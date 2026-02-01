@@ -34,13 +34,10 @@ const HeroSection = () => {
             Through boxing, we develop our kids personally, professionally, and spiritually.
           </p>
           
-          {/* CTA Buttons */}
-          <div className="flex flex-col sm:flex-row gap-4">
+          {/* CTA Button */}
+          <div className="flex">
             <Button size="lg" className="bg-primary-foreground hover:bg-primary-foreground/90 text-primary font-semibold px-8 py-6 text-lg">
-              Get Involved
-            </Button>
-            <Button size="lg" variant="outline" className="border-2 border-primary-foreground/30 text-primary-foreground hover:bg-primary-foreground/10 font-semibold px-8 py-6 text-lg">
-              Learn More
+              DONATE
             </Button>
           </div>
         </div>
