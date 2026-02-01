@@ -33,6 +33,7 @@ import nlaNorthWildwoodPdFire from "@/assets/gym-buddies/nla-north-wildwood-pd-f
 import copsAndHoopers2 from "@/assets/gym-buddies/cops-and-hoopers-2.png";
 import copsAndHoopers3 from "@/assets/gym-buddies/cops-and-hoopers-3.png";
 import copsHoopersPlanning from "@/assets/gym-buddies/cops-hoopers-planning.png";
+import mtpdRonMillerJulioRuiz from "@/assets/gym-buddies/mtpd-ron-miller-julio-ruiz.png";
 
 const GymBuddies = () => {
   const gymBuddiesImages = [
@@ -190,6 +191,11 @@ const GymBuddies = () => {
       src: copsHoopersPlanning,
       alt: "Cops and Hoopers Planning Committee",
       caption: "Cops & Hoopers Planning Committee",
+    },
+    {
+      src: mtpdRonMillerJulioRuiz,
+      alt: "MTPD's Ron Miller and Julio Ruiz",
+      caption: "MTPD's Ron Miller & Julio Ruiz",
     },
   ];
 
