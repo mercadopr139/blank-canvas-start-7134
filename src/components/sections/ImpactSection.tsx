@@ -17,7 +17,11 @@ const ImpactSection = () => {
             </p>
             
             <p className="text-lg md:text-xl text-primary-foreground/80 leading-relaxed">
-              No Limits Academy serves over <span className="font-bold text-primary-foreground">500 youth each year</span> across Cape May County. <span className="font-bold text-primary-foreground">70% of our registered youth fall below the federal poverty line.</span> Our one-stop, wraparound approach to youth development has attracted schools, law enforcement, mental health providers, public officials, and community partners who recognize NLA as a legitimate, trusted hub for real, lasting impact.
+              No Limits Academy serves over <span className="font-bold text-primary-foreground">500 youth each year</span> across Cape May County.
+            </p>
+            
+            <p className="text-lg md:text-xl text-primary-foreground/80 leading-relaxed">
+              <span className="font-bold text-primary-foreground">70% of our registered youth fall below the federal poverty line.</span> Our one-stop, wraparound approach to youth development has attracted schools, law enforcement, mental health providers, public officials, and community partners who recognize NLA as a legitimate, trusted hub for real, lasting impact.
             </p>
           </div>
         </div>
