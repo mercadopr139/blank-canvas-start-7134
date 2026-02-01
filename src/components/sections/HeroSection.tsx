@@ -1,6 +1,6 @@
 import { Button } from "@/components/ui/button";
 const HeroSection = () => {
-  return <section className="relative min-h-[90vh] flex items-center bg-secondary overflow-hidden">
+  return <section className="relative min-h-[90vh] flex items-center bg-primary overflow-hidden">
       {/* Background pattern */}
       <div className="absolute inset-0 opacity-5">
         <div className="absolute inset-0" style={{
@@ -14,28 +14,28 @@ const HeroSection = () => {
       <div className="container relative z-10">
         <div className="max-w-4xl">
           {/* Main headline */}
-          <h1 className="text-4xl md:text-6xl lg:text-7xl font-black text-secondary-foreground leading-[1.1] tracking-tight mb-6">
-            We Show Up <span className="text-primary">Every Day</span>—for Our Youth.
+          <h1 className="text-4xl md:text-6xl lg:text-7xl font-black text-primary-foreground leading-[1.1] tracking-tight mb-6">
+            We Show Up <span className="text-primary-foreground/80">Every Day</span>—for Our Youth.
             <br />
             <span className="block mt-2">We Build Disciplined, Confident Young People.</span>
           </h1>
           
           {/* Subheadline */}
-          <p className="text-xl md:text-2xl font-semibold text-secondary-foreground/80 mb-6 max-w-3xl">
+          <p className="text-xl md:text-2xl font-semibold text-primary-foreground/80 mb-6 max-w-3xl">
             No Limits Academy is a free, year-round youth development organization serving youth, 7–19 years old, of Cape May County. We show up Monday through Friday, 2:30–8:30 PM, using boxing, mentorship, and structure to build disciplined, confident, and accountable young people.
           </p>
           
           {/* Mission */}
-          <p className="text-lg text-secondary-foreground/60 mb-10 max-w-xl leading-relaxed">
+          <p className="text-lg text-primary-foreground/60 mb-10 max-w-xl leading-relaxed">
             Through boxing, we develop our kids personally, professionally, and spiritually.
           </p>
           
           {/* CTA Buttons */}
           <div className="flex flex-col sm:flex-row gap-4">
-            <Button size="lg" className="bg-primary hover:bg-primary/90 text-primary-foreground font-semibold px-8 py-6 text-lg">
+            <Button size="lg" className="bg-primary-foreground hover:bg-primary-foreground/90 text-primary font-semibold px-8 py-6 text-lg">
               Get Involved
             </Button>
-            <Button size="lg" variant="outline" className="border-2 border-secondary-foreground/20 text-secondary-foreground hover:bg-secondary-foreground/5 font-semibold px-8 py-6 text-lg">
+            <Button size="lg" variant="outline" className="border-2 border-primary-foreground/30 text-primary-foreground hover:bg-primary-foreground/10 font-semibold px-8 py-6 text-lg">
               Learn More
             </Button>
           </div>
