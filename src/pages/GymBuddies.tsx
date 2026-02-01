@@ -26,6 +26,7 @@ import nlaBlueKnights from "@/assets/gym-buddies/nla-blue-knights.png";
 import nlaChiefsAssociationCmc from "@/assets/gym-buddies/nla-chiefs-association-cmc.png";
 import nlaOceanCityPd from "@/assets/gym-buddies/nla-ocean-city-pd.png";
 import nlaWildwoodCrestPd from "@/assets/gym-buddies/nla-wildwood-crest-pd.png";
+import nlaWildwoodPd from "@/assets/gym-buddies/nla-wildwood-pd.png";
 
 const GymBuddies = () => {
   const gymBuddiesImages = [
@@ -148,6 +149,11 @@ const GymBuddies = () => {
       src: nlaWildwoodCrestPd,
       alt: "NLA with Wildwood Crest PD",
       caption: "NLA w/ Wildwood Crest PD",
+    },
+    {
+      src: nlaWildwoodPd,
+      alt: "NLA with Wildwood PD",
+      caption: "NLA w/ Wildwood PD",
     },
   ];
 
