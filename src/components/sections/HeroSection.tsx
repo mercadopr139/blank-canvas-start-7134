@@ -35,7 +35,7 @@ const HeroSection = () => {
           </p>
           
           {/* CTA Button */}
-          <div className="flex">
+          <div className="flex justify-center">
             <Button size="lg" className="bg-primary-foreground hover:bg-primary-foreground/90 text-primary font-semibold px-8 py-6 text-lg">
               DONATE
             </Button>
