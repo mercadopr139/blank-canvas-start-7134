@@ -3,17 +3,17 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 const programs = [
   {
     title: "Junior Boxing Program",
-    ages: "Ages 7–10",
+    ages: "Ages 7–10 | Tuesdays",
     description: "An introduction to boxing, fitness, and discipline in a safe, supportive environment focused on confidence, listening skills, and teamwork.",
   },
   {
     title: "Senior Boxing Program",
-    ages: "Ages 11–19",
+    ages: "Ages 11–19 | Monday–Friday",
     description: "A structured, high-expectation program combining boxing & fitness training with mentorship, accountability, leadership development, and life skills.",
   },
   {
     title: "Grit & Grace Program",
-    ages: "Ages 11–19",
+    ages: "Ages 11–19 | Monday–Friday",
     description: "A character and leadership-focused program designed to support youth through mentorship, reflection, and personal growth alongside athletic training.",
   },
 ];
