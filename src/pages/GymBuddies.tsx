@@ -14,6 +14,7 @@ import usCoastGuardBase from "@/assets/gym-buddies/us-coast-guard-base.png";
 import knockoutCookoutMtpd from "@/assets/gym-buddies/knockout-cookout-mtpd.png";
 
 import wildwoodFireDept2 from "@/assets/gym-buddies/wildwood-fire-dept-2.png";
+import chiefsOfCmc from "@/assets/gym-buddies/chiefs-of-cmc.png";
 
 const GymBuddies = () => {
   const gymBuddiesImages = [
@@ -76,6 +77,11 @@ const GymBuddies = () => {
       src: wildwoodFireDept2,
       alt: "Wildwood Fire Department",
       caption: "Wildwood Fire Department",
+    },
+    {
+      src: chiefsOfCmc,
+      alt: "Some of the CHIEFS of CMC",
+      caption: "Some of the CHIEFS of CMC!",
     },
   ];
 
