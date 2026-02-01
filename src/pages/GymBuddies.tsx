@@ -17,6 +17,7 @@ import wildwoodFireDept2 from "@/assets/gym-buddies/wildwood-fire-dept-2.png";
 import chiefsOfCmc from "@/assets/gym-buddies/chiefs-of-cmc.png";
 import chiefJeffChristopher from "@/assets/gym-buddies/chief-jeff-christopher.png";
 import chiefKevinLewis from "@/assets/gym-buddies/chief-kevin-lewis.png";
+import mtpdAlyssaJones from "@/assets/gym-buddies/mtpd-alyssa-jones.png";
 
 const GymBuddies = () => {
   const gymBuddiesImages = [
@@ -94,6 +95,11 @@ const GymBuddies = () => {
       src: chiefKevinLewis,
       alt: "Chief Kevin Lewis of Lower Township PD",
       caption: "Chief Kevin Lewis of Lower Township PD",
+    },
+    {
+      src: mtpdAlyssaJones,
+      alt: "MTPD's Alyssa Jones",
+      caption: "MTPD's Alyssa Jones",
     },
   ];
 
