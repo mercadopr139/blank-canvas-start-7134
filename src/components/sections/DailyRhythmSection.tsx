@@ -28,7 +28,7 @@ const seniorScheduleBlocks = [
 
 const juniorScheduleBlocks = [
   {
-    time: "5:15pm",
+    time: "5:15pm–5:20pm",
     title: "Junior Roll Call & Welcome",
     description: "A brief team meeting to greet youth, set expectations, and transition into the evening together.",
   },
