@@ -32,8 +32,11 @@ const ImpactSection = () => {
             </p>
           </div>
 
-          {/* Gym Buddies Button */}
-          <div className="flex justify-center mt-10">
+          {/* Gym Buddies CTA */}
+          <div className="text-center mt-10">
+            <p className="text-lg md:text-xl text-foreground/80 leading-relaxed mb-6">
+              Learn more about Gym Buddies and how shared training has strengthened trust and relationships throughout our community.
+            </p>
             <Button
               asChild
               variant="default"
