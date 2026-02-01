@@ -10,6 +10,7 @@ import avalonPd from "@/assets/gym-buddies/avalon-pd.png";
 import avalonPd5 from "@/assets/gym-buddies/avalon-pd-5.jpg";
 import acPoliceDept from "@/assets/gym-buddies/ac-police-dept.png";
 import wildwoodPdProsecutors from "@/assets/gym-buddies/wildwood-pd-prosecutors.png";
+import usCoastGuardBase from "@/assets/gym-buddies/us-coast-guard-base.png";
 
 const GymBuddies = () => {
   const gymBuddiesImages = [
@@ -57,6 +58,11 @@ const GymBuddies = () => {
       src: wildwoodPdProsecutors,
       alt: "Wildwood PD and Prosecutors Office",
       caption: "Wildwood PD and Prosecutors Office",
+    },
+    {
+      src: usCoastGuardBase,
+      alt: "US Coast Guard Base, Cape May",
+      caption: "US Coast Guard Base, Cape May",
     },
   ];
 
