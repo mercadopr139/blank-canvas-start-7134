@@ -45,13 +45,11 @@ const ProgramsSection = () => {
             >
               <CardHeader className="pb-4">
                 <div className={`text-sm font-semibold mb-2 ${
-                  index === 0 ? "text-muted-foreground" : "text-primary"
+                  index === 0 ? "text-foreground" : "text-primary"
                 }`}>
                   {program.ages}
                 </div>
-                <CardTitle className={`text-xl md:text-2xl font-bold ${
-                  index === 0 ? "text-muted-foreground" : "text-foreground"
-                }`}>
+                <CardTitle className="text-xl md:text-2xl font-bold text-foreground">
                   {program.title}
                 </CardTitle>
               </CardHeader>
