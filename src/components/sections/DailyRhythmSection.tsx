@@ -1,26 +1,26 @@
 const scheduleBlocks = [
   {
-    time: "2:30–5:00 PM",
+    time: "2:30pm–5:30pm",
     title: "Open Gym & Arrival Window",
-    description: "Youth arrive after school for supervised free time, snacks, mentorship, informal support, and optional strength & conditioning.",
+    description: "Youth arrive after school for supervised free time, snacks, mentorship, and formal & informal support.",
   },
   {
-    time: "5:15 PM",
+    time: "5:15pm",
     title: "Team Roll Call",
-    description: "Attendance, expectations, accountability, and daily focus are set as a group.",
+    description: "Attendance, expectations, accountability, and daily reflection are completed as a group.",
   },
   {
-    time: "5:30–7:00 PM",
-    title: "Boxing & Fitness Training",
-    description: "Structured training including strength & conditioning, boxing fundamentals, skill development, and conditioning. This is a high-expectation training block.",
+    time: "5:30pm–7:00pm",
+    title: "Senior Boxing Program",
+    description: "A high-expectation training block that includes strength & conditioning, boxing fundamentals, skill development, conditioning, spiritual development, and the discipline to follow through.",
   },
   {
-    time: "7:00–7:30 PM",
-    title: "Daily Duties & Reflection",
-    description: "Youth rotate responsibilities to maintain a neat, clean, and orderly facility while reinforcing ownership, teamwork, and respect, followed by reflection.",
+    time: "7:00pm–7:15pm",
+    title: "Daily Duties",
+    description: "Youth rotate responsibilities to ensure our facility remains neat, clean, & orderly—reinforcing ownership, teamwork, and respect.",
   },
   {
-    time: "7:30–8:30 PM",
+    time: "7:15pm–8:30pm",
     title: "Dinner",
     description: "Sit-down, family-style meals where youth break bread together & connect.",
   },
@@ -40,7 +40,7 @@ const DailyRhythmSection = () => {
               Senior Boxing – Typical Day (Ages 11–19)
             </p>
             <p className="text-lg md:text-xl text-muted-foreground leading-relaxed">
-              No Limits Academy operates Monday through Friday, 2:30–8:30 PM. Senior Boxing youth are permitted to arrive as early as 2:30 PM for supervised open gym and structured after-school support.
+              No Limits Academy operates Monday through Friday, 2:30pm–8:30pm. Senior Boxing youth are permitted to arrive as early as 2:30pm for supervised open gym and structured after-school support.
             </p>
           </div>
 
