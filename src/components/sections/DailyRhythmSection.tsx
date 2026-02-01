@@ -1,6 +1,6 @@
 const seniorScheduleBlocks = [
   {
-    time: "2:30pm–5:30pm",
+    time: "2:30pm–5:15pm",
     title: "Open Gym & Arrival Window",
     description: "Youth arrive after school for supervised free time, snacks, mentorship, and formal & informal support.",
   },
