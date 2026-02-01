@@ -4,14 +4,14 @@ const ImpactSection = () => {
       <div className="container">
         <div className="max-w-4xl mx-auto">
           {/* Section header */}
-          <div className="text-center mb-8">
+          <div className="text-left mb-8">
             <h2 className="text-3xl md:text-4xl lg:text-5xl font-black text-primary-foreground mb-6">
               Impact & Credibility
             </h2>
           </div>
 
           {/* Content */}
-          <div className="space-y-6 text-center">
+          <div className="space-y-6 text-left">
             <p className="text-lg md:text-xl text-primary-foreground/80 leading-relaxed">
               Impact at NLA is built through consistency—youth commit to the program, and our staff commits to them. By showing up every day during one of the most chaotic seasons of a young person's life, we become a steady, reliable presence that helps guide their personal journey.
             </p>

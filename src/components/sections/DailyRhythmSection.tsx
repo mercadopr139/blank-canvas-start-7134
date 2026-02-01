@@ -100,7 +100,7 @@ const DailyRhythmSection = () => {
       <div className="container">
         <div className="max-w-4xl mx-auto">
           {/* Section header */}
-          <div className="text-center mb-12">
+          <div className="text-left mb-12">
             <h2 className="text-3xl md:text-4xl lg:text-5xl font-black text-foreground mb-4">
               Daily Rhythm
             </h2>
@@ -110,7 +110,7 @@ const DailyRhythmSection = () => {
           <div className="mb-16">
             {/* Senior Boxing Header Box */}
             <div className="bg-primary rounded-xl p-6 md:p-8 mb-8">
-              <div className="text-center">
+              <div className="text-left">
                 <p className="text-xl md:text-2xl font-semibold text-primary-foreground mb-1">
                   Senior Boxing – Typical Day (Ages 11–19)
                 </p>
@@ -129,7 +129,7 @@ const DailyRhythmSection = () => {
           <div>
             {/* Junior Boxing Header Box */}
             <div className="bg-primary rounded-xl p-6 md:p-8 mb-8">
-              <div className="text-center">
+              <div className="text-left">
                 <p className="text-xl md:text-2xl font-semibold text-primary-foreground mb-1">
                   Junior Boxing – Typical Day (Ages 7–10)
                 </p>
