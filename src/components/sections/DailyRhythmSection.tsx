@@ -21,7 +21,7 @@ const seniorScheduleBlocks = [
   },
   {
     time: "7:15pm–8:30pm",
-    title: "Dinner",
+    title: "Dinner & Dismissal",
     description: "Sit-down, family-style meals where youth break bread together & connect.",
   },
 ];
