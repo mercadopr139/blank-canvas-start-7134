@@ -55,7 +55,7 @@ const ProgramsSection = () => {
                 </CardTitle>
               </CardHeader>
               <CardContent className="flex flex-col gap-6">
-                <p className="text-muted-foreground leading-relaxed">
+                <p className={`leading-relaxed ${index === 0 ? "text-foreground" : "text-muted-foreground"}`}>
                   {program.description}
                 </p>
                 <Button 
