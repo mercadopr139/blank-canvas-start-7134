@@ -13,8 +13,8 @@ const Header = ({ className }: HeaderProps) => {
   const [open, setOpen] = useState(false);
 
   const navLinks = [
-    { href: "#", label: "Home" },
-    { href: "#programs", label: "Programs" },
+    { href: "/", label: "Home" },
+    { href: "/programs", label: "Programs" },
     { href: "#meal-train", label: "Meal Train" },
     { href: "#about", label: "Our Story" },
     { href: "#impact", label: "Our Impact" },
