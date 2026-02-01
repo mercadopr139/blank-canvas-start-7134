@@ -62,7 +62,7 @@ const ProgramsSection = ({ onMoreInfo }: ProgramsSectionProps) => {
                 <p className={`leading-relaxed flex-1 ${index === 0 ? "text-foreground" : "text-muted-foreground"}`}>
                   {program.description}
                 </p>
-                <div className="flex flex-col gap-3">
+                <div className="flex flex-col gap-3 items-center">
                   <Button 
                     className={`w-full font-semibold ${
                       index === 0 
