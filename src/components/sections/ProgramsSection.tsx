@@ -62,7 +62,7 @@ const ProgramsSection = () => {
                   className={`w-full font-semibold ${
                     index === 0 
                       ? "bg-primary hover:bg-primary/90 text-primary-foreground" 
-                      : "bg-background hover:bg-background/90 text-foreground border border-border"
+                      : "bg-foreground hover:bg-foreground/90 text-background"
                   }`}
                 >
                   SIGN-UP
