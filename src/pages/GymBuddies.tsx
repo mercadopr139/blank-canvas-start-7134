@@ -28,6 +28,7 @@ import nlaOceanCityPd from "@/assets/gym-buddies/nla-ocean-city-pd.png";
 import nlaWildwoodCrestPd from "@/assets/gym-buddies/nla-wildwood-crest-pd.png";
 import nlaWildwoodPd from "@/assets/gym-buddies/nla-wildwood-pd.png";
 import nlaMtpd from "@/assets/gym-buddies/nla-mtpd.png";
+import nlaMtpd2 from "@/assets/gym-buddies/nla-mtpd-2.png";
 
 const GymBuddies = () => {
   const gymBuddiesImages = [
@@ -158,6 +159,11 @@ const GymBuddies = () => {
     },
     {
       src: nlaMtpd,
+      alt: "NLA with MTPD",
+      caption: "NLA w/ MTPD",
+    },
+    {
+      src: nlaMtpd2,
       alt: "NLA with MTPD",
       caption: "NLA w/ MTPD",
     },
