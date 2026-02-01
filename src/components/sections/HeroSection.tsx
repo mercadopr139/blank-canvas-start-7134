@@ -14,11 +14,13 @@ const HeroSection = () => {
       <div className="container relative z-10">
         <div className="max-w-4xl">
           {/* Main headline */}
-          <h1 className="text-4xl md:text-6xl lg:text-7xl font-black text-primary-foreground leading-[1.1] tracking-tight mb-6">
+          <h1 className="text-4xl md:text-6xl lg:text-7xl font-black text-primary-foreground leading-[1.1] tracking-tight mb-4">
             We Show Up <span className="text-primary-foreground/80">Every Day</span>—for Our Youth.
-            <br />
-            <span className="block mt-2">We Build Disciplined, Confident Young People.</span>
           </h1>
+          
+          <p className="text-2xl md:text-3xl lg:text-4xl font-bold text-primary-foreground/80 mb-8">
+            We Build Disciplined, Confident Young People.
+          </p>
           
           {/* Subheadline */}
           <p className="text-xl md:text-2xl font-semibold text-primary-foreground/80 mb-6 max-w-3xl">
