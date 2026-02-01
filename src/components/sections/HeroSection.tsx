@@ -11,7 +11,7 @@ const HeroSection = () => {
       {/* Accent line */}
       <div className="absolute left-0 top-1/2 -translate-y-1/2 w-2 h-32 bg-primary rounded-r-full" />
       
-      <div className="container relative z-10">
+      <div className="container relative z-10 pt-12 md:pt-20">
         <div className="max-w-4xl">
           {/* Main headline */}
           {/* Main headline */}
