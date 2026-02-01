@@ -19,7 +19,11 @@ const programs = [
   },
 ];
 
-const ProgramsSection = () => {
+interface ProgramsSectionProps {
+  onMoreInfo?: () => void;
+}
+
+const ProgramsSection = ({ onMoreInfo }: ProgramsSectionProps) => {
   return (
     <section className="py-20 md:py-28 bg-primary">
       <div className="container">
@@ -58,18 +62,31 @@ const ProgramsSection = () => {
                 <p className={`leading-relaxed flex-1 ${index === 0 ? "text-foreground" : "text-muted-foreground"}`}>
                   {program.description}
                 </p>
-                <Button 
-                  className={`w-full font-semibold ${
-                    index === 0 
-                      ? "bg-primary hover:bg-primary/90 text-primary-foreground" 
-                      : "bg-foreground hover:bg-foreground/90 text-background"
-                  }`}
-                  asChild
-                >
-                  <a href="https://wkf.ms/45C6tce" target="_blank" rel="noopener noreferrer">
-                    SIGN-UP
-                  </a>
-                </Button>
+                <div className="flex flex-col gap-3">
+                  <Button 
+                    className={`w-full font-semibold ${
+                      index === 0 
+                        ? "bg-primary hover:bg-primary/90 text-primary-foreground" 
+                        : "bg-foreground hover:bg-foreground/90 text-background"
+                    }`}
+                    asChild
+                  >
+                    <a href="https://wkf.ms/45C6tce" target="_blank" rel="noopener noreferrer">
+                      SIGN-UP
+                    </a>
+                  </Button>
+                  <Button 
+                    variant="outline"
+                    className={`w-full font-semibold ${
+                      index === 0 
+                        ? "border-primary text-primary hover:bg-primary hover:text-primary-foreground" 
+                        : "border-foreground text-foreground hover:bg-foreground hover:text-background"
+                    }`}
+                    onClick={onMoreInfo}
+                  >
+                    MORE INFO
+                  </Button>
+                </div>
               </CardContent>
             </Card>
           ))}
