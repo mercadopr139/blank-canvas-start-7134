@@ -7,12 +7,12 @@ const scheduleBlocks = [
   {
     time: "5:15pm",
     title: "Team Roll Call",
-    description: "Attendance is taken, the schedule is reviewed, expectations are set, and daily reflection is completed as a group.",
+    description: "Youth are welcomed, attendance is taken, the day's schedule and expectations are reviewed, and daily reflection is completed together as a group.",
   },
   {
     time: "5:30pm–7:00pm",
     title: "Senior Boxing Program",
-    description: "A high-expectation training block that includes strength & conditioning, boxing fundamentals, skill development, conditioning, spiritual development, and the discipline to follow through.",
+    description: "A high-expectation training block that includes strength & conditioning, boxing fundamentals, spiritual growth, and the discipline required to show up, work as a team, and follow through on personal and team goals.",
   },
   {
     time: "7:00pm–7:15pm",
