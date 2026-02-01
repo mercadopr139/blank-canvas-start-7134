@@ -17,14 +17,14 @@ const Header = ({ className }: HeaderProps) => {
           <a href="#" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
             Home
           </a>
-          <a href="#" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
-            About
+          <a href="#programs" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
+            Programs
           </a>
-          <a href="#" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
-            Services
+          <a href="#about" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
+            Our Story
           </a>
-          <a href="#" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
-            Contact
+          <a href="#impact" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
+            Our Impact
           </a>
           <Button size="sm" className="bg-primary hover:bg-primary/90 text-primary-foreground font-semibold px-6" asChild>
             <a href="https://www.paypal.com/ncp/payment/TMMDVUSEQKHJC" target="_blank" rel="noopener noreferrer">
