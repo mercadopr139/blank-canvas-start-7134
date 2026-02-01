@@ -20,7 +20,7 @@ const programs = [
 ];
 
 interface ProgramsSectionProps {
-  onMoreInfo?: () => void;
+  onMoreInfo?: (program: "junior" | "senior") => void;
 }
 
 const ProgramsSection = ({ onMoreInfo }: ProgramsSectionProps) => {
@@ -82,7 +82,7 @@ const ProgramsSection = ({ onMoreInfo }: ProgramsSectionProps) => {
                         ? "border-primary text-primary hover:bg-primary hover:text-primary-foreground" 
                         : "border-foreground text-foreground hover:bg-foreground hover:text-background"
                     }`}
-                    onClick={onMoreInfo}
+                    onClick={() => onMoreInfo?.(index === 0 ? "junior" : "senior")}
                   >
                     MORE INFO
                   </Button>

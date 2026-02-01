@@ -94,7 +94,14 @@ const ScheduleBlockComponent = ({ blocks }: { blocks: ScheduleBlock[] }) => (
   </div>
 );
 
-const DailyRhythmSection = () => {
+interface DailyRhythmSectionProps {
+  programFilter?: "junior" | "senior" | "all";
+}
+
+const DailyRhythmSection = ({ programFilter = "all" }: DailyRhythmSectionProps) => {
+  const showSenior = programFilter === "all" || programFilter === "senior";
+  const showJunior = programFilter === "all" || programFilter === "junior";
+
   return (
     <section className="py-20 md:py-28 bg-background">
       <div className="container">
@@ -107,42 +114,46 @@ const DailyRhythmSection = () => {
           </div>
 
           {/* Senior Boxing Schedule */}
-          <div className="mb-16">
-            {/* Senior Boxing Header Box */}
-            <div className="bg-primary rounded-xl p-6 md:p-8 mb-8">
-              <div className="text-left">
-                <p className="text-xl md:text-2xl font-semibold text-primary-foreground mb-1">
-                  Senior Boxing – Typical Day (Ages 11–19)
-                </p>
-                <p className="text-base md:text-lg text-primary-foreground/70 mb-4">
-                  Includes Grit & Grace Program
-                </p>
-                <p className="text-base md:text-lg text-primary-foreground/90 leading-relaxed">
-                  No Limits Academy operates Monday through Friday, 2:30pm–8:30pm. Senior Boxing youth are permitted to arrive as early as 2:30pm for supervised open gym and structured after-school support.
-                </p>
+          {showSenior && (
+            <div className={showJunior ? "mb-16" : ""}>
+              {/* Senior Boxing Header Box */}
+              <div className="bg-primary rounded-xl p-6 md:p-8 mb-8">
+                <div className="text-left">
+                  <p className="text-xl md:text-2xl font-semibold text-primary-foreground mb-1">
+                    Senior Boxing – Typical Day (Ages 11–19)
+                  </p>
+                  <p className="text-base md:text-lg text-primary-foreground/70 mb-4">
+                    Includes Grit & Grace Program
+                  </p>
+                  <p className="text-base md:text-lg text-primary-foreground/90 leading-relaxed">
+                    No Limits Academy operates Monday through Friday, 2:30pm–8:30pm. Senior Boxing youth are permitted to arrive as early as 2:30pm for supervised open gym and structured after-school support.
+                  </p>
+                </div>
               </div>
+              <ScheduleBlockComponent blocks={seniorScheduleBlocks} />
             </div>
-            <ScheduleBlockComponent blocks={seniorScheduleBlocks} />
-          </div>
+          )}
 
           {/* Junior Boxing Schedule */}
-          <div>
-            {/* Junior Boxing Header Box */}
-            <div className="bg-primary rounded-xl p-6 md:p-8 mb-8">
-              <div className="text-left">
-                <p className="text-xl md:text-2xl font-semibold text-primary-foreground mb-1">
-                  Junior Boxing – Typical Day (Ages 7–10)
-                </p>
-                <p className="text-base md:text-lg text-primary-foreground/70 mb-4">
-                  Tuesdays Only
-                </p>
-                <p className="text-base md:text-lg text-primary-foreground/90 leading-relaxed">
-                  Junior Boxing follows a shortened, age-appropriate schedule designed to introduce structure, discipline, and community in a supportive environment. <span className="font-medium">Practice officially ends at 6:00pm</span>—extended programming and dinner are available for families who wish to stay.
-                </p>
+          {showJunior && (
+            <div>
+              {/* Junior Boxing Header Box */}
+              <div className="bg-primary rounded-xl p-6 md:p-8 mb-8">
+                <div className="text-left">
+                  <p className="text-xl md:text-2xl font-semibold text-primary-foreground mb-1">
+                    Junior Boxing – Typical Day (Ages 7–10)
+                  </p>
+                  <p className="text-base md:text-lg text-primary-foreground/70 mb-4">
+                    Tuesdays Only
+                  </p>
+                  <p className="text-base md:text-lg text-primary-foreground/90 leading-relaxed">
+                    Junior Boxing follows a shortened, age-appropriate schedule designed to introduce structure, discipline, and community in a supportive environment. <span className="font-medium">Practice officially ends at 6:00pm</span>—extended programming and dinner are available for families who wish to stay.
+                  </p>
+                </div>
               </div>
+              <ScheduleBlockComponent blocks={juniorScheduleBlocks} />
             </div>
-            <ScheduleBlockComponent blocks={juniorScheduleBlocks} />
-          </div>
+          )}
         </div>
       </div>
     </section>

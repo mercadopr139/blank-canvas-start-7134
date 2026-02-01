@@ -18,6 +18,19 @@ import { Clock } from "lucide-react";
 
 const Index = () => {
   const [open, setOpen] = useState(false);
+  const [programFilter, setProgramFilter] = useState<"junior" | "senior" | "all">("all");
+
+  const handleMoreInfo = (program: "junior" | "senior") => {
+    setProgramFilter(program);
+    setOpen(true);
+  };
+
+  const handleOpenChange = (isOpen: boolean) => {
+    setOpen(isOpen);
+    if (!isOpen) {
+      setProgramFilter("all");
+    }
+  };
 
   return (
     <div className="min-h-screen flex flex-col bg-background">
@@ -26,16 +39,17 @@ const Index = () => {
       <main className="flex-1">
         <HeroSection />
         <AboutSection />
-        <ProgramsSection onMoreInfo={() => setOpen(true)} />
+        <ProgramsSection onMoreInfo={handleMoreInfo} />
         <ImpactSection />
       </main>
 
       {/* Daily Rhythm Dialog Trigger - Fixed Button */}
-      <Dialog open={open} onOpenChange={setOpen}>
+      <Dialog open={open} onOpenChange={handleOpenChange}>
         <DialogTrigger asChild>
           <Button
             className="fixed bottom-6 right-6 z-40 bg-primary hover:bg-primary/90 text-primary-foreground font-semibold shadow-lg"
             size="lg"
+            onClick={() => setProgramFilter("all")}
           >
             <Clock className="mr-2 h-5 w-5" />
             Click for Daily Schedule
@@ -45,7 +59,7 @@ const Index = () => {
           <DialogHeader>
             <DialogTitle className="sr-only">Daily Rhythm</DialogTitle>
           </DialogHeader>
-          <DailyRhythmSection />
+          <DailyRhythmSection programFilter={programFilter} />
         </DialogContent>
       </Dialog>
 
