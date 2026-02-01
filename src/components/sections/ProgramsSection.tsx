@@ -64,8 +64,11 @@ const ProgramsSection = () => {
                       ? "bg-primary hover:bg-primary/90 text-primary-foreground" 
                       : "bg-foreground hover:bg-foreground/90 text-background"
                   }`}
+                  asChild
                 >
-                  SIGN-UP
+                  <a href="https://wkf.ms/45C6tce" target="_blank" rel="noopener noreferrer">
+                    SIGN-UP
+                  </a>
                 </Button>
               </CardContent>
             </Card>
