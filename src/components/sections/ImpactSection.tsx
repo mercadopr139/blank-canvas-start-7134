@@ -1,34 +1,7 @@
-import { useState } from "react";
+import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from "@/components/ui/collapsible";
-import { ChevronDown } from "lucide-react";
-import { cn } from "@/lib/utils";
 
 const ImpactSection = () => {
-  const [isOpen, setIsOpen] = useState(false);
-
-  const gymBuddiesImages = [
-    {
-      src: "/placeholder.svg",
-      alt: "Partnership with local law enforcement",
-      caption: "Law Enforcement",
-    },
-    {
-      src: "/placeholder.svg",
-      alt: "Fire department collaboration",
-      caption: "Fire Department",
-    },
-    {
-      src: "/placeholder.svg",
-      alt: "U.S. Coast Guard partnership",
-      caption: "U.S. Coast Guard",
-    },
-  ];
-
   return (
     <section className="py-20 md:py-28 bg-background">
       <div className="container">
@@ -59,54 +32,16 @@ const ImpactSection = () => {
             </p>
           </div>
 
-          {/* Gym Buddies Collapsible */}
-          <Collapsible open={isOpen} onOpenChange={setIsOpen} className="mt-10">
-            <div className="flex justify-center">
-              <CollapsibleTrigger asChild>
-                <Button
-                  variant="default"
-                  className="group bg-foreground text-background hover:bg-foreground/90"
-                >
-                  Gym Buddies
-                  <ChevronDown
-                    className={cn(
-                      "ml-2 h-4 w-4 transition-transform duration-200",
-                      isOpen && "rotate-180"
-                    )}
-                  />
-                </Button>
-              </CollapsibleTrigger>
-            </div>
-            <CollapsibleContent className="mt-6 space-y-6">
-              {/* Description */}
-              <div className="text-left">
-                <h3 className="text-xl md:text-2xl font-bold text-foreground mb-4">
-                  Gym Buddies Program
-                </h3>
-                <p className="text-lg text-foreground/80 leading-relaxed">
-                  Gym Buddies brings local first responders—law enforcement officers, firefighters, and U.S. Coast Guard members—into the gym to train alongside our youth. These sessions build trust, break down barriers, and create meaningful connections between young people and the heroes who serve their community. It's mentorship in action, one workout at a time.
-                </p>
-              </div>
-
-              {/* Photo Gallery */}
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                {gymBuddiesImages.map((image, index) => (
-                  <div key={index} className="group relative overflow-hidden rounded-lg">
-                    <div className="aspect-[4/3] bg-muted">
-                      <img
-                        src={image.src}
-                        alt={image.alt}
-                        className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
-                      />
-                    </div>
-                    <div className="absolute bottom-0 left-0 right-0 bg-foreground/80 text-background px-3 py-2">
-                      <p className="text-sm font-medium">{image.caption}</p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </CollapsibleContent>
-          </Collapsible>
+          {/* Gym Buddies Button */}
+          <div className="flex justify-center mt-10">
+            <Button
+              asChild
+              variant="default"
+              className="bg-foreground text-background hover:bg-foreground/90"
+            >
+              <Link to="/gym-buddies">Gym Buddies</Link>
+            </Button>
+          </div>
         </div>
       </div>
     </section>
