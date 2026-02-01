@@ -32,7 +32,7 @@ const HeroSection = () => {
           
           {/* Subheadline */}
           <p className="text-xl md:text-2xl lg:text-3xl font-semibold text-secondary-foreground/80 mb-8 max-w-2xl">
-            We Build Disciplined, Confident Young People.
+            Through boxing, we develop children personally, professionally, & spiritually.
           </p>
           
           {/* Description */}
