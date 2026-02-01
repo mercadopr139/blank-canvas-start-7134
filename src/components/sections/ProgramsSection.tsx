@@ -14,7 +14,7 @@ const programs = [
   {
     title: "Grit & Grace Program",
     ages: "Ages 11–19 | Monday–Friday",
-    description: "A character and leadership-focused program designed to support youth through mentorship, reflection, and personal growth alongside athletic training.",
+    description: "A character and leadership-focused girls program designed to support youth through mentorship, reflection, and personal growth alongside athletic training.",
   },
 ];
 
