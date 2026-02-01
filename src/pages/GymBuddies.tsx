@@ -11,6 +11,7 @@ import avalonPd5 from "@/assets/gym-buddies/avalon-pd-5.jpg";
 import acPoliceDept from "@/assets/gym-buddies/ac-police-dept.png";
 import wildwoodPdProsecutors from "@/assets/gym-buddies/wildwood-pd-prosecutors.png";
 import usCoastGuardBase from "@/assets/gym-buddies/us-coast-guard-base.png";
+import knockoutCookoutMtpd from "@/assets/gym-buddies/knockout-cookout-mtpd.png";
 
 const GymBuddies = () => {
   const gymBuddiesImages = [
@@ -63,6 +64,11 @@ const GymBuddies = () => {
       src: usCoastGuardBase,
       alt: "US Coast Guard Base, Cape May",
       caption: "US Coast Guard Base, Cape May",
+    },
+    {
+      src: knockoutCookoutMtpd,
+      alt: "Knockout Cookout with MTPD",
+      caption: "Knockout Cookout with MTPD",
     },
   ];
 
