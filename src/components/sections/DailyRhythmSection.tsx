@@ -33,7 +33,7 @@ const juniorScheduleBlocks = [
     description: "A brief team meeting to greet youth, set expectations, and transition into the evening together.",
   },
   {
-    time: "5:30pm–6:00pm",
+    time: "5:20pm–6:00pm",
     title: "Boxing Training",
     description: "Foundational boxing instruction focused on movement, coordination, and confidence, with Senior Boxing youth assisting as part of their service and leadership responsibilities.",
   },
