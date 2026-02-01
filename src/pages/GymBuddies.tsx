@@ -34,6 +34,7 @@ import copsAndHoopers2 from "@/assets/gym-buddies/cops-and-hoopers-2.png";
 import copsAndHoopers3 from "@/assets/gym-buddies/cops-and-hoopers-3.png";
 import copsHoopersPlanning from "@/assets/gym-buddies/cops-hoopers-planning.png";
 import mtpdRonMillerJulioRuiz from "@/assets/gym-buddies/mtpd-ron-miller-julio-ruiz.png";
+import nlaWildwoodCrestPd2 from "@/assets/gym-buddies/nla-wildwood-crest-pd-2.png";
 
 const GymBuddies = () => {
   const gymBuddiesImages = [
@@ -196,6 +197,11 @@ const GymBuddies = () => {
       src: mtpdRonMillerJulioRuiz,
       alt: "MTPD's Ron Miller and Julio Ruiz",
       caption: "MTPD's Ron Miller & Julio Ruiz",
+    },
+    {
+      src: nlaWildwoodCrestPd2,
+      alt: "NLA with Wildwood Crest PD",
+      caption: "NLA w/ Wildwood Crest PD",
     },
   ];
 
