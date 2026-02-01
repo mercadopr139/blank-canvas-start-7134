@@ -125,13 +125,16 @@ const DailyRhythmSection = () => {
 
           {/* Junior Boxing Schedule */}
           <div>
-            <div className="text-center mb-8">
-              <p className="text-xl md:text-2xl font-semibold text-primary mb-4">
-                Junior Boxing – Typical Day (Ages 7–10)
-              </p>
-              <p className="text-lg md:text-xl text-muted-foreground leading-relaxed">
-                Junior Boxing follows a shortened, age-appropriate schedule designed to introduce structure, discipline, and community in a supportive environment. <span className="font-medium">Practice officially ends at 6:00pm</span>—extended programming and dinner are available for families who wish to stay.
-              </p>
+            {/* Junior Boxing Header Box */}
+            <div className="bg-primary rounded-xl p-6 md:p-8 mb-8">
+              <div className="text-center">
+                <p className="text-xl md:text-2xl font-semibold text-primary-foreground mb-4">
+                  Junior Boxing – Typical Day (Ages 7–10)
+                </p>
+                <p className="text-base md:text-lg text-primary-foreground/90 leading-relaxed">
+                  Junior Boxing follows a shortened, age-appropriate schedule designed to introduce structure, discipline, and community in a supportive environment. <span className="font-medium">Practice officially ends at 6:00pm</span>—extended programming and dinner are available for families who wish to stay.
+                </p>
+              </div>
             </div>
             <ScheduleBlockComponent blocks={juniorScheduleBlocks} />
           </div>
