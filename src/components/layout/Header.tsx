@@ -11,7 +11,7 @@ const Header = ({ className }: HeaderProps) => {
     <header className={cn("w-full border-b border-border bg-background/80 backdrop-blur-sm sticky top-0 z-50", className)}>
       <div className="container flex h-16 items-center justify-between">
         <div className="flex items-center">
-          <img src={nlaLogo} alt="No Limits Academy" className="h-12 w-auto" />
+          <img src={nlaLogo} alt="No Limits Academy" className="h-16 w-auto" />
         </div>
         <nav className="hidden md:flex items-center gap-8">
           <a href="#" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
