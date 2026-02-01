@@ -61,20 +61,22 @@ const ImpactSection = () => {
 
           {/* Gym Buddies Collapsible */}
           <Collapsible open={isOpen} onOpenChange={setIsOpen} className="mt-10">
-            <CollapsibleTrigger asChild>
-              <Button
-                variant="outline"
-                className="group"
-              >
-                Gym Buddies
-                <ChevronDown
-                  className={cn(
-                    "ml-2 h-4 w-4 transition-transform duration-200",
-                    isOpen && "rotate-180"
-                  )}
-                />
-              </Button>
-            </CollapsibleTrigger>
+            <div className="flex justify-center">
+              <CollapsibleTrigger asChild>
+                <Button
+                  variant="default"
+                  className="group bg-foreground text-background hover:bg-foreground/90"
+                >
+                  Gym Buddies
+                  <ChevronDown
+                    className={cn(
+                      "ml-2 h-4 w-4 transition-transform duration-200",
+                      isOpen && "rotate-180"
+                    )}
+                  />
+                </Button>
+              </CollapsibleTrigger>
+            </div>
             <CollapsibleContent className="mt-6 space-y-6">
               {/* Description */}
               <div className="text-left">
