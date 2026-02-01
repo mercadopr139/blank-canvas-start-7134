@@ -36,7 +36,10 @@ const GymBuddies = () => {
               </div>
 
               {/* Description */}
-              <div className="text-left mb-12">
+              <div className="text-left mb-12 space-y-6">
+                <p className="text-lg md:text-xl text-foreground/80 leading-relaxed">
+                  No Limits Academy serves over <span className="font-bold text-foreground">500 youth each year</span> across Cape May County.
+                </p>
                 <p className="text-lg md:text-xl text-foreground/80 leading-relaxed">
                   Gym Buddies brings local first responders—law enforcement officers, firefighters, and U.S. Coast Guard members—into the gym to train alongside our youth. These sessions build trust, break down barriers, and create meaningful connections between young people and the heroes who serve their community. It's mentorship in action, one workout at a time.
                 </p>
