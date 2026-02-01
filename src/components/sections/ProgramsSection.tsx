@@ -77,6 +77,7 @@ const ProgramsSection = ({ onMoreInfo }: ProgramsSectionProps) => {
                   </Button>
                   <Button 
                     variant="outline"
+                    size="sm"
                     className={`w-full font-semibold ${
                       index === 0 
                         ? "border-primary text-primary hover:bg-primary hover:text-primary-foreground" 
