@@ -34,7 +34,7 @@ const ImpactSection = () => {
 
           {/* Gym Buddies CTA */}
           <div className="text-center mt-10">
-            <p className="text-lg md:text-xl text-foreground/80 leading-relaxed mb-6">
+            <p className="text-sm md:text-base text-foreground/80 leading-relaxed mb-6">
               Learn more about Gym Buddies and how shared training has strengthened trust and relationships throughout our community.
             </p>
             <Button
