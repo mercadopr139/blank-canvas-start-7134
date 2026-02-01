@@ -1,3 +1,5 @@
+import { ReactNode } from "react";
+
 const seniorScheduleBlocks = [
   {
     time: "2:30pm–5:15pm",
@@ -35,7 +37,7 @@ const juniorScheduleBlocks = [
   {
     time: "5:20pm–6:00pm",
     title: "Boxing Training",
-    description: "Foundational boxing instruction focused on movement, coordination, and confidence, with Senior Boxing youth assisting as part of their service and leadership responsibilities. Junior Boxing concludes at 6:00 PM, with parent pick-up permitted at that time. Optional aftercare programming is available but not required.",
+    description: (<>Foundational boxing instruction focused on movement, coordination, and confidence, with Senior Boxing youth assisting as part of their service and leadership responsibilities. Junior Boxing concludes at 6:00 PM, with parent pick-up permitted at that time. <span className="font-bold">Optional</span> aftercare programming is available but not required.</>),
   },
   {
     time: "6:00pm–7:00pm",
@@ -54,7 +56,7 @@ const juniorScheduleBlocks = [
 type ScheduleBlock = {
   time: string;
   title: string;
-  description: string;
+  description: ReactNode;
   optional?: boolean;
 };
 
