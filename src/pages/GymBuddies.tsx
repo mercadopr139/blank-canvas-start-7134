@@ -19,6 +19,7 @@ import chiefJeffChristopher from "@/assets/gym-buddies/chief-jeff-christopher.pn
 import chiefKevinLewis from "@/assets/gym-buddies/chief-kevin-lewis.png";
 import mtpdAlyssaJones from "@/assets/gym-buddies/mtpd-alyssa-jones.png";
 import ltpdSimba from "@/assets/gym-buddies/ltpd-simba.png";
+import captainMiller2 from "@/assets/gym-buddies/captain-miller-2.png";
 
 const GymBuddies = () => {
   const gymBuddiesImages = [
@@ -106,6 +107,11 @@ const GymBuddies = () => {
       src: ltpdSimba,
       alt: "Lower Township PD Simba",
       caption: "Lower Township PD, Simba",
+    },
+    {
+      src: captainMiller2,
+      alt: "Congrats Captain Miller",
+      caption: "Congrats Captain Miller!",
     },
   ];
 
