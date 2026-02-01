@@ -33,13 +33,6 @@ const HeroSection = () => {
           <p className="text-lg md:text-xl font-medium text-primary-foreground mb-10 max-w-xl leading-relaxed">
             Through boxing, we develop our kids personally, professionally, and spiritually.
           </p>
-          
-          {/* CTA Button */}
-          <div className="flex justify-center">
-            <Button size="lg" className="bg-primary-foreground hover:bg-primary-foreground/90 text-primary font-semibold px-8 py-6 text-lg">
-              DONATE
-            </Button>
-          </div>
         </div>
       </div>
       

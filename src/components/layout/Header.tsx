@@ -1,5 +1,5 @@
 import { cn } from "@/lib/utils";
-
+import { Button } from "@/components/ui/button";
 interface HeaderProps {
   className?: string;
 }
@@ -24,6 +24,9 @@ const Header = ({ className }: HeaderProps) => {
           <a href="#" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
             Contact
           </a>
+          <Button size="sm" className="bg-primary hover:bg-primary/90 text-primary-foreground font-semibold px-6">
+            DONATE
+          </Button>
         </nav>
       </div>
     </header>
