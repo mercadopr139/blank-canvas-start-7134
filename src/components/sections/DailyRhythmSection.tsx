@@ -112,7 +112,7 @@ const DailyRhythmSection = () => {
                 <p className="text-xl md:text-2xl font-semibold text-primary-foreground mb-1">
                   Senior Boxing – Typical Day (Ages 11–19)
                 </p>
-                <p className="text-sm text-primary-foreground/70 mb-4">
+                <p className="text-base md:text-lg text-primary-foreground/70 mb-4">
                   Includes Grit & Grace Program
                 </p>
                 <p className="text-base md:text-lg text-primary-foreground/90 leading-relaxed">
@@ -131,7 +131,7 @@ const DailyRhythmSection = () => {
                 <p className="text-xl md:text-2xl font-semibold text-primary-foreground mb-1">
                   Junior Boxing – Typical Day (Ages 7–10)
                 </p>
-                <p className="text-base text-primary-foreground/70 mb-4">
+                <p className="text-base md:text-lg text-primary-foreground/70 mb-4">
                   Tuesdays Only
                 </p>
                 <p className="text-base md:text-lg text-primary-foreground/90 leading-relaxed">
