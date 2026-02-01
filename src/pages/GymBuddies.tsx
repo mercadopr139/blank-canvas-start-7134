@@ -53,16 +53,21 @@ const GymBuddies = () => {
       <Header />
       
       <main className="flex-1">
-        <section className="py-20 md:py-28 bg-background">
+        {/* Hero Title Section */}
+        <section className="py-16 md:py-20 bg-foreground">
           <div className="container">
             <div className="max-w-4xl mx-auto">
-              {/* Section header */}
-              <div className="text-left mb-8">
-                <h1 className="text-3xl md:text-4xl lg:text-5xl font-black text-foreground mb-6">
-                  Gym Buddies Program
-                </h1>
-              </div>
+              <h1 className="text-3xl md:text-4xl lg:text-5xl font-black text-background text-center">
+                Gym Buddies Program
+              </h1>
+            </div>
+          </div>
+        </section>
 
+        {/* Content Section */}
+        <section className="py-16 md:py-20 bg-background">
+          <div className="container">
+            <div className="max-w-4xl mx-auto">
               {/* Description */}
               <div className="text-left mb-12 space-y-6">
                 <p className="text-lg md:text-xl text-foreground/80 leading-relaxed">
