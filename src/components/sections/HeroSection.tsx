@@ -19,7 +19,7 @@ const HeroSection = () => {
           <div className="inline-flex items-center gap-2 mb-6">
             <span className="w-8 h-[2px] bg-primary" />
             <span className="text-primary font-semibold tracking-wider text-sm uppercase">
-              Building Tomorrow's Leaders
+              We Build Disciplined, Confident Young People
             </span>
           </div>
           
