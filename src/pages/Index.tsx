@@ -26,7 +26,7 @@ const Index = () => {
       <main className="flex-1">
         <HeroSection />
         <AboutSection />
-        <ProgramsSection />
+        <ProgramsSection onMoreInfo={() => setOpen(true)} />
         <ImpactSection />
       </main>
 
