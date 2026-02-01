@@ -49,8 +49,8 @@ const GymBuddies = () => {
     },
     {
       src: avalonPd5,
-      alt: "Avalon PD Event",
-      caption: "Avalon PD Event",
+      alt: "Congrats Chief Leusner NOW Mayor",
+      caption: "Congrats Chief Leusner NOW Mayor!",
     },
     {
       src: acPoliceDept,
