@@ -32,6 +32,7 @@ import nlaMtpd2 from "@/assets/gym-buddies/nla-mtpd-2.png";
 import nlaNorthWildwoodPdFire from "@/assets/gym-buddies/nla-north-wildwood-pd-fire.png";
 import copsAndHoopers2 from "@/assets/gym-buddies/cops-and-hoopers-2.png";
 import copsAndHoopers3 from "@/assets/gym-buddies/cops-and-hoopers-3.png";
+import copsHoopersPlanning from "@/assets/gym-buddies/cops-hoopers-planning.png";
 
 const GymBuddies = () => {
   const gymBuddiesImages = [
@@ -184,6 +185,11 @@ const GymBuddies = () => {
       src: copsAndHoopers3,
       alt: "Cops and Hoopers",
       caption: "Cops & Hoopers",
+    },
+    {
+      src: copsHoopersPlanning,
+      alt: "Cops and Hoopers Planning Committee",
+      caption: "Cops & Hoopers Planning Committee",
     },
   ];
 
