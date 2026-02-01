@@ -36,6 +36,7 @@ import copsHoopersPlanning from "@/assets/gym-buddies/cops-hoopers-planning.png"
 import mtpdRonMillerJulioRuiz from "@/assets/gym-buddies/mtpd-ron-miller-julio-ruiz.png";
 import nlaWildwoodCrestPd2 from "@/assets/gym-buddies/nla-wildwood-crest-pd-2.png";
 import nlaPoliceChiefsAssociation from "@/assets/gym-buddies/nla-police-chiefs-association.png";
+import cmcFinest from "@/assets/gym-buddies/cmc-finest.png";
 
 const GymBuddies = () => {
   const gymBuddiesImages = [
@@ -208,6 +209,11 @@ const GymBuddies = () => {
       src: nlaPoliceChiefsAssociation,
       alt: "NLA with Police Chiefs Association",
       caption: "NLA w/ Police Chiefs Association",
+    },
+    {
+      src: cmcFinest,
+      alt: "CMC's Finest",
+      caption: "CMC's Finest!",
     },
   ];
 
