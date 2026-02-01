@@ -8,8 +8,8 @@ interface HeaderProps {
 
 const Header = ({ className }: HeaderProps) => {
   return (
-    <header className={cn("w-full border-b border-border bg-background/80 backdrop-blur-sm sticky top-0 z-50", className)}>
-      <div className="container flex h-24 items-center justify-between">
+    <header className={cn("w-full border-b border-border bg-background/80 backdrop-blur-sm sticky top-0 z-50 py-4", className)}>
+      <div className="container flex items-center justify-between">
         <div className="flex items-center">
           <img src={nlaLogo} alt="No Limits Academy" className="h-32 w-auto" />
         </div>
