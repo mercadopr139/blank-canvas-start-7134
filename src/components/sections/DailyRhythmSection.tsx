@@ -77,7 +77,7 @@ const ScheduleBlockComponent = ({ blocks }: { blocks: ScheduleBlock[] }) => (
                 {block.title}
               </h3>
               {block.optional && (
-                <span className="text-xs font-medium bg-primary/10 text-primary px-2 py-0.5 rounded-full">
+                <span className="text-xs font-medium bg-background text-foreground px-2 py-0.5 rounded-full">
                   Optional
                 </span>
               )}
