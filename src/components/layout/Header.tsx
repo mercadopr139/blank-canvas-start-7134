@@ -26,8 +26,10 @@ const Header = ({ className }: HeaderProps) => {
           <a href="#" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
             Contact
           </a>
-          <Button size="sm" className="bg-primary hover:bg-primary/90 text-primary-foreground font-semibold px-6">
-            DONATE
+          <Button size="sm" className="bg-primary hover:bg-primary/90 text-primary-foreground font-semibold px-6" asChild>
+            <a href="https://www.paypal.com/ncp/payment/TMMDVUSEQKHJC" target="_blank" rel="noopener noreferrer">
+              DONATE
+            </a>
           </Button>
         </nav>
       </div>
