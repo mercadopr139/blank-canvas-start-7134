@@ -5,7 +5,7 @@ const seniorScheduleBlocks = [
     description: "Youth arrive after school for supervised free time, snacks, mentorship, and formal & informal support.",
   },
   {
-    time: "5:15pm",
+    time: "5:15pm–5:30pm",
     title: "Team Roll Call",
     description: "Youth are welcomed, attendance is taken, the day's schedule and expectations are reviewed, and daily reflection is completed together as a group.",
   },
