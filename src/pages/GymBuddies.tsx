@@ -27,7 +27,6 @@ import nlaChiefsAssociationCmc from "@/assets/gym-buddies/nla-chiefs-association
 import nlaOceanCityPd from "@/assets/gym-buddies/nla-ocean-city-pd.png";
 import nlaWildwoodCrestPd from "@/assets/gym-buddies/nla-wildwood-crest-pd.png";
 import nlaWildwoodPd from "@/assets/gym-buddies/nla-wildwood-pd.png";
-import nlaMtpd from "@/assets/gym-buddies/nla-mtpd.png";
 import nlaMtpd2 from "@/assets/gym-buddies/nla-mtpd-2.png";
 import nlaNorthWildwoodPdFire from "@/assets/gym-buddies/nla-north-wildwood-pd-fire.png";
 import copsAndHoopers2 from "@/assets/gym-buddies/cops-and-hoopers-2.png";
@@ -159,11 +158,6 @@ const GymBuddies = () => {
       src: nlaWildwoodPd,
       alt: "NLA with Wildwood PD",
       caption: "NLA w/ Wildwood PD",
-    },
-    {
-      src: nlaMtpd,
-      alt: "NLA with MTPD",
-      caption: "NLA w/ MTPD",
     },
     {
       src: nlaMtpd2,
