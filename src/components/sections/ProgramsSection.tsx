@@ -61,7 +61,7 @@ const ProgramsSection = () => {
                 <Button 
                   className={`w-full font-semibold ${
                     index === 0 
-                      ? "bg-secondary hover:bg-secondary/90 text-foreground" 
+                      ? "bg-primary hover:bg-primary/90 text-primary-foreground" 
                       : "bg-background hover:bg-background/90 text-foreground border border-border"
                   }`}
                 >
