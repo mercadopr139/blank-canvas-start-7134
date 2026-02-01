@@ -16,11 +16,11 @@ const ImpactSection = () => {
           {/* Content */}
           <div className="space-y-6 text-left">
             <p className="text-lg md:text-xl text-foreground/80 leading-relaxed">
-              Impact at NLA is built through consistency—youth commit to the program, and our staff commits to them. By showing up every day during one of the most chaotic seasons of a young person's life, we become a steady, reliable presence that helps guide their personal journey.
-            </p>
-            
-            <p className="text-lg md:text-xl text-foreground/80 leading-relaxed">
               No Limits Academy serves over <span className="font-bold text-foreground">500 youth each year</span> across Cape May County.
+            </p>
+
+            <p className="text-lg md:text-xl text-foreground/80 leading-relaxed">
+              Impact at NLA is built through consistency—youth commit to the program, and our staff commits to them. By showing up every day during one of the most chaotic seasons of a young person's life, we become a steady, reliable presence that helps guide their personal journey.
             </p>
             
             <p className="text-lg md:text-xl text-foreground/80 leading-relaxed">
