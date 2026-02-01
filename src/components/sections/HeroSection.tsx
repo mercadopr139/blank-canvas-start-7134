@@ -14,8 +14,9 @@ const HeroSection = () => {
       <div className="container relative z-10">
         <div className="max-w-4xl">
           {/* Main headline */}
-          <h1 className="text-4xl md:text-6xl lg:text-7xl font-black text-secondary-foreground leading-[0.95] tracking-tight mb-6">
-            We Show Up <span className="text-primary">Every Day</span>—for Our Youth.<br />
+          <h1 className="text-4xl md:text-6xl lg:text-7xl font-black text-secondary-foreground leading-[1.1] tracking-tight mb-6">
+            We Show Up <span className="text-primary">Every Day</span>—for Our Youth.
+            <br />
             We Build Disciplined, Confident Young People.
           </h1>
           
