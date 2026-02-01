@@ -15,7 +15,7 @@ const programs = [
   {
     title: "Grit & Grace Program",
     ages: "Ages 11–19 | Monday–Friday",
-    description: "A boxing-based character and leadership program for girls, designed to support youth through mentorship, reflection, and personal growth alongside athletic training.",
+    description: "A boxing-based character and leadership program for girls, within the Senior Boxing Program, designed to support youth through mentorship, reflection, and personal growth alongside athletic training.",
   },
 ];
 
