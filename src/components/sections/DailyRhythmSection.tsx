@@ -37,7 +37,7 @@ const juniorScheduleBlocks = [
   {
     time: "5:20pm–6:00pm",
     title: "Boxing Training",
-    description: (<>Foundational boxing instruction focused on movement, coordination, and confidence, with Senior Boxing youth assisting as part of their service and leadership responsibilities. Junior Boxing concludes at 6:00 PM, with parent pick-up permitted at that time. <span className="font-bold">Optional</span> aftercare programming is available but not required.</>),
+    description: (<>Foundational boxing instruction focused on movement, coordination, and confidence, with Senior Boxing youth assisting as part of their service and leadership responsibilities. Junior Boxing concludes at 6:00 PM, with parent pick-up permitted at that time. <span className="font-bold">Optional aftercare</span> programming is available but not required.</>),
   },
   {
     time: "6:00pm–7:00pm",
@@ -80,7 +80,7 @@ const ScheduleBlockComponent = ({ blocks }: { blocks: ScheduleBlock[] }) => (
               </h3>
               {block.optional && (
                 <span className="text-xs font-medium bg-background text-foreground px-2 py-0.5 rounded-full">
-                  Optional
+                  Optional Aftercare
                 </span>
               )}
             </div>
