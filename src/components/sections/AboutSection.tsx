@@ -9,12 +9,12 @@ const AboutSection = () => {
           </h2>
           
           {/* Body text */}
-          <p className="text-lg md:text-xl text-muted-foreground leading-relaxed mb-8">
+          <p className="text-lg md:text-xl text-muted-foreground leading-relaxed my-12">
             We are a place where young people are known, challenged, and supported—every single day. Built on consistency, discipline, and real relationships, we provide structure and high expectations while balancing tough love with an unwavering commitment to every kid we serve.
           </p>
           
           {/* Tagline */}
-          <p className="text-2xl md:text-3xl font-bold text-primary">
+          <p className="text-2xl md:text-3xl lg:text-4xl font-bold text-primary mt-16">
             Boxing is the tool. Growth is the goal.
           </p>
         </div>
