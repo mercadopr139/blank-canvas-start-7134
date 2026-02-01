@@ -14,21 +14,23 @@ const HeroSection = () => {
       <div className="container relative z-10">
         <div className="max-w-4xl">
           {/* Main headline */}
-          <h1 className="text-4xl md:text-6xl lg:text-7xl font-black text-primary-foreground leading-[1.1] tracking-tight mb-4">
+          {/* Main headline */}
+          <h1 className="text-4xl md:text-6xl lg:text-7xl font-black text-primary-foreground leading-[1.1] tracking-tight mb-6">
             We Show Up <span className="text-primary-foreground/80">Every Day</span>—for Our Youth.
           </h1>
           
-          <p className="text-2xl md:text-3xl lg:text-4xl font-bold text-primary-foreground/80 mb-8">
+          {/* Supporting statement */}
+          <p className="text-xl md:text-2xl lg:text-3xl font-semibold text-primary-foreground/70 mb-12">
             We Build Disciplined, Confident Young People.
           </p>
           
-          {/* Subheadline */}
-          <p className="text-xl md:text-2xl font-semibold text-primary-foreground/80 mb-6 max-w-3xl">
+          {/* Main paragraph */}
+          <p className="text-lg md:text-xl font-medium text-primary-foreground/80 mb-10 max-w-3xl leading-relaxed">
             No Limits Academy is a free, year-round youth development organization serving youth, 7–19 years old, of Cape May County. We show up Monday through Friday, 2:30–8:30 PM, using boxing, mentorship, and structure to build disciplined, confident, and accountable young people.
           </p>
           
-          {/* Mission */}
-          <p className="text-lg text-primary-foreground/60 mb-10 max-w-xl leading-relaxed">
+          {/* Mission - closing line */}
+          <p className="text-base md:text-lg font-normal text-primary-foreground/60 mb-10 max-w-xl leading-relaxed">
             Through boxing, we develop our kids personally, professionally, and spiritually.
           </p>
           
