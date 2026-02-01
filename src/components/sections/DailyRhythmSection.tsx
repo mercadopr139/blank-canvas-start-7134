@@ -48,7 +48,7 @@ const juniorScheduleBlocks = [
   {
     time: "7:00pm–7:15pm",
     title: "Dinner & Dismissal",
-    description: "Youth share a sit-down meal before dismissal. Junior Boxing emphasizes life skills such as hygiene, responsibility, and being good stewards of their community.",
+    description: "Youth share a sit-down meal before dismissal.",
     optional: true,
   },
 ];
