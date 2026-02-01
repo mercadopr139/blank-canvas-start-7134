@@ -1,22 +1,38 @@
 import Header from "@/components/layout/Header";
 import Footer from "@/components/layout/Footer";
 
+import middleTownshipPd from "@/assets/gym-buddies/middle-township-pd.jpg";
+import lowerTownshipPd from "@/assets/gym-buddies/lower-township-pd.jpg";
+import shopWithCop from "@/assets/gym-buddies/shop-with-cop-2025.jpg";
+import wildwoodFireDept from "@/assets/gym-buddies/wildwood-fire-dept.jpg";
+import captainMiller from "@/assets/gym-buddies/captain-miller.jpg";
+
 const GymBuddies = () => {
   const gymBuddiesImages = [
     {
-      src: "/placeholder.svg",
-      alt: "Partnership with local law enforcement",
-      caption: "Law Enforcement",
+      src: middleTownshipPd,
+      alt: "NLA to Middle Township PD",
+      caption: "NLA to Middle Township PD!",
     },
     {
-      src: "/placeholder.svg",
-      alt: "Fire department collaboration",
-      caption: "Fire Department",
+      src: lowerTownshipPd,
+      alt: "NLA to Lower Township PD",
+      caption: "NLA to Lower Township PD!",
     },
     {
-      src: "/placeholder.svg",
-      alt: "U.S. Coast Guard partnership",
-      caption: "U.S. Coast Guard",
+      src: shopWithCop,
+      alt: "Shop with a Cop 2025",
+      caption: "Shop with a Cop 2025",
+    },
+    {
+      src: wildwoodFireDept,
+      alt: "NLA to Wildwood Fire Department",
+      caption: "NLA to Wildwood Fire Department!",
+    },
+    {
+      src: captainMiller,
+      alt: "Congrats Captain Miller",
+      caption: "Congrats Captain Miller!",
     },
   ];
 
