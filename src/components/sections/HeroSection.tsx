@@ -30,7 +30,7 @@ const HeroSection = () => {
           </p>
           
           {/* Mission - closing line */}
-          <p className="text-base md:text-lg font-normal text-primary-foreground/60 mb-10 max-w-xl leading-relaxed">
+          <p className="text-lg md:text-xl font-medium text-primary-foreground/70 mb-10 max-w-xl leading-relaxed">
             Through boxing, we develop our kids personally, professionally, and spiritually.
           </p>
           
