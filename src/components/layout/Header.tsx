@@ -18,6 +18,7 @@ const Header = ({ className }: HeaderProps) => {
     { href: "#meal-train", label: "Meal Train" },
     { href: "#about", label: "Our Story" },
     { href: "#impact", label: "Our Impact" },
+    { href: "#vision", label: "Our Vision" },
   ];
 
   return (
