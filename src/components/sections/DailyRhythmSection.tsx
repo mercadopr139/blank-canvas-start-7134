@@ -106,16 +106,19 @@ const DailyRhythmSection = () => {
 
           {/* Senior Boxing Schedule */}
           <div className="mb-16">
-            <div className="text-center mb-8">
-            <p className="text-xl md:text-2xl font-semibold text-primary mb-1">
-              Senior Boxing – Typical Day (Ages 11–19)
-            </p>
-            <p className="text-sm text-muted-foreground mb-4">
-              Includes Grit & Grace Program
-            </p>
-              <p className="text-lg md:text-xl text-muted-foreground leading-relaxed">
-                No Limits Academy operates Monday through Friday, 2:30pm–8:30pm. Senior Boxing youth are permitted to arrive as early as 2:30pm for supervised open gym and structured after-school support.
-              </p>
+            {/* Senior Boxing Header Box */}
+            <div className="bg-primary rounded-xl p-6 md:p-8 mb-8">
+              <div className="text-center">
+                <p className="text-xl md:text-2xl font-semibold text-primary-foreground mb-1">
+                  Senior Boxing – Typical Day (Ages 11–19)
+                </p>
+                <p className="text-sm text-primary-foreground/70 mb-4">
+                  Includes Grit & Grace Program
+                </p>
+                <p className="text-base md:text-lg text-primary-foreground/90 leading-relaxed">
+                  No Limits Academy operates Monday through Friday, 2:30pm–8:30pm. Senior Boxing youth are permitted to arrive as early as 2:30pm for supervised open gym and structured after-school support.
+                </p>
+              </div>
             </div>
             <ScheduleBlockComponent blocks={seniorScheduleBlocks} />
           </div>
