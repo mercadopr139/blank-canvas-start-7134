@@ -6,6 +6,13 @@ import lowerTownshipPd from "@/assets/gym-buddies/lower-township-pd.jpg";
 import shopWithCop from "@/assets/gym-buddies/shop-with-cop-2025.jpg";
 import wildwoodFireDept from "@/assets/gym-buddies/wildwood-fire-dept.jpg";
 import captainMiller from "@/assets/gym-buddies/captain-miller.jpg";
+import avalonPd from "@/assets/gym-buddies/avalon-pd.png";
+import avalonPd1 from "@/assets/gym-buddies/avalon-pd-1.jpg";
+import avalonPd2 from "@/assets/gym-buddies/avalon-pd-2.jpg";
+import avalonPd3 from "@/assets/gym-buddies/avalon-pd-3.jpg";
+import avalonPd4 from "@/assets/gym-buddies/avalon-pd-4.jpg";
+import avalonPd5 from "@/assets/gym-buddies/avalon-pd-5.jpg";
+import copsHoopersFlyer from "@/assets/gym-buddies/cops-hoopers-flyer.jpg";
 
 const GymBuddies = () => {
   const gymBuddiesImages = [
@@ -33,6 +40,41 @@ const GymBuddies = () => {
       src: captainMiller,
       alt: "Congrats Captain Miller",
       caption: "Congrats Captain Miller!",
+    },
+    {
+      src: avalonPd,
+      alt: "Avalon Police Department",
+      caption: "Avalon Police Department",
+    },
+    {
+      src: avalonPd1,
+      alt: "Thank You Avalon PD",
+      caption: "Thank You Avalon PD!",
+    },
+    {
+      src: avalonPd2,
+      alt: "Avalon PD Training",
+      caption: "Avalon PD Training",
+    },
+    {
+      src: avalonPd3,
+      alt: "Avalon PD Partnership",
+      caption: "Avalon PD Partnership",
+    },
+    {
+      src: avalonPd4,
+      alt: "Avalon PD Community",
+      caption: "Avalon PD Community",
+    },
+    {
+      src: avalonPd5,
+      alt: "Avalon PD Event",
+      caption: "Avalon PD Event",
+    },
+    {
+      src: copsHoopersFlyer,
+      alt: "Cops and Hoopers",
+      caption: "Cops & Hoopers",
     },
   ];
 
