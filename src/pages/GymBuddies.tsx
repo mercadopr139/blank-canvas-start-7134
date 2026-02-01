@@ -9,6 +9,7 @@ import captainMiller from "@/assets/gym-buddies/captain-miller.jpg";
 import avalonPd from "@/assets/gym-buddies/avalon-pd.png";
 import avalonPd5 from "@/assets/gym-buddies/avalon-pd-5.jpg";
 import acPoliceDept from "@/assets/gym-buddies/ac-police-dept.png";
+import wildwoodPdProsecutors from "@/assets/gym-buddies/wildwood-pd-prosecutors.png";
 
 const GymBuddies = () => {
   const gymBuddiesImages = [
@@ -51,6 +52,11 @@ const GymBuddies = () => {
       src: acPoliceDept,
       alt: "NLA to AC Police Department",
       caption: "NLA to AC Police Department",
+    },
+    {
+      src: wildwoodPdProsecutors,
+      alt: "Wildwood PD and Prosecutors Office",
+      caption: "Wildwood PD and Prosecutors Office",
     },
   ];
 
