@@ -24,6 +24,7 @@ import millvillePdBryanH from "@/assets/gym-buddies/millville-pd-bryan-h.png";
 import sleighDayAlyssaJones from "@/assets/gym-buddies/sleigh-day-alyssa-jones.png";
 import nlaBlueKnights from "@/assets/gym-buddies/nla-blue-knights.png";
 import nlaChiefsAssociationCmc from "@/assets/gym-buddies/nla-chiefs-association-cmc.png";
+import nlaOceanCityPd from "@/assets/gym-buddies/nla-ocean-city-pd.png";
 
 const GymBuddies = () => {
   const gymBuddiesImages = [
@@ -136,6 +137,11 @@ const GymBuddies = () => {
       src: nlaChiefsAssociationCmc,
       alt: "NLA with the Chiefs Association of CMC",
       caption: "NLA w/ the Chiefs Association of CMC",
+    },
+    {
+      src: nlaOceanCityPd,
+      alt: "NLA and Ocean City PD",
+      caption: "NLA & Ocean City PD",
     },
   ];
 
