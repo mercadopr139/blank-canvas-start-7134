@@ -21,7 +21,11 @@ const ImpactSection = () => {
             </p>
             
             <p className="text-lg md:text-xl text-foreground/80 leading-relaxed">
-              <span className="font-bold text-foreground">70% of our registered youth fall below the federal poverty line.</span> Our one-stop, wraparound approach to youth development has attracted schools, law enforcement, mental health providers, public officials, and community partners who recognize NLA as a legitimate, trusted hub for real, lasting impact.
+              <span className="font-bold text-foreground">70% of our registered youth fall below the federal poverty line.</span>
+            </p>
+            
+            <p className="text-lg md:text-xl text-foreground/80 leading-relaxed">
+              Our one-stop, wraparound approach to youth development has attracted schools, law enforcement, mental health providers, public officials, and community partners who recognize NLA as a legitimate, trusted hub for real, lasting impact.
             </p>
           </div>
         </div>
