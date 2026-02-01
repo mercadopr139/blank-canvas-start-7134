@@ -1,4 +1,4 @@
-const scheduleBlocks = [
+const seniorScheduleBlocks = [
   {
     time: "2:30pm–5:30pm",
     title: "Open Gym & Arrival Window",
@@ -26,6 +26,56 @@ const scheduleBlocks = [
   },
 ];
 
+const juniorScheduleBlocks = [
+  {
+    time: "5:15pm",
+    title: "Junior Roll Call & Welcome",
+    description: "A brief team meeting to greet youth, set expectations, and transition into the evening together.",
+  },
+  {
+    time: "5:30pm–6:00pm",
+    title: "Boxing Training",
+    description: "Foundational boxing instruction focused on movement, coordination, and confidence, with Senior Boxing youth assisting as part of their service and leadership responsibilities.",
+  },
+  {
+    time: "6:00pm–7:00pm",
+    title: "Reflection & Learning",
+    description: "Age-appropriate reflection and values-based discussion, followed by educational programming including Dental Dental's Smile Lab Program and NJ4S Lil' Champs Program.",
+  },
+  {
+    time: "7:00pm",
+    title: "Dinner & Dismissal",
+    description: "Youth share a sit-down meal before dismissal. Junior Boxing emphasizes life skills such as hygiene, responsibility, and being good stewards of their community.",
+  },
+];
+
+const ScheduleBlock = ({ blocks }: { blocks: typeof seniorScheduleBlocks }) => (
+  <div className="space-y-4">
+    {blocks.map((block, index) => (
+      <div 
+        key={index}
+        className="bg-secondary rounded-xl p-6 md:p-8"
+      >
+        <div className="flex flex-col md:flex-row md:items-start gap-4">
+          <div className="md:w-48 flex-shrink-0">
+            <span className="text-sm md:text-base font-bold text-primary">
+              {block.time}
+            </span>
+          </div>
+          <div className="flex-1">
+            <h3 className="text-lg md:text-xl font-bold text-secondary-foreground mb-2">
+              {block.title}
+            </h3>
+            <p className="text-secondary-foreground/80 leading-relaxed">
+              {block.description}
+            </p>
+          </div>
+        </div>
+      </div>
+    ))}
+  </div>
+);
+
 const DailyRhythmSection = () => {
   return (
     <section className="py-20 md:py-28 bg-background">
@@ -36,38 +86,32 @@ const DailyRhythmSection = () => {
             <h2 className="text-3xl md:text-4xl lg:text-5xl font-black text-foreground mb-4">
               Daily Rhythm
             </h2>
-            <p className="text-xl md:text-2xl font-semibold text-primary mb-6">
-              Senior Boxing – Typical Day (Ages 11–19)
-            </p>
-            <p className="text-lg md:text-xl text-muted-foreground leading-relaxed">
-              No Limits Academy operates Monday through Friday, 2:30pm–8:30pm. Senior Boxing youth are permitted to arrive as early as 2:30pm for supervised open gym and structured after-school support.
-            </p>
           </div>
 
-          {/* Schedule blocks */}
-          <div className="space-y-4">
-            {scheduleBlocks.map((block, index) => (
-              <div 
-                key={index}
-                className="bg-secondary rounded-xl p-6 md:p-8"
-              >
-                <div className="flex flex-col md:flex-row md:items-start gap-4">
-                  <div className="md:w-48 flex-shrink-0">
-                    <span className="text-sm md:text-base font-bold text-primary">
-                      {block.time}
-                    </span>
-                  </div>
-                  <div className="flex-1">
-                    <h3 className="text-lg md:text-xl font-bold text-secondary-foreground mb-2">
-                      {block.title}
-                    </h3>
-                    <p className="text-secondary-foreground/80 leading-relaxed">
-                      {block.description}
-                    </p>
-                  </div>
-                </div>
-              </div>
-            ))}
+          {/* Senior Boxing Schedule */}
+          <div className="mb-16">
+            <div className="text-center mb-8">
+              <p className="text-xl md:text-2xl font-semibold text-primary mb-4">
+                Senior Boxing – Typical Day (Ages 11–19)
+              </p>
+              <p className="text-lg md:text-xl text-muted-foreground leading-relaxed">
+                No Limits Academy operates Monday through Friday, 2:30pm–8:30pm. Senior Boxing youth are permitted to arrive as early as 2:30pm for supervised open gym and structured after-school support.
+              </p>
+            </div>
+            <ScheduleBlock blocks={seniorScheduleBlocks} />
+          </div>
+
+          {/* Junior Boxing Schedule */}
+          <div>
+            <div className="text-center mb-8">
+              <p className="text-xl md:text-2xl font-semibold text-primary mb-4">
+                Junior Boxing – Typical Day (Ages 7–10)
+              </p>
+              <p className="text-lg md:text-xl text-muted-foreground leading-relaxed">
+                Junior Boxing follows a shortened, age-appropriate schedule designed to introduce structure, discipline, and community in a supportive environment.
+              </p>
+            </div>
+            <ScheduleBlock blocks={juniorScheduleBlocks} />
           </div>
         </div>
       </div>
