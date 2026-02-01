@@ -34,7 +34,7 @@ const Header = ({ className }: HeaderProps) => {
             <a
               key={link.label}
               href={link.href}
-              className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+              className="text-sm text-foreground hover:text-primary transition-colors"
             >
               {link.label}
             </a>
