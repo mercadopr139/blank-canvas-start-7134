@@ -17,7 +17,7 @@ const HeroSection = () => {
           <h1 className="text-4xl md:text-6xl lg:text-7xl font-black text-secondary-foreground leading-[1.1] tracking-tight mb-6">
             We Show Up <span className="text-primary">Every Day</span>—for Our Youth.
             <br />
-            We Build Disciplined, Confident Young People.
+            <span className="block mt-2">We Build Disciplined, Confident Young People.</span>
           </h1>
           
           {/* Subheadline */}
