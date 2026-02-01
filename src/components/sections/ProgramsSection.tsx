@@ -38,7 +38,7 @@ const ProgramsSection = () => {
           {programs.map((program, index) => (
             <Card 
               key={index} 
-              className={`border-none shadow-lg hover:shadow-xl transition-shadow duration-300 ${
+              className={`border-none shadow-lg hover:shadow-xl transition-shadow duration-300 flex flex-col h-full ${
                 index === 0 
                   ? "bg-muted" 
                   : "bg-background"
@@ -54,8 +54,8 @@ const ProgramsSection = () => {
                   {program.title}
                 </CardTitle>
               </CardHeader>
-              <CardContent className="flex flex-col gap-6">
-                <p className={`leading-relaxed ${index === 0 ? "text-foreground" : "text-muted-foreground"}`}>
+              <CardContent className="flex flex-col flex-1 gap-6">
+                <p className={`leading-relaxed flex-1 ${index === 0 ? "text-foreground" : "text-muted-foreground"}`}>
                   {program.description}
                 </p>
                 <Button 
