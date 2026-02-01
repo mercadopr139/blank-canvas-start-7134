@@ -40,16 +40,25 @@ const juniorScheduleBlocks = [
   {
     time: "6:00pm–7:00pm",
     title: "Reflection & Learning",
-    description: "Age-appropriate reflection and values-based discussion, followed by educational programming including Dental Dental's Smile Lab Program and NJ4S Lil' Champs Program.",
+    description: "Age-appropriate reflection and values-based discussion, followed by educational programming including Delta Dental's Smile Lab Program and NJ4S Lil' Champs Program.",
+    optional: true,
   },
   {
-    time: "7:00pm",
+    time: "7:00pm–7:15pm",
     title: "Dinner & Dismissal",
     description: "Youth share a sit-down meal before dismissal. Junior Boxing emphasizes life skills such as hygiene, responsibility, and being good stewards of their community.",
+    optional: true,
   },
 ];
 
-const ScheduleBlock = ({ blocks }: { blocks: typeof seniorScheduleBlocks }) => (
+type ScheduleBlock = {
+  time: string;
+  title: string;
+  description: string;
+  optional?: boolean;
+};
+
+const ScheduleBlockComponent = ({ blocks }: { blocks: ScheduleBlock[] }) => (
   <div className="space-y-4">
     {blocks.map((block, index) => (
       <div 
@@ -63,9 +72,16 @@ const ScheduleBlock = ({ blocks }: { blocks: typeof seniorScheduleBlocks }) => (
             </span>
           </div>
           <div className="flex-1">
-            <h3 className="text-lg md:text-xl font-bold text-secondary-foreground mb-2">
-              {block.title}
-            </h3>
+            <div className="flex items-center gap-2 mb-2">
+              <h3 className="text-lg md:text-xl font-bold text-secondary-foreground">
+                {block.title}
+              </h3>
+              {block.optional && (
+                <span className="text-xs font-medium bg-primary/10 text-primary px-2 py-0.5 rounded-full">
+                  Optional
+                </span>
+              )}
+            </div>
             <p className="text-secondary-foreground/80 leading-relaxed">
               {block.description}
             </p>
@@ -101,7 +117,7 @@ const DailyRhythmSection = () => {
                 No Limits Academy operates Monday through Friday, 2:30pm–8:30pm. Senior Boxing youth are permitted to arrive as early as 2:30pm for supervised open gym and structured after-school support.
               </p>
             </div>
-            <ScheduleBlock blocks={seniorScheduleBlocks} />
+            <ScheduleBlockComponent blocks={seniorScheduleBlocks} />
           </div>
 
           {/* Junior Boxing Schedule */}
@@ -111,10 +127,10 @@ const DailyRhythmSection = () => {
                 Junior Boxing – Typical Day (Ages 7–10)
               </p>
               <p className="text-lg md:text-xl text-muted-foreground leading-relaxed">
-                Junior Boxing follows a shortened, age-appropriate schedule designed to introduce structure, discipline, and community in a supportive environment.
+                Junior Boxing follows a shortened, age-appropriate schedule designed to introduce structure, discipline, and community in a supportive environment. <span className="font-medium">Practice officially ends at 6:00pm</span>—extended programming and dinner are available for families who wish to stay.
               </p>
             </div>
-            <ScheduleBlock blocks={juniorScheduleBlocks} />
+            <ScheduleBlockComponent blocks={juniorScheduleBlocks} />
           </div>
         </div>
       </div>
