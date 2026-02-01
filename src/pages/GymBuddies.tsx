@@ -21,6 +21,7 @@ import mtpdAlyssaJones from "@/assets/gym-buddies/mtpd-alyssa-jones.png";
 import ltpdSimba from "@/assets/gym-buddies/ltpd-simba.png";
 import captainMiller2 from "@/assets/gym-buddies/captain-miller-2.png";
 import millvillePdBryanH from "@/assets/gym-buddies/millville-pd-bryan-h.png";
+import sleighDayAlyssaJones from "@/assets/gym-buddies/sleigh-day-alyssa-jones.png";
 
 const GymBuddies = () => {
   const gymBuddiesImages = [
@@ -118,6 +119,11 @@ const GymBuddies = () => {
       src: millvillePdBryanH,
       alt: "NLA to Millville PD Congrats Bryan H",
       caption: "NLA to Millville PD! Congrats Bryan H.",
+    },
+    {
+      src: sleighDayAlyssaJones,
+      alt: "Sleigh the Day with MTPD's Alyssa Jones",
+      caption: "Sleigh the Day with MTPD's Alyssa Jones",
     },
   ];
 
