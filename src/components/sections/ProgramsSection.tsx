@@ -37,13 +37,21 @@ const ProgramsSection = () => {
           {programs.map((program, index) => (
             <Card 
               key={index} 
-              className="bg-background border-none shadow-lg hover:shadow-xl transition-shadow duration-300"
+              className={`border-none shadow-lg hover:shadow-xl transition-shadow duration-300 ${
+                index === 0 
+                  ? "bg-muted" 
+                  : "bg-background"
+              }`}
             >
               <CardHeader className="pb-4">
-                <div className="text-sm font-semibold text-primary mb-2">
+                <div className={`text-sm font-semibold mb-2 ${
+                  index === 0 ? "text-muted-foreground" : "text-primary"
+                }`}>
                   {program.ages}
                 </div>
-                <CardTitle className="text-xl md:text-2xl font-bold text-foreground">
+                <CardTitle className={`text-xl md:text-2xl font-bold ${
+                  index === 0 ? "text-muted-foreground" : "text-foreground"
+                }`}>
                   {program.title}
                 </CardTitle>
               </CardHeader>
