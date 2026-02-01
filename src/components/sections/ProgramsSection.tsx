@@ -25,7 +25,7 @@ interface ProgramsSectionProps {
 
 const ProgramsSection = ({ onMoreInfo }: ProgramsSectionProps) => {
   return (
-    <section className="py-20 md:py-28 bg-primary">
+    <section id="programs" className="py-20 md:py-28 bg-primary">
       <div className="container">
         {/* Section header */}
         <div className="text-left mb-16">
