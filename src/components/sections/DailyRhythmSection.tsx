@@ -63,7 +63,7 @@ const ScheduleBlockComponent = ({ blocks }: { blocks: ScheduleBlock[] }) => (
     {blocks.map((block, index) => (
       <div 
         key={index}
-        className="bg-secondary rounded-xl p-6 md:p-8"
+        className="bg-muted rounded-xl p-6 md:p-8"
       >
         <div className="flex flex-col md:flex-row md:items-start gap-4">
           <div className="md:w-48 flex-shrink-0">

@@ -20,14 +20,14 @@ const programs = [
 
 const ProgramsSection = () => {
   return (
-    <section className="py-20 md:py-28 bg-secondary">
+    <section className="py-20 md:py-28 bg-primary">
       <div className="container">
         {/* Section header */}
         <div className="text-center mb-16">
-          <h2 className="text-3xl md:text-4xl lg:text-5xl font-black text-secondary-foreground mb-6">
+          <h2 className="text-3xl md:text-4xl lg:text-5xl font-black text-primary-foreground mb-6">
             Our Programs
           </h2>
-          <p className="text-lg md:text-xl text-secondary-foreground/70 max-w-3xl mx-auto leading-relaxed">
+          <p className="text-lg md:text-xl text-primary-foreground/70 max-w-3xl mx-auto leading-relaxed">
             We offer three core programs designed to meet youth where they are and grow with them over time. Each program includes boxing & fitness training, mentorship, structure, and opportunities for personal, professional, and spiritual development.
           </p>
         </div>
