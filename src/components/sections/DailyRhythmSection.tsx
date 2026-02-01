@@ -42,7 +42,7 @@ const juniorScheduleBlocks = [
   {
     time: "6:00pm–7:00pm",
     title: "Reflection & Learning",
-    description: "Age-appropriate reflection and values-based discussion, followed by educational programming including Delta Dental's Smile Lab Program and NJ4S Lil' Champs Program. Both programs emphasize life skills including hygiene and becoming a steward of the community.",
+    description: "Age-appropriate reflection and values-based discussion, followed by educational programming including Delta Dental's Smile Lab Program and NJ4S Lil' Champs Program. Both programs emphasize life skills such as hygiene, responsibility, and being good stewards of their community.",
     optional: true,
   },
   {
