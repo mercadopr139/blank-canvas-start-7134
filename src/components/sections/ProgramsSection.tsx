@@ -1,4 +1,5 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 
 const programs = [
   {
@@ -53,10 +54,19 @@ const ProgramsSection = () => {
                   {program.title}
                 </CardTitle>
               </CardHeader>
-              <CardContent>
+              <CardContent className="flex flex-col gap-6">
                 <p className="text-muted-foreground leading-relaxed">
                   {program.description}
                 </p>
+                <Button 
+                  className={`w-full font-semibold ${
+                    index === 0 
+                      ? "bg-secondary hover:bg-secondary/90 text-foreground" 
+                      : "bg-background hover:bg-background/90 text-foreground border border-border"
+                  }`}
+                >
+                  SIGN-UP
+                </Button>
               </CardContent>
             </Card>
           ))}
