@@ -1,5 +1,6 @@
 import Header from "@/components/layout/Header";
 import Footer from "@/components/layout/Footer";
+import HeroSection from "@/components/sections/HeroSection";
 
 const Index = () => {
   return (
@@ -7,12 +8,9 @@ const Index = () => {
       <Header />
       
       <main className="flex-1">
-        {/* Add your sections here */}
-        <section className="container py-24 flex items-center justify-center min-h-[60vh]">
-          <p className="text-muted-foreground text-center">
-            Add your content sections here
-          </p>
-        </section>
+        <HeroSection />
+        
+        {/* Add more sections here */}
       </main>
 
       <Footer />
