@@ -7,7 +7,7 @@ const scheduleBlocks = [
   {
     time: "5:15pm",
     title: "Team Roll Call",
-    description: "Attendance, expectations, accountability, and daily reflection are completed as a group.",
+    description: "Attendance is taken, the schedule is reviewed, expectations are set, and daily reflection is completed as a group.",
   },
   {
     time: "5:30pm–7:00pm",
