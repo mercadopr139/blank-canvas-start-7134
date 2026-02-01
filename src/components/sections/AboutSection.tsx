@@ -2,7 +2,7 @@ const AboutSection = () => {
   return (
     <section className="py-20 md:py-28 bg-background">
       <div className="container">
-        <div className="max-w-4xl mx-auto text-center">
+        <div className="max-w-4xl mx-auto text-left">
           {/* Main headline */}
           <h2 className="text-3xl md:text-4xl lg:text-5xl font-black text-foreground leading-tight mb-8">
             No Limits Academy is more than a boxing gym.
