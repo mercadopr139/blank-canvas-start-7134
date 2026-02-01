@@ -35,7 +35,7 @@ const juniorScheduleBlocks = [
   {
     time: "5:20pm–6:00pm",
     title: "Boxing Training",
-    description: "Foundational boxing instruction focused on movement, coordination, and confidence, with Senior Boxing youth assisting as part of their service and leadership responsibilities.",
+    description: "Foundational boxing instruction focused on movement, coordination, and confidence, with Senior Boxing youth assisting as part of their service and leadership responsibilities. Junior Boxing concludes at 6:00 PM, with parent pick-up permitted at that time. Optional aftercare programming is available but not required.",
   },
   {
     time: "6:00pm–7:00pm",
