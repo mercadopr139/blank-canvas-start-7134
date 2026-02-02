@@ -276,7 +276,7 @@ const GymBuddies = () => {
                     <MessageCircle className="h-5 w-5 mr-2" />
                     Gym Buddies Chat
                   </Button>
-                  <p className="text-sm italic text-muted-foreground mt-2">
+                  <p className="text-sm italic text-muted-foreground mt-2 text-center">
                     Interested in signing-up? Click Gym Buddies Chat for more info
                   </p>
                 </div>
