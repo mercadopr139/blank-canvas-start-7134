@@ -249,8 +249,29 @@ const GymBuddies = () => {
                   No Limits Academy serves over <span className="font-bold text-foreground">500 youth each year</span> across Cape May County.
                 </p>
                 <p className="text-lg md:text-xl text-foreground/80 leading-relaxed">
-                  Gym Buddies brings local first responders—law enforcement officers, firefighters, and U.S. Coast Guard members—into the gym to train alongside our youth. These sessions build trust, break down barriers, and create meaningful connections between young people and the heroes who serve their community. It's mentorship in action, one workout at a time.
+                  We cannot do this work alone. Our Gym Buddies program connects our youth with local first responders—law enforcement officers, firefighters, and U.S. Coast Guard members—who step into the gym not just to train, but to build lasting relationships. What begins as time spent together in the gym grows into trust, mentorship, and genuine connection.
                 </p>
+                <p className="text-lg md:text-xl text-foreground/80 leading-relaxed">
+                  Our Gym Buddies often become advocates well beyond training sessions. They support NLA through community events, fundraising efforts, meal train participation, and by serving as ambassadors for the Academy throughout Cape May County. Gym Buddies help reinforce to our youth that positive, dependable adults exist in their community—and that support doesn't end when the workout does.
+                </p>
+                
+                {/* CTA Buttons */}
+                <div className="flex flex-col sm:flex-row gap-4 pt-4">
+                  <a 
+                    href="mailto:info@nolimitsboxingacademy.org?subject=Gym%20Buddies%20Inquiry"
+                    className="inline-block px-5 py-3 rounded-lg bg-foreground text-background font-extrabold text-center hover:bg-foreground/90 transition-colors"
+                  >
+                    Contact Us About Gym Buddies
+                  </a>
+                  <a 
+                    href="https://www.paypal.com/ncp/payment/TMMDVUSEQKHJC"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-block px-5 py-3 rounded-lg border border-foreground/20 bg-background text-foreground font-extrabold text-center hover:bg-muted transition-colors"
+                  >
+                    Donate to Support NLA
+                  </a>
+                </div>
               </div>
 
               {/* Photo Gallery */}
