@@ -123,7 +123,7 @@ const chatResponses: Record<Exclude<QuickOption, null>, { title: string; content
       <div className="space-y-3">
         <p className="font-bold text-foreground">Talk to a Person</p>
         <p className="text-sm text-muted-foreground">
-          Email us and we'll get back to you as soon as possible:
+          Email Coach Chrissy, and she will get back to you as soon as possible:
         </p>
         <a 
           href={`mailto:${INFO_EMAIL}?cc=${encodeURIComponent(CHRISSY_EMAIL)}&subject=${encodeURIComponent("No Limits Academy Inquiry")}&body=${encodeURIComponent("Hi No Limits Academy,\n\nI have a question about:\n\nName:\nYouth Age (if applicable):\nPhone (optional):\nQuestion:\n\nThanks!")}`}
