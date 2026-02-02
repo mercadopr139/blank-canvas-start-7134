@@ -42,6 +42,11 @@ import chiefDekonCapeMay from "@/assets/gym-buddies/chief-dekon-cape-may.jpg";
 const GymBuddies = () => {
   const gymBuddiesImages = [
     {
+      src: chiefDekonCapeMay,
+      alt: "Congrats Chief Dekon of Cape May",
+      caption: "Congrats Chief Dekon, Chief of Chiefs in CMC!",
+    },
+    {
       src: middleTownshipPd,
       alt: "NLA to Middle Township PD",
       caption: "NLA to Middle Township PD!",
@@ -215,11 +220,6 @@ const GymBuddies = () => {
       src: cmcFinest,
       alt: "CMC's Finest",
       caption: "CMC's Finest!",
-    },
-    {
-      src: chiefDekonCapeMay,
-      alt: "Congrats Chief Dekon of Cape May",
-      caption: "Congrats Chief Dekon, Chief of Chiefs in CMC!",
     },
   ];
 
