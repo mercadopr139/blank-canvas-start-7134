@@ -3,6 +3,7 @@ import Footer from "@/components/layout/Footer";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Calendar, Utensils, Heart } from "lucide-react";
+import mealTrainHero from "@/assets/meal-train/meal-train-hero.png";
 
 const MEAL_TRAIN_LINK = "https://www.mealtrain.com/trains/ode4rn";
 
@@ -12,6 +13,15 @@ const MealTrain = () => {
       <Header />
       
       <main className="flex-1">
+        {/* Hero Image */}
+        <section className="w-full">
+          <img 
+            src={mealTrainHero} 
+            alt="NLA volunteers serving meals to youth participants" 
+            className="w-full h-auto object-cover max-h-[500px]"
+          />
+        </section>
+
         {/* Hero Section */}
         <section className="bg-primary py-16 md:py-24">
           <div className="container">
