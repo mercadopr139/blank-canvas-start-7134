@@ -58,7 +58,7 @@ const chatResponses: Record<Exclude<QuickOption, null>, { title: string; content
             Sign Up for a Program
           </a>
         </div>
-        <p className="text-sm text-muted-foreground mt-2">
+        <p className="text-sm text-muted-foreground mt-2 text-center">
           If you have questions before signing up, email us at{" "}
           <a href={`mailto:${INFO_EMAIL}`} className="text-primary underline">{INFO_EMAIL}</a>.
         </p>
