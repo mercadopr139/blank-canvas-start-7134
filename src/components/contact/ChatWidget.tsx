@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Calendar, MapPin, DollarSign, ClipboardList, User, Mail } from "lucide-react";
+import { ArrowLeft, Calendar, MapPin, DollarSign, ClipboardList, User } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 
 interface ChatWidgetProps {
@@ -9,20 +9,31 @@ interface ChatWidgetProps {
 
 type QuickOption = "schedule" | "registration" | "location" | "cost" | "person" | null;
 
+const INFO_EMAIL = "info@nolimitsboxingacademy.org";
+const CHRISSY_EMAIL = "chrissycasiello@nolimitsboxingacademy.org";
+
+const SENIOR_BOXING_SCHEDULE = `Monday – Friday, 4:00 PM – 8:30 PM
+Ages 11–19`;
+
+const JUNIOR_BOXING_SCHEDULE = `Tuesdays, 4:00 PM – 6:00 PM
+Ages 7–10`;
+
 const chatResponses: Record<Exclude<QuickOption, null>, { title: string; content: React.ReactNode }> = {
   schedule: {
     title: "Schedule",
     content: (
-      <div className="space-y-3">
-        <p className="font-semibold">Program Hours:</p>
-        <div className="space-y-2 text-sm">
-          <p><strong>Junior Program (Ages 6-12):</strong></p>
-          <p>Monday - Friday: 3:00 PM - 6:00 PM</p>
-          <p className="mt-2"><strong>Senior Program (Ages 13-18):</strong></p>
-          <p>Monday - Friday: 4:00 PM - 7:00 PM</p>
-          <p className="mt-2"><strong>Saturday Sessions:</strong></p>
-          <p>10:00 AM - 1:00 PM (All ages)</p>
+      <div className="space-y-4">
+        <div>
+          <p className="font-bold text-foreground">Senior Boxing:</p>
+          <p className="text-sm text-muted-foreground whitespace-pre-line">{SENIOR_BOXING_SCHEDULE}</p>
         </div>
+        <div>
+          <p className="font-bold text-foreground">Junior Boxing:</p>
+          <p className="text-sm text-muted-foreground whitespace-pre-line">{JUNIOR_BOXING_SCHEDULE}</p>
+        </div>
+        <p className="text-sm text-muted-foreground italic">
+          Note: No Limits Academy is a free, year-round youth development program serving youth ages 7–19 in Cape May County.
+        </p>
       </div>
     ),
   },
@@ -30,17 +41,25 @@ const chatResponses: Record<Exclude<QuickOption, null>, { title: string; content
     title: "Registration",
     content: (
       <div className="space-y-3">
-        <p className="font-semibold">How to Register:</p>
-        <div className="space-y-2 text-sm">
-          <p>Registration is open year-round! To enroll your child:</p>
-          <ol className="list-decimal list-inside space-y-1 ml-2">
-            <li>Contact us via email or phone</li>
-            <li>Complete the registration form</li>
-            <li>Attend an orientation session</li>
-            <li>Start training!</li>
-          </ol>
-          <p className="mt-2">Email us at <a href="mailto:info@nolimitsboxingacademy.org" className="text-primary underline">info@nolimitsboxingacademy.org</a> to get started.</p>
-        </div>
+        <p className="font-bold text-foreground">Registration / Sign Up</p>
+        <p className="text-sm text-muted-foreground">Please choose a program option below:</p>
+        <ul className="list-disc list-inside text-sm text-muted-foreground space-y-1 ml-2">
+          <li>Junior Boxing</li>
+          <li>Senior Boxing</li>
+          <li>Grit & Grace Program</li>
+        </ul>
+        <a 
+          href="https://www.nolimitsboxingacademy.org/programs"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-block mt-2 text-primary underline font-semibold text-sm"
+        >
+          Click here to sign up
+        </a>
+        <p className="text-sm text-muted-foreground mt-2">
+          If you have questions before signing up, email us at{" "}
+          <a href={`mailto:${INFO_EMAIL}`} className="text-primary underline">{INFO_EMAIL}</a>.
+        </p>
       </div>
     ),
   },
@@ -48,13 +67,17 @@ const chatResponses: Record<Exclude<QuickOption, null>, { title: string; content
     title: "Location",
     content: (
       <div className="space-y-3">
-        <p className="font-semibold">Our Location:</p>
-        <div className="space-y-2 text-sm">
-          <p><strong>No Limits Academy</strong></p>
-          <p>Cape May County, New Jersey</p>
-          <p className="mt-2">We serve youth throughout Cape May County with our programs.</p>
-          <p className="mt-2">Contact us for specific address and directions.</p>
-        </div>
+        <p className="font-bold text-foreground">Location</p>
+        <p className="text-sm text-muted-foreground">
+          1086 Rt. 47 South, Rio Grande, NJ 08242
+        </p>
+        <p className="text-sm text-muted-foreground italic">
+          (Directly behind Mr. Tire)
+        </p>
+        <p className="text-sm text-muted-foreground mt-2">
+          Need help finding us? Email:{" "}
+          <a href={`mailto:${INFO_EMAIL}`} className="text-primary underline">{INFO_EMAIL}</a>
+        </p>
       </div>
     ),
   },
@@ -62,12 +85,13 @@ const chatResponses: Record<Exclude<QuickOption, null>, { title: string; content
     title: "Cost",
     content: (
       <div className="space-y-3">
-        <p className="font-semibold">Program Cost:</p>
-        <div className="space-y-2 text-sm">
-          <p><strong>All programs are FREE!</strong></p>
-          <p className="mt-2">No Limits Academy is committed to providing free access to all youth in our community. We believe every child deserves the opportunity to learn, grow, and succeed regardless of financial circumstances.</p>
-          <p className="mt-2">Our programs are funded through generous donations and community support.</p>
-        </div>
+        <p className="font-bold text-foreground">Cost</p>
+        <p className="text-sm text-muted-foreground">
+          No Limits Academy is a <strong>free</strong>, year-round youth development program.
+        </p>
+        <p className="text-sm text-muted-foreground">
+          There is no cost to participate.
+        </p>
       </div>
     ),
   },
@@ -75,18 +99,17 @@ const chatResponses: Record<Exclude<QuickOption, null>, { title: string; content
     title: "Talk to a Person",
     content: (
       <div className="space-y-3">
-        <p className="font-semibold">Get in Touch:</p>
-        <div className="space-y-2 text-sm">
-          <p>We'd love to hear from you! The best way to reach us is via email:</p>
-          <a 
-            href="mailto:info@nolimitsboxingacademy.org?subject=No%20Limits%20Academy%20Inquiry" 
-            className="inline-flex items-center gap-2 mt-2 text-primary underline font-medium"
-          >
-            <Mail className="h-4 w-4" />
-            info@nolimitsboxingacademy.org
-          </a>
-          <p className="mt-3">We typically respond within 24-48 hours.</p>
-        </div>
+        <p className="font-bold text-foreground">Talk to a Person</p>
+        <p className="text-sm text-muted-foreground">
+          Email us and we'll get back to you as soon as possible:
+        </p>
+        <a 
+          href={`mailto:${INFO_EMAIL}?cc=${encodeURIComponent(CHRISSY_EMAIL)}&subject=${encodeURIComponent("No Limits Academy Inquiry")}&body=${encodeURIComponent("Hi No Limits Academy,\n\nI have a question about:\n\nName:\nYouth Age (if applicable):\nPhone (optional):\nQuestion:\n\nThanks!")}`}
+          className="inline-flex flex-col gap-1 mt-2 text-primary underline font-semibold text-sm"
+        >
+          <span>{INFO_EMAIL}</span>
+          <span className="text-xs text-muted-foreground">(CC: {CHRISSY_EMAIL})</span>
+        </a>
       </div>
     ),
   },
@@ -128,19 +151,19 @@ const ChatWidget = ({ onBack }: ChatWidgetProps) => {
         {!selectedOption ? (
           <div className="space-y-3">
             <p className="text-sm text-muted-foreground mb-4">
-              What would you like to know about No Limits Academy?
+              Welcome to No Limits Academy! How can we help you today?
             </p>
             <div className="grid grid-cols-2 gap-2">
               {quickOptions.map((option) => (
                 <Button
                   key={option.id}
                   variant="outline"
-                  className="h-auto py-3 px-3 flex flex-col items-center gap-2 hover:bg-accent"
+                  className={`h-auto py-3 px-3 flex flex-col items-center gap-2 hover:bg-accent font-bold ${option.id === "person" ? "col-span-2" : ""}`}
                   onClick={() => handleOptionClick(option.id)}
                   aria-label={`Learn about ${option.label}`}
                 >
                   <option.icon className="h-5 w-5" />
-                  <span className="text-xs font-medium text-center">{option.label}</span>
+                  <span className="text-xs font-bold text-center">{option.label}</span>
                 </Button>
               ))}
             </div>

@@ -14,6 +14,11 @@ interface ContactModalProps {
   onOpenChange: (open: boolean) => void;
 }
 
+const INFO_EMAIL = "info@nolimitsboxingacademy.org";
+const CHRISSY_EMAIL = "chrissycasiello@nolimitsboxingacademy.org";
+
+const mailtoHref = `mailto:${INFO_EMAIL}?cc=${encodeURIComponent(CHRISSY_EMAIL)}&subject=${encodeURIComponent("No Limits Academy Inquiry")}&body=${encodeURIComponent("Hi No Limits Academy,\n\nI have a question about:\n\nName:\nYouth Age (if applicable):\nPhone (optional):\nQuestion:\n\nThanks!")}`;
+
 const ContactModal = ({ open, onOpenChange }: ContactModalProps) => {
   const [showChat, setShowChat] = useState(false);
 
@@ -36,8 +41,8 @@ const ContactModal = ({ open, onOpenChange }: ContactModalProps) => {
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent className="max-w-md" aria-describedby={undefined}>
         <DialogHeader>
-          <DialogTitle className="text-center text-xl font-semibold">
-            {showChat ? "Chat with NLA" : "Contact No Limits Academy"}
+          <DialogTitle className="text-center text-xl font-bold">
+            {showChat ? "Chat with NLA" : "Contact Options"}
           </DialogTitle>
         </DialogHeader>
 
@@ -46,15 +51,15 @@ const ContactModal = ({ open, onOpenChange }: ContactModalProps) => {
             <Button
               variant="outline"
               size="lg"
-              className="w-full justify-start gap-3 h-14"
+              className="w-full justify-start gap-3 h-14 font-bold"
               asChild
               aria-label="Send an email to No Limits Academy"
             >
-              <a href="mailto:info@nolimitsboxingacademy.org?subject=No%20Limits%20Academy%20Inquiry">
+              <a href={mailtoHref}>
                 <Mail className="h-5 w-5" />
                 <span className="flex flex-col items-start">
-                  <span className="font-semibold">Email NLA</span>
-                  <span className="text-xs text-muted-foreground">info@nolimitsboxingacademy.org</span>
+                  <span className="font-bold">Email NLA</span>
+                  <span className="text-xs text-muted-foreground font-normal">{INFO_EMAIL}</span>
                 </span>
               </a>
             </Button>
@@ -62,14 +67,14 @@ const ContactModal = ({ open, onOpenChange }: ContactModalProps) => {
             <Button
               variant="default"
               size="lg"
-              className="w-full justify-start gap-3 h-14 bg-primary hover:bg-primary/90"
+              className="w-full justify-start gap-3 h-14 bg-primary hover:bg-primary/90 font-bold"
               onClick={handleChatClick}
               aria-label="Start a chat with No Limits Academy"
             >
               <MessageCircle className="h-5 w-5" />
               <span className="flex flex-col items-start">
-                <span className="font-semibold">Chat with NLA</span>
-                <span className="text-xs text-primary-foreground/80">Get quick answers</span>
+                <span className="font-bold">Chat with NLA</span>
+                <span className="text-xs text-primary-foreground/80 font-normal">Get quick answers</span>
               </span>
             </Button>
           </div>
