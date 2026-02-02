@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Calendar, Mail, ClipboardList, Shield, Flame, Anchor, Users, Star } from "lucide-react";
+import { ArrowLeft, Calendar, Mail, ClipboardList, Shield, Flame, Anchor, Users, Star, MapPin } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 
 interface GymBuddiesChatWidgetProps {
@@ -106,6 +106,18 @@ const GymBuddiesChatWidget = ({ onClose }: GymBuddiesChatWidgetProps) => {
             <p className="text-sm text-muted-foreground">
               Gym Buddies meets Monday, Wednesday, and Thursday from 5:00–6:30 PM.
             </p>
+            <p className="text-sm text-muted-foreground">
+              1086 Rt. 47 South, Rio Grande, NJ 08242
+            </p>
+            <a
+              href="https://www.google.com/maps/search/?api=1&query=1086+Rt+47+South+Rio+Grande+NJ+08242"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-2 px-4 py-2 bg-foreground text-background rounded-md font-bold text-sm hover:bg-foreground/90 transition-colors"
+            >
+              <MapPin className="h-4 w-4" />
+              Open in Google Maps
+            </a>
           </div>
         );
 
