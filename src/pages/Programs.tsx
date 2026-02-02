@@ -2,6 +2,7 @@ import { useState } from "react";
 import Header from "@/components/layout/Header";
 import Footer from "@/components/layout/Footer";
 import ProgramsSection from "@/components/sections/ProgramsSection";
+import ProgramsExtrasSection from "@/components/sections/ProgramsExtrasSection";
 import DailyRhythmSection from "@/components/sections/DailyRhythmSection";
 import {
   Dialog,
@@ -32,6 +33,7 @@ const Programs = () => {
       
       <main className="flex-1">
         <ProgramsSection onMoreInfo={handleMoreInfo} />
+        <ProgramsExtrasSection />
       </main>
 
       {/* Daily Rhythm Dialog */}
