@@ -104,7 +104,7 @@ const GymBuddiesChatWidget = ({ onClose }: GymBuddiesChatWidgetProps) => {
             <div className="pt-2">
               <a
                 href="#"
-                className="inline-flex items-center justify-center gap-2 px-5 py-3 bg-primary text-primary-foreground font-extrabold rounded-lg text-center hover:bg-primary/90 transition-colors w-full"
+                className="inline-flex items-center justify-center gap-2 px-5 py-3 bg-[hsl(345,87%,40%)] text-white font-extrabold rounded-lg text-center hover:bg-[hsl(345,87%,35%)] transition-colors w-full"
               >
                 <ClipboardList className="h-4 w-4" />
                 Sign Up (Waiver Coming Soon)
