@@ -170,7 +170,7 @@ const GymBuddiesChatWidget = ({ onClose }: GymBuddiesChatWidgetProps) => {
       <div className="pt-4 mt-auto border-t">
         <a
           href="#"
-          className="inline-flex items-center justify-center gap-2 px-4 py-2 border border-foreground/20 bg-background text-foreground font-bold rounded-lg text-center hover:bg-muted transition-colors w-full text-sm"
+          className="inline-flex items-center justify-center gap-2 px-4 py-2 bg-foreground text-background font-bold rounded-lg text-center hover:bg-foreground/90 transition-colors w-full text-sm"
         >
           <ClipboardList className="h-4 w-4" />
           Sign Up (Waiver Coming Soon)
