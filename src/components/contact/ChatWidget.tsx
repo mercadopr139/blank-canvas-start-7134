@@ -127,7 +127,7 @@ const chatResponses: Record<Exclude<QuickOption, null>, { title: string; content
         </p>
         <a 
           href={`mailto:${CHRISSY_EMAIL}?subject=${encodeURIComponent("No Limits Academy Inquiry")}&body=${encodeURIComponent("Hi Coach Chrissy,\n\nI have a question about:\n\nName:\nYouth Age (if applicable):\nPhone (optional):\nQuestion:\n\nThanks!")}`}
-          className="inline-block mt-2 text-primary underline font-bold text-base"
+          className="inline-block mt-2 text-primary underline font-bold text-sm break-all"
         >
           {CHRISSY_EMAIL}
         </a>
