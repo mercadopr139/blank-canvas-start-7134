@@ -44,7 +44,7 @@ const MealTrain = () => {
                   <img 
                     src={mealTrainLogo2} 
                     alt="Meal Train secondary logo" 
-                    className="w-36 h-auto"
+                    className="w-18 h-auto"
                   />
                 </div>
                 <Button 
