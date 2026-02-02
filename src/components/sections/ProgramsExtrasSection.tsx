@@ -87,6 +87,7 @@ const gymBuddiesImages = [
 type ProgramItem = {
   id: string;
   title: string;
+  subtitle: string;
   blurb: string;
   images: { src: string; alt: string }[];
   buttonLabel: string;
@@ -98,6 +99,7 @@ const ProgramsExtrasSection = () => {
       {
         id: "gym-buddies",
         title: "Gym Buddies",
+        subtitle: "Senior Boxers Only",
         blurb:
           "Gym Buddies brings youth together with law enforcement officers, firefighters, and service members for shared workouts that build mutual trust, respect, and understanding—strengthening relationships both inside and beyond the gym.",
         images: gymBuddiesImages,
@@ -106,6 +108,7 @@ const ProgramsExtrasSection = () => {
       {
         id: "excursions",
         title: "Excursions",
+        subtitle: "Senior Boxers Only",
         blurb:
           "Our excursions take youth beyond the facility walls—exposing them to new experiences, education, and opportunities that expand perspective and reinforce life skills learned in the gym.",
         images: [
@@ -121,6 +124,7 @@ const ProgramsExtrasSection = () => {
       {
         id: "launch-pad",
         title: "The Launch Pad",
+        subtitle: "Senior Boxers Only",
         blurb:
           "The Launch Pad prepares youth for early work experiences and a clear path forward—building habits, responsibility, and readiness so they approach graduation with a plan and the discipline to follow through.",
         images: [
@@ -136,6 +140,7 @@ const ProgramsExtrasSection = () => {
       {
         id: "smile-lab",
         title: "Dental Dental's Smile Lab Program",
+        subtitle: "Junior Boxers Only",
         blurb:
           "Smile Lab supports youth with education and life skills connected to hygiene, confidence, and being good stewards of community—reinforcing habits that carry far beyond the gym.",
         images: [
@@ -151,6 +156,7 @@ const ProgramsExtrasSection = () => {
       {
         id: "lil-champs",
         title: "NJ4S Lil' Champs Program",
+        subtitle: "Junior Boxers Only",
         blurb:
           "Lil' Champs provides age-appropriate education programming that strengthens life skills—supporting youth with routines, hygiene, and habits that translate into confidence, responsibility, and community pride.",
         images: [
@@ -204,6 +210,9 @@ const ProgramsExtrasSection = () => {
               <DialogTitle className="text-2xl font-bold">
                 {openItem?.title}
               </DialogTitle>
+              <p className="text-sm font-medium text-muted-foreground">
+                {openItem?.subtitle}
+              </p>
             </DialogHeader>
             
             <p className="text-base text-muted-foreground">
