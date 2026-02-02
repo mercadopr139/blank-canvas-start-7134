@@ -44,7 +44,7 @@ const chatResponses: Record<Exclude<QuickOption, null>, { title: string; content
       <div className="space-y-3">
         <p className="font-bold text-foreground">Registration / Sign Up</p>
         <p className="text-sm text-muted-foreground">Please choose a program option below:</p>
-        <ul className="list-disc list-inside text-sm text-muted-foreground space-y-1 ml-2">
+        <ul className="list-disc list-inside text-sm text-muted-foreground space-y-1 ml-2" style={{ marginBottom: '1.25rem' }}>
           <li>Junior Boxing</li>
           <li>Senior Boxing</li>
           <li>Grit & Grace Program</li>
