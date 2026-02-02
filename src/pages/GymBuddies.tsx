@@ -1,6 +1,7 @@
 import Header from "@/components/layout/Header";
 import Footer from "@/components/layout/Footer";
 
+import coreValuesBanner from "@/assets/gym-buddies/core-values-banner.png";
 import middleTownshipPd from "@/assets/gym-buddies/middle-township-pd.jpg";
 import lowerTownshipPd from "@/assets/gym-buddies/lower-township-pd.jpg";
 import shopWithCop from "@/assets/gym-buddies/shop-with-cop-2025.jpg";
@@ -247,13 +248,11 @@ const GymBuddies = () => {
               <div className="text-left mb-12">
                 {/* Core Value Banner - Float Right on Desktop */}
                 <div className="md:float-right md:ml-6 md:mb-4 md:max-w-[320px] mb-6 w-full max-w-[380px] mx-auto md:mx-0">
-                  <div className="bg-muted rounded-lg shadow-md overflow-hidden">
-                    <div className="aspect-[3/4] flex items-center justify-center bg-accent border-2 border-dashed border-border">
-                      <span className="text-muted-foreground text-center px-4 font-medium">
-                        [INSERT CORE VALUE BANNER HERE]
-                      </span>
-                    </div>
-                  </div>
+                  <img 
+                    src={coreValuesBanner} 
+                    alt="NLA Core Values: Respect, Commitment, Accountability, Leadership, Trust, Service"
+                    className="w-full h-auto"
+                  />
                 </div>
 
                 <div className="space-y-6">
