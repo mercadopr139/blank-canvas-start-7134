@@ -37,6 +37,7 @@ import mtpdRonMillerJulioRuiz from "@/assets/gym-buddies/mtpd-ron-miller-julio-r
 import nlaWildwoodCrestPd2 from "@/assets/gym-buddies/nla-wildwood-crest-pd-2.png";
 import nlaPoliceChiefsAssociation from "@/assets/gym-buddies/nla-police-chiefs-association.png";
 import cmcFinest from "@/assets/gym-buddies/cmc-finest.png";
+import chiefDekonCapeMay from "@/assets/gym-buddies/chief-dekon-cape-may.jpg";
 
 const GymBuddies = () => {
   const gymBuddiesImages = [
@@ -214,6 +215,11 @@ const GymBuddies = () => {
       src: cmcFinest,
       alt: "CMC's Finest",
       caption: "CMC's Finest!",
+    },
+    {
+      src: chiefDekonCapeMay,
+      alt: "Congrats Chief Dekon of Cape May",
+      caption: "Congrats Chief Dekon, Chief of Chiefs in CMC!",
     },
   ];
 
