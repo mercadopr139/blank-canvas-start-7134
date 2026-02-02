@@ -75,10 +75,10 @@ const chatResponses: Record<Exclude<QuickOption, null>, { title: string; content
         <p className="text-sm text-muted-foreground">
           1086 Rt. 47 South, Rio Grande, NJ 08242
         </p>
-        <p className="text-sm text-muted-foreground italic">
+        <p className="text-sm text-muted-foreground italic text-center">
           (Directly behind Mr. Tire)
         </p>
-        <div className="flex justify-center mt-2">
+        <div className="flex justify-center" style={{ marginTop: '1.25rem' }}>
           <a
             href="https://www.google.com/maps/search/?api=1&query=1086+Rt+47+South+Rio+Grande+NJ+08242"
             target="_blank"
