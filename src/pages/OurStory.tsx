@@ -1,5 +1,6 @@
 import Header from "@/components/layout/Header";
 import Footer from "@/components/layout/Footer";
+import joshMcNallyDave from "@/assets/our-story/josh-mcnally-dave.jpeg";
 
 const OurStory = () => {
   return (
@@ -96,14 +97,14 @@ const OurStory = () => {
               {/* Photo Slot C - Centered at end */}
               <div className="w-full max-w-[420px] mx-auto">
                 <div className="bg-muted rounded-lg shadow-md overflow-hidden">
-                  <div className="aspect-[4/3] flex items-center justify-center bg-accent border-2 border-dashed border-border">
-                    <span className="text-muted-foreground text-center px-4 font-medium">
-                      [INSERT PHOTO HERE]
-                    </span>
-                  </div>
+                  <img 
+                    src={joshMcNallyDave} 
+                    alt="Josh, Coach McNally, and Dave at 2025 Naval Academy Brigade boxing championships"
+                    className="w-full h-auto"
+                  />
                   <div className="p-3 text-center">
                     <p className="text-sm text-muted-foreground italic">
-                      Caption: [Add caption here]
+                      Josh, Coach McNally, and Dave at 2025 Naval Academy Brigade boxing championships
                     </p>
                   </div>
                 </div>
