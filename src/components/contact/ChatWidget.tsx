@@ -48,14 +48,16 @@ const chatResponses: Record<Exclude<QuickOption, null>, { title: string; content
           <li>Senior Boxing</li>
           <li>Grit & Grace Program</li>
         </ul>
-        <a 
-          href="https://wkf.ms/45C6tce"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="inline-block mt-2 text-primary underline font-semibold text-sm"
-        >
-          Click here to sign up
-        </a>
+        <div className="flex justify-center mt-4">
+          <a 
+            href="https://wkf.ms/45C6tce"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-block px-5 py-3 bg-foreground text-background font-extrabold rounded-lg text-center hover:bg-foreground/90 transition-colors"
+          >
+            Sign Up for a Program
+          </a>
+        </div>
         <p className="text-sm text-muted-foreground mt-2">
           If you have questions before signing up, email us at{" "}
           <a href={`mailto:${INFO_EMAIL}`} className="text-primary underline">{INFO_EMAIL}</a>.
