@@ -89,7 +89,7 @@ const chatResponses: Record<Exclude<QuickOption, null>, { title: string; content
             Open in Google Maps
           </a>
         </div>
-        <p className="text-sm text-muted-foreground mt-2">
+        <p className="text-sm text-muted-foreground" style={{ marginTop: '1.25rem' }}>
           Need help finding us? Email:{" "}
           <a href={`mailto:${INFO_EMAIL}`} className="text-primary underline">{INFO_EMAIL}</a>
         </p>
