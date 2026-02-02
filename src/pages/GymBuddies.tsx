@@ -255,21 +255,13 @@ const GymBuddies = () => {
                   Our Gym Buddies often become advocates well beyond training sessions. They support NLA through community events, fundraising efforts, meal train participation, and by serving as ambassadors for the Academy throughout Cape May County. Gym Buddies help reinforce to our youth that positive, dependable adults exist in their community—and that support doesn't end when the workout does.
                 </p>
                 
-                {/* CTA Buttons */}
-                <div className="flex flex-col sm:flex-row gap-4 pt-4">
+                {/* CTA Button */}
+                <div className="pt-4">
                   <a 
                     href="mailto:info@nolimitsboxingacademy.org?subject=Gym%20Buddies%20Inquiry"
                     className="inline-block px-5 py-3 rounded-lg bg-foreground text-background font-extrabold text-center hover:bg-foreground/90 transition-colors"
                   >
                     Contact Us About Gym Buddies
-                  </a>
-                  <a 
-                    href="https://www.paypal.com/ncp/payment/TMMDVUSEQKHJC"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-block px-5 py-3 rounded-lg border border-foreground/20 bg-background text-foreground font-extrabold text-center hover:bg-muted transition-colors"
-                  >
-                    Donate to Support NLA
                   </a>
                 </div>
               </div>
