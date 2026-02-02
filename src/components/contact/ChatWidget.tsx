@@ -104,8 +104,7 @@ const chatResponses: Record<Exclude<QuickOption, null>, { title: string; content
           No Limits Academy is a <strong>free</strong>, year-round youth development program.<br />
           There is no cost to participate.
         </p>
-        {/* Use padding (not margin) so spacing isn't overridden by `space-y-*` */}
-        <div className="flex justify-center pt-8">
+        <div className="flex justify-center" style={{ marginTop: '1.25rem' }}>
           <a
             href="https://www.paypal.com/ncp/payment/TMMDVUSEQKHJC"
             target="_blank"
