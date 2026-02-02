@@ -38,8 +38,8 @@
 
     --radius: 0.5rem;
 
-    /* Brand colors */
-    --nla-red: 0 72% 51%;
+    /* Brand colors - #bf0d3e */
+    --nla-red: 345 87% 40%;
     --nla-red-foreground: 0 0% 100%;
 
     /* Custom tokens */
