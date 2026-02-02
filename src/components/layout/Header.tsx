@@ -24,9 +24,9 @@ const Header = ({ className }: HeaderProps) => {
   return (
     <header className={cn("w-full border-b border-border bg-background/80 backdrop-blur-sm sticky top-0 z-50", className)}>
       <div className="container flex items-center justify-between">
-        <div className="flex items-center">
-          <img src={nlaLogo} alt="No Limits Academy" className="h-32 w-auto" />
-        </div>
+        <a href="/" className="flex items-center">
+          <img src={nlaLogo} alt="No Limits Academy - Go to Home" className="h-32 w-auto" />
+        </a>
 
         {/* Desktop Navigation */}
         <nav className="hidden md:flex items-center gap-8">
