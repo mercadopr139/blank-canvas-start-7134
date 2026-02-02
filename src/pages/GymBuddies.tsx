@@ -1,7 +1,6 @@
 import Header from "@/components/layout/Header";
 import Footer from "@/components/layout/Footer";
 
-import coreValuesBanner from "@/assets/gym-buddies/core-values-banner.png";
 import middleTownshipPd from "@/assets/gym-buddies/middle-township-pd.jpg";
 import lowerTownshipPd from "@/assets/gym-buddies/lower-township-pd.jpg";
 import shopWithCop from "@/assets/gym-buddies/shop-with-cop-2025.jpg";
@@ -245,27 +244,13 @@ const GymBuddies = () => {
           <div className="container">
             <div className="max-w-4xl mx-auto">
               {/* Description */}
-              <div className="text-left mb-12">
-                {/* Core Value Banner - Float Right on Desktop */}
-                <div className="md:float-right md:ml-6 md:mb-4 md:max-w-[320px] mb-6 w-full max-w-[380px] mx-auto md:mx-0">
-                  <img 
-                    src={coreValuesBanner} 
-                    alt="NLA Core Values: Respect, Commitment, Accountability, Leadership, Trust, Service"
-                    className="w-full h-auto"
-                  />
-                </div>
-
-                <div className="space-y-6">
-                  <p className="text-lg md:text-xl text-foreground/80 leading-relaxed">
-                    No Limits Academy serves over <span className="font-bold text-foreground">500 youth each year</span> across Cape May County.
-                  </p>
-                  <p className="text-lg md:text-xl text-foreground/80 leading-relaxed">
-                    Gym Buddies brings local first responders—law enforcement officers, firefighters, and U.S. Coast Guard members—into the gym to train alongside our youth. These sessions build trust, break down barriers, and create meaningful connections between young people and the heroes who serve their community. It's mentorship in action, one workout at a time.
-                  </p>
-                </div>
-                
-                {/* Clear floats */}
-                <div className="clear-both" />
+              <div className="text-left mb-12 space-y-6">
+                <p className="text-lg md:text-xl text-foreground/80 leading-relaxed">
+                  No Limits Academy serves over <span className="font-bold text-foreground">500 youth each year</span> across Cape May County.
+                </p>
+                <p className="text-lg md:text-xl text-foreground/80 leading-relaxed">
+                  Gym Buddies brings local first responders—law enforcement officers, firefighters, and U.S. Coast Guard members—into the gym to train alongside our youth. These sessions build trust, break down barriers, and create meaningful connections between young people and the heroes who serve their community. It's mentorship in action, one workout at a time.
+                </p>
               </div>
 
               {/* Photo Gallery */}
