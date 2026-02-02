@@ -12,10 +12,10 @@ type QuickOption = "schedule" | "registration" | "location" | "cost" | "person" 
 const INFO_EMAIL = "info@nolimitsboxingacademy.org";
 const CHRISSY_EMAIL = "chrissycasiello@nolimitsboxingacademy.org";
 
-const SENIOR_BOXING_SCHEDULE = `Monday – Friday, 4:00 PM – 8:30 PM
+const SENIOR_BOXING_SCHEDULE = `Monday – Friday, 2:30 PM – 8:30 PM
 Ages 11–19`;
 
-const JUNIOR_BOXING_SCHEDULE = `Tuesdays, 4:00 PM – 6:00 PM
+const JUNIOR_BOXING_SCHEDULE = `Tuesdays, 5:15 PM – 7:15 PM
 Ages 7–10`;
 
 const chatResponses: Record<Exclude<QuickOption, null>, { title: string; content: React.ReactNode }> = {
