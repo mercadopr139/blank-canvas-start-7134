@@ -126,11 +126,10 @@ const chatResponses: Record<Exclude<QuickOption, null>, { title: string; content
           Email Coach Chrissy, and she will get back to you as soon as possible:
         </p>
         <a 
-          href={`mailto:${INFO_EMAIL}?cc=${encodeURIComponent(CHRISSY_EMAIL)}&subject=${encodeURIComponent("No Limits Academy Inquiry")}&body=${encodeURIComponent("Hi No Limits Academy,\n\nI have a question about:\n\nName:\nYouth Age (if applicable):\nPhone (optional):\nQuestion:\n\nThanks!")}`}
-          className="inline-flex flex-col gap-1 mt-2 text-primary underline font-semibold text-sm"
+          href={`mailto:${CHRISSY_EMAIL}?subject=${encodeURIComponent("No Limits Academy Inquiry")}&body=${encodeURIComponent("Hi Coach Chrissy,\n\nI have a question about:\n\nName:\nYouth Age (if applicable):\nPhone (optional):\nQuestion:\n\nThanks!")}`}
+          className="inline-block mt-2 text-primary underline font-bold text-base"
         >
-          <span>{INFO_EMAIL}</span>
-          <span className="text-xs text-muted-foreground">(CC: {CHRISSY_EMAIL})</span>
+          {CHRISSY_EMAIL}
         </a>
       </div>
     ),
