@@ -7,6 +7,14 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 
+// Gym Buddies images
+import gymBuddies1 from "@/assets/gym-buddies/cops-and-hoopers-2.png";
+import gymBuddies2 from "@/assets/gym-buddies/nla-police-chiefs-association.png";
+import gymBuddies3 from "@/assets/gym-buddies/knockout-cookout-mtpd.png";
+import gymBuddies4 from "@/assets/gym-buddies/nla-wildwood-pd.png";
+import gymBuddies5 from "@/assets/gym-buddies/chiefs-of-cmc.png";
+import gymBuddies6 from "@/assets/gym-buddies/cmc-finest.png";
+
 type ProgramItem = {
   id: string;
   title: string;
@@ -24,12 +32,12 @@ const ProgramsExtrasSection = () => {
         blurb:
           "Gym Buddies brings youth together with law enforcement officers, firefighters, and service members for shared workouts that build mutual trust, respect, and understanding—strengthening relationships both inside and beyond the gym.",
         images: [
-          { src: "/placeholder.svg", alt: "Gym Buddies photo 1" },
-          { src: "/placeholder.svg", alt: "Gym Buddies photo 2" },
-          { src: "/placeholder.svg", alt: "Gym Buddies photo 3" },
-          { src: "/placeholder.svg", alt: "Gym Buddies photo 4" },
-          { src: "/placeholder.svg", alt: "Gym Buddies photo 5" },
-          { src: "/placeholder.svg", alt: "Gym Buddies photo 6" },
+          { src: gymBuddies1, alt: "Cops and Hoopers community event" },
+          { src: gymBuddies2, alt: "NLA with Police Chiefs Association" },
+          { src: gymBuddies3, alt: "Knockout Cookout with Middle Township PD" },
+          { src: gymBuddies4, alt: "NLA with Wildwood Police Department" },
+          { src: gymBuddies5, alt: "Chiefs of Cape May County" },
+          { src: gymBuddies6, alt: "Cape May County's finest officers" },
         ],
         buttonLabel: "Back to Programs",
       },
