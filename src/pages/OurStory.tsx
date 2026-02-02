@@ -75,7 +75,7 @@ const OurStory = () => {
               </div>
 
               <p className="text-lg md:text-xl text-muted-foreground leading-relaxed mb-6">
-                Dave, raised by both parents and influenced by their commitment to community service, attended the United States Naval Academy in Annapolis. There, he distinguished himself academically and athletically as a four-year member of the Navy boxing team, earning multiple Brigade Boxing Championships. He graduated with a degree in Economics, was commissioned as a United States Navy Officer, went on to serve as a Navy SEAL, and later graduated from the Wharton School of the University of Pennsylvania with a Master of Business Administration.
+                Dave, raised by both parents and influenced by their commitment to community service, attended the United States Naval Academy in Annapolis. There, he distinguished himself academically and athletically as a four-year member of the Navy boxing team, earning multiple Brigade Boxing Championships. Following graduation, he was commissioned as a United States Navy Officer and continued his military career for seven years before later graduating from the Wharton School of the University of Pennsylvania with a Master of Business Administration.
               </p>
 
               <p className="text-lg md:text-xl text-muted-foreground leading-relaxed mb-6">
