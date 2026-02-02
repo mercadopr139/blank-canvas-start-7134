@@ -49,6 +49,20 @@ const ContactModal = ({ open, onOpenChange }: ContactModalProps) => {
         {!showChat ? (
           <div className="flex flex-col gap-4 py-4">
             <Button
+              variant="default"
+              size="lg"
+              className="w-full justify-start gap-3 h-14 bg-primary hover:bg-primary/90 font-bold"
+              onClick={handleChatClick}
+              aria-label="Start a chat with No Limits Academy"
+            >
+              <MessageCircle className="h-5 w-5" />
+              <span className="flex flex-col items-start">
+                <span className="font-bold">Chat with NLA</span>
+                <span className="text-xs text-primary-foreground/80 font-normal">Get quick answers</span>
+              </span>
+            </Button>
+
+            <Button
               variant="outline"
               size="lg"
               className="w-full justify-start gap-3 h-14 font-bold"
@@ -62,20 +76,6 @@ const ContactModal = ({ open, onOpenChange }: ContactModalProps) => {
                   <span className="text-xs text-muted-foreground font-normal">{INFO_EMAIL}</span>
                 </span>
               </a>
-            </Button>
-
-            <Button
-              variant="default"
-              size="lg"
-              className="w-full justify-start gap-3 h-14 bg-primary hover:bg-primary/90 font-bold"
-              onClick={handleChatClick}
-              aria-label="Start a chat with No Limits Academy"
-            >
-              <MessageCircle className="h-5 w-5" />
-              <span className="flex flex-col items-start">
-                <span className="font-bold">Chat with NLA</span>
-                <span className="text-xs text-primary-foreground/80 font-normal">Get quick answers</span>
-              </span>
             </Button>
           </div>
         ) : (
