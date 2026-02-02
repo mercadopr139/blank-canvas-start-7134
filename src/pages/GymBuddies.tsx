@@ -1,5 +1,16 @@
+import { useState } from "react";
 import Header from "@/components/layout/Header";
 import Footer from "@/components/layout/Footer";
+import { Button } from "@/components/ui/button";
+import { MessageCircle, X } from "lucide-react";
+import {
+  Drawer,
+  DrawerContent,
+  DrawerHeader,
+  DrawerTitle,
+  DrawerClose,
+} from "@/components/ui/drawer";
+import GymBuddiesChatWidget from "@/components/gym-buddies/GymBuddiesChatWidget";
 
 import middleTownshipPd from "@/assets/gym-buddies/middle-township-pd.jpg";
 import lowerTownshipPd from "@/assets/gym-buddies/lower-township-pd.jpg";
@@ -40,6 +51,7 @@ import cmcFinest from "@/assets/gym-buddies/cmc-finest.png";
 import chiefDekonCapeMay from "@/assets/gym-buddies/chief-dekon-cape-may.jpg";
 
 const GymBuddies = () => {
+  const [isChatOpen, setIsChatOpen] = useState(false);
   const gymBuddiesImages = [
     {
       src: chiefDekonCapeMay,
@@ -255,16 +267,35 @@ const GymBuddies = () => {
                   Our Gym Buddies often become advocates well beyond training sessions. They support NLA through community events, fundraising efforts, meal train participation, and by serving as ambassadors for the Academy throughout Cape May County. Gym Buddies help reinforce to our youth that positive, dependable adults exist in their community—and that support doesn't end when the workout does.
                 </p>
                 
-                {/* CTA Button */}
+                {/* Chat Button */}
                 <div className="pt-4">
-                  <a 
-                    href="mailto:info@nolimitsboxingacademy.org?subject=Gym%20Buddies%20Inquiry"
-                    className="inline-block px-5 py-3 rounded-lg bg-foreground text-background font-extrabold text-center hover:bg-foreground/90 transition-colors"
+                  <Button
+                    onClick={() => setIsChatOpen(true)}
+                    className="px-5 py-3 h-auto rounded-lg bg-foreground text-background font-extrabold hover:bg-foreground/90 transition-colors"
                   >
-                    Contact Us About Gym Buddies
-                  </a>
+                    <MessageCircle className="h-5 w-5 mr-2" />
+                    Gym Buddies Chat
+                  </Button>
                 </div>
               </div>
+
+              {/* Gym Buddies Chat Drawer */}
+              <Drawer open={isChatOpen} onOpenChange={setIsChatOpen}>
+                <DrawerContent className="max-h-[85vh]">
+                  <DrawerHeader className="flex items-center justify-between">
+                    <DrawerTitle className="text-lg font-bold">Gym Buddies Chat</DrawerTitle>
+                    <DrawerClose asChild>
+                      <Button variant="ghost" size="icon" className="h-8 w-8">
+                        <X className="h-4 w-4" />
+                        <span className="sr-only">Close</span>
+                      </Button>
+                    </DrawerClose>
+                  </DrawerHeader>
+                  <div className="px-4 pb-6">
+                    <GymBuddiesChatWidget onClose={() => setIsChatOpen(false)} />
+                  </div>
+                </DrawerContent>
+              </Drawer>
 
               {/* Photo Gallery */}
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
