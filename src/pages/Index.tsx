@@ -56,7 +56,7 @@ const Index = () => {
 
       {/* Contact Button - Fixed */}
       <Button
-        className="fixed bottom-6 right-6 z-40 bg-primary hover:bg-primary/90 text-primary-foreground font-semibold shadow-lg"
+        className="fixed bottom-6 right-6 z-40 bg-nla hover:bg-nla/90 text-nla-foreground font-semibold shadow-lg"
         size="lg"
         onClick={() => setContactOpen(true)}
         aria-label="Open contact options"

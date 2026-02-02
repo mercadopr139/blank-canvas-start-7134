@@ -38,6 +38,10 @@
 
     --radius: 0.5rem;
 
+    /* Brand colors */
+    --nla-red: 0 72% 51%;
+    --nla-red-foreground: 0 0% 100%;
+
     /* Custom tokens */
     --hero-gradient: linear-gradient(135deg, hsl(0 0% 0%) 0%, hsl(0 0% 15%) 100%);
 
