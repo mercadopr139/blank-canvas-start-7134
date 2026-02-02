@@ -98,9 +98,7 @@ const chatResponses: Record<Exclude<QuickOption, null>, { title: string; content
       <div className="space-y-3">
         <p className="font-bold text-foreground">Cost</p>
         <p className="text-sm text-muted-foreground">
-          No Limits Academy is a <strong>free</strong>, year-round youth development program.
-        </p>
-        <p className="text-sm text-muted-foreground">
+          No Limits Academy is a <strong>free</strong>, year-round youth development program.<br />
           There is no cost to participate.
         </p>
         <div className="flex justify-center mt-6">
