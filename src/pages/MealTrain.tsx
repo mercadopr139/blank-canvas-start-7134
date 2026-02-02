@@ -5,6 +5,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Calendar, Utensils, Heart } from "lucide-react";
 import mealTrainHero from "@/assets/meal-train/meal-train-hero.png";
 import mealTrainLogo from "@/assets/meal-train/meal-train-logo.png";
+import mealTrainLogo2 from "@/assets/meal-train/meal-train-logo-2.png";
 
 const MEAL_TRAIN_LINK = "https://www.mealtrain.com/trains/ode4rn";
 
@@ -34,11 +35,18 @@ const MealTrain = () => {
                 The NLA Meal Train supports our youth participants by providing free, sit-down meals during scheduled program days. These meals create consistency, build community, and ensure our athletes are fueled, focused, and cared for while they train and learn together. Volunteers play a vital role in making this possible.
               </p>
               <div className="flex flex-col items-center gap-3">
-                <img 
-                  src={mealTrainLogo} 
-                  alt="Meal Train logo" 
-                  className="w-48 h-auto mb-2"
-                />
+                <div className="flex items-center gap-4 mb-2">
+                  <img 
+                    src={mealTrainLogo} 
+                    alt="Meal Train logo" 
+                    className="w-48 h-auto"
+                  />
+                  <img 
+                    src={mealTrainLogo2} 
+                    alt="Meal Train secondary logo" 
+                    className="w-36 h-auto"
+                  />
+                </div>
                 <Button 
                   size="lg" 
                   className="bg-primary-foreground text-primary hover:bg-primary-foreground/90 font-bold text-lg px-8 py-6"
