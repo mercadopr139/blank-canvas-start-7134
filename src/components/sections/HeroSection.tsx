@@ -26,7 +26,7 @@ const HeroSection = () => {
           
           {/* Main paragraph */}
           <p className="text-lg md:text-xl font-medium text-primary-foreground/80 mb-10 max-w-3xl leading-relaxed">
-            No Limits Academy is a free, year-round youth development organization serving youth, 7–19 years old, of Cape May County. We show up Monday through Friday, 2:30–8:30 PM, using boxing, mentorship, and structure to build disciplined, confident, and accountable young people.
+            No Limits Academy is a free, year-round youth development organization serving youth, 7–19 years old, of Cape May County. We show up Monday through Friday, 2:30 PM–8:30 PM, using boxing, mentorship, and structure to build disciplined, confident, and accountable young people.
           </p>
           
           {/* Mission - closing line */}
