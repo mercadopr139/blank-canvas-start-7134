@@ -89,9 +89,25 @@ const OurStory = () => {
               {/* Clear floats before final paragraph */}
               <div className="clear-both" />
 
-              <p className="text-lg md:text-xl text-muted-foreground leading-relaxed">
+              <p className="text-lg md:text-xl text-muted-foreground leading-relaxed mb-10">
                 Today, No Limits Academy is more than a boxing gym. It is a community hub built on mentorship, belonging, and opportunity. Leveraging backgrounds in education, military service, business, and boxing, Josh and Dave created a space where young people are challenged, supported, and believed in. Through discipline and care, NLA teaches its athletes that their circumstances do not define their future—and that no one succeeds alone.
               </p>
+
+              {/* Photo Slot C - Centered at end */}
+              <div className="w-full max-w-[420px] mx-auto">
+                <div className="bg-muted rounded-lg shadow-md overflow-hidden">
+                  <div className="aspect-[4/3] flex items-center justify-center bg-accent border-2 border-dashed border-border">
+                    <span className="text-muted-foreground text-center px-4 font-medium">
+                      [INSERT PHOTO HERE]
+                    </span>
+                  </div>
+                  <div className="p-3 text-center">
+                    <p className="text-sm text-muted-foreground italic">
+                      Caption: [Add caption here]
+                    </p>
+                  </div>
+                </div>
+              </div>
 
             </div>
           </div>
