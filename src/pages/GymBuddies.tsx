@@ -268,7 +268,7 @@ const GymBuddies = () => {
                 </p>
                 
                 {/* Chat Button */}
-                <div className="pt-4">
+                <div className="pt-4 flex justify-center">
                   <Button
                     onClick={() => setIsChatOpen(true)}
                     className="px-5 py-3 h-auto rounded-lg bg-foreground text-background font-extrabold hover:bg-foreground/90 transition-colors"
