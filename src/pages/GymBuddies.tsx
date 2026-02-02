@@ -244,13 +244,29 @@ const GymBuddies = () => {
           <div className="container">
             <div className="max-w-4xl mx-auto">
               {/* Description */}
-              <div className="text-left mb-12 space-y-6">
-                <p className="text-lg md:text-xl text-foreground/80 leading-relaxed">
-                  No Limits Academy serves over <span className="font-bold text-foreground">500 youth each year</span> across Cape May County.
-                </p>
-                <p className="text-lg md:text-xl text-foreground/80 leading-relaxed">
-                  Gym Buddies brings local first responders—law enforcement officers, firefighters, and U.S. Coast Guard members—into the gym to train alongside our youth. These sessions build trust, break down barriers, and create meaningful connections between young people and the heroes who serve their community. It's mentorship in action, one workout at a time.
-                </p>
+              <div className="text-left mb-12">
+                {/* Core Value Banner - Float Right on Desktop */}
+                <div className="md:float-right md:ml-6 md:mb-4 md:max-w-[320px] mb-6 w-full max-w-[380px] mx-auto md:mx-0">
+                  <div className="bg-muted rounded-lg shadow-md overflow-hidden">
+                    <div className="aspect-[3/4] flex items-center justify-center bg-accent border-2 border-dashed border-border">
+                      <span className="text-muted-foreground text-center px-4 font-medium">
+                        [INSERT CORE VALUE BANNER HERE]
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="space-y-6">
+                  <p className="text-lg md:text-xl text-foreground/80 leading-relaxed">
+                    No Limits Academy serves over <span className="font-bold text-foreground">500 youth each year</span> across Cape May County.
+                  </p>
+                  <p className="text-lg md:text-xl text-foreground/80 leading-relaxed">
+                    Gym Buddies brings local first responders—law enforcement officers, firefighters, and U.S. Coast Guard members—into the gym to train alongside our youth. These sessions build trust, break down barriers, and create meaningful connections between young people and the heroes who serve their community. It's mentorship in action, one workout at a time.
+                  </p>
+                </div>
+                
+                {/* Clear floats */}
+                <div className="clear-both" />
               </div>
 
               {/* Photo Gallery */}
