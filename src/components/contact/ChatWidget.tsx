@@ -49,7 +49,7 @@ const chatResponses: Record<Exclude<QuickOption, null>, { title: string; content
           <li>Grit & Grace Program</li>
         </ul>
         <a 
-          href="https://www.nolimitsboxingacademy.org/programs"
+          href="https://wkf.ms/45C6tce"
           target="_blank"
           rel="noopener noreferrer"
           className="inline-block mt-2 text-primary underline font-semibold text-sm"
