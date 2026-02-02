@@ -16,7 +16,7 @@ const roleOptions = [
   { id: "firefighter", label: "Firefighter", icon: Flame },
   { id: "coast-guard", label: "U.S. Coast Guard", icon: Anchor },
   { id: "military", label: "Military (all branches welcome)", icon: Star },
-  { id: "other", label: "Other / Community Supporter", icon: Users },
+  { id: "other", label: "Other First Responder", icon: Users },
 ];
 
 const GymBuddiesChatWidget = ({ onClose }: GymBuddiesChatWidgetProps) => {
