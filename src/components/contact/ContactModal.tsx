@@ -6,7 +6,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Mail, MessageCircle } from "lucide-react";
+import { MessageCircle } from "lucide-react";
 import ChatWidget from "./ChatWidget";
 
 interface ContactModalProps {
@@ -62,21 +62,13 @@ const ContactModal = ({ open, onOpenChange }: ContactModalProps) => {
               </span>
             </Button>
 
-            <Button
-              variant="outline"
-              size="lg"
-              className="w-full justify-start gap-3 h-14 font-bold"
-              asChild
+            <a
+              href={mailtoHref}
+              className="w-full flex items-center justify-center gap-2 rounded-lg border border-border px-4 py-3 text-sm font-medium hover:bg-accent transition"
               aria-label="Send an email to No Limits Academy"
             >
-              <a href={mailtoHref}>
-                <Mail className="h-5 w-5" />
-                <span className="flex flex-col items-start">
-                  <span className="font-bold">Email NLA</span>
-                  <span className="text-xs text-muted-foreground font-normal">{INFO_EMAIL}</span>
-                </span>
-              </a>
-            </Button>
+              📧 Email NLA
+            </a>
           </div>
         ) : (
           <ChatWidget onBack={handleBackToOptions} />
