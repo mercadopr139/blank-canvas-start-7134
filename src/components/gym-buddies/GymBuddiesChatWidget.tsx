@@ -109,15 +109,17 @@ const GymBuddiesChatWidget = ({ onClose }: GymBuddiesChatWidgetProps) => {
             <p className="text-sm text-muted-foreground">
               1086 Rt. 47 South, Rio Grande, NJ 08242
             </p>
-            <a
-              href="https://www.google.com/maps/search/?api=1&query=1086+Rt+47+South+Rio+Grande+NJ+08242"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-2 px-4 py-2 bg-foreground text-background rounded-md font-bold text-sm hover:bg-foreground/90 transition-colors"
-            >
-              <MapPin className="h-4 w-4" />
-              Open in Google Maps
-            </a>
+            <div className="flex justify-center">
+              <a
+                href="https://www.google.com/maps/search/?api=1&query=1086+Rt+47+South+Rio+Grande+NJ+08242"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-2 px-4 py-2 bg-foreground text-background rounded-md font-bold text-sm hover:bg-foreground/90 transition-colors"
+              >
+                <MapPin className="h-4 w-4" />
+                Open in Google Maps
+              </a>
+            </div>
           </div>
         );
 
