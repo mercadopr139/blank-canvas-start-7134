@@ -74,15 +74,17 @@ const chatResponses: Record<Exclude<QuickOption, null>, { title: string; content
         <p className="text-sm text-muted-foreground italic">
           (Directly behind Mr. Tire)
         </p>
-        <a
-          href="https://www.google.com/maps/search/?api=1&query=1086+Rt+47+South+Rio+Grande+NJ+08242"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="inline-flex items-center gap-2 mt-2 px-4 py-2 bg-primary text-primary-foreground rounded-md font-bold text-sm hover:bg-primary/90 transition-colors"
-        >
-          <MapPin className="h-4 w-4" />
-          Open in Google Maps
-        </a>
+        <div className="flex justify-center mt-2">
+          <a
+            href="https://www.google.com/maps/search/?api=1&query=1086+Rt+47+South+Rio+Grande+NJ+08242"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-md font-bold text-sm hover:bg-primary/90 transition-colors"
+          >
+            <MapPin className="h-4 w-4" />
+            Open in Google Maps
+          </a>
+        </div>
         <p className="text-sm text-muted-foreground mt-2">
           Need help finding us? Email:{" "}
           <a href={`mailto:${INFO_EMAIL}`} className="text-primary underline">{INFO_EMAIL}</a>
