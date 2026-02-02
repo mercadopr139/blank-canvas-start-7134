@@ -20,7 +20,7 @@ const MealTrain = () => {
                 Meal Train
               </h1>
               <p className="text-lg md:text-xl text-primary-foreground/80 leading-relaxed mb-8">
-                When a family in our NLA community faces hardship—injury, illness, crisis, or major life events—we rally around them. The Meal Train is a simple way to provide practical support through meals or delivery. Every signup helps a family feel cared for and supported.
+                The NLA Meal Train supports our youth participants by providing free, sit-down meals during scheduled program days. These meals create consistency, build community, and ensure our athletes are fueled, focused, and cared for while they train and learn together. Volunteers play a vital role in making this possible.
               </p>
               <div className="flex flex-col items-start gap-3">
                 <Button 
@@ -33,7 +33,7 @@ const MealTrain = () => {
                   </a>
                 </Button>
                 <p className="text-sm text-primary-foreground/60">
-                  Takes 2 minutes. Every meal helps.
+                  Takes 2 minutes. Every meal supports our youth.
                 </p>
               </div>
             </div>
@@ -54,7 +54,7 @@ const MealTrain = () => {
                   </div>
                   <h3 className="text-xl font-bold text-foreground mb-2">Pick a Date</h3>
                   <p className="text-muted-foreground">
-                    Choose a day that works for your schedule.
+                    Choose a scheduled program day that works for you.
                   </p>
                 </CardContent>
               </Card>
@@ -64,9 +64,9 @@ const MealTrain = () => {
                   <div className="w-16 h-16 bg-primary rounded-full flex items-center justify-center mx-auto mb-4">
                     <Utensils className="w-8 h-8 text-primary-foreground" />
                   </div>
-                  <h3 className="text-xl font-bold text-foreground mb-2">Choose a Meal</h3>
+                  <h3 className="text-xl font-bold text-foreground mb-2">Provide a Meal</h3>
                   <p className="text-muted-foreground">
-                    Drop-off or delivery—whatever works best.
+                    Prepare a group meal or arrange delivery for our youth participants.
                   </p>
                 </CardContent>
               </Card>
@@ -76,9 +76,9 @@ const MealTrain = () => {
                   <div className="w-16 h-16 bg-primary rounded-full flex items-center justify-center mx-auto mb-4">
                     <Heart className="w-8 h-8 text-primary-foreground" />
                   </div>
-                  <h3 className="text-xl font-bold text-foreground mb-2">Help a Family</h3>
+                  <h3 className="text-xl font-bold text-foreground mb-2">Support the Program</h3>
                   <p className="text-muted-foreground">
-                    Feel supported during a difficult time.
+                    Help create a welcoming, consistent environment for our athletes.
                   </p>
                 </CardContent>
               </Card>
@@ -98,7 +98,7 @@ const MealTrain = () => {
                 "Pasta + salad",
                 "Soups / comfort meals",
                 "Ready-to-heat meals",
-                "Grocery / delivery gift cards",
+                "Grocery or delivery gift cards",
               ].map((item) => (
                 <li key={item} className="flex items-center gap-3 text-lg text-primary-foreground/90">
                   <span className="w-2 h-2 bg-primary-foreground rounded-full flex-shrink-0" />
@@ -117,9 +117,9 @@ const MealTrain = () => {
             </h2>
             <ul className="space-y-3 max-w-2xl">
               {[
-                "Dietary needs/allergies will be listed in the MealTrain signup.",
-                "Please follow the drop-off instructions listed on the schedule.",
-                "If you can't cook, delivery or gift cards are always helpful.",
+                "Meals are served on-site during scheduled NLA programming.",
+                "Meal details and quantities will be listed in the MealTrain signup.",
+                "If you cannot cook, delivery or gift cards are always helpful.",
               ].map((item) => (
                 <li key={item} className="flex items-start gap-3 text-lg text-muted-foreground">
                   <span className="w-2 h-2 bg-foreground rounded-full flex-shrink-0 mt-2" />
@@ -130,7 +130,7 @@ const MealTrain = () => {
           </div>
         </section>
 
-        {/* Repeat CTA */}
+        {/* Bottom CTA */}
         <section className="py-16 md:py-20 bg-primary">
           <div className="container text-center">
             <Button 
