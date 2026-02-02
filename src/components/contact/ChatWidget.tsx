@@ -103,7 +103,7 @@ const chatResponses: Record<Exclude<QuickOption, null>, { title: string; content
         <p className="text-sm text-muted-foreground">
           There is no cost to participate.
         </p>
-        <div className="flex justify-center mt-2">
+        <div className="flex justify-center mt-4">
           <a
             href="https://www.paypal.com/ncp/payment/TMMDVUSEQKHJC"
             target="_blank"
