@@ -55,6 +55,7 @@ const chatResponses: Record<Exclude<QuickOption, null>, { title: string; content
             target="_blank"
             rel="noopener noreferrer"
             className="inline-block px-5 py-3 bg-foreground text-background font-extrabold rounded-lg text-center hover:bg-foreground/90 transition-colors"
+            style={{ marginBottom: '1.25rem' }}
           >
             Sign Up for a Program
           </a>
