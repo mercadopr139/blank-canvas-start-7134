@@ -101,11 +101,10 @@ const GymBuddiesChatWidget = ({ onClose }: GymBuddiesChatWidgetProps) => {
               </a>
             </div>
 
-            {/* Sign Up Button - only shows after role selection */}
             <div className="pt-2">
               <a
                 href="#"
-                className="inline-flex items-center justify-center gap-2 px-5 py-3 bg-foreground text-background font-extrabold rounded-lg text-center hover:bg-foreground/90 transition-colors w-full"
+                className="inline-flex items-center justify-center gap-2 px-5 py-3 bg-primary text-primary-foreground font-extrabold rounded-lg text-center hover:bg-primary/90 transition-colors w-full"
               >
                 <ClipboardList className="h-4 w-4" />
                 Sign Up (Waiver Coming Soon)
