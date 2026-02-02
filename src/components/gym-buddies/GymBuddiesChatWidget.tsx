@@ -61,7 +61,7 @@ const GymBuddiesChatWidget = ({ onClose }: GymBuddiesChatWidgetProps) => {
             {/* Thank you message */}
             <div className="bg-muted/50 rounded-lg p-4">
               <p className="text-sm text-foreground">
-                Thank you for your service and interest in Gym Buddies.
+                Thank you for your service and interest in Gym Buddies! Info is below and if you want to join, you must <span className="font-bold">SIGN-UP</span> below!
               </p>
             </div>
 
