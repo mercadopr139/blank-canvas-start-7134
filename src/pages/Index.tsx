@@ -12,21 +12,22 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "@/components/ui/dialog";
-import { Clock } from "lucide-react";
+import { MessageCircle } from "lucide-react";
+import ContactModal from "@/components/contact/ContactModal";
 
 const Index = () => {
-  const [open, setOpen] = useState(false);
+  const [scheduleOpen, setScheduleOpen] = useState(false);
+  const [contactOpen, setContactOpen] = useState(false);
   const [programFilter, setProgramFilter] = useState<"junior" | "senior" | "all">("all");
 
   const handleMoreInfo = (program: "junior" | "senior") => {
     setProgramFilter(program);
-    setOpen(true);
+    setScheduleOpen(true);
   };
 
-  const handleOpenChange = (isOpen: boolean) => {
-    setOpen(isOpen);
+  const handleScheduleOpenChange = (isOpen: boolean) => {
+    setScheduleOpen(isOpen);
     if (!isOpen) {
       setProgramFilter("all");
     }
@@ -43,18 +44,8 @@ const Index = () => {
         <ImpactSection />
       </main>
 
-      {/* Daily Rhythm Dialog Trigger - Fixed Button */}
-      <Dialog open={open} onOpenChange={handleOpenChange}>
-        <DialogTrigger asChild>
-          <Button
-            className="fixed bottom-6 right-6 z-40 bg-primary hover:bg-primary/90 text-primary-foreground font-semibold shadow-lg"
-            size="lg"
-            onClick={() => setProgramFilter("all")}
-          >
-            <Clock className="mr-2 h-5 w-5" />
-            Click for Daily Schedule
-          </Button>
-        </DialogTrigger>
+      {/* Daily Rhythm Dialog */}
+      <Dialog open={scheduleOpen} onOpenChange={handleScheduleOpenChange}>
         <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="sr-only">Daily Rhythm</DialogTitle>
@@ -62,6 +53,20 @@ const Index = () => {
           <DailyRhythmSection programFilter={programFilter} />
         </DialogContent>
       </Dialog>
+
+      {/* Contact Button - Fixed */}
+      <Button
+        className="fixed bottom-6 right-6 z-40 bg-primary hover:bg-primary/90 text-primary-foreground font-semibold shadow-lg"
+        size="lg"
+        onClick={() => setContactOpen(true)}
+        aria-label="Open contact options"
+      >
+        <MessageCircle className="mr-2 h-5 w-5" />
+        Click to Contact Us
+      </Button>
+
+      {/* Contact Modal */}
+      <ContactModal open={contactOpen} onOpenChange={setContactOpen} />
 
       <Footer />
     </div>
