@@ -6,7 +6,7 @@ const AboutSection = () => {
       <div className="container">
         <div className="max-w-4xl mx-auto text-left">
           {/* Core Values Banner - Float Right on Desktop */}
-          <div className="md:float-right md:ml-8 md:mb-4 md:max-w-[800px] mb-8 w-full mx-auto md:mx-0">
+          <div className="core-values md:float-right md:ml-8 md:mb-4 md:max-w-[800px] mb-8 w-full mx-auto md:mx-0">
             <img 
               src={coreValuesBanner} 
               alt="NLA Core Values: Respect, Commitment, Accountability, Leadership, Trust, Service"
