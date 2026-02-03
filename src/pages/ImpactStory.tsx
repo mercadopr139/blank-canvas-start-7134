@@ -115,7 +115,7 @@ const ImpactStory = () => {
                   <ul className="space-y-2 text-muted-foreground">
                     <li className="flex items-start gap-2">
                       <span className="text-foreground mt-1">•</span>
-                      <span>Middle Township High School</span>
+                      <span>Cape May County Special Services</span>
                     </li>
                     <li className="flex items-start gap-2">
                       <span className="text-foreground mt-1">•</span>
@@ -123,11 +123,15 @@ const ImpactStory = () => {
                     </li>
                     <li className="flex items-start gap-2">
                       <span className="text-foreground mt-1">•</span>
-                      <span>Lower Cape May Regional High School</span>
+                      <span>Lower Cape May Regional School District</span>
                     </li>
                     <li className="flex items-start gap-2">
                       <span className="text-foreground mt-1">•</span>
-                      <span>Wildwood High School</span>
+                      <span>Middle Township School District</span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <span className="text-foreground mt-1">•</span>
+                      <span>North Wildwood School District</span>
                     </li>
                     <li className="flex items-start gap-2">
                       <span className="text-foreground mt-1">•</span>
@@ -135,15 +139,15 @@ const ImpactStory = () => {
                     </li>
                     <li className="flex items-start gap-2">
                       <span className="text-foreground mt-1">•</span>
+                      <span>Wildwood Crest School District</span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <span className="text-foreground mt-1">•</span>
+                      <span>Wildwood School District</span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <span className="text-foreground mt-1">•</span>
                       <span>Woodbine Elementary School</span>
-                    </li>
-                    <li className="flex items-start gap-2">
-                      <span className="text-foreground mt-1">•</span>
-                      <span>Cape May County Special Services School District</span>
-                    </li>
-                    <li className="flex items-start gap-2">
-                      <span className="text-foreground mt-1">•</span>
-                      <span>Multiple additional Cape May County school districts</span>
                     </li>
                   </ul>
                 </div>
