@@ -55,6 +55,7 @@ import excursionPoolChampions from "@/assets/excursions/excursion-pool-champions
 import excursionPfChangs from "@/assets/excursions/excursion-pf-changs.png";
 import excursionBowling from "@/assets/excursions/excursion-bowling.png";
 import excursionWaterpark from "@/assets/excursions/excursion-waterpark.png";
+import excursionNationalNightOut from "@/assets/excursions/excursion-national-night-out.png";
 
 const gymBuddiesImages = [
   { src: chiefDekonCapeMay, alt: "Congrats Chief Dekon of Cape May" },
@@ -131,6 +132,7 @@ const ProgramsExtrasSection = () => {
           { src: excursionPfChangs, alt: "Team Night at PF Chang's", caption: "Team Night at PF Chang's" },
           { src: excursionBowling, alt: "Bowling in Wildwood", caption: "Bowling in Wildwood" },
           { src: excursionWaterpark, alt: "Water Park Fun", caption: "Water Park Fun" },
+          { src: excursionNationalNightOut, alt: "National Night Out in Cape May", caption: "National Night Out in Cape May" },
         ],
         buttonLabel: "Back to Programs",
       },
