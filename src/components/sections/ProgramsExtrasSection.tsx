@@ -49,6 +49,7 @@ import chiefDekonCapeMay from "@/assets/gym-buddies/chief-dekon-cape-may.jpg";
 // Excursions images
 import excursionYouthGroup from "@/assets/excursions/excursion-youth-group.png";
 import excursionPaddleboard from "@/assets/excursions/excursion-paddleboard.png";
+import excursionShoreFishing from "@/assets/excursions/excursion-shore-fishing.png";
 
 const gymBuddiesImages = [
   { src: chiefDekonCapeMay, alt: "Congrats Chief Dekon of Cape May" },
@@ -119,6 +120,7 @@ const ProgramsExtrasSection = () => {
         images: [
           { src: excursionYouthGroup, alt: "NLA youth group excursion" },
           { src: excursionPaddleboard, alt: "NLA paddleboard excursion" },
+          { src: excursionShoreFishing, alt: "Shore Fishing in Cape May", caption: "Shore Fishing in Cape May" },
         ],
         buttonLabel: "Back to Programs",
       },
