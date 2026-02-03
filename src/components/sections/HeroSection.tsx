@@ -16,7 +16,7 @@ const HeroSection = () => {
           {/* Main headline */}
           {/* Main headline */}
           <h1 className="text-4xl md:text-6xl lg:text-7xl font-black text-primary-foreground leading-[1.1] tracking-tight mb-6">
-            We Show Up <span className="text-nla">Every Day</span>—for Our Youth
+            We Show Up <span style={{ color: '#bf0f3e' }}>Every Day</span>—for Our Youth
           </h1>
           
           {/* Supporting statement */}
