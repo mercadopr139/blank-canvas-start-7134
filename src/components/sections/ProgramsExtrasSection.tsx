@@ -118,8 +118,8 @@ const ProgramsExtrasSection = () => {
         blurb:
           "Our excursions take youth beyond the facility walls—exposing them to new experiences, education, and opportunities that expand perspective and reinforce life skills learned in the gym.",
         images: [
-          { src: excursionYouthGroup, alt: "NLA youth group excursion" },
-          { src: excursionPaddleboard, alt: "NLA paddleboard excursion" },
+          { src: excursionYouthGroup, alt: "Hiking at Higbees", caption: "Hiking at Higbees" },
+          { src: excursionPaddleboard, alt: "Paddle Board & Kayaking", caption: "Paddle Board & Kayaking" },
           { src: excursionShoreFishing, alt: "Shore Fishing in Cape May", caption: "Shore Fishing in Cape May" },
         ],
         buttonLabel: "Back to Programs",
