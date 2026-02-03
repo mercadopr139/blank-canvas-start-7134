@@ -171,7 +171,7 @@ const ImpactStory = () => {
                     <ul className="space-y-2 text-muted-foreground">
                       <li className="flex items-start gap-2">
                         <span className="text-foreground mt-1">•</span>
-                        <span>Middle Township Mayor and former Police Chief, Chris Leusner, and various Cape May County Mayors</span>
+                        <span>Middle Township Mayor and former Police Chief, Chris Leusner, and other various Cape May County Mayors</span>
                       </li>
                       <li className="flex items-start gap-2">
                         <span className="text-foreground mt-1">•</span>
