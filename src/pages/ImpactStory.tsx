@@ -110,7 +110,7 @@ const ImpactStory = () => {
                   Community Impact
                 </h2>
                 <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-                  Verified reach across Cape May County through trusted partnerships and collaborative support.
+                  Verified reach across Cape May County through trusted partnerships and community endorsements.
                 </p>
               </div>
 
