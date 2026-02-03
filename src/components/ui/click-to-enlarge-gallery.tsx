@@ -42,8 +42,8 @@ export function ClickToEnlargeGallery({
       itemClassName: "overflow-hidden rounded-xl border border-border bg-muted",
       buttonClassName: "block w-full",
       imgClassName: "h-40 w-full object-cover",
-      captionWrapClassName: "px-3 py-2 bg-muted",
-      captionTextClassName: "text-xs text-muted-foreground text-center",
+      captionWrapClassName: "px-3 py-2 bg-foreground",
+      captionTextClassName: "text-xs text-background text-center",
     } as const;
   }, [variant]);
 
