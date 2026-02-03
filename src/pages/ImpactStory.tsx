@@ -97,27 +97,109 @@ const ImpactStory = () => {
         {/* Credibility Section */}
         <section className="py-16 md:py-20 bg-background">
           <div className="container">
-            <div className="max-w-4xl mx-auto">
+            <div className="max-w-5xl mx-auto">
               <div className="text-center mb-12">
                 <Shield className="h-12 w-12 mx-auto mb-4 text-foreground" />
                 <h2 className="text-3xl md:text-4xl font-black text-foreground mb-4">
-                  Community Validated
+                  Community Impact
                 </h2>
                 <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-                  Our one-stop, wraparound approach to youth development has attracted trusted partners 
-                  who recognize NLA as a legitimate hub for real, lasting impact.
+                  Verified reach across Cape May County through trusted partnerships and collaborative support.
                 </p>
               </div>
 
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                {partners.map((partner, index) => (
-                  <div 
-                    key={index}
-                    className="bg-accent border border-border rounded-lg p-6 text-center"
-                  >
-                    <span className="font-bold text-foreground">{partner}</span>
-                  </div>
-                ))}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                {/* Schools & Education Partners */}
+                <div className="bg-accent border border-border rounded-lg p-6">
+                  <h3 className="text-lg font-bold text-foreground mb-4">Schools & Education Partners</h3>
+                  <ul className="space-y-2 text-muted-foreground">
+                    <li className="flex items-start gap-2">
+                      <span className="text-foreground mt-1">•</span>
+                      <span>Middle Township High School</span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <span className="text-foreground mt-1">•</span>
+                      <span>Cape May County Technical High School</span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <span className="text-foreground mt-1">•</span>
+                      <span>Lower Cape May Regional High School</span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <span className="text-foreground mt-1">•</span>
+                      <span>Wildwood High School</span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <span className="text-foreground mt-1">•</span>
+                      <span>Wildwood Catholic High School</span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <span className="text-foreground mt-1">•</span>
+                      <span>Woodbine Elementary School</span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <span className="text-foreground mt-1">•</span>
+                      <span>Cape May County Special Services School District</span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <span className="text-foreground mt-1">•</span>
+                      <span>Multiple additional Cape May County school districts</span>
+                    </li>
+                  </ul>
+                </div>
+
+                {/* Public Officials & Government Support */}
+                <div className="bg-accent border border-border rounded-lg p-6">
+                  <h3 className="text-lg font-bold text-foreground mb-4">Public Officials & Government Support</h3>
+                  <ul className="space-y-2 text-muted-foreground">
+                    <li className="flex items-start gap-2">
+                      <span className="text-foreground mt-1">•</span>
+                      <span>Middle Township Mayor and former Police Chief</span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <span className="text-foreground mt-1">•</span>
+                      <span>New Jersey State Assembly members</span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <span className="text-foreground mt-1">•</span>
+                      <span>United States Congressman</span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <span className="text-foreground mt-1">•</span>
+                      <span>Cape May County Board of Commissioners leadership</span>
+                    </li>
+                  </ul>
+                </div>
+
+                {/* Law Enforcement & Public Safety */}
+                <div className="bg-accent border border-border rounded-lg p-6">
+                  <h3 className="text-lg font-bold text-foreground mb-4">Law Enforcement & Public Safety</h3>
+                  <ul className="space-y-2 text-muted-foreground">
+                    <li className="flex items-start gap-2">
+                      <span className="text-foreground mt-1">•</span>
+                      <span>Cape May County Prosecutor's Office</span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <span className="text-foreground mt-1">•</span>
+                      <span>Over twelve municipal and county law enforcement agencies across Cape May County</span>
+                    </li>
+                  </ul>
+                </div>
+
+                {/* Mental Health & Youth Support Services */}
+                <div className="bg-accent border border-border rounded-lg p-6">
+                  <h3 className="text-lg font-bold text-foreground mb-4">Mental Health & Youth Support Services</h3>
+                  <ul className="space-y-2 text-muted-foreground">
+                    <li className="flex items-start gap-2">
+                      <span className="text-foreground mt-1">•</span>
+                      <span>Embedded mental health partnerships</span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <span className="text-foreground mt-1">•</span>
+                      <span>Community-based youth support and prevention organizations serving Cape May County</span>
+                    </li>
+                  </ul>
+                </div>
               </div>
             </div>
           </div>
