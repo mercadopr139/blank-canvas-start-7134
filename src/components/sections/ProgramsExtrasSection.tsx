@@ -62,6 +62,7 @@ import excursionCampingWV from "@/assets/excursions/excursion-camping-wv.png";
 import excursionLasVegas from "@/assets/excursions/excursion-las-vegas.png";
 import excursionCycleTime from "@/assets/excursions/excursion-cycle-time.png";
 import excursionBoxingPittsburgh from "@/assets/excursions/excursion-boxing-pittsburgh.png";
+import excursionTrickOrTreat from "@/assets/excursions/excursion-trick-or-treat.png";
 
 const gymBuddiesImages = [
   { src: chiefDekonCapeMay, alt: "Congrats Chief Dekon of Cape May" },
@@ -145,6 +146,7 @@ const ProgramsExtrasSection = () => {
           { src: excursionLasVegas, alt: "Viva Las Vegas", caption: "Viva Las Vegas" },
           { src: excursionCycleTime, alt: "Cycle Time", caption: "Cycle Time" },
           { src: excursionBoxingPittsburgh, alt: "Boxing Camp in Pittsburgh", caption: "Boxing Camp in Pittsburgh" },
+          { src: excursionTrickOrTreat, alt: "Trick or Treat", caption: "Trick or Treat" },
         ],
         buttonLabel: "Back to Programs",
       },
