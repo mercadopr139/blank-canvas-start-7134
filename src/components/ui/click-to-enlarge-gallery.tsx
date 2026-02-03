@@ -80,43 +80,51 @@ export function ClickToEnlargeGallery({
       </div>
 
       {/* Lightbox overlay (portal to body) */}
-      {activeImg
-        ? createPortal(
-            <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4">
-              {/* dark overlay */}
-              <div
-                className="absolute inset-0 bg-black/80 cursor-pointer"
-                onClick={handleClose}
-                role="button"
-                tabIndex={0}
-                onKeyDown={(e) => e.key === "Escape" && handleClose()}
-                aria-label="Close enlarged image"
-              />
+      {activeImg &&
+        createPortal(
+          <div
+            className="fixed inset-0 z-[9999] flex items-center justify-center"
+            role="dialog"
+            aria-modal="true"
+          >
+            {/* Click anywhere on the dark area to close */}
+            <button
+              type="button"
+              className="absolute inset-0 bg-black/80"
+              onClick={() => setActiveImg(null)}
+              aria-label="Close enlarged image"
+            />
 
-              {/* image (centered) */}
-              <div className="relative z-10 w-full max-w-3xl">
-                <button
-                  type="button"
-                  onClick={handleClose}
-                  className="absolute right-3 top-3 z-20 rounded-xl bg-background/90 px-3 py-2 text-sm font-semibold text-foreground backdrop-blur hover:bg-background"
-                >
-                  ✕ Close
-                </button>
+            {/* Content */}
+            <div className="relative z-[10000] w-[92%] max-w-4xl">
+              {/* Close button ALWAYS clickable */}
+              <button
+                type="button"
+                onClick={() => setActiveImg(null)}
+                className="absolute right-3 top-3 z-[10001] rounded-xl bg-white px-3 py-2 text-sm font-semibold shadow"
+              >
+                ✕ Close
+              </button>
+
+              {/* Image (does NOT steal clicks) */}
+              <div className="rounded-2xl bg-black p-2">
                 <img
                   src={activeImg.src}
                   alt={activeImg.alt}
-                  className="max-h-[80vh] w-full rounded-2xl object-contain bg-background"
+                  className="max-h-[82vh] w-full rounded-xl object-contain pointer-events-none select-none"
+                  draggable={false}
                 />
-                {activeImg.caption && (
-                  <p className="mt-2 text-center text-white text-sm font-medium">
-                    {activeImg.caption}
-                  </p>
-                )}
               </div>
-            </div>,
-            document.body
-          )
-        : null}
+
+              {activeImg.caption && (
+                <p className="mt-2 text-center text-white text-sm font-medium">
+                  {activeImg.caption}
+                </p>
+              )}
+            </div>
+          </div>,
+          document.body
+        )}
     </div>
   );
 }
