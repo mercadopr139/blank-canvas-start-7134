@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Link, useLocation } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
@@ -21,23 +22,35 @@ const Header = ({ className }: HeaderProps) => {
     { href: "#vision", label: "Our Vision" },
   ];
 
+  const isHashLink = (href: string) => href.startsWith("#");
+
   return (
     <header className={cn("w-full border-b border-border bg-background/80 backdrop-blur-sm sticky top-0 z-50", className)}>
       <div className="container flex items-center justify-between">
-        <a href="/" className="flex items-center">
+        <Link to="/" className="flex items-center">
           <img src={nlaLogo} alt="No Limits Academy - Go to Home" className="h-32 w-auto" />
-        </a>
+        </Link>
 
         {/* Desktop Navigation */}
         <nav className="hidden md:flex items-center gap-8">
           {navLinks.map((link) => (
-            <a
-              key={link.label}
-              href={link.href}
-              className="text-sm text-foreground hover:text-primary transition-colors"
-            >
-              {link.label}
-            </a>
+            isHashLink(link.href) ? (
+              <a
+                key={link.label}
+                href={link.href}
+                className="text-sm text-foreground hover:text-primary transition-colors"
+              >
+                {link.label}
+              </a>
+            ) : (
+              <Link
+                key={link.label}
+                to={link.href}
+                className="text-sm text-foreground hover:text-primary transition-colors"
+              >
+                {link.label}
+              </Link>
+            )
           ))}
           <Button size="sm" className="bg-primary hover:bg-primary/90 text-primary-foreground font-semibold px-6" asChild>
             <a href="https://www.paypal.com/ncp/payment/TMMDVUSEQKHJC" target="_blank" rel="noopener noreferrer">
@@ -57,14 +70,25 @@ const Header = ({ className }: HeaderProps) => {
           <SheetContent side="right" className="w-[280px]">
             <nav className="flex flex-col gap-6 mt-8">
               {navLinks.map((link) => (
-                <a
-                  key={link.label}
-                  href={link.href}
-                  onClick={() => setOpen(false)}
-                  className="text-lg text-foreground hover:text-primary transition-colors"
-                >
-                  {link.label}
-                </a>
+                isHashLink(link.href) ? (
+                  <a
+                    key={link.label}
+                    href={link.href}
+                    onClick={() => setOpen(false)}
+                    className="text-lg text-foreground hover:text-primary transition-colors"
+                  >
+                    {link.label}
+                  </a>
+                ) : (
+                  <Link
+                    key={link.label}
+                    to={link.href}
+                    onClick={() => setOpen(false)}
+                    className="text-lg text-foreground hover:text-primary transition-colors"
+                  >
+                    {link.label}
+                  </Link>
+                )
               ))}
               <Button className="bg-primary hover:bg-primary/90 text-primary-foreground font-semibold w-full" asChild>
                 <a href="https://www.paypal.com/ncp/payment/TMMDVUSEQKHJC" target="_blank" rel="noopener noreferrer">
