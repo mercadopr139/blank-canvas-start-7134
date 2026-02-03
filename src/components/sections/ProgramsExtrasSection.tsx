@@ -48,6 +48,7 @@ import chiefDekonCapeMay from "@/assets/gym-buddies/chief-dekon-cape-may.jpg";
 
 // Excursions images
 import excursionYouthGroup from "@/assets/excursions/excursion-youth-group.png";
+import excursionPaddleboard from "@/assets/excursions/excursion-paddleboard.png";
 
 const gymBuddiesImages = [
   { src: chiefDekonCapeMay, alt: "Congrats Chief Dekon of Cape May" },
@@ -117,6 +118,7 @@ const ProgramsExtrasSection = () => {
           "Our excursions take youth beyond the facility walls—exposing them to new experiences, education, and opportunities that expand perspective and reinforce life skills learned in the gym.",
         images: [
           { src: excursionYouthGroup, alt: "NLA youth group excursion" },
+          { src: excursionPaddleboard, alt: "NLA paddleboard excursion" },
         ],
         buttonLabel: "Back to Programs",
       },
