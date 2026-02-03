@@ -46,6 +46,9 @@ import nlaPoliceChiefsAssociation from "@/assets/gym-buddies/nla-police-chiefs-a
 import cmcFinest from "@/assets/gym-buddies/cmc-finest.png";
 import chiefDekonCapeMay from "@/assets/gym-buddies/chief-dekon-cape-may.jpg";
 
+// Excursions images
+import excursionYouthGroup from "@/assets/excursions/excursion-youth-group.png";
+
 const gymBuddiesImages = [
   { src: chiefDekonCapeMay, alt: "Congrats Chief Dekon of Cape May" },
   { src: middleTownshipPd, alt: "NLA to Middle Township PD" },
@@ -113,12 +116,7 @@ const ProgramsExtrasSection = () => {
         blurb:
           "Our excursions take youth beyond the facility walls—exposing them to new experiences, education, and opportunities that expand perspective and reinforce life skills learned in the gym.",
         images: [
-          { src: "/placeholder.svg", alt: "Excursions photo 1" },
-          { src: "/placeholder.svg", alt: "Excursions photo 2" },
-          { src: "/placeholder.svg", alt: "Excursions photo 3" },
-          { src: "/placeholder.svg", alt: "Excursions photo 4" },
-          { src: "/placeholder.svg", alt: "Excursions photo 5" },
-          { src: "/placeholder.svg", alt: "Excursions photo 6" },
+          { src: excursionYouthGroup, alt: "NLA youth group excursion" },
         ],
         buttonLabel: "Back to Programs",
       },
