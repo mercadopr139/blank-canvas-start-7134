@@ -223,7 +223,7 @@ const ProgramsExtrasSection = () => {
             </p>
 
             {/* Gallery */}
-            {openItem && <ClickToEnlargeGallery images={openItem.images} />}
+            {openItem && <ClickToEnlargeGallery images={openItem.images} showCaptions />}
 
             {/* Bottom button */}
             <div className="mt-6 flex justify-end">
