@@ -1,5 +1,6 @@
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
+import nlaAvalonAward from "@/assets/gym-buddies/nla-avalon-award.png";
 
 const ImpactSection = () => {
   return (
@@ -34,6 +35,11 @@ const ImpactSection = () => {
 
           {/* Gym Buddies CTA */}
           <div className="text-center mt-10">
+            <img 
+              src={nlaAvalonAward} 
+              alt="NLA youth with Avalon Police Chief receiving award" 
+              className="mx-auto mb-6 rounded-lg shadow-lg max-w-md w-full"
+            />
             <p className="text-sm md:text-base text-foreground/80 leading-relaxed mb-6">
               Learn more about Gym Buddies and how shared training has strengthened trust and relationships throughout our community.
             </p>
