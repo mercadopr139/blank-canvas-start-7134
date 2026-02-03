@@ -27,11 +27,8 @@ export function ClickToEnlargeGallery({
   const overlay = useMemo(() => {
     if (!activeImg) return null;
 
-    const left = anchor?.x ?? window.innerWidth / 2;
-    const top = anchor?.y ?? window.innerHeight / 2;
-
     return (
-      <div className="fixed inset-0 z-[9999]">
+      <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4">
         {/* dark overlay */}
         <button
           type="button"
@@ -40,19 +37,12 @@ export function ClickToEnlargeGallery({
           aria-label="Close enlarged image"
         />
 
-        {/* image (positioned over clicked item) */}
-        <div
-          className="absolute z-10 w-[92%] max-w-3xl p-4"
-          style={{
-            left,
-            top,
-            transform: "translate(-50%, -50%)",
-          }}
-        >
+        {/* image (centered) */}
+        <div className="relative z-10 w-full max-w-3xl">
           <button
             type="button"
             onClick={() => setActiveImg(null)}
-            className="absolute -top-10 right-4 rounded-xl bg-background px-3 py-2 text-sm font-semibold text-foreground"
+            className="absolute -top-10 right-0 rounded-xl bg-background px-3 py-2 text-sm font-semibold text-foreground"
           >
             ✕ Close
           </button>
