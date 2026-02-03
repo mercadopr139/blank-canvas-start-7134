@@ -305,7 +305,7 @@ const GymBuddies = () => {
               </Drawer>
 
               {/* Photo Gallery */}
-              <ClickToEnlargeGallery images={gymBuddiesImages} showCaptions />
+              <ClickToEnlargeGallery images={gymBuddiesImages} showCaptions variant="featured" />
             </div>
           </div>
         </section>
