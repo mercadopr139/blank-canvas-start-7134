@@ -50,6 +50,7 @@ import chiefDekonCapeMay from "@/assets/gym-buddies/chief-dekon-cape-may.jpg";
 import excursionYouthGroup from "@/assets/excursions/excursion-youth-group.png";
 import excursionPaddleboard from "@/assets/excursions/excursion-paddleboard.png";
 import excursionShoreFishing from "@/assets/excursions/excursion-shore-fishing.png";
+import excursionSpeedboatTubing from "@/assets/excursions/excursion-speedboat-tubing.png";
 
 const gymBuddiesImages = [
   { src: chiefDekonCapeMay, alt: "Congrats Chief Dekon of Cape May" },
@@ -121,6 +122,7 @@ const ProgramsExtrasSection = () => {
           { src: excursionYouthGroup, alt: "Hiking at Higbees", caption: "Hiking at Higbees" },
           { src: excursionPaddleboard, alt: "Paddle Board & Kayaking", caption: "Paddle Board & Kayaking" },
           { src: excursionShoreFishing, alt: "Shore Fishing in Cape May", caption: "Shore Fishing in Cape May" },
+          { src: excursionSpeedboatTubing, alt: "Speed Boat & Tubing Fun", caption: "Speed Boat & Tubing Fun" },
         ],
         buttonLabel: "Back to Programs",
       },
