@@ -53,6 +53,7 @@ import excursionShoreFishing from "@/assets/excursions/excursion-shore-fishing.p
 import excursionSpeedboatTubing from "@/assets/excursions/excursion-speedboat-tubing.png";
 import excursionPoolChampions from "@/assets/excursions/excursion-pool-champions.png";
 import excursionPfChangs from "@/assets/excursions/excursion-pf-changs.png";
+import excursionBowling from "@/assets/excursions/excursion-bowling.png";
 
 const gymBuddiesImages = [
   { src: chiefDekonCapeMay, alt: "Congrats Chief Dekon of Cape May" },
@@ -127,6 +128,7 @@ const ProgramsExtrasSection = () => {
           { src: excursionSpeedboatTubing, alt: "Speed Boat & Tubing Fun", caption: "Speed Boat & Tubing Fun" },
           { src: excursionPoolChampions, alt: "World 9 Pool Champions in AC", caption: "World 9 Pool Champions in AC" },
           { src: excursionPfChangs, alt: "Team Night at PF Chang's", caption: "Team Night at PF Chang's" },
+          { src: excursionBowling, alt: "Bowling in Wildwood", caption: "Bowling in Wildwood" },
         ],
         buttonLabel: "Back to Programs",
       },
