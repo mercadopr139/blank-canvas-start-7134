@@ -63,10 +63,10 @@ const ContactModal = ({ open, onOpenChange }: ContactModalProps) => {
 
             <a
               href="mailto:info@nolimitsboxingacademy.org?subject=Question%20from%20No%20Limits%20Academy%20Website"
-              className="w-full flex items-center justify-center gap-2 rounded-lg border border-border px-4 py-3 text-sm font-medium hover:bg-accent transition"
+              className="w-full flex items-center justify-center rounded-xl bg-black px-4 py-3 text-white font-semibold hover:opacity-90 transition"
               aria-label="Send an email to No Limits Academy"
             >
-              📧 Email NLA
+              Email NLA
             </a>
           </div>
         ) : (
