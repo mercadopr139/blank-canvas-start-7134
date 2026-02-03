@@ -171,7 +171,7 @@ const ImpactStory = () => {
                     <ul className="space-y-2 text-muted-foreground">
                       <li className="flex items-start gap-2">
                         <span className="text-foreground mt-1">•</span>
-                        <span>Middle Township Mayor and former Police Chief</span>
+                        <span>Middle Township Mayor and former Police Chief, Chris Leusner, and various Cape May County Mayors</span>
                       </li>
                       <li className="flex items-start gap-2">
                         <span className="text-foreground mt-1">•</span>
@@ -179,7 +179,7 @@ const ImpactStory = () => {
                       </li>
                       <li className="flex items-start gap-2">
                         <span className="text-foreground mt-1">•</span>
-                        <span>United States Congressman</span>
+                        <span>United States Congressman, Jeff Van Drew</span>
                       </li>
                       <li className="flex items-start gap-2">
                         <span className="text-foreground mt-1">•</span>
