@@ -64,6 +64,7 @@ import excursionCycleTime from "@/assets/excursions/excursion-cycle-time.png";
 import excursionBoxingPittsburgh from "@/assets/excursions/excursion-boxing-pittsburgh.png";
 import excursionTrickOrTreat from "@/assets/excursions/excursion-trick-or-treat.png";
 import excursionNavalAcademy from "@/assets/excursions/excursion-naval-academy.png";
+import excursionOmariJones from "@/assets/excursions/excursion-omari-jones.png";
 
 const gymBuddiesImages = [
   { src: chiefDekonCapeMay, alt: "Congrats Chief Dekon of Cape May" },
@@ -149,6 +150,7 @@ const ProgramsExtrasSection = () => {
           { src: excursionBoxingPittsburgh, alt: "Boxing Camp in Pittsburgh", caption: "Boxing Camp in Pittsburgh" },
           { src: excursionTrickOrTreat, alt: "Trick or Treat", caption: "Trick or Treat" },
           { src: excursionNavalAcademy, alt: "Naval Academy Boxing Championships", caption: "Naval Academy Boxing Championships" },
+          { src: excursionOmariJones, alt: "Olympic Bronze Medalist, Omari Jones", caption: "Olympic Bronze Medalist, Omari Jones" },
         ],
         buttonLabel: "Back to Programs",
       },
