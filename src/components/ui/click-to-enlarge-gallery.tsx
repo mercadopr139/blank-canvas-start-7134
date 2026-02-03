@@ -41,7 +41,10 @@ export function ClickToEnlargeGallery({
 
       {/* Lightbox overlay */}
       {activeImg && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center">
+        <div 
+          className="fixed inset-0 z-[9999] flex items-center justify-center p-4"
+          style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0 }}
+        >
           {/* dark overlay */}
           <button
             type="button"
@@ -50,7 +53,7 @@ export function ClickToEnlargeGallery({
             aria-label="Close enlarged image"
           />
           {/* image */}
-          <div className="relative z-10 w-[92%] max-w-3xl">
+          <div className="relative z-10 w-full max-w-3xl">
             <button
               type="button"
               onClick={() => setActiveImg(null)}
