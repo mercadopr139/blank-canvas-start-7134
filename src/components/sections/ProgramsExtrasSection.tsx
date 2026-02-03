@@ -6,6 +6,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import { ClickToEnlargeGallery } from "@/components/ui/click-to-enlarge-gallery";
 
 // Gym Buddies images (all 35)
 import middleTownshipPd from "@/assets/gym-buddies/middle-township-pd.jpg";
@@ -220,21 +221,7 @@ const ProgramsExtrasSection = () => {
             </p>
 
             {/* Gallery */}
-            <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3">
-              {openItem?.images.map((img, idx) => (
-                <div 
-                  key={idx} 
-                  className="overflow-hidden rounded-xl border border-border bg-muted"
-                >
-                  <img
-                    src={img.src}
-                    alt={img.alt}
-                    className="h-40 w-full object-cover"
-                    loading="lazy"
-                  />
-                </div>
-              ))}
-            </div>
+            {openItem && <ClickToEnlargeGallery images={openItem.images} />}
 
             {/* Bottom button */}
             <div className="mt-6 flex justify-end">
