@@ -231,6 +231,18 @@ const ImpactStory = () => {
                         <span className="text-foreground mt-1">•</span>
                         <span>Embedded mental health partnerships</span>
                       </li>
+                      <li className="flex items-start gap-2 ml-6">
+                        <span className="text-foreground mt-1">–</span>
+                        <span>Acenda's NJ4S</span>
+                      </li>
+                      <li className="flex items-start gap-2 ml-6">
+                        <span className="text-foreground mt-1">–</span>
+                        <span>Cape Assist</span>
+                      </li>
+                      <li className="flex items-start gap-2 ml-6">
+                        <span className="text-foreground mt-1">–</span>
+                        <span>CARA</span>
+                      </li>
                       <li className="flex items-start gap-2">
                         <span className="text-foreground mt-1">•</span>
                         <span>Community-based youth support and prevention organizations serving Cape May County</span>
