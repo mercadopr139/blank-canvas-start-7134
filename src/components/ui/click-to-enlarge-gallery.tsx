@@ -32,17 +32,23 @@ export function ClickToEnlargeGallery({
         {/* dark overlay */}
         <button
           type="button"
-          className="absolute inset-0 bg-foreground/80"
+          className="absolute inset-0 z-0 bg-foreground/80"
           onClick={() => setActiveImg(null)}
           aria-label="Close enlarged image"
         />
 
         {/* image (centered) */}
-        <div className="relative z-10 w-full max-w-3xl">
+        <div
+          className="relative z-10 w-full max-w-3xl"
+          onClick={(e) => e.stopPropagation()}
+        >
           <button
             type="button"
-            onClick={() => setActiveImg(null)}
-            className="absolute -top-10 right-0 rounded-xl bg-background px-3 py-2 text-sm font-semibold text-foreground"
+            onClick={(e) => {
+              e.stopPropagation();
+              setActiveImg(null);
+            }}
+            className="absolute right-3 top-3 z-20 rounded-xl bg-background/90 px-3 py-2 text-sm font-semibold text-foreground backdrop-blur"
           >
             ✕ Close
           </button>
