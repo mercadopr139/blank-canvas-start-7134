@@ -3,7 +3,7 @@ import Footer from "@/components/layout/Footer";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Calendar, Utensils, Heart } from "lucide-react";
-import mealTrainHero from "@/assets/meal-train/meal-train-hero.png";
+import mealTrainHero from "@/assets/meal-train/meal-train-hero.jpg";
 import mealTrainLogo from "@/assets/meal-train/meal-train-logo.png";
 
 const MEAL_TRAIN_LINK = "https://www.mealtrain.com/trains/ode4rn";
