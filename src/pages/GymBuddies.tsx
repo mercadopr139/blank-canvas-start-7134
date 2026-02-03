@@ -11,6 +11,7 @@ import {
   DrawerClose,
 } from "@/components/ui/drawer";
 import GymBuddiesChatWidget from "@/components/gym-buddies/GymBuddiesChatWidget";
+import { ClickToEnlargeGallery } from "@/components/ui/click-to-enlarge-gallery";
 
 import middleTownshipPd from "@/assets/gym-buddies/middle-township-pd.jpg";
 import lowerTownshipPd from "@/assets/gym-buddies/lower-township-pd.jpg";
@@ -304,22 +305,7 @@ const GymBuddies = () => {
               </Drawer>
 
               {/* Photo Gallery */}
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                {gymBuddiesImages.map((image, index) => (
-                  <div key={index} className="group relative overflow-hidden rounded-lg">
-                    <div className="aspect-[4/3] bg-muted">
-                      <img
-                        src={image.src}
-                        alt={image.alt}
-                        className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
-                      />
-                    </div>
-                    <div className="absolute bottom-0 left-0 right-0 bg-foreground/80 text-background px-3 py-2">
-                      <p className="text-sm font-medium">{image.caption}</p>
-                    </div>
-                  </div>
-                ))}
-              </div>
+              <ClickToEnlargeGallery images={gymBuddiesImages} showCaptions />
             </div>
           </div>
         </section>
