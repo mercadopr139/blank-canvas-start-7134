@@ -2,6 +2,12 @@ import Header from "@/components/layout/Header";
 import Footer from "@/components/layout/Footer";
 import { Card, CardContent } from "@/components/ui/card";
 import { Users, TrendingUp, Heart, Shield } from "lucide-react";
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
 
 const ImpactStory = () => {
   const stats = [
@@ -108,103 +114,119 @@ const ImpactStory = () => {
                 </p>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+              <Accordion type="single" collapsible className="w-full space-y-4">
                 {/* Schools & Education Partners */}
-                <div className="bg-accent border border-border rounded-lg p-6">
-                  <h3 className="text-lg font-bold text-foreground mb-4">Schools & Education Partners</h3>
-                  <ul className="space-y-2 text-muted-foreground">
-                    <li className="flex items-start gap-2">
-                      <span className="text-foreground mt-1">•</span>
-                      <span>Cape May County Special Services</span>
-                    </li>
-                    <li className="flex items-start gap-2">
-                      <span className="text-foreground mt-1">•</span>
-                      <span>Cape May County Technical High School</span>
-                    </li>
-                    <li className="flex items-start gap-2">
-                      <span className="text-foreground mt-1">•</span>
-                      <span>Lower Cape May Regional School District</span>
-                    </li>
-                    <li className="flex items-start gap-2">
-                      <span className="text-foreground mt-1">•</span>
-                      <span>Middle Township School District</span>
-                    </li>
-                    <li className="flex items-start gap-2">
-                      <span className="text-foreground mt-1">•</span>
-                      <span>North Wildwood School District</span>
-                    </li>
-                    <li className="flex items-start gap-2">
-                      <span className="text-foreground mt-1">•</span>
-                      <span>Wildwood Catholic High School</span>
-                    </li>
-                    <li className="flex items-start gap-2">
-                      <span className="text-foreground mt-1">•</span>
-                      <span>Wildwood Crest School District</span>
-                    </li>
-                    <li className="flex items-start gap-2">
-                      <span className="text-foreground mt-1">•</span>
-                      <span>Wildwood School District</span>
-                    </li>
-                    <li className="flex items-start gap-2">
-                      <span className="text-foreground mt-1">•</span>
-                      <span>Woodbine Elementary School</span>
-                    </li>
-                  </ul>
-                </div>
+                <AccordionItem value="schools" className="bg-accent border border-border rounded-lg px-6">
+                  <AccordionTrigger className="text-lg font-bold text-foreground hover:no-underline py-6">
+                    Schools & Education Partners
+                  </AccordionTrigger>
+                  <AccordionContent className="pb-6">
+                    <ul className="space-y-2 text-muted-foreground">
+                      <li className="flex items-start gap-2">
+                        <span className="text-foreground mt-1">•</span>
+                        <span>Cape May County Special Services</span>
+                      </li>
+                      <li className="flex items-start gap-2">
+                        <span className="text-foreground mt-1">•</span>
+                        <span>Cape May County Technical High School</span>
+                      </li>
+                      <li className="flex items-start gap-2">
+                        <span className="text-foreground mt-1">•</span>
+                        <span>Lower Cape May Regional School District</span>
+                      </li>
+                      <li className="flex items-start gap-2">
+                        <span className="text-foreground mt-1">•</span>
+                        <span>Middle Township School District</span>
+                      </li>
+                      <li className="flex items-start gap-2">
+                        <span className="text-foreground mt-1">•</span>
+                        <span>North Wildwood School District</span>
+                      </li>
+                      <li className="flex items-start gap-2">
+                        <span className="text-foreground mt-1">•</span>
+                        <span>Wildwood Catholic High School</span>
+                      </li>
+                      <li className="flex items-start gap-2">
+                        <span className="text-foreground mt-1">•</span>
+                        <span>Wildwood Crest School District</span>
+                      </li>
+                      <li className="flex items-start gap-2">
+                        <span className="text-foreground mt-1">•</span>
+                        <span>Wildwood School District</span>
+                      </li>
+                      <li className="flex items-start gap-2">
+                        <span className="text-foreground mt-1">•</span>
+                        <span>Woodbine Elementary School</span>
+                      </li>
+                    </ul>
+                  </AccordionContent>
+                </AccordionItem>
 
                 {/* Public Officials & Government Support */}
-                <div className="bg-accent border border-border rounded-lg p-6">
-                  <h3 className="text-lg font-bold text-foreground mb-4">Public Officials & Government Support</h3>
-                  <ul className="space-y-2 text-muted-foreground">
-                    <li className="flex items-start gap-2">
-                      <span className="text-foreground mt-1">•</span>
-                      <span>Middle Township Mayor and former Police Chief</span>
-                    </li>
-                    <li className="flex items-start gap-2">
-                      <span className="text-foreground mt-1">•</span>
-                      <span>New Jersey State Assembly members</span>
-                    </li>
-                    <li className="flex items-start gap-2">
-                      <span className="text-foreground mt-1">•</span>
-                      <span>United States Congressman</span>
-                    </li>
-                    <li className="flex items-start gap-2">
-                      <span className="text-foreground mt-1">•</span>
-                      <span>Cape May County Board of Commissioners leadership</span>
-                    </li>
-                  </ul>
-                </div>
+                <AccordionItem value="officials" className="bg-accent border border-border rounded-lg px-6">
+                  <AccordionTrigger className="text-lg font-bold text-foreground hover:no-underline py-6">
+                    Public Officials & Government Support
+                  </AccordionTrigger>
+                  <AccordionContent className="pb-6">
+                    <ul className="space-y-2 text-muted-foreground">
+                      <li className="flex items-start gap-2">
+                        <span className="text-foreground mt-1">•</span>
+                        <span>Middle Township Mayor and former Police Chief</span>
+                      </li>
+                      <li className="flex items-start gap-2">
+                        <span className="text-foreground mt-1">•</span>
+                        <span>New Jersey State Assembly members</span>
+                      </li>
+                      <li className="flex items-start gap-2">
+                        <span className="text-foreground mt-1">•</span>
+                        <span>United States Congressman</span>
+                      </li>
+                      <li className="flex items-start gap-2">
+                        <span className="text-foreground mt-1">•</span>
+                        <span>Cape May County Board of Commissioners leadership</span>
+                      </li>
+                    </ul>
+                  </AccordionContent>
+                </AccordionItem>
 
                 {/* Law Enforcement & Public Safety */}
-                <div className="bg-accent border border-border rounded-lg p-6">
-                  <h3 className="text-lg font-bold text-foreground mb-4">Law Enforcement & Public Safety</h3>
-                  <ul className="space-y-2 text-muted-foreground">
-                    <li className="flex items-start gap-2">
-                      <span className="text-foreground mt-1">•</span>
-                      <span>Cape May County Prosecutor's Office</span>
-                    </li>
-                    <li className="flex items-start gap-2">
-                      <span className="text-foreground mt-1">•</span>
-                      <span>Over twelve municipal and county law enforcement agencies across Cape May County</span>
-                    </li>
-                  </ul>
-                </div>
+                <AccordionItem value="law-enforcement" className="bg-accent border border-border rounded-lg px-6">
+                  <AccordionTrigger className="text-lg font-bold text-foreground hover:no-underline py-6">
+                    Law Enforcement & Public Safety
+                  </AccordionTrigger>
+                  <AccordionContent className="pb-6">
+                    <ul className="space-y-2 text-muted-foreground">
+                      <li className="flex items-start gap-2">
+                        <span className="text-foreground mt-1">•</span>
+                        <span>Cape May County Prosecutor's Office</span>
+                      </li>
+                      <li className="flex items-start gap-2">
+                        <span className="text-foreground mt-1">•</span>
+                        <span>Over twelve municipal and county law enforcement agencies across Cape May County</span>
+                      </li>
+                    </ul>
+                  </AccordionContent>
+                </AccordionItem>
 
                 {/* Mental Health & Youth Support Services */}
-                <div className="bg-accent border border-border rounded-lg p-6">
-                  <h3 className="text-lg font-bold text-foreground mb-4">Mental Health & Youth Support Services</h3>
-                  <ul className="space-y-2 text-muted-foreground">
-                    <li className="flex items-start gap-2">
-                      <span className="text-foreground mt-1">•</span>
-                      <span>Embedded mental health partnerships</span>
-                    </li>
-                    <li className="flex items-start gap-2">
-                      <span className="text-foreground mt-1">•</span>
-                      <span>Community-based youth support and prevention organizations serving Cape May County</span>
-                    </li>
-                  </ul>
-                </div>
-              </div>
+                <AccordionItem value="mental-health" className="bg-accent border border-border rounded-lg px-6">
+                  <AccordionTrigger className="text-lg font-bold text-foreground hover:no-underline py-6">
+                    Mental Health & Youth Support Services
+                  </AccordionTrigger>
+                  <AccordionContent className="pb-6">
+                    <ul className="space-y-2 text-muted-foreground">
+                      <li className="flex items-start gap-2">
+                        <span className="text-foreground mt-1">•</span>
+                        <span>Embedded mental health partnerships</span>
+                      </li>
+                      <li className="flex items-start gap-2">
+                        <span className="text-foreground mt-1">•</span>
+                        <span>Community-based youth support and prevention organizations serving Cape May County</span>
+                      </li>
+                    </ul>
+                  </AccordionContent>
+                </AccordionItem>
+              </Accordion>
             </div>
           </div>
         </section>
