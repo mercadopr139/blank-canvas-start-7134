@@ -21,7 +21,7 @@ import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import InvoicePreview from "@/components/admin/InvoicePreview";
-import { ArrowLeft, FileText, Eye } from "lucide-react";
+import { ArrowLeft, FileText, Eye, CalendarDays } from "lucide-react";
 import { format } from "date-fns";
 import type { Tables } from "@/integrations/supabase/types";
 
@@ -354,6 +354,16 @@ export default function AdminInvoices() {
             <Button onClick={handleGeneratePreview} disabled={!selectedClientId || isLoading}>
               {isLoading ? "Loading..." : "Generate Preview"}
             </Button>
+            {selectedClientId && (
+              <Link 
+                to={`/admin/service-calendar?client=${selectedClientId}&month=${selectedMonth}&year=${selectedYear}`}
+              >
+                <Button variant="outline">
+                  <CalendarDays className="w-4 h-4 mr-2" />
+                  Add / View Service Days
+                </Button>
+              </Link>
+            )}
           </div>
         </div>
 
