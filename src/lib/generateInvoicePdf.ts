@@ -8,7 +8,7 @@ type ServiceLog = Tables<"service_logs">;
 
 interface LineItem {
   date: string;
-  billingMethod: "hourly" | "flat_rate";
+  billingMethod: "hourly" | "flat_rate" | "per_day";
   hours: number | null;
   flatAmount: number | null;
   lineTotal: number;
@@ -73,11 +73,28 @@ export interface InvoicePdfData {
 export function generateInvoicePdf(data: InvoicePdfData): jsPDF {
   const { client, serviceLogs, invoiceNumber, issueDate, month, year } = data;
   const hourlyRate = (client as any).hourly_rate || 0;
+  const serviceTime = (client as any).service_time || "";
+  const serviceDays = (client as any).service_days || "";
 
   const lineItems = calculateLineItems(serviceLogs);
   const summary = calculateSummary(lineItems, hourlyRate);
 
   const monthName = new Date(year, month - 1).toLocaleString("default", { month: "long" });
+  
+  // Check if this is a Per Day client
+  const isPerDayClient = lineItems.some(item => item.billingMethod === "per_day") || 
+                          (client as any).rate_type === "per_day";
+  
+  // Build formatted dates list for Per Day invoices
+  const formattedDatesList = isPerDayClient && serviceLogs.length > 0
+    ? [...serviceLogs]
+        .sort((a, b) => new Date(a.service_date).getTime() - new Date(b.service_date).getTime())
+        .map(log => {
+          const date = new Date(log.service_date);
+          return format(date, "MMM. d");
+        })
+        .join(", ")
+    : "";
 
   const doc = new jsPDF();
   const pageWidth = doc.internal.pageSize.getWidth();
@@ -141,6 +158,35 @@ export function generateInvoicePdf(data: InvoicePdfData): jsPDF {
     yPos += 10;
   } else {
     yPos += 10;
+  }
+
+  // Per Day schedule info (Time, Days, Dates)
+  if (isPerDayClient) {
+    if (serviceTime) {
+      doc.setFont("helvetica", "bold");
+      doc.text("Time:", 20, yPos);
+      doc.setFont("helvetica", "normal");
+      doc.text(serviceTime, 45, yPos);
+      yPos += 6;
+    }
+    if (serviceDays) {
+      doc.setFont("helvetica", "bold");
+      doc.text("Day(s):", 20, yPos);
+      doc.setFont("helvetica", "normal");
+      doc.text(serviceDays, 45, yPos);
+      yPos += 6;
+    }
+    if (formattedDatesList) {
+      doc.setFont("helvetica", "bold");
+      doc.text("Date(s):", 20, yPos);
+      doc.setFont("helvetica", "normal");
+      // Handle long date lists by wrapping
+      const maxWidth = pageWidth - 65;
+      const splitDates = doc.splitTextToSize(formattedDatesList, maxWidth);
+      doc.text(splitDates, 45, yPos);
+      yPos += 6 * splitDates.length;
+    }
+    yPos += 4;
   }
 
   // Summary section

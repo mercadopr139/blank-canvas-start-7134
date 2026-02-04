@@ -67,7 +67,9 @@ export type Database = {
           phone: string | null
           rate_amount: number | null
           rate_type: Database["public"]["Enums"]["rate_type"] | null
+          service_days: string | null
           service_description_default: string | null
+          service_time: string | null
           updated_at: string
         }
         Insert: {
@@ -84,7 +86,9 @@ export type Database = {
           phone?: string | null
           rate_amount?: number | null
           rate_type?: Database["public"]["Enums"]["rate_type"] | null
+          service_days?: string | null
           service_description_default?: string | null
+          service_time?: string | null
           updated_at?: string
         }
         Update: {
@@ -101,7 +105,9 @@ export type Database = {
           phone?: string | null
           rate_amount?: number | null
           rate_type?: Database["public"]["Enums"]["rate_type"] | null
+          service_days?: string | null
           service_description_default?: string | null
+          service_time?: string | null
           updated_at?: string
         }
         Relationships: []

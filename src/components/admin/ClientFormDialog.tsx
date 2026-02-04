@@ -72,6 +72,8 @@ export default function ClientFormDialog({
     custom_rate_type: "",
     rate_amount: "",
     service_description_default: "",
+    service_time: "",
+    service_days: "",
     notes: "",
   });
 
@@ -89,6 +91,8 @@ export default function ClientFormDialog({
         custom_rate_type: isCustomRateType ? (client.rate_type || "") : "",
         rate_amount: client.rate_amount?.toString() || "",
         service_description_default: client.service_description_default || "",
+        service_time: (client as any).service_time || "",
+        service_days: (client as any).service_days || "",
         notes: client.notes || "",
       });
     } else {
@@ -102,6 +106,8 @@ export default function ClientFormDialog({
         custom_rate_type: "",
         rate_amount: "",
         service_description_default: "",
+        service_time: "",
+        service_days: "",
         notes: "",
       });
     }
@@ -148,6 +154,8 @@ export default function ClientFormDialog({
       rate_type: finalRateType as any,
       rate_amount: formData.rate_amount ? parseFloat(formData.rate_amount) : null,
       service_description_default: formData.service_description_default || null,
+      service_time: formData.service_time || null,
+      service_days: formData.service_days || null,
       notes: formData.notes || null,
     };
 
@@ -291,6 +299,27 @@ export default function ClientFormDialog({
               placeholder='e.g., "Fee-for-service youth development programming"'
               rows={2}
             />
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="service_time">Service Time (for Per Day)</Label>
+              <Input
+                id="service_time"
+                value={formData.service_time}
+                onChange={(e) => setFormData({ ...formData, service_time: e.target.value })}
+                placeholder='e.g., "3pm–5pm"'
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="service_days">Service Days (for Per Day)</Label>
+              <Input
+                id="service_days"
+                value={formData.service_days}
+                onChange={(e) => setFormData({ ...formData, service_days: e.target.value })}
+                placeholder='e.g., "Tuesday & Thursday"'
+              />
+            </div>
           </div>
 
           <div className="space-y-2">
