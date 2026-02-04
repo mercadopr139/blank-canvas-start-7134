@@ -121,7 +121,15 @@ const handler = async (req: Request): Promise<Response> => {
       ],
     });
 
-    console.log("Email sent successfully:", emailResponse);
+    console.log("Resend API response:", emailResponse);
+
+    // Check if there was an error from Resend
+    if (emailResponse.error) {
+      console.error("Resend API error:", emailResponse.error);
+      throw new Error(`Email sending failed: ${emailResponse.error.message}`);
+    }
+
+    console.log("Email sent successfully, ID:", emailResponse.data?.id);
 
     // Update invoice with sent info
     const { error: updateError } = await supabase
