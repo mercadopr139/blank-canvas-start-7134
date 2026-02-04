@@ -398,6 +398,10 @@ young people build discipline, resilience, and direction—so they can break cyc
                     <span className="text-foreground mt-0.5">•</span>
                     <span>Boys: 70%</span>
                   </li>
+                  <li className="flex items-start gap-2">
+                    <span className="text-foreground mt-0.5">•</span>
+                    <span>Girls: 30%</span>
+                  </li>
                 </ul>
               </div>
 
