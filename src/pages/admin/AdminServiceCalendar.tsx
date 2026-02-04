@@ -11,7 +11,7 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
-import ServiceLogEditDialog from "@/components/admin/ServiceLogEditDialog";
+import ServiceEntryModal from "@/components/admin/ServiceEntryModal";
 import { ArrowLeft, Calendar, ChevronLeft, ChevronRight, FileText } from "lucide-react";
 import {
   format,
@@ -37,6 +37,8 @@ export default function AdminServiceCalendar() {
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [serviceLogs, setServiceLogs] = useState<ServiceLog[]>([]);
   const [loading, setLoading] = useState(false);
+  const [entryModalOpen, setEntryModalOpen] = useState(false);
+  const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [editingLog, setEditingLog] = useState<ServiceLog | null>(null);
   
   const { toast } = useToast();
@@ -125,7 +127,7 @@ export default function AdminServiceCalendar() {
     return map;
   }, [serviceLogs]);
 
-  const handleDateClick = async (date: Date) => {
+  const handleDateClick = (date: Date) => {
     if (!selectedClientId) {
       toast({ title: "Please select a client first", variant: "destructive" });
       return;
@@ -134,43 +136,9 @@ export default function AdminServiceCalendar() {
     const dateStr = format(date, "yyyy-MM-dd");
     const existingLog = serviceLogsByDate[dateStr];
 
-    if (existingLog) {
-      // Delete the existing log
-      const { error } = await supabase
-        .from("service_logs")
-        .delete()
-        .eq("id", existingLog.id);
-
-      if (error) {
-        toast({ title: "Error removing service day", description: error.message, variant: "destructive" });
-      } else {
-        setServiceLogs((prev) => prev.filter((log) => log.id !== existingLog.id));
-        toast({ title: "Service day removed" });
-      }
-    } else {
-      // Create a new log
-      const { data, error } = await supabase
-        .from("service_logs")
-        .insert([{ client_id: selectedClientId, service_date: dateStr }])
-        .select()
-        .single();
-
-      if (error) {
-        toast({ title: "Error adding service day", description: error.message, variant: "destructive" });
-      } else {
-        setServiceLogs((prev) => [...prev, data]);
-        toast({ title: "Service day added" });
-      }
-    }
-  };
-
-  const handleDateRightClick = (e: React.MouseEvent, date: Date) => {
-    e.preventDefault();
-    const dateStr = format(date, "yyyy-MM-dd");
-    const existingLog = serviceLogsByDate[dateStr];
-    if (existingLog) {
-      setEditingLog(existingLog);
-    }
+    setSelectedDate(date);
+    setEditingLog(existingLog || null);
+    setEntryModalOpen(true);
   };
 
   const refreshLogs = async () => {
@@ -328,11 +296,10 @@ export default function AdminServiceCalendar() {
                     <button
                       key={dateStr}
                       onClick={() => handleDateClick(day)}
-                      onContextMenu={(e) => handleDateRightClick(e, day)}
                       disabled={loading}
                       className={`
                         aspect-square rounded-lg border text-sm font-medium transition-all
-                        flex items-center justify-center
+                        flex flex-col items-center justify-center gap-0.5
                         ${!isCurrentMonth ? "opacity-50" : ""}
                         ${isServiceDay
                           ? "bg-primary text-primary-foreground border-primary hover:bg-primary/90"
@@ -341,27 +308,44 @@ export default function AdminServiceCalendar() {
                         ${loading ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}
                       `}
                     >
-                      {format(day, "d")}
+                      <span>{format(day, "d")}</span>
+                      {isServiceDay && serviceLogsByDate[dateStr] && (
+                        <span className="text-[10px] opacity-80">
+                          {serviceLogsByDate[dateStr].billing_method === "flat_rate" 
+                            ? "Flat" 
+                            : `${serviceLogsByDate[dateStr].hours || 0}h`}
+                        </span>
+                      )}
                     </button>
                   );
                 })}
               </div>
 
               <p className="text-xs text-muted-foreground mt-4 text-center">
-                Click to toggle service days • Right-click a service day to edit details
+                Click a date to add or edit a service entry
               </p>
             </>
           )}
         </div>
       </main>
 
-      {/* Edit Dialog */}
-      <ServiceLogEditDialog
-        open={!!editingLog}
-        onOpenChange={(open) => !open && setEditingLog(null)}
-        serviceLog={editingLog}
-        onSuccess={refreshLogs}
-      />
+      {/* Service Entry Modal */}
+      {selectedClient && selectedDate && (
+        <ServiceEntryModal
+          open={entryModalOpen}
+          onOpenChange={(open) => {
+            setEntryModalOpen(open);
+            if (!open) {
+              setSelectedDate(null);
+              setEditingLog(null);
+            }
+          }}
+          client={selectedClient}
+          date={selectedDate}
+          existingLog={editingLog}
+          onSuccess={refreshLogs}
+        />
+      )}
     </div>
   );
 }

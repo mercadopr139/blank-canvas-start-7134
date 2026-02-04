@@ -59,6 +59,9 @@ export type Database = {
           client_name: string
           contact_name: string | null
           created_at: string
+          default_billing_method: string | null
+          default_flat_rate: number | null
+          hourly_rate: number | null
           id: string
           notes: string | null
           phone: string | null
@@ -73,6 +76,9 @@ export type Database = {
           client_name: string
           contact_name?: string | null
           created_at?: string
+          default_billing_method?: string | null
+          default_flat_rate?: number | null
+          hourly_rate?: number | null
           id?: string
           notes?: string | null
           phone?: string | null
@@ -87,6 +93,9 @@ export type Database = {
           client_name?: string
           contact_name?: string | null
           created_at?: string
+          default_billing_method?: string | null
+          default_flat_rate?: number | null
+          hourly_rate?: number | null
           id?: string
           notes?: string | null
           phone?: string | null
@@ -161,9 +170,13 @@ export type Database = {
       }
       service_logs: {
         Row: {
+          billing_method: string | null
           client_id: string
           created_at: string
+          flat_amount: number | null
+          hours: number | null
           id: string
+          line_total: number | null
           notes: string | null
           quantity: number | null
           service_date: string
@@ -172,9 +185,13 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          billing_method?: string | null
           client_id: string
           created_at?: string
+          flat_amount?: number | null
+          hours?: number | null
           id?: string
+          line_total?: number | null
           notes?: string | null
           quantity?: number | null
           service_date: string
@@ -183,9 +200,13 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          billing_method?: string | null
           client_id?: string
           created_at?: string
+          flat_amount?: number | null
+          hours?: number | null
           id?: string
+          line_total?: number | null
           notes?: string | null
           quantity?: number | null
           service_date?: string
