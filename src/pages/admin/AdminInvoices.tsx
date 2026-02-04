@@ -22,7 +22,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import InvoicePreview from "@/components/admin/InvoicePreview";
 import ClientFormDialog from "@/components/admin/ClientFormDialog";
-import { ArrowLeft, FileText, Eye, CalendarDays, Plus } from "lucide-react";
+import { ArrowLeft, FileText, Eye, CalendarDays, Plus, Pencil } from "lucide-react";
 import { format } from "date-fns";
 import type { Tables } from "@/integrations/supabase/types";
 
@@ -70,6 +70,7 @@ export default function AdminInvoices() {
   const [isLoading, setIsLoading] = useState(false);
   const [tempInvoiceNumber, setTempInvoiceNumber] = useState("");
   const [showClientDialog, setShowClientDialog] = useState(false);
+  const [editingClient, setEditingClient] = useState<Client | null>(null);
   const autoGenerateTriggered = useRef(false);
   const { toast } = useToast();
   const { signOut } = useAuth();
@@ -363,6 +364,21 @@ export default function AdminInvoices() {
                 >
                   <Plus className="w-4 h-4" />
                 </Button>
+                {selectedClientId && (
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => {
+                      const client = clients.find(c => c.id === selectedClientId);
+                      setEditingClient(client || null);
+                      setShowClientDialog(true);
+                    }}
+                    className="shrink-0"
+                    title="Edit client"
+                  >
+                    <Pencil className="w-4 h-4" />
+                  </Button>
+                )}
               </div>
             </div>
             <div className="w-40">
@@ -484,10 +500,14 @@ export default function AdminInvoices() {
         </div>
       </main>
 
-      {/* Add Client Modal */}
+      {/* Add/Edit Client Modal */}
       <ClientFormDialog
         open={showClientDialog}
-        onOpenChange={setShowClientDialog}
+        onOpenChange={(open) => {
+          setShowClientDialog(open);
+          if (!open) setEditingClient(null);
+        }}
+        client={editingClient}
         onSuccess={fetchClients}
       />
     </div>
