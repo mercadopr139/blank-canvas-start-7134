@@ -370,6 +370,10 @@ export default function AdminInvoices() {
             onSaveDraft={handleSaveDraft}
             onMarkSent={handleMarkSent}
             onMarkPaid={handleMarkPaid}
+            onInvoiceUpdated={() => {
+              handleGeneratePreview();
+              fetchInvoices();
+            }}
             isLoading={isLoading}
           />
         )}

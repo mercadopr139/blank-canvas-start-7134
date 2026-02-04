@@ -1,8 +1,13 @@
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { format } from "date-fns";
+import { Download, Mail, Copy, Check } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
+import { downloadInvoicePdf, getInvoicePdfBase64 } from "@/lib/generateInvoicePdf";
 import type { Tables } from "@/integrations/supabase/types";
 
 type Client = Tables<"clients">;
@@ -29,6 +34,7 @@ interface InvoicePreviewProps {
   onSaveDraft: (subtotal: number, total: number) => void;
   onMarkSent: () => void;
   onMarkPaid: () => void;
+  onInvoiceUpdated?: () => void;
   isLoading: boolean;
 }
 
@@ -56,8 +62,13 @@ export default function InvoicePreview({
   onSaveDraft,
   onMarkSent,
   onMarkPaid,
+  onInvoiceUpdated,
   isLoading,
 }: InvoicePreviewProps) {
+  const [isSending, setIsSending] = useState(false);
+  const [copied, setCopied] = useState(false);
+  const { toast } = useToast();
+  
   const rateType = client.rate_type;
   const rateAmount = client.rate_amount || 0;
 
@@ -70,7 +81,6 @@ export default function InvoicePreview({
     );
 
     if (rateType === "flat_monthly") {
-      // For flat monthly, show all dates as "included" with one total
       return sortedLogs.map((log) => ({
         date: log.service_date,
         serviceType: log.service_type || "Fee for Service",
@@ -82,7 +92,6 @@ export default function InvoicePreview({
     }
 
     if (rateType === "per_day") {
-      // Per day: each service date = 1 unit × rate
       return sortedLogs.map((log) => ({
         date: log.service_date,
         serviceType: log.service_type || "Fee for Service",
@@ -92,7 +101,6 @@ export default function InvoicePreview({
       }));
     }
 
-    // Per session / per hour: quantity × rate
     return sortedLogs.map((log) => ({
       date: log.service_date,
       serviceType: log.service_type || "Fee for Service",
@@ -104,7 +112,6 @@ export default function InvoicePreview({
 
   const lineItems = calculateLineItems();
 
-  // Calculate subtotal and total
   const calculateSubtotal = (): number => {
     if (rateType === "flat_monthly") {
       return rateAmount;
@@ -113,7 +120,7 @@ export default function InvoicePreview({
   };
 
   const subtotal = calculateSubtotal();
-  const total = subtotal; // No tax for now
+  const total = subtotal;
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat("en-US", {
@@ -125,6 +132,98 @@ export default function InvoicePreview({
   const monthName = new Date(year, month - 1).toLocaleString("default", { month: "long" });
   const status = existingInvoice?.status || "draft";
 
+  const pdfData = {
+    client,
+    serviceLogs,
+    invoiceNumber: existingInvoice?.invoice_number || invoiceNumber,
+    issueDate,
+    month,
+    year,
+  };
+
+  const handleDownloadPdf = () => {
+    try {
+      downloadInvoicePdf(pdfData);
+      toast({ title: "PDF downloaded successfully" });
+    } catch (error: any) {
+      toast({ title: "Error generating PDF", description: error.message, variant: "destructive" });
+    }
+  };
+
+  const handleSendInvoice = async () => {
+    if (!existingInvoice) {
+      toast({ title: "Please save the invoice first", variant: "destructive" });
+      return;
+    }
+
+    if (!client.billing_email) {
+      toast({ title: "Client has no billing email", description: "Please add a billing email to the client record.", variant: "destructive" });
+      return;
+    }
+
+    setIsSending(true);
+    try {
+      const pdfBase64 = getInvoicePdfBase64(pdfData);
+      
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        throw new Error("Not authenticated");
+      }
+
+      const { data, error } = await supabase.functions.invoke("send-invoice", {
+        body: {
+          invoiceId: existingInvoice.id,
+          invoiceNumber: existingInvoice.invoice_number,
+          clientName: client.client_name,
+          billingEmail: client.billing_email,
+          month,
+          year,
+          total,
+          pdfBase64,
+        },
+      });
+
+      if (error) throw error;
+
+      toast({ title: "Invoice sent successfully", description: `Sent to ${client.billing_email}` });
+      onInvoiceUpdated?.();
+    } catch (error: any) {
+      console.error("Error sending invoice:", error);
+      toast({ title: "Error sending invoice", description: error.message, variant: "destructive" });
+    } finally {
+      setIsSending(false);
+    }
+  };
+
+  const generateEmailDraft = () => {
+    const formattedTotal = formatCurrency(total);
+    return {
+      subject: `Invoice ${existingInvoice?.invoice_number || invoiceNumber} – No Limits Academy`,
+      body: `Dear ${client.client_name},
+
+Please find attached your invoice for services rendered during ${monthName} ${year}.
+
+Amount Due: ${formattedTotal}
+Payment Terms: Due within 30 days of invoice date
+
+If you have any questions regarding this invoice, please don't hesitate to contact us.
+
+Thank you for your continued support of No Limits Academy.
+
+Best regards,
+No Limits Academy`,
+    };
+  };
+
+  const handleCopyEmailDraft = () => {
+    const draft = generateEmailDraft();
+    const fullText = `Subject: ${draft.subject}\n\n${draft.body}`;
+    navigator.clipboard.writeText(fullText);
+    setCopied(true);
+    toast({ title: "Email draft copied to clipboard" });
+    setTimeout(() => setCopied(false), 2000);
+  };
+
   return (
     <Card className="w-full">
       <CardHeader className="flex flex-row items-start justify-between">
@@ -134,9 +233,11 @@ export default function InvoicePreview({
             {monthName} {year}
           </p>
         </div>
-        <Badge className={statusColors[status]}>
-          {status.charAt(0).toUpperCase() + status.slice(1)}
-        </Badge>
+        <div className="flex items-center gap-2">
+          <Badge className={statusColors[status]}>
+            {status.charAt(0).toUpperCase() + status.slice(1)}
+          </Badge>
+        </div>
       </CardHeader>
       <CardContent className="space-y-6">
         {/* Invoice Header Info */}
@@ -153,7 +254,7 @@ export default function InvoicePreview({
           <div className="md:text-right space-y-1">
             <p>
               <span className="text-muted-foreground">Invoice #:</span>{" "}
-              <span className="font-medium">{invoiceNumber}</span>
+              <span className="font-medium">{existingInvoice?.invoice_number || invoiceNumber}</span>
             </p>
             <p>
               <span className="text-muted-foreground">Issue Date:</span>{" "}
@@ -239,30 +340,54 @@ export default function InvoicePreview({
 
         {/* Action Buttons */}
         <Separator />
-        <div className="flex flex-wrap gap-3 justify-end">
-          {!existingInvoice && (
-            <Button onClick={() => onSaveDraft(subtotal, total)} disabled={isLoading}>
-              {isLoading ? "Saving..." : "Save as Draft"}
+        <div className="flex flex-wrap gap-3 justify-between items-center">
+          {/* Left side: PDF actions */}
+          <div className="flex gap-2">
+            <Button variant="outline" onClick={handleDownloadPdf} disabled={isLoading}>
+              <Download className="w-4 h-4 mr-2" />
+              Download PDF
             </Button>
-          )}
-          {existingInvoice && existingInvoice.status === "draft" && (
-            <>
-              <Button variant="outline" onClick={() => onSaveDraft(subtotal, total)} disabled={isLoading}>
-                Update Draft
-              </Button>
-              <Button onClick={onMarkSent} disabled={isLoading}>
-                {isLoading ? "Updating..." : "Mark as Sent"}
-              </Button>
-            </>
-          )}
-          {existingInvoice && existingInvoice.status === "sent" && (
-            <Button onClick={onMarkPaid} disabled={isLoading}>
-              {isLoading ? "Updating..." : "Mark as Paid"}
+            <Button variant="outline" onClick={handleCopyEmailDraft}>
+              {copied ? <Check className="w-4 h-4 mr-2" /> : <Copy className="w-4 h-4 mr-2" />}
+              {copied ? "Copied!" : "Copy Email Draft"}
             </Button>
-          )}
-          {existingInvoice && existingInvoice.status === "paid" && (
-            <p className="text-green-600 font-medium">✓ Invoice Paid</p>
-          )}
+          </div>
+
+          {/* Right side: Status actions */}
+          <div className="flex flex-wrap gap-3">
+            {!existingInvoice && (
+              <Button onClick={() => onSaveDraft(subtotal, total)} disabled={isLoading}>
+                {isLoading ? "Saving..." : "Save as Draft"}
+              </Button>
+            )}
+            {existingInvoice && existingInvoice.status === "draft" && (
+              <>
+                <Button variant="outline" onClick={() => onSaveDraft(subtotal, total)} disabled={isLoading}>
+                  Update Draft
+                </Button>
+                <Button 
+                  variant="secondary" 
+                  onClick={handleSendInvoice} 
+                  disabled={isLoading || isSending || !client.billing_email}
+                  title={!client.billing_email ? "Client has no billing email" : ""}
+                >
+                  <Mail className="w-4 h-4 mr-2" />
+                  {isSending ? "Sending..." : "Send Invoice"}
+                </Button>
+                <Button onClick={onMarkSent} disabled={isLoading}>
+                  {isLoading ? "Updating..." : "Mark as Sent"}
+                </Button>
+              </>
+            )}
+            {existingInvoice && existingInvoice.status === "sent" && (
+              <Button onClick={onMarkPaid} disabled={isLoading}>
+                {isLoading ? "Updating..." : "Mark as Paid"}
+              </Button>
+            )}
+            {existingInvoice && existingInvoice.status === "paid" && (
+              <p className="text-primary font-medium">✓ Invoice Paid</p>
+            )}
+          </div>
         </div>
       </CardContent>
     </Card>

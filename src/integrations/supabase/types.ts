@@ -70,6 +70,8 @@ export type Database = {
           invoice_year: number
           issue_date: string | null
           notes: string | null
+          sent_at: string | null
+          sent_to: string | null
           status: Database["public"]["Enums"]["invoice_status"]
           subtotal: number | null
           total: number | null
@@ -85,6 +87,8 @@ export type Database = {
           invoice_year: number
           issue_date?: string | null
           notes?: string | null
+          sent_at?: string | null
+          sent_to?: string | null
           status?: Database["public"]["Enums"]["invoice_status"]
           subtotal?: number | null
           total?: number | null
@@ -100,6 +104,8 @@ export type Database = {
           invoice_year?: number
           issue_date?: string | null
           notes?: string | null
+          sent_at?: string | null
+          sent_to?: string | null
           status?: Database["public"]["Enums"]["invoice_status"]
           subtotal?: number | null
           total?: number | null
