@@ -10,7 +10,7 @@ const ImpactStrip = () => {
     {
       icon: ShieldCheck,
       value: "95%",
-      label: "of Youth Participate in Non-Contact, Safety-Focused Training",
+      label: "of Youth Participate in Non-Contact Boxing",
     },
     {
       icon: Heart,
