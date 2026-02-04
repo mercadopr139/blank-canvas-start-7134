@@ -311,9 +311,9 @@ export default function AdminServiceCalendar() {
                       <span>{format(day, "d")}</span>
                       {isServiceDay && serviceLogsByDate[dateStr] && (
                         <span className="text-[10px] opacity-80 leading-tight text-center">
-                          {serviceLogsByDate[dateStr].billing_method === "flat_rate" 
-                            ? `$${serviceLogsByDate[dateStr].line_total || 0} (Per Day)` 
-                            : `$${serviceLogsByDate[dateStr].line_total || 0} (${serviceLogsByDate[dateStr].hours || 0} hrs)`}
+                          {serviceLogsByDate[dateStr].billing_method === "hourly" 
+                            ? `$${serviceLogsByDate[dateStr].line_total || 0} (${serviceLogsByDate[dateStr].hours || 0} hrs)` 
+                            : `$${serviceLogsByDate[dateStr].line_total || 0} (Per Day)`}
                         </span>
                       )}
                     </button>
