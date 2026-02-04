@@ -1,9 +1,18 @@
+import { useState } from "react";
 import Header from "@/components/layout/Header";
 import Footer from "@/components/layout/Footer";
 import { Card, CardContent } from "@/components/ui/card";
 import { Users, TrendingUp, Heart, Shield, ShieldCheck, Utensils, HandHeart, Calendar, Briefcase, RefreshCw } from "lucide-react";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+
 const ImpactStory = () => {
+  const [demographicsOpen, setDemographicsOpen] = useState(false);
   const topStats = [{
     icon: TrendingUp,
     value: "$2.6M+",
@@ -56,20 +65,34 @@ const ImpactStory = () => {
             <div className="max-w-5xl mx-auto">
               {/* Top row: 3 cards */}
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6 md:gap-8 mb-6 md:mb-8">
-                {topStats.map((stat, index) => <Card key={index} className="border-2 border-foreground/10 hover:border-foreground/20 transition-colors">
-                    <CardContent className="p-8 text-center">
-                      <stat.icon className="h-10 w-10 mx-auto mb-4 text-foreground" />
-                      <div className="text-4xl md:text-5xl font-black text-foreground mb-2">
-                        {stat.value}
-                      </div>
-                      <div className="text-lg font-bold text-foreground mb-1">
-                        {stat.label}
-                      </div>
-                      <div className="text-sm text-muted-foreground">
-                        {stat.description}
-                      </div>
-                    </CardContent>
-                  </Card>)}
+                {topStats.map((stat, index) => {
+                  const isYouthCard = stat.label === "Youth Served Annually";
+                  return (
+                    <Card 
+                      key={index} 
+                      className={`border-2 border-foreground/10 hover:border-foreground/20 transition-colors ${isYouthCard ? "cursor-pointer hover:shadow-lg" : ""}`}
+                      onClick={isYouthCard ? () => setDemographicsOpen(true) : undefined}
+                    >
+                      <CardContent className="p-8 text-center">
+                        <stat.icon className="h-10 w-10 mx-auto mb-4 text-foreground" />
+                        <div className="text-4xl md:text-5xl font-black text-foreground mb-2">
+                          {stat.value}
+                        </div>
+                        <div className="text-lg font-bold text-foreground mb-1">
+                          {stat.label}
+                        </div>
+                        <div className="text-sm text-muted-foreground">
+                          {stat.description}
+                        </div>
+                        {isYouthCard && (
+                          <div className="mt-3 text-sm font-medium text-foreground/70 hover:text-foreground transition-colors">
+                            View NLA demographics →
+                          </div>
+                        )}
+                      </CardContent>
+                    </Card>
+                  );
+                })}
               </div>
               
               {/* Bottom row: 2 cards centered */}
@@ -357,6 +380,79 @@ young people build discipline, resilience, and direction—so they can break cyc
             </div>
           </div>
         </section>
+        {/* Demographics Modal */}
+        <Dialog open={demographicsOpen} onOpenChange={setDemographicsOpen}>
+          <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle className="text-2xl font-black text-foreground">
+                NLA Youth Demographics
+              </DialogTitle>
+            </DialogHeader>
+            
+            <div className="space-y-6 pt-4">
+              {/* Gender */}
+              <div>
+                <h3 className="text-lg font-bold text-foreground mb-3">Gender</h3>
+                <ul className="space-y-2 text-muted-foreground">
+                  <li className="flex items-start gap-2">
+                    <span className="text-foreground mt-0.5">•</span>
+                    <span>Boys: 70%</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span className="text-foreground mt-0.5">•</span>
+                    <span>Girls: 30% (154 girls)</span>
+                  </li>
+                </ul>
+              </div>
+
+              {/* Family Structure */}
+              <div>
+                <h3 className="text-lg font-bold text-foreground mb-3">Family Structure</h3>
+                <ul className="space-y-2 text-muted-foreground">
+                  <li className="flex items-start gap-2">
+                    <span className="text-foreground mt-0.5">•</span>
+                    <span>143 youth living in single-parent households headed by mothers</span>
+                  </li>
+                </ul>
+              </div>
+
+              {/* Race / Ethnic Composition */}
+              <div>
+                <h3 className="text-lg font-bold text-foreground mb-3">Race / Ethnic Composition</h3>
+                <ul className="space-y-2 text-muted-foreground">
+                  <li className="flex items-start gap-2">
+                    <span className="text-foreground mt-0.5">•</span>
+                    <span>Caucasian: 36.8%</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span className="text-foreground mt-0.5">•</span>
+                    <span>Hispanic/Latino: 30.0%</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span className="text-foreground mt-0.5">•</span>
+                    <span>African American: 20.0%</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span className="text-foreground mt-0.5">•</span>
+                    <span>Multiracial: 10.4%</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span className="text-foreground mt-0.5">•</span>
+                    <span>Asian: 1.0%</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span className="text-foreground mt-0.5">•</span>
+                    <span>Native Hawaiian/Other Pacific Islander: 0.9%</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span className="text-foreground mt-0.5">•</span>
+                    <span>American Indian/Alaska Native: 0.9%</span>
+                  </li>
+                </ul>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
       </main>
 
       <Footer />
