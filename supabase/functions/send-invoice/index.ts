@@ -94,9 +94,8 @@ const handler = async (req: Request): Promise<Response> => {
       : '';
 
     // Send email with PDF attachment
-    // TODO: Change back to joshmercado@nolimitsboxingacademy.org once domain is verified
     const emailResponse = await resend.emails.send({
-      from: "No Limits Academy <onboarding@resend.dev>",
+      from: "No Limits Academy <joshmercado@nolimitsboxingacademy.org>",
       to: [billingEmail],
       subject: `Invoice ${invoiceNumber} – No Limits Academy`,
       html: `
