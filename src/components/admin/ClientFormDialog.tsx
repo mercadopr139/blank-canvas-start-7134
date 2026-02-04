@@ -49,9 +49,8 @@ interface ClientFormDialogProps {
 
 const rateTypeLabels: Record<string, string> = {
   per_day: "Per Day",
-  per_session: "Per Session",
-  per_hour: "Per Hour",
-  flat_monthly: "Flat Monthly",
+  hourly_rate: "Hourly Rate",
+  other: "Other",
 };
 
 export default function ClientFormDialog({
@@ -70,6 +69,7 @@ export default function ClientFormDialog({
     phone: "",
     billing_address: "",
     rate_type: "" as string,
+    custom_rate_type: "",
     rate_amount: "",
     hourly_rate: "",
     default_billing_method: "hourly" as string,
@@ -80,13 +80,16 @@ export default function ClientFormDialog({
 
   useEffect(() => {
     if (client) {
+      // Check if rate_type is a custom value (not in predefined options)
+      const isCustomRateType = client.rate_type && !["per_day", "hourly_rate", "other"].includes(client.rate_type);
       setFormData({
         client_name: client.client_name || "",
         contact_name: client.contact_name || "",
         billing_email: client.billing_email || "",
         phone: client.phone || "",
         billing_address: client.billing_address || "",
-        rate_type: client.rate_type || "",
+        rate_type: isCustomRateType ? "other" : (client.rate_type || ""),
+        custom_rate_type: isCustomRateType ? (client.rate_type || "") : "",
         rate_amount: client.rate_amount?.toString() || "",
         hourly_rate: (client as any).hourly_rate?.toString() || "",
         default_billing_method: (client as any).default_billing_method || "hourly",
@@ -102,6 +105,7 @@ export default function ClientFormDialog({
         phone: "",
         billing_address: "",
         rate_type: "",
+        custom_rate_type: "",
         rate_amount: "",
         hourly_rate: "",
         default_billing_method: "hourly",
@@ -142,7 +146,10 @@ export default function ClientFormDialog({
       return;
     }
 
-    const rateTypeValue = formData.rate_type as "per_day" | "per_session" | "per_hour" | "flat_monthly" | null;
+    // Determine final rate type value (use custom if "other" is selected)
+    const finalRateType = formData.rate_type === "other" 
+      ? (formData.custom_rate_type || null)
+      : (formData.rate_type || null);
 
     const clientData = {
       client_name: formData.client_name,
@@ -150,7 +157,7 @@ export default function ClientFormDialog({
       billing_email: formData.billing_email || null,
       phone: formData.phone || null,
       billing_address: formData.billing_address || null,
-      rate_type: rateTypeValue || null,
+      rate_type: finalRateType as any,
       rate_amount: formData.rate_amount ? parseFloat(formData.rate_amount) : null,
       hourly_rate: formData.hourly_rate ? parseFloat(formData.hourly_rate) : null,
       default_billing_method: formData.default_billing_method || null,
@@ -249,7 +256,7 @@ export default function ClientFormDialog({
               <Label htmlFor="rate_type">Rate Type</Label>
               <Select
                 value={formData.rate_type}
-                onValueChange={(value) => setFormData({ ...formData, rate_type: value })}
+                onValueChange={(value) => setFormData({ ...formData, rate_type: value, custom_rate_type: value === "other" ? formData.custom_rate_type : "" })}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Select rate type" />
@@ -263,6 +270,17 @@ export default function ClientFormDialog({
                 </SelectContent>
               </Select>
             </div>
+            {formData.rate_type === "other" && (
+              <div className="space-y-2">
+                <Label htmlFor="custom_rate_type">Custom Rate Type</Label>
+                <Input
+                  id="custom_rate_type"
+                  value={formData.custom_rate_type}
+                  onChange={(e) => setFormData({ ...formData, custom_rate_type: e.target.value })}
+                  placeholder="e.g. Facility Rental, Event Fee"
+                />
+              </div>
+            )}
             <div className="space-y-2">
               <Label htmlFor="rate_amount">Rate Amount ($)</Label>
               <Input
