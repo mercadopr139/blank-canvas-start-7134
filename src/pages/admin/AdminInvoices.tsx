@@ -381,9 +381,6 @@ export default function AdminInvoices() {
                 </SelectContent>
               </Select>
             </div>
-            <Button onClick={() => handleGeneratePreview()} disabled={!selectedClientId || isLoading}>
-              {isLoading ? "Loading..." : "Generate Preview"}
-            </Button>
             {selectedClientId && (
               <Link 
                 to={`/admin/service-calendar?client=${selectedClientId}&month=${selectedMonth}&year=${selectedYear}`}
