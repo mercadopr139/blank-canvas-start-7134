@@ -26,7 +26,7 @@ const AdminDashboard = () => {
       description: "View and manage schedules",
       icon: Calendar,
       color: "bg-green-500/10 text-green-500",
-      href: null,
+      href: "/admin/service-calendar",
     },
     {
       title: "Invoices",
