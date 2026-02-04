@@ -19,7 +19,7 @@ const Header = ({ className }: HeaderProps) => {
     { href: "/meal-train", label: "Meal Train" },
     { href: "/our-story", label: "Our Story" },
     { href: "/impact", label: "Our Impact" },
-    { href: "#vision", label: "Our Vision" },
+    { href: "/vision", label: "Our Vision" },
   ];
 
   const isHashLink = (href: string) => href.startsWith("#");
