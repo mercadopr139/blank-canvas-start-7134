@@ -1,7 +1,7 @@
 import Header from "@/components/layout/Header";
 import Footer from "@/components/layout/Footer";
 import { Card, CardContent } from "@/components/ui/card";
-import { Users, TrendingUp, Heart, Shield, ShieldCheck, Utensils } from "lucide-react";
+import { Users, TrendingUp, Heart, Shield, ShieldCheck, Utensils, HandHeart, Calendar, Briefcase, RefreshCw } from "lucide-react";
 import {
   Accordion,
   AccordionContent,
@@ -287,6 +287,70 @@ const ImpactStory = () => {
                   </AccordionContent>
                 </AccordionItem>
               </Accordion>
+            </div>
+          </div>
+        </section>
+
+        {/* How Our Work Is Sustained Section */}
+        <section className="py-16 md:py-20 bg-primary">
+          <div className="container">
+            <div className="max-w-4xl mx-auto">
+              <h2 className="text-3xl md:text-4xl font-black text-primary-foreground mb-6 text-center">
+                How Our Work Is Sustained
+              </h2>
+              <p className="text-lg md:text-xl text-primary-foreground/90 leading-relaxed text-center mb-12">
+                No Limits Academy operates through a diversified funding model that prioritizes sustainability, transparency, and community trust.
+              </p>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="bg-primary-foreground/10 rounded-lg p-6">
+                  <div className="flex items-start gap-4">
+                    <HandHeart className="h-8 w-8 text-primary-foreground shrink-0 mt-1" />
+                    <div>
+                      <h3 className="text-lg font-bold text-primary-foreground mb-2">Donors</h3>
+                      <p className="text-primary-foreground/80">
+                        Individual and community supporters who believe in our mission.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="bg-primary-foreground/10 rounded-lg p-6">
+                  <div className="flex items-start gap-4">
+                    <Calendar className="h-8 w-8 text-primary-foreground shrink-0 mt-1" />
+                    <div>
+                      <h3 className="text-lg font-bold text-primary-foreground mb-2">Fundraising</h3>
+                      <p className="text-primary-foreground/80">
+                        Events and community-driven initiatives that strengthen local investment.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="bg-primary-foreground/10 rounded-lg p-6">
+                  <div className="flex items-start gap-4">
+                    <Briefcase className="h-8 w-8 text-primary-foreground shrink-0 mt-1" />
+                    <div>
+                      <h3 className="text-lg font-bold text-primary-foreground mb-2">Fee for Service</h3>
+                      <p className="text-primary-foreground/80">
+                        Contracted programming with schools and partner agencies that helps offset program costs.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="bg-primary-foreground/10 rounded-lg p-6">
+                  <div className="flex items-start gap-4">
+                    <RefreshCw className="h-8 w-8 text-primary-foreground shrink-0 mt-1" />
+                    <div>
+                      <h3 className="text-lg font-bold text-primary-foreground mb-2">Re-Grants</h3>
+                      <p className="text-primary-foreground/80">
+                        County, state, and pass-through funding that supports prevention and youth development efforts.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         </section>
