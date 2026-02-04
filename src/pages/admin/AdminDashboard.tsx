@@ -33,7 +33,7 @@ const AdminDashboard = () => {
       description: "Track billing and payments",
       icon: FileText,
       color: "bg-amber-500/10 text-amber-500",
-      href: null,
+      href: "/admin/invoices",
     },
     {
       title: "Settings",

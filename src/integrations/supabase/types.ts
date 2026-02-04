@@ -59,6 +59,62 @@ export type Database = {
         }
         Relationships: []
       }
+      invoices: {
+        Row: {
+          client_id: string
+          created_at: string
+          due_date: string | null
+          id: string
+          invoice_month: number
+          invoice_number: string
+          invoice_year: number
+          issue_date: string | null
+          notes: string | null
+          status: Database["public"]["Enums"]["invoice_status"]
+          subtotal: number | null
+          total: number | null
+          updated_at: string
+        }
+        Insert: {
+          client_id: string
+          created_at?: string
+          due_date?: string | null
+          id?: string
+          invoice_month: number
+          invoice_number: string
+          invoice_year: number
+          issue_date?: string | null
+          notes?: string | null
+          status?: Database["public"]["Enums"]["invoice_status"]
+          subtotal?: number | null
+          total?: number | null
+          updated_at?: string
+        }
+        Update: {
+          client_id?: string
+          created_at?: string
+          due_date?: string | null
+          id?: string
+          invoice_month?: number
+          invoice_number?: string
+          invoice_year?: number
+          issue_date?: string | null
+          notes?: string | null
+          status?: Database["public"]["Enums"]["invoice_status"]
+          subtotal?: number | null
+          total?: number | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "invoices_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       service_logs: {
         Row: {
           client_id: string
@@ -136,6 +192,7 @@ export type Database = {
     }
     Enums: {
       app_role: "admin" | "moderator" | "user"
+      invoice_status: "draft" | "sent" | "paid"
       rate_type: "per_day" | "per_session" | "per_hour" | "flat_monthly"
     }
     CompositeTypes: {
@@ -265,6 +322,7 @@ export const Constants = {
   public: {
     Enums: {
       app_role: ["admin", "moderator", "user"],
+      invoice_status: ["draft", "sent", "paid"],
       rate_type: ["per_day", "per_session", "per_hour", "flat_monthly"],
     },
   },
