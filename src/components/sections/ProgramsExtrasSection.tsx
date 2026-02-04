@@ -134,7 +134,7 @@ const ProgramsExtrasSection = () => {
           { src: groupActivityImage, alt: "Kids participating in a group activity" },
           { src: groupLessonImage, alt: "Students participating in a group lesson at a table" },
           { src: instructorSpeakingImage, alt: "Instructor speaking with students during a group activity", objectPosition: "50% 40%" },
-          { src: teamActivityImage, alt: "Students reaching in together during a team activity", objectPosition: "50% 35%" },
+          { src: teamActivityImage, alt: "Students reaching in together during a team activity", objectPosition: "50% 15%" },
           { src: "/placeholder.svg", alt: "Smile Lab photo 5" },
           { src: "/placeholder.svg", alt: "Smile Lab photo 6" },
         ],
