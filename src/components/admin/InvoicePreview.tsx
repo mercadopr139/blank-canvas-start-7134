@@ -8,6 +8,7 @@ import { Download, Mail, Copy, Check } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { downloadInvoicePdf, getInvoicePdfBase64 } from "@/lib/generateInvoicePdf";
+import InvoiceLineItemsEditor, { InvoiceLineItem } from "./InvoiceLineItemsEditor";
 import type { Tables } from "@/integrations/supabase/types";
 
 type Client = Tables<"clients">;
@@ -43,6 +44,8 @@ const rateTypeLabels: Record<string, string> = {
   per_session: "Per Session",
   per_hour: "Per Hour",
   flat_monthly: "Flat Monthly",
+  per_hour_new: "Per Hour",
+  flat_fee: "Flat Fee",
 };
 
 const statusColors: Record<string, string> = {
@@ -67,10 +70,14 @@ export default function InvoicePreview({
 }: InvoicePreviewProps) {
   const [isSending, setIsSending] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [manualLineItems, setManualLineItems] = useState<InvoiceLineItem[]>([]);
   const { toast } = useToast();
   
   const rateType = client.rate_type;
   const rateAmount = client.rate_amount || 0;
+
+  // Determine if we should use manual line items or service log based
+  const useManualLineItems = manualLineItems.length > 0;
 
   // Calculate line items based on rate type
   const calculateLineItems = (): LineItem[] => {
@@ -110,13 +117,17 @@ export default function InvoicePreview({
     }));
   };
 
-  const lineItems = calculateLineItems();
+  const serviceLogLineItems = calculateLineItems();
 
+  // Calculate totals based on which mode we're in
   const calculateSubtotal = (): number => {
+    if (useManualLineItems) {
+      return manualLineItems.reduce((sum, item) => sum + item.total, 0);
+    }
     if (rateType === "flat_monthly") {
       return rateAmount;
     }
-    return lineItems.reduce((sum, item) => sum + item.lineTotal, 0);
+    return serviceLogLineItems.reduce((sum, item) => sum + item.lineTotal, 0);
   };
 
   const subtotal = calculateSubtotal();
@@ -272,56 +283,63 @@ No Limits Academy`,
         <Separator />
 
         {/* Service Description */}
-        {client.service_description_default && (
+        {client.service_description_default && !useManualLineItems && (
           <div>
             <h3 className="font-semibold mb-2">Service Description:</h3>
             <p className="text-muted-foreground">{client.service_description_default}</p>
           </div>
         )}
 
-        {/* Line Items Table */}
-        <div className="border rounded-lg overflow-hidden">
-          <table className="w-full">
-            <thead className="bg-muted">
-              <tr>
-                <th className="px-4 py-3 text-left text-sm font-medium">Date</th>
-                <th className="px-4 py-3 text-left text-sm font-medium">Service Type</th>
-                <th className="px-4 py-3 text-center text-sm font-medium">Qty</th>
-                <th className="px-4 py-3 text-right text-sm font-medium">Rate</th>
-                <th className="px-4 py-3 text-right text-sm font-medium">Amount</th>
-              </tr>
-            </thead>
-            <tbody>
-              {lineItems.length === 0 ? (
-                <tr>
-                  <td colSpan={5} className="px-4 py-8 text-center text-muted-foreground">
-                    No service days logged yet. Add days to generate an invoice.
-                  </td>
-                </tr>
-              ) : (
-                lineItems.map((item, index) => (
-                  <tr key={index} className="border-t">
-                    <td className="px-4 py-3 text-sm">
-                      {format(new Date(item.date), "MMM d, yyyy")}
-                    </td>
-                    <td className="px-4 py-3 text-sm">{item.serviceType}</td>
-                    <td className="px-4 py-3 text-sm text-center">{item.quantity}</td>
-                    <td className="px-4 py-3 text-sm text-right">
-                      {item.isIncluded ? "—" : formatCurrency(item.rate)}
-                    </td>
-                    <td className="px-4 py-3 text-sm text-right">
-                      {item.isIncluded ? (
-                        <span className="text-muted-foreground italic">Included</span>
-                      ) : (
-                        formatCurrency(item.lineTotal)
-                      )}
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
+        {/* Manual Line Items Editor */}
+        <InvoiceLineItemsEditor
+          clientId={client.id}
+          lineItems={manualLineItems}
+          onChange={setManualLineItems}
+        />
+
+        {/* Service Log based Line Items (only show if not using manual items) */}
+        {!useManualLineItems && serviceLogLineItems.length > 0 && (
+          <>
+            <Separator />
+            <div>
+              <h3 className="font-semibold mb-3">Service Days Logged</h3>
+              <div className="border rounded-lg overflow-hidden">
+                <table className="w-full">
+                  <thead className="bg-muted">
+                    <tr>
+                      <th className="px-4 py-3 text-left text-sm font-medium">Date</th>
+                      <th className="px-4 py-3 text-left text-sm font-medium">Service Type</th>
+                      <th className="px-4 py-3 text-center text-sm font-medium">Qty</th>
+                      <th className="px-4 py-3 text-right text-sm font-medium">Rate</th>
+                      <th className="px-4 py-3 text-right text-sm font-medium">Amount</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {serviceLogLineItems.map((item, index) => (
+                      <tr key={index} className="border-t">
+                        <td className="px-4 py-3 text-sm">
+                          {format(new Date(item.date), "MMM d, yyyy")}
+                        </td>
+                        <td className="px-4 py-3 text-sm">{item.serviceType}</td>
+                        <td className="px-4 py-3 text-sm text-center">{item.quantity}</td>
+                        <td className="px-4 py-3 text-sm text-right">
+                          {item.isIncluded ? "—" : formatCurrency(item.rate)}
+                        </td>
+                        <td className="px-4 py-3 text-sm text-right">
+                          {item.isIncluded ? (
+                            <span className="text-muted-foreground italic">Included</span>
+                          ) : (
+                            formatCurrency(item.lineTotal)
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </>
+        )}
 
         {/* Totals */}
         <div className="flex justify-end">
