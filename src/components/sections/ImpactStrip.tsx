@@ -8,14 +8,14 @@ const ImpactStrip = () => {
       label: "Youth Served Annually",
     },
     {
-      icon: Heart,
-      value: "70%",
-      label: "Youth from Low-Income Households",
-    },
-    {
       icon: ShieldCheck,
       value: "95%",
       label: "Non-Contact, Safety-Focused Training",
+    },
+    {
+      icon: Heart,
+      value: "70%",
+      label: "Youth from Low-Income Households",
     },
     {
       icon: Bus,
