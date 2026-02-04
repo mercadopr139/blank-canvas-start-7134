@@ -16,11 +16,18 @@ type Invoice = Tables<"invoices">;
 
 interface LineItem {
   date: string;
-  serviceType: string;
-  quantity: number;
-  rate: number;
+  billingMethod: "hourly" | "flat_rate";
+  hours: number | null;
+  flatAmount: number | null;
   lineTotal: number;
-  isIncluded?: boolean;
+}
+
+interface InvoiceSummary {
+  totalHours: number;
+  hourlyRate: number;
+  hourlyTotal: number;
+  flatTotal: number;
+  invoiceTotal: number;
 }
 
 interface InvoicePreviewProps {
@@ -37,13 +44,6 @@ interface InvoicePreviewProps {
   onInvoiceUpdated?: () => void;
   isLoading: boolean;
 }
-
-const rateTypeLabels: Record<string, string> = {
-  per_day: "Per Day",
-  per_session: "Per Session",
-  per_hour: "Per Hour",
-  flat_monthly: "Flat Monthly",
-};
 
 const statusColors: Record<string, string> = {
   draft: "bg-muted text-muted-foreground",
@@ -69,57 +69,46 @@ export default function InvoicePreview({
   const [copied, setCopied] = useState(false);
   const { toast } = useToast();
   
-  const rateType = client.rate_type;
-  const rateAmount = client.rate_amount || 0;
+  const hourlyRate = (client as any).hourly_rate || 0;
 
-  // Calculate line items based on rate type
+  // Calculate line items from service logs
   const calculateLineItems = (): LineItem[] => {
-    if (!rateType) return [];
-
     const sortedLogs = [...serviceLogs].sort(
       (a, b) => new Date(a.service_date).getTime() - new Date(b.service_date).getTime()
     );
 
-    if (rateType === "flat_monthly") {
-      return sortedLogs.map((log) => ({
-        date: log.service_date,
-        serviceType: log.service_type || "Fee for Service",
-        quantity: log.quantity || 1,
-        rate: 0,
-        lineTotal: 0,
-        isIncluded: true,
-      }));
-    }
-
-    if (rateType === "per_day") {
-      return sortedLogs.map((log) => ({
-        date: log.service_date,
-        serviceType: log.service_type || "Fee for Service",
-        quantity: 1,
-        rate: rateAmount,
-        lineTotal: rateAmount,
-      }));
-    }
-
     return sortedLogs.map((log) => ({
       date: log.service_date,
-      serviceType: log.service_type || "Fee for Service",
-      quantity: log.quantity || 1,
-      rate: rateAmount,
-      lineTotal: (log.quantity || 1) * rateAmount,
+      billingMethod: ((log as any).billing_method || "hourly") as "hourly" | "flat_rate",
+      hours: (log as any).hours || null,
+      flatAmount: (log as any).flat_amount || null,
+      lineTotal: (log as any).line_total || 0,
     }));
   };
 
   const lineItems = calculateLineItems();
 
-  const calculateSubtotal = (): number => {
-    if (rateType === "flat_monthly") {
-      return rateAmount;
-    }
-    return lineItems.reduce((sum, item) => sum + item.lineTotal, 0);
+  // Calculate summary
+  const calculateSummary = (): InvoiceSummary => {
+    const hourlyItems = lineItems.filter(item => item.billingMethod === "hourly");
+    const flatItems = lineItems.filter(item => item.billingMethod === "flat_rate");
+
+    const totalHours = hourlyItems.reduce((sum, item) => sum + (item.hours || 0), 0);
+    const hourlyTotal = totalHours * hourlyRate;
+    const flatTotal = flatItems.reduce((sum, item) => sum + (item.flatAmount || 0), 0);
+    const invoiceTotal = hourlyTotal + flatTotal;
+
+    return {
+      totalHours,
+      hourlyRate,
+      hourlyTotal,
+      flatTotal,
+      invoiceTotal,
+    };
   };
 
-  const subtotal = calculateSubtotal();
+  const summary = calculateSummary();
+  const subtotal = summary.invoiceTotal;
   const total = subtotal;
 
   const formatCurrency = (amount: number) => {
@@ -260,12 +249,12 @@ No Limits Academy`,
               <span className="text-muted-foreground">Issue Date:</span>{" "}
               <span className="font-medium">{format(issueDate, "MMM d, yyyy")}</span>
             </p>
-            <p>
-              <span className="text-muted-foreground">Rate:</span>{" "}
-              <span className="font-medium">
-                {formatCurrency(rateAmount)} {rateType && rateTypeLabels[rateType]}
-              </span>
-            </p>
+            {hourlyRate > 0 && (
+              <p>
+                <span className="text-muted-foreground">Hourly Rate:</span>{" "}
+                <span className="font-medium">{formatCurrency(hourlyRate)} / hour</span>
+              </p>
+            )}
           </div>
         </div>
 
@@ -279,22 +268,43 @@ No Limits Academy`,
           </div>
         )}
 
+        {/* Summary Section */}
+        <div className="bg-muted/50 rounded-lg p-4 space-y-2">
+          <h3 className="font-semibold mb-3">Invoice Summary</h3>
+          {summary.totalHours > 0 && (
+            <div className="flex justify-between text-sm">
+              <span>Hourly Services:</span>
+              <span>{summary.totalHours} hrs × {formatCurrency(summary.hourlyRate)}/hr = <strong>{formatCurrency(summary.hourlyTotal)}</strong></span>
+            </div>
+          )}
+          {summary.flatTotal > 0 && (
+            <div className="flex justify-between text-sm">
+              <span>Flat Rate Services:</span>
+              <span><strong>{formatCurrency(summary.flatTotal)}</strong></span>
+            </div>
+          )}
+          <Separator className="my-2" />
+          <div className="flex justify-between font-semibold text-lg">
+            <span>Total Due:</span>
+            <span className="text-primary">{formatCurrency(summary.invoiceTotal)}</span>
+          </div>
+        </div>
+
         {/* Line Items Table */}
         <div className="border rounded-lg overflow-hidden">
           <table className="w-full">
             <thead className="bg-muted">
               <tr>
                 <th className="px-4 py-3 text-left text-sm font-medium">Date</th>
-                <th className="px-4 py-3 text-left text-sm font-medium">Service Type</th>
-                <th className="px-4 py-3 text-center text-sm font-medium">Qty</th>
-                <th className="px-4 py-3 text-right text-sm font-medium">Rate</th>
+                <th className="px-4 py-3 text-left text-sm font-medium">Type</th>
+                <th className="px-4 py-3 text-center text-sm font-medium">Hours</th>
                 <th className="px-4 py-3 text-right text-sm font-medium">Amount</th>
               </tr>
             </thead>
             <tbody>
               {lineItems.length === 0 ? (
                 <tr>
-                  <td colSpan={5} className="px-4 py-8 text-center text-muted-foreground">
+                  <td colSpan={4} className="px-4 py-8 text-center text-muted-foreground">
                     No service days logged yet. Add days to generate an invoice.
                   </td>
                 </tr>
@@ -304,38 +314,20 @@ No Limits Academy`,
                     <td className="px-4 py-3 text-sm">
                       {format(new Date(item.date), "MMM d, yyyy")}
                     </td>
-                    <td className="px-4 py-3 text-sm">{item.serviceType}</td>
-                    <td className="px-4 py-3 text-sm text-center">{item.quantity}</td>
-                    <td className="px-4 py-3 text-sm text-right">
-                      {item.isIncluded ? "—" : formatCurrency(item.rate)}
+                    <td className="px-4 py-3 text-sm">
+                      {item.billingMethod === "hourly" ? "Hourly" : "Flat Rate"}
                     </td>
-                    <td className="px-4 py-3 text-sm text-right">
-                      {item.isIncluded ? (
-                        <span className="text-muted-foreground italic">Included</span>
-                      ) : (
-                        formatCurrency(item.lineTotal)
-                      )}
+                    <td className="px-4 py-3 text-sm text-center">
+                      {item.billingMethod === "hourly" ? `${item.hours || 0} hrs` : "—"}
+                    </td>
+                    <td className="px-4 py-3 text-sm text-right font-medium">
+                      {formatCurrency(item.lineTotal)}
                     </td>
                   </tr>
                 ))
               )}
             </tbody>
           </table>
-        </div>
-
-        {/* Totals */}
-        <div className="flex justify-end">
-          <div className="w-64 space-y-2">
-            <div className="flex justify-between">
-              <span className="text-muted-foreground">Subtotal:</span>
-              <span>{formatCurrency(subtotal)}</span>
-            </div>
-            <Separator />
-            <div className="flex justify-between font-semibold text-lg">
-              <span>Total:</span>
-              <span>{formatCurrency(total)}</span>
-            </div>
-          </div>
         </div>
 
         {/* Action Buttons */}

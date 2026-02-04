@@ -8,19 +8,19 @@ type ServiceLog = Tables<"service_logs">;
 
 interface LineItem {
   date: string;
-  serviceType: string;
-  quantity: number;
-  rate: number;
+  billingMethod: "hourly" | "flat_rate";
+  hours: number | null;
+  flatAmount: number | null;
   lineTotal: number;
-  isIncluded?: boolean;
 }
 
-const rateTypeLabels: Record<string, string> = {
-  per_day: "Per Day",
-  per_session: "Per Session",
-  per_hour: "Per Hour",
-  flat_monthly: "Flat Monthly",
-};
+interface InvoiceSummary {
+  totalHours: number;
+  hourlyRate: number;
+  hourlyTotal: number;
+  flatTotal: number;
+  invoiceTotal: number;
+}
 
 function formatCurrency(amount: number): string {
   return new Intl.NumberFormat("en-US", {
@@ -29,45 +29,36 @@ function formatCurrency(amount: number): string {
   }).format(amount);
 }
 
-function calculateLineItems(
-  serviceLogs: ServiceLog[],
-  rateType: string | null,
-  rateAmount: number
-): LineItem[] {
-  if (!rateType) return [];
-
+function calculateLineItems(serviceLogs: ServiceLog[]): LineItem[] {
   const sortedLogs = [...serviceLogs].sort(
     (a, b) => new Date(a.service_date).getTime() - new Date(b.service_date).getTime()
   );
 
-  if (rateType === "flat_monthly") {
-    return sortedLogs.map((log) => ({
-      date: log.service_date,
-      serviceType: log.service_type || "Fee for Service",
-      quantity: log.quantity || 1,
-      rate: 0,
-      lineTotal: 0,
-      isIncluded: true,
-    }));
-  }
-
-  if (rateType === "per_day") {
-    return sortedLogs.map((log) => ({
-      date: log.service_date,
-      serviceType: log.service_type || "Fee for Service",
-      quantity: 1,
-      rate: rateAmount,
-      lineTotal: rateAmount,
-    }));
-  }
-
   return sortedLogs.map((log) => ({
     date: log.service_date,
-    serviceType: log.service_type || "Fee for Service",
-    quantity: log.quantity || 1,
-    rate: rateAmount,
-    lineTotal: (log.quantity || 1) * rateAmount,
+    billingMethod: ((log as any).billing_method || "hourly") as "hourly" | "flat_rate",
+    hours: (log as any).hours || null,
+    flatAmount: (log as any).flat_amount || null,
+    lineTotal: (log as any).line_total || 0,
   }));
+}
+
+function calculateSummary(lineItems: LineItem[], hourlyRate: number): InvoiceSummary {
+  const hourlyItems = lineItems.filter(item => item.billingMethod === "hourly");
+  const flatItems = lineItems.filter(item => item.billingMethod === "flat_rate");
+
+  const totalHours = hourlyItems.reduce((sum, item) => sum + (item.hours || 0), 0);
+  const hourlyTotal = totalHours * hourlyRate;
+  const flatTotal = flatItems.reduce((sum, item) => sum + (item.flatAmount || 0), 0);
+  const invoiceTotal = hourlyTotal + flatTotal;
+
+  return {
+    totalHours,
+    hourlyRate,
+    hourlyTotal,
+    flatTotal,
+    invoiceTotal,
+  };
 }
 
 export interface InvoicePdfData {
@@ -81,15 +72,10 @@ export interface InvoicePdfData {
 
 export function generateInvoicePdf(data: InvoicePdfData): jsPDF {
   const { client, serviceLogs, invoiceNumber, issueDate, month, year } = data;
-  const rateType = client.rate_type;
-  const rateAmount = client.rate_amount || 0;
+  const hourlyRate = (client as any).hourly_rate || 0;
 
-  const lineItems = calculateLineItems(serviceLogs, rateType, rateAmount);
-  
-  const subtotal = rateType === "flat_monthly" 
-    ? rateAmount 
-    : lineItems.reduce((sum, item) => sum + item.lineTotal, 0);
-  const total = subtotal;
+  const lineItems = calculateLineItems(serviceLogs);
+  const summary = calculateSummary(lineItems, hourlyRate);
 
   const monthName = new Date(year, month - 1).toLocaleString("default", { month: "long" });
 
@@ -139,13 +125,9 @@ export function generateInvoicePdf(data: InvoicePdfData): jsPDF {
   }
 
   // Rate info
-  if (rateType) {
+  if (hourlyRate > 0) {
     doc.setFontSize(10);
-    doc.text(
-      `Rate: ${formatCurrency(rateAmount)} ${rateTypeLabels[rateType]}`,
-      pageWidth - 70,
-      60
-    );
+    doc.text(`Hourly Rate: ${formatCurrency(hourlyRate)} / hour`, pageWidth - 70, 60);
   }
 
   // Service description
@@ -161,24 +143,48 @@ export function generateInvoicePdf(data: InvoicePdfData): jsPDF {
     yPos += 10;
   }
 
+  // Summary section
+  const summaryStartY = Math.max(yPos, 95);
+  doc.setFillColor(245, 245, 245);
+  doc.rect(20, summaryStartY, pageWidth - 40, 30, "F");
+  
+  doc.setFontSize(11);
+  doc.setFont("helvetica", "bold");
+  doc.text("Invoice Summary", 25, summaryStartY + 8);
+  
+  doc.setFontSize(9);
+  doc.setFont("helvetica", "normal");
+  let summaryY = summaryStartY + 16;
+  
+  if (summary.totalHours > 0) {
+    doc.text(`Hourly Services: ${summary.totalHours} hrs × ${formatCurrency(summary.hourlyRate)}/hr = ${formatCurrency(summary.hourlyTotal)}`, 25, summaryY);
+    summaryY += 6;
+  }
+  if (summary.flatTotal > 0) {
+    doc.text(`Flat Rate Services: ${formatCurrency(summary.flatTotal)}`, 25, summaryY);
+    summaryY += 6;
+  }
+  
+  doc.setFont("helvetica", "bold");
+  doc.text(`Total Due: ${formatCurrency(summary.invoiceTotal)}`, pageWidth - 25, summaryStartY + 20, { align: "right" });
+
   // Line items table
-  const tableStartY = Math.max(yPos, 95);
+  const tableStartY = summaryStartY + 40;
   
   const tableData = lineItems.map((item) => [
     format(new Date(item.date), "MMM d, yyyy"),
-    item.serviceType,
-    item.quantity.toString(),
-    item.isIncluded ? "—" : formatCurrency(item.rate),
-    item.isIncluded ? "Included" : formatCurrency(item.lineTotal),
+    item.billingMethod === "hourly" ? "Hourly" : "Flat Rate",
+    item.billingMethod === "hourly" ? `${item.hours || 0} hrs` : "—",
+    formatCurrency(item.lineTotal),
   ]);
 
   if (tableData.length === 0) {
-    tableData.push(["", "No service logs for this period", "", "", ""]);
+    tableData.push(["", "No service logs for this period", "", ""]);
   }
 
   autoTable(doc, {
     startY: tableStartY,
-    head: [["Date", "Service Type", "Qty", "Rate", "Amount"]],
+    head: [["Date", "Type", "Hours", "Amount"]],
     body: tableData,
     theme: "grid",
     headStyles: {
@@ -191,30 +197,12 @@ export function generateInvoicePdf(data: InvoicePdfData): jsPDF {
       cellPadding: 4,
     },
     columnStyles: {
-      0: { cellWidth: 35 },
-      1: { cellWidth: "auto" },
-      2: { cellWidth: 20, halign: "center" },
-      3: { cellWidth: 30, halign: "right" },
-      4: { cellWidth: 35, halign: "right" },
+      0: { cellWidth: 40 },
+      1: { cellWidth: 40 },
+      2: { cellWidth: 30, halign: "center" },
+      3: { cellWidth: 40, halign: "right" },
     },
   });
-
-  // Get table end position
-  const finalY = (doc as any).lastAutoTable.finalY || tableStartY + 50;
-
-  // Totals
-  const totalsX = pageWidth - 70;
-  doc.setFontSize(10);
-  doc.text("Subtotal:", totalsX, finalY + 15);
-  doc.text(formatCurrency(subtotal), pageWidth - 20, finalY + 15, { align: "right" });
-  
-  doc.setLineWidth(0.5);
-  doc.line(totalsX, finalY + 20, pageWidth - 20, finalY + 20);
-  
-  doc.setFontSize(12);
-  doc.setFont("helvetica", "bold");
-  doc.text("Total Due:", totalsX, finalY + 28);
-  doc.text(formatCurrency(total), pageWidth - 20, finalY + 28, { align: "right" });
 
   // Footer
   doc.setFontSize(9);

@@ -31,6 +31,9 @@ const clientSchema = z.object({
   billing_address: z.string().max(500).optional(),
   rate_type: z.enum(["per_day", "per_session", "per_hour", "flat_monthly"]).optional().nullable(),
   rate_amount: z.number().min(0).optional().nullable(),
+  hourly_rate: z.number().min(0).optional().nullable(),
+  default_billing_method: z.enum(["hourly", "flat_rate"]).optional().nullable(),
+  default_flat_rate: z.number().min(0).optional().nullable(),
   service_description_default: z.string().max(1000).optional(),
   notes: z.string().max(2000).optional(),
 });
@@ -68,6 +71,9 @@ export default function ClientFormDialog({
     billing_address: "",
     rate_type: "" as string,
     rate_amount: "",
+    hourly_rate: "",
+    default_billing_method: "hourly" as string,
+    default_flat_rate: "",
     service_description_default: "",
     notes: "",
   });
@@ -82,6 +88,9 @@ export default function ClientFormDialog({
         billing_address: client.billing_address || "",
         rate_type: client.rate_type || "",
         rate_amount: client.rate_amount?.toString() || "",
+        hourly_rate: (client as any).hourly_rate?.toString() || "",
+        default_billing_method: (client as any).default_billing_method || "hourly",
+        default_flat_rate: (client as any).default_flat_rate?.toString() || "",
         service_description_default: client.service_description_default || "",
         notes: client.notes || "",
       });
@@ -94,6 +103,9 @@ export default function ClientFormDialog({
         billing_address: "",
         rate_type: "",
         rate_amount: "",
+        hourly_rate: "",
+        default_billing_method: "hourly",
+        default_flat_rate: "",
         service_description_default: "",
         notes: "",
       });
@@ -112,6 +124,9 @@ export default function ClientFormDialog({
       billing_address: formData.billing_address || undefined,
       rate_type: formData.rate_type || null,
       rate_amount: formData.rate_amount ? parseFloat(formData.rate_amount) : null,
+      hourly_rate: formData.hourly_rate ? parseFloat(formData.hourly_rate) : null,
+      default_billing_method: formData.default_billing_method || null,
+      default_flat_rate: formData.default_flat_rate ? parseFloat(formData.default_flat_rate) : null,
       service_description_default: formData.service_description_default || undefined,
       notes: formData.notes || undefined,
     };
@@ -137,6 +152,9 @@ export default function ClientFormDialog({
       billing_address: formData.billing_address || null,
       rate_type: rateTypeValue || null,
       rate_amount: formData.rate_amount ? parseFloat(formData.rate_amount) : null,
+      hourly_rate: formData.hourly_rate ? parseFloat(formData.hourly_rate) : null,
+      default_billing_method: formData.default_billing_method || null,
+      default_flat_rate: formData.default_flat_rate ? parseFloat(formData.default_flat_rate) : null,
       service_description_default: formData.service_description_default || null,
       notes: formData.notes || null,
     };
@@ -254,6 +272,49 @@ export default function ClientFormDialog({
                 min="0"
                 value={formData.rate_amount}
                 onChange={(e) => setFormData({ ...formData, rate_amount: e.target.value })}
+              />
+            </div>
+          </div>
+
+          {/* New Billing Fields */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="hourly_rate">Hourly Rate ($)</Label>
+              <Input
+                id="hourly_rate"
+                type="number"
+                step="0.01"
+                min="0"
+                value={formData.hourly_rate}
+                onChange={(e) => setFormData({ ...formData, hourly_rate: e.target.value })}
+                placeholder="e.g., 100"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="default_billing_method">Default Billing Method</Label>
+              <Select
+                value={formData.default_billing_method}
+                onValueChange={(value) => setFormData({ ...formData, default_billing_method: value })}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select method" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="hourly">Hourly</SelectItem>
+                  <SelectItem value="flat_rate">Flat Rate</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="default_flat_rate">Default Flat Rate ($)</Label>
+              <Input
+                id="default_flat_rate"
+                type="number"
+                step="0.01"
+                min="0"
+                value={formData.default_flat_rate}
+                onChange={(e) => setFormData({ ...formData, default_flat_rate: e.target.value })}
+                placeholder="Optional"
               />
             </div>
           </div>
