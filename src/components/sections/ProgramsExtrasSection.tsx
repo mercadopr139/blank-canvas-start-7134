@@ -110,6 +110,7 @@ type ProgramItem = {
   title: string;
   subtitle: string;
   blurb: string;
+  policyText?: string;
   images: { src: string; alt: string }[];
   buttonLabel: string;
 };
@@ -202,6 +203,17 @@ const ProgramsExtrasSection = () => {
         ],
         buttonLabel: "Back to Programs",
       },
+      {
+        id: "spiritual-development",
+        title: "Spiritual Development",
+        subtitle: "All Boxers Welcome",
+        blurb:
+          "Spiritual development at No Limits Academy focuses on reflection, values, purpose, and personal growth within a supportive and respectful environment. This component is designed to complement our youth development work by encouraging mindfulness, character, and healthy decision-making.",
+        policyText:
+          "At No Limits Academy, we respect each individual's unique spiritual journey. Participation in any aspect of spiritual development is entirely voluntary. We do not require youth participants to read, engage with, or participate in spiritual practices or teachings. For youth who are curious or willing to explore their spiritual development, we are here to offer support and guidance. NLA's focus is on providing a nurturing, caring, and encouraging environment where youth can explore God, at their own pace, if they choose to do so.",
+        images: [],
+        buttonLabel: "Back to Programs",
+      },
     ],
     []
   );
@@ -252,8 +264,16 @@ const ProgramsExtrasSection = () => {
               {openItem?.blurb}
             </p>
 
+            {openItem?.policyText && (
+              <p className="text-sm italic text-muted-foreground mt-4">
+                *{openItem.policyText}
+              </p>
+            )}
+
             {/* Gallery */}
-            {openItem && <ClickToEnlargeGallery images={openItem.images} showCaptions />}
+            {openItem && openItem.images.length > 0 && (
+              <ClickToEnlargeGallery images={openItem.images} showCaptions />
+            )}
 
             {/* Bottom button */}
             <div className="mt-6 flex justify-end">
