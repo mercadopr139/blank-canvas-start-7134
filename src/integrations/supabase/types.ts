@@ -130,6 +130,7 @@ export type Database = {
           quantity: number | null
           service_date: string
           service_type: string | null
+          service_type_id: string | null
           updated_at: string
         }
         Insert: {
@@ -140,6 +141,7 @@ export type Database = {
           quantity?: number | null
           service_date: string
           service_type?: string | null
+          service_type_id?: string | null
           updated_at?: string
         }
         Update: {
@@ -150,6 +152,7 @@ export type Database = {
           quantity?: number | null
           service_date?: string
           service_type?: string | null
+          service_type_id?: string | null
           updated_at?: string
         }
         Relationships: [
@@ -160,7 +163,47 @@ export type Database = {
             referencedRelation: "clients"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "service_logs_service_type_id_fkey"
+            columns: ["service_type_id"]
+            isOneToOne: false
+            referencedRelation: "service_types"
+            referencedColumns: ["id"]
+          },
         ]
+      }
+      service_types: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          is_active: boolean
+          name: string
+          rate_amount: number
+          rate_type: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          name: string
+          rate_amount?: number
+          rate_type: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          name?: string
+          rate_amount?: number
+          rate_type?: string
+          updated_at?: string
+        }
+        Relationships: []
       }
       user_roles: {
         Row: {
