@@ -18,6 +18,7 @@ interface SendInvoiceRequest {
   year: number;
   total: number;
   pdfBase64: string;
+  emailNote?: string | null;
 }
 
 const handler = async (req: Request): Promise<Response> => {
@@ -70,9 +71,9 @@ const handler = async (req: Request): Promise<Response> => {
     }
 
     const body: SendInvoiceRequest = await req.json();
-    const { invoiceId, invoiceNumber, clientName, billingEmail, month, year, total, pdfBase64 } = body;
+    const { invoiceId, invoiceNumber, clientName, billingEmail, month, year, total, pdfBase64, emailNote } = body;
 
-    console.log(`Sending invoice ${invoiceNumber} to ${billingEmail}`);
+    console.log(`Sending invoice ${invoiceNumber} to ${billingEmail}`, emailNote ? "(with note)" : "");
 
     // Validate required fields
     if (!invoiceId || !invoiceNumber || !billingEmail || !pdfBase64) {
@@ -85,6 +86,13 @@ const handler = async (req: Request): Promise<Response> => {
       currency: "USD",
     }).format(total);
 
+    // Format the optional note with line breaks preserved
+    const noteHtml = emailNote 
+      ? `<div style="background-color: #e8f4fd; padding: 15px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #2196F3;">
+          <p style="margin: 0; white-space: pre-wrap;">${emailNote.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</p>
+        </div>`
+      : '';
+
     // Send email with PDF attachment
     const emailResponse = await resend.emails.send({
       from: "No Limits Academy <invoices@nolimitsboxingacademy.org>",
@@ -95,6 +103,8 @@ const handler = async (req: Request): Promise<Response> => {
           <h2 style="color: #333;">Invoice ${invoiceNumber}</h2>
           
           <p>Dear ${clientName},</p>
+          
+          ${noteHtml}
           
           <p>Please find attached your invoice for services rendered during <strong>${monthName} ${year}</strong>.</p>
           
@@ -131,13 +141,14 @@ const handler = async (req: Request): Promise<Response> => {
 
     console.log("Email sent successfully, ID:", emailResponse.data?.id);
 
-    // Update invoice with sent info
+    // Update invoice with sent info and note
     const { error: updateError } = await supabase
       .from("invoices")
       .update({
         status: "sent",
         sent_at: new Date().toISOString(),
         sent_to: billingEmail,
+        email_note: emailNote || null,
       })
       .eq("id", invoiceId);
 
