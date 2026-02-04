@@ -8,6 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { useToast } from "@/hooks/use-toast";
 import { z } from "zod";
 import { Lock } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
 
 const loginSchema = z.object({
   email: z.string().email("Please enter a valid email address"),
@@ -18,6 +19,7 @@ const AdminLogin = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [isSignUp, setIsSignUp] = useState(false);
   const { signIn, user, isAdmin, loading } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -40,6 +42,24 @@ const AdminLogin = () => {
         description: validation.error.errors[0].message,
         variant: "destructive",
       });
+      setIsLoading(false);
+      return;
+    }
+
+    if (isSignUp) {
+      const { error } = await supabase.auth.signUp({ email, password });
+      if (error) {
+        toast({
+          title: "Sign Up Failed",
+          description: error.message,
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Check Your Email",
+          description: "We sent you a confirmation link. Please verify your email to continue.",
+        });
+      }
       setIsLoading(false);
       return;
     }
@@ -81,9 +101,9 @@ const AdminLogin = () => {
           <div className="mx-auto mb-4 w-12 h-12 bg-primary rounded-full flex items-center justify-center">
             <Lock className="w-6 h-6 text-primary-foreground" />
           </div>
-          <CardTitle className="text-2xl">Admin Login</CardTitle>
+          <CardTitle className="text-2xl">{isSignUp ? "Create Admin Account" : "Admin Login"}</CardTitle>
           <CardDescription>
-            Enter your credentials to access the admin area
+            {isSignUp ? "Sign up for an admin account" : "Enter your credentials to access the admin area"}
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -113,8 +133,17 @@ const AdminLogin = () => {
               />
             </div>
             <Button type="submit" className="w-full" disabled={isLoading}>
-              {isLoading ? "Signing in..." : "Sign In"}
+              {isLoading ? (isSignUp ? "Creating account..." : "Signing in...") : (isSignUp ? "Create Account" : "Sign In")}
             </Button>
+            <div className="text-center text-sm">
+              <button
+                type="button"
+                onClick={() => setIsSignUp(!isSignUp)}
+                className="text-primary hover:underline"
+              >
+                {isSignUp ? "Already have an account? Sign in" : "Need an account? Sign up"}
+              </button>
+            </div>
           </form>
         </CardContent>
       </Card>
