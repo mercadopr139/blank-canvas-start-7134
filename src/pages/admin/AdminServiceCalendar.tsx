@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import {
   Select,
@@ -31,14 +31,31 @@ type ServiceLog = Tables<"service_logs">;
 const WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
 export default function AdminServiceCalendar() {
+  const [searchParams] = useSearchParams();
   const [clients, setClients] = useState<Client[]>([]);
   const [selectedClientId, setSelectedClientId] = useState<string>("");
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [serviceLogs, setServiceLogs] = useState<ServiceLog[]>([]);
   const [loading, setLoading] = useState(false);
   const [editingLog, setEditingLog] = useState<ServiceLog | null>(null);
+  const [initialFiltersApplied, setInitialFiltersApplied] = useState(false);
   const { toast } = useToast();
   const { signOut } = useAuth();
+
+  // Apply URL filters on mount
+  useEffect(() => {
+    const clientId = searchParams.get("client");
+    const month = searchParams.get("month");
+    const year = searchParams.get("year");
+
+    if (clientId) {
+      setSelectedClientId(clientId);
+    }
+    if (month && year) {
+      setCurrentMonth(new Date(parseInt(year), parseInt(month) - 1, 1));
+    }
+    setInitialFiltersApplied(true);
+  }, [searchParams]);
 
   // Fetch clients on mount
   useEffect(() => {
@@ -52,13 +69,14 @@ export default function AdminServiceCalendar() {
         toast({ title: "Error fetching clients", description: error.message, variant: "destructive" });
       } else {
         setClients(data || []);
-        if (data && data.length > 0 && !selectedClientId) {
+        // Only auto-select first client if no URL filter was provided
+        if (data && data.length > 0 && !selectedClientId && !searchParams.get("client")) {
           setSelectedClientId(data[0].id);
         }
       }
     };
     fetchClients();
-  }, []);
+  }, [searchParams]);
 
   // Fetch service logs when client or month changes
   useEffect(() => {
