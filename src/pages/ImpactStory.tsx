@@ -2,59 +2,37 @@ import Header from "@/components/layout/Header";
 import Footer from "@/components/layout/Footer";
 import { Card, CardContent } from "@/components/ui/card";
 import { Users, TrendingUp, Heart, Shield, ShieldCheck, Utensils, HandHeart, Calendar, Briefcase, RefreshCw } from "lucide-react";
-import {
-  Accordion,
-  AccordionContent,
-  AccordionItem,
-  AccordionTrigger,
-} from "@/components/ui/accordion";
-
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 const ImpactStory = () => {
-  const topStats = [
-    {
-      icon: TrendingUp,
-      value: "$2.6M+",
-      label: "Raised Since 2020",
-      description: "Reinvested in our community"
-    },
-    {
-      icon: Users,
-      value: "500+",
-      label: "Youth Served Annually",
-      description: "Across Cape May County"
-    },
-    {
-      icon: ShieldCheck,
-      value: "95%",
-      label: "Youth Participate in Non-Contact Boxing",
-      description: "Safety-focused training and development"
-    }
-  ];
-
-  const bottomStats = [
-    {
-      icon: Heart,
-      value: "70%",
-      label: "Below Poverty Line",
-      description: "Of registered youth"
-    },
-    {
-      icon: Utensils,
-      value: "Meals Served",
-      label: "Five Nights a Week",
-      description: "September through June"
-    }
-  ];
-
-  const partners = [
-    "Schools",
-    "Law Enforcement",
-    "Mental Health Providers",
-    "Public Officials"
-  ];
-
-  return (
-    <div className="min-h-screen flex flex-col bg-background">
+  const topStats = [{
+    icon: TrendingUp,
+    value: "$2.6M+",
+    label: "Raised Since 2020",
+    description: "Reinvested in our community"
+  }, {
+    icon: Users,
+    value: "500+",
+    label: "Youth Served Annually",
+    description: "Across Cape May County"
+  }, {
+    icon: ShieldCheck,
+    value: "95%",
+    label: "Youth Participate in Non-Contact Boxing",
+    description: "Safety-focused training and development"
+  }];
+  const bottomStats = [{
+    icon: Heart,
+    value: "70%",
+    label: "Below Poverty Line",
+    description: "Of registered youth"
+  }, {
+    icon: Utensils,
+    value: "Meals Served",
+    label: "Five Nights a Week",
+    description: "September through June"
+  }];
+  const partners = ["Schools", "Law Enforcement", "Mental Health Providers", "Public Officials"];
+  return <div className="min-h-screen flex flex-col bg-background">
       <Header />
       
       <main className="flex-1">
@@ -78,8 +56,7 @@ const ImpactStory = () => {
             <div className="max-w-5xl mx-auto">
               {/* Top row: 3 cards */}
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6 md:gap-8 mb-6 md:mb-8">
-                {topStats.map((stat, index) => (
-                  <Card key={index} className="border-2 border-foreground/10 hover:border-foreground/20 transition-colors">
+                {topStats.map((stat, index) => <Card key={index} className="border-2 border-foreground/10 hover:border-foreground/20 transition-colors">
                     <CardContent className="p-8 text-center">
                       <stat.icon className="h-10 w-10 mx-auto mb-4 text-foreground" />
                       <div className="text-4xl md:text-5xl font-black text-foreground mb-2">
@@ -92,14 +69,12 @@ const ImpactStory = () => {
                         {stat.description}
                       </div>
                     </CardContent>
-                  </Card>
-                ))}
+                  </Card>)}
               </div>
               
               {/* Bottom row: 2 cards centered */}
               <div className="flex flex-col md:flex-row justify-center gap-6 md:gap-8">
-                {bottomStats.map((stat, index) => (
-                  <Card key={index} className="border-2 border-foreground/10 hover:border-foreground/20 transition-colors md:w-[calc(33.333%-1rem)]">
+                {bottomStats.map((stat, index) => <Card key={index} className="border-2 border-foreground/10 hover:border-foreground/20 transition-colors md:w-[calc(33.333%-1rem)]">
                     <CardContent className="p-8 text-center">
                       <stat.icon className="h-10 w-10 mx-auto mb-4 text-foreground" />
                       <div className="text-4xl md:text-5xl font-black text-foreground mb-2">
@@ -112,8 +87,7 @@ const ImpactStory = () => {
                         {stat.description}
                       </div>
                     </CardContent>
-                  </Card>
-                ))}
+                  </Card>)}
               </div>
             </div>
           </div>
@@ -367,9 +341,7 @@ const ImpactStory = () => {
               </p>
               
               <div className="space-y-6 text-lg text-muted-foreground leading-relaxed">
-                <p>
-                  No Limits Academy exists to be the best in the country at helping young people build discipline, resilience, and direction—so they can break cycles of poverty and pursue meaningful futures. We believe social entrepreneurship is key to that mission: youth should learn not only how to work, but how to think, lead, and build.
-                </p>
+                <p>No Limits Academy exists to helping young people build discipline, resilience, and direction—so they can break cycles of poverty and pursue meaningful futures. We believe social entrepreneurship is key to that mission: youth should learn not only how to work, but how to think, lead, and build.</p>
                 <p>
                   <span className="font-bold text-foreground">The Launch Pad</span> is our keystone program—ensuring participants continue receiving guidance, opportunity, and support long after they graduate from NLA. Through a growing network of local businesses and mentors, young people gain real-world exposure to careers, entrepreneurship, and leadership—learning not just to be strong employees, but to develop the mindset and skills of employers.
                 </p>
@@ -389,8 +361,6 @@ const ImpactStory = () => {
       </main>
 
       <Footer />
-    </div>
-  );
+    </div>;
 };
-
 export default ImpactStory;
