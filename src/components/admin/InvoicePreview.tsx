@@ -304,7 +304,7 @@ No Limits Academy`,
           )}
           {summary.flatTotal > 0 && (
             <div className="flex justify-between text-sm">
-              <span>Service Total:</span>
+              <span>Hawk Squad Total:</span>
               <span><strong>{formatCurrency(summary.flatTotal)}</strong></span>
             </div>
           )}
