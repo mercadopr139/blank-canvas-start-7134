@@ -510,7 +510,7 @@ export default function AdminInvoices() {
               </Select>
             </div>
             {selectedClientId && <Link to={`/admin/service-calendar?client=${selectedClientId}&month=${selectedMonth}&year=${selectedYear}`}>
-                <Button variant="outline">
+                <Button className="bg-primary text-primary-foreground hover:bg-primary/90">
                   <CalendarDays className="w-4 h-4 mr-2" />
                   Add / View Service Days
                 </Button>
