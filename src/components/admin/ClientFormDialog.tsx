@@ -19,10 +19,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import ClientServicesSection, { ClientService } from "./ClientServicesSection";
 import type { Tables } from "@/integrations/supabase/types";
 
 const clientSchema = z.object({
@@ -74,31 +72,6 @@ export default function ClientFormDialog({
     notes: "",
   });
 
-  const [clientServices, setClientServices] = useState<ClientService[]>([]);
-
-  // Fetch client services when editing
-  const fetchClientServices = async (clientId: string) => {
-    const { data, error } = await supabase
-      .from("client_services")
-      .select("*")
-      .eq("client_id", clientId)
-      .order("service_name");
-
-    if (error) {
-      console.error("Error fetching client services:", error);
-      return;
-    }
-
-    setClientServices(
-      (data || []).map((s) => ({
-        id: s.id,
-        service_name: s.service_name,
-        rate_type: s.rate_type,
-        rate_amount: s.rate_amount?.toString() || "0",
-      }))
-    );
-  };
-
   useEffect(() => {
     if (client) {
       setFormData({
@@ -112,7 +85,6 @@ export default function ClientFormDialog({
         service_description_default: client.service_description_default || "",
         notes: client.notes || "",
       });
-      fetchClientServices(client.id);
     } else {
       setFormData({
         client_name: "",
@@ -125,7 +97,6 @@ export default function ClientFormDialog({
         service_description_default: "",
         notes: "",
       });
-      setClientServices([]);
     }
   }, [client, open]);
 
@@ -171,8 +142,6 @@ export default function ClientFormDialog({
     };
 
     try {
-      let clientId = client?.id;
-
       if (client) {
         const { error } = await supabase
           .from("clients")
@@ -182,51 +151,9 @@ export default function ClientFormDialog({
         if (error) throw error;
         toast({ title: "Client updated successfully" });
       } else {
-        const { data, error } = await supabase
-          .from("clients")
-          .insert([clientData])
-          .select()
-          .single();
+        const { error } = await supabase.from("clients").insert([clientData]);
         if (error) throw error;
-        clientId = data.id;
         toast({ title: "Client created successfully" });
-      }
-
-      // Handle client services
-      if (clientId) {
-        // Delete services marked for deletion
-        const toDelete = clientServices.filter((s) => s.toDelete && s.id);
-        for (const service of toDelete) {
-          await supabase.from("client_services").delete().eq("id", service.id!);
-        }
-
-        // Update existing services
-        const toUpdate = clientServices.filter((s) => s.id && !s.toDelete && !s.isNew);
-        for (const service of toUpdate) {
-          await supabase
-            .from("client_services")
-            .update({
-              service_name: service.service_name,
-              rate_type: service.rate_type,
-              rate_amount: parseFloat(service.rate_amount) || 0,
-            })
-            .eq("id", service.id!);
-        }
-
-        // Insert new services
-        const toInsert = clientServices.filter((s) => s.isNew && !s.toDelete && s.service_name);
-        const newServices = toInsert
-          .filter((s) => s.service_name.trim())
-          .map((s) => ({
-            client_id: clientId!,
-            service_name: s.service_name,
-            rate_type: s.rate_type,
-            rate_amount: parseFloat(s.rate_amount) || 0,
-          }));
-
-        if (newServices.length > 0) {
-          await supabase.from("client_services").insert(newServices);
-        }
       }
 
       onSuccess();
@@ -349,14 +276,6 @@ export default function ClientFormDialog({
               value={formData.notes}
               onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
               rows={3}
-            />
-          </div>
-
-          {/* Client Services Section */}
-          <div className="pt-4 border-t">
-            <ClientServicesSection
-              services={clientServices}
-              onChange={setClientServices}
             />
           </div>
 
