@@ -1,7 +1,7 @@
 import Header from "@/components/layout/Header";
 import Footer from "@/components/layout/Footer";
 import { Card, CardContent } from "@/components/ui/card";
-import { Users, TrendingUp, Heart, Shield } from "lucide-react";
+import { Users, TrendingUp, Heart, Shield, Dumbbell, Utensils } from "lucide-react";
 import {
   Accordion,
   AccordionContent,
@@ -10,7 +10,7 @@ import {
 } from "@/components/ui/accordion";
 
 const ImpactStory = () => {
-  const stats = [
+  const topStats = [
     {
       icon: Users,
       value: "500+",
@@ -28,6 +28,21 @@ const ImpactStory = () => {
       value: "$2.6M+",
       label: "Raised Since 2020",
       description: "Reinvested in our community"
+    }
+  ];
+
+  const bottomStats = [
+    {
+      icon: Dumbbell,
+      value: "95%",
+      label: "Youth Participate in Non-Contact Boxing",
+      description: "Safety-focused training and development"
+    },
+    {
+      icon: Utensils,
+      value: "Meals Served",
+      label: "Five Nights a Week",
+      description: "September through June"
     }
   ];
 
@@ -61,9 +76,30 @@ const ImpactStory = () => {
         <section className="py-16 md:py-20 bg-background">
           <div className="container">
             <div className="max-w-5xl mx-auto">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6 md:gap-8">
-                {stats.map((stat, index) => (
+              {/* Top row: 3 cards */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6 md:gap-8 mb-6 md:mb-8">
+                {topStats.map((stat, index) => (
                   <Card key={index} className="border-2 border-foreground/10 hover:border-foreground/20 transition-colors">
+                    <CardContent className="p-8 text-center">
+                      <stat.icon className="h-10 w-10 mx-auto mb-4 text-foreground" />
+                      <div className="text-4xl md:text-5xl font-black text-foreground mb-2">
+                        {stat.value}
+                      </div>
+                      <div className="text-lg font-bold text-foreground mb-1">
+                        {stat.label}
+                      </div>
+                      <div className="text-sm text-muted-foreground">
+                        {stat.description}
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+              
+              {/* Bottom row: 2 cards centered */}
+              <div className="flex flex-col md:flex-row justify-center gap-6 md:gap-8">
+                {bottomStats.map((stat, index) => (
+                  <Card key={index} className="border-2 border-foreground/10 hover:border-foreground/20 transition-colors md:w-[calc(33.333%-1rem)]">
                     <CardContent className="p-8 text-center">
                       <stat.icon className="h-10 w-10 mx-auto mb-4 text-foreground" />
                       <div className="text-4xl md:text-5xl font-black text-foreground mb-2">
