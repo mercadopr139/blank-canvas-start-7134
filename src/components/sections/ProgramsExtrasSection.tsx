@@ -109,6 +109,7 @@ type ProgramItem = {
   id: string;
   title: string;
   subtitle: string;
+  ageRange: string;
   blurb: string;
   policyText?: string;
   images: { src: string; alt: string }[];
@@ -122,6 +123,7 @@ const ProgramsExtrasSection = () => {
         id: "smile-lab",
         title: "Dental Dental's Smile Lab Program",
         subtitle: "Junior Boxers Only",
+        ageRange: "7–10 years old",
         blurb:
           "Smile Lab supports youth with education and life skills connected to hygiene, confidence, and being good stewards of community—reinforcing habits that carry far beyond the gym.",
         images: [
@@ -138,6 +140,7 @@ const ProgramsExtrasSection = () => {
         id: "excursions",
         title: "Excursions",
         subtitle: "Senior Boxers Only",
+        ageRange: "11–19 years old",
         blurb:
           "Our excursions take youth beyond the facility walls—exposing them to new experiences, education, and opportunities that expand perspective and reinforce life skills learned in the gym.",
         images: [
@@ -166,6 +169,7 @@ const ProgramsExtrasSection = () => {
         id: "gym-buddies",
         title: "Gym Buddies",
         subtitle: "Senior Boxers Only",
+        ageRange: "11–19 years old",
         blurb:
           "Gym Buddies brings youth together with law enforcement officers, firefighters, and service members for shared workouts that build mutual trust, respect, and understanding—strengthening relationships both inside and beyond the gym.",
         images: gymBuddiesImages,
@@ -175,6 +179,7 @@ const ProgramsExtrasSection = () => {
         id: "lil-champs",
         title: "NJ4S Lil' Champs Program",
         subtitle: "Junior Boxers Only",
+        ageRange: "7–10 years old",
         blurb:
           "Lil' Champs provides age-appropriate education programming that strengthens life skills—supporting youth with routines, hygiene, and habits that translate into confidence, responsibility, and community pride.",
         images: [
@@ -191,6 +196,7 @@ const ProgramsExtrasSection = () => {
         id: "spiritual-development",
         title: "Spiritual Development",
         subtitle: "All Boxers Welcome",
+        ageRange: "7–19 years old",
         blurb:
           "Spiritual development at No Limits Academy focuses on reflection, values, purpose, and personal growth within a supportive and respectful environment. This component is designed to complement our youth development work by encouraging mindfulness, character, and healthy decision-making.",
         policyText:
@@ -209,6 +215,7 @@ const ProgramsExtrasSection = () => {
         id: "launch-pad",
         title: "The Launch Pad",
         subtitle: "Senior Boxers Only",
+        ageRange: "11–19 years old",
         blurb:
           "The Launch Pad prepares youth for more than early work experience—it introduces them to the world of business. Through a network of local businesses, youth gain hands-on exposure to professional environments where they learn responsibility, communication, and how organizations operate.\n\nMentored by business leaders, participants build the habits, confidence, and understanding needed to graduate high school with a clear path forward and the discipline to succeed.",
         images: [
@@ -264,6 +271,9 @@ const ProgramsExtrasSection = () => {
               </DialogTitle>
               <p className="text-sm font-medium text-muted-foreground">
                 {openItem?.subtitle}
+              </p>
+              <p className="text-xs font-normal text-muted-foreground/70">
+                {openItem?.ageRange}
               </p>
             </DialogHeader>
             
