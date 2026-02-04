@@ -2,6 +2,7 @@ import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import { format } from "date-fns";
 import type { Tables } from "@/integrations/supabase/types";
+import nlaLogo from "@/assets/nla-logo.png";
 
 type Client = Tables<"clients">;
 type ServiceLog = Tables<"service_logs">;
@@ -68,10 +69,11 @@ export interface InvoicePdfData {
   issueDate: Date;
   month: number;
   year: number;
+  logoBase64?: string;
 }
 
 export function generateInvoicePdf(data: InvoicePdfData): jsPDF {
-  const { client, serviceLogs, invoiceNumber, issueDate, month, year } = data;
+  const { client, serviceLogs, invoiceNumber, issueDate, month, year, logoBase64 } = data;
   const hourlyRate = (client as any).hourly_rate || 0;
   const serviceTime = (client as any).service_time || "";
   const serviceDays = (client as any).service_days || "";
@@ -99,14 +101,25 @@ export function generateInvoicePdf(data: InvoicePdfData): jsPDF {
   const doc = new jsPDF();
   const pageWidth = doc.internal.pageSize.getWidth();
   
+  // Add logo if available
+  let headerTextStartX = 20;
+  if (logoBase64) {
+    try {
+      doc.addImage(logoBase64, "PNG", 20, 12, 30, 30);
+      headerTextStartX = 55;
+    } catch (e) {
+      console.error("Failed to add logo to PDF:", e);
+    }
+  }
+  
   // Header
   doc.setFontSize(24);
   doc.setFont("helvetica", "bold");
-  doc.text("INVOICE", 20, 30);
+  doc.text("INVOICE", headerTextStartX, 30);
   
   doc.setFontSize(12);
   doc.setFont("helvetica", "normal");
-  doc.text("No Limits Academy", 20, 40);
+  doc.text("No Limits Academy", headerTextStartX, 40);
   
   // Invoice details (right side)
   doc.setFontSize(10);
@@ -259,12 +272,30 @@ export function generateInvoicePdf(data: InvoicePdfData): jsPDF {
   return doc;
 }
 
-export function downloadInvoicePdf(data: InvoicePdfData): void {
-  const doc = generateInvoicePdf(data);
+// Helper to load logo as base64
+async function loadLogoBase64(): Promise<string | undefined> {
+  try {
+    const response = await fetch(nlaLogo);
+    const blob = await response.blob();
+    return new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.onloadend = () => resolve(reader.result as string);
+      reader.readAsDataURL(blob);
+    });
+  } catch (e) {
+    console.error("Failed to load logo:", e);
+    return undefined;
+  }
+}
+
+export async function downloadInvoicePdf(data: InvoicePdfData): Promise<void> {
+  const logoBase64 = await loadLogoBase64();
+  const doc = generateInvoicePdf({ ...data, logoBase64 });
   doc.save(`NLA_Invoice_${data.invoiceNumber}.pdf`);
 }
 
-export function getInvoicePdfBase64(data: InvoicePdfData): string {
-  const doc = generateInvoicePdf(data);
+export async function getInvoicePdfBase64(data: InvoicePdfData): Promise<string> {
+  const logoBase64 = await loadLogoBase64();
+  const doc = generateInvoicePdf({ ...data, logoBase64 });
   return doc.output("datauristring").split(",")[1];
 }
