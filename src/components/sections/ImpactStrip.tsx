@@ -1,4 +1,4 @@
-import { Users, Heart, ShieldCheck, Bus } from "lucide-react";
+import { Users, Heart, ShieldCheck, Utensils } from "lucide-react";
 
 const ImpactStrip = () => {
   const stats = [
@@ -18,7 +18,7 @@ const ImpactStrip = () => {
       label: "Youth from Low-Income Households",
     },
     {
-      icon: Bus,
+      icon: Utensils,
       value: "Meals & Transportation",
       label: "Five Nights a Week",
     },
