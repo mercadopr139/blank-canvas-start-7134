@@ -1,5 +1,5 @@
-import { useState, useEffect } from "react";
-import { Link } from "react-router-dom";
+import { useState, useEffect, useRef, useCallback } from "react";
+import { Link, useSearchParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import {
   Select,
@@ -57,6 +57,7 @@ const statusColors: Record<string, string> = {
 };
 
 export default function AdminInvoices() {
+  const [searchParams, setSearchParams] = useSearchParams();
   const [clients, setClients] = useState<Client[]>([]);
   const [selectedClientId, setSelectedClientId] = useState<string>("");
   const [selectedMonth, setSelectedMonth] = useState<string>(String(new Date().getMonth() + 1));
@@ -67,8 +68,20 @@ export default function AdminInvoices() {
   const [invoices, setInvoices] = useState<(Invoice & { client_name?: string })[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [tempInvoiceNumber, setTempInvoiceNumber] = useState("");
+  const autoGenerateTriggered = useRef(false);
   const { toast } = useToast();
   const { signOut } = useAuth();
+
+  // Apply URL params on mount
+  useEffect(() => {
+    const clientId = searchParams.get("client");
+    const month = searchParams.get("month");
+    const year = searchParams.get("year");
+
+    if (clientId) setSelectedClientId(clientId);
+    if (month) setSelectedMonth(month);
+    if (year) setSelectedYear(year);
+  }, []);
 
   // Fetch clients on mount
   useEffect(() => {
@@ -118,8 +131,9 @@ export default function AdminInvoices() {
     }
   };
 
-  const handleGeneratePreview = async () => {
-    if (!selectedClientId) {
+  const handleGeneratePreview = useCallback(async (clientIdOverride?: string) => {
+    const clientId = clientIdOverride || selectedClientId;
+    if (!clientId) {
       toast({ title: "Please select a client", variant: "destructive" });
       return;
     }
@@ -135,7 +149,7 @@ export default function AdminInvoices() {
     const { data: logs, error: logsError } = await supabase
       .from("service_logs")
       .select("*")
-      .eq("client_id", selectedClientId)
+      .eq("client_id", clientId)
       .gte("service_date", startDate)
       .lte("service_date", endDate)
       .order("service_date");
@@ -152,7 +166,7 @@ export default function AdminInvoices() {
     const { data: existingInv } = await supabase
       .from("invoices")
       .select("*")
-      .eq("client_id", selectedClientId)
+      .eq("client_id", clientId)
       .eq("invoice_month", month)
       .eq("invoice_year", year)
       .maybeSingle();
@@ -166,7 +180,23 @@ export default function AdminInvoices() {
 
     setShowPreview(true);
     setIsLoading(false);
-  };
+
+    // Clear URL params after auto-generation
+    if (searchParams.get("autoGenerate")) {
+      setSearchParams({}, { replace: true });
+    }
+  }, [selectedClientId, selectedMonth, selectedYear, searchParams, setSearchParams, toast]);
+
+  // Auto-generate preview when navigating from Service Calendar
+  useEffect(() => {
+    const shouldAutoGenerate = searchParams.get("autoGenerate") === "true";
+    const clientId = searchParams.get("client");
+    
+    if (shouldAutoGenerate && clientId && clients.length > 0 && !autoGenerateTriggered.current) {
+      autoGenerateTriggered.current = true;
+      handleGeneratePreview(clientId);
+    }
+  }, [searchParams, clients, handleGeneratePreview]);
 
   const handleSaveDraft = async (subtotal: number, total: number) => {
     if (!selectedClientId) return;
@@ -351,7 +381,7 @@ export default function AdminInvoices() {
                 </SelectContent>
               </Select>
             </div>
-            <Button onClick={handleGeneratePreview} disabled={!selectedClientId || isLoading}>
+            <Button onClick={() => handleGeneratePreview()} disabled={!selectedClientId || isLoading}>
               {isLoading ? "Loading..." : "Generate Preview"}
             </Button>
             {selectedClientId && (
