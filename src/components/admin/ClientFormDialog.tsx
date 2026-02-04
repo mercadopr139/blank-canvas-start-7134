@@ -24,7 +24,7 @@ import { supabase } from "@/integrations/supabase/client";
 import type { Tables } from "@/integrations/supabase/types";
 
 const clientSchema = z.object({
-  client_name: z.string().min(1, "Client name is required").max(255),
+  client_name: z.string().min(1, "Partner name is required").max(255),
   contact_name: z.string().max(255).optional(),
   billing_email: z.string().email("Invalid email").max(255).optional().or(z.literal("")),
   phone: z.string().max(50).optional(),
@@ -167,11 +167,11 @@ export default function ClientFormDialog({
           .eq("id", client.id);
 
         if (error) throw error;
-        toast({ title: "Client updated successfully" });
+        toast({ title: "Partner updated successfully" });
       } else {
         const { error } = await supabase.from("clients").insert([clientData]);
         if (error) throw error;
-        toast({ title: "Client created successfully" });
+        toast({ title: "Partner created successfully" });
       }
 
       onSuccess();
@@ -191,15 +191,15 @@ export default function ClientFormDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>{client ? "Edit Client" : "Add Client"}</DialogTitle>
+          <DialogTitle>{client ? "Edit Partner" : "Add Partner"}</DialogTitle>
           <DialogDescription>
-            {client ? "Update the client details below." : "Fill in the client details below."}
+            {client ? "Update the partner details below." : "Fill in the partner details below."}
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="client_name">Client Name *</Label>
+              <Label htmlFor="client_name">Partner Name *</Label>
               <Input
                 id="client_name"
                 value={formData.client_name}
@@ -337,7 +337,7 @@ export default function ClientFormDialog({
               Cancel
             </Button>
             <Button type="submit" disabled={isLoading}>
-              {isLoading ? "Saving..." : client ? "Update Client" : "Add Client"}
+              {isLoading ? "Saving..." : client ? "Update Partner" : "Add Partner"}
             </Button>
           </DialogFooter>
         </form>
