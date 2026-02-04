@@ -193,6 +193,23 @@ const ProgramsExtrasSection = () => {
         buttonLabel: "Back to Programs",
       },
       {
+        id: "real-talk",
+        title: "Real Talk Sessions",
+        subtitle: "Senior Boxers",
+        ageRange: "11–19 years old",
+        blurb:
+          "Real Talk Sessions bring highly successful adults to No Limits Academy to share honest stories of struggle, failure, heartbreak, and setbacks—showing youth what perseverance and resilience look like in real life. Speakers share how resilience and faith helped anchor them through adversity, with the goal of inspiring youth to keep moving forward.",
+        images: [
+          { src: "/placeholder.svg", alt: "Real Talk Sessions photo 1", caption: "Real Talk Sessions" },
+          { src: "/placeholder.svg", alt: "Real Talk Sessions photo 2", caption: "Real Talk Sessions" },
+          { src: "/placeholder.svg", alt: "Real Talk Sessions photo 3", caption: "Real Talk Sessions" },
+          { src: "/placeholder.svg", alt: "Real Talk Sessions photo 4", caption: "Real Talk Sessions" },
+          { src: "/placeholder.svg", alt: "Real Talk Sessions photo 5", caption: "Real Talk Sessions" },
+          { src: "/placeholder.svg", alt: "Real Talk Sessions photo 6", caption: "Real Talk Sessions" },
+        ],
+        buttonLabel: "Back to Programs",
+      },
+      {
         id: "spiritual-development",
         title: "Spiritual Development",
         subtitle: "All Boxers Welcome",
@@ -208,23 +225,6 @@ const ProgramsExtrasSection = () => {
           { src: "/placeholder.svg", alt: "Spiritual Development photo 4", caption: "Spiritual Development" },
           { src: "/placeholder.svg", alt: "Spiritual Development photo 5", caption: "Spiritual Development" },
           { src: "/placeholder.svg", alt: "Spiritual Development photo 6", caption: "Spiritual Development" },
-        ],
-        buttonLabel: "Back to Programs",
-      },
-      {
-        id: "real-talk",
-        title: "Real Talk Sessions",
-        subtitle: "Senior Boxers",
-        ageRange: "11–19 years old",
-        blurb:
-          "Real Talk Sessions bring highly successful adults to No Limits Academy to share honest stories of struggle, failure, heartbreak, and setbacks—showing youth what perseverance and resilience look like in real life. Speakers share how resilience and faith helped anchor them through adversity, with the goal of inspiring youth to keep moving forward.",
-        images: [
-          { src: "/placeholder.svg", alt: "Real Talk Sessions photo 1", caption: "Real Talk Sessions" },
-          { src: "/placeholder.svg", alt: "Real Talk Sessions photo 2", caption: "Real Talk Sessions" },
-          { src: "/placeholder.svg", alt: "Real Talk Sessions photo 3", caption: "Real Talk Sessions" },
-          { src: "/placeholder.svg", alt: "Real Talk Sessions photo 4", caption: "Real Talk Sessions" },
-          { src: "/placeholder.svg", alt: "Real Talk Sessions photo 5", caption: "Real Talk Sessions" },
-          { src: "/placeholder.svg", alt: "Real Talk Sessions photo 6", caption: "Real Talk Sessions" },
         ],
         buttonLabel: "Back to Programs",
       },
