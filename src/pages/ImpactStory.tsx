@@ -490,7 +490,7 @@ young people build discipline, resilience, and direction—so they can break cyc
             
             <div className="space-y-6 pt-4">
               <p className="text-muted-foreground leading-relaxed">
-                NLA removes transportation barriers by operating its own fleet to ensure consistent access to programming across Cape May County.
+                NLA removes transportation barriers by operating its own fleet to ensure access to programming in Cape May County's most distressed municipalities, Woodbine & Wildwood.
               </p>
 
               {/* Transportation Assets */}
