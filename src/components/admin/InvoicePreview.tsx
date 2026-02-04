@@ -16,7 +16,7 @@ type Invoice = Tables<"invoices">;
 
 interface LineItem {
   date: string;
-  billingMethod: "hourly" | "flat_rate";
+  billingMethod: "hourly" | "flat_rate" | "per_day";
   hours: number | null;
   flatAmount: number | null;
   lineTotal: number;
@@ -79,7 +79,7 @@ export default function InvoicePreview({
 
     return sortedLogs.map((log) => ({
       date: log.service_date,
-      billingMethod: ((log as any).billing_method || "hourly") as "hourly" | "flat_rate",
+      billingMethod: ((log as any).billing_method || "hourly") as "hourly" | "flat_rate" | "per_day",
       hours: (log as any).hours || null,
       flatAmount: (log as any).flat_amount || null,
       lineTotal: (log as any).line_total || 0,
@@ -91,11 +91,11 @@ export default function InvoicePreview({
   // Calculate summary
   const calculateSummary = (): InvoiceSummary => {
     const hourlyItems = lineItems.filter(item => item.billingMethod === "hourly");
-    const flatItems = lineItems.filter(item => item.billingMethod === "flat_rate");
+    const flatItems = lineItems.filter(item => item.billingMethod === "flat_rate" || item.billingMethod === "per_day");
 
     const totalHours = hourlyItems.reduce((sum, item) => sum + (item.hours || 0), 0);
     const hourlyTotal = totalHours * hourlyRate;
-    const flatTotal = flatItems.reduce((sum, item) => sum + (item.flatAmount || 0), 0);
+    const flatTotal = flatItems.reduce((sum, item) => sum + (item.lineTotal || item.flatAmount || 0), 0);
     const invoiceTotal = hourlyTotal + flatTotal;
 
     return {
@@ -315,7 +315,7 @@ No Limits Academy`,
                       {format(new Date(item.date), "MMM d, yyyy")}
                     </td>
                     <td className="px-4 py-3 text-sm">
-                      {item.billingMethod === "hourly" ? "Hourly" : "Flat Rate"}
+                      {item.billingMethod === "hourly" ? "Hourly" : item.billingMethod === "per_day" ? "Per Day" : "Flat Rate"}
                     </td>
                     <td className="px-4 py-3 text-sm text-center">
                       {item.billingMethod === "hourly" ? `${item.hours || 0} hrs` : "—"}

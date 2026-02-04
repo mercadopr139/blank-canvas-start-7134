@@ -45,11 +45,11 @@ function calculateLineItems(serviceLogs: ServiceLog[]): LineItem[] {
 
 function calculateSummary(lineItems: LineItem[], hourlyRate: number): InvoiceSummary {
   const hourlyItems = lineItems.filter(item => item.billingMethod === "hourly");
-  const flatItems = lineItems.filter(item => item.billingMethod === "flat_rate");
+  const flatItems = lineItems.filter(item => item.billingMethod === "flat_rate" || item.billingMethod === "per_day");
 
   const totalHours = hourlyItems.reduce((sum, item) => sum + (item.hours || 0), 0);
   const hourlyTotal = totalHours * hourlyRate;
-  const flatTotal = flatItems.reduce((sum, item) => sum + (item.flatAmount || 0), 0);
+  const flatTotal = flatItems.reduce((sum, item) => sum + (item.lineTotal || item.flatAmount || 0), 0);
   const invoiceTotal = hourlyTotal + flatTotal;
 
   return {
