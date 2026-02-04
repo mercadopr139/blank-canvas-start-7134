@@ -1,20 +1,8 @@
-import heroCoaching from "@/assets/hero-coaching.png";
-
 const HeroSection = () => {
   return <section className="relative min-h-[90vh] flex items-center bg-primary overflow-hidden pb-12 md:pb-16">
       
-      {/* Hero image - right side on desktop */}
-      <div className="absolute right-0 top-0 bottom-0 w-full lg:w-1/2 overflow-hidden">
-        <img 
-          src={heroCoaching} 
-          alt="NLA coach mentoring youth" 
-          className="w-full h-full object-cover object-center opacity-30 lg:opacity-100"
-        />
-        <div className="absolute inset-0 bg-gradient-to-r from-primary via-primary/80 to-transparent lg:from-primary lg:via-primary/60 lg:to-transparent" />
-      </div>
-      
       {/* Accent line */}
-      <div className="absolute left-0 top-1/2 -translate-y-1/2 w-2 h-32 bg-primary rounded-r-full z-10" />
+      <div className="absolute left-0 top-1/2 -translate-y-1/2 w-2 h-32 bg-primary rounded-r-full" />
       
       <div className="container relative z-10 pt-12 md:pt-20">
         <div className="max-w-4xl">
