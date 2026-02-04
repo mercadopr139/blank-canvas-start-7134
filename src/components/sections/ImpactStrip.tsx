@@ -20,7 +20,7 @@ const ImpactStrip = () => {
     {
       icon: Bus,
       value: "Meals & Transportation",
-      label: "Five Nights a Week Access Support",
+      label: "Five Nights a Week",
     },
   ];
 
