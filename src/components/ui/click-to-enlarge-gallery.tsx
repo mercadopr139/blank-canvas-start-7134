@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import PortalLightbox from "./portal-lightbox";
 
-type Img = { src: string; alt: string; caption?: string };
+type Img = { src: string; alt: string; caption?: string; objectPosition?: string };
 
 export function ClickToEnlargeGallery({ 
   images,
@@ -63,6 +63,7 @@ export function ClickToEnlargeGallery({
                 src={img.src}
                 alt={img.alt}
                 className={ui.imgClassName}
+                style={img.objectPosition ? { objectPosition: img.objectPosition } : undefined}
                 loading="lazy"
               />
             </button>
