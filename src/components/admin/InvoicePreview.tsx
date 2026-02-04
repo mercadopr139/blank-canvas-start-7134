@@ -10,6 +10,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { downloadInvoicePdf, getInvoicePdfBase64 } from "@/lib/generateInvoicePdf";
 import type { Tables } from "@/integrations/supabase/types";
 import SendInvoiceModal from "./SendInvoiceModal";
+import nlaLogo from "@/assets/nla-logo.png";
 
 type Client = Tables<"clients">;
 type ServiceLog = Tables<"service_logs">;
@@ -132,9 +133,9 @@ export default function InvoicePreview({
     year,
   };
 
-  const handleDownloadPdf = () => {
+  const handleDownloadPdf = async () => {
     try {
-      downloadInvoicePdf(pdfData);
+      await downloadInvoicePdf(pdfData);
       toast({ title: "PDF downloaded successfully" });
     } catch (error: any) {
       toast({ title: "Error generating PDF", description: error.message, variant: "destructive" });
@@ -160,7 +161,7 @@ export default function InvoicePreview({
 
     setIsSending(true);
     try {
-      const pdfBase64 = getInvoicePdfBase64(pdfData);
+      const pdfBase64 = await getInvoicePdfBase64(pdfData);
       
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) {
@@ -237,11 +238,14 @@ No Limits Academy`,
     />
     <Card className="w-full">
       <CardHeader className="flex flex-row items-start justify-between">
-        <div>
-          <CardTitle className="text-2xl">Invoice</CardTitle>
-          <p className="text-muted-foreground mt-1">
-            {monthName} {year}
-          </p>
+        <div className="flex items-start gap-4">
+          <img src={nlaLogo} alt="No Limits Academy" className="h-16 w-auto" />
+          <div>
+            <CardTitle className="text-2xl">Invoice</CardTitle>
+            <p className="text-muted-foreground mt-1">
+              {monthName} {year}
+            </p>
+          </div>
         </div>
         <div className="flex items-center gap-2">
           <Badge className={statusColors[status]}>
