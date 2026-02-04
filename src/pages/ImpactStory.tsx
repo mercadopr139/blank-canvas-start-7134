@@ -1,7 +1,7 @@
 import Header from "@/components/layout/Header";
 import Footer from "@/components/layout/Footer";
 import { Card, CardContent } from "@/components/ui/card";
-import { Users, TrendingUp, Heart, Shield, Dumbbell, Utensils } from "lucide-react";
+import { Users, TrendingUp, Heart, Shield, ShieldCheck, Utensils } from "lucide-react";
 import {
   Accordion,
   AccordionContent,
@@ -12,31 +12,31 @@ import {
 const ImpactStory = () => {
   const topStats = [
     {
+      icon: TrendingUp,
+      value: "$2.6M+",
+      label: "Raised Since 2020",
+      description: "Reinvested in our community"
+    },
+    {
       icon: Users,
       value: "500+",
       label: "Youth Served Annually",
       description: "Across Cape May County"
     },
     {
-      icon: Heart,
-      value: "70%",
-      label: "Below Poverty Line",
-      description: "Of registered youth"
-    },
-    {
-      icon: TrendingUp,
-      value: "$2.6M+",
-      label: "Raised Since 2020",
-      description: "Reinvested in our community"
+      icon: ShieldCheck,
+      value: "95%",
+      label: "Youth Participate in Non-Contact Boxing",
+      description: "Safety-focused training and development"
     }
   ];
 
   const bottomStats = [
     {
-      icon: Dumbbell,
-      value: "95%",
-      label: "Youth Participate in Non-Contact Boxing",
-      description: "Safety-focused training and development"
+      icon: Heart,
+      value: "70%",
+      label: "Below Poverty Line",
+      description: "Of registered youth"
     },
     {
       icon: Utensils,
