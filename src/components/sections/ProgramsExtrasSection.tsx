@@ -125,7 +125,7 @@ const ProgramsExtrasSection = () => {
         subtitle: "Junior Boxers Only",
         ageRange: "7–10 years old",
         blurb:
-          "Smile Lab supports youth with education and life skills connected to hygiene, confidence, and being good stewards of community—reinforcing habits that carry far beyond the gym.",
+          "Smile Lab is an oral health initiative at No Limits Academy designed to improve access to care and deliver engaging, oral health education that empowers youth to take control of their oral health and overall well-being.",
         images: [
           { src: "/placeholder.svg", alt: "Smile Lab photo 1" },
           { src: "/placeholder.svg", alt: "Smile Lab photo 2" },
