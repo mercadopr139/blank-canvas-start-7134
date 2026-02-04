@@ -2,7 +2,7 @@ import { useState } from "react";
 import Header from "@/components/layout/Header";
 import Footer from "@/components/layout/Footer";
 import { Card, CardContent } from "@/components/ui/card";
-import { Users, TrendingUp, Heart, Shield, ShieldCheck, Utensils, HandHeart, Calendar, Briefcase, RefreshCw } from "lucide-react";
+import { Users, TrendingUp, Heart, Shield, ShieldCheck, Utensils, HandHeart, Calendar, Briefcase, RefreshCw, Bus } from "lucide-react";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import {
   Dialog,
@@ -96,46 +96,46 @@ const ImpactStory = () => {
                 })}
               </div>
               
-              {/* Bottom row: 2 cards centered */}
-              <div className="flex flex-col md:flex-row justify-center gap-6 md:gap-8">
-                {bottomStats.map((stat, index) => {
-                  const isMealsCard = stat.value === "Meals Served";
-                  return (
-                    <Card key={index} className="border-2 border-foreground/10 hover:border-foreground/20 transition-colors md:w-[calc(33.333%-1rem)]">
-                      <CardContent className="p-8 text-center">
-                        <stat.icon className="h-10 w-10 mx-auto mb-4 text-foreground" />
-                        <div className="text-4xl md:text-5xl font-black text-foreground mb-2">
-                          {stat.value}
-                        </div>
-                        <div className="text-lg font-bold text-foreground mb-1">
-                          {stat.label}
-                        </div>
-                        <div className="text-sm text-muted-foreground">
-                          {stat.description}
-                        </div>
-                        {isMealsCard && (
-                          <div className="mt-6 pt-4 border-t border-foreground/10">
-                            <button
-                              onClick={() => setTransportationOpen(true)}
-                              className="text-lg font-bold text-foreground hover:text-[#bf0f3e] transition-colors cursor-pointer"
-                            >
-                              FREE TRANSPORTATION
-                            </button>
-                            <p className="text-sm text-muted-foreground mt-2">
-                              We provide equal access to our facility for youth from the most distressed areas of Cape May County, five days a week.
-                            </p>
-                            <div 
-                              onClick={() => setTransportationOpen(true)}
-                              className="mt-2 text-sm font-medium text-[#bf0f3e] hover:text-[#bf0f3e]/80 transition-colors cursor-pointer"
-                            >
-                              Learn more →
-                            </div>
-                          </div>
-                        )}
-                      </CardContent>
-                    </Card>
-                  );
-                })}
+              {/* Bottom row: 3 cards */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6 md:gap-8">
+                {bottomStats.map((stat, index) => (
+                  <Card key={index} className="border-2 border-foreground/10 hover:border-foreground/20 transition-colors">
+                    <CardContent className="p-8 text-center">
+                      <stat.icon className="h-10 w-10 mx-auto mb-4 text-foreground" />
+                      <div className="text-4xl md:text-5xl font-black text-foreground mb-2">
+                        {stat.value}
+                      </div>
+                      <div className="text-lg font-bold text-foreground mb-1">
+                        {stat.label}
+                      </div>
+                      <div className="text-sm text-muted-foreground">
+                        {stat.description}
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+                
+                {/* Transportation Card */}
+                <Card 
+                  className="border-2 border-foreground/10 hover:border-foreground/20 hover:shadow-lg transition-all cursor-pointer"
+                  onClick={() => setTransportationOpen(true)}
+                >
+                  <CardContent className="p-8 text-center">
+                    <Bus className="h-10 w-10 mx-auto mb-4 text-foreground" />
+                    <div className="text-4xl md:text-5xl font-black text-foreground mb-2">
+                      Free
+                    </div>
+                    <div className="text-lg font-bold text-foreground mb-1">
+                      Transportation
+                    </div>
+                    <div className="text-sm text-muted-foreground">
+                      Five days a week
+                    </div>
+                    <div className="mt-3 text-sm font-medium text-[#bf0f3e] hover:text-[#bf0f3e]/80 transition-colors">
+                      View NLA fleet →
+                    </div>
+                  </CardContent>
+                </Card>
               </div>
             </div>
           </div>
