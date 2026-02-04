@@ -14,6 +14,51 @@ export type Database = {
   }
   public: {
     Tables: {
+      clients: {
+        Row: {
+          billing_address: string | null
+          billing_email: string | null
+          client_name: string
+          contact_name: string | null
+          created_at: string
+          id: string
+          notes: string | null
+          phone: string | null
+          rate_amount: number | null
+          rate_type: Database["public"]["Enums"]["rate_type"] | null
+          service_description_default: string | null
+          updated_at: string
+        }
+        Insert: {
+          billing_address?: string | null
+          billing_email?: string | null
+          client_name: string
+          contact_name?: string | null
+          created_at?: string
+          id?: string
+          notes?: string | null
+          phone?: string | null
+          rate_amount?: number | null
+          rate_type?: Database["public"]["Enums"]["rate_type"] | null
+          service_description_default?: string | null
+          updated_at?: string
+        }
+        Update: {
+          billing_address?: string | null
+          billing_email?: string | null
+          client_name?: string
+          contact_name?: string | null
+          created_at?: string
+          id?: string
+          notes?: string | null
+          phone?: string | null
+          rate_amount?: number | null
+          rate_type?: Database["public"]["Enums"]["rate_type"] | null
+          service_description_default?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           created_at: string
@@ -50,6 +95,7 @@ export type Database = {
     }
     Enums: {
       app_role: "admin" | "moderator" | "user"
+      rate_type: "per_day" | "per_session" | "per_hour" | "flat_monthly"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -178,6 +224,7 @@ export const Constants = {
   public: {
     Enums: {
       app_role: ["admin", "moderator", "user"],
+      rate_type: ["per_day", "per_session", "per_hour", "flat_monthly"],
     },
   },
 } as const
