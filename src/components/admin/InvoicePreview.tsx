@@ -9,6 +9,7 @@ import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { downloadInvoicePdf, getInvoicePdfBase64 } from "@/lib/generateInvoicePdf";
 import type { Tables } from "@/integrations/supabase/types";
+import SendInvoiceModal from "./SendInvoiceModal";
 
 type Client = Tables<"clients">;
 type ServiceLog = Tables<"service_logs">;
@@ -67,6 +68,7 @@ export default function InvoicePreview({
 }: InvoicePreviewProps) {
   const [isSending, setIsSending] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [showSendModal, setShowSendModal] = useState(false);
   const { toast } = useToast();
   
   const hourlyRate = (client as any).hourly_rate || 0;
@@ -139,7 +141,7 @@ export default function InvoicePreview({
     }
   };
 
-  const handleSendInvoice = async () => {
+  const handleOpenSendModal = () => {
     if (!existingInvoice) {
       toast({ title: "Please save the invoice first", variant: "destructive" });
       return;
@@ -149,6 +151,12 @@ export default function InvoicePreview({
       toast({ title: "Client has no billing email", description: "Please add a billing email to the client record.", variant: "destructive" });
       return;
     }
+
+    setShowSendModal(true);
+  };
+
+  const handleSendInvoice = async (emailNote: string) => {
+    if (!existingInvoice) return;
 
     setIsSending(true);
     try {
@@ -169,11 +177,13 @@ export default function InvoicePreview({
           year,
           total,
           pdfBase64,
+          emailNote: emailNote || null,
         },
       });
 
       if (error) throw error;
 
+      setShowSendModal(false);
       toast({ title: "Invoice sent successfully", description: `Sent to ${client.billing_email}` });
       onInvoiceUpdated?.();
     } catch (error: any) {
@@ -214,6 +224,17 @@ No Limits Academy`,
   };
 
   return (
+    <>
+    <SendInvoiceModal
+      open={showSendModal}
+      onOpenChange={setShowSendModal}
+      onSend={handleSendInvoice}
+      clientName={client.client_name}
+      billingEmail={client.billing_email || ""}
+      invoiceNumber={existingInvoice?.invoice_number || invoiceNumber}
+      existingNote={(existingInvoice as any)?.email_note}
+      isSending={isSending}
+    />
     <Card className="w-full">
       <CardHeader className="flex flex-row items-start justify-between">
         <div>
@@ -359,12 +380,12 @@ No Limits Academy`,
                 </Button>
                 <Button 
                   variant="secondary" 
-                  onClick={handleSendInvoice} 
-                  disabled={isLoading || isSending || !client.billing_email}
+                  onClick={handleOpenSendModal} 
+                  disabled={isLoading || !client.billing_email}
                   title={!client.billing_email ? "Client has no billing email" : ""}
                 >
                   <Mail className="w-4 h-4 mr-2" />
-                  {isSending ? "Sending..." : "Send Invoice"}
+                  Send Invoice
                 </Button>
                 <Button onClick={onMarkSent} disabled={isLoading}>
                   {isLoading ? "Updating..." : "Mark as Sent"}
@@ -383,5 +404,6 @@ No Limits Academy`,
         </div>
       </CardContent>
     </Card>
+    </>
   );
 }
