@@ -2,6 +2,7 @@ import { useState } from "react";
 import Header from "@/components/layout/Header";
 import Footer from "@/components/layout/Footer";
 import HeroSection from "@/components/sections/HeroSection";
+import ImpactStrip from "@/components/sections/ImpactStrip";
 import AboutSection from "@/components/sections/AboutSection";
 import ProgramsSection from "@/components/sections/ProgramsSection";
 import DailyRhythmSection from "@/components/sections/DailyRhythmSection";
@@ -39,6 +40,7 @@ const Index = () => {
       
       <main className="flex-1">
         <HeroSection />
+        <ImpactStrip />
         <AboutSection />
         <ProgramsSection onMoreInfo={handleMoreInfo} />
         <ImpactSection />
