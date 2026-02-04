@@ -86,7 +86,7 @@ const ImpactStory = () => {
                         </div>
                         {isYouthCard && (
                           <div className="mt-3 text-sm font-medium text-foreground/70 hover:text-foreground transition-colors">
-                            View NLA demographics →
+                            View <span className="text-[#bf0f3e]">NLA</span> demographics →
                           </div>
                         )}
                       </CardContent>
