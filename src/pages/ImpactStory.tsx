@@ -352,9 +352,7 @@ young people build discipline, resilience, and direction—so they can break cyc
                 <p className="text-lg font-semibold text-foreground">
                   Our model combines personal, professional, and spiritual development—alongside education and hard work—to create lasting transformation.
                 </p>
-                <p className="text-sm italic text-muted-foreground mt-3">
-                  *Spiritual development is always voluntary and offered as supportive guidance for youth who choose it.
-                </p>
+                
               </div>
             </div>
           </div>
