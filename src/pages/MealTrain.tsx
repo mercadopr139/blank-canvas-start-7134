@@ -19,7 +19,7 @@ const MealTrain = () => {
           <img 
             src={mealTrainHero} 
             alt="NLA volunteers serving meals to youth participants" 
-            className="w-full h-auto object-cover max-h-[500px] md:object-top"
+            className="w-full h-auto object-cover max-h-[500px] md:[object-position:center_25%]"
           />
         </section>
 
