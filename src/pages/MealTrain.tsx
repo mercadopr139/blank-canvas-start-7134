@@ -15,11 +15,11 @@ const MealTrain = () => {
       
       <main className="flex-1">
         {/* Hero Image */}
-        <section className="w-full">
+        <section className="w-full lg:py-8 lg:px-8">
           <img 
             src={mealTrainHero} 
             alt="NLA volunteers serving meals to youth participants" 
-            className="w-full h-auto object-cover max-h-[500px] md:[object-position:center_25%]"
+            className="w-full h-auto object-cover max-h-[500px] md:[object-position:center_25%] lg:max-w-4xl lg:mx-auto lg:rounded-xl lg:object-contain lg:max-h-none"
           />
         </section>
 
