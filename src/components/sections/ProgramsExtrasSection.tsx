@@ -119,12 +119,19 @@ const ProgramsExtrasSection = () => {
   const items: ProgramItem[] = useMemo(
     () => [
       {
-        id: "gym-buddies",
-        title: "Gym Buddies",
-        subtitle: "Senior Boxers Only",
+        id: "smile-lab",
+        title: "Dental Dental's Smile Lab Program",
+        subtitle: "Junior Boxers Only",
         blurb:
-          "Gym Buddies brings youth together with law enforcement officers, firefighters, and service members for shared workouts that build mutual trust, respect, and understanding—strengthening relationships both inside and beyond the gym.",
-        images: gymBuddiesImages,
+          "Smile Lab supports youth with education and life skills connected to hygiene, confidence, and being good stewards of community—reinforcing habits that carry far beyond the gym.",
+        images: [
+          { src: "/placeholder.svg", alt: "Smile Lab photo 1" },
+          { src: "/placeholder.svg", alt: "Smile Lab photo 2" },
+          { src: "/placeholder.svg", alt: "Smile Lab photo 3" },
+          { src: "/placeholder.svg", alt: "Smile Lab photo 4" },
+          { src: "/placeholder.svg", alt: "Smile Lab photo 5" },
+          { src: "/placeholder.svg", alt: "Smile Lab photo 6" },
+        ],
         buttonLabel: "Back to Programs",
       },
       {
@@ -156,35 +163,12 @@ const ProgramsExtrasSection = () => {
         buttonLabel: "Back to Programs",
       },
       {
-        id: "launch-pad",
-        title: "The Launch Pad",
+        id: "gym-buddies",
+        title: "Gym Buddies",
         subtitle: "Senior Boxers Only",
         blurb:
-          "The Launch Pad prepares youth for more than early work experience—it introduces them to the world of business. Through a network of local businesses, youth gain hands-on exposure to professional environments where they learn responsibility, communication, and how organizations operate.\n\nMentored by business leaders, participants build the habits, confidence, and understanding needed to graduate high school with a clear path forward and the discipline to succeed.",
-        images: [
-          { src: "/placeholder.svg", alt: "Launch Pad photo 1" },
-          { src: "/placeholder.svg", alt: "Launch Pad photo 2" },
-          { src: "/placeholder.svg", alt: "Launch Pad photo 3" },
-          { src: "/placeholder.svg", alt: "Launch Pad photo 4" },
-          { src: "/placeholder.svg", alt: "Launch Pad photo 5" },
-          { src: "/placeholder.svg", alt: "Launch Pad photo 6" },
-        ],
-        buttonLabel: "Back to Programs",
-      },
-      {
-        id: "smile-lab",
-        title: "Dental Dental's Smile Lab Program",
-        subtitle: "Junior Boxers Only",
-        blurb:
-          "Smile Lab supports youth with education and life skills connected to hygiene, confidence, and being good stewards of community—reinforcing habits that carry far beyond the gym.",
-        images: [
-          { src: "/placeholder.svg", alt: "Smile Lab photo 1" },
-          { src: "/placeholder.svg", alt: "Smile Lab photo 2" },
-          { src: "/placeholder.svg", alt: "Smile Lab photo 3" },
-          { src: "/placeholder.svg", alt: "Smile Lab photo 4" },
-          { src: "/placeholder.svg", alt: "Smile Lab photo 5" },
-          { src: "/placeholder.svg", alt: "Smile Lab photo 6" },
-        ],
+          "Gym Buddies brings youth together with law enforcement officers, firefighters, and service members for shared workouts that build mutual trust, respect, and understanding—strengthening relationships both inside and beyond the gym.",
+        images: gymBuddiesImages,
         buttonLabel: "Back to Programs",
       },
       {
@@ -212,6 +196,22 @@ const ProgramsExtrasSection = () => {
         policyText:
           "At No Limits Academy, we respect each individual's unique spiritual journey. Participation in any aspect of spiritual development is entirely voluntary. We do not require youth participants to read, engage with, or participate in spiritual practices or teachings. For youth who are curious or willing to explore their spiritual development, we are here to offer support and guidance. NLA's focus is on providing a nurturing, caring, and encouraging environment where youth can explore God, at their own pace, if they choose to do so.",
         images: [],
+        buttonLabel: "Back to Programs",
+      },
+      {
+        id: "launch-pad",
+        title: "The Launch Pad",
+        subtitle: "Senior Boxers Only",
+        blurb:
+          "The Launch Pad prepares youth for more than early work experience—it introduces them to the world of business. Through a network of local businesses, youth gain hands-on exposure to professional environments where they learn responsibility, communication, and how organizations operate.\n\nMentored by business leaders, participants build the habits, confidence, and understanding needed to graduate high school with a clear path forward and the discipline to succeed.",
+        images: [
+          { src: "/placeholder.svg", alt: "Launch Pad photo 1" },
+          { src: "/placeholder.svg", alt: "Launch Pad photo 2" },
+          { src: "/placeholder.svg", alt: "Launch Pad photo 3" },
+          { src: "/placeholder.svg", alt: "Launch Pad photo 4" },
+          { src: "/placeholder.svg", alt: "Launch Pad photo 5" },
+          { src: "/placeholder.svg", alt: "Launch Pad photo 6" },
+        ],
         buttonLabel: "Back to Programs",
       },
     ],
