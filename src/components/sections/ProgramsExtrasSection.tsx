@@ -1,4 +1,5 @@
 import { useState, useMemo } from "react";
+import groupActivityImage from "@/assets/programs/group-activity.jpg";
 import {
   Dialog,
   DialogContent,
