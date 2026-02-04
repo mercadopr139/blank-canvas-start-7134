@@ -272,7 +272,7 @@ const ProgramsExtrasSection = () => {
             </p>
 
             {openItem?.policyText && (
-              <p className="text-sm italic text-muted-foreground mt-4">
+              <p className="text-xs italic text-muted-foreground mt-4">
                 *{openItem.policyText}
               </p>
             )}
