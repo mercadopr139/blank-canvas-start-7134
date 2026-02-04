@@ -17,12 +17,22 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import InvoicePreview from "@/components/admin/InvoicePreview";
 import ClientFormDialog from "@/components/admin/ClientFormDialog";
-import { ArrowLeft, FileText, Eye, CalendarDays, Plus, Pencil } from "lucide-react";
+import { ArrowLeft, FileText, Eye, CalendarDays, Plus, Pencil, Trash2 } from "lucide-react";
 import { format } from "date-fns";
 import type { Tables } from "@/integrations/supabase/types";
 
@@ -71,6 +81,8 @@ export default function AdminInvoices() {
   const [tempInvoiceNumber, setTempInvoiceNumber] = useState("");
   const [showClientDialog, setShowClientDialog] = useState(false);
   const [editingClient, setEditingClient] = useState<Client | null>(null);
+  const [deleteClientId, setDeleteClientId] = useState<string | null>(null);
+  const [deleteInvoiceId, setDeleteInvoiceId] = useState<string | null>(null);
   const autoGenerateTriggered = useRef(false);
   const { toast } = useToast();
   const { signOut } = useAuth();
@@ -301,7 +313,58 @@ export default function AdminInvoices() {
     }, 100);
   };
 
+  const handleDeleteClient = async () => {
+    if (!deleteClientId) return;
+
+    setIsLoading(true);
+    try {
+      const { error } = await supabase
+        .from("clients")
+        .delete()
+        .eq("id", deleteClientId);
+
+      if (error) throw error;
+      
+      toast({ title: "Client deleted successfully" });
+      setSelectedClientId("");
+      setShowPreview(false);
+      fetchClients();
+      fetchInvoices();
+    } catch (error: any) {
+      toast({ title: "Error deleting client", description: error.message, variant: "destructive" });
+    } finally {
+      setIsLoading(false);
+      setDeleteClientId(null);
+    }
+  };
+
+  const handleDeleteInvoice = async () => {
+    if (!deleteInvoiceId) return;
+
+    setIsLoading(true);
+    try {
+      const { error } = await supabase
+        .from("invoices")
+        .delete()
+        .eq("id", deleteInvoiceId);
+
+      if (error) throw error;
+      
+      toast({ title: "Invoice deleted successfully" });
+      setShowPreview(false);
+      setExistingInvoice(null);
+      fetchInvoices();
+    } catch (error: any) {
+      toast({ title: "Error deleting invoice", description: error.message, variant: "destructive" });
+    } finally {
+      setIsLoading(false);
+      setDeleteInvoiceId(null);
+    }
+  };
+
   const selectedClient = clients.find((c) => c.id === selectedClientId);
+  const clientToDelete = clients.find((c) => c.id === deleteClientId);
+  const invoiceToDelete = invoices.find((inv) => inv.id === deleteInvoiceId);
 
   const formatCurrency = (amount: number | null) => {
     if (amount === null || amount === undefined) return "—";
@@ -365,19 +428,30 @@ export default function AdminInvoices() {
                   <Plus className="w-4 h-4" />
                 </Button>
                 {selectedClientId && (
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => {
-                      const client = clients.find(c => c.id === selectedClientId);
-                      setEditingClient(client || null);
-                      setShowClientDialog(true);
-                    }}
-                    className="shrink-0"
-                    title="Edit client"
-                  >
-                    <Pencil className="w-4 h-4" />
-                  </Button>
+                  <>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => {
+                        const client = clients.find(c => c.id === selectedClientId);
+                        setEditingClient(client || null);
+                        setShowClientDialog(true);
+                      }}
+                      className="shrink-0"
+                      title="Edit client"
+                    >
+                      <Pencil className="w-4 h-4" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => setDeleteClientId(selectedClientId)}
+                      className="shrink-0 text-destructive hover:text-destructive"
+                      title="Delete client"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </Button>
+                  </>
                 )}
               </div>
             </div>
@@ -484,13 +558,25 @@ export default function AdminInvoices() {
                     <TableCell className="text-right">{formatCurrency(invoice.total)}</TableCell>
                     <TableCell>{format(new Date(invoice.created_at), "MMM d, yyyy")}</TableCell>
                     <TableCell className="text-right">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleViewInvoice(invoice)}
-                      >
-                        <Eye className="w-4 h-4" />
-                      </Button>
+                      <div className="flex items-center justify-end gap-1">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleViewInvoice(invoice)}
+                          title="View invoice"
+                        >
+                          <Eye className="w-4 h-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => setDeleteInvoiceId(invoice.id)}
+                          className="text-destructive hover:text-destructive"
+                          title="Delete invoice"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      </div>
                     </TableCell>
                   </TableRow>
                 ))}
@@ -510,6 +596,42 @@ export default function AdminInvoices() {
         client={editingClient}
         onSuccess={fetchClients}
       />
+
+      {/* Delete Client Confirmation */}
+      <AlertDialog open={!!deleteClientId} onOpenChange={(open) => !open && setDeleteClientId(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Client</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete "{clientToDelete?.client_name}"? This will also delete all associated invoices and service logs. This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>No</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDeleteClient} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              Yes
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Delete Invoice Confirmation */}
+      <AlertDialog open={!!deleteInvoiceId} onOpenChange={(open) => !open && setDeleteInvoiceId(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Invoice</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete invoice "{invoiceToDelete?.invoice_number}"? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>No</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDeleteInvoice} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              Yes
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
