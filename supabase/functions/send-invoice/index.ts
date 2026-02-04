@@ -88,9 +88,14 @@ const handler = async (req: Request): Promise<Response> => {
 
     // Format the optional note with line breaks preserved
     const noteHtml = emailNote 
-      ? `<div style="background-color: #e8f4fd; padding: 15px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #2196F3;">
-          <p style="margin: 0; white-space: pre-wrap;">${emailNote.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</p>
-        </div>`
+      ? `
+        <table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin: 0 0 24px 0;">
+          <tr>
+            <td style="background-color: #f0f7ff; border: 1px solid #d0e3f7; border-left: 4px solid #3b82f6; border-radius: 8px; padding: 16px;">
+              <p style="margin: 0; font-family: Arial, sans-serif; font-size: 14px; line-height: 1.6; color: #1e3a5f; white-space: pre-wrap;">${emailNote.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</p>
+            </td>
+          </tr>
+        </table>`
       : '';
 
     // Send email with PDF attachment
@@ -99,29 +104,65 @@ const handler = async (req: Request): Promise<Response> => {
       to: [billingEmail],
       subject: `Invoice ${invoiceNumber} – No Limits Academy`,
       html: `
-        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-          <h2 style="color: #333;">Invoice ${invoiceNumber}</h2>
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body style="margin: 0; padding: 0; background-color: #f5f5f5; font-family: Arial, sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color: #f5f5f5; padding: 32px 16px;">
+    <tr>
+      <td align="left">
+        <table width="600" cellpadding="0" cellspacing="0" border="0" style="max-width: 600px; background-color: #ffffff; border: 1px solid #e5e5e5; border-radius: 8px;">
           
-          <p>Dear ${clientName},</p>
+          <!-- Header -->
+          <tr>
+            <td style="padding: 32px 32px 24px 32px; border-bottom: 1px solid #e5e5e5;">
+              <h1 style="margin: 0; font-family: Arial, sans-serif; font-size: 24px; font-weight: bold; color: #111827;">No Limits Academy</h1>
+            </td>
+          </tr>
           
-          ${noteHtml}
+          <!-- Content -->
+          <tr>
+            <td style="padding: 32px;">
+              
+              <!-- Invoice Title -->
+              <h2 style="margin: 0 0 24px 0; font-family: Arial, sans-serif; font-size: 20px; font-weight: 600; color: #374151;">Invoice ${invoiceNumber}</h2>
+              
+              <!-- Note Box (if exists) -->
+              ${noteHtml}
+              
+              <!-- Amount Card -->
+              <table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin: 0 0 24px 0;">
+                <tr>
+                  <td style="background-color: #f9fafb; border: 1px solid #e5e5e5; border-radius: 8px; padding: 24px;">
+                    <p style="margin: 0 0 8px 0; font-family: Arial, sans-serif; font-size: 14px; color: #6b7280;">Amount Due</p>
+                    <p style="margin: 0 0 16px 0; font-family: Arial, sans-serif; font-size: 28px; font-weight: bold; color: #111827;">${formattedTotal}</p>
+                    <p style="margin: 0; font-family: Arial, sans-serif; font-size: 14px; color: #6b7280;">Payment Terms: Due within 30 days of invoice date</p>
+                  </td>
+                </tr>
+              </table>
+              
+              <!-- Service Period -->
+              <p style="margin: 0 0 24px 0; font-family: Arial, sans-serif; font-size: 15px; line-height: 1.6; color: #374151;">Please find attached your invoice for services rendered during <strong>${monthName} ${year}</strong>.</p>
+              
+            </td>
+          </tr>
           
-          <p>Please find attached your invoice for services rendered during <strong>${monthName} ${year}</strong>.</p>
+          <!-- Footer -->
+          <tr>
+            <td style="padding: 24px 32px; border-top: 1px solid #e5e5e5; background-color: #fafafa;">
+              <p style="margin: 0; font-family: Arial, sans-serif; font-size: 14px; color: #6b7280;">If you have questions, reply to this email.</p>
+            </td>
+          </tr>
           
-          <div style="background-color: #f5f5f5; padding: 20px; border-radius: 8px; margin: 20px 0;">
-            <p style="margin: 0; font-size: 18px;"><strong>Amount Due: ${formattedTotal}</strong></p>
-            <p style="margin: 10px 0 0 0; color: #666;">Payment Terms: Due within 30 days of invoice date</p>
-          </div>
-          
-          <p>If you have any questions regarding this invoice, please don't hesitate to contact us.</p>
-          
-          <p>Thank you for your continued support of No Limits Academy.</p>
-          
-          <p style="margin-top: 30px;">
-            Best regards,<br>
-            <strong>No Limits Academy</strong>
-          </p>
-        </div>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
       `,
       attachments: [
         {
