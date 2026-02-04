@@ -1,8 +1,19 @@
+import { useState } from "react";
 import Header from "@/components/layout/Header";
 import Footer from "@/components/layout/Footer";
+import PortalLightbox from "@/components/ui/portal-lightbox";
 import joshMcNallyDave from "@/assets/our-story/josh-mcnally-dave.jpeg";
 
+type FacilityImg = { src: string; alt: string };
+
+const facilityPlaceholders: FacilityImg[] = Array.from({ length: 16 }, (_, i) => ({
+  src: "/placeholder.svg",
+  alt: `Facility photo ${i + 1}`,
+}));
+
 const OurStory = () => {
+  const [activeImg, setActiveImg] = useState<FacilityImg | null>(null);
+
   return (
     <div className="min-h-screen flex flex-col bg-background">
       <Header />
@@ -113,7 +124,48 @@ const OurStory = () => {
             </div>
           </div>
         </section>
+
+        {/* Our Facility Section */}
+        <section className="py-16 md:py-20 bg-foreground">
+          <div className="container">
+            <div className="max-w-[1200px] mx-auto">
+              <h2 className="text-3xl md:text-4xl font-black text-background mb-4">
+                Our Facility
+              </h2>
+              <p className="text-lg text-background/80 mb-10">
+                We began our journey in April of 2020 and moved into our current location in Rio Grande, NJ.
+              </p>
+              
+              {/* Photo Gallery - 4x4 desktop, 3 cols tablet, 2 cols mobile */}
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+                {facilityPlaceholders.map((img, idx) => (
+                  <div key={idx} className="overflow-hidden rounded-xl bg-muted">
+                    <button
+                      type="button"
+                      onClick={() => setActiveImg(img)}
+                      className="block w-full aspect-[4/3]"
+                      aria-label={`Enlarge ${img.alt}`}
+                    >
+                      <div className="w-full h-full flex items-center justify-center bg-accent border-2 border-dashed border-border">
+                        <span className="text-muted-foreground text-center px-4 text-sm font-medium">
+                          Photo {idx + 1}
+                        </span>
+                      </div>
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </section>
       </main>
+
+      {/* Lightbox */}
+      <PortalLightbox
+        open={!!activeImg}
+        img={activeImg}
+        onClose={() => setActiveImg(null)}
+      />
 
       <Footer />
     </div>
