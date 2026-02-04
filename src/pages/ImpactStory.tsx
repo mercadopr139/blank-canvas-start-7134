@@ -327,7 +327,7 @@ const ImpactStory = () => {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="bg-foreground rounded-lg p-6 border-l-4 border-[#2d6a4f]">
                   <div className="flex items-start gap-4">
-                    <HandHeart className="h-8 w-8 text-background shrink-0 mt-1" />
+                    <HandHeart className="h-8 w-8 text-[#2d6a4f] shrink-0 mt-1" />
                     <div>
                       <h3 className="text-lg font-bold text-background mb-2">Donors</h3>
                       <p className="text-background/80">
@@ -339,7 +339,7 @@ const ImpactStory = () => {
 
                 <div className="bg-foreground rounded-lg p-6 border-l-4 border-[#2d6a4f]">
                   <div className="flex items-start gap-4">
-                    <Calendar className="h-8 w-8 text-background shrink-0 mt-1" />
+                    <Calendar className="h-8 w-8 text-[#2d6a4f] shrink-0 mt-1" />
                     <div>
                       <h3 className="text-lg font-bold text-background mb-2">Fundraising</h3>
                       <p className="text-background/80">
@@ -351,7 +351,7 @@ const ImpactStory = () => {
 
                 <div className="bg-foreground rounded-lg p-6 border-l-4 border-[#2d6a4f]">
                   <div className="flex items-start gap-4">
-                    <Briefcase className="h-8 w-8 text-background shrink-0 mt-1" />
+                    <Briefcase className="h-8 w-8 text-[#2d6a4f] shrink-0 mt-1" />
                     <div>
                       <h3 className="text-lg font-bold text-background mb-2">Fee for Service</h3>
                       <p className="text-background/80">
@@ -363,7 +363,7 @@ const ImpactStory = () => {
 
                 <div className="bg-foreground rounded-lg p-6 border-l-4 border-[#2d6a4f]">
                   <div className="flex items-start gap-4">
-                    <RefreshCw className="h-8 w-8 text-background shrink-0 mt-1" />
+                    <RefreshCw className="h-8 w-8 text-[#2d6a4f] shrink-0 mt-1" />
                     <div>
                       <h3 className="text-lg font-bold text-background mb-2">Re-Grants</h3>
                       <p className="text-background/80">
