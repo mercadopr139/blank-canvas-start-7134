@@ -21,7 +21,8 @@ import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import InvoicePreview from "@/components/admin/InvoicePreview";
-import { ArrowLeft, FileText, Eye, CalendarDays } from "lucide-react";
+import ClientFormDialog from "@/components/admin/ClientFormDialog";
+import { ArrowLeft, FileText, Eye, CalendarDays, Plus } from "lucide-react";
 import { format } from "date-fns";
 import type { Tables } from "@/integrations/supabase/types";
 
@@ -68,6 +69,7 @@ export default function AdminInvoices() {
   const [invoices, setInvoices] = useState<(Invoice & { client_name?: string })[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [tempInvoiceNumber, setTempInvoiceNumber] = useState("");
+  const [showClientDialog, setShowClientDialog] = useState(false);
   const autoGenerateTriggered = useRef(false);
   const { toast } = useToast();
   const { signOut } = useAuth();
@@ -83,20 +85,21 @@ export default function AdminInvoices() {
     if (year) setSelectedYear(year);
   }, []);
 
+  const fetchClients = async () => {
+    const { data, error } = await supabase
+      .from("clients")
+      .select("*")
+      .order("client_name");
+
+    if (error) {
+      toast({ title: "Error fetching clients", description: error.message, variant: "destructive" });
+    } else {
+      setClients(data || []);
+    }
+  };
+
   // Fetch clients on mount
   useEffect(() => {
-    const fetchClients = async () => {
-      const { data, error } = await supabase
-        .from("clients")
-        .select("*")
-        .order("client_name");
-
-      if (error) {
-        toast({ title: "Error fetching clients", description: error.message, variant: "destructive" });
-      } else {
-        setClients(data || []);
-      }
-    };
     fetchClients();
     fetchInvoices();
   }, []);
@@ -336,20 +339,31 @@ export default function AdminInvoices() {
         <div className="bg-background rounded-lg border shadow-sm p-6">
           <h2 className="font-semibold mb-4">Generate Invoice</h2>
           <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-end">
-            <div className="w-64">
+            <div className="flex-1 max-w-xs">
               <label className="text-sm text-muted-foreground mb-1 block">Client</label>
-              <Select value={selectedClientId} onValueChange={(v) => { setSelectedClientId(v); setShowPreview(false); }}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select client" />
-                </SelectTrigger>
-                <SelectContent>
-                  {clients.map((client) => (
-                    <SelectItem key={client.id} value={client.id}>
-                      {client.client_name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <div className="flex items-center gap-2">
+                <Select value={selectedClientId} onValueChange={(v) => { setSelectedClientId(v); setShowPreview(false); }}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select client" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {clients.map((client) => (
+                      <SelectItem key={client.id} value={client.id}>
+                        {client.client_name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => setShowClientDialog(true)}
+                  className="shrink-0"
+                  title="Add new client"
+                >
+                  <Plus className="w-4 h-4" />
+                </Button>
+              </div>
             </div>
             <div className="w-40">
               <label className="text-sm text-muted-foreground mb-1 block">Month</label>
@@ -469,6 +483,13 @@ export default function AdminInvoices() {
           )}
         </div>
       </main>
+
+      {/* Add Client Modal */}
+      <ClientFormDialog
+        open={showClientDialog}
+        onOpenChange={setShowClientDialog}
+        onSuccess={fetchClients}
+      />
     </div>
   );
 }
