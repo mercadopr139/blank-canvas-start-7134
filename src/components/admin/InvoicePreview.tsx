@@ -279,7 +279,7 @@ No Limits Academy`,
           )}
           {summary.flatTotal > 0 && (
             <div className="flex justify-between text-sm">
-              <span>Flat Rate Services:</span>
+              <span>Service Total:</span>
               <span><strong>{formatCurrency(summary.flatTotal)}</strong></span>
             </div>
           )}

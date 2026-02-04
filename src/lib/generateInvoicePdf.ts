@@ -207,7 +207,7 @@ export function generateInvoicePdf(data: InvoicePdfData): jsPDF {
     summaryY += 6;
   }
   if (summary.flatTotal > 0) {
-    doc.text(`Flat Rate Services: ${formatCurrency(summary.flatTotal)}`, 25, summaryY);
+    doc.text(`Service Total: ${formatCurrency(summary.flatTotal)}`, 25, summaryY);
     summaryY += 6;
   }
   
