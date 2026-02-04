@@ -17,6 +17,7 @@ import AdminIndex from "./pages/admin/AdminIndex";
 import AdminLogin from "./pages/admin/AdminLogin";
 import AdminDashboard from "./pages/admin/AdminDashboard";
 import AdminClients from "./pages/admin/AdminClients";
+import AdminServiceCalendar from "./pages/admin/AdminServiceCalendar";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -55,6 +56,14 @@ const App = () => (
               element={
                 <ProtectedRoute requireAdmin>
                   <AdminClients />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin/service-calendar"
+              element={
+                <ProtectedRoute requireAdmin>
+                  <AdminServiceCalendar />
                 </ProtectedRoute>
               }
             />

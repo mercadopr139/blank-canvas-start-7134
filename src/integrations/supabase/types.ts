@@ -59,6 +59,47 @@ export type Database = {
         }
         Relationships: []
       }
+      service_logs: {
+        Row: {
+          client_id: string
+          created_at: string
+          id: string
+          notes: string | null
+          quantity: number | null
+          service_date: string
+          service_type: string | null
+          updated_at: string
+        }
+        Insert: {
+          client_id: string
+          created_at?: string
+          id?: string
+          notes?: string | null
+          quantity?: number | null
+          service_date: string
+          service_type?: string | null
+          updated_at?: string
+        }
+        Update: {
+          client_id?: string
+          created_at?: string
+          id?: string
+          notes?: string | null
+          quantity?: number | null
+          service_date?: string
+          service_type?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "service_logs_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_roles: {
         Row: {
           created_at: string
