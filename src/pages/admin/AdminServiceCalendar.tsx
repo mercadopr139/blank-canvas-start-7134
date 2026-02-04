@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
-import { Link, useSearchParams } from "react-router-dom";
+import { Link, useSearchParams, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import {
   Select,
@@ -12,7 +12,7 @@ import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import ServiceLogEditDialog from "@/components/admin/ServiceLogEditDialog";
-import { ArrowLeft, Calendar, ChevronLeft, ChevronRight } from "lucide-react";
+import { ArrowLeft, Calendar, ChevronLeft, ChevronRight, FileText } from "lucide-react";
 import {
   format,
   startOfMonth,
@@ -38,9 +38,10 @@ export default function AdminServiceCalendar() {
   const [serviceLogs, setServiceLogs] = useState<ServiceLog[]>([]);
   const [loading, setLoading] = useState(false);
   const [editingLog, setEditingLog] = useState<ServiceLog | null>(null);
-  const [initialFiltersApplied, setInitialFiltersApplied] = useState(false);
+  
   const { toast } = useToast();
   const { signOut } = useAuth();
+  const navigate = useNavigate();
 
   // Apply URL filters on mount
   useEffect(() => {
@@ -54,7 +55,6 @@ export default function AdminServiceCalendar() {
     if (month && year) {
       setCurrentMonth(new Date(parseInt(year), parseInt(month) - 1, 1));
     }
-    setInitialFiltersApplied(true);
   }, [searchParams]);
 
   // Fetch clients on mount
@@ -190,6 +190,12 @@ export default function AdminServiceCalendar() {
 
   const selectedClient = clients.find((c) => c.id === selectedClientId);
 
+  const handleGeneratePreview = () => {
+    const month = currentMonth.getMonth() + 1;
+    const year = currentMonth.getFullYear();
+    navigate(`/admin/invoices?client=${selectedClientId}&month=${month}&year=${year}&autoGenerate=true`);
+  };
+
   return (
     <div className="min-h-screen bg-muted/30">
       {/* Header */}
@@ -257,8 +263,24 @@ export default function AdminServiceCalendar() {
           </div>
 
           {selectedClient && (
-            <div className="text-sm text-muted-foreground">
-              <span className="font-medium">{serviceLogs.length}</span> service days this month
+            <div className="flex items-center gap-4">
+              <div className="text-sm text-muted-foreground">
+                <span className="font-medium">{serviceLogs.length}</span> service days this month
+              </div>
+              <div className="flex flex-col items-end gap-1">
+                <Button
+                  onClick={handleGeneratePreview}
+                  disabled={serviceLogs.length === 0}
+                >
+                  <FileText className="w-4 h-4 mr-2" />
+                  Generate Preview
+                </Button>
+                {serviceLogs.length === 0 && (
+                  <span className="text-xs text-muted-foreground">
+                    Select at least 1 service day to generate a preview.
+                  </span>
+                )}
+              </div>
             </div>
           )}
         </div>
