@@ -1,7 +1,6 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
-import { Input } from "@/components/ui/input";
 import {
   Dialog,
   DialogContent,
@@ -36,6 +35,26 @@ interface ServiceEntryModalProps {
 
 const HOUR_OPTIONS = [1, 2, 3, 4, 5, 6, 7, 8];
 
+// Helper to determine billing method from client rate_type
+function getBillingMethodFromRateType(rateType: string | null): "per_day" | "hourly" | "flat_rate" {
+  if (!rateType) return "per_day";
+  const normalized = rateType.toLowerCase();
+  if (normalized === "per_day") return "per_day";
+  if (normalized === "per_hour" || normalized === "hourly_rate") return "hourly";
+  // Custom rate types are treated as flat rate
+  return "flat_rate";
+}
+
+// Helper to get display label for rate type
+function getRateTypeLabel(rateType: string | null): string {
+  if (!rateType) return "Per Day";
+  const normalized = rateType.toLowerCase();
+  if (normalized === "per_day") return "Per Day";
+  if (normalized === "per_hour" || normalized === "hourly_rate") return "Hourly";
+  // Return the custom label as-is
+  return rateType;
+}
+
 export default function ServiceEntryModal({
   open,
   onOpenChange,
@@ -48,31 +67,41 @@ export default function ServiceEntryModal({
   const { toast } = useToast();
   
   // Form state
-  const [billingMethod, setBillingMethod] = useState<"hourly" | "flat_rate">("hourly");
+  const [billingMethod, setBillingMethod] = useState<"per_day" | "hourly" | "flat_rate">("per_day");
   const [hours, setHours] = useState<number>(1);
-  const [flatAmount, setFlatAmount] = useState<string>("");
+
+  // Get rate from client
+  const clientRateAmount = client.rate_amount || 0;
+  const clientRateType = client.rate_type;
+  const rateTypeLabel = getRateTypeLabel(clientRateType);
 
   // Reset form when modal opens or log changes
   useEffect(() => {
     if (open) {
       if (existingLog) {
-        setBillingMethod((existingLog.billing_method as "hourly" | "flat_rate") || "hourly");
+        // Load from existing log
+        const savedMethod = existingLog.billing_method || "per_day";
+        if (savedMethod === "hourly") {
+          setBillingMethod("hourly");
+        } else if (savedMethod === "per_day") {
+          setBillingMethod("per_day");
+        } else {
+          setBillingMethod("flat_rate");
+        }
         setHours(existingLog.hours || 1);
-        setFlatAmount(existingLog.flat_amount?.toString() || client.default_flat_rate?.toString() || "");
       } else {
-        // Default from client settings
-        const defaultMethod = (client.default_billing_method as "hourly" | "flat_rate") || "hourly";
+        // Default from client's rate_type
+        const defaultMethod = getBillingMethodFromRateType(clientRateType);
         setBillingMethod(defaultMethod);
         setHours(1);
-        setFlatAmount(client.default_flat_rate?.toString() || "");
       }
     }
-  }, [open, existingLog, client]);
+  }, [open, existingLog, clientRateType]);
 
-  const hourlyRate = client.hourly_rate || 0;
+  // Calculate line total based on billing method
   const lineTotal = billingMethod === "hourly" 
-    ? hours * hourlyRate 
-    : parseFloat(flatAmount) || 0;
+    ? hours * clientRateAmount 
+    : clientRateAmount;
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat("en-US", {
@@ -90,7 +119,7 @@ export default function ServiceEntryModal({
       service_date: dateStr,
       billing_method: billingMethod,
       hours: billingMethod === "hourly" ? hours : null,
-      flat_amount: billingMethod === "flat_rate" ? parseFloat(flatAmount) || 0 : null,
+      flat_amount: clientRateAmount, // Store the rate used for historical consistency
       line_total: lineTotal,
     };
 
@@ -163,26 +192,17 @@ export default function ServiceEntryModal({
         </DialogHeader>
 
         <div className="space-y-4 py-4">
-          {/* Billing Method */}
+          {/* Rate Type Info (read-only) */}
           <div className="space-y-2">
-            <Label htmlFor="billing_method">Billing Method</Label>
-            <Select
-              value={billingMethod}
-              onValueChange={(value) => setBillingMethod(value as "hourly" | "flat_rate")}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Select billing method" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="hourly">Hourly</SelectItem>
-                <SelectItem value="flat_rate">Flat Rate</SelectItem>
-              </SelectContent>
-            </Select>
+            <Label>Rate Type</Label>
+            <div className="p-3 bg-muted rounded-md text-sm font-medium">
+              {rateTypeLabel}
+            </div>
           </div>
 
-          {billingMethod === "hourly" ? (
+          {billingMethod === "hourly" && (
             <>
-              {/* Hours Dropdown */}
+              {/* Hours Dropdown - only for hourly billing */}
               <div className="space-y-2">
                 <Label htmlFor="hours">Hours</Label>
                 <Select
@@ -206,23 +226,29 @@ export default function ServiceEntryModal({
               <div className="space-y-2">
                 <Label>Hourly Rate</Label>
                 <div className="p-3 bg-muted rounded-md text-sm font-medium">
-                  {formatCurrency(hourlyRate)} / hour
+                  {formatCurrency(clientRateAmount)} / hour
                 </div>
               </div>
             </>
-          ) : (
-            /* Flat Amount Input */
+          )}
+
+          {billingMethod === "per_day" && (
+            /* Per Day Rate (read-only) */
             <div className="space-y-2">
-              <Label htmlFor="flat_amount">Flat Amount ($)</Label>
-              <Input
-                id="flat_amount"
-                type="number"
-                step="0.01"
-                min="0"
-                value={flatAmount}
-                onChange={(e) => setFlatAmount(e.target.value)}
-                placeholder="Enter flat rate amount"
-              />
+              <Label>Per Day Rate</Label>
+              <div className="p-3 bg-muted rounded-md text-sm font-medium">
+                {formatCurrency(clientRateAmount)} / day
+              </div>
+            </div>
+          )}
+
+          {billingMethod === "flat_rate" && (
+            /* Custom/Flat Rate (read-only) */
+            <div className="space-y-2">
+              <Label>{rateTypeLabel} Rate</Label>
+              <div className="p-3 bg-muted rounded-md text-sm font-medium">
+                {formatCurrency(clientRateAmount)}
+              </div>
             </div>
           )}
 
@@ -236,7 +262,7 @@ export default function ServiceEntryModal({
             </div>
             {billingMethod === "hourly" && (
               <p className="text-xs text-muted-foreground mt-1">
-                {hours} {hours === 1 ? "hour" : "hours"} × {formatCurrency(hourlyRate)}
+                {hours} {hours === 1 ? "hour" : "hours"} × {formatCurrency(clientRateAmount)}
               </p>
             )}
           </div>
