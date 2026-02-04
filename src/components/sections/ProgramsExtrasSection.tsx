@@ -195,7 +195,14 @@ const ProgramsExtrasSection = () => {
           "Spiritual development at No Limits Academy focuses on reflection, values, purpose, and personal growth within a supportive and respectful environment. This component is designed to complement our youth development work by encouraging mindfulness, character, and healthy decision-making.",
         policyText:
           "At No Limits Academy, we respect each individual's unique spiritual journey. Participation in any aspect of spiritual development is entirely voluntary. We do not require youth participants to read, engage with, or participate in spiritual practices or teachings. For youth who are curious or willing to explore their spiritual development, we are here to offer support and guidance. NLA's focus is on providing a nurturing, caring, and encouraging environment where youth can explore God, at their own pace, if they choose to do so.",
-        images: [],
+        images: [
+          { src: "/placeholder.svg", alt: "Spiritual Development photo 1", caption: "Spiritual Development" },
+          { src: "/placeholder.svg", alt: "Spiritual Development photo 2", caption: "Spiritual Development" },
+          { src: "/placeholder.svg", alt: "Spiritual Development photo 3", caption: "Spiritual Development" },
+          { src: "/placeholder.svg", alt: "Spiritual Development photo 4", caption: "Spiritual Development" },
+          { src: "/placeholder.svg", alt: "Spiritual Development photo 5", caption: "Spiritual Development" },
+          { src: "/placeholder.svg", alt: "Spiritual Development photo 6", caption: "Spiritual Development" },
+        ],
         buttonLabel: "Back to Programs",
       },
       {
