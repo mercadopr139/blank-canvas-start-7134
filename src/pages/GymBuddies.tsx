@@ -50,10 +50,16 @@ import nlaWildwoodCrestPd2 from "@/assets/gym-buddies/nla-wildwood-crest-pd-2.pn
 import nlaPoliceChiefsAssociation from "@/assets/gym-buddies/nla-police-chiefs-association.png";
 import cmcFinest from "@/assets/gym-buddies/cmc-finest.png";
 import chiefDekonCapeMay from "@/assets/gym-buddies/chief-dekon-cape-may.jpg";
+import youthGroupSession from "@/assets/gym-buddies/youth-group-session.jpg";
 
 const GymBuddies = () => {
   const [isChatOpen, setIsChatOpen] = useState(false);
   const gymBuddiesImages = [
+    {
+      src: youthGroupSession,
+      alt: "Youth Group Session at NLA",
+      caption: "Youth Group Session at NLA",
+    },
     {
       src: chiefDekonCapeMay,
       alt: "Congrats Chief Dekon of Cape May",
