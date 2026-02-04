@@ -302,15 +302,38 @@ export default function AdminInvoices() {
     }
   };
 
-  const handleViewInvoice = (invoice: Invoice) => {
+  const handleViewInvoice = async (invoice: Invoice) => {
     setSelectedClientId(invoice.client_id);
     setSelectedMonth(String(invoice.invoice_month));
     setSelectedYear(String(invoice.invoice_year));
     
-    // Trigger preview after state updates
-    setTimeout(() => {
-      handleGeneratePreview();
-    }, 100);
+    // Generate preview directly with invoice data
+    setIsLoading(true);
+    const month = invoice.invoice_month;
+    const year = invoice.invoice_year;
+
+    // Fetch service logs for the invoice period
+    const startDate = `${year}-${String(month).padStart(2, "0")}-01`;
+    const endDate = new Date(year, month, 0).toISOString().split("T")[0];
+
+    const { data: logs, error: logsError } = await supabase
+      .from("service_logs")
+      .select("*")
+      .eq("client_id", invoice.client_id)
+      .gte("service_date", startDate)
+      .lte("service_date", endDate)
+      .order("service_date");
+
+    if (logsError) {
+      toast({ title: "Error fetching service logs", description: logsError.message, variant: "destructive" });
+      setIsLoading(false);
+      return;
+    }
+
+    setServiceLogs(logs || []);
+    setExistingInvoice(invoice);
+    setShowPreview(true);
+    setIsLoading(false);
   };
 
   const handleDeleteClient = async () => {
