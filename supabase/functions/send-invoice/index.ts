@@ -95,7 +95,7 @@ const handler = async (req: Request): Promise<Response> => {
 
     // Send email with PDF attachment
     const emailResponse = await resend.emails.send({
-      from: "No Limits Academy <invoices@nolimitsboxingacademy.org>",
+      from: "No Limits Academy <joshmercado@nolimitsboxingacademy.org>",
       to: [billingEmail],
       subject: `Invoice ${invoiceNumber} – No Limits Academy`,
       html: `
