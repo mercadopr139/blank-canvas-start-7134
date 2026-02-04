@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import PortalLightbox from "./portal-lightbox";
 
-type Img = { src: string; alt: string; caption?: string; objectPosition?: string };
+type Img = { src: string; alt: string; caption?: string; objectPosition?: string; objectFit?: "cover" | "contain"; bgColor?: string };
 
 export function ClickToEnlargeGallery({ 
   images,
@@ -52,7 +52,11 @@ export function ClickToEnlargeGallery({
       {/* Gallery grid */}
       <div className={ui.gridClassName}>
         {images.map((img, idx) => (
-          <div key={idx} className={ui.itemClassName}>
+          <div 
+            key={idx} 
+            className={ui.itemClassName}
+            style={img.bgColor ? { backgroundColor: img.bgColor } : undefined}
+          >
             <button
               type="button"
               onClick={() => setActiveImg(img)}
@@ -62,8 +66,11 @@ export function ClickToEnlargeGallery({
               <img
                 src={img.src}
                 alt={img.alt}
-                className={ui.imgClassName}
-                style={img.objectPosition ? { objectPosition: img.objectPosition } : undefined}
+                className={img.objectFit === "contain" ? ui.imgClassName.replace("object-cover", "object-contain") : ui.imgClassName}
+                style={{
+                  ...(img.objectPosition ? { objectPosition: img.objectPosition } : {}),
+                  ...(img.objectFit ? { objectFit: img.objectFit } : {}),
+                }}
                 loading="lazy"
               />
             </button>
