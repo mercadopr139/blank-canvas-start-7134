@@ -8,6 +8,7 @@ import smileLabModelsImage from "@/assets/programs/smile-lab-models.jpg";
 import lilChampsActivity1 from "@/assets/programs/lil-champs-activity-1.jpg";
 import lilChampsActivity2 from "@/assets/programs/lil-champs-activity-2.jpg";
 import lilChampsActivity3 from "@/assets/programs/lil-champs-activity-3.jpg";
+import lilChampsActivity4 from "@/assets/programs/lil-champs-activity-4.jpg";
 import {
   Dialog,
   DialogContent,
@@ -195,7 +196,7 @@ const ProgramsExtrasSection = () => {
           { src: lilChampsActivity1, alt: "Child working on a hands-on learning activity during Lil' Champs program" },
           { src: lilChampsActivity2, alt: "Instructor engaging with kids during a Lil' Champs group activity" },
           { src: lilChampsActivity3, alt: "Kids working together on a hands-on learning activity during Lil' Champs" },
-          { src: "/placeholder.svg", alt: "Lil' Champs photo 4" },
+          { src: lilChampsActivity4, alt: "Child decorating a heart-shaped craft during Lil' Champs" },
           { src: "/placeholder.svg", alt: "Lil' Champs photo 5" },
           { src: "/placeholder.svg", alt: "Lil' Champs photo 6" },
         ],
