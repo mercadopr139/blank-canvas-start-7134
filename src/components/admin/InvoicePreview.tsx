@@ -405,7 +405,7 @@ No Limits Academy`,
                       </td>
                     )}
                     <td className="px-4 py-3 text-sm">
-                      {item.billingMethod === "hourly" ? "Hourly" : item.billingMethod === "per_day" ? "Per Day" : "Flat Rate"}
+                      {item.billingMethod === "hourly" ? "Hourly" : item.billingMethod === "per_day" ? "Per Day" : "Monthly Program Cost"}
                     </td>
                     <td className="px-4 py-3 text-sm text-center">
                       {item.billingMethod === "hourly" ? `${item.hours || 0} hrs` : "—"}
