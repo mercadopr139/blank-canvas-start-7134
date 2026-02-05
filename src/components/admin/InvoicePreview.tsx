@@ -185,7 +185,21 @@ export default function InvoicePreview({
       if (error) throw error;
 
       setShowSendModal(false);
-      toast({ title: "Invoice sent successfully", description: `Sent to ${client.billing_email}` });
+      const sentTime = new Date().toLocaleString("en-US", {
+        dateStyle: "medium",
+        timeStyle: "short",
+      });
+      toast({ 
+        title: "✓ Invoice sent successfully", 
+        description: (
+          <div className="mt-1 space-y-1 text-sm">
+            <p><span className="text-muted-foreground">To:</span> {client.billing_email}</p>
+            <p><span className="text-muted-foreground">Invoice:</span> {existingInvoice.invoice_number}</p>
+            <p><span className="text-muted-foreground">Sent:</span> {sentTime}</p>
+          </div>
+        ),
+        duration: 8000,
+      });
       onInvoiceUpdated?.();
     } catch (error: any) {
       console.error("Error sending invoice:", error);
