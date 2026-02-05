@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -22,6 +22,7 @@ interface LineItem {
   hours: number | null;
   flatAmount: number | null;
   lineTotal: number;
+  serviceType: string;
 }
 
 interface InvoiceSummary {
@@ -32,6 +33,11 @@ interface InvoiceSummary {
   invoiceTotal: number;
 }
 
+interface ServiceGroup {
+  serviceName: string;
+  items: LineItem[];
+  subtotal: number;
+}
 interface InvoicePreviewProps {
   client: Client;
   serviceLogs: ServiceLog[];
@@ -87,11 +93,32 @@ export default function InvoicePreview({
       hours: (log as any).hours || null,
       flatAmount: (log as any).flat_amount || null,
       lineTotal: (log as any).line_total || 0,
+      serviceType: log.service_type || "Service",
     }));
   };
 
   const lineItems = calculateLineItems();
 
+  // Group line items by service type
+  const serviceGroups: ServiceGroup[] = useMemo(() => {
+    const groups: Record<string, LineItem[]> = {};
+    
+    lineItems.forEach((item) => {
+      const key = item.serviceType;
+      if (!groups[key]) {
+        groups[key] = [];
+      }
+      groups[key].push(item);
+    });
+
+    return Object.entries(groups).map(([serviceName, items]) => ({
+      serviceName,
+      items,
+      subtotal: items.reduce((sum, item) => sum + item.lineTotal, 0),
+    }));
+  }, [lineItems]);
+
+  const hasMultipleServices = serviceGroups.length > 1;
   // Calculate summary
   const calculateSummary = (): InvoiceSummary => {
     const hourlyItems = lineItems.filter(item => item.billingMethod === "hourly");
@@ -314,17 +341,29 @@ No Limits Academy`,
         {/* Summary Section */}
         <div className="bg-muted/50 rounded-lg p-4 space-y-2">
           <h3 className="font-semibold mb-3">Invoice Summary</h3>
-          {summary.totalHours > 0 && (
-            <div className="flex justify-between text-sm">
-              <span>Hourly Services:</span>
-              <span>{summary.totalHours} hrs × {formatCurrency(summary.hourlyRate)}/hr = <strong>{formatCurrency(summary.hourlyTotal)}</strong></span>
-            </div>
-          )}
-          {summary.flatTotal > 0 && (
-            <div className="flex justify-between text-sm">
-            <span>{(client as any).program_title || "Service Total"}:</span>
-              <span><strong>{formatCurrency(summary.flatTotal)}</strong></span>
-            </div>
+          {hasMultipleServices ? (
+            // Show breakdown by service type
+            serviceGroups.map((group) => (
+              <div key={group.serviceName} className="flex justify-between text-sm">
+                <span>{group.serviceName}:</span>
+                <span><strong>{formatCurrency(group.subtotal)}</strong></span>
+              </div>
+            ))
+          ) : (
+            <>
+              {summary.totalHours > 0 && (
+                <div className="flex justify-between text-sm">
+                  <span>Hourly Services:</span>
+                  <span>{summary.totalHours} hrs × {formatCurrency(summary.hourlyRate)}/hr = <strong>{formatCurrency(summary.hourlyTotal)}</strong></span>
+                </div>
+              )}
+              {summary.flatTotal > 0 && (
+                <div className="flex justify-between text-sm">
+                  <span>{(client as any).program_title || "Service Total"}:</span>
+                  <span><strong>{formatCurrency(summary.flatTotal)}</strong></span>
+                </div>
+              )}
+            </>
           )}
           <Separator className="my-2" />
           <div className="flex justify-between font-semibold text-lg">
@@ -339,6 +378,9 @@ No Limits Academy`,
             <thead className="bg-muted">
               <tr>
                 <th className="px-4 py-3 text-left text-sm font-medium">Date</th>
+                {hasMultipleServices && (
+                  <th className="px-4 py-3 text-left text-sm font-medium">Service</th>
+                )}
                 <th className="px-4 py-3 text-left text-sm font-medium">Type</th>
                 <th className="px-4 py-3 text-center text-sm font-medium">Hours</th>
                 <th className="px-4 py-3 text-right text-sm font-medium">Amount</th>
@@ -347,7 +389,7 @@ No Limits Academy`,
             <tbody>
               {lineItems.length === 0 ? (
                 <tr>
-                  <td colSpan={4} className="px-4 py-8 text-center text-muted-foreground">
+                  <td colSpan={hasMultipleServices ? 5 : 4} className="px-4 py-8 text-center text-muted-foreground">
                     No service days logged yet. Add days to generate an invoice.
                   </td>
                 </tr>
@@ -357,6 +399,11 @@ No Limits Academy`,
                     <td className="px-4 py-3 text-sm">
                       {format(new Date(item.date), "MMM d, yyyy")}
                     </td>
+                    {hasMultipleServices && (
+                      <td className="px-4 py-3 text-sm">
+                        {item.serviceType}
+                      </td>
+                    )}
                     <td className="px-4 py-3 text-sm">
                       {item.billingMethod === "hourly" ? "Hourly" : item.billingMethod === "per_day" ? "Per Day" : "Flat Rate"}
                     </td>
