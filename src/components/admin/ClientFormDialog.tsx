@@ -53,7 +53,7 @@ const rateTypeOptions = [
   { value: "per_day", label: "Per Day", placeholder: "Per-day rate (e.g., 175)" },
   { value: "per_hour", label: "Per Hour", placeholder: "Hourly rate (e.g., 100)" },
   { value: "sponsorship", label: "Sponsorship", placeholder: "Sponsorship amount" },
-  { value: "other_service", label: "Other Service", placeholder: "Service rate" },
+  { value: "other_service", label: "Other", placeholder: "Service rate" },
 ];
 
 export default function ClientFormDialog({
