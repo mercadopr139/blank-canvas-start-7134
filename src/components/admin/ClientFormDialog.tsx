@@ -243,7 +243,7 @@ export default function ClientFormDialog({
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="rate_type">Rate Type</Label>
+              <Label htmlFor="rate_type">Default Rate Type</Label>
               <Select
                 value={formData.rate_type}
                 onValueChange={(value) => setFormData({ ...formData, rate_type: value })}
@@ -262,7 +262,7 @@ export default function ClientFormDialog({
             </div>
             {formData.rate_type && (
               <div className="space-y-2">
-                <Label htmlFor="rate_amount">Rate Amount ($)</Label>
+                <Label htmlFor="rate_amount">Default Rate Amount ($)</Label>
                 <Input
                   id="rate_amount"
                   type="number"
@@ -275,6 +275,10 @@ export default function ClientFormDialog({
               </div>
             )}
           </div>
+
+          <p className="text-xs text-muted-foreground">
+            These defaults are used only if no specific services are configured below.
+          </p>
 
           <div className="space-y-2">
             <Label htmlFor="service_description_default">Default Service Description</Label>
