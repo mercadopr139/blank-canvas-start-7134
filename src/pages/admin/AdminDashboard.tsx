@@ -18,7 +18,7 @@ const AdminDashboard = () => {
       title: "Operations",
       description: "Clients & Service Calendar",
       icon: Briefcase,
-       color: "bg-[#bf0f3e]/10 text-[#bf0f3e]",
+       color: "bg-green-500/10 text-green-500",
       href: "/admin/operations",
     },
     {
