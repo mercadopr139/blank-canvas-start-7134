@@ -457,7 +457,6 @@ export type Database = {
         | "White"
         | "Two or More Races"
         | "Other"
-        | "Prefer not to say"
       child_sex: "Male" | "Female" | "Other"
       household_income:
         | "Under $25,000"
@@ -466,7 +465,6 @@ export type Database = {
         | "$75,000 - $99,999"
         | "$100,000 - $149,999"
         | "$150,000 or more"
-        | "Prefer not to say"
       invoice_status: "draft" | "sent" | "paid"
       lunch_status: "Yes" | "No" | "Not Applicable"
       rate_type:
@@ -631,7 +629,6 @@ export const Constants = {
         "White",
         "Two or More Races",
         "Other",
-        "Prefer not to say",
       ],
       child_sex: ["Male", "Female", "Other"],
       household_income: [
@@ -641,7 +638,6 @@ export const Constants = {
         "$75,000 - $99,999",
         "$100,000 - $149,999",
         "$150,000 or more",
-        "Prefer not to say",
       ],
       invoice_status: ["draft", "sent", "paid"],
       lunch_status: ["Yes", "No", "Not Applicable"],

@@ -25,7 +25,6 @@
    "White",
    "Two or More Races",
    "Other",
-   "Prefer not to say",
  ] as const;
  const SCHOOL_DISTRICTS = [
    "Cape May City",
@@ -53,7 +52,6 @@
    "$75,000 - $99,999",
    "$100,000 - $149,999",
    "$150,000 or more",
-   "Prefer not to say",
  ] as const;
  const LUNCH_OPTIONS = ["Yes", "No", "Not Applicable"] as const;
  
