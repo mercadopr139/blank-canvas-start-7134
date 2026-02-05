@@ -170,7 +170,7 @@ export default function AdminClients() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Client Name</TableHead>
+                  <TableHead>Partner</TableHead>
                   <TableHead>Billing Email</TableHead>
                   <TableHead>Rate Type</TableHead>
                   <TableHead>Rate Amount</TableHead>
