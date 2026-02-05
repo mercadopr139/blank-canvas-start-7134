@@ -131,10 +131,10 @@ const ProgramsExtrasSection = () => {
         blurb:
           "Smile Lab is an oral health initiative at No Limits Academy designed to improve access to care and deliver engaging, oral health education that empowers youth to take control of their oral health and overall well-being.",
         images: [
-          { src: groupActivityImage, alt: "Kids participating in a group activity" },
           { src: groupLessonImage, alt: "Students participating in a group lesson at a table" },
           { src: instructorSpeakingImage, alt: "Instructor speaking with students during a group activity", objectPosition: "50% 40%" },
           { src: teamActivityImage, alt: "Student giving a high five during a group activity" },
+          { src: groupActivityImage, alt: "Kids participating in a group activity" },
           { src: "/placeholder.svg", alt: "Smile Lab photo 5" },
           { src: "/placeholder.svg", alt: "Smile Lab photo 6" },
         ],
