@@ -6,6 +6,7 @@ import teamActivityImage from "@/assets/programs/team-activity.jpg";
 import smileLabDisplayImage from "@/assets/programs/smile-lab-display.jpg";
 import smileLabModelsImage from "@/assets/programs/smile-lab-models.jpg";
 import lilChampsActivity1 from "@/assets/programs/lil-champs-activity-1.jpg";
+import lilChampsActivity2 from "@/assets/programs/lil-champs-activity-2.jpg";
 import {
   Dialog,
   DialogContent,
@@ -191,7 +192,7 @@ const ProgramsExtrasSection = () => {
           "Lil' Champs provides age-appropriate education programming that strengthens life skills—supporting youth with routines, hygiene, and habits that translate into confidence, responsibility, and community pride.",
         images: [
           { src: lilChampsActivity1, alt: "Child working on a hands-on learning activity during Lil' Champs program" },
-          { src: "/placeholder.svg", alt: "Lil' Champs photo 2" },
+          { src: lilChampsActivity2, alt: "Instructor engaging with kids during a Lil' Champs group activity" },
           { src: "/placeholder.svg", alt: "Lil' Champs photo 3" },
           { src: "/placeholder.svg", alt: "Lil' Champs photo 4" },
           { src: "/placeholder.svg", alt: "Lil' Champs photo 5" },
