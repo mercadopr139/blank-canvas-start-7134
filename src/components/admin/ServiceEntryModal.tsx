@@ -425,16 +425,15 @@ export default function ServiceEntryModal({
               </Button>
             </div>
 
-            {clientServices.length === 0 ? (
-              <div className="p-3 bg-muted rounded-md text-sm text-muted-foreground">
-                No services configured for this partner yet. Add services in Partners → Edit Partner → Services.
-              </div>
-            ) : (
+          {clientServices.length > 0 ? (
               <Select value={selectedServiceId} onValueChange={setSelectedServiceId}>
                 <SelectTrigger>
                   <SelectValue placeholder="Select a service" />
                 </SelectTrigger>
                 <SelectContent>
+                <SelectItem value="">
+                  (Use Partner Default)
+                </SelectItem>
                   {clientServices.map((service) => (
                     <SelectItem key={service.id} value={service.id}>
                       {service.service_name} — {formatCurrency(service.rate_amount)}
@@ -442,9 +441,19 @@ export default function ServiceEntryModal({
                   ))}
                 </SelectContent>
               </Select>
+          ) : (
+            <div className="p-3 bg-muted rounded-md text-sm">
+              Using partner default: <span className="font-medium">{client.service_description_default || "Service"}</span>
+            </div>
             )}
 
-            {clientServices.length === 1 && (
+          {clientServices.length === 0 && (
+            <p className="text-xs text-muted-foreground">
+              Rate: {getRateTypeLabel(client.rate_type)} • {formatCurrency(client.rate_amount || 0)}
+            </p>
+          )}
+
+          {clientServices.length === 1 && clientServices.length > 0 && (
               <p className="text-xs text-muted-foreground">
                 Only 1 service is set for this partner—add a second service to get more dropdown options here.
               </p>
