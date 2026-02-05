@@ -282,12 +282,31 @@
          <SignatureRow label="Transportation/Excursions" name={reg.transportation_excursions_waiver_name} url={reg.transportation_excursions_signature_url} />
          <SignatureRow label="Media Consent" name={reg.media_consent_name} url={reg.media_consent_signature_url} />
          <SignatureRow label="Spiritual Development" name={reg.spiritual_development_policy_name} url={reg.spiritual_development_policy_signature_url} />
+       {reg.counseling_services_name && (
+         <SignatureRow label="Counseling Services" name={reg.counseling_services_name} url={reg.counseling_services_signature_url} />
+       )}
        </Section>
+
+       {/* Child Headshot */}
+       {reg.child_headshot_url && (
+         <Section title="Child Photo">
+           <a href={reg.child_headshot_url} target="_blank" rel="noopener noreferrer">
+             <img 
+               src={reg.child_headshot_url} 
+               alt="Child headshot" 
+               className="w-24 h-24 object-cover rounded-lg border border-border hover:opacity-80 transition-opacity"
+             />
+           </a>
+         </Section>
+       )}
  
        {/* Submission Info */}
        <Section title="Submission">
          <InfoRow label="Submitted On" value={format(parseISO(reg.submission_date), "MMMM d, yyyy")} />
          <InfoRow label="Registration ID" value={reg.id} />
+       {reg.final_signature_name && (
+         <InfoRow label="Final Signature Name" value={reg.final_signature_name} />
+       )}
        </Section>
      </div>
    );

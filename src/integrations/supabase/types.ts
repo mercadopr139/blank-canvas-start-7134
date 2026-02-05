@@ -306,13 +306,17 @@ export type Database = {
           child_date_of_birth: string
           child_first_name: string
           child_grade_level: number | null
+          child_headshot_url: string | null
           child_last_name: string
           child_phone: string | null
           child_primary_address: string
           child_race_ethnicity: Database["public"]["Enums"]["child_race_ethnicity"]
           child_school_district: Database["public"]["Enums"]["school_district"]
           child_sex: Database["public"]["Enums"]["child_sex"]
+          counseling_services_name: string | null
+          counseling_services_signature_url: string | null
           created_at: string
+          final_signature_name: string | null
           free_or_reduced_lunch:
             | Database["public"]["Enums"]["lunch_status"]
             | null
@@ -345,13 +349,17 @@ export type Database = {
           child_date_of_birth: string
           child_first_name: string
           child_grade_level?: number | null
+          child_headshot_url?: string | null
           child_last_name: string
           child_phone?: string | null
           child_primary_address: string
           child_race_ethnicity: Database["public"]["Enums"]["child_race_ethnicity"]
           child_school_district: Database["public"]["Enums"]["school_district"]
           child_sex: Database["public"]["Enums"]["child_sex"]
+          counseling_services_name?: string | null
+          counseling_services_signature_url?: string | null
           created_at?: string
+          final_signature_name?: string | null
           free_or_reduced_lunch?:
             | Database["public"]["Enums"]["lunch_status"]
             | null
@@ -384,13 +392,17 @@ export type Database = {
           child_date_of_birth?: string
           child_first_name?: string
           child_grade_level?: number | null
+          child_headshot_url?: string | null
           child_last_name?: string
           child_phone?: string | null
           child_primary_address?: string
           child_race_ethnicity?: Database["public"]["Enums"]["child_race_ethnicity"]
           child_school_district?: Database["public"]["Enums"]["school_district"]
           child_sex?: Database["public"]["Enums"]["child_sex"]
+          counseling_services_name?: string | null
+          counseling_services_signature_url?: string | null
           created_at?: string
+          final_signature_name?: string | null
           free_or_reduced_lunch?:
             | Database["public"]["Enums"]["lunch_status"]
             | null
