@@ -19,9 +19,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import type { Tables } from "@/integrations/supabase/types";
+import PartnerServicesManager from "./PartnerServicesManager";
 
 const clientSchema = z.object({
   client_name: z.string().min(1, "Partner name is required").max(255),
@@ -315,6 +317,14 @@ export default function ClientFormDialog({
               />
             </div>
           </div>
+
+          {/* Partner Services Section - only show when editing existing partner */}
+          {client && (
+            <>
+              <Separator />
+              <PartnerServicesManager clientId={client.id} />
+            </>
+          )}
 
           <div className="space-y-2">
             <Label htmlFor="notes">Notes</Label>
