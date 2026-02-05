@@ -134,9 +134,7 @@ export default function ServiceEntryModal({
         }
         setHours(existingLog.hours || 1);
         // Try to match existing log to a service
-        if (existingLog.service_type_id) {
-          setSelectedServiceId(existingLog.service_type_id);
-        } else if (existingLog.service_type && clientServices.length > 0) {
+        if (existingLog.service_type && clientServices.length > 0) {
           const matchingService = clientServices.find(s => s.service_name === existingLog.service_type);
           setSelectedServiceId(matchingService?.id || "");
         } else {
@@ -193,7 +191,8 @@ export default function ServiceEntryModal({
       flat_amount: activeService.rateAmount, // Store the rate used for historical consistency
       line_total: lineTotal,
       service_type: selectedService?.service_name || activeService.name,
-      service_type_id: selectedServiceId || null,
+      // Note: service_type_id references service_types table, not client_services
+      // We store the service name in service_type text field instead
     };
 
     try {
