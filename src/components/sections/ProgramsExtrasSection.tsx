@@ -3,7 +3,6 @@ import groupActivityImage from "@/assets/programs/group-activity.jpg";
 import groupLessonImage from "@/assets/programs/group-lesson.jpg";
 import instructorSpeakingImage from "@/assets/programs/instructor-speaking.jpg";
 import teamActivityImage from "@/assets/programs/team-activity.jpg";
-import smileLabDisplayImage from "@/assets/programs/smile-lab-display.jpg";
 import {
   Dialog,
   DialogContent,
@@ -136,7 +135,7 @@ const ProgramsExtrasSection = () => {
           { src: instructorSpeakingImage, alt: "Instructor speaking with students during a group activity", objectPosition: "50% 40%" },
           { src: teamActivityImage, alt: "Student giving a high five during a group activity" },
           { src: groupActivityImage, alt: "Kids participating in a group activity" },
-          { src: smileLabDisplayImage, alt: "Smile Lab oral health display inside No Limits Academy" },
+          { src: "/placeholder.svg", alt: "Smile Lab photo 5" },
           { src: "/placeholder.svg", alt: "Smile Lab photo 6" },
         ],
         buttonLabel: "Back to Programs",
