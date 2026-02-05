@@ -190,6 +190,9 @@
          </div>
        </CardHeader>
        <CardContent className="space-y-3">
+        <p className="text-xs text-muted-foreground">
+          Services save immediately and will appear in the calendar “Service Type” dropdown.
+        </p>
          {/* Existing Services List */}
          {services.length === 0 && !isAdding ? (
            <p className="text-sm text-muted-foreground text-center py-4">
@@ -244,7 +247,7 @@
                        onClick={() => handleUpdateService(service.id)}
                        disabled={isLoading}
                      >
-                       <Check className="w-4 h-4 text-green-600" />
+                        <Check className="w-4 h-4 text-primary" />
                      </Button>
                      <Button
                        variant="ghost"
