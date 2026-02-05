@@ -51,13 +51,13 @@
  
  By registering your child in our program, you acknowledge and consent to the following:
  
- • You understand that informal counseling or supportive conversations may be provided by program staff as part of ongoing youth development and mentoring.
+- You understand that informal counseling or supportive conversations may be provided by program staff as part of ongoing youth development and mentoring.
  
- • You understand that formal counseling services may be offered on-site by a licensed professional, and that these services will be coordinated with parents/guardians prior to initiation of regular sessions.
+- You understand that formal counseling services may be offered on-site by a licensed professional, and that these services will be coordinated with parents/guardians prior to initiation of regular sessions.
  
- • You give permission for your child to participate in informal or formal counseling support while enrolled in the program. You may withdraw or modify this permission at any time by contacting the program director in writing.
+- You give permission for your child to participate in informal or formal counseling support while enrolled in the program. You may withdraw or modify this permission at any time by contacting the program director in writing.
  
- • You understand that any information shared in a counseling setting is confidential, except in situations where disclosure is legally required (such as imminent harm to self or others, or suspected child abuse/neglect).
+- You understand that any information shared in a counseling setting is confidential, except in situations where disclosure is legally required (such as imminent harm to self or others, or suspected child abuse/neglect).
  
  Please sign below to acknowledge that you have read and understand this policy, and grant permission for your child to access on-site counseling support as described above.`,
  };

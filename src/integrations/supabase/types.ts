@@ -445,10 +445,9 @@ export type Database = {
     Enums: {
       app_role: "admin" | "moderator" | "user"
       boxing_program:
-        | "Boxing Fundamentals (Ages 7-12)"
-        | "Boxing Development (Ages 13-16)"
-        | "Boxing Advanced (Ages 17-19)"
-        | "Boxing Fitness Only"
+        | "Junior Boxing (Ages 7-10)"
+        | "Senior Boxing (Ages 11-19)"
+        | "Grit & Grace (Ages 11-19)"
       child_race_ethnicity:
         | "American Indian or Alaska Native"
         | "Asian"
@@ -619,10 +618,9 @@ export const Constants = {
     Enums: {
       app_role: ["admin", "moderator", "user"],
       boxing_program: [
-        "Boxing Fundamentals (Ages 7-12)",
-        "Boxing Development (Ages 13-16)",
-        "Boxing Advanced (Ages 17-19)",
-        "Boxing Fitness Only",
+        "Junior Boxing (Ages 7-10)",
+        "Senior Boxing (Ages 11-19)",
+        "Grit & Grace (Ages 11-19)",
       ],
       child_race_ethnicity: [
         "American Indian or Alaska Native",
