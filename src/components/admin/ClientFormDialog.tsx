@@ -49,8 +49,9 @@ interface ClientFormDialogProps {
 
 const rateTypeOptions = [
   { value: "per_day", label: "Per Day", placeholder: "Per-day rate (e.g., 175)" },
-  { value: "hourly_rate", label: "Hourly Rate", placeholder: "Hourly rate (e.g., 100)" },
-  { value: "other", label: "Other", placeholder: "Rate amount" },
+  { value: "per_hour", label: "Hourly Rate", placeholder: "Hourly rate (e.g., 100)" },
+  { value: "per_session", label: "Per Session", placeholder: "Per-session rate" },
+  { value: "flat_monthly", label: "Flat Monthly", placeholder: "Monthly rate" },
 ];
 
 export default function ClientFormDialog({
@@ -69,7 +70,6 @@ export default function ClientFormDialog({
     phone: "",
     billing_address: "",
     rate_type: "" as string,
-    custom_rate_type: "",
     rate_amount: "",
     service_description_default: "",
     service_time: "",
@@ -80,16 +80,13 @@ export default function ClientFormDialog({
 
   useEffect(() => {
     if (client) {
-      // Check if rate_type is a custom value (not in predefined options)
-      const isCustomRateType = client.rate_type && !["per_day", "hourly_rate"].includes(client.rate_type);
       setFormData({
         client_name: client.client_name || "",
         contact_name: client.contact_name || "",
         billing_email: client.billing_email || "",
         phone: client.phone || "",
         billing_address: client.billing_address || "",
-        rate_type: isCustomRateType ? "other" : (client.rate_type || ""),
-        custom_rate_type: isCustomRateType ? (client.rate_type || "") : "",
+        rate_type: client.rate_type || "",
         rate_amount: client.rate_amount?.toString() || "",
         service_description_default: client.service_description_default || "",
         service_time: (client as any).service_time || "",
@@ -105,7 +102,6 @@ export default function ClientFormDialog({
         phone: "",
         billing_address: "",
         rate_type: "",
-        custom_rate_type: "",
         rate_amount: "",
         service_description_default: "",
         service_time: "",
@@ -143,18 +139,13 @@ export default function ClientFormDialog({
       return;
     }
 
-    // Determine final rate type value (use custom if "other" is selected)
-    const finalRateType = formData.rate_type === "other" 
-      ? (formData.custom_rate_type || null)
-      : (formData.rate_type || null);
-
     const clientData = {
       client_name: formData.client_name,
       contact_name: formData.contact_name || null,
       billing_email: formData.billing_email || null,
       phone: formData.phone || null,
       billing_address: formData.billing_address || null,
-      rate_type: finalRateType as any,
+      rate_type: (formData.rate_type || null) as "per_day" | "per_session" | "per_hour" | "flat_monthly" | null,
       rate_amount: formData.rate_amount ? parseFloat(formData.rate_amount) : null,
       service_description_default: formData.service_description_default || null,
       service_time: formData.service_time || null,
@@ -253,7 +244,7 @@ export default function ClientFormDialog({
               <Label htmlFor="rate_type">Rate Type</Label>
               <Select
                 value={formData.rate_type}
-                onValueChange={(value) => setFormData({ ...formData, rate_type: value, custom_rate_type: value === "other" ? formData.custom_rate_type : "" })}
+                onValueChange={(value) => setFormData({ ...formData, rate_type: value })}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Select rate type" />
@@ -267,17 +258,6 @@ export default function ClientFormDialog({
                 </SelectContent>
               </Select>
             </div>
-            {formData.rate_type === "other" && (
-              <div className="space-y-2">
-                <Label htmlFor="custom_rate_type">Custom Rate Type</Label>
-                <Input
-                  id="custom_rate_type"
-                  value={formData.custom_rate_type}
-                  onChange={(e) => setFormData({ ...formData, custom_rate_type: e.target.value })}
-                  placeholder="e.g. Facility Rental, Event Fee"
-                />
-              </div>
-            )}
             {formData.rate_type && (
               <div className="space-y-2">
                 <Label htmlFor="rate_amount">Rate Amount ($)</Label>
