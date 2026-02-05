@@ -15,7 +15,7 @@ import { FileText, Mail, ArrowLeft } from "lucide-react";
        href: "/admin/invoices",
      },
      {
-       title: "Sent History",
+      title: "Invoice Sent History",
        description: "View emailed invoices",
        icon: Mail,
        color: "bg-cyan-500/10 text-cyan-500",
