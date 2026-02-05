@@ -313,7 +313,13 @@ export type Database = {
     Enums: {
       app_role: "admin" | "moderator" | "user"
       invoice_status: "draft" | "sent" | "paid"
-      rate_type: "per_day" | "per_session" | "per_hour" | "flat_monthly"
+      rate_type:
+        | "per_day"
+        | "per_session"
+        | "per_hour"
+        | "flat_monthly"
+        | "sponsorship"
+        | "other_service"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -443,7 +449,14 @@ export const Constants = {
     Enums: {
       app_role: ["admin", "moderator", "user"],
       invoice_status: ["draft", "sent", "paid"],
-      rate_type: ["per_day", "per_session", "per_hour", "flat_monthly"],
+      rate_type: [
+        "per_day",
+        "per_session",
+        "per_hour",
+        "flat_monthly",
+        "sponsorship",
+        "other_service",
+      ],
     },
   },
 } as const

@@ -49,9 +49,9 @@ interface ClientFormDialogProps {
 
 const rateTypeOptions = [
   { value: "per_day", label: "Per Day", placeholder: "Per-day rate (e.g., 175)" },
-  { value: "per_hour", label: "Hourly Rate", placeholder: "Hourly rate (e.g., 100)" },
-  { value: "per_session", label: "Per Session", placeholder: "Per-session rate" },
-  { value: "flat_monthly", label: "Flat Monthly", placeholder: "Monthly rate" },
+  { value: "per_hour", label: "Per Hour", placeholder: "Hourly rate (e.g., 100)" },
+  { value: "sponsorship", label: "Sponsorship", placeholder: "Sponsorship amount" },
+  { value: "other_service", label: "Other Service", placeholder: "Service rate" },
 ];
 
 export default function ClientFormDialog({
@@ -145,7 +145,7 @@ export default function ClientFormDialog({
       billing_email: formData.billing_email || null,
       phone: formData.phone || null,
       billing_address: formData.billing_address || null,
-      rate_type: (formData.rate_type || null) as "per_day" | "per_session" | "per_hour" | "flat_monthly" | null,
+      rate_type: (formData.rate_type || null) as "per_day" | "per_hour" | "sponsorship" | "other_service" | null,
       rate_amount: formData.rate_amount ? parseFloat(formData.rate_amount) : null,
       service_description_default: formData.service_description_default || null,
       service_time: formData.service_time || null,
