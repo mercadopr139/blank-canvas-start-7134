@@ -49,13 +49,16 @@ function calculateSummary(lineItems: LineItem[], hourlyRate: number): InvoiceSum
   const flatItems = lineItems.filter(item => item.billingMethod === "flat_rate" || item.billingMethod === "per_day");
 
   const totalHours = hourlyItems.reduce((sum, item) => sum + (item.hours || 0), 0);
-  const hourlyTotal = totalHours * hourlyRate;
+  // Sum actual line totals instead of recalculating from hourly rate
+  const hourlyTotal = hourlyItems.reduce((sum, item) => sum + (item.lineTotal || 0), 0);
+  // Derive effective hourly rate for display (use passed rate as fallback)
+  const effectiveHourlyRate = totalHours > 0 ? hourlyTotal / totalHours : hourlyRate;
   const flatTotal = flatItems.reduce((sum, item) => sum + (item.lineTotal || item.flatAmount || 0), 0);
   const invoiceTotal = hourlyTotal + flatTotal;
 
   return {
     totalHours,
-    hourlyRate,
+    hourlyRate: effectiveHourlyRate,
     hourlyTotal,
     flatTotal,
     invoiceTotal,
