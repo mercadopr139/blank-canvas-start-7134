@@ -57,6 +57,18 @@
      rate_type: "",
      rate_amount: "",
    });
+
+    const formatCurrency = (amount: number) => {
+      return new Intl.NumberFormat("en-US", {
+        style: "currency",
+        currency: "USD",
+      }).format(amount);
+    };
+
+    const getRateLabel = (rateType: string) => {
+      const option = rateTypeOptions.find((o) => o.value === rateType);
+      return option?.label || rateType;
+    };
  
    const fetchServices = async () => {
      setIsLoading(true);
@@ -87,20 +99,31 @@
      }
  
      setIsLoading(true);
-     const { error } = await supabase.from("client_services").insert([{
-       client_id: clientId,
-       service_name: newService.service_name.trim(),
-       rate_type: newService.rate_type,
-       rate_amount: parseFloat(newService.rate_amount) || 0,
-     }]);
+      const { data, error } = await supabase
+        .from("client_services")
+        .insert([
+          {
+            client_id: clientId,
+            service_name: newService.service_name.trim(),
+            rate_type: newService.rate_type,
+            rate_amount: parseFloat(newService.rate_amount) || 0,
+          },
+        ])
+        .select("*")
+        .single();
  
      if (error) {
        toast({ title: "Error adding service", description: error.message, variant: "destructive" });
      } else {
-       toast({ title: "Service added" });
+        setServices((prev) =>
+          [...prev, data].sort((a, b) => a.service_name.localeCompare(b.service_name)),
+        );
+        toast({
+          title: "Service added",
+          description: `${data.service_name} • ${getRateLabel(data.rate_type)} • ${formatCurrency(data.rate_amount)}`,
+        });
        setNewService({ service_name: "", rate_type: "per_day", rate_amount: "" });
        setIsAdding(false);
-       fetchServices();
        onServicesChange?.();
      }
      setIsLoading(false);
@@ -122,7 +145,7 @@
      }
  
      setIsLoading(true);
-     const { error } = await supabase
+      const { data, error } = await supabase
        .from("client_services")
        .update({
          service_name: editService.service_name.trim(),
@@ -134,9 +157,20 @@
      if (error) {
        toast({ title: "Error updating service", description: error.message, variant: "destructive" });
      } else {
+        // Optimistically update the list to reflect the saved change immediately
+        const updated = {
+          ...(services.find((s) => s.id === id) as ClientService),
+          service_name: editService.service_name.trim(),
+          rate_type: editService.rate_type,
+          rate_amount: parseFloat(editService.rate_amount) || 0,
+        };
+        setServices((prev) =>
+          prev
+            .map((s) => (s.id === id ? updated : s))
+            .sort((a, b) => a.service_name.localeCompare(b.service_name)),
+        );
        toast({ title: "Service updated" });
        setEditingId(null);
-       fetchServices();
        onServicesChange?.();
      }
      setIsLoading(false);
@@ -153,22 +187,10 @@
        toast({ title: "Error deleting service", description: error.message, variant: "destructive" });
      } else {
        toast({ title: "Service removed" });
-       fetchServices();
+        setServices((prev) => prev.filter((s) => s.id !== id));
        onServicesChange?.();
      }
      setIsLoading(false);
-   };
- 
-   const formatCurrency = (amount: number) => {
-     return new Intl.NumberFormat("en-US", {
-       style: "currency",
-       currency: "USD",
-     }).format(amount);
-   };
- 
-   const getRateLabel = (rateType: string) => {
-     const option = rateTypeOptions.find((o) => o.value === rateType);
-     return option?.label || rateType;
    };
  
    return (
@@ -291,6 +313,9 @@
          {/* Add New Service Form */}
          {isAdding && (
            <div className="p-3 border rounded-lg space-y-3">
+              <p className="text-xs text-muted-foreground">
+                Tip: services only save when you click “Add Service” below (closing this dialog won’t save the draft).
+              </p>
              <div className="space-y-2">
                <Label htmlFor="new_service_name">Service Name</Label>
                <Input
