@@ -20,6 +20,7 @@ import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
 import type { Tables } from "@/integrations/supabase/types";
+import { RefreshCw } from "lucide-react";
 
 type Client = Tables<"clients">;
 type ServiceLog = Tables<"service_logs">;
@@ -79,19 +80,31 @@ export default function ServiceEntryModal({
   const [hours, setHours] = useState<number>(1);
   const [clientServices, setClientServices] = useState<ClientService[]>([]);
   const [selectedServiceId, setSelectedServiceId] = useState<string>("");
+  const [isServicesLoading, setIsServicesLoading] = useState(false);
+
+  const fetchClientServices = async () => {
+    setIsServicesLoading(true);
+    const { data, error } = await supabase
+      .from("client_services")
+      .select("*")
+      .eq("client_id", client.id)
+      .order("service_name");
+
+    if (error) {
+      toast({
+        title: "Error fetching services",
+        description: error.message,
+        variant: "destructive",
+      });
+      setClientServices([]);
+    } else {
+      setClientServices(data || []);
+    }
+    setIsServicesLoading(false);
+  };
 
   // Fetch client services on mount
   useEffect(() => {
-    const fetchClientServices = async () => {
-      const { data } = await supabase
-        .from("client_services")
-        .select("*")
-        .eq("client_id", client.id)
-        .order("service_name");
-      
-      setClientServices(data || []);
-    };
-    
     if (open) {
       fetchClientServices();
     }
@@ -264,14 +277,28 @@ export default function ServiceEntryModal({
         </DialogHeader>
 
         <div className="space-y-4 py-4">
-          {/* Service Selector - only show if client has multiple services */}
-          {clientServices.length > 0 && (
-            <div className="space-y-2">
+          {/* Service Selector */}
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
               <Label>Service Type</Label>
-              <Select
-                value={selectedServiceId}
-                onValueChange={setSelectedServiceId}
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={fetchClientServices}
+                disabled={isServicesLoading}
               >
+                <RefreshCw className={`w-4 h-4 mr-2 ${isServicesLoading ? "animate-spin" : ""}`} />
+                Refresh
+              </Button>
+            </div>
+
+            {clientServices.length === 0 ? (
+              <div className="p-3 bg-muted rounded-md text-sm text-muted-foreground">
+                No services configured for this partner yet. Add services in Partners → Edit Partner → Services.
+              </div>
+            ) : (
+              <Select value={selectedServiceId} onValueChange={setSelectedServiceId}>
                 <SelectTrigger>
                   <SelectValue placeholder="Select a service" />
                 </SelectTrigger>
@@ -283,8 +310,14 @@ export default function ServiceEntryModal({
                   ))}
                 </SelectContent>
               </Select>
-            </div>
-          )}
+            )}
+
+            {clientServices.length === 1 && (
+              <p className="text-xs text-muted-foreground">
+                Only 1 service is set for this partner—add a second service to get more dropdown options here.
+              </p>
+            )}
+          </div>
 
           {/* Rate Type Info (read-only) */}
           <div className="space-y-2">
