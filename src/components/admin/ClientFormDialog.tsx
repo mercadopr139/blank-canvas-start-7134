@@ -31,7 +31,7 @@ const clientSchema = z.object({
   billing_email: z.string().email("Invalid email").max(255).optional().or(z.literal("")),
   phone: z.string().max(50).optional(),
   billing_address: z.string().max(500).optional(),
-  rate_type: z.enum(["per_day", "per_session", "per_hour", "flat_monthly"]).optional().nullable(),
+  rate_type: z.enum(["per_day", "per_session", "per_hour", "flat_monthly", "sponsorship", "other_service"]).optional().nullable(),
   rate_amount: z.number().min(0).optional().nullable(),
   hourly_rate: z.number().min(0).optional().nullable(),
   default_billing_method: z.enum(["hourly", "flat_rate"]).optional().nullable(),
