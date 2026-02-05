@@ -65,6 +65,7 @@ export type Database = {
           id: string
           notes: string | null
           phone: string | null
+          program_title: string | null
           rate_amount: number | null
           rate_type: Database["public"]["Enums"]["rate_type"] | null
           service_days: string | null
@@ -84,6 +85,7 @@ export type Database = {
           id?: string
           notes?: string | null
           phone?: string | null
+          program_title?: string | null
           rate_amount?: number | null
           rate_type?: Database["public"]["Enums"]["rate_type"] | null
           service_days?: string | null
@@ -103,6 +105,7 @@ export type Database = {
           id?: string
           notes?: string | null
           phone?: string | null
+          program_title?: string | null
           rate_amount?: number | null
           rate_type?: Database["public"]["Enums"]["rate_type"] | null
           service_days?: string | null

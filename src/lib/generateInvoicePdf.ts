@@ -77,6 +77,7 @@ export function generateInvoicePdf(data: InvoicePdfData): jsPDF {
   const hourlyRate = (client as any).hourly_rate || 0;
   const serviceTime = (client as any).service_time || "";
   const serviceDays = (client as any).service_days || "";
+  const programTitle = (client as any).program_title || "Service Total";
 
   const lineItems = calculateLineItems(serviceLogs);
   const summary = calculateSummary(lineItems, hourlyRate);
@@ -220,7 +221,7 @@ export function generateInvoicePdf(data: InvoicePdfData): jsPDF {
     summaryY += 6;
   }
   if (summary.flatTotal > 0) {
-    doc.text(`Service Total: ${formatCurrency(summary.flatTotal)}`, 25, summaryY);
+    doc.text(`${programTitle}: ${formatCurrency(summary.flatTotal)}`, 25, summaryY);
     summaryY += 6;
   }
   

@@ -74,6 +74,7 @@ export default function ClientFormDialog({
     service_description_default: "",
     service_time: "",
     service_days: "",
+    program_title: "",
     notes: "",
   });
 
@@ -93,6 +94,7 @@ export default function ClientFormDialog({
         service_description_default: client.service_description_default || "",
         service_time: (client as any).service_time || "",
         service_days: (client as any).service_days || "",
+        program_title: (client as any).program_title || "",
         notes: client.notes || "",
       });
     } else {
@@ -108,6 +110,7 @@ export default function ClientFormDialog({
         service_description_default: "",
         service_time: "",
         service_days: "",
+        program_title: "",
         notes: "",
       });
     }
@@ -156,6 +159,7 @@ export default function ClientFormDialog({
       service_description_default: formData.service_description_default || null,
       service_time: formData.service_time || null,
       service_days: formData.service_days || null,
+      program_title: formData.program_title || null,
       notes: formData.notes || null,
     };
 
@@ -298,6 +302,16 @@ export default function ClientFormDialog({
               onChange={(e) => setFormData({ ...formData, service_description_default: e.target.value })}
               placeholder='e.g., "Fee-for-service youth development programming"'
               rows={2}
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="program_title">Program/Service Title</Label>
+            <Input
+              id="program_title"
+              value={formData.program_title}
+              onChange={(e) => setFormData({ ...formData, program_title: e.target.value })}
+              placeholder='e.g., "Hawk Squad Total" — displays on invoice summary'
             />
           </div>
 
