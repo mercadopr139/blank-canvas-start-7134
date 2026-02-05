@@ -72,7 +72,8 @@ export default function InvoicePreview({
   const [showSendModal, setShowSendModal] = useState(false);
   const { toast } = useToast();
   
-  const hourlyRate = (client as any).hourly_rate || 0;
+  // Get rate info - for display purposes, we derive from line items if client rate is 0
+  const clientHourlyRate = (client as any).hourly_rate || 0;
 
   // Calculate line items from service logs
   const calculateLineItems = (): LineItem[] => {
@@ -97,13 +98,16 @@ export default function InvoicePreview({
     const flatItems = lineItems.filter(item => item.billingMethod === "flat_rate" || item.billingMethod === "per_day");
 
     const totalHours = hourlyItems.reduce((sum, item) => sum + (item.hours || 0), 0);
-    const hourlyTotal = totalHours * hourlyRate;
+    // Sum actual line totals instead of recalculating from hourly rate
+    const hourlyTotal = hourlyItems.reduce((sum, item) => sum + (item.lineTotal || 0), 0);
+    // Derive effective hourly rate for display
+    const effectiveHourlyRate = totalHours > 0 ? hourlyTotal / totalHours : clientHourlyRate;
     const flatTotal = flatItems.reduce((sum, item) => sum + (item.lineTotal || item.flatAmount || 0), 0);
     const invoiceTotal = hourlyTotal + flatTotal;
 
     return {
       totalHours,
-      hourlyRate,
+      hourlyRate: effectiveHourlyRate,
       hourlyTotal,
       flatTotal,
       invoiceTotal,
@@ -288,10 +292,10 @@ No Limits Academy`,
               <span className="text-muted-foreground">Issue Date:</span>{" "}
               <span className="font-medium">{format(issueDate, "MMM d, yyyy")}</span>
             </p>
-            {hourlyRate > 0 && (
+            {summary.hourlyRate > 0 && (
               <p>
                 <span className="text-muted-foreground">Hourly Rate:</span>{" "}
-                <span className="font-medium">{formatCurrency(hourlyRate)} / hour</span>
+                <span className="font-medium">{formatCurrency(summary.hourlyRate)} / hour</span>
               </p>
             )}
           </div>
