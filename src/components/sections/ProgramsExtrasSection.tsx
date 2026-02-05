@@ -71,6 +71,7 @@ import excursionNationalNightOut from "@/assets/excursions/excursion-national-ni
 import excursionFoodTruck from "@/assets/excursions/excursion-food-truck.png";
 import excursionGirlsNight from "@/assets/excursions/excursion-girls-night.png";
 import excursionCampingWV from "@/assets/excursions/excursion-camping-wv.png";
+import excursionCampingWV2 from "@/assets/excursions/excursion-camping-wv-2.png";
 import excursionLasVegas from "@/assets/excursions/excursion-las-vegas.png";
 import excursionCycleTime from "@/assets/excursions/excursion-cycle-time.png";
 import excursionBoxingPittsburgh from "@/assets/excursions/excursion-boxing-pittsburgh.png";
@@ -168,6 +169,7 @@ const ProgramsExtrasSection = () => {
           { src: excursionFoodTruck, alt: "Food Truck Time", caption: "Food Truck Time" },
           { src: excursionGirlsNight, alt: "Girls Night in Cape May", caption: "Girls Night in Cape May" },
           { src: excursionCampingWV, alt: "Camping in West Virginia", caption: "Camping in West Virginia" },
+          { src: excursionCampingWV2, alt: "Camping in West Virginia", caption: "Camping in West Virginia" },
           { src: excursionLasVegas, alt: "Viva Las Vegas", caption: "Viva Las Vegas" },
           { src: excursionCycleTime, alt: "Cycle Time", caption: "Cycle Time" },
           { src: excursionBoxingPittsburgh, alt: "Boxing Camp in Pittsburgh", caption: "Boxing Camp in Pittsburgh" },
