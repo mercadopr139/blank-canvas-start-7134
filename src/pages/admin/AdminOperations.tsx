@@ -1,19 +1,12 @@
  import { useNavigate } from "react-router-dom";
  import { Button } from "@/components/ui/button";
  import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
- import { Users, Calendar, ArrowLeft } from "lucide-react";
+import { Calendar, ArrowLeft } from "lucide-react";
  
  const AdminOperations = () => {
    const navigate = useNavigate();
  
    const tiles = [
-     {
-       title: "Clients",
-       description: "Manage client information",
-       icon: Users,
-       color: "bg-blue-500/10 text-blue-500",
-       href: "/admin/clients",
-     },
      {
        title: "Service Calendar",
        description: "View and manage schedules",
