@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Link } from "react-router-dom";
 import Header from "@/components/layout/Header";
 import Footer from "@/components/layout/Footer";
 import HeroSection from "@/components/sections/HeroSection";
@@ -15,7 +16,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { MessageCircle } from "lucide-react";
+import { MessageCircle, Users } from "lucide-react";
 import ContactModal from "@/components/contact/ContactModal";
 
 const Index = () => {
@@ -46,6 +47,29 @@ const Index = () => {
         <AboutSection />
         <ProgramsSection onMoreInfo={handleMoreInfo} />
         <ImpactSection />
+
+        {/* Rookie Orientation Section */}
+        <section className="w-full bg-muted/30 border-t border-border py-10 md:py-14">
+          <div className="container flex flex-col items-center text-center px-4">
+            <h2 className="text-xl md:text-2xl font-semibold text-foreground mb-3">
+              New to the Program?
+            </h2>
+            <p className="text-muted-foreground mb-6 max-w-md">
+              Access orientation materials and get started with everything you need to know.
+            </p>
+            <Button
+              asChild
+              size="lg"
+              className="text-white font-semibold"
+              style={{ backgroundColor: "#bf0f3e" }}
+            >
+              <Link to="/rookie-orientation">
+                <Users className="mr-2 h-5 w-5" />
+                Rookie Orientation
+              </Link>
+            </Button>
+          </div>
+        </section>
       </main>
 
       {/* Daily Rhythm Dialog */}
