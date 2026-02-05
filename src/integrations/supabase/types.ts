@@ -297,6 +297,126 @@ export type Database = {
         }
         Relationships: []
       }
+      youth_registrations: {
+        Row: {
+          adults_in_household: number
+          allergies: string | null
+          asthma_inhaler_info: string | null
+          child_boxing_program: Database["public"]["Enums"]["boxing_program"]
+          child_date_of_birth: string
+          child_first_name: string
+          child_grade_level: number | null
+          child_last_name: string
+          child_phone: string | null
+          child_primary_address: string
+          child_race_ethnicity: Database["public"]["Enums"]["child_race_ethnicity"]
+          child_school_district: Database["public"]["Enums"]["school_district"]
+          child_sex: Database["public"]["Enums"]["child_sex"]
+          created_at: string
+          free_or_reduced_lunch:
+            | Database["public"]["Enums"]["lunch_status"]
+            | null
+          household_income_range: Database["public"]["Enums"]["household_income"]
+          id: string
+          important_child_notes: string | null
+          liability_waiver_name: string
+          liability_waiver_signature_url: string
+          media_consent_name: string
+          media_consent_signature_url: string
+          medical_consent_name: string
+          medical_consent_signature_url: string
+          parent_email: string
+          parent_first_name: string
+          parent_last_name: string
+          parent_phone: string
+          siblings_in_household: number
+          spiritual_development_policy_name: string
+          spiritual_development_policy_signature_url: string
+          submission_date: string
+          transportation_excursions_signature_url: string
+          transportation_excursions_waiver_name: string
+          updated_at: string
+        }
+        Insert: {
+          adults_in_household: number
+          allergies?: string | null
+          asthma_inhaler_info?: string | null
+          child_boxing_program: Database["public"]["Enums"]["boxing_program"]
+          child_date_of_birth: string
+          child_first_name: string
+          child_grade_level?: number | null
+          child_last_name: string
+          child_phone?: string | null
+          child_primary_address: string
+          child_race_ethnicity: Database["public"]["Enums"]["child_race_ethnicity"]
+          child_school_district: Database["public"]["Enums"]["school_district"]
+          child_sex: Database["public"]["Enums"]["child_sex"]
+          created_at?: string
+          free_or_reduced_lunch?:
+            | Database["public"]["Enums"]["lunch_status"]
+            | null
+          household_income_range: Database["public"]["Enums"]["household_income"]
+          id?: string
+          important_child_notes?: string | null
+          liability_waiver_name: string
+          liability_waiver_signature_url: string
+          media_consent_name: string
+          media_consent_signature_url: string
+          medical_consent_name: string
+          medical_consent_signature_url: string
+          parent_email: string
+          parent_first_name: string
+          parent_last_name: string
+          parent_phone: string
+          siblings_in_household: number
+          spiritual_development_policy_name: string
+          spiritual_development_policy_signature_url: string
+          submission_date?: string
+          transportation_excursions_signature_url: string
+          transportation_excursions_waiver_name: string
+          updated_at?: string
+        }
+        Update: {
+          adults_in_household?: number
+          allergies?: string | null
+          asthma_inhaler_info?: string | null
+          child_boxing_program?: Database["public"]["Enums"]["boxing_program"]
+          child_date_of_birth?: string
+          child_first_name?: string
+          child_grade_level?: number | null
+          child_last_name?: string
+          child_phone?: string | null
+          child_primary_address?: string
+          child_race_ethnicity?: Database["public"]["Enums"]["child_race_ethnicity"]
+          child_school_district?: Database["public"]["Enums"]["school_district"]
+          child_sex?: Database["public"]["Enums"]["child_sex"]
+          created_at?: string
+          free_or_reduced_lunch?:
+            | Database["public"]["Enums"]["lunch_status"]
+            | null
+          household_income_range?: Database["public"]["Enums"]["household_income"]
+          id?: string
+          important_child_notes?: string | null
+          liability_waiver_name?: string
+          liability_waiver_signature_url?: string
+          media_consent_name?: string
+          media_consent_signature_url?: string
+          medical_consent_name?: string
+          medical_consent_signature_url?: string
+          parent_email?: string
+          parent_first_name?: string
+          parent_last_name?: string
+          parent_phone?: string
+          siblings_in_household?: number
+          spiritual_development_policy_name?: string
+          spiritual_development_policy_signature_url?: string
+          submission_date?: string
+          transportation_excursions_signature_url?: string
+          transportation_excursions_waiver_name?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
@@ -312,7 +432,32 @@ export type Database = {
     }
     Enums: {
       app_role: "admin" | "moderator" | "user"
+      boxing_program:
+        | "Boxing Fundamentals (Ages 7-12)"
+        | "Boxing Development (Ages 13-16)"
+        | "Boxing Advanced (Ages 17-19)"
+        | "Boxing Fitness Only"
+      child_race_ethnicity:
+        | "American Indian or Alaska Native"
+        | "Asian"
+        | "Black or African American"
+        | "Hispanic or Latino"
+        | "Native Hawaiian or Other Pacific Islander"
+        | "White"
+        | "Two or More Races"
+        | "Other"
+        | "Prefer not to say"
+      child_sex: "Male" | "Female" | "Other"
+      household_income:
+        | "Under $25,000"
+        | "$25,000 - $49,999"
+        | "$50,000 - $74,999"
+        | "$75,000 - $99,999"
+        | "$100,000 - $149,999"
+        | "$150,000 or more"
+        | "Prefer not to say"
       invoice_status: "draft" | "sent" | "paid"
+      lunch_status: "Yes" | "No" | "Not Applicable"
       rate_type:
         | "per_day"
         | "per_session"
@@ -320,6 +465,19 @@ export type Database = {
         | "flat_monthly"
         | "sponsorship"
         | "other_service"
+      school_district:
+        | "Cape May City"
+        | "Lower Cape May Regional"
+        | "Middle Township"
+        | "Ocean City"
+        | "Upper Township"
+        | "Wildwood"
+        | "Wildwood Crest"
+        | "North Wildwood"
+        | "West Cape May"
+        | "Dennis Township"
+        | "Woodbine"
+        | "Other"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -448,7 +606,35 @@ export const Constants = {
   public: {
     Enums: {
       app_role: ["admin", "moderator", "user"],
+      boxing_program: [
+        "Boxing Fundamentals (Ages 7-12)",
+        "Boxing Development (Ages 13-16)",
+        "Boxing Advanced (Ages 17-19)",
+        "Boxing Fitness Only",
+      ],
+      child_race_ethnicity: [
+        "American Indian or Alaska Native",
+        "Asian",
+        "Black or African American",
+        "Hispanic or Latino",
+        "Native Hawaiian or Other Pacific Islander",
+        "White",
+        "Two or More Races",
+        "Other",
+        "Prefer not to say",
+      ],
+      child_sex: ["Male", "Female", "Other"],
+      household_income: [
+        "Under $25,000",
+        "$25,000 - $49,999",
+        "$50,000 - $74,999",
+        "$75,000 - $99,999",
+        "$100,000 - $149,999",
+        "$150,000 or more",
+        "Prefer not to say",
+      ],
       invoice_status: ["draft", "sent", "paid"],
+      lunch_status: ["Yes", "No", "Not Applicable"],
       rate_type: [
         "per_day",
         "per_session",
@@ -456,6 +642,20 @@ export const Constants = {
         "flat_monthly",
         "sponsorship",
         "other_service",
+      ],
+      school_district: [
+        "Cape May City",
+        "Lower Cape May Regional",
+        "Middle Township",
+        "Ocean City",
+        "Upper Township",
+        "Wildwood",
+        "Wildwood Crest",
+        "North Wildwood",
+        "West Cape May",
+        "Dennis Township",
+        "Woodbine",
+        "Other",
       ],
     },
   },

@@ -22,6 +22,9 @@ import AdminFinance from "./pages/admin/AdminFinance";
 import AdminClients from "./pages/admin/AdminClients";
 import AdminServiceCalendar from "./pages/admin/AdminServiceCalendar";
 import AdminInvoices from "./pages/admin/AdminInvoices";
+ import AdminRegistrations from "./pages/admin/AdminRegistrations";
+ import AdminRegistrationAnalytics from "./pages/admin/AdminRegistrationAnalytics";
+ import Register from "./pages/Register";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -43,6 +46,7 @@ const App = () => (
             <Route path="/our-story" element={<OurStory />} />
             <Route path="/impact" element={<ImpactStory />} />
             <Route path="/vision" element={<Vision />} />
+             <Route path="/register" element={<Register />} />
             
             {/* Admin Routes */}
             <Route path="/admin" element={<AdminIndex />} />
@@ -103,6 +107,22 @@ const App = () => (
                 </ProtectedRoute>
               }
             />
+             <Route
+               path="/admin/operations/registrations"
+               element={
+                 <ProtectedRoute requireAdmin>
+                   <AdminRegistrations />
+                 </ProtectedRoute>
+               }
+             />
+             <Route
+               path="/admin/operations/registration-analytics"
+               element={
+                 <ProtectedRoute requireAdmin>
+                   <AdminRegistrationAnalytics />
+                 </ProtectedRoute>
+               }
+             />
             
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
