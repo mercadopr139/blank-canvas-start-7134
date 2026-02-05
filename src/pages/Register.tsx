@@ -6,13 +6,14 @@
  import { Label } from "@/components/ui/label";
  import { Textarea } from "@/components/ui/textarea";
  import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
- import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+ import { Card, CardContent } from "@/components/ui/card";
  import { useToast } from "@/hooks/use-toast";
  import { CheckCircle2, Loader2, Upload } from "lucide-react";
  import Header from "@/components/layout/Header";
  import Footer from "@/components/layout/Footer";
  import WaiverSection from "@/components/registration/WaiverSection";
  import { WAIVER_TEXTS } from "@/components/registration/waiverTexts";
+ import nlaLogo from "@/assets/nla-logo.png";
  
  const SEX_OPTIONS = ["Male", "Female", "Other"] as const;
  const RACE_OPTIONS = [
@@ -373,405 +374,387 @@
    return (
      <div className="min-h-screen flex flex-col bg-background">
        <Header />
-       <main className="flex-1 container mx-auto px-4 py-8 max-w-3xl">
-         <div className="text-center mb-8">
-           <h1 className="text-3xl font-bold mb-2">NLA Youth Registration</h1>
-           <p className="text-muted-foreground">Complete all sections below to register your child for NLA Boxing programs.</p>
-         </div>
+       <main className="flex-1 container mx-auto px-4 py-8 max-w-xl">
+         <Card className="shadow-lg">
+           <CardContent className="pt-8 pb-8">
+             {/* Header */}
+             <div className="text-center mb-8">
+               <img src={nlaLogo} alt="No Limits Academy" className="w-20 h-20 mx-auto mb-4 object-contain" />
+               <h1 className="text-2xl font-bold mb-2">2025-26 Registration</h1>
+               <p className="text-muted-foreground text-sm">Must complete before participation at No Limits Academy.</p>
+             </div>
  
-         <form onSubmit={handleSubmit} className="space-y-8">
-           {/* Section 1: Child Information */}
-           <Card>
-             <CardHeader>
-               <CardTitle>1. Child Information</CardTitle>
-               <CardDescription>Tell us about your child</CardDescription>
-             </CardHeader>
-             <CardContent className="space-y-4">
-               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                 <div>
-                   <Label htmlFor="child_first_name">First Name *</Label>
-                   <Input
-                     id="child_first_name"
-                     value={formData.child_first_name}
-                     onChange={(e) => handleInputChange("child_first_name", e.target.value)}
-                     required
-                   />
-                 </div>
-                 <div>
-                   <Label htmlFor="child_last_name">Last Name *</Label>
-                   <Input
-                     id="child_last_name"
-                     value={formData.child_last_name}
-                     onChange={(e) => handleInputChange("child_last_name", e.target.value)}
-                     required
-                   />
-                 </div>
-               </div>
-               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                 <div>
-                   <Label htmlFor="child_sex">Sex *</Label>
-                   <Select value={formData.child_sex} onValueChange={(v) => handleInputChange("child_sex", v)}>
-                     <SelectTrigger><SelectValue placeholder="Select..." /></SelectTrigger>
-                     <SelectContent>
-                       {SEX_OPTIONS.map(opt => <SelectItem key={opt} value={opt}>{opt}</SelectItem>)}
-                     </SelectContent>
-                   </Select>
-                 </div>
-                 <div>
-                   <Label htmlFor="child_date_of_birth">Date of Birth *</Label>
-                   <Input
-                     id="child_date_of_birth"
-                     type="date"
-                     value={formData.child_date_of_birth}
-                     onChange={(e) => handleInputChange("child_date_of_birth", e.target.value)}
-                     required
-                   />
-                 </div>
-               </div>
+             <form onSubmit={handleSubmit} className="space-y-6">
+               {/* Today's Date - Auto-filled but shown */}
                <div>
-                 <Label htmlFor="child_race_ethnicity">Race/Ethnicity *</Label>
+                 <Label className="text-base font-medium">Today's Date <span className="text-destructive">*</span></Label>
+                 <Input
+                   type="date"
+                   value={new Date().toISOString().split('T')[0]}
+                   disabled
+                   className="mt-2 bg-muted"
+                 />
+               </div>
+
+               {/* First Name of Child */}
+               <div>
+                 <Label htmlFor="child_first_name" className="text-base font-medium">First Name of Child <span className="text-destructive">*</span></Label>
+                 <Input
+                   id="child_first_name"
+                   value={formData.child_first_name}
+                   onChange={(e) => handleInputChange("child_first_name", e.target.value)}
+                   className="mt-2"
+                   required
+                 />
+               </div>
+
+               {/* Last Name of Child */}
+               <div>
+                 <Label htmlFor="child_last_name" className="text-base font-medium">Last Name of Child <span className="text-destructive">*</span></Label>
+                 <Input
+                   id="child_last_name"
+                   value={formData.child_last_name}
+                   onChange={(e) => handleInputChange("child_last_name", e.target.value)}
+                   className="mt-2"
+                   required
+                 />
+               </div>
+
+               {/* Child's Sex */}
+               <div>
+                 <Label htmlFor="child_sex" className="text-base font-medium">Child's Sex <span className="text-destructive">*</span></Label>
+                 <Select value={formData.child_sex} onValueChange={(v) => handleInputChange("child_sex", v)}>
+                   <SelectTrigger className="mt-2"><SelectValue placeholder="Select..." /></SelectTrigger>
+                   <SelectContent>
+                     {SEX_OPTIONS.map(opt => <SelectItem key={opt} value={opt}>{opt}</SelectItem>)}
+                   </SelectContent>
+                 </Select>
+               </div>
+
+               {/* Child's Date of Birth */}
+               <div>
+                 <Label htmlFor="child_date_of_birth" className="text-base font-medium">Child's Date of Birth <span className="text-destructive">*</span></Label>
+                 <Input
+                   id="child_date_of_birth"
+                   type="date"
+                   value={formData.child_date_of_birth}
+                   onChange={(e) => handleInputChange("child_date_of_birth", e.target.value)}
+                   className="mt-2"
+                   required
+                 />
+               </div>
+
+               {/* Child's Race/Ethnicity */}
+               <div>
+                 <Label htmlFor="child_race_ethnicity" className="text-base font-medium">Child's Race/Ethnicity <span className="text-destructive">*</span></Label>
                  <Select value={formData.child_race_ethnicity} onValueChange={(v) => handleInputChange("child_race_ethnicity", v)}>
-                   <SelectTrigger><SelectValue placeholder="Select..." /></SelectTrigger>
+                   <SelectTrigger className="mt-2"><SelectValue placeholder="Select..." /></SelectTrigger>
                    <SelectContent>
                      {RACE_OPTIONS.map(opt => <SelectItem key={opt} value={opt}>{opt}</SelectItem>)}
                    </SelectContent>
                  </Select>
                </div>
-             </CardContent>
-           </Card>
- 
-           {/* Section 2: Parent/Guardian Information */}
-           <Card>
-             <CardHeader>
-               <CardTitle>2. Parent/Guardian Information</CardTitle>
-               <CardDescription>Primary contact details</CardDescription>
-             </CardHeader>
-             <CardContent className="space-y-4">
-               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                 <div>
-                   <Label htmlFor="parent_first_name">Parent First Name *</Label>
-                   <Input
-                     id="parent_first_name"
-                     value={formData.parent_first_name}
-                     onChange={(e) => handleInputChange("parent_first_name", e.target.value)}
-                     required
-                   />
-                 </div>
-                 <div>
-                   <Label htmlFor="parent_last_name">Parent Last Name *</Label>
-                   <Input
-                     id="parent_last_name"
-                     value={formData.parent_last_name}
-                     onChange={(e) => handleInputChange("parent_last_name", e.target.value)}
-                     required
-                   />
-                 </div>
-               </div>
-               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                 <div>
-                   <Label htmlFor="parent_phone">Parent Phone *</Label>
-                   <Input
-                     id="parent_phone"
-                     type="tel"
-                     value={formData.parent_phone}
-                     onChange={(e) => handleInputChange("parent_phone", e.target.value)}
-                     placeholder="(555) 123-4567"
-                     required
-                   />
-                 </div>
-                 <div>
-                   <Label htmlFor="child_phone">Child's Phone (optional)</Label>
-                   <Input
-                     id="child_phone"
-                     type="tel"
-                     value={formData.child_phone}
-                     onChange={(e) => handleInputChange("child_phone", e.target.value)}
-                     placeholder="(555) 123-4567"
-                   />
-                 </div>
-               </div>
+
+               {/* First Name of Parent/Guardian */}
                <div>
-                 <Label htmlFor="parent_email">Parent Email *</Label>
+                 <Label htmlFor="parent_first_name" className="text-base font-medium">First Name of Parent/Guardian <span className="text-destructive">*</span></Label>
+                 <Input
+                   id="parent_first_name"
+                   value={formData.parent_first_name}
+                   onChange={(e) => handleInputChange("parent_first_name", e.target.value)}
+                   className="mt-2"
+                   required
+                 />
+               </div>
+
+               {/* Last Name of Parent/Guardian */}
+               <div>
+                 <Label htmlFor="parent_last_name" className="text-base font-medium">Last Name of Parent/Guardian <span className="text-destructive">*</span></Label>
+                 <Input
+                   id="parent_last_name"
+                   value={formData.parent_last_name}
+                   onChange={(e) => handleInputChange("parent_last_name", e.target.value)}
+                   className="mt-2"
+                   required
+                 />
+               </div>
+
+               {/* Parent/Guardian Cell Phone # */}
+               <div>
+                 <Label htmlFor="parent_phone" className="text-base font-medium">Parent/Guardian Cell Phone # <span className="text-destructive">*</span></Label>
+                 <Input
+                   id="parent_phone"
+                   type="tel"
+                   value={formData.parent_phone}
+                   onChange={(e) => handleInputChange("parent_phone", e.target.value)}
+                   className="mt-2"
+                   required
+                 />
+               </div>
+
+               {/* Child's Cell Phone # */}
+               <div>
+                 <Label htmlFor="child_phone" className="text-base font-medium">Child's Cell Phone #</Label>
+                 <p className="text-sm text-muted-foreground">If no cell phone, SKIP</p>
+                 <Input
+                   id="child_phone"
+                   type="tel"
+                   value={formData.child_phone}
+                   onChange={(e) => handleInputChange("child_phone", e.target.value)}
+                   className="mt-2"
+                 />
+               </div>
+
+               {/* Parent/Guardian Email */}
+               <div>
+                 <Label htmlFor="parent_email" className="text-base font-medium">Parent/Guardian Email <span className="text-destructive">*</span></Label>
                  <Input
                    id="parent_email"
                    type="email"
                    value={formData.parent_email}
                    onChange={(e) => handleInputChange("parent_email", e.target.value)}
+                   className="mt-2"
                    required
                  />
                </div>
-             </CardContent>
-           </Card>
- 
-           {/* Section 3: Address + School */}
-           <Card>
-             <CardHeader>
-               <CardTitle>3. Address & School</CardTitle>
-               <CardDescription>Location and education information</CardDescription>
-             </CardHeader>
-             <CardContent className="space-y-4">
+
+               {/* Child's Primary Address */}
                <div>
-                 <Label htmlFor="child_primary_address">Child's Primary Address *</Label>
+                 <Label htmlFor="child_primary_address" className="text-base font-medium">Child's Primary Address <span className="text-destructive">*</span></Label>
+                 <p className="text-sm text-muted-foreground">MUST BE FULL MAILING ADDRESS</p>
                  <Textarea
                    id="child_primary_address"
                    value={formData.child_primary_address}
                    onChange={(e) => handleInputChange("child_primary_address", e.target.value)}
-                   placeholder="MUST BE FULL MAILING ADDRESS"
+                   className="mt-2"
                    required
                  />
                </div>
-               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                 <div>
-                   <Label htmlFor="child_school_district">School District *</Label>
-                   <Select value={formData.child_school_district} onValueChange={(v) => handleInputChange("child_school_district", v)}>
-                     <SelectTrigger><SelectValue placeholder="Select..." /></SelectTrigger>
-                     <SelectContent>
-                       {SCHOOL_DISTRICTS.map(opt => <SelectItem key={opt} value={opt}>{opt}</SelectItem>)}
-                     </SelectContent>
-                   </Select>
-                 </div>
-                 <div>
-                   <Label htmlFor="child_grade_level">Child's Grade Level</Label>
-                   <Input
-                     id="child_grade_level"
-                     type="number"
-                     min="1"
-                     max="12"
-                     value={formData.child_grade_level}
-                     onChange={(e) => handleInputChange("child_grade_level", e.target.value)}
-                     placeholder="Use # Only (Ex: 9 for ninth grade)"
-                   />
-                   <p className="text-xs text-muted-foreground mt-1">Skip if not applicable</p>
-                 </div>
-               </div>
-             </CardContent>
-           </Card>
- 
-           {/* Section 4: Program + Household */}
-           <Card>
-             <CardHeader>
-               <CardTitle>4. Program & Household</CardTitle>
-               <CardDescription>Program selection and household info</CardDescription>
-             </CardHeader>
-             <CardContent className="space-y-4">
+
+               {/* Child's School District */}
                <div>
-                 <Label htmlFor="child_boxing_program">Boxing Program *</Label>
+                 <Label htmlFor="child_school_district" className="text-base font-medium">Child's School District <span className="text-destructive">*</span></Label>
+                 <Select value={formData.child_school_district} onValueChange={(v) => handleInputChange("child_school_district", v)}>
+                   <SelectTrigger className="mt-2"><SelectValue placeholder="Select..." /></SelectTrigger>
+                   <SelectContent>
+                     {SCHOOL_DISTRICTS.map(opt => <SelectItem key={opt} value={opt}>{opt}</SelectItem>)}
+                   </SelectContent>
+                 </Select>
+               </div>
+
+               {/* Child's Grade Level */}
+               <div>
+                 <Label htmlFor="child_grade_level" className="text-base font-medium">Child's Grade Level <span className="text-destructive">*</span></Label>
+                 <p className="text-sm text-muted-foreground">Use # Only (Ex: 9 for ninth grade)</p>
+                 <p className="text-sm text-muted-foreground">Skip if not applicable</p>
+                 <Input
+                   id="child_grade_level"
+                   type="number"
+                   min="1"
+                   max="12"
+                   value={formData.child_grade_level}
+                   onChange={(e) => handleInputChange("child_grade_level", e.target.value)}
+                   className="mt-2"
+                 />
+               </div>
+
+               {/* Child's Boxing Program */}
+               <div>
+                 <Label htmlFor="child_boxing_program" className="text-base font-medium">Child's Boxing Program <span className="text-destructive">*</span></Label>
                  <Select value={formData.child_boxing_program} onValueChange={(v) => handleInputChange("child_boxing_program", v)}>
-                   <SelectTrigger><SelectValue placeholder="Select program..." /></SelectTrigger>
+                   <SelectTrigger className="mt-2"><SelectValue placeholder="Select..." /></SelectTrigger>
                    <SelectContent>
                      {BOXING_PROGRAMS.map(opt => <SelectItem key={opt} value={opt}>{opt}</SelectItem>)}
                    </SelectContent>
                  </Select>
                </div>
-               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                 <div>
-                   <Label htmlFor="adults_in_household">Adult(s) in Child's primary household *</Label>
-                   <Input
-                     id="adults_in_household"
-                     type="number"
-                     min="1"
-                     value={formData.adults_in_household}
-                     onChange={(e) => handleInputChange("adults_in_household", e.target.value)}
-                     required
-                   />
-                 </div>
-                 <div>
-                   <Label htmlFor="siblings_in_household">How many siblings in Child's primary household? *</Label>
-                   <Input
-                     id="siblings_in_household"
-                     type="number"
-                     min="0"
-                     value={formData.siblings_in_household}
-                     onChange={(e) => handleInputChange("siblings_in_household", e.target.value)}
-                     required
-                   />
-                 </div>
-               </div>
-             </CardContent>
-           </Card>
- 
-           {/* Section 5: Funding Questions */}
-           <Card>
-             <CardHeader>
-               <CardTitle>5. Funding Questions</CardTitle>
-               <CardDescription>This information is completely confidential and is used for data collection.</CardDescription>
-             </CardHeader>
-             <CardContent className="space-y-4">
+
+               {/* Adult(s) in Child's primary household */}
                <div>
-                 <Label htmlFor="household_income_range">For Program funding purposes, please indicate which below reflects your total household income. *</Label>
+                 <Label htmlFor="adults_in_household" className="text-base font-medium">Adult(s) in Child's primary household <span className="text-destructive">*</span></Label>
+                 <Input
+                   id="adults_in_household"
+                   type="number"
+                   min="1"
+                   value={formData.adults_in_household}
+                   onChange={(e) => handleInputChange("adults_in_household", e.target.value)}
+                   className="mt-2"
+                   required
+                 />
+               </div>
+
+               {/* How many siblings in Child's primary household? */}
+               <div>
+                 <Label htmlFor="siblings_in_household" className="text-base font-medium">How many siblings in Child's primary household? <span className="text-destructive">*</span></Label>
+                 <Input
+                   id="siblings_in_household"
+                   type="number"
+                   min="0"
+                   value={formData.siblings_in_household}
+                   onChange={(e) => handleInputChange("siblings_in_household", e.target.value)}
+                   className="mt-2"
+                   required
+                 />
+               </div>
+
+               {/* Household Income */}
+               <div>
+                 <Label htmlFor="household_income_range" className="text-base font-medium">For Program funding purposes, please indicate which below reflects your total household income. <span className="text-destructive">*</span></Label>
+                 <p className="text-sm text-muted-foreground">This information is completely confidential and is used for data collection.</p>
                  <Select value={formData.household_income_range} onValueChange={(v) => handleInputChange("household_income_range", v)}>
-                   <SelectTrigger><SelectValue placeholder="Select..." /></SelectTrigger>
+                   <SelectTrigger className="mt-2"><SelectValue placeholder="Select..." /></SelectTrigger>
                    <SelectContent>
                      {INCOME_RANGES.map(opt => <SelectItem key={opt} value={opt}>{opt}</SelectItem>)}
                    </SelectContent>
                  </Select>
                </div>
+
+               {/* Free or reduced lunch */}
                <div>
-                 <Label htmlFor="free_or_reduced_lunch">For Program funding purposes, does your Child receive free or reduced lunch at school?</Label>
+                 <Label htmlFor="free_or_reduced_lunch" className="text-base font-medium">For Program funding purposes, does your Child receive free or reduced lunch at school?</Label>
+                 <p className="text-sm text-muted-foreground">Skip if not applicable</p>
                  <Select value={formData.free_or_reduced_lunch} onValueChange={(v) => handleInputChange("free_or_reduced_lunch", v)}>
-                   <SelectTrigger><SelectValue placeholder="Select..." /></SelectTrigger>
+                   <SelectTrigger className="mt-2"><SelectValue placeholder="Select..." /></SelectTrigger>
                    <SelectContent>
                      {LUNCH_OPTIONS.map(opt => <SelectItem key={opt} value={opt}>{opt}</SelectItem>)}
                    </SelectContent>
                  </Select>
-                 <p className="text-xs text-muted-foreground mt-1">Skip if not applicable</p>
                </div>
-             </CardContent>
-           </Card>
- 
-           {/* Section 6: Medical Info */}
-           <Card>
-             <CardHeader>
-               <CardTitle>6. Medical Information</CardTitle>
-               <CardDescription>Important health details (optional)</CardDescription>
-             </CardHeader>
-             <CardContent className="space-y-4">
+
+               {/* Allergies */}
                <div>
-                 <Label htmlFor="allergies">What allergies does your child have?</Label>
+                 <Label htmlFor="allergies" className="text-base font-medium">What allergies does your child have? If none, please skip question.</Label>
+                 <p className="text-sm text-muted-foreground">If your child requires an epinephrine injection, <strong>YOU MUST PROVIDE</strong> No Limits Academy Coaches with an up-to-date epi-pen that will remain at the No Limits Academy facility. NO EXCEPTIONS.</p>
                  <Textarea
                    id="allergies"
                    value={formData.allergies}
                    onChange={(e) => handleInputChange("allergies", e.target.value)}
-                   placeholder="If none, please skip question."
+                   className="mt-2"
+                   maxLength={2000}
                  />
-                 <p className="text-xs text-muted-foreground mt-1">
-                   If your child requires an epinephrine injection, <strong>YOU MUST PROVIDE</strong> No Limits Academy Coaches with an up-to-date epi-pen that will remain at the No Limits Academy facility. NO EXCEPTIONS.
-                 </p>
                </div>
+
+               {/* Asthma */}
                <div>
-                 <Label htmlFor="asthma_inhaler_info">If your child has asthma, please fill in the following information.</Label>
+                 <Label htmlFor="asthma_inhaler_info" className="text-base font-medium">If your child has asthma, please fill in the following information. If your child does not have asthma, please skip question.</Label>
+                 <p className="text-sm text-muted-foreground">Name of the inhaler your child takes prior to strenuous exercise.</p>
+                 <p className="text-sm text-muted-foreground"><strong>YOU MUST PROVIDE</strong> an inhaler that will remain at the No Limits Academy facility. NO EXCEPTIONS.</p>
                  <Textarea
                    id="asthma_inhaler_info"
                    value={formData.asthma_inhaler_info}
                    onChange={(e) => handleInputChange("asthma_inhaler_info", e.target.value)}
-                   placeholder="Name of the inhaler your child takes prior to strenuous exercise. If your child does not have asthma, please skip question."
+                   className="mt-2"
+                   maxLength={2000}
                  />
-                 <p className="text-xs text-muted-foreground mt-1">
-                   <strong>YOU MUST PROVIDE</strong> an inhaler that will remain at the No Limits Academy facility. NO EXCEPTIONS.
-                 </p>
                </div>
-             </CardContent>
-           </Card>
- 
-           {/* Section 7: Coach Notes */}
-           <Card>
-             <CardHeader>
-               <CardTitle>7. Coach Notes</CardTitle>
-               <CardDescription>Skip if not applicable</CardDescription>
-             </CardHeader>
-             <CardContent>
+
+               {/* Medical Consent - Signature Required */}
+               <div className="border-t pt-6">
+                 <WaiverSection
+                   title="Signature Required:"
+                   text={WAIVER_TEXTS.medical_consent}
+                   nameValue={formData.medical_consent_name}
+                   onNameChange={(v) => handleInputChange("medical_consent_name", v)}
+                   onSignatureChange={(blob) => handleSignatureChange("medical_consent", blob)}
+                   acknowledged={acknowledgements.medical_consent}
+                   onAcknowledgeChange={(v) => handleAcknowledgementChange("medical_consent", v)}
+                 />
+               </div>
+
+               {/* Coach Notes */}
                <div>
-                 <Label htmlFor="important_child_notes">Please share any important information about your child that would help our coaches support them.</Label>
+                 <Label htmlFor="important_child_notes" className="text-base font-medium">Please share any important information about your child that would help our coaches support them.</Label>
+                 <p className="text-sm text-muted-foreground">Ex: Recent life changes, social challenges, medical needs, etc.</p>
+                 <p className="text-sm text-muted-foreground">Skip if not applicable</p>
                  <Textarea
                    id="important_child_notes"
                    value={formData.important_child_notes}
                    onChange={(e) => handleInputChange("important_child_notes", e.target.value)}
-                   placeholder="Ex: Recent life changes, social challenges, medical needs, etc."
+                   className="mt-2"
                    rows={4}
                  />
                </div>
-             </CardContent>
-           </Card>
- 
-           {/* Section 8: Waivers & Consents */}
-           <Card>
-             <CardHeader>
-               <CardTitle>8. Waivers & Consents</CardTitle>
-               <CardDescription>Please read each waiver carefully, type your name, and sign</CardDescription>
-             </CardHeader>
-             <CardContent className="space-y-8">
-               {/* Medical Consent */}
-               <WaiverSection
-                 title="Medical Consent"
-                 text={WAIVER_TEXTS.medical_consent}
-                 nameValue={formData.medical_consent_name}
-                 onNameChange={(v) => handleInputChange("medical_consent_name", v)}
-                 onSignatureChange={(blob) => handleSignatureChange("medical_consent", blob)}
-                 acknowledged={acknowledgements.medical_consent}
-                 onAcknowledgeChange={(v) => handleAcknowledgementChange("medical_consent", v)}
-               />
- 
-               {/* Liability Waiver */}
-               <WaiverSection
-                 title="Liability Waiver"
-                 text={WAIVER_TEXTS.liability_waiver}
-                 nameValue={formData.liability_waiver_name}
-                 onNameChange={(v) => handleInputChange("liability_waiver_name", v)}
-                 onSignatureChange={(blob) => handleSignatureChange("liability_waiver", blob)}
-                 acknowledged={acknowledgements.liability_waiver}
-                 onAcknowledgeChange={(v) => handleAcknowledgementChange("liability_waiver", v)}
-               />
- 
-               {/* Transportation & Excursions */}
-               <WaiverSection
-                 title="Transportation & Excursions Waiver"
-                 text={WAIVER_TEXTS.transportation_excursions}
-                 nameValue={formData.transportation_excursions_waiver_name}
-                 onNameChange={(v) => handleInputChange("transportation_excursions_waiver_name", v)}
-                 onSignatureChange={(blob) => handleSignatureChange("transportation_excursions", blob)}
-                 acknowledged={acknowledgements.transportation_excursions}
-                 onAcknowledgeChange={(v) => handleAcknowledgementChange("transportation_excursions", v)}
-               />
- 
-               {/* Media Consent */}
-               <WaiverSection
-                 title="Media Consent"
-                 text={WAIVER_TEXTS.media_consent}
-                 nameValue={formData.media_consent_name}
-                 onNameChange={(v) => handleInputChange("media_consent_name", v)}
-                 onSignatureChange={(blob) => handleSignatureChange("media_consent", blob)}
-                 acknowledged={acknowledgements.media_consent}
-                 onAcknowledgeChange={(v) => handleAcknowledgementChange("media_consent", v)}
-               />
- 
+
+               {/* Release of Liability & Waiver Form */}
+               <div className="border-t pt-6">
+                 <WaiverSection
+                   title="Release of Liability & Waiver Form"
+                   text={WAIVER_TEXTS.liability_waiver}
+                   nameValue={formData.liability_waiver_name}
+                   onNameChange={(v) => handleInputChange("liability_waiver_name", v)}
+                   onSignatureChange={(blob) => handleSignatureChange("liability_waiver", blob)}
+                   acknowledged={acknowledgements.liability_waiver}
+                   onAcknowledgeChange={(v) => handleAcknowledgementChange("liability_waiver", v)}
+                 />
+               </div>
+
+               {/* Waiver and Permission - Transportation and Excursions */}
+               <div className="border-t pt-6">
+                 <WaiverSection
+                   title="Waiver and Permission - Transportation and Excursions"
+                   text={WAIVER_TEXTS.transportation_excursions}
+                   nameValue={formData.transportation_excursions_waiver_name}
+                   onNameChange={(v) => handleInputChange("transportation_excursions_waiver_name", v)}
+                   onSignatureChange={(blob) => handleSignatureChange("transportation_excursions", blob)}
+                   acknowledged={acknowledgements.transportation_excursions}
+                   onAcknowledgeChange={(v) => handleAcknowledgementChange("transportation_excursions", v)}
+                 />
+               </div>
+
+               {/* Media Consent, Release & Waiver */}
+               <div className="border-t pt-6">
+                 <WaiverSection
+                   title="Media Consent, Release & Waiver"
+                   text={WAIVER_TEXTS.media_consent}
+                   nameValue={formData.media_consent_name}
+                   onNameChange={(v) => handleInputChange("media_consent_name", v)}
+                   onSignatureChange={(blob) => handleSignatureChange("media_consent", blob)}
+                   acknowledged={acknowledgements.media_consent}
+                   onAcknowledgeChange={(v) => handleAcknowledgementChange("media_consent", v)}
+                 />
+               </div>
+
                {/* Spiritual Development Policy */}
-               <WaiverSection
-                 title="Spiritual Development Policy"
-                 text={WAIVER_TEXTS.spiritual_development}
-                 nameValue={formData.spiritual_development_policy_name}
-                 onNameChange={(v) => handleInputChange("spiritual_development_policy_name", v)}
-                 onSignatureChange={(blob) => handleSignatureChange("spiritual_development", blob)}
-                 acknowledged={acknowledgements.spiritual_development}
-                 onAcknowledgeChange={(v) => handleAcknowledgementChange("spiritual_development", v)}
-               />
+               <div className="border-t pt-6">
+                 <WaiverSection
+                   title="Spiritual Development Policy"
+                   text={WAIVER_TEXTS.spiritual_development}
+                   nameValue={formData.spiritual_development_policy_name}
+                   onNameChange={(v) => handleInputChange("spiritual_development_policy_name", v)}
+                   onSignatureChange={(blob) => handleSignatureChange("spiritual_development", blob)}
+                   acknowledged={acknowledgements.spiritual_development}
+                   onAcknowledgeChange={(v) => handleAcknowledgementChange("spiritual_development", v)}
+                 />
+               </div>
 
                {/* Counseling Services Notice & Consent */}
-               <WaiverSection
-                 title="Counseling Services Notice & Consent"
-                 text={WAIVER_TEXTS.counseling_services}
-                 nameValue={formData.counseling_services_name}
-                 onNameChange={(v) => handleInputChange("counseling_services_name", v)}
-                 onSignatureChange={(blob) => handleSignatureChange("counseling_services", blob)}
-                 acknowledged={acknowledgements.counseling_services}
-                 onAcknowledgeChange={(v) => handleAcknowledgementChange("counseling_services", v)}
-               />
-             </CardContent>
-           </Card>
- 
-           {/* Section 9: Final Confirmation */}
-           <Card>
-             <CardHeader>
-               <CardTitle>9. Final Confirmation</CardTitle>
-               <CardDescription>Please complete these final items</CardDescription>
-             </CardHeader>
-             <CardContent className="space-y-6">
-               {/* Typed Name Confirmation */}
-               <div>
-                 <Label htmlFor="final_signature_name">
-                   Please TYPE the FIRST and LAST name used in the Signatures above *
-                 </Label>
+               <div className="border-t pt-6">
+                 <WaiverSection
+                   title="Counseling Services Notice & Consent"
+                   text={WAIVER_TEXTS.counseling_services}
+                   nameValue={formData.counseling_services_name}
+                   onNameChange={(v) => handleInputChange("counseling_services_name", v)}
+                   onSignatureChange={(blob) => handleSignatureChange("counseling_services", blob)}
+                   acknowledged={acknowledgements.counseling_services}
+                   onAcknowledgeChange={(v) => handleAcknowledgementChange("counseling_services", v)}
+                 />
+               </div>
+
+               {/* Final typed name */}
+               <div className="border-t pt-6">
+                 <Label htmlFor="final_signature_name" className="text-base font-medium">Please TYPE the FIRST and LAST name used in the Signatures above. <span className="text-destructive">*</span></Label>
                  <Input
                    id="final_signature_name"
                    value={formData.final_signature_name}
                    onChange={(e) => handleInputChange("final_signature_name", e.target.value)}
-                   placeholder="Enter your full name as signed above"
+                   className="mt-2"
                    required
                  />
                </div>
- 
+
                {/* Child Headshot Upload */}
                <div>
-                 <Label>For safety & security, upload a picture (headshot) of your child *</Label>
+                 <Label className="text-base font-medium">For safety & security, upload a picture (headshot) of your child. <span className="text-destructive">*</span></Label>
                  <div className="mt-2">
                    <div className="flex items-center gap-4">
                      <label className="flex items-center gap-2 px-4 py-2 border border-input rounded-md cursor-pointer hover:bg-muted transition-colors">
@@ -799,23 +782,23 @@
                    )}
                  </div>
                </div>
-             </CardContent>
-           </Card>
- 
-           {/* Submit */}
-           <div className="flex justify-center">
-             <Button type="submit" size="lg" disabled={isSubmitting} className="w-full md:w-auto min-w-[200px]">
-               {isSubmitting ? (
-                 <>
-                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                   Submitting...
-                 </>
-               ) : (
-                 "Submit Registration"
-               )}
-             </Button>
-           </div>
-         </form>
+
+               {/* Submit */}
+               <div className="pt-6">
+                 <Button type="submit" size="lg" disabled={isSubmitting} className="w-full">
+                   {isSubmitting ? (
+                     <>
+                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                       Submitting...
+                     </>
+                   ) : (
+                     "Submit"
+                   )}
+                 </Button>
+               </div>
+             </form>
+           </CardContent>
+         </Card>
        </main>
        <Footer />
      </div>
