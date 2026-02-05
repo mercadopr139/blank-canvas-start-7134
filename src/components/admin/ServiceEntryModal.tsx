@@ -20,7 +20,8 @@ import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
 import type { Tables } from "@/integrations/supabase/types";
-import { RefreshCw } from "lucide-react";
+import { RefreshCw, Plus, Pencil, Trash2 } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 
 type Client = Tables<"clients">;
 type ServiceLog = Tables<"service_logs">;
@@ -39,6 +40,8 @@ interface ServiceEntryModalProps {
   client: Client;
   date: Date;
   existingLog?: ServiceLog | null;
+  existingLogsForDate?: ServiceLog[];
+  onEditLog?: (log: ServiceLog) => void;
   onSuccess: () => void;
 }
 
@@ -70,6 +73,8 @@ export default function ServiceEntryModal({
   client,
   date,
   existingLog,
+  existingLogsForDate = [],
+  onEditLog,
   onSuccess,
 }: ServiceEntryModalProps) {
   const [isLoading, setIsLoading] = useState(false);
@@ -81,6 +86,7 @@ export default function ServiceEntryModal({
   const [clientServices, setClientServices] = useState<ClientService[]>([]);
   const [selectedServiceId, setSelectedServiceId] = useState<string>("");
   const [isServicesLoading, setIsServicesLoading] = useState(false);
+  const [isAddingNew, setIsAddingNew] = useState(true);
 
   const fetchClientServices = async () => {
     setIsServicesLoading(true);
@@ -136,6 +142,8 @@ export default function ServiceEntryModal({
   useEffect(() => {
     if (open) {
       if (existingLog) {
+        // Editing an existing log
+        setIsAddingNew(false);
         // Load from existing log
         const savedMethod = existingLog.billing_method || "per_day";
         if (savedMethod === "hourly") {
@@ -154,7 +162,8 @@ export default function ServiceEntryModal({
           setSelectedServiceId("");
         }
       } else {
-        // Default - select first service if available
+        // Adding new entry - select first service if available
+        setIsAddingNew(true);
         const defaultServiceId = clientServices.length > 0 ? clientServices[0].id : "";
         setSelectedServiceId(defaultServiceId);
         const defaultRateType = clientServices.length > 0 
@@ -188,6 +197,27 @@ export default function ServiceEntryModal({
       style: "currency",
       currency: "USD",
     }).format(amount);
+  };
+
+  // Helper to switch to add new mode
+  const handleAddNew = () => {
+    setIsAddingNew(true);
+    if (onEditLog) onEditLog(null as any);
+    // Reset form to defaults
+    const defaultServiceId = clientServices.length > 0 ? clientServices[0].id : "";
+    setSelectedServiceId(defaultServiceId);
+    const defaultRateType = clientServices.length > 0 
+      ? clientServices[0].rate_type 
+      : client.rate_type;
+    const defaultMethod = getBillingMethodFromRateType(defaultRateType);
+    setBillingMethod(defaultMethod);
+    setHours(1);
+  };
+
+  // Helper to switch to edit mode
+  const handleEditExisting = (log: ServiceLog) => {
+    if (onEditLog) onEditLog(log);
+    setIsAddingNew(false);
   };
 
   const handleSave = async () => {
@@ -266,6 +296,32 @@ export default function ServiceEntryModal({
     }
   };
 
+  const handleDeleteEntry = async (logId: string) => {
+    setIsLoading(true);
+    try {
+      const { error } = await supabase
+        .from("service_logs")
+        .delete()
+        .eq("id", logId);
+
+      if (error) throw error;
+      toast({ title: "Service entry removed" });
+      onSuccess();
+      // If we deleted the one being edited, switch to add mode
+      if (existingLog?.id === logId) {
+        handleAddNew();
+      }
+    } catch (error: any) {
+      toast({
+        title: "Error removing service entry",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
@@ -277,6 +333,82 @@ export default function ServiceEntryModal({
         </DialogHeader>
 
         <div className="space-y-4 py-4">
+          {/* Existing entries for this date */}
+          {existingLogsForDate.length > 0 && (
+            <div className="space-y-2">
+              <Label className="text-xs text-muted-foreground uppercase tracking-wide">
+                Entries on this date ({existingLogsForDate.length})
+              </Label>
+              <div className="space-y-2 max-h-32 overflow-y-auto">
+                {existingLogsForDate.map((log) => (
+                  <div
+                    key={log.id}
+                    className={`flex items-center justify-between p-2 rounded-md border text-sm ${
+                      existingLog?.id === log.id 
+                        ? "border-primary bg-primary/5" 
+                        : "border-border bg-muted/50"
+                    }`}
+                  >
+                    <div className="flex-1 min-w-0">
+                      <span className="font-medium truncate block">
+                        {log.service_type || "Service"}
+                      </span>
+                      <span className="text-xs text-muted-foreground">
+                        {formatCurrency(log.line_total || 0)}
+                        {log.billing_method === "hourly" && ` (${log.hours}h)`}
+                      </span>
+                    </div>
+                    <div className="flex gap-1 ml-2">
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className="h-7 w-7 p-0"
+                        onClick={() => handleEditExisting(log)}
+                        disabled={existingLog?.id === log.id}
+                      >
+                        <Pencil className="w-3.5 h-3.5" />
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className="h-7 w-7 p-0 text-destructive hover:text-destructive"
+                        onClick={() => handleDeleteEntry(log.id)}
+                        disabled={isLoading}
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              
+              {/* Add another button */}
+              {!isAddingNew && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="w-full"
+                  onClick={handleAddNew}
+                >
+                  <Plus className="w-4 h-4 mr-2" />
+                  Add Another Service
+                </Button>
+              )}
+            </div>
+          )}
+
+          {/* Form section header */}
+          {existingLogsForDate.length > 0 && (
+            <div className="border-t pt-4">
+              <Badge variant={isAddingNew ? "default" : "secondary"} className="mb-3">
+                {isAddingNew ? "New Entry" : "Editing Entry"}
+              </Badge>
+            </div>
+          )}
+
           {/* Service Selector */}
           <div className="space-y-2">
             <div className="flex items-center justify-between">
@@ -396,7 +528,7 @@ export default function ServiceEntryModal({
         </div>
 
         <DialogFooter className="flex-col sm:flex-row gap-2">
-          {existingLog && (
+          {existingLog && !isAddingNew && (
             <Button
               type="button"
               variant="destructive"
@@ -411,7 +543,7 @@ export default function ServiceEntryModal({
             Cancel
           </Button>
           <Button onClick={handleSave} disabled={isLoading}>
-            {isLoading ? "Saving..." : existingLog ? "Update Entry" : "Add Entry"}
+            {isLoading ? "Saving..." : (existingLog && !isAddingNew) ? "Update Entry" : "Add Entry"}
           </Button>
         </DialogFooter>
       </DialogContent>

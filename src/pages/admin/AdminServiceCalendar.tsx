@@ -30,6 +30,16 @@ type ServiceLog = Tables<"service_logs">;
 
 const WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
+// Format currency helper
+const formatCurrency = (amount: number) => {
+  return new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: "USD",
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0,
+  }).format(amount);
+};
+
 export default function AdminServiceCalendar() {
   const [searchParams] = useSearchParams();
   const [clients, setClients] = useState<Client[]>([]);
@@ -40,6 +50,7 @@ export default function AdminServiceCalendar() {
   const [entryModalOpen, setEntryModalOpen] = useState(false);
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [editingLog, setEditingLog] = useState<ServiceLog | null>(null);
+  const [existingLogsForDate, setExistingLogsForDate] = useState<ServiceLog[]>([]);
   
   const { toast } = useToast();
   const { signOut } = useAuth();
@@ -118,11 +129,14 @@ export default function AdminServiceCalendar() {
     return [...paddedDays, ...days];
   }, [currentMonth]);
 
-  // Map service logs by date string
+  // Map service logs by date string (now stores array of logs per date)
   const serviceLogsByDate = useMemo(() => {
-    const map: Record<string, ServiceLog> = {};
+    const map: Record<string, ServiceLog[]> = {};
     serviceLogs.forEach((log) => {
-      map[log.service_date] = log;
+      if (!map[log.service_date]) {
+        map[log.service_date] = [];
+      }
+      map[log.service_date].push(log);
     });
     return map;
   }, [serviceLogs]);
@@ -134,10 +148,11 @@ export default function AdminServiceCalendar() {
     }
 
     const dateStr = format(date, "yyyy-MM-dd");
-    const existingLog = serviceLogsByDate[dateStr];
+    const existingLogs = serviceLogsByDate[dateStr] || [];
 
     setSelectedDate(date);
-    setEditingLog(existingLog || null);
+    setExistingLogsForDate(existingLogs);
+    setEditingLog(null); // Start in "add new" mode
     setEntryModalOpen(true);
   };
 
@@ -289,8 +304,13 @@ export default function AdminServiceCalendar() {
                   }
 
                   const dateStr = format(day, "yyyy-MM-dd");
-                  const isServiceDay = !!serviceLogsByDate[dateStr];
+                  const logsForDay = serviceLogsByDate[dateStr] || [];
+                  const isServiceDay = logsForDay.length > 0;
                   const isCurrentMonth = isSameMonth(day, currentMonth);
+                  
+                  // Calculate total for the day
+                  const dayTotal = logsForDay.reduce((sum, log) => sum + (log.line_total || 0), 0);
+                  const entryCount = logsForDay.length;
 
                   return (
                     <button
@@ -309,11 +329,10 @@ export default function AdminServiceCalendar() {
                       `}
                     >
                       <span>{format(day, "d")}</span>
-                      {isServiceDay && serviceLogsByDate[dateStr] && (
+                      {isServiceDay && (
                         <span className="text-[10px] opacity-80 leading-tight text-center">
-                          {serviceLogsByDate[dateStr].billing_method === "hourly" 
-                            ? `$${serviceLogsByDate[dateStr].line_total || 0} (${serviceLogsByDate[dateStr].hours || 0} hrs)` 
-                            : `$${serviceLogsByDate[dateStr].line_total || 0} (Per Day)`}
+                          {formatCurrency(dayTotal)}
+                          {entryCount > 1 && ` (${entryCount})`}
                         </span>
                       )}
                     </button>
@@ -338,11 +357,14 @@ export default function AdminServiceCalendar() {
             if (!open) {
               setSelectedDate(null);
               setEditingLog(null);
+              setExistingLogsForDate([]);
             }
           }}
           client={selectedClient}
           date={selectedDate}
           existingLog={editingLog}
+          existingLogsForDate={existingLogsForDate}
+          onEditLog={(log) => setEditingLog(log)}
           onSuccess={refreshLogs}
         />
       )}
