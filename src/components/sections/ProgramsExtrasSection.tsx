@@ -10,6 +10,7 @@ import lilChampsActivity2 from "@/assets/programs/lil-champs-activity-2.jpg";
 import lilChampsActivity3 from "@/assets/programs/lil-champs-activity-3.jpg";
 import lilChampsActivity4 from "@/assets/programs/lil-champs-activity-4.jpg";
 import lilChampsActivity5 from "@/assets/programs/lil-champs-activity-5.jpg";
+import lilChampsActivity6 from "@/assets/programs/lil-champs-activity-6.jpg";
 import {
   Dialog,
   DialogContent,
@@ -199,7 +200,7 @@ const ProgramsExtrasSection = () => {
           { src: lilChampsActivity3, alt: "Kids working together on a hands-on learning activity during Lil' Champs" },
           { src: lilChampsActivity4, alt: "Child decorating a heart-shaped craft during Lil' Champs" },
           { src: lilChampsActivity5, alt: "Lil' Champs students proudly holding up their handmade heart crafts" },
-          { src: "/placeholder.svg", alt: "Lil' Champs photo 6" },
+          { src: lilChampsActivity6, alt: "Student participating in a Lil' Champs hands-on learning activity" },
         ],
         buttonLabel: "Back to Programs",
       },
