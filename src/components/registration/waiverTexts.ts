@@ -1,122 +1,63 @@
  export const WAIVER_TEXTS = {
-   medical_consent: `MEDICAL CONSENT AND AUTHORIZATION
+   medical_consent: `I give permission for No Limits Academy Coaches to share this medical information with supervising staff and EMTs on an "as needed" basis.`,
  
- I, the undersigned parent/guardian of the minor child named in this registration, hereby grant permission for NLA Youth Boxing ("NLA") and its authorized representatives to seek and obtain emergency medical treatment for my child in the event of an accident, injury, or illness during their participation in NLA programs, activities, or events.
+   liability_waiver: `I, the parent/guardian, or I, the participant, understand that exercise, training, and using fitness equipment are potentially hazardous activities. I further understand that these activities involve risks of injury, aggravation of pre-existing conditions, and, in the most severe situations, even death. Furthermore, I acknowledge that exercise on the body cannot be predicted with complete accuracy and that injuries may occur during or following exercise that could lead to these complications and adversely affect my health. These changes may include, among other effects, high blood pressure, increased heart rate, altered heart function, and possibly cardiac complications or stroke.
  
- I understand and agree that:
+ I, the parent/guardian, or I, the participant, voluntarily assume all responsibility and liability for using the facilities, equipment, machinery, and all exercise programs (including boxing) at No Limits Academy. I assume all risks of injuries associated with participation including, but not limited to: falls, contact with other participants, the effects of the weather (including high heat and/or humidity), and all other such risks being known and acknowledged by me (including fractures, head and spinal injuries).
  
- 1. NLA staff will make reasonable efforts to contact me or an emergency contact before seeking medical treatment, except in life-threatening situations where immediate action is required.
+ I, the parent/guardian, or I, the participant, am aware that a comprehensive medical examination by my doctor is necessary before starting an exercise program. I acknowledge that I have consulted with my physician to determine which, if any, physical activities, exercises, and training programs are not recommended for me. I acknowledge that I had a comprehensive physical examination by my doctor within the last 12 months and I have no restrictions for strenuous exercise or boxing participation.
  
- 2. I authorize NLA to transport my child to the nearest appropriate medical facility if necessary.
+ I, the parent/guardian, or I, the participant, have read and understand the following warning and notification: "If you are currently under a physician's care for an injury, bleeding disorder, condition or illness, the No Limits Academy urges you to consult your physician before participating in any exercises, using any equipment, or participating in any program at NLA (which includes weight lifting and boxing)."
  
- 3. I assume full financial responsibility for any medical treatment provided to my child.
+ I, the parent/guardian, or I, the participant, declare that I am physically fit, sound, and suffering from no condition, impairment, disability, disease, infirmity, or illness that should prevent my participation in any program and the use of any exercise equipment, including weight lifting and boxing. (Anyone who cannot commit that this statement is true and correct must see the NLA supervisor before using the facilities.)
  
- 4. I have disclosed all relevant medical conditions, allergies, and medications in this registration form.
+ Moreover, in consideration of being allowed the use of all facilities, equipment, machinery, and programs, I, the parent/guardian, or I, the participant, waive and release, now and forever, all claims and causes of action against NLA, its elected or appointed officers, agents, volunteers, employees, representatives, consultants, executors, and all others directly or indirectly connected with NLA, from any and all personal injuries I sustain (including death or permanent disability), and any medical condition of any kind which results in any aggravation of a pre-existing medical condition, and any and all other damages or injuries which I sustain in any way from the direct or indirect result of my activities, exercise, training, and participation in NLA activities.`,
  
- 5. I will keep NLA informed of any changes to my child's health information.
+   transportation_excursions: `If and when applicable, I give permission for my child to be transported in a motor vehicle driven by a representative of No Limits Academy (NLA). I understand that my child is expected to follow all applicable laws regarding riding in a motor vehicle and is expected to follow the directions provided by the driver and/or other adult volunteers.
  
- 6. If my child requires an inhaler, EpiPen, or other emergency medication, I will ensure they have it with them at all times during NLA activities.
+ I have read, understand, and discussed with my child that:
  
- By signing below, I confirm that I have read, understand, and agree to the terms of this Medical Consent and Authorization.`,
+ (1) They will be traveling in a motor vehicle driven by an adult and are to wear their safety belt while traveling;
  
-   liability_waiver: `LIABILITY WAIVER AND RELEASE OF CLAIMS
+ (2) They are expected to respect each other, the vehicles they ride in, and the people they travel with during the trip;
  
- I, the undersigned parent/guardian, acknowledge that boxing and related fitness activities involve inherent risks of physical injury, including but not limited to: bruises, sprains, strains, fractures, concussions, and in rare cases, serious injury or death.
+ (3) Riding in a motor vehicle may result in personal injuries or death from wrecks, collisions, or acts by riders, other drivers, or objects; and
  
- In consideration of my child being allowed to participate in NLA Youth Boxing programs, I hereby agree to the following:
+ (4) They are to remain in their seats and not be disruptive to the driver of the vehicle.
  
- 1. ASSUMPTION OF RISK: I understand and voluntarily accept the risks associated with boxing and fitness training. I acknowledge that my child is physically fit to participate and has no medical conditions that would prevent safe participation.
+ I understand that my child may also participate in Excursions hosted by No Limits Academy, which may include but are not limited to off-site trips, educational visits, athletic events, and recreational outings. I acknowledge that:
  
- 2. RELEASE OF LIABILITY: I, on behalf of myself, my child, and our heirs, executors, and assigns, hereby release, waive, and forever discharge NLA Youth Boxing, its officers, directors, employees, volunteers, coaches, and agents from any and all liability, claims, demands, and causes of action arising from my child's participation in NLA programs.
+ – Parents and/or guardians will be notified in advance of any scheduled Excursions.
  
- 3. INDEMNIFICATION: I agree to indemnify and hold harmless NLA Youth Boxing from any claims, damages, or expenses arising from my child's participation.
+ – These Excursions may include transportation provided by NLA staff or volunteers.
  
- 4. RULES AND CONDUCT: I agree that my child will follow all safety rules, instructions from coaches, and conduct themselves appropriately. Failure to do so may result in removal from the program without refund.
+ – Some Excursions may involve additional forms of travel, such as public or private buses, trains, commercial air transportation, or ferries.
  
- 5. GOVERNING LAW: This waiver shall be governed by the laws of the State of New Jersey.
+ – I understand and accept that other forms of transportation not specifically listed here may also be used as necessary for the purpose of the Excursion.
  
- I HAVE READ THIS WAIVER CAREFULLY AND UNDERSTAND ITS CONTENTS. I SIGN IT VOLUNTARILY AND WITH FULL KNOWLEDGE OF ITS LEGAL CONSEQUENCES.`,
+ As with any physical or recreational activity, Excursions carry the inherent risk of injury, illness, or even death. By signing this form, I voluntarily assume all risks associated with my child's participation in both transportation and Excursions. I understand and agree that No Limits Academy, its Board, staff, and volunteers shall not be held liable for any injury, illness, accident, loss, or death that may occur during transportation or while participating in any Excursion-related activity, regardless of the cause, including negligence.
  
-   transportation_excursions: `TRANSPORTATION AND EXCURSIONS WAIVER
+ I hereby attest and verify that I have full knowledge of the risks involved and that I assume any expenses that may be incurred in the event of an accident, illness, or other incapacity. As a condition for the services received, I, for myself, my child, my executors, and assigners, further agree to release and forever discharge No Limits Academy, its Board, and the Coaches from any claim that I might have myself or that I could bring on my child's behalf with regard to any damages, demands, or actions whatsoever, in any manner arising out of transportation or participation in Excursions.
  
- I, the undersigned parent/guardian, grant permission for my child to participate in field trips, excursions, and off-site activities organized by NLA Youth Boxing.
+ I have read this entire waiver and permission form, fully understand it, and agree to be legally bound by its terms.`,
  
- I understand and agree that:
+   media_consent: `I hereby give consent to No Limits Academy to photograph, videotape, or otherwise digitally record and use images and/or sound recordings of myself or my child/children to use in any public media, including radio, television, internet, social media, print or in any of the organization's or its partners' publications, productions, or posts. I understand that the intended use of such images and information is solely for the purpose of advertising, marketing, fundraising and/or the promotional and public awareness purposes for the organization. I hereby waive any rights or interest in the images or recordings, as stated in this release. I acknowledge that this consent to use images and/or recordings is being made solely for the benefit of the organization and comes without any expectation of monetary compensation or other benefit to me. To the extent that any benefit accrues or might accrue to the organization from the use of images or information, I hereby and forever waive any interest in or claim to such benefits. I hereby release and forever discharge No Limits Academy from any and all claims, liability, actions, suits, demands, costs, expenses or indebtedness arising out of, related to, or in any way connected with the use of images and materials described herein, and I hereby waive all rights and interest in and to such information and materials. I further acknowledge that there is no guarantee that any or all of the participants' images or recordings will be used in any released media.`,
  
- 1. TRANSPORTATION: My child may be transported in vehicles operated by NLA staff, volunteers, or designated transportation providers. All drivers will have valid licenses and appropriate insurance.
+   spiritual_development: `At No Limits Academy, we respect each individual's unique spiritual journey. Participation in any aspect of spiritual development is entirely voluntary. We do not require youth participants to read, engage with, or participate in spiritual practices or teachings. For youth who are curious or willing to explore their spiritual development, we are here to offer support and guidance.
  
- 2. SUPERVISION: While every effort will be made to provide adequate supervision, I understand that excursions present unique challenges and risks.
+ NLA's focus is on providing a nurturing, caring, and encouraging environment where youth can explore God, at their own pace, if they choose to do so. By signing below, I understand NLA's Spiritual Development Policy.`,
  
- 3. OFF-SITE ACTIVITIES: My child may participate in activities such as:
-    - Visits to other boxing gyms or sports facilities
-    - Community service events
-    - Educational trips
-    - Recreational outings (bowling, movies, parks, etc.)
-    - Competition travel
-    - Camping and outdoor activities
+   counseling_services: `As part of our commitment to supporting the emotional, social, and mental well-being of our participants, our program offers on-site counseling services. These may include both informal counseling (such as supportive conversations, wellness check-ins, and guidance provided by trained staff) and formal counseling (scheduled sessions with a qualified licensed counselor or mental health professional).
  
- 4. WATER ACTIVITIES: If water activities (swimming, paddleboarding, water parks, etc.) are included, I confirm that my child can swim or will wear appropriate flotation devices.
+ By registering your child in our program, you acknowledge and consent to the following:
  
- 5. EMERGENCY PROCEDURES: I have provided accurate emergency contact information and authorize NLA to seek medical treatment if I cannot be reached.
+ • You understand that informal counseling or supportive conversations may be provided by program staff as part of ongoing youth development and mentoring.
  
- 6. BEHAVIOR EXPECTATIONS: My child will follow all instructions from chaperones and behave appropriately. Misconduct may result in being sent home at my expense.
+ • You understand that formal counseling services may be offered on-site by a licensed professional, and that these services will be coordinated with parents/guardians prior to initiation of regular sessions.
  
- 7. PERSONAL BELONGINGS: NLA is not responsible for lost, stolen, or damaged personal belongings.
+ • You give permission for your child to participate in informal or formal counseling support while enrolled in the program. You may withdraw or modify this permission at any time by contacting the program director in writing.
  
- I RELEASE NLA YOUTH BOXING from all liability related to transportation and excursion activities, except in cases of gross negligence.`,
+ • You understand that any information shared in a counseling setting is confidential, except in situations where disclosure is legally required (such as imminent harm to self or others, or suspected child abuse/neglect).
  
-   media_consent: `MEDIA CONSENT AND RELEASE
- 
- I, the undersigned parent/guardian, grant permission for NLA Youth Boxing to photograph, video record, and otherwise capture images and likeness of my child during their participation in NLA programs, events, and activities.
- 
- I understand and agree that:
- 
- 1. PERMITTED USES: These images and recordings may be used for:
-    - NLA's website and social media accounts
-    - Promotional materials and marketing
-    - Fundraising and grant applications
-    - News media and press coverage
-    - Documentary or educational purposes
-    - Annual reports and newsletters
- 
- 2. NO COMPENSATION: I will not receive payment or royalties for the use of my child's image.
- 
- 3. NO APPROVAL REQUIRED: NLA is not required to seek my approval before each use of the images.
- 
- 4. RIGHTS TRANSFER: I transfer all rights, title, and interest in any images to NLA Youth Boxing.
- 
- 5. NAME USAGE: NLA may use my child's first name and last initial (e.g., "John S.") in connection with images. Full names will not be used without additional consent.
- 
- 6. DURATION: This consent remains in effect until revoked in writing.
- 
- 7. REVOCATION: I may revoke this consent at any time by submitting a written request to NLA. Revocation will not affect materials already produced or distributed.
- 
- I understand that if I do NOT wish my child to be photographed or recorded, I must notify NLA in writing, and reasonable efforts will be made to exclude my child from media capture.`,
- 
-   spiritual_development: `SPIRITUAL DEVELOPMENT POLICY
- 
- NLA Youth Boxing is committed to the holistic development of young people, which includes opportunities for spiritual growth and character development.
- 
- PLEASE READ THE FOLLOWING CAREFULLY:
- 
- 1. VOLUNTARY PARTICIPATION: All spiritual development activities are entirely VOLUNTARY. No child will be required to participate in prayer, devotionals, or faith-based discussions.
- 
- 2. PROGRAM DESCRIPTION: Our spiritual development program may include:
-    - Optional prayer before or after training sessions
-    - Character education discussions on values like respect, discipline, perseverance, and integrity
-    - Occasional visits from community faith leaders (participation optional)
-    - Discussions about purpose, goals, and personal growth
-    - Reflection activities and journaling
- 
- 3. RESPECT FOR ALL BELIEFS: NLA welcomes youth of all faiths and those with no religious affiliation. We respect each family's beliefs and will never pressure children to adopt any particular faith.
- 
- 4. OPT-OUT OPTION: If you prefer that your child not participate in any spiritual activities, simply indicate this to our staff. Your child will be provided with an alternative activity during these times.
- 
- 5. PARENTAL NOTIFICATION: We will inform parents in advance of any significant spiritual or faith-based events.
- 
- 6. NO DISCRIMINATION: Participation or non-participation in spiritual activities will have no effect on a child's standing in the program, access to training, or any other aspect of their NLA experience.
- 
- By signing below, I acknowledge that I have read and understand NLA's Spiritual Development Policy. I understand that my child may be exposed to optional spiritual activities, and I have the right to opt my child out at any time.
- 
- *This acknowledgment does not require agreement with any particular belief system—only that you understand and accept the policy as stated.`,
+ Please sign below to acknowledge that you have read and understand this policy, and grant permission for your child to access on-site counseling support as described above.`,
  };
