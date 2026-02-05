@@ -2,7 +2,7 @@ import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Users, Calendar, FileText, Settings, LogOut } from "lucide-react";
+import { Users, Calendar, FileText, Settings, LogOut, Mail } from "lucide-react";
 
 const AdminDashboard = () => {
   const { user, signOut } = useAuth();
@@ -34,6 +34,13 @@ const AdminDashboard = () => {
       icon: FileText,
       color: "bg-amber-500/10 text-amber-500",
       href: "/admin/invoices",
+    },
+    {
+      title: "Sent History",
+      description: "View emailed invoices",
+      icon: Mail,
+      color: "bg-cyan-500/10 text-cyan-500",
+      href: "/admin/invoices?tab=sent",
     },
     {
       title: "Settings",

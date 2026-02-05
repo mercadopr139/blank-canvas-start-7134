@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { Link, useSearchParams } from "react-router-dom";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -10,7 +11,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import InvoicePreview from "@/components/admin/InvoicePreview";
 import ClientFormDialog from "@/components/admin/ClientFormDialog";
-import { ArrowLeft, FileText, Eye, CalendarDays, Plus, Pencil, Trash2 } from "lucide-react";
+import SentInvoicesTable from "@/components/admin/SentInvoicesTable";
+import { ArrowLeft, FileText, Eye, CalendarDays, Plus, Pencil, Trash2, Mail } from "lucide-react";
 import { format } from "date-fns";
 import type { Tables } from "@/integrations/supabase/types";
 type Client = Tables<"clients">;
@@ -83,6 +85,7 @@ export default function AdminInvoices() {
   const [editingClient, setEditingClient] = useState<Client | null>(null);
   const [deleteClientId, setDeleteClientId] = useState<string | null>(null);
   const [deleteInvoiceId, setDeleteInvoiceId] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState<string>("all");
   const autoGenerateTriggered = useRef(false);
   const {
     toast
@@ -99,6 +102,9 @@ export default function AdminInvoices() {
     if (clientId) setSelectedClientId(clientId);
     if (month) setSelectedMonth(month);
     if (year) setSelectedYear(year);
+    // Check for tab param
+    const tabParam = searchParams.get("tab");
+    if (tabParam === "sent") setActiveTab("sent");
   }, []);
   const fetchClients = async () => {
     const {
@@ -525,53 +531,80 @@ export default function AdminInvoices() {
       }} isLoading={isLoading} />}
 
         {/* Saved Invoices List */}
-        <div className="bg-background rounded-lg border shadow-sm">
-          <div className="p-4 border-b">
-            <h2 className="font-semibold">Saved Invoices</h2>
-          </div>
-          {invoices.length === 0 ? <div className="p-8 text-center text-muted-foreground">
-              No invoices yet. Generate and save your first invoice above.
-            </div> : <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Invoice #</TableHead>
-                  <TableHead>Client</TableHead>
-                  <TableHead>Period</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead className="text-right">Total</TableHead>
-                  <TableHead>Created</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {invoices.map(invoice => <TableRow key={invoice.id}>
-                    <TableCell className="font-medium">{invoice.invoice_number}</TableCell>
-                    <TableCell>{invoice.client_name}</TableCell>
-                    <TableCell>
-                      {MONTHS.find(m => m.value === String(invoice.invoice_month))?.label}{" "}
-                      {invoice.invoice_year}
-                    </TableCell>
-                    <TableCell>
-                      <Badge className={statusColors[invoice.status]}>
-                        {invoice.status.charAt(0).toUpperCase() + invoice.status.slice(1)}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="text-right">{formatCurrency(invoice.total)}</TableCell>
-                    <TableCell>{format(new Date(invoice.created_at), "MMM d, yyyy")}</TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex items-center justify-end gap-1">
-                        <Button variant="ghost" size="sm" onClick={() => handleViewInvoice(invoice)} title="View invoice">
-                          <Eye className="w-4 h-4" />
-                        </Button>
-                        <Button variant="ghost" size="sm" onClick={() => setDeleteInvoiceId(invoice.id)} className="text-destructive hover:text-destructive" title="Delete invoice">
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>)}
-              </TableBody>
-            </Table>}
-        </div>
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+          <TabsList className="mb-4 grid w-full max-w-md grid-cols-2">
+            <TabsTrigger value="all" className="gap-2">
+              <FileText className="w-4 h-4" />
+              All Invoices
+            </TabsTrigger>
+            <TabsTrigger value="sent" className="gap-2">
+              <Mail className="w-4 h-4" />
+              Sent History
+            </TabsTrigger>
+          </TabsList>
+          
+          <TabsContent value="all">
+            <div className="bg-background rounded-lg border shadow-sm">
+              <div className="p-4 border-b">
+                <h2 className="font-semibold">Saved Invoices</h2>
+              </div>
+              {invoices.length === 0 ? <div className="p-8 text-center text-muted-foreground">
+                  No invoices yet. Generate and save your first invoice above.
+                </div> : <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Invoice #</TableHead>
+                      <TableHead>Client</TableHead>
+                      <TableHead>Period</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead className="text-right">Total</TableHead>
+                      <TableHead>Created</TableHead>
+                      <TableHead className="text-right">Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {invoices.map(invoice => <TableRow key={invoice.id}>
+                        <TableCell className="font-medium">{invoice.invoice_number}</TableCell>
+                        <TableCell>{invoice.client_name}</TableCell>
+                        <TableCell>
+                          {MONTHS.find(m => m.value === String(invoice.invoice_month))?.label}{" "}
+                          {invoice.invoice_year}
+                        </TableCell>
+                        <TableCell>
+                          <Badge className={statusColors[invoice.status]}>
+                            {invoice.status.charAt(0).toUpperCase() + invoice.status.slice(1)}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-right">{formatCurrency(invoice.total)}</TableCell>
+                        <TableCell>{format(new Date(invoice.created_at), "MMM d, yyyy")}</TableCell>
+                        <TableCell className="text-right">
+                          <div className="flex items-center justify-end gap-1">
+                            <Button variant="ghost" size="sm" onClick={() => handleViewInvoice(invoice)} title="View invoice">
+                              <Eye className="w-4 h-4" />
+                            </Button>
+                            <Button variant="ghost" size="sm" onClick={() => setDeleteInvoiceId(invoice.id)} className="text-destructive hover:text-destructive" title="Delete invoice">
+                              <Trash2 className="w-4 h-4" />
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>)}
+                  </TableBody>
+                </Table>}
+            </div>
+          </TabsContent>
+          
+          <TabsContent value="sent">
+            <div className="bg-background rounded-lg border shadow-sm">
+              <div className="p-4 border-b">
+                <h2 className="font-semibold">Sent Invoice History</h2>
+                <p className="text-sm text-muted-foreground mt-1">
+                  View all invoices that have been emailed to partners
+                </p>
+              </div>
+              <SentInvoicesTable invoices={invoices} />
+            </div>
+          </TabsContent>
+        </Tabs>
       </main>
 
       {/* Add/Edit Client Modal */}
