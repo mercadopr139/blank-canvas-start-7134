@@ -16,6 +16,9 @@ import Vision from "./pages/Vision";
 import AdminIndex from "./pages/admin/AdminIndex";
 import AdminLogin from "./pages/admin/AdminLogin";
 import AdminDashboard from "./pages/admin/AdminDashboard";
+import AdminOperations from "./pages/admin/AdminOperations";
+import AdminSalesMarketing from "./pages/admin/AdminSalesMarketing";
+import AdminFinance from "./pages/admin/AdminFinance";
 import AdminClients from "./pages/admin/AdminClients";
 import AdminServiceCalendar from "./pages/admin/AdminServiceCalendar";
 import AdminInvoices from "./pages/admin/AdminInvoices";
@@ -49,6 +52,30 @@ const App = () => (
               element={
                 <ProtectedRoute requireAdmin>
                   <AdminDashboard />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin/operations"
+              element={
+                <ProtectedRoute requireAdmin>
+                  <AdminOperations />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin/sales-marketing"
+              element={
+                <ProtectedRoute requireAdmin>
+                  <AdminSalesMarketing />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin/finance"
+              element={
+                <ProtectedRoute requireAdmin>
+                  <AdminFinance />
                 </ProtectedRoute>
               }
             />
