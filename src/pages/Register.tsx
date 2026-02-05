@@ -15,7 +15,7 @@
  import { WAIVER_TEXTS } from "@/components/registration/waiverTexts";
  import nlaLogo from "@/assets/nla-logo.png";
  
- const SEX_OPTIONS = ["Male", "Female", "Other"] as const;
+const SEX_OPTIONS = ["Male", "Female"] as const;
  const RACE_OPTIONS = [
    "American Indian or Alaska Native",
    "Asian",
@@ -24,7 +24,6 @@
    "Native Hawaiian or Other Pacific Islander",
    "White",
    "Two or More Races",
-   "Other",
  ] as const;
  const SCHOOL_DISTRICTS = [
    "Cape May City",
@@ -38,7 +37,6 @@
    "West Cape May",
    "Dennis Township",
    "Woodbine",
-   "Other",
  ] as const;
  const BOXING_PROGRAMS = [
   "Junior Boxing (Ages 7-10)",

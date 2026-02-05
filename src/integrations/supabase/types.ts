@@ -456,8 +456,7 @@ export type Database = {
         | "Native Hawaiian or Other Pacific Islander"
         | "White"
         | "Two or More Races"
-        | "Other"
-      child_sex: "Male" | "Female" | "Other"
+      child_sex: "Male" | "Female"
       household_income:
         | "Under $25,000"
         | "$25,000 - $49,999"
@@ -628,9 +627,8 @@ export const Constants = {
         "Native Hawaiian or Other Pacific Islander",
         "White",
         "Two or More Races",
-        "Other",
       ],
-      child_sex: ["Male", "Female", "Other"],
+      child_sex: ["Male", "Female"],
       household_income: [
         "Under $25,000",
         "$25,000 - $49,999",
