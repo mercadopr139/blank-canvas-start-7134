@@ -2,7 +2,7 @@ import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Users, Calendar, FileText, Settings, LogOut, Mail, Briefcase, TrendingUp, DollarSign } from "lucide-react";
+import { Settings, LogOut, Briefcase, TrendingUp, DollarSign } from "lucide-react";
 
 const AdminDashboard = () => {
   const { user, signOut } = useAuth();
@@ -13,79 +13,29 @@ const AdminDashboard = () => {
     navigate("/admin/login", { replace: true });
   };
 
-  const operationsTiles = [
+  const folders = [
     {
-      title: "Clients",
-      description: "Manage client information",
-      icon: Users,
+      title: "Operations",
+      description: "Clients & Service Calendar",
+      icon: Briefcase,
       color: "bg-blue-500/10 text-blue-500",
-      href: "/admin/clients",
+      href: "/admin/operations",
     },
     {
-      title: "Service Calendar",
-      description: "View and manage schedules",
-      icon: Calendar,
-      color: "bg-green-500/10 text-green-500",
-      href: "/admin/service-calendar",
+      title: "Sales & Marketing",
+      description: "Outreach & Campaigns",
+      icon: TrendingUp,
+      color: "bg-pink-500/10 text-pink-500",
+      href: "/admin/sales-marketing",
     },
-  ];
-
-  const financeTiles = [
     {
-      title: "Invoices",
-      description: "Track billing and payments",
-      icon: FileText,
+      title: "Finance",
+      description: "Invoices & Payments",
+      icon: DollarSign,
       color: "bg-amber-500/10 text-amber-500",
-      href: "/admin/invoices",
-    },
-    {
-      title: "Sent History",
-      description: "View emailed invoices",
-      icon: Mail,
-      color: "bg-cyan-500/10 text-cyan-500",
-      href: "/admin/invoices?tab=sent",
+      href: "/admin/finance",
     },
   ];
-
-  const settingsTile = {
-    title: "Settings",
-    description: "Configure admin preferences",
-    icon: Settings,
-    color: "bg-purple-500/10 text-purple-500",
-    href: null,
-  };
-
-  const renderTile = (tile: typeof operationsTiles[0]) => {
-    const content = (
-      <Card
-        key={tile.title}
-        className={`${tile.href ? "cursor-pointer hover:shadow-md" : "opacity-75"} transition-shadow`}
-      >
-        <CardHeader>
-          <div className={`w-12 h-12 rounded-lg flex items-center justify-center ${tile.color} mb-2`}>
-            <tile.icon className="w-6 h-6" />
-          </div>
-          <CardTitle className="text-lg">{tile.title}</CardTitle>
-          <CardDescription>{tile.description}</CardDescription>
-        </CardHeader>
-        <CardContent>
-          {tile.href ? (
-            <p className="text-sm text-primary">Manage →</p>
-          ) : (
-            <p className="text-sm text-muted-foreground">Coming soon</p>
-          )}
-        </CardContent>
-      </Card>
-    );
-
-    return tile.href ? (
-      <div key={tile.title} onClick={() => navigate(tile.href!)}>
-        {content}
-      </div>
-    ) : (
-      <div key={tile.title}>{content}</div>
-    );
-  };
 
   return (
     <div className="min-h-screen bg-muted/30">
@@ -104,53 +54,42 @@ const AdminDashboard = () => {
       </header>
 
       {/* Main Content */}
-      <main className="container mx-auto px-4 py-8 space-y-10">
-        {/* Operations Section */}
-        <section>
-          <div className="flex items-center gap-3 mb-4">
-            <div className="w-10 h-10 rounded-lg bg-blue-500/10 flex items-center justify-center">
-              <Briefcase className="w-5 h-5 text-blue-500" />
-            </div>
-            <h2 className="text-xl font-semibold text-foreground">Operations</h2>
-          </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-            {operationsTiles.map(renderTile)}
-          </div>
-        </section>
+      <main className="container mx-auto px-4 py-8">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+          {folders.map((folder) => (
+            <Card
+              key={folder.title}
+              className="cursor-pointer hover:shadow-lg transition-all hover:scale-[1.02] min-h-[200px]"
+              onClick={() => navigate(folder.href)}
+            >
+              <CardHeader className="pb-4">
+                <div className={`w-14 h-14 rounded-xl flex items-center justify-center ${folder.color} mb-3`}>
+                  <folder.icon className="w-7 h-7" />
+                </div>
+                <CardTitle className="text-xl">{folder.title}</CardTitle>
+                <CardDescription className="text-base">{folder.description}</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <p className="text-sm text-primary font-medium">Open →</p>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
 
-        {/* Sales & Marketing Section */}
-        <section>
-          <div className="flex items-center gap-3 mb-4">
-            <div className="w-10 h-10 rounded-lg bg-pink-500/10 flex items-center justify-center">
-              <TrendingUp className="w-5 h-5 text-pink-500" />
-            </div>
-            <h2 className="text-xl font-semibold text-foreground">Sales & Marketing</h2>
-          </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-            <div className="border border-dashed border-muted-foreground/30 rounded-lg p-6 flex items-center justify-center min-h-[180px]">
+        {/* Settings Card */}
+        <div className="border-t border-border pt-6">
+          <Card className="opacity-75 max-w-xs">
+            <CardHeader>
+              <div className="w-12 h-12 rounded-lg flex items-center justify-center bg-purple-500/10 text-purple-500 mb-2">
+                <Settings className="w-6 h-6" />
+              </div>
+              <CardTitle className="text-lg">Settings</CardTitle>
+              <CardDescription>Configure admin preferences</CardDescription>
+            </CardHeader>
+            <CardContent>
               <p className="text-sm text-muted-foreground">Coming soon</p>
-            </div>
-          </div>
-        </section>
-
-        {/* Finance Section */}
-        <section>
-          <div className="flex items-center gap-3 mb-4">
-            <div className="w-10 h-10 rounded-lg bg-amber-500/10 flex items-center justify-center">
-              <DollarSign className="w-5 h-5 text-amber-500" />
-            </div>
-            <h2 className="text-xl font-semibold text-foreground">Finance</h2>
-          </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-            {financeTiles.map(renderTile)}
-          </div>
-        </section>
-
-        {/* Settings - Standalone */}
-        <div className="pt-4 border-t border-border">
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-            {renderTile(settingsTile)}
-          </div>
+            </CardContent>
+          </Card>
         </div>
       </main>
     </div>
