@@ -1,32 +1,41 @@
  import { useNavigate } from "react-router-dom";
  import { Button } from "@/components/ui/button";
  import { Card, CardContent } from "@/components/ui/card";
- import { ArrowLeft, Users, BarChart3, LucideIcon } from "lucide-react";
- 
- interface OperationsTile {
-   title: string;
-   description: string;
-   icon: LucideIcon;
-   color: string;
-   href: string;
- }
- 
- const tiles: OperationsTile[] = [
-   {
-     title: "Registrations",
-     description: "View and manage youth registrations",
-     icon: Users,
-     color: "bg-primary/10 text-primary",
-     href: "/admin/operations/registrations",
-   },
-   {
-     title: "Registration Analytics",
-     description: "Charts and insights from registrations",
-     icon: BarChart3,
-     color: "bg-primary/10 text-primary",
-     href: "/admin/operations/registration-analytics",
-   },
- ];
+import { ArrowLeft, Users, BarChart3, ClipboardList, LucideIcon } from "lucide-react";
+
+interface OperationsTile {
+  title: string;
+  description: string;
+  icon: LucideIcon;
+  color: string;
+  href: string;
+  external?: boolean;
+}
+
+const tiles: OperationsTile[] = [
+  {
+    title: "Registration Form",
+    description: "Public youth registration form",
+    icon: ClipboardList,
+    color: "bg-green-100 text-green-600",
+    href: "/register",
+    external: true,
+  },
+  {
+    title: "Registrations",
+    description: "View and manage youth registrations",
+    icon: Users,
+    color: "bg-primary/10 text-primary",
+    href: "/admin/operations/registrations",
+  },
+  {
+    title: "Registration Analytics",
+    description: "Charts and insights from registrations",
+    icon: BarChart3,
+    color: "bg-primary/10 text-primary",
+    href: "/admin/operations/registration-analytics",
+  },
+];
  
  const AdminOperations = () => {
    const navigate = useNavigate();
@@ -48,11 +57,11 @@
        <main className="container mx-auto px-4 py-8">
          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
            {tiles.map((tile) => (
-             <Card
-               key={tile.title}
-               className="cursor-pointer hover:shadow-md transition-shadow"
-               onClick={() => navigate(tile.href)}
-             >
+              <Card
+                key={tile.title}
+                className="cursor-pointer hover:shadow-md transition-shadow"
+                onClick={() => tile.external ? window.open(tile.href, '_blank') : navigate(tile.href)}
+              >
                <CardContent className="pt-6">
                  <div className="flex items-start gap-4">
                    <div className={`p-3 rounded-lg ${tile.color}`}>
