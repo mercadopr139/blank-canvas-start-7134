@@ -5,8 +5,19 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { AlertCircle, Lock } from "lucide-react";
 import Header from "@/components/layout/Header";
 import Footer from "@/components/layout/Footer";
+import OrientationStep from "@/components/orientation/OrientationStep";
 
 const SESSION_KEY = "rookie_orientation_unlocked";
+
+// Placeholder URLs - replace with actual YouTube links
+const COACH_INTRO_URL = "";
+const MISSION_URL = "";
+const HOUSE_RULES_INTRO_URL = "";
+const HOUSE_RULES_TEST_URL = "#"; // External link placeholder
+const BIG3_URL = "";
+const WRAP_URL = "";
+const PUNCH_CODE_URL = "";
+const SIGNIN_URL = "";
 
 const RookieOrientation = () => {
   const [isUnlocked, setIsUnlocked] = useState(false);
@@ -94,17 +105,92 @@ const RookieOrientation = () => {
   }
 
   return (
-    <div className="min-h-screen flex flex-col bg-background">
+    <div className="min-h-screen flex flex-col bg-black">
       <Header />
-      <main className="flex-1 container py-12 md:py-16 px-4">
-        <h1 className="text-3xl md:text-4xl font-bold text-foreground mb-4">
-          Rookie Orientation Day
-        </h1>
-        <p className="text-muted-foreground text-lg">
-          Content goes here.
-        </p>
+      <main className="flex-1">
+        {/* Hero Title */}
+        <div className="py-12 md:py-16 text-center">
+          <h1 className="text-3xl md:text-5xl lg:text-6xl font-black text-white tracking-tight">
+            ROOKIE ORIENTATION DAY
+          </h1>
+        </div>
+
+        {/* Steps Container */}
+        <div className="max-w-[1100px] mx-auto px-4 pb-16 md:pb-24">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-8">
+            {/* STEP 1: Registration */}
+            <OrientationStep
+              stepNumber={1}
+              title="REGISTRATION"
+              buttonLabel="REGISTER NOW"
+              buttonLink="/register"
+            />
+
+            {/* STEP 2: Coach Mercado Intro */}
+            <OrientationStep
+              stepNumber={2}
+              title="COACH MERCADO INTRO"
+              videoUrl={COACH_INTRO_URL}
+            />
+
+            {/* STEP 3: Mission Statement */}
+            <OrientationStep
+              stepNumber={3}
+              title="MISSION STATEMENT"
+              videoUrl={MISSION_URL}
+            />
+
+            {/* STEP 4: House Rules Intro & Test */}
+            <OrientationStep
+              stepNumber={4}
+              title="HOUSE RULES INTRO & TEST"
+              videoUrl={HOUSE_RULES_INTRO_URL}
+              secondaryButtonLabel="HOUSE RULES"
+              secondaryButtonLink="#step-5"
+            />
+
+            {/* STEP 5: House Rules Test */}
+            <OrientationStep
+              stepNumber={5}
+              title="HOUSE RULES TEST"
+              buttonLabel="OPEN TEST"
+              buttonLink={HOUSE_RULES_TEST_URL}
+              isExternal={true}
+            />
+
+            {/* STEP 6: The Big 3! */}
+            <OrientationStep
+              stepNumber={6}
+              title="THE BIG 3!"
+              videoUrl={BIG3_URL}
+            />
+
+            {/* STEP 7: Wrapping Your Hands */}
+            <OrientationStep
+              stepNumber={7}
+              title="WRAPPING YOUR HANDS"
+              videoUrl={WRAP_URL}
+            />
+
+            {/* STEP 8: Punch Code */}
+            <OrientationStep
+              stepNumber={8}
+              title="PUNCH CODE"
+              videoUrl={PUNCH_CODE_URL}
+            />
+
+            {/* STEP 9: Congrats */}
+            <div className="md:col-span-2">
+              <OrientationStep
+                stepNumber={9}
+                title="CONGRATS! YOU'RE READY TO SIGN-IN!"
+                videoUrl={SIGNIN_URL}
+              />
+            </div>
+          </div>
+        </div>
       </main>
-      <Footer />
+      <Footer className="bg-neutral-950 border-neutral-800" />
     </div>
   );
 };
