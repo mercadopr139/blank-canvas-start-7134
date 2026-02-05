@@ -183,7 +183,7 @@ const ProgramsExtrasSection = () => {
           { src: excursionOmariJones, alt: "Olympic Bronze Medalist, Omari Jones", caption: "Olympic Bronze Medalist, Omari Jones" },
           { src: excursionLaserTag, alt: "Laser Tag Fun", caption: "Laser Tag Fun" },
           { src: excursionStocktonDinner, alt: "Team Night Dinner at Stockton Visit", caption: "Team Night Dinner at Stockton Visit" },
-          { src: excursionElainesDinner, alt: "Team Dinner at Elaine's, Cape May", caption: "Team Dinner at Elaine's, Cape May" },
+          { src: excursionElainesDinner, alt: "New Year's Dinner at Elaine's", caption: "New Year's Dinner at Elaine's" },
         ],
         buttonLabel: "Back to Programs",
       },
