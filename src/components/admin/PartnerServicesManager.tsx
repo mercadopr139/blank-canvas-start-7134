@@ -31,7 +31,7 @@
    { value: "per_day", label: "Per Day" },
    { value: "per_hour", label: "Per Hour" },
    { value: "sponsorship", label: "Sponsorship" },
-   { value: "other_service", label: "Other Service" },
+  { value: "other_service", label: "Other" },
  ];
  
  export default function PartnerServicesManager({
