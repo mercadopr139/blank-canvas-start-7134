@@ -8,7 +8,7 @@
  import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
  import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
  import { useToast } from "@/hooks/use-toast";
- import { CheckCircle2, Loader2 } from "lucide-react";
+ import { CheckCircle2, Loader2, Upload } from "lucide-react";
  import Header from "@/components/layout/Header";
  import Footer from "@/components/layout/Footer";
  import WaiverSection from "@/components/registration/WaiverSection";
@@ -84,6 +84,8 @@
    transportation_excursions_waiver_name: string;
    media_consent_name: string;
    spiritual_development_policy_name: string;
+   counseling_services_name: string;
+   final_signature_name: string;
  }
  
  interface Signatures {
@@ -92,6 +94,7 @@
    transportation_excursions: Blob | null;
    media_consent: Blob | null;
    spiritual_development: Blob | null;
+   counseling_services: Blob | null;
  }
  
  interface Acknowledgements {
@@ -100,6 +103,7 @@
    transportation_excursions: boolean;
    media_consent: boolean;
    spiritual_development: boolean;
+   counseling_services: boolean;
  }
  
  const Register = () => {
@@ -107,6 +111,8 @@
    const { toast } = useToast();
    const [isSubmitting, setIsSubmitting] = useState(false);
    const [isSubmitted, setIsSubmitted] = useState(false);
+   const [childHeadshot, setChildHeadshot] = useState<File | null>(null);
+   const [headshotPreview, setHeadshotPreview] = useState<string | null>(null);
    const [formData, setFormData] = useState<FormData>({
      child_first_name: "",
      child_last_name: "",
@@ -134,6 +140,8 @@
      transportation_excursions_waiver_name: "",
      media_consent_name: "",
      spiritual_development_policy_name: "",
+     counseling_services_name: "",
+     final_signature_name: "",
    });
    const [signatures, setSignatures] = useState<Signatures>({
      medical_consent: null,
@@ -141,6 +149,7 @@
      transportation_excursions: null,
      media_consent: null,
      spiritual_development: null,
+     counseling_services: null,
    });
    const [acknowledgements, setAcknowledgements] = useState<Acknowledgements>({
      medical_consent: false,
@@ -148,6 +157,7 @@
      transportation_excursions: false,
      media_consent: false,
      spiritual_development: false,
+     counseling_services: false,
    });
  
    const handleInputChange = (field: keyof FormData, value: string) => {
@@ -177,6 +187,33 @@
      return urlData.publicUrl;
    };
  
+   const handleHeadshotChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+     const file = e.target.files?.[0];
+     if (file) {
+       setChildHeadshot(file);
+       const reader = new FileReader();
+       reader.onloadend = () => {
+         setHeadshotPreview(reader.result as string);
+       };
+       reader.readAsDataURL(file);
+     }
+   };
+ 
+   const uploadHeadshot = async (file: File): Promise<string> => {
+     const fileName = `headshot_${Date.now()}_${Math.random().toString(36).substring(7)}.${file.name.split('.').pop()}`;
+     const { data, error } = await supabase.storage
+       .from("registration-signatures")
+       .upload(fileName, file, { contentType: file.type });
+     
+     if (error) throw error;
+     
+     const { data: urlData } = supabase.storage
+       .from("registration-signatures")
+       .getPublicUrl(data.path);
+     
+     return urlData.publicUrl;
+   };
+ 
    const validateForm = (): string | null => {
      const requiredFields: (keyof FormData)[] = [
        "child_first_name", "child_last_name", "child_sex", "child_date_of_birth",
@@ -184,7 +221,8 @@
        "parent_email", "child_primary_address", "child_school_district", "child_boxing_program",
        "adults_in_household", "siblings_in_household", "household_income_range",
        "medical_consent_name", "liability_waiver_name", "transportation_excursions_waiver_name",
-       "media_consent_name", "spiritual_development_policy_name"
+       "media_consent_name", "spiritual_development_policy_name", "counseling_services_name",
+       "final_signature_name"
      ];
  
      for (const field of requiredFields) {
@@ -195,7 +233,7 @@
  
      const requiredSignatures: (keyof Signatures)[] = [
        "medical_consent", "liability_waiver", "transportation_excursions",
-       "media_consent", "spiritual_development"
+       "media_consent", "spiritual_development", "counseling_services"
      ];
  
      for (const sig of requiredSignatures) {
@@ -208,6 +246,10 @@
        if (!acknowledgements[ack]) {
          return `Please acknowledge all waivers by checking the boxes.`;
        }
+     }
+ 
+     if (!childHeadshot) {
+       return "Please upload a headshot photo of your child.";
      }
  
      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -236,17 +278,22 @@
          liabilitySigUrl,
          transportSigUrl,
          mediaSigUrl,
-         spiritualSigUrl
+         spiritualSigUrl,
+         counselingSigUrl
        ] = await Promise.all([
          uploadSignature(signatures.medical_consent!, "medical"),
          uploadSignature(signatures.liability_waiver!, "liability"),
          uploadSignature(signatures.transportation_excursions!, "transport"),
          uploadSignature(signatures.media_consent!, "media"),
          uploadSignature(signatures.spiritual_development!, "spiritual"),
+         uploadSignature(signatures.counseling_services!, "counseling"),
        ]);
  
+       // Upload headshot
+       const headshotUrl = await uploadHeadshot(childHeadshot!);
+ 
        // Insert registration
-       const { error } = await supabase.from("youth_registrations").insert({
+       const { error } = await (supabase.from("youth_registrations") as any).insert({
          submission_date: new Date().toISOString().split("T")[0],
          child_first_name: formData.child_first_name.trim(),
          child_last_name: formData.child_last_name.trim(),
@@ -279,6 +326,10 @@
          media_consent_signature_url: mediaSigUrl,
          spiritual_development_policy_name: formData.spiritual_development_policy_name.trim(),
          spiritual_development_policy_signature_url: spiritualSigUrl,
+         counseling_services_name: formData.counseling_services_name.trim(),
+         counseling_services_signature_url: counselingSigUrl,
+         child_headshot_url: headshotUrl,
+         final_signature_name: formData.final_signature_name.trim(),
        });
  
        if (error) throw error;
@@ -460,12 +511,12 @@
              </CardHeader>
              <CardContent className="space-y-4">
                <div>
-                 <Label htmlFor="child_primary_address">Primary Address *</Label>
+                 <Label htmlFor="child_primary_address">Child's Primary Address *</Label>
                  <Textarea
                    id="child_primary_address"
                    value={formData.child_primary_address}
                    onChange={(e) => handleInputChange("child_primary_address", e.target.value)}
-                   placeholder="Street, City, State, ZIP"
+                   placeholder="MUST BE FULL MAILING ADDRESS"
                    required
                  />
                </div>
@@ -480,7 +531,7 @@
                    </Select>
                  </div>
                  <div>
-                   <Label htmlFor="child_grade_level">Grade Level (optional)</Label>
+                   <Label htmlFor="child_grade_level">Child's Grade Level</Label>
                    <Input
                      id="child_grade_level"
                      type="number"
@@ -488,7 +539,9 @@
                      max="12"
                      value={formData.child_grade_level}
                      onChange={(e) => handleInputChange("child_grade_level", e.target.value)}
+                     placeholder="Use # Only (Ex: 9 for ninth grade)"
                    />
+                   <p className="text-xs text-muted-foreground mt-1">Skip if not applicable</p>
                  </div>
                </div>
              </CardContent>
@@ -512,7 +565,7 @@
                </div>
                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                  <div>
-                   <Label htmlFor="adults_in_household">Adults in Household *</Label>
+                   <Label htmlFor="adults_in_household">Adult(s) in Child's primary household *</Label>
                    <Input
                      id="adults_in_household"
                      type="number"
@@ -523,7 +576,7 @@
                    />
                  </div>
                  <div>
-                   <Label htmlFor="siblings_in_household">Siblings in Household *</Label>
+                   <Label htmlFor="siblings_in_household">How many siblings in Child's primary household? *</Label>
                    <Input
                      id="siblings_in_household"
                      type="number"
@@ -541,11 +594,11 @@
            <Card>
              <CardHeader>
                <CardTitle>5. Funding Questions</CardTitle>
-               <CardDescription>This helps us seek grants and funding</CardDescription>
+               <CardDescription>This information is completely confidential and is used for data collection.</CardDescription>
              </CardHeader>
              <CardContent className="space-y-4">
                <div>
-                 <Label htmlFor="household_income_range">Household Income Range *</Label>
+                 <Label htmlFor="household_income_range">For Program funding purposes, please indicate which below reflects your total household income. *</Label>
                  <Select value={formData.household_income_range} onValueChange={(v) => handleInputChange("household_income_range", v)}>
                    <SelectTrigger><SelectValue placeholder="Select..." /></SelectTrigger>
                    <SelectContent>
@@ -554,13 +607,14 @@
                  </Select>
                </div>
                <div>
-                 <Label htmlFor="free_or_reduced_lunch">Does your child receive free or reduced lunch? (optional)</Label>
+                 <Label htmlFor="free_or_reduced_lunch">For Program funding purposes, does your Child receive free or reduced lunch at school?</Label>
                  <Select value={formData.free_or_reduced_lunch} onValueChange={(v) => handleInputChange("free_or_reduced_lunch", v)}>
                    <SelectTrigger><SelectValue placeholder="Select..." /></SelectTrigger>
                    <SelectContent>
                      {LUNCH_OPTIONS.map(opt => <SelectItem key={opt} value={opt}>{opt}</SelectItem>)}
                    </SelectContent>
                  </Select>
+                 <p className="text-xs text-muted-foreground mt-1">Skip if not applicable</p>
                </div>
              </CardContent>
            </Card>
@@ -573,22 +627,28 @@
              </CardHeader>
              <CardContent className="space-y-4">
                <div>
-                 <Label htmlFor="allergies">Allergies</Label>
+                 <Label htmlFor="allergies">What allergies does your child have?</Label>
                  <Textarea
                    id="allergies"
                    value={formData.allergies}
                    onChange={(e) => handleInputChange("allergies", e.target.value)}
-                   placeholder="List any allergies..."
+                   placeholder="If none, please skip question."
                  />
+                 <p className="text-xs text-muted-foreground mt-1">
+                   If your child requires an epinephrine injection, <strong>YOU MUST PROVIDE</strong> No Limits Academy Coaches with an up-to-date epi-pen that will remain at the No Limits Academy facility. NO EXCEPTIONS.
+                 </p>
                </div>
                <div>
-                 <Label htmlFor="asthma_inhaler_info">Asthma / Inhaler Information</Label>
+                 <Label htmlFor="asthma_inhaler_info">If your child has asthma, please fill in the following information.</Label>
                  <Textarea
                    id="asthma_inhaler_info"
                    value={formData.asthma_inhaler_info}
                    onChange={(e) => handleInputChange("asthma_inhaler_info", e.target.value)}
-                   placeholder="Describe any asthma conditions or inhaler needs..."
+                   placeholder="Name of the inhaler your child takes prior to strenuous exercise. If your child does not have asthma, please skip question."
                  />
+                 <p className="text-xs text-muted-foreground mt-1">
+                   <strong>YOU MUST PROVIDE</strong> an inhaler that will remain at the No Limits Academy facility. NO EXCEPTIONS.
+                 </p>
                </div>
              </CardContent>
            </Card>
@@ -597,16 +657,16 @@
            <Card>
              <CardHeader>
                <CardTitle>7. Coach Notes</CardTitle>
-               <CardDescription>Anything else we should know?</CardDescription>
+               <CardDescription>Skip if not applicable</CardDescription>
              </CardHeader>
              <CardContent>
                <div>
-                 <Label htmlFor="important_child_notes">Important Notes About Your Child</Label>
+                 <Label htmlFor="important_child_notes">Please share any important information about your child that would help our coaches support them.</Label>
                  <Textarea
                    id="important_child_notes"
                    value={formData.important_child_notes}
                    onChange={(e) => handleInputChange("important_child_notes", e.target.value)}
-                   placeholder="Special needs, behavioral notes, goals, etc."
+                   placeholder="Ex: Recent life changes, social challenges, medical needs, etc."
                    rows={4}
                  />
                </div>
@@ -674,6 +734,71 @@
                  acknowledged={acknowledgements.spiritual_development}
                  onAcknowledgeChange={(v) => handleAcknowledgementChange("spiritual_development", v)}
                />
+
+               {/* Counseling Services Notice & Consent */}
+               <WaiverSection
+                 title="Counseling Services Notice & Consent"
+                 text={WAIVER_TEXTS.counseling_services}
+                 nameValue={formData.counseling_services_name}
+                 onNameChange={(v) => handleInputChange("counseling_services_name", v)}
+                 onSignatureChange={(blob) => handleSignatureChange("counseling_services", blob)}
+                 acknowledged={acknowledgements.counseling_services}
+                 onAcknowledgeChange={(v) => handleAcknowledgementChange("counseling_services", v)}
+               />
+             </CardContent>
+           </Card>
+ 
+           {/* Section 9: Final Confirmation */}
+           <Card>
+             <CardHeader>
+               <CardTitle>9. Final Confirmation</CardTitle>
+               <CardDescription>Please complete these final items</CardDescription>
+             </CardHeader>
+             <CardContent className="space-y-6">
+               {/* Typed Name Confirmation */}
+               <div>
+                 <Label htmlFor="final_signature_name">
+                   Please TYPE the FIRST and LAST name used in the Signatures above *
+                 </Label>
+                 <Input
+                   id="final_signature_name"
+                   value={formData.final_signature_name}
+                   onChange={(e) => handleInputChange("final_signature_name", e.target.value)}
+                   placeholder="Enter your full name as signed above"
+                   required
+                 />
+               </div>
+ 
+               {/* Child Headshot Upload */}
+               <div>
+                 <Label>For safety & security, upload a picture (headshot) of your child *</Label>
+                 <div className="mt-2">
+                   <div className="flex items-center gap-4">
+                     <label className="flex items-center gap-2 px-4 py-2 border border-input rounded-md cursor-pointer hover:bg-muted transition-colors">
+                       <Upload className="w-4 h-4" />
+                       <span className="text-sm">Choose Photo</span>
+                       <input
+                         type="file"
+                         accept="image/*"
+                         onChange={handleHeadshotChange}
+                         className="hidden"
+                       />
+                     </label>
+                     {childHeadshot && (
+                       <span className="text-sm text-muted-foreground">{childHeadshot.name}</span>
+                     )}
+                   </div>
+                   {headshotPreview && (
+                     <div className="mt-4">
+                       <img
+                         src={headshotPreview}
+                         alt="Child headshot preview"
+                         className="w-32 h-32 object-cover rounded-lg border border-border"
+                       />
+                     </div>
+                   )}
+                 </div>
+               </div>
              </CardContent>
            </Card>
  
