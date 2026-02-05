@@ -118,7 +118,7 @@ export default function ServiceEntryModal({
 
   // Determine the active rate source (selected service or client default)
   const activeService = useMemo(() => {
-    if (selectedServiceId && clientServices.length > 0) {
+    if (selectedServiceId && selectedServiceId !== "__default__" && clientServices.length > 0) {
       const service = clientServices.find(s => s.id === selectedServiceId);
       if (service) {
         return {
@@ -157,14 +157,14 @@ export default function ServiceEntryModal({
         // Try to match existing log to a service
         if (existingLog.service_type && clientServices.length > 0) {
           const matchingService = clientServices.find(s => s.service_name === existingLog.service_type);
-          setSelectedServiceId(matchingService?.id || "");
+          setSelectedServiceId(matchingService?.id || "__default__");
         } else {
-          setSelectedServiceId("");
+          setSelectedServiceId("__default__");
         }
       } else {
         // Adding new entry - select first service if available
         setIsAddingNew(true);
-        const defaultServiceId = clientServices.length > 0 ? clientServices[0].id : "";
+        const defaultServiceId = clientServices.length > 0 ? clientServices[0].id : "__default__";
         setSelectedServiceId(defaultServiceId);
         const defaultRateType = clientServices.length > 0 
           ? clientServices[0].rate_type 
@@ -204,7 +204,7 @@ export default function ServiceEntryModal({
     setIsAddingNew(true);
     if (onEditLog) onEditLog(null as any);
     // Reset form to defaults
-    const defaultServiceId = clientServices.length > 0 ? clientServices[0].id : "";
+    const defaultServiceId = clientServices.length > 0 ? clientServices[0].id : "__default__";
     setSelectedServiceId(defaultServiceId);
     const defaultRateType = clientServices.length > 0 
       ? clientServices[0].rate_type 
@@ -431,9 +431,9 @@ export default function ServiceEntryModal({
                   <SelectValue placeholder="Select a service" />
                 </SelectTrigger>
                 <SelectContent>
-                <SelectItem value="">
-                  (Use Partner Default)
-                </SelectItem>
+                  <SelectItem value="__default__">
+                    (Use Partner Default)
+                  </SelectItem>
                   {clientServices.map((service) => (
                     <SelectItem key={service.id} value={service.id}>
                       {service.service_name} — {formatCurrency(service.rate_amount)}
