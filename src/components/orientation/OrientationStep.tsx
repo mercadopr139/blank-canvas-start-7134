@@ -30,9 +30,10 @@ const YouTubeEmbed = ({ url }: YouTubeEmbedProps) => {
   return (
     <div className="aspect-video w-full">
       <iframe
-        src={`https://www.youtube.com/embed/${videoId}`}
-        title="YouTube video"
-        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+        src={`https://www.youtube-nocookie.com/embed/${videoId}`}
+        title="YouTube video player"
+        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+        referrerPolicy="strict-origin-when-cross-origin"
         allowFullScreen
         className="w-full h-full rounded-lg"
       />
