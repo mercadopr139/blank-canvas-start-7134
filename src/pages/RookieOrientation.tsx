@@ -58,8 +58,8 @@ const RookieOrientation = () => {
           <div className="w-full max-w-sm">
             <div className="border border-border rounded-lg p-6 md:p-8 shadow-lg text-primary-foreground bg-primary">
               <div className="flex flex-col items-center text-center mb-6">
-                <div className="w-14 h-14 rounded-full bg-muted flex items-center justify-center mb-4">
-                  <Lock className="w-7 h-7 text-primary" />
+                <div className="w-14 h-14 rounded-full bg-white flex items-center justify-center mb-4">
+                  <Lock className="w-7 h-7 text-black" />
                 </div>
                 <h1 className="text-xl md:text-2xl font-bold text-primary-foreground">
                   Rookie Orientation
