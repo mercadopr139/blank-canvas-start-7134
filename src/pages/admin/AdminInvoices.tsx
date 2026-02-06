@@ -261,6 +261,18 @@ export default function AdminInvoices() {
         toast({
           title: "Invoice saved as draft"
         });
+
+        // Clear service logs after invoice is created (invoice captured the totals)
+        const startDate = `${year}-${String(month).padStart(2, "0")}-01`;
+        const endDate = new Date(year, month, 0).toISOString().split("T")[0];
+        await supabase
+          .from("service_logs")
+          .delete()
+          .eq("client_id", selectedClientId)
+          .gte("service_date", startDate)
+          .lte("service_date", endDate);
+        
+        setServiceLogs([]);
       }
       fetchInvoices();
     } catch (error: any) {
