@@ -243,11 +243,7 @@ const ImpactStory = () => {
                         "Lower Township Police Department",
                         "Middle Township Police Department",
                         "North Wildwood Police Department",
-                        "Ocean City Police Department",
                         "Police Benevolent Association (Local PBA 59)",
-                        "Sea Isle City Police Department",
-                        "Stone Harbor Police Department",
-                        "West Wildwood Police Department",
                         "Wildwood Crest Police Department",
                         "Wildwood Police Department",
                       ].sort((a, b) => a.localeCompare(b));
