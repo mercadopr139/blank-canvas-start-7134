@@ -71,18 +71,18 @@ export default function AdminServiceCalendar() {
   // Keep latest values for cleanup (avoid stale closures)
   const selectedClientIdRef = useRef<string>("");
   const currentMonthRef = useRef<Date>(new Date());
-  const navigatingToPreviewRef = useRef(false);
+  const navigatingAwayRef = useRef(false);
 
   useEffect(() => {
     selectedClientIdRef.current = selectedClientId;
     currentMonthRef.current = currentMonth;
   }, [selectedClientId, currentMonth]);
 
-  // Auto-clear service days when leaving this screen WITHOUT generating preview.
-  // (When generating preview, the invoices screen clears them after reading them.)
+  // Auto-clear service days when leaving this screen (unmount).
+  // Skip if we're navigating to Generate Preview (it handles its own clear).
   useEffect(() => {
     return () => {
-      if (navigatingToPreviewRef.current) return;
+      if (navigatingAwayRef.current) return;
 
       const clientId = selectedClientIdRef.current;
       const monthDate = currentMonthRef.current;
@@ -239,17 +239,20 @@ export default function AdminServiceCalendar() {
     }
   };
 
-  const handleBackToDashboard = async () => {
-    // Clear first so the next time you open the calendar you don’t see stale boxes.
+  const handleBack = async () => {
+    // Mark that we're navigating away so unmount cleanup doesn't double-delete
+    navigatingAwayRef.current = true;
+    // Clear service days first so the next time you open the calendar you don't see stale boxes.
     try {
       await clearServiceDaysForCurrentMonth();
     } finally {
-      navigate("/admin/dashboard");
+      navigate("/admin/invoices");
     }
   };
 
   const handleGeneratePreview = () => {
-    navigatingToPreviewRef.current = true;
+    // Mark that we're navigating away so unmount cleanup doesn't run
+    navigatingAwayRef.current = true;
     const month = currentMonth.getMonth() + 1;
     const year = currentMonth.getFullYear();
     navigate(
@@ -294,9 +297,9 @@ export default function AdminServiceCalendar() {
       <header className="bg-background border-b">
         <div className="container mx-auto px-4 py-4 flex items-center justify-between">
           <div className="flex items-center gap-4">
-            <Button variant="ghost" size="sm" onClick={handleBackToDashboard}>
+            <Button variant="ghost" size="sm" onClick={handleBack}>
               <ArrowLeft className="w-4 h-4 mr-2" />
-              Dashboard
+              Back
             </Button>
             <div className="flex items-center gap-2">
               <Calendar className="w-5 h-5 text-primary" />
