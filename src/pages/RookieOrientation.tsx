@@ -6,14 +6,14 @@ import { AlertCircle, Lock } from "lucide-react";
 import Header from "@/components/layout/Header";
 import Footer from "@/components/layout/Footer";
 import OrientationStep from "@/components/orientation/OrientationStep";
+import OrientationStepGated from "@/components/orientation/OrientationStepGated";
 import { Step1DoneBadge } from "@/components/orientation/Step1DoneBadge";
 
 const SESSION_KEY = "rookie_orientation_unlocked";
 
 // Storage keys for localStorage persistence
 const STORAGE_KEY_PREFIX = "rookie_orientation_video_";
-const HOUSE_RULES_TEST_URL = "#"; // External link placeholder
-
+const HOUSE_RULES_TEST_URL = "/house-rules-test";
 const RookieOrientation = () => {
   const [isUnlocked, setIsUnlocked] = useState(false);
   const [code, setCode] = useState("");
@@ -150,25 +150,25 @@ const RookieOrientation = () => {
               title="HOUSE RULES TEST"
               buttonLabel="OPEN TEST"
               buttonLink={HOUSE_RULES_TEST_URL}
-              isExternal={true}
+              isExternal={false}
             />
 
-            {/* STEP 6: The Big 3! */}
-            <OrientationStep
+            {/* STEP 6: The Big 3! (Gated - requires passing House Rules Test) */}
+            <OrientationStepGated
               stepNumber={6}
               title="THE BIG 3!"
               videoStorageKey={`${STORAGE_KEY_PREFIX}step_6`}
             />
 
             {/* STEP 7: Wrapping Your Hands */}
-            <OrientationStep
+            <OrientationStepGated
               stepNumber={7}
               title="WRAPPING YOUR HANDS"
               videoStorageKey={`${STORAGE_KEY_PREFIX}step_7`}
             />
 
             {/* STEP 8: Punch Code */}
-            <OrientationStep
+            <OrientationStepGated
               stepNumber={8}
               title="PUNCH CODE"
               videoStorageKey={`${STORAGE_KEY_PREFIX}step_8`}
@@ -176,7 +176,7 @@ const RookieOrientation = () => {
 
             {/* STEP 9: Congrats */}
             <div className="md:col-span-2">
-              <OrientationStep
+              <OrientationStepGated
                 stepNumber={9}
                 title="CONGRATS! YOU'RE READY TO SIGN-IN!"
                 videoStorageKey={`${STORAGE_KEY_PREFIX}step_9`}
