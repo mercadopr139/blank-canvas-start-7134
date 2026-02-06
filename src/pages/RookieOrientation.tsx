@@ -20,7 +20,7 @@ const VIDEO_IDS = {
   step6: "k50NkTgNlKs",  // The Big 3
   step7: "3iJ_mTmpcFQ",  // Wrapping Your Hands
   step8: "O2cYqka9-js",  // Punch Code
-  step9: "TDMJNvqIK9P",  // Congrats - Sign In (update if different)
+  step9: "TDWUNwJK3Rg",  // Congrats - Sign In
 };
 
 const RookieOrientation = () => {
