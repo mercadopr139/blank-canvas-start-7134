@@ -11,7 +11,8 @@ import DailyRhythmSection from "@/components/sections/DailyRhythmSection";
 import ImpactSection from "@/components/sections/ImpactSection";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { MessageCircle, Users } from "lucide-react";
+import { MessageCircle } from "lucide-react";
+import BoxingGloveIcon from "@/components/icons/BoxingGloveIcon";
 import ContactModal from "@/components/contact/ContactModal";
 const Index = () => {
   const [scheduleOpen, setScheduleOpen] = useState(false);
@@ -47,7 +48,7 @@ const Index = () => {
             </p>
             <Button asChild size="lg" className="bg-white hover:bg-neutral-100 text-black font-semibold">
               <Link to="/rookie-orientation">
-                <Users className="mr-2 h-5 w-5" />
+                <BoxingGloveIcon className="mr-2 h-5 w-5" />
                 Rookie Orientation
               </Link>
             </Button>
