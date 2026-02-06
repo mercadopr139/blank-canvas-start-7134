@@ -188,7 +188,9 @@ export default function AdminServiceCalendar() {
   const handleGeneratePreview = () => {
     const month = currentMonth.getMonth() + 1;
     const year = currentMonth.getFullYear();
-    navigate(`/admin/invoices?client=${selectedClientId}&month=${month}&year=${year}&autoGenerate=true`);
+    navigate(
+      `/admin/invoices?client=${selectedClientId}&month=${month}&year=${year}&autoGenerate=true&clearServiceDays=true`,
+    );
   };
 
   const handleClearAllServiceDays = async () => {
