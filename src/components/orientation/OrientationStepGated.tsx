@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { AlertCircle } from "lucide-react";
+import { AlertCircle, MessageCircle } from "lucide-react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { YouTubeEmbed } from "@/components/orientation/YouTubeEmbed";
@@ -71,8 +71,11 @@ const OrientationStepGated = ({
               <div className="aspect-video bg-neutral-800 rounded-lg flex items-center justify-center border border-neutral-700">
                 <div className="text-center p-4">
                   <div className="w-12 h-12 rounded-full bg-neutral-700 flex items-center justify-center mx-auto mb-3">
-                    <AlertCircle className="w-6 h-6 text-neutral-400" />
+                    <MessageCircle className="w-6 h-6 text-neutral-400" />
                   </div>
+                  <p className="text-white font-semibold text-sm mb-1">
+                    Message from Coach Mercado
+                  </p>
                   <p className="text-neutral-400 text-sm">
                     Complete the House Rules Test first
                   </p>
