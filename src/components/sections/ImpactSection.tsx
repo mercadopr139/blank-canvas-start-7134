@@ -51,6 +51,61 @@ const ImpactSection = () => {
               <Link to="/gym-buddies">Gym Buddies</Link>
             </Button>
           </div>
+
+          {/* Awards & Recognition */}
+          <div className="mt-12 rounded-2xl bg-white/5 p-6 ring-1 ring-white/10">
+            <h3 className="text-lg font-bold text-foreground">
+              Awards & Community Recognition
+            </h3>
+            <p className="mt-2 text-sm leading-relaxed text-foreground/70">
+              No Limits Academy has been recognized by local, state, and national
+              organizations for our youth impact, mentorship, and community leadership.
+            </p>
+            <ul className="mt-5 space-y-3">
+              <li className="flex items-start gap-3">
+                <span className="mt-1 inline-block h-2.5 w-2.5 rounded-full bg-green-500" />
+                <span className="text-sm leading-relaxed text-foreground/80">
+                  2023 Middle Matters Civic Recognition Award
+                </span>
+              </li>
+              <li className="flex items-start gap-3">
+                <span className="mt-1 inline-block h-2.5 w-2.5 rounded-full bg-green-500" />
+                <span className="text-sm leading-relaxed text-foreground/80">
+                  United States House of Representatives — Congressional Proclamation
+                </span>
+              </li>
+              <li className="flex items-start gap-3">
+                <span className="mt-1 inline-block h-2.5 w-2.5 rounded-full bg-green-500" />
+                <span className="text-sm leading-relaxed text-foreground/80">
+                  USA Boxing Mid-Atlantic Boxing — George Hill Humanitarian Award
+                </span>
+              </li>
+              <li className="flex items-start gap-3">
+                <span className="mt-1 inline-block h-2.5 w-2.5 rounded-full bg-green-500" />
+                <span className="text-sm leading-relaxed text-foreground/80">
+                  BCMF — Be Kind Award Recipient
+                </span>
+              </li>
+              <li className="flex items-start gap-3">
+                <span className="mt-1 inline-block h-2.5 w-2.5 rounded-full bg-green-500" />
+                <span className="text-sm leading-relaxed text-foreground/80">
+                  CMC Chamber of Commerce — Non-Profit of the Year Award
+                </span>
+              </li>
+              <li className="flex items-start gap-3">
+                <span className="mt-1 inline-block h-2.5 w-2.5 rounded-full bg-green-500" />
+                <span className="text-sm leading-relaxed text-foreground/80">
+                  Cape Assist — Partner in Prevention Award
+                </span>
+              </li>
+              <li className="flex items-start gap-3">
+                <span className="mt-1 inline-block h-2.5 w-2.5 rounded-full bg-green-500" />
+                <span className="text-sm leading-relaxed text-foreground/80">
+                  Cape May County NAACP Freedom Fund — "Recognition of Educator Award"
+                </span>
+              </li>
+            </ul>
+          </div>
         </div>
       </div>
     </section>
