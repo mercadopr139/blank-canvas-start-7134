@@ -55,45 +55,31 @@ const ImpactSection = () => {
             <ul className="mt-5 space-y-3">
               <li className="flex items-start gap-3">
                 <Trophy className="mt-0.5 h-4 w-4 flex-shrink-0 text-primary" />
-                <span className="text-sm leading-relaxed text-foreground/80">
-                  Middle Township City Council's "Middle Matters" Civic Recognition Award, NLA Program Director
-                </span>
+                <span className="text-sm leading-relaxed text-foreground/80">Middle Township City Council's "Middle Matters" Civic Recognition Award —  NLA Program Director</span>
               </li>
               <li className="flex items-start gap-3">
                 <Trophy className="mt-0.5 h-4 w-4 flex-shrink-0 text-primary" />
-                <span className="text-sm leading-relaxed text-foreground/80">
-                  Middle Township City Council's "Middle Matters" Civic Recognition Award, NLA Program Coordinator
-                </span>
+                <span className="text-sm leading-relaxed text-foreground/80">Middle Township City Council's "Middle Matters" Civic Recognition Award — NLA Program Coordinator</span>
               </li>
               <li className="flex items-start gap-3">
                 <Trophy className="mt-0.5 h-4 w-4 flex-shrink-0 text-primary" />
-                <span className="text-sm leading-relaxed text-foreground/80">
-                  United States House of Representatives — Congressional Proclamation of Recognition  
-                </span>
+                <span className="text-sm leading-relaxed text-foreground/80">United States House of Representatives — Congressional Proclamation of Recognition</span>
               </li>
               <li className="flex items-start gap-3">
                 <Trophy className="mt-0.5 h-4 w-4 flex-shrink-0 text-primary" />
-                <span className="text-sm leading-relaxed text-foreground/80">
-                  USA Boxing Mid-Atlantic Boxing — George Hill Humanitarian Award
-                </span>
+                <span className="text-sm leading-relaxed text-foreground/80">USA Boxing Mid-Atlantic Boxing —  George Hill Humanitarian Award</span>
               </li>
               <li className="flex items-start gap-3">
                 <Trophy className="mt-0.5 h-4 w-4 flex-shrink-0 text-primary" />
-                <span className="text-sm leading-relaxed text-foreground/80">
-                  BCMF — Be Kind Award Recipient
-                </span>
+                <span className="text-sm leading-relaxed text-foreground/80">BCMF —  Be Kind Award Recipient</span>
               </li>
               <li className="flex items-start gap-3">
                 <Trophy className="mt-0.5 h-4 w-4 flex-shrink-0 text-primary" />
-                <span className="text-sm leading-relaxed text-foreground/80">
-                  CMC Chamber of Commerce — Non-Profit of the Year Award
-                </span>
+                <span className="text-sm leading-relaxed text-foreground/80">CMC Chamber of Commerce- Non-Profit of the Year Award</span>
               </li>
               <li className="flex items-start gap-3">
                 <Trophy className="mt-0.5 h-4 w-4 flex-shrink-0 text-primary" />
-                <span className="text-sm leading-relaxed text-foreground/80">
-                  Cape Assist — Partner in Prevention Award
-                </span>
+                <span className="text-sm leading-relaxed text-foreground/80">Cape Assist — Partner in Prevention Award</span>
               </li>
               <li className="flex items-start gap-3">
                 <Trophy className="mt-0.5 h-4 w-4 flex-shrink-0 text-primary" />
