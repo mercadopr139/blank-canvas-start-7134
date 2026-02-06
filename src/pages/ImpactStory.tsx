@@ -4,13 +4,7 @@ import Footer from "@/components/layout/Footer";
 import { Card, CardContent } from "@/components/ui/card";
 import { Users, TrendingUp, Heart, Shield, ShieldCheck, Utensils, HandHeart, Calendar, Briefcase, RefreshCw, Bus } from "lucide-react";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 const ImpactStory = () => {
   const [demographicsOpen, setDemographicsOpen] = useState(false);
   const [transportationOpen, setTransportationOpen] = useState(false);
@@ -67,13 +61,8 @@ const ImpactStory = () => {
               {/* Top row: 3 cards */}
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6 md:gap-8 mb-6 md:mb-8">
                 {topStats.map((stat, index) => {
-                  const isYouthCard = stat.label === "Youth Served Annually";
-                  return (
-                    <Card 
-                      key={index} 
-                      className={`border-2 border-foreground/10 hover:border-foreground/20 transition-colors ${isYouthCard ? "cursor-pointer hover:shadow-lg" : ""}`}
-                      onClick={isYouthCard ? () => setDemographicsOpen(true) : undefined}
-                    >
+                const isYouthCard = stat.label === "Youth Served Annually";
+                return <Card key={index} className={`border-2 border-foreground/10 hover:border-foreground/20 transition-colors ${isYouthCard ? "cursor-pointer hover:shadow-lg" : ""}`} onClick={isYouthCard ? () => setDemographicsOpen(true) : undefined}>
                       <CardContent className="p-8 text-center">
                         <stat.icon className="h-10 w-10 mx-auto mb-4 text-foreground" />
                         <div className="text-4xl md:text-5xl font-black text-foreground mb-2">
@@ -85,21 +74,17 @@ const ImpactStory = () => {
                         <div className="text-sm text-muted-foreground">
                           {stat.description}
                         </div>
-                        {isYouthCard && (
-                          <div className="mt-3 text-sm font-medium text-[#bf0f3e] hover:text-[#bf0f3e]/80 transition-colors">
+                        {isYouthCard && <div className="mt-3 text-sm font-medium text-[#bf0f3e] hover:text-[#bf0f3e]/80 transition-colors">
                             View NLA demographics →
-                          </div>
-                        )}
+                          </div>}
                       </CardContent>
-                    </Card>
-                  );
-                })}
+                    </Card>;
+              })}
               </div>
               
               {/* Bottom row: 3 cards */}
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6 md:gap-8">
-                {bottomStats.map((stat, index) => (
-                  <Card key={index} className="border-2 border-foreground/10 hover:border-foreground/20 transition-colors">
+                {bottomStats.map((stat, index) => <Card key={index} className="border-2 border-foreground/10 hover:border-foreground/20 transition-colors">
                     <CardContent className="p-8 text-center">
                       <stat.icon className="h-10 w-10 mx-auto mb-4 text-foreground" />
                       <div className="text-4xl md:text-5xl font-black text-foreground mb-2">
@@ -112,14 +97,10 @@ const ImpactStory = () => {
                         {stat.description}
                       </div>
                     </CardContent>
-                  </Card>
-                ))}
+                  </Card>)}
                 
                 {/* Transportation Card */}
-                <Card 
-                  className="border-2 border-foreground/10 hover:border-foreground/20 hover:shadow-lg transition-all cursor-pointer"
-                  onClick={() => setTransportationOpen(true)}
-                >
+                <Card className="border-2 border-foreground/10 hover:border-foreground/20 hover:shadow-lg transition-all cursor-pointer" onClick={() => setTransportationOpen(true)}>
                   <CardContent className="p-8 text-center">
                     <Bus className="h-10 w-10 mx-auto mb-4 text-foreground" />
                     <div className="text-4xl md:text-5xl font-black text-foreground mb-2">
@@ -271,8 +252,9 @@ const ImpactStory = () => {
                         <span>Cape May County Prosecutor's Office</span>
                       </li>
                       <li className="flex items-start gap-2 ml-6">
-                        <span className="text-foreground mt-1">–</span>
-                        <span>Over twelve municipal and county law enforcement agencies across Cape May County</span>
+                        <span className="text-foreground mt-1">
+                      </span>
+                        <span>*Over 12 municipal and county law enforcement agencies across Cape May County</span>
                       </li>
                     </ul>
                   </AccordionContent>
