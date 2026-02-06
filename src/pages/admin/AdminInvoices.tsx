@@ -173,8 +173,10 @@ export default function AdminInvoices() {
     }
 
     setIsLoading(true);
-    const month = parseInt(selectedMonth);
-    const year = parseInt(selectedYear);
+
+    // Prefer explicit URL params when coming from the calendar
+    const month = parseInt(searchParams.get("month") ?? selectedMonth);
+    const year = parseInt(searchParams.get("year") ?? selectedYear);
 
     // Fetch service logs for the selected month/year
     const startDate = `${year}-${String(month).padStart(2, "0")}-01`;
@@ -289,20 +291,6 @@ export default function AdminInvoices() {
 
         setExistingInvoice(data);
         toast({ title: "Invoice saved as draft" });
-      }
-
-      // Auto-clear the exact service entries used for this invoice preview.
-      // (We delete by ID so it works even if the user navigated months in the calendar.)
-      if (serviceLogs.length > 0) {
-        const ids = serviceLogs.map((l) => l.id);
-        const { error: clearError } = await supabase
-          .from("service_logs")
-          .delete()
-          .in("id", ids);
-
-        if (clearError) throw clearError;
-
-        toast({ title: "Service days cleared" });
       }
 
       fetchInvoices();

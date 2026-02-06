@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { Link, useSearchParams, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import {
@@ -63,10 +63,46 @@ export default function AdminServiceCalendar() {
   const [existingLogsForDate, setExistingLogsForDate] = useState<ServiceLog[]>([]);
   const [showClearConfirm, setShowClearConfirm] = useState(false);
   const [isClearing, setIsClearing] = useState(false);
-  
+
   const { toast } = useToast();
   const { signOut } = useAuth();
   const navigate = useNavigate();
+
+  // Keep latest values for cleanup (avoid stale closures)
+  const selectedClientIdRef = useRef<string>("");
+  const currentMonthRef = useRef<Date>(new Date());
+  const serviceLogsCountRef = useRef<number>(0);
+  const navigatingToPreviewRef = useRef(false);
+
+  useEffect(() => {
+    selectedClientIdRef.current = selectedClientId;
+    currentMonthRef.current = currentMonth;
+    serviceLogsCountRef.current = serviceLogs.length;
+  }, [selectedClientId, currentMonth, serviceLogs.length]);
+
+  // Auto-clear service days when leaving this screen WITHOUT generating preview.
+  // (When generating preview, the invoices screen clears them after reading them.)
+  useEffect(() => {
+    return () => {
+      if (navigatingToPreviewRef.current) return;
+
+      const clientId = selectedClientIdRef.current;
+      const monthDate = currentMonthRef.current;
+      const count = serviceLogsCountRef.current;
+
+      if (!clientId || count === 0) return;
+
+      const monthStart = format(startOfMonth(monthDate), "yyyy-MM-dd");
+      const monthEnd = format(endOfMonth(monthDate), "yyyy-MM-dd");
+
+      void supabase
+        .from("service_logs")
+        .delete()
+        .eq("client_id", clientId)
+        .gte("service_date", monthStart)
+        .lte("service_date", monthEnd);
+    };
+  }, []);
 
   // Apply URL filters on mount
   useEffect(() => {
@@ -186,6 +222,7 @@ export default function AdminServiceCalendar() {
   const selectedClient = clients.find((c) => c.id === selectedClientId);
 
   const handleGeneratePreview = () => {
+    navigatingToPreviewRef.current = true;
     const month = currentMonth.getMonth() + 1;
     const year = currentMonth.getFullYear();
     navigate(
