@@ -71,14 +71,12 @@ export default function AdminServiceCalendar() {
   // Keep latest values for cleanup (avoid stale closures)
   const selectedClientIdRef = useRef<string>("");
   const currentMonthRef = useRef<Date>(new Date());
-  const serviceLogsCountRef = useRef<number>(0);
   const navigatingToPreviewRef = useRef(false);
 
   useEffect(() => {
     selectedClientIdRef.current = selectedClientId;
     currentMonthRef.current = currentMonth;
-    serviceLogsCountRef.current = serviceLogs.length;
-  }, [selectedClientId, currentMonth, serviceLogs.length]);
+  }, [selectedClientId, currentMonth]);
 
   // Auto-clear service days when leaving this screen WITHOUT generating preview.
   // (When generating preview, the invoices screen clears them after reading them.)
@@ -88,9 +86,8 @@ export default function AdminServiceCalendar() {
 
       const clientId = selectedClientIdRef.current;
       const monthDate = currentMonthRef.current;
-      const count = serviceLogsCountRef.current;
 
-      if (!clientId || count === 0) return;
+      if (!clientId) return;
 
       const monthStart = format(startOfMonth(monthDate), "yyyy-MM-dd");
       const monthEnd = format(endOfMonth(monthDate), "yyyy-MM-dd");
@@ -221,6 +218,36 @@ export default function AdminServiceCalendar() {
 
   const selectedClient = clients.find((c) => c.id === selectedClientId);
 
+  const clearServiceDaysForCurrentMonth = async () => {
+    const clientId = selectedClientIdRef.current || selectedClientId;
+    const monthDate = currentMonthRef.current || currentMonth;
+
+    if (!clientId) return;
+
+    const monthStart = format(startOfMonth(monthDate), "yyyy-MM-dd");
+    const monthEnd = format(endOfMonth(monthDate), "yyyy-MM-dd");
+
+    const { error } = await supabase
+      .from("service_logs")
+      .delete()
+      .eq("client_id", clientId)
+      .gte("service_date", monthStart)
+      .lte("service_date", monthEnd);
+
+    if (error) {
+      console.error("[ServiceCalendar] auto-clear failed", error);
+    }
+  };
+
+  const handleBackToDashboard = async () => {
+    // Clear first so the next time you open the calendar you don’t see stale boxes.
+    try {
+      await clearServiceDaysForCurrentMonth();
+    } finally {
+      navigate("/admin/dashboard");
+    }
+  };
+
   const handleGeneratePreview = () => {
     navigatingToPreviewRef.current = true;
     const month = currentMonth.getMonth() + 1;
@@ -267,12 +294,10 @@ export default function AdminServiceCalendar() {
       <header className="bg-background border-b">
         <div className="container mx-auto px-4 py-4 flex items-center justify-between">
           <div className="flex items-center gap-4">
-            <Link to="/admin/dashboard">
-              <Button variant="ghost" size="sm">
-                <ArrowLeft className="w-4 h-4 mr-2" />
-                Dashboard
-              </Button>
-            </Link>
+            <Button variant="ghost" size="sm" onClick={handleBackToDashboard}>
+              <ArrowLeft className="w-4 h-4 mr-2" />
+              Dashboard
+            </Button>
             <div className="flex items-center gap-2">
               <Calendar className="w-5 h-5 text-primary" />
               <h1 className="text-xl font-semibold">Service Calendar</h1>
