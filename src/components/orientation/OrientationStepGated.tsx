@@ -91,8 +91,7 @@ const OrientationStepGated = ({
             <Button
               asChild
               size="lg"
-              className="w-full text-white font-bold text-base py-6"
-              style={{ backgroundColor: "#bf0f3e" }}
+              className="w-full bg-black hover:bg-neutral-800 text-white font-bold text-base py-6"
             >
               <Link to="/house-rules-test">Take the House Rules Test</Link>
             </Button>
