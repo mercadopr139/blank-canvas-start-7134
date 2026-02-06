@@ -2,10 +2,8 @@ import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Trophy } from "lucide-react";
 import nlaAvalonAward from "@/assets/gym-buddies/nla-avalon-award.png";
-
 const ImpactSection = () => {
-  return (
-    <section className="py-20 md:py-28 bg-background">
+  return <section className="py-20 md:py-28 bg-background">
       <div className="container">
         <div className="max-w-4xl mx-auto">
           {/* Section header */}
@@ -36,19 +34,11 @@ const ImpactSection = () => {
 
           {/* Gym Buddies CTA */}
           <div className="text-center mt-10">
-            <img 
-              src={nlaAvalonAward} 
-              alt="NLA youth with Avalon Police Chief receiving award" 
-              className="mx-auto mb-6 rounded-lg shadow-lg max-w-md w-full"
-            />
+            <img src={nlaAvalonAward} alt="NLA youth with Avalon Police Chief receiving award" className="mx-auto mb-6 rounded-lg shadow-lg max-w-md w-full" />
             <p className="text-sm md:text-base text-foreground/80 leading-relaxed mb-6">
               Learn more about Gym Buddies and how shared training has strengthened trust and relationships throughout our community.
             </p>
-            <Button
-              asChild
-              variant="default"
-              className="bg-foreground text-background hover:bg-foreground/90"
-            >
+            <Button asChild variant="default" className="bg-foreground text-background hover:bg-foreground/90">
               <Link to="/gym-buddies">Gym Buddies</Link>
             </Button>
           </div>
@@ -66,7 +56,8 @@ const ImpactSection = () => {
               <li className="flex items-start gap-3">
                 <Trophy className="mt-0.5 h-4 w-4 flex-shrink-0 text-primary" />
                 <span className="text-sm leading-relaxed text-foreground/80">
-                  2023 Middle Matters Civic Recognition Award
+                  Middle Township City Council's "Middle Matters" Civic Recognition Award, NLA Program Director
+    
                 </span>
               </li>
               <li className="flex items-start gap-3">
@@ -109,8 +100,6 @@ const ImpactSection = () => {
           </div>
         </div>
       </div>
-    </section>
-  );
+    </section>;
 };
-
 export default ImpactSection;
