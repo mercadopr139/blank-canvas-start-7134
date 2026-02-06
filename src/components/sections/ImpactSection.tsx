@@ -1,6 +1,6 @@
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Check } from "lucide-react";
+import { Heart } from "lucide-react";
 import nlaAvalonAward from "@/assets/gym-buddies/nla-avalon-award.png";
 
 const ImpactSection = () => {
@@ -64,43 +64,43 @@ const ImpactSection = () => {
             </p>
             <ul className="mt-5 space-y-3">
               <li className="flex items-start gap-3">
-                <Check className="mt-0.5 h-4 w-4 flex-shrink-0 text-primary" />
+                <Heart className="mt-0.5 h-4 w-4 flex-shrink-0 text-primary" fill="currentColor" />
                 <span className="text-sm leading-relaxed text-foreground/80">
                   2023 Middle Matters Civic Recognition Award
                 </span>
               </li>
               <li className="flex items-start gap-3">
-                <Check className="mt-0.5 h-4 w-4 flex-shrink-0 text-primary" />
+                <Heart className="mt-0.5 h-4 w-4 flex-shrink-0 text-primary" fill="currentColor" />
                 <span className="text-sm leading-relaxed text-foreground/80">
                   United States House of Representatives — Congressional Proclamation
                 </span>
               </li>
               <li className="flex items-start gap-3">
-                <Check className="mt-0.5 h-4 w-4 flex-shrink-0 text-primary" />
+                <Heart className="mt-0.5 h-4 w-4 flex-shrink-0 text-primary" fill="currentColor" />
                 <span className="text-sm leading-relaxed text-foreground/80">
                   USA Boxing Mid-Atlantic Boxing — George Hill Humanitarian Award
                 </span>
               </li>
               <li className="flex items-start gap-3">
-                <Check className="mt-0.5 h-4 w-4 flex-shrink-0 text-primary" />
+                <Heart className="mt-0.5 h-4 w-4 flex-shrink-0 text-primary" fill="currentColor" />
                 <span className="text-sm leading-relaxed text-foreground/80">
                   BCMF — Be Kind Award Recipient
                 </span>
               </li>
               <li className="flex items-start gap-3">
-                <Check className="mt-0.5 h-4 w-4 flex-shrink-0 text-primary" />
+                <Heart className="mt-0.5 h-4 w-4 flex-shrink-0 text-primary" fill="currentColor" />
                 <span className="text-sm leading-relaxed text-foreground/80">
                   CMC Chamber of Commerce — Non-Profit of the Year Award
                 </span>
               </li>
               <li className="flex items-start gap-3">
-                <Check className="mt-0.5 h-4 w-4 flex-shrink-0 text-primary" />
+                <Heart className="mt-0.5 h-4 w-4 flex-shrink-0 text-primary" fill="currentColor" />
                 <span className="text-sm leading-relaxed text-foreground/80">
                   Cape Assist — Partner in Prevention Award
                 </span>
               </li>
               <li className="flex items-start gap-3">
-                <Check className="mt-0.5 h-4 w-4 flex-shrink-0 text-primary" />
+                <Heart className="mt-0.5 h-4 w-4 flex-shrink-0 text-primary" fill="currentColor" />
                 <span className="text-sm leading-relaxed text-foreground/80">
                   Cape May County NAACP Freedom Fund — "Recognition of Educator Award"
                 </span>
