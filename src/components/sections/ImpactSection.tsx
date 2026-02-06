@@ -68,7 +68,7 @@ const ImpactSection = () => {
               <li className="flex items-start gap-3">
                 <Trophy className="mt-0.5 h-4 w-4 flex-shrink-0 text-primary" />
                 <span className="text-sm leading-relaxed text-foreground/80">
-                  United States House of Representatives — Congressional Proclamation
+                  United States House of Representatives — Congressional Proclamation of Recognition  
                 </span>
               </li>
               <li className="flex items-start gap-3">
