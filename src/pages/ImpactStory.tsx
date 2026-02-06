@@ -239,6 +239,7 @@ const ImpactStory = () => {
                         "Avalon Police Department",
                         "Blue Knights Motorcycle Club",
                         "Cape May County Prosecutor's Office",
+                        "Cape May County Sheriff's Department",
                         "Cape May Police Department",
                         "Lower Township Police Department",
                         "Middle Township Police Department",
