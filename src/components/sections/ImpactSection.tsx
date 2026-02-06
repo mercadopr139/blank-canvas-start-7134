@@ -44,7 +44,7 @@ const ImpactSection = () => {
           </div>
 
           {/* Awards & Recognition */}
-          <div className="mt-12 rounded-2xl bg-white/5 p-6 ring-1 ring-white/10">
+          <div className="mt-12 rounded-2xl p-6 ring-1 ring-white/10 bg-secondary">
             <h3 className="text-lg font-bold text-foreground">
               Awards & Community Recognition
             </h3>
