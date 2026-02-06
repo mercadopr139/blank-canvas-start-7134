@@ -56,8 +56,7 @@ const ImpactSection = () => {
               <li className="flex items-start gap-3">
                 <Trophy className="mt-0.5 h-4 w-4 flex-shrink-0 text-primary" />
                 <span className="text-sm leading-relaxed text-foreground/80">
-                  Middle Township City Council's "Middle Matters" Civic Recognition Award, NLA Program Director
-    
+                  Middle Township City Council's "Middle Matters" Civic Recognition Award, NLA Program Coordinator
                 </span>
               </li>
               <li className="flex items-start gap-3">
