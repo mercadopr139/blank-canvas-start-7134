@@ -1,7 +1,17 @@
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Trophy } from "lucide-react";
 import nlaAvalonAward from "@/assets/gym-buddies/nla-avalon-award.png";
+
+const awards = [
+  `BCMF — Be Kind Award Recipient`,
+  `Cape Assist — Partner in Prevention Award`,
+  `Cape May County NAACP Freedom Fund — "Recognition of Educator Award"`,
+  `CMC Chamber of Commerce — Non-Profit of the Year Award`,
+  `Middle Township City Council — "Middle Matters" Civic Recognition Award`,
+  `United States House of Representatives — Congressional Proclamation of Recognition`,
+  `USA Boxing Mid-Atlantic Boxing — George Hill Humanitarian Award`,
+].sort((a, b) => a.localeCompare(b));
+
 const ImpactSection = () => {
   return <section className="py-20 md:py-28 bg-background">
       <div className="container">
@@ -53,40 +63,12 @@ const ImpactSection = () => {
               organizations for our youth impact, mentorship, and community leadership.
             </p>
             <ul className="mt-5 space-y-3">
-              <li className="flex items-start gap-3">
-                <Trophy className="mt-0.5 h-4 w-4 flex-shrink-0 text-primary" />
-                <span className="text-sm leading-relaxed text-foreground/80">Middle Township City Council's "Middle Matters" Civic Recognition Award —  NLA Program Director</span>
-              </li>
-              <li className="flex items-start gap-3">
-                <Trophy className="mt-0.5 h-4 w-4 flex-shrink-0 text-primary" />
-                <span className="text-sm leading-relaxed text-foreground/80">Middle Township City Council's "Middle Matters" Civic Recognition Award — NLA Program Coordinator</span>
-              </li>
-              <li className="flex items-start gap-3">
-                <Trophy className="mt-0.5 h-4 w-4 flex-shrink-0 text-primary" />
-                <span className="text-sm leading-relaxed text-foreground/80">United States House of Representatives — Congressional Proclamation of Recognition</span>
-              </li>
-              <li className="flex items-start gap-3">
-                <Trophy className="mt-0.5 h-4 w-4 flex-shrink-0 text-primary" />
-                <span className="text-sm leading-relaxed text-foreground/80">USA Boxing Mid-Atlantic Boxing —  George Hill Humanitarian Award</span>
-              </li>
-              <li className="flex items-start gap-3">
-                <Trophy className="mt-0.5 h-4 w-4 flex-shrink-0 text-primary" />
-                <span className="text-sm leading-relaxed text-foreground/80">BCMF —  Be Kind Award Recipient</span>
-              </li>
-              <li className="flex items-start gap-3">
-                <Trophy className="mt-0.5 h-4 w-4 flex-shrink-0 text-primary" />
-                <span className="text-sm leading-relaxed text-foreground/80">CMC Chamber of Commerce- Non-Profit of the Year Award</span>
-              </li>
-              <li className="flex items-start gap-3">
-                <Trophy className="mt-0.5 h-4 w-4 flex-shrink-0 text-primary" />
-                <span className="text-sm leading-relaxed text-foreground/80">Cape Assist — Partner in Prevention Award</span>
-              </li>
-              <li className="flex items-start gap-3">
-                <Trophy className="mt-0.5 h-4 w-4 flex-shrink-0 text-primary" />
-                <span className="text-sm leading-relaxed text-foreground/80">
-                  Cape May County NAACP Freedom Fund — "Recognition of Educator Award"
-                </span>
-              </li>
+              {awards.map((award) => (
+                <li key={award} className="flex items-start gap-3">
+                  <span className="mt-1 inline-block h-2.5 w-2.5 rounded-full bg-green-500" />
+                  <span className="text-sm leading-relaxed text-foreground/80">{award}</span>
+                </li>
+              ))}
             </ul>
           </div>
         </div>
