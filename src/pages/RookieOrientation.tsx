@@ -140,7 +140,7 @@ const RookieOrientation = () => {
               stepNumber={4}
               title="HOUSE RULES INTRO & TEST"
               videoStorageKey={`${STORAGE_KEY_PREFIX}step_4`}
-              secondaryButtonLabel="HOUSE RULES"
+              secondaryButtonLabel="READ HOUSE RULES"
               secondaryButtonLink="#step-5"
             />
 
