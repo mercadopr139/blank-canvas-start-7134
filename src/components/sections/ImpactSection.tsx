@@ -10,7 +10,7 @@ const awards = [
   `CMC Chamber of Commerce — Non-Profit of the Year Award`,
   `Middle Township City Council — "Middle Matters" Civic Recognition Award`,
   `United States House of Representatives — Congressional Proclamation of Recognition`,
-  `USA Boxing Mid-Atlantic Boxing — George Hill Humanitarian Award`,
+  `USA Boxing's Mid-Atlantic Association — George Hill Humanitarian Award`,
 ].sort((a, b) => a.localeCompare(b));
 
 const ImpactSection = () => {
