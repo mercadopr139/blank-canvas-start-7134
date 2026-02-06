@@ -1,5 +1,6 @@
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
+import { Trophy } from "lucide-react";
 import nlaAvalonAward from "@/assets/gym-buddies/nla-avalon-award.png";
 
 const awards = [
@@ -65,7 +66,7 @@ const ImpactSection = () => {
             <ul className="mt-5 space-y-3">
               {awards.map((award) => (
                 <li key={award} className="flex items-start gap-3">
-                  <span className="mt-1 inline-block h-2.5 w-2.5 rounded-full bg-green-500" />
+                  <Trophy className="mt-0.5 h-4 w-4 flex-shrink-0 text-primary" />
                   <span className="text-sm leading-relaxed text-foreground/80">{award}</span>
                 </li>
               ))}
