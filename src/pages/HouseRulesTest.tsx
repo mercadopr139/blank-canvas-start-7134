@@ -297,10 +297,9 @@ const HouseRulesTest = () => {
                   </div>
 
                   <RadioGroup
-                    value={answers[q.id]?.toString()}
+                    value={answers[q.id] !== undefined ? answers[q.id].toString() : ""}
                     onValueChange={(value) => handleAnswerChange(q.id, parseInt(value))}
                     className="space-y-2 ml-11"
-                    disabled={submitted && !isIncorrect}
                   >
                     {q.options.map((option, optIndex) => {
                       const isSelectedIncorrect =
