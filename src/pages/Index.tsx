@@ -45,9 +45,7 @@ const Index = () => {
             <p className="mb-6 max-w-md text-primary-foreground">
               Access orientation materials and get started with everything you need to know.
             </p>
-            <Button asChild size="lg" className="text-white font-semibold" style={{
-            backgroundColor: "#bf0f3e"
-          }}>
+            <Button asChild size="lg" className="bg-black hover:bg-neutral-800 text-white font-semibold">
               <Link to="/rookie-orientation">
                 <Users className="mr-2 h-5 w-5" />
                 Rookie Orientation
