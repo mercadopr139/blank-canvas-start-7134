@@ -122,7 +122,7 @@ const RookieOrientation = () => {
             <OrientationStep stepNumber={5} title="HOUSE RULES TEST" buttonLabel="OPEN TEST" buttonLink={HOUSE_RULES_TEST_URL} isExternal={false} />
 
             {/* STEP 6: The Big 3! (Gated - requires passing House Rules Test) */}
-            <OrientationStepGated stepNumber={6} title="THE BIG 3!" videoId={VIDEO_IDS.step6} />
+            <OrientationStepGated stepNumber={6} title="HOUSE RULES IN ACTION!" videoId={VIDEO_IDS.step6} />
 
             {/* STEP 7: Wrapping Your Hands */}
             <OrientationStepGated stepNumber={7} title="WRAPPING YOUR HANDS" videoId={VIDEO_IDS.step7} />
