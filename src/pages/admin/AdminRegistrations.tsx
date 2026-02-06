@@ -1,17 +1,17 @@
- import { useState } from "react";
- import { useNavigate } from "react-router-dom";
- import { useQuery } from "@tanstack/react-query";
- import { supabase } from "@/integrations/supabase/client";
- import { Button } from "@/components/ui/button";
- import { Input } from "@/components/ui/input";
- import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
- import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
- import { Badge } from "@/components/ui/badge";
- import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
- import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
- import { ScrollArea } from "@/components/ui/scroll-area";
- import { ArrowLeft, Search, Eye, AlertTriangle, ExternalLink, Users } from "lucide-react";
- import { format, parseISO, differenceInYears } from "date-fns";
+import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Badge } from "@/components/ui/badge";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { ArrowLeft, Search, Eye, AlertTriangle, ExternalLink, Users, Loader2 } from "lucide-react";
+import { format, parseISO, differenceInYears } from "date-fns";
  
  const AdminRegistrations = () => {
    const navigate = useNavigate();
@@ -201,116 +201,171 @@
    );
  };
  
- const RegistrationDetail = ({ registration: reg }: { registration: any }) => {
-   const age = differenceInYears(new Date(), parseISO(reg.child_date_of_birth));
- 
-   return (
-     <div className="space-y-6">
-       {/* Medical Alerts */}
-       {(reg.allergies || reg.asthma_inhaler_info) && (
-         <Card className="border-destructive bg-destructive/5">
-           <CardHeader className="pb-2">
-             <CardTitle className="text-destructive flex items-center gap-2 text-base">
-               <AlertTriangle className="w-5 h-5" /> Medical Alerts
-             </CardTitle>
-           </CardHeader>
-           <CardContent className="space-y-2 text-sm">
-             {reg.allergies && (
-               <div>
-                 <strong>Allergies:</strong> {reg.allergies}
-               </div>
-             )}
-             {reg.asthma_inhaler_info && (
-               <div>
-                 <strong>Asthma/Inhaler:</strong> {reg.asthma_inhaler_info}
-               </div>
-             )}
-           </CardContent>
-         </Card>
-       )}
- 
-       {/* Child Info */}
-       <Section title="Child Information">
-         <InfoRow label="Name" value={`${reg.child_first_name} ${reg.child_last_name}`} />
-         <InfoRow label="Age" value={`${age} years old`} />
-         <InfoRow label="Date of Birth" value={format(parseISO(reg.child_date_of_birth), "MMMM d, yyyy")} />
-         <InfoRow label="Sex" value={reg.child_sex} />
-         <InfoRow label="Race/Ethnicity" value={reg.child_race_ethnicity} />
-       </Section>
- 
-       {/* Parent Info */}
-       <Section title="Parent/Guardian">
-         <InfoRow label="Name" value={`${reg.parent_first_name} ${reg.parent_last_name}`} />
-         <InfoRow label="Phone" value={reg.parent_phone} />
-         <InfoRow label="Email" value={reg.parent_email} />
-         {reg.child_phone && <InfoRow label="Child's Phone" value={reg.child_phone} />}
-       </Section>
- 
-       {/* Address & School */}
-       <Section title="Address & School">
-         <InfoRow label="Address" value={reg.child_primary_address} />
-         <InfoRow label="School District" value={reg.child_school_district} />
-         {reg.child_grade_level && <InfoRow label="Grade Level" value={reg.child_grade_level} />}
-       </Section>
- 
-       {/* Program & Household */}
-       <Section title="Program & Household">
-         <InfoRow label="Boxing Program" value={reg.child_boxing_program} />
-         <InfoRow label="Adults in Household" value={reg.adults_in_household} />
-         <InfoRow label="Siblings in Household" value={reg.siblings_in_household} />
-       </Section>
- 
-       {/* Funding Info */}
-       <Section title="Funding Information">
-         <InfoRow label="Household Income" value={reg.household_income_range} />
-         {reg.free_or_reduced_lunch && (
-           <InfoRow label="Free/Reduced Lunch" value={reg.free_or_reduced_lunch} />
-         )}
-       </Section>
- 
-       {/* Coach Notes */}
-       {reg.important_child_notes && (
-         <Section title="Coach Notes">
-           <p className="text-sm">{reg.important_child_notes}</p>
-         </Section>
-       )}
- 
-       {/* Signatures */}
-       <Section title="Waivers & Signatures">
-         <SignatureRow label="Medical Consent" name={reg.medical_consent_name} url={reg.medical_consent_signature_url} />
-         <SignatureRow label="Liability Waiver" name={reg.liability_waiver_name} url={reg.liability_waiver_signature_url} />
-         <SignatureRow label="Transportation/Excursions" name={reg.transportation_excursions_waiver_name} url={reg.transportation_excursions_signature_url} />
-         <SignatureRow label="Media Consent" name={reg.media_consent_name} url={reg.media_consent_signature_url} />
-         <SignatureRow label="Spiritual Development" name={reg.spiritual_development_policy_name} url={reg.spiritual_development_policy_signature_url} />
-       {reg.counseling_services_name && (
-         <SignatureRow label="Counseling Services" name={reg.counseling_services_name} url={reg.counseling_services_signature_url} />
-       )}
-       </Section>
+const RegistrationDetail = ({ registration: reg }: { registration: any }) => {
+  const age = differenceInYears(new Date(), parseISO(reg.child_date_of_birth));
+  const [signedUrls, setSignedUrls] = useState<Record<string, string>>({});
+  const [loadingUrls, setLoadingUrls] = useState(true);
 
-       {/* Child Headshot */}
-       {reg.child_headshot_url && (
-         <Section title="Child Photo">
-           <a href={reg.child_headshot_url} target="_blank" rel="noopener noreferrer">
-             <img 
-               src={reg.child_headshot_url} 
-               alt="Child headshot" 
-               className="w-24 h-24 object-cover rounded-lg border border-border hover:opacity-80 transition-opacity"
-             />
-           </a>
-         </Section>
-       )}
- 
-       {/* Submission Info */}
-       <Section title="Submission">
-         <InfoRow label="Submitted On" value={format(parseISO(reg.submission_date), "MMMM d, yyyy")} />
-         <InfoRow label="Registration ID" value={reg.id} />
-       {reg.final_signature_name && (
-         <InfoRow label="Final Signature Name" value={reg.final_signature_name} />
-       )}
-       </Section>
-     </div>
-   );
- };
+  // Generate signed URLs for all files when component mounts
+  useEffect(() => {
+    const generateSignedUrls = async () => {
+      const urlFields = [
+        { key: 'medical_consent_signature_url', value: reg.medical_consent_signature_url },
+        { key: 'liability_waiver_signature_url', value: reg.liability_waiver_signature_url },
+        { key: 'transportation_excursions_signature_url', value: reg.transportation_excursions_signature_url },
+        { key: 'media_consent_signature_url', value: reg.media_consent_signature_url },
+        { key: 'spiritual_development_policy_signature_url', value: reg.spiritual_development_policy_signature_url },
+        { key: 'counseling_services_signature_url', value: reg.counseling_services_signature_url },
+        { key: 'child_headshot_url', value: reg.child_headshot_url },
+      ].filter(f => f.value);
+
+      const urls: Record<string, string> = {};
+      
+      for (const field of urlFields) {
+        // Extract file path from URL if it's a full URL, or use as-is if it's a path
+        const filePath = field.value.includes('registration-signatures/') 
+          ? field.value.split('registration-signatures/').pop() 
+          : field.value;
+        
+        const { data } = await supabase.storage
+          .from('registration-signatures')
+          .createSignedUrl(filePath, 3600); // 1 hour expiry
+        
+        if (data?.signedUrl) {
+          urls[field.key] = data.signedUrl;
+        }
+      }
+      
+      setSignedUrls(urls);
+      setLoadingUrls(false);
+    };
+
+    generateSignedUrls();
+  }, [reg]);
+
+  return (
+    <div className="space-y-6">
+      {/* Medical Alerts */}
+      {(reg.allergies || reg.asthma_inhaler_info) && (
+        <Card className="border-destructive bg-destructive/5">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-destructive flex items-center gap-2 text-base">
+              <AlertTriangle className="w-5 h-5" /> Medical Alerts
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-2 text-sm">
+            {reg.allergies && (
+              <div>
+                <strong>Allergies:</strong> {reg.allergies}
+              </div>
+            )}
+            {reg.asthma_inhaler_info && (
+              <div>
+                <strong>Asthma/Inhaler:</strong> {reg.asthma_inhaler_info}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Child Info */}
+      <Section title="Child Information">
+        <InfoRow label="Name" value={`${reg.child_first_name} ${reg.child_last_name}`} />
+        <InfoRow label="Age" value={`${age} years old`} />
+        <InfoRow label="Date of Birth" value={format(parseISO(reg.child_date_of_birth), "MMMM d, yyyy")} />
+        <InfoRow label="Sex" value={reg.child_sex} />
+        <InfoRow label="Race/Ethnicity" value={reg.child_race_ethnicity} />
+      </Section>
+
+      {/* Parent Info */}
+      <Section title="Parent/Guardian">
+        <InfoRow label="Name" value={`${reg.parent_first_name} ${reg.parent_last_name}`} />
+        <InfoRow label="Phone" value={reg.parent_phone} />
+        <InfoRow label="Email" value={reg.parent_email} />
+        {reg.child_phone && <InfoRow label="Child's Phone" value={reg.child_phone} />}
+      </Section>
+
+      {/* Address & School */}
+      <Section title="Address & School">
+        <InfoRow label="Address" value={reg.child_primary_address} />
+        <InfoRow label="School District" value={reg.child_school_district} />
+        {reg.child_grade_level && <InfoRow label="Grade Level" value={reg.child_grade_level} />}
+      </Section>
+
+      {/* Program & Household */}
+      <Section title="Program & Household">
+        <InfoRow label="Boxing Program" value={reg.child_boxing_program} />
+        <InfoRow label="Adults in Household" value={reg.adults_in_household} />
+        <InfoRow label="Siblings in Household" value={reg.siblings_in_household} />
+      </Section>
+
+      {/* Funding Info */}
+      <Section title="Funding Information">
+        <InfoRow label="Household Income" value={reg.household_income_range} />
+        {reg.free_or_reduced_lunch && (
+          <InfoRow label="Free/Reduced Lunch" value={reg.free_or_reduced_lunch} />
+        )}
+      </Section>
+
+      {/* Coach Notes */}
+      {reg.important_child_notes && (
+        <Section title="Coach Notes">
+          <p className="text-sm">{reg.important_child_notes}</p>
+        </Section>
+      )}
+
+      {/* Signatures */}
+      <Section title="Waivers & Signatures">
+        {loadingUrls ? (
+          <div className="flex items-center gap-2 text-muted-foreground py-2">
+            <Loader2 className="w-4 h-4 animate-spin" /> Loading signatures...
+          </div>
+        ) : (
+          <>
+            <SignatureRow label="Medical Consent" name={reg.medical_consent_name} url={signedUrls.medical_consent_signature_url} />
+            <SignatureRow label="Liability Waiver" name={reg.liability_waiver_name} url={signedUrls.liability_waiver_signature_url} />
+            <SignatureRow label="Transportation/Excursions" name={reg.transportation_excursions_waiver_name} url={signedUrls.transportation_excursions_signature_url} />
+            <SignatureRow label="Media Consent" name={reg.media_consent_name} url={signedUrls.media_consent_signature_url} />
+            <SignatureRow label="Spiritual Development" name={reg.spiritual_development_policy_name} url={signedUrls.spiritual_development_policy_signature_url} />
+            {reg.counseling_services_name && (
+              <SignatureRow label="Counseling Services" name={reg.counseling_services_name} url={signedUrls.counseling_services_signature_url} />
+            )}
+          </>
+        )}
+      </Section>
+
+      {/* Child Headshot */}
+      {reg.child_headshot_url && (
+        <Section title="Child Photo">
+          {loadingUrls ? (
+            <div className="flex items-center gap-2 text-muted-foreground">
+              <Loader2 className="w-4 h-4 animate-spin" /> Loading photo...
+            </div>
+          ) : signedUrls.child_headshot_url ? (
+            <a href={signedUrls.child_headshot_url} target="_blank" rel="noopener noreferrer">
+              <img 
+                src={signedUrls.child_headshot_url} 
+                alt="Child headshot" 
+                className="w-24 h-24 object-cover rounded-lg border border-border hover:opacity-80 transition-opacity"
+              />
+            </a>
+          ) : (
+            <p className="text-sm text-muted-foreground">Unable to load photo</p>
+          )}
+        </Section>
+      )}
+
+      {/* Submission Info */}
+      <Section title="Submission">
+        <InfoRow label="Submitted On" value={format(parseISO(reg.submission_date), "MMMM d, yyyy")} />
+        <InfoRow label="Registration ID" value={reg.id} />
+        {reg.final_signature_name && (
+          <InfoRow label="Final Signature Name" value={reg.final_signature_name} />
+        )}
+      </Section>
+    </div>
+  );
+};
  
  const Section = ({ title, children }: { title: string; children: React.ReactNode }) => (
    <div>
@@ -326,21 +381,25 @@
    </div>
  );
  
- const SignatureRow = ({ label, name, url }: { label: string; name: string; url: string }) => (
-   <div className="flex items-center justify-between text-sm py-2 border-b border-border/50">
-     <div>
-       <span className="text-muted-foreground">{label}</span>
-       <span className="ml-2 font-medium">({name})</span>
-     </div>
-     <a
-       href={url}
-       target="_blank"
-       rel="noopener noreferrer"
-       className="text-primary hover:underline flex items-center gap-1"
-     >
-       View <ExternalLink className="w-3 h-3" />
-     </a>
-   </div>
- );
+const SignatureRow = ({ label, name, url }: { label: string; name: string; url?: string }) => (
+  <div className="flex items-center justify-between text-sm py-2 border-b border-border/50">
+    <div>
+      <span className="text-muted-foreground">{label}</span>
+      <span className="ml-2 font-medium">({name})</span>
+    </div>
+    {url ? (
+      <a
+        href={url}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="text-primary hover:underline flex items-center gap-1"
+      >
+        View <ExternalLink className="w-3 h-3" />
+      </a>
+    ) : (
+      <span className="text-muted-foreground text-xs">Unavailable</span>
+    )}
+  </div>
+);
  
  export default AdminRegistrations;
