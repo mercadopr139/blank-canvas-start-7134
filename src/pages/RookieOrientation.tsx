@@ -123,8 +123,6 @@ const RookieOrientation = () => {
             <OrientationStep
               stepNumber={1}
               title="REGISTRATION"
-              buttonLabel="REGISTER NOW"
-              buttonLink="/register"
             >
               <Step1DoneBadge />
             </OrientationStep>
