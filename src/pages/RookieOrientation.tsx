@@ -10,15 +10,9 @@ import { Step1DoneBadge } from "@/components/orientation/Step1DoneBadge";
 
 const SESSION_KEY = "rookie_orientation_unlocked";
 
-// Placeholder URLs - replace with actual YouTube links
-const COACH_INTRO_URL = "";
-const MISSION_URL = "";
-const HOUSE_RULES_INTRO_URL = "";
+// Storage keys for localStorage persistence
+const STORAGE_KEY_PREFIX = "rookie_orientation_video_";
 const HOUSE_RULES_TEST_URL = "#"; // External link placeholder
-const BIG3_URL = "";
-const WRAP_URL = "";
-const PUNCH_CODE_URL = "";
-const SIGNIN_URL = "";
 
 const RookieOrientation = () => {
   const [isUnlocked, setIsUnlocked] = useState(false);
@@ -131,21 +125,21 @@ const RookieOrientation = () => {
             <OrientationStep
               stepNumber={2}
               title="COACH MERCADO INTRO"
-              videoUrl={COACH_INTRO_URL}
+              videoStorageKey={`${STORAGE_KEY_PREFIX}step_2`}
             />
 
             {/* STEP 3: Mission Statement */}
             <OrientationStep
               stepNumber={3}
               title="MISSION STATEMENT"
-              videoUrl={MISSION_URL}
+              videoStorageKey={`${STORAGE_KEY_PREFIX}step_3`}
             />
 
             {/* STEP 4: House Rules Intro & Test */}
             <OrientationStep
               stepNumber={4}
               title="HOUSE RULES INTRO & TEST"
-              videoUrl={HOUSE_RULES_INTRO_URL}
+              videoStorageKey={`${STORAGE_KEY_PREFIX}step_4`}
               secondaryButtonLabel="HOUSE RULES"
               secondaryButtonLink="#step-5"
             />
@@ -163,21 +157,21 @@ const RookieOrientation = () => {
             <OrientationStep
               stepNumber={6}
               title="THE BIG 3!"
-              videoUrl={BIG3_URL}
+              videoStorageKey={`${STORAGE_KEY_PREFIX}step_6`}
             />
 
             {/* STEP 7: Wrapping Your Hands */}
             <OrientationStep
               stepNumber={7}
               title="WRAPPING YOUR HANDS"
-              videoUrl={WRAP_URL}
+              videoStorageKey={`${STORAGE_KEY_PREFIX}step_7`}
             />
 
             {/* STEP 8: Punch Code */}
             <OrientationStep
               stepNumber={8}
               title="PUNCH CODE"
-              videoUrl={PUNCH_CODE_URL}
+              videoStorageKey={`${STORAGE_KEY_PREFIX}step_8`}
             />
 
             {/* STEP 9: Congrats */}
@@ -185,7 +179,7 @@ const RookieOrientation = () => {
               <OrientationStep
                 stepNumber={9}
                 title="CONGRATS! YOU'RE READY TO SIGN-IN!"
-                videoUrl={SIGNIN_URL}
+                videoStorageKey={`${STORAGE_KEY_PREFIX}step_9`}
               />
             </div>
           </div>
