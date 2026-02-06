@@ -2,32 +2,12 @@ import { ReactNode } from "react";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
 import { ExternalLink } from "lucide-react";
-interface YouTubeEmbedProps {
-  url: string;
-}
-const YouTubeEmbed = ({
-  url
-}: YouTubeEmbedProps) => {
-  // Extract video ID from various YouTube URL formats
-  const getVideoId = (url: string) => {
-    if (!url) return null;
-    const match = url.match(/(?:youtu\.be\/|youtube\.com\/(?:embed\/|v\/|watch\?v=|watch\?.+&v=))([^&?]+)/);
-    return match ? match[1] : null;
-  };
-  const videoId = getVideoId(url);
-  if (!videoId) {
-    return <div className="aspect-video bg-neutral-800 rounded-lg flex items-center justify-center">
-        <p className="text-neutral-400 text-sm">Video coming soon</p>
-      </div>;
-  }
-  return <div className="aspect-video w-full">
-      <iframe src={`https://www.youtube-nocookie.com/embed/${videoId}`} title="YouTube video player" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerPolicy="strict-origin-when-cross-origin" allowFullScreen className="w-full h-full rounded-lg" />
-    </div>;
-};
+import { AutoYouTubeBox } from "@/components/orientation/AutoYouTubeBox";
+
 interface OrientationStepProps {
   stepNumber: number;
   title: string;
-  videoUrl?: string;
+  videoStorageKey?: string;
   buttonLabel?: string;
   buttonLink?: string;
   isExternal?: boolean;
@@ -38,7 +18,7 @@ interface OrientationStepProps {
 const OrientationStep = ({
   stepNumber,
   title,
-  videoUrl,
+  videoStorageKey,
   buttonLabel,
   buttonLink,
   isExternal = false,
@@ -62,7 +42,7 @@ const OrientationStep = ({
         </h3>
 
         {/* Video Embed */}
-        {videoUrl !== undefined && <YouTubeEmbed url={videoUrl} />}
+        {videoStorageKey && <AutoYouTubeBox storageKey={videoStorageKey} label={title} />}
 
         {/* Primary Button */}
         {buttonLabel && buttonLink && <div className="mt-5 bg-nla">
