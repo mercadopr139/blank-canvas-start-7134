@@ -2,12 +2,12 @@ import { ReactNode } from "react";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
 import { ExternalLink } from "lucide-react";
-import { AutoYouTubeBox } from "@/components/orientation/AutoYouTubeBox";
+import { YouTubeEmbed } from "@/components/orientation/YouTubeEmbed";
 
 interface OrientationStepProps {
   stepNumber: number;
   title: string;
-  videoStorageKey?: string;
+  videoId?: string;
   buttonLabel?: string;
   buttonLink?: string;
   isExternal?: boolean;
@@ -15,10 +15,11 @@ interface OrientationStepProps {
   secondaryButtonLink?: string;
   children?: ReactNode;
 }
+
 const OrientationStep = ({
   stepNumber,
   title,
-  videoStorageKey,
+  videoId,
   buttonLabel,
   buttonLink,
   isExternal = false,
@@ -27,7 +28,9 @@ const OrientationStep = ({
   children
 }: OrientationStepProps) => {
   const anchorId = `step-${stepNumber}`;
-  return <div id={anchorId} className="scroll-mt-24">
+  
+  return (
+    <div id={anchorId} className="scroll-mt-24">
       <div className="bg-neutral-900 border border-neutral-800 rounded-xl p-5 md:p-6 h-full">
         {/* Step Label */}
         <div className="mb-3">
@@ -42,34 +45,55 @@ const OrientationStep = ({
         </h3>
 
         {/* Video Embed */}
-        {videoStorageKey && <AutoYouTubeBox storageKey={videoStorageKey} label={title} />}
+        {videoId && <YouTubeEmbed videoId={videoId} title={title} />}
 
         {/* Primary Button */}
-        {buttonLabel && buttonLink && <div className="mt-5 bg-nla">
-            {isExternal ? <Button asChild size="lg" className="w-full text-white font-bold text-base py-6" style={{
-          backgroundColor: "#bf0f3e"
-        }}>
+        {buttonLabel && buttonLink && (
+          <div className="mt-5">
+            {isExternal ? (
+              <Button
+                asChild
+                size="lg"
+                className="w-full text-white font-bold text-base py-6"
+                style={{ backgroundColor: "#bf0f3e" }}
+              >
                 <a href={buttonLink} target="_blank" rel="noopener noreferrer">
                   {buttonLabel}
                   <ExternalLink className="ml-2 h-4 w-4" />
                 </a>
-              </Button> : <Button asChild size="lg" className="w-full text-white font-bold text-base py-6" style={{
-          backgroundColor: "#bf0f3e"
-        }}>
+              </Button>
+            ) : (
+              <Button
+                asChild
+                size="lg"
+                className="w-full text-white font-bold text-base py-6"
+                style={{ backgroundColor: "#bf0f3e" }}
+              >
                 <Link to={buttonLink}>{buttonLabel}</Link>
-              </Button>}
-          </div>}
+              </Button>
+            )}
+          </div>
+        )}
 
         {/* Secondary Button (for scroll links) */}
-        {secondaryButtonLabel && secondaryButtonLink && <div className="mt-3">
-            <Button asChild size="lg" className="w-full text-white font-bold text-base py-6" style={{ backgroundColor: "#bf0f3e" }}>
+        {secondaryButtonLabel && secondaryButtonLink && (
+          <div className="mt-3">
+            <Button
+              asChild
+              size="lg"
+              className="w-full text-white font-bold text-base py-6"
+              style={{ backgroundColor: "#bf0f3e" }}
+            >
               <a href={secondaryButtonLink}>{secondaryButtonLabel}</a>
             </Button>
-          </div>}
+          </div>
+        )}
 
         {/* Additional Content */}
         {children}
       </div>
-    </div>;
+    </div>
+  );
 };
+
 export default OrientationStep;

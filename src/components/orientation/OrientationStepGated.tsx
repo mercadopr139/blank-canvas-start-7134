@@ -3,20 +3,20 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { AlertCircle } from "lucide-react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { AutoYouTubeBox } from "@/components/orientation/AutoYouTubeBox";
+import { YouTubeEmbed } from "@/components/orientation/YouTubeEmbed";
 
 const TEST_PASSED_KEY = "house_rules_test_passed";
 
 interface OrientationStepGatedProps {
   stepNumber: number;
   title: string;
-  videoStorageKey?: string;
+  videoId?: string;
 }
 
 const OrientationStepGated = ({
   stepNumber,
   title,
-  videoStorageKey
+  videoId
 }: OrientationStepGatedProps) => {
   const [hasPassed, setHasPassed] = useState(false);
   const [showWarning, setShowWarning] = useState(false);
@@ -62,9 +62,7 @@ const OrientationStepGated = ({
         {/* Gated Content */}
         {hasPassed ? (
           <>
-            {videoStorageKey && (
-              <AutoYouTubeBox storageKey={videoStorageKey} label={title} />
-            )}
+            {videoId && <YouTubeEmbed videoId={videoId} title={title} />}
           </>
         ) : (
           <div onClick={handleBlockedClick} className="cursor-pointer">
