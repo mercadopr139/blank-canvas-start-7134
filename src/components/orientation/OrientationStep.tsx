@@ -62,7 +62,7 @@ const OrientationStep = ({
 
         {/* Secondary Button (for scroll links) */}
         {secondaryButtonLabel && secondaryButtonLink && <div className="mt-3">
-            <Button asChild variant="outline" size="lg" className="w-full font-bold text-base py-6 border-neutral-600 text-white hover:bg-neutral-800">
+            <Button asChild size="lg" className="w-full text-white font-bold text-base py-6" style={{ backgroundColor: "#bf0f3e" }}>
               <a href={secondaryButtonLink}>{secondaryButtonLabel}</a>
             </Button>
           </div>}
