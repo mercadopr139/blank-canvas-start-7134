@@ -6,6 +6,7 @@ import { AlertCircle, Lock } from "lucide-react";
 import Header from "@/components/layout/Header";
 import Footer from "@/components/layout/Footer";
 import OrientationStep from "@/components/orientation/OrientationStep";
+import { Step1DoneBadge } from "@/components/orientation/Step1DoneBadge";
 
 const SESSION_KEY = "rookie_orientation_unlocked";
 
@@ -124,7 +125,9 @@ const RookieOrientation = () => {
               title="REGISTRATION"
               buttonLabel="REGISTER NOW"
               buttonLink="/register"
-            />
+            >
+              <Step1DoneBadge />
+            </OrientationStep>
 
             {/* STEP 2: Coach Mercado Intro */}
             <OrientationStep
