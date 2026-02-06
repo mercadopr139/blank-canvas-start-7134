@@ -1,7 +1,5 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { CheckCircle, XCircle, ArrowLeft, Trophy } from "lucide-react";
 import { Link } from "react-router-dom";
@@ -296,36 +294,40 @@ const HouseRulesTest = () => {
                     </div>
                   </div>
 
-                  <RadioGroup
-                    value={answers[q.id] !== undefined ? answers[q.id].toString() : ""}
-                    onValueChange={(value) => handleAnswerChange(q.id, parseInt(value))}
-                    className="space-y-2 ml-11"
-                  >
+                  <div className="space-y-2 ml-11">
                     {q.options.map((option, optIndex) => {
+                      const isSelected = answers[q.id] === optIndex;
                       const isSelectedIncorrect =
                         submitted && isIncorrect && answers[q.id] === optIndex;
                       const isTheCorrectAnswer =
                         submitted && isIncorrect && q.correctAnswer === optIndex;
 
                       return (
-                        <div
+                        <button
                           key={optIndex}
-                          className={`flex items-center space-x-3 p-3 rounded-lg border transition-colors ${
+                          type="button"
+                          onClick={() => handleAnswerChange(q.id, optIndex)}
+                          className={`w-full flex items-center space-x-3 p-3 rounded-lg border transition-colors text-left ${
                             isSelectedIncorrect
                               ? "bg-red-500/10 border-red-500/50"
                               : isTheCorrectAnswer
                               ? "bg-green-500/10 border-green-500/50"
-                              : "border-neutral-700 hover:border-neutral-600"
+                              : isSelected
+                              ? "bg-neutral-800 border-neutral-500"
+                              : "border-neutral-700 hover:border-neutral-500 hover:bg-neutral-800/50"
                           }`}
                         >
-                          <RadioGroupItem
-                            value={optIndex.toString()}
-                            id={`q${q.id}-opt${optIndex}`}
-                            className="border-neutral-500"
-                          />
-                          <Label
-                            htmlFor={`q${q.id}-opt${optIndex}`}
-                            className={`flex-1 cursor-pointer ${
+                          <div
+                            className={`w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 ${
+                              isSelected ? "border-white" : "border-neutral-500"
+                            }`}
+                          >
+                            {isSelected && (
+                              <div className="w-2.5 h-2.5 rounded-full bg-white" />
+                            )}
+                          </div>
+                          <span
+                            className={`flex-1 ${
                               isSelectedIncorrect
                                 ? "text-red-300"
                                 : isTheCorrectAnswer
@@ -334,17 +336,17 @@ const HouseRulesTest = () => {
                             }`}
                           >
                             {option}
-                          </Label>
+                          </span>
                           {isSelectedIncorrect && (
                             <XCircle className="h-5 w-5 text-red-500 flex-shrink-0" />
                           )}
                           {isTheCorrectAnswer && (
                             <CheckCircle className="h-5 w-5 text-green-500 flex-shrink-0" />
                           )}
-                        </div>
+                        </button>
                       );
                     })}
-                  </RadioGroup>
+                  </div>
                 </div>
               );
             })}
