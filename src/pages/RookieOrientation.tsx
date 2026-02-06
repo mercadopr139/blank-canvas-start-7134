@@ -122,7 +122,7 @@ const RookieOrientation = () => {
             {/* STEP 1: Registration */}
             <OrientationStep
               stepNumber={1}
-              title="Registration"
+              title="REGISTRATION"
             >
               <Step1DoneBadge />
             </OrientationStep>
