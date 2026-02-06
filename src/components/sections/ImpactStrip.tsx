@@ -1,7 +1,12 @@
-import { Users, Heart, ShieldCheck, Utensils } from "lucide-react";
+import { Users, Heart, ShieldCheck, Utensils, TrendingUp, Bus } from "lucide-react";
 
 const ImpactStrip = () => {
   const stats = [
+    {
+      icon: TrendingUp,
+      value: "$2.6M+",
+      label: "Raised Since 2020",
+    },
     {
       icon: Users,
       value: "500+",
@@ -10,24 +15,29 @@ const ImpactStrip = () => {
     {
       icon: ShieldCheck,
       value: "95%",
-      label: "of Youth Participate in Non-Contact Boxing",
+      label: "Youth Participate in Non-Contact Boxing",
     },
     {
       icon: Heart,
       value: "70%",
-      label: "Youth from Low-Income Households",
+      label: "Below Poverty Line",
     },
     {
       icon: Utensils,
-      value: "Meals & Transportation",
+      value: "Meals Served",
       label: "Five Nights a Week",
+    },
+    {
+      icon: Bus,
+      value: "Free",
+      label: "Transportation",
     },
   ];
 
   return (
     <section className="bg-foreground py-8 md:py-10">
       <div className="container px-4 md:px-6">
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-y-8 gap-x-4 md:gap-8 justify-items-center">
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-y-8 gap-x-4 md:gap-6 justify-items-center">
           {stats.map((stat, index) => (
             <div key={index} className="text-center w-full max-w-[160px] md:max-w-none flex flex-col items-center">
               <stat.icon className="h-6 w-6 mb-2 text-background/70" />
