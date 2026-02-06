@@ -234,28 +234,31 @@ const ImpactStory = () => {
                     Law Enforcement & Public Safety
                   </AccordionTrigger>
                   <AccordionContent className="pb-6">
-                    <ul className="space-y-2 text-muted-foreground">
-                      <li className="flex items-start gap-2">
-                        <span className="text-foreground mt-1">•</span>
-                        <span>Cape May County Prosecutor's Office</span>
-                      </li>
-                      <li className="flex items-start gap-2 ml-6">
-                        <span className="text-foreground mt-1"></span>
-                        <span>*Over 12 municipal and county law enforcement agencies across Cape May County</span>
-                      </li>
-                      <li className="flex items-start gap-2">
-                        <span className="text-foreground mt-1">•</span>
-                        <span>Cape May Police Chief, Dekon Fashaw</span>
-                      </li>
-                      <li className="flex items-start gap-2">
-                        <span className="text-foreground mt-1">•</span>
-                        <span>Middle Township Police Chief, Tracey Super</span>
-                      </li>
-                      <li className="flex items-start gap-2">
-                        <span className="text-foreground mt-1">•</span>
-                        <span>Police Chiefs Association of Cape May County</span>
-                      </li>
-                    </ul>
+                    {(() => {
+                      const lawEnforcementPartners = [
+                        "Avalon Police Department",
+                        "Blue Knights Motorcycle Club",
+                        "Cape May County Prosecutor's Office",
+                        "Cape May Police Department",
+                        "Lower Township Police Department",
+                        "Middle Township Police Department",
+                        "North Wildwood Police Department",
+                        "Ocean City Police Department",
+                        "Police Benevolent Association (Local PBA 59)",
+                        "Sea Isle City Police Department",
+                        "Stone Harbor Police Department",
+                        "West Wildwood Police Department",
+                        "Wildwood Crest Police Department",
+                        "Wildwood Police Department",
+                      ].sort((a, b) => a.localeCompare(b));
+                      return (
+                        <ul className="mt-3 list-disc space-y-2 pl-5 text-sm text-muted-foreground">
+                          {lawEnforcementPartners.map((item) => (
+                            <li key={item}>{item}</li>
+                          ))}
+                        </ul>
+                      );
+                    })()}
                   </AccordionContent>
                 </AccordionItem>
 
