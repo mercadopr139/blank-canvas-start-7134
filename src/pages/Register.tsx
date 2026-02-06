@@ -168,20 +168,17 @@ const SEX_OPTIONS = ["Male", "Female"] as const;
      setAcknowledgements(prev => ({ ...prev, [field]: value }));
    };
  
-   const uploadSignature = async (blob: Blob, prefix: string): Promise<string> => {
-     const fileName = `${prefix}_${Date.now()}_${Math.random().toString(36).substring(7)}.png`;
-     const { data, error } = await supabase.storage
-       .from("registration-signatures")
-       .upload(fileName, blob, { contentType: "image/png" });
-     
-     if (error) throw error;
-     
-     const { data: urlData } = supabase.storage
-       .from("registration-signatures")
-       .getPublicUrl(data.path);
-     
-     return urlData.publicUrl;
-   };
+    const uploadSignature = async (blob: Blob, prefix: string): Promise<string> => {
+      const fileName = `${prefix}_${Date.now()}_${Math.random().toString(36).substring(7)}.png`;
+      const { data, error } = await supabase.storage
+        .from("registration-signatures")
+        .upload(fileName, blob, { contentType: "image/png" });
+      
+      if (error) throw error;
+      
+      // Store the file path - admins will use signed URLs to access
+      return data.path;
+    };
  
    const handleHeadshotChange = (e: React.ChangeEvent<HTMLInputElement>) => {
      const file = e.target.files?.[0];
@@ -195,20 +192,17 @@ const SEX_OPTIONS = ["Male", "Female"] as const;
      }
    };
  
-   const uploadHeadshot = async (file: File): Promise<string> => {
-     const fileName = `headshot_${Date.now()}_${Math.random().toString(36).substring(7)}.${file.name.split('.').pop()}`;
-     const { data, error } = await supabase.storage
-       .from("registration-signatures")
-       .upload(fileName, file, { contentType: file.type });
-     
-     if (error) throw error;
-     
-     const { data: urlData } = supabase.storage
-       .from("registration-signatures")
-       .getPublicUrl(data.path);
-     
-     return urlData.publicUrl;
-   };
+    const uploadHeadshot = async (file: File): Promise<string> => {
+      const fileName = `headshot_${Date.now()}_${Math.random().toString(36).substring(7)}.${file.name.split('.').pop()}`;
+      const { data, error } = await supabase.storage
+        .from("registration-signatures")
+        .upload(fileName, file, { contentType: file.type });
+      
+      if (error) throw error;
+      
+      // Store the file path - admins will use signed URLs to access
+      return data.path;
+    };
  
    const validateForm = (): string | null => {
      const requiredFields: (keyof FormData)[] = [
