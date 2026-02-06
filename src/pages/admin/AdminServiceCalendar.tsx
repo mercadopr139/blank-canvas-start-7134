@@ -8,11 +8,21 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import ServiceEntryModal from "@/components/admin/ServiceEntryModal";
-import { ArrowLeft, Calendar, ChevronLeft, ChevronRight, FileText } from "lucide-react";
+import { ArrowLeft, Calendar, ChevronLeft, ChevronRight, FileText, Trash2 } from "lucide-react";
 import {
   format,
   startOfMonth,
@@ -51,6 +61,8 @@ export default function AdminServiceCalendar() {
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [editingLog, setEditingLog] = useState<ServiceLog | null>(null);
   const [existingLogsForDate, setExistingLogsForDate] = useState<ServiceLog[]>([]);
+  const [showClearConfirm, setShowClearConfirm] = useState(false);
+  const [isClearing, setIsClearing] = useState(false);
   
   const { toast } = useToast();
   const { signOut } = useAuth();
@@ -179,6 +191,37 @@ export default function AdminServiceCalendar() {
     navigate(`/admin/invoices?client=${selectedClientId}&month=${month}&year=${year}&autoGenerate=true`);
   };
 
+  const handleClearAllServiceDays = async () => {
+    if (!selectedClientId || serviceLogs.length === 0) return;
+    
+    setIsClearing(true);
+    try {
+      const monthStart = format(startOfMonth(currentMonth), "yyyy-MM-dd");
+      const monthEnd = format(endOfMonth(currentMonth), "yyyy-MM-dd");
+
+      const { error } = await supabase
+        .from("service_logs")
+        .delete()
+        .eq("client_id", selectedClientId)
+        .gte("service_date", monthStart)
+        .lte("service_date", monthEnd);
+
+      if (error) throw error;
+
+      toast({ title: `Cleared ${serviceLogs.length} service entries` });
+      setServiceLogs([]);
+    } catch (error: any) {
+      toast({
+        title: "Error clearing service days",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setIsClearing(false);
+      setShowClearConfirm(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-muted/30">
       {/* Header */}
@@ -250,19 +293,32 @@ export default function AdminServiceCalendar() {
               <div className="text-sm text-muted-foreground">
                 <span className="font-medium">{serviceLogs.length}</span> service days this month
               </div>
-              <div className="flex flex-col items-end gap-1">
-                <Button
-                  onClick={handleGeneratePreview}
-                  disabled={serviceLogs.length === 0}
-                >
-                  <FileText className="w-4 h-4 mr-2" />
-                  Generate Preview
-                </Button>
-                {serviceLogs.length === 0 && (
-                  <span className="text-xs text-muted-foreground">
-                    Select at least 1 service day to generate a preview.
-                  </span>
+              <div className="flex items-center gap-2">
+                {serviceLogs.length > 0 && (
+                  <Button
+                    variant="outline"
+                    onClick={() => setShowClearConfirm(true)}
+                    disabled={isClearing}
+                    className="text-destructive hover:text-destructive"
+                  >
+                    <Trash2 className="w-4 h-4 mr-2" />
+                    Clear All
+                  </Button>
                 )}
+                <div className="flex flex-col items-end gap-1">
+                  <Button
+                    onClick={handleGeneratePreview}
+                    disabled={serviceLogs.length === 0}
+                  >
+                    <FileText className="w-4 h-4 mr-2" />
+                    Generate Preview
+                  </Button>
+                  {serviceLogs.length === 0 && (
+                    <span className="text-xs text-muted-foreground">
+                      Select at least 1 service day to generate a preview.
+                    </span>
+                  )}
+                </div>
               </div>
             </div>
           )}
@@ -368,6 +424,31 @@ export default function AdminServiceCalendar() {
           onSuccess={refreshLogs}
         />
       )}
+
+      {/* Clear All Confirmation Dialog */}
+      <AlertDialog open={showClearConfirm} onOpenChange={setShowClearConfirm}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Clear All Service Days?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will permanently delete all {serviceLogs.length} service entries for{" "}
+              <strong>{selectedClient?.client_name}</strong> in{" "}
+              <strong>{format(currentMonth, "MMMM yyyy")}</strong>.
+              This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isClearing}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleClearAllServiceDays}
+              disabled={isClearing}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {isClearing ? "Clearing..." : "Clear All"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
