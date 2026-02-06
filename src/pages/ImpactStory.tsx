@@ -237,7 +237,11 @@ const ImpactStory = () => {
                     <ul className="space-y-2 text-muted-foreground">
                       <li className="flex items-start gap-2">
                         <span className="text-foreground mt-1">•</span>
-                        <span>Police Chiefs Association of Cape May County</span>
+                        <span>Cape May County Prosecutor's Office</span>
+                      </li>
+                      <li className="flex items-start gap-2 ml-6">
+                        <span className="text-foreground mt-1"></span>
+                        <span>*Over 12 municipal and county law enforcement agencies across Cape May County</span>
                       </li>
                       <li className="flex items-start gap-2">
                         <span className="text-foreground mt-1">•</span>
@@ -249,12 +253,7 @@ const ImpactStory = () => {
                       </li>
                       <li className="flex items-start gap-2">
                         <span className="text-foreground mt-1">•</span>
-                        <span>Cape May County Prosecutor's Office</span>
-                      </li>
-                      <li className="flex items-start gap-2 ml-6">
-                        <span className="text-foreground mt-1">
-                      </span>
-                        <span>*Over 12 municipal and county law enforcement agencies across Cape May County</span>
+                        <span>Police Chiefs Association of Cape May County</span>
                       </li>
                     </ul>
                   </AccordionContent>
