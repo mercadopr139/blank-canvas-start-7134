@@ -71,7 +71,7 @@ const RookieOrientation = () => {
 
               <form onSubmit={handleSubmit} className="space-y-4">
                 <div>
-                  <Input type="text" value={code} onChange={handleCodeChange} placeholder="Enter code" className="text-center text-lg tracking-widest uppercase font-mono" maxLength={3} autoFocus />
+                  <Input type="text" value={code} onChange={handleCodeChange} placeholder="Enter code" className="text-center text-lg tracking-widest uppercase font-mono text-black" maxLength={3} autoFocus />
                 </div>
 
                 {error && <Alert variant="destructive">
