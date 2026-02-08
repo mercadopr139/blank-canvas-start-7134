@@ -73,7 +73,7 @@ const AboutSection = () => {
             <img 
               src={gymYouthGathering} 
               alt=""
-              className="w-full h-full object-cover object-bottom opacity-40"
+              className="w-full h-full object-cover object-[center_60%] opacity-40"
             />
             <div className="absolute inset-0 bg-gradient-to-b from-background/70 via-background/50 to-background/80" />
           </div>
