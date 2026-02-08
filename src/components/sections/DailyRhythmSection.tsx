@@ -125,9 +125,17 @@ const DailyRhythmSection = ({ programFilter = "all" }: DailyRhythmSectionProps) 
                   <p className="text-base md:text-lg text-primary-foreground/70 mb-4">
                     Includes Grit & Grace Program
                   </p>
-                  <p className="text-base md:text-lg text-primary-foreground/90 leading-relaxed">
+                  <p className="text-base md:text-lg text-primary-foreground/90 leading-relaxed mb-4">
                     No Limits Academy operates Monday through Friday, 2:30pm–8:30pm. Senior Boxing youth are permitted to arrive as early as 2:30pm for supervised open gym and structured after-school support.
                   </p>
+                  <div className="border-t border-primary-foreground/20 pt-4 mt-4">
+                    <p className="text-base md:text-lg font-semibold text-primary-foreground mb-2">
+                      Grit & Grace Program
+                    </p>
+                    <p className="text-base md:text-lg text-primary-foreground/90 leading-relaxed">
+                      A boxing-based character and leadership program for girls, within the Senior Boxing Program, designed to support youth through mentorship, reflection, and personal growth alongside athletic training. Boys and girls generally train separately during the Senior Boxing Program.
+                    </p>
+                  </div>
                 </div>
               </div>
               <ScheduleBlockComponent blocks={seniorScheduleBlocks} />
