@@ -3,17 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Trophy } from "lucide-react";
 import nlaAvalonAward from "@/assets/gym-buddies/nla-avalon-award.png";
 import middleMattersChrissy from "@/assets/awards/middle-matters-chrissy-casiello.jpg";
-
-const awards = [
-  `BCMF — Be Kind Award Recipient`,
-  `Cape Assist — Partner in Prevention Award`,
-  `Cape May County NAACP Freedom Fund — "Recognition of Educator Award"`,
-  `CMC Chamber of Commerce — Non-Profit of the Year Award`,
-  `Middle Township City Council — "Middle Matters" Civic Recognition Award`,
-  `United States House of Representatives — Congressional Proclamation of Recognition`,
-  `USA Boxing's Mid-Atlantic Association — George Hill Humanitarian Award`,
-].sort((a, b) => a.localeCompare(b));
-
+const awards = [`BCMF — Be Kind Award Recipient`, `Cape Assist — Partner in Prevention Award`, `Cape May County NAACP Freedom Fund — "Recognition of Educator Award"`, `CMC Chamber of Commerce — Non-Profit of the Year Award`, `Middle Township City Council — "Middle Matters" Civic Recognition Award`, `United States House of Representatives — Congressional Proclamation of Recognition`, `USA Boxing's Mid-Atlantic Association — George Hill Humanitarian Award`].sort((a, b) => a.localeCompare(b));
 const ImpactSection = () => {
   return <section className="py-20 md:py-28 bg-background">
       <div className="container">
@@ -27,19 +17,14 @@ const ImpactSection = () => {
 
           {/* Middle Matters Award Image */}
           <div className="mb-10 rounded-xl overflow-hidden bg-muted">
-            <img 
-              src={middleMattersChrissy} 
-              alt="Middle Township honors NLA Program Director Chrissy Casiello with Middle Matters Award" 
-              className="w-full"
-              style={{ objectFit: 'contain' }}
-            />
+            <img src={middleMattersChrissy} alt="Middle Township honors NLA Program Director Chrissy Casiello with Middle Matters Award" className="w-full" style={{
+            objectFit: 'contain'
+          }} />
           </div>
 
           {/* Content */}
           <div className="space-y-6 text-left">
-            <p className="text-lg md:text-xl text-foreground/80 leading-relaxed">
-              No Limits Academy serves over <span className="font-bold text-foreground">500 youth each year</span> across Cape May County.
-            </p>
+            
 
             <p className="text-lg md:text-xl text-foreground/80 leading-relaxed">
               Impact at NLA is built through consistency—youth commit to the program, and our staff commits to them. By showing up every day during one of the most chaotic seasons of a young person's life, we become a steady, reliable presence that helps guide their personal journey.
@@ -75,12 +60,10 @@ const ImpactSection = () => {
               organizations for our youth impact, mentorship, and community leadership.
             </p>
             <ul className="mt-5 space-y-3">
-              {awards.map((award) => (
-                <li key={award} className="flex items-start gap-3">
+              {awards.map(award => <li key={award} className="flex items-start gap-3">
                   <Trophy className="mt-0.5 h-4 w-4 flex-shrink-0 text-primary" />
                   <span className="text-sm leading-relaxed text-foreground/80">{award}</span>
-                </li>
-              ))}
+                </li>)}
             </ul>
           </div>
         </div>
