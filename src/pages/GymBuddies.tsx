@@ -239,11 +239,14 @@ const GymBuddies = () => {
                 
                 {/* Chat Button */}
                 <div className="pt-4 flex flex-col items-center">
-                  <Button onClick={() => setIsChatOpen(true)} className="px-5 py-3 h-auto rounded-lg bg-foreground text-background font-extrabold hover:bg-foreground/90 transition-colors">
-                    <MessageCircle className="h-5 w-5 mr-2" />
-                    Interested in becoming a Gym Buddy?
+                  <Button onClick={() => setIsChatOpen(true)} className="px-4 py-2 h-auto rounded-lg bg-foreground text-background font-bold text-sm hover:bg-foreground/90 transition-colors flex flex-col items-center gap-0.5">
+                    <span className="flex items-center gap-1.5">
+                      <MessageCircle className="h-4 w-4" />
+                      Interested in becoming
+                    </span>
+                    <span>a Gym Buddy?</span>
                   </Button>
-                  <p className="text-sm italic text-muted-foreground mt-2 text-center">Click for more info!</p>
+                  <p className="text-xs italic text-muted-foreground mt-2 text-center">Click for more info!</p>
                 </div>
               </div>
 
