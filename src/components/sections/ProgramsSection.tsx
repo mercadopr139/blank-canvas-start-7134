@@ -76,7 +76,7 @@ const ProgramsSection = ({
           <img 
             src={juniorBoxingImage} 
             alt="Junior Boxing Program" 
-            className="w-full aspect-[4/3] object-cover rounded-lg"
+            className="w-full aspect-[4/3] object-cover object-top rounded-lg"
           />
           <div className="mt-4 space-y-1.5">
             <p className="font-semibold text-foreground text-sm">Quick Parent Snapshot 👇</p>
