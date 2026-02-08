@@ -74,6 +74,14 @@ const ProgramsSection = ({
           <div className="w-full aspect-[4/3] bg-muted rounded-lg flex items-center justify-center">
             <span className="text-muted-foreground text-sm">Junior Boxing Image Placeholder</span>
           </div>
+          <Button 
+            className="w-full mt-4 bg-primary hover:bg-primary/90 text-primary-foreground font-semibold"
+            asChild
+          >
+            <a href="https://wkf.ms/45C6tce" target="_blank" rel="noopener noreferrer">
+              SIGN-UP
+            </a>
+          </Button>
         </DialogContent>
       </Dialog>
 
@@ -86,6 +94,14 @@ const ProgramsSection = ({
           <div className="w-full aspect-[4/3] bg-foreground/10 rounded-lg flex items-center justify-center">
             <span className="text-foreground/50 text-sm">Senior Boxing Image Placeholder</span>
           </div>
+          <Button 
+            className="w-full mt-4 bg-foreground hover:bg-foreground/90 text-background font-semibold"
+            asChild
+          >
+            <a href="https://wkf.ms/45C6tce" target="_blank" rel="noopener noreferrer">
+              SIGN-UP
+            </a>
+          </Button>
         </DialogContent>
       </Dialog>
     </section>;
