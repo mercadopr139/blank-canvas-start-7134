@@ -1,5 +1,13 @@
+import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+
 const programs = [{
   title: "Junior Boxing Program",
   ages: "Ages 7–10 | Tuesdays",
@@ -15,6 +23,7 @@ interface ProgramsSectionProps {
 const ProgramsSection = ({
   onMoreInfo
 }: ProgramsSectionProps) => {
+  const [signupModalOpen, setSignupModalOpen] = useState<"junior" | "senior" | null>(null);
   return <section id="programs" className="py-20 md:py-28 bg-primary">
       <div className="container">
         {/* Section header */}
@@ -41,10 +50,11 @@ const ProgramsSection = ({
                   {program.description}
                 </p>
                 <div className="flex flex-col gap-3 items-center">
-                  <Button className={`w-full font-semibold ${index === 0 ? "bg-primary hover:bg-primary/90 text-primary-foreground" : "bg-foreground hover:bg-foreground/90 text-background"}`} asChild>
-                    <a href="https://wkf.ms/45C6tce" target="_blank" rel="noopener noreferrer">
-                      SIGN-UP
-                    </a>
+                  <Button 
+                    className={`w-full font-semibold ${index === 0 ? "bg-primary hover:bg-primary/90 text-primary-foreground" : "bg-foreground hover:bg-foreground/90 text-background"}`}
+                    onClick={() => setSignupModalOpen(index === 0 ? "junior" : "senior")}
+                  >
+                    SIGN-UP
                   </Button>
                   <Button variant="outline" size="sm" className={`w-1/2 font-semibold ${index === 0 ? "border-primary text-primary hover:bg-primary hover:text-primary-foreground" : "border-foreground text-foreground hover:bg-foreground hover:text-background"}`} onClick={() => onMoreInfo?.(index === 0 ? "junior" : "senior")}>
                     MORE INFO
@@ -54,6 +64,30 @@ const ProgramsSection = ({
             </Card>)}
         </div>
       </div>
+
+      {/* Junior Boxing Signup Modal */}
+      <Dialog open={signupModalOpen === "junior"} onOpenChange={(open) => !open && setSignupModalOpen(null)}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="sr-only">Junior Boxing Sign-Up</DialogTitle>
+          </DialogHeader>
+          <div className="w-full aspect-[4/3] bg-muted rounded-lg flex items-center justify-center">
+            <span className="text-muted-foreground text-sm">Junior Boxing Image Placeholder</span>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Senior Boxing Signup Modal */}
+      <Dialog open={signupModalOpen === "senior"} onOpenChange={(open) => !open && setSignupModalOpen(null)}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="sr-only">Senior Boxing Sign-Up</DialogTitle>
+          </DialogHeader>
+          <div className="w-full aspect-[4/3] bg-foreground/10 rounded-lg flex items-center justify-center">
+            <span className="text-foreground/50 text-sm">Senior Boxing Image Placeholder</span>
+          </div>
+        </DialogContent>
+      </Dialog>
     </section>;
 };
 export default ProgramsSection;
