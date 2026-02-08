@@ -26,18 +26,18 @@ const AboutSection = () => {
               </div>
             </div>
             
-            {/* Mobile: Stacked with creative overlap effect */}
-            <div className="md:hidden relative">
+            {/* Mobile: Stacked with subtle tilt effect */}
+            <div className="md:hidden space-y-6">
               {/* Youth gathering photo - tilted slightly */}
-              <div className="relative z-10 mx-4 -rotate-2 rounded-lg overflow-hidden shadow-xl">
+              <div className="relative mx-2 -rotate-1 rounded-lg overflow-hidden shadow-xl">
                 <img 
                   src={gymYouthGathering} 
                   alt="NLA youth gathered in the gym for a presentation"
                   className="w-full h-auto object-cover"
                 />
               </div>
-              {/* Core Values banner - underneath, tilted opposite */}
-              <div className="core-values relative z-0 -mt-8 mx-2 rotate-1 rounded-lg overflow-hidden shadow-lg">
+              {/* Core Values banner - tilted opposite */}
+              <div className="core-values relative mx-4 rotate-1 rounded-lg overflow-hidden shadow-lg">
                 <img 
                   src={coreValuesBanner} 
                   alt="NLA Core Values: Respect, Commitment, Accountability, Leadership, Trust, Service"
