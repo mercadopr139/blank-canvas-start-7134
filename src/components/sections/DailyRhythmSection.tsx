@@ -99,9 +99,7 @@ const DailyRhythmSection = ({
                   <p className="text-xl md:text-2xl font-semibold text-primary-foreground mb-1">
                     Senior Boxing – Typical Day (Ages 11–19)
                   </p>
-                  <p className="text-sm md:text-base italic text-primary-foreground/70 mb-4">
-                    Includes Grit & Grace Program
-                  </p>
+                  <p className="text-sm md:text-base italic text-primary-foreground/70 mb-4">*Senior Boxers operate with structured training groups, including separate coaching environments for boys and girls, while remaining one unified program.</p>
                   <p className="text-base md:text-lg text-primary-foreground/90 leading-relaxed mb-4">
                     No Limits Academy operates Monday through Friday, 2:30pm–8:30pm. Senior Boxing youth are permitted to arrive as early as 2:30pm for supervised open gym and structured after-school support.
                   </p>
