@@ -53,14 +53,7 @@ export function ClickToEnlargeGallery({
         backgroundColor: img.bgColor
       } : undefined}>
             <button type="button" onClick={() => setActiveImg(img)} className={ui.buttonClassName} aria-label="Enlarge image">
-              <img src={img.src} alt={img.alt} className={img.objectFit === "contain" ? ui.imgClassName.replace("object-cover", "object-contain") : ui.imgClassName} style={{
-            ...(img.objectPosition ? {
-              objectPosition: img.objectPosition
-            } : {}),
-            ...(img.objectFit ? {
-              objectFit: img.objectFit
-            } : {})
-          }} loading="lazy" />
+              
             </button>
             {showCaptions && img.caption ? <div className={ui.captionWrapClassName}>
                 <p className={ui.captionTextClassName}>{img.caption}</p>
