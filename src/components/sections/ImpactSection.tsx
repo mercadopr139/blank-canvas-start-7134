@@ -1,6 +1,6 @@
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Trophy } from "lucide-react";
+import { Trophy, Users, Heart } from "lucide-react";
 import nlaAvalonAward from "@/assets/gym-buddies/nla-avalon-award.png";
 import middleMattersChrissy from "@/assets/awards/middle-matters-chrissy-casiello.jpg";
 const awards = [`BCMF — Be Kind Award Recipient`, `Cape Assist — Partner in Prevention Award`, `Cape May County NAACP Freedom Fund — "Recognition of Educator Award"`, `CMC Chamber of Commerce — Non-Profit of the Year Award`, `Middle Township City Council — "Middle Matters" Civic Recognition Award`, `United States House of Representatives — Congressional Proclamation of Recognition`, `USA Boxing's Mid-Atlantic Association — George Hill Humanitarian Award`].sort((a, b) => a.localeCompare(b));
@@ -29,10 +29,20 @@ const ImpactSection = () => {
             <p className="text-lg md:text-xl text-foreground/80 leading-relaxed">
               Impact at NLA is built through consistency—youth commit to the program, and our staff commits to them. By showing up every day during one of the most chaotic seasons of a young person's life, we become a steady, reliable presence that helps guide their personal journey.
             </p>
-            
-            <p className="text-lg md:text-xl text-foreground/80 leading-relaxed">
-              
-            </p>
+
+            {/* Impact Stats */}
+            <div className="flex justify-center gap-12 md:gap-20 py-4">
+              <div className="text-center">
+                <Users className="h-6 w-6 mx-auto mb-2 text-foreground/60" />
+                <p className="text-3xl md:text-4xl font-black text-foreground">500+</p>
+                <p className="text-sm text-foreground/70">Youth Served<br />Annually</p>
+              </div>
+              <div className="text-center">
+                <Heart className="h-6 w-6 mx-auto mb-2 text-foreground/60" />
+                <p className="text-3xl md:text-4xl font-black text-foreground">70%</p>
+                <p className="text-sm text-foreground/70">Below Poverty Line</p>
+              </div>
+            </div>
             
             <p className="text-lg md:text-xl text-foreground/80 leading-relaxed">
               Our one-stop, wraparound approach to youth development has attracted schools, law enforcement, mental health providers, public officials, and community partners who recognize NLA as a legitimate, trusted hub for real, lasting impact.
