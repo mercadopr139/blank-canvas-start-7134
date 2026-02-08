@@ -7,6 +7,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { DollarSign, Shirt, Clock, Utensils, AlarmClock } from "lucide-react";
 
 const programs = [{
   title: "Junior Boxing Program",
@@ -76,11 +77,21 @@ const ProgramsSection = ({
           </div>
           <div className="mt-4 space-y-2 text-sm">
             <p className="font-semibold text-foreground">Quick Parent Snapshot 👇</p>
-            <p className="text-muted-foreground">🥊 Cost: 100% FREE</p>
-            <p className="text-muted-foreground">👕 What to bring: athletic clothes & sneakers</p>
-            <p className="text-muted-foreground">🕔 Program: 5:15–6:00 PM</p>
-            <p className="text-muted-foreground">🍽️ Optional Aftercare: 6-7pm (Dinner Included)</p>
-            <p className="text-muted-foreground">⏰ Pick-Up: 7-7:10pm, Please be on time!</p>
+            <p className="text-muted-foreground italic flex items-center gap-2">
+              <DollarSign className="h-4 w-4 text-foreground flex-shrink-0" /> Cost: 100% FREE
+            </p>
+            <p className="text-muted-foreground italic flex items-center gap-2">
+              <Shirt className="h-4 w-4 text-foreground flex-shrink-0" /> What to bring: athletic clothes & sneakers
+            </p>
+            <p className="text-muted-foreground italic flex items-center gap-2">
+              <Clock className="h-4 w-4 text-foreground flex-shrink-0" /> Program: 5:15–6:00 PM
+            </p>
+            <p className="text-muted-foreground italic flex items-center gap-2">
+              <Utensils className="h-4 w-4 text-foreground flex-shrink-0" /> Optional Aftercare: 6-7pm (Dinner Included)
+            </p>
+            <p className="text-muted-foreground italic flex items-center gap-2">
+              <AlarmClock className="h-4 w-4 text-foreground flex-shrink-0" /> Pick-Up: 7-7:10pm, Please be on time!
+            </p>
           </div>
           <Button 
             className="w-full mt-4 bg-primary hover:bg-primary/90 text-primary-foreground font-semibold"
