@@ -2,7 +2,9 @@ const FreeAccessMarquee = () => {
   const message = "ALL YOUTH FREE — GUARANTEED";
   // Repeat the message to create seamless loop
   const repeatedMessage = `${message} \u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0 ${message} \u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0 ${message} \u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0 ${message}`;
-  return <section className="bg-nla py-2 md:py-3 overflow-hidden border-0 rounded-md">
+
+  return (
+    <section className="bg-nla py-2 md:py-3 overflow-hidden">
       <div className="relative">
         <div className="flex whitespace-nowrap animate-marquee-fast">
           <span className="text-sm md:text-base font-bold tracking-widest text-nla-foreground px-4">
@@ -13,6 +15,8 @@ const FreeAccessMarquee = () => {
           </span>
         </div>
       </div>
-    </section>;
+    </section>
+  );
 };
+
 export default FreeAccessMarquee;
