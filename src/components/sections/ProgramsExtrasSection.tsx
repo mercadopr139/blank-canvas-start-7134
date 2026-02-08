@@ -1,4 +1,5 @@
 import { useState, useMemo } from "react";
+import { Link } from "react-router-dom";
 import groupActivityImage from "@/assets/programs/group-activity.jpg";
 import groupLessonImage from "@/assets/programs/group-lesson.jpg";
 import instructorSpeakingImage from "@/assets/programs/instructor-speaking.jpg";
@@ -19,44 +20,6 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { ClickToEnlargeGallery } from "@/components/ui/click-to-enlarge-gallery";
-
-// Gym Buddies images (all 35)
-import middleTownshipPd from "@/assets/gym-buddies/middle-township-pd.jpg";
-import lowerTownshipPd from "@/assets/gym-buddies/lower-township-pd.jpg";
-import shopWithCop from "@/assets/gym-buddies/shop-with-cop-2025.jpg";
-import wildwoodFireDept from "@/assets/gym-buddies/wildwood-fire-dept.jpg";
-import captainMiller from "@/assets/gym-buddies/captain-miller.jpg";
-import avalonPd from "@/assets/gym-buddies/avalon-pd.png";
-import avalonPd5 from "@/assets/gym-buddies/avalon-pd-5.jpg";
-import acPoliceDept from "@/assets/gym-buddies/ac-police-dept.png";
-import wildwoodPdProsecutors from "@/assets/gym-buddies/wildwood-pd-prosecutors.png";
-import usCoastGuardBase from "@/assets/gym-buddies/us-coast-guard-base.png";
-import knockoutCookoutMtpd from "@/assets/gym-buddies/knockout-cookout-mtpd.png";
-import wildwoodFireDept2 from "@/assets/gym-buddies/wildwood-fire-dept-2.png";
-import chiefsOfCmc from "@/assets/gym-buddies/chiefs-of-cmc.png";
-import chiefJeffChristopher from "@/assets/gym-buddies/chief-jeff-christopher.png";
-import chiefKevinLewis from "@/assets/gym-buddies/chief-kevin-lewis.png";
-import mtpdAlyssaJones from "@/assets/gym-buddies/mtpd-alyssa-jones.png";
-import ltpdSimba from "@/assets/gym-buddies/ltpd-simba.png";
-import captainMiller2 from "@/assets/gym-buddies/captain-miller-2.png";
-import millvillePdBryanH from "@/assets/gym-buddies/millville-pd-bryan-h.png";
-import sleighDayAlyssaJones from "@/assets/gym-buddies/sleigh-day-alyssa-jones.png";
-import nlaBlueKnights from "@/assets/gym-buddies/nla-blue-knights.png";
-import nlaChiefsAssociationCmc from "@/assets/gym-buddies/nla-chiefs-association-cmc.png";
-import nlaOceanCityPd from "@/assets/gym-buddies/nla-ocean-city-pd.png";
-import nlaWildwoodCrestPd from "@/assets/gym-buddies/nla-wildwood-crest-pd.png";
-import nlaWildwoodPd from "@/assets/gym-buddies/nla-wildwood-pd.png";
-import nlaWildwoodPd2 from "@/assets/gym-buddies/nla-wildwood-pd-2.png";
-import nlaMtpd2 from "@/assets/gym-buddies/nla-mtpd-2.png";
-import nlaNorthWildwoodPdFire from "@/assets/gym-buddies/nla-north-wildwood-pd-fire.png";
-import copsAndHoopers2 from "@/assets/gym-buddies/cops-and-hoopers-2.png";
-import copsAndHoopers3 from "@/assets/gym-buddies/cops-and-hoopers-3.png";
-import copsHoopersPlanning from "@/assets/gym-buddies/cops-hoopers-planning.png";
-import mtpdRonMillerJulioRuiz from "@/assets/gym-buddies/mtpd-ron-miller-julio-ruiz.png";
-import nlaWildwoodCrestPd2 from "@/assets/gym-buddies/nla-wildwood-crest-pd-2.png";
-import nlaPoliceChiefsAssociation from "@/assets/gym-buddies/nla-police-chiefs-association.png";
-import cmcFinest from "@/assets/gym-buddies/cmc-finest.png";
-import chiefDekonCapeMay from "@/assets/gym-buddies/chief-dekon-cape-may.jpg";
 
 // Excursions images
 import excursionYouthGroup from "@/assets/excursions/excursion-youth-group.png";
@@ -83,45 +46,6 @@ import excursionLaserTag from "@/assets/excursions/excursion-laser-tag.png";
 import excursionStocktonDinner from "@/assets/excursions/excursion-stockton-dinner.png";
 import excursionElainesDinner from "@/assets/excursions/excursion-elaines-dinner.png";
 
-const gymBuddiesImages = [
-  { src: chiefDekonCapeMay, alt: "Congrats Chief Dekon of Cape May" },
-  { src: middleTownshipPd, alt: "NLA to Middle Township PD" },
-  { src: lowerTownshipPd, alt: "NLA to Lower Township PD" },
-  { src: shopWithCop, alt: "Shop with a Cop 2025" },
-  { src: wildwoodFireDept, alt: "NLA to Wildwood Fire Department" },
-  { src: captainMiller, alt: "Congrats Captain Miller" },
-  { src: avalonPd, alt: "Avalon Police Department" },
-  { src: avalonPd5, alt: "Congrats Chief Leusner NOW Mayor" },
-  { src: acPoliceDept, alt: "NLA to AC Police Department" },
-  { src: wildwoodPdProsecutors, alt: "Wildwood PD and Prosecutors Office" },
-  { src: usCoastGuardBase, alt: "US Coast Guard Base, Cape May" },
-  { src: knockoutCookoutMtpd, alt: "Knockout Cookout with MTPD" },
-  { src: wildwoodFireDept2, alt: "Wildwood Fire Department" },
-  { src: chiefsOfCmc, alt: "Some of the CHIEFS of CMC" },
-  { src: chiefJeffChristopher, alt: "Chief of Avalon Jeff Christopher" },
-  { src: chiefKevinLewis, alt: "Chief Kevin Lewis of Lower Township PD" },
-  { src: mtpdAlyssaJones, alt: "MTPD's Alyssa Jones" },
-  { src: ltpdSimba, alt: "Lower Township PD Simba" },
-  { src: captainMiller2, alt: "Congrats Captain Miller" },
-  { src: millvillePdBryanH, alt: "NLA to Millville PD Congrats Bryan H" },
-  { src: sleighDayAlyssaJones, alt: "Sleigh the Day with MTPD's Alyssa Jones" },
-  { src: nlaBlueKnights, alt: "NLA with the Blue Knights" },
-  { src: nlaChiefsAssociationCmc, alt: "NLA with the Chiefs Association of CMC" },
-  { src: nlaOceanCityPd, alt: "NLA and Ocean City PD" },
-  { src: nlaWildwoodCrestPd, alt: "NLA with Wildwood Crest PD" },
-  { src: nlaWildwoodPd, alt: "NLA with Wildwood PD" },
-  { src: nlaWildwoodPd2, alt: "NLA with Wildwood PD" },
-  { src: nlaMtpd2, alt: "NLA with MTPD" },
-  { src: nlaNorthWildwoodPdFire, alt: "NLA with North Wildwood Police and Fire" },
-  { src: copsAndHoopers2, alt: "Cops and Hoopers" },
-  { src: copsAndHoopers3, alt: "Cops and Hoopers" },
-  { src: copsHoopersPlanning, alt: "Cops and Hoopers Planning Committee" },
-  { src: mtpdRonMillerJulioRuiz, alt: "MTPD's Ron Miller and Julio Ruiz" },
-  { src: nlaWildwoodCrestPd2, alt: "NLA with Wildwood Crest PD" },
-  { src: nlaPoliceChiefsAssociation, alt: "NLA with Police Chiefs Association" },
-  { src: cmcFinest, alt: "CMC's Finest" },
-];
-
 type ProgramItem = {
   id: string;
   title: string;
@@ -129,7 +53,7 @@ type ProgramItem = {
   ageRange: string;
   blurb: string;
   policyText?: string;
-  images: { src: string; alt: string }[];
+  images: { src: string; alt: string; caption?: string }[];
   buttonLabel: string;
 };
 
@@ -145,7 +69,7 @@ const ProgramsExtrasSection = () => {
           "Smile Lab is an oral health initiative at No Limits Academy designed to improve access to care and deliver engaging, oral health education that empowers youth to take control of their oral health and overall well-being.",
         images: [
           { src: groupLessonImage, alt: "Students participating in a group lesson at a table" },
-          { src: instructorSpeakingImage, alt: "Instructor speaking with students during a group activity", objectPosition: "50% 40%" },
+          { src: instructorSpeakingImage, alt: "Instructor speaking with students during a group activity" },
           { src: teamActivityImage, alt: "Student giving a high five during a group activity" },
           { src: groupActivityImage, alt: "Kids participating in a group activity" },
           { src: smileLabDisplayImage, alt: "Smile Lab oral health display inside No Limits Academy" },
@@ -185,16 +109,6 @@ const ProgramsExtrasSection = () => {
           { src: excursionStocktonDinner, alt: "Team Night Dinner at Stockton Visit", caption: "Team Night Dinner at Stockton Visit" },
           { src: excursionElainesDinner, alt: "New Year's Dinner at Elaine's", caption: "New Year's Dinner at Elaine's" },
         ],
-        buttonLabel: "Back to Programs",
-      },
-      {
-        id: "gym-buddies",
-        title: "Gym Buddies",
-        subtitle: "Senior Boxers Only",
-        ageRange: "11–19 years old",
-        blurb:
-          "Gym Buddies brings youth together with law enforcement officers, firefighters, and service members for shared workouts that build mutual trust, respect, and understanding—strengthening relationships both inside and beyond the gym.",
-        images: gymBuddiesImages,
         buttonLabel: "Back to Programs",
       },
       {
@@ -274,6 +188,10 @@ const ProgramsExtrasSection = () => {
   const [openId, setOpenId] = useState<string | null>(null);
   const openItem = items.find((x) => x.id === openId) || null;
 
+  // Items to render: first two modal items, then Gym Buddies link, then rest
+  const firstTwoItems = items.slice(0, 2); // Smile Lab, Excursions
+  const remainingItems = items.slice(2); // Lil' Champs, Real Talk, Spiritual Development, Launch Pad
+
   return (
     <section className="py-16 md:py-20 bg-background">
       <div className="container">
@@ -286,7 +204,34 @@ const ProgramsExtrasSection = () => {
 
         {/* Bullet-style list */}
         <ul className="mt-6 space-y-3">
-          {items.map((item) => (
+          {/* First two items (Smile Lab, Excursions) */}
+          {firstTwoItems.map((item) => (
+            <li key={item.id} className="flex items-start gap-3">
+              <span className="mt-2.5 h-2 w-2 rounded-full bg-foreground flex-shrink-0" />
+              <button
+                type="button"
+                onClick={() => setOpenId(item.id)}
+                className="text-left text-lg font-medium text-foreground underline underline-offset-4 hover:text-foreground/80 transition-colors"
+                aria-haspopup="dialog"
+              >
+                {item.title}
+              </button>
+            </li>
+          ))}
+
+          {/* Gym Buddies - links to dedicated page */}
+          <li className="flex items-start gap-3">
+            <span className="mt-2.5 h-2 w-2 rounded-full bg-foreground flex-shrink-0" />
+            <Link
+              to="/gym-buddies"
+              className="text-left text-lg font-medium text-foreground underline underline-offset-4 hover:text-foreground/80 transition-colors"
+            >
+              Gym Buddies
+            </Link>
+          </li>
+
+          {/* Remaining items (Lil' Champs through Launch Pad) */}
+          {remainingItems.map((item) => (
             <li key={item.id} className="flex items-start gap-3">
               <span className="mt-2.5 h-2 w-2 rounded-full bg-foreground flex-shrink-0" />
               <button
