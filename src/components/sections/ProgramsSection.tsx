@@ -131,6 +131,9 @@ const ProgramsSection = ({
               <Clock className="h-3.5 w-3.5 text-foreground flex-shrink-0" /> Program: Monday–Friday, 5:15pm–7:15pm
             </p>
             <p className="text-muted-foreground italic text-xs flex items-center gap-2">
+              <Clock className="h-3.5 w-3.5 text-foreground flex-shrink-0" /> Extended Hours: 2:30pm–8:30pm available
+            </p>
+            <p className="text-muted-foreground italic text-xs flex items-center gap-2">
               <Utensils className="h-3.5 w-3.5 text-foreground flex-shrink-0" /> Dinner: Included
             </p>
             <p className="text-muted-foreground italic text-xs flex items-center gap-2">
