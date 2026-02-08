@@ -80,7 +80,7 @@ const ProgramsSection = ({
             <p className="text-muted-foreground">👕 What to bring: athletic clothes & sneakers</p>
             <p className="text-muted-foreground">🕔 Program: 5:15–6:00 PM</p>
             <p className="text-muted-foreground">🍽️ Optional Aftercare: 6-7pm (Dinner Included)</p>
-            <p className="text-muted-foreground">⏰ Pick-Up: Please be on time — late pick-ups are not allowed</p>
+            <p className="text-muted-foreground">⏰ Pick-Up: 7-7:10pm, Please be on time!</p>
           </div>
           <Button 
             className="w-full mt-4 bg-primary hover:bg-primary/90 text-primary-foreground font-semibold"
