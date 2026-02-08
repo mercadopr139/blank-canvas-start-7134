@@ -204,6 +204,24 @@ const GymBuddies = () => {
           </div>
         </section>
 
+        {/* Featured Hero Image */}
+        <section className="bg-background pt-8 pb-0">
+          <div className="container">
+            <div className="max-w-4xl mx-auto">
+              <div className="rounded-lg overflow-hidden">
+                <img 
+                  src={captainMiller} 
+                  alt="Congrats Captain Miller" 
+                  className="w-full h-auto object-cover"
+                />
+                <div className="bg-foreground/80 text-background px-4 py-3 text-center">
+                  <p className="font-medium">Congrats Captain Miller!</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
         {/* Content Section */}
         <section className="py-16 md:py-20 bg-background">
           <div className="container">
