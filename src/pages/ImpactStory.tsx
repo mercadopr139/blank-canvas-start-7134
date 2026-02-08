@@ -5,6 +5,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Users, TrendingUp, Heart, Shield, ShieldCheck, Utensils, HandHeart, Calendar, Briefcase, RefreshCw, Bus } from "lucide-react";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import middleMattersChrissy from "@/assets/awards/middle-matters-chrissy-casiello.jpg";
 const ImpactStory = () => {
   const [demographicsOpen, setDemographicsOpen] = useState(false);
   const [transportationOpen, setTransportationOpen] = useState(false);
@@ -151,6 +152,16 @@ const ImpactStory = () => {
                 <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
                   Verified reach across Cape May County through trusted partnerships and community endorsements.
                 </p>
+              </div>
+
+              {/* Featured Image */}
+              <div className="mb-10 rounded-xl overflow-hidden">
+                <img 
+                  src={middleMattersChrissy} 
+                  alt="Middle Township honors NLA Program Director Chrissy Casiello with Middle Matters Award" 
+                  className="w-full h-64 md:h-80"
+                  style={{ objectFit: 'cover', objectPosition: '70% center' }}
+                />
               </div>
 
               <Accordion type="single" collapsible className="w-full space-y-4">
