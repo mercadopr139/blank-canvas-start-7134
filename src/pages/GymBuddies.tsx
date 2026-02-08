@@ -219,7 +219,7 @@ const GymBuddies = () => {
         </section>
 
         {/* Content Section */}
-        <section className="py-16 md:py-20 bg-background">
+        <section className="md:py-20 bg-background py-[20px]">
           <div className="container">
             <div className="max-w-4xl mx-auto">
               {/* Description */}
