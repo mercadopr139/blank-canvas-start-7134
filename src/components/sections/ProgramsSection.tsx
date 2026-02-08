@@ -7,7 +7,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { DollarSign, Shirt, Clock, Utensils, AlarmClock } from "lucide-react";
+import { DollarSign, Shirt, Clock, Utensils, AlarmClock, Megaphone } from "lucide-react";
 import juniorBoxingImage from "@/assets/programs/junior-boxing-modal.png";
 
 const programs = [{
@@ -115,6 +115,27 @@ const ProgramsSection = ({
           </DialogHeader>
           <div className="w-full aspect-[4/3] bg-foreground/10 rounded-lg flex items-center justify-center">
             <span className="text-foreground/50 text-sm">Senior Boxing Image Placeholder</span>
+          </div>
+          <div className="mt-4 space-y-1.5">
+            <p className="font-semibold text-foreground text-sm">Quick Parent Snapshot 👇</p>
+            <p className="text-muted-foreground italic text-xs flex items-center gap-2">
+              <DollarSign className="h-3.5 w-3.5 text-foreground flex-shrink-0" /> Cost: 100% FREE
+            </p>
+            <p className="text-muted-foreground italic text-xs flex items-center gap-2">
+              <Shirt className="h-3.5 w-3.5 text-foreground flex-shrink-0" /> What to bring: athletic clothes & sneakers
+            </p>
+            <p className="text-muted-foreground italic text-xs flex items-center gap-2">
+              <Clock className="h-3.5 w-3.5 text-foreground flex-shrink-0" /> Program: Monday–Friday, 5:15pm–7:15pm
+            </p>
+            <p className="text-muted-foreground italic text-xs flex items-center gap-2">
+              <Utensils className="h-3.5 w-3.5 text-foreground flex-shrink-0" /> Dinner: Included
+            </p>
+            <p className="text-muted-foreground italic text-xs flex items-center gap-2">
+              <Megaphone className="h-3.5 w-3.5 text-foreground flex-shrink-0" /> Attendance: You don't have to come every day — just let us know if you can't make it
+            </p>
+            <p className="text-muted-foreground italic text-xs flex items-center gap-2">
+              <AlarmClock className="h-3.5 w-3.5 text-foreground flex-shrink-0" /> Pick-Up: 7:30pm — Please be on time!
+            </p>
           </div>
           <Button 
             className="w-full mt-4 bg-foreground hover:bg-foreground/90 text-background font-semibold"
