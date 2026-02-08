@@ -79,7 +79,7 @@ const ProgramsSection = ({
             <p className="text-muted-foreground">🥊 Cost: 100% FREE</p>
             <p className="text-muted-foreground">👕 What to bring: athletic clothes & sneakers</p>
             <p className="text-muted-foreground">🕔 Program: 5:15–6:00 PM</p>
-            <p className="text-muted-foreground">🍽️ Optional Aftercare: 6:00–7:15 PM (sit-down dinner included)</p>
+            <p className="text-muted-foreground">🍽️ Optional Aftercare: 6-7pm (Dinner Included)</p>
             <p className="text-muted-foreground">⏰ Pick-Up: Please be on time — late pick-ups are not allowed</p>
           </div>
           <Button 
