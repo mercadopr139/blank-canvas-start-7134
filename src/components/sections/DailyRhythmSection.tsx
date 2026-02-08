@@ -122,7 +122,7 @@ const DailyRhythmSection = ({ programFilter = "all" }: DailyRhythmSectionProps) 
                   <p className="text-xl md:text-2xl font-semibold text-primary-foreground mb-1">
                     Senior Boxing – Typical Day (Ages 11–19)
                   </p>
-                  <p className="text-base md:text-lg text-primary-foreground/70 mb-4">
+                  <p className="text-sm md:text-base italic text-primary-foreground/70 mb-4">
                     Includes Grit & Grace Program
                   </p>
                   <p className="text-base md:text-lg text-primary-foreground/90 leading-relaxed mb-4">
