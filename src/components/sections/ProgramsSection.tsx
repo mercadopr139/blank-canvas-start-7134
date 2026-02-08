@@ -44,18 +44,18 @@ const ProgramsSection = ({
             return (
               <Card 
                 key={index} 
-                className="border-none shadow-lg hover:shadow-xl transition-shadow duration-300 flex flex-col h-full relative overflow-hidden bg-background"
+                className="border-none shadow-lg hover:shadow-xl transition-shadow duration-300 flex flex-col h-full relative overflow-hidden bg-background min-h-[400px]"
               >
-                {/* Background image */}
+                {/* Background image - focused on head/face */}
                 <div 
-                  className="absolute inset-0 opacity-20"
+                  className="absolute inset-0 opacity-25"
                   style={{
                     backgroundImage: `url(${bgImage})`,
-                    backgroundSize: 'cover',
-                    backgroundPosition: 'center top',
+                    backgroundSize: '200%',
+                    backgroundPosition: 'center 15%',
                   }}
                 />
-                <CardHeader className="pb-4 relative z-10">
+                <CardHeader className="pb-4 relative z-10 pt-8">
                   <div className="text-sm font-semibold mb-2 text-primary">
                     {program.ages}
                   </div>
@@ -63,7 +63,7 @@ const ProgramsSection = ({
                     {program.title}
                   </CardTitle>
                 </CardHeader>
-                <CardContent className="flex flex-col flex-1 gap-6 relative z-10">
+                <CardContent className="flex flex-col flex-1 gap-6 relative z-10 pb-8">
                   <p className="leading-relaxed flex-1 text-foreground">
                     {program.description}
                   </p>
