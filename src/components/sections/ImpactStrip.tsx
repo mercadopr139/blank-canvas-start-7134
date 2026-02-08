@@ -3,19 +3,9 @@ import { Users, Heart, ShieldCheck, Utensils, TrendingUp, Bus } from "lucide-rea
 const ImpactStrip = () => {
   const stats = [
     {
-      icon: TrendingUp,
-      value: "$2.6M+",
-      label: "Raised Since 2020",
-    },
-    {
       icon: Users,
       value: "500+",
       label: "Youth Served Annually",
-    },
-    {
-      icon: ShieldCheck,
-      value: "95%",
-      label: "Youth Participate in Non-Contact Boxing",
     },
     {
       icon: Heart,
@@ -23,14 +13,24 @@ const ImpactStrip = () => {
       label: "Below Poverty Line",
     },
     {
+      icon: Bus,
+      value: "Free",
+      label: "Transportation",
+    },
+    {
       icon: Utensils,
       value: "Meals Served",
       label: "Five Nights a Week",
     },
     {
-      icon: Bus,
-      value: "Free",
-      label: "Transportation",
+      icon: ShieldCheck,
+      value: "95%",
+      label: "Youth Participate in Non-Contact Boxing",
+    },
+    {
+      icon: TrendingUp,
+      value: "$2.6M+",
+      label: "Raised Since 2020",
     },
   ];
 
