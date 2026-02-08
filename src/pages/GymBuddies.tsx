@@ -209,11 +209,7 @@ const GymBuddies = () => {
           <div className="container">
             <div className="max-w-4xl mx-auto">
               <div className="rounded-lg overflow-hidden">
-                <img 
-                  src={captainMiller} 
-                  alt="Congrats Captain Miller" 
-                  className="w-full h-auto object-cover"
-                />
+                <img src={captainMiller} alt="Congrats Captain Miller" className="w-full h-auto object-cover" />
                 <div className="bg-foreground/80 text-background px-4 py-3 text-center">
                   <p className="font-medium">Congrats Captain Miller!</p>
                 </div>
@@ -231,8 +227,11 @@ const GymBuddies = () => {
                 <p className="text-lg md:text-xl text-foreground/80 leading-relaxed">
                   No Limits Academy serves over <span className="font-bold text-foreground">500 youth each year</span> across Cape May County.
                 </p>
-                <p className="text-lg md:text-xl text-foreground/80 leading-relaxed">
-                  <span className="font-bold text-foreground">We cannot do this work alone.</span> Our Gym Buddies program connects our youth with local first responders—law enforcement officers, firefighters, and U.S. Coast Guard members—who step into the gym not just to train, but to build lasting relationships. What begins as time spent together in the gym grows into trust, mentorship, and genuine connection.
+                <p className="text-lg md:text-xl text-foreground/80 leading-relaxed">We cannot do this work alone.
+
+
+Our Gym Buddies program connects our youth with local first responders—law enforcement officers, firefighters, and U.S. Coast Guard members—who step into the gym not just to train, but to build lasting relationships. What begins as time spent together in the gym grows into trust, mentorship, and genuine connection.<span className="font-bold text-foreground">We cannot do this work alone
+.</span> Our Gym Buddies program connects our youth with local first responders—law enforcement officers, firefighters, and U.S. Coast Guard members—who step into the gym not just to train, but to build lasting relationships. What begins as time spent together in the gym grows into trust, mentorship, and genuine connection.
                 </p>
                 <p className="text-lg md:text-xl text-foreground/80 leading-relaxed">
                   Our Gym Buddies often become advocates well beyond training sessions. They support NLA through community events, fundraising efforts, meal train participation, and by serving as ambassadors for the Academy throughout Cape May County.
