@@ -39,32 +39,49 @@ const ProgramsSection = ({
 
         {/* Program cards */}
         <div className="grid md:grid-cols-2 gap-8 max-w-4xl mx-auto">
-          {programs.map((program, index) => <Card key={index} className={`border-none shadow-lg hover:shadow-xl transition-shadow duration-300 flex flex-col h-full ${index === 0 ? "bg-muted" : "bg-background"}`}>
-              <CardHeader className="pb-4">
-                <div className={`text-sm font-semibold mb-2 ${index === 0 ? "text-foreground" : "text-primary"}`}>
-                  {program.ages}
-                </div>
-                <CardTitle className="text-xl md:text-2xl font-bold text-foreground">
-                  {program.title}
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="flex flex-col flex-1 gap-6">
-                <p className={`leading-relaxed flex-1 ${index === 0 ? "text-foreground" : "text-muted-foreground"}`}>
-                  {program.description}
-                </p>
-                <div className="flex flex-col gap-3 items-center">
-                  <Button 
-                    className={`w-full font-semibold ${index === 0 ? "bg-primary hover:bg-primary/90 text-primary-foreground" : "bg-foreground hover:bg-foreground/90 text-background"}`}
-                    onClick={() => setSignupModalOpen(index === 0 ? "junior" : "senior")}
-                  >
-                    SIGN-UP
-                  </Button>
-                  <Button variant="outline" size="sm" className={`w-1/2 font-semibold ${index === 0 ? "border-primary text-primary hover:bg-primary hover:text-primary-foreground" : "border-foreground text-foreground hover:bg-foreground hover:text-background"}`} onClick={() => onMoreInfo?.(index === 0 ? "junior" : "senior")}>
-                    MORE INFO
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>)}
+          {programs.map((program, index) => {
+            const bgImage = index === 0 ? juniorBoxingImage : seniorBoxingImage;
+            return (
+              <Card 
+                key={index} 
+                className={`border-none shadow-lg hover:shadow-xl transition-shadow duration-300 flex flex-col h-full relative overflow-hidden ${index === 0 ? "bg-muted" : "bg-background"}`}
+              >
+                {/* Background image */}
+                <div 
+                  className="absolute inset-0 opacity-10"
+                  style={{
+                    backgroundImage: `url(${bgImage})`,
+                    backgroundSize: 'cover',
+                    backgroundPosition: 'center top',
+                  }}
+                />
+                <CardHeader className="pb-4 relative z-10">
+                  <div className={`text-sm font-semibold mb-2 ${index === 0 ? "text-foreground" : "text-primary"}`}>
+                    {program.ages}
+                  </div>
+                  <CardTitle className="text-xl md:text-2xl font-bold text-foreground">
+                    {program.title}
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="flex flex-col flex-1 gap-6 relative z-10">
+                  <p className={`leading-relaxed flex-1 ${index === 0 ? "text-foreground" : "text-muted-foreground"}`}>
+                    {program.description}
+                  </p>
+                  <div className="flex flex-col gap-3 items-center">
+                    <Button 
+                      className={`w-full font-semibold ${index === 0 ? "bg-primary hover:bg-primary/90 text-primary-foreground" : "bg-foreground hover:bg-foreground/90 text-background"}`}
+                      onClick={() => setSignupModalOpen(index === 0 ? "junior" : "senior")}
+                    >
+                      SIGN-UP
+                    </Button>
+                    <Button variant="outline" size="sm" className={`w-1/2 font-semibold ${index === 0 ? "border-primary text-primary hover:bg-primary hover:text-primary-foreground" : "border-foreground text-foreground hover:bg-foreground hover:text-background"}`} onClick={() => onMoreInfo?.(index === 0 ? "junior" : "senior")}>
+                      MORE INFO
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            );
+          })}
         </div>
       </div>
 
