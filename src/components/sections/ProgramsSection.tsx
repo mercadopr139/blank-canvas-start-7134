@@ -8,6 +8,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { DollarSign, Shirt, Clock, Utensils, AlarmClock } from "lucide-react";
+import juniorBoxingImage from "@/assets/programs/junior-boxing-modal.png";
 
 const programs = [{
   title: "Junior Boxing Program",
@@ -72,9 +73,11 @@ const ProgramsSection = ({
           <DialogHeader>
             <DialogTitle className="sr-only">Junior Boxing Sign-Up</DialogTitle>
           </DialogHeader>
-          <div className="w-full aspect-[4/3] bg-muted rounded-lg flex items-center justify-center">
-            <span className="text-muted-foreground text-sm">Junior Boxing Image Placeholder</span>
-          </div>
+          <img 
+            src={juniorBoxingImage} 
+            alt="Junior Boxing Program" 
+            className="w-full aspect-[4/3] object-cover rounded-lg"
+          />
           <div className="mt-4 space-y-1.5">
             <p className="font-semibold text-foreground text-sm">Quick Parent Snapshot 👇</p>
             <p className="text-muted-foreground italic text-xs flex items-center gap-2">
