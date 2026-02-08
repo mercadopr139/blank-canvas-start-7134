@@ -31,7 +31,7 @@ const ImpactSection = () => {
             </p>
             
             <p className="text-lg md:text-xl text-foreground/80 leading-relaxed">
-              <span className="font-bold text-foreground">70% of our registered youth fall below the federal poverty line.</span>
+              
             </p>
             
             <p className="text-lg md:text-xl text-foreground/80 leading-relaxed">
