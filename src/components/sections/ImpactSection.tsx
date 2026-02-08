@@ -30,8 +30,8 @@ const ImpactSection = () => {
             <img 
               src={middleMattersChrissy} 
               alt="Middle Township honors NLA Program Director Chrissy Casiello with Middle Matters Award" 
-              className="w-full h-64 md:h-80"
-              style={{ objectFit: 'cover', objectPosition: '70% center' }}
+              className="w-full h-80 md:h-[420px]"
+              style={{ objectFit: 'cover', objectPosition: '70% 35%' }}
             />
           </div>
 
