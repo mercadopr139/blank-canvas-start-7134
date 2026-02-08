@@ -26,12 +26,12 @@ const ImpactSection = () => {
           </div>
 
           {/* Middle Matters Award Image */}
-          <div className="mb-10 rounded-xl overflow-hidden">
+          <div className="mb-10 rounded-xl overflow-hidden bg-muted">
             <img 
               src={middleMattersChrissy} 
               alt="Middle Township honors NLA Program Director Chrissy Casiello with Middle Matters Award" 
-              className="w-full h-80 md:h-[420px]"
-              style={{ objectFit: 'cover', objectPosition: '70% 35%' }}
+              className="w-full"
+              style={{ objectFit: 'contain' }}
             />
           </div>
 
