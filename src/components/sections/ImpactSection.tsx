@@ -2,6 +2,7 @@ import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Trophy } from "lucide-react";
 import nlaAvalonAward from "@/assets/gym-buddies/nla-avalon-award.png";
+import middleMattersChrissy from "@/assets/awards/middle-matters-chrissy-casiello.jpg";
 
 const awards = [
   `BCMF — Be Kind Award Recipient`,
@@ -71,6 +72,16 @@ const ImpactSection = () => {
                 </li>
               ))}
             </ul>
+          </div>
+
+          {/* Middle Matters Award Image */}
+          <div className="mt-10 rounded-xl overflow-hidden">
+            <img 
+              src={middleMattersChrissy} 
+              alt="Middle Township honors NLA Program Director Chrissy Casiello with Middle Matters Award" 
+              className="w-full h-64 md:h-80"
+              style={{ objectFit: 'cover', objectPosition: '70% center' }}
+            />
           </div>
         </div>
       </div>
