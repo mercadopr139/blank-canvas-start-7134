@@ -55,6 +55,12 @@ const ProgramsSection = ({
                     backgroundPosition: 'center 15%',
                   }}
                 />
+                {/* Age range badge - top right */}
+                <div className="absolute top-3 right-3 z-20">
+                  <span className="text-white text-sm font-bold drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">
+                    {index === 0 ? "7–10 yrs" : "11–19 yrs"}
+                  </span>
+                </div>
                 <CardHeader className="pb-4 relative z-10 pt-8">
                   <div className="inline-block bg-background/80 backdrop-blur-sm rounded-lg px-4 py-3 shadow-sm">
                     <div className="text-sm font-semibold mb-2 text-primary">
