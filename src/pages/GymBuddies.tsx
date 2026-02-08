@@ -3,16 +3,9 @@ import Header from "@/components/layout/Header";
 import Footer from "@/components/layout/Footer";
 import { Button } from "@/components/ui/button";
 import { MessageCircle, X } from "lucide-react";
-import {
-  Drawer,
-  DrawerContent,
-  DrawerHeader,
-  DrawerTitle,
-  DrawerClose,
-} from "@/components/ui/drawer";
+import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerClose } from "@/components/ui/drawer";
 import GymBuddiesChatWidget from "@/components/gym-buddies/GymBuddiesChatWidget";
 import { ClickToEnlargeGallery } from "@/components/ui/click-to-enlarge-gallery";
-
 import middleTownshipPd from "@/assets/gym-buddies/middle-township-pd.jpg";
 import lowerTownshipPd from "@/assets/gym-buddies/lower-township-pd.jpg";
 import shopWithCop from "@/assets/gym-buddies/shop-with-cop-2025.jpg";
@@ -24,7 +17,6 @@ import acPoliceDept from "@/assets/gym-buddies/ac-police-dept.png";
 import wildwoodPdProsecutors from "@/assets/gym-buddies/wildwood-pd-prosecutors.png";
 import usCoastGuardBase from "@/assets/gym-buddies/us-coast-guard-base.png";
 import knockoutCookoutMtpd from "@/assets/gym-buddies/knockout-cookout-mtpd.png";
-
 import wildwoodFireDept2 from "@/assets/gym-buddies/wildwood-fire-dept-2.png";
 import chiefsOfCmc from "@/assets/gym-buddies/chiefs-of-cmc.png";
 import chiefJeffChristopher from "@/assets/gym-buddies/chief-jeff-christopher.png";
@@ -50,194 +42,154 @@ import nlaWildwoodCrestPd2 from "@/assets/gym-buddies/nla-wildwood-crest-pd-2.pn
 import nlaPoliceChiefsAssociation from "@/assets/gym-buddies/nla-police-chiefs-association.png";
 import cmcFinest from "@/assets/gym-buddies/cmc-finest.png";
 import chiefDekonCapeMay from "@/assets/gym-buddies/chief-dekon-cape-may.jpg";
-
 const GymBuddies = () => {
   const [isChatOpen, setIsChatOpen] = useState(false);
-  const gymBuddiesImages = [
-    {
-      src: chiefDekonCapeMay,
-      alt: "Congrats Chief Dekon of Cape May",
-      caption: "Congrats Chief Dekon, Chief of Chiefs in CMC!",
-    },
-    {
-      src: middleTownshipPd,
-      alt: "NLA to Middle Township PD",
-      caption: "NLA to Middle Township PD!",
-    },
-    {
-      src: lowerTownshipPd,
-      alt: "NLA to Lower Township PD",
-      caption: "NLA to Lower Township PD!",
-    },
-    {
-      src: shopWithCop,
-      alt: "Shop with a Cop 2025",
-      caption: "Shop with a Cop 2025",
-    },
-    {
-      src: wildwoodFireDept,
-      alt: "NLA to Wildwood Fire Department",
-      caption: "NLA to Wildwood Fire Department!",
-    },
-    {
-      src: captainMiller,
-      alt: "Congrats Captain Miller",
-      caption: "Congrats Captain Miller!",
-    },
-    {
-      src: avalonPd,
-      alt: "Avalon Police Department",
-      caption: "Avalon Police Department",
-    },
-    {
-      src: avalonPd5,
-      alt: "Congrats Chief Leusner NOW Mayor",
-      caption: "Congrats Chief Leusner NOW Mayor!",
-    },
-    {
-      src: acPoliceDept,
-      alt: "NLA to AC Police Department",
-      caption: "NLA to AC Police Department",
-    },
-    {
-      src: wildwoodPdProsecutors,
-      alt: "Wildwood PD and Prosecutors Office",
-      caption: "Wildwood PD and Prosecutors Office",
-    },
-    {
-      src: usCoastGuardBase,
-      alt: "US Coast Guard Base, Cape May",
-      caption: "US Coast Guard Base, Cape May",
-    },
-    {
-      src: knockoutCookoutMtpd,
-      alt: "Knockout Cookout with MTPD",
-      caption: "Knockout Cookout with MTPD",
-    },
-    {
-      src: wildwoodFireDept2,
-      alt: "Wildwood Fire Department",
-      caption: "Wildwood Fire Department",
-    },
-    {
-      src: chiefsOfCmc,
-      alt: "Some of the CHIEFS of CMC",
-      caption: "Some of the CHIEFS of CMC!",
-    },
-    {
-      src: chiefJeffChristopher,
-      alt: "Chief of Avalon Jeff Christopher",
-      caption: "Chief of Avalon, Jeff Christopher",
-    },
-    {
-      src: chiefKevinLewis,
-      alt: "Chief Kevin Lewis of Lower Township PD",
-      caption: "Chief Kevin Lewis of Lower Township PD",
-    },
-    {
-      src: mtpdAlyssaJones,
-      alt: "MTPD's Alyssa Jones",
-      caption: "MTPD's Alyssa Jones",
-    },
-    {
-      src: ltpdSimba,
-      alt: "Lower Township PD Simba",
-      caption: "Lower Township PD, Simba",
-    },
-    {
-      src: captainMiller2,
-      alt: "Congrats Captain Miller",
-      caption: "Congrats Captain Miller!",
-    },
-    {
-      src: millvillePdBryanH,
-      alt: "NLA to Millville PD Congrats Bryan H",
-      caption: "NLA to Millville PD! Congrats Bryan H.",
-    },
-    {
-      src: sleighDayAlyssaJones,
-      alt: "Sleigh the Day with MTPD's Alyssa Jones",
-      caption: "Sleigh the Day with MTPD's Alyssa Jones",
-    },
-    {
-      src: nlaBlueKnights,
-      alt: "NLA with the Blue Knights",
-      caption: "NLA w/ the Blue Knights",
-    },
-    {
-      src: nlaChiefsAssociationCmc,
-      alt: "NLA with the Chiefs Association of CMC",
-      caption: "NLA w/ the Chiefs Association of CMC",
-    },
-    {
-      src: nlaOceanCityPd,
-      alt: "NLA and Ocean City PD",
-      caption: "NLA & Ocean City PD",
-    },
-    {
-      src: nlaWildwoodCrestPd,
-      alt: "NLA with Wildwood Crest PD",
-      caption: "NLA w/ Wildwood Crest PD",
-    },
-    {
-      src: nlaWildwoodPd,
-      alt: "NLA with Wildwood PD",
-      caption: "NLA w/ Wildwood PD",
-    },
-    {
-      src: nlaWildwoodPd2,
-      alt: "NLA with Wildwood PD",
-      caption: "NLA w/ Wildwood PD",
-    },
-    {
-      src: nlaMtpd2,
-      alt: "NLA with MTPD",
-      caption: "NLA w/ MTPD",
-    },
-    {
-      src: nlaNorthWildwoodPdFire,
-      alt: "NLA with North Wildwood Police and Fire",
-      caption: "NLA w/ North Wildwood Police & Fire",
-    },
-    {
-      src: copsAndHoopers2,
-      alt: "Cops and Hoopers",
-      caption: "Cops & Hoopers",
-    },
-    {
-      src: copsAndHoopers3,
-      alt: "Cops and Hoopers",
-      caption: "Cops & Hoopers",
-    },
-    {
-      src: copsHoopersPlanning,
-      alt: "Cops and Hoopers Planning Committee",
-      caption: "Cops & Hoopers Planning Committee",
-    },
-    {
-      src: mtpdRonMillerJulioRuiz,
-      alt: "MTPD's Ron Miller and Julio Ruiz",
-      caption: "MTPD's Ron Miller & Julio Ruiz",
-    },
-    {
-      src: nlaWildwoodCrestPd2,
-      alt: "NLA with Wildwood Crest PD",
-      caption: "NLA w/ Wildwood Crest PD",
-    },
-    {
-      src: nlaPoliceChiefsAssociation,
-      alt: "NLA with Police Chiefs Association",
-      caption: "NLA w/ Police Chiefs Association",
-    },
-    {
-      src: cmcFinest,
-      alt: "CMC's Finest",
-      caption: "CMC's Finest!",
-    },
-  ];
-
-  return (
-    <div className="min-h-screen flex flex-col bg-background">
+  const gymBuddiesImages = [{
+    src: chiefDekonCapeMay,
+    alt: "Congrats Chief Dekon of Cape May",
+    caption: "Congrats Chief Dekon, Chief of Chiefs in CMC!"
+  }, {
+    src: middleTownshipPd,
+    alt: "NLA to Middle Township PD",
+    caption: "NLA to Middle Township PD!"
+  }, {
+    src: lowerTownshipPd,
+    alt: "NLA to Lower Township PD",
+    caption: "NLA to Lower Township PD!"
+  }, {
+    src: shopWithCop,
+    alt: "Shop with a Cop 2025",
+    caption: "Shop with a Cop 2025"
+  }, {
+    src: wildwoodFireDept,
+    alt: "NLA to Wildwood Fire Department",
+    caption: "NLA to Wildwood Fire Department!"
+  }, {
+    src: captainMiller,
+    alt: "Congrats Captain Miller",
+    caption: "Congrats Captain Miller!"
+  }, {
+    src: avalonPd,
+    alt: "Avalon Police Department",
+    caption: "Avalon Police Department"
+  }, {
+    src: avalonPd5,
+    alt: "Congrats Chief Leusner NOW Mayor",
+    caption: "Congrats Chief Leusner NOW Mayor!"
+  }, {
+    src: acPoliceDept,
+    alt: "NLA to AC Police Department",
+    caption: "NLA to AC Police Department"
+  }, {
+    src: wildwoodPdProsecutors,
+    alt: "Wildwood PD and Prosecutors Office",
+    caption: "Wildwood PD and Prosecutors Office"
+  }, {
+    src: usCoastGuardBase,
+    alt: "US Coast Guard Base, Cape May",
+    caption: "US Coast Guard Base, Cape May"
+  }, {
+    src: knockoutCookoutMtpd,
+    alt: "Knockout Cookout with MTPD",
+    caption: "Knockout Cookout with MTPD"
+  }, {
+    src: wildwoodFireDept2,
+    alt: "Wildwood Fire Department",
+    caption: "Wildwood Fire Department"
+  }, {
+    src: chiefsOfCmc,
+    alt: "Some of the CHIEFS of CMC",
+    caption: "Some of the CHIEFS of CMC!"
+  }, {
+    src: chiefJeffChristopher,
+    alt: "Chief of Avalon Jeff Christopher",
+    caption: "Chief of Avalon, Jeff Christopher"
+  }, {
+    src: chiefKevinLewis,
+    alt: "Chief Kevin Lewis of Lower Township PD",
+    caption: "Chief Kevin Lewis of Lower Township PD"
+  }, {
+    src: mtpdAlyssaJones,
+    alt: "MTPD's Alyssa Jones",
+    caption: "MTPD's Alyssa Jones"
+  }, {
+    src: ltpdSimba,
+    alt: "Lower Township PD Simba",
+    caption: "Lower Township PD, Simba"
+  }, {
+    src: captainMiller2,
+    alt: "Congrats Captain Miller",
+    caption: "Congrats Captain Miller!"
+  }, {
+    src: millvillePdBryanH,
+    alt: "NLA to Millville PD Congrats Bryan H",
+    caption: "NLA to Millville PD! Congrats Bryan H."
+  }, {
+    src: sleighDayAlyssaJones,
+    alt: "Sleigh the Day with MTPD's Alyssa Jones",
+    caption: "Sleigh the Day with MTPD's Alyssa Jones"
+  }, {
+    src: nlaBlueKnights,
+    alt: "NLA with the Blue Knights",
+    caption: "NLA w/ the Blue Knights"
+  }, {
+    src: nlaChiefsAssociationCmc,
+    alt: "NLA with the Chiefs Association of CMC",
+    caption: "NLA w/ the Chiefs Association of CMC"
+  }, {
+    src: nlaOceanCityPd,
+    alt: "NLA and Ocean City PD",
+    caption: "NLA & Ocean City PD"
+  }, {
+    src: nlaWildwoodCrestPd,
+    alt: "NLA with Wildwood Crest PD",
+    caption: "NLA w/ Wildwood Crest PD"
+  }, {
+    src: nlaWildwoodPd,
+    alt: "NLA with Wildwood PD",
+    caption: "NLA w/ Wildwood PD"
+  }, {
+    src: nlaWildwoodPd2,
+    alt: "NLA with Wildwood PD",
+    caption: "NLA w/ Wildwood PD"
+  }, {
+    src: nlaMtpd2,
+    alt: "NLA with MTPD",
+    caption: "NLA w/ MTPD"
+  }, {
+    src: nlaNorthWildwoodPdFire,
+    alt: "NLA with North Wildwood Police and Fire",
+    caption: "NLA w/ North Wildwood Police & Fire"
+  }, {
+    src: copsAndHoopers2,
+    alt: "Cops and Hoopers",
+    caption: "Cops & Hoopers"
+  }, {
+    src: copsAndHoopers3,
+    alt: "Cops and Hoopers",
+    caption: "Cops & Hoopers"
+  }, {
+    src: copsHoopersPlanning,
+    alt: "Cops and Hoopers Planning Committee",
+    caption: "Cops & Hoopers Planning Committee"
+  }, {
+    src: mtpdRonMillerJulioRuiz,
+    alt: "MTPD's Ron Miller and Julio Ruiz",
+    caption: "MTPD's Ron Miller & Julio Ruiz"
+  }, {
+    src: nlaWildwoodCrestPd2,
+    alt: "NLA with Wildwood Crest PD",
+    caption: "NLA w/ Wildwood Crest PD"
+  }, {
+    src: nlaPoliceChiefsAssociation,
+    alt: "NLA with Police Chiefs Association",
+    caption: "NLA w/ Police Chiefs Association"
+  }, {
+    src: cmcFinest,
+    alt: "CMC's Finest",
+    caption: "CMC's Finest!"
+  }];
+  return <div className="min-h-screen flex flex-col bg-background">
       <Header />
       
       <main className="flex-1">
@@ -273,16 +225,11 @@ const GymBuddies = () => {
                 
                 {/* Chat Button */}
                 <div className="pt-4 flex flex-col items-center">
-                  <Button
-                    onClick={() => setIsChatOpen(true)}
-                    className="px-5 py-3 h-auto rounded-lg bg-foreground text-background font-extrabold hover:bg-foreground/90 transition-colors"
-                  >
+                  <Button onClick={() => setIsChatOpen(true)} className="px-5 py-3 h-auto rounded-lg bg-foreground text-background font-extrabold hover:bg-foreground/90 transition-colors">
                     <MessageCircle className="h-5 w-5 mr-2" />
                     Interested in becoming a Gym Buddy?
                   </Button>
-                  <p className="text-sm italic text-muted-foreground mt-2 text-center">
-                    Interested in signing-up? Click Gym Buddies Chat for more info
-                  </p>
+                  <p className="text-sm italic text-muted-foreground mt-2 text-center">Click for more info!</p>
                 </div>
               </div>
 
@@ -312,8 +259,6 @@ const GymBuddies = () => {
       </main>
 
       <Footer />
-    </div>
-  );
+    </div>;
 };
-
 export default GymBuddies;
