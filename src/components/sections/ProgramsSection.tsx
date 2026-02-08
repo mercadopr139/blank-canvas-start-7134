@@ -48,7 +48,7 @@ const ProgramsSection = ({
               >
                 {/* Background image - focused on head/face */}
                 <div 
-                  className="absolute inset-0 opacity-25"
+                  className="absolute inset-0 opacity-15"
                   style={{
                     backgroundImage: `url(${bgImage})`,
                     backgroundSize: '200%',
