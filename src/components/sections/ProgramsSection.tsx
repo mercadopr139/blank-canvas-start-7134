@@ -8,10 +8,6 @@ const programs = [{
   title: "Senior Boxing Program",
   ages: "Ages 11–19 | Monday–Friday",
   description: "A structured, high-expectation program combining boxing & fitness training with mentorship, accountability, leadership development, and life skills."
-}, {
-  title: "Grit & Grace Program",
-  ages: "Ages 11–19 | Monday–Friday",
-  description: "A boxing-based character and leadership program for girls, within the Senior Boxing Program, designed to support youth through mentorship, reflection, and personal growth alongside athletic training."
 }];
 interface ProgramsSectionProps {
   onMoreInfo?: (program: "junior" | "senior") => void;
@@ -30,7 +26,7 @@ const ProgramsSection = ({
         </div>
 
         {/* Program cards */}
-        <div className="grid md:grid-cols-3 gap-8">
+        <div className="grid md:grid-cols-2 gap-8 max-w-4xl mx-auto">
           {programs.map((program, index) => <Card key={index} className={`border-none shadow-lg hover:shadow-xl transition-shadow duration-300 flex flex-col h-full ${index === 0 ? "bg-muted" : "bg-background"}`}>
               <CardHeader className="pb-4">
                 <div className={`text-sm font-semibold mb-2 ${index === 0 ? "text-foreground" : "text-primary"}`}>
