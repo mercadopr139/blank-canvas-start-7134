@@ -44,11 +44,11 @@ const ProgramsSection = ({
             return (
               <Card 
                 key={index} 
-                className={`border-none shadow-lg hover:shadow-xl transition-shadow duration-300 flex flex-col h-full relative overflow-hidden ${index === 0 ? "bg-muted" : "bg-background"}`}
+                className="border-none shadow-lg hover:shadow-xl transition-shadow duration-300 flex flex-col h-full relative overflow-hidden bg-background"
               >
                 {/* Background image */}
                 <div 
-                  className="absolute inset-0 opacity-10"
+                  className="absolute inset-0 opacity-20"
                   style={{
                     backgroundImage: `url(${bgImage})`,
                     backgroundSize: 'cover',
@@ -56,7 +56,7 @@ const ProgramsSection = ({
                   }}
                 />
                 <CardHeader className="pb-4 relative z-10">
-                  <div className={`text-sm font-semibold mb-2 ${index === 0 ? "text-foreground" : "text-primary"}`}>
+                  <div className="text-sm font-semibold mb-2 text-primary">
                     {program.ages}
                   </div>
                   <CardTitle className="text-xl md:text-2xl font-bold text-foreground">
@@ -64,17 +64,17 @@ const ProgramsSection = ({
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="flex flex-col flex-1 gap-6 relative z-10">
-                  <p className={`leading-relaxed flex-1 ${index === 0 ? "text-foreground" : "text-muted-foreground"}`}>
+                  <p className="leading-relaxed flex-1 text-foreground">
                     {program.description}
                   </p>
                   <div className="flex flex-col gap-3 items-center">
                     <Button 
-                      className={`w-full font-semibold ${index === 0 ? "bg-primary hover:bg-primary/90 text-primary-foreground" : "bg-foreground hover:bg-foreground/90 text-background"}`}
+                      className="w-full font-semibold bg-primary hover:bg-primary/90 text-primary-foreground"
                       onClick={() => setSignupModalOpen(index === 0 ? "junior" : "senior")}
                     >
                       SIGN-UP
                     </Button>
-                    <Button variant="outline" size="sm" className={`w-1/2 font-semibold ${index === 0 ? "border-primary text-primary hover:bg-primary hover:text-primary-foreground" : "border-foreground text-foreground hover:bg-foreground hover:text-background"}`} onClick={() => onMoreInfo?.(index === 0 ? "junior" : "senior")}>
+                    <Button variant="outline" size="sm" className="w-1/2 font-semibold border-foreground text-foreground hover:bg-foreground hover:text-background" onClick={() => onMoreInfo?.(index === 0 ? "junior" : "senior")}>
                       MORE INFO
                     </Button>
                   </div>
