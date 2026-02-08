@@ -56,12 +56,14 @@ const ProgramsSection = ({
                   }}
                 />
                 <CardHeader className="pb-4 relative z-10 pt-8">
-                  <div className="text-sm font-semibold mb-2 text-primary">
-                    {program.ages}
+                  <div className="inline-block bg-background/80 backdrop-blur-sm rounded-lg px-4 py-3 shadow-sm">
+                    <div className="text-sm font-semibold mb-2 text-primary">
+                      {program.ages}
+                    </div>
+                    <CardTitle className="text-xl md:text-2xl font-bold text-foreground">
+                      {program.title}
+                    </CardTitle>
                   </div>
-                  <CardTitle className="text-xl md:text-2xl font-bold text-foreground">
-                    {program.title}
-                  </CardTitle>
                 </CardHeader>
                 <CardContent className="flex flex-col flex-1 gap-6 relative z-10 pb-8">
                   <p className="leading-relaxed flex-1 text-foreground">
