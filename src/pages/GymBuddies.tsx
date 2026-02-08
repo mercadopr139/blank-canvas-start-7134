@@ -45,6 +45,10 @@ import chiefDekonCapeMay from "@/assets/gym-buddies/chief-dekon-cape-may.jpg";
 const GymBuddies = () => {
   const [isChatOpen, setIsChatOpen] = useState(false);
   const gymBuddiesImages = [{
+    src: captainMiller,
+    alt: "Congrats Captain Miller",
+    caption: "Congrats Captain Miller!"
+  }, {
     src: chiefDekonCapeMay,
     alt: "Congrats Chief Dekon of Cape May",
     caption: "Congrats Chief Dekon, Chief of Chiefs in CMC!"
@@ -64,10 +68,6 @@ const GymBuddies = () => {
     src: wildwoodFireDept,
     alt: "NLA to Wildwood Fire Department",
     caption: "NLA to Wildwood Fire Department!"
-  }, {
-    src: captainMiller,
-    alt: "Congrats Captain Miller",
-    caption: "Congrats Captain Miller!"
   }, {
     src: avalonPd,
     alt: "Avalon Police Department",
