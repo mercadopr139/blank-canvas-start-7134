@@ -1,74 +1,32 @@
 
+# Plan: Adjust Mobile Background Photo Layout
 
-## Add Two New Impact Stat Cards
+## What You Want
+1. Remove the photo background from behind the Core Values banner
+2. Keep the photo background behind the "No Limits Academy is more than a boxing gym..." text section
+3. Adjust the photo position so the coach's head isn't cut off
 
-### Overview
-Add two new stat cards to the Impact page's stats section to highlight the boxing program participation and meal service.
+## How I'll Do It
 
-### New Stats to Add
+### 1. Restructure the Mobile Layout
+Currently, the background photo spans the entire section. I'll split it so:
+- **Core Values banner** → Solid background (no photo behind it)
+- **Text content area** → Photo background with the coach visible
 
-**Stat 1: Boxing Participation**
-- Headline: "95%"
-- Subtext: "Youth Participate in Non-Contact Boxing"
-- Supporting line: "Safety-focused training and development"
+### 2. Move the Core Values Banner Above the Background Photo Area
+- Place the Core Values banner in its own container with a solid `bg-background`
+- The faded photo background will only cover the text content below it
 
-**Stat 2: Meals Served**
-- Headline: "Meals Served"
-- Subtext: "Five Nights a Week"
-- Supporting line: "September through June"
+### 3. Adjust Photo Positioning
+- Change `object-center` to `object-top` so the photo shows more of the top (where the coach's head is)
+- This prevents the coach's head from being cut off
 
-### Technical Implementation
+## Technical Details
 
-**File to modify:** `src/pages/ImpactStory.tsx`
+**File to edit:** `src/components/sections/AboutSection.tsx`
 
-1. **Import additional icons** from lucide-react:
-   - `Dumbbell` (or similar) for the boxing stat
-   - `Utensils` for the meals stat
-
-2. **Add new entries to the `stats` array:**
-```tsx
-const stats = [
-  // ... existing 3 stats ...
-  {
-    icon: Dumbbell,
-    value: "95%",
-    label: "Youth Participate in Non-Contact Boxing",
-    description: "Safety-focused training and development"
-  },
-  {
-    icon: Utensils,
-    value: "Meals Served",
-    label: "Five Nights a Week",
-    description: "September through June"
-  }
-];
-```
-
-3. **Update grid layout** to accommodate 5 cards:
-   - Change from `md:grid-cols-3` to a responsive layout that works for 5 items
-   - Options:
-     - Row 1: 3 cards, Row 2: 2 cards centered
-     - Use `md:grid-cols-5` with smaller cards
-   - Recommended: Keep 3-column grid but let the 4th and 5th cards naturally wrap to a second row, centered
-
-4. **Adjust grid centering** for the second row:
-   - Add flexbox wrapper or use CSS to center the bottom row of 2 cards
-   - Alternative: Use `justify-items-center` with specific column spans
-
-### Visual Consistency
-- Same `Card` and `CardContent` components
-- Same padding (`p-8`), text alignment (`text-center`)
-- Same typography hierarchy:
-  - Value: `text-4xl md:text-5xl font-black`
-  - Label: `text-lg font-bold`
-  - Description: `text-sm text-muted-foreground`
-- Same icon sizing: `h-10 w-10`
-- Same border styling: `border-2 border-foreground/10 hover:border-foreground/20`
-
-### Layout Approach
-To keep the bottom 2 cards visually centered under the top 3, I'll render the stats in two groups:
-- First row: 3 cards in a 3-column grid
-- Second row: 2 cards centered using flexbox
-
-This ensures a balanced, professional appearance.
-
+**Changes:**
+- Wrap the text content (headline, body, tagline) in a `relative` container that has its own background image
+- Move the Core Values banner outside this background area on mobile
+- Use `object-top` instead of `object-center` to show more of the coach's head
+- Keep the solid background behind the Core Values banner
