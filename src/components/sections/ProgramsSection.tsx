@@ -75,22 +75,22 @@ const ProgramsSection = ({
           <div className="w-full aspect-[4/3] bg-muted rounded-lg flex items-center justify-center">
             <span className="text-muted-foreground text-sm">Junior Boxing Image Placeholder</span>
           </div>
-          <div className="mt-4 space-y-2 text-sm">
-            <p className="font-semibold text-foreground">Quick Parent Snapshot 👇</p>
-            <p className="text-muted-foreground italic flex items-center gap-2">
-              <DollarSign className="h-4 w-4 text-foreground flex-shrink-0" /> Cost: 100% FREE
+          <div className="mt-4 space-y-1.5">
+            <p className="font-semibold text-foreground text-sm">Quick Parent Snapshot 👇</p>
+            <p className="text-muted-foreground italic text-xs flex items-center gap-2">
+              <DollarSign className="h-3.5 w-3.5 text-foreground flex-shrink-0" /> Cost: 100% FREE
             </p>
-            <p className="text-muted-foreground italic flex items-center gap-2">
-              <Shirt className="h-4 w-4 text-foreground flex-shrink-0" /> What to bring: athletic clothes & sneakers
+            <p className="text-muted-foreground italic text-xs flex items-center gap-2">
+              <Shirt className="h-3.5 w-3.5 text-foreground flex-shrink-0" /> What to bring: athletic clothes & sneakers
             </p>
-            <p className="text-muted-foreground italic flex items-center gap-2">
-              <Clock className="h-4 w-4 text-foreground flex-shrink-0" /> Program: 5:15–6:00 PM
+            <p className="text-muted-foreground italic text-xs flex items-center gap-2">
+              <Clock className="h-3.5 w-3.5 text-foreground flex-shrink-0" /> Program: 5:15–6:00 PM
             </p>
-            <p className="text-muted-foreground italic flex items-center gap-2">
-              <Utensils className="h-4 w-4 text-foreground flex-shrink-0" /> Optional Aftercare: 6-7pm (Dinner Included)
+            <p className="text-muted-foreground italic text-xs flex items-center gap-2">
+              <Utensils className="h-3.5 w-3.5 text-foreground flex-shrink-0" /> Optional Aftercare: 6-7pm (Dinner Included)
             </p>
-            <p className="text-muted-foreground italic flex items-center gap-2">
-              <AlarmClock className="h-4 w-4 text-foreground flex-shrink-0" /> Pick-Up: 7-7:10pm, Please be on time!
+            <p className="text-muted-foreground italic text-xs flex items-center gap-2">
+              <AlarmClock className="h-3.5 w-3.5 text-foreground flex-shrink-0" /> Pick-Up: 7-7:10pm, Please be on time!
             </p>
           </div>
           <Button 
