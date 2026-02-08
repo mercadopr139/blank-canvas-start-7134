@@ -45,9 +45,9 @@ const AboutSection = () => {
         <div className="hidden md:block bg-background py-8">
           <div className="container">
             <div className="max-w-4xl mx-auto">
-              <div className="core-values max-w-md my-0 px-0">
-                <img src={coreValuesBanner} alt="NLA Core Values: Respect, Commitment, Accountability, Leadership, Trust, Service" className="w-full h-auto object-cover" />
-              </div>
+            <div className="core-values max-w-md mx-auto px-0">
+              <img src={coreValuesBanner} alt="NLA Core Values: Respect, Commitment, Accountability, Leadership, Trust, Service" className="w-full h-auto object-cover" />
+            </div>
             </div>
           </div>
         </div>
