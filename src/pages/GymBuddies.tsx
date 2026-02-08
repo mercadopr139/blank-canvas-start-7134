@@ -278,7 +278,7 @@ const GymBuddies = () => {
                     className="px-5 py-3 h-auto rounded-lg bg-foreground text-background font-extrabold hover:bg-foreground/90 transition-colors"
                   >
                     <MessageCircle className="h-5 w-5 mr-2" />
-                    Gym Buddies Chat
+                    Interested in becoming a Gym Buddy?
                   </Button>
                   <p className="text-sm italic text-muted-foreground mt-2 text-center">
                     Interested in signing-up? Click Gym Buddies Chat for more info
