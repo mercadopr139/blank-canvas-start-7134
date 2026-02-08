@@ -1,17 +1,50 @@
 import coreValuesBanner from "@/assets/gym-buddies/core-values-banner.png";
+import gymYouthGathering from "@/assets/gym-youth-gathering.jpg";
 
 const AboutSection = () => {
   return (
     <section className="py-20 md:py-28 bg-background">
       <div className="container">
         <div className="max-w-4xl mx-auto text-left">
-          {/* Core Values Banner - Float Right on Desktop */}
-          <div className="core-values md:float-right md:ml-8 md:mb-4 md:max-w-[800px] mb-8 w-full mx-auto md:mx-0">
-            <img 
-              src={coreValuesBanner} 
-              alt="NLA Core Values: Respect, Commitment, Accountability, Leadership, Trust, Service"
-              className="w-full h-auto"
-            />
+          {/* Image Pair - Creative Layout */}
+          <div className="md:float-right md:ml-8 md:mb-4 mb-8 w-full md:max-w-[800px]">
+            {/* Desktop: Side by side */}
+            <div className="hidden md:flex gap-4 items-start">
+              <div className="flex-1 rounded-lg overflow-hidden shadow-lg">
+                <img 
+                  src={gymYouthGathering} 
+                  alt="NLA youth gathered in the gym for a presentation"
+                  className="w-full h-auto object-cover"
+                />
+              </div>
+              <div className="core-values flex-1">
+                <img 
+                  src={coreValuesBanner} 
+                  alt="NLA Core Values: Respect, Commitment, Accountability, Leadership, Trust, Service"
+                  className="w-full h-auto"
+                />
+              </div>
+            </div>
+            
+            {/* Mobile: Stacked with creative overlap effect */}
+            <div className="md:hidden relative">
+              {/* Youth gathering photo - tilted slightly */}
+              <div className="relative z-10 mx-4 -rotate-2 rounded-lg overflow-hidden shadow-xl">
+                <img 
+                  src={gymYouthGathering} 
+                  alt="NLA youth gathered in the gym for a presentation"
+                  className="w-full h-auto object-cover"
+                />
+              </div>
+              {/* Core Values banner - underneath, tilted opposite */}
+              <div className="core-values relative z-0 -mt-8 mx-2 rotate-1 rounded-lg overflow-hidden shadow-lg">
+                <img 
+                  src={coreValuesBanner} 
+                  alt="NLA Core Values: Respect, Commitment, Accountability, Leadership, Trust, Service"
+                  className="w-full h-auto"
+                />
+              </div>
+            </div>
           </div>
 
           {/* Main headline */}
