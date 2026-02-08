@@ -87,7 +87,7 @@ const ProgramsSection = ({
               <Shirt className="h-3.5 w-3.5 text-foreground flex-shrink-0" /> What to bring: athletic clothes & sneakers
             </p>
             <p className="text-muted-foreground italic text-xs flex items-center gap-2">
-              <Clock className="h-3.5 w-3.5 text-foreground flex-shrink-0" /> Program: 5:15–6:00 PM
+              <Clock className="h-3.5 w-3.5 text-foreground flex-shrink-0" /> Program: Tuesdays Only, 5:15pm-6:00pm
             </p>
             <p className="text-muted-foreground italic text-xs flex items-center gap-2">
               <Utensils className="h-3.5 w-3.5 text-foreground flex-shrink-0" /> Optional Aftercare: 6-7pm (Dinner Included)
