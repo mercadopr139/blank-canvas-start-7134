@@ -99,9 +99,14 @@ const ProgramsSection = ({
               alt="Junior Boxing Program" 
               className="w-full aspect-[4/3] object-cover object-top rounded-lg"
             />
-            <span className="absolute top-3 right-3 text-white text-sm font-bold drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">
-              7–10 yrs old
-            </span>
+            <div className="absolute top-3 right-3 text-right">
+              <span className="block text-white text-xs font-semibold drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">
+                Junior Boxer
+              </span>
+              <span className="block text-white text-sm font-bold drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">
+                7–10 yrs old
+              </span>
+            </div>
           </div>
           <div className="mt-4 space-y-1.5">
             <p className="font-semibold text-foreground text-sm">Quick Parent Snapshot 👇</p>
@@ -144,9 +149,14 @@ const ProgramsSection = ({
               alt="Senior Boxing Program" 
               className="w-full aspect-[4/3] object-cover object-top rounded-lg"
             />
-            <span className="absolute top-3 right-3 text-white text-sm font-bold drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">
-              11–19 yrs old
-            </span>
+            <div className="absolute top-3 right-3 text-right">
+              <span className="block text-white text-xs font-semibold drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">
+                Senior Boxer
+              </span>
+              <span className="block text-white text-sm font-bold drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">
+                11–19 yrs old
+              </span>
+            </div>
           </div>
           <div className="mt-4 space-y-1.5">
             <p className="font-semibold text-foreground text-sm">Quick Parent Snapshot 👇</p>
