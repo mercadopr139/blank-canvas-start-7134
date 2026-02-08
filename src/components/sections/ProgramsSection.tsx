@@ -74,6 +74,14 @@ const ProgramsSection = ({
           <div className="w-full aspect-[4/3] bg-muted rounded-lg flex items-center justify-center">
             <span className="text-muted-foreground text-sm">Junior Boxing Image Placeholder</span>
           </div>
+          <div className="mt-4 space-y-2 text-sm">
+            <p className="font-semibold text-foreground">Quick Parent Snapshot 👇</p>
+            <p className="text-muted-foreground">🥊 Cost: 100% FREE</p>
+            <p className="text-muted-foreground">👕 What to bring: Gym-class style clothes + sneakers</p>
+            <p className="text-muted-foreground">🕔 Program: 5:15–6:00 PM</p>
+            <p className="text-muted-foreground">🍽️ Optional Aftercare: 6:00–7:15 PM (sit-down dinner included)</p>
+            <p className="text-muted-foreground">⏰ Pick-Up: Please be on time — late pick-ups are not allowed</p>
+          </div>
           <Button 
             className="w-full mt-4 bg-primary hover:bg-primary/90 text-primary-foreground font-semibold"
             asChild
