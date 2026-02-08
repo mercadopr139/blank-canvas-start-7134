@@ -176,7 +176,7 @@ const ProgramsSection = ({
               <Utensils className="h-3.5 w-3.5 text-foreground flex-shrink-0" /> Dinner: Included
             </p>
             <p className="text-muted-foreground italic text-xs flex items-center gap-2">
-              <Megaphone className="h-3.5 w-3.5 text-foreground flex-shrink-0" /> Attendance: You don't have to come every day — BUT you must communicate your schedule with your coaches
+              <Megaphone className="h-3.5 w-3.5 text-foreground flex-shrink-0" /> Attendance: You don't have to come every day — BUT you must communicate your schedule with your coaches.
             </p>
             <p className="text-muted-foreground italic text-xs flex items-center gap-2">
               <AlarmClock className="h-3.5 w-3.5 text-foreground flex-shrink-0" /> Pick-Up: 7:30pm — Please be on time!
