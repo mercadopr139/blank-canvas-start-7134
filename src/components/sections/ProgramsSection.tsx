@@ -7,7 +7,7 @@ const programs = [{
 }, {
   title: "Senior Boxing Program",
   ages: "Ages 11–19 | Monday–Friday",
-  description: "A structured, high-expectation boys program combining boxing & fitness training with mentorship, accountability, leadership development, and life skills."
+  description: "A structured, high-expectation program combining boxing & fitness training with mentorship, accountability, leadership development, and life skills."
 }, {
   title: "Grit & Grace Program",
   ages: "Ages 11–19 | Monday–Friday",
