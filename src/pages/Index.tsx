@@ -43,7 +43,7 @@ const Index = () => {
           <div className="container flex flex-col items-center text-center px-4">
             <h2 className="text-xl md:text-2xl font-semibold mb-3 text-primary-foreground">Are you new to the Program?</h2>
             <p className="mb-6 max-w-md text-primary-foreground">
-              Access orientation materials and get started with everything you need to know.
+              Access Rookie Orientation materials and get started with everything you need to know.
             </p>
             <Button asChild size="lg" className="bg-white hover:bg-neutral-100 text-black font-semibold">
               <Link to="/rookie-orientation">
