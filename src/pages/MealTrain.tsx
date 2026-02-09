@@ -40,6 +40,18 @@ const MealTrain = () => {
               <Card className="border-border">
                 <CardContent className="pt-8 pb-8 text-center">
                   <div className="w-16 h-16 bg-primary rounded-full flex items-center justify-center mx-auto mb-4">
+                    <Heart className="w-8 h-8 text-primary-foreground" />
+                  </div>
+                  <h3 className="text-xl font-bold text-foreground mb-2">Want to Feed our Kids?</h3>
+                  <p className="text-muted-foreground">
+                    Join the Meal Train and help nourish our youth with a home-cooked or delivered meal.
+                  </p>
+                </CardContent>
+              </Card>
+              
+              <Card className="border-border">
+                <CardContent className="pt-8 pb-8 text-center">
+                  <div className="w-16 h-16 bg-primary rounded-full flex items-center justify-center mx-auto mb-4">
                     <Calendar className="w-8 h-8 text-primary-foreground" />
                   </div>
                   <h3 className="text-xl font-bold text-foreground mb-2">Pick a Date</h3>
@@ -57,18 +69,6 @@ const MealTrain = () => {
                   <h3 className="text-xl font-bold text-foreground mb-2">Provide a Meal</h3>
                   <p className="text-muted-foreground">
                     Prepare a group meal or arrange delivery for our youth participants.
-                  </p>
-                </CardContent>
-              </Card>
-              
-              <Card className="border-border">
-                <CardContent className="pt-8 pb-8 text-center">
-                  <div className="w-16 h-16 bg-primary rounded-full flex items-center justify-center mx-auto mb-4">
-                    <Heart className="w-8 h-8 text-primary-foreground" />
-                  </div>
-                  <h3 className="text-xl font-bold text-foreground mb-2">Want to Feed our Kids?</h3>
-                  <p className="text-muted-foreground">
-                    Help create a welcoming, consistent environment for our youth.
                   </p>
                 </CardContent>
               </Card>
