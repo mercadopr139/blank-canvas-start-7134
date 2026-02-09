@@ -139,6 +139,9 @@ const ProgramsSection = ({
               <DollarSign className="h-3.5 w-3.5 text-foreground flex-shrink-0" /> Cost: 100% FREE
             </p>
             <p className="text-muted-foreground italic text-xs flex items-center gap-2">
+              <Dumbbell className="h-3.5 w-3.5 text-foreground flex-shrink-0" /> Equipment: We provide everything — no gear needed!
+            </p>
+            <p className="text-muted-foreground italic text-xs flex items-center gap-2">
               <Shirt className="h-3.5 w-3.5 text-foreground flex-shrink-0" /> What to bring: Athletic clothes & sneakers
             </p>
             <p className="text-muted-foreground italic text-xs flex items-center gap-2">
