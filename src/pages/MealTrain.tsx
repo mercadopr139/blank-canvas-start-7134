@@ -30,28 +30,9 @@ const MealTrain = () => {
               <h1 className="text-4xl md:text-5xl lg:text-6xl font-black text-primary-foreground leading-tight mb-6">
                 Meal Train
               </h1>
-              <p className="text-lg md:text-xl text-primary-foreground/80 leading-relaxed mb-8">
+              <p className="text-lg md:text-xl text-primary-foreground/80 leading-relaxed">
                 The NLA Meal Train supports our youth participants by providing free, sit-down meals during scheduled program days. These meals create consistency, build community, and ensure our athletes are fueled, focused, and cared for while they train and learn together. Volunteers play a vital role in making this possible.
               </p>
-              <div className="flex flex-col items-center gap-3">
-                <img 
-                  src={mealTrainLogo} 
-                  alt="Meal Train logo" 
-                  className="w-48 h-auto mb-2"
-                />
-                <Button 
-                  size="lg" 
-                  className="bg-primary-foreground text-primary hover:bg-primary-foreground/90 font-bold text-lg px-8 py-6"
-                  asChild
-                >
-                  <a href={MEAL_TRAIN_LINK} target="_blank" rel="noopener noreferrer">
-                    Jump Aboard!
-                  </a>
-                </Button>
-                <p className="text-sm text-primary-foreground/60">
-                  Thank you for feeding our kids!
-                </p>
-              </div>
             </div>
           </div>
         </section>
@@ -65,8 +46,8 @@ const MealTrain = () => {
             <div className="grid md:grid-cols-3 gap-6">
               <Card className="border-border">
                 <CardContent className="pt-8 pb-8 text-center">
-                  <div className="w-16 h-16 bg-primary rounded-full flex items-center justify-center mx-auto mb-4">
-                    <Calendar className="w-8 h-8 text-primary-foreground" />
+                  <div className="w-16 h-16 bg-foreground rounded-full flex items-center justify-center mx-auto mb-4">
+                    <Calendar className="w-8 h-8 text-background" />
                   </div>
                   <h3 className="text-xl font-bold text-foreground mb-2">Pick a Date</h3>
                   <p className="text-muted-foreground">
@@ -77,8 +58,8 @@ const MealTrain = () => {
               
               <Card className="border-border">
                 <CardContent className="pt-8 pb-8 text-center">
-                  <div className="w-16 h-16 bg-primary rounded-full flex items-center justify-center mx-auto mb-4">
-                    <Utensils className="w-8 h-8 text-primary-foreground" />
+                  <div className="w-16 h-16 bg-foreground rounded-full flex items-center justify-center mx-auto mb-4">
+                    <Utensils className="w-8 h-8 text-background" />
                   </div>
                   <h3 className="text-xl font-bold text-foreground mb-2">Provide a Meal</h3>
                   <p className="text-muted-foreground">
@@ -89,8 +70,8 @@ const MealTrain = () => {
               
               <Card className="border-border">
                 <CardContent className="pt-8 pb-8 text-center">
-                  <div className="w-16 h-16 bg-primary rounded-full flex items-center justify-center mx-auto mb-4">
-                    <Heart className="w-8 h-8 text-primary-foreground" />
+                  <div className="w-16 h-16 bg-foreground rounded-full flex items-center justify-center mx-auto mb-4">
+                    <Heart className="w-8 h-8 text-background" />
                   </div>
                   <h3 className="text-xl font-bold text-foreground mb-2">Support the Program</h3>
                   <p className="text-muted-foreground">
@@ -98,6 +79,31 @@ const MealTrain = () => {
                   </p>
                 </CardContent>
               </Card>
+            </div>
+          </div>
+        </section>
+
+        {/* Jump Aboard CTA */}
+        <section className="py-12 md:py-16 bg-primary">
+          <div className="container">
+            <div className="flex flex-col items-center gap-3">
+              <img 
+                src={mealTrainLogo} 
+                alt="Meal Train logo" 
+                className="w-48 h-auto mb-2"
+              />
+              <Button 
+                size="lg" 
+                className="bg-primary-foreground text-primary hover:bg-primary-foreground/90 font-bold text-lg px-8 py-6"
+                asChild
+              >
+                <a href={MEAL_TRAIN_LINK} target="_blank" rel="noopener noreferrer">
+                  Jump Aboard!
+                </a>
+              </Button>
+              <p className="text-sm text-primary-foreground/60">
+                Thank you for feeding our kids!
+              </p>
             </div>
           </div>
         </section>
