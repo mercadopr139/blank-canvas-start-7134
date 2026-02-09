@@ -45,10 +45,6 @@ import chiefDekonCapeMay from "@/assets/gym-buddies/chief-dekon-cape-may.jpg";
 const GymBuddies = () => {
   const [isChatOpen, setIsChatOpen] = useState(false);
   const gymBuddiesImages = [{
-    src: captainMiller,
-    alt: "Congrats Captain Miller",
-    caption: "Congrats Captain Miller!"
-  }, {
     src: chiefDekonCapeMay,
     alt: "Congrats Chief Dekon of Cape May",
     caption: "Congrats Chief Dekon, Chief of Chiefs in CMC!"
