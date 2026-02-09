@@ -41,7 +41,7 @@ const ImpactStory = () => {
       
       <main className="flex-1">
         {/* Hero Section */}
-        <section className="bg-primary md:py-24 py-[20px]">
+        <section className="bg-primary md:py-24 py-[30px]">
           <div className="container">
             <div className="max-w-4xl mx-auto text-center">
               <h1 className="text-4xl md:text-5xl lg:text-6xl font-black text-primary-foreground leading-tight mb-6">
