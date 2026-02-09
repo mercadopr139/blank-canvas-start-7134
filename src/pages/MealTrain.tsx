@@ -31,32 +31,9 @@ const MealTrain = () => {
               <h1 className="text-4xl md:text-5xl lg:text-6xl font-black text-primary-foreground leading-tight mb-6">
                 Meal Train
               </h1>
-              <p className="text-lg md:text-xl text-primary-foreground/80 leading-relaxed mb-8">
+              <p className="text-lg md:text-xl text-primary-foreground/80 leading-relaxed">
                 The NLA Meal Train supports our youth participants by providing free, sit-down meals during scheduled program days. These meals create consistency, build community, and ensure our athletes are fueled, focused, and cared for while they train and learn together. Volunteers play a vital role in making this possible.
               </p>
-              
-              {/* Photo with caption */}
-              <div 
-                className="relative w-full max-w-2xl cursor-pointer group"
-                onClick={() => setLightboxOpen(true)}
-              >
-                <img 
-                  src={mealTrainPhoto} 
-                  alt="We feed our kids 5 nights a week" 
-                  className="w-full h-64 md:h-80 object-cover rounded-lg transition-transform group-hover:scale-[1.02]"
-                />
-                <div className="absolute inset-0 bg-white/0 group-hover:bg-white/10 transition-colors rounded-lg" />
-              </div>
-              <p className="mt-4 text-lg font-semibold text-primary-foreground">
-                We feed our kids 5 nights a week.
-              </p>
-
-              {/* Lightbox */}
-              <PortalLightbox 
-                open={lightboxOpen} 
-                onClose={() => setLightboxOpen(false)}
-                img={{ src: mealTrainPhoto, alt: "We feed our kids 5 nights a week" }}
-              />
             </div>
           </div>
         </section>
@@ -134,6 +111,33 @@ const MealTrain = () => {
                 Thank you for feeding our kids!
               </p>
             </div>
+          </div>
+        </section>
+
+        {/* Photo Section */}
+        <section className="py-16 md:py-20 bg-foreground">
+          <div className="container">
+            <div 
+              className="relative w-full max-w-2xl mx-auto cursor-pointer group"
+              onClick={() => setLightboxOpen(true)}
+            >
+              <img 
+                src={mealTrainPhoto} 
+                alt="We feed our kids 5 nights a week" 
+                className="w-full h-64 md:h-80 object-cover rounded-lg transition-transform group-hover:scale-[1.02]"
+              />
+              <div className="absolute inset-0 bg-white/0 group-hover:bg-white/10 transition-colors rounded-lg" />
+            </div>
+            <p className="text-center mt-6 text-lg font-semibold text-background">
+              We feed our kids 5 nights a week.
+            </p>
+
+            {/* Lightbox */}
+            <PortalLightbox 
+              open={lightboxOpen} 
+              onClose={() => setLightboxOpen(false)}
+              img={{ src: mealTrainPhoto, alt: "We feed our kids 5 nights a week" }}
+            />
           </div>
         </section>
 
