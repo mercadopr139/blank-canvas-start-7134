@@ -25,7 +25,7 @@ const MealTrain = () => {
         </section>
 
         {/* Hero Section - Intro */}
-        <section className="bg-primary py-16 md:py-[30px]">
+        <section className="bg-primary py-8 md:py-6">
           <div className="container">
             <div className="max-w-3xl">
               <h1 className="text-4xl md:text-5xl lg:text-6xl font-black text-primary-foreground leading-tight mb-4">
