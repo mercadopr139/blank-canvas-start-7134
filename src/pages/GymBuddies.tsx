@@ -50,8 +50,8 @@ const GymBuddies = () => {
   const [isChatOpen, setIsChatOpen] = useState(false);
   const gymBuddiesImages = [{
     src: chiefDekonCapeMay,
-    alt: "Congrats Chief Dekon of Cape May",
-    caption: "Congrats Chief Dekon, Chief of Chiefs in CMC!"
+    alt: "Congrats Chief Dekon, Chief of Chiefs in CMC with Mayor Leusner and NLA Family",
+    caption: "Congrats Chief Dekon, Chief of Chiefs in CMC! w/ Mayor Leusner & NLA Family!"
   }, {
     src: chiefDekonWeldonPowell,
     alt: "Chief Dekon Fashaw, Cape May with Chief Weldon Powell, Chief of Detectives, NJ",
