@@ -113,7 +113,7 @@ const ProgramsExtrasSection = () => {
       },
       {
         id: "lil-champs",
-        title: "NJ4S Lil' Champs Program",
+        title: "NJ4S Lil' Champs' Corner Program",
         subtitle: "Junior Boxers Only",
         ageRange: "7–10 years old",
         blurb:
