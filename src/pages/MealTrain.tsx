@@ -7,10 +7,8 @@ import { Calendar, Utensils, Heart, Truck } from "lucide-react";
 import PortalLightbox from "@/components/ui/portal-lightbox";
 import mealTrainHero from "@/assets/meal-train/meal-train-hero.jpg";
 import mealTrainLogo from "@/assets/meal-train/meal-train-logo.png";
+import mealTrainServing from "@/assets/meal-train/meal-train-serving.jpg";
 const MEAL_TRAIN_LINK = "https://www.mealtrain.com/trains/ode4rn";
-
-// Placeholder for meal train photo - replace with actual image when available
-const mealTrainPhoto = "/placeholder.svg";
 const MealTrain = () => {
   const [lightboxOpen, setLightboxOpen] = useState(false);
   return <div className="min-h-screen flex flex-col bg-background">
@@ -104,7 +102,7 @@ const MealTrain = () => {
         <section className="py-16 md:py-20 bg-foreground">
           <div className="container">
             <div className="relative w-full max-w-2xl mx-auto cursor-pointer group" onClick={() => setLightboxOpen(true)}>
-              <img src={mealTrainPhoto} alt="We feed our kids 5 nights a week" className="w-full h-64 md:h-80 object-cover rounded-lg transition-transform group-hover:scale-[1.02]" />
+              <img src={mealTrainServing} alt="We feed our kids 5 nights a week" className="w-full h-64 md:h-80 object-cover rounded-lg transition-transform group-hover:scale-[1.02]" />
               <div className="absolute inset-0 bg-white/0 group-hover:bg-white/10 transition-colors rounded-lg" />
             </div>
             <p className="text-center mt-6 text-lg font-semibold text-background">
@@ -113,7 +111,7 @@ const MealTrain = () => {
 
             {/* Lightbox */}
             <PortalLightbox open={lightboxOpen} onClose={() => setLightboxOpen(false)} img={{
-            src: mealTrainPhoto,
+            src: mealTrainServing,
             alt: "We feed our kids 5 nights a week"
           }} />
           </div>
