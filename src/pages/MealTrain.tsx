@@ -36,7 +36,7 @@ const MealTrain = () => {
         </section>
 
         {/* How It Works */}
-        <section className="pt-8 pb-16 md:pt-10 md:pb-20 bg-background py-[20px]">
+        <section className="pt-8 pb-6 md:pt-10 md:pb-8 bg-background py-[20px]">
           <div className="container">
             <h2 className="text-3xl md:text-4xl font-bold text-foreground mb-10">
               How It Works
