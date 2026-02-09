@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 import Header from "@/components/layout/Header";
 import Footer from "@/components/layout/Footer";
 import { Button } from "@/components/ui/button";
@@ -44,6 +44,8 @@ import nlaPoliceChiefsAssociation from "@/assets/gym-buddies/nla-police-chiefs-a
 import cmcFinest from "@/assets/gym-buddies/cmc-finest.png";
 import chiefDekonCapeMay from "@/assets/gym-buddies/chief-dekon-cape-may.jpg";
 const GymBuddies = () => {
+  const location = useLocation();
+  const fromPrograms = location.state?.fromPrograms === true;
   const [isChatOpen, setIsChatOpen] = useState(false);
   const gymBuddiesImages = [{
     src: chiefDekonCapeMay,
@@ -193,15 +195,17 @@ const GymBuddies = () => {
         {/* Hero Title Section */}
         <section className="py-16 md:py-20 bg-foreground">
           <div className="container">
-            <div className="max-w-4xl mx-auto">
-              {/* Back to Programs Link */}
-              <Link 
-                to="/programs#more-programs" 
-                className="inline-flex items-center gap-1.5 text-background/80 hover:text-background transition-colors mb-6 text-sm font-medium"
-              >
-                <ArrowLeft className="h-4 w-4" />
-                Back to Programs
-              </Link>
+          <div className="max-w-4xl mx-auto">
+              {/* Back to Programs Link - only show if came from Programs page */}
+              {fromPrograms && (
+                <Link 
+                  to="/programs#more-programs" 
+                  className="inline-flex items-center gap-1.5 text-background/80 hover:text-background transition-colors mb-6 text-sm font-medium"
+                >
+                  <ArrowLeft className="h-4 w-4" />
+                  Back to Programs
+                </Link>
+              )}
               <h1 className="text-3xl md:text-4xl lg:text-5xl font-black text-background text-center">
                 Gym Buddies Program
               </h1>

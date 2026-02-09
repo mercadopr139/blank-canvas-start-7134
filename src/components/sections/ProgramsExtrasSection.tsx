@@ -330,7 +330,7 @@ const ProgramsExtrasSection = () => {
           {/* Gym Buddies - links to dedicated page */}
           <li className="flex items-start gap-3">
             <span className="mt-2.5 h-2 w-2 rounded-full bg-foreground flex-shrink-0" />
-            <Link to="/gym-buddies" className="text-left text-lg font-medium text-foreground underline underline-offset-4 hover:text-foreground/80 transition-colors">
+            <Link to="/gym-buddies" state={{ fromPrograms: true }} className="text-left text-lg font-medium text-foreground underline underline-offset-4 hover:text-foreground/80 transition-colors">
               Gym Buddies
             </Link>
           </li>
