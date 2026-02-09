@@ -214,7 +214,7 @@ const ProgramsExtrasSection = () => {
     title: "Real Talk Sessions",
     subtitle: "Senior Boxers",
     ageRange: "11–19 years old",
-    blurb: "Real Talk Sessions bring highly successful adults to No Limits Academy to share honest stories of struggle, failure, heartbreak, and setbacks—showing youth what perseverance and resilience look like in real life. Speakers share how resilience and faith helped anchor them through adversity, with the goal of inspiring youth to keep moving forward.",
+    blurb: "Real Talk Sessions bring influential adults to No Limits Academy to share honest stories of struggle, failure, heartbreak, and setbacks—showing youth what perseverance and resilience look like in real life. Speakers share how resilience and faith helped anchor them through adversity, with the goal of inspiring youth to keep moving forward.",
     images: [{
       src: realTalkJoeFranco,
       alt: "Joe Franco with NLA youth at Real Talk Session",
