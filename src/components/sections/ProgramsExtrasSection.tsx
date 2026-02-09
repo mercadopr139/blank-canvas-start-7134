@@ -12,6 +12,7 @@ import lilChampsActivity3 from "@/assets/programs/lil-champs-activity-3.jpg";
 import lilChampsActivity4 from "@/assets/programs/lil-champs-activity-4.jpg";
 import lilChampsActivity5 from "@/assets/programs/lil-champs-activity-5.jpg";
 import lilChampsActivity6 from "@/assets/programs/lil-champs-activity-6.jpg";
+import nj4sLogo from "@/assets/programs/nj4s-logo.png";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { ClickToEnlargeGallery } from "@/components/ui/click-to-enlarge-gallery";
@@ -364,6 +365,13 @@ const ProgramsExtrasSection = () => {
             {openItem?.policyText && <p className="text-xs italic text-muted-foreground mt-4">
                 *{openItem.policyText}
               </p>}
+
+            {/* NJ4S Logo for Lil' Champs */}
+            {openItem?.id === "lil-champs" && (
+              <div className="flex justify-center my-6">
+                <img src={nj4sLogo} alt="NJ4S Logo" className="h-24 w-auto" />
+              </div>
+            )}
 
             {/* Gallery */}
             {openItem && openItem.images.length > 0 && <ClickToEnlargeGallery images={openItem.images} showCaptions />}
