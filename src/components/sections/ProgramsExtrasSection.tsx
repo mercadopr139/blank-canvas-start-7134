@@ -316,7 +316,7 @@ const ProgramsExtrasSection = () => {
     title: "Coaching Boys into Men (Evidence-Based Program)",
     subtitle: "Senior Boxers",
     ageRange: "11–19 years old",
-    blurb: "Coaching Boys into Men is an evidence-based violence prevention program that trains coaches to teach young male athletes about respect, integrity, and non-violence. Through ongoing conversations and teachable moments, coaches help shape attitudes and behaviors that prevent relationship abuse and promote healthy masculinity.",
+    blurb: "In partnership with Cape Assist, CBIM is an evidence-based violence prevention program that trains coaches to teach young male athletes about respect, integrity, and non-violence. Through ongoing conversations and teachable moments, coaches help shape attitudes and behaviors that prevent relationship abuse and promote healthy masculinity.",
     images: [{
       src: "/placeholder.svg",
       alt: "Coaching Boys into Men photo 1"
