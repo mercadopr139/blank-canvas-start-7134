@@ -1,11 +1,11 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Calendar, MapPin, DollarSign, ClipboardList, User } from "lucide-react";
+import { ArrowLeft, Calendar, MapPin, DollarSign, ClipboardList, User, Bus } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 interface ChatWidgetProps {
   onBack: () => void;
 }
-type QuickOption = "schedule" | "registration" | "location" | "cost" | "person" | null;
+type QuickOption = "schedule" | "registration" | "location" | "cost" | "transportation" | "person" | null;
 const INFO_EMAIL = "info@nolimitsboxingacademy.org";
 const CHRISSY_EMAIL = "chrissycasiello@nolimitsboxingacademy.org";
 const SENIOR_BOXING_SCHEDULE = `Monday – Friday, 2:30 PM – 8:30 PM
@@ -102,6 +102,29 @@ const chatResponses: Record<Exclude<QuickOption, null>, {
         </div>
       </div>
   },
+  transportation: {
+    title: "Transportation",
+    content: <div className="space-y-3">
+        <p className="font-bold text-foreground">Transportation</p>
+        <p className="text-sm text-muted-foreground">
+          NLA provides <strong>free transportation</strong> for Wildwood &amp; Woodbine kids, 5 days a week.
+        </p>
+        <p className="text-sm text-muted-foreground">
+          If you live in Wildwood or Woodbine and have transportation questions, please reach out:
+        </p>
+        <div className="flex justify-center" style={{ marginTop: '1.25rem' }}>
+          <a 
+            href={`mailto:${INFO_EMAIL}?subject=${encodeURIComponent("Transportation Inquiry")}&body=${encodeURIComponent("Hi,\n\nI have a question about transportation for my child.\n\nName:\nChild's Name:\nLocation (Wildwood/Woodbine):\nQuestion:\n\nThanks!")}`}
+            className="inline-flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-md font-bold text-sm hover:bg-primary/90 transition-colors"
+          >
+            Email Us About Transportation
+          </a>
+        </div>
+        <p className="text-sm text-muted-foreground text-center" style={{ marginTop: '1.25rem' }}>
+          <a href={`mailto:${INFO_EMAIL}`} className="text-primary underline">{INFO_EMAIL}</a>
+        </p>
+      </div>
+  },
   person: {
     title: "Talk to a Person",
     content: <div className="space-y-3">
@@ -131,6 +154,10 @@ const quickOptions = [{
   id: "cost" as const,
   label: "Cost",
   icon: DollarSign
+}, {
+  id: "transportation" as const,
+  label: "Transportation",
+  icon: Bus
 }, {
   id: "person" as const,
   label: "Talk to a person",
