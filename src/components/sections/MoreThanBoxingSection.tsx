@@ -12,10 +12,6 @@ const MoreThanBoxingSection = () => {
               alt="No Limits Academy youth gathered around a campfire"
               className="w-full h-auto rounded-lg"
             />
-            {/* Gradient overlays for creative fade effect */}
-            <div className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent rounded-lg" />
-            <div className="absolute inset-0 bg-gradient-to-r from-black/60 via-transparent to-black/60 rounded-lg" />
-            <div className="absolute inset-0 bg-gradient-to-b from-black/70 via-transparent to-black rounded-lg" />
           </div>
           
           {/* Text overlay on top of image */}
