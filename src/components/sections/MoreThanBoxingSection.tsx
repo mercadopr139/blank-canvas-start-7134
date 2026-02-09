@@ -27,6 +27,10 @@ const MoreThanBoxingSection = () => {
                 className="w-full h-full object-[center_30%] object-contain"
               />
             </button>
+            {/* Caption */}
+            <div className="absolute bottom-0 left-0 right-0 bg-foreground/80 px-3 py-2">
+              <p className="text-sm text-background text-center font-medium">Camping in West Virginia</p>
+            </div>
           </div>
         </div>
       </div>
