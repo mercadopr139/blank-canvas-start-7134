@@ -80,7 +80,6 @@ const MealTrain = () => {
                   <h3 className="text-xl font-bold text-foreground mb-2">Want to Feed our Kids?</h3>
                   <p className="text-muted-foreground">
                     Help create a welcoming, consistent environment for our youth.
-                    Help create a welcoming, consistent environment for our athletes.
                   </p>
                 </CardContent>
               </Card>
