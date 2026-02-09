@@ -362,7 +362,7 @@ const ProgramsExtrasSection = () => {
           More Programs at NLA
         </h2>
         <p className="mt-3 text-base md:text-lg text-muted-foreground max-w-3xl">
-          These programs strengthen the core experience and show how NLA extends impact beyond the gym.
+          These programs strengthen the core experience and show how NLA extends impact beyond boxing & fitness training.
         </p>
 
         {/* Bullet-style list - alphabetically sorted */}
