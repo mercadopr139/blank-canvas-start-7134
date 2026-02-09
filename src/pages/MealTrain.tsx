@@ -91,7 +91,7 @@ const MealTrain = () => {
                   </p>
                   <Button size="sm" className="bg-primary text-primary-foreground hover:bg-primary/90" asChild>
                     <a href={MEAL_TRAIN_LINK} target="_blank" rel="noopener noreferrer">
-                      Sign Up
+                      Meal Train Sign-Up
                     </a>
                   </Button>
                 </CardContent>
