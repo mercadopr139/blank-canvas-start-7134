@@ -1,12 +1,20 @@
+import { useState } from "react";
 import Header from "@/components/layout/Header";
 import Footer from "@/components/layout/Footer";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Calendar, Utensils, Heart } from "lucide-react";
+import PortalLightbox from "@/components/ui/portal-lightbox";
 import mealTrainHero from "@/assets/meal-train/meal-train-hero.jpg";
 import mealTrainLogo from "@/assets/meal-train/meal-train-logo.png";
+
 const MEAL_TRAIN_LINK = "https://www.mealtrain.com/trains/ode4rn";
+
+// Placeholder for meal train photo - replace with actual image when available
+const mealTrainPhoto = "/placeholder.svg";
+
 const MealTrain = () => {
+  const [lightboxOpen, setLightboxOpen] = useState(false);
   return <div className="min-h-screen flex flex-col bg-background">
       <Header />
       
@@ -36,7 +44,7 @@ const MealTrain = () => {
             <h2 className="text-3xl md:text-4xl font-bold text-foreground mb-10">
               How It Works
             </h2>
-            <div className="grid md:grid-cols-3 gap-6">
+            <div className="grid md:grid-cols-3 gap-6 mb-12">
               <Card className="border-border">
                 <CardContent className="pt-8 pb-8 text-center">
                   <div className="w-16 h-16 bg-primary rounded-full flex items-center justify-center mx-auto mb-4">
@@ -73,20 +81,41 @@ const MealTrain = () => {
                 </CardContent>
               </Card>
             </div>
-          </div>
-        </section>
 
-        {/* Jump Aboard CTA */}
-        <section className="bg-primary py-12 md:py-16">
-          <div className="container">
-            <div className="flex flex-col items-center gap-3">
+            {/* Photo placeholder with lightbox */}
+            <div className="mb-12">
+              <div 
+                className="relative w-full max-w-2xl mx-auto cursor-pointer group"
+                onClick={() => setLightboxOpen(true)}
+              >
+                <img 
+                  src={mealTrainPhoto} 
+                  alt="We feed our kids 5 nights a week" 
+                  className="w-full h-64 md:h-80 object-cover rounded-lg border border-border transition-transform group-hover:scale-[1.02]"
+                />
+                <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors rounded-lg" />
+              </div>
+              <p className="text-center mt-4 text-lg font-semibold text-foreground">
+                We feed our kids 5 nights a week.
+              </p>
+            </div>
+
+            {/* Lightbox */}
+            <PortalLightbox 
+              open={lightboxOpen} 
+              onClose={() => setLightboxOpen(false)}
+              img={{ src: mealTrainPhoto, alt: "We feed our kids 5 nights a week" }}
+            />
+
+            {/* Jump Aboard CTA */}
+            <div className="flex flex-col items-center gap-3 pt-4">
               <img src={mealTrainLogo} alt="Meal Train logo" className="w-48 h-auto mb-2" />
-              <Button size="lg" className="bg-primary-foreground text-primary hover:bg-primary-foreground/90 font-bold text-lg px-8 py-[20px]" asChild>
+              <Button size="lg" className="bg-primary text-primary-foreground hover:bg-primary/90 font-bold text-lg px-8 py-[20px]" asChild>
                 <a href={MEAL_TRAIN_LINK} target="_blank" rel="noopener noreferrer">
                   Jump Aboard!
                 </a>
               </Button>
-              <p className="text-sm text-primary-foreground/60">
+              <p className="text-sm text-muted-foreground">
                 Thank you for feeding our kids!
               </p>
             </div>
