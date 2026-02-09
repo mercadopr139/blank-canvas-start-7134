@@ -368,7 +368,7 @@ const ProgramsExtrasSection = () => {
 
             {/* NJ4S Logo for Lil' Champs */}
             {openItem?.id === "lil-champs" && <div className="flex justify-center my-6">
-                <img src={nj4sLogo} alt="NJ4S Logo" className="h-32 w-auto border-none" />
+                <img src={nj4sLogo} alt="NJ4S Logo" className="h-48 w-auto border-none" />
               </div>}
 
             {/* Gallery */}
