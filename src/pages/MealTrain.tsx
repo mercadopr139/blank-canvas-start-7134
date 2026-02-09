@@ -26,7 +26,7 @@ const MealTrain = () => {
         <section className="bg-primary py-8 md:py-6">
           <div className="container">
             <div className="max-w-3xl">
-              <h1 className="text-4xl md:text-5xl lg:text-6xl font-black text-primary-foreground leading-tight mb-4">
+              <h1 className="text-4xl md:text-5xl lg:text-6xl font-black text-primary-foreground leading-tight mb-4 text-center">
                 Meal Train
               </h1>
               <img src={mealTrainLogo} alt="Meal Train logo" className="w-32 md:w-40 h-auto mb-6 mx-auto md:mx-0" />
