@@ -28,7 +28,7 @@ const ImpactStory = () => {
     icon: Heart,
     value: "70%",
     label: "Below Poverty Line",
-    description: "of registered youth"
+    description: "Of registered youth"
   }, {
     icon: Utensils,
     value: "Meals Served",
@@ -41,7 +41,7 @@ const ImpactStory = () => {
       
       <main className="flex-1">
         {/* Hero Section */}
-        <section className="bg-primary py-16 md:py-24">
+        <section className="bg-primary md:py-24 py-[20px]">
           <div className="container">
             <div className="max-w-4xl mx-auto text-center">
               <h1 className="text-4xl md:text-5xl lg:text-6xl font-black text-primary-foreground leading-tight mb-6">
@@ -235,27 +235,11 @@ const ImpactStory = () => {
                   </AccordionTrigger>
                   <AccordionContent className="pb-6">
                     {(() => {
-                      const lawEnforcementPartners = [
-                        "Avalon Police Department",
-                        "Blue Knights Motorcycle Club",
-                        "Cape May County Prosecutor's Office",
-                        "Cape May County Sheriff's Department",
-                        "Cape May Police Department",
-                        "Lower Township Police Department",
-                        "Middle Township Police Department",
-                        "North Wildwood Police Department",
-                        "Police Benevolent Association (Local PBA 59)",
-                        "Wildwood Crest Police Department",
-                        "Wildwood Police Department",
-                      ].sort((a, b) => a.localeCompare(b));
-                      return (
-                        <ul className="mt-3 list-disc space-y-2 pl-5 text-sm text-muted-foreground">
-                          {lawEnforcementPartners.map((item) => (
-                            <li key={item}>{item}</li>
-                          ))}
-                        </ul>
-                      );
-                    })()}
+                    const lawEnforcementPartners = ["Avalon Police Department", "Blue Knights Motorcycle Club", "Cape May County Prosecutor's Office", "Cape May County Sheriff's Department", "Cape May Police Department", "Lower Township Police Department", "Middle Township Police Department", "North Wildwood Police Department", "Police Benevolent Association (Local PBA 59)", "Wildwood Crest Police Department", "Wildwood Police Department"].sort((a, b) => a.localeCompare(b));
+                    return <ul className="mt-3 list-disc space-y-2 pl-5 text-sm text-muted-foreground">
+                          {lawEnforcementPartners.map(item => <li key={item}>{item}</li>)}
+                        </ul>;
+                  })()}
                   </AccordionContent>
                 </AccordionItem>
 
