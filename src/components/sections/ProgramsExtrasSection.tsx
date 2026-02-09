@@ -117,7 +117,7 @@ const ProgramsExtrasSection = () => {
         subtitle: "Junior Boxers Only",
         ageRange: "7–10 years old",
         blurb:
-          "Lil' Champs provides age-appropriate education programming that strengthens life skills—supporting youth with routines, hygiene, and habits that translate into confidence, responsibility, and community pride.",
+          "In partnership with Acenda's NJ4S, we provide age-appropriate education programming that strengthens life skills—supporting youth with routines, hygiene, and habits that translate into confidence, responsibility, and community pride.",
         images: [
           { src: lilChampsActivity1, alt: "Child working on a hands-on learning activity during Lil' Champs program" },
           { src: lilChampsActivity2, alt: "Instructor engaging with kids during a Lil' Champs group activity" },
