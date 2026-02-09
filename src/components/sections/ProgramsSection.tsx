@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { DollarSign, Shirt, Clock, Utensils, AlarmClock, Megaphone } from "lucide-react";
+import { DollarSign, Shirt, Clock, Utensils, AlarmClock, Megaphone, Dumbbell } from "lucide-react";
 import juniorBoxingImage from "@/assets/programs/junior-boxing-modal.png";
 import seniorBoxingImage from "@/assets/programs/senior-boxing-modal.png";
 const programs = [{
@@ -91,6 +91,9 @@ const ProgramsSection = ({
             <p className="font-semibold text-foreground text-sm">Quick Parent Snapshot 👇</p>
             <p className="text-muted-foreground italic text-xs flex items-center gap-2">
               <DollarSign className="h-3.5 w-3.5 text-foreground flex-shrink-0" /> Cost: 100% FREE
+            </p>
+            <p className="text-muted-foreground italic text-xs flex items-center gap-2">
+              <Dumbbell className="h-3.5 w-3.5 text-foreground flex-shrink-0" /> Equipment: We provide everything — no gear needed!
             </p>
             <p className="text-muted-foreground italic text-xs flex items-center gap-2">
               <Shirt className="h-3.5 w-3.5 text-foreground flex-shrink-0" /> What to bring: Athletic clothes & sneakers
