@@ -1,17 +1,11 @@
 import moreThanBoxingImage from "@/assets/programs/more-than-boxing-gym.jpg";
-
 const MoreThanBoxingSection = () => {
-  return (
-    <section className="relative bg-black overflow-hidden">
-      <div className="container py-16 md:py-24">
+  return <section className="relative bg-black overflow-hidden">
+      <div className="container md:py-24 py-[20px]">
         <div className="relative w-full max-w-3xl mx-auto">
           {/* Image with creative fade */}
           <div className="relative">
-            <img
-              src={moreThanBoxingImage}
-              alt="No Limits Academy youth gathered around a campfire"
-              className="w-full h-auto rounded-lg"
-            />
+            <img src={moreThanBoxingImage} alt="No Limits Academy youth gathered around a campfire" className="w-full h-auto rounded-lg" />
           </div>
           
           {/* Text overlay on top of image */}
@@ -22,8 +16,6 @@ const MoreThanBoxingSection = () => {
           </div>
         </div>
       </div>
-    </section>
-  );
+    </section>;
 };
-
 export default MoreThanBoxingSection;
