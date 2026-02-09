@@ -99,18 +99,6 @@ const MealTrain = () => {
                 </CardContent>
               </Card>
             </div>
-
-            {/* Jump Aboard CTA */}
-            <div className="flex flex-col items-center gap-3 pt-8">
-              <Button size="lg" className="bg-primary text-primary-foreground hover:bg-primary/90 font-bold text-lg px-8 py-[20px]" asChild>
-                <a href={MEAL_TRAIN_LINK} target="_blank" rel="noopener noreferrer">
-                  Jump Aboard!
-                </a>
-              </Button>
-              <p className="text-sm text-muted-foreground">
-                Thank you for feeding our kids!
-              </p>
-            </div>
           </div>
         </section>
 
