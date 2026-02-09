@@ -1,8 +1,9 @@
 import { useState } from "react";
+import { Link } from "react-router-dom";
 import Header from "@/components/layout/Header";
 import Footer from "@/components/layout/Footer";
 import { Button } from "@/components/ui/button";
-import { MessageCircle, X } from "lucide-react";
+import { MessageCircle, X, ArrowLeft } from "lucide-react";
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerClose } from "@/components/ui/drawer";
 import GymBuddiesChatWidget from "@/components/gym-buddies/GymBuddiesChatWidget";
 import { ClickToEnlargeGallery } from "@/components/ui/click-to-enlarge-gallery";
@@ -193,6 +194,14 @@ const GymBuddies = () => {
         <section className="py-16 md:py-20 bg-foreground">
           <div className="container">
             <div className="max-w-4xl mx-auto">
+              {/* Back to Programs Link */}
+              <Link 
+                to="/programs#more-programs" 
+                className="inline-flex items-center gap-1.5 text-background/80 hover:text-background transition-colors mb-6 text-sm font-medium"
+              >
+                <ArrowLeft className="h-4 w-4" />
+                Back to Programs
+              </Link>
               <h1 className="text-3xl md:text-4xl lg:text-5xl font-black text-background text-center">
                 Gym Buddies Program
               </h1>
