@@ -3,6 +3,7 @@ import Header from "@/components/layout/Header";
 import Footer from "@/components/layout/Footer";
 import ProgramsSection from "@/components/sections/ProgramsSection";
 import ProgramsExtrasSection from "@/components/sections/ProgramsExtrasSection";
+import MoreThanBoxingSection from "@/components/sections/MoreThanBoxingSection";
 import DailyRhythmSection from "@/components/sections/DailyRhythmSection";
 import {
   Dialog,
@@ -34,6 +35,7 @@ const Programs = () => {
       <main className="flex-1">
         <ProgramsSection onMoreInfo={handleMoreInfo} />
         <ProgramsExtrasSection />
+        <MoreThanBoxingSection />
       </main>
 
       {/* Daily Rhythm Dialog */}
