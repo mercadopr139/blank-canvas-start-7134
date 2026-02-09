@@ -21,7 +21,7 @@ const ProgramsSection = ({
   onMoreInfo
 }: ProgramsSectionProps) => {
   const [signupModalOpen, setSignupModalOpen] = useState<"junior" | "senior" | null>(null);
-  return <section id="programs" className="md:py-28 bg-primary py-[30px]">
+  return <section id="programs" className="bg-primary py-[30px] md:py-[60px]">
       <div className="container">
         {/* Section header */}
         <div className="text-left mb-16">
