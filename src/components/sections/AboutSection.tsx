@@ -46,7 +46,7 @@ const AboutSection = () => {
           <div className="container">
             <div className="max-w-4xl mx-auto">
             <div className="core-values max-w-md mx-auto px-0">
-              <img src={coreValuesBanner} alt="NLA Core Values: Respect, Commitment, Accountability, Leadership, Trust, Service" className="w-full h-auto object-cover" />
+              <img src={coreValuesBanner} alt="NLA Core Values: Respect, Commitment, Accountability, Leadership, Trust, Service" className="w-full h-auto object-fill" />
             </div>
             </div>
           </div>
