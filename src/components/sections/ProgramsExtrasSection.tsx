@@ -39,6 +39,7 @@ import excursionTrickOrTreat from "@/assets/excursions/excursion-trick-or-treat.
 import excursionNavalAcademy from "@/assets/excursions/excursion-naval-academy.png";
 import excursionOmariJones from "@/assets/excursions/excursion-omari-jones.png";
 import excursionLaserTag from "@/assets/excursions/excursion-laser-tag.png";
+import excursionLaserTagMayslanding from "@/assets/excursions/excursion-laser-tag-mayslanding.jpg";
 import excursionStocktonDinner from "@/assets/excursions/excursion-stockton-dinner.png";
 import excursionElainesDinner from "@/assets/excursions/excursion-elaines-dinner.png";
 import realTalkJoeFranco from "@/assets/programs/real-talk-joe-franco.png";
@@ -173,6 +174,10 @@ const ProgramsExtrasSection = () => {
       src: excursionLaserTag,
       alt: "Laser Tag Fun",
       caption: "Laser Tag Fun"
+    }, {
+      src: excursionLaserTagMayslanding,
+      alt: "Laser Tag Fun, Mayslanding",
+      caption: "Laser Tag Fun, Mayslanding"
     }, {
       src: excursionStocktonDinner,
       alt: "Team Night Dinner at Stockton Visit",
