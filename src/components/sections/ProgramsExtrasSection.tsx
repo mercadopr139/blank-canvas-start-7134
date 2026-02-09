@@ -42,6 +42,7 @@ import excursionLaserTag from "@/assets/excursions/excursion-laser-tag.png";
 import excursionLaserTagMayslanding from "@/assets/excursions/excursion-laser-tag-mayslanding.jpg";
 import excursionStocktonDinner from "@/assets/excursions/excursion-stockton-dinner.png";
 import excursionElainesDinner from "@/assets/excursions/excursion-elaines-dinner.png";
+import excursionOutdoorAdventureWildwood from "@/assets/excursions/excursion-outdoor-adventure-wildwood.jpg";
 import realTalkJoeFranco from "@/assets/programs/real-talk-joe-franco.png";
 type ProgramItem = {
   id: string;
@@ -186,6 +187,10 @@ const ProgramsExtrasSection = () => {
       src: excursionElainesDinner,
       alt: "New Year's Dinner at Elaine's",
       caption: "New Year's Dinner at Elaine's"
+    }, {
+      src: excursionOutdoorAdventureWildwood,
+      alt: "Outdoor Adventure Fun in Wildwood",
+      caption: "Outdoor Adventure Fun in Wildwood"
     }],
     buttonLabel: "Back to Programs"
   }, {
