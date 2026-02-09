@@ -358,7 +358,7 @@ const ProgramsExtrasSection = () => {
               </p>
             </DialogHeader>
             
-            <p className="text-base text-muted-foreground px-0 py-[10px]">
+            <p className="text-base text-muted-foreground px-0 py-[10px] pb-0">
               {openItem?.blurb}
             </p>
 
