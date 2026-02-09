@@ -1,16 +1,10 @@
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { DollarSign, Shirt, Clock, Utensils, AlarmClock, Megaphone } from "lucide-react";
 import juniorBoxingImage from "@/assets/programs/junior-boxing-modal.png";
 import seniorBoxingImage from "@/assets/programs/senior-boxing-modal.png";
-
 const programs = [{
   title: "Junior Boxing Program",
   ages: "Ages 7–10 | Tuesdays",
@@ -27,7 +21,7 @@ const ProgramsSection = ({
   onMoreInfo
 }: ProgramsSectionProps) => {
   const [signupModalOpen, setSignupModalOpen] = useState<"junior" | "senior" | null>(null);
-  return <section id="programs" className="py-20 md:py-28 bg-primary">
+  return <section id="programs" className="md:py-28 bg-primary py-[30px]">
       <div className="container">
         {/* Section header */}
         <div className="text-left mb-16">
@@ -40,21 +34,14 @@ const ProgramsSection = ({
         {/* Program cards */}
         <div className="grid md:grid-cols-2 gap-8 max-w-4xl mx-auto">
           {programs.map((program, index) => {
-            const bgImage = index === 0 ? juniorBoxingImage : seniorBoxingImage;
-            return (
-              <Card 
-                key={index} 
-                className="border-none shadow-lg hover:shadow-xl transition-shadow duration-300 flex flex-col h-full relative overflow-hidden bg-background min-h-[400px]"
-              >
+          const bgImage = index === 0 ? juniorBoxingImage : seniorBoxingImage;
+          return <Card key={index} className="border-none shadow-lg hover:shadow-xl transition-shadow duration-300 flex flex-col h-full relative overflow-hidden bg-background min-h-[400px]">
                 {/* Background image - focused on head/face */}
-                <div 
-                  className="absolute inset-0 opacity-20"
-                  style={{
-                    backgroundImage: `url(${bgImage})`,
-                    backgroundSize: '200%',
-                    backgroundPosition: 'center 15%',
-                  }}
-                />
+                <div className="absolute inset-0 opacity-20" style={{
+              backgroundImage: `url(${bgImage})`,
+              backgroundSize: '200%',
+              backgroundPosition: 'center 15%'
+            }} />
                 <CardHeader className="pb-4 relative z-10 pt-8">
                   <div className="inline-block bg-background/80 backdrop-blur-sm rounded-lg px-4 py-3 shadow-sm">
                     <div className="text-sm font-semibold mb-2 text-primary">
@@ -70,10 +57,7 @@ const ProgramsSection = ({
                     {program.description}
                   </p>
                   <div className="flex flex-col gap-3 items-center">
-                    <Button 
-                      className="w-full font-semibold bg-primary hover:bg-primary/90 text-primary-foreground"
-                      onClick={() => setSignupModalOpen(index === 0 ? "junior" : "senior")}
-                    >
+                    <Button className="w-full font-semibold bg-primary hover:bg-primary/90 text-primary-foreground" onClick={() => setSignupModalOpen(index === 0 ? "junior" : "senior")}>
                       SIGN-UP
                     </Button>
                     <Button variant="outline" size="sm" className="w-1/2 font-semibold border-foreground text-foreground hover:bg-foreground hover:text-background" onClick={() => onMoreInfo?.(index === 0 ? "junior" : "senior")}>
@@ -81,24 +65,19 @@ const ProgramsSection = ({
                     </Button>
                   </div>
                 </CardContent>
-              </Card>
-            );
-          })}
+              </Card>;
+        })}
         </div>
       </div>
 
       {/* Junior Boxing Signup Modal */}
-      <Dialog open={signupModalOpen === "junior"} onOpenChange={(open) => !open && setSignupModalOpen(null)}>
+      <Dialog open={signupModalOpen === "junior"} onOpenChange={open => !open && setSignupModalOpen(null)}>
         <DialogContent className="max-w-lg">
           <DialogHeader>
             <DialogTitle className="sr-only">Junior Boxing Sign-Up</DialogTitle>
           </DialogHeader>
           <div className="relative">
-            <img 
-              src={juniorBoxingImage} 
-              alt="Junior Boxing Program" 
-              className="w-full aspect-[4/3] object-cover object-top rounded-lg"
-            />
+            <img src={juniorBoxingImage} alt="Junior Boxing Program" className="w-full aspect-[4/3] object-cover object-top rounded-lg" />
             <div className="absolute top-3 right-3 text-right">
               <span className="block text-white text-xs font-semibold drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">
                 Junior Boxer
@@ -126,10 +105,7 @@ const ProgramsSection = ({
               <AlarmClock className="h-3.5 w-3.5 text-foreground flex-shrink-0" /> Pick-Up: 7-7:10pm, Please be on time!
             </p>
           </div>
-          <Button 
-            className="w-full mt-4 bg-primary hover:bg-primary/90 text-primary-foreground font-semibold"
-            asChild
-          >
+          <Button className="w-full mt-4 bg-primary hover:bg-primary/90 text-primary-foreground font-semibold" asChild>
             <a href="https://wkf.ms/45C6tce" target="_blank" rel="noopener noreferrer">
               SIGN-UP
             </a>
@@ -138,17 +114,13 @@ const ProgramsSection = ({
       </Dialog>
 
       {/* Senior Boxing Signup Modal */}
-      <Dialog open={signupModalOpen === "senior"} onOpenChange={(open) => !open && setSignupModalOpen(null)}>
+      <Dialog open={signupModalOpen === "senior"} onOpenChange={open => !open && setSignupModalOpen(null)}>
         <DialogContent className="max-w-lg">
           <DialogHeader>
             <DialogTitle className="sr-only">Senior Boxing Sign-Up</DialogTitle>
           </DialogHeader>
           <div className="relative">
-            <img 
-              src={seniorBoxingImage} 
-              alt="Senior Boxing Program" 
-              className="w-full aspect-[4/3] object-cover object-top rounded-lg"
-            />
+            <img src={seniorBoxingImage} alt="Senior Boxing Program" className="w-full aspect-[4/3] object-cover object-top rounded-lg" />
             <div className="absolute top-3 right-3 text-right">
               <span className="block text-white text-xs font-semibold drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">
                 Senior Boxer
@@ -182,10 +154,7 @@ const ProgramsSection = ({
               <AlarmClock className="h-3.5 w-3.5 text-foreground flex-shrink-0" /> Pick-Up: 7:30pm — Please be on time!
             </p>
           </div>
-          <Button 
-            className="w-full mt-4 bg-foreground hover:bg-foreground/90 text-background font-semibold"
-            asChild
-          >
+          <Button className="w-full mt-4 bg-foreground hover:bg-foreground/90 text-background font-semibold" asChild>
             <a href="https://wkf.ms/45C6tce" target="_blank" rel="noopener noreferrer">
               SIGN-UP
             </a>
