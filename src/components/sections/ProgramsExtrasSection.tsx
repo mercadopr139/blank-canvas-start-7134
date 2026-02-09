@@ -14,6 +14,7 @@ import lilChampsActivity5 from "@/assets/programs/lil-champs-activity-5.jpg";
 import lilChampsActivity6 from "@/assets/programs/lil-champs-activity-6.jpg";
 import nj4sLogo from "@/assets/programs/nj4s-logo.png";
 import capeAssistLogo from "@/assets/programs/cape-assist-logo.png";
+import deltaDentalLogo from "@/assets/programs/delta-dental-logo.png";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { ClickToEnlargeGallery } from "@/components/ui/click-to-enlarge-gallery";
@@ -414,6 +415,11 @@ const ProgramsExtrasSection = () => {
             {openItem?.policyText && <p className="text-xs italic text-muted-foreground mt-4">
                 *{openItem.policyText}
               </p>}
+
+            {/* Delta Dental Logo for Smile Lab */}
+            {openItem?.id === "smile-lab" && <div className="flex justify-center my-4">
+                <img src={deltaDentalLogo} alt="Delta Dental Logo" className="h-20 w-auto border-none" />
+              </div>}
 
             {/* NJ4S Logo for Lil' Champs */}
             {openItem?.id === "lil-champs" && <div className="flex justify-center my-0">
