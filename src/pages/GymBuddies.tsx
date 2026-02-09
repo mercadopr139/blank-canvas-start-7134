@@ -43,6 +43,7 @@ import nlaWildwoodCrestPd2 from "@/assets/gym-buddies/nla-wildwood-crest-pd-2.pn
 import nlaPoliceChiefsAssociation from "@/assets/gym-buddies/nla-police-chiefs-association.png";
 import cmcFinest from "@/assets/gym-buddies/cmc-finest.png";
 import chiefDekonCapeMay from "@/assets/gym-buddies/chief-dekon-cape-may.jpg";
+import chiefDekonWeldonPowell from "@/assets/gym-buddies/chief-dekon-weldon-powell.jpg";
 const GymBuddies = () => {
   const location = useLocation();
   const fromPrograms = location.state?.fromPrograms === true;
@@ -51,6 +52,10 @@ const GymBuddies = () => {
     src: chiefDekonCapeMay,
     alt: "Congrats Chief Dekon of Cape May",
     caption: "Congrats Chief Dekon, Chief of Chiefs in CMC!"
+  }, {
+    src: chiefDekonWeldonPowell,
+    alt: "Chief Dekon Fashaw, Cape May with Chief Weldon Powell, Chief of Detectives, NJ",
+    caption: "Chief Dekon Fashaw, Cape May w/ Chief Weldon Powell, Chief of Detectives, NJ"
   }, {
     src: middleTownshipPd,
     alt: "NLA to Middle Township PD",
