@@ -77,7 +77,7 @@ const MealTrain = () => {
                   <div className="w-16 h-16 bg-primary rounded-full flex items-center justify-center mx-auto mb-4">
                     <Heart className="w-8 h-8 text-primary-foreground" />
                   </div>
-                  <h3 className="text-xl font-bold text-foreground mb-2">Support the Program</h3>
+                  <h3 className="text-xl font-bold text-foreground mb-2">Want to Feed our Kids?</h3>
                   <p className="text-muted-foreground">
                     Help create a welcoming, consistent environment for our athletes.
                   </p>
