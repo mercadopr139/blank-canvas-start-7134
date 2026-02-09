@@ -3,7 +3,7 @@ import Header from "@/components/layout/Header";
 import Footer from "@/components/layout/Footer";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Calendar, Utensils, Heart } from "lucide-react";
+import { Calendar, Utensils, Heart, TrainFront } from "lucide-react";
 import PortalLightbox from "@/components/ui/portal-lightbox";
 import mealTrainHero from "@/assets/meal-train/meal-train-hero.jpg";
 import mealTrainLogo from "@/assets/meal-train/meal-train-logo.png";
@@ -44,7 +44,7 @@ const MealTrain = () => {
             <h2 className="text-3xl md:text-4xl font-bold text-foreground mb-10">
               How It Works
             </h2>
-            <div className="grid md:grid-cols-3 gap-6 mb-12">
+            <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6 mb-12">
               <Card className="border-border">
                 <CardContent className="pt-8 pb-8 text-center">
                   <div className="w-16 h-16 bg-primary rounded-full flex items-center justify-center mx-auto mb-4">
@@ -78,6 +78,23 @@ const MealTrain = () => {
                   <p className="text-muted-foreground">
                     Prepare a group meal or arrange delivery for our youth participants.
                   </p>
+                </CardContent>
+              </Card>
+
+              <Card className="border-border">
+                <CardContent className="pt-8 pb-8 text-center">
+                  <div className="w-16 h-16 bg-primary rounded-full flex items-center justify-center mx-auto mb-4">
+                    <TrainFront className="w-8 h-8 text-primary-foreground" />
+                  </div>
+                  <h3 className="text-xl font-bold text-foreground mb-2">Jump Aboard</h3>
+                  <p className="text-muted-foreground mb-4">
+                    All details included in the link below. Sign up to provide a meal for our youth.
+                  </p>
+                  <Button size="sm" className="bg-primary text-primary-foreground hover:bg-primary/90" asChild>
+                    <a href={MEAL_TRAIN_LINK} target="_blank" rel="noopener noreferrer">
+                      Sign Up
+                    </a>
+                  </Button>
                 </CardContent>
               </Card>
             </div>
