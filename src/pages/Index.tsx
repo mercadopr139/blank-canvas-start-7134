@@ -51,6 +51,7 @@ const Index = () => {
                 Rookie Orientation
               </Link>
             </Button>
+            <p className="mt-2 text-xs text-primary-foreground/70">Password Protected</p>
           </div>
         </section>
       </main>
