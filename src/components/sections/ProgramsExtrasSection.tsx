@@ -12,12 +12,7 @@ import lilChampsActivity3 from "@/assets/programs/lil-champs-activity-3.jpg";
 import lilChampsActivity4 from "@/assets/programs/lil-champs-activity-4.jpg";
 import lilChampsActivity5 from "@/assets/programs/lil-champs-activity-5.jpg";
 import lilChampsActivity6 from "@/assets/programs/lil-champs-activity-6.jpg";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { ClickToEnlargeGallery } from "@/components/ui/click-to-enlarge-gallery";
 
@@ -45,7 +40,6 @@ import excursionOmariJones from "@/assets/excursions/excursion-omari-jones.png";
 import excursionLaserTag from "@/assets/excursions/excursion-laser-tag.png";
 import excursionStocktonDinner from "@/assets/excursions/excursion-stockton-dinner.png";
 import excursionElainesDinner from "@/assets/excursions/excursion-elaines-dinner.png";
-
 type ProgramItem = {
   id: string;
   title: string;
@@ -53,147 +47,266 @@ type ProgramItem = {
   ageRange: string;
   blurb: string;
   policyText?: string;
-  images: { src: string; alt: string; caption?: string }[];
+  images: {
+    src: string;
+    alt: string;
+    caption?: string;
+  }[];
   buttonLabel: string;
 };
-
 const ProgramsExtrasSection = () => {
-  const items: ProgramItem[] = useMemo(
-    () => [
-      {
-        id: "smile-lab",
-        title: "Dental Dental's Smile Lab Program",
-        subtitle: "Junior Boxers Only",
-        ageRange: "7–10 years old",
-        blurb:
-          "Smile Lab is an oral health initiative at No Limits Academy designed to improve access to care and deliver engaging, oral health education that empowers youth to take control of their oral health and overall well-being.",
-        images: [
-          { src: groupLessonImage, alt: "Students participating in a group lesson at a table" },
-          { src: instructorSpeakingImage, alt: "Instructor speaking with students during a group activity" },
-          { src: teamActivityImage, alt: "Student giving a high five during a group activity" },
-          { src: groupActivityImage, alt: "Kids participating in a group activity" },
-          { src: smileLabDisplayImage, alt: "Smile Lab oral health display inside No Limits Academy" },
-          { src: smileLabModelsImage, alt: "Dental education models demonstrating oral health" },
-        ],
-        buttonLabel: "Back to Programs",
-      },
-      {
-        id: "excursions",
-        title: "Excursions",
-        subtitle: "Senior Boxers Only",
-        ageRange: "11–19 years old",
-        blurb:
-          "Our excursions take youth beyond the facility walls—exposing them to new experiences, education, and opportunities that expand perspective and reinforce life skills learned in the gym.",
-        images: [
-          { src: excursionYouthGroup, alt: "Hiking at Higbees", caption: "Hiking at Higbees" },
-          { src: excursionPaddleboard, alt: "Paddle Board & Kayaking", caption: "Paddle Board & Kayaking" },
-          { src: excursionShoreFishing, alt: "Shore Fishing in Cape May", caption: "Shore Fishing in Cape May" },
-          { src: excursionSpeedboatTubing, alt: "Speed Boat & Tubing Fun", caption: "Speed Boat & Tubing Fun" },
-          { src: excursionPoolChampions, alt: "World 9 Pool Champions in AC", caption: "World 9 Pool Champions in AC" },
-          { src: excursionPfChangs, alt: "Team Night at PF Chang's", caption: "Team Night at PF Chang's" },
-          { src: excursionBowling, alt: "Bowling in Wildwood", caption: "Bowling in Wildwood" },
-          { src: excursionWaterpark, alt: "Water Park Fun", caption: "Water Park Fun" },
-          { src: excursionNationalNightOut, alt: "National Night Out in Cape May", caption: "National Night Out in Cape May" },
-          { src: excursionFoodTruck, alt: "Food Truck Time", caption: "Food Truck Time" },
-          { src: excursionGirlsNight, alt: "Girls Night in Cape May", caption: "Girls Night in Cape May" },
-          { src: excursionCampingWV, alt: "Camping in West Virginia", caption: "Camping in West Virginia" },
-          { src: excursionCampingWV2, alt: "Camping in West Virginia", caption: "Camping in West Virginia" },
-          { src: excursionHikingVirginia, alt: "Hiking in Virginia", caption: "Hiking in Virginia" },
-          { src: excursionLasVegas, alt: "Viva Las Vegas", caption: "Viva Las Vegas" },
-          { src: excursionCycleTime, alt: "Cycle Time", caption: "Cycle Time" },
-          { src: excursionBoxingPittsburgh, alt: "Boxing Camp in Pittsburgh", caption: "Boxing Camp in Pittsburgh" },
-          { src: excursionTrickOrTreat, alt: "Trick or Treat", caption: "Trick or Treat" },
-          { src: excursionNavalAcademy, alt: "Naval Academy Boxing Championships", caption: "Naval Academy Boxing Championships" },
-          { src: excursionOmariJones, alt: "Olympic Bronze Medalist, Omari Jones", caption: "Olympic Bronze Medalist, Omari Jones" },
-          { src: excursionLaserTag, alt: "Laser Tag Fun", caption: "Laser Tag Fun" },
-          { src: excursionStocktonDinner, alt: "Team Night Dinner at Stockton Visit", caption: "Team Night Dinner at Stockton Visit" },
-          { src: excursionElainesDinner, alt: "New Year's Dinner at Elaine's", caption: "New Year's Dinner at Elaine's" },
-        ],
-        buttonLabel: "Back to Programs",
-      },
-      {
-        id: "lil-champs",
-        title: "NJ4S Lil' Champs' Corner Program",
-        subtitle: "Junior Boxers Only",
-        ageRange: "7–10 years old",
-        blurb:
-          "In partnership with Acenda's NJ4S, we provide age-appropriate education programming that strengthens life skills—supporting youth with routines, hygiene, and habits that translate into confidence, responsibility, and community pride.",
-        images: [
-          { src: lilChampsActivity1, alt: "Child working on a hands-on learning activity during Lil' Champs program" },
-          { src: lilChampsActivity2, alt: "Instructor engaging with kids during a Lil' Champs group activity" },
-          { src: lilChampsActivity3, alt: "Kids working together on a hands-on learning activity during Lil' Champs" },
-          { src: lilChampsActivity4, alt: "Child decorating a heart-shaped craft during Lil' Champs" },
-          { src: lilChampsActivity5, alt: "Lil' Champs students proudly holding up their handmade heart crafts" },
-          { src: lilChampsActivity6, alt: "Student participating in a Lil' Champs hands-on learning activity" },
-        ],
-        buttonLabel: "Back to Programs",
-      },
-      {
-        id: "real-talk",
-        title: "Real Talk Sessions",
-        subtitle: "Senior Boxers",
-        ageRange: "11–19 years old",
-        blurb:
-          "Real Talk Sessions bring highly successful adults to No Limits Academy to share honest stories of struggle, failure, heartbreak, and setbacks—showing youth what perseverance and resilience look like in real life. Speakers share how resilience and faith helped anchor them through adversity, with the goal of inspiring youth to keep moving forward.",
-        images: [
-          { src: "/placeholder.svg", alt: "Real Talk Sessions photo 1", caption: "Real Talk Sessions" },
-          { src: "/placeholder.svg", alt: "Real Talk Sessions photo 2", caption: "Real Talk Sessions" },
-          { src: "/placeholder.svg", alt: "Real Talk Sessions photo 3", caption: "Real Talk Sessions" },
-          { src: "/placeholder.svg", alt: "Real Talk Sessions photo 4", caption: "Real Talk Sessions" },
-          { src: "/placeholder.svg", alt: "Real Talk Sessions photo 5", caption: "Real Talk Sessions" },
-          { src: "/placeholder.svg", alt: "Real Talk Sessions photo 6", caption: "Real Talk Sessions" },
-        ],
-        buttonLabel: "Back to Programs",
-      },
-      {
-        id: "spiritual-development",
-        title: "Spiritual Development",
-        subtitle: "All Boxers Welcome",
-        ageRange: "7–19 years old",
-        blurb:
-          "Spiritual development at No Limits Academy focuses on reflection, values, purpose, and personal growth within a supportive and respectful environment. This component is designed to complement our youth development work by encouraging mindfulness, character, and healthy decision-making.",
-        policyText:
-          "At No Limits Academy, we respect each individual's unique spiritual journey. Participation in any aspect of spiritual development is entirely voluntary. We do not require youth participants to read, engage with, or participate in spiritual practices or teachings. For youth who are curious or willing to explore their spiritual development, we are here to offer support and guidance. NLA's focus is on providing a nurturing, caring, and encouraging environment where youth can explore God, at their own pace, if they choose to do so.",
-        images: [
-          { src: "/placeholder.svg", alt: "Spiritual Development photo 1", caption: "Spiritual Development" },
-          { src: "/placeholder.svg", alt: "Spiritual Development photo 2", caption: "Spiritual Development" },
-          { src: "/placeholder.svg", alt: "Spiritual Development photo 3", caption: "Spiritual Development" },
-          { src: "/placeholder.svg", alt: "Spiritual Development photo 4", caption: "Spiritual Development" },
-          { src: "/placeholder.svg", alt: "Spiritual Development photo 5", caption: "Spiritual Development" },
-          { src: "/placeholder.svg", alt: "Spiritual Development photo 6", caption: "Spiritual Development" },
-        ],
-        buttonLabel: "Back to Programs",
-      },
-      {
-        id: "launch-pad",
-        title: "The Launch Pad",
-        subtitle: "Senior Boxers Only",
-        ageRange: "11–19 years old",
-        blurb:
-          "The Launch Pad prepares youth for more than early work experience—it introduces them to the world of business. Through a network of local businesses, youth gain hands-on exposure to professional environments where they learn responsibility, communication, and how organizations operate.\n\nMentored by business leaders, participants build the habits, confidence, and understanding needed to graduate high school with a clear path forward and the discipline to succeed.",
-        images: [
-          { src: "/placeholder.svg", alt: "Launch Pad photo 1" },
-          { src: "/placeholder.svg", alt: "Launch Pad photo 2" },
-          { src: "/placeholder.svg", alt: "Launch Pad photo 3" },
-          { src: "/placeholder.svg", alt: "Launch Pad photo 4" },
-          { src: "/placeholder.svg", alt: "Launch Pad photo 5" },
-          { src: "/placeholder.svg", alt: "Launch Pad photo 6" },
-        ],
-        buttonLabel: "Back to Programs",
-      },
-    ],
-    []
-  );
-
+  const items: ProgramItem[] = useMemo(() => [{
+    id: "smile-lab",
+    title: "Dental Dental's Smile Lab Program",
+    subtitle: "Junior Boxers Only",
+    ageRange: "7–10 years old",
+    blurb: "Smile Lab is an oral health initiative at No Limits Academy designed to improve access to care and deliver engaging, oral health education that empowers youth to take control of their oral health and overall well-being.",
+    images: [{
+      src: groupLessonImage,
+      alt: "Students participating in a group lesson at a table"
+    }, {
+      src: instructorSpeakingImage,
+      alt: "Instructor speaking with students during a group activity"
+    }, {
+      src: teamActivityImage,
+      alt: "Student giving a high five during a group activity"
+    }, {
+      src: groupActivityImage,
+      alt: "Kids participating in a group activity"
+    }, {
+      src: smileLabDisplayImage,
+      alt: "Smile Lab oral health display inside No Limits Academy"
+    }, {
+      src: smileLabModelsImage,
+      alt: "Dental education models demonstrating oral health"
+    }],
+    buttonLabel: "Back to Programs"
+  }, {
+    id: "excursions",
+    title: "Excursions",
+    subtitle: "Senior Boxers Only",
+    ageRange: "11–19 years old",
+    blurb: "Our excursions take youth beyond the facility walls—exposing them to new experiences, education, and opportunities that expand perspective and reinforce life skills learned in the gym.",
+    images: [{
+      src: excursionYouthGroup,
+      alt: "Hiking at Higbees",
+      caption: "Hiking at Higbees"
+    }, {
+      src: excursionPaddleboard,
+      alt: "Paddle Board & Kayaking",
+      caption: "Paddle Board & Kayaking"
+    }, {
+      src: excursionShoreFishing,
+      alt: "Shore Fishing in Cape May",
+      caption: "Shore Fishing in Cape May"
+    }, {
+      src: excursionSpeedboatTubing,
+      alt: "Speed Boat & Tubing Fun",
+      caption: "Speed Boat & Tubing Fun"
+    }, {
+      src: excursionPoolChampions,
+      alt: "World 9 Pool Champions in AC",
+      caption: "World 9 Pool Champions in AC"
+    }, {
+      src: excursionPfChangs,
+      alt: "Team Night at PF Chang's",
+      caption: "Team Night at PF Chang's"
+    }, {
+      src: excursionBowling,
+      alt: "Bowling in Wildwood",
+      caption: "Bowling in Wildwood"
+    }, {
+      src: excursionWaterpark,
+      alt: "Water Park Fun",
+      caption: "Water Park Fun"
+    }, {
+      src: excursionNationalNightOut,
+      alt: "National Night Out in Cape May",
+      caption: "National Night Out in Cape May"
+    }, {
+      src: excursionFoodTruck,
+      alt: "Food Truck Time",
+      caption: "Food Truck Time"
+    }, {
+      src: excursionGirlsNight,
+      alt: "Girls Night in Cape May",
+      caption: "Girls Night in Cape May"
+    }, {
+      src: excursionCampingWV,
+      alt: "Camping in West Virginia",
+      caption: "Camping in West Virginia"
+    }, {
+      src: excursionCampingWV2,
+      alt: "Camping in West Virginia",
+      caption: "Camping in West Virginia"
+    }, {
+      src: excursionHikingVirginia,
+      alt: "Hiking in Virginia",
+      caption: "Hiking in Virginia"
+    }, {
+      src: excursionLasVegas,
+      alt: "Viva Las Vegas",
+      caption: "Viva Las Vegas"
+    }, {
+      src: excursionCycleTime,
+      alt: "Cycle Time",
+      caption: "Cycle Time"
+    }, {
+      src: excursionBoxingPittsburgh,
+      alt: "Boxing Camp in Pittsburgh",
+      caption: "Boxing Camp in Pittsburgh"
+    }, {
+      src: excursionTrickOrTreat,
+      alt: "Trick or Treat",
+      caption: "Trick or Treat"
+    }, {
+      src: excursionNavalAcademy,
+      alt: "Naval Academy Boxing Championships",
+      caption: "Naval Academy Boxing Championships"
+    }, {
+      src: excursionOmariJones,
+      alt: "Olympic Bronze Medalist, Omari Jones",
+      caption: "Olympic Bronze Medalist, Omari Jones"
+    }, {
+      src: excursionLaserTag,
+      alt: "Laser Tag Fun",
+      caption: "Laser Tag Fun"
+    }, {
+      src: excursionStocktonDinner,
+      alt: "Team Night Dinner at Stockton Visit",
+      caption: "Team Night Dinner at Stockton Visit"
+    }, {
+      src: excursionElainesDinner,
+      alt: "New Year's Dinner at Elaine's",
+      caption: "New Year's Dinner at Elaine's"
+    }],
+    buttonLabel: "Back to Programs"
+  }, {
+    id: "lil-champs",
+    title: "NJ4S Lil' Champs' Corner Program",
+    subtitle: "Junior Boxers Only",
+    ageRange: "7–10 years old",
+    blurb: "In partnership with Acenda's NJ4S, we provide age-appropriate education programming that strengthens life skills—supporting youth with routines, hygiene, and habits that translate into confidence, responsibility, and community pride.",
+    images: [{
+      src: lilChampsActivity1,
+      alt: "Child working on a hands-on learning activity during Lil' Champs program"
+    }, {
+      src: lilChampsActivity2,
+      alt: "Instructor engaging with kids during a Lil' Champs group activity"
+    }, {
+      src: lilChampsActivity3,
+      alt: "Kids working together on a hands-on learning activity during Lil' Champs"
+    }, {
+      src: lilChampsActivity4,
+      alt: "Child decorating a heart-shaped craft during Lil' Champs"
+    }, {
+      src: lilChampsActivity5,
+      alt: "Lil' Champs students proudly holding up their handmade heart crafts"
+    }, {
+      src: lilChampsActivity6,
+      alt: "Student participating in a Lil' Champs hands-on learning activity"
+    }],
+    buttonLabel: "Back to Programs"
+  }, {
+    id: "real-talk",
+    title: "Real Talk Sessions",
+    subtitle: "Senior Boxers",
+    ageRange: "11–19 years old",
+    blurb: "Real Talk Sessions bring highly successful adults to No Limits Academy to share honest stories of struggle, failure, heartbreak, and setbacks—showing youth what perseverance and resilience look like in real life. Speakers share how resilience and faith helped anchor them through adversity, with the goal of inspiring youth to keep moving forward.",
+    images: [{
+      src: "/placeholder.svg",
+      alt: "Real Talk Sessions photo 1",
+      caption: "Real Talk Sessions"
+    }, {
+      src: "/placeholder.svg",
+      alt: "Real Talk Sessions photo 2",
+      caption: "Real Talk Sessions"
+    }, {
+      src: "/placeholder.svg",
+      alt: "Real Talk Sessions photo 3",
+      caption: "Real Talk Sessions"
+    }, {
+      src: "/placeholder.svg",
+      alt: "Real Talk Sessions photo 4",
+      caption: "Real Talk Sessions"
+    }, {
+      src: "/placeholder.svg",
+      alt: "Real Talk Sessions photo 5",
+      caption: "Real Talk Sessions"
+    }, {
+      src: "/placeholder.svg",
+      alt: "Real Talk Sessions photo 6",
+      caption: "Real Talk Sessions"
+    }],
+    buttonLabel: "Back to Programs"
+  }, {
+    id: "spiritual-development",
+    title: "Spiritual Development",
+    subtitle: "All Boxers Welcome",
+    ageRange: "7–19 years old",
+    blurb: "Spiritual development at No Limits Academy focuses on reflection, values, purpose, and personal growth within a supportive and respectful environment. This component is designed to complement our youth development work by encouraging mindfulness, character, and healthy decision-making.",
+    policyText: "At No Limits Academy, we respect each individual's unique spiritual journey. Participation in any aspect of spiritual development is entirely voluntary. We do not require youth participants to read, engage with, or participate in spiritual practices or teachings. For youth who are curious or willing to explore their spiritual development, we are here to offer support and guidance. NLA's focus is on providing a nurturing, caring, and encouraging environment where youth can explore God, at their own pace, if they choose to do so.",
+    images: [{
+      src: "/placeholder.svg",
+      alt: "Spiritual Development photo 1",
+      caption: "Spiritual Development"
+    }, {
+      src: "/placeholder.svg",
+      alt: "Spiritual Development photo 2",
+      caption: "Spiritual Development"
+    }, {
+      src: "/placeholder.svg",
+      alt: "Spiritual Development photo 3",
+      caption: "Spiritual Development"
+    }, {
+      src: "/placeholder.svg",
+      alt: "Spiritual Development photo 4",
+      caption: "Spiritual Development"
+    }, {
+      src: "/placeholder.svg",
+      alt: "Spiritual Development photo 5",
+      caption: "Spiritual Development"
+    }, {
+      src: "/placeholder.svg",
+      alt: "Spiritual Development photo 6",
+      caption: "Spiritual Development"
+    }],
+    buttonLabel: "Back to Programs"
+  }, {
+    id: "launch-pad",
+    title: "The Launch Pad",
+    subtitle: "Senior Boxers Only",
+    ageRange: "11–19 years old",
+    blurb: "The Launch Pad prepares youth for more than early work experience—it introduces them to the world of business. Through a network of local businesses, youth gain hands-on exposure to professional environments where they learn responsibility, communication, and how organizations operate.\n\nMentored by business leaders, participants build the habits, confidence, and understanding needed to graduate high school with a clear path forward and the discipline to succeed.",
+    images: [{
+      src: "/placeholder.svg",
+      alt: "Launch Pad photo 1"
+    }, {
+      src: "/placeholder.svg",
+      alt: "Launch Pad photo 2"
+    }, {
+      src: "/placeholder.svg",
+      alt: "Launch Pad photo 3"
+    }, {
+      src: "/placeholder.svg",
+      alt: "Launch Pad photo 4"
+    }, {
+      src: "/placeholder.svg",
+      alt: "Launch Pad photo 5"
+    }, {
+      src: "/placeholder.svg",
+      alt: "Launch Pad photo 6"
+    }],
+    buttonLabel: "Back to Programs"
+  }], []);
   const [openId, setOpenId] = useState<string | null>(null);
-  const openItem = items.find((x) => x.id === openId) || null;
+  const openItem = items.find(x => x.id === openId) || null;
 
   // Items to render: first two modal items, then Gym Buddies link, then rest
   const firstTwoItems = items.slice(0, 2); // Smile Lab, Excursions
   const remainingItems = items.slice(2); // Lil' Champs, Real Talk, Spiritual Development, Launch Pad
 
-  return (
-    <section className="py-16 md:py-20 bg-background">
+  return <section className="py-16 md:py-20 bg-background">
       <div className="container">
         <h2 className="text-2xl md:text-3xl font-bold text-foreground">
           More Programs at NLA
@@ -205,49 +318,32 @@ const ProgramsExtrasSection = () => {
         {/* Bullet-style list */}
         <ul className="mt-6 space-y-3">
           {/* First two items (Smile Lab, Excursions) */}
-          {firstTwoItems.map((item) => (
-            <li key={item.id} className="flex items-start gap-3">
+          {firstTwoItems.map(item => <li key={item.id} className="flex items-start gap-3">
               <span className="mt-2.5 h-2 w-2 rounded-full bg-foreground flex-shrink-0" />
-              <button
-                type="button"
-                onClick={() => setOpenId(item.id)}
-                className="text-left text-lg font-medium text-foreground underline underline-offset-4 hover:text-foreground/80 transition-colors"
-                aria-haspopup="dialog"
-              >
+              <button type="button" onClick={() => setOpenId(item.id)} className="text-left text-lg font-medium text-foreground underline underline-offset-4 hover:text-foreground/80 transition-colors" aria-haspopup="dialog">
                 {item.title}
               </button>
-            </li>
-          ))}
+            </li>)}
 
           {/* Gym Buddies - links to dedicated page */}
           <li className="flex items-start gap-3">
             <span className="mt-2.5 h-2 w-2 rounded-full bg-foreground flex-shrink-0" />
-            <Link
-              to="/gym-buddies"
-              className="text-left text-lg font-medium text-foreground underline underline-offset-4 hover:text-foreground/80 transition-colors"
-            >
+            <Link to="/gym-buddies" className="text-left text-lg font-medium text-foreground underline underline-offset-4 hover:text-foreground/80 transition-colors">
               Gym Buddies
             </Link>
           </li>
 
           {/* Remaining items (Lil' Champs through Launch Pad) */}
-          {remainingItems.map((item) => (
-            <li key={item.id} className="flex items-start gap-3">
+          {remainingItems.map(item => <li key={item.id} className="flex items-start gap-3">
               <span className="mt-2.5 h-2 w-2 rounded-full bg-foreground flex-shrink-0" />
-              <button
-                type="button"
-                onClick={() => setOpenId(item.id)}
-                className="text-left text-lg font-medium text-foreground underline underline-offset-4 hover:text-foreground/80 transition-colors"
-                aria-haspopup="dialog"
-              >
+              <button type="button" onClick={() => setOpenId(item.id)} className="text-left text-lg font-medium text-foreground underline underline-offset-4 hover:text-foreground/80 transition-colors" aria-haspopup="dialog">
                 {item.title}
               </button>
-            </li>
-          ))}
+            </li>)}
         </ul>
 
         {/* Modal */}
-        <Dialog open={!!openItem} onOpenChange={(open) => !open && setOpenId(null)}>
+        <Dialog open={!!openItem} onOpenChange={open => !open && setOpenId(null)}>
           <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle className="text-2xl font-bold">
@@ -261,35 +357,26 @@ const ProgramsExtrasSection = () => {
               </p>
             </DialogHeader>
             
-            <p className="text-base text-muted-foreground">
+            <p className="text-base text-muted-foreground px-0 py-[10px]">
               {openItem?.blurb}
             </p>
 
-            {openItem?.policyText && (
-              <p className="text-xs italic text-muted-foreground mt-4">
+            {openItem?.policyText && <p className="text-xs italic text-muted-foreground mt-4">
                 *{openItem.policyText}
-              </p>
-            )}
+              </p>}
 
             {/* Gallery */}
-            {openItem && openItem.images.length > 0 && (
-              <ClickToEnlargeGallery images={openItem.images} showCaptions />
-            )}
+            {openItem && openItem.images.length > 0 && <ClickToEnlargeGallery images={openItem.images} showCaptions />}
 
             {/* Bottom button */}
             <div className="mt-6 flex justify-end">
-              <Button
-                onClick={() => setOpenId(null)}
-                className="bg-foreground text-background hover:bg-foreground/90"
-              >
+              <Button onClick={() => setOpenId(null)} className="bg-foreground text-background hover:bg-foreground/90">
                 {openItem?.buttonLabel}
               </Button>
             </div>
           </DialogContent>
         </Dialog>
       </div>
-    </section>
-  );
+    </section>;
 };
-
 export default ProgramsExtrasSection;
