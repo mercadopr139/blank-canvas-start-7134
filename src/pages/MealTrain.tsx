@@ -119,13 +119,6 @@ const MealTrain = () => {
             <p className="text-center mt-6 text-lg font-semibold text-background">
               We feed our kids 5 nights a week.
             </p>
-            <div className="text-center mt-6">
-              <Button size="lg" className="bg-primary-foreground text-primary hover:bg-primary-foreground/90 font-bold text-lg px-8 py-6" asChild>
-                <a href={MEAL_TRAIN_LINK} target="_blank" rel="noopener noreferrer">
-                  Sign Up for a Meal
-                </a>
-              </Button>
-            </div>
 
             {/* Lightbox */}
             <PortalLightbox 
