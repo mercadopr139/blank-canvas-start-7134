@@ -140,7 +140,7 @@ const ImpactStory = () => {
         </section>
 
         {/* Credibility Section */}
-        <section className="py-16 md:py-20 bg-background">
+        <section className="md:py-20 bg-background py-[30px]">
           <div className="container">
             <div className="max-w-5xl mx-auto">
               <div className="text-center mb-12">
