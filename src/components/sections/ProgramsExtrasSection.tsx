@@ -41,6 +41,7 @@ import excursionOmariJones from "@/assets/excursions/excursion-omari-jones.png";
 import excursionLaserTag from "@/assets/excursions/excursion-laser-tag.png";
 import excursionStocktonDinner from "@/assets/excursions/excursion-stockton-dinner.png";
 import excursionElainesDinner from "@/assets/excursions/excursion-elaines-dinner.png";
+import realTalkJoeFranco from "@/assets/programs/real-talk-joe-franco.png";
 type ProgramItem = {
   id: string;
   title: string;
@@ -215,9 +216,9 @@ const ProgramsExtrasSection = () => {
     ageRange: "11–19 years old",
     blurb: "Real Talk Sessions bring highly successful adults to No Limits Academy to share honest stories of struggle, failure, heartbreak, and setbacks—showing youth what perseverance and resilience look like in real life. Speakers share how resilience and faith helped anchor them through adversity, with the goal of inspiring youth to keep moving forward.",
     images: [{
-      src: "/placeholder.svg",
-      alt: "Real Talk Sessions photo 1",
-      caption: "Real Talk Sessions"
+      src: realTalkJoeFranco,
+      alt: "Joe Franco with NLA youth at Real Talk Session",
+      caption: "Joe Franco, NLA Donor & Wildwood Crest Commissioner"
     }, {
       src: "/placeholder.svg",
       alt: "Real Talk Sessions photo 2",
