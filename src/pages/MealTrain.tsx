@@ -122,36 +122,6 @@ const MealTrain = () => {
           </div>
         </section>
 
-        {/* Meal Ideas */}
-        <section className="py-16 md:py-20 bg-primary">
-          <div className="container">
-            <h2 className="text-3xl md:text-4xl font-bold text-primary-foreground mb-8">
-              Helpful Meal Ideas
-            </h2>
-            <ul className="space-y-3 max-w-xl">
-              {["Family-style dinners", "Pasta + salad", "Soups / comfort meals", "Ready-to-heat meals", "Grocery or delivery gift cards"].map(item => <li key={item} className="flex items-center gap-3 text-lg text-primary-foreground/90">
-                  <span className="w-2 h-2 bg-primary-foreground rounded-full flex-shrink-0" />
-                  {item}
-                </li>)}
-            </ul>
-          </div>
-        </section>
-
-        {/* Important Notes */}
-        <section className="py-16 md:py-20 bg-background">
-          <div className="container">
-            <h2 className="text-3xl md:text-4xl font-bold text-foreground mb-8">
-              Important Notes
-            </h2>
-            <ul className="space-y-3 max-w-2xl">
-              {["Meals are served on-site during scheduled NLA programming.", "Meal details and quantities will be listed in the MealTrain signup.", "If you cannot cook, delivery or gift cards are always helpful."].map(item => <li key={item} className="flex items-start gap-3 text-lg text-muted-foreground">
-                  <span className="w-2 h-2 bg-foreground rounded-full flex-shrink-0 mt-2" />
-                  {item}
-                </li>)}
-            </ul>
-          </div>
-        </section>
-
         {/* Bottom CTA */}
         <section className="py-16 md:py-20 bg-primary">
           <div className="container text-center">
