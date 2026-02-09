@@ -9,7 +9,7 @@ const MoreThanBoxingSection = () => {
           <div className="relative">
             <img
               src={moreThanBoxingImage}
-              alt="No Limits Academy youth at laser tag excursion"
+              alt="No Limits Academy youth gathered around a campfire"
               className="w-full h-auto rounded-lg"
             />
             {/* Gradient overlays for creative fade effect */}
