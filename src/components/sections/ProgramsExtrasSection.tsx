@@ -340,9 +340,20 @@ const ProgramsExtrasSection = () => {
   const [openId, setOpenId] = useState<string | null>(null);
   const openItem = items.find(x => x.id === openId) || null;
 
-  // Items to render: first two modal items, then Gym Buddies link, then rest
-  const firstTwoItems = items.slice(0, 2); // Smile Lab, Excursions
-  const remainingItems = items.slice(2); // Lil' Champs, Real Talk, Spiritual Development, Launch Pad
+  // Sort items alphabetically by title
+  const sortedItems = [...items].sort((a, b) => a.title.localeCompare(b.title));
+
+  // Create a combined list with Gym Buddies inserted alphabetically
+  type ListItem = { type: 'modal'; item: ProgramItem } | { type: 'link'; title: string };
+  
+  const allItems: ListItem[] = [
+    ...sortedItems.map(item => ({ type: 'modal' as const, item })),
+    { type: 'link' as const, title: 'Gym Buddies' }
+  ].sort((a, b) => {
+    const titleA = a.type === 'modal' ? a.item.title : a.title;
+    const titleB = b.type === 'modal' ? b.item.title : b.title;
+    return titleA.localeCompare(titleB);
+  });
 
   return <section className="py-16 md:py-20 bg-background">
       <div className="container">
@@ -353,31 +364,31 @@ const ProgramsExtrasSection = () => {
           These programs strengthen the core experience and show how NLA extends impact beyond the gym.
         </p>
 
-        {/* Bullet-style list */}
+        {/* Bullet-style list - alphabetically sorted */}
         <ul className="mt-6 space-y-3">
-          {/* First two items (Smile Lab, Excursions) */}
-          {firstTwoItems.map(item => <li key={item.id} className="flex items-start gap-3">
+          {allItems.map((listItem, idx) => (
+            <li key={listItem.type === 'modal' ? listItem.item.id : 'gym-buddies'} className="flex items-start gap-3">
               <span className="mt-2.5 h-2 w-2 rounded-full bg-foreground flex-shrink-0" />
-              <button type="button" onClick={() => setOpenId(item.id)} className="text-left text-lg font-medium text-foreground underline underline-offset-4 hover:text-foreground/80 transition-colors" aria-haspopup="dialog">
-                {item.title}
-              </button>
-            </li>)}
-
-          {/* Gym Buddies - links to dedicated page */}
-          <li className="flex items-start gap-3">
-            <span className="mt-2.5 h-2 w-2 rounded-full bg-foreground flex-shrink-0" />
-            <Link to="/gym-buddies" state={{ fromPrograms: true }} className="text-left text-lg font-medium text-foreground underline underline-offset-4 hover:text-foreground/80 transition-colors">
-              Gym Buddies
-            </Link>
-          </li>
-
-          {/* Remaining items (Lil' Champs through Launch Pad) */}
-          {remainingItems.map(item => <li key={item.id} className="flex items-start gap-3">
-              <span className="mt-2.5 h-2 w-2 rounded-full bg-foreground flex-shrink-0" />
-              <button type="button" onClick={() => setOpenId(item.id)} className="text-left text-lg font-medium text-foreground underline underline-offset-4 hover:text-foreground/80 transition-colors" aria-haspopup="dialog">
-                {item.title}
-              </button>
-            </li>)}
+              {listItem.type === 'modal' ? (
+                <button 
+                  type="button" 
+                  onClick={() => setOpenId(listItem.item.id)} 
+                  className="text-left text-lg font-medium text-foreground underline underline-offset-4 hover:text-foreground/80 transition-colors" 
+                  aria-haspopup="dialog"
+                >
+                  {listItem.item.title}
+                </button>
+              ) : (
+                <Link 
+                  to="/gym-buddies" 
+                  state={{ fromPrograms: true }} 
+                  className="text-left text-lg font-medium text-foreground underline underline-offset-4 hover:text-foreground/80 transition-colors"
+                >
+                  {listItem.title}
+                </Link>
+              )}
+            </li>
+          ))}
         </ul>
 
         {/* Modal */}
