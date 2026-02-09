@@ -310,6 +310,32 @@ const ProgramsExtrasSection = () => {
       alt: "Launch Pad photo 6"
     }],
     buttonLabel: "Back to Programs"
+  }, {
+    id: "coaching-boys-into-men",
+    title: "Coaching Boys into Men (Evidence-Based Program)",
+    subtitle: "Senior Boxers",
+    ageRange: "11–19 years old",
+    blurb: "Coaching Boys into Men is an evidence-based violence prevention program that trains coaches to teach young male athletes about respect, integrity, and non-violence. Through ongoing conversations and teachable moments, coaches help shape attitudes and behaviors that prevent relationship abuse and promote healthy masculinity.",
+    images: [{
+      src: "/placeholder.svg",
+      alt: "Coaching Boys into Men photo 1"
+    }, {
+      src: "/placeholder.svg",
+      alt: "Coaching Boys into Men photo 2"
+    }, {
+      src: "/placeholder.svg",
+      alt: "Coaching Boys into Men photo 3"
+    }, {
+      src: "/placeholder.svg",
+      alt: "Coaching Boys into Men photo 4"
+    }, {
+      src: "/placeholder.svg",
+      alt: "Coaching Boys into Men photo 5"
+    }, {
+      src: "/placeholder.svg",
+      alt: "Coaching Boys into Men photo 6"
+    }],
+    buttonLabel: "Back to Programs"
   }], []);
   const [openId, setOpenId] = useState<string | null>(null);
   const openItem = items.find(x => x.id === openId) || null;
