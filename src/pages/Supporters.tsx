@@ -7,6 +7,7 @@ import supporterCheck2 from "@/assets/supporters/supporter-check-2.jpeg";
 import supporterCheck3 from "@/assets/supporters/supporter-check-3.png";
 import supporterCheck4 from "@/assets/supporters/supporter-check-4.png";
 import supporterCheck5 from "@/assets/supporters/supporter-check-5.jpg";
+import supporterCheck6 from "@/assets/supporters/supporter-check-6.png";
 const supporterImages = [{
   src: supporterCheck4,
   alt: "Morey's Pier donation with NLA youth team",
@@ -27,6 +28,10 @@ const supporterImages = [{
   src: supporterCheck3,
   alt: "Impact Club of Cape May County donation",
   caption: "Impact Club"
+}, {
+  src: supporterCheck6,
+  alt: "Burke Subaru Share the Love donation check presentation",
+  caption: "Burke Subaru"
 }];
 const PAYPAL_LINK = "https://www.paypal.com/ncp/payment/TMMDVUSEQKHJC";
 const Supporters = () => {
