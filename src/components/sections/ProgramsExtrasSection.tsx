@@ -1,5 +1,5 @@
-import { useState, useMemo } from "react";
-import { Link } from "react-router-dom";
+import { useState, useMemo, useEffect } from "react";
+import { Link, useLocation } from "react-router-dom";
 import groupActivityImage from "@/assets/programs/group-activity.jpg";
 import groupLessonImage from "@/assets/programs/group-lesson.jpg";
 import instructorSpeakingImage from "@/assets/programs/instructor-speaking.jpg";
@@ -80,6 +80,8 @@ type ProgramItem = {
   buttonLabel: string;
 };
 const ProgramsExtrasSection = () => {
+  const location = useLocation();
+  const fromMealTrain = location.state?.openMealTrain === true;
   const items: ProgramItem[] = useMemo(() => [{
     id: "smile-lab",
     title: "Dental Dental's Smile Lab Program",
@@ -391,6 +393,13 @@ const ProgramsExtrasSection = () => {
   }], []);
   const [openId, setOpenId] = useState<string | null>(null);
   const openItem = items.find(x => x.id === openId) || null;
+
+  // Auto-open Meal Train modal when navigated from Meal Train page
+  useEffect(() => {
+    if (fromMealTrain) {
+      setOpenId("meal-train");
+    }
+  }, [fromMealTrain]);
 
   // Sort items alphabetically by title
   const sortedItems = [...items].sort((a, b) => a.title.localeCompare(b.title));

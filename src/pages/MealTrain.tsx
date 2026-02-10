@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Link } from "react-router-dom";
 import Header from "@/components/layout/Header";
 import Footer from "@/components/layout/Footer";
 import { Button } from "@/components/ui/button";
@@ -107,6 +108,13 @@ const MealTrain = () => {
             <p className="text-center mt-6 text-lg font-semibold text-background">
               We feed our kids 5 nights a week.
             </p>
+            <div className="flex justify-center mt-6">
+              <Button asChild className="bg-primary text-primary-foreground hover:bg-primary/90">
+                <Link to="/programs" state={{ openMealTrain: true }}>
+                  View Meal Train Photos
+                </Link>
+              </Button>
+            </div>
 
             {/* Lightbox */}
             <PortalLightbox open={lightboxOpen} onClose={() => setLightboxOpen(false)} img={{
