@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Calendar, Utensils, Heart, Truck } from "lucide-react";
 import PortalLightbox from "@/components/ui/portal-lightbox";
+import { ClickToEnlargeGallery } from "@/components/ui/click-to-enlarge-gallery";
 import mealTrainHero from "@/assets/meal-train/meal-train-hero.jpg";
 import mealTrainLogo from "@/assets/meal-train/meal-train-logo.png";
 import mealTrainServing from "@/assets/meal-train/meal-train-serving.jpg";
@@ -112,6 +113,23 @@ const MealTrain = () => {
             src: mealTrainServing,
             alt: "We feed our kids 5 nights a week"
           }} />
+          </div>
+        </section>
+
+        {/* Photo Gallery */}
+        <section className="py-16 md:py-20 bg-background">
+          <div className="container">
+            <h2 className="text-3xl md:text-4xl font-bold text-foreground mb-8">
+              Meal Train Photos
+            </h2>
+            <ClickToEnlargeGallery
+              images={[
+                { src: mealTrainServing, alt: "Volunteers serving meals to youth", caption: "Serving our kids" },
+                { src: mealTrainHero, alt: "NLA Meal Train volunteers", caption: "Meal Train volunteers" },
+              ]}
+              showCaptions
+              variant="featured"
+            />
           </div>
         </section>
 
