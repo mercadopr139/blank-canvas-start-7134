@@ -40,10 +40,12 @@ const ImpactSection = () => {
 
           {/* Gym Buddies CTA */}
           <div className="text-center mt-10">
-            <img src={nlaAvalonAward} alt="NLA youth with Avalon Police Chief receiving award" className="mx-auto mb-6 rounded-lg shadow-lg max-w-md w-full" />
-            <p className="text-xs md:text-sm text-foreground/60 leading-relaxed mb-6 my-0 mx-0">
-              Learn more about Gym Buddies and how shared training has strengthened trust and relationships throughout our community.
-            </p>
+            <div className="max-w-md mx-auto">
+              <img src={nlaAvalonAward} alt="NLA youth with Avalon Police Chief receiving award" className="w-full rounded-lg shadow-lg" />
+              <p className="text-xs md:text-sm text-foreground/60 leading-relaxed mt-2 mb-6">
+                Learn more about Gym Buddies and how shared training has strengthened trust and relationships throughout our community.
+              </p>
+            </div>
             <Button asChild variant="default" className="bg-foreground text-background hover:bg-foreground/90">
               <Link to="/gym-buddies">Gym Buddies</Link>
             </Button>
