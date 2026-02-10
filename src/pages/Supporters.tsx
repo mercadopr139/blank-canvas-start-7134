@@ -6,10 +6,15 @@ import supporterCheck1 from "@/assets/supporters/supporter-check-1.jpeg";
 import supporterCheck2 from "@/assets/supporters/supporter-check-2.jpeg";
 import supporterCheck3 from "@/assets/supporters/supporter-check-3.png";
 import supporterCheck4 from "@/assets/supporters/supporter-check-4.png";
+import supporterCheck5 from "@/assets/supporters/supporter-check-5.jpg";
 const supporterImages = [{
   src: supporterCheck4,
   alt: "Morey's Pier donation with NLA youth team",
   caption: "Morey's Piers"
+}, {
+  src: supporterCheck5,
+  alt: "Crest Savings Bank donation check presentation",
+  caption: "Crest Savings Bank"
 }, {
   src: supporterCheck1,
   alt: "Supporter donation check presentation",
