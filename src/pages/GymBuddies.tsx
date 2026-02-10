@@ -210,11 +210,11 @@ const GymBuddies = () => {
 
         {/* Fixed Back to Programs Link - below header + title */}
         {fromPrograms && (
-          <div className="fixed bottom-0 left-0 right-0 z-40 bg-foreground/95 backdrop-blur-sm border-t border-background/10">
+          <div className="fixed bottom-0 left-0 right-0 z-40 bg-muted/70 backdrop-blur-sm border-t border-border/30">
             <div className="container py-3">
               <Link 
                 to="/programs#more-programs" 
-                className="inline-flex items-center gap-1.5 text-background/80 hover:text-background transition-colors text-sm font-medium"
+                className="inline-flex items-center gap-1.5 text-foreground/60 hover:text-foreground transition-colors text-sm font-medium"
               >
                 <ArrowLeft className="h-4 w-4" />
                 Back to Programs
