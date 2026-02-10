@@ -5,7 +5,7 @@ import nlaAvalonAward from "@/assets/gym-buddies/nla-avalon-award.png";
 import middleMattersChrissy from "@/assets/awards/middle-matters-chrissy-casiello.jpg";
 const awards = [`BCMF — Be Kind Award Recipient`, `Cape Assist — Partner in Prevention Award`, `Cape May County NAACP Freedom Fund — "Recognition of Educator Award"`, `CMC Chamber of Commerce — Non-Profit of the Year Award`, `Middle Township City Council — "Middle Matters" Civic Recognition Award`, `United States House of Representatives — Congressional Proclamation of Recognition`, `USA Boxing's Mid-Atlantic Association — George Hill Humanitarian Award`].sort((a, b) => a.localeCompare(b));
 const ImpactSection = () => {
-  return <section className="md:py-28 bg-background py-[30px]">
+  return <><section className="md:py-28 bg-background py-[30px]">
       <div className="container">
         <div className="max-w-4xl mx-auto">
           {/* Section header */}
@@ -51,24 +51,30 @@ const ImpactSection = () => {
             </Button>
           </div>
 
-          {/* Awards & Recognition */}
-          <div className="mt-12 rounded-2xl p-6 ring-1 ring-white/10 bg-secondary">
-            <h3 className="text-lg font-bold text-foreground">
-              Awards & Community Recognition
-            </h3>
-            <p className="mt-2 text-sm leading-relaxed text-foreground/70">
-              No Limits Academy has been recognized by local, state, and national
-              organizations for our youth impact, mentorship, and community leadership.
-            </p>
-            <ul className="mt-5 space-y-3">
-              {awards.map(award => <li key={award} className="flex items-start gap-3">
-                  <Trophy className="mt-0.5 h-4 w-4 flex-shrink-0 text-primary" />
-                  <span className="text-sm leading-relaxed text-foreground/80">{award}</span>
-                </li>)}
-            </ul>
-          </div>
         </div>
       </div>
-    </section>;
+    </section>
+
+    {/* Awards & Community Recognition - separate black section */}
+    <section className="py-16 md:py-28 bg-black">
+      <div className="container">
+        <div className="max-w-4xl mx-auto">
+          <h3 className="text-2xl md:text-3xl font-bold text-white mb-3">
+            Awards & Community Recognition
+          </h3>
+          <p className="text-sm leading-relaxed text-white/70 mb-8">
+            No Limits Academy has been recognized by local, state, and national
+            organizations for our youth impact, mentorship, and community leadership.
+          </p>
+          <ul className="space-y-3">
+            {awards.map(award => <li key={award} className="flex items-start gap-3">
+                <Trophy className="mt-0.5 h-4 w-4 flex-shrink-0 text-primary" />
+                <span className="text-sm leading-relaxed text-white/80">{award}</span>
+              </li>)}
+          </ul>
+        </div>
+      </div>
+    </section>
+  </>;
 };
 export default ImpactSection;
