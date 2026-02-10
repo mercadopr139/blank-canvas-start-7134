@@ -21,6 +21,7 @@ import spiritualDevPrayer2 from "@/assets/programs/spiritual-dev-prayer-2.jpg";
 import smileLabGroupImage from "@/assets/programs/smile-lab-group.png";
 import smileLabInstructorImage from "@/assets/programs/smile-lab-instructor.png";
 import smileLabKidsPuzzle from "@/assets/programs/smile-lab-kids-puzzle.png";
+import smileLabBoysCraft from "@/assets/programs/smile-lab-boys-craft.png";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { ClickToEnlargeGallery } from "@/components/ui/click-to-enlarge-gallery";
@@ -102,6 +103,9 @@ const ProgramsExtrasSection = () => {
     }, {
       src: smileLabKidsPuzzle,
       alt: "Kids working together on a dental puzzle activity"
+    }, {
+      src: smileLabBoysCraft,
+      alt: "Boys building dental models during Smile Lab"
     }],
     buttonLabel: "Back to Programs"
   }, {
