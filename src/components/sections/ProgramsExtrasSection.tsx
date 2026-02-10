@@ -18,6 +18,7 @@ import capeAssistLogo from "@/assets/programs/cape-assist-logo.png";
 import deltaDentalLogo from "@/assets/programs/delta-dental-logo.png";
 import spiritualDevPrayer1 from "@/assets/programs/spiritual-dev-prayer-1.jpg";
 import spiritualDevPrayer2 from "@/assets/programs/spiritual-dev-prayer-2.jpg";
+import smileLabGroupImage from "@/assets/programs/smile-lab-group.png";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { ClickToEnlargeGallery } from "@/components/ui/click-to-enlarge-gallery";
@@ -90,6 +91,9 @@ const ProgramsExtrasSection = () => {
     }, {
       src: smileLabModelsImage,
       alt: "Dental education models demonstrating oral health"
+    }, {
+      src: smileLabGroupImage,
+      alt: "Smile Lab instructor teaching youth about oral health"
     }],
     buttonLabel: "Back to Programs"
   }, {
