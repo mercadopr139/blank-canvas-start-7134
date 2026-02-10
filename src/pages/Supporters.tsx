@@ -11,7 +11,7 @@ const supporterImages = [
   { src: supporterCheck4, alt: "Morey's Pier donation with NLA youth team", caption: "Morey's Piers" },
   { src: supporterCheck1, alt: "Supporter donation check presentation", caption: "Anglesea Irish Society" },
   { src: supporterCheck2, alt: "Supporter donation check presentation with youth", caption: "J Bryne Insurance" },
-  { src: supporterCheck3, alt: "Impact Club of Cape May County donation", caption: "Caption coming soon" },
+  { src: supporterCheck3, alt: "Impact Club of Cape May County donation", caption: "Impact Club" },
 ];
 const PAYPAL_LINK = "https://www.paypal.com/ncp/payment/TMMDVUSEQKHJC";
 const Supporters = () => {
