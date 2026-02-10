@@ -50,6 +50,7 @@ import realTalkJoeFranco from "@/assets/programs/real-talk-joe-franco.png";
 import mealTrainServing from "@/assets/meal-train/meal-train-serving.jpg";
 import mealTrainHero from "@/assets/meal-train/meal-train-hero.jpg";
 import mealTrainOurKids from "@/assets/meal-train/meal-train-our-kids.png";
+import mealTrainOurKids2 from "@/assets/meal-train/meal-train-our-kids-2.png";
 type ProgramItem = {
   id: string;
   title: string;
@@ -356,6 +357,7 @@ const ProgramsExtrasSection = () => {
       { src: mealTrainServing, alt: "Volunteers serving meals to youth", caption: "Serving our kids" },
       { src: mealTrainHero, alt: "NLA Meal Train volunteers", caption: "Meal Train volunteers" },
       { src: mealTrainOurKids, alt: "NLA youth enjoying a meal together", caption: "Our Kids" },
+      { src: mealTrainOurKids2, alt: "NLA youth enjoying a meal together", caption: "Our Kids" },
     ],
     buttonLabel: "Back to Programs"
   }], []);
