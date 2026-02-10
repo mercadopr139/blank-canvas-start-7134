@@ -8,7 +8,7 @@ import supporterCheck3 from "@/assets/supporters/supporter-check-3.png";
 import supporterCheck4 from "@/assets/supporters/supporter-check-4.png";
 
 const supporterImages = [
-  { src: supporterCheck4, alt: "Morey's Pier donation with NLA youth team", caption: "Caption coming soon" },
+  { src: supporterCheck4, alt: "Morey's Pier donation with NLA youth team", caption: "Morey's Piers" },
   { src: supporterCheck1, alt: "Supporter donation check presentation", caption: "Caption coming soon" },
   { src: supporterCheck2, alt: "Supporter donation check presentation with youth", caption: "Caption coming soon" },
   { src: supporterCheck3, alt: "Impact Club of Cape May County donation", caption: "Caption coming soon" },
