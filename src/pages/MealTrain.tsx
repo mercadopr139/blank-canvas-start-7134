@@ -3,7 +3,7 @@ import Header from "@/components/layout/Header";
 import Footer from "@/components/layout/Footer";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Calendar, Utensils, Heart, Rocket } from "lucide-react";
+import { Calendar, Utensils, Heart, Truck } from "lucide-react";
 import PortalLightbox from "@/components/ui/portal-lightbox";
 import { ClickToEnlargeGallery } from "@/components/ui/click-to-enlarge-gallery";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -88,7 +88,7 @@ const MealTrain = () => {
               <Card className="border-border">
                 <CardContent className="pt-8 pb-8 text-center">
                   <div className="w-16 h-16 bg-primary rounded-full flex items-center justify-center mx-auto mb-4">
-                    <Rocket className="w-8 h-8 text-primary-foreground" />
+                    <Truck className="w-8 h-8 text-primary-foreground" />
                   </div>
                   <h3 className="text-xl font-bold text-foreground mb-2">Jump Aboard</h3>
                   <p className="text-muted-foreground mb-4">All details included in the link below. Click to view & Sign-Up!</p>
