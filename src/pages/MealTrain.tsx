@@ -21,13 +21,13 @@ const MealTrain = () => {
         </section>
 
         {/* Hero Section - Intro */}
-        <section className="bg-primary py-8 md:py-6">
+        <section className="bg-primary py-8 md:py-[40px]">
           <div className="container">
-            <div className="max-w-3xl mx-auto text-center">
+            <div className="max-w-3xl">
               <h1 className="text-4xl md:text-5xl lg:text-6xl font-black text-primary-foreground leading-tight mb-4 text-center">
                 Meal Train
               </h1>
-              <img src={mealTrainLogo} alt="Meal Train logo" className="w-56 md:w-72 h-auto mb-6 mx-auto md:mx-0 object-fill" />
+              <img src={mealTrainLogo} alt="Meal Train logo" className="w-32 md:w-40 h-auto mb-6 mx-auto md:mx-0 object-fill" />
               <p className="text-lg md:text-xl text-primary-foreground/80 leading-relaxed">
                 The NLA Meal Train supports our youth participants by providing free, sit-down meals during scheduled program days. These meals create consistency, build community, and ensure our athletes are fueled, focused, and cared for while they train and learn together. Volunteers play a vital role in making this possible.
               </p>
