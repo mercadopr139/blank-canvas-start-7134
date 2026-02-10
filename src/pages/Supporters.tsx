@@ -30,7 +30,7 @@ const Supporters = () => {
       <main className="flex-1">
         {/* Donate Section - White background at top */}
         <div className="bg-background">
-          <div className="container md:py-16 px-4 py-[60px]">
+          <div className="container md:py-16 px-4 py-[30px]">
             <div className="rounded-2xl text-background text-center p-8 md:p-10 bg-primary">
               <h2 className="text-2xl md:text-3xl font-bold mb-3">
                 Want to Support No Limits Academy?
