@@ -1,20 +1,14 @@
 import Header from "@/components/layout/Header";
 import Footer from "@/components/layout/Footer";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
-const supporters = [{
-  name: "Supporter 1",
-  img: "https://via.placeholder.com/300x200"
-}, {
-  name: "Supporter 2",
-  img: "https://via.placeholder.com/300x200"
-}, {
-  name: "Supporter 3",
-  img: "https://via.placeholder.com/300x200"
-}, {
-  name: "Supporter 4",
-  img: "https://via.placeholder.com/300x200"
-}];
+import { ClickToEnlargeGallery } from "@/components/ui/click-to-enlarge-gallery";
+import supporterCheck1 from "@/assets/supporters/supporter-check-1.jpeg";
+import supporterCheck2 from "@/assets/supporters/supporter-check-2.jpeg";
+
+const supporterImages = [
+  { src: supporterCheck1, alt: "Supporter donation check presentation", caption: "Caption coming soon" },
+  { src: supporterCheck2, alt: "Supporter donation check presentation with youth", caption: "Caption coming soon" },
+];
 const PAYPAL_LINK = "https://www.paypal.com/ncp/payment/TMMDVUSEQKHJC";
 const Supporters = () => {
   return <div className="min-h-screen flex flex-col bg-background">
@@ -29,14 +23,9 @@ const Supporters = () => {
             believe in our kids, our mission, and our community.
           </p>
 
-          {/* Supporter Photo Grid */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 mb-12">
-            {supporters.map((s, index) => <Card key={index} className="overflow-hidden">
-                <img src={s.img} alt={s.name} className="w-full h-44 object-cover" />
-                <CardContent className="p-4">
-                  <p className="text-lg font-semibold text-foreground">{s.name}</p>
-                </CardContent>
-              </Card>)}
+          {/* Supporter Photo Gallery */}
+          <div className="mb-12">
+            <ClickToEnlargeGallery images={supporterImages} showCaptions variant="featured" />
           </div>
 
           {/* Donate Section */}
