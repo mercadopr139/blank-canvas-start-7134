@@ -196,22 +196,22 @@ const GymBuddies = () => {
   return <div className="min-h-screen flex flex-col bg-background">
       <Header />
       
-      <main className="flex-1">
-        {/* Sticky Back to Programs Link */}
-        {fromPrograms && (
-          <div className="sticky top-0 z-40 bg-foreground/95 backdrop-blur-sm border-b border-background/10">
-            <div className="container py-3">
-              <Link 
-                to="/programs#more-programs" 
-                className="inline-flex items-center gap-1.5 text-background/80 hover:text-background transition-colors text-sm font-medium"
-              >
-                <ArrowLeft className="h-4 w-4" />
-                Back to Programs
-              </Link>
-            </div>
+      {/* Sticky Back to Programs Link */}
+      {fromPrograms && (
+        <div className="fixed top-0 left-0 right-0 z-50 bg-foreground/95 backdrop-blur-sm border-b border-background/10">
+          <div className="container py-3">
+            <Link 
+              to="/programs#more-programs" 
+              className="inline-flex items-center gap-1.5 text-background/80 hover:text-background transition-colors text-sm font-medium"
+            >
+              <ArrowLeft className="h-4 w-4" />
+              Back to Programs
+            </Link>
           </div>
-        )}
+        </div>
+      )}
 
+      <main className="flex-1">
         {/* Hero Title Section */}
         <section className="py-16 md:py-20 bg-foreground">
           <div className="container">
