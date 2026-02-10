@@ -116,22 +116,6 @@ const MealTrain = () => {
           </div>
         </section>
 
-        {/* Photo Gallery */}
-        <section className="py-16 md:py-20 bg-background">
-          <div className="container">
-            <h2 className="text-3xl md:text-4xl font-bold text-foreground mb-8">
-              Meal Train Photos
-            </h2>
-            <ClickToEnlargeGallery
-              images={[
-                { src: mealTrainServing, alt: "Volunteers serving meals to youth", caption: "Serving our kids" },
-                { src: mealTrainHero, alt: "NLA Meal Train volunteers", caption: "Meal Train volunteers" },
-              ]}
-              showCaptions
-              variant="featured"
-            />
-          </div>
-        </section>
 
       </main>
 
