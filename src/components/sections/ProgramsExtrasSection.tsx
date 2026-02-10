@@ -381,7 +381,7 @@ const ProgramsExtrasSection = () => {
           alt="" 
           className="h-full w-full object-cover object-[60%_20%] opacity-20 md:opacity-50"
         />
-        <div className="absolute inset-0 bg-gradient-to-r from-background via-background/70 md:via-background/40 to-transparent" />
+        <div className="absolute inset-0 bg-gradient-to-r from-background via-background/40 md:via-background/20 to-transparent" />
       </div>
       <div className="container relative z-10">
         <h2 className="text-2xl md:text-3xl font-bold text-foreground">
