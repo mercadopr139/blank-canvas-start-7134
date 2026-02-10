@@ -57,6 +57,7 @@ import mealTrainVolunteers2 from "@/assets/meal-train/meal-train-volunteers-2.pn
 import mealTrainOurKids5 from "@/assets/meal-train/meal-train-our-kids-5.png";
 import mealTrainOurKids6 from "@/assets/meal-train/meal-train-our-kids-6.png";
 import mealTrainOurKids7 from "@/assets/meal-train/meal-train-our-kids-7.png";
+import mealTrainOurKids8 from "@/assets/meal-train/meal-train-our-kids-8.png";
 type ProgramItem = {
   id: string;
   title: string;
@@ -370,6 +371,7 @@ const ProgramsExtrasSection = () => {
       { src: mealTrainOurKids5, alt: "NLA youth with a plate of food", caption: "Our Kids" },
       { src: mealTrainOurKids6, alt: "NLA youth enjoying meal time together", caption: "Our Kids" },
       { src: mealTrainOurKids7, alt: "NLA youth giving thumbs up at meal time", caption: "Our Kids" },
+      { src: mealTrainOurKids8, alt: "NLA youth smiling with a plate of food", caption: "Our Kids" },
     ],
     buttonLabel: "Back to Programs"
   }], []);
