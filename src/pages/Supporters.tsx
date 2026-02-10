@@ -38,9 +38,13 @@ const Supporters = () => {
               <p className="text-base mb-4 opacity-90">
                 Your donation helps us keep kids training, mentored, and safe.
               </p>
-              <p className="text-sm italic mb-6 opacity-75">
-                Checks payable to No Limits Academy Inc., mail to 301 N. Vineyard Court, Cape May, NJ 08204
-              </p>
+              <p className="text-sm italic mb-6 opacity-75">Checks payable to:
+No Limits Academy Inc.
+
+
+Mail to:
+ 301 N. Vineyard Court, 
+Cape May, NJ 08204</p>
               <Button size="lg" className="bg-background text-foreground hover:bg-background/90 font-bold text-base px-8" asChild>
                 <a href={PAYPAL_LINK} target="_blank" rel="noopener noreferrer">
                   DONATE VIA PAYPAL
