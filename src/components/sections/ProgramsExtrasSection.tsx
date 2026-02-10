@@ -379,9 +379,9 @@ const ProgramsExtrasSection = () => {
         <img 
           src={coachingRingsideImage} 
           alt="" 
-          className="h-full w-full object-cover object-center opacity-30"
+          className="h-full w-full object-cover object-center opacity-45"
         />
-        <div className="absolute inset-0 bg-gradient-to-r from-background via-background/60 to-transparent" />
+        <div className="absolute inset-0 bg-gradient-to-r from-background via-background/50 to-transparent" />
       </div>
       <div className="container relative z-10">
         <h2 className="text-2xl md:text-3xl font-bold text-foreground">
