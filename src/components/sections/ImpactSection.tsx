@@ -74,7 +74,9 @@ const ImpactSection = () => {
               </li>)}
           </ul>
           <div className="mt-8 flex justify-center">
-            <img src={georgeHillAward} alt="NLA receives USA Boxing George Hill Humanitarian Award at Middle Township" className="w-full max-w-2xl rounded-lg" />
+            <div className="w-full max-w-2xl rounded-lg overflow-hidden">
+              <img src={georgeHillAward} alt="NLA receives USA Boxing George Hill Humanitarian Award at Middle Township" className="w-full object-cover object-bottom" style={{ marginTop: '-15%' }} />
+            </div>
           </div>
         </div>
       </div>
