@@ -1,5 +1,4 @@
 import { useState } from "react";
-import { Link } from "react-router-dom";
 import Header from "@/components/layout/Header";
 import Footer from "@/components/layout/Footer";
 import { Button } from "@/components/ui/button";
@@ -7,12 +6,18 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Calendar, Utensils, Heart, Truck } from "lucide-react";
 import PortalLightbox from "@/components/ui/portal-lightbox";
 import { ClickToEnlargeGallery } from "@/components/ui/click-to-enlarge-gallery";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { mealTrainGalleryImages } from "@/data/mealTrainGallery";
 import mealTrainHero from "@/assets/meal-train/meal-train-hero.jpg";
 import mealTrainLogo from "@/assets/meal-train/meal-train-logo.png";
 import mealTrainServing from "@/assets/meal-train/meal-train-serving.jpg";
+
 const MEAL_TRAIN_LINK = "https://www.mealtrain.com/trains/ode4rn";
+
 const MealTrain = () => {
   const [lightboxOpen, setLightboxOpen] = useState(false);
+  const [galleryOpen, setGalleryOpen] = useState(false);
+
   return <div className="min-h-screen flex flex-col bg-background">
       <Header />
       
@@ -109,22 +114,33 @@ const MealTrain = () => {
               We feed our kids 5 nights a week.
             </p>
             <div className="flex justify-center mt-6">
-              <Button asChild className="bg-background text-foreground hover:bg-background/90">
-                <Link to="/programs" state={{ openMealTrain: true }}>
-                  View Meal Train Photos
-                </Link>
+              <Button onClick={() => setGalleryOpen(true)} className="bg-background text-foreground hover:bg-background/90">
+                View Meal Train Photos
               </Button>
             </div>
 
             {/* Lightbox */}
             <PortalLightbox open={lightboxOpen} onClose={() => setLightboxOpen(false)} img={{
-            src: mealTrainServing,
-            alt: "We feed our kids 5 nights a week"
-          }} />
+              src: mealTrainServing,
+              alt: "We feed our kids 5 nights a week"
+            }} />
           </div>
         </section>
 
-
+        {/* Gallery Dialog */}
+        <Dialog open={galleryOpen} onOpenChange={setGalleryOpen}>
+          <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle className="text-2xl font-bold">Meal Train Photos</DialogTitle>
+            </DialogHeader>
+            <ClickToEnlargeGallery images={mealTrainGalleryImages} showCaptions />
+            <div className="mt-6 flex justify-end">
+              <Button onClick={() => setGalleryOpen(false)} className="bg-foreground text-background hover:bg-foreground/90">
+                Back to Meal Train
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
       </main>
 
       <Footer />
