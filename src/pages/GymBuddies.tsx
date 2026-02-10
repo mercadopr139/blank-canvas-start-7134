@@ -197,9 +197,20 @@ const GymBuddies = () => {
       <Header />
       
       <main className="flex-1">
-        {/* Sticky Back to Programs Link - below header */}
+        {/* Hero Title Section */}
+        <section className="py-16 md:py-20 bg-foreground">
+          <div className="container">
+            <div className="max-w-4xl mx-auto">
+              <h1 className="text-3xl md:text-4xl lg:text-5xl font-black text-background text-center">
+                Gym Buddies Program
+              </h1>
+            </div>
+          </div>
+        </section>
+
+        {/* Fixed Back to Programs Link - below header + title */}
         {fromPrograms && (
-          <div className="fixed top-[57px] left-0 right-0 z-40 bg-foreground/95 backdrop-blur-sm border-b border-background/10">
+          <div className="sticky top-[57px] z-40 bg-foreground/95 backdrop-blur-sm border-b border-background/10">
             <div className="container py-3">
               <Link 
                 to="/programs#more-programs" 
@@ -211,16 +222,6 @@ const GymBuddies = () => {
             </div>
           </div>
         )}
-        {/* Hero Title Section */}
-        <section className="py-16 md:py-20 bg-foreground">
-          <div className="container">
-          <div className="max-w-4xl mx-auto">
-              <h1 className="text-3xl md:text-4xl lg:text-5xl font-black text-background text-center">
-                Gym Buddies Program
-              </h1>
-            </div>
-          </div>
-        </section>
 
         {/* Featured Hero Image */}
         <section className="bg-background pt-8 pb-0">
