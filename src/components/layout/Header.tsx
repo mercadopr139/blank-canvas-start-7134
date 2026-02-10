@@ -53,9 +53,9 @@ const Header = ({ className }: HeaderProps) => {
             )
           ))}
           <Button size="sm" className="bg-primary hover:bg-primary/90 text-primary-foreground font-semibold px-6" asChild>
-            <a href="https://www.paypal.com/ncp/payment/TMMDVUSEQKHJC" target="_blank" rel="noopener noreferrer">
+            <Link to="/supporters">
               DONATE
-            </a>
+            </Link>
           </Button>
         </nav>
 
@@ -91,9 +91,9 @@ const Header = ({ className }: HeaderProps) => {
                 )
               ))}
               <Button className="bg-primary hover:bg-primary/90 text-primary-foreground font-semibold w-full" asChild>
-                <a href="https://www.paypal.com/ncp/payment/TMMDVUSEQKHJC" target="_blank" rel="noopener noreferrer">
+                <Link to="/supporters" onClick={() => setOpen(false)}>
                   DONATE
-                </a>
+                </Link>
               </Button>
             </nav>
           </SheetContent>
