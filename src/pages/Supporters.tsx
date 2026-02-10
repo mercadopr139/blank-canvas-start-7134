@@ -61,10 +61,7 @@ const Supporters = () => {
           <h1 className="text-3xl md:text-4xl font-bold mb-3 text-primary-foreground">
             Our Supporters
           </h1>
-          <p className="text-lg mb-8 max-w-2xl leading-relaxed text-secondary">
-            No Limits Academy is supported by amazing people and organizations who
-            believe in our kids, our mission, and our community.
-          </p>
+          <p className="text-lg mb-8 max-w-2xl leading-relaxed text-secondary">No Limits Academy is supported by amazing people and organizations who believe in our kids, our mission, and our community!</p>
 
           {/* Supporter Photo Gallery */}
           <div>
