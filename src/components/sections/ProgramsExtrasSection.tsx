@@ -1,4 +1,5 @@
 import { useState, useMemo } from "react";
+import coachingRingsideImage from "@/assets/programs/coaching-ringside.jpg";
 import { Link } from "react-router-dom";
 import groupActivityImage from "@/assets/programs/group-activity.jpg";
 import groupLessonImage from "@/assets/programs/group-lesson.jpg";
@@ -372,8 +373,17 @@ const ProgramsExtrasSection = () => {
     return titleA.localeCompare(titleB);
   });
 
-  return <section className="py-16 md:py-20 bg-background">
-      <div className="container">
+  return <section className="py-16 md:py-20 bg-background relative overflow-hidden">
+      {/* Background image on the right */}
+      <div className="hidden md:block absolute right-0 top-0 bottom-0 w-1/3 pointer-events-none">
+        <img 
+          src={coachingRingsideImage} 
+          alt="" 
+          className="h-full w-full object-cover object-center opacity-15"
+        />
+        <div className="absolute inset-0 bg-gradient-to-r from-background via-background/80 to-transparent" />
+      </div>
+      <div className="container relative z-10">
         <h2 className="text-2xl md:text-3xl font-bold text-foreground">
           More Programs at NLA
         </h2>
