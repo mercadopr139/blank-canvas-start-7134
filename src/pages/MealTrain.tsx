@@ -23,11 +23,11 @@ const MealTrain = () => {
         {/* Hero Section - Intro */}
         <section className="bg-primary py-8 md:py-[40px]">
           <div className="container">
-            <div className="max-w-3xl mx-auto text-center">
+            <div className="max-w-3xl">
               <h1 className="text-4xl md:text-5xl lg:text-6xl font-black text-primary-foreground leading-tight mb-4 text-center">
                 Meal Train
               </h1>
-              <img src={mealTrainLogo} alt="Meal Train logo" className="w-32 md:w-40 h-auto mb-6 mx-auto object-fill" />
+              <img src={mealTrainLogo} alt="Meal Train logo" className="w-32 md:w-40 h-auto mb-6 mx-auto md:mx-0 object-fill" />
               <p className="text-lg md:text-xl text-primary-foreground/80 leading-relaxed">
                 The NLA Meal Train supports our youth participants by providing free, sit-down meals during scheduled program days. These meals create consistency, build community, and ensure our athletes are fueled, focused, and cared for while they train and learn together. Volunteers play a vital role in making this possible.
               </p>
@@ -84,9 +84,7 @@ const MealTrain = () => {
                     <Truck className="w-8 h-8 text-primary-foreground" />
                   </div>
                   <h3 className="text-xl font-bold text-foreground mb-2">Jump Aboard</h3>
-                  <p className="text-muted-foreground mb-4">
-                    All details included in the link below. Sign up to provide a meal for our youth.
-                  </p>
+                  <p className="text-muted-foreground mb-4">All details included in the link below. Click to view & Sign-Up!</p>
                   <Button size="sm" className="bg-primary text-primary-foreground hover:bg-primary/90" asChild>
                     <a href={MEAL_TRAIN_LINK} target="_blank" rel="noopener noreferrer">
                       Meal Train Sign-Up
