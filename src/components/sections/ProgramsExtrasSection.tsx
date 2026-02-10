@@ -350,12 +350,13 @@ const ProgramsExtrasSection = () => {
   // Sort items alphabetically by title
   const sortedItems = [...items].sort((a, b) => a.title.localeCompare(b.title));
 
-  // Create a combined list with Gym Buddies inserted alphabetically
-  type ListItem = { type: 'modal'; item: ProgramItem } | { type: 'link'; title: string };
+  // Create a combined list with link items inserted alphabetically
+  type ListItem = { type: 'modal'; item: ProgramItem } | { type: 'link'; title: string; to: string };
   
   const allItems: ListItem[] = [
     ...sortedItems.map(item => ({ type: 'modal' as const, item })),
-    { type: 'link' as const, title: 'Gym Buddies' }
+    { type: 'link' as const, title: 'Gym Buddies', to: '/gym-buddies' },
+    { type: 'link' as const, title: 'Meal Train', to: '/meal-train' }
   ].sort((a, b) => {
     const titleA = a.type === 'modal' ? a.item.title : a.title;
     const titleB = b.type === 'modal' ? b.item.title : b.title;
@@ -374,7 +375,7 @@ const ProgramsExtrasSection = () => {
         {/* Bullet-style list - alphabetically sorted */}
         <ul className="mt-6 space-y-3">
           {allItems.map((listItem, idx) => (
-            <li key={listItem.type === 'modal' ? listItem.item.id : 'gym-buddies'} className="flex items-start gap-3">
+            <li key={listItem.type === 'modal' ? listItem.item.id : listItem.title} className="flex items-start gap-3">
               <span className="mt-2.5 h-2 w-2 rounded-full bg-foreground flex-shrink-0" />
               {listItem.type === 'modal' ? (
                 <button 
@@ -387,7 +388,7 @@ const ProgramsExtrasSection = () => {
                 </button>
               ) : (
                 <Link 
-                  to="/gym-buddies" 
+                  to={listItem.to} 
                   state={{ fromPrograms: true }} 
                   className="text-left text-lg font-medium text-foreground underline underline-offset-4 hover:text-foreground/80 transition-colors"
                 >
