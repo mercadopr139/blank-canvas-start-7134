@@ -31,18 +31,7 @@ const ImpactSection = () => {
             </p>
 
             {/* Impact Stats */}
-            <div className="flex justify-center gap-12 md:gap-20 py-4">
-              <div className="text-center">
-                <Users className="h-6 w-6 mx-auto mb-2 text-foreground/60" />
-                <p className="text-3xl md:text-4xl font-black text-foreground">500+</p>
-                <p className="text-sm text-foreground/70">Youth Served<br />Annually</p>
-              </div>
-              <div className="text-center">
-                <Heart className="h-6 w-6 mx-auto mb-2 text-foreground/60" />
-                <p className="text-3xl md:text-4xl font-black text-foreground">70%</p>
-                <p className="text-sm text-foreground/70">Below Poverty Line</p>
-              </div>
-            </div>
+            
             
             <p className="text-lg md:text-xl text-foreground/80 leading-relaxed">
               Our one-stop, wraparound approach to youth development has attracted schools, law enforcement, mental health providers, public officials, and community partners who recognize NLA as a legitimate, trusted hub for real, lasting impact.
