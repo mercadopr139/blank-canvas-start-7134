@@ -375,13 +375,13 @@ const ProgramsExtrasSection = () => {
 
   return <section className="py-16 md:py-20 bg-background relative overflow-hidden">
       {/* Background image on the right */}
-      <div className="hidden md:block absolute right-0 top-0 bottom-0 w-1/3 pointer-events-none">
+      <div className="absolute right-0 top-0 bottom-0 w-full md:w-1/3 pointer-events-none">
         <img 
           src={coachingRingsideImage} 
           alt="" 
-          className="h-full w-full object-cover object-center opacity-45"
+          className="h-full w-full object-cover object-right opacity-20 md:opacity-50"
         />
-        <div className="absolute inset-0 bg-gradient-to-r from-background via-background/50 to-transparent" />
+        <div className="absolute inset-0 bg-gradient-to-r from-background via-background/70 md:via-background/40 to-transparent" />
       </div>
       <div className="container relative z-10">
         <h2 className="text-2xl md:text-3xl font-bold text-foreground">
