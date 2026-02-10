@@ -26,7 +26,8 @@ import AdminServiceCalendar from "./pages/admin/AdminServiceCalendar";
 import AdminInvoices from "./pages/admin/AdminInvoices";
  import AdminRegistrations from "./pages/admin/AdminRegistrations";
  import AdminRegistrationAnalytics from "./pages/admin/AdminRegistrationAnalytics";
- import Register from "./pages/Register";
+import Register from "./pages/Register";
+import Supporters from "./pages/Supporters";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -51,6 +52,7 @@ const App = () => (
             <Route path="/rookie-orientation" element={<RookieOrientation />} />
             <Route path="/house-rules-test" element={<HouseRulesTest />} />
              <Route path="/register" element={<Register />} />
+            <Route path="/supporters" element={<Supporters />} />
             
             {/* Admin Routes */}
             <Route path="/admin" element={<AdminIndex />} />
