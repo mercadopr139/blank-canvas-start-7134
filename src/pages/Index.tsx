@@ -40,7 +40,7 @@ const Index = () => {
 
         {/* Rookie Orientation Section */}
         <section className="w-full border-t py-10 md:py-14 bg-primary border-primary-foreground">
-          <div className="container flex flex-col items-center text-center px-4">
+          <div className="container flex flex-col items-center text-center bg-muted-foreground px-0">
             <h2 className="text-xl md:text-2xl font-semibold mb-3 text-primary-foreground">Are you new to the Program?</h2>
             <p className="mb-6 max-w-md text-primary-foreground">
               Access Rookie Orientation materials and get started with everything you need to know.
