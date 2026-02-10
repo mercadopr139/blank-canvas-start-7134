@@ -47,6 +47,8 @@ import excursionElainesDinner from "@/assets/excursions/excursion-elaines-dinner
 import excursionOutdoorAdventureWildwood from "@/assets/excursions/excursion-outdoor-adventure-wildwood.jpg";
 import excursionMoreysPiers from "@/assets/excursions/excursion-moreys-piers.jpg";
 import realTalkJoeFranco from "@/assets/programs/real-talk-joe-franco.png";
+import mealTrainServing from "@/assets/meal-train/meal-train-serving.jpg";
+import mealTrainHero from "@/assets/meal-train/meal-train-hero.jpg";
 type ProgramItem = {
   id: string;
   title: string;
@@ -343,6 +345,17 @@ const ProgramsExtrasSection = () => {
       alt: "Coaching Boys into Men photo 6"
     }],
     buttonLabel: "Back to Programs"
+  }, {
+    id: "meal-train",
+    title: "Meal Train",
+    subtitle: "All Participants",
+    ageRange: "7–19 years old",
+    blurb: "The NLA Meal Train supports our youth participants by providing free, sit-down meals during scheduled program days. These meals create consistency, build community, and ensure our athletes are fueled, focused, and cared for while they train and learn together. Volunteers play a vital role in making this possible.",
+    images: [
+      { src: mealTrainServing, alt: "Volunteers serving meals to youth", caption: "Serving our kids" },
+      { src: mealTrainHero, alt: "NLA Meal Train volunteers", caption: "Meal Train volunteers" },
+    ],
+    buttonLabel: "Back to Programs"
   }], []);
   const [openId, setOpenId] = useState<string | null>(null);
   const openItem = items.find(x => x.id === openId) || null;
@@ -355,8 +368,7 @@ const ProgramsExtrasSection = () => {
   
   const allItems: ListItem[] = [
     ...sortedItems.map(item => ({ type: 'modal' as const, item })),
-    { type: 'link' as const, title: 'Gym Buddies', to: '/gym-buddies' },
-    { type: 'link' as const, title: 'Meal Train', to: '/meal-train' }
+    { type: 'link' as const, title: 'Gym Buddies', to: '/gym-buddies' }
   ].sort((a, b) => {
     const titleA = a.type === 'modal' ? a.item.title : a.title;
     const titleB = b.type === 'modal' ? b.item.title : b.title;
