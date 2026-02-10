@@ -45,6 +45,7 @@ import excursionLaserTagMayslanding from "@/assets/excursions/excursion-laser-ta
 import excursionStocktonDinner from "@/assets/excursions/excursion-stockton-dinner.png";
 import excursionElainesDinner from "@/assets/excursions/excursion-elaines-dinner.png";
 import excursionOutdoorAdventureWildwood from "@/assets/excursions/excursion-outdoor-adventure-wildwood.jpg";
+import excursionMoreysPiers from "@/assets/excursions/excursion-moreys-piers.jpg";
 import realTalkJoeFranco from "@/assets/programs/real-talk-joe-franco.png";
 type ProgramItem = {
   id: string;
@@ -193,6 +194,10 @@ const ProgramsExtrasSection = () => {
       src: excursionOutdoorAdventureWildwood,
       alt: "Outdoor Adventure Fun in Wildwood",
       caption: "Outdoor Adventure Fun in Wildwood"
+    }, {
+      src: excursionMoreysPiers,
+      alt: "Moreys Piers",
+      caption: "Moreys Piers"
     }],
     buttonLabel: "Back to Programs"
   }, {
