@@ -47,7 +47,7 @@ const Supporters = () => {
               </p>
             </div>
             <div className="mt-6 flex flex-col items-center gap-4">
-              <Button size="lg" className="bg-[#179BD7] text-white hover:bg-[#1489be] font-bold text-base px-8" asChild>
+              <Button size="lg" className="bg-[#179BD7] text-white hover:bg-[#1489be] font-bold text-base px-8 border border-foreground" asChild>
                 <a href={PAYPAL_LINK} target="_blank" rel="noopener noreferrer">
                   DONATE VIA PAYPAL
                 </a>
