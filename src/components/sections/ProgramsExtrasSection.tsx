@@ -16,6 +16,8 @@ import lilChampsActivity6 from "@/assets/programs/lil-champs-activity-6.jpg";
 import nj4sLogo from "@/assets/programs/nj4s-logo.png";
 import capeAssistLogo from "@/assets/programs/cape-assist-logo.png";
 import deltaDentalLogo from "@/assets/programs/delta-dental-logo.png";
+import spiritualDevPrayer1 from "@/assets/programs/spiritual-dev-prayer-1.jpg";
+import spiritualDevPrayer2 from "@/assets/programs/spiritual-dev-prayer-2.jpg";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { ClickToEnlargeGallery } from "@/components/ui/click-to-enlarge-gallery";
@@ -268,12 +270,12 @@ const ProgramsExtrasSection = () => {
     blurb: "Spiritual development at No Limits Academy focuses on reflection, values, purpose, and personal growth within a supportive and respectful environment. This component is designed to complement our youth development work by encouraging mindfulness, character, and healthy decision-making.",
     policyText: "At No Limits Academy, we respect each individual's unique spiritual journey. Participation in any aspect of spiritual development is entirely voluntary. We do not require youth participants to read, engage with, or participate in spiritual practices or teachings. For youth who are curious or willing to explore their spiritual development, we are here to offer support and guidance. NLA's focus is on providing a nurturing, caring, and encouraging environment where youth can explore God, at their own pace, if they choose to do so.",
     images: [{
-      src: "/placeholder.svg",
-      alt: "Spiritual Development photo 1",
+      src: spiritualDevPrayer1,
+      alt: "Youth in reflection during spiritual development",
       caption: "Spiritual Development"
     }, {
-      src: "/placeholder.svg",
-      alt: "Spiritual Development photo 2",
+      src: spiritualDevPrayer2,
+      alt: "Group reflection during spiritual development",
       caption: "Spiritual Development"
     }, {
       src: "/placeholder.svg",
