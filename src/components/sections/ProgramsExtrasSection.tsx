@@ -184,8 +184,8 @@ const ProgramsExtrasSection = () => {
       caption: "Laser Tag Fun, Mayslanding"
     }, {
       src: excursionStocktonDinner,
-      alt: "Team Night Dinner at Stockton Visit",
-      caption: "Team Night Dinner at Stockton Visit"
+      alt: "Team Night at Stockton University, then Dinner",
+      caption: "Team Night at Stockton University, then Dinner"
     }, {
       src: excursionElainesDinner,
       alt: "New Year's Dinner at Elaine's",
