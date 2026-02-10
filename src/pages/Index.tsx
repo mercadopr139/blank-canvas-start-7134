@@ -39,8 +39,7 @@ const Index = () => {
         <ImpactSection />
 
         {/* Rookie Orientation Section */}
-        <section className="w-full border-t md:py-14 bg-primary border-primary-foreground py-[20px]">
-          <div className="container flex flex-col items-center text-center bg-muted-foreground px-[20px] py-[20px]">
+        <section className="w-full bg-muted-foreground py-10 md:py-14 flex flex-col items-center text-center px-5">
             <h2 className="text-xl md:text-2xl font-semibold mb-3 text-primary-foreground">Are you new to the program?</h2>
             <p className="mb-6 max-w-md text-primary-foreground">
               Access Rookie Orientation materials and get started with everything you need to know.
@@ -52,7 +51,6 @@ const Index = () => {
               </Link>
             </Button>
             <p className="mt-2 text-xs text-primary-foreground/70">Password Protected</p>
-          </div>
         </section>
       </main>
 
