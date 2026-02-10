@@ -210,7 +210,7 @@ const GymBuddies = () => {
 
         {/* Fixed Back to Programs Link - below header + title */}
         {fromPrograms && (
-          <div className="sticky top-[57px] z-40 bg-foreground/95 backdrop-blur-sm border-b border-background/10">
+          <div className="fixed bottom-0 left-0 right-0 z-40 bg-foreground/95 backdrop-blur-sm border-t border-background/10">
             <div className="container py-3">
               <Link 
                 to="/programs#more-programs" 
