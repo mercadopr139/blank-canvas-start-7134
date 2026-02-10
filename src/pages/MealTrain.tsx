@@ -109,7 +109,7 @@ const MealTrain = () => {
               We feed our kids 5 nights a week.
             </p>
             <div className="flex justify-center mt-6">
-              <Button asChild className="bg-primary text-primary-foreground hover:bg-primary/90">
+              <Button asChild className="bg-background text-foreground hover:bg-background/90">
                 <Link to="/programs" state={{ openMealTrain: true }}>
                   View Meal Train Photos
                 </Link>
