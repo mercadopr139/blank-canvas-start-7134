@@ -63,6 +63,7 @@ import mealTrainOurKids10 from "@/assets/meal-train/meal-train-our-kids-10.png";
 import mealTrainOurKids11 from "@/assets/meal-train/meal-train-our-kids-11.png";
 import mealTrainFounders from "@/assets/meal-train/meal-train-founders.png";
 import mealTrainOurKids12 from "@/assets/meal-train/meal-train-our-kids-12.png";
+import mealTrainOurKids13 from "@/assets/meal-train/meal-train-our-kids-13.png";
 type ProgramItem = {
   id: string;
   title: string;
@@ -382,6 +383,7 @@ const ProgramsExtrasSection = () => {
       { src: mealTrainOurKids11, alt: "NLA youth smiling during meal time", caption: "Our Kids" },
       { src: mealTrainFounders, alt: "Meal Train founders at No Limits Academy", caption: "Meal Train Founders" },
       { src: mealTrainOurKids12, alt: "NLA youth gathered around table during meal time", caption: "Our Kids" },
+      { src: mealTrainOurKids13, alt: "NLA youth posing together at meal time", caption: "Our Kids" },
     ],
     buttonLabel: "Back to Programs"
   }], []);
