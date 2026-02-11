@@ -572,18 +572,24 @@ const SEX_OPTIONS = ["Male", "Female"] as const;
                </div>
 
                {/* How many siblings in Child's primary household? */}
-               <div>
-                 <Label htmlFor="siblings_in_household" className="text-base font-medium">How many siblings in Child's primary household? <span className="text-destructive">*</span></Label>
-                 <Input
-                   id="siblings_in_household"
-                   type="number"
-                   min="0"
-                   value={formData.siblings_in_household}
-                   onChange={(e) => handleInputChange("siblings_in_household", e.target.value)}
-                   className="mt-2"
-                   required
-                 />
-               </div>
+                <div>
+                  <Label htmlFor="siblings_in_household" className="text-base font-medium">How many siblings in Child's primary household? <span className="text-destructive">*</span></Label>
+                  <Select value={formData.siblings_in_household} onValueChange={(value) => handleInputChange("siblings_in_household", value)}>
+                    <SelectTrigger className="mt-2">
+                      <SelectValue placeholder="Select..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="0">Only child</SelectItem>
+                      <SelectItem value="1">Child + 1 sibling</SelectItem>
+                      <SelectItem value="2">Child + 2 siblings</SelectItem>
+                      <SelectItem value="3">Child + 3 siblings</SelectItem>
+                      <SelectItem value="4">Child + 4 siblings</SelectItem>
+                      <SelectItem value="5">Child + 5 siblings</SelectItem>
+                      <SelectItem value="6">Child + 6 siblings</SelectItem>
+                      <SelectItem value="7">Other</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
 
                {/* Household Income */}
                <div>
