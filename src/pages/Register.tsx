@@ -11,8 +11,9 @@
  import { CheckCircle2, Loader2, Upload } from "lucide-react";
  import Header from "@/components/layout/Header";
  import Footer from "@/components/layout/Footer";
- import WaiverSection from "@/components/registration/WaiverSection";
- import { WAIVER_TEXTS } from "@/components/registration/waiverTexts";
+import WaiverSection from "@/components/registration/WaiverSection";
+import { WAIVER_TEXTS } from "@/components/registration/waiverTexts";
+import ChildPrimaryAddressField from "@/components/registration/ChildPrimaryAddressField";
  import nlaLogo from "@/assets/nla-logo.png";
  
 const SEX_OPTIONS = ["Male", "Female"] as const;
@@ -507,18 +508,16 @@ const SEX_OPTIONS = ["Male", "Female"] as const;
                  />
                </div>
 
-               {/* Child's Primary Address */}
-               <div>
-                 <Label htmlFor="child_primary_address" className="text-base font-medium">Child's Primary Address <span className="text-destructive">*</span></Label>
-                 <p className="text-sm text-muted-foreground">MUST BE FULL MAILING ADDRESS</p>
-                 <Textarea
-                   id="child_primary_address"
-                   value={formData.child_primary_address}
-                   onChange={(e) => handleInputChange("child_primary_address", e.target.value)}
-                   className="mt-2"
-                   required
-                 />
-               </div>
+                {/* Child's Primary Address */}
+                <div>
+                  <Label htmlFor="child_primary_address" className="text-base font-medium">Child's Primary Address <span className="text-destructive">*</span></Label>
+                  <p className="text-sm text-muted-foreground">MUST BE FULL MAILING ADDRESS</p>
+                  <ChildPrimaryAddressField
+                    value={formData.child_primary_address}
+                    onChange={(v) => handleInputChange("child_primary_address", v)}
+                    className="mt-2"
+                  />
+                </div>
 
                {/* Child's School District */}
                <div>
