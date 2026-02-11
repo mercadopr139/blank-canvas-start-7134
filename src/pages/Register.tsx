@@ -41,7 +41,6 @@ const SEX_OPTIONS = ["Male", "Female"] as const;
  const BOXING_PROGRAMS = [
   "Junior Boxing (Ages 7-10)",
   "Senior Boxing (Ages 11-19)",
-  "Grit & Grace (Ages 11-19)",
  ] as const;
  const INCOME_RANGES = [
    "Under $25,000",
