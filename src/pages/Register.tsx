@@ -43,12 +43,12 @@ const SEX_OPTIONS = ["Male", "Female"] as const;
   "Senior Boxing (Ages 11-19)",
  ] as const;
  const INCOME_RANGES = [
-   "Under $25,000",
-   "$25,000 - $49,999",
-   "$50,000 - $74,999",
-   "$75,000 - $99,999",
-   "$100,000 - $149,999",
-   "$150,000 or more",
+   "Less than $25,000",
+   "Less than $35,000",
+   "Less than $45,000",
+   "Less than $65,000",
+   "Less than $80,000",
+   "Greater than $80,001",
  ] as const;
  const LUNCH_OPTIONS = ["Yes", "No", "Not Applicable"] as const;
  
