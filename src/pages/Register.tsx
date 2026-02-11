@@ -26,17 +26,18 @@ const SEX_OPTIONS = ["Male", "Female"] as const;
    "Two or More Races",
  ] as const;
  const SCHOOL_DISTRICTS = [
-   "Cape May City",
-   "Lower Cape May Regional",
+   "Wildwood Catholic Academy",
+   "Lower Township",
+   "Cape May Tech",
+   "Avalon/Stone Harbor",
+   "Homeschool, Hybrid, or Alternative Form of Schooling",
+   "Upper Township",
+   "Cape May/West Cape May",
+   "Woodbine",
    "Middle Township",
    "Ocean City",
-   "Upper Township",
-   "Wildwood",
-   "Wildwood Crest",
-   "North Wildwood",
-   "West Cape May",
-   "Dennis Township",
-   "Woodbine",
+   "Wildwood/Wildwood Crest/North Wildwood",
+   "Other",
  ] as const;
  const BOXING_PROGRAMS = [
   "Junior Boxing (Ages 7-10)",
