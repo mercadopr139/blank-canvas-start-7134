@@ -558,18 +558,23 @@ const SEX_OPTIONS = ["Male", "Female"] as const;
                </div>
 
                {/* Adult(s) in Child's primary household */}
-               <div>
-                 <Label htmlFor="adults_in_household" className="text-base font-medium">Adult(s) in Child's primary household <span className="text-destructive">*</span></Label>
-                 <Input
-                   id="adults_in_household"
-                   type="number"
-                   min="1"
-                   value={formData.adults_in_household}
-                   onChange={(e) => handleInputChange("adults_in_household", e.target.value)}
-                   className="mt-2"
-                   required
-                 />
-               </div>
+                <div>
+                  <Label htmlFor="adults_in_household" className="text-base font-medium">Adult(s) in Child's primary household <span className="text-destructive">*</span></Label>
+                  <Select value={formData.adults_in_household} onValueChange={(value) => handleInputChange("adults_in_household", value)}>
+                    <SelectTrigger className="mt-2">
+                      <SelectValue placeholder="Select..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Dad and Mom">Dad and Mom</SelectItem>
+                      <SelectItem value="Dad Only">Dad Only</SelectItem>
+                      <SelectItem value="Dad + Partner">Dad + Partner</SelectItem>
+                      <SelectItem value="Mom Only">Mom Only</SelectItem>
+                      <SelectItem value="Mom + Partner">Mom + Partner</SelectItem>
+                      <SelectItem value="Grandparent(s)">Grandparent(s)</SelectItem>
+                      <SelectItem value="Other">Other</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
 
                {/* How many siblings in Child's primary household? */}
                 <div>
