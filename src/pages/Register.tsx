@@ -50,7 +50,7 @@ const SEX_OPTIONS = ["Male", "Female"] as const;
    "Less than $80,000",
    "Greater than $80,001",
  ] as const;
- const LUNCH_OPTIONS = ["Yes", "No", "Not Applicable"] as const;
+ const LUNCH_OPTIONS = ["Yes", "No"] as const;
  
  interface FormData {
    child_first_name: string;
