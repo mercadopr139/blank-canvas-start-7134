@@ -6,6 +6,9 @@ import joshMcNallyDave from "@/assets/our-story/josh-mcnally-dave.jpeg";
 import facilityConstructionCrew from "@/assets/facility/facility-construction-crew.png";
 import facilityPlumbingCrew from "@/assets/facility/facility-plumbing-crew.png";
 import facilityRebarPrep from "@/assets/facility/facility-rebar-prep.png";
+import facilityFloorWork from "@/assets/facility/facility-floor-work.png";
+import facilityThumbsUp from "@/assets/facility/facility-thumbs-up.png";
+import facilityLoungeArea from "@/assets/facility/facility-lounge-area.png";
 
 type FacilityImg = { src: string; alt: string };
 
@@ -13,6 +16,9 @@ const facilityImages: FacilityImg[] = [
   { src: facilityConstructionCrew, alt: "Construction crew breaking ground" },
   { src: facilityPlumbingCrew, alt: "Plumbing installation crew" },
   { src: facilityRebarPrep, alt: "Rebar and foundation preparation" },
+  { src: facilityFloorWork, alt: "Floor installation in progress" },
+  { src: facilityThumbsUp, alt: "Facility space taking shape" },
+  { src: facilityLoungeArea, alt: "Finished lounge area" },
 ];
 
 const OurStory = () => {
