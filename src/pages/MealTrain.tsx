@@ -36,8 +36,16 @@ const MealTrain = () => {
               </h1>
               <img src={mealTrainLogo} alt="Meal Train logo" className="w-32 md:w-40 h-auto mb-6 mx-auto object-fill" />
               <p className="text-lg md:text-xl text-primary-foreground/80 leading-relaxed">
+                Prepare a group meal or arrange delivery for our youth participants.
                 The NLA Meal Train supports our youth participants by providing free, sit-down meals during scheduled program days. These meals create consistency, build community, and ensure our athletes are fueled, focused, and cared for while they train and learn together. Volunteers play a vital role in making this possible.
               </p>
+              <div className="mt-6">
+                <Button className="bg-background text-foreground hover:bg-background/90" asChild>
+                  <a href={MEAL_TRAIN_LINK} target="_blank" rel="noopener noreferrer">
+                    Meal Train Sign-Up
+                  </a>
+                </Button>
+              </div>
             </div>
           </div>
         </section>
