@@ -1,4 +1,5 @@
 import { cn } from "@/lib/utils";
+import { Instagram, Facebook } from "lucide-react";
 
 interface FooterProps {
   className?: string;
@@ -6,20 +7,38 @@ interface FooterProps {
 
 const Footer = ({ className }: FooterProps) => {
   return (
-    <footer className={cn("w-full border-t border-border bg-muted/30", className)}>
+    <footer className={cn("w-full bg-black text-white", className)}>
       <div className="container py-8">
-        <div className="flex flex-col md:flex-row items-center justify-between gap-4">
-          <p className="text-sm text-muted-foreground">
-            © 2026 Your Company. All rights reserved.
+        <div className="flex flex-col md:flex-row items-center justify-between gap-6">
+          <p className="text-sm font-bold tracking-widest uppercase">
+            No Limits Academy
           </p>
-          <div className="flex items-center gap-6">
-            <a href="#" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
-              Privacy
+          <div className="flex items-center gap-4">
+            <a
+              href="https://www.instagram.com/nolimitsboxingacademy/?hl=en"
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label="Instagram"
+              className="text-white hover:text-white/70 transition-colors"
+            >
+              <Instagram className="h-5 w-5" />
             </a>
-            <a href="#" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
-              Terms
+            <a
+              href="https://www.facebook.com/nolimitsboxingacademy/"
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label="Facebook"
+              className="text-white hover:text-white/70 transition-colors"
+            >
+              <Facebook className="h-5 w-5" />
             </a>
           </div>
+          <a
+            href="mailto:info@nolimitsboxingacademy.org"
+            className="text-sm text-white/80 hover:text-white transition-colors"
+          >
+            info@nolimitsboxingacademy.org
+          </a>
         </div>
       </div>
     </footer>
