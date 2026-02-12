@@ -14,7 +14,7 @@ const HeroSection = () => {
       </div>
 
       {/* Content */}
-      <div className="container relative z-20 pt-12 md:pt-20 py-[30px]">
+      <div className="container relative z-20 pt-12 md:pt-20 py-0">
         <div className="max-w-2xl lg:max-w-xl">
           {/* Main headline */}
           <h1 className="text-4xl md:text-6xl lg:text-7xl font-black text-primary-foreground leading-[1.1] tracking-tight mb-6">
