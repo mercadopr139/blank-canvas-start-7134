@@ -9,7 +9,7 @@ const HeroSection = () => {
         <img
           src={heroVictory}
           alt="NLA youth boxer celebrating victory with referee raising their arm"
-          className="w-full h-full object-cover object-[35%_center] lg:object-center opacity-60 lg:opacity-100" />
+          className="w-full h-full object-cover object-[25%_center] lg:object-center opacity-60 lg:opacity-100" />
 
       </div>
 
