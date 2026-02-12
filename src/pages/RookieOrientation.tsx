@@ -97,41 +97,42 @@ const RookieOrientation = () => {
       <main className="flex-1">
         {/* Call-Out Section */}
         <div className="py-12 md:py-16 text-center bg-neutral-950 border-b border-neutral-800 flex items-center justify-center">
-          <div className="max-w-[700px] mx-auto px-4 bg-neutral-900 rounded-xl py-10">
-            <h2 className="text-2xl md:text-3xl font-black text-white mb-2">CALL-OUT</h2>
-            <Smartphone className="w-8 h-8 text-white mx-auto mb-4" />
-            <p className="text-lg md:text-xl font-bold text-white mb-2">
-              100% Attendance is not Required,
-            </p>
-            <p className="text-lg md:text-xl font-bold text-white mb-8">
-              100% Communication is Required!
-            </p>
-            <a
-              href="https://forms.monday.com/forms/583578aa7eb854fe388d49e84780eee4?r=use1"
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              <Button
-                className="text-white font-bold px-8 py-3 text-lg"
-                style={{ backgroundColor: "#bf0f3e" }}
+          <div className="max-w-[900px] mx-auto px-4 flex items-center gap-6 md:gap-10">
+            <img
+              src={mascotEagle}
+              alt="No Limits Academy Eagle Mascot"
+              className="hidden md:block w-[140px] lg:w-[180px] flex-shrink-0"
+            />
+            <div className="bg-neutral-900 rounded-xl py-10 px-4 flex-1 text-center">
+              <h2 className="text-2xl md:text-3xl font-black text-white mb-2">CALL-OUT</h2>
+              <Smartphone className="w-8 h-8 text-white mx-auto mb-4" />
+              <p className="text-lg md:text-xl font-bold text-white mb-2">
+                100% Attendance is not Required,
+              </p>
+              <p className="text-lg md:text-xl font-bold text-white mb-8">
+                100% Communication is Required!
+              </p>
+              <a
+                href="https://forms.monday.com/forms/583578aa7eb854fe388d49e84780eee4?r=use1"
+                target="_blank"
+                rel="noopener noreferrer"
               >
-                CALL-OUT FORM
-              </Button>
-            </a>
+                <Button
+                  className="text-white font-bold px-8 py-3 text-lg"
+                  style={{ backgroundColor: "#bf0f3e" }}
+                >
+                  CALL-OUT FORM
+                </Button>
+              </a>
+            </div>
           </div>
         </div>
 
-        {/* Hero Title with Mascot */}
-        <div className="py-12 md:py-16 text-center relative overflow-hidden">
-          <h1 className="text-3xl md:text-5xl lg:text-6xl font-black text-white tracking-tight relative z-10">
+        {/* Hero Title */}
+        <div className="py-12 md:py-16 text-center">
+          <h1 className="text-3xl md:text-5xl lg:text-6xl font-black text-white tracking-tight">
             ROOKIE ORIENTATION DAY
           </h1>
-          {/* Mascot peeking from the right */}
-          <img
-            src={mascotEagle}
-            alt="No Limits Academy Eagle Mascot"
-            className="hidden md:block absolute -right-4 lg:right-8 bottom-0 h-[180px] lg:h-[220px] opacity-80 pointer-events-none select-none"
-          />
         </div>
 
         {/* Steps Container */}
