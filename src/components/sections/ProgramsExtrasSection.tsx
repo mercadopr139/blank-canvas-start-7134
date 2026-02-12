@@ -16,6 +16,7 @@ import lilChampsActivity6 from "@/assets/programs/lil-champs-activity-6.jpg";
 import nj4sLogo from "@/assets/programs/nj4s-logo.png";
 import capeAssistLogo from "@/assets/programs/cape-assist-logo.png";
 import deltaDentalLogo from "@/assets/programs/delta-dental-logo.png";
+import launchPadLogo from "@/assets/programs/launch-pad-logo.png";
 import spiritualDevPrayer1 from "@/assets/programs/spiritual-dev-prayer-1.jpg";
 import spiritualDevPrayer2 from "@/assets/programs/spiritual-dev-prayer-2.jpg";
 import smileLabGroupImage from "@/assets/programs/smile-lab-group.png";
@@ -343,6 +344,11 @@ const ProgramsExtrasSection = () => {
             {/* Cape Assist Logo for Coaching Boys into Men */}
             {openItem?.id === "coaching-boys-into-men" && <div className="flex justify-center my-0">
                 <img src={capeAssistLogo} alt="Cape Assist Logo" className="h-48 w-auto border-none" />
+              </div>}
+
+            {/* Launch Pad Logo */}
+            {openItem?.id === "launch-pad" && <div className="flex justify-center my-4">
+                <img src={launchPadLogo} alt="The Launch Pad Logo" className="h-48 w-auto border-none" />
               </div>}
 
             {/* Gallery */}
