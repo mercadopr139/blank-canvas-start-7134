@@ -181,7 +181,7 @@ const ProgramsExtrasSection = () => {
       src: spiritualDevPrayer5,
       alt: "Two youth in prayer during spiritual development",
       caption: "Spiritual Development",
-      objectPosition: "center 70%"
+      objectPosition: "center 20%"
     }, {
       src: spiritualDevPrayer6,
       alt: "Youth and mentors in reflection during spiritual development",
