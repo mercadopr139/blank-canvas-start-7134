@@ -96,7 +96,7 @@ const RookieOrientation = () => {
       <main className="flex-1">
         {/* Call-Out Section */}
         <div className="py-12 md:py-16 text-center bg-neutral-950 border-b border-neutral-800 flex items-center justify-center">
-          <div className="max-w-[700px] mx-auto px-4">
+          <div className="max-w-[700px] mx-auto px-4 bg-neutral-900 rounded-xl py-10">
             <h2 className="text-2xl md:text-3xl font-black text-white mb-2">CALL-OUT</h2>
             <Smartphone className="w-8 h-8 text-white mx-auto mb-4" />
             <p className="text-lg md:text-xl font-bold text-white mb-2">
