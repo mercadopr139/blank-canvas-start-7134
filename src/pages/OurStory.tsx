@@ -28,6 +28,9 @@ import facilityKidOnPlates from "@/assets/facility/facility-kid-on-plates.png";
 import facilityFramingOverview from "@/assets/facility/facility-framing-overview.png";
 import facilityFramingFloor from "@/assets/facility/facility-framing-floor.png";
 import facilityFramingWall from "@/assets/facility/facility-framing-wall.png";
+import facilityWallRaising from "@/assets/facility/facility-wall-raising.png";
+import facilityWallFraming from "@/assets/facility/facility-wall-framing.png";
+import facilityPlywoodWall from "@/assets/facility/facility-plywood-wall.png";
 
 type FacilityImg = { src: string; alt: string };
 
@@ -57,6 +60,9 @@ const facilityImages: FacilityImg[] = [
   { src: facilityFramingOverview, alt: "Framing work overview" },
   { src: facilityFramingFloor, alt: "Framing the floor structure" },
   { src: facilityFramingWall, alt: "Wall framing installation" },
+  { src: facilityWallRaising, alt: "Raising the walls" },
+  { src: facilityWallFraming, alt: "Framing progress" },
+  { src: facilityPlywoodWall, alt: "Plywood sheathing installation" },
 ];
 
 const OurStory = () => {
