@@ -57,24 +57,19 @@ const ImpactSection = () => {
     </section>
 
     {/* Awards & Community Recognition - separate black section */}
-    <section className="py-16 bg-black md:py-[30px]">
+    <section className="py-16 bg-black md:py-[60px]">
       <div className="container">
         <div className="max-w-4xl mx-auto">
-          <div className="border-l-4 border-[#bf0f3e] pl-4 mb-8">
-            <p className="text-xs font-semibold tracking-[0.2em] uppercase text-[#bf0f3e] mb-2">
-              Honored & Recognized
-            </p>
-            <h3 className="text-2xl md:text-3xl font-bold text-white mb-3">
-              Awards & Community Recognition
-            </h3>
-            <p className="text-sm leading-relaxed text-white/70">
-              No Limits Academy has been recognized by local, state, and national
-              organizations for our youth impact, mentorship, and community leadership.
-            </p>
-          </div>
+          <h3 className="text-2xl md:text-3xl font-bold text-white mb-3">
+            Awards & Community Recognition
+          </h3>
+          <p className="text-sm leading-relaxed text-white/70 mb-8">
+            No Limits Academy has been recognized by local, state, and national
+            organizations for our youth impact, mentorship, and community leadership.
+          </p>
           <ul className="space-y-3">
-            {awards.map(award => <li key={award} className="flex items-start gap-3">
-                <Trophy className="mt-0.5 h-4 w-4 flex-shrink-0 text-[#bf0f3e]" />
+            {awards.map((award) => <li key={award} className="flex items-start gap-3">
+                <Trophy className="mt-0.5 h-4 w-4 flex-shrink-0 text-primary" />
                 <span className="text-sm leading-relaxed text-white/80">{award}</span>
               </li>)}
           </ul>
