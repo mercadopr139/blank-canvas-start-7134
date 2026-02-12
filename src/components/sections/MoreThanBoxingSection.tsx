@@ -21,14 +21,14 @@ const MoreThanBoxingSection = () => {
   return (
     <section className="relative bg-black overflow-hidden">
       <div className="container md:py-24 py-[20px]">
-        <div className="relative w-full max-w-5xl mx-auto text-center">
+        <div className="relative w-full text-center">
           {/* Title */}
           <h2 className="text-2xl md:text-4xl lg:text-5xl font-bold text-white drop-shadow-lg mb-6 md:mb-8">
             More than a boxing gym.
           </h2>
 
           {/* Three images in a row */}
-          <div className="grid grid-cols-3 gap-8 md:gap-16 w-full mx-auto">
+          <div className="flex justify-between gap-4 md:gap-8 w-full">
             {/* Tubing - Left */}
             <div className="relative h-[200px] md:h-[350px] overflow-hidden rounded-lg">
               <button
