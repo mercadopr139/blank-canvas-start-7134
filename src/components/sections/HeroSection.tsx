@@ -2,7 +2,7 @@ import heroVictory from "@/assets/hero/hero-victory.jpg";
 
 const HeroSection = () => {
   return (
-    <section className="relative min-h-[90vh] flex items-center bg-primary overflow-hidden pb-12 md:pb-16">
+    <section className="relative min-h-[75vh] flex items-center bg-primary overflow-hidden pb-12 md:pb-16">
       {/* Hero Image - Right Side */}
       <div className="absolute inset-0 lg:left-1/2 lg:right-0">
         <div className="absolute inset-0 bg-gradient-to-r from-primary via-primary/95 to-primary/40 lg:from-primary lg:via-primary/80 lg:to-transparent z-10" />
