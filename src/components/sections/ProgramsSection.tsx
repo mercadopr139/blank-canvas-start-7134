@@ -33,7 +33,7 @@ const ProgramsSection = ({
               Our Programs
             </h2>
           </div>
-          <p className="text-lg md:text-xl text-primary-foreground/70 max-w-3xl leading-relaxed">We offer two core programs designed to meet youth where they are and grow with them over time. Each program includes <span className="font-bold text-primary-foreground/70">boxing & fitness training</span>, mentorship, structure, and opportunities for <span className="font-bold text-[#bf0f3e]">personal, professional, and spiritual</span> development.</p>
+          <p className="text-lg md:text-xl text-primary-foreground/70 max-w-3xl leading-relaxed underline">We offer two core programs designed to meet youth where they are and grow with them over time. Each program includes <span className="font-bold text-primary-foreground/70">boxing & fitness training</span>, mentorship, structure, and opportunities for <span className="font-bold text-[#bf0f3e]">personal, professional, and spiritual</span> development.</p>
         </div>
 
         {/* Program cards */}
