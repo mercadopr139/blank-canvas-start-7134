@@ -22,6 +22,9 @@ import facilityMetalwork from "@/assets/facility/facility-metalwork.png";
 import facilitySteelFrame from "@/assets/facility/facility-steel-frame.png";
 import facilityWelding from "@/assets/facility/facility-welding.png";
 import facilityDumpster from "@/assets/facility/facility-dumpster.png";
+import facilityGymFloorPrep from "@/assets/facility/facility-gym-floor-prep.png";
+import facilityRigInstall from "@/assets/facility/facility-rig-install.png";
+import facilityKidOnPlates from "@/assets/facility/facility-kid-on-plates.png";
 
 type FacilityImg = { src: string; alt: string };
 
@@ -45,6 +48,9 @@ const facilityImages: FacilityImg[] = [
   { src: facilitySteelFrame, alt: "Steel frame assembly" },
   { src: facilityWelding, alt: "Welding steel structure" },
   { src: facilityDumpster, alt: "Demolition debris removal" },
+  { src: facilityGymFloorPrep, alt: "Gym floor preparation" },
+  { src: facilityRigInstall, alt: "Installing the rig" },
+  { src: facilityKidOnPlates, alt: "Future champion testing the equipment" },
 ];
 
 const OurStory = () => {
