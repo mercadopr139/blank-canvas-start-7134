@@ -69,7 +69,7 @@ const ImpactSection = () => {
           </p>
           <ul className="space-y-3">
             {awards.map((award) => <li key={award} className="flex items-start gap-3">
-                <Trophy className="mt-0.5 h-4 w-4 flex-shrink-0 text-primary" />
+                <Trophy className="mt-0.5 h-4 w-4 flex-shrink-0 text-[#bf0f3e]" />
                 <span className="text-sm leading-relaxed text-white/80">{award}</span>
               </li>)}
           </ul>
