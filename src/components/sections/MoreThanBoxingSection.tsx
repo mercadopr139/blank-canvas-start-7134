@@ -28,7 +28,7 @@ const MoreThanBoxingSection = () => {
           </h2>
 
           {/* Three images in a row */}
-          <div className="grid grid-cols-3 gap-3 md:gap-5 max-w-4xl mx-auto">
+          <div className="grid grid-cols-3 gap-6 md:gap-10 max-w-4xl mx-auto">
             {/* Tubing - Left */}
             <div className="relative h-[200px] md:h-[350px] overflow-hidden rounded-lg">
               <button
