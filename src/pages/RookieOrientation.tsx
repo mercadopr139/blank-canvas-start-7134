@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { AlertCircle, Lock } from "lucide-react";
+import { AlertCircle, Lock, Smartphone } from "lucide-react";
 import Header from "@/components/layout/Header";
 import Footer from "@/components/layout/Footer";
 import OrientationStep from "@/components/orientation/OrientationStep";
@@ -94,6 +94,32 @@ const RookieOrientation = () => {
   return <div className="min-h-screen flex flex-col bg-black">
       <Header />
       <main className="flex-1">
+        {/* Call-Out Section */}
+        <div className="py-12 md:py-16 text-center bg-neutral-950 border-b border-neutral-800">
+          <div className="max-w-[700px] mx-auto px-4">
+            <h2 className="text-2xl md:text-3xl font-black text-white mb-2">CALL-OUT</h2>
+            <Smartphone className="w-8 h-8 text-white mx-auto mb-4" />
+            <p className="text-lg md:text-xl font-bold text-white mb-2">
+              100% Attendance is not Required,
+            </p>
+            <p className="text-lg md:text-xl font-bold text-white mb-8">
+              100% Communication is Required!
+            </p>
+            <a
+              href="https://forms.monday.com/forms/54ec87b1697f78b22490889e70bfe459?r=use1"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              <Button
+                className="text-white font-bold px-8 py-3 text-lg"
+                style={{ backgroundColor: "#bf0f3e" }}
+              >
+                CALL-OUT FORM
+              </Button>
+            </a>
+          </div>
+        </div>
+
         {/* Hero Title */}
         <div className="py-12 md:py-16 text-center border-primary-foreground">
           <h1 className="text-3xl md:text-5xl lg:text-6xl font-black text-white tracking-tight border-primary-foreground border mx-0 py-[20px]">
