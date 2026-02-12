@@ -20,6 +20,9 @@ import launchPadLogo from "@/assets/programs/launch-pad-logo.png";
 import spiritualDevPrayer1 from "@/assets/programs/spiritual-dev-prayer-1.jpg";
 import spiritualDevPrayer2 from "@/assets/programs/spiritual-dev-prayer-2.jpg";
 import spiritualDevPrayer3 from "@/assets/programs/spiritual-dev-prayer-3.jpg";
+import spiritualDevPrayer4 from "@/assets/programs/spiritual-dev-prayer-4.jpg";
+import spiritualDevPrayer5 from "@/assets/programs/spiritual-dev-prayer-5.jpg";
+import spiritualDevPrayer6 from "@/assets/programs/spiritual-dev-prayer-6.jpg";
 import smileLabGroupImage from "@/assets/programs/smile-lab-group.png";
 import smileLabInstructorImage from "@/assets/programs/smile-lab-instructor.png";
 import smileLabKidsPuzzle from "@/assets/programs/smile-lab-kids-puzzle.png";
@@ -171,16 +174,16 @@ const ProgramsExtrasSection = () => {
       alt: "Youth in group prayer during spiritual development at NLA",
       caption: "Spiritual Development"
     }, {
-      src: "/placeholder.svg",
-      alt: "Spiritual Development photo 4",
+      src: spiritualDevPrayer4,
+      alt: "Youth gathered listening during spiritual development",
       caption: "Spiritual Development"
     }, {
-      src: "/placeholder.svg",
-      alt: "Spiritual Development photo 5",
+      src: spiritualDevPrayer5,
+      alt: "Two youth in prayer during spiritual development",
       caption: "Spiritual Development"
     }, {
-      src: "/placeholder.svg",
-      alt: "Spiritual Development photo 6",
+      src: spiritualDevPrayer6,
+      alt: "Youth and mentors in reflection during spiritual development",
       caption: "Spiritual Development"
     }],
     buttonLabel: "Back to Programs"
