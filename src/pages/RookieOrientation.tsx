@@ -98,11 +98,11 @@ const RookieOrientation = () => {
         {/* Call-Out Section */}
         <div className="py-12 md:py-16 text-center bg-neutral-950 border-b border-neutral-800 flex items-center justify-center">
           <div className="max-w-[900px] mx-auto px-4 flex items-center gap-6 md:gap-10">
-            <img
-              src={mascotEagle}
-              alt="No Limits Academy Eagle Mascot"
-              className="hidden md:block w-[140px] lg:w-[180px] flex-shrink-0"
-            />
+            
+
+
+
+
             <div className="bg-neutral-900 rounded-xl py-10 px-4 flex-1 text-center">
               <h2 className="text-2xl md:text-3xl font-black text-white mb-2">CALL-OUT</h2>
               <Smartphone className="w-8 h-8 text-white mx-auto mb-4" />
@@ -113,14 +113,14 @@ const RookieOrientation = () => {
                 100% Communication is Required!
               </p>
               <a
-                href="https://forms.monday.com/forms/583578aa7eb854fe388d49e84780eee4?r=use1"
-                target="_blank"
-                rel="noopener noreferrer"
-              >
+              href="https://forms.monday.com/forms/583578aa7eb854fe388d49e84780eee4?r=use1"
+              target="_blank"
+              rel="noopener noreferrer">
+
                 <Button
-                  className="text-white font-bold px-8 py-3 text-lg"
-                  style={{ backgroundColor: "#bf0f3e" }}
-                >
+                className="text-white font-bold px-8 py-3 text-lg"
+                style={{ backgroundColor: "#bf0f3e" }}>
+
                   CALL-OUT FORM
                 </Button>
               </a>
