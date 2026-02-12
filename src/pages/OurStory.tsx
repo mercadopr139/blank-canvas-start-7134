@@ -8,6 +8,8 @@ import facilityPlumbingCrew from "@/assets/facility/facility-plumbing-crew.png";
 import facilityRebarPrep from "@/assets/facility/facility-rebar-prep.png";
 import facilityFloorWork from "@/assets/facility/facility-floor-work.png";
 import facilityThumbsUp from "@/assets/facility/facility-thumbs-up.png";
+import facilityFramingFloorWork from "@/assets/facility/facility-framing-floor.png";
+import facilityBathroom from "@/assets/facility/facility-bathroom.png";
 import facilityLoungeArea from "@/assets/facility/facility-lounge-area.png";
 import facilityFloorCleaning from "@/assets/facility/facility-floor-cleaning.png";
 import facilityMovingBoxes from "@/assets/facility/facility-moving-boxes.png";
@@ -50,6 +52,8 @@ const facilityImages: FacilityImg[] = [
   { src: facilityRebarPrep, alt: "Rebar and foundation preparation" },
   { src: facilityFloorWork, alt: "Floor installation in progress" },
   { src: facilityThumbsUp, alt: "Facility space taking shape" },
+  { src: facilityFramingFloorWork, alt: "Framing and floor work" },
+  { src: facilityBathroom, alt: "Finished bathroom facilities" },
   { src: facilityLoungeArea, alt: "Finished lounge area" },
   { src: facilityFloorCleaning, alt: "Floor cleaning and prep" },
   { src: facilityMovingBoxes, alt: "Moving equipment in" },
