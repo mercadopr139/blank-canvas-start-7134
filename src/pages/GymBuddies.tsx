@@ -292,6 +292,27 @@ const GymBuddies = () => {
             </div>
           </div>
         </section>
+
+        {/* US Coast Guard Video Section */}
+        <section className="py-16 md:py-20 bg-foreground">
+          <div className="container">
+            <div className="max-w-4xl mx-auto">
+              <h2 className="text-2xl md:text-3xl font-black text-background text-center mb-8">
+                Gym Buddies: United States Coast Guard
+              </h2>
+              <div className="relative w-full rounded-lg overflow-hidden" style={{ paddingBottom: "56.25%" }}>
+                <iframe
+                  className="absolute inset-0 w-full h-full"
+                  src="https://www.youtube-nocookie.com/embed/hssnpxFkTAg"
+                  title="Gym Buddies: United States Coast Guard"
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                  allowFullScreen
+                  referrerPolicy="strict-origin"
+                />
+              </div>
+            </div>
+          </div>
+        </section>
       </main>
 
       <Footer />
