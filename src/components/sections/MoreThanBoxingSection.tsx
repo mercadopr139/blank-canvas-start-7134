@@ -30,7 +30,7 @@ const MoreThanBoxingSection = () => {
           {/* Three images in a row */}
           <div className="flex flex-col md:flex-row md:justify-between gap-4 md:gap-8 w-full">
             {/* Tubing - Left */}
-            <div className="relative h-[200px] md:h-[350px] overflow-hidden rounded-lg border-4 border-white">
+            <div className="relative h-[200px] md:h-[350px] overflow-hidden rounded-lg border border-white/60">
               <button
                 type="button"
                 onClick={() => openLightbox(excursionSpeedboatTubing, "Speed Boat & Tubing Fun")}
@@ -49,7 +49,7 @@ const MoreThanBoxingSection = () => {
             </div>
 
             {/* Camping - Center */}
-            <div className="relative h-[200px] md:h-[350px] overflow-hidden rounded-lg border-4 border-white">
+            <div className="relative h-[200px] md:h-[350px] overflow-hidden rounded-lg border border-white/60">
               <button
                 type="button"
                 onClick={() => openLightbox(moreThanBoxingImage, "Camping in West Virginia")}
@@ -68,7 +68,7 @@ const MoreThanBoxingSection = () => {
             </div>
 
             {/* Kayaking - Right */}
-            <div className="relative h-[200px] md:h-[350px] overflow-hidden rounded-lg border-4 border-white">
+            <div className="relative h-[200px] md:h-[350px] overflow-hidden rounded-lg border border-white/60">
               <button
                 type="button"
                 onClick={() => openLightbox(excursionPaddleboard, "Paddle Board & Kayaking")}
