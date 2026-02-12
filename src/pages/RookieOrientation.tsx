@@ -94,16 +94,9 @@ const RookieOrientation = () => {
   return <div className="min-h-screen flex flex-col bg-black">
       <Header />
       <main className="flex-1">
-        {/* Hero Title */}
-        <div className="py-12 md:py-16 text-center">
-          <h1 className="text-3xl md:text-5xl lg:text-6xl font-black text-white tracking-tight">
-            ROOKIE ORIENTATION DAY
-          </h1>
-        </div>
-
         {/* Call-Out Section */}
-        <div className="max-w-[700px] mx-auto px-4 pb-12 md:pb-16 text-center">
-          <div className="bg-neutral-900 border border-neutral-800 rounded-xl p-8 md:p-12">
+        <div className="py-12 md:py-16 text-center bg-neutral-950 border-b border-neutral-800">
+          <div className="max-w-[700px] mx-auto px-4">
             <h2 className="text-2xl md:text-3xl font-black text-white mb-2">
               CALL-OUT
             </h2>
@@ -126,6 +119,13 @@ const RookieOrientation = () => {
               </a>
             </Button>
           </div>
+        </div>
+
+        {/* Hero Title */}
+        <div className="py-12 md:py-16 text-center">
+          <h1 className="text-3xl md:text-5xl lg:text-6xl font-black text-white tracking-tight">
+            ROOKIE ORIENTATION DAY
+          </h1>
         </div>
 
         {/* Steps Container */}
