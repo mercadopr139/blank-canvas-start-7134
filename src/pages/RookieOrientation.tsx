@@ -121,8 +121,8 @@ const RookieOrientation = () => {
         </div>
 
         {/* Hero Title */}
-        <div className="py-12 md:py-16 text-center border-primary-foreground">
-          <h1 className="text-3xl md:text-5xl lg:text-6xl font-black text-white tracking-tight border-primary-foreground border mx-0 py-[20px]">
+        <div className="py-12 md:py-16 text-center">
+          <h1 className="text-3xl md:text-5xl lg:text-6xl font-black text-white tracking-tight">
             ROOKIE ORIENTATION DAY
           </h1>
         </div>
