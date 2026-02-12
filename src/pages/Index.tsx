@@ -4,7 +4,6 @@ import Header from "@/components/layout/Header";
 import Footer from "@/components/layout/Footer";
 import HeroSection from "@/components/sections/HeroSection";
 import FreeAccessMarquee from "@/components/sections/FreeAccessMarquee";
-import MissionStrip from "@/components/sections/MissionStrip";
 import ImpactStrip from "@/components/sections/ImpactStrip";
 import AboutSection from "@/components/sections/AboutSection";
 import ProgramsSection from "@/components/sections/ProgramsSection";
@@ -33,7 +32,6 @@ const Index = () => {
       
       <main className="flex-1">
         <HeroSection />
-        <MissionStrip />
         <FreeAccessMarquee />
         <ImpactStrip />
         <AboutSection />
