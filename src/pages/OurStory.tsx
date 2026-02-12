@@ -13,6 +13,9 @@ import facilityFloorCleaning from "@/assets/facility/facility-floor-cleaning.png
 import facilityMovingBoxes from "@/assets/facility/facility-moving-boxes.png";
 import facilityDoorInstall from "@/assets/facility/facility-door-install.png";
 import facilityKitchen from "@/assets/facility/facility-kitchen.png";
+import facilityDemolition from "@/assets/facility/facility-demolition.png";
+import facilityBuildCrew from "@/assets/facility/facility-build-crew.png";
+import facilityPlanning from "@/assets/facility/facility-planning.png";
 
 type FacilityImg = { src: string; alt: string };
 
@@ -27,6 +30,9 @@ const facilityImages: FacilityImg[] = [
   { src: facilityMovingBoxes, alt: "Moving equipment in" },
   { src: facilityDoorInstall, alt: "Door frame installation" },
   { src: facilityKitchen, alt: "Finished kitchen" },
+  { src: facilityDemolition, alt: "Demolition day" },
+  { src: facilityBuildCrew, alt: "Build crew on site" },
+  { src: facilityPlanning, alt: "Planning the build" },
 ];
 
 const OurStory = () => {
