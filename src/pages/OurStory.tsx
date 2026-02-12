@@ -211,7 +211,7 @@ const OurStory = () => {
                 Our Facility
               </h2>
               <p className="text-lg text-background/80 mb-10">
-                We began our journey in April of 2020 and moved into our current location in Rio Grande, NJ.
+                We began our journey in April of 2020 and moved into our current location in Rio Grande, NJ. Since then, we have methodically renovated, built, and modified our space to create a state-of-the-art training and youth development center that services at-risk and local youth of Cape May County.
               </p>
               
               {/* Photo Gallery - 4x4 desktop, 3 cols tablet, 2 cols mobile */}
