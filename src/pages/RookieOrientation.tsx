@@ -107,7 +107,7 @@ const RookieOrientation = () => {
               100% Attendance is not Required,
             </p>
             <p className="text-lg md:text-xl font-bold text-white mb-8">
-              100% Communication <span className="italic">is</span> Required!
+              100% Communication is Required!
             </p>
             <Button
               asChild
