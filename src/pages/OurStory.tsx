@@ -19,6 +19,9 @@ import facilityPlanning from "@/assets/facility/facility-planning.png";
 import facilityGreenTeam from "@/assets/facility/facility-green-team.png";
 import facilityEmptyWarehouse from "@/assets/facility/facility-empty-warehouse.png";
 import facilityMetalwork from "@/assets/facility/facility-metalwork.png";
+import facilitySteelFrame from "@/assets/facility/facility-steel-frame.png";
+import facilityWelding from "@/assets/facility/facility-welding.png";
+import facilityDumpster from "@/assets/facility/facility-dumpster.png";
 
 type FacilityImg = { src: string; alt: string };
 
@@ -39,6 +42,9 @@ const facilityImages: FacilityImg[] = [
   { src: facilityGreenTeam, alt: "Volunteer crew thumbs up" },
   { src: facilityEmptyWarehouse, alt: "Empty warehouse before renovation" },
   { src: facilityMetalwork, alt: "Metalwork and welding" },
+  { src: facilitySteelFrame, alt: "Steel frame assembly" },
+  { src: facilityWelding, alt: "Welding steel structure" },
+  { src: facilityDumpster, alt: "Demolition debris removal" },
 ];
 
 const OurStory = () => {
