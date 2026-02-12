@@ -160,6 +160,9 @@ const ImpactStory = () => {
                     Schools & Education Partners
                   </AccordionTrigger>
                   <AccordionContent className="pb-6">
+                    <p className="text-sm text-muted-foreground mb-4">
+                      NLA has become a trusted resource for local schools, establishing itself as a creative, innovative partner for behavioral intervention and extended support for youth across Cape May County.
+                    </p>
                     <ul className="space-y-2 text-muted-foreground">
                       <li className="flex items-start gap-2">
                         <span className="text-foreground mt-1">•</span>
@@ -207,6 +210,9 @@ const ImpactStory = () => {
                     Public Officials & Government Support
                   </AccordionTrigger>
                   <AccordionContent className="pb-6">
+                    <p className="text-sm text-muted-foreground mb-4">
+                      Elected officials and government leaders at the municipal, county, state, and federal levels have recognized NLA's impact and actively supported our mission through endorsements, proclamations, and ongoing collaboration.
+                    </p>
                     <ul className="space-y-2 text-muted-foreground">
                       <li className="flex items-start gap-2">
                         <span className="text-foreground mt-1">•</span>
@@ -234,6 +240,9 @@ const ImpactStory = () => {
                     Law Enforcement & Public Safety
                   </AccordionTrigger>
                   <AccordionContent className="pb-6">
+                    <p className="text-sm text-muted-foreground mb-4">
+                      Through our Gym Buddies initiative and community partnerships, NLA has built genuine, trust-based relationships with law enforcement agencies across Cape May County—bridging the gap between officers and the youth they serve.
+                    </p>
                     {(() => {
                     const lawEnforcementPartners = ["Avalon Police Department", "Blue Knights Motorcycle Club", "Cape May County Prosecutor's Office", "Cape May County Sheriff's Department", "Cape May Police Department", "Lower Township Police Department", "Middle Township Police Department", "North Wildwood Police Department", "Police Benevolent Association (Local PBA 59)", "Wildwood Crest Police Department", "Wildwood Police Department"].sort((a, b) => a.localeCompare(b));
                     return <ul className="mt-3 list-disc space-y-2 pl-5 text-sm text-muted-foreground">
@@ -249,6 +258,9 @@ const ImpactStory = () => {
                     Mental Health & Youth Support Services
                   </AccordionTrigger>
                   <AccordionContent className="pb-6">
+                    <p className="text-sm text-muted-foreground mb-4">
+                      NLA partners with licensed mental health providers and youth-serving organizations to offer embedded, on-site support—ensuring our kids have access to counseling and prevention services right where they already are.
+                    </p>
                     <ul className="space-y-2 text-muted-foreground">
                       <li className="flex items-start gap-2">
                         <span className="text-foreground mt-1">•</span>
