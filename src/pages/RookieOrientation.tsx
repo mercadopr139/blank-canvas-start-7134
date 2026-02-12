@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { AlertCircle, Lock } from "lucide-react";
+import { AlertCircle, Lock, Smartphone } from "lucide-react";
 import Header from "@/components/layout/Header";
 import Footer from "@/components/layout/Footer";
 import OrientationStep from "@/components/orientation/OrientationStep";
@@ -99,6 +99,33 @@ const RookieOrientation = () => {
           <h1 className="text-3xl md:text-5xl lg:text-6xl font-black text-white tracking-tight">
             ROOKIE ORIENTATION DAY
           </h1>
+        </div>
+
+        {/* Call-Out Section */}
+        <div className="max-w-[700px] mx-auto px-4 pb-12 md:pb-16 text-center">
+          <div className="bg-neutral-900 border border-neutral-800 rounded-xl p-8 md:p-12">
+            <h2 className="text-2xl md:text-3xl font-black text-white mb-2">
+              CALL-OUT
+            </h2>
+            <div className="my-6 flex justify-center">
+              <Smartphone className="w-16 h-16 text-white" />
+            </div>
+            <p className="text-lg md:text-xl font-bold text-white mb-2">
+              100% Attendance is <span className="italic">not</span> Required,
+            </p>
+            <p className="text-lg md:text-xl font-bold text-white mb-8">
+              100% Communication <span className="italic">is</span> Required!
+            </p>
+            <Button
+              asChild
+              size="lg"
+              className="bg-[#bf0f3e] hover:bg-[#bf0f3e]/90 text-white font-bold text-base px-10 py-6"
+            >
+              <a href="https://forms.monday.com/forms/583578aa7eb854fe388d49e84780eee4?r=use1" target="_blank" rel="noopener noreferrer">
+                CALL-OUT
+              </a>
+            </Button>
+          </div>
         </div>
 
         {/* Steps Container */}
