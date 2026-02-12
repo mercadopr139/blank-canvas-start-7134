@@ -8,6 +8,7 @@ import Footer from "@/components/layout/Footer";
 import OrientationStep from "@/components/orientation/OrientationStep";
 import OrientationStepGated from "@/components/orientation/OrientationStepGated";
 import { Step1DoneBadge } from "@/components/orientation/Step1DoneBadge";
+import mascotEagle from "@/assets/mascot-eagle.png";
 const SESSION_KEY = "rookie_orientation_unlocked";
 const HOUSE_RULES_TEST_URL = "/house-rules-test";
 
@@ -120,11 +121,17 @@ const RookieOrientation = () => {
           </div>
         </div>
 
-        {/* Hero Title */}
-        <div className="py-12 md:py-16 text-center">
-          <h1 className="text-3xl md:text-5xl lg:text-6xl font-black text-white tracking-tight">
+        {/* Hero Title with Mascot */}
+        <div className="py-12 md:py-16 text-center relative overflow-hidden">
+          <h1 className="text-3xl md:text-5xl lg:text-6xl font-black text-white tracking-tight relative z-10">
             ROOKIE ORIENTATION DAY
           </h1>
+          {/* Mascot peeking from the right */}
+          <img
+            src={mascotEagle}
+            alt="No Limits Academy Eagle Mascot"
+            className="hidden md:block absolute -right-4 lg:right-8 bottom-0 h-[180px] lg:h-[220px] opacity-80 pointer-events-none select-none"
+          />
         </div>
 
         {/* Steps Container */}
