@@ -34,6 +34,10 @@ import facilityPlywoodWall from "@/assets/facility/facility-plywood-wall.png";
 import facilityEquipmentPrep from "@/assets/facility/facility-equipment-prep.png";
 import facilityFinishedGym from "@/assets/facility/facility-finished-gym.png";
 import facilityFoundersCleaning from "@/assets/facility/facility-founders-cleaning.png";
+import facilityDemoFloor from "@/assets/facility/facility-demo-floor.png";
+import facilityFloorInstall1 from "@/assets/facility/facility-floor-install-1.png";
+import facilityFloorInstall2 from "@/assets/facility/facility-floor-install-2.png";
+import facilityFloorDiscussion from "@/assets/facility/facility-floor-discussion.png";
 
 type FacilityImg = { src: string; alt: string };
 
@@ -69,6 +73,10 @@ const facilityImages: FacilityImg[] = [
   { src: facilityEquipmentPrep, alt: "Assembling gym equipment" },
   { src: facilityFinishedGym, alt: "The finished facility" },
   { src: facilityFoundersCleaning, alt: "Founders prepping the space" },
+  { src: facilityDemoFloor, alt: "Floor demolition" },
+  { src: facilityFloorInstall1, alt: "Installing the new floor" },
+  { src: facilityFloorInstall2, alt: "Floor installation progress" },
+  { src: facilityFloorDiscussion, alt: "Planning floor layout" },
 ];
 
 const OurStory = () => {
