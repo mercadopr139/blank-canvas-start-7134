@@ -19,6 +19,7 @@ import deltaDentalLogo from "@/assets/programs/delta-dental-logo.png";
 import launchPadLogo from "@/assets/programs/launch-pad-logo.png";
 import spiritualDevPrayer1 from "@/assets/programs/spiritual-dev-prayer-1.jpg";
 import spiritualDevPrayer2 from "@/assets/programs/spiritual-dev-prayer-2.jpg";
+import spiritualDevPrayer3 from "@/assets/programs/spiritual-dev-prayer-3.jpg";
 import smileLabGroupImage from "@/assets/programs/smile-lab-group.png";
 import smileLabInstructorImage from "@/assets/programs/smile-lab-instructor.png";
 import smileLabKidsPuzzle from "@/assets/programs/smile-lab-kids-puzzle.png";
@@ -166,8 +167,8 @@ const ProgramsExtrasSection = () => {
       alt: "Group reflection during spiritual development",
       caption: "Spiritual Development"
     }, {
-      src: "/placeholder.svg",
-      alt: "Spiritual Development photo 3",
+      src: spiritualDevPrayer3,
+      alt: "Youth in group prayer during spiritual development at NLA",
       caption: "Spiritual Development"
     }, {
       src: "/placeholder.svg",
