@@ -23,12 +23,17 @@ const ProgramsSection = ({
   const [signupModalOpen, setSignupModalOpen] = useState<"junior" | "senior" | null>(null);
   return <section id="programs" className="bg-primary py-[30px] md:py-[60px]">
       <div className="container">
-        {/* Section header */}
+        {/* Section header with red accent bar */}
         <div className="text-left mb-16">
-          <h2 className="text-3xl md:text-4xl lg:text-5xl font-black text-primary-foreground mb-6">
-            Our Programs
-          </h2>
-          <p className="text-lg md:text-xl text-primary-foreground/70 max-w-3xl leading-relaxed">We offer two core programs designed to meet youth where they are and grow with them over time. Each program includes boxing & fitness training, mentorship, structure, and opportunities for personal, professional, and spiritual development.</p>
+          <div className="border-l-4 border-[#bf0f3e] pl-4">
+            <p className="text-xs font-semibold tracking-[0.2em] uppercase text-[#bf0f3e] mb-2">
+              What We Offer
+            </p>
+            <h2 className="text-3xl md:text-4xl lg:text-5xl font-black text-primary-foreground mb-6">
+              Our Programs
+            </h2>
+          </div>
+          <p className="text-lg md:text-xl text-primary-foreground/70 max-w-3xl leading-relaxed">We offer two core programs designed to meet youth where they are and grow with them over time. Each program includes <span className="font-bold text-[#bf0f3e]">boxing & fitness training</span>, mentorship, structure, and opportunities for <span className="font-bold text-[#bf0f3e]">personal, professional, and spiritual</span> development.</p>
         </div>
 
         {/* Program cards */}
