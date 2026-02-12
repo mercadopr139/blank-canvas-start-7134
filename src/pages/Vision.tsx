@@ -1,5 +1,6 @@
 import Header from "@/components/layout/Header";
 import Footer from "@/components/layout/Footer";
+import launchPadLogo from "@/assets/programs/launch-pad-logo.png";
 
 const Vision = () => {
   return (
@@ -33,6 +34,9 @@ const Vision = () => {
                 <p className="font-semibold text-foreground">
                   Our model combines personal, professional, and spiritual development—alongside education and hard work—to create lasting transformation.
                 </p>
+                <div className="flex justify-center my-6">
+                  <img src={launchPadLogo} alt="The Launch Pad Logo" className="h-40 md:h-48 w-auto" />
+                </div>
                 <p>
                   <span className="font-bold text-foreground">The Launch Pad</span> is our keystone program—ensuring participants continue receiving guidance, opportunity, and support long after they graduate from NLA. Through a growing network of local businesses and mentors, young people gain real-world exposure to careers, entrepreneurship, and leadership—learning not just to be strong employees, but to develop the mindset and skills of employers.
                 </p>
