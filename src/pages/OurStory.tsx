@@ -3,13 +3,17 @@ import Header from "@/components/layout/Header";
 import Footer from "@/components/layout/Footer";
 import PortalLightbox from "@/components/ui/portal-lightbox";
 import joshMcNallyDave from "@/assets/our-story/josh-mcnally-dave.jpeg";
+import facilityConstructionCrew from "@/assets/facility/facility-construction-crew.png";
+import facilityPlumbingCrew from "@/assets/facility/facility-plumbing-crew.png";
+import facilityRebarPrep from "@/assets/facility/facility-rebar-prep.png";
 
 type FacilityImg = { src: string; alt: string };
 
-const facilityPlaceholders: FacilityImg[] = Array.from({ length: 16 }, (_, i) => ({
-  src: "/placeholder.svg",
-  alt: `Facility photo ${i + 1}`,
-}));
+const facilityImages: FacilityImg[] = [
+  { src: facilityConstructionCrew, alt: "Construction crew breaking ground" },
+  { src: facilityPlumbingCrew, alt: "Plumbing installation crew" },
+  { src: facilityRebarPrep, alt: "Rebar and foundation preparation" },
+];
 
 const OurStory = () => {
   const [activeImg, setActiveImg] = useState<FacilityImg | null>(null);
@@ -138,7 +142,7 @@ const OurStory = () => {
               
               {/* Photo Gallery - 4x4 desktop, 3 cols tablet, 2 cols mobile */}
               <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
-                {facilityPlaceholders.map((img, idx) => (
+                {facilityImages.map((img, idx) => (
                   <div key={idx} className="overflow-hidden rounded-xl bg-muted">
                     <button
                       type="button"
@@ -146,11 +150,11 @@ const OurStory = () => {
                       className="block w-full aspect-[4/3]"
                       aria-label={`Enlarge ${img.alt}`}
                     >
-                      <div className="w-full h-full flex items-center justify-center bg-accent border-2 border-dashed border-border">
-                        <span className="text-muted-foreground text-center px-4 text-sm font-medium">
-                          Photo {idx + 1}
-                        </span>
-                      </div>
+                      <img
+                        src={img.src}
+                        alt={img.alt}
+                        className="w-full h-full object-cover"
+                      />
                     </button>
                   </div>
                 ))}
