@@ -13,24 +13,26 @@ const Footer = ({ className }: FooterProps) => {
           <p className="text-sm font-bold tracking-widest uppercase">
             No Limits Academy
           </p>
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-4 relative z-50">
             <a
               href="https://www.instagram.com/nolimitsboxingacademy/?hl=en"
               target="_blank"
               rel="noopener noreferrer"
               aria-label="Instagram"
-              className="text-white hover:text-white/70 transition-colors"
+              className="text-white hover:text-white/70 transition-colors p-2"
+              onClick={(e) => e.stopPropagation()}
             >
-              <Instagram className="h-5 w-5" />
+              <Instagram className="h-5 w-5 pointer-events-none" />
             </a>
             <a
               href="https://www.facebook.com/nolimitsboxingacademy/"
               target="_blank"
               rel="noopener noreferrer"
               aria-label="Facebook"
-              className="text-white hover:text-white/70 transition-colors"
+              className="text-white hover:text-white/70 transition-colors p-2"
+              onClick={(e) => e.stopPropagation()}
             >
-              <Facebook className="h-5 w-5" />
+              <Facebook className="h-5 w-5 pointer-events-none" />
             </a>
           </div>
           <a
