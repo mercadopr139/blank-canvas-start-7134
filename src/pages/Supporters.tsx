@@ -60,7 +60,7 @@ const Supporters = () => {
             <div className="mt-6 flex flex-col items-center gap-6">
               {/* PayPal */}
               <div className="flex flex-col items-center gap-2">
-                <Button size="lg" className="bg-[#179BD7] text-white hover:bg-[#1489be] font-bold text-base px-8 border border-foreground" asChild>
+                <Button size="lg" className="bg-foreground text-background hover:bg-foreground/90 font-bold text-base px-8 border border-foreground" asChild>
                   <a href={PAYPAL_LINK} target="_blank" rel="noopener noreferrer">
                     DONATE VIA PAYPAL
                   </a>
@@ -76,7 +76,7 @@ const Supporters = () => {
 
               {/* Venmo */}
               <div className="flex flex-col items-center gap-2">
-                <Button size="lg" className="bg-[#008CFF] text-white hover:bg-[#0074D4] font-bold text-base px-8 border border-foreground" asChild>
+                <Button size="lg" className="bg-foreground text-background hover:bg-foreground/90 font-bold text-base px-8 border border-foreground" asChild>
                   <a href="https://account.venmo.com/u/nolimitsacademy2020" target="_blank" rel="noopener noreferrer">
                     DONATE VIA VENMO
                   </a>
