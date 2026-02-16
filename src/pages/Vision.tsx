@@ -100,15 +100,15 @@ const Vision = () => {
                 <img
                   src={launchPadLogoNew}
                   alt="The Launch Pad"
-                  className="w-full h-auto drop-shadow-2xl"
-                />
+                  className="w-full h-auto drop-shadow-2xl" />
+
               </div>
             </div>
           </div>
         </section>
 
         {/* Why This Matters */}
-        <section className="py-16 md:py-24 bg-background">
+        <section className="py-16 bg-background md:py-[60px]">
           <div className="container">
             <div className="max-w-3xl">
               <div className="flex items-start gap-4 mb-8">
