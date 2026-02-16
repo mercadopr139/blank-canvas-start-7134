@@ -8,7 +8,7 @@ interface ChatWidgetProps {
 type QuickOption = "schedule" | "registration" | "location" | "cost" | "transportation" | "person" | null;
 const INFO_EMAIL = "info@nolimitsboxingacademy.org";
 const CHRISSY_EMAIL = "chrissycasiello@nolimitsboxingacademy.org";
-const SENIOR_BOXING_SCHEDULE = `Monday – Friday, 2:30 PM – 8:30 PM
+const SENIOR_BOXING_SCHEDULE = `Monday – Friday, 5:15 PM – 7:15 PM
 Ages 11–19`;
 const JUNIOR_BOXING_SCHEDULE = `Tuesdays, 5:15 PM – 7:15 PM
 Ages 7–10`;
