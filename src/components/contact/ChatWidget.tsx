@@ -88,22 +88,22 @@ const chatResponses: Record<Exclude<QuickOption, null>, {
     title: "Cost",
     content: <div className="space-y-3">
         <p className="font-bold text-foreground">Cost</p>
-        <p className="text-sm text-muted-foreground">
-          No Limits Academy is a <strong>free</strong>, year-round youth development program.<br />
+        <p className="text-sm text-muted-foreground">No Limits Academy is a FREE, year-round youth development program.
+
+
+There is no cost to participate.
+
+
+If you would to support our mission, consider donating below.             <strong>FREE</strong>, year-round youth development program.<br />
           There is no cost to participate.
         </p>
-        <div className="flex justify-center" style={{
-        marginTop: '1.25rem'
-      }}>
+        <div className="flex justify-center" style={{ marginTop: '1.25rem' }}>
           <a href="https://www.paypal.com/ncp/payment/TMMDVUSEQKHJC" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-md font-bold text-sm hover:bg-primary/90 transition-colors">
             <DollarSign className="h-4 w-4" />
             Donate to Support NLA
           </a>
         </div>
-      </div>
-  },
-  transportation: {
-    title: "Transportation",
+      </div> }, transportation: { title: "Transportation",
     content: <div className="space-y-3">
         <p className="font-bold text-foreground">Transportation</p>
         <p className="text-sm text-muted-foreground">
@@ -113,10 +113,10 @@ const chatResponses: Record<Exclude<QuickOption, null>, {
           If you live in Wildwood or Woodbine and have transportation questions, please reach out:
         </p>
         <div className="flex justify-center" style={{ marginTop: '1.25rem' }}>
-          <a 
-            href={`mailto:${INFO_EMAIL}?subject=${encodeURIComponent("Transportation Inquiry")}&body=${encodeURIComponent("Hi,\n\nI have a question about transportation for my child.\n\nName:\nChild's Name:\nLocation (Wildwood/Woodbine):\nQuestion:\n\nThanks!")}`}
-            className="inline-flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-md font-bold text-sm hover:bg-primary/90 transition-colors"
-          >
+          <a
+          href={`mailto:${INFO_EMAIL}?subject=${encodeURIComponent("Transportation Inquiry")}&body=${encodeURIComponent("Hi,\n\nI have a question about transportation for my child.\n\nName:\nChild's Name:\nLocation (Wildwood/Woodbine):\nQuestion:\n\nThanks!")}`}
+          className="inline-flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-md font-bold text-sm hover:bg-primary/90 transition-colors">
+
             Email Us About Transportation
           </a>
         </div>
@@ -185,7 +185,7 @@ const ChatWidget = ({
               Welcome to No Limits Academy! How can we help you today?
             </p>
             <div className="grid grid-cols-2 gap-2">
-              {quickOptions.map(option => <Button key={option.id} variant="outline" className={`h-auto py-3 px-3 flex flex-col items-center gap-2 hover:bg-accent font-bold ${option.id === "person" ? "col-span-2" : ""}`} onClick={() => handleOptionClick(option.id)} aria-label={`Learn about ${option.label}`}>
+              {quickOptions.map((option) => <Button key={option.id} variant="outline" className={`h-auto py-3 px-3 flex flex-col items-center gap-2 hover:bg-accent font-bold ${option.id === "person" ? "col-span-2" : ""}`} onClick={() => handleOptionClick(option.id)} aria-label={`Learn about ${option.label}`}>
                   <option.icon className="h-5 w-5" />
                   <span className="text-xs font-bold text-center">{option.label}</span>
                 </Button>)}
