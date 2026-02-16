@@ -23,7 +23,7 @@ const Vision = () => {
         <section className="py-16 md:py-20 bg-background">
           <div className="container">
             <div className="max-w-4xl mx-auto">
-              <p className="text-xl md:text-2xl font-semibold text-foreground/90 mb-8">To become a industry leader in youth development—setting a national standard for how children transform.
+              <p className="text-xl md:text-2xl font-semibold text-foreground/90 mb-8">To become a leader in youth development—setting a national standard for how children transform.
 
               </p>
               
