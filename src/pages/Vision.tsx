@@ -22,23 +22,6 @@ const Vision = () => {
           </div>
         </section>
 
-        {/* Intro */}
-        <section className="py-16 md:py-24 bg-background">
-          <div className="container">
-            <div className="max-w-3xl">
-              <p className="text-lg md:text-xl text-foreground leading-relaxed mb-6">
-                No Limits Academy helps young people build <strong>discipline, resilience, and direction</strong>—so they can break cycles of poverty and pursue meaningful futures.
-              </p>
-              <p className="text-lg md:text-xl text-muted-foreground leading-relaxed mb-6">
-                But we don't believe transformation ends when the training session is over.
-              </p>
-              <p className="text-lg md:text-xl text-foreground leading-relaxed">
-                That's why our mission is powered by <strong>social entrepreneurship</strong>—teaching youth not only how to work hard, but how to <strong>think, lead, build, and create opportunity</strong>.
-              </p>
-            </div>
-          </div>
-        </section>
-
         {/* Social Entrepreneurship Model */}
         <section className="py-16 md:py-24 bg-primary">
           <div className="container">
