@@ -116,10 +116,10 @@ const MealTrain = () => {
             {/* Partner Logos */}
             <div className="text-center mt-2">
               <div className="flex flex-wrap items-center justify-center gap-10 md:gap-14">
-                <img src={mattsFamilyLogo} alt="Matt's Family - Taste the Love" className="h-64 md:h-80 w-auto object-contain" />
                 <img src={tacoCaballitoLogo} alt="Taco Caballito Tequileria" className="h-20 md:h-28 w-auto object-contain" />
                 <img src={mudhenBrewingLogo} alt="Mud Hen Brewing Co." className="h-16 md:h-24 w-auto object-contain" />
                 <img src={capeSquareLogo} alt="Cape Square Entertainment" className="h-24 md:h-32 w-auto object-contain" />
+                <img src={mattsFamilyLogo} alt="Matt's Family - Taste the Love" className="h-64 md:h-80 w-auto object-contain" />
               </div>
               <p className="text-sm text-muted-foreground mt-6 italic">
                 Proudly supported by local businesses who help fuel our youth.
