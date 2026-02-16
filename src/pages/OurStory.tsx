@@ -6,6 +6,7 @@ import joshMcNallyDave from "@/assets/our-story/josh-mcnally-dave.jpeg";
 import joshParents from "@/assets/our-story/josh-parents.png";
 import daveFamily from "@/assets/our-story/dave-family.png";
 import joshDaveEarly from "@/assets/our-story/josh-dave-early.png";
+import joshBasketballCoach from "@/assets/our-story/josh-basketball-coach.png";
 import facilityConstructionCrew from "@/assets/facility/facility-construction-crew.png";
 import facilityPlumbingCrew from "@/assets/facility/facility-plumbing-crew.png";
 import facilityRebarPrep from "@/assets/facility/facility-rebar-prep.png";
@@ -141,6 +142,20 @@ const OurStory = () => {
               <p className="text-lg md:text-xl text-muted-foreground leading-relaxed mb-6">
                 After graduating, Josh felt a calling to make an impact beyond the ring. He spent over a decade as a psychology and sociology teacher, earning recognition for exceptional classroom culture, relationship-based discipline, and student motivation. As both a teacher and multi-sport coach, Josh was intentional about becoming the mentor he once needed—consistent, fair, and committed to giving every young person a genuine opportunity.
               </p>
+
+              {/* Josh Basketball Coach photo - float left */}
+              <div className="md:float-left md:mr-5 md:mb-4 md:max-w-[340px] mb-6 w-full max-w-[380px] mx-auto md:mx-0">
+                <div className="bg-muted rounded-lg shadow-md overflow-hidden">
+                  <img
+                    src={joshBasketballCoach}
+                    alt="Josh, Head Varsity Basketball Coach, 2015-2021"
+                    className="w-full h-auto"
+                  />
+                  <div className="px-3 py-1.5 text-center">
+                    <p className="text-xs text-muted-foreground italic">Josh, Head Varsity Basketball Coach, 2015-2021</p>
+                  </div>
+                </div>
+              </div>
 
               {/* Josh & Dave early photo - float right */}
               <div className="md:float-right md:ml-5 md:mb-4 md:max-w-[320px] mb-6 w-full max-w-[380px] mx-auto md:mx-0">
