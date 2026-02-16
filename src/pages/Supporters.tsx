@@ -9,6 +9,7 @@ import supporterCheck4 from "@/assets/supporters/supporter-check-4.png";
 import supporterCheck5 from "@/assets/supporters/supporter-check-5.jpg";
 import supporterCheck6 from "@/assets/supporters/supporter-check-6.png";
 import venmoLogo from "@/assets/venmo-logo.png";
+import squareLogo from "@/assets/square-logo.png";
 const supporterImages = [{
   src: supporterCheck4,
   alt: "Morey's Pier donation with NLA youth team",
@@ -91,6 +92,7 @@ const Supporters = () => {
                     DONATE VIA SQUARE
                   </a>
                 </Button>
+                <img src={squareLogo} alt="Square" className="h-8" />
               </div>
             </div>
           </div>
