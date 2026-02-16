@@ -119,7 +119,7 @@ const MealTrain = () => {
                 <img src={tacoCaballitoLogo} alt="Taco Caballito Tequileria" className="h-16 md:h-22 w-auto object-contain" />
                 <img src={mudhenBrewingLogo} alt="Mud Hen Brewing Co." className="h-12 md:h-18 w-auto object-contain" />
                 <img src={capeSquareLogo} alt="Cape Square Entertainment" className="h-20 md:h-26 w-auto object-contain" />
-                <img src={mattsFamilyLogo} alt="Matt's Family - Taste the Love" className="h-52 md:h-64 w-auto object-contain" />
+                <img src={mattsFamilyLogo} alt="Matt's Family - Taste the Love" className="h-44 md:h-52 w-auto object-contain" />
               </div>
               <p className="text-sm text-muted-foreground mt-6 italic">
                 Proudly supported by local businesses who help fuel our youth.
