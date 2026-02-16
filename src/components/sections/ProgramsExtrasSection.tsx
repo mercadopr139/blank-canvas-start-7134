@@ -1,6 +1,7 @@
 import { useState, useMemo } from "react";
 import coachingRingsideImage from "@/assets/programs/coaching-ringside.jpg";
 import { Link } from "react-router-dom";
+import { YouTubeEmbed } from "@/components/orientation/YouTubeEmbed";
 import groupActivityImage from "@/assets/programs/group-activity.jpg";
 import groupLessonImage from "@/assets/programs/group-lesson.jpg";
 import instructorSpeakingImage from "@/assets/programs/instructor-speaking.jpg";
@@ -250,6 +251,7 @@ const ProgramsExtrasSection = () => {
     buttonLabel: "Back to Programs"
   }], []);
   const [openId, setOpenId] = useState<string | null>(null);
+  const [bankingBoxingOpen, setBankingBoxingOpen] = useState(false);
   const openItem = items.find(x => x.id === openId) || null;
 
 
@@ -257,11 +259,12 @@ const ProgramsExtrasSection = () => {
   const sortedItems = [...items].sort((a, b) => a.title.localeCompare(b.title));
 
   // Create a combined list with link items inserted alphabetically
-  type ListItem = { type: 'modal'; item: ProgramItem } | { type: 'link'; title: string; to: string };
+  type ListItem = { type: 'modal'; item: ProgramItem } | { type: 'link'; title: string; to: string } | { type: 'video'; title: string };
   
   const allItems: ListItem[] = [
     ...sortedItems.map(item => ({ type: 'modal' as const, item })),
-    { type: 'link' as const, title: 'Gym Buddies', to: '/gym-buddies' }
+    { type: 'link' as const, title: 'Gym Buddies', to: '/gym-buddies' },
+    { type: 'video' as const, title: 'Banking & Boxing' }
   ].sort((a, b) => {
     const titleA = a.type === 'modal' ? a.item.title : a.title;
     const titleB = b.type === 'modal' ? b.item.title : b.title;
@@ -300,7 +303,7 @@ const ProgramsExtrasSection = () => {
                 >
                   {listItem.item.title}
                 </button>
-              ) : (
+              ) : listItem.type === 'link' ? (
                 <Link 
                   to={listItem.to} 
                   state={{ fromPrograms: true }} 
@@ -308,6 +311,15 @@ const ProgramsExtrasSection = () => {
                 >
                   {listItem.title}
                 </Link>
+              ) : (
+                <button 
+                  type="button" 
+                  onClick={() => setBankingBoxingOpen(true)} 
+                  className="text-left text-lg font-medium text-foreground underline underline-offset-4 hover:text-foreground/80 transition-colors" 
+                  aria-haspopup="dialog"
+                >
+                  {listItem.title}
+                </button>
               )}
             </li>
           ))}
@@ -363,6 +375,21 @@ const ProgramsExtrasSection = () => {
             <div className="mt-6 flex justify-end">
               <Button onClick={() => setOpenId(null)} className="bg-foreground text-background hover:bg-foreground/90">
                 {openItem?.buttonLabel}
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
+
+        {/* Banking & Boxing Video Dialog */}
+        <Dialog open={bankingBoxingOpen} onOpenChange={setBankingBoxingOpen}>
+          <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle className="text-2xl font-bold">Banking & Boxing</DialogTitle>
+            </DialogHeader>
+            <YouTubeEmbed videoId="TsXbq70NB70" title="Banking & Boxing" />
+            <div className="mt-6 flex justify-end">
+              <Button onClick={() => setBankingBoxingOpen(false)} className="bg-foreground text-background hover:bg-foreground/90">
+                Back to Programs
               </Button>
             </div>
           </DialogContent>
