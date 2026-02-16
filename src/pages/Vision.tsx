@@ -26,7 +26,7 @@ const Vision = () => {
         <section className="py-16 bg-background md:py-[60px]">
           <div className="container">
             <div className="max-w-4xl">
-              <div className="flex items-center justify-between gap-6 md:gap-10 mb-8">
+              <div className="flex items-center justify-between gap-3 md:gap-5 mb-8">
                 <div className="flex-1">
                   <div className="flex items-start gap-4">
                     <div className="w-1 self-stretch rounded-full bg-nla shrink-0" />
