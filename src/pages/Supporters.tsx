@@ -77,7 +77,7 @@ const Supporters = () => {
               {/* Venmo */}
               <div className="flex flex-col items-center gap-2">
                 <Button size="lg" className="bg-[#008CFF] text-white hover:bg-[#0074D4] font-bold text-base px-8 border border-foreground" asChild>
-                  <a href="https://venmo.com/u/NoLimitsAcademy" target="_blank" rel="noopener noreferrer">
+                  <a href="https://account.venmo.com/u/nolimitsacademy2020" target="_blank" rel="noopener noreferrer">
                     DONATE VIA VENMO
                   </a>
                 </Button>
