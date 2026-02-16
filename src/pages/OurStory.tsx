@@ -142,13 +142,8 @@ const OurStory = () => {
                 After graduating, Josh felt a calling to make an impact beyond the ring. He spent over a decade as a psychology and sociology teacher, earning recognition for exceptional classroom culture, relationship-based discipline, and student motivation. As both a teacher and multi-sport coach, Josh was intentional about becoming the mentor he once needed—consistent, fair, and committed to giving every young person a genuine opportunity.
               </p>
 
-              <p className="text-lg md:text-xl text-muted-foreground leading-relaxed mb-6">
-                Not long after finishing college, Josh began teaching boxing lessons back home in Cape May, NJ—and one of the individuals who hired him was Dave Von Savage Jr., who was preparing to attend the United States Naval Academy. Interestingly, the Naval Academy's head boxing coach, Jim McNally, was also one of the original founders of Lock Haven University's boxing program in 1979—the very program where Josh would later win a national championship. What began as sessions in a residential gym quickly grew into a lasting friendship rooted in trust, discipline, and shared values.
-              </p>
-
-              {/* Josh & Dave early photo - inline centered */}
-              <div className="clear-both" />
-              <div className="w-full max-w-[380px] mx-auto my-6">
+              {/* Josh & Dave early photo - float right */}
+              <div className="md:float-right md:ml-5 md:mb-4 md:max-w-[320px] mb-6 w-full max-w-[380px] mx-auto md:mx-0">
                 <div className="bg-muted rounded-lg shadow-md overflow-hidden">
                   <img
                     src={joshDaveEarly}
@@ -160,6 +155,10 @@ const OurStory = () => {
                   </div>
                 </div>
               </div>
+
+              <p className="text-lg md:text-xl text-muted-foreground leading-relaxed mb-6">
+                Not long after finishing college, Josh began teaching boxing lessons back home in Cape May, NJ—and one of the individuals who hired him was Dave Von Savage Jr., who was preparing to attend the United States Naval Academy. Interestingly, the Naval Academy's head boxing coach, Jim McNally, was also one of the original founders of Lock Haven University's boxing program in 1979—the very program where Josh would later win a national championship. What began as sessions in a residential gym quickly grew into a lasting friendship rooted in trust, discipline, and shared values.
+              </p>
 
               {/* Clear floats before Photo Slot B */}
               <div className="clear-both" />
