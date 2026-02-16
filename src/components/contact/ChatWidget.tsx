@@ -117,7 +117,7 @@ const chatResponses: Record<Exclude<QuickOption, null>, {
           </a>
         </div>
         <p className="text-sm text-muted-foreground text-center" style={{ marginTop: '1.25rem' }}>
-          <a href={`mailto:${INFO_EMAIL}`} className="text-primary underline">{INFO_EMAIL}</a>
+          
         </p>
       </div>
   },
