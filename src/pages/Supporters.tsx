@@ -15,7 +15,8 @@ const supporterImages = [{
 }, {
   src: supporterCheck5,
   alt: "Crest Savings Bank donation check presentation",
-  caption: "Crest Savings Bank"
+  caption: "Crest Savings Bank",
+  objectPosition: "center 35%"
 }, {
   src: supporterCheck1,
   alt: "Supporter donation check presentation",
