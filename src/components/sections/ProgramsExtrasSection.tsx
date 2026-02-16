@@ -100,7 +100,7 @@ const ProgramsExtrasSection = () => {
     buttonLabel: "Back to Programs"
   }, {
     id: "lil-champs",
-    title: "NJ4S Lil' Champs' Corner Program",
+    title: "NJ4S Lil' Champs' Corner",
     subtitle: "Junior Boxers Only",
     ageRange: "7–10 years old",
     blurb: "Lil' Champs' Corner is part of Double Punch Tuesday—our Junior Boxing program followed by optional aftercare. After training, youth participate in age-appropriate education programming through our NJ4S partnership with Acenda, building life skills like routines, hygiene, and habits that translate into confidence and responsibility.",
