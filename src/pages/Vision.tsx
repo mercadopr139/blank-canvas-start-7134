@@ -50,7 +50,7 @@ const Vision = () => {
                 At No Limits Academy, youth don't just join a program—they enter a <strong className="text-foreground">development pipeline</strong>.
               </p>
               <p className="text-lg md:text-xl text-muted-foreground leading-relaxed">
-                We don't just train athletes. We develop <strong className="text-foreground">future leaders, employees, entrepreneurs, and community builders</strong>.
+                We don't just train athletes. We develop <strong className="text-foreground">future leaders, employees, employers, entrepreneurs, and community builders</strong>.
               </p>
             </div>
           </div>
