@@ -34,7 +34,7 @@ const Vision = () => {
                   <img src={launchPadLogo} alt="The Launch Pad Logo" className="h-56 md:h-64 w-auto" />
                 </div>
                 <p>
-                  <span className="font-bold text-foreground">The Launch Pad</span> is our keystone program—ensuring participants continue receiving guidance, opportunity, and support long after they graduate from NLA. Through a growing network of local businesses and mentors, young people gain real-world exposure to careers, entrepreneurship, and leadership—learning not just to be strong employees, but to develop the mindset and skills of employers.
+                  <span className="font-bold text-foreground">The Launch Pad</span> ensures participants continue receiving guidance, opportunity, and support long after they graduate from NLA. Through a growing network of local businesses and mentors, young people gain real-world exposure to careers, entrepreneurship, and leadership—learning not just to be strong employees, but to develop the mindset and skills of employers.
                 </p>
               </div>
             </div>
