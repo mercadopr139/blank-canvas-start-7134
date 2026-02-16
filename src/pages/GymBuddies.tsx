@@ -7,6 +7,7 @@ import { MessageCircle, X, ArrowLeft } from "lucide-react";
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerClose } from "@/components/ui/drawer";
 import GymBuddiesChatWidget from "@/components/gym-buddies/GymBuddiesChatWidget";
 import { ClickToEnlargeGallery } from "@/components/ui/click-to-enlarge-gallery";
+import { YouTubeEmbed } from "@/components/orientation/YouTubeEmbed";
 import middleTownshipPd from "@/assets/gym-buddies/middle-township-pd.jpg";
 import lowerTownshipPd from "@/assets/gym-buddies/lower-township-pd.jpg";
 import shopWithCop from "@/assets/gym-buddies/shop-with-cop-2025.jpg";
@@ -266,6 +267,12 @@ const GymBuddies = () => {
                     <span>a Gym Buddy?</span>
                   </Button>
                   <p className="text-xs italic text-muted-foreground mt-2 text-center">Click for more info!</p>
+
+                  {/* 2025 Shop with a Cop Video */}
+                  <div className="mt-8 w-full max-w-2xl">
+                    <h3 className="text-lg md:text-xl font-bold text-foreground mb-3 text-center">2025 Shop with a Cop Event</h3>
+                    <YouTubeEmbed videoId="wbo6KZzj_1s" title="2025 Shop with a Cop Event" />
+                  </div>
                 </div>
               </div>
 
