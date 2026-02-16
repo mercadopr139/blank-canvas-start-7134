@@ -117,8 +117,8 @@ const OurStory = () => {
           <div className="container">
             <div className="max-w-[900px] mx-auto prose prose-lg">
               
-              {/* Photo Slot A - Josh with Step Dad & Mom */}
-              <div className="md:float-right md:ml-5 md:mb-4 md:max-w-[380px] mb-6 w-full max-w-[420px] mx-auto md:mx-0">
+              {/* Photo Slot A - Josh with Step Dad & Mom — floated right with first paragraph */}
+              <div className="md:float-right md:ml-5 md:mb-3 md:max-w-[260px] mb-6 w-full max-w-[320px] mx-auto md:mx-0">
                 <div className="bg-muted rounded-lg shadow-md overflow-hidden">
                   <img
                     src={joshParents}
@@ -139,12 +139,10 @@ const OurStory = () => {
                 Sports provided an outlet, but boxing became the turning point. While pursuing his education at Lock Haven University—known for its nationally ranked boxing program—Josh found structure, accountability, and belief in his own potential. In 2007, he became a National Collegiate Boxing Champion, later competing professionally, while earning his degree in Secondary Education. Boxing did more than sharpen his athletic ability; it taught him discipline, resilience, and how to confront adversity with focus and self-control.
               </p>
 
-              <p className="text-lg md:text-xl text-muted-foreground leading-relaxed mb-6">
-                After graduating, Josh felt a calling to make an impact beyond the ring. He spent over a decade as a psychology and sociology teacher, earning recognition for exceptional classroom culture, relationship-based discipline, and student motivation. As both a teacher and multi-sport coach, Josh was intentional about becoming the mentor he once needed—consistent, fair, and committed to giving every young person a genuine opportunity.
-              </p>
+              <div className="clear-both" />
 
-              {/* Josh Basketball Coach photo - float left */}
-              <div className="md:float-left md:mr-5 md:mb-4 md:max-w-[340px] mb-6 w-full max-w-[380px] mx-auto md:mx-0">
+              {/* Basketball Coach photo — floated left with teaching paragraph */}
+              <div className="md:float-left md:mr-5 md:mb-3 md:max-w-[240px] mb-6 w-full max-w-[300px] mx-auto md:mx-0">
                 <div className="bg-muted rounded-lg shadow-md overflow-hidden">
                   <img
                     src={joshBasketballCoach}
@@ -157,8 +155,14 @@ const OurStory = () => {
                 </div>
               </div>
 
-              {/* Josh & Dave early photo - float right */}
-              <div className="md:float-right md:ml-5 md:mb-4 md:max-w-[320px] mb-6 w-full max-w-[380px] mx-auto md:mx-0">
+              <p className="text-lg md:text-xl text-muted-foreground leading-relaxed mb-6">
+                After graduating, Josh felt a calling to make an impact beyond the ring. He spent over a decade as a psychology and sociology teacher, earning recognition for exceptional classroom culture, relationship-based discipline, and student motivation. As both a teacher and multi-sport coach, Josh was intentional about becoming the mentor he once needed—consistent, fair, and committed to giving every young person a genuine opportunity.
+              </p>
+
+              <div className="clear-both" />
+
+              {/* Josh & Dave early photo — floated right with meeting paragraph */}
+              <div className="md:float-right md:ml-5 md:mb-3 md:max-w-[240px] mb-6 w-full max-w-[300px] mx-auto md:mx-0">
                 <div className="bg-muted rounded-lg shadow-md overflow-hidden">
                   <img
                     src={joshDaveEarly}
@@ -175,11 +179,10 @@ const OurStory = () => {
                 Not long after finishing college, Josh began teaching boxing lessons back home in Cape May, NJ—and one of the individuals who hired him was Dave Von Savage Jr., who was preparing to attend the United States Naval Academy. Interestingly, the Naval Academy's head boxing coach, Jim McNally, was also one of the original founders of Lock Haven University's boxing program in 1979—the very program where Josh would later win a national championship. What began as sessions in a residential gym quickly grew into a lasting friendship rooted in trust, discipline, and shared values.
               </p>
 
-              {/* Clear floats before Photo Slot B */}
               <div className="clear-both" />
 
-              {/* Photo Slot B - Dave with Sister & Parents */}
-              <div className="md:float-left md:mr-5 md:mb-4 md:max-w-[380px] mb-6 mt-4 w-full max-w-[420px] mx-auto md:mx-0">
+              {/* Dave with Sister & Parents — floated left with Dave paragraph */}
+              <div className="md:float-left md:mr-5 md:mb-3 md:max-w-[260px] mb-6 w-full max-w-[320px] mx-auto md:mx-0">
                 <div className="bg-muted rounded-lg shadow-md overflow-hidden">
                   <img
                     src={daveFamily}
@@ -198,12 +201,11 @@ const OurStory = () => {
                 Dave, raised by both parents and influenced by their commitment to community service, attended the United States Naval Academy in Annapolis. There, he distinguished himself academically and athletically as a four-year member of the Navy boxing team, earning multiple Brigade Boxing Championships. Following graduation, he was commissioned as a United States Navy Officer and continued his military career for seven years before later graduating from the Wharton School of the University of Pennsylvania with a Master of Business Administration.
               </p>
 
+              <div className="clear-both" />
+
               <p className="text-lg md:text-xl text-muted-foreground leading-relaxed mb-6">
                 Though their lives unfolded along different paths, Josh and Dave stayed closely connected, united by boxing, friendship, and a shared belief in the power of structure and consistency to change lives. In 2020, those parallel journeys converged with the establishment of No Limits Academy. In 2022, Josh resigned from his teaching position to commit to NLA full time, allowing the organization to grow from a vision into a comprehensive youth development program serving children across Cape May County.
               </p>
-
-              {/* Clear floats before final paragraph */}
-              <div className="clear-both" />
 
               <p className="text-lg md:text-xl text-muted-foreground leading-relaxed mb-10">
                 Today, No Limits Academy is more than a boxing gym. It is a community hub built on mentorship, belonging, and opportunity. Leveraging backgrounds in education, military service, business, and boxing, alongside a network of incredible people, Josh and Dave created a space where young people are challenged, supported, and believed in. Through discipline and care, NLA teaches its athletes that their circumstances do not define their future—and that no one succeeds alone.
