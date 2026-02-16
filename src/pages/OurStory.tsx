@@ -211,12 +211,12 @@ const OurStory = () => {
               </p>
 
               {/* McNally photo — floated right with final paragraph */}
-              <div className="md:float-right md:ml-5 md:mb-3 md:max-w-[200px] md:-mt-16 mb-6 w-full max-w-[260px] mx-auto md:mx-0">
+              <div className="md:float-right md:ml-5 md:mb-3 md:max-w-[200px] mb-6 w-full max-w-[260px] mx-auto md:mx-0">
                 <div className="bg-muted rounded-lg shadow-md overflow-hidden">
                   <img
                     src={joshMcNallyDave}
                     alt="Josh, Coach McNally, and Dave at 2025 Naval Academy Brigade boxing championships"
-                    className="w-full h-auto" />
+                    className="w-full aspect-[3/4] object-cover object-bottom" />
                   <div className="px-3 py-1.5 text-center">
                     <p className="text-xs text-muted-foreground italic">
                       Josh, Coach McNally, and Dave at 2025 Naval Academy Brigade boxing championships
