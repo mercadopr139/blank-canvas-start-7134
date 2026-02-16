@@ -211,7 +211,7 @@ const OurStory = () => {
               </p>
 
               {/* McNally photo — floated right with final paragraph */}
-              <div className="md:float-right md:ml-5 md:mb-3 md:max-w-[240px] mb-6 w-full max-w-[300px] mx-auto md:mx-0">
+              <div className="md:float-right md:ml-5 md:mb-3 md:max-w-[200px] md:-mt-16 mb-6 w-full max-w-[260px] mx-auto md:mx-0">
                 <div className="bg-muted rounded-lg shadow-md overflow-hidden">
                   <img
                     src={joshMcNallyDave}
