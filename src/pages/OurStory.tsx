@@ -208,25 +208,26 @@ const OurStory = () => {
                 Though their lives unfolded along different paths, Josh and Dave stayed closely connected, united by boxing, friendship, and a shared belief in the power of structure and consistency to change lives. In 2020, those parallel journeys converged with the establishment of No Limits Academy. In 2022, Josh resigned from his teaching position to commit to NLA full time, allowing the organization to grow from a vision into a comprehensive youth development program serving children across Cape May County.
               </p>
 
-              <p className="text-lg md:text-xl text-muted-foreground leading-relaxed mb-10">
-                Today, No Limits Academy is more than a boxing gym. It is a community hub built on mentorship, belonging, and opportunity. Leveraging backgrounds in education, military service, business, and boxing, alongside a network of incredible people, Josh and Dave created a space where young people are challenged, supported, and believed in. Through discipline and care, NLA teaches its athletes that their circumstances do not define their future—and that no one succeeds alone.
-              </p>
-
-              {/* Photo Slot C - Centered at end */}
-              <div className="w-full max-w-[420px] mx-auto">
+              {/* McNally photo — floated right with final paragraph */}
+              <div className="md:float-right md:ml-5 md:mb-3 md:max-w-[240px] mb-6 w-full max-w-[300px] mx-auto md:mx-0">
                 <div className="bg-muted rounded-lg shadow-md overflow-hidden">
                   <img
                     src={joshMcNallyDave}
                     alt="Josh, Coach McNally, and Dave at 2025 Naval Academy Brigade boxing championships"
                     className="w-full h-auto" />
-
-                  <div className="p-3 text-center">
-                    <p className="text-sm text-muted-foreground italic">
+                  <div className="px-3 py-1.5 text-center">
+                    <p className="text-xs text-muted-foreground italic">
                       Josh, Coach McNally, and Dave at 2025 Naval Academy Brigade boxing championships
                     </p>
                   </div>
                 </div>
               </div>
+
+              <p className="text-lg md:text-xl text-muted-foreground leading-relaxed mb-10">
+                Today, No Limits Academy is more than a boxing gym. It is a community hub built on mentorship, belonging, and opportunity. Leveraging backgrounds in education, military service, business, and boxing, alongside a network of incredible people, Josh and Dave created a space where young people are challenged, supported, and believed in. Through discipline and care, NLA teaches its athletes that their circumstances do not define their future—and that no one succeeds alone.
+              </p>
+
+              <div className="clear-both" />
 
             </div>
           </div>
