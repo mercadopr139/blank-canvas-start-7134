@@ -83,6 +83,7 @@ const ImpactSection = () => {
               <img src={georgeHillAward} alt="NLA receives USA Boxing George Hill Humanitarian Award at Middle Township" className="w-full object-cover object-bottom" style={{ marginTop: '-15%' }} />
             </div>
           </div>
+          <div className="mt-6 border-b border-white/30" />
         </div>
       </div>
     </section>
