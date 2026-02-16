@@ -28,9 +28,9 @@ const chatResponses: Record<Exclude<QuickOption, null>, {
           <p className="font-bold text-foreground">Junior Boxing:</p>
           <p className="text-sm text-muted-foreground whitespace-pre-line">{JUNIOR_BOXING_SCHEDULE}</p>
         </div>
-        <p className="text-sm text-muted-foreground italic">
-          Note: No Limits Academy is a free, year-round youth development program serving youth ages 7–19 in Cape May County.
-        </p>
+        
+
+
       </div>
   },
   registration: {
