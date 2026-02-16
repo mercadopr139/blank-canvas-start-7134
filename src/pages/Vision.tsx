@@ -9,7 +9,7 @@ const Vision = () => {
 
       <main className="flex-1">
         {/* Hero */}
-        <section className="bg-primary py-20 md:py-28">
+        <section className="bg-primary py-20 md:py-[50px]">
           <div className="container">
             <div className="max-w-3xl">
               <h1 className="text-4xl md:text-5xl lg:text-6xl font-black text-primary-foreground leading-[1.1] tracking-tight mb-6">
@@ -23,7 +23,7 @@ const Vision = () => {
         </section>
 
         {/* Social Entrepreneurship Model */}
-        <section className="py-16 md:py-24 bg-background">
+        <section className="py-16 bg-background md:py-[60px]">
           <div className="container">
             <div className="max-w-4xl">
               <div className="flex items-center justify-between gap-6 md:gap-10 mb-8">
@@ -43,8 +43,8 @@ const Vision = () => {
                 <img
                   src={launchPadLogo}
                   alt="The Launch Pad"
-                  className="h-24 md:h-32 lg:h-40 w-auto shrink-0"
-                />
+                  className="h-24 md:h-32 lg:h-40 w-auto shrink-0" />
+
               </div>
               <p className="text-lg md:text-xl text-muted-foreground leading-relaxed mb-6">
                 At No Limits Academy, youth don't just join a program—they enter a <strong className="text-foreground">development pipeline</strong>.
@@ -63,8 +63,8 @@ const Vision = () => {
               <img
                 src={launchPadLogo}
                 alt="The Launch Pad"
-                className="h-48 md:h-60 w-auto mx-auto"
-              />
+                className="h-48 md:h-60 w-auto mx-auto" />
+
             </div>
 
             <div className="max-w-3xl">
@@ -86,15 +86,15 @@ const Vision = () => {
 
               <ul className="space-y-4 mb-10">
                 {[
-                  "Career exposure and workforce readiness",
-                  "Entrepreneurship and leadership development",
-                  "Mentorship, accountability, and next-step planning",
-                ].map((item) => (
-                  <li key={item} className="flex items-start gap-3">
+                "Career exposure and workforce readiness",
+                "Entrepreneurship and leadership development",
+                "Mentorship, accountability, and next-step planning"].
+                map((item) =>
+                <li key={item} className="flex items-start gap-3">
                     <span className="mt-2 h-2 w-2 rounded-full bg-nla shrink-0" />
                     <span className="text-lg text-primary-foreground font-medium">{item}</span>
                   </li>
-                ))}
+                )}
               </ul>
 
               <p className="text-xl md:text-2xl font-bold text-primary-foreground leading-snug">
@@ -131,8 +131,8 @@ const Vision = () => {
       </main>
 
       <Footer />
-    </div>
-  );
+    </div>);
+
 };
 
 export default Vision;
