@@ -23,17 +23,22 @@ const Vision = () => {
         </section>
 
         {/* Social Entrepreneurship Model */}
-        <section className="py-16 md:py-24 bg-primary">
+        <section className="py-16 md:py-24 bg-background">
           <div className="container">
             <div className="max-w-4xl">
               <div className="flex items-center justify-between gap-6 md:gap-10 mb-8">
                 <div className="flex-1">
-                  <span className="inline-block text-xs font-black tracking-[0.25em] uppercase text-nla mb-3">
-                    The Model
-                  </span>
-                  <h2 className="text-3xl md:text-4xl lg:text-5xl font-black text-primary-foreground leading-[1.1] tracking-tight">
-                    Our Social Entrepreneurship Model
-                  </h2>
+                  <div className="flex items-start gap-4">
+                    <div className="w-1 self-stretch rounded-full bg-nla shrink-0" />
+                    <div>
+                      <span className="inline-block text-xs font-black tracking-[0.25em] uppercase text-nla mb-2">
+                        The Model
+                      </span>
+                      <h2 className="text-3xl md:text-4xl lg:text-5xl font-black text-foreground leading-[1.1] tracking-tight">
+                        Our Social Entrepreneurship Model
+                      </h2>
+                    </div>
+                  </div>
                 </div>
                 <img
                   src={launchPadLogo}
@@ -41,18 +46,18 @@ const Vision = () => {
                   className="h-24 md:h-32 lg:h-40 w-auto shrink-0"
                 />
               </div>
-              <p className="text-lg md:text-xl text-primary-foreground/80 leading-relaxed mb-6">
-                At No Limits Academy, youth don't just join a program—they enter a <strong className="text-primary-foreground">development pipeline</strong>.
+              <p className="text-lg md:text-xl text-muted-foreground leading-relaxed mb-6">
+                At No Limits Academy, youth don't just join a program—they enter a <strong className="text-foreground">development pipeline</strong>.
               </p>
-              <p className="text-lg md:text-xl text-primary-foreground/80 leading-relaxed">
-                We don't just train athletes. We develop <strong className="text-primary-foreground">future leaders, employees, entrepreneurs, and community builders</strong>.
+              <p className="text-lg md:text-xl text-muted-foreground leading-relaxed">
+                We don't just train athletes. We develop <strong className="text-foreground">future leaders, employees, entrepreneurs, and community builders</strong>.
               </p>
             </div>
           </div>
         </section>
 
         {/* Launch Pad Logo + Details */}
-        <section className="py-16 md:py-24 bg-background">
+        <section className="py-16 md:py-24 bg-primary">
           <div className="container">
             <div className="max-w-3xl mx-auto text-center mb-16">
               <img
@@ -69,14 +74,14 @@ const Vision = () => {
                   <span className="inline-block text-xs font-black tracking-[0.25em] uppercase text-nla mb-2">
                     The Launch Pad
                   </span>
-                  <h2 className="text-2xl md:text-3xl font-black text-foreground leading-tight">
+                  <h2 className="text-2xl md:text-3xl font-black text-primary-foreground leading-tight">
                     How we execute our mission long-term.
                   </h2>
                 </div>
               </div>
 
-              <p className="text-lg md:text-xl text-muted-foreground leading-relaxed mb-8">
-                The Launch Pad keeps young people connected to <strong className="text-foreground">guidance, opportunity, and support</strong> long after they leave the gym—through a growing network of <strong className="text-foreground">mentors, local businesses, and real-world partnerships</strong>.
+              <p className="text-lg md:text-xl text-primary-foreground/80 leading-relaxed mb-8">
+                The Launch Pad keeps young people connected to <strong className="text-primary-foreground">guidance, opportunity, and support</strong> long after they leave the gym—through a growing network of <strong className="text-primary-foreground">mentors, local businesses, and real-world partnerships</strong>.
               </p>
 
               <ul className="space-y-4 mb-10">
@@ -87,12 +92,12 @@ const Vision = () => {
                 ].map((item) => (
                   <li key={item} className="flex items-start gap-3">
                     <span className="mt-2 h-2 w-2 rounded-full bg-nla shrink-0" />
-                    <span className="text-lg text-foreground font-medium">{item}</span>
+                    <span className="text-lg text-primary-foreground font-medium">{item}</span>
                   </li>
                 ))}
               </ul>
 
-              <p className="text-xl md:text-2xl font-bold text-foreground leading-snug">
+              <p className="text-xl md:text-2xl font-bold text-primary-foreground leading-snug">
                 Youth don't just learn how to be strong employees—they develop the mindset and skills of <strong>builders and leaders</strong>.
               </p>
             </div>
@@ -100,20 +105,25 @@ const Vision = () => {
         </section>
 
         {/* Why This Matters */}
-        <section className="py-16 md:py-24 bg-primary">
+        <section className="py-16 md:py-24 bg-background">
           <div className="container">
             <div className="max-w-3xl">
-              <span className="inline-block text-xs font-black tracking-[0.25em] uppercase text-nla mb-3">
-                Why It Matters
-              </span>
-              <h2 className="text-3xl md:text-4xl font-black text-primary-foreground leading-[1.1] tracking-tight mb-8">
-                Most youth programs end when the program ends.
-              </h2>
-              <p className="text-lg md:text-xl text-primary-foreground/80 leading-relaxed mb-6">
-                No Limits Academy is built differently. The Launch Pad creates a <strong className="text-primary-foreground">long-term model of development</strong> that produces lasting outcomes.
+              <div className="flex items-start gap-4 mb-8">
+                <div className="w-1 self-stretch rounded-full bg-nla shrink-0" />
+                <div>
+                  <span className="inline-block text-xs font-black tracking-[0.25em] uppercase text-nla mb-2">
+                    Why It Matters
+                  </span>
+                  <h2 className="text-3xl md:text-4xl font-black text-foreground leading-[1.1] tracking-tight">
+                    Most youth programs end when the program ends.
+                  </h2>
+                </div>
+              </div>
+              <p className="text-lg md:text-xl text-muted-foreground leading-relaxed mb-6">
+                No Limits Academy is built differently. The Launch Pad creates a <strong className="text-foreground">long-term model of development</strong> that produces lasting outcomes.
               </p>
-              <p className="text-lg md:text-xl text-primary-foreground/80 leading-relaxed">
-                For donors, that means your support doesn't just fund training—you're investing in a <strong className="text-primary-foreground">system that changes life trajectories</strong>.
+              <p className="text-lg md:text-xl text-muted-foreground leading-relaxed">
+                For donors, that means your support doesn't just fund training—you're investing in a <strong className="text-foreground">system that changes life trajectories</strong>.
               </p>
             </div>
           </div>
