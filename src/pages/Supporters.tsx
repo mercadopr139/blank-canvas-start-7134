@@ -83,6 +83,15 @@ const Supporters = () => {
                 </Button>
                 <img src={venmoLogo} alt="Venmo" className="h-8" />
               </div>
+
+              {/* Square */}
+              <div className="flex flex-col items-center gap-2">
+                <Button size="lg" className="bg-muted text-foreground hover:bg-muted/80 font-bold text-base px-8 border border-foreground" asChild>
+                  <a href="https://square.link/u/VPgZRXC7" target="_blank" rel="noopener noreferrer">
+                    DONATE VIA SQUARE
+                  </a>
+                </Button>
+              </div>
             </div>
           </div>
         </div>
