@@ -43,8 +43,8 @@ const Supporters = () => {
         <div className="bg-background">
           <div className="container md:py-16 px-4 py-[30px]">
             <div className="rounded-2xl text-background text-center p-8 md:p-10 bg-primary">
-              <h2 className="text-2xl md:text-3xl font-bold mb-3">Want to Support 
-No Limits Academy?</h2>
+              <h2 className="text-2xl md:text-3xl font-bold mb-3">Want to Support No Limits Academy?
+            </h2>
               <p className="text-base mb-4 opacity-90">
                 Your donation helps us keep kids training, mentored, and safe.
               </p>
