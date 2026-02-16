@@ -243,22 +243,51 @@ const OurStory = () => {
               <p className="text-lg text-background/80 mb-10">
                 We began our journey in April of 2020 and moved into our current location in Rio Grande, NJ. Since then, we have methodically renovated, built, and modified our space to create a state-of-the-art training and youth development center that services at-risk and local youth of Cape May County.
               </p>
-              
-              {/* Photo Gallery - 4x4 desktop, 3 cols tablet, 2 cols mobile */}
+
+              {/* Featured finished facility photos */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                {[facilityImages[facilityImages.length - 2], facilityImages[facilityImages.length - 1]].map((img, idx) => (
+                  <div key={`featured-${idx}`} className="relative overflow-hidden rounded-xl group">
+                    <button
+                      type="button"
+                      onClick={() => setActiveImg(img)}
+                      className="block w-full aspect-[16/10]"
+                      aria-label={`Enlarge ${img.alt}`}
+                    >
+                      <img
+                        src={img.src}
+                        alt={img.alt}
+                        className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                      />
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
+                      <p className="absolute bottom-3 left-4 right-4 text-sm font-semibold text-white drop-shadow-lg">
+                        {img.alt}
+                      </p>
+                    </button>
+                  </div>
+                ))}
+              </div>
+
+              {/* Divider label */}
+              <div className="flex items-center gap-4 my-8">
+                <div className="flex-1 h-px bg-background/20" />
+                <span className="text-xs font-black tracking-[0.25em] uppercase text-[#bf0f3e]">The Build</span>
+                <div className="flex-1 h-px bg-background/20" />
+              </div>
+
+              {/* Construction journey gallery */}
               <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
-                {facilityImages.map((img, idx) =>
+                {facilityImages.slice(0, -2).map((img, idx) =>
                 <div key={idx} className="overflow-hidden rounded-xl bg-muted">
                     <button
                     type="button"
                     onClick={() => setActiveImg(img)}
                     className="block w-full aspect-[4/3]"
                     aria-label={`Enlarge ${img.alt}`}>
-
                       <img
                       src={img.src}
                       alt={img.alt}
                       className="w-full h-full object-cover" />
-
                     </button>
                   </div>
                 )}
