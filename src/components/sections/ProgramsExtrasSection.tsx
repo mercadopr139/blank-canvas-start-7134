@@ -134,26 +134,6 @@ const ProgramsExtrasSection = () => {
       src: realTalkJoeFranco,
       alt: "Joe Franco with NLA youth at Real Talk Session",
       caption: "Joe Franco, NLA Donor & Wildwood Crest Commissioner"
-    }, {
-      src: "/placeholder.svg",
-      alt: "Real Talk Sessions photo 2",
-      caption: "Real Talk Sessions"
-    }, {
-      src: "/placeholder.svg",
-      alt: "Real Talk Sessions photo 3",
-      caption: "Real Talk Sessions"
-    }, {
-      src: "/placeholder.svg",
-      alt: "Real Talk Sessions photo 4",
-      caption: "Real Talk Sessions"
-    }, {
-      src: "/placeholder.svg",
-      alt: "Real Talk Sessions photo 5",
-      caption: "Real Talk Sessions"
-    }, {
-      src: "/placeholder.svg",
-      alt: "Real Talk Sessions photo 6",
-      caption: "Real Talk Sessions"
     }],
     buttonLabel: "Back to Programs"
   }, {
