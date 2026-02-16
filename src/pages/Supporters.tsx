@@ -73,7 +73,7 @@ No Limits Academy?</h2>
         </div>
 
         {/* Supporters Gallery Section */}
-        <div className="container py-10 md:py-16 px-4 bg-primary">
+        <div className="container py-10 md:py-16 px-4 bg-primary my-[30px]">
           <h1 className="text-3xl md:text-4xl font-bold mb-3 text-primary-foreground">
             Our Supporters
           </h1>
