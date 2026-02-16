@@ -35,7 +35,7 @@ const MealTrain = () => {
                 Meal Train
               </h1>
               <img src={mealTrainLogo} alt="Meal Train logo" className="w-32 md:w-40 h-auto mb-6 mx-auto object-fill" />
-              <p className="text-lg md:text-xl text-primary-foreground/80 leading-relaxed">
+              <p className="text-lg md:text-xl text-primary-foreground/80 leading-relaxed text-justify">
                 Prepare a group meal or arrange delivery for our youth participants.
                 The NLA Meal Train supports our youth participants by providing free, sit-down meals during scheduled program days. These meals create consistency, build community, and ensure our athletes are fueled, focused, and cared for while they train and learn together. Volunteers play a vital role in making this possible.
               </p>
@@ -129,9 +129,9 @@ const MealTrain = () => {
 
             {/* Lightbox */}
             <PortalLightbox open={lightboxOpen} onClose={() => setLightboxOpen(false)} img={{
-              src: mealTrainServing,
-              alt: "We feed our kids 5 nights a week"
-            }} />
+            src: mealTrainServing,
+            alt: "We feed our kids 5 nights a week"
+          }} />
           </div>
         </section>
 
