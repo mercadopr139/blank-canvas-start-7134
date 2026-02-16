@@ -56,7 +56,7 @@ const ProgramsExtrasSection = () => {
     title: "Dental Dental's Smile Lab Program",
     subtitle: "Junior Boxers Only",
     ageRange: "7–10 years old",
-    blurb: "Smile Lab, in partnership with Delta Dental, is an oral health initiative at No Limits Academy designed to improve access to care and deliver engaging, oral health education that empowers youth to take control of their oral health and overall well-being.",
+    blurb: "Smile Lab is part of Double Punch Tuesday—our Junior Boxing program followed by optional aftercare. After training, youth participate in an oral health initiative through our partnership with Delta Dental, designed to improve access to care and deliver engaging education that empowers youth to take control of their oral health and overall well-being.",
     images: [{
       src: groupLessonImage,
       alt: "Students participating in a group lesson at a table"
