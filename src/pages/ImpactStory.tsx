@@ -28,7 +28,7 @@ const ImpactStory = () => {
     icon: Heart,
     value: "70%",
     label: "Below Poverty Line",
-    description: "Of youth we serve come from low-income households"
+    description: "Of our youth come from underserved communities"
   }, {
     icon: Utensils,
     value: "Meals Served",
