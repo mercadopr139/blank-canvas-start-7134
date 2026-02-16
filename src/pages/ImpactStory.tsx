@@ -216,6 +216,10 @@ const ImpactStory = () => {
                     <ul className="space-y-2 text-muted-foreground">
                       <li className="flex items-start gap-2">
                         <span className="text-foreground mt-1">•</span>
+                        <span>Cape May County Board of Commissioners leadership</span>
+                      </li>
+                      <li className="flex items-start gap-2">
+                        <span className="text-foreground mt-1">•</span>
                         <span>Middle Township Mayor and former Police Chief Chris Leusner, along with multiple municipal mayors across Cape May County</span>
                       </li>
                       <li className="flex items-start gap-2">
@@ -224,11 +228,7 @@ const ImpactStory = () => {
                       </li>
                       <li className="flex items-start gap-2">
                         <span className="text-foreground mt-1">•</span>
-                        <span>United States Representative for New Jersey's 2nd Congressional District </span>
-                      </li>
-                      <li className="flex items-start gap-2">
-                        <span className="text-foreground mt-1">•</span>
-                        <span>Cape May County Board of Commissioners leadership</span>
+                        <span>NJ Division of Criminal Justice, Chief of Detectives</span>
                       </li>
                       <li className="flex items-start gap-2">
                         <span className="text-foreground mt-1">•</span>
@@ -236,7 +236,7 @@ const ImpactStory = () => {
                       </li>
                       <li className="flex items-start gap-2">
                         <span className="text-foreground mt-1">•</span>
-                        <span>NJ Division of Criminal Justice, Chief of Detectives</span>
+                        <span>United States Representative for New Jersey's 2nd Congressional District</span>
                       </li>
                     </ul>
                   </AccordionContent>
