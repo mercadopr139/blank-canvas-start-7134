@@ -22,8 +22,8 @@ const HeroSection = () => {
           </h1>
 
           {/* Supporting statement */}
-          <p className="text-xl md:text-2xl lg:text-3xl font-semibold text-primary-foreground/70 mb-12">
-            We Build Disciplined, Confident Young People.
+          <p className="text-xl md:text-2xl lg:text-3xl font-semibold text-primary-foreground/70 mb-12">We Build Disciplined, Confident, & Accountable Young People.
+
           </p>
 
           {/* Main paragraph */}
