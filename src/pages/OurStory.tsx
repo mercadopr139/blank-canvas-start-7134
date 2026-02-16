@@ -47,6 +47,8 @@ import facilityFloorDiscussion from "@/assets/facility/facility-floor-discussion
 import facilityScaffoldWork from "@/assets/facility/facility-scaffold-work.png";
 import facilityHighWork from "@/assets/facility/facility-high-work.png";
 import facilityFinishedCourt from "@/assets/facility/facility-finished-court.png";
+import facilityFinishedGymNew from "@/assets/facility/facility-finished-gym-new.jpg";
+import facilityFinishedCourtNew from "@/assets/facility/facility-finished-court-new.jpg";
 
 type FacilityImg = {src: string;alt: string;};
 
@@ -246,7 +248,10 @@ const OurStory = () => {
 
               {/* Featured finished facility photos */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                {[facilityImages[facilityImages.length - 2], facilityImages[facilityImages.length - 1]].map((img, idx) => (
+                {[
+                  { src: facilityFinishedGymNew, alt: "The finished boxing gym" },
+                  { src: facilityFinishedCourtNew, alt: "Finished basketball court and gym" },
+                ].map((img, idx) => (
                   <div key={`featured-${idx}`} className="relative overflow-hidden rounded-xl group">
                     <button
                       type="button"
@@ -277,7 +282,7 @@ const OurStory = () => {
 
               {/* Construction journey gallery */}
               <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
-                {facilityImages.slice(0, -2).map((img, idx) =>
+                {facilityImages.map((img, idx) =>
                 <div key={idx} className="overflow-hidden rounded-xl bg-muted">
                     <button
                     type="button"
