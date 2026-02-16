@@ -33,7 +33,7 @@ const ProgramsSection = ({
               Our Programs
             </h2>
           </div>
-          <p className="text-lg md:text-xl text-primary-foreground/70 max-w-3xl leading-relaxed">We offer <span className="underline">two core programs</span> designed to meet youth where they are and grow with them over time. Each program includes <span className="font-bold text-primary-foreground/70">boxing & fitness training</span>, mentorship, structure, and opportunities for <span className="font-bold text-[#bf0f3e]">personal, professional, and spiritual</span> development.</p>
+          <p className="text-lg md:text-xl text-primary-foreground/70 max-w-3xl leading-relaxed">We offer two core programs designed to meet youth where they are and grow with them over time. Each program includes boxing & fitness training, mentorship, discipline, and opportunities for personal, professional, and spiritual development.<span className="underline">two core programs</span> designed to meet youth where they are and grow with them over time. Each program includes <span className="font-bold text-primary-foreground/70">boxing & fitness training</span>, mentorship, structure, and opportunities for <span className="font-bold text-[#bf0f3e]">personal, professional, and spiritual</span> development.</p>
         </div>
 
         {/* Program cards */}
@@ -76,7 +76,7 @@ const ProgramsSection = ({
       </div>
 
       {/* Junior Boxing Signup Modal */}
-      <Dialog open={signupModalOpen === "junior"} onOpenChange={open => !open && setSignupModalOpen(null)}>
+      <Dialog open={signupModalOpen === "junior"} onOpenChange={(open) => !open && setSignupModalOpen(null)}>
         <DialogContent className="max-w-lg">
           <DialogHeader>
             <DialogTitle className="sr-only">Junior Boxing Sign-Up</DialogTitle>
@@ -122,7 +122,7 @@ const ProgramsSection = ({
       </Dialog>
 
       {/* Senior Boxing Signup Modal */}
-      <Dialog open={signupModalOpen === "senior"} onOpenChange={open => !open && setSignupModalOpen(null)}>
+      <Dialog open={signupModalOpen === "senior"} onOpenChange={(open) => !open && setSignupModalOpen(null)}>
         <DialogContent className="max-w-lg">
           <DialogHeader>
             <DialogTitle className="sr-only">Senior Boxing Sign-Up</DialogTitle>
