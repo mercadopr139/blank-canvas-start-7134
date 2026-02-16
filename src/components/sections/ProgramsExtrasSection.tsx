@@ -175,7 +175,7 @@ const ProgramsExtrasSection = () => {
     title: "The Launch Pad",
     subtitle: "Senior Boxers Only",
     ageRange: "11–19 years old",
-    blurb: "The Launch Pad prepares youth for more than early work experience—it introduces them to the world of business. Through a network of local businesses, youth gain hands-on exposure to professional environments where they learn responsibility, communication, and how organizations operate.\n\nMentored by business leaders, participants build the habits, confidence, and understanding needed to graduate high school with a clear path forward and the discipline to succeed.",
+    blurb: "The Launch Pad is how No Limits Academy executes its mission long-term. It keeps young people connected to guidance, opportunity, and support long after they leave the gym—through a growing network of mentors, local businesses, and real-world partnerships.\n\nWe don't just train athletes. We develop future leaders, employees, employers, entrepreneurs, and community builders—youth who graduate with a clear path forward and the discipline to succeed.",
     images: [{
       src: "/placeholder.svg",
       alt: "Launch Pad photo 1"
