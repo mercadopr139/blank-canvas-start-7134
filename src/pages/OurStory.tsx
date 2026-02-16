@@ -124,9 +124,7 @@ const OurStory = () => {
                     className="w-full h-auto"
                   />
                   <div className="px-3 py-1.5 text-center">
-                    <p className="text-xs text-muted-foreground italic">
-                      Josh, pictured with Step Dad &amp; Mom
-                    </p>
+                    <p className="text-xs text-muted-foreground italic">Josh, pictured with step dad &amp; mom</p>
                   </div>
                 </div>
               </div>
