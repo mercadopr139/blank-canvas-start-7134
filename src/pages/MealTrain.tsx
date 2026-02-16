@@ -86,15 +86,15 @@ const MealTrain = () => {
                   <div className="relative z-10 flex flex-col items-center text-center px-6 py-8">
                     {/* Step number + icon */}
                     <div className="relative mb-5">
-                      <div className="w-20 h-20 rounded-2xl bg-foreground flex items-center justify-center transition-all duration-300 group-hover:bg-[hsl(var(--nla-red))] group-hover:scale-105 group-hover:shadow-lg">
-                        <item.icon className="w-9 h-9 text-background" />
+                      <div className="w-20 h-20 lg:w-28 lg:h-28 rounded-2xl bg-foreground flex items-center justify-center transition-all duration-300 group-hover:bg-[hsl(var(--nla-red))] group-hover:scale-105 group-hover:shadow-lg">
+                        <item.icon className="w-9 h-9 lg:w-12 lg:h-12 text-background" />
                       </div>
-                      <span className="absolute -top-2 -right-2 w-7 h-7 rounded-full bg-[hsl(var(--nla-red))] text-[hsl(var(--nla-red-foreground))] text-xs font-bold flex items-center justify-center">
+                      <span className="absolute -top-2 -right-2 w-7 h-7 lg:w-9 lg:h-9 rounded-full bg-[hsl(var(--nla-red))] text-[hsl(var(--nla-red-foreground))] text-xs lg:text-sm font-bold flex items-center justify-center">
                         {item.step}
                       </span>
                     </div>
-                    <h3 className="text-lg font-bold text-foreground mb-2">{item.title}</h3>
-                    <p className="text-sm text-muted-foreground leading-relaxed">{item.desc}</p>
+                    <h3 className="text-lg lg:text-xl font-bold text-foreground mb-2">{item.title}</h3>
+                    <p className="text-sm lg:text-base text-muted-foreground leading-relaxed">{item.desc}</p>
                     {i === 3 && (
                       <Button size="sm" className="mt-4 bg-[hsl(var(--nla-red))] text-[hsl(var(--nla-red-foreground))] hover:bg-[hsl(var(--nla-red))]/90" asChild>
                         <a href={MEAL_TRAIN_LINK} target="_blank" rel="noopener noreferrer">
