@@ -43,7 +43,6 @@ const chatResponses: Record<Exclude<QuickOption, null>, {
       }}>
           <li>Junior Boxing</li>
           <li>Senior Boxing</li>
-          
         </ul>
         <div className="flex justify-center mt-4">
           <a href="https://wkf.ms/45C6tce" target="_blank" rel="noopener noreferrer" className="inline-block px-5 py-3 bg-foreground text-background font-extrabold rounded-lg text-center hover:bg-foreground/90 transition-colors" style={{
@@ -88,14 +87,8 @@ const chatResponses: Record<Exclude<QuickOption, null>, {
     title: "Cost",
     content: <div className="space-y-3">
         <p className="font-bold text-foreground">Cost</p>
-        <p className="text-sm text-muted-foreground">No Limits Academy is a FREE, year-round youth development program.   
-
-
-There is no cost to participate.  
-
-
-If you would to support our mission, please consider a donation.<strong>FREE</strong>, year-round youth development program.<br />
-          There is no cost to participate.
+        <p className="text-sm text-muted-foreground">
+          No Limits Academy is a <strong>FREE</strong>, year-round youth development program. There is no cost to participate. If you would like to support our mission, please consider a donation.
         </p>
         <div className="flex justify-center" style={{ marginTop: '1.25rem' }}>
           <a href="https://www.paypal.com/ncp/payment/TMMDVUSEQKHJC" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-md font-bold text-sm hover:bg-primary/90 transition-colors">
@@ -103,7 +96,10 @@ If you would to support our mission, please consider a donation.<strong>FREE</st
             Donate to Support NLA
           </a>
         </div>
-      </div> }, transportation: { title: "Transportation",
+      </div>
+  },
+  transportation: {
+    title: "Transportation",
     content: <div className="space-y-3">
         <p className="font-bold text-foreground">Transportation</p>
         <p className="text-sm text-muted-foreground">
