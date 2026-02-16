@@ -142,7 +142,8 @@ const OurStory = () => {
               <div className="clear-both" />
 
               {/* Basketball Coach photo — floated left with teaching paragraph */}
-              <div className="md:float-left md:mr-5 md:mb-3 md:max-w-[240px] mb-6 w-full max-w-[300px] mx-auto md:mx-0">
+              {/* negative top margin pulls it up to align with text */}
+              <div className="md:float-left md:mr-5 md:mb-3 md:max-w-[240px] md:-mt-4 mb-6 w-full max-w-[300px] mx-auto md:mx-0">
                 <div className="bg-muted rounded-lg shadow-md overflow-hidden">
                   <img
                     src={joshBasketballCoach}
