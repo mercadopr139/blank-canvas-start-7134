@@ -41,11 +41,11 @@ const Vision = () => {
                   className="h-24 md:h-32 lg:h-40 w-auto shrink-0"
                 />
               </div>
-              <p className="text-lg md:text-xl text-primary-foreground leading-relaxed mb-6">
-                At No Limits Academy, youth don't just join a program—they enter a <strong>development pipeline</strong>.
+              <p className="text-lg md:text-xl text-primary-foreground/80 leading-relaxed mb-6">
+                At No Limits Academy, youth don't just join a program—they enter a <strong className="text-primary-foreground">development pipeline</strong>.
               </p>
-              <p className="text-lg md:text-xl text-primary-foreground leading-relaxed">
-                We don't just train athletes. We develop <strong>future leaders, employees, entrepreneurs, and community builders</strong>.
+              <p className="text-lg md:text-xl text-primary-foreground/80 leading-relaxed">
+                We don't just train athletes. We develop <strong className="text-primary-foreground">future leaders, employees, entrepreneurs, and community builders</strong>.
               </p>
             </div>
           </div>
