@@ -54,7 +54,7 @@ type ProgramItem = {
 const ProgramsExtrasSection = () => {
   const items: ProgramItem[] = useMemo(() => [{
     id: "smile-lab",
-    title: "Delta Dental's Smile Lab Program",
+    title: "Delta Dental's Smile Lab",
     subtitle: "Junior Boxers Only",
     ageRange: "7–10 years old",
     blurb: "Smile Lab is part of Double Punch Tuesday—our Junior Boxing program followed by optional aftercare. After training, youth participate in an oral health initiative through our partnership with Delta Dental, designed to improve access to care and deliver engaging education that empowers youth to take control of their oral health and overall well-being.",
