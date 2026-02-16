@@ -5,6 +5,7 @@ import PortalLightbox from "@/components/ui/portal-lightbox";
 import joshMcNallyDave from "@/assets/our-story/josh-mcnally-dave.jpeg";
 import joshParents from "@/assets/our-story/josh-parents.png";
 import daveFamily from "@/assets/our-story/dave-family.png";
+import joshDaveEarly from "@/assets/our-story/josh-dave-early.png";
 import facilityConstructionCrew from "@/assets/facility/facility-construction-crew.png";
 import facilityPlumbingCrew from "@/assets/facility/facility-plumbing-crew.png";
 import facilityRebarPrep from "@/assets/facility/facility-rebar-prep.png";
@@ -144,6 +145,21 @@ const OurStory = () => {
               <p className="text-lg md:text-xl text-muted-foreground leading-relaxed mb-6">
                 Not long after finishing college, Josh began teaching boxing lessons back home in Cape May, NJ—and one of the individuals who hired him was Dave Von Savage Jr., who was preparing to attend the United States Naval Academy. Interestingly, the Naval Academy's head boxing coach, Jim McNally, was also one of the original founders of Lock Haven University's boxing program in 1979—the very program where Josh would later win a national championship. What began as sessions in a residential gym quickly grew into a lasting friendship rooted in trust, discipline, and shared values.
               </p>
+
+              {/* Josh & Dave early photo - inline centered */}
+              <div className="clear-both" />
+              <div className="w-full max-w-[380px] mx-auto my-6">
+                <div className="bg-muted rounded-lg shadow-md overflow-hidden">
+                  <img
+                    src={joshDaveEarly}
+                    alt="Josh and Dave in the early days"
+                    className="w-full h-auto"
+                  />
+                  <div className="px-3 py-1.5 text-center">
+                    <p className="text-xs text-muted-foreground italic">Josh and Dave in the early days</p>
+                  </div>
+                </div>
+              </div>
 
               {/* Clear floats before Photo Slot B */}
               <div className="clear-both" />
