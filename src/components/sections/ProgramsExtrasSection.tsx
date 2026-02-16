@@ -374,6 +374,11 @@ const ProgramsExtrasSection = () => {
                 <img src={launchPadLogo} alt="The Launch Pad Logo" className="h-48 w-auto border-none" />
               </div>}
 
+            {/* Excursions Video */}
+            {openItem?.id === "excursions" && <div className="my-4">
+                <YouTubeEmbed videoId="ogMH05MZFwM" title="NLA Excursions" />
+              </div>}
+
             {/* Gallery */}
             {openItem && openItem.images.length > 0 && <ClickToEnlargeGallery images={openItem.images} showCaptions />}
 
