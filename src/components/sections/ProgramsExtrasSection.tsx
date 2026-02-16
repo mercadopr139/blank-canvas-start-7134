@@ -35,6 +35,7 @@ import { ClickToEnlargeGallery } from "@/components/ui/click-to-enlarge-gallery"
 // Excursions images (shared gallery)
 import { excursionGalleryImages } from "@/data/excursionsGallery";
 import realTalkJoeFranco from "@/assets/programs/real-talk-joe-franco.png";
+import oceanFirstBankLogo from "@/assets/programs/oceanfirst-bank-logo.png";
 import { mealTrainGalleryImages } from "@/data/mealTrainGallery";
 type ProgramItem = {
   id: string;
@@ -394,6 +395,9 @@ const ProgramsExtrasSection = () => {
             <p className="text-base text-muted-foreground px-0 py-[10px] pb-4 whitespace-pre-line">
               {"In Banking & Boxing, our youth train bankers in boxing, and bankers return the favor by teaching financial literacy. The exchange helps young people recognize their value first—then absorb new knowledge with confidence.\n\n"}
             </p>
+            <div className="flex justify-center my-4">
+              <img src={oceanFirstBankLogo} alt="OceanFirst Bank Logo" className="h-20 w-auto border-none" />
+            </div>
             <YouTubeEmbed videoId="TsXbq70NB70" title="Banking & Boxing" />
             <div className="mt-6 flex justify-end">
               <Button onClick={() => setBankingBoxingOpen(false)} className="bg-foreground text-background hover:bg-foreground/90">
