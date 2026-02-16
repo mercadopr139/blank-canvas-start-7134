@@ -55,75 +55,72 @@ const MealTrain = () => {
         </section>
 
         {/* How It Works */}
-        <section className="pt-8 pb-6 md:pt-10 md:pb-8 bg-background py-[20px]">
+        <section className="pt-12 pb-10 md:pt-16 md:pb-14 bg-background">
           <div className="container">
-            <h2 className="text-3xl md:text-4xl font-bold text-foreground mb-10">
-              How It Works
-            </h2>
-            <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6 mb-12">
-              <Card className="border-border">
-                <CardContent className="pt-8 pb-8 text-center">
-                  <div className="w-16 h-16 bg-primary rounded-full flex items-center justify-center mx-auto mb-4">
-                    <Heart className="w-8 h-8 text-primary-foreground" />
-                  </div>
-                  <h3 className="text-xl font-bold text-foreground mb-2">Want to Feed our Kids?</h3>
-                  <p className="text-muted-foreground">
-                    Join the Meal Train and help nourish our youth with a home-cooked or delivered meal.
-                  </p>
-                </CardContent>
-              </Card>
-              
-              <Card className="border-border">
-                <CardContent className="pt-8 pb-8 text-center">
-                  <div className="w-16 h-16 bg-primary rounded-full flex items-center justify-center mx-auto mb-4">
-                    <Calendar className="w-8 h-8 text-primary-foreground" />
-                  </div>
-                  <h3 className="text-xl font-bold text-foreground mb-2">Pick a Date</h3>
-                  <p className="text-muted-foreground">
-                    Choose a scheduled program day that works for you.
-                  </p>
-                </CardContent>
-              </Card>
-              
-              <Card className="border-border">
-                <CardContent className="pt-8 pb-8 text-center">
-                  <div className="w-16 h-16 bg-primary rounded-full flex items-center justify-center mx-auto mb-4">
-                    <Utensils className="w-8 h-8 text-primary-foreground" />
-                  </div>
-                  <h3 className="text-xl font-bold text-foreground mb-2">Provide a Meal</h3>
-                  <p className="text-muted-foreground">
-                    Prepare a group meal or arrange delivery for our youth participants.
-                  </p>
-                </CardContent>
-              </Card>
-
-              <Card className="border-border">
-                <CardContent className="pt-8 pb-8 text-center">
-                  <div className="w-16 h-16 bg-primary rounded-full flex items-center justify-center mx-auto mb-4">
-                    <Truck className="w-8 h-8 text-primary-foreground" />
-                  </div>
-                  <h3 className="text-xl font-bold text-foreground mb-2">Jump Aboard</h3>
-                  <p className="text-muted-foreground mb-4">All details included in the link below. Click to view & Sign-Up!</p>
-                  <Button size="sm" className="bg-primary text-primary-foreground hover:bg-primary/90" asChild>
-                    <a href={MEAL_TRAIN_LINK} target="_blank" rel="noopener noreferrer">
-                      Meal Train Sign-Up
-                    </a>
-                  </Button>
-                </CardContent>
-              </Card>
+            {/* Section Header with red accent */}
+            <div className="mb-12 md:mb-16">
+              <p className="text-xs font-bold uppercase tracking-[0.2em] text-[hsl(var(--nla-red))] mb-2">
+                Get Involved
+              </p>
+              <div className="flex items-center gap-4">
+                <div className="w-1 h-10 bg-[hsl(var(--nla-red))] rounded-full" />
+                <h2 className="text-3xl md:text-4xl font-black text-foreground">
+                  How It Works
+                </h2>
+              </div>
             </div>
 
+            {/* Steps */}
+            <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-0 mb-16">
+              {[
+                { icon: Heart, step: "01", title: "Want to Feed our Kids?", desc: "Join the Meal Train and help nourish our youth with a home-cooked or delivered meal." },
+                { icon: Calendar, step: "02", title: "Pick a Date", desc: "Choose a scheduled program day that works for you." },
+                { icon: Utensils, step: "03", title: "Provide a Meal", desc: "Prepare a group meal or arrange delivery for our youth participants." },
+                { icon: Truck, step: "04", title: "Jump Aboard", desc: "All details included in the link below. Click to view & Sign-Up!" },
+              ].map((item, i) => (
+                <div key={i} className="relative group">
+                  {/* Connector line */}
+                  {i < 3 && (
+                    <div className="hidden lg:block absolute top-10 right-0 w-full h-[2px] bg-border z-0 translate-x-1/2" />
+                  )}
+                  <div className="relative z-10 flex flex-col items-center text-center px-6 py-8">
+                    {/* Step number + icon */}
+                    <div className="relative mb-5">
+                      <div className="w-20 h-20 rounded-2xl bg-foreground flex items-center justify-center transition-all duration-300 group-hover:bg-[hsl(var(--nla-red))] group-hover:scale-105 group-hover:shadow-lg">
+                        <item.icon className="w-9 h-9 text-background" />
+                      </div>
+                      <span className="absolute -top-2 -right-2 w-7 h-7 rounded-full bg-[hsl(var(--nla-red))] text-[hsl(var(--nla-red-foreground))] text-xs font-bold flex items-center justify-center">
+                        {item.step}
+                      </span>
+                    </div>
+                    <h3 className="text-lg font-bold text-foreground mb-2">{item.title}</h3>
+                    <p className="text-sm text-muted-foreground leading-relaxed">{item.desc}</p>
+                    {i === 3 && (
+                      <Button size="sm" className="mt-4 bg-[hsl(var(--nla-red))] text-[hsl(var(--nla-red-foreground))] hover:bg-[hsl(var(--nla-red))]/90" asChild>
+                        <a href={MEAL_TRAIN_LINK} target="_blank" rel="noopener noreferrer">
+                          Meal Train Sign-Up
+                        </a>
+                      </Button>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Divider */}
+            <div className="w-16 h-1 bg-[hsl(var(--nla-red))] mx-auto mb-10 rounded-full" />
+
             {/* Partner Logos */}
-            <div className="text-center mt-2">
-              <div className="flex flex-wrap items-center justify-center gap-10 md:gap-14">
-                <img src={tacoCaballitoLogo} alt="Taco Caballito Tequileria" className="h-16 md:h-22 w-auto object-contain" />
-                <img src={mudhenBrewingLogo} alt="Mud Hen Brewing Co." className="h-12 md:h-18 w-auto object-contain" />
-                <img src={capeSquareLogo} alt="Cape Square Entertainment" className="h-20 md:h-26 w-auto object-contain" />
-                <img src={mattsFamilyLogo} alt="Matt's Family - Taste the Love" className="h-44 md:h-52 w-auto object-contain" />
-              </div>
-              <p className="text-sm text-muted-foreground mt-6 italic">
-                Proudly supported by local businesses who help fuel our youth.
+            <div className="text-center">
+              <p className="text-xs font-bold uppercase tracking-[0.2em] text-muted-foreground mb-8">
+                Proudly supported by local businesses who help fuel our youth
               </p>
+              <div className="flex flex-wrap items-center justify-center gap-10 md:gap-14">
+                <img src={tacoCaballitoLogo} alt="Taco Caballito Tequileria" className="h-16 md:h-22 w-auto object-contain grayscale hover:grayscale-0 transition-all duration-300" />
+                <img src={mudhenBrewingLogo} alt="Mud Hen Brewing Co." className="h-12 md:h-18 w-auto object-contain grayscale hover:grayscale-0 transition-all duration-300" />
+                <img src={capeSquareLogo} alt="Cape Square Entertainment" className="h-20 md:h-26 w-auto object-contain grayscale hover:grayscale-0 transition-all duration-300" />
+                <img src={mattsFamilyLogo} alt="Matt's Family - Taste the Love" className="h-44 md:h-52 w-auto object-contain grayscale hover:grayscale-0 transition-all duration-300" />
+              </div>
             </div>
           </div>
         </section>
