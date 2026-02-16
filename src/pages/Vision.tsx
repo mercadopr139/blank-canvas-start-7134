@@ -57,7 +57,7 @@ const Vision = () => {
         </section>
 
         {/* Launch Pad Logo + Details */}
-        <section className="py-16 bg-primary md:py-[60px]">
+        <section className="py-16 bg-primary my-0 md:py-[60px]">
           <div className="container">
             <div className="max-w-3xl mx-auto text-center mb-16">
               
