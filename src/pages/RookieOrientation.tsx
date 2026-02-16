@@ -96,7 +96,7 @@ const RookieOrientation = () => {
       <Header />
       <main className="flex-1">
         {/* Call-Out Section */}
-        <div className="py-12 md:py-16 text-center bg-neutral-950 border-b border-neutral-800 flex items-center justify-center">
+        <div className="py-12 md:py-16 text-center border-b border-neutral-800 flex items-center justify-center bg-secondary">
           <div className="max-w-[900px] mx-auto px-4 flex items-center gap-6 md:gap-10">
             
 
