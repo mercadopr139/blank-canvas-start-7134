@@ -1,6 +1,5 @@
 import Header from "@/components/layout/Header";
 import Footer from "@/components/layout/Footer";
-import launchPadLogo from "@/assets/programs/launch-pad-logo.png";
 import launchPadLogoNew from "@/assets/programs/launch-pad-logo-new.png";
 
 const Vision = () => {
@@ -42,7 +41,7 @@ const Vision = () => {
                   </div>
                 </div>
                 <img
-                  src={launchPadLogo}
+                  src={launchPadLogoNew}
                   alt="The Launch Pad"
                   className="h-24 md:h-32 lg:h-40 w-auto shrink-0" />
 
