@@ -88,18 +88,13 @@ const chatResponses: Record<Exclude<QuickOption, null>, {
     title: "Cost",
     content: <div className="space-y-3">
         <p className="font-bold text-foreground">Cost</p>
-        <p className="text-sm text-muted-foreground">No Limits Academy is a FREE, year-round youth development program. 
+        <p className="text-sm text-muted-foreground">No Limits Academy is a FREE, year-round youth development program.  
 
 
-There is no cost to participate. 
+There is no cost to participate.  
 
 
-If you would to support our mission, please consider a donation. 
-
-
-
-
-        <strong>FREE</strong>, year-round youth development program.<br />
+If you would to support our mission, please consider a donation. <strong>FREE</strong>, year-round youth development program.<br />
           There is no cost to participate.
         </p>
         <div className="flex justify-center" style={{ marginTop: '1.25rem' }}>
@@ -108,7 +103,8 @@ If you would to support our mission, please consider a donation. 
             Donate to Support NLA
           </a>
         </div>
-      </div> }, transportation: { title: "Transportation", content: <div className="space-y-3">
+      </div> }, transportation: { title: "Transportation",
+    content: <div className="space-y-3">
         <p className="font-bold text-foreground">Transportation</p>
         <p className="text-sm text-muted-foreground">
           NLA provides <strong>free transportation</strong> for Wildwood &amp; Woodbine kids, 5 days a week.
@@ -117,14 +113,18 @@ If you would to support our mission, please consider a donation. 
           If you live in Wildwood or Woodbine and have transportation questions, please reach out:
         </p>
         <div className="flex justify-center" style={{ marginTop: '1.25rem' }}>
-          <a href={`mailto:${INFO_EMAIL}?subject=${encodeURIComponent("Transportation Inquiry")}&body=${encodeURIComponent("Hi,\n\nI have a question about transportation for my child.\n\nName:\nChild's Name:\nLocation (Wildwood/Woodbine):\nQuestion:\n\nThanks!")}`} className="inline-flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-md font-bold text-sm hover:bg-primary/90 transition-colors">
+          <a
+          href={`mailto:${INFO_EMAIL}?subject=${encodeURIComponent("Transportation Inquiry")}&body=${encodeURIComponent("Hi,\n\nI have a question about transportation for my child.\n\nName:\nChild's Name:\nLocation (Wildwood/Woodbine):\nQuestion:\n\nThanks!")}`}
+          className="inline-flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-md font-bold text-sm hover:bg-primary/90 transition-colors">
+
             Email Us About Transportation
           </a>
         </div>
         <p className="text-sm text-muted-foreground text-center" style={{ marginTop: '1.25rem' }}>
           <a href={`mailto:${INFO_EMAIL}`} className="text-primary underline">{INFO_EMAIL}</a>
         </p>
-      </div> },
+      </div>
+  },
   person: {
     title: "Talk to a Person",
     content: <div className="space-y-3">
