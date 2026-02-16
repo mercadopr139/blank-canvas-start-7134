@@ -123,6 +123,11 @@ const OurStory = () => {
                     alt="Josh, pictured with Step Dad & Mom"
                     className="w-full h-auto"
                   />
+                  <div className="px-3 py-1.5 text-center">
+                    <p className="text-xs text-muted-foreground italic">
+                      Josh, pictured with Step Dad &amp; Mom
+                    </p>
+                  </div>
                 </div>
               </div>
 
@@ -153,6 +158,11 @@ const OurStory = () => {
                     alt="Dave, pictured with sister & parents"
                     className="w-full h-auto"
                   />
+                  <div className="px-3 py-1.5 text-center">
+                    <p className="text-xs text-muted-foreground italic">
+                      Dave, pictured with sister &amp; parents
+                    </p>
+                  </div>
                 </div>
               </div>
 
