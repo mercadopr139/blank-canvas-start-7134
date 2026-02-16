@@ -393,7 +393,7 @@ const ProgramsExtrasSection = () => {
               <DialogTitle className="text-2xl font-bold">Banking & Boxing</DialogTitle>
             </DialogHeader>
             <p className="text-base text-muted-foreground px-0 py-[10px] pb-4 whitespace-pre-line">
-              {"In Banking & Boxing, our youth train bankers in boxing, and bankers return the favor by teaching financial literacy. The exchange helps young people recognize their value first—then absorb new knowledge with confidence.\n\n"}
+              {"In Banking & Boxing, our youth train bankers in boxing, and bankers return the favor by teaching financial literacy. The exchange helps young people recognize their value first—then absorb new knowledge with confidence."}
             </p>
             <div className="flex justify-center my-2">
               <img src={oceanFirstBankLogo} alt="OceanFirst Bank Logo" className="h-20 w-auto border-none" />
