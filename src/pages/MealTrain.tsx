@@ -75,7 +75,7 @@ const MealTrain = () => {
               {[
                 { icon: Heart, step: "01", title: "Want to Feed our Kids?", desc: "Join the Meal Train and help nourish our youth with a home-cooked or delivered meal." },
                 { icon: Calendar, step: "02", title: "Pick a Date", desc: "Choose a scheduled program day that works for you." },
-                { icon: Utensils, step: "03", title: "Provide a Meal", desc: "Prepare a group meal or arrange delivery for our youth participants." },
+                { icon: Utensils, step: "03", title: "Plan a Meal", desc: "Prepare a group meal or arrange delivery for our youth participants." },
                 { icon: Truck, step: "04", title: "Jump Aboard", desc: "All details included in the link below. Click to view & Sign-Up!" },
               ].map((item, i) => (
                 <div key={i} className="relative group">
