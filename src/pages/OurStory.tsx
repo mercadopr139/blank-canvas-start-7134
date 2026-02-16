@@ -249,7 +249,7 @@ const OurStory = () => {
               {/* Featured finished facility photos */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                 {[
-                  { src: facilityFinishedGymNew, alt: "The finished boxing gym" },
+                  { src: facilityFinishedGymNew, alt: "The finished Boxing Facility" },
                   { src: facilityFinishedCourtNew, alt: "Finished basketball court and gym" },
                 ].map((img, idx) => (
                   <div key={`featured-${idx}`} className="relative overflow-hidden rounded-xl group">
