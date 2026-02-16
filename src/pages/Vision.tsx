@@ -1,6 +1,7 @@
 import Header from "@/components/layout/Header";
 import Footer from "@/components/layout/Footer";
 import launchPadLogo from "@/assets/programs/launch-pad-logo.png";
+import launchPadLogoNew from "@/assets/programs/launch-pad-logo-new.png";
 
 const Vision = () => {
   return (
@@ -57,49 +58,51 @@ const Vision = () => {
         </section>
 
         {/* Launch Pad Logo + Details */}
-        <section className="py-16 bg-primary my-0 md:py-[60px]">
+        <section className="py-16 bg-primary my-0 md:py-[60px] overflow-hidden">
           <div className="container">
-            <div className="max-w-3xl mx-auto text-center mb-16">
-              
-
-
-
-
-            </div>
-
-            <div className="max-w-3xl">
-              <div className="flex items-start gap-4 mb-10">
-                <div className="w-1 self-stretch rounded-full bg-nla shrink-0" />
-                <div>
-                  <span className="inline-block text-xs font-black tracking-[0.25em] uppercase text-nla mb-2">
-                    The Launch Pad
-                  </span>
-                  <h2 className="text-2xl md:text-3xl font-black text-primary-foreground leading-tight">
-                    How we execute our mission long-term.
-                  </h2>
+            <div className="flex flex-col lg:flex-row items-center gap-10 lg:gap-16">
+              <div className="flex-1">
+                <div className="flex items-start gap-4 mb-10">
+                  <div className="w-1 self-stretch rounded-full bg-nla shrink-0" />
+                  <div>
+                    <span className="inline-block text-xs font-black tracking-[0.25em] uppercase text-nla mb-2">
+                      The Launch Pad
+                    </span>
+                    <h2 className="text-2xl md:text-3xl font-black text-primary-foreground leading-tight">
+                      How we execute our mission long-term.
+                    </h2>
+                  </div>
                 </div>
+
+                <p className="text-lg md:text-xl text-primary-foreground/80 leading-relaxed mb-8">
+                  The Launch Pad keeps young people connected to <strong className="text-primary-foreground">guidance, opportunity, and support</strong> long after they leave the gym—through a growing network of <strong className="text-primary-foreground">mentors, local businesses, and real-world partnerships</strong>.
+                </p>
+
+                <ul className="space-y-4 mb-10">
+                  {[
+                  "Career exposure and workforce readiness",
+                  "Entrepreneurship and leadership development",
+                  "Mentorship, accountability, and next-step planning"].
+                  map((item) =>
+                  <li key={item} className="flex items-start gap-3">
+                      <span className="mt-2 h-2 w-2 rounded-full bg-nla shrink-0" />
+                      <span className="text-lg text-primary-foreground font-medium">{item}</span>
+                    </li>
+                  )}
+                </ul>
+
+                <p className="text-xl md:text-2xl font-bold text-primary-foreground leading-snug">
+                  Youth don't just learn how to be strong employees—they develop the mindset and skills of <strong>builders and leaders</strong>.
+                </p>
               </div>
 
-              <p className="text-lg md:text-xl text-primary-foreground/80 leading-relaxed mb-8">
-                The Launch Pad keeps young people connected to <strong className="text-primary-foreground">guidance, opportunity, and support</strong> long after they leave the gym—through a growing network of <strong className="text-primary-foreground">mentors, local businesses, and real-world partnerships</strong>.
-              </p>
-
-              <ul className="space-y-4 mb-10">
-                {[
-                "Career exposure and workforce readiness",
-                "Entrepreneurship and leadership development",
-                "Mentorship, accountability, and next-step planning"].
-                map((item) =>
-                <li key={item} className="flex items-start gap-3">
-                    <span className="mt-2 h-2 w-2 rounded-full bg-nla shrink-0" />
-                    <span className="text-lg text-primary-foreground font-medium">{item}</span>
-                  </li>
-                )}
-              </ul>
-
-              <p className="text-xl md:text-2xl font-bold text-primary-foreground leading-snug">
-                Youth don't just learn how to be strong employees—they develop the mindset and skills of <strong>builders and leaders</strong>.
-              </p>
+              <div className="shrink-0 lg:w-[340px] xl:w-[420px]">
+                <img
+                  src={launchPadLogoNew}
+                  alt="The Launch Pad"
+                  className="w-full h-auto drop-shadow-2xl"
+                />
+              </div>
             </div>
           </div>
         </section>
