@@ -44,50 +44,50 @@ import facilityScaffoldWork from "@/assets/facility/facility-scaffold-work.png";
 import facilityHighWork from "@/assets/facility/facility-high-work.png";
 import facilityFinishedCourt from "@/assets/facility/facility-finished-court.png";
 
-type FacilityImg = { src: string; alt: string };
+type FacilityImg = {src: string;alt: string;};
 
 const facilityImages: FacilityImg[] = [
-  { src: facilityConstructionCrew, alt: "Construction crew breaking ground" },
-  { src: facilityPlumbingCrew, alt: "Plumbing installation crew" },
-  { src: facilityRebarPrep, alt: "Rebar and foundation preparation" },
-  { src: facilityFloorWork, alt: "Floor installation in progress" },
-  { src: facilityFramingFloorWork, alt: "Framing and floor work" },
-  { src: facilityBathroom, alt: "Finished bathroom facilities" },
-  { src: facilityThumbsUp, alt: "Facility space taking shape" },
-  { src: facilityLoungeArea, alt: "Finished lounge area" },
-  { src: facilityFloorCleaning, alt: "Floor cleaning and prep" },
-  { src: facilityMovingBoxes, alt: "Moving equipment in" },
-  { src: facilityDoorInstall, alt: "Door frame installation" },
-  { src: facilityKitchen, alt: "Finished kitchen" },
-  { src: facilityDemolition, alt: "Demolition day" },
-  { src: facilityBuildCrew, alt: "Build crew on site" },
-  { src: facilityPlanning, alt: "Planning the build" },
-  { src: facilityGreenTeam, alt: "Volunteer crew thumbs up" },
-  { src: facilityEmptyWarehouse, alt: "Empty warehouse before renovation" },
-  { src: facilityMetalwork, alt: "Metalwork and welding" },
-  { src: facilitySteelFrame, alt: "Steel frame assembly" },
-  { src: facilityWelding, alt: "Welding steel structure" },
-  { src: facilityDumpster, alt: "Demolition debris removal" },
-  { src: facilityGymFloorPrep, alt: "Gym floor preparation" },
-  { src: facilityRigInstall, alt: "Installing the rig" },
-  { src: facilityKidOnPlates, alt: "Future champion testing the equipment" },
-  { src: facilityFramingOverview, alt: "Framing work overview" },
-  { src: facilityFramingFloor, alt: "Framing the floor structure" },
-  { src: facilityFramingWall, alt: "Wall framing installation" },
-  { src: facilityWallRaising, alt: "Raising the walls" },
-  { src: facilityWallFraming, alt: "Framing progress" },
-  { src: facilityPlywoodWall, alt: "Plywood sheathing installation" },
-  { src: facilityEquipmentPrep, alt: "Assembling gym equipment" },
-  { src: facilityFinishedGym, alt: "The finished facility" },
-  { src: facilityFoundersCleaning, alt: "Founders prepping the space" },
-  { src: facilityDemoFloor, alt: "Floor demolition" },
-  { src: facilityFloorInstall1, alt: "Installing the new floor" },
-  { src: facilityFloorInstall2, alt: "Floor installation progress" },
-  { src: facilityFloorDiscussion, alt: "Planning floor layout" },
-  { src: facilityScaffoldWork, alt: "Working on scaffolding" },
-  { src: facilityHighWork, alt: "High ceiling work" },
-  { src: facilityFinishedCourt, alt: "Finished basketball court and gym" },
-];
+{ src: facilityConstructionCrew, alt: "Construction crew breaking ground" },
+{ src: facilityPlumbingCrew, alt: "Plumbing installation crew" },
+{ src: facilityRebarPrep, alt: "Rebar and foundation preparation" },
+{ src: facilityFloorWork, alt: "Floor installation in progress" },
+{ src: facilityFramingFloorWork, alt: "Framing and floor work" },
+{ src: facilityBathroom, alt: "Finished bathroom facilities" },
+{ src: facilityThumbsUp, alt: "Facility space taking shape" },
+{ src: facilityLoungeArea, alt: "Finished lounge area" },
+{ src: facilityFloorCleaning, alt: "Floor cleaning and prep" },
+{ src: facilityMovingBoxes, alt: "Moving equipment in" },
+{ src: facilityDoorInstall, alt: "Door frame installation" },
+{ src: facilityKitchen, alt: "Finished kitchen" },
+{ src: facilityDemolition, alt: "Demolition day" },
+{ src: facilityBuildCrew, alt: "Build crew on site" },
+{ src: facilityPlanning, alt: "Planning the build" },
+{ src: facilityGreenTeam, alt: "Volunteer crew thumbs up" },
+{ src: facilityEmptyWarehouse, alt: "Empty warehouse before renovation" },
+{ src: facilityMetalwork, alt: "Metalwork and welding" },
+{ src: facilitySteelFrame, alt: "Steel frame assembly" },
+{ src: facilityWelding, alt: "Welding steel structure" },
+{ src: facilityDumpster, alt: "Demolition debris removal" },
+{ src: facilityGymFloorPrep, alt: "Gym floor preparation" },
+{ src: facilityRigInstall, alt: "Installing the rig" },
+{ src: facilityKidOnPlates, alt: "Future champion testing the equipment" },
+{ src: facilityFramingOverview, alt: "Framing work overview" },
+{ src: facilityFramingFloor, alt: "Framing the floor structure" },
+{ src: facilityFramingWall, alt: "Wall framing installation" },
+{ src: facilityWallRaising, alt: "Raising the walls" },
+{ src: facilityWallFraming, alt: "Framing progress" },
+{ src: facilityPlywoodWall, alt: "Plywood sheathing installation" },
+{ src: facilityEquipmentPrep, alt: "Assembling gym equipment" },
+{ src: facilityFinishedGym, alt: "The finished facility" },
+{ src: facilityFoundersCleaning, alt: "Founders prepping the space" },
+{ src: facilityDemoFloor, alt: "Floor demolition" },
+{ src: facilityFloorInstall1, alt: "Installing the new floor" },
+{ src: facilityFloorInstall2, alt: "Floor installation progress" },
+{ src: facilityFloorDiscussion, alt: "Planning floor layout" },
+{ src: facilityScaffoldWork, alt: "Working on scaffolding" },
+{ src: facilityHighWork, alt: "High ceiling work" },
+{ src: facilityFinishedCourt, alt: "Finished basketball court and gym" }];
+
 
 const OurStory = () => {
   const [activeImg, setActiveImg] = useState<FacilityImg | null>(null);
@@ -134,15 +134,15 @@ const OurStory = () => {
               </p>
 
               <p className="text-lg md:text-xl text-muted-foreground leading-relaxed mb-6">
-                Sports provided an outlet, but boxing became the turning point. While pursuing his education at Lock Haven University—known for both its nationally ranked boxing program and strong teacher preparation—Josh found structure, accountability, and belief in his own potential. He became a National Collegiate Boxing Champion, later competing professionally, while earning his degree in Secondary Education. Boxing did more than sharpen his athletic ability; it taught him discipline, resilience, and how to confront adversity with focus and self-control.
+                Sports provided an outlet, but boxing became the turning point. While pursuing his education at Lock Haven University—known for both its nationally ranked boxing program—Josh found structure, accountability, and belief in his own potential. In 2007, he became a National Collegiate Boxing Champion, later competing professionally, while earning his degree in Secondary Education. Boxing did more than sharpen his athletic ability; it taught him discipline, resilience, and how to confront adversity with focus and self-control.
               </p>
 
               <p className="text-lg md:text-xl text-muted-foreground leading-relaxed mb-6">
                 After graduating, Josh felt a calling to make an impact beyond the ring. He spent over a decade as a psychology and sociology teacher, earning recognition for exceptional classroom culture, relationship-based discipline, and student motivation. As both a teacher and multi-sport coach, Josh was intentional about becoming the mentor he once needed—consistent, fair, and committed to giving every young person a genuine opportunity.
               </p>
 
-              <p className="text-lg md:text-xl text-muted-foreground leading-relaxed mb-6">
-                Along that journey, Josh's path intersected with Dave Von Savage Jr. More than a decade ago, Dave hired Josh as his boxing trainer, and what began as sessions in a residential gym evolved into a lasting friendship rooted in trust, discipline, and shared values. Though raised in different circumstances, both men were shaped by environments that emphasized accountability, service, and leadership.
+              <p className="text-lg md:text-xl text-muted-foreground leading-relaxed mb-6">Not long after finishing college, Josh began teaching boxing lessons—and one of the individuals who hired him was Dave Von Savage Jr. What began as sessions in a residential gym evolved into a lasting friendship rooted in trust, discipline, and shared values. Though raised in different circumstances, both men were shaped by environments that emphasized accountability, service, and leadership.
+
               </p>
 
               {/* Clear floats before Photo Slot B */}
@@ -186,11 +186,11 @@ const OurStory = () => {
               {/* Photo Slot C - Centered at end */}
               <div className="w-full max-w-[420px] mx-auto">
                 <div className="bg-muted rounded-lg shadow-md overflow-hidden">
-                  <img 
-                    src={joshMcNallyDave} 
+                  <img
+                    src={joshMcNallyDave}
                     alt="Josh, Coach McNally, and Dave at 2025 Naval Academy Brigade boxing championships"
-                    className="w-full h-auto"
-                  />
+                    className="w-full h-auto" />
+
                   <div className="p-3 text-center">
                     <p className="text-sm text-muted-foreground italic">
                       Josh, Coach McNally, and Dave at 2025 Naval Academy Brigade boxing championships
@@ -216,22 +216,22 @@ const OurStory = () => {
               
               {/* Photo Gallery - 4x4 desktop, 3 cols tablet, 2 cols mobile */}
               <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
-                {facilityImages.map((img, idx) => (
-                  <div key={idx} className="overflow-hidden rounded-xl bg-muted">
+                {facilityImages.map((img, idx) =>
+                <div key={idx} className="overflow-hidden rounded-xl bg-muted">
                     <button
-                      type="button"
-                      onClick={() => setActiveImg(img)}
-                      className="block w-full aspect-[4/3]"
-                      aria-label={`Enlarge ${img.alt}`}
-                    >
+                    type="button"
+                    onClick={() => setActiveImg(img)}
+                    className="block w-full aspect-[4/3]"
+                    aria-label={`Enlarge ${img.alt}`}>
+
                       <img
-                        src={img.src}
-                        alt={img.alt}
-                        className="w-full h-full object-cover"
-                      />
+                      src={img.src}
+                      alt={img.alt}
+                      className="w-full h-full object-cover" />
+
                     </button>
                   </div>
-                ))}
+                )}
               </div>
             </div>
           </div>
@@ -242,12 +242,12 @@ const OurStory = () => {
       <PortalLightbox
         open={!!activeImg}
         img={activeImg}
-        onClose={() => setActiveImg(null)}
-      />
+        onClose={() => setActiveImg(null)} />
+
 
       <Footer />
-    </div>
-  );
+    </div>);
+
 };
 
 export default OurStory;
