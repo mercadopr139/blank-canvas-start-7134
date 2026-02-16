@@ -234,6 +234,10 @@ const ImpactStory = () => {
                         <span className="text-foreground mt-1">•</span>
                         <span>Police Chiefs Association of Cape May County</span>
                       </li>
+                      <li className="flex items-start gap-2">
+                        <span className="text-foreground mt-1">•</span>
+                        <span>NJ Division of Criminal Justice, Chief of Detectives</span>
+                      </li>
                     </ul>
                   </AccordionContent>
                 </AccordionItem>
