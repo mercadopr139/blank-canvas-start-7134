@@ -121,7 +121,7 @@ const DailyRhythmSection = ({
                     Tuesdays Only
                   </p>
                   <p className="text-base md:text-lg text-primary-foreground/90 leading-relaxed">
-                    Junior Boxing follows a shortened, age-appropriate schedule designed to introduce structure, discipline, and community in a supportive environment. <span className="font-medium">Practice officially ends at 6:00pm</span>—extended programming and dinner are available for families who wish to stay.
+                    Junior Boxing follows a shortened, age-appropriate schedule designed to introduce structure, discipline, and community in a supportive environment. <span className="font-medium">Practice officially ends at 6:00pm</span>—extended programming and dinner are available for children who wish to stay.
                   </p>
                 </div>
               </div>
