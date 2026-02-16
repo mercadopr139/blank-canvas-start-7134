@@ -28,7 +28,7 @@ const ImpactStory = () => {
     icon: Heart,
     value: "70%",
     label: "Below Poverty Line",
-    description: "The majority of our youth come from underserved communities"
+    description: "Of registered youth"
   }, {
     icon: Utensils,
     value: "Meals Served",
@@ -224,7 +224,7 @@ const ImpactStory = () => {
                       </li>
                       <li className="flex items-start gap-2">
                         <span className="text-foreground mt-1">•</span>
-                        <span>United States Congressman Jeff Van Drew</span>
+                        <span>United States Representative for New Jersey's 2nd Congressional District </span>
                       </li>
                       <li className="flex items-start gap-2">
                         <span className="text-foreground mt-1">•</span>
@@ -246,7 +246,7 @@ const ImpactStory = () => {
                     {(() => {
                     const lawEnforcementPartners = ["Avalon Police Department", "Blue Knights Motorcycle Club", "Cape May County Prosecutor's Office", "Cape May County Sheriff's Department", "Cape May Police Department", "Lower Township Police Department", "Middle Township Police Department", "North Wildwood Police Department", "Police Benevolent Association (Local PBA 59)", "Wildwood Crest Police Department", "Wildwood Police Department"].sort((a, b) => a.localeCompare(b));
                     return <ul className="mt-3 list-disc space-y-2 pl-5 text-sm text-muted-foreground">
-                          {lawEnforcementPartners.map(item => <li key={item}>{item}</li>)}
+                          {lawEnforcementPartners.map((item) => <li key={item}>{item}</li>)}
                         </ul>;
                   })()}
                   </AccordionContent>
