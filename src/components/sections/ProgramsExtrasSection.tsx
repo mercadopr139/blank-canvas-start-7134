@@ -353,10 +353,15 @@ const ProgramsExtrasSection = () => {
                 <img src={deltaDentalLogo} alt="Delta Dental Logo" className="h-20 w-auto border-none" />
               </div>}
 
-            {/* NJ4S Logo for Lil' Champs */}
-            {openItem?.id === "lil-champs" && <div className="flex justify-center my-0">
-                <img src={nj4sLogo} alt="NJ4S Logo" className="h-48 w-auto border-none" />
-              </div>}
+            {/* NJ4S Video + Logo for Lil' Champs */}
+            {openItem?.id === "lil-champs" && <>
+                <div className="my-4">
+                  <YouTubeEmbed videoId="R6HPefPkv20" title="NJ4S Lil' Champs' Corner Program" />
+                </div>
+                <div className="flex justify-center my-0">
+                  <img src={nj4sLogo} alt="NJ4S Logo" className="h-48 w-auto border-none" />
+                </div>
+              </>}
 
             {/* Cape Assist Logo for Coaching Boys into Men */}
             {openItem?.id === "coaching-boys-into-men" && <div className="flex justify-center my-0">
