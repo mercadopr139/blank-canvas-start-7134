@@ -27,7 +27,7 @@ const chatResponses: Record<Exclude<QuickOption, null>, {
         <div>
           <p className="font-bold text-foreground">Junior Boxing:</p>
           <p className="text-sm text-muted-foreground whitespace-pre-line">{JUNIOR_BOXING_SCHEDULE}</p>
-          <p className="text-xs italic text-muted-foreground mt-1">*Junior Boxing practice ends 6pm, optional aftercare programming available</p>
+          <p className="text-xs italic text-muted-foreground mt-1">*Junior Boxing practice ends 6pm, optional aftercare programming available until 7:15pm </p>
         </div>
         
 
