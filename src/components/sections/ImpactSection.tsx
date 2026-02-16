@@ -4,7 +4,7 @@ import { Trophy, Users, Heart } from "lucide-react";
 import nlaAvalonAward from "@/assets/gym-buddies/nla-avalon-award.png";
 import middleMattersChrissy from "@/assets/awards/middle-matters-chrissy-casiello.jpg";
 import georgeHillAward from "@/assets/awards/george-hill-award-ceremony.jpeg";
-const awards = [`BCMF — Be Kind Award Recipient`, `Cape Assist — Partner in Prevention Award`, `Cape May County NAACP Freedom Fund — "Recognition of Educator Award"`, `CMC Chamber of Commerce — Non-Profit of the Year Award`, `Middle Township City Council — "Middle Matters" Civic Recognition Award`, `United States House of Representatives — Congressional Proclamation of Recognition`, `USA Boxing's Mid-Atlantic Association — George Hill Humanitarian Award`].sort((a, b) => a.localeCompare(b));
+const awards = [`BCMF — Be Kind Award Recipient`, `Cape Assist — Partner in Prevention Award`, `Cape May County NAACP Freedom Fund — Recognition of Educator Award`, `CMC Chamber of Commerce — Non-Profit of the Year Award`, `Middle Township City Council — "Middle Matters" Civic Recognition Award`, `United States House of Representatives — Congressional Proclamation of Recognition`, `USA Boxing's Mid-Atlantic Association — George Hill Humanitarian Award`].sort((a, b) => a.localeCompare(b));
 const ImpactSection = () => {
   return <><section className="md:pt-28 md:pb-10 bg-background py-[30px]">
       <div className="container">
