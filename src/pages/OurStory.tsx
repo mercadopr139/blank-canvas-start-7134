@@ -3,6 +3,8 @@ import Header from "@/components/layout/Header";
 import Footer from "@/components/layout/Footer";
 import PortalLightbox from "@/components/ui/portal-lightbox";
 import joshMcNallyDave from "@/assets/our-story/josh-mcnally-dave.jpeg";
+import joshParents from "@/assets/our-story/josh-parents.png";
+import daveFamily from "@/assets/our-story/dave-family.png";
 import facilityConstructionCrew from "@/assets/facility/facility-construction-crew.png";
 import facilityPlumbingCrew from "@/assets/facility/facility-plumbing-crew.png";
 import facilityRebarPrep from "@/assets/facility/facility-rebar-prep.png";
@@ -113,17 +115,17 @@ const OurStory = () => {
           <div className="container">
             <div className="max-w-[900px] mx-auto prose prose-lg">
               
-              {/* Photo Slot A - Float Right on Desktop */}
+              {/* Photo Slot A - Josh with Step Dad & Mom */}
               <div className="md:float-right md:ml-5 md:mb-4 md:max-w-[380px] mb-6 w-full max-w-[420px] mx-auto md:mx-0">
                 <div className="bg-muted rounded-lg shadow-md overflow-hidden">
-                  <div className="aspect-[4/5] flex items-center justify-center bg-accent border-2 border-dashed border-border">
-                    <span className="text-muted-foreground text-center px-4 font-medium">
-                      [INSERT JOSH PHOTO HERE]
-                    </span>
-                  </div>
+                  <img
+                    src={joshParents}
+                    alt="Josh, pictured with Step Dad & Mom"
+                    className="w-full h-auto"
+                  />
                   <div className="p-3 text-center">
                     <p className="text-sm text-muted-foreground italic">
-                      Caption: [Add caption here]
+                      Josh, pictured with Step Dad &amp; Mom
                     </p>
                   </div>
                 </div>
@@ -148,17 +150,17 @@ const OurStory = () => {
               {/* Clear floats before Photo Slot B */}
               <div className="clear-both" />
 
-              {/* Photo Slot B - Float Left on Desktop */}
+              {/* Photo Slot B - Dave with Sister & Parents */}
               <div className="md:float-left md:mr-5 md:mb-4 md:max-w-[380px] mb-6 mt-4 w-full max-w-[420px] mx-auto md:mx-0">
                 <div className="bg-muted rounded-lg shadow-md overflow-hidden">
-                  <div className="aspect-[4/3] flex items-center justify-center bg-accent border-2 border-dashed border-border">
-                    <span className="text-muted-foreground text-center px-4 font-medium">
-                      [INSERT JOSH + DAVE (OR NLA) PHOTO HERE]
-                    </span>
-                  </div>
+                  <img
+                    src={daveFamily}
+                    alt="Dave, pictured with sister & parents"
+                    className="w-full h-auto"
+                  />
                   <div className="p-3 text-center">
                     <p className="text-sm text-muted-foreground italic">
-                      Caption: [Add caption here]
+                      Dave, pictured with sister &amp; parents
                     </p>
                   </div>
                 </div>
