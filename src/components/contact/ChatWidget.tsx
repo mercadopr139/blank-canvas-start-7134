@@ -92,7 +92,7 @@ const chatResponses: Record<Exclude<QuickOption, null>, {
           No Limits Academy is a <strong>FREE</strong>, year-round youth development program. There is no cost to participate. If you would like to support our mission, please consider a donation.
         </p>
         <div className="flex justify-center" style={{ marginTop: '1.25rem' }}>
-          <a href="https://www.paypal.com/ncp/payment/TMMDVUSEQKHJC" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-md font-bold text-sm hover:bg-primary/90 transition-colors">
+          <a href="/supporters" className="inline-flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-md font-bold text-sm hover:bg-primary/90 transition-colors">
             <DollarSign className="h-4 w-4" />
             Donate to Support NLA
           </a>
