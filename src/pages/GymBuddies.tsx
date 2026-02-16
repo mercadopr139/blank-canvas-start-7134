@@ -294,6 +294,9 @@ const GymBuddies = () => {
                 </DrawerContent>
               </Drawer>
 
+              {/* Divider */}
+              <hr className="border-t border-foreground/10 my-8" />
+
               {/* Photo Gallery */}
               <ClickToEnlargeGallery images={gymBuddiesImages} showCaptions variant="featured" />
             </div>
