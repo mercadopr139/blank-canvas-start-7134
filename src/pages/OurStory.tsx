@@ -134,15 +134,15 @@ const OurStory = () => {
               </p>
 
               <p className="text-lg md:text-xl text-muted-foreground leading-relaxed mb-6">
-                Sports provided an outlet, but boxing became the turning point. While pursuing his education at Lock Haven University—known for both its nationally ranked boxing program—Josh found structure, accountability, and belief in his own potential. In 2007, he became a National Collegiate Boxing Champion, later competing professionally, while earning his degree in Secondary Education. Boxing did more than sharpen his athletic ability; it taught him discipline, resilience, and how to confront adversity with focus and self-control.
+                Sports provided an outlet, but boxing became the turning point. While pursuing his education at Lock Haven University—known for its nationally ranked boxing program—Josh found structure, accountability, and belief in his own potential. In 2007, he became a National Collegiate Boxing Champion, later competing professionally, while earning his degree in Secondary Education. Boxing did more than sharpen his athletic ability; it taught him discipline, resilience, and how to confront adversity with focus and self-control.
               </p>
 
               <p className="text-lg md:text-xl text-muted-foreground leading-relaxed mb-6">
                 After graduating, Josh felt a calling to make an impact beyond the ring. He spent over a decade as a psychology and sociology teacher, earning recognition for exceptional classroom culture, relationship-based discipline, and student motivation. As both a teacher and multi-sport coach, Josh was intentional about becoming the mentor he once needed—consistent, fair, and committed to giving every young person a genuine opportunity.
               </p>
 
-              <p className="text-lg md:text-xl text-muted-foreground leading-relaxed mb-6">Not long after finishing college, Josh began teaching boxing lessons—and one of the individuals who hired him was Dave Von Savage Jr. What began as sessions in a residential gym evolved into a lasting friendship rooted in trust, discipline, and shared values. Though raised in different circumstances, both men were shaped by environments that emphasized accountability, service, and leadership.
-
+              <p className="text-lg md:text-xl text-muted-foreground leading-relaxed mb-6">
+                Not long after finishing college, Josh began teaching boxing lessons back home in Cape May, NJ—and one of the individuals who hired him was Dave Von Savage Jr., who was preparing to attend the United States Naval Academy. Interestingly, the Naval Academy's head boxing coach, Jim McNally, was also one of the original founders of Lock Haven University's boxing program in 1979—the very program where Josh would later win a national championship. What began as sessions in a residential gym quickly grew into a lasting friendship rooted in trust, discipline, and shared values.
               </p>
 
               {/* Clear floats before Photo Slot B */}
@@ -169,10 +169,6 @@ const OurStory = () => {
               </p>
 
               <p className="text-lg md:text-xl text-muted-foreground leading-relaxed mb-6">
-                What neither Josh nor Dave fully understood at the time was how closely their paths had already been shaped by the same boxing lineage. Dave trained at the Naval Academy under Jim McNally, who previously founded the boxing program at Lock Haven University—where Josh would later win a national championship. Long before they ever met, the same philosophy, standards, and approach to discipline had been instilled in both of them, quietly preparing each for a partnership neither could have imagined.
-              </p>
-
-              <p className="text-lg md:text-xl text-muted-foreground leading-relaxed mb-6">
                 Though their lives unfolded along different paths, Josh and Dave stayed closely connected, united by boxing, friendship, and a shared belief in the power of structure and consistency to change lives. In 2020, those parallel journeys converged with the establishment of No Limits Academy. In 2022, Josh resigned from his teaching position to commit to NLA full time, allowing the organization to grow from a vision into a comprehensive youth development program serving children across Cape May County.
               </p>
 
@@ -180,7 +176,7 @@ const OurStory = () => {
               <div className="clear-both" />
 
               <p className="text-lg md:text-xl text-muted-foreground leading-relaxed mb-10">
-                Today, No Limits Academy is more than a boxing gym. It is a community hub built on mentorship, belonging, and opportunity. Leveraging backgrounds in education, military service, business, and boxing, Josh and Dave created a space where young people are challenged, supported, and believed in. Through discipline and care, NLA teaches its athletes that their circumstances do not define their future—and that no one succeeds alone.
+                Today, No Limits Academy is more than a boxing gym. It is a community hub built on mentorship, belonging, and opportunity. Leveraging backgrounds in education, military service, business, and boxing, alongside a network of incredible people, Josh and Dave created a space where young people are challenged, supported, and believed in. Through discipline and care, NLA teaches its athletes that their circumstances do not define their future—and that no one succeeds alone.
               </p>
 
               {/* Photo Slot C - Centered at end */}
