@@ -104,7 +104,7 @@ const OurStory = () => {
       
       <main className="flex-1">
         {/* Hero Section */}
-        <section className="bg-primary py-16 md:py-24">
+        <section className="bg-primary py-16 md:py-[30px]">
           <div className="container">
             <div className="max-w-[900px] mx-auto">
               <h1 className="text-4xl md:text-5xl lg:text-6xl font-black text-primary-foreground leading-tight">
@@ -125,8 +125,8 @@ const OurStory = () => {
                   <img
                     src={joshParents}
                     alt="Josh, pictured with Step Dad & Mom"
-                    className="w-full h-auto"
-                  />
+                    className="w-full h-auto" />
+
                   <div className="px-3 py-1.5 text-center">
                     <p className="text-xs text-muted-foreground italic">Josh, pictured with step dad &amp; mom</p>
                   </div>
@@ -150,8 +150,8 @@ const OurStory = () => {
                   <img
                     src={joshBasketballCoach}
                     alt="Josh, Head Varsity Basketball Coach, 2015-2021"
-                    className="w-full h-auto"
-                  />
+                    className="w-full h-auto" />
+
                   <div className="px-3 py-1.5 text-center">
                     <p className="text-xs text-muted-foreground italic">Josh, Head Varsity Basketball Coach, 2015-2021</p>
                   </div>
@@ -170,8 +170,8 @@ const OurStory = () => {
                   <img
                     src={joshDaveEarly}
                     alt="Josh and Dave in the early days"
-                    className="w-full h-auto"
-                  />
+                    className="w-full h-auto" />
+
                   <div className="px-3 py-1.5 text-center">
                     <p className="text-xs text-muted-foreground italic">Josh and Dave in the early days</p>
                   </div>
@@ -190,8 +190,8 @@ const OurStory = () => {
                   <img
                     src={daveFamily}
                     alt="Dave, pictured with sister & parents"
-                    className="w-full h-auto"
-                  />
+                    className="w-full h-auto" />
+
                   <div className="px-3 py-1.5 text-center">
                     <p className="text-xs text-muted-foreground italic">
                       Dave, pictured with sister &amp; parents
@@ -223,7 +223,7 @@ const OurStory = () => {
         </section>
 
         {/* Our Facility Section */}
-        <section className="py-16 md:py-20 bg-foreground">
+        <section className="py-16 bg-foreground md:py-[30px]">
           <div className="container">
             <div className="max-w-[1200px] mx-auto">
               <h2 className="text-3xl md:text-4xl font-black text-background mb-4">
@@ -236,28 +236,28 @@ const OurStory = () => {
               {/* Featured finished facility photos */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                 {[
-                  { src: facilityFinishedGymNew, alt: "The finished Boxing Facility" },
-                  { src: facilityFinishedCourtNew, alt: "The finished Performance Center" },
-                ].map((img, idx) => (
-                  <div key={`featured-${idx}`} className="relative overflow-hidden rounded-xl group">
+                { src: facilityFinishedGymNew, alt: "The finished Boxing Facility" },
+                { src: facilityFinishedCourtNew, alt: "The finished Performance Center" }].
+                map((img, idx) =>
+                <div key={`featured-${idx}`} className="relative overflow-hidden rounded-xl group">
                     <button
-                      type="button"
-                      onClick={() => setActiveImg(img)}
-                      className="block w-full aspect-[16/10]"
-                      aria-label={`Enlarge ${img.alt}`}
-                    >
+                    type="button"
+                    onClick={() => setActiveImg(img)}
+                    className="block w-full aspect-[16/10]"
+                    aria-label={`Enlarge ${img.alt}`}>
+
                       <img
-                        src={img.src}
-                        alt={img.alt}
-                        className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
-                      />
+                      src={img.src}
+                      alt={img.alt}
+                      className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" />
+
                       <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
                       <p className="absolute bottom-3 left-4 right-4 text-sm font-semibold text-white drop-shadow-lg">
                         {img.alt}
                       </p>
                     </button>
                   </div>
-                ))}
+                )}
               </div>
 
               {/* Divider label */}
