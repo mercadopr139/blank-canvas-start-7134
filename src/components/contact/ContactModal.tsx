@@ -4,8 +4,8 @@ import {
   Dialog,
   DialogContent,
   DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+  DialogTitle } from
+"@/components/ui/dialog";
 import { MessageCircle } from "lucide-react";
 import ChatWidget from "./ChatWidget";
 
@@ -46,14 +46,14 @@ const ContactModal = ({ open, onOpenChange }: ContactModalProps) => {
           </DialogTitle>
         </DialogHeader>
 
-        {!showChat ? (
-          <div className="flex flex-col gap-4 py-4">
+        {!showChat ?
+        <div className="flex flex-col gap-4 py-4">
             <button
-              type="button"
-              className="w-full rounded-xl bg-black px-4 py-3 text-white font-semibold hover:opacity-90 transition flex items-center gap-3"
-              onClick={handleChatClick}
-              aria-label="Start a chat with No Limits Academy"
-            >
+            type="button"
+            className="w-full rounded-xl bg-black px-4 py-3 text-white font-semibold hover:opacity-90 transition gap-3 flex items-center justify-center"
+            onClick={handleChatClick}
+            aria-label="Start a chat with No Limits Academy">
+
               <MessageCircle className="h-5 w-5" />
               <span className="flex flex-col items-start">
                 <span className="font-bold">Chat with NLA</span>
@@ -62,19 +62,19 @@ const ContactModal = ({ open, onOpenChange }: ContactModalProps) => {
             </button>
 
             <a
-              href="mailto:info@nolimitsboxingacademy.org?subject=Question%20from%20No%20Limits%20Academy%20Website"
-              className="w-full flex items-center justify-center rounded-xl bg-black px-4 py-3 text-white font-semibold hover:opacity-90 transition"
-              aria-label="Send an email to No Limits Academy"
-            >
+            href="mailto:info@nolimitsboxingacademy.org?subject=Question%20from%20No%20Limits%20Academy%20Website"
+            className="w-full flex items-center justify-center rounded-xl bg-black px-4 py-3 text-white font-semibold hover:opacity-90 transition"
+            aria-label="Send an email to No Limits Academy">
+
               Email NLA
             </a>
-          </div>
-        ) : (
-          <ChatWidget onBack={handleBackToOptions} />
-        )}
+          </div> :
+
+        <ChatWidget onBack={handleBackToOptions} />
+        }
       </DialogContent>
-    </Dialog>
-  );
+    </Dialog>);
+
 };
 
 export default ContactModal;
