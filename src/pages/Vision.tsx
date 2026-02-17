@@ -34,15 +34,9 @@ const Vision = () => {
                       <span className="inline-block text-xs font-black tracking-[0.25em] uppercase text-nla mb-2">
                         The Model
                       </span>
-                      <div className="relative">
-                        <h2 className="text-3xl md:text-4xl lg:text-5xl font-black text-foreground leading-[1.1] tracking-tight">
-                          Our Social Entrepreneurship Model
-                        </h2>
-                        <img
-                          src={launchPadLogoNew}
-                          alt="The Launch Pad"
-                          className="md:hidden h-12 w-auto absolute -bottom-2 -right-2" />
-                      </div>
+                      <h2 className="text-3xl md:text-4xl lg:text-5xl font-black text-foreground leading-[1.1] tracking-tight">
+                        Our Social Entrepreneurship Model
+                      </h2>
                     </div>
                   </div>
                 </div>
@@ -58,6 +52,12 @@ const Vision = () => {
               <p className="text-lg md:text-xl text-muted-foreground leading-relaxed">
                 We don't just train athletes. We develop <strong className="text-foreground">future leaders, employees, employers, entrepreneurs, and community builders</strong>.
               </p>
+              <div className="md:hidden flex justify-center mt-8">
+                <img
+                  src={launchPadLogoNew}
+                  alt="The Launch Pad"
+                  className="h-24 w-auto" />
+              </div>
             </div>
           </div>
         </section>
