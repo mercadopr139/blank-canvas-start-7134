@@ -41,6 +41,7 @@ import { ClickToEnlargeGallery } from "@/components/ui/click-to-enlarge-gallery"
 // Excursions images (shared gallery)
 import { excursionGalleryImages } from "@/data/excursionsGallery";
 import realTalkJoeFranco from "@/assets/programs/real-talk-joe-franco.png";
+import realTalkNateEvans from "@/assets/programs/real-talk-nate-evans.jpg";
 import oceanFirstBankLogo from "@/assets/programs/oceanfirst-bank-logo.png";
 import { mealTrainGalleryImages } from "@/data/mealTrainGallery";
 type ProgramItem = {
@@ -140,6 +141,10 @@ const ProgramsExtrasSection = () => {
       src: realTalkJoeFranco,
       alt: "Joe Franco with NLA youth at Real Talk Session",
       caption: "Joe Franco, NLA Donor & Wildwood Crest Commissioner"
+    }, {
+      src: realTalkNateEvans,
+      alt: "Nate Evans speaking at Real Talk Session",
+      caption: "Resilience Coach & Mentor, Nate Evans"
     }],
     buttonLabel: "Back to Programs"
   }, {
