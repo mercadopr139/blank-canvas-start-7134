@@ -34,13 +34,15 @@ const Vision = () => {
                       <span className="inline-block text-xs font-black tracking-[0.25em] uppercase text-nla mb-2">
                         The Model
                       </span>
-                      <h2 className="text-3xl md:text-4xl lg:text-5xl font-black text-foreground leading-[1.1] tracking-tight">
-                        Our Social Entrepreneurship Model
-                      </h2>
-                      <img
-                        src={launchPadLogoNew}
-                        alt="The Launch Pad"
-                        className="md:hidden h-24 w-auto mt-4" />
+                      <div className="relative">
+                        <h2 className="text-3xl md:text-4xl lg:text-5xl font-black text-foreground leading-[1.1] tracking-tight">
+                          Our Social Entrepreneurship Model
+                        </h2>
+                        <img
+                          src={launchPadLogoNew}
+                          alt="The Launch Pad"
+                          className="md:hidden h-12 w-auto absolute -bottom-2 -right-2" />
+                      </div>
                     </div>
                   </div>
                 </div>
