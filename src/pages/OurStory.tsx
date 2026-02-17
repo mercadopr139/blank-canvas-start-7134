@@ -123,11 +123,12 @@ const OurStory = () => {
               {/* Photo Slot A - Josh with Step Dad & Mom — floated right with first paragraph */}
               <div className="md:float-right md:ml-5 md:mb-3 md:max-w-[260px] mb-6 w-full max-w-[320px] mx-auto md:mx-0">
                 <div className="bg-muted rounded-lg shadow-md overflow-hidden">
-                  <img
-                    src={joshParents}
-                    alt="Josh, pictured with Step Dad & Mom"
-                    className="w-full h-auto" />
-
+                  <button type="button" onClick={() => setActiveImg({ src: joshParents, alt: "Josh, pictured with step dad & mom" })} aria-label="Enlarge photo">
+                    <img
+                      src={joshParents}
+                      alt="Josh, pictured with Step Dad & Mom"
+                      className="w-full h-auto cursor-pointer" />
+                  </button>
                   <div className="px-3 py-1.5 text-center">
                     <p className="text-xs text-muted-foreground italic">Josh, pictured with step dad &amp; mom</p>
                   </div>
@@ -148,11 +149,12 @@ const OurStory = () => {
               {/* negative top margin pulls it up to align with text */}
               <div className="md:float-left md:mr-5 md:mb-3 md:max-w-[240px] md:-mt-4 mb-6 w-full max-w-[300px] mx-auto md:mx-0">
                 <div className="bg-muted rounded-lg shadow-md overflow-hidden">
-                  <img
-                    src={joshBasketballCoach}
-                    alt="Josh, Head Varsity Basketball Coach, 2015-2021"
-                    className="w-full h-auto" />
-
+                  <button type="button" onClick={() => setActiveImg({ src: joshBasketballCoach, alt: "Josh, Head Varsity Basketball Coach, 2015-2021" })} aria-label="Enlarge photo">
+                    <img
+                      src={joshBasketballCoach}
+                      alt="Josh, Head Varsity Basketball Coach, 2015-2021"
+                      className="w-full h-auto cursor-pointer" />
+                  </button>
                   <div className="px-3 py-1.5 text-center">
                     <p className="text-xs text-muted-foreground italic">Josh, Head Varsity Basketball Coach, 2015-2021</p>
                   </div>
@@ -168,11 +170,12 @@ const OurStory = () => {
               {/* Josh & Dave early photo — floated right with meeting paragraph */}
               <div className="md:float-right md:ml-5 md:mb-3 md:max-w-[180px] mb-6 w-full max-w-[220px] mx-auto md:mx-0">
                 <div className="bg-muted rounded-lg shadow-md overflow-hidden">
-                  <img
-                    src={joshDaveEarly}
-                    alt="Josh and Dave in the early days"
-                    className="w-full h-auto" />
-
+                  <button type="button" onClick={() => setActiveImg({ src: joshDaveEarly, alt: "Josh and Dave in the early days" })} aria-label="Enlarge photo">
+                    <img
+                      src={joshDaveEarly}
+                      alt="Josh and Dave in the early days"
+                      className="w-full h-auto cursor-pointer" />
+                  </button>
                   <div className="px-3 py-1.5 text-center">
                     <p className="text-xs text-muted-foreground italic">Josh and Dave in the early days</p>
                   </div>
@@ -188,11 +191,12 @@ const OurStory = () => {
               {/* Dave with Sister & Parents — floated left with Dave paragraph */}
               <div className="md:float-left md:mr-5 md:mb-3 md:max-w-[260px] mb-6 w-full max-w-[320px] mx-auto md:mx-0">
                 <div className="bg-muted rounded-lg shadow-md overflow-hidden">
-                  <img
-                    src={daveFamily}
-                    alt="Dave, pictured with sister & parents"
-                    className="w-full h-auto" />
-
+                  <button type="button" onClick={() => setActiveImg({ src: daveFamily, alt: "Dave, pictured with sister & parents" })} aria-label="Enlarge photo">
+                    <img
+                      src={daveFamily}
+                      alt="Dave, pictured with sister & parents"
+                      className="w-full h-auto cursor-pointer" />
+                  </button>
                   <div className="px-3 py-1.5 text-center">
                     <p className="text-xs text-muted-foreground italic">
                       Dave, pictured with sister &amp; parents
@@ -211,10 +215,12 @@ const OurStory = () => {
               {/* Dave Brigade Champion — floated right */}
               <div className="md:float-right md:ml-5 md:mb-3 md:max-w-[200px] mb-6 w-full max-w-[240px] mx-auto md:mx-0">
                 <div className="bg-muted rounded-lg shadow-md overflow-hidden">
-                  <img
-                    src={daveBrigadeChampion}
-                    alt="Dave, 2015 Brigade Champion"
-                    className="w-full h-auto" />
+                  <button type="button" onClick={() => setActiveImg({ src: daveBrigadeChampion, alt: "Dave, 2015 Brigade Champion" })} aria-label="Enlarge photo">
+                    <img
+                      src={daveBrigadeChampion}
+                      alt="Dave, 2015 Brigade Champion"
+                      className="w-full h-auto cursor-pointer" />
+                  </button>
                   <div className="px-3 py-1.5 text-center">
                     <p className="text-xs text-muted-foreground italic">Dave, 2015 Brigade Champion</p>
                   </div>
