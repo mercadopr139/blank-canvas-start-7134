@@ -23,7 +23,7 @@ const Vision = () => {
         </section>
 
         {/* Social Entrepreneurship Model */}
-        <section className="py-16 bg-background md:py-[60px]">
+        <section className="bg-background md:py-[60px] py-[30px]">
           <div className="container">
             <div className="max-w-4xl">
               <div className="flex items-center justify-between gap-3 md:gap-5 mb-8">
