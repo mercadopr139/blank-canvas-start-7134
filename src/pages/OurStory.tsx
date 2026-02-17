@@ -206,20 +206,6 @@ const OurStory = () => {
 
               <div className="clear-both" />
 
-              {/* McNally photo — floated right, text wraps around it */}
-              <div className="hidden md:block md:float-right md:ml-5 md:mb-3 md:max-w-[200px]">
-                <div className="bg-muted rounded-lg shadow-md overflow-hidden">
-                  <img
-                    src={joshMcNallyDave}
-                    alt="Josh, Coach McNally, and Dave at 2025 Naval Academy Brigade boxing championships"
-                    className="w-full aspect-[3/4] object-cover object-bottom" />
-                  <div className="px-3 py-1.5 text-center">
-                    <p className="text-xs text-muted-foreground italic">
-                      Josh, Coach McNally, and Dave at 2025 Naval Academy Brigade boxing championships
-                    </p>
-                  </div>
-                </div>
-              </div>
 
               <p className="text-lg md:text-xl text-muted-foreground leading-relaxed mb-6">
                 Though they are from completely different upbringings with distinct journeys, Josh and Dave stayed closely connected, united by boxing, friendship, and a shared belief in the power of structure and consistency to change lives. In 2020, those parallel journeys converged with the establishment of No Limits Academy. In 2022, Josh resigned from his teaching position to commit to NLA full time, allowing the organization to grow from a vision into a comprehensive youth development program serving children across Cape May County.
@@ -231,20 +217,6 @@ const OurStory = () => {
 
               <div className="clear-both" />
 
-              {/* Mobile-only McNally photo — below final paragraph */}
-              <div className="md:hidden mb-10 w-full max-w-[300px] mx-auto">
-                <div className="bg-muted rounded-lg shadow-md overflow-hidden">
-                  <img
-                    src={joshMcNallyDave}
-                    alt="Josh, Coach McNally, and Dave at 2025 Naval Academy Brigade boxing championships"
-                    className="w-full aspect-[3/4] object-cover object-bottom" />
-                  <div className="px-3 py-1.5 text-center">
-                    <p className="text-xs text-muted-foreground italic">
-                      Josh, Coach McNally, and Dave at 2025 Naval Academy Brigade boxing championships
-                    </p>
-                  </div>
-                </div>
-              </div>
 
             </div>
           </div>
