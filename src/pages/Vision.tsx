@@ -37,6 +37,10 @@ const Vision = () => {
                       <h2 className="text-3xl md:text-4xl lg:text-5xl font-black text-foreground leading-[1.1] tracking-tight">
                         Our Social Entrepreneurship Model
                       </h2>
+                      <img
+                        src={launchPadLogoNew}
+                        alt="The Launch Pad"
+                        className="md:hidden h-16 w-auto mt-4" />
                     </div>
                   </div>
                 </div>
