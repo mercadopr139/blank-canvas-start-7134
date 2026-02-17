@@ -356,8 +356,9 @@ const ProgramsExtrasSection = () => {
               </div>}
 
             {/* Launch Pad Logo */}
-            {openItem?.id === "launch-pad" && <div className="flex justify-center my-4">
+            {openItem?.id === "launch-pad" && <div className="flex flex-col items-center my-4">
                 <img src={launchPadLogo} alt="The Launch Pad Logo" className="h-48 w-auto border-none" />
+                <p className="text-sm text-muted-foreground italic mt-2">Pictures coming soon</p>
               </div>}
 
             {/* Excursions Video */}
