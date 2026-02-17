@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { AlertCircle, Lock, Smartphone } from "lucide-react";
+import { AlertCircle, Lock, Smartphone, KeyRound } from "lucide-react";
 import Header from "@/components/layout/Header";
 import Footer from "@/components/layout/Footer";
 import OrientationStep from "@/components/orientation/OrientationStep";
@@ -10,6 +10,8 @@ import OrientationStepGated from "@/components/orientation/OrientationStepGated"
 import { Step1DoneBadge } from "@/components/orientation/Step1DoneBadge";
 import mascotEagle from "@/assets/mascot-eagle.png";
 const SESSION_KEY = "rookie_orientation_unlocked";
+const ADMIN_BYPASS_KEY = "orientation_admin_bypass";
+const ADMIN_PASSWORD = "COACH";
 const HOUSE_RULES_TEST_URL = "/house-rules-test";
 
 // Hardcoded YouTube video IDs - these will work on published site
@@ -28,6 +30,77 @@ const VIDEO_IDS = {
   // Punch Code
   step9: "TDWUNwJK3Rg" // Congrats - Sign In
 };
+
+const Step5WithBypass = ({ testUrl }: { testUrl: string }) => {
+  const [showBypass, setShowBypass] = useState(false);
+  const [bypassCode, setBypassCode] = useState("");
+  const [bypassError, setBypassError] = useState("");
+
+  const handleBypassSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (bypassCode.toUpperCase() === ADMIN_PASSWORD) {
+      sessionStorage.setItem(ADMIN_BYPASS_KEY, "true");
+      localStorage.setItem("house_rules_test_passed", "true");
+      window.location.reload();
+    } else {
+      setBypassError("Incorrect password.");
+    }
+  };
+
+  return (
+    <div id="step-5" className="scroll-mt-24">
+      <div className="bg-neutral-900 border border-neutral-800 rounded-xl p-5 md:p-6 h-full">
+        <div className="mb-3">
+          <span className="text-xs font-bold tracking-widest text-neutral-400 uppercase">
+            Step 5
+          </span>
+        </div>
+        <h3 className="text-lg md:text-xl font-bold text-white mb-5">
+          HOUSE RULES TEST
+        </h3>
+        <div className="space-y-3">
+          <Button
+            asChild
+            size="lg"
+            className="w-full text-white font-bold text-base py-6"
+            style={{ backgroundColor: "#bf0f3e" }}
+          >
+            <a href={testUrl}>OPEN TEST</a>
+          </Button>
+
+          {/* Admin bypass */}
+          {!showBypass ? (
+            <button
+              onClick={() => setShowBypass(true)}
+              className="flex items-center gap-1.5 text-xs text-neutral-500 hover:text-neutral-300 transition-colors mx-auto"
+            >
+              <KeyRound className="h-3 w-3" />
+              Admin bypass
+            </button>
+          ) : (
+            <form onSubmit={handleBypassSubmit} className="flex gap-2">
+              <Input
+                type="password"
+                value={bypassCode}
+                onChange={(e) => setBypassCode(e.target.value)}
+                placeholder="Admin password"
+                className="text-sm bg-neutral-800 border-neutral-700 text-white"
+                autoFocus
+              />
+              <Button type="submit" size="sm" className="bg-[#bf0f3e] hover:bg-[#bf0f3e]/90 text-white">
+                Go
+              </Button>
+            </form>
+          )}
+          {bypassError && (
+            <p className="text-red-400 text-xs text-center">{bypassError}</p>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};
+
 const RookieOrientation = () => {
   const [isUnlocked, setIsUnlocked] = useState(false);
   const [code, setCode] = useState("");
@@ -152,8 +225,8 @@ const RookieOrientation = () => {
             {/* STEP 4: House Rules Intro & Test */}
             <OrientationStep stepNumber={4} title="HOUSE RULES INTRO & TEST" videoId={VIDEO_IDS.step4} secondaryButtonLabel="READ HOUSE RULES" secondaryButtonLink="#step-5" />
 
-            {/* STEP 5: House Rules Test */}
-            <OrientationStep stepNumber={5} title="HOUSE RULES TEST" buttonLabel="OPEN TEST" buttonLink={HOUSE_RULES_TEST_URL} isExternal={false} />
+            {/* STEP 5: House Rules Test + Admin Bypass */}
+            <Step5WithBypass testUrl={HOUSE_RULES_TEST_URL} />
 
             {/* STEP 6: The Big 3! (Gated - requires passing House Rules Test) */}
             <OrientationStepGated stepNumber={6} title="HOUSE RULES IN ACTION!" videoId={VIDEO_IDS.step6} />

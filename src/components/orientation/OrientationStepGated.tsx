@@ -1,14 +1,12 @@
 import { useState, useEffect } from "react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { AlertCircle, MessageCircle, KeyRound } from "lucide-react";
+import { AlertCircle, MessageCircle } from "lucide-react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { YouTubeEmbed } from "@/components/orientation/YouTubeEmbed";
 
 const TEST_PASSED_KEY = "house_rules_test_passed";
 const ADMIN_BYPASS_KEY = "orientation_admin_bypass";
-const ADMIN_PASSWORD = "COACH";
 
 interface OrientationStepGatedProps {
   stepNumber: number;
@@ -23,9 +21,6 @@ const OrientationStepGated = ({
 }: OrientationStepGatedProps) => {
   const [hasPassed, setHasPassed] = useState(false);
   const [showWarning, setShowWarning] = useState(false);
-  const [showBypass, setShowBypass] = useState(false);
-  const [bypassCode, setBypassCode] = useState("");
-  const [bypassError, setBypassError] = useState("");
 
   useEffect(() => {
     const passed = localStorage.getItem(TEST_PASSED_KEY) === "true";
@@ -38,17 +33,6 @@ const OrientationStepGated = ({
   const handleBlockedClick = () => {
     if (!hasPassed) {
       setShowWarning(true);
-    }
-  };
-
-  const handleBypassSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (bypassCode.toUpperCase() === ADMIN_PASSWORD) {
-      sessionStorage.setItem(ADMIN_BYPASS_KEY, "true");
-      setHasPassed(true);
-      setBypassError("");
-    } else {
-      setBypassError("Incorrect password.");
     }
   };
 
@@ -103,9 +87,9 @@ const OrientationStepGated = ({
           </div>
         )}
 
-        {/* Take Test Button + Admin Bypass when blocked */}
+        {/* Take Test Button when blocked */}
         {showWarning && !hasPassed && (
-          <div className="mt-4 space-y-3">
+          <div className="mt-4">
             <Button
               asChild
               size="lg"
@@ -113,34 +97,6 @@ const OrientationStepGated = ({
             >
               <Link to="/house-rules-test">Take the House Rules Test</Link>
             </Button>
-
-            {/* Admin bypass toggle */}
-            {!showBypass ? (
-              <button
-                onClick={() => setShowBypass(true)}
-                className="flex items-center gap-1.5 text-xs text-neutral-500 hover:text-neutral-300 transition-colors mx-auto"
-              >
-                <KeyRound className="h-3 w-3" />
-                Admin bypass
-              </button>
-            ) : (
-              <form onSubmit={handleBypassSubmit} className="flex gap-2">
-                <Input
-                  type="password"
-                  value={bypassCode}
-                  onChange={(e) => setBypassCode(e.target.value)}
-                  placeholder="Admin password"
-                  className="text-sm bg-neutral-800 border-neutral-700 text-white"
-                  autoFocus
-                />
-                <Button type="submit" size="sm" className="bg-[#bf0f3e] hover:bg-[#bf0f3e]/90 text-white">
-                  Go
-                </Button>
-              </form>
-            )}
-            {bypassError && (
-              <p className="text-red-400 text-xs text-center">{bypassError}</p>
-            )}
           </div>
         )}
       </div>
