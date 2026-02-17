@@ -43,7 +43,7 @@ const Vision = () => {
                 <img
                   src={launchPadLogoNew}
                   alt="The Launch Pad"
-                  className="h-24 md:h-32 lg:h-40 w-auto shrink-0" />
+                  className="hidden md:block h-32 lg:h-40 w-auto shrink-0" />
 
               </div>
               <p className="text-lg md:text-xl text-muted-foreground leading-relaxed mb-6">
