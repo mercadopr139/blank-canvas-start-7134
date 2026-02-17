@@ -16,6 +16,12 @@ import lilChampsActivity5 from "@/assets/programs/lil-champs-activity-5.jpg";
 import lilChampsActivity6 from "@/assets/programs/lil-champs-activity-6.jpg";
 import nj4sLogo from "@/assets/programs/nj4s-logo.png";
 import capeAssistLogo from "@/assets/programs/cape-assist-logo.png";
+import cbim1 from "@/assets/programs/cbim-1.png";
+import cbim2 from "@/assets/programs/cbim-2.png";
+import cbim3 from "@/assets/programs/cbim-3.png";
+import cbim4 from "@/assets/programs/cbim-4.png";
+import cbim5 from "@/assets/programs/cbim-5.png";
+import cbim6 from "@/assets/programs/cbim-6.png";
 import deltaDentalLogo from "@/assets/programs/delta-dental-logo.png";
 import launchPadLogo from "@/assets/programs/launch-pad-logo.png";
 import spiritualDevPrayer1 from "@/assets/programs/spiritual-dev-prayer-1.jpg";
@@ -203,23 +209,23 @@ const ProgramsExtrasSection = () => {
     ageRange: "11–19 years old",
     blurb: "In partnership with Cape Assist, CBIM is an evidence-based violence prevention program that trains coaches to teach young male athletes about respect, integrity, and non-violence. Through ongoing conversations and teachable moments, coaches help shape attitudes and behaviors that prevent relationship abuse and promote healthy masculinity.",
     images: [{
-      src: "/placeholder.svg",
-      alt: "Coaching Boys into Men photo 1"
+      src: cbim1,
+      alt: "CBIM closing session presentation"
     }, {
-      src: "/placeholder.svg",
-      alt: "Coaching Boys into Men photo 2"
+      src: cbim2,
+      alt: "CBIM coach leading discussion"
     }, {
-      src: "/placeholder.svg",
-      alt: "Coaching Boys into Men photo 3"
+      src: cbim3,
+      alt: "CBIM lesson on healthy behaviors"
     }, {
-      src: "/placeholder.svg",
-      alt: "Coaching Boys into Men photo 4"
+      src: cbim4,
+      alt: "CBIM group session at NLA"
     }, {
-      src: "/placeholder.svg",
-      alt: "Coaching Boys into Men photo 5"
+      src: cbim5,
+      alt: "CBIM coaches in discussion"
     }, {
-      src: "/placeholder.svg",
-      alt: "Coaching Boys into Men photo 6"
+      src: cbim6,
+      alt: "CBIM participants listening"
     }],
     buttonLabel: "Back to Programs"
   }, {
