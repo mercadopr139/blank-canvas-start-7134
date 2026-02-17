@@ -41,7 +41,7 @@ const ImpactStory = () => {
       
       <main className="flex-1">
         {/* Hero Section */}
-        <section className="bg-primary md:py-24 py-[30px]">
+        <section className="bg-primary py-[30px] md:py-[30px]">
           <div className="container">
             <div className="max-w-4xl mx-auto text-center">
               <h1 className="text-4xl md:text-5xl lg:text-6xl font-black text-primary-foreground leading-tight mb-6">
@@ -123,7 +123,7 @@ const ImpactStory = () => {
         </section>
 
         {/* Impact Overview */}
-        <section className="py-16 md:py-20 bg-primary">
+        <section className="py-16 bg-primary md:py-[30px]">
           <div className="container">
             <div className="max-w-4xl mx-auto text-center">
               <h2 className="text-3xl md:text-4xl font-black text-primary-foreground mb-8">
@@ -140,7 +140,7 @@ const ImpactStory = () => {
         </section>
 
         {/* Credibility Section */}
-        <section className="md:py-20 bg-background py-[30px]">
+        <section className="bg-background py-[30px] md:py-[30px]">
           <div className="container">
             <div className="max-w-5xl mx-auto">
               <div className="text-center mb-12">
@@ -299,7 +299,7 @@ const ImpactStory = () => {
         </section>
 
         {/* How Our Work Is Sustained Section */}
-        <section className="py-16 md:py-20 bg-primary">
+        <section className="py-16 bg-primary md:py-[30px]">
           <div className="container">
             <div className="max-w-4xl mx-auto">
               <h2 className="text-3xl md:text-4xl font-black text-primary-foreground mb-6 text-center">
