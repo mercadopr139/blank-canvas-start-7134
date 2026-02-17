@@ -179,7 +179,7 @@ const OurStory = () => {
               </div>
 
               <p className="text-lg md:text-xl text-muted-foreground leading-relaxed mb-6">
-                Not long after finishing college, Josh began teaching boxing lessons back home in Cape May, NJ—and one of the individuals who hired him was Dave Von Savage Jr., who was preparing to attend the United States Naval Academy. Interestingly, the Naval Academy's head boxing coach, Jim McNally, was also one of the original founders of Lock Haven University's boxing program in 1979—the very program where Josh would later win a national championship. What began as sessions in a residential gym quickly grew into a lasting friendship rooted in trust, discipline, and shared values.
+                Not long after finishing college, Josh began coaching boxing back home in Cape May, NJ—where he met Dave Von Savage who was preparing to attend the United States Naval Academy. What began as weekly boxing lessons in a basement boxing gym formed the foundation of a lasting friendship rooted in trust, discipline, and shared values.
               </p>
 
               <div className="clear-both" />
@@ -201,7 +201,7 @@ const OurStory = () => {
               </div>
 
               <p className="text-lg md:text-xl text-muted-foreground leading-relaxed mb-6">
-                Dave, raised by both parents and influenced by their commitment to community service, attended the United States Naval Academy in Annapolis. There, he distinguished himself academically and athletically as a four-year member of the Navy boxing team, earning multiple Brigade Boxing Championships. Following graduation, he was commissioned as a United States Navy Officer and continued his military career for seven years before later graduating from the Wharton School of the University of Pennsylvania with a Master of Business Administration.
+                Dave, raised by both parents and influenced by their commitment to community service, attended the United States Naval Academy in Annapolis. There, he distinguished himself academically and athletically as a four-year member of the Navy boxing team, earning multiple Brigade Boxing Championships. Following graduation, he commissioned into the United States Navy and served for seven years on active duty before later attending the Wharton School of the University of Pennsylvania, earning his MBA.
               </p>
 
               <div className="clear-both" />
@@ -222,7 +222,7 @@ const OurStory = () => {
               </div>
 
               <p className="text-lg md:text-xl text-muted-foreground leading-relaxed mb-6">
-                Though their lives unfolded along different paths, Josh and Dave stayed closely connected, united by boxing, friendship, and a shared belief in the power of structure and consistency to change lives. In 2020, those parallel journeys converged with the establishment of No Limits Academy. In 2022, Josh resigned from his teaching position to commit to NLA full time, allowing the organization to grow from a vision into a comprehensive youth development program serving children across Cape May County.
+                Though they are from completely different upbringings with distinct journeys, Josh and Dave stayed closely connected, united by boxing, friendship, and a shared belief in the power of structure and consistency to change lives. In 2020, those parallel journeys converged with the establishment of No Limits Academy. In 2022, Josh resigned from his teaching position to commit to NLA full time, allowing the organization to grow from a vision into a comprehensive youth development program serving children across Cape May County.
               </p>
 
               <p className="text-lg md:text-xl text-muted-foreground leading-relaxed mb-6">
