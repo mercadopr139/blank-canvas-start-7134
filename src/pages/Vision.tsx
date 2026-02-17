@@ -56,7 +56,7 @@ const Vision = () => {
                 <img
                   src={launchPadLogoNew}
                   alt="The Launch Pad"
-                  className="h-24 w-auto" />
+                  className="h-40 w-auto" />
               </div>
             </div>
           </div>
