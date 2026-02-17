@@ -7,6 +7,7 @@ import joshParents from "@/assets/our-story/josh-parents.png";
 import daveFamily from "@/assets/our-story/dave-family.png";
 import joshDaveEarly from "@/assets/our-story/josh-dave-early.png";
 import joshBasketballCoach from "@/assets/our-story/josh-basketball-coach.png";
+import daveBrigadeChampion from "@/assets/our-story/dave-brigade-champion.png";
 import facilityConstructionCrew from "@/assets/facility/facility-construction-crew.png";
 import facilityPlumbingCrew from "@/assets/facility/facility-plumbing-crew.png";
 import facilityRebarPrep from "@/assets/facility/facility-rebar-prep.png";
@@ -206,6 +207,19 @@ const OurStory = () => {
 
               <div className="clear-both" />
 
+
+              {/* Dave Brigade Champion — floated right */}
+              <div className="md:float-right md:ml-5 md:mb-3 md:max-w-[200px] mb-6 w-full max-w-[240px] mx-auto md:mx-0">
+                <div className="bg-muted rounded-lg shadow-md overflow-hidden">
+                  <img
+                    src={daveBrigadeChampion}
+                    alt="Dave, 2015 Brigade Champion"
+                    className="w-full h-auto" />
+                  <div className="px-3 py-1.5 text-center">
+                    <p className="text-xs text-muted-foreground italic">Dave, 2015 Brigade Champion</p>
+                  </div>
+                </div>
+              </div>
 
               <p className="text-lg md:text-xl text-muted-foreground leading-relaxed mb-6">
                 Though they are from completely different upbringings with distinct journeys, Josh and Dave stayed closely connected, united by boxing, friendship, and a shared belief in the power of structure and consistency to change lives. In 2020, those parallel journeys converged with the establishment of No Limits Academy. In 2022, Josh resigned from his teaching position to commit to NLA full time, allowing the organization to grow from a vision into a comprehensive youth development program serving children across Cape May County.
