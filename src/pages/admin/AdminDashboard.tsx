@@ -1,5 +1,5 @@
 import { useNavigate } from "react-router-dom";
-import nlaLogo from "@/assets/nla-logo.png";
+import nlaLogoWhite from "@/assets/nla-logo-white.png";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -66,7 +66,7 @@ const AdminDashboard = () => {
       <main className="container mx-auto px-4 py-8">
         {/* NLA Logo */}
         <div className="flex justify-center mb-8">
-          <img src={nlaLogo} alt="No Limits Academy" className="h-28 w-auto" />
+          <img src={nlaLogoWhite} alt="No Limits Academy" className="h-56 w-auto invert" />
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
