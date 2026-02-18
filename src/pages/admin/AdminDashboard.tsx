@@ -21,6 +21,7 @@ const AdminDashboard = () => {
     icon: Briefcase,
     color: "bg-[#bf0f3e]/10 text-[#bf0f3e]",
     borderColor: "border-[#bf0f3e]",
+    linkColor: "text-[#bf0f3e]",
     href: "/admin/operations"
   },
   {
@@ -29,6 +30,7 @@ const AdminDashboard = () => {
     icon: TrendingUp,
     color: "bg-green-500/10 text-green-500",
     borderColor: "border-green-500",
+    linkColor: "text-green-500",
     href: "/admin/sales-marketing"
   },
   {
@@ -37,6 +39,7 @@ const AdminDashboard = () => {
     icon: DollarSign,
     color: "bg-sky-300/10 text-sky-300",
     borderColor: "border-sky-300",
+    linkColor: "text-sky-300",
     href: "/admin/finance"
   }];
 
@@ -84,7 +87,7 @@ const AdminDashboard = () => {
                 <CardDescription className="text-base text-white/50">{folder.description}</CardDescription>
               </CardHeader>
               <CardContent>
-                <p className="text-sm text-sky-400 font-medium">Open →</p>
+                <p className={`text-sm font-medium ${folder.linkColor}`}>Open →</p>
               </CardContent>
             </Card>
           )}
