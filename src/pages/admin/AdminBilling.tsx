@@ -1,21 +1,26 @@
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { ArrowLeft, Receipt } from "lucide-react";
+import { FileText, Mail, ArrowLeft } from "lucide-react";
 
+const tiles = [
+  {
+    title: "Invoices",
+    description: "Track billing and payments",
+    icon: FileText,
+    href: "/admin/invoices",
+  },
+  {
+    title: "Invoice Sent History",
+    description: "View emailed invoices",
+    icon: Mail,
+    href: "/admin/invoices?tab=sent",
+  },
+];
 
-const AdminFinance = () => {
+const AdminBilling = () => {
   const navigate = useNavigate();
-  const goBack = () => window.history.length > 1 ? navigate(-1) : navigate("/admin");
-
-  const folders = [
-    {
-      title: "Billing",
-      description: "Invoices & payment tracking",
-      icon: Receipt,
-      href: "/admin/finance/billing",
-    },
-  ];
+  const goBack = () => window.history.length > 1 ? navigate(-1) : navigate("/admin/finance");
 
   return (
     <div className="min-h-screen bg-black text-white">
@@ -25,29 +30,29 @@ const AdminFinance = () => {
             <ArrowLeft className="w-5 h-5" />
           </Button>
           <div>
-            <h1 className="text-xl font-bold text-white">Finance</h1>
-            <p className="text-sm text-white/50">Financial Systems & Personnel</p>
+            <h1 className="text-xl font-bold text-white">Billing</h1>
+            <p className="text-sm text-white/50">Invoices & payment tracking</p>
           </div>
         </div>
       </header>
 
       <main className="container mx-auto px-4 py-8">
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-          {folders.map((folder) => (
+          {tiles.map((tile) => (
             <Card
-              key={folder.title}
+              key={tile.title}
               className="cursor-pointer hover:shadow-md transition-shadow bg-white/5 border-2 border-sky-300/50 hover:border-sky-300"
-              onClick={() => navigate(folder.href)}
+              onClick={() => navigate(tile.href)}
             >
               <CardHeader>
                 <div className="w-12 h-12 rounded-lg flex items-center justify-center bg-sky-300/10 text-sky-300 mb-2">
-                  <folder.icon className="w-6 h-6" />
+                  <tile.icon className="w-6 h-6" />
                 </div>
-                <CardTitle className="text-lg text-white">{folder.title}</CardTitle>
-                <CardDescription className="text-white/50">{folder.description}</CardDescription>
+                <CardTitle className="text-lg text-white">{tile.title}</CardTitle>
+                <CardDescription className="text-white/50">{tile.description}</CardDescription>
               </CardHeader>
               <CardContent>
-                <p className="text-sm text-sky-300">Open →</p>
+                <p className="text-sm text-sky-300">Manage →</p>
               </CardContent>
             </Card>
           ))}
@@ -57,4 +62,4 @@ const AdminFinance = () => {
   );
 };
 
-export default AdminFinance;
+export default AdminBilling;
