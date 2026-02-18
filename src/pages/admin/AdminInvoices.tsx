@@ -468,7 +468,7 @@ export default function AdminInvoices() {
               <h1 className="text-xl font-semibold text-white">Invoices</h1>
             </div>
           </div>
-          <Button variant="outline" size="sm" onClick={signOut} className="border-white/10 text-white hover:bg-white/10 hover:text-white">
+          <Button variant="outline" size="sm" onClick={signOut} className="bg-black border-white text-white hover:bg-black hover:text-white">
             Log out
           </Button>
         </div>
@@ -563,12 +563,12 @@ export default function AdminInvoices() {
 
         {/* Saved Invoices List */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="mb-4 grid w-full max-w-md grid-cols-2">
-            <TabsTrigger value="all" className="gap-2">
+          <TabsList className="mb-4 grid w-full max-w-md grid-cols-2 bg-white/5 border border-white/10">
+            <TabsTrigger value="all" className="gap-2 text-white/50 data-[state=active]:bg-black data-[state=active]:text-white data-[state=active]:border data-[state=active]:border-white">
               <FileText className="w-4 h-4" />
               All Invoices
             </TabsTrigger>
-            <TabsTrigger value="sent" className="gap-2">
+            <TabsTrigger value="sent" className="gap-2 text-white/50 data-[state=active]:bg-black data-[state=active]:text-white data-[state=active]:border data-[state=active]:border-white">
               <Mail className="w-4 h-4" />
               Sent History
             </TabsTrigger>
