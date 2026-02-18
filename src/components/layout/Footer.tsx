@@ -35,12 +35,21 @@ const Footer = ({ className }: FooterProps) => {
               <Facebook className="h-5 w-5 pointer-events-none" />
             </a>
           </div>
-          <a
-            href="mailto:info@nolimitsboxingacademy.org"
-            className="text-sm text-white/80 hover:text-white transition-colors"
-          >
-            info@nolimitsboxingacademy.org
-          </a>
+          <div className="flex items-center gap-4">
+            <a
+              href="mailto:info@nolimitsboxingacademy.org"
+              className="text-sm text-white/80 hover:text-white transition-colors"
+            >
+              info@nolimitsboxingacademy.org
+            </a>
+            <span className="text-white/20">·</span>
+            <a
+              href="/admin"
+              className="text-xs text-white/30 hover:text-white/60 transition-colors"
+            >
+              Admin
+            </a>
+          </div>
         </div>
       </div>
     </footer>
