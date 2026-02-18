@@ -19,7 +19,7 @@ const AdminDashboard = () => {
     title: "Operations",
     description: "Clients & Service Calendar",
     icon: Briefcase,
-    color: "bg-sky-400/10 text-sky-400",
+    color: "bg-[#bf0f3e]/10 text-[#bf0f3e]",
     borderColor: "border-[#bf0f3e]",
     href: "/admin/operations"
   },
@@ -27,7 +27,7 @@ const AdminDashboard = () => {
     title: "Sales & Marketing",
     description: "Outreach & Campaigns",
     icon: TrendingUp,
-    color: "bg-pink-500/10 text-pink-500",
+    color: "bg-green-500/10 text-green-500",
     borderColor: "border-green-500",
     href: "/admin/sales-marketing"
   },
@@ -35,7 +35,7 @@ const AdminDashboard = () => {
     title: "Finance",
     description: "Invoices & Payments",
     icon: DollarSign,
-    color: "bg-amber-500/10 text-amber-500",
+    color: "bg-sky-300/10 text-sky-300",
     borderColor: "border-sky-300",
     href: "/admin/finance"
   }];
@@ -65,7 +65,7 @@ const AdminDashboard = () => {
       {/* Main Content */}
       <main className="container mx-auto px-4 py-[30px]">
         {/* NLA Logo */}
-        <div className="flex justify-center mb-8">
+        <div className="flex justify-center mb-16">
           <img src={nlaLogoWhite} alt="No Limits Academy" className="h-56 w-auto" />
         </div>
 
