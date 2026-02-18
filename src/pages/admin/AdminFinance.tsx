@@ -6,7 +6,7 @@ import { ArrowLeft, Receipt } from "lucide-react";
 
 const AdminFinance = () => {
   const navigate = useNavigate();
-  const goBack = () => window.history.length > 1 ? navigate(-1) : navigate("/admin");
+  const goBack = () => window.history.state?.idx > 0 ? navigate(-1) : navigate("/admin");
 
   const folders = [
     {

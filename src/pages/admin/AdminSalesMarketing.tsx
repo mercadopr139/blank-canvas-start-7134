@@ -4,7 +4,7 @@ import { ArrowLeft, TrendingUp } from "lucide-react";
 
 const AdminSalesMarketing = () => {
   const navigate = useNavigate();
-  const goBack = () => window.history.length > 1 ? navigate(-1) : navigate("/admin");
+  const goBack = () => window.history.state?.idx > 0 ? navigate(-1) : navigate("/admin");
 
   return (
     <div className="min-h-screen bg-black text-white">

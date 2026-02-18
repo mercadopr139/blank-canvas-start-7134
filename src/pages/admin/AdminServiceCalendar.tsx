@@ -246,7 +246,7 @@ export default function AdminServiceCalendar() {
     try {
       await clearServiceDaysForCurrentMonth();
     } finally {
-      window.history.length > 1 ? navigate(-1) : navigate("/admin/finance");
+      window.history.state?.idx > 0 ? navigate(-1) : navigate("/admin/finance");
     }
   };
 
