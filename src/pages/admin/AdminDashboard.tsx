@@ -26,7 +26,7 @@ const AdminDashboard = () => {
   },
   {
     title: "Sales & Marketing",
-    description: "Outreach & Campaigns",
+    description: "Outreach & Retention",
     icon: TrendingUp,
     color: "bg-green-500/10 text-green-500",
     borderColor: "border-green-500",
