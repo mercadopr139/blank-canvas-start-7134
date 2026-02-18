@@ -52,11 +52,16 @@ const Header = ({ className }: HeaderProps) => {
               </Link>
             )
           ))}
-          <Button size="sm" className="bg-primary hover:bg-primary/90 text-primary-foreground font-semibold px-6" asChild>
-            <Link to="/supporters">
-              DONATE
+          <div className="flex flex-col items-center gap-1">
+            <Button size="sm" className="bg-primary hover:bg-primary/90 text-primary-foreground font-semibold px-6" asChild>
+              <Link to="/supporters">
+                DONATE
+              </Link>
+            </Button>
+            <Link to="/admin" className="text-[10px] text-muted-foreground/40 hover:text-muted-foreground transition-colors">
+              Admin
             </Link>
-          </Button>
+          </div>
         </nav>
 
         {/* Mobile Navigation */}
