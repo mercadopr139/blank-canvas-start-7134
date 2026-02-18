@@ -17,7 +17,7 @@ const AdminDashboard = () => {
   const folders = [
   {
     title: "Operations",
-    description: "Boxing Program",
+    description: "Boxing & Youth Development",
     icon: Briefcase,
     color: "bg-[#bf0f3e]/10 text-[#bf0f3e]",
     borderColor: "border-[#bf0f3e]",
