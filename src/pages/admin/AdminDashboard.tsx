@@ -15,31 +15,31 @@ const AdminDashboard = () => {
   };
 
   const folders = [
-    {
-      title: "Operations",
-      description: "Clients & Service Calendar",
-      icon: Briefcase,
-      color: "bg-sky-400/10 text-sky-400",
-      borderColor: "border-[#bf0f3e]",
-      href: "/admin/operations",
-    },
-    {
-      title: "Sales & Marketing",
-      description: "Outreach & Campaigns",
-      icon: TrendingUp,
-      color: "bg-pink-500/10 text-pink-500",
-      borderColor: "border-green-500",
-      href: "/admin/sales-marketing",
-    },
-    {
-      title: "Finance",
-      description: "Invoices & Payments",
-      icon: DollarSign,
-      color: "bg-amber-500/10 text-amber-500",
-      borderColor: "border-sky-300",
-      href: "/admin/finance",
-    },
-  ];
+  {
+    title: "Operations",
+    description: "Clients & Service Calendar",
+    icon: Briefcase,
+    color: "bg-sky-400/10 text-sky-400",
+    borderColor: "border-[#bf0f3e]",
+    href: "/admin/operations"
+  },
+  {
+    title: "Sales & Marketing",
+    description: "Outreach & Campaigns",
+    icon: TrendingUp,
+    color: "bg-pink-500/10 text-pink-500",
+    borderColor: "border-green-500",
+    href: "/admin/sales-marketing"
+  },
+  {
+    title: "Finance",
+    description: "Invoices & Payments",
+    icon: DollarSign,
+    color: "bg-amber-500/10 text-amber-500",
+    borderColor: "border-sky-300",
+    href: "/admin/finance"
+  }];
+
 
   return (
     <div className="min-h-screen bg-black text-white">
@@ -63,19 +63,19 @@ const AdminDashboard = () => {
       </header>
 
       {/* Main Content */}
-      <main className="container mx-auto px-4 py-8">
+      <main className="container mx-auto px-4 py-[30px]">
         {/* NLA Logo */}
         <div className="flex justify-center mb-8">
           <img src={nlaLogoWhite} alt="No Limits Academy" className="h-56 w-auto" />
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
-          {folders.map((folder) => (
-            <Card
-              key={folder.title}
-              className={`cursor-pointer hover:shadow-lg transition-all hover:scale-[1.02] min-h-[200px] bg-white/5 border-2 ${folder.borderColor} text-white`}
-              onClick={() => navigate(folder.href)}
-            >
+          {folders.map((folder) =>
+          <Card
+            key={folder.title}
+            className={`cursor-pointer hover:shadow-lg transition-all hover:scale-[1.02] min-h-[200px] bg-white/5 border-2 ${folder.borderColor} text-white`}
+            onClick={() => navigate(folder.href)}>
+
               <CardHeader className="pb-4">
                 <div className={`w-14 h-14 rounded-xl flex items-center justify-center ${folder.color} mb-3`}>
                   <folder.icon className="w-7 h-7" />
@@ -87,7 +87,7 @@ const AdminDashboard = () => {
                 <p className="text-sm text-sky-400 font-medium">Open →</p>
               </CardContent>
             </Card>
-          ))}
+          )}
         </div>
 
         {/* Settings Card */}
@@ -106,8 +106,8 @@ const AdminDashboard = () => {
           </Card>
         </div>
       </main>
-    </div>
-  );
+    </div>);
+
 };
 
 export default AdminDashboard;
