@@ -1,4 +1,5 @@
 import { useNavigate } from "react-router-dom";
+import nlaLogo from "@/assets/nla-logo.png";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -63,6 +64,11 @@ const AdminDashboard = () => {
 
       {/* Main Content */}
       <main className="container mx-auto px-4 py-8">
+        {/* NLA Logo */}
+        <div className="flex justify-center mb-8">
+          <img src={nlaLogo} alt="No Limits Academy" className="h-28 w-auto" />
+        </div>
+
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
           {folders.map((folder) => (
             <Card
@@ -86,7 +92,7 @@ const AdminDashboard = () => {
 
         {/* Settings Card */}
         <div className="border-t border-white/10 pt-6">
-          <Card className="opacity-75 max-w-xs bg-white/5 border-white/10 text-white">
+          <Card className="opacity-75 max-w-xs bg-white/5 border-2 border-gray-500 text-white">
             <CardHeader>
               <div className="w-12 h-12 rounded-lg flex items-center justify-center bg-purple-500/10 text-purple-500 mb-2">
                 <Settings className="w-6 h-6" />
