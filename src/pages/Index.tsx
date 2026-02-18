@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Link } from "react-router-dom";
 import Header from "@/components/layout/Header";
 import Footer from "@/components/layout/Footer";
@@ -17,6 +17,20 @@ const Index = () => {
   const [scheduleOpen, setScheduleOpen] = useState(false);
   const [contactOpen, setContactOpen] = useState(false);
   const [programFilter, setProgramFilter] = useState<"junior" | "senior" | "all">("all");
+  const [footerVisible, setFooterVisible] = useState(false);
+  const footerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const el = footerRef.current;
+    if (!el) return;
+    const observer = new IntersectionObserver(
+      ([entry]) => setFooterVisible(entry.isIntersecting),
+      { threshold: 0 }
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
+
   const handleMoreInfo = (program: "junior" | "senior") => {
     setProgramFilter(program);
     setScheduleOpen(true);
@@ -64,10 +78,14 @@ const Index = () => {
         </DialogContent>
       </Dialog>
 
-      {/* Contact Button - Fixed */}
-      <Button className="fixed bottom-6 right-6 z-40 text-white font-semibold shadow-lg" style={{
-      backgroundColor: '#bf0f3e'
-    }} size="lg" onClick={() => setContactOpen(true)} aria-label="Open contact options">
+      {/* Contact Button - Fixed, hidden when footer is visible */}
+      <Button
+        className={`fixed bottom-6 right-6 z-40 text-white font-semibold shadow-lg transition-opacity duration-300 ${footerVisible ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}
+        style={{ backgroundColor: '#bf0f3e' }}
+        size="lg"
+        onClick={() => setContactOpen(true)}
+        aria-label="Open contact options"
+      >
         <MessageCircle className="mr-2 h-5 w-5" />
         Click to Contact Us
       </Button>
@@ -75,7 +93,9 @@ const Index = () => {
       {/* Contact Modal */}
       <ContactModal open={contactOpen} onOpenChange={setContactOpen} />
 
-      <Footer />
+      <div ref={footerRef}>
+        <Footer />
+      </div>
     </div>;
 };
 export default Index;
