@@ -25,6 +25,7 @@ import AdminClients from "./pages/admin/AdminClients";
 import AdminServiceCalendar from "./pages/admin/AdminServiceCalendar";
 import AdminInvoices from "./pages/admin/AdminInvoices";
  import AdminRegistrations from "./pages/admin/AdminRegistrations";
+ import AdminBilling from "./pages/admin/AdminBilling";
  import AdminRegistrationAnalytics from "./pages/admin/AdminRegistrationAnalytics";
 import Register from "./pages/Register";
 import Supporters from "./pages/Supporters";
@@ -126,6 +127,14 @@ const App = () => (
                element={
                  <ProtectedRoute requireAdmin>
                    <AdminRegistrationAnalytics />
+                 </ProtectedRoute>
+               }
+             />
+             <Route
+               path="/admin/finance/billing"
+               element={
+                 <ProtectedRoute requireAdmin>
+                   <AdminBilling />
                  </ProtectedRoute>
                }
              />
