@@ -18,7 +18,8 @@ const AdminDashboard = () => {
       title: "Operations",
       description: "Clients & Service Calendar",
       icon: Briefcase,
-       color: "bg-sky-400/10 text-sky-400",
+      color: "bg-sky-400/10 text-sky-400",
+      borderColor: "border-[#bf0f3e]",
       href: "/admin/operations",
     },
     {
@@ -26,6 +27,7 @@ const AdminDashboard = () => {
       description: "Outreach & Campaigns",
       icon: TrendingUp,
       color: "bg-pink-500/10 text-pink-500",
+      borderColor: "border-green-500",
       href: "/admin/sales-marketing",
     },
     {
@@ -33,6 +35,7 @@ const AdminDashboard = () => {
       description: "Invoices & Payments",
       icon: DollarSign,
       color: "bg-amber-500/10 text-amber-500",
+      borderColor: "border-sky-300",
       href: "/admin/finance",
     },
   ];
@@ -64,7 +67,7 @@ const AdminDashboard = () => {
           {folders.map((folder) => (
             <Card
               key={folder.title}
-              className="cursor-pointer hover:shadow-lg transition-all hover:scale-[1.02] min-h-[200px] bg-white/5 border-white/10 text-white"
+              className={`cursor-pointer hover:shadow-lg transition-all hover:scale-[1.02] min-h-[200px] bg-white/5 border-2 ${folder.borderColor} text-white`}
               onClick={() => navigate(folder.href)}
             >
               <CardHeader className="pb-4">
