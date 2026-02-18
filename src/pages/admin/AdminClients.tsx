@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Link } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -45,7 +45,7 @@ export default function AdminClients() {
   const [deleteClient, setDeleteClient] = useState<Client | null>(null);
   const { toast } = useToast();
   const { signOut } = useAuth();
-
+  const navigate = useNavigate();
   const fetchClients = async () => {
     setLoading(true);
     const { data, error } = await supabase
@@ -92,12 +92,10 @@ export default function AdminClients() {
       <header className="bg-black border-b border-white/10">
         <div className="container mx-auto px-4 py-4 flex items-center justify-between">
           <div className="flex items-center gap-4">
-            <Link to="/admin/dashboard">
-              <Button variant="ghost" size="sm" className="text-white hover:bg-white/10 hover:text-white">
+              <Button variant="ghost" size="sm" onClick={() => navigate(-1)} className="text-white hover:bg-white/10 hover:text-white">
                 <ArrowLeft className="w-4 h-4 mr-2" />
-                Dashboard
+                Back
               </Button>
-            </Link>
             <div className="flex items-center gap-2">
               <Users className="w-5 h-5 text-sky-300" />
               <h1 className="text-xl font-semibold text-white">Clients</h1>
