@@ -246,7 +246,7 @@ export default function AdminServiceCalendar() {
     try {
       await clearServiceDaysForCurrentMonth();
     } finally {
-      navigate("/admin/invoices");
+      navigate(-1);
     }
   };
 

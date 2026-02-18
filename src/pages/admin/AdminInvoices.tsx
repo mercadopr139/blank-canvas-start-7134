@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from "react";
-import { Link, useSearchParams } from "react-router-dom";
+import { Link, useSearchParams, useNavigate } from "react-router-dom";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -93,6 +93,7 @@ export default function AdminInvoices() {
   const {
     signOut
   } = useAuth();
+  const navigate = useNavigate();
 
   // Apply URL params on mount
   useEffect(() => {
@@ -457,12 +458,10 @@ export default function AdminInvoices() {
       <header className="bg-black border-b border-white/10">
         <div className="container mx-auto px-4 py-4 flex items-center justify-between">
           <div className="flex items-center gap-4">
-            <Link to="/admin/dashboard">
-              <Button variant="ghost" size="sm" className="text-white hover:bg-white/10 hover:text-white">
+              <Button variant="ghost" size="sm" onClick={() => navigate(-1)} className="text-white hover:bg-white/10 hover:text-white">
                 <ArrowLeft className="w-4 h-4 mr-2" />
-                Dashboard
+                Back
               </Button>
-            </Link>
             <div className="flex items-center gap-2">
               <FileText className="w-5 h-5 text-sky-300" />
               <h1 className="text-xl font-semibold text-white">Invoices</h1>
