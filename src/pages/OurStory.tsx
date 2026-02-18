@@ -184,7 +184,7 @@ const OurStory = () => {
               <div className="clear-both" />
 
               {/* Dave with Sister & Parents — floated left with Dave paragraph */}
-              <div className="md:float-left md:mr-5 md:mb-3 md:max-w-[260px] mb-6 w-full max-w-[320px] mx-auto md:mx-0">
+              <div className="md:float-right md:ml-5 md:mb-3 md:max-w-[260px] mb-6 w-full max-w-[320px] mx-auto md:mx-0">
                 <div className="bg-muted rounded-lg shadow-md overflow-hidden">
                   <button type="button" onClick={() => setActiveImg({ src: daveFamily, alt: "Dave, pictured with sister & parents" })} aria-label="Enlarge photo">
                     <img
