@@ -11,7 +11,7 @@ const AdminFinance = () => {
   const folders = [
     {
       title: "Billing",
-      description: "Human Resources",
+      description: "Invoices",
       icon: Receipt,
       href: "/admin/finance/billing",
     },
