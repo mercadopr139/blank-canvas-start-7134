@@ -103,7 +103,9 @@ const GymBuddiesChatWidget = ({ onClose }: GymBuddiesChatWidgetProps) => {
 
             <div className="pt-2">
               <a
-                href="#"
+                href="https://forms.monday.com/forms/586351067bf3d7c919aa61006fd70b73?r=use1"
+                target="_blank"
+                rel="noopener noreferrer"
                 className="inline-flex items-center justify-center gap-2 px-4 py-2 bg-[hsl(345,87%,40%)] text-white font-extrabold rounded-lg text-center text-sm hover:bg-[hsl(345,87%,35%)] transition-colors"
               >
                 <ClipboardList className="h-4 w-4" />
