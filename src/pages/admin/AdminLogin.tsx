@@ -34,7 +34,6 @@ const AdminLogin = () => {
     e.preventDefault();
     setIsLoading(true);
 
-    // Validate input
     const validation = loginSchema.safeParse({ email, password });
     if (!validation.success) {
       toast({
@@ -82,34 +81,33 @@ const AdminLogin = () => {
       return;
     }
 
-    // The useEffect will handle redirect after isAdmin is confirmed
     setIsLoading(false);
   };
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+      <div className="min-h-screen flex items-center justify-center bg-black">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white"></div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-muted/30 px-4">
-      <Card className="w-full max-w-md">
+    <div className="min-h-screen flex items-center justify-center bg-black px-4">
+      <Card className="w-full max-w-md bg-white/5 border-white/10">
         <CardHeader className="text-center">
-          <div className="mx-auto mb-4 w-12 h-12 bg-primary rounded-full flex items-center justify-center">
-            <Lock className="w-6 h-6 text-primary-foreground" />
+          <div className="mx-auto mb-4 w-12 h-12 bg-white/10 rounded-full flex items-center justify-center">
+            <Lock className="w-6 h-6 text-white" />
           </div>
-          <CardTitle className="text-2xl">{isSignUp ? "Create Admin Account" : "Admin Login"}</CardTitle>
-          <CardDescription>
+          <CardTitle className="text-2xl text-white">{isSignUp ? "Create Admin Account" : "Admin Login"}</CardTitle>
+          <CardDescription className="text-white/50">
             {isSignUp ? "Sign up for an admin account" : "Enter your credentials to access the admin area"}
           </CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
+              <Label htmlFor="email" className="text-white/70">Email</Label>
               <Input
                 id="email"
                 type="email"
@@ -118,10 +116,11 @@ const AdminLogin = () => {
                 onChange={(e) => setEmail(e.target.value)}
                 required
                 autoComplete="email"
+                className="bg-white/5 border-white/10 text-white placeholder:text-white/30"
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="password">Password</Label>
+              <Label htmlFor="password" className="text-white/70">Password</Label>
               <Input
                 id="password"
                 type="password"
@@ -130,6 +129,7 @@ const AdminLogin = () => {
                 onChange={(e) => setPassword(e.target.value)}
                 required
                 autoComplete="current-password"
+                className="bg-white/5 border-white/10 text-white placeholder:text-white/30"
               />
             </div>
             <Button type="submit" className="w-full" disabled={isLoading}>
@@ -139,7 +139,7 @@ const AdminLogin = () => {
               <button
                 type="button"
                 onClick={() => setIsSignUp(!isSignUp)}
-                className="text-primary hover:underline"
+                className="text-white/50 hover:text-white hover:underline"
               >
                 {isSignUp ? "Already have an account? Sign in" : "Need an account? Sign up"}
               </button>

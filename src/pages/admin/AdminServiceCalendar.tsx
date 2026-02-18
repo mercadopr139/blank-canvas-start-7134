@@ -292,21 +292,21 @@ export default function AdminServiceCalendar() {
   };
 
   return (
-    <div className="min-h-screen bg-muted/30">
+    <div className="min-h-screen bg-black text-white">
       {/* Header */}
-      <header className="bg-background border-b">
+      <header className="bg-black border-b border-white/10">
         <div className="container mx-auto px-4 py-4 flex items-center justify-between">
           <div className="flex items-center gap-4">
-            <Button variant="ghost" size="sm" onClick={handleBack}>
+            <Button variant="ghost" size="sm" onClick={handleBack} className="text-white hover:bg-white/10 hover:text-white">
               <ArrowLeft className="w-4 h-4 mr-2" />
               Back
             </Button>
             <div className="flex items-center gap-2">
-              <Calendar className="w-5 h-5 text-primary" />
-              <h1 className="text-xl font-semibold">Service Calendar</h1>
+              <Calendar className="w-5 h-5 text-sky-300" />
+              <h1 className="text-xl font-semibold text-white">Service Calendar</h1>
             </div>
           </div>
-          <Button variant="outline" size="sm" onClick={signOut}>
+          <Button variant="outline" size="sm" onClick={signOut} className="border-white/10 text-white hover:bg-white/10 hover:text-white">
             Log out
           </Button>
         </div>
@@ -320,7 +320,7 @@ export default function AdminServiceCalendar() {
             {/* Client Selector */}
             <div className="w-64">
               <Select value={selectedClientId} onValueChange={setSelectedClientId}>
-                <SelectTrigger>
+                <SelectTrigger className="bg-white/5 border-white/10 text-white">
                   <SelectValue placeholder="Select client" />
                 </SelectTrigger>
                 <SelectContent>
@@ -339,16 +339,18 @@ export default function AdminServiceCalendar() {
                 variant="outline"
                 size="icon"
                 onClick={() => setCurrentMonth(subMonths(currentMonth, 1))}
+                className="border-white/10 text-white hover:bg-white/10 hover:text-white"
               >
                 <ChevronLeft className="w-4 h-4" />
               </Button>
-              <span className="min-w-[160px] text-center font-medium">
+              <span className="min-w-[160px] text-center font-medium text-white">
                 {format(currentMonth, "MMMM yyyy")}
               </span>
               <Button
                 variant="outline"
                 size="icon"
                 onClick={() => setCurrentMonth(addMonths(currentMonth, 1))}
+                className="border-white/10 text-white hover:bg-white/10 hover:text-white"
               >
                 <ChevronRight className="w-4 h-4" />
               </Button>
@@ -357,16 +359,16 @@ export default function AdminServiceCalendar() {
 
           {selectedClient && (
             <div className="flex items-center gap-4">
-              <div className="text-sm text-muted-foreground">
-                <span className="font-medium">{serviceLogs.length}</span> service days this month
+              <div className="text-sm text-white/50">
+                <span className="font-medium text-white">{serviceLogs.length}</span> service days this month
               </div>
               <div className="flex items-center gap-2">
                 {serviceLogs.length > 0 && (
-                  <Button
+                    <Button
                     variant="outline"
                     onClick={() => setShowClearConfirm(true)}
                     disabled={isClearing}
-                    className="text-destructive hover:text-destructive"
+                    className="text-destructive hover:text-destructive border-white/10 hover:bg-white/10"
                   >
                     <Trash2 className="w-4 h-4 mr-2" />
                     Clear All
@@ -381,7 +383,7 @@ export default function AdminServiceCalendar() {
                     Generate Preview
                   </Button>
                   {serviceLogs.length === 0 && (
-                    <span className="text-xs text-muted-foreground">
+                    <span className="text-xs text-white/50">
                       Select at least 1 service day to generate a preview.
                     </span>
                   )}
@@ -392,17 +394,17 @@ export default function AdminServiceCalendar() {
         </div>
 
         {/* Calendar Grid */}
-        <div className="bg-background rounded-lg border shadow-sm p-4">
+        <div className="bg-white/5 rounded-lg border border-white/10 shadow-sm p-4">
           {clients.length === 0 ? (
-            <div className="text-center py-8 text-muted-foreground">
+            <div className="text-center py-8 text-white/50">
               No clients found.{" "}
-              <Link to="/admin/clients" className="text-primary hover:underline">
+              <Link to="/admin/clients" className="text-sky-300 hover:underline">
                 Add a client
               </Link>{" "}
               first.
             </div>
           ) : !selectedClientId ? (
-            <div className="text-center py-8 text-muted-foreground">
+            <div className="text-center py-8 text-white/50">
               Select a client to view their service calendar.
             </div>
           ) : (
@@ -412,7 +414,7 @@ export default function AdminServiceCalendar() {
                 {WEEKDAYS.map((day) => (
                   <div
                     key={day}
-                    className="text-center text-sm font-medium text-muted-foreground py-2"
+                    className="text-center text-sm font-medium text-white/50 py-2"
                   >
                     {day}
                   </div>
@@ -445,8 +447,8 @@ export default function AdminServiceCalendar() {
                         flex flex-col items-center justify-center gap-0.5
                         ${!isCurrentMonth ? "opacity-50" : ""}
                         ${isServiceDay
-                          ? "bg-primary text-primary-foreground border-primary hover:bg-primary/90"
-                          : "bg-background hover:bg-muted border-border"
+                          ? "bg-sky-300 text-black border-sky-300 hover:bg-sky-300/90"
+                          : "bg-white/5 hover:bg-white/10 border-white/10 text-white"
                         }
                         ${loading ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}
                       `}
@@ -463,7 +465,7 @@ export default function AdminServiceCalendar() {
                 })}
               </div>
 
-              <p className="text-xs text-muted-foreground mt-4 text-center">
+              <p className="text-xs text-white/50 mt-4 text-center">
                 Click a date to add or edit a service entry
               </p>
             </>
