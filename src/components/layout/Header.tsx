@@ -95,6 +95,13 @@ const Header = ({ className }: HeaderProps) => {
                   DONATE
                 </Link>
               </Button>
+              <Link
+                to="/admin"
+                onClick={() => setOpen(false)}
+                className="text-xs text-muted-foreground/50 hover:text-muted-foreground transition-colors text-center mt-4"
+              >
+                Admin
+              </Link>
             </nav>
           </SheetContent>
         </Sheet>
