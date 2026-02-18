@@ -35,7 +35,7 @@ const AdminDashboard = () => {
   },
   {
     title: "Finance",
-    description: "Invoices & Payments",
+    description: "Financial Systems & Personnel",
     icon: DollarSign,
     color: "bg-sky-300/10 text-sky-300",
     borderColor: "border-sky-300",
