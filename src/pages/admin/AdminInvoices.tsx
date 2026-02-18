@@ -452,23 +452,23 @@ export default function AdminInvoices() {
       currency: "USD"
     }).format(amount);
   };
-  return <div className="min-h-screen bg-muted/30">
+  return <div className="min-h-screen bg-black text-white">
       {/* Header */}
-      <header className="bg-background border-b">
+      <header className="bg-black border-b border-white/10">
         <div className="container mx-auto px-4 py-4 flex items-center justify-between">
           <div className="flex items-center gap-4">
             <Link to="/admin/dashboard">
-              <Button variant="ghost" size="sm">
+              <Button variant="ghost" size="sm" className="text-white hover:bg-white/10 hover:text-white">
                 <ArrowLeft className="w-4 h-4 mr-2" />
                 Dashboard
               </Button>
             </Link>
             <div className="flex items-center gap-2">
-              <FileText className="w-5 h-5 text-primary" />
-              <h1 className="text-xl font-semibold">Invoices</h1>
+              <FileText className="w-5 h-5 text-sky-300" />
+              <h1 className="text-xl font-semibold text-white">Invoices</h1>
             </div>
           </div>
-          <Button variant="outline" size="sm" onClick={signOut}>
+          <Button variant="outline" size="sm" onClick={signOut} className="border-white/10 text-white hover:bg-white/10 hover:text-white">
             Log out
           </Button>
         </div>
@@ -477,18 +477,18 @@ export default function AdminInvoices() {
       {/* Main Content */}
       <main className="container mx-auto px-4 py-8 space-y-8">
         {/* Controls */}
-        <div className="bg-background rounded-lg border shadow-sm p-6">
-          <h2 className="font-semibold mb-4">Generate Invoice</h2>
+        <div className="bg-white/5 rounded-lg border border-white/10 shadow-sm p-6">
+          <h2 className="font-semibold mb-4 text-white">Generate Invoice</h2>
           <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-end">
             <div className="flex-1 max-w-xs">
-              <label className="text-sm text-muted-foreground mb-1 block">​Partner Name
+              <label className="text-sm text-white/50 mb-1 block">​Partner Name
  </label>
               <div className="flex items-center gap-2">
                 <Select value={selectedClientId} onValueChange={v => {
                 setSelectedClientId(v);
                 setShowPreview(false);
               }}>
-                  <SelectTrigger>
+                  <SelectTrigger className="bg-white/5 border-white/10 text-white">
                     <SelectValue placeholder="Select client" />
                   </SelectTrigger>
                   <SelectContent>
@@ -497,7 +497,7 @@ export default function AdminInvoices() {
                       </SelectItem>)}
                   </SelectContent>
                 </Select>
-                <Button variant="ghost" size="icon" onClick={() => setShowClientDialog(true)} className="shrink-0" title="Add new client">
+                <Button variant="ghost" size="icon" onClick={() => setShowClientDialog(true)} className="shrink-0 text-white hover:bg-white/10 hover:text-white" title="Add new client">
                   <Plus className="w-4 h-4" />
                 </Button>
                 {selectedClientId && <>
@@ -505,22 +505,22 @@ export default function AdminInvoices() {
                   const client = clients.find(c => c.id === selectedClientId);
                   setEditingClient(client || null);
                   setShowClientDialog(true);
-                }} className="shrink-0" title="Edit client">
+                }} className="shrink-0 text-white hover:bg-white/10 hover:text-white" title="Edit client">
                       <Pencil className="w-4 h-4" />
                     </Button>
-                    <Button variant="ghost" size="icon" onClick={() => setDeleteClientId(selectedClientId)} className="shrink-0 text-destructive hover:text-destructive" title="Delete client">
+                    <Button variant="ghost" size="icon" onClick={() => setDeleteClientId(selectedClientId)} className="shrink-0 text-destructive hover:text-destructive hover:bg-white/10" title="Delete client">
                       <Trash2 className="w-4 h-4" />
                     </Button>
                   </>}
               </div>
             </div>
             <div className="w-40">
-              <label className="text-sm text-muted-foreground mb-1 block">Month</label>
+              <label className="text-sm text-white/50 mb-1 block">Month</label>
               <Select value={selectedMonth} onValueChange={v => {
               setSelectedMonth(v);
               setShowPreview(false);
             }}>
-                <SelectTrigger>
+                <SelectTrigger className="bg-white/5 border-white/10 text-white">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -531,12 +531,12 @@ export default function AdminInvoices() {
               </Select>
             </div>
             <div className="w-32">
-              <label className="text-sm text-muted-foreground mb-1 block">Year</label>
+              <label className="text-sm text-white/50 mb-1 block">Year</label>
               <Select value={selectedYear} onValueChange={v => {
               setSelectedYear(v);
               setShowPreview(false);
             }}>
-                <SelectTrigger>
+                <SelectTrigger className="bg-white/5 border-white/10 text-white">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -575,28 +575,28 @@ export default function AdminInvoices() {
           </TabsList>
           
           <TabsContent value="all">
-            <div className="bg-background rounded-lg border shadow-sm">
-              <div className="p-4 border-b">
-                <h2 className="font-semibold">Saved Invoices</h2>
+            <div className="bg-white/5 rounded-lg border border-white/10 shadow-sm">
+              <div className="p-4 border-b border-white/10">
+                <h2 className="font-semibold text-white">Saved Invoices</h2>
               </div>
-              {invoices.length === 0 ? <div className="p-8 text-center text-muted-foreground">
+              {invoices.length === 0 ? <div className="p-8 text-center text-white/50">
                   No invoices yet. Generate and save your first invoice above.
                 </div> : <Table>
                   <TableHeader>
-                    <TableRow>
-                      <TableHead>Invoice #</TableHead>
-                      <TableHead>Client</TableHead>
-                      <TableHead>Period</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead className="text-right">Total</TableHead>
-                      <TableHead>Created</TableHead>
-                      <TableHead className="text-right">Actions</TableHead>
+                    <TableRow className="border-white/10 hover:bg-white/5">
+                      <TableHead className="text-white/70">Invoice #</TableHead>
+                      <TableHead className="text-white/70">Client</TableHead>
+                      <TableHead className="text-white/70">Period</TableHead>
+                      <TableHead className="text-white/70">Status</TableHead>
+                      <TableHead className="text-right text-white/70">Total</TableHead>
+                      <TableHead className="text-white/70">Created</TableHead>
+                      <TableHead className="text-right text-white/70">Actions</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {invoices.map(invoice => <TableRow key={invoice.id}>
-                        <TableCell className="font-medium">{invoice.invoice_number}</TableCell>
-                        <TableCell>{invoice.client_name}</TableCell>
+                    {invoices.map(invoice => <TableRow key={invoice.id} className="border-white/10 hover:bg-white/5">
+                        <TableCell className="font-medium text-white">{invoice.invoice_number}</TableCell>
+                        <TableCell className="text-white">{invoice.client_name}</TableCell>
                         <TableCell>
                           {MONTHS.find(m => m.value === String(invoice.invoice_month))?.label}{" "}
                           {invoice.invoice_year}
@@ -606,14 +606,14 @@ export default function AdminInvoices() {
                             {invoice.status.charAt(0).toUpperCase() + invoice.status.slice(1)}
                           </Badge>
                         </TableCell>
-                        <TableCell className="text-right">{formatCurrency(invoice.total)}</TableCell>
-                        <TableCell>{format(new Date(invoice.created_at), "MMM d, yyyy")}</TableCell>
+                        <TableCell className="text-right text-white">{formatCurrency(invoice.total)}</TableCell>
+                        <TableCell className="text-white/70">{format(new Date(invoice.created_at), "MMM d, yyyy")}</TableCell>
                         <TableCell className="text-right">
                           <div className="flex items-center justify-end gap-1">
-                            <Button variant="ghost" size="sm" onClick={() => handleViewInvoice(invoice)} title="View invoice">
+                            <Button variant="ghost" size="sm" onClick={() => handleViewInvoice(invoice)} title="View invoice" className="text-white hover:bg-white/10 hover:text-white">
                               <Eye className="w-4 h-4" />
                             </Button>
-                            <Button variant="ghost" size="sm" onClick={() => setDeleteInvoiceId(invoice.id)} className="text-destructive hover:text-destructive" title="Delete invoice">
+                            <Button variant="ghost" size="sm" onClick={() => setDeleteInvoiceId(invoice.id)} className="text-destructive hover:text-destructive hover:bg-white/10" title="Delete invoice">
                               <Trash2 className="w-4 h-4" />
                             </Button>
                           </div>
@@ -625,10 +625,10 @@ export default function AdminInvoices() {
           </TabsContent>
           
           <TabsContent value="sent">
-            <div className="bg-background rounded-lg border shadow-sm">
-              <div className="p-4 border-b">
-                <h2 className="font-semibold">Sent Invoice History</h2>
-                <p className="text-sm text-muted-foreground mt-1">
+            <div className="bg-white/5 rounded-lg border border-white/10 shadow-sm">
+              <div className="p-4 border-b border-white/10">
+                <h2 className="font-semibold text-white">Sent Invoice History</h2>
+                <p className="text-sm text-white/50 mt-1">
                   View all invoices that have been emailed to partners
                 </p>
               </div>
