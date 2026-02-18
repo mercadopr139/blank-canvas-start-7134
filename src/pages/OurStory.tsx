@@ -236,7 +236,9 @@ const OurStory = () => {
                       className="w-full h-auto cursor-pointer" />
                   </button>
                   <div className="px-2 py-1.5 text-center">
-                    <p className="text-[10px] text-muted-foreground italic leading-tight">Josh, legendary Coach Jim McNally, &amp; Dave — McNally coached Navy boxing for 37 years and founded the program at Lock Haven University, where Mercado would arrive years later. Some paths are just meant to cross.</p>
+                    <p className="text-[10px] text-muted-foreground italic leading-tight">Josh, legendary Naval Academy coach Jim McNally, & Dave —
+
+McNally coached Navy boxing for 37 years and interestingly, in the late 1970s, he graduated from Lock Haven and was one of the "founding fathers" of the historic boxing program, where Mercado would arrive years later.                  </p>
                   </div>
                 </div>
               </div>
@@ -265,9 +267,7 @@ const OurStory = () => {
 
               {/* Featured finished facility photos */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                {[
-                { src: facilityFinishedGymNew, alt: "The finished Boxing Facility" },
-                { src: facilityFinishedCourtNew, alt: "The finished Performance Center" }].
+                {[{ src: facilityFinishedGymNew, alt: "The finished Boxing Facility" }, { src: facilityFinishedCourtNew, alt: "The finished Performance Center" }].
                 map((img, idx) =>
                 <div key={`featured-${idx}`} className="relative overflow-hidden rounded-xl group">
                     <button
