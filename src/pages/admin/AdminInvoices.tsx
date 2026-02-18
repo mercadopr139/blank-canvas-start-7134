@@ -458,7 +458,7 @@ export default function AdminInvoices() {
       <header className="bg-black border-b border-white/10">
         <div className="container mx-auto px-4 py-4 flex items-center justify-between">
           <div className="flex items-center gap-4">
-              <Button variant="ghost" size="sm" onClick={() => navigate(-1)} className="text-white hover:bg-white/10 hover:text-white">
+              <Button variant="ghost" size="sm" onClick={() => window.history.length > 1 ? navigate(-1) : navigate("/admin/finance")} className="text-white hover:bg-white/10 hover:text-white">
                 <ArrowLeft className="w-4 h-4 mr-2" />
                 Back
               </Button>

@@ -4,12 +4,13 @@ import { ArrowLeft, TrendingUp } from "lucide-react";
 
 const AdminSalesMarketing = () => {
   const navigate = useNavigate();
+  const goBack = () => window.history.length > 1 ? navigate(-1) : navigate("/admin");
 
   return (
     <div className="min-h-screen bg-black text-white">
       <header className="bg-black border-b border-white/10">
         <div className="container mx-auto px-4 py-4 flex items-center gap-4">
-          <Button variant="ghost" size="icon" onClick={() => navigate(-1)} className="text-white hover:bg-white/10 hover:text-white">
+          <Button variant="ghost" size="icon" onClick={goBack} className="text-white hover:bg-white/10 hover:text-white">
             <ArrowLeft className="w-5 h-5" />
           </Button>
           <div>
