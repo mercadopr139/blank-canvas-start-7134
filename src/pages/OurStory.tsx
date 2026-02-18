@@ -8,7 +8,7 @@ import daveFamily from "@/assets/our-story/dave-family.png";
 import joshDaveEarly from "@/assets/our-story/josh-dave-early.png";
 import joshBasketballCoach from "@/assets/our-story/josh-basketball-coach.png";
 import daveBrigadeChampion from "@/assets/our-story/dave-brigade-champion.png";
-import joshProBoxing from "@/assets/our-story/josh-pro-boxing.png";
+import joshProBoxing from "@/assets/our-story/josh-pro-boxing-2.png";
 import facilityConstructionCrew from "@/assets/facility/facility-construction-crew.png";
 import facilityPlumbingCrew from "@/assets/facility/facility-plumbing-crew.png";
 import facilityRebarPrep from "@/assets/facility/facility-rebar-prep.png";
