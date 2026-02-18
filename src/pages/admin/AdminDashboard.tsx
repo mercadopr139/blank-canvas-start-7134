@@ -94,18 +94,15 @@ const AdminDashboard = () => {
         </div>
 
         {/* Settings Card */}
-        <div className="border-t border-white/10 pt-6">
-          <Card className="opacity-75 max-w-xs bg-white/5 border-2 border-gray-500 text-white">
-            <CardHeader>
-              <div className="w-12 h-12 rounded-lg flex items-center justify-center bg-purple-500/10 text-purple-500 mb-2">
-                <Settings className="w-6 h-6" />
+        <div className="flex justify-center mt-12">
+          <Card className="opacity-60 w-48 bg-white/5 border border-gray-600 text-white">
+            <CardHeader className="p-4 pb-2">
+              <div className="w-8 h-8 rounded-md flex items-center justify-center bg-purple-500/10 text-purple-500 mb-1">
+                <Settings className="w-4 h-4" />
               </div>
-              <CardTitle className="text-lg text-white">Settings</CardTitle>
-              <CardDescription className="text-white/50">Configure admin preferences</CardDescription>
+              <CardTitle className="text-sm text-white">Settings</CardTitle>
+              <CardDescription className="text-xs text-white/40">Coming soon</CardDescription>
             </CardHeader>
-            <CardContent>
-              <p className="text-sm text-white/30">Coming soon</p>
-            </CardContent>
           </Card>
         </div>
       </main>
