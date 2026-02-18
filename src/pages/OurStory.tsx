@@ -180,20 +180,6 @@ const OurStory = () => {
 
               <div className="clear-both" />
 
-              {/* Josh & Dave early photo — floated right with meeting paragraph */}
-              <div className="md:float-right md:ml-5 md:mb-3 md:max-w-[180px] mb-6 w-full max-w-[220px] mx-auto md:mx-0">
-                <div className="bg-muted rounded-lg shadow-md overflow-hidden">
-                  <button type="button" onClick={() => setActiveImg({ src: joshDaveEarly, alt: "Josh and Dave in the early days" })} aria-label="Enlarge photo">
-                    
-
-
-
-                  </button>
-                  <div className="px-3 py-1.5 text-center">
-                    <p className="text-xs text-muted-foreground italic">Josh and Dave in the early days</p>
-                  </div>
-                </div>
-              </div>
 
               <p className="text-lg md:text-xl text-muted-foreground leading-relaxed mb-2">
                 Not long after finishing college, Josh began coaching boxing back home in Cape May, NJ—where he met Dave Von Savage who was preparing to attend the United States Naval Academy. What began as weekly boxing lessons in a basement boxing gym formed the foundation of a lasting friendship rooted in trust, discipline, and shared values.
