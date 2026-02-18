@@ -23,7 +23,7 @@ const COLORS = [
 
 const AdminRegistrationAnalytics = () => {
   const navigate = useNavigate();
-  const goBack = () => window.history.length > 1 ? navigate(-1) : navigate("/admin/operations");
+  const goBack = () => window.history.state?.idx > 0 ? navigate(-1) : navigate("/admin/operations");
 
   const { data: registrations, isLoading } = useQuery({
     queryKey: ["youth-registrations-analytics"],
