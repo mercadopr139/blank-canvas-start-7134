@@ -95,9 +95,9 @@ const AdminDashboard = () => {
 
         {/* Settings Card */}
         <div className="flex justify-center mt-12">
-          <Card className="opacity-60 w-48 bg-white/5 border border-gray-600 text-white">
+          <Card className="opacity-60 w-48 bg-white/5 border border-white/20 text-white">
             <CardHeader className="p-4 pb-2">
-              <div className="w-8 h-8 rounded-md flex items-center justify-center bg-purple-500/10 text-purple-500 mb-1">
+              <div className="w-8 h-8 rounded-md flex items-center justify-center bg-white/5 text-white/40 mb-1">
                 <Settings className="w-4 h-4" />
               </div>
               <CardTitle className="text-sm text-white">Settings</CardTitle>
