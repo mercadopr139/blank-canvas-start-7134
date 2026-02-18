@@ -134,15 +134,7 @@ const OurStory = () => {
                     <p className="text-xs text-muted-foreground italic">Josh, pictured with step dad &amp; mom</p>
                   </div>
                 </div>
-              </div>
-
-              <p className="text-lg md:text-xl text-muted-foreground leading-relaxed mb-6">
-                No Limits Academy was founded by Josh Mercado, whose life has been shaped by the power—and absence—of mentorship. Raised in a single-parent household, Josh grew up acutely aware of what it meant to feel unrepresented and unsupported, watching other children benefit from adults who coached, advocated, and opened doors for them. That early longing to be seen, guided, and defended became a defining force in his life.
-              </p>
-
-              {/* Pro boxing photo — small, floated right within paragraph */}
-              <div className="md:float-right md:ml-4 md:mb-2 md:max-w-[160px] mb-4 w-full max-w-[200px] mx-auto md:mx-0">
-                <div className="bg-muted rounded-lg shadow-md overflow-hidden">
+                <div className="bg-muted rounded-lg shadow-md overflow-hidden mt-3">
                   <button type="button" onClick={() => setActiveImg({ src: joshProBoxing, alt: "Josh competing professionally" })} aria-label="Enlarge photo">
                     <img src={joshProBoxing} alt="Josh competing professionally" className="w-full h-auto cursor-pointer" />
                   </button>
@@ -151,6 +143,10 @@ const OurStory = () => {
                   </div>
                 </div>
               </div>
+
+              <p className="text-lg md:text-xl text-muted-foreground leading-relaxed mb-6">
+                No Limits Academy was founded by Josh Mercado, whose life has been shaped by the power—and absence—of mentorship. Raised in a single-parent household, Josh grew up acutely aware of what it meant to feel unrepresented and unsupported, watching other children benefit from adults who coached, advocated, and opened doors for them. That early longing to be seen, guided, and defended became a defining force in his life.
+              </p>
 
               <p className="text-lg md:text-xl text-muted-foreground leading-relaxed mb-6">
                 Sports provided an outlet, but boxing became the turning point. While pursuing his education at Lock Haven University—known for its nationally ranked boxing program—Josh found structure, accountability, and belief in his own potential. In 2007, he became a National Collegiate Boxing Champion, later competing professionally, while earning his degree in Secondary Education. Boxing did more than sharpen his athletic ability; it taught him discipline, resilience, and how to confront adversity with focus and self-control.
