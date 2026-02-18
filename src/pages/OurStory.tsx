@@ -226,6 +226,21 @@ const OurStory = () => {
                 Though they are from completely different upbringings with distinct journeys, Josh and Dave stayed closely connected, united by boxing, friendship, and a shared belief in the power of structure and consistency to change lives. In 2020, those parallel journeys converged with the establishment of No Limits Academy. In 2022, Josh resigned from his teaching position to commit to NLA full time, allowing the organization to grow from a vision into a comprehensive youth development program serving children across Cape May County.
               </p>
 
+              {/* Josh, Coach McNally & Dave — floated right with final paragraph */}
+              <div className="md:float-right md:ml-5 md:mb-3 md:max-w-[260px] mb-6 w-full max-w-[320px] mx-auto md:mx-0">
+                <div className="bg-muted rounded-lg shadow-md overflow-hidden">
+                  <button type="button" onClick={() => setActiveImg({ src: joshMcNallyDave, alt: "Josh Mercado, Coach Jim McNally & Dave Von Savage" })} aria-label="Enlarge photo">
+                    <img
+                      src={joshMcNallyDave}
+                      alt="Josh Mercado, Coach Jim McNally & Dave Von Savage"
+                      className="w-full h-auto cursor-pointer" />
+                  </button>
+                  <div className="px-2 py-1.5 text-center">
+                    <p className="text-[10px] text-muted-foreground italic leading-tight">Josh, legendary Coach Jim McNally, &amp; Dave — McNally coached Navy boxing for 37 years and founded the program at Lock Haven University, where Mercado would arrive years later. Some paths are just meant to cross.</p>
+                  </div>
+                </div>
+              </div>
+
               <p className="text-lg md:text-xl text-muted-foreground leading-relaxed mb-6">
                 Today, No Limits Academy is more than a boxing gym. It is a community hub built on mentorship, belonging, and opportunity. Leveraging backgrounds in education, military service, business, and boxing, alongside a network of incredible people, Josh and Dave created a space where young people are challenged, supported, and believed in. Through discipline and care, NLA teaches its athletes that their circumstances do not define their future—and that no one succeeds alone.
               </p>
