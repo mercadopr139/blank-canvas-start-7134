@@ -1,71 +1,56 @@
 
-# Plan: Link "Gym Buddies" in Programs Page to the Dedicated Gym Buddies Page
 
-## Summary
-The "More Programs at NLA" section on the Programs page currently shows "Gym Buddies" as a clickable item that opens a modal with content. You want to remove this modal content and instead have the "Gym Buddies" link navigate directly to the dedicated `/gym-buddies` page (the same page accessible from the homepage navigation).
+# Dark Theme for All Command Center Pages
 
-## Changes Required
+## Overview
+Apply the Command Center's black background and pillar-specific color theming across every admin page. Each page will inherit the accent color of its parent pillar so users can instantly associate which section they're in.
 
-### 1. Update `ProgramsExtrasSection.tsx`
+## Color Mapping
 
-**What we'll do:**
-- Remove "Gym Buddies" from the `items` array (since it no longer needs modal content)
-- Change the "Gym Buddies" list item from a button that opens a modal to a link that navigates to `/gym-buddies`
+| Pillar | Accent Color | Used For |
+|--------|-------------|----------|
+| Operations | NLA Red (`#bf0f3e`) | Borders, icons, accent text, active states |
+| Sales & Marketing | Green (`green-500`) | Borders, icons, accent text |
+| Finance | Sky Blue (`sky-300`) | Borders, icons, accent text |
 
-**Technical approach:**
-- Keep the bullet list format consistent with other items
-- Use React Router's `Link` component to navigate to `/gym-buddies`
-- The link will have the same styling as other items (underlined, clickable text)
+## Pages to Update
 
-### 2. Cleanup Gym Buddies Image Imports
+### 1. Pillar Landing Pages (3 files)
+**AdminOperations.tsx** - Black background, red-accented cards with red borders, white text
+**AdminSalesMarketing.tsx** - Black background, green-accented icon and "Coming Soon" text
+**AdminFinance.tsx** - Black background, sky-blue-accented cards with sky-blue borders, white text
 
-**What we'll do:**
-- Remove all the Gym Buddies image imports from `ProgramsExtrasSection.tsx` since they're no longer needed in this component
-- Remove the `gymBuddiesImages` array from this component
+### 2. Operations Sub-Pages (2 files)
+**AdminRegistrations.tsx** - Black background, red accent on header icon, white text on tables/cards
+**AdminRegistrationAnalytics.tsx** - Black background, red accent on stat cards and chart containers, white text
 
-This cleanup will reduce the component's bundle size since all those images are already imported in the dedicated `/gym-buddies` page.
+### 3. Finance Sub-Pages (3 files)
+**AdminInvoices.tsx** - Black background, sky-blue accent on header icon, white text on tables/cards/controls
+**AdminServiceCalendar.tsx** - Black background, sky-blue accent on calendar elements, white text
+**AdminClients.tsx** - Black background, sky-blue accent on header icon, white text on tables
 
----
+### 4. Login Page (1 file)
+**AdminLogin.tsx** - Black background to match the overall Command Center feel
 
-## Before & After
+## What Changes Per Page
 
-**Before (clicking "Gym Buddies" in More Programs):**
-- Opens a modal with description and photo gallery
+Each page will receive the same pattern of changes:
 
-**After (clicking "Gym Buddies" in More Programs):**
-- Navigates directly to `/gym-buddies` page (same as the homepage Gym Buddies link)
-
----
+- **Outer wrapper**: `bg-muted/30` becomes `bg-black text-white`
+- **Header**: `bg-background border-b border-border` becomes `bg-black border-b border-white/10`
+- **Header text**: `text-foreground` becomes `text-white`, `text-muted-foreground` becomes `text-white/50`
+- **Back button and Log out button**: Ghost/outline styles updated with white text and black background hover states
+- **Cards**: `bg-background` becomes `bg-white/5 border-white/10 text-white` (or pillar-colored borders on landing pages)
+- **Tables**: Background becomes `bg-white/5`, header text `text-white/70`, row text `text-white`, borders `border-white/10`
+- **Inputs/Selects**: Dark-styled with `bg-white/5 border-white/10 text-white`
+- **Badges**: Adjusted for dark background contrast
+- **Muted text**: `text-muted-foreground` becomes `text-white/50`
+- **Accent links/text**: Uses the pillar color (red for Operations pages, sky-blue for Finance pages)
+- **Pillar landing page cards**: Get `border-2` with the pillar accent color, matching the Dashboard card style
 
 ## Technical Details
 
-### File: `src/components/sections/ProgramsExtrasSection.tsx`
-
-1. Add `Link` import from `react-router-dom`
-2. Remove all Gym Buddies image imports (lines 24-59)
-3. Remove the `gymBuddiesImages` array (lines 86-123)
-4. Remove the "gym-buddies" object from the `items` array (lines 190-199)
-5. Add a separate "Gym Buddies" entry in the list that uses a `Link` instead of a button:
-
-```tsx
-{/* Gym Buddies - links to dedicated page */}
-<li className="flex items-start gap-3">
-  <span className="mt-2.5 h-2 w-2 rounded-full bg-foreground flex-shrink-0" />
-  <Link
-    to="/gym-buddies"
-    className="text-left text-lg font-medium text-foreground underline underline-offset-4 hover:text-foreground/80 transition-colors"
-  >
-    Gym Buddies
-  </Link>
-</li>
-```
-
-The list will maintain alphabetical order:
-1. Dental Dental's Smile Lab Program
-2. Excursions
-3. **Gym Buddies** → (Link to /gym-buddies)
-4. NJ4S Lil' Champs Program
-5. Real Talk Sessions
-6. Spiritual Development
-7. The Launch Pad
-
+- All changes are CSS class swaps only -- no logic or data changes
+- 9 files total will be edited
+- Modal dialogs (AlertDialog, Dialog, ClientFormDialog, ServiceEntryModal) will keep their default styling since they overlay the page and have their own contained styles
+- Chart colors in AdminRegistrationAnalytics will be adjusted for visibility on dark backgrounds
