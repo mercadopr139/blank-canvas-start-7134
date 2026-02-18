@@ -184,10 +184,10 @@ const OurStory = () => {
               <div className="md:float-right md:ml-5 md:mb-3 md:max-w-[180px] mb-6 w-full max-w-[220px] mx-auto md:mx-0">
                 <div className="bg-muted rounded-lg shadow-md overflow-hidden">
                   <button type="button" onClick={() => setActiveImg({ src: joshDaveEarly, alt: "Josh and Dave in the early days" })} aria-label="Enlarge photo">
-                    <img
-                      src={joshDaveEarly}
-                      alt="Josh and Dave in the early days"
-                      className="w-full h-auto cursor-pointer" />
+                    
+
+
+
                   </button>
                   <div className="px-3 py-1.5 text-center">
                     <p className="text-xs text-muted-foreground italic">Josh and Dave in the early days</p>
