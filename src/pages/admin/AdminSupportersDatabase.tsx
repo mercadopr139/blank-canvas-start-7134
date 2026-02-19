@@ -1,8 +1,8 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
-import { Input } from "@/components/ui/input";
+
 import { Upload } from "lucide-react";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
@@ -10,6 +10,9 @@ import {
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
+import {
+  Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
+} from "@/components/ui/table";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -18,7 +21,26 @@ type CsvRow = Record<string, string>;
 const MAPPABLE_FIELDS = ["name", "story", "email", "phone", "address"] as const;
 type MappableField = (typeof MAPPABLE_FIELDS)[number];
 
-// ─── CSV helpers ──────────────────────────────────────────────────────────────
+const FIELD_LABELS: Record<MappableField, string> = {
+  name: "Name",
+  story: "Notes",
+  email: "Email",
+  phone: "Phone",
+  address: "Address",
+};
+
+const SUPPORTER_TYPES = ["Hall of Fame", "Donor", "Sponsor", "Partner", "Other"] as const;
+
+interface SupporterRow {
+  id: string;
+  name: string;
+  email: string | null;
+  phone: string | null;
+  address: string | null;
+  supporter_type: string;
+}
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function parseCsv(text: string): CsvRow[] {
   const lines = text.split(/\r?\n/).filter(Boolean);
@@ -32,23 +54,58 @@ function parseCsv(text: string): CsvRow[] {
   });
 }
 
+/** Normalise to E.164. Assumes US (+1) if no country code. Returns null if empty. */
+function normalizePhone(raw: string): string | null {
+  const cleaned = raw.trim();
+  if (!cleaned) return null;
+  const digits = cleaned.replace(/\D/g, "");
+  if (!digits) return cleaned; // non-digit-only string — store as-is
+  if (digits.length === 10) return `+1${digits}`;
+  if (digits.length === 11 && digits.startsWith("1")) return `+${digits}`;
+  return `+${digits}`;
+}
+
+function normalizeEmail(raw: string): string | null {
+  const v = raw.trim().toLowerCase();
+  return v || null;
+}
+
 // ─── Component ────────────────────────────────────────────────────────────────
 
 const AdminSupportersDatabase = () => {
   const fileRef = useRef<HTMLInputElement>(null);
 
+  // ── Table state ───────────────────────────────────────────────────────────
+  const [rows, setRows] = useState<SupporterRow[]>([]);
+  const [loadingRows, setLoadingRows] = useState(true);
+
+  const fetchRows = useCallback(async () => {
+    setLoadingRows(true);
+    const { data } = await supabase
+      .from("supporters")
+      .select("id, name, email, phone, address, supporter_type")
+      .order("name");
+    setRows(data ?? []);
+    setLoadingRows(false);
+  }, []);
+
+  useEffect(() => { fetchRows(); }, [fetchRows]);
+
+  // ── Import modal state ────────────────────────────────────────────────────
   const [importOpen, setImportOpen] = useState(false);
+  const [supporterType, setSupporterType] = useState<string>("Hall of Fame");
   const [csvHeaders, setCsvHeaders] = useState<string[]>([]);
   const [csvData, setCsvData] = useState<CsvRow[]>([]);
   const [mapping, setMapping] = useState<Record<MappableField, string>>({
     name: "", story: "", email: "", phone: "", address: "",
   });
   const [importing, setImporting] = useState(false);
-  const [summary, setSummary] = useState<{ created: number; updated: number } | null>(null);
+  const [summary, setSummary] = useState<{ created: number; updated: number; skipped: number } | null>(null);
 
   const resetImport = () => {
     setCsvHeaders([]);
     setCsvData([]);
+    setSupporterType("Hall of Fame");
     setMapping({ name: "", story: "", email: "", phone: "", address: "" });
     setSummary(null);
     if (fileRef.current) fileRef.current.value = "";
@@ -66,8 +123,16 @@ const AdminSupportersDatabase = () => {
       setCsvHeaders(Object.keys(parsed[0]));
       const autoMap: Record<MappableField, string> = { name: "", story: "", email: "", phone: "", address: "" };
       MAPPABLE_FIELDS.forEach((field) => {
-        const match = Object.keys(parsed[0]).find(
-          (h) => h.toLowerCase() === field.toLowerCase()
+        // auto-map: "notes" column → story field
+        const aliases: Record<MappableField, string[]> = {
+          name: ["name"],
+          story: ["story", "notes", "bio", "description"],
+          email: ["email", "e-mail"],
+          phone: ["phone", "phone number", "tel"],
+          address: ["address", "addr"],
+        };
+        const match = Object.keys(parsed[0]).find((h) =>
+          aliases[field].includes(h.toLowerCase())
         );
         if (match) autoMap[field] = match;
       });
@@ -82,67 +147,64 @@ const AdminSupportersDatabase = () => {
     setImporting(true);
     let created = 0;
     let updated = 0;
+    let skipped = 0;
 
     for (const row of csvData) {
       const name = row[mapping.name]?.trim();
-      if (!name) continue;
+      if (!name) { skipped++; continue; }
 
-      const email = mapping.email && mapping.email !== "__skip__" ? row[mapping.email]?.trim() || null : null;
-      const story = mapping.story && mapping.story !== "__skip__" ? row[mapping.story]?.trim() || null : null;
-      const phone = mapping.phone && mapping.phone !== "__skip__" ? row[mapping.phone]?.trim() || null : null;
-      const address = mapping.address && mapping.address !== "__skip__" ? row[mapping.address]?.trim() || null : null;
+      const rawEmail = mapping.email && mapping.email !== "__skip__" ? row[mapping.email] ?? "" : "";
+      const rawPhone = mapping.phone && mapping.phone !== "__skip__" ? row[mapping.phone] ?? "" : "";
+      const rawStory = mapping.story && mapping.story !== "__skip__" ? row[mapping.story] ?? "" : "";
+      const rawAddress = mapping.address && mapping.address !== "__skip__" ? row[mapping.address] ?? "" : "";
 
-      let existingId: string | null = null;
-      if (email) {
-        const { data } = await supabase
-          .from("supporters")
-          .select("id")
-          .eq("email", email)
-          .maybeSingle();
-        if (data) existingId = data.id;
-      }
-      if (!existingId) {
-        const { data } = await supabase
-          .from("supporters")
-          .select("id")
-          .ilike("name", name)
-          .maybeSingle();
-        if (data) existingId = data.id;
+      const email = normalizeEmail(rawEmail);
+      const phone = normalizePhone(rawPhone);
+      const story = rawStory.trim() || null;
+      const address = rawAddress.trim() || null;
+
+      // Blank email → always insert as new record
+      if (!email) {
+        await supabase.from("supporters").insert({
+          name, email: null, story, phone, address,
+          supporter_type: supporterType,
+        });
+        created++;
+        continue;
       }
 
-      if (existingId) {
-        const { data: existing } = await supabase
-          .from("supporters")
-          .select("email, story, phone, address")
-          .eq("id", existingId)
-          .single();
+      // Email present → lookup by email first
+      const { data: existing } = await supabase
+        .from("supporters")
+        .select("id, email, story, phone, address")
+        .eq("email", email)
+        .maybeSingle();
 
+      if (existing) {
+        // Fill only missing fields
         const patch: Record<string, string | null> = {};
-        if (!existing?.email && email) patch.email = email;
-        if (!existing?.story && story) patch.story = story;
-        if (!existing?.phone && phone) patch.phone = phone;
-        if (!existing?.address && address) patch.address = address;
-
+        if (!existing.story && story) patch.story = story;
+        if (!existing.phone && phone) patch.phone = phone;
+        if (!existing.address && address) patch.address = address;
         if (Object.keys(patch).length) {
-          await supabase.from("supporters").update(patch).eq("id", existingId);
+          await supabase.from("supporters").update(patch).eq("id", existing.id);
         }
         updated++;
       } else {
         await supabase.from("supporters").insert({
-          name,
-          email,
-          story,
-          phone,
-          address,
-          supporter_type: "Hall of Fame",
+          name, email, story, phone, address,
+          supporter_type: supporterType,
         });
         created++;
       }
     }
 
     setImporting(false);
-    setSummary({ created, updated });
+    setSummary({ created, updated, skipped });
+    await fetchRows();
   };
+
+  // ─── Render ───────────────────────────────────────────────────────────────
 
   return (
     <div className="bg-black text-white">
@@ -153,9 +215,10 @@ const AdminSupportersDatabase = () => {
       </div>
 
       <div className="container mx-auto px-4 py-8">
+        {/* Toolbar */}
         <div className="flex items-center justify-between mb-6">
           <p className="text-sm text-white/50">
-            Import Hall of Fame supporters from a CSV export (e.g. Monday.com).
+            Import supporters from a CSV export (e.g. Monday.com).
           </p>
           <Button
             size="sm"
@@ -163,27 +226,76 @@ const AdminSupportersDatabase = () => {
             onClick={() => { resetImport(); setImportOpen(true); }}
           >
             <Upload className="w-4 h-4" />
-            Import Hall of Fame CSV
+            Import Supporters CSV
           </Button>
+        </div>
+
+        {/* Supporters table */}
+        <div className="rounded-lg border border-white/10 overflow-hidden">
+          <Table>
+            <TableHeader>
+              <TableRow className="border-white/10 hover:bg-transparent">
+                <TableHead className="text-white/70">Name</TableHead>
+                <TableHead className="text-white/70">Type</TableHead>
+                <TableHead className="text-white/70">Email</TableHead>
+                <TableHead className="text-white/70">Phone</TableHead>
+                <TableHead className="text-white/70">Address</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {loadingRows ? (
+                <TableRow className="border-white/10 hover:bg-transparent">
+                  <TableCell colSpan={5} className="text-center py-12 text-white/50">Loading…</TableCell>
+                </TableRow>
+              ) : rows.length === 0 ? (
+                <TableRow className="border-white/10 hover:bg-transparent">
+                  <TableCell colSpan={5} className="text-center py-12 text-white/50">No supporters yet. Import a CSV to get started.</TableCell>
+                </TableRow>
+              ) : (
+                rows.map((s) => (
+                  <TableRow key={s.id} className="border-white/10 hover:bg-white/5">
+                    <TableCell className="text-white font-medium">{s.name}</TableCell>
+                    <TableCell className="text-white/60 text-sm">{s.supporter_type}</TableCell>
+                    <TableCell className="text-white/70 text-sm">
+                      {s.email
+                        ? <a href={`mailto:${s.email}`} className="text-sky-400 hover:underline">{s.email}</a>
+                        : "—"}
+                    </TableCell>
+                    <TableCell className="text-white/70 text-sm">
+                      {s.phone
+                        ? <a href={`tel:${s.phone}`} className="text-sky-400 hover:underline">{s.phone}</a>
+                        : "—"}
+                    </TableCell>
+                    <TableCell className="text-white/70 text-sm">{s.address || "—"}</TableCell>
+                  </TableRow>
+                ))
+              )}
+            </TableBody>
+          </Table>
         </div>
       </div>
 
-      {/* ── Import Modal ─────────────────────────────────────────────────────── */}
+      {/* ── Import Modal ──────────────────────────────────────────────────────── */}
       <Dialog open={importOpen} onOpenChange={(o) => { if (!o) resetImport(); setImportOpen(o); }}>
         <DialogContent className="bg-zinc-900 border-white/10 text-white sm:max-w-lg">
           <DialogHeader>
-            <DialogTitle className="text-white">Import Hall of Fame CSV</DialogTitle>
+            <DialogTitle className="text-white">Import Supporters CSV</DialogTitle>
           </DialogHeader>
 
           <div className="space-y-5 py-1">
-            {/* Supporter Type — locked */}
+            {/* Supporter Type dropdown */}
             <div className="space-y-1.5">
-              <Label className="text-white/70">Supporter Type</Label>
-              <Input
-                value="Hall of Fame"
-                disabled
-                className="bg-white/5 border-white/10 text-white/50 cursor-not-allowed"
-              />
+              <Label className="text-white/70">Supporter Type <span className="text-red-400">*</span></Label>
+              <Select value={supporterType} onValueChange={setSupporterType}>
+                <SelectTrigger className="bg-white/5 border-white/10 text-white">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent className="bg-zinc-900 border-white/10 text-white">
+                  {SUPPORTER_TYPES.map((t) => (
+                    <SelectItem key={t} value={t} className="focus:bg-white/10">{t}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
 
             {/* File upload */}
@@ -204,7 +316,7 @@ const AdminSupportersDatabase = () => {
                 <p className="text-sm font-medium text-white/80">Column Mapping</p>
                 {MAPPABLE_FIELDS.map((field) => (
                   <div key={field} className="flex items-center gap-3">
-                    <span className="w-20 text-sm text-white/60 capitalize">{field}</span>
+                    <span className="w-20 text-sm text-white/60">{FIELD_LABELS[field]}</span>
                     <Select
                       value={mapping[field]}
                       onValueChange={(v) => setMapping((prev) => ({ ...prev, [field]: v }))}
@@ -227,10 +339,17 @@ const AdminSupportersDatabase = () => {
               </div>
             )}
 
+            {/* Notes about formatting */}
+            <p className="text-xs text-white/30 leading-relaxed">
+              Emails are lowercased. Phone numbers are stored in E.164 format (+1 assumed for 10-digit US numbers). Blank emails are always inserted as new records.
+            </p>
+
             {/* Summary */}
             {summary && (
               <div className="rounded-md bg-green-600/10 border border-green-600/30 px-4 py-3 text-sm text-green-300">
-                Import complete — <strong>{summary.created}</strong> created, <strong>{summary.updated}</strong> updated.
+                Import complete — <strong>{summary.created}</strong> created,{" "}
+                <strong>{summary.updated}</strong> updated,{" "}
+                <strong>{summary.skipped}</strong> skipped.
               </div>
             )}
           </div>
