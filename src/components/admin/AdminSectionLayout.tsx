@@ -158,22 +158,22 @@ const AdminSectionLayout = ({
       </div>
 
       {/* Card list */}
-      <div className="flex-1 overflow-y-auto py-3 px-3 flex flex-col gap-1.5">
+      <div className="flex-1 overflow-y-auto py-2">
         {allCards.map((card) => {
           const active = isActive(card.href);
           return (
             <button
               key={card.href + card.title}
               onClick={() => handleCardClick(card)}
-              className={`w-full text-left px-3 py-2.5 rounded-md border transition-all flex items-center gap-2.5
+              className={`w-full text-left px-4 py-2.5 flex items-center gap-3 transition-colors
                 ${active
-                  ? `${ac.activeBg} border-current ${ac.link} font-semibold`
-                  : `border-white/20 text-white/70 hover:text-white hover:border-white/50 hover:bg-white/5`
+                  ? `${ac.activeBg} ${ac.activeBorder} ${ac.link} font-medium`
+                  : "text-white/70 hover:text-white hover:bg-white/5"
                 }`}
             >
-              <card.icon className={`w-4 h-4 flex-shrink-0 ${active ? ac.icon : "text-white/50"}`} />
+              <card.icon className={`w-4 h-4 flex-shrink-0 ${active ? ac.icon : ""}`} />
               <span className="text-sm leading-tight truncate">{card.title}</span>
-              {card.external && <ExternalLink className="w-3 h-3 ml-auto flex-shrink-0 opacity-40" />}
+              {card.external && <ExternalLink className="w-3 h-3 ml-auto flex-shrink-0 opacity-50" />}
             </button>
           );
         })}
