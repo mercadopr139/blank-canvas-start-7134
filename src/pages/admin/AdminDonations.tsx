@@ -105,15 +105,8 @@ const AdminDonations = () => {
         );
 
         if (qualifying.length === 0) {
-          await supabase
-            .from("supporters")
-            .update({
-              receipt_2026_status: "Not Sent",
-              receipt_2026_sent_at: null,
-              receipt_2026_last_sent_to: null,
-              receipt_2026_pdf_url: null,
-            })
-            .eq("id", supporterId);
+          // No qualifying donations left — delete the supporter record
+          await supabase.from("supporters").delete().eq("id", supporterId);
         }
       }
       toast({ title: "Record deleted" });
