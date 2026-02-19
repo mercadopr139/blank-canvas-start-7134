@@ -313,7 +313,7 @@ const AdminSupportersDatabase = () => {
   // ─── Render ───────────────────────────────────────────────────────────────
 
   return (
-    <div className="bg-black text-white">
+    <div className="bg-black text-white overflow-x-hidden">
       {/* Page header */}
       <div className="border-b border-white/10 px-4 py-3">
         <h2 className="text-base font-semibold text-green-400">Supporters Database</h2>
@@ -362,8 +362,8 @@ const AdminSupportersDatabase = () => {
         )}
 
         {/* Supporters table */}
-        <div className="rounded-lg border border-white/10 overflow-x-auto">
-          <div className="min-w-[900px]">
+        <div className="rounded-lg border border-white/10 overflow-x-scroll w-full" style={{ WebkitOverflowScrolling: 'touch' }}>
+          <div style={{ minWidth: 960 }}>
           <Table>
             <TableHeader>
               <TableRow className="border-white/10 hover:bg-transparent">
