@@ -23,27 +23,28 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import NewDonationModal from "@/components/admin/NewDonationModal";
+import NewRevenueModal from "@/components/admin/NewRevenueModal";
 
-interface Donation {
+interface Revenue {
   id: string;
+  revenue_type: string;
+  source_name: string | null;
   donor_name: string;
   amount: number;
   method: string;
+  deposit_date: string | null;
   date_received: string;
   reference_id: string | null;
-  deposit_batch_id: string | null;
   receipt_status: string;
-  deposit_batches: { batch_name: string } | null;
 }
 
 const columns = [
-  "Date",
-  "Donor",
+  "Deposit Date",
+  "Type",
+  "Source",
   "Amount",
   "Method",
   "Reference ID",
-  "Deposit Batch",
   "Receipt Status",
   "",
 ];
@@ -52,18 +53,18 @@ const AdminDonations = () => {
   const navigate = useNavigate();
   const goBack = () => navigate("/admin/sales-marketing");
 
-  const [donations, setDonations] = useState<Donation[]>([]);
+  const [rows, setRows] = useState<Revenue[]>([]);
   const [loading, setLoading] = useState(true);
   const [modalOpen, setModalOpen] = useState(false);
   const [deleteId, setDeleteId] = useState<string | null>(null);
 
-  const fetchDonations = useCallback(async () => {
+  const fetchRevenue = useCallback(async () => {
     setLoading(true);
     const { data } = await supabase
       .from("donations")
-      .select("id, donor_name, amount, method, date_received, reference_id, deposit_batch_id, receipt_status, deposit_batches(batch_name)")
-      .order("date_received", { ascending: false });
-    setDonations((data as Donation[]) ?? []);
+      .select("id, revenue_type, source_name, donor_name, amount, method, deposit_date, date_received, reference_id, receipt_status")
+      .order("created_at", { ascending: false });
+    setRows((data as Revenue[]) ?? []);
     setLoading(false);
   }, []);
 
@@ -73,15 +74,26 @@ const AdminDonations = () => {
     if (error) {
       toast({ title: "Error", description: error.message, variant: "destructive" });
     } else {
-      toast({ title: "Donation deleted" });
-      fetchDonations();
+      toast({ title: "Record deleted" });
+      fetchRevenue();
     }
     setDeleteId(null);
   };
 
   useEffect(() => {
-    fetchDonations();
-  }, [fetchDonations]);
+    fetchRevenue();
+  }, [fetchRevenue]);
+
+  const displayDate = (r: Revenue) => {
+    const d = r.deposit_date || r.date_received;
+    if (!d) return "—";
+    return format(new Date(d + "T00:00:00"), "MM/dd/yyyy");
+  };
+
+  const displaySource = (r: Revenue) => r.source_name || r.donor_name || "—";
+
+  const displayReceipt = (r: Revenue) =>
+    r.revenue_type === "Donation" ? r.receipt_status : "—";
 
   return (
     <div className="min-h-screen bg-black text-white">
@@ -96,9 +108,9 @@ const AdminDonations = () => {
             <ArrowLeft className="w-5 h-5" />
           </Button>
           <div>
-            <h1 className="text-xl font-bold text-white">Donations</h1>
+            <h1 className="text-xl font-bold text-white">Revenue</h1>
             <p className="text-sm text-white/50">
-              Track and manage all incoming donations.
+              Track and manage all incoming revenue.
             </p>
           </div>
         </div>
@@ -111,7 +123,7 @@ const AdminDonations = () => {
             onClick={() => setModalOpen(true)}
           >
             <Plus className="w-4 h-4 mr-2" />
-            New Donation
+            New Revenue
           </Button>
         </div>
 
@@ -133,32 +145,28 @@ const AdminDonations = () => {
                     Loading…
                   </TableCell>
                 </TableRow>
-              ) : donations.length === 0 ? (
+              ) : rows.length === 0 ? (
                 <TableRow className="border-white/10 hover:bg-transparent">
                   <TableCell colSpan={columns.length} className="text-center py-12 text-white/50">
-                    No donations yet. Click 'New Donation' to add one.
+                    No revenue yet. Click 'New Revenue' to add one.
                   </TableCell>
                 </TableRow>
               ) : (
-                donations.map((d) => (
-                  <TableRow key={d.id} className="border-white/10 hover:bg-white/5">
-                    <TableCell className="text-white">
-                      {format(new Date(d.date_received + "T00:00:00"), "MM/dd/yyyy")}
-                    </TableCell>
-                    <TableCell className="text-white">{d.donor_name}</TableCell>
-                    <TableCell className="text-white">
-                      ${Number(d.amount).toFixed(2)}
-                    </TableCell>
-                    <TableCell className="text-white">{d.method}</TableCell>
-                    <TableCell className="text-white/70">{d.reference_id ?? "—"}</TableCell>
-                    <TableCell className="text-white/70">{d.deposit_batches?.batch_name ?? "—"}</TableCell>
-                    <TableCell className="text-white">{d.receipt_status}</TableCell>
+                rows.map((r) => (
+                  <TableRow key={r.id} className="border-white/10 hover:bg-white/5">
+                    <TableCell className="text-white">{displayDate(r)}</TableCell>
+                    <TableCell className="text-white">{r.revenue_type}</TableCell>
+                    <TableCell className="text-white">{displaySource(r)}</TableCell>
+                    <TableCell className="text-white">${Number(r.amount).toFixed(2)}</TableCell>
+                    <TableCell className="text-white">{r.method}</TableCell>
+                    <TableCell className="text-white/70">{r.reference_id ?? "—"}</TableCell>
+                    <TableCell className="text-white">{displayReceipt(r)}</TableCell>
                     <TableCell>
                       <Button
                         variant="ghost"
                         size="icon"
                         className="text-red-500 hover:text-red-400 hover:bg-white/10"
-                        onClick={() => setDeleteId(d.id)}
+                        onClick={() => setDeleteId(r.id)}
                       >
                         <Trash2 className="w-4 h-4" />
                       </Button>
@@ -171,18 +179,18 @@ const AdminDonations = () => {
         </div>
       </main>
 
-      <NewDonationModal
+      <NewRevenueModal
         open={modalOpen}
         onOpenChange={setModalOpen}
-        onCreated={fetchDonations}
+        onCreated={fetchRevenue}
       />
 
       <AlertDialog open={!!deleteId} onOpenChange={(open) => !open && setDeleteId(null)}>
         <AlertDialogContent className="bg-black border-white/10">
           <AlertDialogHeader>
-            <AlertDialogTitle className="text-white">Delete Donation?</AlertDialogTitle>
+            <AlertDialogTitle className="text-white">Delete Record?</AlertDialogTitle>
             <AlertDialogDescription className="text-white/60">
-              This will permanently delete this donation record.
+              This will permanently delete this revenue record.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
