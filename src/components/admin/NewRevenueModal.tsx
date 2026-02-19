@@ -432,7 +432,7 @@ const NewRevenueModal = ({ open, onOpenChange, onCreated }: Props) => {
               </div>
 
               <Button type="submit" disabled={saving || !isValid()} className="w-full bg-white text-black hover:bg-white/90">
-                {saving ? "Saving…" : "Save Revenue"}
+                {saving ? "Saving…" : "Save Revenue Entry"}
               </Button>
             </>
           )}
