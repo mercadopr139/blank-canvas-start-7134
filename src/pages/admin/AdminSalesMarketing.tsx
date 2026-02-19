@@ -5,8 +5,7 @@ import { ArrowLeft, BarChart3, HandCoins } from "lucide-react";
 
 const AdminSalesMarketing = () => {
   const navigate = useNavigate();
-  const goBack = () =>
-    window.history.state?.idx > 0 ? navigate(-1) : navigate("/admin/dashboard");
+  const goBack = () => navigate("/admin/dashboard");
 
   const folders = [
     {
