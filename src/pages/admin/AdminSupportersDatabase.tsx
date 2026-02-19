@@ -97,7 +97,7 @@ const AdminSupportersDatabase = () => {
   const [csvHeaders, setCsvHeaders] = useState<string[]>([]);
   const [csvData, setCsvData] = useState<CsvRow[]>([]);
   const [mapping, setMapping] = useState<Record<MappableField, string>>({
-    name: "", story: "", email: "", phone: "", address: "",
+    name: "__skip__", story: "__skip__", email: "__skip__", phone: "__skip__", address: "__skip__",
   });
   const [importing, setImporting] = useState(false);
   const [summary, setSummary] = useState<{ created: number; updated: number; skipped: number } | null>(null);
@@ -106,7 +106,7 @@ const AdminSupportersDatabase = () => {
     setCsvHeaders([]);
     setCsvData([]);
     setSupporterType("Hall of Fame");
-    setMapping({ name: "", story: "", email: "", phone: "", address: "" });
+    setMapping({ name: "__skip__", story: "__skip__", email: "__skip__", phone: "__skip__", address: "__skip__" });
     setSummary(null);
     if (fileRef.current) fileRef.current.value = "";
   };
@@ -121,7 +121,7 @@ const AdminSupportersDatabase = () => {
       if (!parsed.length) return;
       setCsvData(parsed);
       setCsvHeaders(Object.keys(parsed[0]));
-      const autoMap: Record<MappableField, string> = { name: "", story: "", email: "", phone: "", address: "" };
+      const autoMap: Record<MappableField, string> = { name: "__skip__", story: "__skip__", email: "__skip__", phone: "__skip__", address: "__skip__" };
       MAPPABLE_FIELDS.forEach((field) => {
         // auto-map: "notes" column → story field
         const aliases: Record<MappableField, string[]> = {
