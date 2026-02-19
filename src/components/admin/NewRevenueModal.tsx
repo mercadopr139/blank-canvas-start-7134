@@ -31,6 +31,15 @@ import { Calendar } from "@/components/ui/calendar";
 const REVENUE_TYPES = ["Donation", "Fundraising", "Fee for Service", "Re-Grant"] as const;
 const METHODS = ["Cash", "Check", "Venmo", "PayPal", "Square"] as const;
 const RECEIPT_STATUSES = ["Pending", "Sent", "Not Needed"] as const;
+const FUNDRAISING_DESCRIPTIONS = [
+  "Presale tickets",
+  "Sponsor",
+  "Event day tickets",
+  "Raffle",
+  "Merchandise",
+  "Concessions",
+  "Other",
+] as const;
 
 interface Props {
   open: boolean;
@@ -65,7 +74,9 @@ const NewRevenueModal = ({ open, onOpenChange, onCreated }: Props) => {
 
   // Fundraising fields
   const [eventName, setEventName] = useState("");
-  const [revenueDescription, setRevenueDescription] = useState("");
+  const [fundraisingDescSelect, setFundraisingDescSelect] = useState("");
+  const [fundraisingDescOther, setFundraisingDescOther] = useState("");
+  
 
   // Shared fields
   const [recognitionPeriod, setRecognitionPeriod] = useState("");
@@ -86,7 +97,8 @@ const NewRevenueModal = ({ open, onOpenChange, onCreated }: Props) => {
     setPartnerName("");
     setGrantDate(undefined);
     setEventName("");
-    setRevenueDescription("");
+    setFundraisingDescSelect("");
+    setFundraisingDescOther("");
     setRecognitionPeriod("");
   };
 
@@ -113,6 +125,7 @@ const NewRevenueModal = ({ open, onOpenChange, onCreated }: Props) => {
       case "Re-Grant":
         return !!partnerName.trim();
       case "Fundraising":
+        if (fundraisingDescSelect === "Other" && !fundraisingDescOther.trim()) return false;
         return !!eventName.trim() && !!method;
       default:
         return false;
@@ -163,7 +176,10 @@ const NewRevenueModal = ({ open, onOpenChange, onCreated }: Props) => {
 
     if (revenueType === "Fundraising") {
       record.event_name = eventName.trim() || null;
-      record.revenue_description = revenueDescription.trim() || null;
+      const desc = fundraisingDescSelect === "Other"
+        ? fundraisingDescOther.trim()
+        : fundraisingDescSelect;
+      record.revenue_description = desc || null;
     }
 
     const { error } = await supabase.from("donations").insert(record as any);
@@ -305,9 +321,24 @@ const NewRevenueModal = ({ open, onOpenChange, onCreated }: Props) => {
                     <Input value={eventName} onChange={(e) => setEventName(e.target.value)} className="bg-white/5 border-white/20 text-white" />
                   </div>
                   <div className="space-y-1">
-                    <Label className="text-white/70">Description</Label>
-                    <Input value={revenueDescription} onChange={(e) => setRevenueDescription(e.target.value)} placeholder="raffle, merch, concessions…" className="bg-white/5 border-white/20 text-white placeholder:text-white/30" />
+                    <Label className="text-white/70">Revenue Description</Label>
+                    <Select value={fundraisingDescSelect} onValueChange={(v) => { setFundraisingDescSelect(v); if (v !== "Other") setFundraisingDescOther(""); }}>
+                      <SelectTrigger className="bg-white/5 border-white/20 text-white">
+                        <SelectValue placeholder="Select description" />
+                      </SelectTrigger>
+                      <SelectContent className="bg-white border-gray-200 z-50">
+                        {FUNDRAISING_DESCRIPTIONS.map((d) => (
+                          <SelectItem key={d} value={d} className="text-black">{d}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
+                  {fundraisingDescSelect === "Other" && (
+                    <div className="space-y-1">
+                      <Label className="text-white/70">Other Description *</Label>
+                      <Input value={fundraisingDescOther} onChange={(e) => setFundraisingDescOther(e.target.value)} placeholder="Describe the revenue…" className="bg-white/5 border-white/20 text-white placeholder:text-white/30" />
+                    </div>
+                  )}
                 </>
               )}
 
