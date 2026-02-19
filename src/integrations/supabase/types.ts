@@ -175,6 +175,7 @@ export type Database = {
           service_month: string | null
           source_email: string | null
           source_name: string | null
+          supporter_id: string | null
           updated_at: string
           vendor_name: string | null
         }
@@ -201,6 +202,7 @@ export type Database = {
           service_month?: string | null
           source_email?: string | null
           source_name?: string | null
+          supporter_id?: string | null
           updated_at?: string
           vendor_name?: string | null
         }
@@ -227,6 +229,7 @@ export type Database = {
           service_month?: string | null
           source_email?: string | null
           source_name?: string | null
+          supporter_id?: string | null
           updated_at?: string
           vendor_name?: string | null
         }
@@ -236,6 +239,13 @@ export type Database = {
             columns: ["deposit_batch_id"]
             isOneToOne: false
             referencedRelation: "deposit_batches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "donations_supporter_id_fkey"
+            columns: ["supporter_id"]
+            isOneToOne: false
+            referencedRelation: "supporters"
             referencedColumns: ["id"]
           },
         ]
@@ -397,6 +407,42 @@ export type Database = {
           name?: string
           rate_amount?: number
           rate_type?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      supporters: {
+        Row: {
+          created_at: string
+          email: string | null
+          id: string
+          name: string
+          receipt_2026_last_sent_to: string | null
+          receipt_2026_pdf_url: string | null
+          receipt_2026_sent_at: string | null
+          receipt_2026_status: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          email?: string | null
+          id?: string
+          name: string
+          receipt_2026_last_sent_to?: string | null
+          receipt_2026_pdf_url?: string | null
+          receipt_2026_sent_at?: string | null
+          receipt_2026_status?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          email?: string | null
+          id?: string
+          name?: string
+          receipt_2026_last_sent_to?: string | null
+          receipt_2026_pdf_url?: string | null
+          receipt_2026_sent_at?: string | null
+          receipt_2026_status?: string
           updated_at?: string
         }
         Relationships: []
