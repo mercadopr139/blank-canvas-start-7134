@@ -1,7 +1,9 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
+import { format } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
+import { RefreshCw } from "lucide-react";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle,
 } from "@/components/ui/dialog";
@@ -13,6 +15,11 @@ import {
 } from "@/components/ui/select";
 
 const BANK_ACCOUNTS = ["Crest Savings", "Other"] as const;
+
+const generateName = (bank: string) => {
+  const prefix = bank === "Crest Savings" ? "Crest" : bank;
+  return `${prefix} - ${format(new Date(), "yyyy-MM-dd")}`;
+};
 
 interface Props {
   open: boolean;
@@ -26,10 +33,34 @@ const NewBatchModal = ({ open, onOpenChange, onCreated }: Props) => {
   const [saving, setSaving] = useState(false);
   const [batchName, setBatchName] = useState("");
   const [bankAccount, setBankAccount] = useState<string>("Crest Savings");
+  const manuallyEdited = useRef(false);
 
-  const reset = () => {
-    setBatchName("");
-    setBankAccount("Crest Savings");
+  // Auto-fill on open
+  useEffect(() => {
+    if (open) {
+      const defaultBank = "Crest Savings";
+      setBankAccount(defaultBank);
+      setBatchName(generateName(defaultBank));
+      manuallyEdited.current = false;
+    }
+  }, [open]);
+
+  // Update name when bank changes, unless manually edited
+  const handleBankChange = (value: string) => {
+    setBankAccount(value);
+    if (!manuallyEdited.current) {
+      setBatchName(generateName(value));
+    }
+  };
+
+  const handleNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setBatchName(e.target.value);
+    manuallyEdited.current = true;
+  };
+
+  const handleGenerate = () => {
+    setBatchName(generateName(bankAccount));
+    manuallyEdited.current = false;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -51,7 +82,6 @@ const NewBatchModal = ({ open, onOpenChange, onCreated }: Props) => {
     }
 
     toast({ title: "Batch created." });
-    reset();
     onOpenChange(false);
     onCreated();
   };
@@ -65,17 +95,29 @@ const NewBatchModal = ({ open, onOpenChange, onCreated }: Props) => {
         <form onSubmit={handleSubmit} className="space-y-4 mt-2">
           <div className="space-y-1">
             <Label className="text-white/70">Batch Name *</Label>
-            <Input
-              value={batchName}
-              onChange={(e) => setBatchName(e.target.value)}
-              maxLength={200}
-              placeholder='e.g. "Crest Deposit - Feb 18, 2026"'
-              className="bg-white/5 border-white/20 text-white placeholder:text-white/30"
-            />
+            <div className="flex gap-2">
+              <Input
+                value={batchName}
+                onChange={handleNameChange}
+                maxLength={200}
+                placeholder='e.g. "Crest - 2026-02-19"'
+                className="bg-white/5 border-white/20 text-white placeholder:text-white/30 flex-1"
+              />
+              <Button
+                type="button"
+                variant="outline"
+                size="icon"
+                onClick={handleGenerate}
+                className="border-white/20 text-white bg-transparent hover:bg-white/10 hover:text-white shrink-0"
+                title="Generate default name"
+              >
+                <RefreshCw className="w-4 h-4" />
+              </Button>
+            </div>
           </div>
           <div className="space-y-1">
             <Label className="text-white/70">Bank Account</Label>
-            <Select value={bankAccount} onValueChange={setBankAccount}>
+            <Select value={bankAccount} onValueChange={handleBankChange}>
               <SelectTrigger className="bg-white/5 border-white/20 text-white">
                 <SelectValue />
               </SelectTrigger>
