@@ -1,4 +1,4 @@
-import { BarChart3, HandCoins, Users, LucideIcon } from "lucide-react";
+import { BarChart3, HandCoins, Users, Database, LucideIcon } from "lucide-react";
 import AdminSectionLayout, { SectionCard } from "@/components/admin/AdminSectionLayout";
 
 interface SMTile {
@@ -25,6 +25,12 @@ const baseTiles: SMTile[] = [
     title: "NLA Donor/Sponsor History",
     description: "Supporters & 2026 receipts",
     icon: Users,
+    href: "/admin/sales-marketing/supporters",
+  },
+  {
+    title: "Supporters Database",
+    description: "Hall of Fame & supporter imports",
+    icon: Database,
     href: "/admin/sales-marketing/supporters",
   },
 ];
