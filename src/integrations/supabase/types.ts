@@ -168,6 +168,7 @@ export type Database = {
           partner_name: string | null
           program_name: string | null
           receipt_status: Database["public"]["Enums"]["receipt_status"]
+          recognition_period: string | null
           reference_id: string | null
           revenue_description: string | null
           revenue_type: Database["public"]["Enums"]["revenue_type"]
@@ -193,6 +194,7 @@ export type Database = {
           partner_name?: string | null
           program_name?: string | null
           receipt_status?: Database["public"]["Enums"]["receipt_status"]
+          recognition_period?: string | null
           reference_id?: string | null
           revenue_description?: string | null
           revenue_type?: Database["public"]["Enums"]["revenue_type"]
@@ -218,6 +220,7 @@ export type Database = {
           partner_name?: string | null
           program_name?: string | null
           receipt_status?: Database["public"]["Enums"]["receipt_status"]
+          recognition_period?: string | null
           reference_id?: string | null
           revenue_description?: string | null
           revenue_type?: Database["public"]["Enums"]["revenue_type"]
