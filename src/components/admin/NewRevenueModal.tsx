@@ -24,7 +24,7 @@ const REVENUE_TYPES = ["Donation", "Fundraising", "Fee for Service", "Re-Grant"]
 const METHODS = ["Cash", "Check", "Venmo", "PayPal", "Square"] as const;
 
 const FUNDRAISING_DESCRIPTIONS = [
-  "Presale tickets", "Sponsor", "Event day tickets", "Raffle", "Merchandise", "Concessions", "Other",
+  "Sponsor", "Pre-Sale Tickets", "Event Day Ticket Sales", "Raffle", "Merchandise", "Concessions", "Other",
 ] as const;
 
 interface Props {
@@ -116,8 +116,11 @@ const NewRevenueModal = ({ open, onOpenChange, onCreated }: Props) => {
       case "Fee for Service": return !!vendorName.trim() && !!method;
       case "Re-Grant": return !!partnerName.trim();
       case "Fundraising":
+        if (!fundraisingDescSelect) return false;
         if (fundraisingDescSelect === "Other" && !fundraisingDescOther.trim()) return false;
-        if (fundraisingDescSelect === "Sponsor" && !sponsorName.trim()) return false;
+        if (fundraisingDescSelect === "Sponsor") {
+          return !!eventName.trim() && !!sponsorName.trim() && !!sponsorEmail.trim() && !!method && !!recognitionPeriod;
+        }
         return !!eventName.trim() && !!method;
       default: return false;
     }
@@ -353,11 +356,7 @@ const NewRevenueModal = ({ open, onOpenChange, onCreated }: Props) => {
                 {revenueType === "Fundraising" && (
                   <>
                     <div className="space-y-1">
-                      <Label className="text-white/70">Sponsor Name*</Label>
-                      <Input value={eventName} onChange={(e) => setEventName(e.target.value)} className="bg-white/5 border-white/20 text-white" />
-                    </div>
-                    <div className="space-y-1">
-                      <Label className="text-white/70">Revenue Description</Label>
+                      <Label className="text-white/70">Description of Fundraising Revenue *</Label>
                       <Select value={fundraisingDescSelect} onValueChange={(v) => { setFundraisingDescSelect(v); if (v !== "Other") setFundraisingDescOther(""); }}>
                         <SelectTrigger className="bg-white/5 border-white/20 text-white">
                           <SelectValue placeholder="Select description" />
@@ -375,14 +374,24 @@ const NewRevenueModal = ({ open, onOpenChange, onCreated }: Props) => {
                         <Input value={fundraisingDescOther} onChange={(e) => setFundraisingDescOther(e.target.value)} placeholder="Describe the revenue…" className="bg-white/5 border-white/20 text-white placeholder:text-white/30" />
                       </div>
                     )}
+                    {fundraisingDescSelect && fundraisingDescSelect !== "Sponsor" && (
+                      <div className="space-y-1">
+                        <Label className="text-white/70">Event Name *</Label>
+                        <Input value={eventName} onChange={(e) => setEventName(e.target.value)} className="bg-white/5 border-white/20 text-white" />
+                      </div>
+                    )}
                     {fundraisingDescSelect === "Sponsor" && (
                       <>
+                        <div className="space-y-1">
+                          <Label className="text-white/70">Event Name *</Label>
+                          <Input value={eventName} onChange={(e) => setEventName(e.target.value)} className="bg-white/5 border-white/20 text-white" />
+                        </div>
                         <div className="space-y-1">
                           <Label className="text-white/70">Sponsor Name *</Label>
                           <Input value={sponsorName} onChange={(e) => setSponsorName(e.target.value)} placeholder="Contact / company name" className="bg-white/5 border-white/20 text-white placeholder:text-white/30" />
                         </div>
                         <div className="space-y-1">
-                          <Label className="text-white/70">Sponsor Email</Label>
+                          <Label className="text-white/70">Sponsor Email *</Label>
                           <Input type="email" value={sponsorEmail} onChange={(e) => setSponsorEmail(e.target.value)} placeholder="For receipt delivery" className="bg-white/5 border-white/20 text-white placeholder:text-white/30" />
                         </div>
                       </>
