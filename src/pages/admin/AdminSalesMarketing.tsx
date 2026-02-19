@@ -10,8 +10,8 @@ const AdminSalesMarketing = () => {
 
   const folders = [
     {
-      title: "Donations",
-      description: "Track incoming donations",
+      title: "Revenue",
+      description: "Track all incoming revenue",
       icon: HandCoins,
       href: "/admin/finance/donations",
     },

@@ -157,42 +157,75 @@ export type Database = {
           created_at: string
           date_received: string
           deposit_batch_id: string | null
+          deposit_date: string | null
           donor_email: string | null
           donor_name: string
+          event_name: string | null
+          grant_date: string | null
           id: string
           method: Database["public"]["Enums"]["donation_method"]
           notes: string | null
+          partner_name: string | null
+          program_name: string | null
           receipt_status: Database["public"]["Enums"]["receipt_status"]
           reference_id: string | null
+          revenue_description: string | null
+          revenue_type: Database["public"]["Enums"]["revenue_type"]
+          service_month: string | null
+          source_email: string | null
+          source_name: string | null
           updated_at: string
+          vendor_name: string | null
         }
         Insert: {
           amount: number
           created_at?: string
           date_received: string
           deposit_batch_id?: string | null
+          deposit_date?: string | null
           donor_email?: string | null
           donor_name: string
+          event_name?: string | null
+          grant_date?: string | null
           id?: string
           method: Database["public"]["Enums"]["donation_method"]
           notes?: string | null
+          partner_name?: string | null
+          program_name?: string | null
           receipt_status?: Database["public"]["Enums"]["receipt_status"]
           reference_id?: string | null
+          revenue_description?: string | null
+          revenue_type?: Database["public"]["Enums"]["revenue_type"]
+          service_month?: string | null
+          source_email?: string | null
+          source_name?: string | null
           updated_at?: string
+          vendor_name?: string | null
         }
         Update: {
           amount?: number
           created_at?: string
           date_received?: string
           deposit_batch_id?: string | null
+          deposit_date?: string | null
           donor_email?: string | null
           donor_name?: string
+          event_name?: string | null
+          grant_date?: string | null
           id?: string
           method?: Database["public"]["Enums"]["donation_method"]
           notes?: string | null
+          partner_name?: string | null
+          program_name?: string | null
           receipt_status?: Database["public"]["Enums"]["receipt_status"]
           reference_id?: string | null
+          revenue_description?: string | null
+          revenue_type?: Database["public"]["Enums"]["revenue_type"]
+          service_month?: string | null
+          source_email?: string | null
+          source_name?: string | null
           updated_at?: string
+          vendor_name?: string | null
         }
         Relationships: [
           {
@@ -548,7 +581,13 @@ export type Database = {
         | "Two or More Races"
       child_sex: "Male" | "Female"
       deposit_status: "Draft" | "Deposited"
-      donation_method: "Check" | "PayPal" | "Cash" | "Other"
+      donation_method:
+        | "Check"
+        | "PayPal"
+        | "Cash"
+        | "Other"
+        | "Venmo"
+        | "Square"
       household_income:
         | "Under $25,000"
         | "$25,000 - $49,999"
@@ -566,6 +605,7 @@ export type Database = {
         | "sponsorship"
         | "other_service"
       receipt_status: "Pending" | "Sent" | "Not Needed"
+      revenue_type: "Donation" | "Fundraising" | "Fee for Service" | "Re-Grant"
       school_district:
         | "Cape May City"
         | "Lower Cape May Regional"
@@ -724,7 +764,7 @@ export const Constants = {
       ],
       child_sex: ["Male", "Female"],
       deposit_status: ["Draft", "Deposited"],
-      donation_method: ["Check", "PayPal", "Cash", "Other"],
+      donation_method: ["Check", "PayPal", "Cash", "Other", "Venmo", "Square"],
       household_income: [
         "Under $25,000",
         "$25,000 - $49,999",
@@ -744,6 +784,7 @@ export const Constants = {
         "other_service",
       ],
       receipt_status: ["Pending", "Sent", "Not Needed"],
+      revenue_type: ["Donation", "Fundraising", "Fee for Service", "Re-Grant"],
       school_district: [
         "Cape May City",
         "Lower Cape May Regional",

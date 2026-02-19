@@ -1,0 +1,365 @@
+import { useState } from "react";
+import { format } from "date-fns";
+import { CalendarIcon } from "lucide-react";
+import { cn } from "@/lib/utils";
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
+
+const REVENUE_TYPES = ["Donation", "Fundraising", "Fee for Service", "Re-Grant"] as const;
+const METHODS = ["Cash", "Check", "Venmo", "PayPal", "Square"] as const;
+const RECEIPT_STATUSES = ["Pending", "Sent", "Not Needed"] as const;
+
+interface Props {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  onCreated: () => void;
+}
+
+const NewRevenueModal = ({ open, onOpenChange, onCreated }: Props) => {
+  const { toast } = useToast();
+  const [saving, setSaving] = useState(false);
+
+  const [revenueType, setRevenueType] = useState<string>("");
+  const [amount, setAmount] = useState("");
+  const [method, setMethod] = useState("");
+  const [depositDate, setDepositDate] = useState<Date | undefined>(undefined);
+  const [referenceId, setReferenceId] = useState("");
+  const [notes, setNotes] = useState("");
+
+  // Donation fields
+  const [donorName, setDonorName] = useState("");
+  const [donorEmail, setDonorEmail] = useState("");
+  const [dateReceived, setDateReceived] = useState<Date | undefined>(undefined);
+  const [receiptStatus, setReceiptStatus] = useState("Pending");
+
+  // Fee for Service fields
+  const [vendorName, setVendorName] = useState("");
+  const [programName, setProgramName] = useState("");
+  const [serviceMonth, setServiceMonth] = useState("");
+
+  // Re-Grant fields
+  const [partnerName, setPartnerName] = useState("");
+  const [grantDate, setGrantDate] = useState<Date | undefined>(undefined);
+
+  // Fundraising fields
+  const [eventName, setEventName] = useState("");
+  const [revenueDescription, setRevenueDescription] = useState("");
+
+  const reset = () => {
+    setRevenueType("");
+    setAmount("");
+    setMethod("");
+    setDepositDate(undefined);
+    setReferenceId("");
+    setNotes("");
+    setDonorName("");
+    setDonorEmail("");
+    setDateReceived(undefined);
+    setReceiptStatus("Pending");
+    setVendorName("");
+    setProgramName("");
+    setServiceMonth("");
+    setPartnerName("");
+    setGrantDate(undefined);
+    setEventName("");
+    setRevenueDescription("");
+  };
+
+  const getSourceName = () => {
+    switch (revenueType) {
+      case "Donation": return donorName.trim();
+      case "Fee for Service": return vendorName.trim();
+      case "Re-Grant": return partnerName.trim();
+      case "Fundraising": return eventName.trim();
+      default: return "";
+    }
+  };
+
+  const isValid = () => {
+    if (!revenueType || !amount || !depositDate) return false;
+    const parsed = parseFloat(amount);
+    if (isNaN(parsed) || parsed <= 0) return false;
+
+    switch (revenueType) {
+      case "Donation":
+        return !!donorName.trim() && !!method && !!dateReceived;
+      case "Fee for Service":
+        return !!vendorName.trim() && !!method;
+      case "Re-Grant":
+        return !!partnerName.trim();
+      case "Fundraising":
+        return !!eventName.trim() && !!method;
+      default:
+        return false;
+    }
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!isValid()) {
+      toast({ title: "Please fill in all required fields.", variant: "destructive" });
+      return;
+    }
+
+    setSaving(true);
+    const sourceName = getSourceName();
+
+    const record: Record<string, any> = {
+      revenue_type: revenueType,
+      amount: parseFloat(amount),
+      method: (revenueType === "Re-Grant" ? "Other" : method) as any,
+      deposit_date: format(depositDate!, "yyyy-MM-dd"),
+      reference_id: referenceId.trim() || null,
+      notes: notes.trim() || null,
+      source_name: sourceName || null,
+      // donor_name is required in schema — use source or placeholder
+      donor_name: sourceName || "N/A",
+      date_received: dateReceived ? format(dateReceived, "yyyy-MM-dd") : format(depositDate!, "yyyy-MM-dd"),
+    };
+
+    if (revenueType === "Donation") {
+      record.source_email = donorEmail.trim() || null;
+      record.receipt_status = receiptStatus as any;
+    } else {
+      record.receipt_status = "Not Needed" as any;
+    }
+
+    if (revenueType === "Fee for Service") {
+      record.vendor_name = vendorName.trim() || null;
+      record.program_name = programName.trim() || null;
+      record.service_month = serviceMonth || null;
+    }
+
+    if (revenueType === "Re-Grant") {
+      record.partner_name = partnerName.trim() || null;
+      record.grant_date = grantDate ? format(grantDate, "yyyy-MM-dd") : null;
+    }
+
+    if (revenueType === "Fundraising") {
+      record.event_name = eventName.trim() || null;
+      record.revenue_description = revenueDescription.trim() || null;
+    }
+
+    const { error } = await supabase.from("donations").insert(record as any);
+    setSaving(false);
+
+    if (error) {
+      toast({ title: "Failed to save.", description: error.message, variant: "destructive" });
+      return;
+    }
+
+    toast({ title: "Revenue saved." });
+    reset();
+    onOpenChange(false);
+    onCreated();
+  };
+
+  const DateField = ({
+    label,
+    value,
+    onChange,
+    required = false,
+  }: {
+    label: string;
+    value: Date | undefined;
+    onChange: (d: Date | undefined) => void;
+    required?: boolean;
+  }) => (
+    <div className="space-y-1">
+      <Label className="text-white/70">{label}{required ? " *" : ""}</Label>
+      <Popover>
+        <PopoverTrigger asChild>
+          <Button
+            variant="outline"
+            className={cn(
+              "w-full justify-start text-left font-normal bg-white/5 border-white/20 text-white",
+              !value && "text-white/40"
+            )}
+          >
+            <CalendarIcon className="mr-2 h-4 w-4" />
+            {value ? format(value, "PPP") : "Pick a date"}
+          </Button>
+        </PopoverTrigger>
+        <PopoverContent className="w-auto p-0 bg-black border-white/20" align="start">
+          <Calendar
+            mode="single"
+            selected={value}
+            onSelect={onChange}
+            initialFocus
+            className={cn("p-3 pointer-events-auto")}
+          />
+        </PopoverContent>
+      </Popover>
+    </div>
+  );
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="bg-black border-white/20 text-white max-w-lg max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle className="text-white">New Revenue</DialogTitle>
+        </DialogHeader>
+        <form onSubmit={handleSubmit} className="space-y-4 mt-2">
+          {/* Revenue Type */}
+          <div className="space-y-1">
+            <Label className="text-white/70">Revenue Type *</Label>
+            <Select value={revenueType} onValueChange={setRevenueType}>
+              <SelectTrigger className="bg-white/5 border-white/20 text-white">
+                <SelectValue placeholder="Select type" />
+              </SelectTrigger>
+              <SelectContent className="bg-black border-white/20">
+                {REVENUE_TYPES.map((t) => (
+                  <SelectItem key={t} value={t} className="text-white">{t}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {revenueType && (
+            <>
+              {/* ===== DONATION ===== */}
+              {revenueType === "Donation" && (
+                <>
+                  <div className="space-y-1">
+                    <Label className="text-white/70">Donor Name *</Label>
+                    <Input value={donorName} onChange={(e) => setDonorName(e.target.value)} className="bg-white/5 border-white/20 text-white" />
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-white/70">Donor Email</Label>
+                    <Input type="email" value={donorEmail} onChange={(e) => setDonorEmail(e.target.value)} className="bg-white/5 border-white/20 text-white" />
+                  </div>
+                </>
+              )}
+
+              {/* ===== FEE FOR SERVICE ===== */}
+              {revenueType === "Fee for Service" && (
+                <>
+                  <div className="space-y-1">
+                    <Label className="text-white/70">Vendor Name *</Label>
+                    <Input value={vendorName} onChange={(e) => setVendorName(e.target.value)} className="bg-white/5 border-white/20 text-white" />
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-white/70">Program Name</Label>
+                    <Input value={programName} onChange={(e) => setProgramName(e.target.value)} className="bg-white/5 border-white/20 text-white" />
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-white/70">Service Month</Label>
+                    <Input type="month" value={serviceMonth} onChange={(e) => setServiceMonth(e.target.value)} className="bg-white/5 border-white/20 text-white" />
+                  </div>
+                </>
+              )}
+
+              {/* ===== RE-GRANT ===== */}
+              {revenueType === "Re-Grant" && (
+                <>
+                  <div className="space-y-1">
+                    <Label className="text-white/70">Partner Name *</Label>
+                    <Input value={partnerName} onChange={(e) => setPartnerName(e.target.value)} className="bg-white/5 border-white/20 text-white" />
+                  </div>
+                  <DateField label="Grant Date" value={grantDate} onChange={setGrantDate} />
+                </>
+              )}
+
+              {/* ===== FUNDRAISING ===== */}
+              {revenueType === "Fundraising" && (
+                <>
+                  <div className="space-y-1">
+                    <Label className="text-white/70">Event Name *</Label>
+                    <Input value={eventName} onChange={(e) => setEventName(e.target.value)} className="bg-white/5 border-white/20 text-white" />
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-white/70">Description</Label>
+                    <Input value={revenueDescription} onChange={(e) => setRevenueDescription(e.target.value)} placeholder="raffle, merch, concessions…" className="bg-white/5 border-white/20 text-white placeholder:text-white/30" />
+                  </div>
+                </>
+              )}
+
+              {/* ===== SHARED FIELDS ===== */}
+              <div className="space-y-1">
+                <Label className="text-white/70">Amount *</Label>
+                <Input type="number" step="0.01" min="0.01" value={amount} onChange={(e) => setAmount(e.target.value)} className="bg-white/5 border-white/20 text-white" />
+              </div>
+
+              {revenueType !== "Re-Grant" && (
+                <div className="space-y-1">
+                  <Label className="text-white/70">Payment Method *</Label>
+                  <Select value={method} onValueChange={setMethod}>
+                    <SelectTrigger className="bg-white/5 border-white/20 text-white">
+                      <SelectValue placeholder="Select method" />
+                    </SelectTrigger>
+                    <SelectContent className="bg-black border-white/20">
+                      {METHODS.map((m) => (
+                        <SelectItem key={m} value={m} className="text-white">{m}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+
+              {revenueType === "Donation" && (
+                <DateField label="Date Received" value={dateReceived} onChange={setDateReceived} required />
+              )}
+
+              <DateField label="Deposit Date" value={depositDate} onChange={setDepositDate} required />
+
+              <div className="space-y-1">
+                <Label className="text-white/70">Reference ID</Label>
+                <Input value={referenceId} onChange={(e) => setReferenceId(e.target.value)} placeholder="Check # or transaction ID" className="bg-white/5 border-white/20 text-white placeholder:text-white/30" />
+              </div>
+
+              {revenueType === "Donation" && (
+                <div className="space-y-1">
+                  <Label className="text-white/70">Receipt Status</Label>
+                  <Select value={receiptStatus} onValueChange={setReceiptStatus}>
+                    <SelectTrigger className="bg-white/5 border-white/20 text-white">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent className="bg-black border-white/20">
+                      {RECEIPT_STATUSES.map((s) => (
+                        <SelectItem key={s} value={s} className="text-white">{s}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+
+              <div className="space-y-1">
+                <Label className="text-white/70">Notes</Label>
+                <Textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={3} className="bg-white/5 border-white/20 text-white" />
+              </div>
+
+              <Button type="submit" disabled={saving || !isValid()} className="w-full bg-white text-black hover:bg-white/90">
+                {saving ? "Saving…" : "Save Revenue"}
+              </Button>
+            </>
+          )}
+        </form>
+      </DialogContent>
+    </Dialog>
+  );
+};
+
+export default NewRevenueModal;
