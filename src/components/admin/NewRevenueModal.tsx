@@ -142,6 +142,7 @@ const NewRevenueModal = ({ open, onOpenChange, onCreated }: Props) => {
       // donor_name is required in schema — use source or placeholder
       donor_name: sourceName || "N/A",
       date_received: dateReceived ? format(dateReceived, "yyyy-MM-dd") : format(depositDate!, "yyyy-MM-dd"),
+      recognition_period: recognitionPeriod || null,
     };
 
     if (revenueType === "Donation") {
