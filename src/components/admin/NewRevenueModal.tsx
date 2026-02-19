@@ -230,9 +230,9 @@ const NewRevenueModal = ({ open, onOpenChange, onCreated }: Props) => {
               <SelectTrigger className="bg-white/5 border-white/20 text-white">
                 <SelectValue placeholder="Select type" />
               </SelectTrigger>
-              <SelectContent className="bg-black border-white/20">
+              <SelectContent className="bg-white border-gray-200 z-50">
                 {REVENUE_TYPES.map((t) => (
-                  <SelectItem key={t} value={t} className="text-white">{t}</SelectItem>
+                  <SelectItem key={t} value={t} className="text-black">{t}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
@@ -310,9 +310,9 @@ const NewRevenueModal = ({ open, onOpenChange, onCreated }: Props) => {
                     <SelectTrigger className="bg-white/5 border-white/20 text-white">
                       <SelectValue placeholder="Select method" />
                     </SelectTrigger>
-                    <SelectContent className="bg-black border-white/20">
+                    <SelectContent className="bg-white border-gray-200 z-50">
                       {METHODS.map((m) => (
-                        <SelectItem key={m} value={m} className="text-white">{m}</SelectItem>
+                        <SelectItem key={m} value={m} className="text-black">{m}</SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
@@ -337,9 +337,9 @@ const NewRevenueModal = ({ open, onOpenChange, onCreated }: Props) => {
                     <SelectTrigger className="bg-white/5 border-white/20 text-white">
                       <SelectValue />
                     </SelectTrigger>
-                    <SelectContent className="bg-black border-white/20">
+                    <SelectContent className="bg-white border-gray-200 z-50">
                       {RECEIPT_STATUSES.map((s) => (
-                        <SelectItem key={s} value={s} className="text-white">{s}</SelectItem>
+                        <SelectItem key={s} value={s} className="text-black">{s}</SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
