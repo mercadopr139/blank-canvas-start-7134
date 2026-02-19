@@ -3,7 +3,18 @@ import { useNavigate } from "react-router-dom";
 import { format } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Plus } from "lucide-react";
+import { ArrowLeft, Plus, Trash2 } from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { toast } from "@/hooks/use-toast";
 import {
   Table,
   TableBody,
@@ -33,6 +44,7 @@ const columns = [
   "Total Amount",
   "Donations",
   "Created By",
+  "",
 ];
 
 const AdminDeposits = () => {
@@ -42,6 +54,7 @@ const AdminDeposits = () => {
   const [batches, setBatches] = useState<Batch[]>([]);
   const [loading, setLoading] = useState(true);
   const [modalOpen, setModalOpen] = useState(false);
+  const [deleteId, setDeleteId] = useState<string | null>(null);
 
   const fetchBatches = useCallback(async () => {
     setLoading(true);
@@ -79,6 +92,20 @@ const AdminDeposits = () => {
     );
     setLoading(false);
   }, []);
+
+  const handleDelete = async () => {
+    if (!deleteId) return;
+    // Unlink donations first, then delete batch
+    await supabase.from("donations").update({ deposit_batch_id: null }).eq("deposit_batch_id", deleteId);
+    const { error } = await supabase.from("deposit_batches").delete().eq("id", deleteId);
+    if (error) {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+    } else {
+      toast({ title: "Batch deleted" });
+      fetchBatches();
+    }
+    setDeleteId(null);
+  };
 
   useEffect(() => {
     fetchBatches();
@@ -155,6 +182,16 @@ const AdminDeposits = () => {
                     <TableCell className="text-white">${b.total_amount.toFixed(2)}</TableCell>
                     <TableCell className="text-white">{b.donation_count}</TableCell>
                     <TableCell className="text-white/70">{b.created_by ?? "—"}</TableCell>
+                    <TableCell>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="text-red-500 hover:text-red-400 hover:bg-white/10"
+                        onClick={(e) => { e.stopPropagation(); setDeleteId(b.id); }}
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
+                    </TableCell>
                   </TableRow>
                 ))
               )}
@@ -168,6 +205,21 @@ const AdminDeposits = () => {
         onOpenChange={setModalOpen}
         onCreated={fetchBatches}
       />
+
+      <AlertDialog open={!!deleteId} onOpenChange={(open) => !open && setDeleteId(null)}>
+        <AlertDialogContent className="bg-black border-white/10">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-white">Delete Batch?</AlertDialogTitle>
+            <AlertDialogDescription className="text-white/60">
+              This will unlink all donations from this batch and permanently delete it.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel className="border-white/20 text-white hover:bg-white/10">Cancel</AlertDialogCancel>
+            <AlertDialogAction className="bg-red-600 hover:bg-red-700 text-white" onClick={handleDelete}>Delete</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
