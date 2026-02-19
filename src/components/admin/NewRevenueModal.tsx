@@ -22,7 +22,7 @@ import SendReceiptFlow from "@/components/admin/SendReceiptFlow";
 
 const REVENUE_TYPES = ["Donation", "Fundraising", "Fee for Service", "Re-Grant"] as const;
 const METHODS = ["Cash", "Check", "Venmo", "PayPal", "Square"] as const;
-const RECEIPT_STATUSES = ["Pending", "Sent", "Not Needed"] as const;
+
 const FUNDRAISING_DESCRIPTIONS = [
   "Presale tickets", "Sponsor", "Event day tickets", "Raffle", "Merchandise", "Concessions", "Other",
 ] as const;
@@ -431,21 +431,6 @@ const NewRevenueModal = ({ open, onOpenChange, onCreated }: Props) => {
                   <Input value={referenceId} onChange={(e) => setReferenceId(e.target.value)} placeholder="Check # or transaction ID" className="bg-white/5 border-white/20 text-white placeholder:text-white/30" />
                 </div>
 
-                {revenueType === "Donation" && (
-                  <div className="space-y-1">
-                    <Label className="text-white/70">Receipt Status</Label>
-                    <Select value={receiptStatus} onValueChange={setReceiptStatus}>
-                      <SelectTrigger className="bg-white/5 border-white/20 text-white">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent className="bg-white border-gray-200 z-50">
-                        {RECEIPT_STATUSES.map((s) => (
-                          <SelectItem key={s} value={s} className="text-black">{s}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                )}
 
                 <div className="space-y-1">
                   <Label className="text-white/70">Notes</Label>
