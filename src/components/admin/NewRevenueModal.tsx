@@ -315,7 +315,10 @@ const NewRevenueModal = ({ open, onOpenChange, onCreated }: Props) => {
               {/* ===== SHARED FIELDS ===== */}
               <div className="space-y-1">
                 <Label className="text-white/70">Amount *</Label>
-                <Input type="number" step="0.01" min="0.01" value={amount} onChange={(e) => setAmount(e.target.value)} className="bg-white/5 border-white/20 text-white" />
+                <div className="relative">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-white/50">$</span>
+                  <Input type="number" step="0.01" min="0.01" value={amount} onChange={(e) => setAmount(e.target.value)} className="bg-white/5 border-white/20 text-white pl-7" />
+                </div>
               </div>
 
               {revenueType !== "Re-Grant" && (
