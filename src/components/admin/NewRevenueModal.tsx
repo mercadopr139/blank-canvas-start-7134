@@ -100,7 +100,7 @@ const NewRevenueModal = ({ open, onOpenChange, onCreated }: Props) => {
 
   const isValid = () => {
     if (!revenueType || !amount || !depositDate) return false;
-    const parsed = parseFloat(amount);
+    const parsed = parseFloat(amount.replace(/,/g, ""));
     if (isNaN(parsed) || parsed <= 0) return false;
 
     switch (revenueType) {
@@ -129,7 +129,7 @@ const NewRevenueModal = ({ open, onOpenChange, onCreated }: Props) => {
 
     const record: Record<string, any> = {
       revenue_type: revenueType,
-      amount: parseFloat(amount),
+      amount: parseFloat(amount.replace(/,/g, "")),
       method: (revenueType === "Re-Grant" ? "Other" : method) as any,
       deposit_date: format(depositDate!, "yyyy-MM-dd"),
       reference_id: referenceId.trim() || null,
@@ -317,7 +317,31 @@ const NewRevenueModal = ({ open, onOpenChange, onCreated }: Props) => {
                 <Label className="text-white/70">Amount *</Label>
                 <div className="relative">
                   <span className="absolute left-3 top-1/2 -translate-y-1/2 text-white/50">$</span>
-                  <Input type="number" step="0.01" min="0.01" value={amount} onChange={(e) => setAmount(e.target.value)} className="bg-white/5 border-white/20 text-white pl-7" />
+                  <Input
+                    type="text"
+                    inputMode="decimal"
+                    value={amount}
+                    onChange={(e) => {
+                      // Strip everything except digits and decimal
+                      const raw = e.target.value.replace(/[^0-9.]/g, "");
+                      // Only allow one decimal point
+                      const parts = raw.split(".");
+                      const cleaned = parts.length > 2 ? parts[0] + "." + parts.slice(1).join("") : raw;
+                      setAmount(cleaned);
+                    }}
+                    onBlur={() => {
+                      const num = parseFloat(amount);
+                      if (!isNaN(num) && num > 0) {
+                        setAmount(num.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 }));
+                      }
+                    }}
+                    onFocus={() => {
+                      // Strip formatting on focus for easy editing
+                      setAmount(amount.replace(/,/g, ""));
+                    }}
+                    placeholder="0.00"
+                    className="bg-white/5 border-white/20 text-white pl-7 placeholder:text-white/30"
+                  />
                 </div>
               </div>
 
