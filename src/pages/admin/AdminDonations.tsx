@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { format } from "date-fns";
+import { formatUSD } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, Plus, Trash2 } from "lucide-react";
@@ -157,7 +158,7 @@ const AdminDonations = () => {
                     <TableCell className="text-white">{displayDate(r)}</TableCell>
                     <TableCell className="text-white">{r.revenue_type}</TableCell>
                     <TableCell className="text-white">{displaySource(r)}</TableCell>
-                    <TableCell className="text-white">${Number(r.amount).toFixed(2)}</TableCell>
+                    <TableCell className="text-white">{formatUSD(r.amount)}</TableCell>
                     <TableCell className="text-white">{r.method}</TableCell>
                     <TableCell className="text-white/70">{r.reference_id ?? "—"}</TableCell>
                     <TableCell className="text-white">{displayReceipt(r)}</TableCell>

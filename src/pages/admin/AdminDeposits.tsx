@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { format } from "date-fns";
+import { formatUSD } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, Plus, Trash2 } from "lucide-react";
@@ -179,7 +180,7 @@ const AdminDeposits = () => {
                         ? format(new Date(b.deposit_date + "T00:00:00"), "MM/dd/yyyy")
                         : "—"}
                     </TableCell>
-                    <TableCell className="text-white">${b.total_amount.toFixed(2)}</TableCell>
+                    <TableCell className="text-white">{formatUSD(b.total_amount)}</TableCell>
                     <TableCell className="text-white">{b.donation_count}</TableCell>
                     <TableCell className="text-white/70">{b.created_by ?? "—"}</TableCell>
                     <TableCell>
