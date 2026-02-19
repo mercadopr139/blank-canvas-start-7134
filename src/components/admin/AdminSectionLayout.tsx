@@ -11,8 +11,27 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import type { LucideIcon } from "lucide-react";
+
+// All known modules that can be added as sidebar items
+const KNOWN_MODULES: { label: string; href: string }[] = [
+  { label: "Registrations", href: "/admin/operations/registrations" },
+  { label: "Registration Analytics", href: "/admin/operations/registration-analytics" },
+  { label: "Registration Form (external)", href: "/register" },
+  { label: "Revenue", href: "/admin/sales-marketing/revenue" },
+  { label: "Master Revenue Tracker", href: "/admin/sales-marketing/master-revenue-tracker" },
+  { label: "NLA Donor/Sponsor History", href: "/admin/sales-marketing/supporters" },
+  { label: "Billing / Invoices", href: "/admin/finance/billing" },
+  { label: "Insurance", href: "/admin/finance/insurance" },
+  { label: "Other (custom route)", href: "__other__" },
+];
 
 export interface SectionCard {
   title: string;
@@ -106,8 +125,9 @@ const AdminSectionLayout = ({
 
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [addModalOpen, setAddModalOpen] = useState(false);
-  const [newTitle, setNewTitle] = useState("");
-  const [newDesc, setNewDesc] = useState("");
+  const [selectedModule, setSelectedModule] = useState("");
+  const [displayName, setDisplayName] = useState("");
+  const [customRoute, setCustomRoute] = useState("");
 
   const allCards = [...cards, ...customCards];
 
@@ -125,20 +145,29 @@ const AdminSectionLayout = ({
     }
   };
 
-  const handleAddCard = () => {
-    if (!newTitle.trim()) return;
+  const isOther = selectedModule === "__other__";
+  const resolvedHref = isOther ? customRoute.trim() : selectedModule;
+  const resolvedLabel = displayName.trim() ||
+    KNOWN_MODULES.find((m) => m.href === selectedModule)?.label || "";
+  const canAdd = resolvedLabel && resolvedHref && resolvedHref !== "__other__";
+
+  const handleAddItem = () => {
+    if (!canAdd) return;
+    const isExternal = resolvedHref.startsWith("http") || resolvedHref === "/register";
     const newCard: SectionCard = {
-      title: newTitle.trim(),
-      description: newDesc.trim(),
-      href: `#custom-${Date.now()}`,
+      title: resolvedLabel,
+      description: "",
+      href: resolvedHref,
       icon: Plus,
       custom: true,
+      external: isExternal,
     };
     const updated = [...customCards, newCard];
     setCustomCards(updated);
     localStorage.setItem(storageKey, JSON.stringify(updated));
-    setNewTitle("");
-    setNewDesc("");
+    setSelectedModule("");
+    setDisplayName("");
+    setCustomRoute("");
     setAddModalOpen(false);
   };
 
@@ -153,7 +182,7 @@ const AdminSectionLayout = ({
           onClick={() => { setSidebarOpen(false); setAddModalOpen(true); }}
         >
           <Plus className="w-4 h-4 mr-1.5" />
-          Add Card
+          + Add Sidebar Item
         </Button>
       </div>
 
@@ -246,32 +275,56 @@ const AdminSectionLayout = ({
         </main>
       </div>
 
-      {/* Add Card Modal */}
-      <Dialog open={addModalOpen} onOpenChange={setAddModalOpen}>
+      {/* Add Sidebar Item Modal */}
+      <Dialog open={addModalOpen} onOpenChange={(open) => {
+        if (!open) { setSelectedModule(""); setDisplayName(""); setCustomRoute(""); }
+        setAddModalOpen(open);
+      }}>
         <DialogContent className="bg-zinc-900 border-white/10 text-white sm:max-w-md">
           <DialogHeader>
-            <DialogTitle className="text-white">Add Card</DialogTitle>
+            <DialogTitle className="text-white">Add Sidebar Item</DialogTitle>
           </DialogHeader>
           <div className="space-y-4 py-2">
+            {/* Item Type */}
             <div className="space-y-1.5">
-              <Label className="text-white/80">Title <span className="text-red-400">*</span></Label>
+              <Label className="text-white/80">Item Type <span className="text-red-400">*</span></Label>
+              <Select value={selectedModule} onValueChange={setSelectedModule}>
+                <SelectTrigger className="bg-white/5 border-white/10 text-white">
+                  <SelectValue placeholder="Select a module…" />
+                </SelectTrigger>
+                <SelectContent className="bg-zinc-900 border-white/10 text-white">
+                  {KNOWN_MODULES.map((m) => (
+                    <SelectItem key={m.href} value={m.href} className="hover:bg-white/10 focus:bg-white/10">
+                      {m.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Display Name */}
+            <div className="space-y-1.5">
+              <Label className="text-white/80">Display Name <span className="text-white/40 font-normal">(optional override)</span></Label>
               <Input
-                value={newTitle}
-                onChange={(e) => setNewTitle(e.target.value)}
-                placeholder="Card title"
+                value={displayName}
+                onChange={(e) => setDisplayName(e.target.value)}
+                placeholder={KNOWN_MODULES.find((m) => m.href === selectedModule)?.label || "Label shown in sidebar"}
                 className="bg-white/5 border-white/10 text-white placeholder:text-white/30"
               />
             </div>
-            <div className="space-y-1.5">
-              <Label className="text-white/80">Description</Label>
-              <Textarea
-                value={newDesc}
-                onChange={(e) => setNewDesc(e.target.value)}
-                placeholder="Optional description"
-                rows={3}
-                className="bg-white/5 border-white/10 text-white placeholder:text-white/30 resize-none"
-              />
-            </div>
+
+            {/* Custom route — only when "Other" selected */}
+            {isOther && (
+              <div className="space-y-1.5">
+                <Label className="text-white/80">Custom Route <span className="text-red-400">*</span></Label>
+                <Input
+                  value={customRoute}
+                  onChange={(e) => setCustomRoute(e.target.value)}
+                  placeholder="/admin/custom-page or https://…"
+                  className="bg-white/5 border-white/10 text-white placeholder:text-white/30"
+                />
+              </div>
+            )}
           </div>
           <DialogFooter>
             <Button
@@ -282,11 +335,11 @@ const AdminSectionLayout = ({
               Cancel
             </Button>
             <Button
-              disabled={!newTitle.trim()}
-              onClick={handleAddCard}
+              disabled={!canAdd}
+              onClick={handleAddItem}
               className={`${ac.button} ${ac.buttonText}`}
             >
-              Add Card
+              Add Item
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -296,3 +349,4 @@ const AdminSectionLayout = ({
 };
 
 export default AdminSectionLayout;
+
