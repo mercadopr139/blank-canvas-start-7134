@@ -60,6 +60,8 @@ const NewRevenueModal = ({ open, onOpenChange, onCreated }: Props) => {
   const [eventName, setEventName] = useState("");
   const [fundraisingDescSelect, setFundraisingDescSelect] = useState("");
   const [fundraisingDescOther, setFundraisingDescOther] = useState("");
+  const [sponsorName, setSponsorName] = useState("");
+  const [sponsorEmail, setSponsorEmail] = useState("");
 
   // Shared fields
   const [recognitionPeriod, setRecognitionPeriod] = useState("");
@@ -85,6 +87,8 @@ const NewRevenueModal = ({ open, onOpenChange, onCreated }: Props) => {
     setEventName("");
     setFundraisingDescSelect("");
     setFundraisingDescOther("");
+    setSponsorName("");
+    setSponsorEmail("");
     setRecognitionPeriod("");
   };
 
@@ -113,6 +117,7 @@ const NewRevenueModal = ({ open, onOpenChange, onCreated }: Props) => {
       case "Re-Grant": return !!partnerName.trim();
       case "Fundraising":
         if (fundraisingDescSelect === "Other" && !fundraisingDescOther.trim()) return false;
+        if (fundraisingDescSelect === "Sponsor" && !sponsorName.trim()) return false;
         return !!eventName.trim() && !!method;
       default: return false;
     }
@@ -166,8 +171,8 @@ const NewRevenueModal = ({ open, onOpenChange, onCreated }: Props) => {
     // Find or create supporter for qualifying types
     let supporterId: string | null = null;
     if (qualifying) {
-      const sName = revenueType === "Donation" ? donorName.trim() : eventName.trim();
-      const sEmail = revenueType === "Donation" ? (donorEmail.trim() || null) : null;
+      const sName = revenueType === "Donation" ? donorName.trim() : sponsorName.trim();
+      const sEmail = revenueType === "Donation" ? (donorEmail.trim() || null) : (sponsorEmail.trim() || null);
       supporterId = await findOrCreateSupporter(sName, sEmail);
     }
 
@@ -206,6 +211,10 @@ const NewRevenueModal = ({ open, onOpenChange, onCreated }: Props) => {
       record.event_name = eventName.trim() || null;
       const desc = fundraisingDescSelect === "Other" ? fundraisingDescOther.trim() : fundraisingDescSelect;
       record.revenue_description = desc || null;
+      if (fundraisingDescSelect === "Sponsor") {
+        record.source_name = sponsorName.trim() || eventName.trim();
+        record.source_email = sponsorEmail.trim() || null;
+      }
     }
 
     const { error } = await supabase.from("donations").insert(record as any);
@@ -223,7 +232,7 @@ const NewRevenueModal = ({ open, onOpenChange, onCreated }: Props) => {
 
     // Show receipt prompt for qualifying types
     if (qualifying && supporterId) {
-      const sName = revenueType === "Donation" ? donorName.trim() : eventName.trim();
+      const sName = revenueType === "Donation" ? donorName.trim() : sponsorName.trim();
       setReceiptPromptSupporterId(supporterId);
       setReceiptPromptSupporterName(sName);
     }
@@ -363,6 +372,18 @@ const NewRevenueModal = ({ open, onOpenChange, onCreated }: Props) => {
                         <Label className="text-white/70">Other Description *</Label>
                         <Input value={fundraisingDescOther} onChange={(e) => setFundraisingDescOther(e.target.value)} placeholder="Describe the revenue…" className="bg-white/5 border-white/20 text-white placeholder:text-white/30" />
                       </div>
+                    )}
+                    {fundraisingDescSelect === "Sponsor" && (
+                      <>
+                        <div className="space-y-1">
+                          <Label className="text-white/70">Sponsor Name *</Label>
+                          <Input value={sponsorName} onChange={(e) => setSponsorName(e.target.value)} placeholder="Contact / company name" className="bg-white/5 border-white/20 text-white placeholder:text-white/30" />
+                        </div>
+                        <div className="space-y-1">
+                          <Label className="text-white/70">Sponsor Email</Label>
+                          <Input type="email" value={sponsorEmail} onChange={(e) => setSponsorEmail(e.target.value)} placeholder="For receipt delivery" className="bg-white/5 border-white/20 text-white placeholder:text-white/30" />
+                        </div>
+                      </>
                     )}
                   </>
                 )}
