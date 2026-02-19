@@ -30,7 +30,7 @@ interface Props {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   donationId: string | null;
-  onSaved: () => void;
+  onSaved: (receiptInfo?: { supporterId: string; supporterName: string }) => void;
 }
 
 const EditRevenueModal = ({ open, onOpenChange, donationId, onSaved }: Props) => {
@@ -158,12 +158,50 @@ const EditRevenueModal = ({ open, onOpenChange, donationId, onSaved }: Props) =>
     }
   };
 
+  const isQualifyingForReceipt = () =>
+    revenueType === "Donation" ||
+    (revenueType === "Fundraising" && fundraisingDescSelect === "Sponsor");
+
+  const findOrCreateSupporter = async (name: string, email: string | null): Promise<string | null> => {
+    const { data: byName } = await supabase
+      .from("supporters")
+      .select("id")
+      .eq("name", name)
+      .maybeSingle();
+    if (byName) {
+      if (email) {
+        await supabase.from("supporters").update({ email }).eq("id", byName.id);
+      }
+      return byName.id;
+    }
+    const { data: created, error: createErr } = await supabase
+      .from("supporters")
+      .insert({ name, email })
+      .select("id")
+      .single();
+    if (createErr) {
+      console.error("Failed to create supporter:", createErr);
+      return null;
+    }
+    return created.id;
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!isValid() || !donationId) return;
 
     setSaving(true);
     const sourceName = getSourceName();
+    const qualifying = isQualifyingForReceipt();
+
+    // Find or create supporter for qualifying types
+    let supporterId: string | null = null;
+    let receiptName = "";
+    if (qualifying) {
+      receiptName = revenueType === "Donation" ? donorName.trim() : sponsorName.trim();
+      const sEmail = revenueType === "Donation" ? (donorEmail.trim() || null) : (sponsorEmail.trim() || null);
+      supporterId = await findOrCreateSupporter(receiptName, sEmail);
+    }
 
     const record: Record<string, any> = {
       revenue_type: revenueType,
@@ -178,6 +216,7 @@ const EditRevenueModal = ({ open, onOpenChange, donationId, onSaved }: Props) =>
         : (sourceName || "N/A"),
       date_received: format(depositDate!, "yyyy-MM-dd"),
       recognition_period: recognitionPeriod || null,
+      supporter_id: supporterId,
     };
 
     if (revenueType === "Donation") {
@@ -189,20 +228,21 @@ const EditRevenueModal = ({ open, onOpenChange, donationId, onSaved }: Props) =>
     if (revenueType === "Fee for Service") {
       record.vendor_name = vendorName.trim() || null;
       record.program_name = programName.trim() || null;
-      if (fundraisingDescSelect === "Sponsor") {
-        record.source_name = sponsorName.trim() || eventName.trim();
-        record.source_email = sponsorEmail.trim() || null;
-      }
-    }
-    if (revenueType === "Re-Grant") {
-      record.partner_name = partnerName.trim() || null;
-      record.grant_date = grantDate ? format(grantDate, "yyyy-MM-dd") : null;
     }
 
     if (revenueType === "Fundraising") {
       record.event_name = eventName.trim() || null;
       const desc = fundraisingDescSelect === "Other" ? fundraisingDescOther.trim() : fundraisingDescSelect;
       record.revenue_description = desc || null;
+      if (fundraisingDescSelect === "Sponsor") {
+        record.source_name = sponsorName.trim() || eventName.trim();
+        record.source_email = sponsorEmail.trim() || null;
+      }
+    }
+
+    if (revenueType === "Re-Grant") {
+      record.partner_name = partnerName.trim() || null;
+      record.grant_date = grantDate ? format(grantDate, "yyyy-MM-dd") : null;
     }
 
     const { error } = await supabase.from("donations").update(record as any).eq("id", donationId);
@@ -215,7 +255,7 @@ const EditRevenueModal = ({ open, onOpenChange, donationId, onSaved }: Props) =>
 
     toast({ title: "Revenue updated." });
     onOpenChange(false);
-    onSaved();
+    onSaved(qualifying && supporterId ? { supporterId, supporterName: receiptName } : undefined);
   };
 
   const DateField = ({
