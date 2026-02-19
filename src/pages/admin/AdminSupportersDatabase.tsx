@@ -363,7 +363,7 @@ const AdminSupportersDatabase = () => {
 
         {/* Supporters table — fills remaining height, scrolls both axes */}
         <div className="flex-1 min-h-0 rounded-lg border border-white/10 overflow-auto">
-          <div style={{ minWidth: 960 }}>
+          <div style={{ minWidth: 1200 }}>
           <Table>
             <TableHeader>
               <TableRow className="border-white/10 hover:bg-transparent">
@@ -382,7 +382,7 @@ const AdminSupportersDatabase = () => {
                 <TableHead className="text-white/70">Email</TableHead>
                 <TableHead className="text-white/70">Phone</TableHead>
                 <TableHead className="text-white/70">Address</TableHead>
-                <TableHead className="text-white/70">Notes</TableHead>
+                <TableHead className="text-white/70 min-w-[280px]">Notes</TableHead>
                 <TableHead className="text-white/70 w-20 text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
@@ -422,7 +422,7 @@ const AdminSupportersDatabase = () => {
                         : "—"}
                     </TableCell>
                     <TableCell className="text-white/70 text-sm">{s.address || "—"}</TableCell>
-                    <TableCell className="text-white/50 text-xs max-w-[200px] truncate" title={s.story ?? undefined}>{s.story || "—"}</TableCell>
+                    <TableCell className="text-white/50 text-xs min-w-[280px] whitespace-pre-wrap break-words align-top py-3">{s.story || "—"}</TableCell>
                     <TableCell className="text-right">
                       <div className="flex justify-end gap-1">
                         <button
