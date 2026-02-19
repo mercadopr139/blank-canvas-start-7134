@@ -21,13 +21,13 @@ const baseTiles: SMTile[] = [
     title: "Master Revenue Tracker",
     description: "Monthly totals and year-to-date revenue",
     icon: BarChart3,
-    href: "/admin/finance/master-revenue-tracker",
+    href: "/admin/sales-marketing/master-revenue-tracker",
   },
   {
     title: "NLA Donor/Sponsor History",
     description: "Supporters & 2026 receipts",
     icon: Users,
-    href: "/admin/finance/supporters",
+    href: "/admin/sales-marketing/supporters",
   },
 ];
 
