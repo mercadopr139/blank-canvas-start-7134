@@ -141,6 +141,7 @@ const NewRevenueModal = ({ open, onOpenChange, onCreated }: Props) => {
       donor_name: sourceName || "N/A",
       date_received: format(depositDate!, "yyyy-MM-dd"),
       recognition_period: recognitionPeriod || null,
+      service_month: serviceMonth || null,
     };
 
     if (revenueType === "Donation") {
@@ -153,7 +154,6 @@ const NewRevenueModal = ({ open, onOpenChange, onCreated }: Props) => {
     if (revenueType === "Fee for Service") {
       record.vendor_name = vendorName.trim() || null;
       record.program_name = programName.trim() || null;
-      record.service_month = serviceMonth || null;
     }
 
     if (revenueType === "Re-Grant") {
@@ -283,10 +283,6 @@ const NewRevenueModal = ({ open, onOpenChange, onCreated }: Props) => {
                     <Label className="text-white/70">Program Name</Label>
                     <Input value={programName} onChange={(e) => setProgramName(e.target.value)} className="bg-white/5 border-white/20 text-white" />
                   </div>
-                  <div className="space-y-1">
-                    <Label className="text-white/70">Service Month</Label>
-                    <Input type="month" value={serviceMonth} onChange={(e) => setServiceMonth(e.target.value)} className="bg-white/5 border-white/20 text-white" />
-                  </div>
                 </>
               )}
 
@@ -365,6 +361,20 @@ const NewRevenueModal = ({ open, onOpenChange, onCreated }: Props) => {
               )}
 
               <DateField label="Date of Deposit" value={depositDate} onChange={setDepositDate} required />
+
+              <div className="space-y-1">
+                <Label className="text-white/70">Service Month</Label>
+                <Select value={serviceMonth} onValueChange={setServiceMonth}>
+                  <SelectTrigger className="bg-white/5 border-white/20 text-white">
+                    <SelectValue placeholder="Select month" />
+                  </SelectTrigger>
+                  <SelectContent className="bg-white border-gray-200 z-50">
+                    {["January","February","March","April","May","June","July","August","September","October","November","December"].map((m) => (
+                      <SelectItem key={m} value={m} className="text-black">{m}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
 
               <div className="space-y-1">
                 <Label className="text-white/70">Recognition Period</Label>
