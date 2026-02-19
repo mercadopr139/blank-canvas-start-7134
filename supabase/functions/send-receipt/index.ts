@@ -398,16 +398,47 @@ Deno.serve(async (req) => {
     }
 
     // Build email body
-    let emailBody = `<div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;">`;
+    let personalBlock = "";
+    let personalText = "";
     if (personal_message) {
-      emailBody += `<div style="background:#f0f7ff;border-radius:8px;padding:16px;margin-bottom:20px;">
-        <p style="margin:0;color:#333;">${personal_message.replace(/\n/g, "<br/>")}</p>
-      </div>`;
+      personalBlock = `<p style="margin:0 0 16px;color:#333;">${personal_message.replace(/\n/g, "<br/>")}</p>`;
+      personalText = `${personal_message}\n\n`;
     }
-    emailBody += `<p>Please find your 2026 annual donation receipt attached.</p>
-      <p>Thank you for your generous support of ${ORG_NAME}!</p>
-      <p style="color:#888;font-size:12px;margin-top:24px;">You may reply directly to this email with any questions.</p>
-    </div>`;
+
+    const emailBody = `<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="utf-8"/><meta name="viewport" content="width=device-width"/></head>
+<body style="margin:0;padding:0;background:#f9f9f9;">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f9f9f9;">
+<tr><td align="center" style="padding:24px 0;">
+<table role="presentation" width="600" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:8px;padding:32px;font-family:Arial,sans-serif;color:#333;">
+<tr><td>
+  <h2 style="margin:0 0 8px;color:#1a1a1a;">No Limits Academy</h2>
+  <p style="margin:0 0 20px;color:#888;font-size:13px;">Annual Donation Receipt — 2026</p>
+  ${personalBlock}
+  <p style="margin:0 0 12px;">Dear ${supporter.name},</p>
+  <p style="margin:0 0 12px;">Please find your 2026 annual donation receipt attached to this email.</p>
+  <p style="margin:0 0 12px;">Thank you for your generous support of ${ORG_NAME}! Your contribution helps us use the discipline of boxing to promote personal, professional, and spiritual development within our community.</p>
+  <p style="margin:0 0 0;color:#888;font-size:12px;">You may reply directly to this email with any questions.</p>
+</td></tr>
+</table>
+</td></tr>
+</table>
+</body>
+</html>`;
+
+    // Plain text version (critical for spam scoring)
+    const textBody = `${personalText}Dear ${supporter.name},
+
+Please find your 2026 annual donation receipt attached to this email.
+
+Thank you for your generous support of ${ORG_NAME}! Your contribution helps us use the discipline of boxing to promote personal, professional, and spiritual development within our community.
+
+You may reply directly to this email with any questions.
+
+No Limits Academy Inc.
+${ORG_PHONE} | ${ORG_EMAIL}
+${ORG_WEBSITE}`;
 
     // Send via Resend with PDF attachment
     const resendRes = await fetch("https://api.resend.com/emails", {
@@ -418,9 +449,11 @@ Deno.serve(async (req) => {
       },
       body: JSON.stringify({
         from: `No Limits Academy <${SENDER_EMAIL}>`,
+        reply_to: SENDER_EMAIL,
         to: [supporter.email],
-        subject: "No Limits Academy — 2026 Donation Receipt",
+        subject: `Your 2026 Donation Receipt from No Limits Academy`,
         html: emailBody,
+        text: textBody,
         attachments: [
           {
             filename: pdfFilename,
