@@ -115,6 +115,42 @@ export type Database = {
         }
         Relationships: []
       }
+      deposit_batches: {
+        Row: {
+          bank_account: Database["public"]["Enums"]["bank_account"]
+          batch_name: string
+          created_at: string
+          created_by: string | null
+          deposit_date: string | null
+          deposited_by: string | null
+          id: string
+          status: Database["public"]["Enums"]["deposit_status"]
+          updated_at: string
+        }
+        Insert: {
+          bank_account?: Database["public"]["Enums"]["bank_account"]
+          batch_name: string
+          created_at?: string
+          created_by?: string | null
+          deposit_date?: string | null
+          deposited_by?: string | null
+          id?: string
+          status?: Database["public"]["Enums"]["deposit_status"]
+          updated_at?: string
+        }
+        Update: {
+          bank_account?: Database["public"]["Enums"]["bank_account"]
+          batch_name?: string
+          created_at?: string
+          created_by?: string | null
+          deposit_date?: string | null
+          deposited_by?: string | null
+          id?: string
+          status?: Database["public"]["Enums"]["deposit_status"]
+          updated_at?: string
+        }
+        Relationships: []
+      }
       donations: {
         Row: {
           amount: number
@@ -158,7 +194,15 @@ export type Database = {
           reference_id?: string | null
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "donations_deposit_batch_id_fkey"
+            columns: ["deposit_batch_id"]
+            isOneToOne: false
+            referencedRelation: "deposit_batches"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       invoices: {
         Row: {
@@ -489,6 +533,7 @@ export type Database = {
     }
     Enums: {
       app_role: "admin" | "moderator" | "user"
+      bank_account: "Crest Savings" | "Other"
       boxing_program:
         | "Junior Boxing (Ages 7-10)"
         | "Senior Boxing (Ages 11-19)"
@@ -502,6 +547,7 @@ export type Database = {
         | "White"
         | "Two or More Races"
       child_sex: "Male" | "Female"
+      deposit_status: "Draft" | "Deposited"
       donation_method: "Check" | "PayPal" | "Cash" | "Other"
       household_income:
         | "Under $25,000"
@@ -661,6 +707,7 @@ export const Constants = {
   public: {
     Enums: {
       app_role: ["admin", "moderator", "user"],
+      bank_account: ["Crest Savings", "Other"],
       boxing_program: [
         "Junior Boxing (Ages 7-10)",
         "Senior Boxing (Ages 11-19)",
@@ -676,6 +723,7 @@ export const Constants = {
         "Two or More Races",
       ],
       child_sex: ["Male", "Female"],
+      deposit_status: ["Draft", "Deposited"],
       donation_method: ["Check", "PayPal", "Cash", "Other"],
       household_income: [
         "Under $25,000",
