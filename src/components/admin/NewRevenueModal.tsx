@@ -52,7 +52,6 @@ const NewRevenueModal = ({ open, onOpenChange, onCreated }: Props) => {
   // Donation fields
   const [donorName, setDonorName] = useState("");
   const [donorEmail, setDonorEmail] = useState("");
-  const [dateReceived, setDateReceived] = useState<Date | undefined>(undefined);
   const [receiptStatus, setReceiptStatus] = useState("Pending");
 
   // Fee for Service fields
@@ -80,7 +79,6 @@ const NewRevenueModal = ({ open, onOpenChange, onCreated }: Props) => {
     setNotes("");
     setDonorName("");
     setDonorEmail("");
-    setDateReceived(undefined);
     setReceiptStatus("Pending");
     setVendorName("");
     setProgramName("");
@@ -109,7 +107,7 @@ const NewRevenueModal = ({ open, onOpenChange, onCreated }: Props) => {
 
     switch (revenueType) {
       case "Donation":
-        return !!donorName.trim() && !!method && !!dateReceived;
+        return !!donorName.trim() && !!method;
       case "Fee for Service":
         return !!vendorName.trim() && !!method;
       case "Re-Grant":
@@ -141,7 +139,7 @@ const NewRevenueModal = ({ open, onOpenChange, onCreated }: Props) => {
       source_name: sourceName || null,
       // donor_name is required in schema — use source or placeholder
       donor_name: sourceName || "N/A",
-      date_received: dateReceived ? format(dateReceived, "yyyy-MM-dd") : format(depositDate!, "yyyy-MM-dd"),
+      date_received: format(depositDate!, "yyyy-MM-dd"),
       recognition_period: recognitionPeriod || null,
     };
 
@@ -366,15 +364,20 @@ const NewRevenueModal = ({ open, onOpenChange, onCreated }: Props) => {
                 </div>
               )}
 
-              {revenueType === "Donation" && (
-                <DateField label="Date Received" value={dateReceived} onChange={setDateReceived} required />
-              )}
-
               <DateField label="Date of Deposit" value={depositDate} onChange={setDepositDate} required />
 
               <div className="space-y-1">
                 <Label className="text-white/70">Recognition Period</Label>
-                <Input type="month" value={recognitionPeriod} onChange={(e) => setRecognitionPeriod(e.target.value)} className="bg-white/5 border-white/20 text-white" />
+                <Select value={recognitionPeriod} onValueChange={setRecognitionPeriod}>
+                  <SelectTrigger className="bg-white/5 border-white/20 text-white">
+                    <SelectValue placeholder="Select month" />
+                  </SelectTrigger>
+                  <SelectContent className="bg-white border-gray-200 z-50">
+                    {["January","February","March","April","May","June","July","August","September","October","November","December"].map((m) => (
+                      <SelectItem key={m} value={m} className="text-black">{m}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
 
               <div className="space-y-1">
