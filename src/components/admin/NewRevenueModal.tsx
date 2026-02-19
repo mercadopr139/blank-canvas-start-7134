@@ -184,7 +184,9 @@ const NewRevenueModal = ({ open, onOpenChange, onCreated }: Props) => {
       reference_id: referenceId.trim() || null,
       notes: notes.trim() || null,
       source_name: sourceName || null,
-      donor_name: sourceName || "N/A",
+      donor_name: (revenueType === "Fundraising" && fundraisingDescSelect === "Sponsor")
+        ? (sponsorName.trim() || sourceName || "N/A")
+        : (sourceName || "N/A"),
       date_received: format(depositDate!, "yyyy-MM-dd"),
       recognition_period: recognitionPeriod || null,
       supporter_id: supporterId,
