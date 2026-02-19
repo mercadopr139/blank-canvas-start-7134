@@ -54,7 +54,7 @@ const NewRevenueModal = ({ open, onOpenChange, onCreated }: Props) => {
 
   // Re-Grant fields
   const [partnerName, setPartnerName] = useState("");
-  const [grantDate, setGrantDate] = useState<Date | undefined>(undefined);
+  const [grantYear, setGrantYear] = useState("");
 
   // Fundraising fields
   const [eventName, setEventName] = useState("");
@@ -83,7 +83,7 @@ const NewRevenueModal = ({ open, onOpenChange, onCreated }: Props) => {
     setVendorName("");
     setProgramName("");
     setPartnerName("");
-    setGrantDate(undefined);
+    setGrantYear("");
     setEventName("");
     setFundraisingDescSelect("");
     setFundraisingDescOther("");
@@ -205,7 +205,8 @@ const NewRevenueModal = ({ open, onOpenChange, onCreated }: Props) => {
 
     if (revenueType === "Re-Grant") {
       record.partner_name = partnerName.trim() || null;
-      record.grant_date = grantDate ? format(grantDate, "yyyy-MM-dd") : null;
+      record.grant_date = null;
+      record.revenue_description = grantYear || null;
     }
 
     if (revenueType === "Fundraising") {
@@ -344,7 +345,18 @@ const NewRevenueModal = ({ open, onOpenChange, onCreated }: Props) => {
                       <Label className="text-white/70">Partner Name *</Label>
                       <Input value={partnerName} onChange={(e) => setPartnerName(e.target.value)} className="bg-white/5 border-white/20 text-white" />
                     </div>
-                    <DateField label="Grant Date" value={grantDate} onChange={setGrantDate} />
+                    <div className="space-y-1">
+                      <Label className="text-white/70">Grant Year</Label>
+                      <Select value={grantYear} onValueChange={setGrantYear}>
+                        <SelectTrigger className="bg-white/5 border-white/20 text-white">
+                          <SelectValue placeholder="Select grant year" />
+                        </SelectTrigger>
+                        <SelectContent className="bg-white border-gray-200 z-50">
+                          <SelectItem value="2025-26" className="text-black">2025-26</SelectItem>
+                          <SelectItem value="2026-2027" className="text-black">2026-2027</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
                   </>
                 )}
 
