@@ -43,16 +43,32 @@ interface SupporterRow {
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function parseCsv(text: string): CsvRow[] {
-  const lines = text.split(/\r?\n/).filter(Boolean);
+  const lines = text.split(/\r?\n/);
   if (lines.length < 2) return [];
-  // Strip empty header columns (trailing commas from exports like Monday.com)
-  const allHeaders = lines[0].split(",").map((h) => h.trim().replace(/^"|"$/g, ""));
-  return lines.slice(1).map((line) => {
-    const values = line.split(",").map((v) => v.trim().replace(/^"|"$/g, ""));
-    const row: CsvRow = {};
-    allHeaders.forEach((h, i) => { if (h) row[h] = values[i] ?? ""; });
-    return row;
-  });
+
+  // Skip leading blank/empty rows to find the real header row
+  // (Monday.com and some exports prepend blank rows before headers)
+  let headerIdx = -1;
+  for (let i = 0; i < lines.length; i++) {
+    const cols = lines[i].split(",").map((c) => c.trim().replace(/^"|"$/g, ""));
+    if (cols.some((c) => c !== "")) {
+      headerIdx = i;
+      break;
+    }
+  }
+  if (headerIdx === -1) return [];
+
+  const allHeaders = lines[headerIdx].split(",").map((h) => h.trim().replace(/^"|"$/g, ""));
+  const dataLines = lines.slice(headerIdx + 1).filter(Boolean);
+
+  return dataLines
+    .map((line) => {
+      const values = line.split(",").map((v) => v.trim().replace(/^"|"$/g, ""));
+      const row: CsvRow = {};
+      allHeaders.forEach((h, i) => { if (h) row[h] = values[i] ?? ""; });
+      return row;
+    })
+    .filter((row) => Object.values(row).some((v) => v !== "")); // skip fully-blank data rows
 }
 
 /** Normalise to E.164. Assumes US (+1) if no country code. Returns null if empty. */
