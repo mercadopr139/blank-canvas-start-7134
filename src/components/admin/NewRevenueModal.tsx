@@ -68,6 +68,9 @@ const NewRevenueModal = ({ open, onOpenChange, onCreated }: Props) => {
   const [eventName, setEventName] = useState("");
   const [revenueDescription, setRevenueDescription] = useState("");
 
+  // Shared fields
+  const [recognitionPeriod, setRecognitionPeriod] = useState("");
+
   const reset = () => {
     setRevenueType("");
     setAmount("");
@@ -86,6 +89,7 @@ const NewRevenueModal = ({ open, onOpenChange, onCreated }: Props) => {
     setGrantDate(undefined);
     setEventName("");
     setRevenueDescription("");
+    setRecognitionPeriod("");
   };
 
   const getSourceName = () => {
@@ -365,7 +369,12 @@ const NewRevenueModal = ({ open, onOpenChange, onCreated }: Props) => {
                 <DateField label="Date Received" value={dateReceived} onChange={setDateReceived} required />
               )}
 
-              <DateField label="Deposit Date" value={depositDate} onChange={setDepositDate} required />
+              <DateField label="Date of Deposit" value={depositDate} onChange={setDepositDate} required />
+
+              <div className="space-y-1">
+                <Label className="text-white/70">Recognition Period</Label>
+                <Input type="month" value={recognitionPeriod} onChange={(e) => setRecognitionPeriod(e.target.value)} className="bg-white/5 border-white/20 text-white" />
+              </div>
 
               <div className="space-y-1">
                 <Label className="text-white/70">Reference ID</Label>
