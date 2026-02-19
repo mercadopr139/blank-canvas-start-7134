@@ -118,13 +118,17 @@ const AdminSupportersDatabase = () => {
     const reader = new FileReader();
     reader.onload = (ev) => {
       const text = ev.target?.result as string;
+      console.log("[CSV] raw first 300 chars:", JSON.stringify(text.slice(0, 300)));
       const parsed = parseCsv(text);
+      console.log("[CSV] parsed rows:", parsed.length);
+      console.log("[CSV] first row keys:", parsed.length ? Object.keys(parsed[0]) : "no rows");
       if (!parsed.length) return;
+      const headers = Object.keys(parsed[0]);
+      console.log("[CSV] csvHeaders to set:", headers);
       setCsvData(parsed);
-      setCsvHeaders(Object.keys(parsed[0]));
+      setCsvHeaders(headers);
       const autoMap: Record<MappableField, string> = { name: "__skip__", story: "__skip__", email: "__skip__", phone: "__skip__", address: "__skip__" };
       MAPPABLE_FIELDS.forEach((field) => {
-        // auto-map: "notes" column → story field
         const aliases: Record<MappableField, string[]> = {
           name: ["name", "full name", "fullname", "contact name", "contact", "supporter", "donor", "person", "first name", "firstname"],
           story: ["story", "notes", "bio", "description", "note", "comments"],
@@ -132,11 +136,12 @@ const AdminSupportersDatabase = () => {
           phone: ["phone", "phone number", "phonenumber", "tel", "telephone", "mobile", "cell"],
           address: ["address", "addr", "mailing address", "street address"],
         };
-        const match = Object.keys(parsed[0]).find((h) =>
-          aliases[field].includes(h.toLowerCase())
+        const match = headers.find((h) =>
+          aliases[field].includes(h.toLowerCase().trim())
         );
         if (match) autoMap[field] = match;
       });
+      console.log("[CSV] autoMap result:", autoMap);
       setMapping(autoMap);
       setSummary(null);
     };
