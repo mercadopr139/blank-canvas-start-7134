@@ -115,6 +115,51 @@ export type Database = {
         }
         Relationships: []
       }
+      donations: {
+        Row: {
+          amount: number
+          created_at: string
+          date_received: string
+          deposit_batch_id: string | null
+          donor_email: string | null
+          donor_name: string
+          id: string
+          method: Database["public"]["Enums"]["donation_method"]
+          notes: string | null
+          receipt_status: Database["public"]["Enums"]["receipt_status"]
+          reference_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          date_received: string
+          deposit_batch_id?: string | null
+          donor_email?: string | null
+          donor_name: string
+          id?: string
+          method: Database["public"]["Enums"]["donation_method"]
+          notes?: string | null
+          receipt_status?: Database["public"]["Enums"]["receipt_status"]
+          reference_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          date_received?: string
+          deposit_batch_id?: string | null
+          donor_email?: string | null
+          donor_name?: string
+          id?: string
+          method?: Database["public"]["Enums"]["donation_method"]
+          notes?: string | null
+          receipt_status?: Database["public"]["Enums"]["receipt_status"]
+          reference_id?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       invoices: {
         Row: {
           client_id: string
@@ -457,6 +502,7 @@ export type Database = {
         | "White"
         | "Two or More Races"
       child_sex: "Male" | "Female"
+      donation_method: "Check" | "PayPal" | "Cash" | "Other"
       household_income:
         | "Under $25,000"
         | "$25,000 - $49,999"
@@ -473,6 +519,7 @@ export type Database = {
         | "flat_monthly"
         | "sponsorship"
         | "other_service"
+      receipt_status: "Pending" | "Sent" | "Not Needed"
       school_district:
         | "Cape May City"
         | "Lower Cape May Regional"
@@ -629,6 +676,7 @@ export const Constants = {
         "Two or More Races",
       ],
       child_sex: ["Male", "Female"],
+      donation_method: ["Check", "PayPal", "Cash", "Other"],
       household_income: [
         "Under $25,000",
         "$25,000 - $49,999",
@@ -647,6 +695,7 @@ export const Constants = {
         "sponsorship",
         "other_service",
       ],
+      receipt_status: ["Pending", "Sent", "Not Needed"],
       school_district: [
         "Cape May City",
         "Lower Cape May Regional",
