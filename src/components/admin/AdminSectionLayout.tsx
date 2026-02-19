@@ -134,8 +134,8 @@ const AdminSectionLayout = ({
   const allCards = [...cards, ...customCards];
 
   const isActive = (href: string) => {
-    if (href === `/${section}`) return location.pathname === href;
-    return location.pathname.startsWith(href);
+    if (href === `/admin/${section}`) return location.pathname === href;
+    return location.pathname === href || location.pathname.startsWith(href + "/");
   };
 
   const handleCardClick = (card: SectionCard) => {
