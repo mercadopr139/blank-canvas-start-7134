@@ -216,8 +216,13 @@ const NewRevenueModal = ({ open, onOpenChange, onCreated }: Props) => {
     </div>
   );
 
+  const handleOpenChange = (isOpen: boolean) => {
+    if (!isOpen) reset();
+    onOpenChange(isOpen);
+  };
+
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent className="bg-black border-white/20 text-white max-w-lg max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="text-white">New Revenue</DialogTitle>
