@@ -264,8 +264,6 @@ async function generateReceiptPdf(
   page.drawText(`Website: ${ORG_WEBSITE}`, { x: MARGIN_L, y, font, size: 8, color: gray });
 
   return await pdf.save();
-
-  return await pdf.save();
 }
 
 // ── Edge function handler ───────────────────────────────────────────────────
@@ -376,8 +374,13 @@ Deno.serve(async (req) => {
       year: "numeric",
     });
 
-    // Use the donor_name from the donation records (the name entered in the revenue form)
-    const receiptName = qualifying[0]?.donor_name?.trim() || supporter.name?.trim() || "Supporter";
+    // Use the donor_name from the donation records (the name entered in the revenue form).
+    // For Sponsor entries, donor_name holds the Sponsor Name; for Donations, it holds Donor Name.
+    // Pick the first non-empty donor_name across all qualifying records, falling back to supporter name.
+    const receiptName =
+      qualifying.map((d: any) => d.donor_name?.trim()).find((n: string) => n && n !== "N/A") ||
+      supporter.name?.trim() ||
+      "Supporter";
 
     // Generate PDF
     const pdfBytes = await generateReceiptPdf(receiptName, qualifying, total, dateIssued);
