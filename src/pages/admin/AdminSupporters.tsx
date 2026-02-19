@@ -57,7 +57,11 @@ const AdminSupporters = () => {
       }
     });
 
-    setRows(supporters.map((s: any) => ({ ...s, total_2026: totals[s.id] || 0 })));
+    setRows(
+      supporters
+        .map((s: any) => ({ ...s, total_2026: totals[s.id] || 0 }))
+        .filter((s) => s.total_2026 > 0)  // Only show supporters with qualifying donations
+    );
     setLoading(false);
   }, []);
 
