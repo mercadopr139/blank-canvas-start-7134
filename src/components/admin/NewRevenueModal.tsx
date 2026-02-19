@@ -10,7 +10,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -209,7 +209,17 @@ const NewRevenueModal = ({ open, onOpenChange, onCreated }: Props) => {
             selected={value}
             onSelect={onChange}
             initialFocus
-            className={cn("p-3 pointer-events-auto")}
+            className={cn("p-3 pointer-events-auto text-white")}
+            classNames={{
+              caption_label: "text-sm font-medium text-white",
+              nav_button: cn(buttonVariants({ variant: "outline" }), "h-7 w-7 bg-transparent p-0 opacity-50 hover:opacity-100 border-white/20 text-white"),
+              head_cell: "text-white/50 rounded-md w-9 font-normal text-[0.8rem]",
+              day: cn(buttonVariants({ variant: "ghost" }), "h-9 w-9 p-0 font-normal aria-selected:opacity-100 text-white hover:bg-white/10 hover:text-white"),
+              day_selected: "bg-white text-black hover:bg-white hover:text-black focus:bg-white focus:text-black",
+              day_today: "bg-white/20 text-white",
+              day_outside: "day-outside text-white/30 opacity-50 aria-selected:bg-white/10 aria-selected:text-white/50 aria-selected:opacity-30",
+              day_disabled: "text-white/30 opacity-50",
+            }}
           />
         </PopoverContent>
       </Popover>
