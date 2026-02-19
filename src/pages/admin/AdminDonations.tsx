@@ -37,8 +37,7 @@ const columns = [
 
 const AdminDonations = () => {
   const navigate = useNavigate();
-  const goBack = () =>
-    window.history.state?.idx > 0 ? navigate(-1) : navigate("/admin/dashboard");
+  const goBack = () => navigate("/admin/dashboard");
 
   const [donations, setDonations] = useState<Donation[]>([]);
   const [loading, setLoading] = useState(true);
