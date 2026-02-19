@@ -313,16 +313,16 @@ const AdminSupportersDatabase = () => {
   // ─── Render ───────────────────────────────────────────────────────────────
 
   return (
-    <div className="bg-black text-white overflow-x-hidden">
+    <div className="bg-black text-white flex flex-col" style={{ height: 'calc(100vh - 73px)' }}>
       {/* Page header */}
-      <div className="border-b border-white/10 px-4 py-3">
+      <div className="border-b border-white/10 px-4 py-3 flex-shrink-0">
         <h2 className="text-base font-semibold text-green-400">Supporters Database</h2>
         <p className="text-xs text-white/50">Import and manage supporter records</p>
       </div>
 
-      <div className="container mx-auto px-4 py-8">
+      <div className="flex flex-col flex-1 min-h-0 px-4 py-4">
         {/* Toolbar */}
-        <div className="flex items-center justify-between mb-6">
+        <div className="flex items-center justify-between mb-4 flex-shrink-0">
           <p className="text-sm text-white/50">
             Import supporters from a CSV export (e.g. Monday.com).
           </p>
@@ -338,7 +338,7 @@ const AdminSupportersDatabase = () => {
 
         {/* Bulk action bar */}
         {selected.size > 0 && (
-          <div className="flex items-center gap-3 mb-3 px-3 py-2 rounded-md bg-red-950/40 border border-red-600/30">
+          <div className="flex items-center gap-3 mb-3 px-3 py-2 rounded-md bg-red-950/40 border border-red-600/30 flex-shrink-0">
             <span className="text-sm text-white/70">
               <span className="font-semibold text-white">{selected.size}</span> row{selected.size !== 1 ? "s" : ""} selected
             </span>
@@ -361,8 +361,8 @@ const AdminSupportersDatabase = () => {
           </div>
         )}
 
-        {/* Supporters table */}
-        <div className="rounded-lg border border-white/10 overflow-x-scroll w-full" style={{ WebkitOverflowScrolling: 'touch' }}>
+        {/* Supporters table — fills remaining height, scrolls both axes */}
+        <div className="flex-1 min-h-0 rounded-lg border border-white/10 overflow-auto">
           <div style={{ minWidth: 960 }}>
           <Table>
             <TableHeader>
@@ -449,7 +449,6 @@ const AdminSupportersDatabase = () => {
           </div>
         </div>
       </div>
-
       {/* ── Edit Modal ────────────────────────────────────────────────────────── */}
       <Dialog open={!!editRow} onOpenChange={(o) => { if (!o) setEditRow(null); }}>
         <DialogContent className="bg-zinc-900 border-white/10 text-white sm:max-w-md flex flex-col max-h-[85vh] p-0 gap-0">

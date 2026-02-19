@@ -283,15 +283,8 @@ const AdminSectionLayout = ({
           </div>
         )}
 
-        {/* Main content */}
-        <main className="flex-1 overflow-y-auto overflow-x-auto">
-          {isOnSubPage ? (
-            // Sub-page: render Outlet (strips the full-page wrapper from sub-pages)
-            <Outlet />
-          ) : (
-            // Section home: render Outlet (which is the index route = tile grid)
-            <Outlet />
-          )}
+        <main className="flex-1 overflow-y-auto overflow-x-hidden flex flex-col">
+          <Outlet />
         </main>
       </div>
 
