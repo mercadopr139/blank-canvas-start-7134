@@ -12,10 +12,17 @@ interface ReceiptRequest {
   personal_message?: string;
 }
 
-const ORG_NAME = "No Limits Academy";
-const ORG_ADDRESS = "3614 Pacific Ave, Wildwood, NJ 08260";
-const ORG_PHONE = "(609) 408-8108";
-const ORG_EIN = "85-2891498";
+const ORG_NAME = "No Limits Academy Inc.";
+const ORG_GYM_ADDRESS_1 = "Gym Location:";
+const ORG_GYM_ADDRESS_2 = "1086 Route 47 South";
+const ORG_GYM_ADDRESS_3 = "Rio Grande, NJ 08242";
+const ORG_MAIL_ADDRESS_1 = "Mailing Address:";
+const ORG_MAIL_ADDRESS_2 = "301 North Vineyard Court";
+const ORG_MAIL_ADDRESS_3 = "Cape May, NJ 08204";
+const ORG_PHONE = "609-780-2761";
+const ORG_EMAIL = "info@nolimitsboxingacademy.org";
+const ORG_WEBSITE = "www.nolimitsboxingacademy.org";
+const ORG_EIN = "84-3998071";
 const SENDER_EMAIL = "alexandravalerio@nolimitsboxingacademy.org";
 
 function formatCurrency(amount: number): string {
@@ -72,23 +79,31 @@ async function generateReceiptPdf(
 
   // ── Helper: draw the header block (reused on continuation pages) ──
   const drawHeader = (page: ReturnType<typeof pdf.addPage>): number => {
-    let y = PAGE_H - 60;
+    let y = PAGE_H - 50;
 
-    drawCentred(page, ORG_NAME, y, fontBold, 18);
+    // Org name
+    drawCentred(page, ORG_NAME, y, fontBold, 16);
+    y -= 18;
+
+    // Gym location
+    drawCentred(page, ORG_GYM_ADDRESS_1, y, fontBold, 9, gray);
+    y -= 12;
+    drawCentred(page, ORG_GYM_ADDRESS_2, y, font, 9, gray);
+    y -= 12;
+    drawCentred(page, ORG_GYM_ADDRESS_3, y, font, 9, gray);
     y -= 16;
-    drawCentred(page, ORG_ADDRESS, y, font, 10, gray);
-    y -= 13;
-    drawCentred(page, ORG_PHONE, y, font, 10, gray);
-    y -= 13;
-    drawCentred(page, `EIN: ${ORG_EIN}`, y, font, 10, gray);
+
+    // Mailing address
+    drawCentred(page, ORG_MAIL_ADDRESS_1, y, fontBold, 9, gray);
+    y -= 12;
+    drawCentred(page, ORG_MAIL_ADDRESS_2, y, font, 9, gray);
+    y -= 12;
+    drawCentred(page, ORG_MAIL_ADDRESS_3, y, font, 9, gray);
     y -= 20;
 
     // Horizontal rule
     page.drawLine({ start: { x: MARGIN_L, y }, end: { x: PAGE_W - MARGIN_R, y }, thickness: 1.5, color: black });
     y -= 24;
-
-    drawCentred(page, "2026 Annual Donation Receipt", y, fontBold, 15);
-    y -= 28;
 
     return y;
   };
@@ -101,7 +116,6 @@ async function generateReceiptPdf(
   const ROW_H = 18;
 
   const drawTableHeader = (page: ReturnType<typeof pdf.addPage>, y: number): number => {
-    // Header background
     page.drawRectangle({ x: MARGIN_L, y: y - 3, width: CONTENT_W, height: ROW_H, color: headerBg });
     const headerY = y;
     page.drawText("Date", { x: COL_DATE_X + 4, y: headerY, font: fontBold, size: 9, color: black });
@@ -111,43 +125,64 @@ async function generateReceiptPdf(
     return y - ROW_H - 2;
   };
 
+  // Helper: word-wrap text and draw
+  const drawWrappedText = (
+    page: ReturnType<typeof pdf.addPage>,
+    text: string,
+    x: number,
+    startY: number,
+    f: typeof font,
+    size: number,
+    color = black,
+    maxW = CONTENT_W
+  ): number => {
+    let y = startY;
+    const words = text.split(" ");
+    let line = "";
+    for (const word of words) {
+      const test = line ? `${line} ${word}` : word;
+      if (f.widthOfTextAtSize(test, size) > maxW) {
+        page.drawText(line, { x, y, font: f, size, color });
+        y -= size + 4;
+        line = word;
+      } else {
+        line = test;
+      }
+    }
+    if (line) {
+      page.drawText(line, { x, y, font: f, size, color });
+      y -= size + 4;
+    }
+    return y;
+  };
+
   // ── Build pages ──
   let page = pdf.addPage([PAGE_W, PAGE_H]);
   let y = drawHeader(page);
 
-  // Date issued & donor name
+  // Date issued
   page.drawText(`Date Issued: ${dateIssued}`, { x: MARGIN_L, y, font: font, size: 10, color: black });
-  y -= 16;
-  page.drawText(`Donor Name: ${donorName}`, { x: MARGIN_L, y, font: font, size: 10, color: black });
-  y -= 24;
+  y -= 20;
 
   // Dear line
   page.drawText(`Dear ${donorName},`, { x: MARGIN_L, y, font: font, size: 10, color: black });
   y -= 16;
 
-  const thankYouText = `Thank you for your generous support of ${ORG_NAME} during the 2026 calendar year. Below is a summary of your contributions for your tax records.`;
-  // Wrap thank-you text
-  const maxLineW = CONTENT_W;
-  const words = thankYouText.split(" ");
-  let line = "";
-  for (const word of words) {
-    const test = line ? `${line} ${word}` : word;
-    if (font.widthOfTextAtSize(test, 10) > maxLineW) {
-      page.drawText(line, { x: MARGIN_L, y, font, size: 10, color: black });
-      y -= 14;
-      line = word;
-    } else {
-      line = test;
-    }
-  }
-  if (line) {
-    page.drawText(line, { x: MARGIN_L, y, font, size: 10, color: black });
-    y -= 14;
-  }
+  // Thank you paragraph
+  const thankYouText = `Thank you for your generous support of ${ORG_NAME} Your contribution helps us use the discipline of boxing to promote personal, professional, and spiritual development within our community.`;
+  y = drawWrappedText(page, thankYouText, MARGIN_L, y, font, 10, black);
+  y -= 6;
+
+  const missionText = `${ORG_NAME} is a registered 501(c)(3) nonprofit organization, and we believe that the future of our community depends on investing in and empowering our youth through structured programs, accountability, and guidance.`;
+  y = drawWrappedText(page, missionText, MARGIN_L, y, font, 10, black);
+  y -= 6;
+
+  const totalIntroText = `Your total tax-deductible contributions for the 2026 calendar year total: ${formatCurrency(total)}. A detailed summary of your 2026 donations is provided below for your records:`;
+  y = drawWrappedText(page, totalIntroText, MARGIN_L, y, font, 10, black);
   y -= 10;
 
   // Donation Summary heading
-  page.drawText("Donation Summary", { x: MARGIN_L, y, font: fontBold, size: 12, color: black });
+  page.drawText("2026 Donation Summary", { x: MARGIN_L, y, font: fontBold, size: 12, color: black });
   y -= 20;
 
   // Table header
@@ -155,62 +190,80 @@ async function generateReceiptPdf(
 
   // Rows
   for (const d of donations) {
-    if (y < 100) {
-      // New page
+    if (y < 120) {
       page = pdf.addPage([PAGE_W, PAGE_H]);
       y = drawHeader(page);
-      page.drawText("Donation Summary (continued)", { x: MARGIN_L, y, font: fontBold, size: 12, color: black });
+      page.drawText("2026 Donation Summary (continued)", { x: MARGIN_L, y, font: fontBold, size: 12, color: black });
       y -= 20;
       y = drawTableHeader(page, y);
     }
 
     page.drawText(formatDate(d.deposit_date), { x: COL_DATE_X + 4, y, font, size: 9, color: black });
     page.drawText(d.reference_id || "—", { x: COL_REF_X + 4, y, font, size: 9, color: black });
-
-    const amtStr = formatCurrency(d.amount);
-    page.drawText(amtStr, { x: COL_AMT_X + 4, y, font, size: 9, color: black });
-
+    page.drawText(formatCurrency(d.amount), { x: COL_AMT_X + 4, y, font, size: 9, color: black });
     const noteStr = (d.notes || "").substring(0, 30);
     page.drawText(noteStr, { x: COL_NOTES_X + 4, y, font, size: 9, color: black });
 
-    // Row border
     page.drawLine({ start: { x: MARGIN_L, y: y - 4 }, end: { x: PAGE_W - MARGIN_R, y: y - 4 }, thickness: 0.5, color: lineGray });
     y -= ROW_H;
   }
 
   // Total row
-  if (y < 100) {
+  if (y < 120) {
     page = pdf.addPage([PAGE_W, PAGE_H]);
     y = drawHeader(page);
   }
   page.drawRectangle({ x: MARGIN_L, y: y - 3, width: CONTENT_W, height: ROW_H, color: headerBg });
   page.drawText("TOTAL", { x: COL_DATE_X + 4, y, font: fontBold, size: 9, color: black });
   page.drawText(formatCurrency(total), { x: COL_AMT_X + 4, y, font: fontBold, size: 9, color: black });
-  y -= ROW_H + 16;
+  y -= ROW_H + 20;
 
-  // Disclaimer
+  // Closing
+  page.drawText("Sincerely,", { x: MARGIN_L, y, font, size: 10, color: black });
+  y -= 14;
+  page.drawText(ORG_NAME, { x: MARGIN_L, y, font: fontBold, size: 10, color: black });
+  y -= 24;
+
+  // Disclaimer paragraph
   const disclaimerLines = [
-    "No goods or services were provided in exchange for these contributions unless otherwise noted above.",
-    `${ORG_NAME} is a 501(c)(3) tax-exempt organization. Our EIN is ${ORG_EIN}.`,
-    "Please retain this receipt for your tax records.",
+    `Please retain this donation acknowledgment for your records. This receipt may be used for tax and accounting purposes. If you have any questions regarding your 2026 contributions, please contact ${ORG_NAME} at ${ORG_PHONE} or ${ORG_EMAIL}.`,
   ];
   for (const dl of disclaimerLines) {
-    if (y < 60) {
+    y = drawWrappedText(page, dl, MARGIN_L, y, font, 8, gray);
+    y -= 4;
+  }
+  y -= 4;
+
+  const legalLines = [
+    "No goods or services were provided in exchange for this contribution.",
+    `${ORG_NAME} is a 501(c)(3) nonprofit organization.`,
+    `EIN: ${ORG_EIN}`,
+    "Contributions are tax-deductible to the fullest extent allowed by law.",
+  ];
+  for (const ll of legalLines) {
+    if (y < 40) {
       page = pdf.addPage([PAGE_W, PAGE_H]);
       y = PAGE_H - 60;
     }
-    page.drawText(dl, { x: MARGIN_L, y, font, size: 8, color: gray });
+    page.drawText(ll, { x: MARGIN_L, y, font, size: 8, color: gray });
     y -= 12;
   }
 
-  y -= 12;
+  // Footer contact info
+  y -= 8;
   if (y < 60) {
     page = pdf.addPage([PAGE_W, PAGE_H]);
     y = PAGE_H - 60;
   }
-  page.drawText("With gratitude,", { x: MARGIN_L, y, font, size: 10, color: black });
-  y -= 14;
-  page.drawText(ORG_NAME, { x: MARGIN_L, y, font, size: 10, color: black });
+  page.drawText(ORG_NAME, { x: MARGIN_L, y, font: fontBold, size: 8, color: gray });
+  y -= 12;
+  page.drawText(`Phone: ${ORG_PHONE}`, { x: MARGIN_L, y, font, size: 8, color: gray });
+  y -= 12;
+  page.drawText(`Email: ${ORG_EMAIL}`, { x: MARGIN_L, y, font, size: 8, color: gray });
+  y -= 12;
+  page.drawText(`Website: ${ORG_WEBSITE}`, { x: MARGIN_L, y, font, size: 8, color: gray });
+
+  return await pdf.save();
 
   return await pdf.save();
 }
