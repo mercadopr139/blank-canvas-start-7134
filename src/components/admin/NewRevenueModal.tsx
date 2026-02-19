@@ -66,7 +66,6 @@ const NewRevenueModal = ({ open, onOpenChange, onCreated }: Props) => {
   // Fee for Service fields
   const [vendorName, setVendorName] = useState("");
   const [programName, setProgramName] = useState("");
-  const [serviceMonth, setServiceMonth] = useState("");
 
   // Re-Grant fields
   const [partnerName, setPartnerName] = useState("");
@@ -93,7 +92,6 @@ const NewRevenueModal = ({ open, onOpenChange, onCreated }: Props) => {
     setReceiptStatus("Pending");
     setVendorName("");
     setProgramName("");
-    setServiceMonth("");
     setPartnerName("");
     setGrantDate(undefined);
     setEventName("");
@@ -121,7 +119,7 @@ const NewRevenueModal = ({ open, onOpenChange, onCreated }: Props) => {
       case "Donation":
         return !!donorName.trim() && !!method;
       case "Fee for Service":
-        return !!vendorName.trim() && !!method && !!serviceMonth;
+        return !!vendorName.trim() && !!method;
       case "Re-Grant":
         return !!partnerName.trim();
       case "Fundraising":
@@ -154,7 +152,6 @@ const NewRevenueModal = ({ open, onOpenChange, onCreated }: Props) => {
       donor_name: sourceName || "N/A",
       date_received: format(depositDate!, "yyyy-MM-dd"),
       recognition_period: recognitionPeriod || null,
-      service_month: revenueType === "Fee for Service" ? serviceMonth || null : null,
     };
 
     if (revenueType === "Donation") {
@@ -298,20 +295,6 @@ const NewRevenueModal = ({ open, onOpenChange, onCreated }: Props) => {
                   <div className="space-y-1">
                     <Label className="text-white/70">Program Name</Label>
                     <Input value={programName} onChange={(e) => setProgramName(e.target.value)} className="bg-white/5 border-white/20 text-white" />
-                  </div>
-                  <div className="space-y-1">
-                    <Label className="text-white/70">Service Month *</Label>
-                    <Select value={serviceMonth} onValueChange={setServiceMonth}>
-                      <SelectTrigger className="bg-white/5 border-white/20 text-white">
-                        <SelectValue placeholder="Select month" />
-                      </SelectTrigger>
-                      <SelectContent className="bg-white border-gray-200 z-50">
-                        {["January","February","March","April","May","June","July","August","September","October","November","December"].map((m) => (
-                          <SelectItem key={m} value={m} className="text-black">{m}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <p className="text-xs text-white/40">Month the service was provided (not the deposit month).</p>
                   </div>
                 </>
               )}
