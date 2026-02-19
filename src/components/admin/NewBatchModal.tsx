@@ -121,9 +121,9 @@ const NewBatchModal = ({ open, onOpenChange, onCreated }: Props) => {
               <SelectTrigger className="bg-white/5 border-white/20 text-white">
                 <SelectValue />
               </SelectTrigger>
-              <SelectContent className="bg-black border-white/20">
+              <SelectContent className="bg-white border-gray-200 z-50">
                 {BANK_ACCOUNTS.map((a) => (
-                  <SelectItem key={a} value={a} className="text-white">{a}</SelectItem>
+                  <SelectItem key={a} value={a} className="text-black">{a}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
