@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { format } from "date-fns";
-import { cn } from "@/lib/utils";
+import { cn, formatUSD } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
@@ -200,7 +200,7 @@ const AdminDepositDetail = () => {
               </div>
               <div>
                 <p className="text-white/50">Total Amount</p>
-                <p className="font-medium">${totalAmount.toFixed(2)}</p>
+                <p className="font-medium">{formatUSD(totalAmount)}</p>
               </div>
               <div>
                 <p className="text-white/50">Donations</p>
@@ -254,7 +254,7 @@ const AdminDepositDetail = () => {
                     <TableRow key={d.id} className="border-white/10 hover:bg-white/5">
                       <TableCell className="text-white">{format(new Date(d.date_received + "T00:00:00"), "MM/dd/yyyy")}</TableCell>
                       <TableCell className="text-white">{d.donor_name}</TableCell>
-                      <TableCell className="text-white">${Number(d.amount).toFixed(2)}</TableCell>
+                      <TableCell className="text-white">{formatUSD(d.amount)}</TableCell>
                       <TableCell className="text-white">{d.method}</TableCell>
                       <TableCell className="text-white/70">{d.reference_id ?? "—"}</TableCell>
                     </TableRow>
@@ -288,7 +288,7 @@ const AdminDepositDetail = () => {
                   <div className="flex-1 text-sm">
                     <span className="font-medium">{d.donor_name}</span>
                     <span className="text-white/50 ml-2">
-                      ${Number(d.amount).toFixed(2)} · {d.method} · {format(new Date(d.date_received + "T00:00:00"), "MM/dd/yyyy")}
+                      {formatUSD(d.amount)} · {d.method} · {format(new Date(d.date_received + "T00:00:00"), "MM/dd/yyyy")}
                     </span>
                   </div>
                 </label>
