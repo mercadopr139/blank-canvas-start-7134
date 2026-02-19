@@ -5,7 +5,7 @@ import { Label } from "@/components/ui/label";
 
 import { Upload } from "lucide-react";
 import {
-  Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
+  Dialog, DialogContent, DialogHeader, DialogTitle,
 } from "@/components/ui/dialog";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
@@ -126,11 +126,11 @@ const AdminSupportersDatabase = () => {
       MAPPABLE_FIELDS.forEach((field) => {
         // auto-map: "notes" column → story field
         const aliases: Record<MappableField, string[]> = {
-          name: ["name"],
-          story: ["story", "notes", "bio", "description"],
-          email: ["email", "e-mail"],
-          phone: ["phone", "phone number", "tel"],
-          address: ["address", "addr"],
+          name: ["name", "full name", "fullname", "contact name", "contact", "supporter", "donor", "person", "first name", "firstname"],
+          story: ["story", "notes", "bio", "description", "note", "comments"],
+          email: ["email", "e-mail", "email address", "emailaddress"],
+          phone: ["phone", "phone number", "phonenumber", "tel", "telephone", "mobile", "cell"],
+          address: ["address", "addr", "mailing address", "street address"],
         };
         const match = Object.keys(parsed[0]).find((h) =>
           aliases[field].includes(h.toLowerCase())
@@ -144,7 +144,7 @@ const AdminSupportersDatabase = () => {
   };
 
   const handleImport = async () => {
-    if (!csvData.length || !mapping.name) return;
+    if (!csvData.length || mapping.name === "__skip__") return;
     setImporting(true);
     let created = 0;
     let updated = 0;
@@ -278,12 +278,15 @@ const AdminSupportersDatabase = () => {
 
       {/* ── Import Modal ──────────────────────────────────────────────────────── */}
       <Dialog open={importOpen} onOpenChange={(o) => { if (!o) resetImport(); setImportOpen(o); }}>
-        <DialogContent className="bg-zinc-900 border-white/10 text-white sm:max-w-lg">
-          <DialogHeader>
-            <DialogTitle className="text-white">Import Supporters CSV</DialogTitle>
-          </DialogHeader>
+        <DialogContent className="bg-zinc-900 border-white/10 text-white sm:max-w-lg flex flex-col max-h-[85vh] p-0 gap-0">
+          <div className="px-6 pt-6 pb-2 shrink-0">
+            <DialogHeader>
+              <DialogTitle className="text-white">Import Supporters CSV</DialogTitle>
+            </DialogHeader>
+          </div>
 
-          <div className="space-y-5 py-1">
+          {/* Scrollable body */}
+          <div className="overflow-y-auto flex-1 px-6 pb-2 space-y-5">
             {/* Supporter Type dropdown */}
             <div className="space-y-1.5">
               <Label className="text-white/70">Supporter Type <span className="text-red-400">*</span></Label>
@@ -317,7 +320,10 @@ const AdminSupportersDatabase = () => {
                 <p className="text-sm font-medium text-white/80">Column Mapping</p>
                 {MAPPABLE_FIELDS.map((field) => (
                   <div key={field} className="flex items-center gap-3">
-                    <span className="w-20 text-sm text-white/60">{FIELD_LABELS[field]}</span>
+                    <span className="w-20 text-sm text-white/60 shrink-0">
+                      {FIELD_LABELS[field]}
+                      {field === "name" && <span className="text-red-400 ml-0.5">*</span>}
+                    </span>
                     <Select
                       value={mapping[field]}
                       onValueChange={(v) => setMapping((prev) => ({ ...prev, [field]: v }))}
@@ -339,7 +345,7 @@ const AdminSupportersDatabase = () => {
                 </p>
                 {mapping.name === "__skip__" && (
                   <p className="text-xs text-amber-400">
-                    ⚠ You must map a column to <strong>Name</strong> before importing.
+                    ⚠ Map a column to <strong>Name*</strong> to enable import.
                   </p>
                 )}
               </div>
@@ -360,7 +366,8 @@ const AdminSupportersDatabase = () => {
             )}
           </div>
 
-          <DialogFooter>
+          {/* Sticky footer */}
+          <div className="px-6 py-4 border-t border-white/10 shrink-0 flex justify-end gap-2">
             <Button
               variant="ghost"
               onClick={() => { resetImport(); setImportOpen(false); }}
@@ -377,7 +384,7 @@ const AdminSupportersDatabase = () => {
                 {importing ? "Importing…" : `Import ${csvData.length || ""} Rows`}
               </Button>
             )}
-          </DialogFooter>
+          </div>
         </DialogContent>
       </Dialog>
     </div>
