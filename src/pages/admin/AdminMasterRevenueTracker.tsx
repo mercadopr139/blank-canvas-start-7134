@@ -222,7 +222,7 @@ const AdminMasterRevenueTracker = () => {
             <TableHeader>
               <TableRow className="border-white/10 hover:bg-transparent">
                 <TableHead className="text-white/70">Month</TableHead>
-                <TableHead className="text-white/70 text-right">Total Revenue</TableHead>
+                <TableHead className="text-green-400 text-right font-semibold bg-green-500/10">Total Revenue</TableHead>
                 <TableHead className="text-white/70 text-right">Donations</TableHead>
                 <TableHead className="text-white/70 text-right">Fundraising</TableHead>
                 <TableHead className="text-white/70 text-right">Fee for Service</TableHead>
@@ -238,10 +238,10 @@ const AdminMasterRevenueTracker = () => {
                   </TableCell>
                 </TableRow>
               ) : (
-                monthlyData.map((row) => (
-                  <TableRow key={row.month} className="border-white/10 hover:bg-white/5">
+                monthlyData.map((row, i) => (
+                  <TableRow key={row.month} className={`border-white/10 hover:bg-white/5 ${i % 2 === 0 ? "bg-white/[0.02]" : "bg-white/[0.06]"}`}>
                     <TableCell className="text-white font-medium">{row.month}</TableCell>
-                    <TableCell className="text-white text-right">{formatUSD(row.total)}</TableCell>
+                    <TableCell className="text-green-400 text-right font-bold bg-green-500/10">{formatUSD(row.total)}</TableCell>
                     <TableCell className="text-white/70 text-right">{formatUSD(row.donation)}</TableCell>
                     <TableCell className="text-white/70 text-right">{formatUSD(row.fundraising)}</TableCell>
                     <TableCell className="text-white/70 text-right">{formatUSD(row.feeForService)}</TableCell>
