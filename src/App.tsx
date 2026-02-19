@@ -29,6 +29,7 @@ import AdminInvoices from "./pages/admin/AdminInvoices";
  import AdminRegistrationAnalytics from "./pages/admin/AdminRegistrationAnalytics";
 import Register from "./pages/Register";
 import Supporters from "./pages/Supporters";
+import AdminDonations from "./pages/admin/AdminDonations";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -135,6 +136,14 @@ const App = () => (
                element={
                  <ProtectedRoute requireAdmin>
                    <AdminBilling />
+                 </ProtectedRoute>
+               }
+             />
+             <Route
+               path="/admin/finance/donations"
+               element={
+                 <ProtectedRoute requireAdmin>
+                   <AdminDonations />
                  </ProtectedRoute>
                }
              />
