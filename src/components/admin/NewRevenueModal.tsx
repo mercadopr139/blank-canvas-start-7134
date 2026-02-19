@@ -47,7 +47,6 @@ const NewRevenueModal = ({ open, onOpenChange, onCreated }: Props) => {
   // Donation fields
   const [donorName, setDonorName] = useState("");
   const [donorEmail, setDonorEmail] = useState("");
-  const [receiptStatus, setReceiptStatus] = useState("Pending");
 
   // Fee for Service fields
   const [vendorName, setVendorName] = useState("");
@@ -78,7 +77,7 @@ const NewRevenueModal = ({ open, onOpenChange, onCreated }: Props) => {
     setNotes("");
     setDonorName("");
     setDonorEmail("");
-    setReceiptStatus("Pending");
+    setDonorEmail("");
     setVendorName("");
     setProgramName("");
     setPartnerName("");
@@ -188,7 +187,7 @@ const NewRevenueModal = ({ open, onOpenChange, onCreated }: Props) => {
 
     if (revenueType === "Donation") {
       record.source_email = donorEmail.trim() || null;
-      record.receipt_status = receiptStatus as any;
+      record.receipt_status = "Not Needed" as any;
     } else {
       record.receipt_status = "Not Needed" as any;
     }

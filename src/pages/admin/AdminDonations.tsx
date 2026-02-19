@@ -38,6 +38,8 @@ interface Revenue {
   date_received: string;
   reference_id: string | null;
   receipt_status: string;
+  supporter_id: string | null;
+  supporter_receipt_status: string | null;
 }
 
 const columns = [
@@ -65,9 +67,14 @@ const AdminDonations = () => {
     setLoading(true);
     const { data } = await supabase
       .from("donations")
-      .select("id, revenue_type, source_name, donor_name, amount, method, deposit_date, date_received, reference_id, receipt_status")
+      .select("id, revenue_type, source_name, donor_name, amount, method, deposit_date, date_received, reference_id, receipt_status, supporter_id, supporters(receipt_2026_status)")
       .order("created_at", { ascending: false });
-    setRows((data as Revenue[]) ?? []);
+
+    const mapped = (data || []).map((d: any) => ({
+      ...d,
+      supporter_receipt_status: d.supporters?.receipt_2026_status || null,
+    }));
+    setRows(mapped as Revenue[]);
     setLoading(false);
   }, []);
 
@@ -95,8 +102,11 @@ const AdminDonations = () => {
 
   const displaySource = (r: Revenue) => r.source_name || r.donor_name || "—";
 
-  const displayReceipt = (r: Revenue) =>
-    r.revenue_type === "Donation" ? r.receipt_status : "—";
+  const displayReceipt = (r: Revenue) => {
+    if (r.revenue_type !== "Donation" && !(r.revenue_type === "Fundraising")) return "—";
+    if (!r.supporter_id) return "—";
+    return r.supporter_receipt_status || "Not Sent";
+  };
 
   return (
     <div className="min-h-screen bg-black text-white">
