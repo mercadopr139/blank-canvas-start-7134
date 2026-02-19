@@ -1,7 +1,7 @@
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { ArrowLeft, HandCoins, Landmark } from "lucide-react";
+import { ArrowLeft, HandCoins } from "lucide-react";
 
 const AdminSalesMarketing = () => {
   const navigate = useNavigate();
@@ -14,12 +14,6 @@ const AdminSalesMarketing = () => {
       description: "Track all incoming revenue",
       icon: HandCoins,
       href: "/admin/finance/donations",
-    },
-    {
-      title: "Deposit Batches",
-      description: "Group donations into bank deposits",
-      icon: Landmark,
-      href: "/admin/finance/deposits",
     },
   ];
 
