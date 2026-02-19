@@ -165,7 +165,7 @@ async function generateReceiptPdf(
   y -= 20;
 
   // Dear line
-  page.drawText(`Dear ${donorName},`, { x: MARGIN_L, y, font: font, size: 10, color: black });
+  page.drawText(`Dear ${(donorName?.trim() || "Supporter")},`, { x: MARGIN_L, y, font: font, size: 10, color: black });
   y -= 16;
 
   // Thank you paragraph
