@@ -36,7 +36,7 @@ const columns = [
 
 const AdminDeposits = () => {
   const navigate = useNavigate();
-  const goBack = () => navigate("/admin/dashboard");
+  const goBack = () => navigate("/admin/finance");
 
   const [batches, setBatches] = useState<Batch[]>([]);
   const [loading, setLoading] = useState(true);

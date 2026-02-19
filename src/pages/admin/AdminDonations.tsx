@@ -38,7 +38,7 @@ const columns = [
 
 const AdminDonations = () => {
   const navigate = useNavigate();
-  const goBack = () => navigate("/admin/dashboard");
+  const goBack = () => navigate("/admin/finance");
 
   const [donations, setDonations] = useState<Donation[]>([]);
   const [loading, setLoading] = useState(true);
