@@ -1,4 +1,7 @@
+import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
+import { format } from "date-fns";
+import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, Plus } from "lucide-react";
 import {
@@ -9,6 +12,18 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import NewDonationModal from "@/components/admin/NewDonationModal";
+
+interface Donation {
+  id: string;
+  donor_name: string;
+  amount: number;
+  method: string;
+  date_received: string;
+  reference_id: string | null;
+  deposit_batch_id: string | null;
+  receipt_status: string;
+}
 
 const columns = [
   "Date",
@@ -24,6 +39,24 @@ const AdminDonations = () => {
   const navigate = useNavigate();
   const goBack = () =>
     window.history.state?.idx > 0 ? navigate(-1) : navigate("/admin/dashboard");
+
+  const [donations, setDonations] = useState<Donation[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [modalOpen, setModalOpen] = useState(false);
+
+  const fetchDonations = useCallback(async () => {
+    setLoading(true);
+    const { data } = await supabase
+      .from("donations")
+      .select("id, donor_name, amount, method, date_received, reference_id, deposit_batch_id, receipt_status")
+      .order("date_received", { ascending: false });
+    setDonations((data as Donation[]) ?? []);
+    setLoading(false);
+  }, []);
+
+  useEffect(() => {
+    fetchDonations();
+  }, [fetchDonations]);
 
   return (
     <div className="min-h-screen bg-black text-white">
@@ -48,7 +81,10 @@ const AdminDonations = () => {
 
       <main className="container mx-auto px-4 py-8">
         <div className="flex justify-end mb-6">
-          <Button className="bg-white text-black hover:bg-white/90">
+          <Button
+            className="bg-white text-black hover:bg-white/90"
+            onClick={() => setModalOpen(true)}
+          >
             <Plus className="w-4 h-4 mr-2" />
             New Donation
           </Button>
@@ -66,18 +102,45 @@ const AdminDonations = () => {
               </TableRow>
             </TableHeader>
             <TableBody>
-              <TableRow className="border-white/10 hover:bg-transparent">
-                <TableCell
-                  colSpan={columns.length}
-                  className="text-center py-12 text-white/50"
-                >
-                  No donations yet. Click 'New Donation' to add one.
-                </TableCell>
-              </TableRow>
+              {loading ? (
+                <TableRow className="border-white/10 hover:bg-transparent">
+                  <TableCell colSpan={columns.length} className="text-center py-12 text-white/50">
+                    Loading…
+                  </TableCell>
+                </TableRow>
+              ) : donations.length === 0 ? (
+                <TableRow className="border-white/10 hover:bg-transparent">
+                  <TableCell colSpan={columns.length} className="text-center py-12 text-white/50">
+                    No donations yet. Click 'New Donation' to add one.
+                  </TableCell>
+                </TableRow>
+              ) : (
+                donations.map((d) => (
+                  <TableRow key={d.id} className="border-white/10 hover:bg-white/5">
+                    <TableCell className="text-white">
+                      {format(new Date(d.date_received + "T00:00:00"), "MM/dd/yyyy")}
+                    </TableCell>
+                    <TableCell className="text-white">{d.donor_name}</TableCell>
+                    <TableCell className="text-white">
+                      ${Number(d.amount).toFixed(2)}
+                    </TableCell>
+                    <TableCell className="text-white">{d.method}</TableCell>
+                    <TableCell className="text-white/70">{d.reference_id ?? "—"}</TableCell>
+                    <TableCell className="text-white/70">—</TableCell>
+                    <TableCell className="text-white">{d.receipt_status}</TableCell>
+                  </TableRow>
+                ))
+              )}
             </TableBody>
           </Table>
         </div>
       </main>
+
+      <NewDonationModal
+        open={modalOpen}
+        onOpenChange={setModalOpen}
+        onCreated={fetchDonations}
+      />
     </div>
   );
 };
