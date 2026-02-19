@@ -337,6 +337,11 @@ const AdminSupportersDatabase = () => {
                 <p className="text-xs text-white/40">
                   {csvData.length} row{csvData.length !== 1 ? "s" : ""} detected
                 </p>
+                {mapping.name === "__skip__" && (
+                  <p className="text-xs text-amber-400">
+                    ⚠ You must map a column to <strong>Name</strong> before importing.
+                  </p>
+                )}
               </div>
             )}
 
@@ -365,7 +370,7 @@ const AdminSupportersDatabase = () => {
             </Button>
             {!summary && (
               <Button
-                disabled={!csvData.length || !mapping.name || importing}
+                disabled={!csvData.length || mapping.name === "__skip__" || importing}
                 onClick={handleImport}
                 className="bg-sky-500 hover:bg-sky-400 text-white"
               >
