@@ -128,25 +128,21 @@ const NewRevenueModal = ({ open, onOpenChange, onCreated }: Props) => {
 
   /** Find or create a supporter, return their id */
   const findOrCreateSupporter = async (name: string, email: string | null): Promise<string | null> => {
-    // Try match by email first
-    if (email) {
-      const { data: byEmail } = await supabase
-        .from("supporters")
-        .select("id")
-        .ilike("email", email)
-        .maybeSingle();
-      if (byEmail) return byEmail.id;
-    }
-
-    // Try match by exact name
+    // Match by exact name first (each donor/sponsor gets their own record)
     const { data: byName } = await supabase
       .from("supporters")
       .select("id")
       .eq("name", name)
       .maybeSingle();
-    if (byName) return byName.id;
+    if (byName) {
+      // Update email if provided and different
+      if (email) {
+        await supabase.from("supporters").update({ email }).eq("id", byName.id);
+      }
+      return byName.id;
+    }
 
-    // Create new
+    // Create new supporter
     const { data: created, error } = await supabase
       .from("supporters")
       .insert({ name, email })
