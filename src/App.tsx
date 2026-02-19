@@ -97,6 +97,9 @@ const App = () => (
             >
               <Route index element={<AdminSalesMarketingIndex />} />
               <Route path="revenue" element={<AdminDonations />} />
+              <Route path="master-revenue-tracker" element={<AdminMasterRevenueTracker />} />
+              <Route path="supporters" element={<AdminSupporters />} />
+              <Route path="supporters/:id" element={<AdminSupporterDetail />} />
             </Route>
 
             {/* Finance section — sidebar layout wraps sub-pages */}
