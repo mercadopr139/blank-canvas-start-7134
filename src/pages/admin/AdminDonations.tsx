@@ -3,7 +3,18 @@ import { useNavigate } from "react-router-dom";
 import { format } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Plus } from "lucide-react";
+import { ArrowLeft, Plus, Trash2 } from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { toast } from "@/hooks/use-toast";
 import {
   Table,
   TableBody,
@@ -34,6 +45,7 @@ const columns = [
   "Reference ID",
   "Deposit Batch",
   "Receipt Status",
+  "",
 ];
 
 const AdminDonations = () => {
@@ -43,6 +55,7 @@ const AdminDonations = () => {
   const [donations, setDonations] = useState<Donation[]>([]);
   const [loading, setLoading] = useState(true);
   const [modalOpen, setModalOpen] = useState(false);
+  const [deleteId, setDeleteId] = useState<string | null>(null);
 
   const fetchDonations = useCallback(async () => {
     setLoading(true);
@@ -53,6 +66,18 @@ const AdminDonations = () => {
     setDonations((data as Donation[]) ?? []);
     setLoading(false);
   }, []);
+
+  const handleDelete = async () => {
+    if (!deleteId) return;
+    const { error } = await supabase.from("donations").delete().eq("id", deleteId);
+    if (error) {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+    } else {
+      toast({ title: "Donation deleted" });
+      fetchDonations();
+    }
+    setDeleteId(null);
+  };
 
   useEffect(() => {
     fetchDonations();
@@ -128,6 +153,16 @@ const AdminDonations = () => {
                     <TableCell className="text-white/70">{d.reference_id ?? "—"}</TableCell>
                     <TableCell className="text-white/70">{d.deposit_batches?.batch_name ?? "—"}</TableCell>
                     <TableCell className="text-white">{d.receipt_status}</TableCell>
+                    <TableCell>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="text-red-500 hover:text-red-400 hover:bg-white/10"
+                        onClick={() => setDeleteId(d.id)}
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
+                    </TableCell>
                   </TableRow>
                 ))
               )}
@@ -141,6 +176,21 @@ const AdminDonations = () => {
         onOpenChange={setModalOpen}
         onCreated={fetchDonations}
       />
+
+      <AlertDialog open={!!deleteId} onOpenChange={(open) => !open && setDeleteId(null)}>
+        <AlertDialogContent className="bg-black border-white/10">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-white">Delete Donation?</AlertDialogTitle>
+            <AlertDialogDescription className="text-white/60">
+              This will permanently delete this donation record.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel className="border-white/20 text-white hover:bg-white/10">Cancel</AlertDialogCancel>
+            <AlertDialogAction className="bg-red-600 hover:bg-red-700 text-white" onClick={handleDelete}>Delete</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
