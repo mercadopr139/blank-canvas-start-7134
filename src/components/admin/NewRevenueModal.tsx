@@ -311,6 +311,7 @@ const NewRevenueModal = ({ open, onOpenChange, onCreated }: Props) => {
                         ))}
                       </SelectContent>
                     </Select>
+                    <p className="text-xs text-white/40">Month the service was provided (not the deposit month).</p>
                   </div>
                 </>
               )}
