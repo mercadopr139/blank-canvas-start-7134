@@ -362,7 +362,8 @@ const AdminSupportersDatabase = () => {
         )}
 
         {/* Supporters table */}
-        <div className="rounded-lg border border-white/10 overflow-hidden">
+        <div className="rounded-lg border border-white/10 overflow-x-auto">
+          <div className="min-w-[900px]">
           <Table>
             <TableHeader>
               <TableRow className="border-white/10 hover:bg-transparent">
@@ -445,6 +446,7 @@ const AdminSupportersDatabase = () => {
               )}
             </TableBody>
           </Table>
+          </div>
         </div>
       </div>
 
