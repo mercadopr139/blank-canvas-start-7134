@@ -23,6 +23,7 @@ interface Donation {
   reference_id: string | null;
   deposit_batch_id: string | null;
   receipt_status: string;
+  deposit_batches: { batch_name: string } | null;
 }
 
 const columns = [
@@ -47,7 +48,7 @@ const AdminDonations = () => {
     setLoading(true);
     const { data } = await supabase
       .from("donations")
-      .select("id, donor_name, amount, method, date_received, reference_id, deposit_batch_id, receipt_status")
+      .select("id, donor_name, amount, method, date_received, reference_id, deposit_batch_id, receipt_status, deposit_batches(batch_name)")
       .order("date_received", { ascending: false });
     setDonations((data as Donation[]) ?? []);
     setLoading(false);
@@ -125,7 +126,7 @@ const AdminDonations = () => {
                     </TableCell>
                     <TableCell className="text-white">{d.method}</TableCell>
                     <TableCell className="text-white/70">{d.reference_id ?? "—"}</TableCell>
-                    <TableCell className="text-white/70">—</TableCell>
+                    <TableCell className="text-white/70">{d.deposit_batches?.batch_name ?? "—"}</TableCell>
                     <TableCell className="text-white">{d.receipt_status}</TableCell>
                   </TableRow>
                 ))
