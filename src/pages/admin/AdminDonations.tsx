@@ -4,6 +4,7 @@ import { format } from "date-fns";
 import { formatUSD } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { ArrowLeft, Pencil, Plus, Trash2 } from "lucide-react";
 import {
   AlertDialog,
@@ -102,10 +103,18 @@ const AdminDonations = () => {
 
   const displaySource = (r: Revenue) => r.source_name || r.donor_name || "—";
 
-  const displayReceipt = (r: Revenue) => {
-    if (r.revenue_type !== "Donation" && !(r.revenue_type === "Fundraising")) return "—";
-    if (!r.supporter_id) return "—";
-    return r.supporter_receipt_status || "Not Sent";
+  const receiptBadge = (r: Revenue) => {
+    if (r.revenue_type !== "Donation" && r.revenue_type !== "Fundraising") return <span className="text-white/50">—</span>;
+    if (!r.supporter_id) return <span className="text-white/50">—</span>;
+    const status = r.supporter_receipt_status || "Not Sent";
+    switch (status) {
+      case "Sent":
+        return <Badge className="bg-green-600/20 text-green-400 border-green-600/30">Sent</Badge>;
+      case "Failed":
+        return <Badge className="bg-yellow-600/20 text-yellow-400 border-yellow-600/30">Failed</Badge>;
+      default:
+        return <Badge className="bg-red-600/20 text-red-400 border-red-600/30">Not Sent</Badge>;
+    }
   };
 
   return (
@@ -173,7 +182,7 @@ const AdminDonations = () => {
                     <TableCell className="text-white">{formatUSD(r.amount)}</TableCell>
                     <TableCell className="text-white">{r.method}</TableCell>
                     <TableCell className="text-white/70">{r.reference_id ?? "—"}</TableCell>
-                    <TableCell className="text-white">{displayReceipt(r)}</TableCell>
+                    <TableCell>{receiptBadge(r)}</TableCell>
                     <TableCell>
                       <div className="flex items-center gap-1">
                         <Button
