@@ -40,7 +40,7 @@ const AdminDashboard = () => {
     color: "bg-sky-300/10 text-sky-300",
     borderColor: "border-sky-300",
     linkColor: "text-sky-300",
-    href: "/admin/finance"
+    href: "/admin/finance/donations"
   }];
 
 
