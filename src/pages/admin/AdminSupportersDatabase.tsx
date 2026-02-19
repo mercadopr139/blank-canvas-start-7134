@@ -172,6 +172,40 @@ const AdminSupportersDatabase = () => {
     await fetchRows();
   };
 
+  // ── Bulk selection state ───────────────────────────────────────────────────
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
+  const [bulkDeleting, setBulkDeleting] = useState(false);
+
+  const allSelected = rows.length > 0 && selected.size === rows.length;
+  const someSelected = selected.size > 0 && !allSelected;
+
+  const toggleAll = () => {
+    if (allSelected) {
+      setSelected(new Set());
+    } else {
+      setSelected(new Set(rows.map((r) => r.id)));
+    }
+  };
+
+  const toggleOne = (id: string) => {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  };
+
+  const handleBulkDelete = async () => {
+    if (!selected.size) return;
+    setBulkDeleting(true);
+    await supabase.from("supporters").delete().in("id", [...selected]);
+    setBulkDeleting(false);
+    setBulkDeleteOpen(false);
+    setSelected(new Set());
+    await fetchRows();
+  };
+
   // ── Import modal state ────────────────────────────────────────────────────
   const [importOpen, setImportOpen] = useState(false);
   const [supporterType, setSupporterType] = useState<string>("Hall of Fame");
@@ -302,11 +336,46 @@ const AdminSupportersDatabase = () => {
           </Button>
         </div>
 
+        {/* Bulk action bar */}
+        {selected.size > 0 && (
+          <div className="flex items-center gap-3 mb-3 px-3 py-2 rounded-md bg-red-950/40 border border-red-600/30">
+            <span className="text-sm text-white/70">
+              <span className="font-semibold text-white">{selected.size}</span> row{selected.size !== 1 ? "s" : ""} selected
+            </span>
+            <Button
+              size="sm"
+              variant="ghost"
+              className="text-white/50 hover:text-white hover:bg-white/10 text-xs h-7"
+              onClick={() => setSelected(new Set())}
+            >
+              Clear
+            </Button>
+            <Button
+              size="sm"
+              className="bg-red-600 hover:bg-red-500 text-white text-xs h-7 gap-1.5 ml-auto"
+              onClick={() => setBulkDeleteOpen(true)}
+            >
+              <Trash2 className="w-3.5 h-3.5" />
+              Delete {selected.size} Selected
+            </Button>
+          </div>
+        )}
+
         {/* Supporters table */}
         <div className="rounded-lg border border-white/10 overflow-hidden">
           <Table>
             <TableHeader>
               <TableRow className="border-white/10 hover:bg-transparent">
+                <TableHead className="w-10 px-3">
+                  <input
+                    type="checkbox"
+                    checked={allSelected}
+                    ref={(el) => { if (el) el.indeterminate = someSelected; }}
+                    onChange={toggleAll}
+                    className="accent-green-500 w-4 h-4 cursor-pointer"
+                    title="Select all"
+                  />
+                </TableHead>
                 <TableHead className="text-white/70">Name</TableHead>
                 <TableHead className="text-white/70">Type</TableHead>
                 <TableHead className="text-white/70">Email</TableHead>
@@ -319,15 +388,26 @@ const AdminSupportersDatabase = () => {
             <TableBody>
               {loadingRows ? (
                 <TableRow className="border-white/10 hover:bg-transparent">
-                  <TableCell colSpan={7} className="text-center py-12 text-white/50">Loading…</TableCell>
+                  <TableCell colSpan={8} className="text-center py-12 text-white/50">Loading…</TableCell>
                 </TableRow>
               ) : rows.length === 0 ? (
                 <TableRow className="border-white/10 hover:bg-transparent">
-                  <TableCell colSpan={7} className="text-center py-12 text-white/50">No supporters yet. Import a CSV to get started.</TableCell>
+                  <TableCell colSpan={8} className="text-center py-12 text-white/50">No supporters yet. Import a CSV to get started.</TableCell>
                 </TableRow>
               ) : (
                 rows.map((s) => (
-                  <TableRow key={s.id} className="border-white/10 hover:bg-white/5">
+                  <TableRow
+                    key={s.id}
+                    className={`border-white/10 hover:bg-white/5 ${selected.has(s.id) ? "bg-red-950/20" : ""}`}
+                  >
+                    <TableCell className="px-3">
+                      <input
+                        type="checkbox"
+                        checked={selected.has(s.id)}
+                        onChange={() => toggleOne(s.id)}
+                        className="accent-green-500 w-4 h-4 cursor-pointer"
+                      />
+                    </TableCell>
                     <TableCell className="text-white font-medium">{s.name}</TableCell>
                     <TableCell className="text-white/60 text-sm">{s.supporter_type}</TableCell>
                     <TableCell className="text-white/70 text-sm">
@@ -470,6 +550,30 @@ const AdminSupportersDatabase = () => {
               className="bg-red-600 hover:bg-red-500 text-white"
             >
               {deleting ? "Deleting…" : "Delete"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* ── Bulk Delete Confirmation ──────────────────────────────────────────── */}
+      <AlertDialog open={bulkDeleteOpen} onOpenChange={(o) => { if (!o) setBulkDeleteOpen(false); }}>
+        <AlertDialogContent className="bg-zinc-900 border-white/10 text-white">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-white">Delete {selected.size} supporter{selected.size !== 1 ? "s" : ""}?</AlertDialogTitle>
+            <AlertDialogDescription className="text-white/50">
+              This will permanently remove all {selected.size} selected records. This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel className="bg-transparent border-white/20 text-white hover:bg-white/10">
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleBulkDelete}
+              disabled={bulkDeleting}
+              className="bg-red-600 hover:bg-red-500 text-white"
+            >
+              {bulkDeleting ? "Deleting…" : `Delete ${selected.size}`}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
