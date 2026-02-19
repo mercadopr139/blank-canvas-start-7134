@@ -190,22 +190,40 @@ const AdminSectionLayout = ({
 
       {/* Card list */}
       <div className="flex-1 overflow-y-auto py-2">
-        {allCards.map((card) => {
+      {allCards.map((card) => {
           const active = isActive(card.href);
           return (
-            <button
+            <div
               key={card.href + card.title}
-              onClick={() => handleCardClick(card)}
-              className={`w-full text-left px-4 py-2.5 flex items-center gap-3 transition-colors
+              className={`group relative flex items-center transition-colors
                 ${active
-                  ? `${ac.activeBg} ${ac.activeBorder} ${ac.link} font-medium`
-                  : "text-white/70 hover:text-white hover:bg-white/5"
+                  ? `${ac.activeBg} ${ac.activeBorder}`
+                  : "hover:bg-white/5"
                 }`}
             >
-              <card.icon className={`w-4 h-4 flex-shrink-0 ${active ? ac.icon : ""}`} />
-              <span className="text-sm leading-tight truncate">{card.title}</span>
-              {card.external && <ExternalLink className="w-3 h-3 ml-auto flex-shrink-0 opacity-50" />}
-            </button>
+              <button
+                onClick={() => handleCardClick(card)}
+                className={`flex-1 text-left px-4 py-2.5 flex items-center gap-3 min-w-0
+                  ${active ? `${ac.link} font-medium` : "text-white/70 hover:text-white"}`}
+              >
+                <card.icon className={`w-4 h-4 flex-shrink-0 ${active ? ac.icon : ""}`} />
+                <span className="text-sm leading-tight truncate">{card.title}</span>
+                {card.external && <ExternalLink className="w-3 h-3 ml-auto flex-shrink-0 opacity-50" />}
+              </button>
+              {card.custom && (
+                <button
+                  onClick={() => {
+                    const updated = customCards.filter((c) => !(c.href === card.href && c.title === card.title));
+                    setCustomCards(updated);
+                    localStorage.setItem(storageKey, JSON.stringify(updated));
+                  }}
+                  className="hidden group-hover:flex items-center justify-center w-6 h-6 mr-2 flex-shrink-0 text-white/40 hover:text-red-400 transition-colors"
+                  title="Remove item"
+                >
+                  <X className="w-3 h-3" />
+                </button>
+              )}
+            </div>
           );
         })}
       </div>
