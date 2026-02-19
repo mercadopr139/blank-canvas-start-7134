@@ -1,7 +1,7 @@
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { ArrowLeft, Receipt, ShieldCheck } from "lucide-react";
+import { ArrowLeft, Receipt, ShieldCheck, Users } from "lucide-react";
 
 const AdminFinance = () => {
   const navigate = useNavigate();
@@ -20,6 +20,12 @@ const AdminFinance = () => {
       description: "Policies & coverage",
       icon: ShieldCheck,
       href: "/admin/finance/insurance",
+    },
+    {
+      title: "NLA Supporter History",
+      description: "Supporters & 2026 receipts",
+      icon: Users,
+      href: "/admin/finance/supporters",
     },
   ];
 

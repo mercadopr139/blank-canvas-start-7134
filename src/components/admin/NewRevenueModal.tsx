@@ -5,40 +5,26 @@ import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
+  Dialog, DialogContent, DialogHeader, DialogTitle,
 } from "@/components/ui/dialog";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
+  Popover, PopoverContent, PopoverTrigger,
 } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
+import SendReceiptFlow from "@/components/admin/SendReceiptFlow";
 
 const REVENUE_TYPES = ["Donation", "Fundraising", "Fee for Service", "Re-Grant"] as const;
 const METHODS = ["Cash", "Check", "Venmo", "PayPal", "Square"] as const;
 const RECEIPT_STATUSES = ["Pending", "Sent", "Not Needed"] as const;
 const FUNDRAISING_DESCRIPTIONS = [
-  "Presale tickets",
-  "Sponsor",
-  "Event day tickets",
-  "Raffle",
-  "Merchandise",
-  "Concessions",
-  "Other",
+  "Presale tickets", "Sponsor", "Event day tickets", "Raffle", "Merchandise", "Concessions", "Other",
 ] as const;
 
 interface Props {
@@ -75,10 +61,13 @@ const NewRevenueModal = ({ open, onOpenChange, onCreated }: Props) => {
   const [eventName, setEventName] = useState("");
   const [fundraisingDescSelect, setFundraisingDescSelect] = useState("");
   const [fundraisingDescOther, setFundraisingDescOther] = useState("");
-  
 
   // Shared fields
   const [recognitionPeriod, setRecognitionPeriod] = useState("");
+
+  // Receipt prompt state
+  const [receiptPromptSupporterId, setReceiptPromptSupporterId] = useState<string | null>(null);
+  const [receiptPromptSupporterName, setReceiptPromptSupporterName] = useState("");
 
   const reset = () => {
     setRevenueType("");
@@ -110,24 +99,58 @@ const NewRevenueModal = ({ open, onOpenChange, onCreated }: Props) => {
     }
   };
 
+  const isQualifyingForReceipt = () =>
+    revenueType === "Donation" ||
+    (revenueType === "Fundraising" && fundraisingDescSelect === "Sponsor");
+
   const isValid = () => {
     if (!revenueType || !amount || !depositDate) return false;
     const parsed = parseFloat(amount.replace(/,/g, ""));
     if (isNaN(parsed) || parsed <= 0) return false;
 
     switch (revenueType) {
-      case "Donation":
-        return !!donorName.trim() && !!method;
-      case "Fee for Service":
-        return !!vendorName.trim() && !!method;
-      case "Re-Grant":
-        return !!partnerName.trim();
+      case "Donation": return !!donorName.trim() && !!method;
+      case "Fee for Service": return !!vendorName.trim() && !!method;
+      case "Re-Grant": return !!partnerName.trim();
       case "Fundraising":
         if (fundraisingDescSelect === "Other" && !fundraisingDescOther.trim()) return false;
         return !!eventName.trim() && !!method;
-      default:
-        return false;
+      default: return false;
     }
+  };
+
+  /** Find or create a supporter, return their id */
+  const findOrCreateSupporter = async (name: string, email: string | null): Promise<string | null> => {
+    // Try match by email first
+    if (email) {
+      const { data: byEmail } = await supabase
+        .from("supporters")
+        .select("id")
+        .ilike("email", email)
+        .maybeSingle();
+      if (byEmail) return byEmail.id;
+    }
+
+    // Try match by exact name
+    const { data: byName } = await supabase
+      .from("supporters")
+      .select("id")
+      .eq("name", name)
+      .maybeSingle();
+    if (byName) return byName.id;
+
+    // Create new
+    const { data: created, error } = await supabase
+      .from("supporters")
+      .insert({ name, email })
+      .select("id")
+      .single();
+
+    if (error) {
+      console.error("Failed to create supporter:", error);
+      return null;
+    }
+    return created.id;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -139,6 +162,15 @@ const NewRevenueModal = ({ open, onOpenChange, onCreated }: Props) => {
 
     setSaving(true);
     const sourceName = getSourceName();
+    const qualifying = isQualifyingForReceipt();
+
+    // Find or create supporter for qualifying types
+    let supporterId: string | null = null;
+    if (qualifying) {
+      const sName = revenueType === "Donation" ? donorName.trim() : eventName.trim();
+      const sEmail = revenueType === "Donation" ? (donorEmail.trim() || null) : null;
+      supporterId = await findOrCreateSupporter(sName, sEmail);
+    }
 
     const record: Record<string, any> = {
       revenue_type: revenueType,
@@ -148,10 +180,10 @@ const NewRevenueModal = ({ open, onOpenChange, onCreated }: Props) => {
       reference_id: referenceId.trim() || null,
       notes: notes.trim() || null,
       source_name: sourceName || null,
-      // donor_name is required in schema — use source or placeholder
       donor_name: sourceName || "N/A",
       date_received: format(depositDate!, "yyyy-MM-dd"),
       recognition_period: recognitionPeriod || null,
+      supporter_id: supporterId,
     };
 
     if (revenueType === "Donation") {
@@ -173,9 +205,7 @@ const NewRevenueModal = ({ open, onOpenChange, onCreated }: Props) => {
 
     if (revenueType === "Fundraising") {
       record.event_name = eventName.trim() || null;
-      const desc = fundraisingDescSelect === "Other"
-        ? fundraisingDescOther.trim()
-        : fundraisingDescSelect;
+      const desc = fundraisingDescSelect === "Other" ? fundraisingDescOther.trim() : fundraisingDescSelect;
       record.revenue_description = desc || null;
     }
 
@@ -191,18 +221,19 @@ const NewRevenueModal = ({ open, onOpenChange, onCreated }: Props) => {
     reset();
     onOpenChange(false);
     onCreated();
+
+    // Show receipt prompt for qualifying types
+    if (qualifying && supporterId) {
+      const sName = revenueType === "Donation" ? donorName.trim() : eventName.trim();
+      setReceiptPromptSupporterId(supporterId);
+      setReceiptPromptSupporterName(sName);
+    }
   };
 
   const DateField = ({
-    label,
-    value,
-    onChange,
-    required = false,
+    label, value, onChange, required = false,
   }: {
-    label: string;
-    value: Date | undefined;
-    onChange: (d: Date | undefined) => void;
-    required?: boolean;
+    label: string; value: Date | undefined; onChange: (d: Date | undefined) => void; required?: boolean;
   }) => (
     <div className="space-y-1">
       <Label className="text-white/70">{label}{required ? " *" : ""}</Label>
@@ -221,10 +252,7 @@ const NewRevenueModal = ({ open, onOpenChange, onCreated }: Props) => {
         </PopoverTrigger>
         <PopoverContent className="w-auto p-0 bg-black border-white/20" align="start">
           <Calendar
-            mode="single"
-            selected={value}
-            onSelect={onChange}
-            initialFocus
+            mode="single" selected={value} onSelect={onChange} initialFocus
             className={cn("p-3 pointer-events-auto text-white")}
             classNames={{
               caption_label: "text-sm font-medium text-white",
@@ -248,197 +276,208 @@ const NewRevenueModal = ({ open, onOpenChange, onCreated }: Props) => {
   };
 
   return (
-    <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent className="bg-black border-white/20 text-white max-w-lg max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle className="text-white">New Revenue</DialogTitle>
-        </DialogHeader>
-        <form onSubmit={handleSubmit} className="space-y-4 mt-2">
-          {/* Revenue Type */}
-          <div className="space-y-1">
-            <Label className="text-white/70">Revenue Type *</Label>
-            <Select value={revenueType} onValueChange={setRevenueType}>
-              <SelectTrigger className="bg-white/5 border-white/20 text-white">
-                <SelectValue placeholder="Select type" />
-              </SelectTrigger>
-              <SelectContent className="bg-white border-gray-200 z-50">
-                {REVENUE_TYPES.map((t) => (
-                  <SelectItem key={t} value={t} className="text-black">{t}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+    <>
+      <Dialog open={open} onOpenChange={handleOpenChange}>
+        <DialogContent className="bg-black border-white/20 text-white max-w-lg max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="text-white">New Revenue</DialogTitle>
+          </DialogHeader>
+          <form onSubmit={handleSubmit} className="space-y-4 mt-2">
+            {/* Revenue Type */}
+            <div className="space-y-1">
+              <Label className="text-white/70">Revenue Type *</Label>
+              <Select value={revenueType} onValueChange={setRevenueType}>
+                <SelectTrigger className="bg-white/5 border-white/20 text-white">
+                  <SelectValue placeholder="Select type" />
+                </SelectTrigger>
+                <SelectContent className="bg-white border-gray-200 z-50">
+                  {REVENUE_TYPES.map((t) => (
+                    <SelectItem key={t} value={t} className="text-black">{t}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
 
-          {revenueType && (
-            <>
-              {/* ===== DONATION ===== */}
-              {revenueType === "Donation" && (
-                <>
-                  <div className="space-y-1">
-                    <Label className="text-white/70">Donor Name *</Label>
-                    <Input value={donorName} onChange={(e) => setDonorName(e.target.value)} className="bg-white/5 border-white/20 text-white" />
-                  </div>
-                  <div className="space-y-1">
-                    <Label className="text-white/70">Donor Email</Label>
-                    <Input type="email" value={donorEmail} onChange={(e) => setDonorEmail(e.target.value)} className="bg-white/5 border-white/20 text-white" />
-                  </div>
-                </>
-              )}
+            {revenueType && (
+              <>
+                {/* ===== DONATION ===== */}
+                {revenueType === "Donation" && (
+                  <>
+                    <div className="space-y-1">
+                      <Label className="text-white/70">Donor Name *</Label>
+                      <Input value={donorName} onChange={(e) => setDonorName(e.target.value)} className="bg-white/5 border-white/20 text-white" />
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-white/70">Donor Email</Label>
+                      <Input type="email" value={donorEmail} onChange={(e) => setDonorEmail(e.target.value)} className="bg-white/5 border-white/20 text-white" />
+                    </div>
+                  </>
+                )}
 
-              {/* ===== FEE FOR SERVICE ===== */}
-              {revenueType === "Fee for Service" && (
-                <>
-                  <div className="space-y-1">
-                    <Label className="text-white/70">Vendor Name *</Label>
-                    <Input value={vendorName} onChange={(e) => setVendorName(e.target.value)} className="bg-white/5 border-white/20 text-white" />
-                  </div>
-                  <div className="space-y-1">
-                    <Label className="text-white/70">Program Name</Label>
-                    <Input value={programName} onChange={(e) => setProgramName(e.target.value)} className="bg-white/5 border-white/20 text-white" />
-                  </div>
-                </>
-              )}
+                {/* ===== FEE FOR SERVICE ===== */}
+                {revenueType === "Fee for Service" && (
+                  <>
+                    <div className="space-y-1">
+                      <Label className="text-white/70">Vendor Name *</Label>
+                      <Input value={vendorName} onChange={(e) => setVendorName(e.target.value)} className="bg-white/5 border-white/20 text-white" />
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-white/70">Program Name</Label>
+                      <Input value={programName} onChange={(e) => setProgramName(e.target.value)} className="bg-white/5 border-white/20 text-white" />
+                    </div>
+                  </>
+                )}
 
-              {/* ===== RE-GRANT ===== */}
-              {revenueType === "Re-Grant" && (
-                <>
-                  <div className="space-y-1">
-                    <Label className="text-white/70">Partner Name *</Label>
-                    <Input value={partnerName} onChange={(e) => setPartnerName(e.target.value)} className="bg-white/5 border-white/20 text-white" />
-                  </div>
-                  <DateField label="Grant Date" value={grantDate} onChange={setGrantDate} />
-                </>
-              )}
+                {/* ===== RE-GRANT ===== */}
+                {revenueType === "Re-Grant" && (
+                  <>
+                    <div className="space-y-1">
+                      <Label className="text-white/70">Partner Name *</Label>
+                      <Input value={partnerName} onChange={(e) => setPartnerName(e.target.value)} className="bg-white/5 border-white/20 text-white" />
+                    </div>
+                    <DateField label="Grant Date" value={grantDate} onChange={setGrantDate} />
+                  </>
+                )}
 
-              {/* ===== FUNDRAISING ===== */}
-              {revenueType === "Fundraising" && (
-                <>
-                  <div className="space-y-1">
-                    <Label className="text-white/70">Event Name *</Label>
-                    <Input value={eventName} onChange={(e) => setEventName(e.target.value)} className="bg-white/5 border-white/20 text-white" />
+                {/* ===== FUNDRAISING ===== */}
+                {revenueType === "Fundraising" && (
+                  <>
+                    <div className="space-y-1">
+                      <Label className="text-white/70">Event Name *</Label>
+                      <Input value={eventName} onChange={(e) => setEventName(e.target.value)} className="bg-white/5 border-white/20 text-white" />
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-white/70">Revenue Description</Label>
+                      <Select value={fundraisingDescSelect} onValueChange={(v) => { setFundraisingDescSelect(v); if (v !== "Other") setFundraisingDescOther(""); }}>
+                        <SelectTrigger className="bg-white/5 border-white/20 text-white">
+                          <SelectValue placeholder="Select description" />
+                        </SelectTrigger>
+                        <SelectContent className="bg-white border-gray-200 z-50">
+                          {FUNDRAISING_DESCRIPTIONS.map((d) => (
+                            <SelectItem key={d} value={d} className="text-black">{d}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    {fundraisingDescSelect === "Other" && (
+                      <div className="space-y-1">
+                        <Label className="text-white/70">Other Description *</Label>
+                        <Input value={fundraisingDescOther} onChange={(e) => setFundraisingDescOther(e.target.value)} placeholder="Describe the revenue…" className="bg-white/5 border-white/20 text-white placeholder:text-white/30" />
+                      </div>
+                    )}
+                  </>
+                )}
+
+                {/* ===== SHARED FIELDS ===== */}
+                <div className="space-y-1">
+                  <Label className="text-white/70">Amount *</Label>
+                  <div className="relative">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-white/50">$</span>
+                    <Input
+                      type="text" inputMode="decimal" value={amount}
+                      onChange={(e) => {
+                        const raw = e.target.value.replace(/[^0-9.]/g, "");
+                        const parts = raw.split(".");
+                        const cleaned = parts.length > 2 ? parts[0] + "." + parts.slice(1).join("") : raw;
+                        setAmount(cleaned);
+                      }}
+                      onBlur={() => {
+                        const num = parseFloat(amount);
+                        if (!isNaN(num) && num > 0) {
+                          setAmount(num.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 }));
+                        }
+                      }}
+                      onFocus={() => setAmount(amount.replace(/,/g, ""))}
+                      placeholder="0.00"
+                      className="bg-white/5 border-white/20 text-white pl-7 placeholder:text-white/30"
+                    />
                   </div>
+                </div>
+
+                {revenueType !== "Re-Grant" && (
                   <div className="space-y-1">
-                    <Label className="text-white/70">Revenue Description</Label>
-                    <Select value={fundraisingDescSelect} onValueChange={(v) => { setFundraisingDescSelect(v); if (v !== "Other") setFundraisingDescOther(""); }}>
+                    <Label className="text-white/70">Payment Method *</Label>
+                    <Select value={method} onValueChange={setMethod}>
                       <SelectTrigger className="bg-white/5 border-white/20 text-white">
-                        <SelectValue placeholder="Select description" />
+                        <SelectValue placeholder="Select method" />
                       </SelectTrigger>
                       <SelectContent className="bg-white border-gray-200 z-50">
-                        {FUNDRAISING_DESCRIPTIONS.map((d) => (
-                          <SelectItem key={d} value={d} className="text-black">{d}</SelectItem>
+                        {METHODS.map((m) => (
+                          <SelectItem key={m} value={m} className="text-black">{m}</SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
                   </div>
-                  {fundraisingDescSelect === "Other" && (
-                    <div className="space-y-1">
-                      <Label className="text-white/70">Other Description *</Label>
-                      <Input value={fundraisingDescOther} onChange={(e) => setFundraisingDescOther(e.target.value)} placeholder="Describe the revenue…" className="bg-white/5 border-white/20 text-white placeholder:text-white/30" />
-                    </div>
-                  )}
-                </>
-              )}
+                )}
 
-              {/* ===== SHARED FIELDS ===== */}
-              <div className="space-y-1">
-                <Label className="text-white/70">Amount *</Label>
-                <div className="relative">
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-white/50">$</span>
-                  <Input
-                    type="text"
-                    inputMode="decimal"
-                    value={amount}
-                    onChange={(e) => {
-                      // Strip everything except digits and decimal
-                      const raw = e.target.value.replace(/[^0-9.]/g, "");
-                      // Only allow one decimal point
-                      const parts = raw.split(".");
-                      const cleaned = parts.length > 2 ? parts[0] + "." + parts.slice(1).join("") : raw;
-                      setAmount(cleaned);
-                    }}
-                    onBlur={() => {
-                      const num = parseFloat(amount);
-                      if (!isNaN(num) && num > 0) {
-                        setAmount(num.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 }));
-                      }
-                    }}
-                    onFocus={() => {
-                      // Strip formatting on focus for easy editing
-                      setAmount(amount.replace(/,/g, ""));
-                    }}
-                    placeholder="0.00"
-                    className="bg-white/5 border-white/20 text-white pl-7 placeholder:text-white/30"
-                  />
-                </div>
-              </div>
+                <DateField label="Date of Deposit" value={depositDate} onChange={setDepositDate} required />
 
-              {revenueType !== "Re-Grant" && (
                 <div className="space-y-1">
-                  <Label className="text-white/70">Payment Method *</Label>
-                  <Select value={method} onValueChange={setMethod}>
+                  <Label className="text-white/70">Recognition Period</Label>
+                  <Select value={recognitionPeriod} onValueChange={setRecognitionPeriod}>
                     <SelectTrigger className="bg-white/5 border-white/20 text-white">
-                      <SelectValue placeholder="Select method" />
+                      <SelectValue placeholder="Select month" />
                     </SelectTrigger>
                     <SelectContent className="bg-white border-gray-200 z-50">
-                      {METHODS.map((m) => (
+                      {["January","February","March","April","May","June","July","August","September","October","November","December"].map((m) => (
                         <SelectItem key={m} value={m} className="text-black">{m}</SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
                 </div>
-              )}
 
-              <DateField label="Date of Deposit" value={depositDate} onChange={setDepositDate} required />
-
-
-              <div className="space-y-1">
-                <Label className="text-white/70">Recognition Period</Label>
-                <Select value={recognitionPeriod} onValueChange={setRecognitionPeriod}>
-                  <SelectTrigger className="bg-white/5 border-white/20 text-white">
-                    <SelectValue placeholder="Select month" />
-                  </SelectTrigger>
-                  <SelectContent className="bg-white border-gray-200 z-50">
-                    {["January","February","March","April","May","June","July","August","September","October","November","December"].map((m) => (
-                      <SelectItem key={m} value={m} className="text-black">{m}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-1">
-                <Label className="text-white/70">Reference ID</Label>
-                <Input value={referenceId} onChange={(e) => setReferenceId(e.target.value)} placeholder="Check # or transaction ID" className="bg-white/5 border-white/20 text-white placeholder:text-white/30" />
-              </div>
-
-              {revenueType === "Donation" && (
                 <div className="space-y-1">
-                  <Label className="text-white/70">Receipt Status</Label>
-                  <Select value={receiptStatus} onValueChange={setReceiptStatus}>
-                    <SelectTrigger className="bg-white/5 border-white/20 text-white">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent className="bg-white border-gray-200 z-50">
-                      {RECEIPT_STATUSES.map((s) => (
-                        <SelectItem key={s} value={s} className="text-black">{s}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <Label className="text-white/70">Reference ID</Label>
+                  <Input value={referenceId} onChange={(e) => setReferenceId(e.target.value)} placeholder="Check # or transaction ID" className="bg-white/5 border-white/20 text-white placeholder:text-white/30" />
                 </div>
-              )}
 
-              <div className="space-y-1">
-                <Label className="text-white/70">Notes</Label>
-                <Textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={3} className="bg-white/5 border-white/20 text-white" />
-              </div>
+                {revenueType === "Donation" && (
+                  <div className="space-y-1">
+                    <Label className="text-white/70">Receipt Status</Label>
+                    <Select value={receiptStatus} onValueChange={setReceiptStatus}>
+                      <SelectTrigger className="bg-white/5 border-white/20 text-white">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent className="bg-white border-gray-200 z-50">
+                        {RECEIPT_STATUSES.map((s) => (
+                          <SelectItem key={s} value={s} className="text-black">{s}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
 
-              <Button type="submit" disabled={saving || !isValid()} className="w-full bg-white text-black hover:bg-white/90">
-                {saving ? "Saving…" : "Save Revenue Entry"}
-              </Button>
-            </>
-          )}
-        </form>
-      </DialogContent>
-    </Dialog>
+                <div className="space-y-1">
+                  <Label className="text-white/70">Notes</Label>
+                  <Textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={3} className="bg-white/5 border-white/20 text-white" />
+                </div>
+
+                <Button type="submit" disabled={saving || !isValid()} className="w-full bg-white text-black hover:bg-white/90">
+                  {saving ? "Saving…" : "Save Revenue Entry"}
+                </Button>
+              </>
+            )}
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Receipt prompt after saving qualifying revenue */}
+      <SendReceiptFlow
+        open={!!receiptPromptSupporterId}
+        onOpenChange={(isOpen) => {
+          if (!isOpen) {
+            setReceiptPromptSupporterId(null);
+            setReceiptPromptSupporterName("");
+          }
+        }}
+        supporterId={receiptPromptSupporterId || ""}
+        supporterName={receiptPromptSupporterName}
+        onComplete={() => {
+          setReceiptPromptSupporterId(null);
+          setReceiptPromptSupporterName("");
+        }}
+      />
+    </>
   );
 };
 
