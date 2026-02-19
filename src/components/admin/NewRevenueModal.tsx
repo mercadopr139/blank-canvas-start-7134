@@ -353,7 +353,7 @@ const NewRevenueModal = ({ open, onOpenChange, onCreated }: Props) => {
                         </SelectTrigger>
                         <SelectContent className="bg-white border-gray-200 z-50">
                           <SelectItem value="2025-26" className="text-black">2025-26</SelectItem>
-                          <SelectItem value="2026-2027" className="text-black">2026-2027</SelectItem>
+                          <SelectItem value="2026-27" className="text-black">2026-27</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
