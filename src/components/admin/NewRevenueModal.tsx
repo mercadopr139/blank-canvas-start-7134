@@ -353,7 +353,7 @@ const NewRevenueModal = ({ open, onOpenChange, onCreated }: Props) => {
                 {revenueType === "Fundraising" && (
                   <>
                     <div className="space-y-1">
-                      <Label className="text-white/70">Event Name *</Label>
+                      <Label className="text-white/70">Sponsor Name*</Label>
                       <Input value={eventName} onChange={(e) => setEventName(e.target.value)} className="bg-white/5 border-white/20 text-white" />
                     </div>
                     <div className="space-y-1">
