@@ -32,6 +32,7 @@ import Supporters from "./pages/Supporters";
 import AdminDonations from "./pages/admin/AdminDonations";
 import AdminDeposits from "./pages/admin/AdminDeposits";
 import AdminDepositDetail from "./pages/admin/AdminDepositDetail";
+import AdminMasterRevenueTracker from "./pages/admin/AdminMasterRevenueTracker";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -162,6 +163,14 @@ const App = () => (
                element={
                  <ProtectedRoute requireAdmin>
                    <AdminDepositDetail />
+                 </ProtectedRoute>
+               }
+             />
+             <Route
+               path="/admin/finance/master-revenue-tracker"
+               element={
+                 <ProtectedRoute requireAdmin>
+                   <AdminMasterRevenueTracker />
                  </ProtectedRoute>
                }
              />

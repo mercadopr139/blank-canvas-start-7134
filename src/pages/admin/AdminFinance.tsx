@@ -1,7 +1,7 @@
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { ArrowLeft, Receipt, ShieldCheck } from "lucide-react";
+import { ArrowLeft, BarChart3, Receipt, ShieldCheck } from "lucide-react";
 
 const AdminFinance = () => {
   const navigate = useNavigate();
@@ -14,6 +14,12 @@ const AdminFinance = () => {
       description: "Invoices",
       icon: Receipt,
       href: "/admin/finance/billing",
+    },
+    {
+      title: "Master Revenue Tracker",
+      description: "Monthly totals and year-to-date revenue",
+      icon: BarChart3,
+      href: "/admin/finance/master-revenue-tracker",
     },
     {
       title: "Insurance",
