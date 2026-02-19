@@ -234,23 +234,13 @@ const AdminSupporters = () => {
   return (
     <div className="bg-black text-white">
       {/* Page header */}
-      <div className="border-b border-white/10 px-4 py-3 flex items-center justify-between">
-        <div>
-          <h2 className="text-base font-semibold text-white">Donor/Sponsor History</h2>
-          <p className="text-xs text-white/50">View supporters and 2026 receipt status</p>
-        </div>
-        <Button
-          size="sm"
-          className="bg-sky-500 hover:bg-sky-400 text-white gap-1.5"
-          onClick={() => { resetImport(); setImportOpen(true); }}
-        >
-          <Upload className="w-4 h-4" />
-          Import Hall of Fame CSV
-        </Button>
+      <div className="border-b border-white/10 px-4 py-3">
+        <h2 className="text-base font-semibold text-white">Donor/Sponsor History</h2>
+        <p className="text-xs text-white/50">View supporters and 2026 receipt status</p>
       </div>
 
       <div className="container mx-auto px-4 py-8">
-        <div className="flex gap-4 mb-6">
+        <div className="flex items-center gap-4 mb-6">
           <div className="relative flex-1 max-w-sm">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/40" />
             <Input
@@ -260,6 +250,14 @@ const AdminSupporters = () => {
               className="pl-9 bg-white/5 border-white/20 text-white placeholder:text-white/30"
             />
           </div>
+          <Button
+            size="sm"
+            className="bg-sky-500 hover:bg-sky-400 text-white gap-1.5 flex-shrink-0"
+            onClick={() => { resetImport(); setImportOpen(true); }}
+          >
+            <Upload className="w-4 h-4" />
+            Import Hall of Fame CSV
+          </Button>
         </div>
 
         <div className="rounded-lg border border-white/10 overflow-hidden">
