@@ -413,36 +413,48 @@ export type Database = {
       }
       supporters: {
         Row: {
+          address: string | null
           created_at: string
           email: string | null
           id: string
           name: string
+          phone: string | null
           receipt_2026_last_sent_to: string | null
           receipt_2026_pdf_url: string | null
           receipt_2026_sent_at: string | null
           receipt_2026_status: string
+          story: string | null
+          supporter_type: string
           updated_at: string
         }
         Insert: {
+          address?: string | null
           created_at?: string
           email?: string | null
           id?: string
           name: string
+          phone?: string | null
           receipt_2026_last_sent_to?: string | null
           receipt_2026_pdf_url?: string | null
           receipt_2026_sent_at?: string | null
           receipt_2026_status?: string
+          story?: string | null
+          supporter_type?: string
           updated_at?: string
         }
         Update: {
+          address?: string | null
           created_at?: string
           email?: string | null
           id?: string
           name?: string
+          phone?: string | null
           receipt_2026_last_sent_to?: string | null
           receipt_2026_pdf_url?: string | null
           receipt_2026_sent_at?: string | null
           receipt_2026_status?: string
+          story?: string | null
+          supporter_type?: string
           updated_at?: string
         }
         Relationships: []
