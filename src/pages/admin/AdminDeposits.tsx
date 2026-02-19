@@ -12,6 +12,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import NewBatchModal from "@/components/admin/NewBatchModal";
 
 interface Batch {
   id: string;
@@ -40,6 +41,7 @@ const AdminDeposits = () => {
 
   const [batches, setBatches] = useState<Batch[]>([]);
   const [loading, setLoading] = useState(true);
+  const [modalOpen, setModalOpen] = useState(false);
 
   const fetchBatches = useCallback(async () => {
     setLoading(true);
@@ -105,7 +107,7 @@ const AdminDeposits = () => {
 
       <main className="container mx-auto px-4 py-8">
         <div className="flex justify-end mb-6">
-          <Button className="bg-white text-black hover:bg-white/90">
+          <Button className="bg-white text-black hover:bg-white/90" onClick={() => setModalOpen(true)}>
             <Plus className="w-4 h-4 mr-2" />
             New Batch
           </Button>
@@ -160,6 +162,12 @@ const AdminDeposits = () => {
           </Table>
         </div>
       </main>
+
+      <NewBatchModal
+        open={modalOpen}
+        onOpenChange={setModalOpen}
+        onCreated={fetchBatches}
+      />
     </div>
   );
 };
