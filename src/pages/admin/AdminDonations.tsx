@@ -81,10 +81,41 @@ const AdminDonations = () => {
 
   const handleDelete = async () => {
     if (!deleteId) return;
+    // Find the row to get supporter_id before deleting
+    const rowToDelete = rows.find((r) => r.id === deleteId);
+    const supporterId = rowToDelete?.supporter_id;
+
     const { error } = await supabase.from("donations").delete().eq("id", deleteId);
     if (error) {
       toast({ title: "Error", description: error.message, variant: "destructive" });
     } else {
+      // If this donation was linked to a supporter, check remaining qualifying donations
+      if (supporterId) {
+        const { data: remaining } = await supabase
+          .from("donations")
+          .select("id, revenue_type, revenue_description")
+          .eq("supporter_id", supporterId)
+          .gte("deposit_date", "2026-01-01")
+          .lte("deposit_date", "2026-12-31");
+
+        const qualifying = (remaining || []).filter(
+          (d: any) =>
+            d.revenue_type === "Donation" ||
+            (d.revenue_type === "Fundraising" && d.revenue_description === "Sponsor")
+        );
+
+        if (qualifying.length === 0) {
+          await supabase
+            .from("supporters")
+            .update({
+              receipt_2026_status: "Not Sent",
+              receipt_2026_sent_at: null,
+              receipt_2026_last_sent_to: null,
+              receipt_2026_pdf_url: null,
+            })
+            .eq("id", supporterId);
+        }
+      }
       toast({ title: "Record deleted" });
       fetchRevenue();
     }
