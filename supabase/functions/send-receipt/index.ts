@@ -1,4 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { PDFDocument, rgb, StandardFonts } from "https://esm.sh/pdf-lib@1.17.1";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -26,76 +27,195 @@ function formatDate(dateStr: string): string {
   return d.toLocaleDateString("en-US", { month: "2-digit", day: "2-digit", year: "numeric" });
 }
 
-function generateReceiptHtml(
-  supporter: { name: string },
-  donations: Array<{ deposit_date: string; reference_id: string | null; amount: number; notes: string | null }>,
+// ── PDF generation ──────────────────────────────────────────────────────────
+
+interface DonationRow {
+  deposit_date: string;
+  reference_id: string | null;
+  amount: number;
+  notes: string | null;
+}
+
+async function generateReceiptPdf(
+  donorName: string,
+  donations: DonationRow[],
   total: number,
   dateIssued: string
-): string {
-  const rows = donations
-    .map(
-      (d) =>
-        `<tr>
-          <td style="padding:6px 12px;border:1px solid #ddd;">${formatDate(d.deposit_date)}</td>
-          <td style="padding:6px 12px;border:1px solid #ddd;">${d.reference_id || "—"}</td>
-          <td style="padding:6px 12px;border:1px solid #ddd;text-align:right;">${formatCurrency(d.amount)}</td>
-          <td style="padding:6px 12px;border:1px solid #ddd;">${d.notes || ""}</td>
-        </tr>`
-    )
-    .join("");
+): Promise<Uint8Array> {
+  const pdf = await PDFDocument.create();
+  const font = await pdf.embedFont(StandardFonts.Helvetica);
+  const fontBold = await pdf.embedFont(StandardFonts.HelveticaBold);
 
-  return `
-<!DOCTYPE html>
-<html>
-<head><meta charset="utf-8"><title>2026 Donation Receipt</title></head>
-<body style="font-family:Arial,sans-serif;max-width:700px;margin:0 auto;padding:40px 20px;color:#222;">
-  <h1 style="text-align:center;font-size:22px;margin-bottom:4px;">${ORG_NAME}</h1>
-  <p style="text-align:center;margin:0;font-size:13px;color:#555;">${ORG_ADDRESS}</p>
-  <p style="text-align:center;margin:0 0 4px;font-size:13px;color:#555;">${ORG_PHONE}</p>
-  <p style="text-align:center;margin:0 0 20px;font-size:13px;color:#555;">EIN: ${ORG_EIN}</p>
-  
-  <hr style="border:none;border-top:2px solid #222;margin:20px 0;" />
-  
-  <h2 style="text-align:center;font-size:18px;margin-bottom:20px;">2026 Annual Donation Receipt</h2>
-  
-  <p><strong>Date Issued:</strong> ${dateIssued}</p>
-  <p><strong>Donor Name:</strong> ${supporter.name}</p>
-  
-  <p style="margin-top:20px;">Dear ${supporter.name},</p>
-  <p>Thank you for your generous support of ${ORG_NAME} during the 2026 calendar year. Below is a summary of your contributions for your tax records.</p>
-  
-  <h3 style="margin-top:24px;margin-bottom:8px;">Donation Summary</h3>
-  <table style="width:100%;border-collapse:collapse;font-size:14px;">
-    <thead>
-      <tr style="background:#f5f5f5;">
-        <th style="padding:8px 12px;border:1px solid #ddd;text-align:left;">Date</th>
-        <th style="padding:8px 12px;border:1px solid #ddd;text-align:left;">Check # / Transaction ID</th>
-        <th style="padding:8px 12px;border:1px solid #ddd;text-align:right;">Amount</th>
-        <th style="padding:8px 12px;border:1px solid #ddd;text-align:left;">Notes</th>
-      </tr>
-    </thead>
-    <tbody>
-      ${rows}
-    </tbody>
-    <tfoot>
-      <tr style="font-weight:bold;background:#f9f9f9;">
-        <td colspan="2" style="padding:8px 12px;border:1px solid #ddd;">TOTAL</td>
-        <td style="padding:8px 12px;border:1px solid #ddd;text-align:right;">${formatCurrency(total)}</td>
-        <td style="padding:8px 12px;border:1px solid #ddd;"></td>
-      </tr>
-    </tfoot>
-  </table>
-  
-  <p style="margin-top:24px;font-size:13px;color:#555;">
-    No goods or services were provided in exchange for these contributions unless otherwise noted above.
-    ${ORG_NAME} is a 501(c)(3) tax-exempt organization. Our EIN is ${ORG_EIN}.
-    Please retain this receipt for your tax records.
-  </p>
-  
-  <p style="margin-top:24px;">With gratitude,<br/>${ORG_NAME}</p>
-</body>
-</html>`;
+  const PAGE_W = 612; // Letter
+  const PAGE_H = 792;
+  const MARGIN_L = 60;
+  const MARGIN_R = 60;
+  const CONTENT_W = PAGE_W - MARGIN_L - MARGIN_R;
+
+  const black = rgb(0, 0, 0);
+  const gray = rgb(0.33, 0.33, 0.33);
+  const lineGray = rgb(0.78, 0.78, 0.78);
+  const headerBg = rgb(0.96, 0.96, 0.96);
+
+  // ── Helper: draw text centred ──
+  const drawCentred = (
+    page: ReturnType<typeof pdf.addPage>,
+    text: string,
+    y: number,
+    f: typeof font,
+    size: number,
+    color = black
+  ) => {
+    const w = f.widthOfTextAtSize(text, size);
+    page.drawText(text, { x: (PAGE_W - w) / 2, y, font: f, size, color });
+  };
+
+  // ── Helper: draw the header block (reused on continuation pages) ──
+  const drawHeader = (page: ReturnType<typeof pdf.addPage>): number => {
+    let y = PAGE_H - 60;
+
+    drawCentred(page, ORG_NAME, y, fontBold, 18);
+    y -= 16;
+    drawCentred(page, ORG_ADDRESS, y, font, 10, gray);
+    y -= 13;
+    drawCentred(page, ORG_PHONE, y, font, 10, gray);
+    y -= 13;
+    drawCentred(page, `EIN: ${ORG_EIN}`, y, font, 10, gray);
+    y -= 20;
+
+    // Horizontal rule
+    page.drawLine({ start: { x: MARGIN_L, y }, end: { x: PAGE_W - MARGIN_R, y }, thickness: 1.5, color: black });
+    y -= 24;
+
+    drawCentred(page, "2026 Annual Donation Receipt", y, fontBold, 15);
+    y -= 28;
+
+    return y;
+  };
+
+  // ── Table column layout ──
+  const COL_DATE_X = MARGIN_L;
+  const COL_REF_X = MARGIN_L + 90;
+  const COL_AMT_X = MARGIN_L + 300;
+  const COL_NOTES_X = MARGIN_L + 390;
+  const ROW_H = 18;
+
+  const drawTableHeader = (page: ReturnType<typeof pdf.addPage>, y: number): number => {
+    // Header background
+    page.drawRectangle({ x: MARGIN_L, y: y - 3, width: CONTENT_W, height: ROW_H, color: headerBg });
+    const headerY = y;
+    page.drawText("Date", { x: COL_DATE_X + 4, y: headerY, font: fontBold, size: 9, color: black });
+    page.drawText("Check # / Transaction ID", { x: COL_REF_X + 4, y: headerY, font: fontBold, size: 9, color: black });
+    page.drawText("Amount", { x: COL_AMT_X + 4, y: headerY, font: fontBold, size: 9, color: black });
+    page.drawText("Notes", { x: COL_NOTES_X + 4, y: headerY, font: fontBold, size: 9, color: black });
+    return y - ROW_H - 2;
+  };
+
+  // ── Build pages ──
+  let page = pdf.addPage([PAGE_W, PAGE_H]);
+  let y = drawHeader(page);
+
+  // Date issued & donor name
+  page.drawText(`Date Issued: ${dateIssued}`, { x: MARGIN_L, y, font: font, size: 10, color: black });
+  y -= 16;
+  page.drawText(`Donor Name: ${donorName}`, { x: MARGIN_L, y, font: font, size: 10, color: black });
+  y -= 24;
+
+  // Dear line
+  page.drawText(`Dear ${donorName},`, { x: MARGIN_L, y, font: font, size: 10, color: black });
+  y -= 16;
+
+  const thankYouText = `Thank you for your generous support of ${ORG_NAME} during the 2026 calendar year. Below is a summary of your contributions for your tax records.`;
+  // Wrap thank-you text
+  const maxLineW = CONTENT_W;
+  const words = thankYouText.split(" ");
+  let line = "";
+  for (const word of words) {
+    const test = line ? `${line} ${word}` : word;
+    if (font.widthOfTextAtSize(test, 10) > maxLineW) {
+      page.drawText(line, { x: MARGIN_L, y, font, size: 10, color: black });
+      y -= 14;
+      line = word;
+    } else {
+      line = test;
+    }
+  }
+  if (line) {
+    page.drawText(line, { x: MARGIN_L, y, font, size: 10, color: black });
+    y -= 14;
+  }
+  y -= 10;
+
+  // Donation Summary heading
+  page.drawText("Donation Summary", { x: MARGIN_L, y, font: fontBold, size: 12, color: black });
+  y -= 20;
+
+  // Table header
+  y = drawTableHeader(page, y);
+
+  // Rows
+  for (const d of donations) {
+    if (y < 100) {
+      // New page
+      page = pdf.addPage([PAGE_W, PAGE_H]);
+      y = drawHeader(page);
+      page.drawText("Donation Summary (continued)", { x: MARGIN_L, y, font: fontBold, size: 12, color: black });
+      y -= 20;
+      y = drawTableHeader(page, y);
+    }
+
+    page.drawText(formatDate(d.deposit_date), { x: COL_DATE_X + 4, y, font, size: 9, color: black });
+    page.drawText(d.reference_id || "—", { x: COL_REF_X + 4, y, font, size: 9, color: black });
+
+    const amtStr = formatCurrency(d.amount);
+    page.drawText(amtStr, { x: COL_AMT_X + 4, y, font, size: 9, color: black });
+
+    const noteStr = (d.notes || "").substring(0, 30);
+    page.drawText(noteStr, { x: COL_NOTES_X + 4, y, font, size: 9, color: black });
+
+    // Row border
+    page.drawLine({ start: { x: MARGIN_L, y: y - 4 }, end: { x: PAGE_W - MARGIN_R, y: y - 4 }, thickness: 0.5, color: lineGray });
+    y -= ROW_H;
+  }
+
+  // Total row
+  if (y < 100) {
+    page = pdf.addPage([PAGE_W, PAGE_H]);
+    y = drawHeader(page);
+  }
+  page.drawRectangle({ x: MARGIN_L, y: y - 3, width: CONTENT_W, height: ROW_H, color: headerBg });
+  page.drawText("TOTAL", { x: COL_DATE_X + 4, y, font: fontBold, size: 9, color: black });
+  page.drawText(formatCurrency(total), { x: COL_AMT_X + 4, y, font: fontBold, size: 9, color: black });
+  y -= ROW_H + 16;
+
+  // Disclaimer
+  const disclaimerLines = [
+    "No goods or services were provided in exchange for these contributions unless otherwise noted above.",
+    `${ORG_NAME} is a 501(c)(3) tax-exempt organization. Our EIN is ${ORG_EIN}.`,
+    "Please retain this receipt for your tax records.",
+  ];
+  for (const dl of disclaimerLines) {
+    if (y < 60) {
+      page = pdf.addPage([PAGE_W, PAGE_H]);
+      y = PAGE_H - 60;
+    }
+    page.drawText(dl, { x: MARGIN_L, y, font, size: 8, color: gray });
+    y -= 12;
+  }
+
+  y -= 12;
+  if (y < 60) {
+    page = pdf.addPage([PAGE_W, PAGE_H]);
+    y = PAGE_H - 60;
+  }
+  page.drawText("With gratitude,", { x: MARGIN_L, y, font, size: 10, color: black });
+  y -= 14;
+  page.drawText(ORG_NAME, { x: MARGIN_L, y, font, size: 10, color: black });
+
+  return await pdf.save();
 }
+
+// ── Edge function handler ───────────────────────────────────────────────────
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -203,11 +323,13 @@ Deno.serve(async (req) => {
       year: "numeric",
     });
 
-    const receiptHtml = generateReceiptHtml(supporter, qualifying, total, dateIssued);
+    // Generate PDF
+    const pdfBytes = await generateReceiptPdf(supporter.name, qualifying, total, dateIssued);
+    const pdfBase64 = btoa(String.fromCharCode(...pdfBytes));
+    const pdfFilename = `2026-Donation-Receipt-${supporter.name.replace(/\s+/g, "-")}.pdf`;
 
     // Try to send email
     if (!resendApiKey) {
-      // Update status to Failed
       await supabase
         .from("supporters")
         .update({ receipt_2026_status: "Failed" })
@@ -216,7 +338,6 @@ Deno.serve(async (req) => {
       return new Response(
         JSON.stringify({
           error: "Email service not configured",
-          receipt_html: receiptHtml,
           can_download: true,
         }),
         { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -235,10 +356,7 @@ Deno.serve(async (req) => {
       <p style="color:#888;font-size:12px;margin-top:24px;">You may reply directly to this email with any questions.</p>
     </div>`;
 
-    // Send via Resend with HTML receipt as attachment
-    // Using Resend's attachment feature with HTML content
-    const receiptBase64 = btoa(unescape(encodeURIComponent(receiptHtml)));
-
+    // Send via Resend with PDF attachment
     const resendRes = await fetch("https://api.resend.com/emails", {
       method: "POST",
       headers: {
@@ -252,9 +370,9 @@ Deno.serve(async (req) => {
         html: emailBody,
         attachments: [
           {
-            filename: `2026-Donation-Receipt-${supporter.name.replace(/\s+/g, "-")}.html`,
-            content: receiptBase64,
-            type: "text/html",
+            filename: pdfFilename,
+            content: pdfBase64,
+            type: "application/pdf",
           },
         ],
       }),
@@ -273,7 +391,6 @@ Deno.serve(async (req) => {
         JSON.stringify({
           error: "Failed to send email",
           details: errText,
-          receipt_html: receiptHtml,
           can_download: true,
         }),
         { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
