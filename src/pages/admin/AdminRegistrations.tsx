@@ -15,7 +15,7 @@ import { format, parseISO, differenceInYears } from "date-fns";
 
 const AdminRegistrations = () => {
   const navigate = useNavigate();
-  const goBack = () => window.history.state?.idx > 0 ? navigate(-1) : navigate("/admin/operations");
+  const goBack = () => navigate("/admin/operations");
   const [searchQuery, setSearchQuery] = useState("");
   const [programFilter, setProgramFilter] = useState<string>("all");
   const [districtFilter, setDistrictFilter] = useState<string>("all");

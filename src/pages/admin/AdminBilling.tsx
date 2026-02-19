@@ -20,7 +20,7 @@ const tiles = [
 
 const AdminBilling = () => {
   const navigate = useNavigate();
-  const goBack = () => window.history.state?.idx > 0 ? navigate(-1) : navigate("/admin/finance");
+  const goBack = () => navigate("/admin/finance");
 
   return (
     <div className="min-h-screen bg-black text-white">

@@ -37,8 +37,7 @@ interface RevenueRow {
 
 const AdminMasterRevenueTracker = () => {
   const navigate = useNavigate();
-  const goBack = () =>
-    window.history.state?.idx > 0 ? navigate(-1) : navigate("/admin/sales-marketing");
+  const goBack = () => navigate("/admin/sales-marketing");
 
   const currentYear = new Date().getFullYear();
   const [year, setYear] = useState(String(currentYear));

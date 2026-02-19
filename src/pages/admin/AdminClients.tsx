@@ -46,7 +46,7 @@ export default function AdminClients() {
   const { toast } = useToast();
   const { signOut } = useAuth();
   const navigate = useNavigate();
-  const goBack = () => window.history.state?.idx > 0 ? navigate(-1) : navigate("/admin/finance");
+  const goBack = () => navigate("/admin/finance");
   const fetchClients = async () => {
     setLoading(true);
     const { data, error } = await supabase
