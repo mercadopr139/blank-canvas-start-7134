@@ -342,7 +342,7 @@ Deno.serve(async (req) => {
     // Get qualifying donations for 2026
     const { data: donations, error: donErr } = await supabase
       .from("donations")
-      .select("deposit_date, reference_id, amount, notes, revenue_type, revenue_description")
+      .select("deposit_date, reference_id, amount, notes, revenue_type, revenue_description, donor_name")
       .eq("supporter_id", supporter_id)
       .gte("deposit_date", "2026-01-01")
       .lte("deposit_date", "2026-12-31")
@@ -376,10 +376,13 @@ Deno.serve(async (req) => {
       year: "numeric",
     });
 
+    // Use the donor_name from the donation records (the name entered in the revenue form)
+    const receiptName = qualifying[0]?.donor_name?.trim() || supporter.name?.trim() || "Supporter";
+
     // Generate PDF
-    const pdfBytes = await generateReceiptPdf(supporter.name, qualifying, total, dateIssued);
+    const pdfBytes = await generateReceiptPdf(receiptName, qualifying, total, dateIssued);
     const pdfBase64 = btoa(String.fromCharCode(...pdfBytes));
-    const pdfFilename = `2026-Donation-Receipt-${supporter.name.replace(/\s+/g, "-")}.pdf`;
+    const pdfFilename = `2026-Donation-Receipt-${receiptName.replace(/\s+/g, "-")}.pdf`;
 
     // Try to send email
     if (!resendApiKey) {
@@ -416,7 +419,7 @@ Deno.serve(async (req) => {
   <h2 style="margin:0 0 8px;color:#1a1a1a;">No Limits Academy</h2>
   <p style="margin:0 0 20px;color:#888;font-size:13px;">Annual Donation Receipt — 2026</p>
   ${personalBlock}
-  <p style="margin:0 0 12px;">Dear ${supporter.name},</p>
+  <p style="margin:0 0 12px;">Dear ${receiptName},</p>
   <p style="margin:0 0 12px;">Please find your 2026 annual donation receipt attached to this email.</p>
   <p style="margin:0 0 12px;">Thank you for your generous support of ${ORG_NAME}! Your contribution helps us use the discipline of boxing to promote personal, professional, and spiritual development within our community.</p>
   <p style="margin:0 0 0;color:#888;font-size:12px;">You may reply directly to this email with any questions.</p>
@@ -428,7 +431,7 @@ Deno.serve(async (req) => {
 </html>`;
 
     // Plain text version (critical for spam scoring)
-    const textBody = `${personalText}Dear ${supporter.name},
+    const textBody = `${personalText}Dear ${receiptName},
 
 Please find your 2026 annual donation receipt attached to this email.
 
