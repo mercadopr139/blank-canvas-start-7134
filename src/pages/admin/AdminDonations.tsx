@@ -4,7 +4,7 @@ import { format } from "date-fns";
 import { formatUSD } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Plus, Trash2 } from "lucide-react";
+import { ArrowLeft, Pencil, Plus, Trash2 } from "lucide-react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -25,6 +25,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import NewRevenueModal from "@/components/admin/NewRevenueModal";
+import EditRevenueModal from "@/components/admin/EditRevenueModal";
 
 interface Revenue {
   id: string;
@@ -58,6 +59,7 @@ const AdminDonations = () => {
   const [loading, setLoading] = useState(true);
   const [modalOpen, setModalOpen] = useState(false);
   const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [editId, setEditId] = useState<string | null>(null);
 
   const fetchRevenue = useCallback(async () => {
     setLoading(true);
@@ -163,14 +165,24 @@ const AdminDonations = () => {
                     <TableCell className="text-white/70">{r.reference_id ?? "—"}</TableCell>
                     <TableCell className="text-white">{displayReceipt(r)}</TableCell>
                     <TableCell>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="text-red-500 hover:text-red-400 hover:bg-white/10"
-                        onClick={() => setDeleteId(r.id)}
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </Button>
+                      <div className="flex items-center gap-1">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="text-white/50 hover:text-white hover:bg-white/10"
+                          onClick={() => setEditId(r.id)}
+                        >
+                          <Pencil className="w-4 h-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="text-red-500 hover:text-red-400 hover:bg-white/10"
+                          onClick={() => setDeleteId(r.id)}
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      </div>
                     </TableCell>
                   </TableRow>
                 ))
@@ -184,6 +196,13 @@ const AdminDonations = () => {
         open={modalOpen}
         onOpenChange={setModalOpen}
         onCreated={fetchRevenue}
+      />
+
+      <EditRevenueModal
+        open={!!editId}
+        onOpenChange={(isOpen) => { if (!isOpen) setEditId(null); }}
+        donationId={editId}
+        onSaved={fetchRevenue}
       />
 
       <AlertDialog open={!!deleteId} onOpenChange={(open) => !open && setDeleteId(null)}>
