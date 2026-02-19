@@ -61,6 +61,8 @@ const EditRevenueModal = ({ open, onOpenChange, donationId, onSaved }: Props) =>
   const [eventName, setEventName] = useState("");
   const [fundraisingDescSelect, setFundraisingDescSelect] = useState("");
   const [fundraisingDescOther, setFundraisingDescOther] = useState("");
+  const [sponsorName, setSponsorName] = useState("");
+  const [sponsorEmail, setSponsorEmail] = useState("");
 
   // Shared fields
   const [recognitionPeriod, setRecognitionPeriod] = useState("");
@@ -101,6 +103,15 @@ const EditRevenueModal = ({ open, onOpenChange, donationId, onSaved }: Props) =>
       setPartnerName(data.partner_name || "");
       setGrantDate(data.grant_date ? new Date(data.grant_date + "T00:00:00") : undefined);
       setEventName(data.event_name || "");
+
+      // Load sponsor fields: for Fundraising/Sponsor, source_name holds the sponsor name
+      if (data.revenue_type === "Fundraising" && data.revenue_description === "Sponsor") {
+        setSponsorName(data.source_name || data.donor_name || "");
+        setSponsorEmail(data.source_email || "");
+      } else {
+        setSponsorName("");
+        setSponsorEmail("");
+      }
 
       const desc = data.revenue_description || "";
       const knownDescs = ["Presale tickets", "Sponsor", "Event day tickets", "Raffle", "Merchandise", "Concessions"];
@@ -162,7 +173,9 @@ const EditRevenueModal = ({ open, onOpenChange, donationId, onSaved }: Props) =>
       reference_id: referenceId.trim() || null,
       notes: notes.trim() || null,
       source_name: sourceName || null,
-      donor_name: sourceName || "N/A",
+      donor_name: (revenueType === "Fundraising" && fundraisingDescSelect === "Sponsor")
+        ? (sponsorName.trim() || sourceName || "N/A")
+        : (sourceName || "N/A"),
       date_received: format(depositDate!, "yyyy-MM-dd"),
       recognition_period: recognitionPeriod || null,
     };
@@ -176,8 +189,11 @@ const EditRevenueModal = ({ open, onOpenChange, donationId, onSaved }: Props) =>
     if (revenueType === "Fee for Service") {
       record.vendor_name = vendorName.trim() || null;
       record.program_name = programName.trim() || null;
+      if (fundraisingDescSelect === "Sponsor") {
+        record.source_name = sponsorName.trim() || eventName.trim();
+        record.source_email = sponsorEmail.trim() || null;
+      }
     }
-
     if (revenueType === "Re-Grant") {
       record.partner_name = partnerName.trim() || null;
       record.grant_date = grantDate ? format(grantDate, "yyyy-MM-dd") : null;
@@ -334,6 +350,18 @@ const EditRevenueModal = ({ open, onOpenChange, donationId, onSaved }: Props) =>
                         <Label className="text-white/70">Other Description *</Label>
                         <Input value={fundraisingDescOther} onChange={(e) => setFundraisingDescOther(e.target.value)} placeholder="Describe the revenue…" className="bg-white/5 border-white/20 text-white placeholder:text-white/30" />
                       </div>
+                    )}
+                    {fundraisingDescSelect === "Sponsor" && (
+                      <>
+                        <div className="space-y-1">
+                          <Label className="text-white/70">Sponsor Name *</Label>
+                          <Input value={sponsorName} onChange={(e) => setSponsorName(e.target.value)} placeholder="Contact / company name" className="bg-white/5 border-white/20 text-white placeholder:text-white/30" />
+                        </div>
+                        <div className="space-y-1">
+                          <Label className="text-white/70">Sponsor Email</Label>
+                          <Input type="email" value={sponsorEmail} onChange={(e) => setSponsorEmail(e.target.value)} placeholder="For receipt delivery" className="bg-white/5 border-white/20 text-white placeholder:text-white/30" />
+                        </div>
+                      </>
                     )}
                   </>
                 )}
