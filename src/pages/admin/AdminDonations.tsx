@@ -272,7 +272,7 @@ const AdminDonations = () => {
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel className="border-white/20 text-white hover:bg-white/10">Cancel</AlertDialogCancel>
+            <AlertDialogCancel className="bg-white text-black border-white/20 hover:bg-white/90 hover:text-black">Cancel</AlertDialogCancel>
             <AlertDialogAction className="bg-red-600 hover:bg-red-700 text-white" onClick={handleDelete}>Delete</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
