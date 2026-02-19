@@ -7,8 +7,8 @@ import { Badge } from "@/components/ui/badge";
 import { ArrowLeft, Search } from "lucide-react";
 import { formatUSD } from "@/lib/utils";
 import {
-  Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
-} from "@/components/ui/table";
+  Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from
+"@/components/ui/table";
 
 interface SupporterRow {
   id: string;
@@ -28,46 +28,46 @@ const AdminSupporters = () => {
   const fetchData = useCallback(async () => {
     setLoading(true);
     // Get all supporters
-    const { data: supporters } = await supabase
-      .from("supporters")
-      .select("id, name, email, receipt_2026_status, receipt_2026_sent_at")
-      .order("name");
+    const { data: supporters } = await supabase.
+    from("supporters").
+    select("id, name, email, receipt_2026_status, receipt_2026_sent_at").
+    order("name");
 
-    if (!supporters) { setLoading(false); return; }
+    if (!supporters) {setLoading(false);return;}
 
     // Get 2026 qualifying donations grouped by supporter
-    const { data: donations } = await supabase
-      .from("donations")
-      .select("supporter_id, amount, revenue_type, revenue_description, deposit_date")
-      .gte("deposit_date", "2026-01-01")
-      .lte("deposit_date", "2026-12-31");
+    const { data: donations } = await supabase.
+    from("donations").
+    select("supporter_id, amount, revenue_type, revenue_description, deposit_date").
+    gte("deposit_date", "2026-01-01").
+    lte("deposit_date", "2026-12-31");
 
     const totals: Record<string, number> = {};
     (donations || []).forEach((d: any) => {
       if (
-        d.supporter_id &&
-        (d.revenue_type === "Donation" ||
-          (d.revenue_type === "Fundraising" && d.revenue_description === "Sponsor"))
-      ) {
+      d.supporter_id && (
+      d.revenue_type === "Donation" ||
+      d.revenue_type === "Fundraising" && d.revenue_description === "Sponsor"))
+      {
         totals[d.supporter_id] = (totals[d.supporter_id] || 0) + Number(d.amount);
       }
     });
 
     const merged: SupporterRow[] = supporters.map((s: any) => ({
       ...s,
-      total_2026: totals[s.id] || 0,
+      total_2026: totals[s.id] || 0
     }));
 
     setRows(merged);
     setLoading(false);
   }, []);
 
-  useEffect(() => { fetchData(); }, [fetchData]);
+  useEffect(() => {fetchData();}, [fetchData]);
 
   const filtered = rows.filter(
     (r) =>
-      r.name.toLowerCase().includes(search.toLowerCase()) ||
-      (r.email && r.email.toLowerCase().includes(search.toLowerCase()))
+    r.name.toLowerCase().includes(search.toLowerCase()) ||
+    r.email && r.email.toLowerCase().includes(search.toLowerCase())
   );
 
   const statusBadge = (status: string) => {
@@ -84,7 +84,7 @@ const AdminSupporters = () => {
   return (
     <div className="bg-black text-white">
       <div className="border-b border-white/10 px-4 py-3">
-        <h2 className="text-base font-semibold text-white">NLA Supporter History</h2>
+        <h2 className="text-base font-semibold text-white">Donor/Sponsor History</h2>
         <p className="text-xs text-white/50">View supporters and 2026 receipt status</p>
       </div>
 
@@ -96,8 +96,8 @@ const AdminSupporters = () => {
               placeholder="Search by name or email…"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="pl-9 bg-white/5 border-white/20 text-white placeholder:text-white/30"
-            />
+              className="pl-9 bg-white/5 border-white/20 text-white placeholder:text-white/30" />
+
           </div>
         </div>
 
@@ -114,45 +114,45 @@ const AdminSupporters = () => {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {loading ? (
-                <TableRow className="border-white/10 hover:bg-transparent">
+              {loading ?
+              <TableRow className="border-white/10 hover:bg-transparent">
                   <TableCell colSpan={6} className="text-center py-12 text-white/50">Loading…</TableCell>
-                </TableRow>
-              ) : filtered.length === 0 ? (
-                <TableRow className="border-white/10 hover:bg-transparent">
+                </TableRow> :
+              filtered.length === 0 ?
+              <TableRow className="border-white/10 hover:bg-transparent">
                   <TableCell colSpan={6} className="text-center py-12 text-white/50">No supporters found.</TableCell>
-                </TableRow>
-              ) : (
-                filtered.map((s) => (
-                  <TableRow key={s.id} className="border-white/10 hover:bg-white/5">
+                </TableRow> :
+
+              filtered.map((s) =>
+              <TableRow key={s.id} className="border-white/10 hover:bg-white/5">
                     <TableCell className="text-white font-medium">{s.name}</TableCell>
                     <TableCell className="text-white/70">{s.email || "—"}</TableCell>
                     <TableCell className="text-white">{formatUSD(s.total_2026)}</TableCell>
                     <TableCell>{statusBadge(s.receipt_2026_status)}</TableCell>
                     <TableCell className="text-white/70">
-                      {s.receipt_2026_sent_at
-                        ? new Date(s.receipt_2026_sent_at).toLocaleDateString()
-                        : "—"}
+                      {s.receipt_2026_sent_at ?
+                  new Date(s.receipt_2026_sent_at).toLocaleDateString() :
+                  "—"}
                     </TableCell>
                     <TableCell>
                       <Button
-                        variant="ghost"
-                        size="sm"
-                        className="text-sky-300 hover:text-sky-200 hover:bg-white/10"
-                        onClick={() => navigate(`/admin/finance/supporters/${s.id}`)}
-                      >
+                    variant="ghost"
+                    size="sm"
+                    className="text-sky-300 hover:text-sky-200 hover:bg-white/10"
+                    onClick={() => navigate(`/admin/finance/supporters/${s.id}`)}>
+
                         View
                       </Button>
                     </TableCell>
                   </TableRow>
-                ))
-              )}
+              )
+              }
             </TableBody>
           </Table>
         </div>
       </div>
-    </div>
-  );
+    </div>);
+
 };
 
 export default AdminSupporters;
