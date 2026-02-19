@@ -27,6 +27,7 @@ import {
 } from "@/components/ui/table";
 import NewRevenueModal from "@/components/admin/NewRevenueModal";
 import EditRevenueModal from "@/components/admin/EditRevenueModal";
+import SendReceiptFlow from "@/components/admin/SendReceiptFlow";
 
 interface Revenue {
   id: string;
@@ -63,6 +64,7 @@ const AdminDonations = () => {
   const [modalOpen, setModalOpen] = useState(false);
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [editId, setEditId] = useState<string | null>(null);
+  const [receiptPrompt, setReceiptPrompt] = useState<{ supporterId: string; supporterName: string } | null>(null);
 
   const fetchRevenue = useCallback(async () => {
     setLoading(true);
@@ -245,7 +247,20 @@ const AdminDonations = () => {
         open={!!editId}
         onOpenChange={(isOpen) => { if (!isOpen) setEditId(null); }}
         donationId={editId}
-        onSaved={fetchRevenue}
+        onSaved={(receiptInfo) => {
+          fetchRevenue();
+          if (receiptInfo) {
+            setReceiptPrompt(receiptInfo);
+          }
+        }}
+      />
+
+      <SendReceiptFlow
+        open={!!receiptPrompt}
+        onOpenChange={(isOpen) => { if (!isOpen) setReceiptPrompt(null); }}
+        supporterId={receiptPrompt?.supporterId || ""}
+        supporterName={receiptPrompt?.supporterName || ""}
+        onComplete={fetchRevenue}
       />
 
       <AlertDialog open={!!deleteId} onOpenChange={(open) => !open && setDeleteId(null)}>
