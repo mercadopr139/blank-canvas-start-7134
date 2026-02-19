@@ -144,27 +144,13 @@ const AdminDonations = () => {
   };
 
   return (
-    <div className="min-h-screen bg-black text-white">
-      <header className="bg-black border-b border-white/10">
-        <div className="container mx-auto px-4 py-4 flex items-center gap-4">
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={goBack}
-            className="text-white hover:bg-white/10 hover:text-white"
-          >
-            <ArrowLeft className="w-5 h-5" />
-          </Button>
-          <div>
-            <h1 className="text-xl font-bold text-white">Revenue</h1>
-            <p className="text-sm text-white/50">
-              Track and manage all incoming revenue.
-            </p>
-          </div>
-        </div>
-      </header>
+    <div className="bg-black text-white">
+      <div className="border-b border-white/10 px-4 py-3">
+        <h2 className="text-base font-semibold text-white">Revenue</h2>
+        <p className="text-xs text-white/50">Track and manage all incoming revenue.</p>
+      </div>
 
-      <main className="container mx-auto px-4 py-8">
+      <div className="container mx-auto px-4 py-8">
         <div className="flex justify-end mb-6">
           <Button
             className="bg-white text-black hover:bg-white/90"
@@ -235,7 +221,7 @@ const AdminDonations = () => {
             </TableBody>
           </Table>
         </div>
-      </main>
+      </div>
 
       <NewRevenueModal
         open={modalOpen}

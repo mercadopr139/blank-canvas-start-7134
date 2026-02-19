@@ -81,7 +81,7 @@ const AdminSupporterDetail = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-black text-white flex items-center justify-center">
+      <div className="bg-black text-white flex items-center justify-center py-24">
         <p className="text-white/50">Loading…</p>
       </div>
     );
@@ -89,43 +89,38 @@ const AdminSupporterDetail = () => {
 
   if (!supporter) {
     return (
-      <div className="min-h-screen bg-black text-white flex items-center justify-center">
+      <div className="bg-black text-white flex items-center justify-center py-24">
         <p className="text-white/50">Supporter not found.</p>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-black text-white">
-      <header className="bg-black border-b border-white/10">
-        <div className="container mx-auto px-4 py-4 flex items-center gap-4">
-          <Button variant="ghost" size="icon" onClick={() => navigate("/admin/finance/supporters")} className="text-white hover:bg-white/10 hover:text-white">
-            <ArrowLeft className="w-5 h-5" />
-          </Button>
-          <div className="flex-1">
-            <h1 className="text-xl font-bold text-white">{supporter.name}</h1>
-            <p className="text-sm text-white/50">{supporter.email || "No email"}</p>
-          </div>
-          <div className="flex items-center gap-3">
-            {statusBadge(supporter.receipt_2026_status)}
-            <Button
-              className="bg-white text-black hover:bg-white/90"
-              onClick={() => {
-                if (!supporter.email) {
-                  toast({ title: "Email required", description: "Add an email to this supporter before sending a receipt.", variant: "destructive" });
-                  return;
-                }
-                setReceiptFlowOpen(true);
-              }}
-            >
-              <Send className="w-4 h-4 mr-2" />
-              Send 2026 Receipt
-            </Button>
-          </div>
+    <div className="bg-black text-white">
+      <div className="border-b border-white/10 px-4 py-3 flex items-center justify-between">
+        <div>
+          <h2 className="text-base font-semibold text-white">{supporter.name}</h2>
+          <p className="text-xs text-white/50">{supporter.email || "No email"}</p>
         </div>
-      </header>
+        <div className="flex items-center gap-3">
+          {statusBadge(supporter.receipt_2026_status)}
+          <Button
+            className="bg-white text-black hover:bg-white/90"
+            onClick={() => {
+              if (!supporter.email) {
+                toast({ title: "Email required", description: "Add an email to this supporter before sending a receipt.", variant: "destructive" });
+                return;
+              }
+              setReceiptFlowOpen(true);
+            }}
+          >
+            <Send className="w-4 h-4 mr-2" />
+            Send 2026 Receipt
+          </Button>
+        </div>
+      </div>
 
-      <main className="container mx-auto px-4 py-8">
+      <div className="container mx-auto px-4 py-8">
         <div className="flex items-center justify-between mb-6">
           <h2 className="text-lg font-semibold text-white">2026 Qualifying Revenue</h2>
           <p className="text-white/70">Total: <span className="text-white font-bold">{formatUSD(total)}</span></p>
@@ -168,7 +163,7 @@ const AdminSupporterDetail = () => {
             {new Date(supporter.receipt_2026_sent_at).toLocaleString()}
           </p>
         )}
-      </main>
+      </div>
 
       <SendReceiptFlow
         open={receiptFlowOpen}

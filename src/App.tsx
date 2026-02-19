@@ -18,9 +18,9 @@ import HouseRulesTest from "./pages/HouseRulesTest";
 import AdminIndex from "./pages/admin/AdminIndex";
 import AdminLogin from "./pages/admin/AdminLogin";
 import AdminDashboard from "./pages/admin/AdminDashboard";
-import AdminOperations from "./pages/admin/AdminOperations";
-import AdminSalesMarketing from "./pages/admin/AdminSalesMarketing";
-import AdminFinance from "./pages/admin/AdminFinance";
+import AdminOperations, { AdminOperationsIndex } from "./pages/admin/AdminOperations";
+import AdminSalesMarketing, { AdminSalesMarketingIndex } from "./pages/admin/AdminSalesMarketing";
+import AdminFinance, { AdminFinanceIndex } from "./pages/admin/AdminFinance";
 import AdminClients from "./pages/admin/AdminClients";
 import AdminServiceCalendar from "./pages/admin/AdminServiceCalendar";
 import AdminInvoices from "./pages/admin/AdminInvoices";
@@ -72,6 +72,7 @@ const App = () => (
                 </ProtectedRoute>
               }
             />
+            {/* Operations section — sidebar layout wraps sub-pages */}
             <Route
               path="/admin/operations"
               element={
@@ -79,7 +80,13 @@ const App = () => (
                   <AdminOperations />
                 </ProtectedRoute>
               }
-            />
+            >
+              <Route index element={<AdminOperationsIndex />} />
+              <Route path="registrations" element={<AdminRegistrations />} />
+              <Route path="registration-analytics" element={<AdminRegistrationAnalytics />} />
+            </Route>
+
+            {/* Sales & Marketing section — sidebar layout wraps sub-pages */}
             <Route
               path="/admin/sales-marketing"
               element={
@@ -87,7 +94,12 @@ const App = () => (
                   <AdminSalesMarketing />
                 </ProtectedRoute>
               }
-            />
+            >
+              <Route index element={<AdminSalesMarketingIndex />} />
+              <Route path="revenue" element={<AdminDonations />} />
+            </Route>
+
+            {/* Finance section — sidebar layout wraps sub-pages */}
             <Route
               path="/admin/finance"
               element={
@@ -95,103 +107,16 @@ const App = () => (
                   <AdminFinance />
                 </ProtectedRoute>
               }
-            />
-            <Route
-              path="/admin/clients"
-              element={
-                <ProtectedRoute requireAdmin>
-                  <AdminClients />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/admin/service-calendar"
-              element={
-                <ProtectedRoute requireAdmin>
-                  <AdminServiceCalendar />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/admin/invoices"
-              element={
-                <ProtectedRoute requireAdmin>
-                  <AdminInvoices />
-                </ProtectedRoute>
-              }
-            />
-             <Route
-               path="/admin/operations/registrations"
-               element={
-                 <ProtectedRoute requireAdmin>
-                   <AdminRegistrations />
-                 </ProtectedRoute>
-               }
-             />
-             <Route
-               path="/admin/operations/registration-analytics"
-               element={
-                 <ProtectedRoute requireAdmin>
-                   <AdminRegistrationAnalytics />
-                 </ProtectedRoute>
-               }
-             />
-             <Route
-               path="/admin/finance/billing"
-               element={
-                 <ProtectedRoute requireAdmin>
-                   <AdminBilling />
-                 </ProtectedRoute>
-               }
-             />
-             <Route
-               path="/admin/finance/donations"
-               element={
-                 <ProtectedRoute requireAdmin>
-                   <AdminDonations />
-                 </ProtectedRoute>
-               }
-             />
-             <Route
-               path="/admin/finance/deposits"
-               element={
-                 <ProtectedRoute requireAdmin>
-                   <AdminDeposits />
-                 </ProtectedRoute>
-               }
-             />
-             <Route
-               path="/admin/finance/deposits/:id"
-               element={
-                 <ProtectedRoute requireAdmin>
-                   <AdminDepositDetail />
-                 </ProtectedRoute>
-               }
-             />
-             <Route
-               path="/admin/finance/master-revenue-tracker"
-               element={
-                 <ProtectedRoute requireAdmin>
-                   <AdminMasterRevenueTracker />
-                 </ProtectedRoute>
-               }
-             />
-             <Route
-               path="/admin/finance/supporters"
-               element={
-                 <ProtectedRoute requireAdmin>
-                   <AdminSupporters />
-                 </ProtectedRoute>
-               }
-             />
-             <Route
-               path="/admin/finance/supporters/:id"
-               element={
-                 <ProtectedRoute requireAdmin>
-                   <AdminSupporterDetail />
-                 </ProtectedRoute>
-               }
-             />
+            >
+              <Route index element={<AdminFinanceIndex />} />
+              <Route path="billing" element={<AdminBilling />} />
+              <Route path="donations" element={<AdminDonations />} />
+              <Route path="deposits" element={<AdminDeposits />} />
+              <Route path="deposits/:id" element={<AdminDepositDetail />} />
+              <Route path="master-revenue-tracker" element={<AdminMasterRevenueTracker />} />
+              <Route path="supporters" element={<AdminSupporters />} />
+              <Route path="supporters/:id" element={<AdminSupporterDetail />} />
+            </Route>
             
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />

@@ -1,5 +1,4 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -10,12 +9,10 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { ArrowLeft, Search, Eye, AlertTriangle, ExternalLink, Users, Loader2 } from "lucide-react";
+import { Search, Eye, AlertTriangle, ExternalLink, Users, Loader2 } from "lucide-react";
 import { format, parseISO, differenceInYears } from "date-fns";
 
 const AdminRegistrations = () => {
-  const navigate = useNavigate();
-  const goBack = () => navigate("/admin/operations");
   const [searchQuery, setSearchQuery] = useState("");
   const [programFilter, setProgramFilter] = useState<string>("all");
   const [districtFilter, setDistrictFilter] = useState<string>("all");
@@ -58,22 +55,13 @@ const AdminRegistrations = () => {
   const districts = [...new Set(registrations?.map((r) => r.child_school_district) || [])];
 
   return (
-    <div className="min-h-screen bg-black text-white">
-      <header className="bg-black border-b border-white/10">
-        <div className="container mx-auto px-4 py-4 flex items-center gap-4">
-          <Button variant="ghost" size="icon" onClick={goBack} className="text-white hover:bg-white/10 hover:text-white">
-            <ArrowLeft className="w-5 h-5" />
-          </Button>
-          <div>
-            <h1 className="text-xl font-bold text-white">Youth Registrations</h1>
-            <p className="text-sm text-white/50">
-              {filteredRegistrations?.length || 0} registrations
-            </p>
-          </div>
-        </div>
-      </header>
+    <div className="bg-black text-white">
+      <div className="border-b border-white/10 px-4 py-3">
+        <h2 className="text-base font-semibold text-white">Youth Registrations</h2>
+        <p className="text-xs text-white/50">{filteredRegistrations?.length || 0} registrations</p>
+      </div>
 
-      <main className="container mx-auto px-4 py-6 space-y-6">
+      <div className="container mx-auto px-4 py-6 space-y-6">
         {/* Filters */}
         <Card className="bg-white/5 border-white/10">
           <CardContent className="pt-4">
@@ -182,7 +170,7 @@ const AdminRegistrations = () => {
             )}
           </CardContent>
         </Card>
-      </main>
+      </div>
 
       {/* Detail Dialog */}
       <Dialog open={!!selectedRegistration} onOpenChange={() => setSelectedRegistration(null)}>
