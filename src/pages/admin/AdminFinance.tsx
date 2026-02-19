@@ -1,7 +1,7 @@
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { ArrowLeft, HandCoins, Landmark, Receipt, ShieldCheck } from "lucide-react";
+import { ArrowLeft, Receipt, ShieldCheck } from "lucide-react";
 
 const AdminFinance = () => {
   const navigate = useNavigate();
@@ -9,18 +9,6 @@ const AdminFinance = () => {
     window.history.state?.idx > 0 ? navigate(-1) : navigate("/admin/dashboard");
 
   const folders = [
-    {
-      title: "Donations",
-      description: "Track incoming donations",
-      icon: HandCoins,
-      href: "/admin/finance/donations",
-    },
-    {
-      title: "Deposit Batches",
-      description: "Group donations into bank deposits",
-      icon: Landmark,
-      href: "/admin/finance/deposits",
-    },
     {
       title: "Billing",
       description: "Invoices",
