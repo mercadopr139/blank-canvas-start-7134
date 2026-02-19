@@ -21,7 +21,7 @@ const AdminSalesMarketing = () => {
       href: "/admin/finance/master-revenue-tracker",
     },
     {
-      title: "NLA Supporter History",
+      title: "NLA Donor/Sponsor History",
       description: "Supporters & 2026 receipts",
       icon: Users,
       href: "/admin/finance/supporters",
