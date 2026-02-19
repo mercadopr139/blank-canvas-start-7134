@@ -1,7 +1,7 @@
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { ArrowLeft, BarChart3, HandCoins } from "lucide-react";
+import { ArrowLeft, BarChart3, HandCoins, Users } from "lucide-react";
 
 const AdminSalesMarketing = () => {
   const navigate = useNavigate();
@@ -19,6 +19,12 @@ const AdminSalesMarketing = () => {
       description: "Monthly totals and year-to-date revenue",
       icon: BarChart3,
       href: "/admin/finance/master-revenue-tracker",
+    },
+    {
+      title: "NLA Supporter History",
+      description: "Supporters & 2026 receipts",
+      icon: Users,
+      href: "/admin/finance/supporters",
     },
   ];
 
