@@ -1,76 +1,84 @@
 import { useNavigate } from "react-router-dom";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { ArrowLeft, BarChart3, HandCoins, Users } from "lucide-react";
+import { Card, CardContent } from "@/components/ui/card";
+import { BarChart3, HandCoins, Users, LucideIcon } from "lucide-react";
+import AdminSectionLayout, { SectionCard } from "@/components/admin/AdminSectionLayout";
 
-const AdminSalesMarketing = () => {
+interface SMTile {
+  title: string;
+  description: string;
+  icon: LucideIcon;
+  href: string;
+}
+
+const baseTiles: SMTile[] = [
+  {
+    title: "Revenue",
+    description: "Track all incoming revenue",
+    icon: HandCoins,
+    href: "/admin/sales-marketing/revenue",
+  },
+  {
+    title: "Master Revenue Tracker",
+    description: "Monthly totals and year-to-date revenue",
+    icon: BarChart3,
+    href: "/admin/finance/master-revenue-tracker",
+  },
+  {
+    title: "NLA Donor/Sponsor History",
+    description: "Supporters & 2026 receipts",
+    icon: Users,
+    href: "/admin/finance/supporters",
+  },
+];
+
+// Index tile grid – rendered as the <Outlet> for /admin/sales-marketing
+export const AdminSalesMarketingIndex = () => {
   const navigate = useNavigate();
-  const goBack = () => navigate("/admin/dashboard");
-
-  const folders = [
-    {
-      title: "Revenue",
-      description: "Track all incoming revenue",
-      icon: HandCoins,
-      href: "/admin/finance/donations",
-    },
-    {
-      title: "Master Revenue Tracker",
-      description: "Monthly totals and year-to-date revenue",
-      icon: BarChart3,
-      href: "/admin/finance/master-revenue-tracker",
-    },
-    {
-      title: "NLA Donor/Sponsor History",
-      description: "Supporters & 2026 receipts",
-      icon: Users,
-      href: "/admin/finance/supporters",
-    },
-  ];
-
   return (
-    <div className="min-h-screen bg-black text-white">
-      <header className="bg-black border-b border-white/10">
-        <div className="container mx-auto px-4 py-4 flex items-center gap-4">
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={goBack}
-            className="text-white hover:bg-white/10 hover:text-white"
+    <div className="p-8">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+        {baseTiles.map((tile) => (
+          <Card
+            key={tile.title}
+            className="cursor-pointer hover:shadow-md transition-shadow bg-white/5 border-2 border-green-500/50 hover:border-green-500"
+            onClick={() => navigate(tile.href)}
           >
-            <ArrowLeft className="w-5 h-5" />
-          </Button>
-          <div>
-            <h1 className="text-xl font-bold text-white">Sales & Marketing</h1>
-            <p className="text-sm text-white/50">Outreach & Retention</p>
-          </div>
-        </div>
-      </header>
-
-      <main className="container mx-auto px-4 py-8">
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-          {folders.map((folder) => (
-            <Card
-              key={folder.title}
-              className="cursor-pointer hover:shadow-md transition-shadow bg-white/5 border-2 border-green-500/50 hover:border-green-500"
-              onClick={() => navigate(folder.href)}
-            >
-              <CardHeader>
-                <div className="w-12 h-12 rounded-lg flex items-center justify-center bg-green-500/10 text-green-500 mb-2">
-                  <folder.icon className="w-6 h-6" />
+            <CardContent className="pt-6">
+              <div className="flex items-start gap-4">
+                <div className="p-3 rounded-lg bg-green-500/10 text-green-500">
+                  <tile.icon className="w-6 h-6" />
                 </div>
-                <CardTitle className="text-lg text-white">{folder.title}</CardTitle>
-                <CardDescription className="text-white/50">{folder.description}</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <p className="text-sm text-green-500">Open →</p>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      </main>
+                <div>
+                  <h3 className="font-semibold text-white">{tile.title}</h3>
+                  <p className="text-sm text-white/50 mt-1">{tile.description}</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
     </div>
   );
 };
+
+const sidebarCards: SectionCard[] = baseTiles.map((t) => ({
+  title: t.title,
+  description: t.description,
+  href: t.href,
+  icon: t.icon,
+}));
+
+const AdminSalesMarketing = () => (
+  <AdminSectionLayout
+    section="sales-marketing"
+    title="Sales & Marketing"
+    subtitle="Outreach & Retention"
+    accent="green"
+    accentHex="#22c55e"
+    cards={sidebarCards}
+    backHref="/admin/dashboard"
+    storageKey="nla_sm_custom_cards"
+  />
+);
 
 export default AdminSalesMarketing;

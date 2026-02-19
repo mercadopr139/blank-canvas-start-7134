@@ -145,7 +145,7 @@ const AdminDepositDetail = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-black text-white flex items-center justify-center">
+      <div className="bg-black text-white flex items-center justify-center py-24">
         <p className="text-white/50">Loading…</p>
       </div>
     );
@@ -153,28 +153,20 @@ const AdminDepositDetail = () => {
 
   if (!batch) {
     return (
-      <div className="min-h-screen bg-black text-white flex items-center justify-center">
+      <div className="bg-black text-white flex items-center justify-center py-24">
         <p className="text-white/50">Batch not found.</p>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-black text-white">
-      {/* Header */}
-      <header className="bg-black border-b border-white/10">
-        <div className="container mx-auto px-4 py-4 flex items-center gap-4">
-          <Button variant="ghost" size="icon" onClick={() => navigate("/admin/finance/deposits")} className="text-white hover:bg-white/10 hover:text-white">
-            <ArrowLeft className="w-5 h-5" />
-          </Button>
-          <div>
-            <h1 className="text-xl font-bold text-white">{batch.batch_name}</h1>
-            <p className="text-sm text-white/50">Deposit Batch Detail</p>
-          </div>
-        </div>
-      </header>
+    <div className="bg-black text-white">
+      <div className="border-b border-white/10 px-4 py-3">
+        <h2 className="text-base font-semibold text-white">{batch.batch_name}</h2>
+        <p className="text-xs text-white/50">Deposit Batch Detail</p>
+      </div>
 
-      <main className="container mx-auto px-4 py-8 space-y-8">
+      <div className="container mx-auto px-4 py-8 space-y-8">
         {/* Batch summary card */}
         <Card className="bg-white/5 border-white/10 text-white">
           <CardHeader>
@@ -264,7 +256,7 @@ const AdminDepositDetail = () => {
             </Table>
           </div>
         </div>
-      </main>
+      </div>
 
       {/* Add Donations Modal */}
       <Dialog open={addOpen} onOpenChange={setAddOpen}>

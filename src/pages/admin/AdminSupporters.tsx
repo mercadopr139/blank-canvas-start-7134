@@ -82,20 +82,13 @@ const AdminSupporters = () => {
   };
 
   return (
-    <div className="min-h-screen bg-black text-white">
-      <header className="bg-black border-b border-white/10">
-        <div className="container mx-auto px-4 py-4 flex items-center gap-4">
-          <Button variant="ghost" size="icon" onClick={() => navigate("/admin/sales-marketing")} className="text-white hover:bg-white/10 hover:text-white">
-            <ArrowLeft className="w-5 h-5" />
-          </Button>
-          <div>
-            <h1 className="text-xl font-bold text-white">NLA Supporter History</h1>
-            <p className="text-sm text-white/50">View supporters and 2026 receipt status</p>
-          </div>
-        </div>
-      </header>
+    <div className="bg-black text-white">
+      <div className="border-b border-white/10 px-4 py-3">
+        <h2 className="text-base font-semibold text-white">NLA Supporter History</h2>
+        <p className="text-xs text-white/50">View supporters and 2026 receipt status</p>
+      </div>
 
-      <main className="container mx-auto px-4 py-8">
+      <div className="container mx-auto px-4 py-8">
         <div className="flex gap-4 mb-6">
           <div className="relative flex-1 max-w-sm">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/40" />
@@ -157,7 +150,7 @@ const AdminSupporters = () => {
             </TableBody>
           </Table>
         </div>
-      </main>
+      </div>
     </div>
   );
 };

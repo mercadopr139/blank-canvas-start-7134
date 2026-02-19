@@ -92,20 +92,13 @@ const AdminRegistrationAnalytics = () => {
   };
 
   return (
-    <div className="min-h-screen bg-black text-white">
-      <header className="bg-black border-b border-white/10">
-        <div className="container mx-auto px-4 py-4 flex items-center gap-4">
-          <Button variant="ghost" size="icon" onClick={goBack} className="text-white hover:bg-white/10 hover:text-white">
-            <ArrowLeft className="w-5 h-5" />
-          </Button>
-          <div>
-            <h1 className="text-xl font-bold text-white">Registration Analytics</h1>
-            <p className="text-sm text-white/50">Insights from youth registrations</p>
-          </div>
-        </div>
-      </header>
+    <div className="bg-black text-white">
+      <div className="border-b border-white/10 px-4 py-3">
+        <h2 className="text-base font-semibold text-white">Registration Analytics</h2>
+        <p className="text-xs text-white/50">Insights from youth registrations</p>
+      </div>
 
-      <main className="container mx-auto px-4 py-6 space-y-6">
+      <div className="container mx-auto px-4 py-6 space-y-6">
         {isLoading ? (
           <div className="text-center py-12 text-white/50">Loading analytics...</div>
         ) : (
@@ -224,7 +217,7 @@ const AdminRegistrationAnalytics = () => {
             </div>
           </>
         )}
-      </main>
+      </div>
     </div>
   );
 };
