@@ -34,6 +34,7 @@ import AdminDeposits from "./pages/admin/AdminDeposits";
 import AdminDepositDetail from "./pages/admin/AdminDepositDetail";
 import AdminMasterRevenueTracker from "./pages/admin/AdminMasterRevenueTracker";
 import AdminSupporters from "./pages/admin/AdminSupporters";
+import AdminSupportersDatabase from "./pages/admin/AdminSupportersDatabase";
 import AdminSupporterDetail from "./pages/admin/AdminSupporterDetail";
 import NotFound from "./pages/NotFound";
 
@@ -100,6 +101,7 @@ const App = () => (
               <Route path="master-revenue-tracker" element={<AdminMasterRevenueTracker />} />
               <Route path="supporters" element={<AdminSupporters />} />
               <Route path="supporters/:id" element={<AdminSupporterDetail />} />
+              <Route path="supporters-database" element={<AdminSupportersDatabase />} />
             </Route>
 
             {/* Finance section — sidebar layout wraps sub-pages */}

@@ -31,7 +31,7 @@ const baseTiles: SMTile[] = [
     title: "Supporters Database",
     description: "Hall of Fame & supporter imports",
     icon: Database,
-    href: "/admin/sales-marketing/supporters",
+    href: "/admin/sales-marketing/supporters-database",
   },
 ];
 
