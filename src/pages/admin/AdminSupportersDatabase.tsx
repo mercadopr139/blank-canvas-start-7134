@@ -2,11 +2,15 @@ import { useState, useRef, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
-
-import { Upload } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Upload, Pencil, Trash2 } from "lucide-react";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
@@ -108,6 +112,38 @@ const AdminSupportersDatabase = () => {
 
   useEffect(() => { fetchRows(); }, [fetchRows]);
 
+  // ── Edit state ────────────────────────────────────────────────────────────
+  const [editRow, setEditRow] = useState<SupporterRow | null>(null);
+  const [editSaving, setEditSaving] = useState(false);
+
+  const handleEditSave = async () => {
+    if (!editRow) return;
+    setEditSaving(true);
+    await supabase.from("supporters").update({
+      name: editRow.name,
+      email: editRow.email || null,
+      phone: editRow.phone || null,
+      address: editRow.address || null,
+      supporter_type: editRow.supporter_type,
+    }).eq("id", editRow.id);
+    setEditSaving(false);
+    setEditRow(null);
+    await fetchRows();
+  };
+
+  // ── Delete state ──────────────────────────────────────────────────────────
+  const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [deleting, setDeleting] = useState(false);
+
+  const handleDelete = async () => {
+    if (!deleteId) return;
+    setDeleting(true);
+    await supabase.from("supporters").delete().eq("id", deleteId);
+    setDeleting(false);
+    setDeleteId(null);
+    await fetchRows();
+  };
+
   // ── Import modal state ────────────────────────────────────────────────────
   const [importOpen, setImportOpen] = useState(false);
   const [supporterType, setSupporterType] = useState<string>("Hall of Fame");
@@ -134,13 +170,9 @@ const AdminSupportersDatabase = () => {
     const reader = new FileReader();
     reader.onload = (ev) => {
       const text = ev.target?.result as string;
-      console.log("[CSV] raw first 300 chars:", JSON.stringify(text.slice(0, 300)));
       const parsed = parseCsv(text);
-      console.log("[CSV] parsed rows:", parsed.length);
-      console.log("[CSV] first row keys:", parsed.length ? Object.keys(parsed[0]) : "no rows");
       if (!parsed.length) return;
       const headers = Object.keys(parsed[0]);
-      console.log("[CSV] csvHeaders to set:", headers);
       setCsvData(parsed);
       setCsvHeaders(headers);
       const autoMap: Record<MappableField, string> = { name: "__skip__", story: "__skip__", email: "__skip__", phone: "__skip__", address: "__skip__" };
@@ -157,7 +189,6 @@ const AdminSupportersDatabase = () => {
         );
         if (match) autoMap[field] = match;
       });
-      console.log("[CSV] autoMap result:", autoMap);
       setMapping(autoMap);
       setSummary(null);
     };
@@ -185,17 +216,12 @@ const AdminSupportersDatabase = () => {
       const story = rawStory.trim() || null;
       const address = rawAddress.trim() || null;
 
-      // Blank email → always insert as new record
       if (!email) {
-        await supabase.from("supporters").insert({
-          name, email: null, story, phone, address,
-          supporter_type: supporterType,
-        });
+        await supabase.from("supporters").insert({ name, email: null, story, phone, address, supporter_type: supporterType });
         created++;
         continue;
       }
 
-      // Email present → lookup by email first
       const { data: existing } = await supabase
         .from("supporters")
         .select("id, email, story, phone, address")
@@ -203,7 +229,6 @@ const AdminSupportersDatabase = () => {
         .maybeSingle();
 
       if (existing) {
-        // Fill only missing fields
         const patch: Record<string, string | null> = {};
         if (!existing.story && story) patch.story = story;
         if (!existing.phone && phone) patch.phone = phone;
@@ -213,10 +238,7 @@ const AdminSupportersDatabase = () => {
         }
         updated++;
       } else {
-        await supabase.from("supporters").insert({
-          name, email, story, phone, address,
-          supporter_type: supporterType,
-        });
+        await supabase.from("supporters").insert({ name, email, story, phone, address, supporter_type: supporterType });
         created++;
       }
     }
@@ -232,7 +254,7 @@ const AdminSupportersDatabase = () => {
     <div className="bg-black text-white">
       {/* Page header */}
       <div className="border-b border-white/10 px-4 py-3">
-        <h2 className="text-base font-semibold text-white">Supporters Database</h2>
+        <h2 className="text-base font-semibold text-green-400">Supporters Database</h2>
         <p className="text-xs text-white/50">Import and manage supporter records</p>
       </div>
 
@@ -244,7 +266,7 @@ const AdminSupportersDatabase = () => {
           </p>
           <Button
             size="sm"
-            className="bg-sky-500 hover:bg-sky-400 text-white gap-1.5"
+            className="bg-green-500 hover:bg-green-400 text-black gap-1.5"
             onClick={() => { resetImport(); setImportOpen(true); }}
           >
             <Upload className="w-4 h-4" />
@@ -262,16 +284,17 @@ const AdminSupportersDatabase = () => {
                 <TableHead className="text-white/70">Email</TableHead>
                 <TableHead className="text-white/70">Phone</TableHead>
                 <TableHead className="text-white/70">Address</TableHead>
+                <TableHead className="text-white/70 w-20 text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {loadingRows ? (
                 <TableRow className="border-white/10 hover:bg-transparent">
-                  <TableCell colSpan={5} className="text-center py-12 text-white/50">Loading…</TableCell>
+                  <TableCell colSpan={6} className="text-center py-12 text-white/50">Loading…</TableCell>
                 </TableRow>
               ) : rows.length === 0 ? (
                 <TableRow className="border-white/10 hover:bg-transparent">
-                  <TableCell colSpan={5} className="text-center py-12 text-white/50">No supporters yet. Import a CSV to get started.</TableCell>
+                  <TableCell colSpan={6} className="text-center py-12 text-white/50">No supporters yet. Import a CSV to get started.</TableCell>
                 </TableRow>
               ) : (
                 rows.map((s) => (
@@ -280,15 +303,33 @@ const AdminSupportersDatabase = () => {
                     <TableCell className="text-white/60 text-sm">{s.supporter_type}</TableCell>
                     <TableCell className="text-white/70 text-sm">
                       {s.email
-                        ? <a href={`mailto:${s.email}`} className="text-sky-400 hover:underline">{s.email}</a>
+                        ? <a href={`mailto:${s.email}`} className="text-green-400 hover:underline">{s.email}</a>
                         : "—"}
                     </TableCell>
                     <TableCell className="text-white/70 text-sm">
                       {s.phone
-                        ? <a href={`tel:${s.phone}`} className="text-sky-400 hover:underline">{s.phone}</a>
+                        ? <a href={`tel:${s.phone}`} className="text-green-400 hover:underline">{s.phone}</a>
                         : "—"}
                     </TableCell>
                     <TableCell className="text-white/70 text-sm">{s.address || "—"}</TableCell>
+                    <TableCell className="text-right">
+                      <div className="flex justify-end gap-1">
+                        <button
+                          onClick={() => setEditRow({ ...s })}
+                          className="p-1.5 rounded text-white/40 hover:text-green-400 hover:bg-white/5 transition-colors"
+                          title="Edit"
+                        >
+                          <Pencil className="w-3.5 h-3.5" />
+                        </button>
+                        <button
+                          onClick={() => setDeleteId(s.id)}
+                          className="p-1.5 rounded text-white/40 hover:text-red-400 hover:bg-white/5 transition-colors"
+                          title="Delete"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    </TableCell>
                   </TableRow>
                 ))
               )}
@@ -297,18 +338,114 @@ const AdminSupportersDatabase = () => {
         </div>
       </div>
 
+      {/* ── Edit Modal ────────────────────────────────────────────────────────── */}
+      <Dialog open={!!editRow} onOpenChange={(o) => { if (!o) setEditRow(null); }}>
+        <DialogContent className="bg-zinc-900 border-white/10 text-white sm:max-w-md flex flex-col max-h-[85vh] p-0 gap-0">
+          <div className="px-6 pt-6 pb-2 shrink-0">
+            <DialogHeader>
+              <DialogTitle className="text-green-400">Edit Supporter</DialogTitle>
+            </DialogHeader>
+          </div>
+          <div className="overflow-y-auto flex-1 px-6 pb-4 space-y-4 pt-2">
+            {editRow && (
+              <>
+                <div className="space-y-1.5">
+                  <Label className="text-white/70">Name <span className="text-red-400">*</span></Label>
+                  <Input
+                    value={editRow.name}
+                    onChange={(e) => setEditRow({ ...editRow, name: e.target.value })}
+                    className="bg-white/5 border-white/10 text-white"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-white/70">Supporter Type</Label>
+                  <Select value={editRow.supporter_type} onValueChange={(v) => setEditRow({ ...editRow, supporter_type: v })}>
+                    <SelectTrigger className="bg-white/5 border-white/10 text-white">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent className="bg-zinc-900 border-white/10 text-white">
+                      {SUPPORTER_TYPES.map((t) => (
+                        <SelectItem key={t} value={t} className="focus:bg-white/10">{t}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-white/70">Email</Label>
+                  <Input
+                    value={editRow.email ?? ""}
+                    onChange={(e) => setEditRow({ ...editRow, email: e.target.value })}
+                    className="bg-white/5 border-white/10 text-white"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-white/70">Phone</Label>
+                  <Input
+                    value={editRow.phone ?? ""}
+                    onChange={(e) => setEditRow({ ...editRow, phone: e.target.value })}
+                    className="bg-white/5 border-white/10 text-white"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-white/70">Address</Label>
+                  <Input
+                    value={editRow.address ?? ""}
+                    onChange={(e) => setEditRow({ ...editRow, address: e.target.value })}
+                    className="bg-white/5 border-white/10 text-white"
+                  />
+                </div>
+              </>
+            )}
+          </div>
+          <div className="px-6 py-4 border-t border-white/10 shrink-0 flex justify-end gap-2">
+            <Button variant="ghost" onClick={() => setEditRow(null)} className="text-white hover:bg-white/10">
+              Cancel
+            </Button>
+            <Button
+              onClick={handleEditSave}
+              disabled={!editRow?.name?.trim() || editSaving}
+              className="bg-green-500 hover:bg-green-400 text-black"
+            >
+              {editSaving ? "Saving…" : "Save Changes"}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* ── Delete Confirmation ───────────────────────────────────────────────── */}
+      <AlertDialog open={!!deleteId} onOpenChange={(o) => { if (!o) setDeleteId(null); }}>
+        <AlertDialogContent className="bg-zinc-900 border-white/10 text-white">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-white">Delete supporter?</AlertDialogTitle>
+            <AlertDialogDescription className="text-white/50">
+              This will permanently remove the record. This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel className="bg-transparent border-white/20 text-white hover:bg-white/10">
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDelete}
+              disabled={deleting}
+              className="bg-red-600 hover:bg-red-500 text-white"
+            >
+              {deleting ? "Deleting…" : "Delete"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
       {/* ── Import Modal ──────────────────────────────────────────────────────── */}
       <Dialog open={importOpen} onOpenChange={(o) => { if (!o) resetImport(); setImportOpen(o); }}>
         <DialogContent className="bg-zinc-900 border-white/10 text-white sm:max-w-lg flex flex-col max-h-[85vh] p-0 gap-0">
           <div className="px-6 pt-6 pb-2 shrink-0">
             <DialogHeader>
-              <DialogTitle className="text-white">Import Supporters CSV</DialogTitle>
+              <DialogTitle className="text-green-400">Import Supporters CSV</DialogTitle>
             </DialogHeader>
           </div>
 
-          {/* Scrollable body */}
           <div className="overflow-y-auto flex-1 px-6 pb-2 space-y-5">
-            {/* Supporter Type dropdown */}
             <div className="space-y-1.5">
               <Label className="text-white/70">Supporter Type <span className="text-red-400">*</span></Label>
               <Select value={supporterType} onValueChange={setSupporterType}>
@@ -323,7 +460,6 @@ const AdminSupportersDatabase = () => {
               </Select>
             </div>
 
-            {/* File upload */}
             <div className="space-y-1.5">
               <Label className="text-white/70">CSV File <span className="text-red-400">*</span></Label>
               <input
@@ -335,7 +471,6 @@ const AdminSupportersDatabase = () => {
               />
             </div>
 
-            {/* Column mapping */}
             {csvHeaders.length > 0 && (
               <div className="space-y-3">
                 <p className="text-sm font-medium text-white/80">Column Mapping</p>
@@ -372,12 +507,10 @@ const AdminSupportersDatabase = () => {
               </div>
             )}
 
-            {/* Notes about formatting */}
             <p className="text-xs text-white/30 leading-relaxed">
               Emails are lowercased. Phone numbers are stored in E.164 format (+1 assumed for 10-digit US numbers). Blank emails are always inserted as new records.
             </p>
 
-            {/* Summary */}
             {summary && (
               <div className="rounded-md bg-green-600/10 border border-green-600/30 px-4 py-3 text-sm text-green-300">
                 Import complete — <strong>{summary.created}</strong> created,{" "}
@@ -387,7 +520,6 @@ const AdminSupportersDatabase = () => {
             )}
           </div>
 
-          {/* Sticky footer */}
           <div className="px-6 py-4 border-t border-white/10 shrink-0 flex justify-end gap-2">
             <Button
               variant="ghost"
@@ -400,7 +532,7 @@ const AdminSupportersDatabase = () => {
               <Button
                 disabled={!csvData.length || mapping.name === "__skip__" || importing}
                 onClick={handleImport}
-                className="bg-sky-500 hover:bg-sky-400 text-white"
+                className="bg-green-500 hover:bg-green-400 text-black"
               >
                 {importing ? "Importing…" : `Import ${csvData.length || ""} Rows`}
               </Button>
