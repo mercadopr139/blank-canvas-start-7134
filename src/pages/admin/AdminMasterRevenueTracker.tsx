@@ -19,6 +19,12 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 const MONTHS = [
   "January", "February", "March", "April", "May", "June",
@@ -28,12 +34,47 @@ const MONTHS = [
 const REVENUE_TYPES = ["All", "Donation", "Fundraising", "Fee for Service", "Re-Grant"];
 const PAYMENT_METHODS = ["All", "Cash", "Check", "Venmo", "PayPal", "Square", "Other"];
 
+type DrillCategory = "Donations" | "Fundraising" | "Fee for Service" | "Re-Grants";
+
 interface RevenueRow {
+  id: string;
   amount: number;
   deposit_date: string | null;
   revenue_type: string;
   method: string;
+  donor_name: string | null;
+  source_name: string | null;
+  vendor_name: string | null;
+  partner_name: string | null;
+  event_name: string | null;
+  revenue_description: string | null;
+  reference_id: string | null;
 }
+
+/** Resolve a human-readable "name" for modal display by category */
+const resolveName = (r: RevenueRow, category: DrillCategory): string => {
+  switch (category) {
+    case "Donations":
+      return r.donor_name || r.source_name || "—";
+    case "Fundraising":
+      return r.source_name || r.event_name || r.donor_name || "—";
+    case "Fee for Service":
+      return r.vendor_name || r.source_name || r.donor_name || "—";
+    case "Re-Grants":
+      return r.partner_name || r.source_name || r.donor_name || "—";
+    default:
+      return "—";
+  }
+};
+
+const revenueTypeForCategory = (cat: DrillCategory): string => {
+  switch (cat) {
+    case "Donations": return "Donation";
+    case "Fundraising": return "Fundraising";
+    case "Fee for Service": return "Fee for Service";
+    case "Re-Grants": return "Re-Grant";
+  }
+};
 
 const AdminMasterRevenueTracker = () => {
   const navigate = useNavigate();
@@ -46,12 +87,17 @@ const AdminMasterRevenueTracker = () => {
   const [rows, setRows] = useState<RevenueRow[]>([]);
   const [loading, setLoading] = useState(true);
 
+  // Drill-down state
+  const [drillOpen, setDrillOpen] = useState(false);
+  const [drillMonth, setDrillMonth] = useState<string>("");
+  const [drillCategory, setDrillCategory] = useState<DrillCategory>("Donations");
+
   useEffect(() => {
     const fetchRevenue = async () => {
       setLoading(true);
       const { data } = await supabase
         .from("donations")
-        .select("amount, deposit_date, revenue_type, method");
+        .select("id, amount, deposit_date, revenue_type, method, donor_name, source_name, vendor_name, partner_name, event_name, revenue_description, reference_id");
       setRows((data as RevenueRow[]) ?? []);
       setLoading(false);
     };
@@ -102,19 +148,12 @@ const AdminMasterRevenueTracker = () => {
   const currentDay = today.getDate();
 
   const monthTotal = useMemo(() => {
-    if (String(currentYear) !== year) {
-      // If viewing a past year, show December total
-      return monthlyData[11]?.total ?? 0;
-    }
+    if (String(currentYear) !== year) return monthlyData[11]?.total ?? 0;
     return monthlyData[currentMonthIdx]?.total ?? 0;
   }, [monthlyData, year, currentMonthIdx, currentYear]);
 
   const ytdTotal = useMemo(() => {
-    if (String(currentYear) !== year) {
-      // Full year
-      return monthlyData[11]?.cumulative ?? 0;
-    }
-    // Sum all months up to current, but for current month only count entries up to today
+    if (String(currentYear) !== year) return monthlyData[11]?.cumulative ?? 0;
     let sum = 0;
     filtered.forEach((r) => {
       const d = r.deposit_date!;
@@ -135,6 +174,45 @@ const AdminMasterRevenueTracker = () => {
     });
     return Array.from(years).sort().reverse();
   }, [rows, currentYear]);
+
+  // Drill-down transactions
+  const drillTransactions = useMemo(() => {
+    const monthIdx = MONTHS.indexOf(drillMonth);
+    if (monthIdx === -1) return [];
+    const revType = revenueTypeForCategory(drillCategory);
+    return filtered
+      .filter((r) => {
+        if (!r.deposit_date) return false;
+        const m = parseInt(r.deposit_date.substring(5, 7), 10) - 1;
+        return m === monthIdx && r.revenue_type === revType;
+      })
+      .sort((a, b) => (b.deposit_date ?? "").localeCompare(a.deposit_date ?? ""));
+  }, [filtered, drillMonth, drillCategory]);
+
+  const drillTotal = useMemo(
+    () => drillTransactions.reduce((s, r) => s + r.amount, 0),
+    [drillTransactions],
+  );
+
+  const openDrill = (month: string, category: DrillCategory) => {
+    setDrillMonth(month);
+    setDrillCategory(category);
+    setDrillOpen(true);
+  };
+
+  /** Renders a clickable category cell */
+  const CategoryCell = ({ value, month, category }: { value: number; month: string; category: DrillCategory }) => {
+    const clickable = value > 0;
+    return (
+      <TableCell
+        className={`text-white/70 text-right ${clickable ? "cursor-pointer hover:text-white hover:underline underline-offset-2 transition-colors" : ""}`}
+        onClick={clickable ? () => openDrill(month, category) : undefined}
+        title={clickable ? `View ${category} transactions for ${month}` : undefined}
+      >
+        {formatUSD(value)}
+      </TableCell>
+    );
+  };
 
   return (
     <div className="min-h-screen bg-black text-white">
@@ -241,10 +319,10 @@ const AdminMasterRevenueTracker = () => {
                   <TableRow key={row.month} className={`border-white/10 hover:bg-white/5 ${i % 2 === 0 ? "bg-white/[0.02]" : "bg-white/[0.06]"}`}>
                     <TableCell className="text-white font-medium">{row.month}</TableCell>
                     <TableCell className="text-green-400 text-right font-bold bg-green-500/10">{formatUSD(row.total)}</TableCell>
-                    <TableCell className="text-white/70 text-right">{formatUSD(row.donation)}</TableCell>
-                    <TableCell className="text-white/70 text-right">{formatUSD(row.fundraising)}</TableCell>
-                    <TableCell className="text-white/70 text-right">{formatUSD(row.feeForService)}</TableCell>
-                    <TableCell className="text-white/70 text-right">{formatUSD(row.reGrant)}</TableCell>
+                    <CategoryCell value={row.donation} month={row.month} category="Donations" />
+                    <CategoryCell value={row.fundraising} month={row.month} category="Fundraising" />
+                    <CategoryCell value={row.feeForService} month={row.month} category="Fee for Service" />
+                    <CategoryCell value={row.reGrant} month={row.month} category="Re-Grants" />
                     <TableCell className="text-white text-right font-semibold">{formatUSD(row.cumulative)}</TableCell>
                   </TableRow>
                 ))
@@ -253,6 +331,60 @@ const AdminMasterRevenueTracker = () => {
           </Table>
         </div>
       </main>
+
+      {/* Drill-down Modal */}
+      <Dialog open={drillOpen} onOpenChange={setDrillOpen}>
+        <DialogContent className="bg-black border-white/20 text-white max-w-3xl max-h-[85vh] flex flex-col">
+          <DialogHeader>
+            <DialogTitle className="text-white text-lg">
+              {drillMonth} {year} – {drillCategory} Transactions
+            </DialogTitle>
+          </DialogHeader>
+
+          <div className="overflow-y-auto flex-1 mt-2">
+            {drillTransactions.length === 0 ? (
+              <p className="text-white/50 text-sm py-8 text-center">No transactions found.</p>
+            ) : (
+              <Table>
+                <TableHeader>
+                  <TableRow className="border-white/10 hover:bg-transparent">
+                    <TableHead className="text-white/60">Date</TableHead>
+                    <TableHead className="text-white/60">Name</TableHead>
+                    <TableHead className="text-white/60 text-right">Amount</TableHead>
+                    <TableHead className="text-white/60">Method</TableHead>
+                    <TableHead className="text-white/60">Ref ID</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {drillTransactions.map((r) => (
+                    <TableRow key={r.id} className="border-white/10 hover:bg-white/5">
+                      <TableCell className="text-white/80 text-sm">
+                        {r.deposit_date ?? "—"}
+                      </TableCell>
+                      <TableCell className="text-white text-sm font-medium">
+                        {resolveName(r, drillCategory)}
+                      </TableCell>
+                      <TableCell className="text-white text-right text-sm font-semibold">
+                        {formatUSD(r.amount)}
+                      </TableCell>
+                      <TableCell className="text-white/70 text-sm">{r.method}</TableCell>
+                      <TableCell className="text-white/50 text-sm font-mono">
+                        {r.reference_id ?? "—"}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            )}
+          </div>
+
+          {/* Total footer */}
+          <div className="border-t border-white/10 pt-3 mt-2 flex justify-end items-center gap-3">
+            <span className="text-white/50 text-sm">Total</span>
+            <span className="text-white font-bold text-lg">{formatUSD(drillTotal)}</span>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
