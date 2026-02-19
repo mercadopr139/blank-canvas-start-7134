@@ -113,11 +113,13 @@ const AdminSectionLayout = ({
   const location = useLocation();
   const ac = accentClasses[accent] ?? accentClasses.sky;
 
-  // Custom cards from localStorage
+  // Custom cards from localStorage — icons can't survive JSON round-trip, so restore Plus as fallback
   const [customCards, setCustomCards] = useState<SectionCard[]>(() => {
     try {
       const stored = localStorage.getItem(storageKey);
-      return stored ? JSON.parse(stored) : [];
+      if (!stored) return [];
+      const parsed: SectionCard[] = JSON.parse(stored);
+      return parsed.map((c) => ({ ...c, icon: Plus }));
     } catch {
       return [];
     }
