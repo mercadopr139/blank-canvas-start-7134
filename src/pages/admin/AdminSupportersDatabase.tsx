@@ -42,9 +42,36 @@ interface SupporterRow {
   phone: string | null;
   address: string | null;
   supporter_type: string;
+  story: string | null;
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
+
+/** Parse a single CSV line, correctly handling quoted fields that contain commas or newlines */
+function parseCsvLine(line: string): string[] {
+  const result: string[] = [];
+  let current = "";
+  let inQuotes = false;
+  for (let i = 0; i < line.length; i++) {
+    const ch = line[i];
+    if (ch === '"') {
+      if (inQuotes && line[i + 1] === '"') {
+        // escaped quote inside quoted field
+        current += '"';
+        i++;
+      } else {
+        inQuotes = !inQuotes;
+      }
+    } else if (ch === ',' && !inQuotes) {
+      result.push(current.trim());
+      current = "";
+    } else {
+      current += ch;
+    }
+  }
+  result.push(current.trim());
+  return result;
+}
 
 function parseCsv(text: string): CsvRow[] {
   const lines = text.split(/\r?\n/);
@@ -54,7 +81,7 @@ function parseCsv(text: string): CsvRow[] {
   // (Monday.com and some exports prepend blank rows before headers)
   let headerIdx = -1;
   for (let i = 0; i < lines.length; i++) {
-    const cols = lines[i].split(",").map((c) => c.trim().replace(/^"|"$/g, ""));
+    const cols = parseCsvLine(lines[i]);
     if (cols.some((c) => c !== "")) {
       headerIdx = i;
       break;
@@ -62,12 +89,12 @@ function parseCsv(text: string): CsvRow[] {
   }
   if (headerIdx === -1) return [];
 
-  const allHeaders = lines[headerIdx].split(",").map((h) => h.trim().replace(/^"|"$/g, ""));
+  const allHeaders = parseCsvLine(lines[headerIdx]);
   const dataLines = lines.slice(headerIdx + 1).filter(Boolean);
 
   return dataLines
     .map((line) => {
-      const values = line.split(",").map((v) => v.trim().replace(/^"|"$/g, ""));
+      const values = parseCsvLine(line);
       const row: CsvRow = {};
       allHeaders.forEach((h, i) => { if (h) row[h] = values[i] ?? ""; });
       return row;
@@ -104,7 +131,7 @@ const AdminSupportersDatabase = () => {
     setLoadingRows(true);
     const { data } = await supabase
       .from("supporters")
-      .select("id, name, email, phone, address, supporter_type")
+      .select("id, name, email, phone, address, supporter_type, story")
       .order("name");
     setRows(data ?? []);
     setLoadingRows(false);
@@ -124,6 +151,7 @@ const AdminSupportersDatabase = () => {
       email: editRow.email || null,
       phone: editRow.phone || null,
       address: editRow.address || null,
+      story: editRow.story || null,
       supporter_type: editRow.supporter_type,
     }).eq("id", editRow.id);
     setEditSaving(false);
@@ -284,17 +312,18 @@ const AdminSupportersDatabase = () => {
                 <TableHead className="text-white/70">Email</TableHead>
                 <TableHead className="text-white/70">Phone</TableHead>
                 <TableHead className="text-white/70">Address</TableHead>
+                <TableHead className="text-white/70">Notes</TableHead>
                 <TableHead className="text-white/70 w-20 text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {loadingRows ? (
                 <TableRow className="border-white/10 hover:bg-transparent">
-                  <TableCell colSpan={6} className="text-center py-12 text-white/50">Loading…</TableCell>
+                  <TableCell colSpan={7} className="text-center py-12 text-white/50">Loading…</TableCell>
                 </TableRow>
               ) : rows.length === 0 ? (
                 <TableRow className="border-white/10 hover:bg-transparent">
-                  <TableCell colSpan={6} className="text-center py-12 text-white/50">No supporters yet. Import a CSV to get started.</TableCell>
+                  <TableCell colSpan={7} className="text-center py-12 text-white/50">No supporters yet. Import a CSV to get started.</TableCell>
                 </TableRow>
               ) : (
                 rows.map((s) => (
@@ -312,6 +341,7 @@ const AdminSupportersDatabase = () => {
                         : "—"}
                     </TableCell>
                     <TableCell className="text-white/70 text-sm">{s.address || "—"}</TableCell>
+                    <TableCell className="text-white/50 text-xs max-w-[200px] truncate" title={s.story ?? undefined}>{s.story || "—"}</TableCell>
                     <TableCell className="text-right">
                       <div className="flex justify-end gap-1">
                         <button
@@ -392,6 +422,15 @@ const AdminSupportersDatabase = () => {
                     value={editRow.address ?? ""}
                     onChange={(e) => setEditRow({ ...editRow, address: e.target.value })}
                     className="bg-white/5 border-white/10 text-white"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-white/70">Notes</Label>
+                  <textarea
+                    rows={3}
+                    value={editRow.story ?? ""}
+                    onChange={(e) => setEditRow({ ...editRow, story: e.target.value })}
+                    className="w-full rounded-md bg-white/5 border border-white/10 text-white text-sm px-3 py-2 resize-none focus:outline-none focus:ring-1 focus:ring-green-500"
                   />
                 </div>
               </>
