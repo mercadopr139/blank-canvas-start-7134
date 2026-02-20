@@ -43,6 +43,7 @@ interface SupporterRow {
   address: string | null;
   supporter_type: string;
   story: string | null;
+  is_hall_of_fame: boolean;
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -131,9 +132,9 @@ const AdminSupportersDatabase = () => {
     setLoadingRows(true);
     const { data } = await supabase
       .from("supporters")
-      .select("id, name, email, phone, address, supporter_type, story")
+      .select("id, name, email, phone, address, supporter_type, story, is_hall_of_fame")
       .order("name");
-    setRows(data ?? []);
+    setRows((data ?? []) as SupporterRow[]);
     setLoadingRows(false);
   }, []);
 
@@ -141,8 +142,8 @@ const AdminSupportersDatabase = () => {
 
   // Sort: Hall of Fame first (alphabetically within group), then everyone else (alphabetically)
   const sortedRows = [...rows].sort((a, b) => {
-    const aHof = a.supporter_type === "Hall of Fame" ? 0 : 1;
-    const bHof = b.supporter_type === "Hall of Fame" ? 0 : 1;
+    const aHof = a.is_hall_of_fame ? 0 : 1;
+    const bHof = b.is_hall_of_fame ? 0 : 1;
     if (aHof !== bHof) return aHof - bHof;
     return a.name.localeCompare(b.name);
   });
@@ -387,6 +388,7 @@ const AdminSupportersDatabase = () => {
                 </TableHead>
                 <TableHead className="text-white/70">Name</TableHead>
                 <TableHead className="text-white/70">Type</TableHead>
+                <TableHead className="text-white/70">HOF</TableHead>
                 <TableHead className="text-white/70">Email</TableHead>
                 <TableHead className="text-white/70">Phone</TableHead>
                 <TableHead className="text-white/70">Address</TableHead>
@@ -397,11 +399,11 @@ const AdminSupportersDatabase = () => {
             <TableBody>
               {loadingRows ? (
                 <TableRow className="border-white/10 hover:bg-transparent">
-                  <TableCell colSpan={8} className="text-center py-12 text-white/50">Loading…</TableCell>
+                  <TableCell colSpan={9} className="text-center py-12 text-white/50">Loading…</TableCell>
                 </TableRow>
               ) : rows.length === 0 ? (
                 <TableRow className="border-white/10 hover:bg-transparent">
-                  <TableCell colSpan={8} className="text-center py-12 text-white/50">No supporters yet. Import a CSV to get started.</TableCell>
+                  <TableCell colSpan={9} className="text-center py-12 text-white/50">No supporters yet. Import a CSV to get started.</TableCell>
                 </TableRow>
               ) : (
                 sortedRows.map((s) => (
@@ -417,8 +419,22 @@ const AdminSupportersDatabase = () => {
                         className="accent-green-500 w-4 h-4 cursor-pointer"
                       />
                     </TableCell>
-                    <TableCell className="text-white font-medium">{s.name}</TableCell>
-                    <TableCell className="text-white/60 text-sm">{s.supporter_type}</TableCell>
+                     <TableCell className="text-white font-medium">{s.name}</TableCell>
+                     <TableCell className="text-white/60 text-sm">{s.supporter_type}</TableCell>
+                     <TableCell>
+                       <select
+                         value={s.is_hall_of_fame ? "hof" : ""}
+                         onChange={async (e) => {
+                           const val = e.target.value === "hof";
+                           await supabase.from("supporters").update({ is_hall_of_fame: val } as any).eq("id", s.id);
+                           await fetchRows();
+                         }}
+                         className="bg-white text-black text-xs rounded px-1.5 py-1 border border-white/20 cursor-pointer"
+                       >
+                         <option value="">—</option>
+                         <option value="hof">Hall of Fame</option>
+                       </select>
+                     </TableCell>
                     <TableCell className="text-white/70 text-sm">
                       {s.email
                         ? <a href={`mailto:${s.email}`} className="text-green-400 hover:underline">{s.email}</a>

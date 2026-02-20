@@ -417,6 +417,7 @@ export type Database = {
           created_at: string
           email: string | null
           id: string
+          is_hall_of_fame: boolean
           name: string
           phone: string | null
           receipt_2026_last_sent_to: string | null
@@ -432,6 +433,7 @@ export type Database = {
           created_at?: string
           email?: string | null
           id?: string
+          is_hall_of_fame?: boolean
           name: string
           phone?: string | null
           receipt_2026_last_sent_to?: string | null
@@ -447,6 +449,7 @@ export type Database = {
           created_at?: string
           email?: string | null
           id?: string
+          is_hall_of_fame?: boolean
           name?: string
           phone?: string | null
           receipt_2026_last_sent_to?: string | null

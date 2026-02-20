@@ -1,0 +1,1 @@
+ALTER TABLE public.supporters ADD COLUMN is_hall_of_fame boolean NOT NULL DEFAULT false;
