@@ -424,10 +424,12 @@ const AdminSupportersDatabase = () => {
                      <TableCell className="text-center px-2">
                        <button
                          title={s.is_hall_of_fame ? "Remove from Hall of Fame" : "Add to Hall of Fame"}
-                         onClick={async () => {
-                           await supabase.from("supporters").update({ is_hall_of_fame: !s.is_hall_of_fame } as any).eq("id", s.id);
-                           await fetchRows();
-                         }}
+                          onClick={async () => {
+                            const newHof = !s.is_hall_of_fame;
+                            await supabase.from("supporters").update({ is_hall_of_fame: newHof } as any).eq("id", s.id);
+                            // Optimistic update — avoid full refetch which resets scroll position
+                            setRows((prev) => prev.map((r) => r.id === s.id ? { ...r, is_hall_of_fame: newHof } : r));
+                          }}
                          className="p-0.5 rounded hover:bg-white/10 transition-colors"
                        >
                          <Star
@@ -444,15 +446,16 @@ const AdminSupportersDatabase = () => {
                        title="Double-click to edit"
                      >
                        {editingTypeId === s.id ? (
-                         <select
-                           autoFocus
-                           defaultValue={s.supporter_type}
-                           onChange={async (e) => {
-                             const newType = e.target.value;
-                             await supabase.from("supporters").update({ supporter_type: newType }).eq("id", s.id);
-                             setEditingTypeId(null);
-                             await fetchRows();
-                           }}
+                          <select
+                            autoFocus
+                            defaultValue={s.supporter_type}
+                            onChange={async (e) => {
+                              const newType = e.target.value;
+                              await supabase.from("supporters").update({ supporter_type: newType }).eq("id", s.id);
+                              // Optimistic update — avoid full refetch which resets scroll position
+                              setRows((prev) => prev.map((r) => r.id === s.id ? { ...r, supporter_type: newType } : r));
+                              setEditingTypeId(null);
+                            }}
                             onKeyDown={(e) => { if (e.key === "Escape") setEditingTypeId(null); }}
                            className="bg-white text-black text-xs rounded px-1.5 py-1 border border-white/20 cursor-pointer"
                          >
