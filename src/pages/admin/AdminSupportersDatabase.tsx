@@ -23,10 +23,10 @@ const MAPPABLE_FIELDS = ["name", "story", "email", "phone", "address"] as const;
 type MappableField = (typeof MAPPABLE_FIELDS)[number];
 
 const FIELD_LABELS: Record<MappableField, string> = {
-  name: "Name",
-  story: "Notes",
-  email: "Email",
-  phone: "Phone",
+  name: "Supporter Name",
+  story: "Internal Strategic Notes",
+  email: "Primary Contact Email",
+  phone: "Primary Contact Phone",
   address: "Address",
 };
 
@@ -384,12 +384,12 @@ const AdminSupportersDatabase = () => {
                   />
                 </th>
                 <th className="h-12 px-4 w-8 text-center align-middle font-medium text-white/70 text-xs">HOF</th>
-                <th className="h-12 px-4 text-left align-middle font-medium text-white/70">Name</th>
-                <th className="h-12 px-4 text-left align-middle font-medium text-white/70">Type</th>
-                <th className="h-12 px-4 text-left align-middle font-medium text-white/70">Email</th>
-                <th className="h-12 px-4 text-left align-middle font-medium text-white/70">Phone</th>
+                <th className="h-12 px-4 text-left align-middle font-medium text-white/70">Supporter Name</th>
+                <th className="h-12 px-4 text-left align-middle font-medium text-white/70">Supporter Category</th>
+                <th className="h-12 px-4 text-left align-middle font-medium text-white/70">Primary Contact Email</th>
+                <th className="h-12 px-4 text-left align-middle font-medium text-white/70">Primary Contact Phone</th>
                 <th className="h-12 px-4 text-left align-middle font-medium text-white/70">Address</th>
-                <th className="h-12 px-4 text-left align-middle font-medium text-white/70 min-w-[280px]">Notes</th>
+                <th className="h-12 px-4 text-left align-middle font-medium text-white/70 min-w-[280px]">Internal Strategic Notes</th>
                 <th className="h-12 px-4 w-20 text-right align-middle font-medium text-white/70">Actions</th>
               </tr>
             </thead>
@@ -510,7 +510,7 @@ const AdminSupportersDatabase = () => {
             {editRow && (
               <>
                 <div className="space-y-1.5">
-                  <Label className="text-white/70">Name <span className="text-red-400">*</span></Label>
+                  <Label className="text-white/70">Supporter Name <span className="text-red-400">*</span></Label>
                   <Input
                     value={editRow.name}
                     onChange={(e) => setEditRow({ ...editRow, name: e.target.value })}
@@ -518,7 +518,7 @@ const AdminSupportersDatabase = () => {
                   />
                 </div>
                 <div className="space-y-1.5">
-                  <Label className="text-white/70">Supporter Type</Label>
+                  <Label className="text-white/70">Supporter Category</Label>
                   <Select value={editRow.supporter_type} onValueChange={(v) => setEditRow({ ...editRow, supporter_type: v })}>
                     <SelectTrigger className="bg-white/5 border-white/10 text-white">
                       <SelectValue />
@@ -531,7 +531,7 @@ const AdminSupportersDatabase = () => {
                   </Select>
                 </div>
                 <div className="space-y-1.5">
-                  <Label className="text-white/70">Email</Label>
+                  <Label className="text-white/70">Primary Contact Email</Label>
                   <Input
                     value={editRow.email ?? ""}
                     onChange={(e) => setEditRow({ ...editRow, email: e.target.value })}
@@ -539,7 +539,7 @@ const AdminSupportersDatabase = () => {
                   />
                 </div>
                 <div className="space-y-1.5">
-                  <Label className="text-white/70">Phone</Label>
+                  <Label className="text-white/70">Primary Contact Phone</Label>
                   <Input
                     value={editRow.phone ?? ""}
                     onChange={(e) => setEditRow({ ...editRow, phone: e.target.value })}
@@ -555,7 +555,7 @@ const AdminSupportersDatabase = () => {
                   />
                 </div>
                 <div className="space-y-1.5">
-                  <Label className="text-white/70">Notes</Label>
+                  <Label className="text-white/70">Internal Strategic Notes</Label>
                   <textarea
                     rows={3}
                     value={editRow.story ?? ""}
