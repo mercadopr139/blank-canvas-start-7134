@@ -139,6 +139,14 @@ const AdminSupportersDatabase = () => {
 
   useEffect(() => { fetchRows(); }, [fetchRows]);
 
+  // Sort: Hall of Fame first (alphabetically within group), then everyone else (alphabetically)
+  const sortedRows = [...rows].sort((a, b) => {
+    const aHof = a.supporter_type === "Hall of Fame" ? 0 : 1;
+    const bHof = b.supporter_type === "Hall of Fame" ? 0 : 1;
+    if (aHof !== bHof) return aHof - bHof;
+    return a.name.localeCompare(b.name);
+  });
+
   // ── Edit state ────────────────────────────────────────────────────────────
   const [editRow, setEditRow] = useState<SupporterRow | null>(null);
   const [editSaving, setEditSaving] = useState(false);
@@ -396,7 +404,7 @@ const AdminSupportersDatabase = () => {
                   <TableCell colSpan={8} className="text-center py-12 text-white/50">No supporters yet. Import a CSV to get started.</TableCell>
                 </TableRow>
               ) : (
-                rows.map((s) => (
+                sortedRows.map((s) => (
                   <TableRow
                     key={s.id}
                     className={`border-white/10 hover:bg-white/5 ${selected.has(s.id) ? "bg-red-950/20" : ""}`}
