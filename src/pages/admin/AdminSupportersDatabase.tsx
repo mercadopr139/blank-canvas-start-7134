@@ -453,8 +453,7 @@ const AdminSupportersDatabase = () => {
                              setEditingTypeId(null);
                              await fetchRows();
                            }}
-                           onBlur={() => setEditingTypeId(null)}
-                           onKeyDown={(e) => { if (e.key === "Escape") setEditingTypeId(null); }}
+                            onKeyDown={(e) => { if (e.key === "Escape") setEditingTypeId(null); }}
                            className="bg-white text-black text-xs rounded px-1.5 py-1 border border-white/20 cursor-pointer"
                          >
                            {SUPPORTER_TYPES.map((t) => (
