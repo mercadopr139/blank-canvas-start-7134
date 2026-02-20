@@ -375,9 +375,9 @@ const AdminSupportersDatabase = () => {
         <div className="flex-1 min-h-0 rounded-lg border border-white/10 overflow-auto">
           <div style={{ minWidth: 1200 }}>
           <Table>
-            <TableHeader>
+            <TableHeader className="sticky top-0 z-10 bg-black shadow-[0_1px_0_0_rgba(255,255,255,0.12)]">
               <TableRow className="border-white/10 hover:bg-transparent">
-                <TableHead className="w-10 px-3">
+                <TableHead className="w-10 px-3 bg-black">
                   <input
                     type="checkbox"
                     checked={allSelected}
@@ -387,14 +387,14 @@ const AdminSupportersDatabase = () => {
                     title="Select all"
                   />
                 </TableHead>
-                <TableHead className="w-8 text-center text-white/70 text-xs">HOF</TableHead>
-                <TableHead className="text-white/70">Name</TableHead>
-                <TableHead className="text-white/70">Type</TableHead>
-                <TableHead className="text-white/70">Email</TableHead>
-                <TableHead className="text-white/70">Phone</TableHead>
-                <TableHead className="text-white/70">Address</TableHead>
-                <TableHead className="text-white/70 min-w-[280px]">Notes</TableHead>
-                <TableHead className="text-white/70 w-20 text-right">Actions</TableHead>
+                <TableHead className="w-8 text-center text-white/70 text-xs bg-black">HOF</TableHead>
+                <TableHead className="text-white/70 bg-black">Name</TableHead>
+                <TableHead className="text-white/70 bg-black">Type</TableHead>
+                <TableHead className="text-white/70 bg-black">Email</TableHead>
+                <TableHead className="text-white/70 bg-black">Phone</TableHead>
+                <TableHead className="text-white/70 bg-black">Address</TableHead>
+                <TableHead className="text-white/70 min-w-[280px] bg-black">Notes</TableHead>
+                <TableHead className="text-white/70 w-20 text-right bg-black">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
