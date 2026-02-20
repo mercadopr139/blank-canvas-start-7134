@@ -373,8 +373,7 @@ const AdminSupportersDatabase = () => {
 
         {/* Supporters table — fills remaining height, scrolls both axes */}
         <div className="flex-1 min-h-0 rounded-lg border border-white/10 overflow-auto">
-          <div style={{ minWidth: 1200 }}>
-          <Table>
+          <Table className="min-w-[1200px]">
             <TableHeader className="sticky top-0 z-10 bg-black shadow-[0_1px_0_0_rgba(255,255,255,0.12)]">
               <TableRow className="border-white/10 hover:bg-transparent">
                 <TableHead className="w-10 px-3 bg-black">
@@ -502,7 +501,6 @@ const AdminSupportersDatabase = () => {
               )}
             </TableBody>
           </Table>
-          </div>
         </div>
       </div>
       {/* ── Edit Modal ────────────────────────────────────────────────────────── */}
