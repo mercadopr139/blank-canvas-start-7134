@@ -14,9 +14,6 @@ import {
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
-import {
-  Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
-} from "@/components/ui/table";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -373,10 +370,10 @@ const AdminSupportersDatabase = () => {
 
         {/* Supporters table — fills remaining height, scrolls both axes */}
         <div className="flex-1 min-h-0 rounded-lg border border-white/10 overflow-auto">
-          <Table className="min-w-[1200px]">
-            <TableHeader className="sticky top-0 z-10 bg-black shadow-[0_1px_0_0_rgba(255,255,255,0.12)]">
-              <TableRow className="border-white/10 hover:bg-transparent">
-                <TableHead className="w-10 px-3 bg-black">
+          <table className="w-full caption-bottom text-sm min-w-[1200px]">
+            <thead className="sticky top-0 z-10 bg-black shadow-[0_1px_0_rgba(255,255,255,0.12)] [&_tr]:border-b">
+              <tr className="border-b border-white/10">
+                <th className="h-12 px-3 w-10 text-left align-middle font-medium text-white/70">
                   <input
                     type="checkbox"
                     checked={allSelected}
@@ -385,100 +382,98 @@ const AdminSupportersDatabase = () => {
                     className="accent-green-500 w-4 h-4 cursor-pointer"
                     title="Select all"
                   />
-                </TableHead>
-                <TableHead className="w-8 text-center text-white/70 text-xs bg-black">HOF</TableHead>
-                <TableHead className="text-white/70 bg-black">Name</TableHead>
-                <TableHead className="text-white/70 bg-black">Type</TableHead>
-                <TableHead className="text-white/70 bg-black">Email</TableHead>
-                <TableHead className="text-white/70 bg-black">Phone</TableHead>
-                <TableHead className="text-white/70 bg-black">Address</TableHead>
-                <TableHead className="text-white/70 min-w-[280px] bg-black">Notes</TableHead>
-                <TableHead className="text-white/70 w-20 text-right bg-black">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
+                </th>
+                <th className="h-12 px-4 w-8 text-center align-middle font-medium text-white/70 text-xs">HOF</th>
+                <th className="h-12 px-4 text-left align-middle font-medium text-white/70">Name</th>
+                <th className="h-12 px-4 text-left align-middle font-medium text-white/70">Type</th>
+                <th className="h-12 px-4 text-left align-middle font-medium text-white/70">Email</th>
+                <th className="h-12 px-4 text-left align-middle font-medium text-white/70">Phone</th>
+                <th className="h-12 px-4 text-left align-middle font-medium text-white/70">Address</th>
+                <th className="h-12 px-4 text-left align-middle font-medium text-white/70 min-w-[280px]">Notes</th>
+                <th className="h-12 px-4 w-20 text-right align-middle font-medium text-white/70">Actions</th>
+              </tr>
+            </thead>
+            <tbody className="[&_tr:last-child]:border-0">
               {loadingRows ? (
-                <TableRow className="border-white/10 hover:bg-transparent">
-                  <TableCell colSpan={9} className="text-center py-12 text-white/50">Loading…</TableCell>
-                </TableRow>
+                <tr className="border-b border-white/10">
+                  <td colSpan={9} className="p-4 text-center py-12 text-white/50 align-middle">Loading…</td>
+                </tr>
               ) : rows.length === 0 ? (
-                <TableRow className="border-white/10 hover:bg-transparent">
-                  <TableCell colSpan={9} className="text-center py-12 text-white/50">No supporters yet. Import a CSV to get started.</TableCell>
-                </TableRow>
+                <tr className="border-b border-white/10">
+                  <td colSpan={9} className="p-4 text-center py-12 text-white/50 align-middle">No supporters yet. Import a CSV to get started.</td>
+                </tr>
               ) : (
                 sortedRows.map((s) => (
-                  <TableRow
+                  <tr
                     key={s.id}
-                    className={`border-white/10 hover:bg-white/5 ${selected.has(s.id) ? "bg-red-950/20" : ""}`}
+                    className={`border-b border-white/10 transition-colors hover:bg-white/5 ${selected.has(s.id) ? "bg-red-950/20" : ""}`}
                   >
-                     <TableCell className="px-3">
-                       <input
-                         type="checkbox"
-                         checked={selected.has(s.id)}
-                         onChange={() => toggleOne(s.id)}
-                         className="accent-green-500 w-4 h-4 cursor-pointer"
-                       />
-                     </TableCell>
-                     {/* ★ Star toggle */}
-                     <TableCell className="text-center px-2">
-                       <button
-                         title={s.is_hall_of_fame ? "Remove from Hall of Fame" : "Add to Hall of Fame"}
-                          onClick={async () => {
-                            const newHof = !s.is_hall_of_fame;
-                            await supabase.from("supporters").update({ is_hall_of_fame: newHof } as any).eq("id", s.id);
-                            // Optimistic update — avoid full refetch which resets scroll position
-                            setRows((prev) => prev.map((r) => r.id === s.id ? { ...r, is_hall_of_fame: newHof } : r));
+                    <td className="p-4 px-3 align-middle">
+                      <input
+                        type="checkbox"
+                        checked={selected.has(s.id)}
+                        onChange={() => toggleOne(s.id)}
+                        className="accent-green-500 w-4 h-4 cursor-pointer"
+                      />
+                    </td>
+                    {/* ★ HOF star toggle */}
+                    <td className="p-4 px-2 text-center align-middle">
+                      <button
+                        title={s.is_hall_of_fame ? "Remove from Hall of Fame" : "Add to Hall of Fame"}
+                        onClick={async () => {
+                          const newHof = !s.is_hall_of_fame;
+                          await supabase.from("supporters").update({ is_hall_of_fame: newHof } as any).eq("id", s.id);
+                          setRows((prev) => prev.map((r) => r.id === s.id ? { ...r, is_hall_of_fame: newHof } : r));
+                        }}
+                        className="p-0.5 rounded hover:bg-white/10 transition-colors"
+                      >
+                        <Star
+                          className={`w-4 h-4 ${s.is_hall_of_fame ? "text-yellow-400 fill-yellow-400" : "text-white/30"}`}
+                          strokeWidth={1.5}
+                        />
+                      </button>
+                    </td>
+                    <td className="p-4 align-middle text-white font-medium">{s.name}</td>
+                    {/* Type — double-click to edit inline */}
+                    <td
+                      className="p-4 align-middle text-white/60 text-sm cursor-pointer select-none"
+                      onDoubleClick={() => setEditingTypeId(s.id)}
+                      title="Double-click to edit"
+                    >
+                      {editingTypeId === s.id ? (
+                        <select
+                          autoFocus
+                          defaultValue={s.supporter_type}
+                          onChange={async (e) => {
+                            const newType = e.target.value;
+                            await supabase.from("supporters").update({ supporter_type: newType }).eq("id", s.id);
+                            setRows((prev) => prev.map((r) => r.id === s.id ? { ...r, supporter_type: newType } : r));
+                            setEditingTypeId(null);
                           }}
-                         className="p-0.5 rounded hover:bg-white/10 transition-colors"
-                       >
-                         <Star
-                           className={`w-4 h-4 ${s.is_hall_of_fame ? "text-yellow-400 fill-yellow-400" : "text-white/30"}`}
-                           strokeWidth={1.5}
-                         />
-                       </button>
-                     </TableCell>
-                     <TableCell className="text-white font-medium">{s.name}</TableCell>
-                     {/* Type — double-click to edit inline */}
-                     <TableCell
-                       className="text-white/60 text-sm cursor-pointer select-none"
-                       onDoubleClick={() => setEditingTypeId(s.id)}
-                       title="Double-click to edit"
-                     >
-                       {editingTypeId === s.id ? (
-                          <select
-                            autoFocus
-                            defaultValue={s.supporter_type}
-                            onChange={async (e) => {
-                              const newType = e.target.value;
-                              await supabase.from("supporters").update({ supporter_type: newType }).eq("id", s.id);
-                              // Optimistic update — avoid full refetch which resets scroll position
-                              setRows((prev) => prev.map((r) => r.id === s.id ? { ...r, supporter_type: newType } : r));
-                              setEditingTypeId(null);
-                            }}
-                            onKeyDown={(e) => { if (e.key === "Escape") setEditingTypeId(null); }}
-                           className="bg-white text-black text-xs rounded px-1.5 py-1 border border-white/20 cursor-pointer"
-                         >
-                           {SUPPORTER_TYPES.map((t) => (
-                             <option key={t} value={t}>{t}</option>
-                           ))}
-                         </select>
-                       ) : (
-                         s.supporter_type
-                       )}
-                     </TableCell>
-                    <TableCell className="text-white/70 text-sm">
+                          onKeyDown={(e) => { if (e.key === "Escape") setEditingTypeId(null); }}
+                          className="bg-white text-black text-xs rounded px-1.5 py-1 border border-white/20 cursor-pointer"
+                        >
+                          {SUPPORTER_TYPES.map((t) => (
+                            <option key={t} value={t}>{t}</option>
+                          ))}
+                        </select>
+                      ) : (
+                        s.supporter_type
+                      )}
+                    </td>
+                    <td className="p-4 align-middle text-white/70 text-sm">
                       {s.email
                         ? <a href={`mailto:${s.email}`} className="text-green-400 hover:underline">{s.email}</a>
                         : "—"}
-                    </TableCell>
-                    <TableCell className="text-white/70 text-sm">
+                    </td>
+                    <td className="p-4 align-middle text-white/70 text-sm">
                       {s.phone
                         ? <a href={`tel:${s.phone}`} className="text-green-400 hover:underline">{s.phone}</a>
                         : "—"}
-                    </TableCell>
-                    <TableCell className="text-white/70 text-sm">{s.address || "—"}</TableCell>
-                    <TableCell className="text-white/50 text-xs min-w-[280px] whitespace-pre-wrap break-words align-top py-3">{s.story || "—"}</TableCell>
-                    <TableCell className="text-right">
+                    </td>
+                    <td className="p-4 align-middle text-white/70 text-sm">{s.address || "—"}</td>
+                    <td className="p-4 align-middle text-white/50 text-xs min-w-[280px] whitespace-pre-wrap break-words align-top py-3">{s.story || "—"}</td>
+                    <td className="p-4 align-middle text-right">
                       <div className="flex justify-end gap-1">
                         <button
                           onClick={() => setEditRow({ ...s })}
@@ -495,12 +490,12 @@ const AdminSupportersDatabase = () => {
                           <Trash2 className="w-3.5 h-3.5" />
                         </button>
                       </div>
-                    </TableCell>
-                  </TableRow>
+                    </td>
+                  </tr>
                 ))
               )}
-            </TableBody>
-          </Table>
+            </tbody>
+          </table>
         </div>
       </div>
       {/* ── Edit Modal ────────────────────────────────────────────────────────── */}
