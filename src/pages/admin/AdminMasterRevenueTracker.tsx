@@ -280,7 +280,7 @@ const AdminMasterRevenueTracker = () => {
         </div>
 
         {/* Monthly Table */}
-        <div className="rounded-lg border border-white/10 overflow-x-auto">
+        <div className="rounded-lg border border-white/10 overflow-auto">
           <Table>
             <TableHeader>
               <TableRow className="border-white/10 hover:bg-transparent">

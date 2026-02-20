@@ -125,7 +125,7 @@ export default function AdminClients() {
           </Button>
         </div>
 
-        <div className="bg-white/5 rounded-lg border border-white/10 shadow-sm">
+        <div className="bg-white/5 rounded-lg border border-white/10 shadow-sm overflow-auto">
           {loading ? (
             <div className="p-8 text-center">
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-sky-300 mx-auto"></div>
