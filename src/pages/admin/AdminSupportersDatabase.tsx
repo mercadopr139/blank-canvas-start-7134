@@ -525,7 +525,7 @@ const AdminSupportersDatabase = () => {
                     </SelectTrigger>
                     <SelectContent className="bg-zinc-900 border-white/10 text-white">
                       {SUPPORTER_TYPES.map((t) => (
-                        <SelectItem key={t} value={t} className="focus:bg-white/10">{t}</SelectItem>
+                        <SelectItem key={t} value={t} className="text-white focus:bg-white/10 focus:text-white">{t}</SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
@@ -647,7 +647,7 @@ const AdminSupportersDatabase = () => {
                 </SelectTrigger>
                 <SelectContent className="bg-zinc-900 border-white/10 text-white">
                   {SUPPORTER_TYPES.map((t) => (
-                    <SelectItem key={t} value={t} className="focus:bg-white/10">{t}</SelectItem>
+                    <SelectItem key={t} value={t} className="text-white focus:bg-white/10 focus:text-white">{t}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
