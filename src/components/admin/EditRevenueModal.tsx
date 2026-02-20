@@ -4,6 +4,7 @@ import { CalendarIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import SupporterAutocomplete, { type Supporter } from "@/components/admin/SupporterAutocomplete";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle,
 } from "@/components/ui/dialog";
@@ -48,6 +49,7 @@ const EditRevenueModal = ({ open, onOpenChange, donationId, onSaved }: Props) =>
   // Donation fields
   const [donorName, setDonorName] = useState("");
   const [donorEmail, setDonorEmail] = useState("");
+  const [donorPhone, setDonorPhone] = useState("");
 
   // Fee for Service fields
   const [vendorName, setVendorName] = useState("");
@@ -63,6 +65,7 @@ const EditRevenueModal = ({ open, onOpenChange, donationId, onSaved }: Props) =>
   const [fundraisingDescOther, setFundraisingDescOther] = useState("");
   const [sponsorName, setSponsorName] = useState("");
   const [sponsorEmail, setSponsorEmail] = useState("");
+  const [sponsorPhone, setSponsorPhone] = useState("");
 
   // Shared fields
   const [recognitionPeriod, setRecognitionPeriod] = useState("");
@@ -329,13 +332,25 @@ const EditRevenueModal = ({ open, onOpenChange, donationId, onSaved }: Props) =>
                 {/* ===== DONATION ===== */}
                 {revenueType === "Donation" && (
                   <>
-                    <div className="space-y-1">
-                      <Label className="text-white/70">Donor Name *</Label>
-                      <Input value={donorName} onChange={(e) => setDonorName(e.target.value)} className="bg-white/5 border-white/20 text-white" />
-                    </div>
+                    <SupporterAutocomplete
+                      label="Donor Name"
+                      required
+                      value={donorName}
+                      onChange={setDonorName}
+                      onSelect={(s: Supporter) => {
+                        setDonorName(s.name);
+                        setDonorEmail(s.email || "");
+                        setDonorPhone(s.phone || "");
+                      }}
+                      placeholder="Type to search supporters…"
+                    />
                     <div className="space-y-1">
                       <Label className="text-white/70">Donor Email</Label>
                       <Input type="email" value={donorEmail} onChange={(e) => setDonorEmail(e.target.value)} className="bg-white/5 border-white/20 text-white" />
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-white/70">Donor Phone</Label>
+                      <Input type="tel" value={donorPhone} onChange={(e) => setDonorPhone(e.target.value)} className="bg-white/5 border-white/20 text-white" />
                     </div>
                   </>
                 )}
@@ -393,13 +408,25 @@ const EditRevenueModal = ({ open, onOpenChange, donationId, onSaved }: Props) =>
                     )}
                     {fundraisingDescSelect === "Sponsor" && (
                       <>
-                        <div className="space-y-1">
-                          <Label className="text-white/70">Sponsor Name *</Label>
-                          <Input value={sponsorName} onChange={(e) => setSponsorName(e.target.value)} placeholder="Contact / company name" className="bg-white/5 border-white/20 text-white placeholder:text-white/30" />
-                        </div>
+                        <SupporterAutocomplete
+                          label="Sponsor Name"
+                          required
+                          value={sponsorName}
+                          onChange={setSponsorName}
+                          onSelect={(s: Supporter) => {
+                            setSponsorName(s.name);
+                            setSponsorEmail(s.email || "");
+                            setSponsorPhone(s.phone || "");
+                          }}
+                          placeholder="Type to search supporters…"
+                        />
                         <div className="space-y-1">
                           <Label className="text-white/70">Sponsor Email</Label>
                           <Input type="email" value={sponsorEmail} onChange={(e) => setSponsorEmail(e.target.value)} placeholder="For receipt delivery" className="bg-white/5 border-white/20 text-white placeholder:text-white/30" />
+                        </div>
+                        <div className="space-y-1">
+                          <Label className="text-white/70">Sponsor Phone</Label>
+                          <Input type="tel" value={sponsorPhone} onChange={(e) => setSponsorPhone(e.target.value)} className="bg-white/5 border-white/20 text-white" />
                         </div>
                       </>
                     )}
