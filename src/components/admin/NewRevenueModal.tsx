@@ -292,7 +292,7 @@ const NewRevenueModal = ({ open, onOpenChange, onCreated }: Props) => {
   return (
     <>
       <Dialog open={open} onOpenChange={handleOpenChange}>
-        <DialogContent className="bg-black border-white/20 text-white max-w-lg max-h-[90vh] overflow-y-auto">
+        <DialogContent className="bg-black border-white/20 text-white max-w-lg max-h-[90vh] overflow-y-auto" onInteractOutside={(e) => e.preventDefault()}>
           <DialogHeader>
             <DialogTitle className="text-white">New Revenue</DialogTitle>
           </DialogHeader>
