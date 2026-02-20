@@ -323,7 +323,7 @@ const AdminSupportersDatabase = () => {
     <div className="bg-black text-white flex flex-col" style={{ height: 'calc(100vh - 73px)' }}>
       {/* Page header */}
       <div className="border-b border-white/10 px-4 py-3 flex-shrink-0">
-        <h2 className="text-base font-semibold text-green-400">Supporters Database</h2>
+        <h2 className="text-base font-semibold text-green-400">Supporters</h2>
         <p className="text-xs text-white/50">Import and manage supporter records</p>
       </div>
 
