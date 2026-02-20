@@ -640,20 +640,6 @@ const AdminSupportersDatabase = () => {
 
           <div className="overflow-y-auto flex-1 px-6 pb-2 space-y-5">
             <div className="space-y-1.5">
-              <Label className="text-white/70">Supporter Type <span className="text-red-400">*</span></Label>
-              <Select value={supporterType} onValueChange={setSupporterType}>
-                <SelectTrigger className="bg-white/5 border-white/10 text-white">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent className="bg-zinc-900 border-white/10 text-white">
-                  {SUPPORTER_TYPES.map((t) => (
-                    <SelectItem key={t} value={t} className="text-white focus:bg-white/10 focus:text-white">{t}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-1.5">
               <Label className="text-white/70">CSV File <span className="text-red-400">*</span></Label>
               <input
                 ref={fileRef}
