@@ -32,6 +32,9 @@ const FIELD_LABELS: Record<MappableField, string> = {
 
 const SUPPORTER_TYPES = ["Donor", "Sponsor", "Meal Train", "Partner", "Advocate", "Volunteer"] as const;
 
+const PRIMARY_REVENUE_STREAMS = ["Donation", "Sponsorship", "Fee for Service", "Re-Grant", "Mixed"] as const;
+const SUPPORTER_STATUSES = ["Active", "Prospect", "Lapsed", "Past"] as const;
+
 interface SupporterRow {
   id: string;
   name: string;
@@ -41,6 +44,9 @@ interface SupporterRow {
   supporter_type: string;
   story: string | null;
   is_hall_of_fame: boolean;
+  primary_revenue_stream: string | null;
+  status: string | null;
+  relationship_owner: string | null;
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -129,7 +135,7 @@ const AdminSupportersDatabase = () => {
     setLoadingRows(true);
     const { data } = await supabase
       .from("supporters")
-      .select("id, name, email, phone, address, supporter_type, story, is_hall_of_fame")
+      .select("id, name, email, phone, address, supporter_type, story, is_hall_of_fame, primary_revenue_stream, status, relationship_owner")
       .order("name");
     setRows((data ?? []) as SupporterRow[]);
     setLoadingRows(false);
@@ -160,6 +166,9 @@ const AdminSupportersDatabase = () => {
       address: editRow.address || null,
       story: editRow.story || null,
       supporter_type: editRow.supporter_type,
+      primary_revenue_stream: editRow.primary_revenue_stream || null,
+      status: editRow.status || null,
+      relationship_owner: editRow.relationship_owner || null,
     }).eq("id", editRow.id);
     setEditSaving(false);
     setEditRow(null);
@@ -386,6 +395,9 @@ const AdminSupportersDatabase = () => {
                 <th className="h-12 px-4 w-8 text-center align-middle font-medium text-white/70 text-xs">HOF</th>
                 <th className="h-12 px-4 text-left align-middle font-medium text-white/70">Supporter Name</th>
                 <th className="h-12 px-4 text-left align-middle font-medium text-white/70">Supporter Category</th>
+                <th className="h-12 px-4 text-left align-middle font-medium text-white/70">Status</th>
+                <th className="h-12 px-4 text-left align-middle font-medium text-white/70">Primary Revenue Stream</th>
+                <th className="h-12 px-4 text-left align-middle font-medium text-white/70">Relationship Owner</th>
                 <th className="h-12 px-4 text-left align-middle font-medium text-white/70">Primary Contact Email</th>
                 <th className="h-12 px-4 text-left align-middle font-medium text-white/70">Primary Contact Phone</th>
                 <th className="h-12 px-4 text-left align-middle font-medium text-white/70">Address</th>
@@ -396,11 +408,11 @@ const AdminSupportersDatabase = () => {
             <tbody className="[&_tr:last-child]:border-0">
               {loadingRows ? (
                 <tr className="border-b border-white/10">
-                  <td colSpan={9} className="p-4 text-center py-12 text-white/50 align-middle">Loading…</td>
+                  <td colSpan={12} className="p-4 text-center py-12 text-white/50 align-middle">Loading…</td>
                 </tr>
               ) : rows.length === 0 ? (
                 <tr className="border-b border-white/10">
-                  <td colSpan={9} className="p-4 text-center py-12 text-white/50 align-middle">No supporters yet. Import a CSV to get started.</td>
+                  <td colSpan={12} className="p-4 text-center py-12 text-white/50 align-middle">No supporters yet. Import a CSV to get started.</td>
                 </tr>
               ) : (
                 sortedRows.map((s) => (
@@ -471,6 +483,9 @@ const AdminSupportersDatabase = () => {
                         ? <a href={`tel:${s.phone}`} className="text-green-400 hover:underline">{s.phone}</a>
                         : "—"}
                     </td>
+                    <td className="p-4 align-middle text-white/70 text-sm">{s.status || "—"}</td>
+                    <td className="p-4 align-middle text-white/70 text-sm">{s.primary_revenue_stream || "—"}</td>
+                    <td className="p-4 align-middle text-white/70 text-sm">{s.relationship_owner || "—"}</td>
                     <td className="p-4 align-middle text-white/70 text-sm">{s.address || "—"}</td>
                     <td className="p-4 align-middle text-white/50 text-xs min-w-[280px] whitespace-pre-wrap break-words align-top py-3">{s.story || "—"}</td>
                     <td className="p-4 align-middle text-right">
@@ -552,6 +567,41 @@ const AdminSupportersDatabase = () => {
                     value={editRow.address ?? ""}
                     onChange={(e) => setEditRow({ ...editRow, address: e.target.value })}
                     className="bg-white/5 border-white/10 text-white"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-white/70">Primary Revenue Stream</Label>
+                  <Select value={editRow.primary_revenue_stream ?? ""} onValueChange={(v) => setEditRow({ ...editRow, primary_revenue_stream: v || null })}>
+                    <SelectTrigger className="bg-white/5 border-white/10 text-white">
+                      <SelectValue placeholder="— not set —" />
+                    </SelectTrigger>
+                    <SelectContent className="bg-zinc-900 border-white/10 text-white">
+                      {PRIMARY_REVENUE_STREAMS.map((r) => (
+                        <SelectItem key={r} value={r} className="text-white focus:bg-white/10 focus:text-white">{r}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-white/70">Status</Label>
+                  <Select value={editRow.status ?? ""} onValueChange={(v) => setEditRow({ ...editRow, status: v || null })}>
+                    <SelectTrigger className="bg-white/5 border-white/10 text-white">
+                      <SelectValue placeholder="— not set —" />
+                    </SelectTrigger>
+                    <SelectContent className="bg-zinc-900 border-white/10 text-white">
+                      {SUPPORTER_STATUSES.map((s) => (
+                        <SelectItem key={s} value={s} className="text-white focus:bg-white/10 focus:text-white">{s}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-white/70">Relationship Owner</Label>
+                  <Input
+                    value={editRow.relationship_owner ?? ""}
+                    onChange={(e) => setEditRow({ ...editRow, relationship_owner: e.target.value })}
+                    className="bg-white/5 border-white/10 text-white"
+                    placeholder="Person's name…"
                   />
                 </div>
                 <div className="space-y-1.5">
