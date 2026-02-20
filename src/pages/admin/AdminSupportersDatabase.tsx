@@ -218,7 +218,7 @@ const AdminSupportersDatabase = () => {
 
   // ── Import modal state ────────────────────────────────────────────────────
   const [importOpen, setImportOpen] = useState(false);
-  const [supporterType, setSupporterType] = useState<string>("Hall of Fame");
+  const [supporterType, setSupporterType] = useState<string>("Donor");
   const [csvHeaders, setCsvHeaders] = useState<string[]>([]);
   const [csvData, setCsvData] = useState<CsvRow[]>([]);
   const [mapping, setMapping] = useState<Record<MappableField, string>>({
@@ -230,7 +230,7 @@ const AdminSupportersDatabase = () => {
   const resetImport = () => {
     setCsvHeaders([]);
     setCsvData([]);
-    setSupporterType("Hall of Fame");
+    setSupporterType("Donor");
     setMapping({ name: "__skip__", story: "__skip__", email: "__skip__", phone: "__skip__", address: "__skip__" });
     setSummary(null);
     if (fileRef.current) fileRef.current.value = "";
@@ -387,7 +387,7 @@ const AdminSupportersDatabase = () => {
                     title="Select all"
                   />
                 </TableHead>
-                <TableHead className="w-8 text-center text-white/70">★</TableHead>
+                <TableHead className="w-8 text-center text-white/70 text-xs">HOF</TableHead>
                 <TableHead className="text-white/70">Name</TableHead>
                 <TableHead className="text-white/70">Type</TableHead>
                 <TableHead className="text-white/70">Email</TableHead>
