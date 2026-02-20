@@ -223,7 +223,7 @@ const AdminDepositDetail = () => {
         {/* Donations table */}
         <div>
           <h2 className="text-lg font-semibold mb-4">Donations in this batch</h2>
-          <div className="rounded-lg border border-white/10 overflow-hidden">
+          <div className="rounded-lg border border-white/10 overflow-auto">
             <Table>
               <TableHeader>
                 <TableRow className="border-white/10 hover:bg-transparent">
