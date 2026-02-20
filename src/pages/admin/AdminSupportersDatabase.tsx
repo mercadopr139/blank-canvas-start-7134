@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
-import { Upload, Pencil, Trash2 } from "lucide-react";
+import { Upload, Pencil, Trash2, Star } from "lucide-react";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle,
 } from "@/components/ui/dialog";
@@ -33,7 +33,7 @@ const FIELD_LABELS: Record<MappableField, string> = {
   address: "Address",
 };
 
-const SUPPORTER_TYPES = ["Hall of Fame", "Donor", "Sponsor", "Partner", "Other"] as const;
+const SUPPORTER_TYPES = ["Donor", "Sponsor", "Meal Train", "Partner", "Advocate"] as const;
 
 interface SupporterRow {
   id: string;
@@ -151,6 +151,7 @@ const AdminSupportersDatabase = () => {
   // ── Edit state ────────────────────────────────────────────────────────────
   const [editRow, setEditRow] = useState<SupporterRow | null>(null);
   const [editSaving, setEditSaving] = useState(false);
+  const [editingTypeId, setEditingTypeId] = useState<string | null>(null);
 
   const handleEditSave = async () => {
     if (!editRow) return;
@@ -386,9 +387,9 @@ const AdminSupportersDatabase = () => {
                     title="Select all"
                   />
                 </TableHead>
+                <TableHead className="w-8 text-center text-white/70">★</TableHead>
                 <TableHead className="text-white/70">Name</TableHead>
                 <TableHead className="text-white/70">Type</TableHead>
-                <TableHead className="text-white/70">HOF</TableHead>
                 <TableHead className="text-white/70">Email</TableHead>
                 <TableHead className="text-white/70">Phone</TableHead>
                 <TableHead className="text-white/70">Address</TableHead>
@@ -411,29 +412,58 @@ const AdminSupportersDatabase = () => {
                     key={s.id}
                     className={`border-white/10 hover:bg-white/5 ${selected.has(s.id) ? "bg-red-950/20" : ""}`}
                   >
-                    <TableCell className="px-3">
-                      <input
-                        type="checkbox"
-                        checked={selected.has(s.id)}
-                        onChange={() => toggleOne(s.id)}
-                        className="accent-green-500 w-4 h-4 cursor-pointer"
-                      />
-                    </TableCell>
-                     <TableCell className="text-white font-medium">{s.name}</TableCell>
-                     <TableCell className="text-white/60 text-sm">{s.supporter_type}</TableCell>
-                     <TableCell>
-                       <select
-                         value={s.is_hall_of_fame ? "hof" : ""}
-                         onChange={async (e) => {
-                           const val = e.target.value === "hof";
-                           await supabase.from("supporters").update({ is_hall_of_fame: val } as any).eq("id", s.id);
+                     <TableCell className="px-3">
+                       <input
+                         type="checkbox"
+                         checked={selected.has(s.id)}
+                         onChange={() => toggleOne(s.id)}
+                         className="accent-green-500 w-4 h-4 cursor-pointer"
+                       />
+                     </TableCell>
+                     {/* ★ Star toggle */}
+                     <TableCell className="text-center px-2">
+                       <button
+                         title={s.is_hall_of_fame ? "Remove from Hall of Fame" : "Add to Hall of Fame"}
+                         onClick={async () => {
+                           await supabase.from("supporters").update({ is_hall_of_fame: !s.is_hall_of_fame } as any).eq("id", s.id);
                            await fetchRows();
                          }}
-                         className="bg-white text-black text-xs rounded px-1.5 py-1 border border-white/20 cursor-pointer"
+                         className="p-0.5 rounded hover:bg-white/10 transition-colors"
                        >
-                         <option value="">—</option>
-                         <option value="hof">Hall of Fame</option>
-                       </select>
+                         <Star
+                           className={`w-4 h-4 ${s.is_hall_of_fame ? "text-yellow-400 fill-yellow-400" : "text-white/30"}`}
+                           strokeWidth={1.5}
+                         />
+                       </button>
+                     </TableCell>
+                     <TableCell className="text-white font-medium">{s.name}</TableCell>
+                     {/* Type — double-click to edit inline */}
+                     <TableCell
+                       className="text-white/60 text-sm cursor-pointer select-none"
+                       onDoubleClick={() => setEditingTypeId(s.id)}
+                       title="Double-click to edit"
+                     >
+                       {editingTypeId === s.id ? (
+                         <select
+                           autoFocus
+                           defaultValue={s.supporter_type}
+                           onChange={async (e) => {
+                             const newType = e.target.value;
+                             await supabase.from("supporters").update({ supporter_type: newType }).eq("id", s.id);
+                             setEditingTypeId(null);
+                             await fetchRows();
+                           }}
+                           onBlur={() => setEditingTypeId(null)}
+                           onKeyDown={(e) => { if (e.key === "Escape") setEditingTypeId(null); }}
+                           className="bg-white text-black text-xs rounded px-1.5 py-1 border border-white/20 cursor-pointer"
+                         >
+                           {SUPPORTER_TYPES.map((t) => (
+                             <option key={t} value={t}>{t}</option>
+                           ))}
+                         </select>
+                       ) : (
+                         s.supporter_type
+                       )}
                      </TableCell>
                     <TableCell className="text-white/70 text-sm">
                       {s.email
