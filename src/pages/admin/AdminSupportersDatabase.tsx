@@ -30,7 +30,7 @@ const FIELD_LABELS: Record<MappableField, string> = {
   address: "Address",
 };
 
-const SUPPORTER_TYPES = ["Donor", "Sponsor", "Meal Train", "Partner", "Advocate"] as const;
+const SUPPORTER_TYPES = ["Donor", "Sponsor", "Meal Train", "Partner", "Advocate", "Volunteer"] as const;
 
 interface SupporterRow {
   id: string;
