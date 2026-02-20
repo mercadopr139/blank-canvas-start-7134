@@ -420,10 +420,13 @@ export type Database = {
           is_hall_of_fame: boolean
           name: string
           phone: string | null
+          primary_revenue_stream: string | null
           receipt_2026_last_sent_to: string | null
           receipt_2026_pdf_url: string | null
           receipt_2026_sent_at: string | null
           receipt_2026_status: string
+          relationship_owner: string | null
+          status: string | null
           story: string | null
           supporter_type: string
           updated_at: string
@@ -436,10 +439,13 @@ export type Database = {
           is_hall_of_fame?: boolean
           name: string
           phone?: string | null
+          primary_revenue_stream?: string | null
           receipt_2026_last_sent_to?: string | null
           receipt_2026_pdf_url?: string | null
           receipt_2026_sent_at?: string | null
           receipt_2026_status?: string
+          relationship_owner?: string | null
+          status?: string | null
           story?: string | null
           supporter_type?: string
           updated_at?: string
@@ -452,10 +458,13 @@ export type Database = {
           is_hall_of_fame?: boolean
           name?: string
           phone?: string | null
+          primary_revenue_stream?: string | null
           receipt_2026_last_sent_to?: string | null
           receipt_2026_pdf_url?: string | null
           receipt_2026_sent_at?: string | null
           receipt_2026_status?: string
+          relationship_owner?: string | null
+          status?: string | null
           story?: string | null
           supporter_type?: string
           updated_at?: string
