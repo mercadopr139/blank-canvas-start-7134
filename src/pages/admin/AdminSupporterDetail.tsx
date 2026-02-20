@@ -98,9 +98,20 @@ const AdminSupporterDetail = () => {
   return (
     <div className="bg-black text-white">
       <div className="border-b border-white/10 px-4 py-3 flex items-center justify-between">
-        <div>
-          <h2 className="text-base font-semibold text-white">{supporter.name}</h2>
-          <p className="text-xs text-white/50">{supporter.email || "No email"}</p>
+        <div className="flex items-center gap-3">
+          <Button
+            variant="ghost"
+            size="sm"
+            className="text-white/50 hover:text-white hover:bg-white/10 px-2"
+            onClick={() => navigate("/admin/sales-marketing/supporters")}
+          >
+            <ArrowLeft className="w-4 h-4 mr-1" />
+            Back
+          </Button>
+          <div>
+            <h2 className="text-base font-semibold text-white">{supporter.name}</h2>
+            <p className="text-xs text-white/50">{supporter.email || "No email"}</p>
+          </div>
         </div>
         <div className="flex items-center gap-3">
           {statusBadge(supporter.receipt_2026_status)}

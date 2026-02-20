@@ -143,7 +143,7 @@ const AdminSupporters = () => {
                         variant="ghost"
                         size="sm"
                         className="text-sky-300 hover:text-sky-200 hover:bg-white/10"
-                        onClick={() => navigate(`/admin/finance/supporters/${s.id}`)}
+                        onClick={() => navigate(`/admin/sales-marketing/supporters/${s.id}`)}
                       >
                         View
                       </Button>
