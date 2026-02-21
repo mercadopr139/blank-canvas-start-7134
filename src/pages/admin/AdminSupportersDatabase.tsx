@@ -396,8 +396,8 @@ const AdminSupportersDatabase = () => {
                 <th className="h-12 px-4 w-8 text-center align-middle font-medium text-white/70 text-xs">HOF</th>
                 <th className="h-12 px-4 text-left align-middle font-medium text-white/70">Supporter Name</th>
                 <th className="h-12 px-4 text-left align-middle font-medium text-white/70">Supporter Category</th>
-                <th className="h-12 px-4 text-left align-middle font-medium text-white/70">Status</th>
                 <th className="h-12 px-4 text-left align-middle font-medium text-white/70">Primary Revenue Stream</th>
+                <th className="h-12 px-4 text-left align-middle font-medium text-white/70">Status</th>
                 <th className="h-12 px-4 text-left align-middle font-medium text-white/70">Relationship Owner</th>
                 <th className="h-12 px-4 text-left align-middle font-medium text-white/70">Primary Contact Email</th>
                 <th className="h-12 px-4 text-left align-middle font-medium text-white/70">Primary Contact Phone</th>
@@ -474,6 +474,9 @@ const AdminSupportersDatabase = () => {
                         s.supporter_category || "—"
                       )}
                     </td>
+                    <td className="p-4 align-middle text-white/70 text-sm">{s.primary_revenue_stream || "—"}</td>
+                    <td className="p-4 align-middle text-white/70 text-sm">{s.status || "—"}</td>
+                    <td className="p-4 align-middle text-white/70 text-sm">{s.relationship_owner || "—"}</td>
                     <td className="p-4 align-middle text-white/70 text-sm">
                       {s.email
                         ? <a href={`mailto:${s.email}`} className="text-green-400 hover:underline">{s.email}</a>
@@ -484,9 +487,6 @@ const AdminSupportersDatabase = () => {
                         ? <a href={`tel:${s.phone}`} className="text-green-400 hover:underline">{s.phone}</a>
                         : "—"}
                     </td>
-                    <td className="p-4 align-middle text-white/70 text-sm">{s.status || "—"}</td>
-                    <td className="p-4 align-middle text-white/70 text-sm">{s.primary_revenue_stream || "—"}</td>
-                    <td className="p-4 align-middle text-white/70 text-sm">{s.relationship_owner || "—"}</td>
                     <td className="p-4 align-middle text-white/70 text-sm">{s.address || "—"}</td>
                     <td className="p-4 align-middle text-white/50 text-xs min-w-[280px] whitespace-pre-wrap break-words align-top py-3">{s.story || "—"}</td>
                     <td className="p-4 align-middle text-right">
