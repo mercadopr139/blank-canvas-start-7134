@@ -428,6 +428,7 @@ export type Database = {
           relationship_owner: string | null
           status: string | null
           story: string | null
+          supporter_category: string | null
           supporter_type: string
           updated_at: string
         }
@@ -447,6 +448,7 @@ export type Database = {
           relationship_owner?: string | null
           status?: string | null
           story?: string | null
+          supporter_category?: string | null
           supporter_type?: string
           updated_at?: string
         }
@@ -466,6 +468,7 @@ export type Database = {
           relationship_owner?: string | null
           status?: string | null
           story?: string | null
+          supporter_category?: string | null
           supporter_type?: string
           updated_at?: string
         }
