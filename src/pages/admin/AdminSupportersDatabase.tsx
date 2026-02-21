@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Upload, Pencil, Trash2, Star } from "lucide-react";
+import SupporterRevenueSection from "@/components/admin/SupporterRevenueSection";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle,
 } from "@/components/ui/dialog";
@@ -516,7 +517,7 @@ const AdminSupportersDatabase = () => {
       </div>
       {/* ── Edit Modal ────────────────────────────────────────────────────────── */}
       <Dialog open={!!editRow} onOpenChange={(o) => { if (!o) setEditRow(null); }}>
-        <DialogContent className="bg-zinc-900 border-white/10 text-white sm:max-w-md flex flex-col max-h-[85vh] p-0 gap-0">
+        <DialogContent className="bg-zinc-900 border-white/10 text-white sm:max-w-2xl flex flex-col max-h-[85vh] p-0 gap-0">
           <div className="px-6 pt-6 pb-2 shrink-0">
             <DialogHeader>
               <DialogTitle className="text-green-400">Edit Supporter</DialogTitle>
@@ -613,6 +614,11 @@ const AdminSupportersDatabase = () => {
                     onChange={(e) => setEditRow({ ...editRow, story: e.target.value })}
                     className="w-full rounded-md bg-white/5 border border-white/10 text-white text-sm px-3 py-2 resize-none focus:outline-none focus:ring-1 focus:ring-green-500"
                   />
+                </div>
+
+                {/* ── Revenue History ─────────────────────────────── */}
+                <div className="pt-2 border-t border-white/10">
+                  <SupporterRevenueSection supporterId={editRow.id} supporterName={editRow.name} />
                 </div>
               </>
             )}
