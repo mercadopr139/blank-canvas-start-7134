@@ -256,7 +256,7 @@ export default function AdminServiceCalendar() {
     const month = currentMonth.getMonth() + 1;
     const year = currentMonth.getFullYear();
     navigate(
-      `/admin/invoices?client=${selectedClientId}&month=${month}&year=${year}&autoGenerate=true&clearServiceDays=true`,
+      `/admin/finance/invoices?client=${selectedClientId}&month=${month}&year=${year}&autoGenerate=true&clearServiceDays=true`,
     );
   };
 
