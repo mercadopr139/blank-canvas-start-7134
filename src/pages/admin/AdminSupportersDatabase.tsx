@@ -30,7 +30,7 @@ const FIELD_LABELS: Record<MappableField, string> = {
   address: "Address",
 };
 
-const SUPPORTER_TYPES = ["Donor", "Sponsor", "Meal Train", "Partner", "Advocate", "Volunteer"] as const;
+
 
 const PRIMARY_REVENUE_STREAMS = ["Donation", "Sponsorship", "Fee for Service", "Re-Grant", "Mixed"] as const;
 const SUPPORTER_STATUSES = ["Active", "Prospect", "Lapsed", "Past"] as const;
@@ -42,7 +42,6 @@ interface SupporterRow {
   email: string | null;
   phone: string | null;
   address: string | null;
-  supporter_type: string;
   story: string | null;
   is_hall_of_fame: boolean;
   primary_revenue_stream: string | null;
@@ -137,7 +136,7 @@ const AdminSupportersDatabase = () => {
     setLoadingRows(true);
     const { data } = await supabase
       .from("supporters")
-      .select("id, name, email, phone, address, supporter_type, story, is_hall_of_fame, primary_revenue_stream, status, relationship_owner, supporter_category")
+      .select("id, name, email, phone, address, story, is_hall_of_fame, primary_revenue_stream, status, relationship_owner, supporter_category")
       .order("name");
     setRows((data ?? []) as SupporterRow[]);
     setLoadingRows(false);
@@ -156,7 +155,7 @@ const AdminSupportersDatabase = () => {
   // ── Edit state ────────────────────────────────────────────────────────────
   const [editRow, setEditRow] = useState<SupporterRow | null>(null);
   const [editSaving, setEditSaving] = useState(false);
-  const [editingTypeId, setEditingTypeId] = useState<string | null>(null);
+  const [editingCategoryId, setEditingCategoryId] = useState<string | null>(null);
 
   const handleEditSave = async () => {
     if (!editRow) return;
@@ -167,11 +166,10 @@ const AdminSupportersDatabase = () => {
       phone: editRow.phone || null,
       address: editRow.address || null,
       story: editRow.story || null,
-      supporter_type: editRow.supporter_type,
+      supporter_category: editRow.supporter_category || null,
       primary_revenue_stream: editRow.primary_revenue_stream || null,
       status: editRow.status || null,
       relationship_owner: editRow.relationship_owner || null,
-      supporter_category: editRow.supporter_category || null,
     }).eq("id", editRow.id);
     setEditSaving(false);
     setEditRow(null);
@@ -227,7 +225,7 @@ const AdminSupportersDatabase = () => {
 
   // ── Import modal state ────────────────────────────────────────────────────
   const [importOpen, setImportOpen] = useState(false);
-  const [supporterType, setSupporterType] = useState<string>("Donor");
+  const [importCategory, setImportCategory] = useState<string>("Individual");
   const [csvHeaders, setCsvHeaders] = useState<string[]>([]);
   const [csvData, setCsvData] = useState<CsvRow[]>([]);
   const [mapping, setMapping] = useState<Record<MappableField, string>>({
@@ -239,7 +237,7 @@ const AdminSupportersDatabase = () => {
   const resetImport = () => {
     setCsvHeaders([]);
     setCsvData([]);
-    setSupporterType("Donor");
+    setImportCategory("Individual");
     setMapping({ name: "__skip__", story: "__skip__", email: "__skip__", phone: "__skip__", address: "__skip__" });
     setSummary(null);
     if (fileRef.current) fileRef.current.value = "";
@@ -298,7 +296,7 @@ const AdminSupportersDatabase = () => {
       const address = rawAddress.trim() || null;
 
       if (!email) {
-        await supabase.from("supporters").insert({ name, email: null, story, phone, address, supporter_type: supporterType });
+        await supabase.from("supporters").insert({ name, email: null, story, phone, address, supporter_category: importCategory });
         created++;
         continue;
       }
@@ -319,7 +317,7 @@ const AdminSupportersDatabase = () => {
         }
         updated++;
       } else {
-        await supabase.from("supporters").insert({ name, email, story, phone, address, supporter_type: supporterType });
+        await supabase.from("supporters").insert({ name, email, story, phone, address, supporter_category: importCategory });
         created++;
       }
     }
@@ -398,7 +396,6 @@ const AdminSupportersDatabase = () => {
                 <th className="h-12 px-4 w-8 text-center align-middle font-medium text-white/70 text-xs">HOF</th>
                 <th className="h-12 px-4 text-left align-middle font-medium text-white/70">Supporter Name</th>
                 <th className="h-12 px-4 text-left align-middle font-medium text-white/70">Supporter Category</th>
-                <th className="h-12 px-4 text-left align-middle font-medium text-white/70">Supporter Category (New)</th>
                 <th className="h-12 px-4 text-left align-middle font-medium text-white/70">Status</th>
                 <th className="h-12 px-4 text-left align-middle font-medium text-white/70">Primary Revenue Stream</th>
                 <th className="h-12 px-4 text-left align-middle font-medium text-white/70">Relationship Owner</th>
@@ -412,11 +409,11 @@ const AdminSupportersDatabase = () => {
             <tbody className="[&_tr:last-child]:border-0">
               {loadingRows ? (
                 <tr className="border-b border-white/10">
-                   <td colSpan={13} className="p-4 text-center py-12 text-white/50 align-middle">Loading…</td>
+                   <td colSpan={12} className="p-4 text-center py-12 text-white/50 align-middle">Loading…</td>
                 </tr>
               ) : rows.length === 0 ? (
                 <tr className="border-b border-white/10">
-                   <td colSpan={13} className="p-4 text-center py-12 text-white/50 align-middle">No supporters yet. Import a CSV to get started.</td>
+                   <td colSpan={12} className="p-4 text-center py-12 text-white/50 align-middle">No supporters yet. Import a CSV to get started.</td>
                 </tr>
               ) : (
                 sortedRows.map((s) => (
@@ -450,34 +447,33 @@ const AdminSupportersDatabase = () => {
                       </button>
                     </td>
                     <td className="p-4 align-middle text-white font-medium">{s.name}</td>
-                    {/* Type — double-click to edit inline */}
+                    {/* Category — double-click to edit inline */}
                     <td
                       className="p-4 align-middle text-white/60 text-sm cursor-pointer select-none"
-                      onDoubleClick={() => setEditingTypeId(s.id)}
+                      onDoubleClick={() => setEditingCategoryId(s.id)}
                       title="Double-click to edit"
                     >
-                      {editingTypeId === s.id ? (
+                      {editingCategoryId === s.id ? (
                         <select
                           autoFocus
-                          defaultValue={s.supporter_type}
+                          defaultValue={s.supporter_category ?? ""}
                           onChange={async (e) => {
-                            const newType = e.target.value;
-                            await supabase.from("supporters").update({ supporter_type: newType }).eq("id", s.id);
-                            setRows((prev) => prev.map((r) => r.id === s.id ? { ...r, supporter_type: newType } : r));
-                            setEditingTypeId(null);
+                            const newCat = e.target.value;
+                            await supabase.from("supporters").update({ supporter_category: newCat }).eq("id", s.id);
+                            setRows((prev) => prev.map((r) => r.id === s.id ? { ...r, supporter_category: newCat } : r));
+                            setEditingCategoryId(null);
                           }}
-                          onKeyDown={(e) => { if (e.key === "Escape") setEditingTypeId(null); }}
+                          onKeyDown={(e) => { if (e.key === "Escape") setEditingCategoryId(null); }}
                           className="bg-white text-black text-xs rounded px-1.5 py-1 border border-white/20 cursor-pointer"
                         >
-                          {SUPPORTER_TYPES.map((t) => (
-                            <option key={t} value={t}>{t}</option>
+                          {SUPPORTER_CATEGORIES.map((c) => (
+                            <option key={c} value={c}>{c}</option>
                           ))}
                         </select>
                       ) : (
-                        s.supporter_type
+                        s.supporter_category || "—"
                       )}
                     </td>
-                    <td className="p-4 align-middle text-white/70 text-sm">{s.supporter_category || "—"}</td>
                     <td className="p-4 align-middle text-white/70 text-sm">
                       {s.email
                         ? <a href={`mailto:${s.email}`} className="text-green-400 hover:underline">{s.email}</a>
@@ -539,13 +535,13 @@ const AdminSupportersDatabase = () => {
                 </div>
                 <div className="space-y-1.5">
                   <Label className="text-white/70">Supporter Category</Label>
-                  <Select value={editRow.supporter_type} onValueChange={(v) => setEditRow({ ...editRow, supporter_type: v })}>
+                  <Select value={editRow.supporter_category ?? ""} onValueChange={(v) => setEditRow({ ...editRow, supporter_category: v || null })}>
                     <SelectTrigger className="bg-white/5 border-white/10 text-white">
-                      <SelectValue />
+                      <SelectValue placeholder="— not set —" />
                     </SelectTrigger>
                     <SelectContent className="bg-zinc-900 border-white/10 text-white">
-                      {SUPPORTER_TYPES.map((t) => (
-                        <SelectItem key={t} value={t} className="text-white focus:bg-white/10 focus:text-white">{t}</SelectItem>
+                      {SUPPORTER_CATEGORIES.map((c) => (
+                        <SelectItem key={c} value={c} className="text-white focus:bg-white/10 focus:text-white">{c}</SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
@@ -573,19 +569,6 @@ const AdminSupportersDatabase = () => {
                     onChange={(e) => setEditRow({ ...editRow, address: e.target.value })}
                     className="bg-white/5 border-white/10 text-white"
                   />
-                </div>
-                <div className="space-y-1.5">
-                  <Label className="text-white/70">Supporter Category (New)</Label>
-                  <Select value={editRow.supporter_category ?? ""} onValueChange={(v) => setEditRow({ ...editRow, supporter_category: v || null })}>
-                    <SelectTrigger className="bg-white/5 border-white/10 text-white">
-                      <SelectValue placeholder="— not set —" />
-                    </SelectTrigger>
-                    <SelectContent className="bg-zinc-900 border-white/10 text-white">
-                      {SUPPORTER_CATEGORIES.map((c) => (
-                        <SelectItem key={c} value={c} className="text-white focus:bg-white/10 focus:text-white">{c}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
                 </div>
                 <div className="space-y-1.5">
                   <Label className="text-white/70">Primary Revenue Stream</Label>

@@ -1,0 +1,1 @@
+ALTER TABLE public.supporters DROP COLUMN IF EXISTS supporter_type;
