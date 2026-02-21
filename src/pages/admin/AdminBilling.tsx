@@ -7,13 +7,13 @@ const tiles = [
     title: "Invoices",
     description: "Track billing and payments",
     icon: FileText,
-    href: "/admin/invoices",
+    href: "/admin/finance/invoices",
   },
   {
     title: "Invoice Sent History",
     description: "View emailed invoices",
     icon: Mail,
-    href: "/admin/invoices?tab=sent",
+    href: "/admin/finance/invoices?tab=sent",
   },
 ];
 

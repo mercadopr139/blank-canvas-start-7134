@@ -115,6 +115,9 @@ const App = () => (
             >
               <Route index element={<AdminFinanceIndex />} />
               <Route path="billing" element={<AdminBilling />} />
+              <Route path="invoices" element={<AdminInvoices />} />
+              <Route path="clients" element={<AdminClients />} />
+              <Route path="service-calendar" element={<AdminServiceCalendar />} />
               <Route path="donations" element={<AdminDonations />} />
               <Route path="deposits" element={<AdminDeposits />} />
               <Route path="deposits/:id" element={<AdminDepositDetail />} />
