@@ -315,6 +315,65 @@ export type Database = {
           },
         ]
       }
+      revenue: {
+        Row: {
+          amount: number
+          created_at: string
+          date: string
+          id: string
+          invoice_sent: boolean
+          logged_by: string | null
+          notes: string | null
+          payment_method: string | null
+          reporting_required: boolean
+          revenue_type: string
+          supporter_id: string | null
+          thank_you_date: string | null
+          thank_you_sent: boolean
+          updated_at: string
+        }
+        Insert: {
+          amount?: number
+          created_at?: string
+          date: string
+          id?: string
+          invoice_sent?: boolean
+          logged_by?: string | null
+          notes?: string | null
+          payment_method?: string | null
+          reporting_required?: boolean
+          revenue_type: string
+          supporter_id?: string | null
+          thank_you_date?: string | null
+          thank_you_sent?: boolean
+          updated_at?: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          date?: string
+          id?: string
+          invoice_sent?: boolean
+          logged_by?: string | null
+          notes?: string | null
+          payment_method?: string | null
+          reporting_required?: boolean
+          revenue_type?: string
+          supporter_id?: string | null
+          thank_you_date?: string | null
+          thank_you_sent?: boolean
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "revenue_supporter_id_fkey"
+            columns: ["supporter_id"]
+            isOneToOne: false
+            referencedRelation: "supporters"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       service_logs: {
         Row: {
           billing_method: string | null
