@@ -30,6 +30,7 @@ import AdminInvoices from "./pages/admin/AdminInvoices";
 import Register from "./pages/Register";
 import Supporters from "./pages/Supporters";
 import AdminDonations from "./pages/admin/AdminDonations";
+import AdminRevenue from "./pages/admin/AdminRevenue";
 import AdminDeposits from "./pages/admin/AdminDeposits";
 import AdminDepositDetail from "./pages/admin/AdminDepositDetail";
 import AdminMasterRevenueTracker from "./pages/admin/AdminMasterRevenueTracker";
@@ -97,7 +98,7 @@ const App = () => (
               }
             >
               <Route index element={<AdminSalesMarketingIndex />} />
-              <Route path="revenue" element={<AdminDonations />} />
+              <Route path="revenue" element={<AdminRevenue />} />
               <Route path="master-revenue-tracker" element={<AdminMasterRevenueTracker />} />
               <Route path="supporters" element={<AdminSupporters />} />
               <Route path="supporters/:id" element={<AdminSupporterDetail />} />
