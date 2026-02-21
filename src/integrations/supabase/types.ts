@@ -429,7 +429,6 @@ export type Database = {
           status: string | null
           story: string | null
           supporter_category: string | null
-          supporter_type: string
           updated_at: string
         }
         Insert: {
@@ -449,7 +448,6 @@ export type Database = {
           status?: string | null
           story?: string | null
           supporter_category?: string | null
-          supporter_type?: string
           updated_at?: string
         }
         Update: {
@@ -469,7 +467,6 @@ export type Database = {
           status?: string | null
           story?: string | null
           supporter_category?: string | null
-          supporter_type?: string
           updated_at?: string
         }
         Relationships: []
