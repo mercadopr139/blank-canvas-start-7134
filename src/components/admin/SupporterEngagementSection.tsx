@@ -9,7 +9,7 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 
-const ENGAGEMENT_TYPES = ["Call", "Email", "Text", "Meeting", "Event", "Report Sent", "Video Update Sent"] as const;
+const ENGAGEMENT_TYPES = ["Call", "Email", "Text", "Meeting", "Event", "Report Sent", "Video Update Sent", "Monthly Postcard"] as const;
 const OUTCOME_OPTIONS = ["Positive", "Neutral", "No Response"] as const;
 
 interface EngagementRecord {
@@ -82,7 +82,7 @@ const SupporterEngagementSection = ({ supporterId }: Props) => {
     const payload = {
       supporter_id: supporterId,
       date: form.date,
-      engagement_type: form.engagement_type as "Call" | "Email" | "Text" | "Meeting" | "Event" | "Report Sent" | "Video Update Sent",
+      engagement_type: form.engagement_type as "Call" | "Email" | "Text" | "Meeting" | "Event" | "Report Sent" | "Video Update Sent" | "Monthly Postcard",
       outcome: (form.outcome || null) as "Positive" | "Neutral" | "No Response" | null,
       follow_up_needed: form.follow_up_needed,
       follow_up_date: form.follow_up_date || null,
