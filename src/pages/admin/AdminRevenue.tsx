@@ -520,9 +520,8 @@ const AdminRevenue = () => {
                   setIsNewSupporter(false);
                 }}
                 onCreateNew={() => {
-                  setSupporterSearch("");
                   setForm({ ...form, supporter_id: "" });
-                  setSupporterDetails({ ...emptySupporterDetails });
+                  setSupporterDetails({ ...emptySupporterDetails, name: supporterSearch });
                   setSupporterDetailsOpen(true);
                   setIsNewSupporter(true);
                 }}
