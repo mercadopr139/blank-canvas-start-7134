@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
-import { Upload, Pencil, Trash2, Star, Search } from "lucide-react";
+import { Upload, Pencil, Trash2, Star, Search, Plus } from "lucide-react";
 import SupporterRevenueSection from "@/components/admin/SupporterRevenueSection";
 import SupporterEngagementSection from "@/components/admin/SupporterEngagementSection";
 import SupporterTasksSection from "@/components/admin/SupporterTasksSection";
@@ -32,7 +32,6 @@ const FIELD_LABELS: Record<MappableField, string> = {
   phone: "Primary Contact Phone",
   address: "Address",
 };
-
 
 
 const PRIMARY_REVENUE_STREAMS = ["Donation", "Sponsorship", "Fee for Service", "Re-Grant", "Mixed"] as const;
@@ -202,6 +201,36 @@ const AdminSupportersDatabase = () => {
     await fetchRows();
   };
 
+  // ── Add new supporter state ───────────────────────────────────────────
+  const [addOpen, setAddOpen] = useState(false);
+  const [addSaving, setAddSaving] = useState(false);
+  const emptyNew = (): Omit<SupporterRow, "id"> => ({
+    name: "", email: null, phone: null, address: null, story: null,
+    is_hall_of_fame: false, primary_revenue_stream: null, status: null,
+    relationship_owner: null, supporter_category: null,
+  });
+  const [newSupporter, setNewSupporter] = useState<Omit<SupporterRow, "id">>(emptyNew());
+
+  const handleAddSave = async () => {
+    if (!newSupporter.name.trim()) return;
+    setAddSaving(true);
+    await supabase.from("supporters").insert({
+      name: newSupporter.name.trim(),
+      email: newSupporter.email?.trim() || null,
+      phone: newSupporter.phone?.trim() || null,
+      address: newSupporter.address?.trim() || null,
+      story: newSupporter.story?.trim() || null,
+      supporter_category: newSupporter.supporter_category || null,
+      primary_revenue_stream: newSupporter.primary_revenue_stream || null,
+      status: newSupporter.status || null,
+      relationship_owner: newSupporter.relationship_owner?.trim() || null,
+    });
+    setAddSaving(false);
+    setAddOpen(false);
+    setNewSupporter(emptyNew());
+    await fetchRows();
+  };
+
   // ── Bulk selection state ───────────────────────────────────────────────────
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
@@ -362,14 +391,25 @@ const AdminSupportersDatabase = () => {
               className="pl-9 bg-white/5 border-white/10 text-white placeholder:text-white/30 h-9"
             />
           </div>
-          <Button
-            size="sm"
-            className="bg-green-500 hover:bg-green-400 text-black gap-1.5"
-            onClick={() => { resetImport(); setImportOpen(true); }}
-          >
-            <Upload className="w-4 h-4" />
-            Import Supporters CSV
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button
+              size="sm"
+              className="bg-green-500 hover:bg-green-400 text-black gap-1.5"
+              onClick={() => { setNewSupporter(emptyNew()); setAddOpen(true); }}
+            >
+              <Plus className="w-4 h-4" />
+              Add Supporter
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              className="border-green-500/40 text-green-400 hover:bg-green-500/10 gap-1.5"
+              onClick={() => { resetImport(); setImportOpen(true); }}
+            >
+              <Upload className="w-4 h-4" />
+              Import CSV
+            </Button>
+          </div>
         </div>
 
         {/* Bulk action bar */}
@@ -661,6 +701,76 @@ const AdminSupportersDatabase = () => {
               className="bg-green-500 hover:bg-green-400 text-black"
             >
               {editSaving ? "Saving…" : "Save Changes"}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* ── Add Supporter Modal ──────────────────────────────────────────────── */}
+      <Dialog open={addOpen} onOpenChange={(o) => { if (!o) setNewSupporter(emptyNew()); setAddOpen(o); }}>
+        <DialogContent className="bg-zinc-900 border-white/10 text-white sm:max-w-lg flex flex-col max-h-[85vh] p-0 gap-0">
+          <div className="px-6 pt-6 pb-2 shrink-0">
+            <DialogHeader>
+              <DialogTitle className="text-green-400">Add New Supporter</DialogTitle>
+            </DialogHeader>
+          </div>
+          <div className="overflow-y-auto flex-1 px-6 pb-2 space-y-4">
+            <div className="space-y-1.5">
+              <Label className="text-white/70">Supporter Name <span className="text-red-400">*</span></Label>
+              <Input value={newSupporter.name} onChange={(e) => setNewSupporter({ ...newSupporter, name: e.target.value })} className="bg-white/5 border-white/10 text-white" placeholder="Full name…" />
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-white/70">Email</Label>
+              <Input type="email" value={newSupporter.email ?? ""} onChange={(e) => setNewSupporter({ ...newSupporter, email: e.target.value })} className="bg-white/5 border-white/10 text-white" placeholder="email@example.com" />
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-white/70">Phone</Label>
+              <Input type="tel" value={newSupporter.phone ?? ""} onChange={(e) => setNewSupporter({ ...newSupporter, phone: e.target.value })} className="bg-white/5 border-white/10 text-white" placeholder="+1 (555) 123-4567" />
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-white/70">Address</Label>
+              <Input value={newSupporter.address ?? ""} onChange={(e) => setNewSupporter({ ...newSupporter, address: e.target.value })} className="bg-white/5 border-white/10 text-white" placeholder="Street address…" />
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-white/70">Supporter Category</Label>
+              <Select value={newSupporter.supporter_category ?? ""} onValueChange={(v) => setNewSupporter({ ...newSupporter, supporter_category: v })}>
+                <SelectTrigger className="bg-white/5 border-white/10 text-white"><SelectValue placeholder="Select category" /></SelectTrigger>
+                <SelectContent className="bg-zinc-900 border-white/10 text-white">
+                  {SUPPORTER_CATEGORIES.map((c) => <SelectItem key={c} value={c} className="focus:bg-white/10">{c}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-white/70">Primary Revenue Stream</Label>
+              <Select value={newSupporter.primary_revenue_stream ?? ""} onValueChange={(v) => setNewSupporter({ ...newSupporter, primary_revenue_stream: v })}>
+                <SelectTrigger className="bg-white/5 border-white/10 text-white"><SelectValue placeholder="Select stream" /></SelectTrigger>
+                <SelectContent className="bg-zinc-900 border-white/10 text-white">
+                  {PRIMARY_REVENUE_STREAMS.map((s) => <SelectItem key={s} value={s} className="focus:bg-white/10">{s}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-white/70">Status</Label>
+              <Select value={newSupporter.status ?? ""} onValueChange={(v) => setNewSupporter({ ...newSupporter, status: v })}>
+                <SelectTrigger className="bg-white/5 border-white/10 text-white"><SelectValue placeholder="Select status" /></SelectTrigger>
+                <SelectContent className="bg-zinc-900 border-white/10 text-white">
+                  {SUPPORTER_STATUSES.map((s) => <SelectItem key={s} value={s} className="focus:bg-white/10">{s}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-white/70">Relationship Owner</Label>
+              <Input value={newSupporter.relationship_owner ?? ""} onChange={(e) => setNewSupporter({ ...newSupporter, relationship_owner: e.target.value })} className="bg-white/5 border-white/10 text-white" placeholder="Person's name…" />
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-white/70">Internal Strategic Notes</Label>
+              <textarea rows={3} value={newSupporter.story ?? ""} onChange={(e) => setNewSupporter({ ...newSupporter, story: e.target.value })} className="w-full rounded-md bg-white/5 border border-white/10 text-white text-sm px-3 py-2 resize-none focus:outline-none focus:ring-1 focus:ring-green-500" />
+            </div>
+          </div>
+          <div className="px-6 py-4 border-t border-white/10 shrink-0 flex justify-end gap-2">
+            <Button variant="ghost" onClick={() => { setNewSupporter(emptyNew()); setAddOpen(false); }} className="text-white hover:bg-white/10">Cancel</Button>
+            <Button onClick={handleAddSave} disabled={!newSupporter.name.trim() || addSaving} className="bg-green-500 hover:bg-green-400 text-black">
+              {addSaving ? "Saving…" : "Add Supporter"}
             </Button>
           </div>
         </DialogContent>
