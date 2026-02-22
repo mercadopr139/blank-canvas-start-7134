@@ -5,6 +5,7 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Upload, Pencil, Trash2, Star } from "lucide-react";
 import SupporterRevenueSection from "@/components/admin/SupporterRevenueSection";
+import SupporterEngagementSection from "@/components/admin/SupporterEngagementSection";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle,
 } from "@/components/ui/dialog";
@@ -619,6 +620,11 @@ const AdminSupportersDatabase = () => {
                 {/* ── Revenue History ─────────────────────────────── */}
                 <div className="pt-2 border-t border-white/10">
                   <SupporterRevenueSection supporterId={editRow.id} supporterName={editRow.name} />
+                </div>
+
+                {/* ── Engagement History ──────────────────────────── */}
+                <div className="pt-2 border-t border-white/10">
+                  <SupporterEngagementSection supporterId={editRow.id} supporterName={editRow.name} />
                 </div>
               </>
             )}
