@@ -8,7 +8,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
-import { Plus, Pencil, Trash2, ChevronRight } from "lucide-react";
+import { Plus, Pencil, Trash2 } from "lucide-react";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle,
 } from "@/components/ui/dialog";
@@ -463,12 +463,25 @@ const AdminRevenue = () => {
           className="bg-zinc-900 border-white/10 text-white sm:max-w-md flex flex-col max-h-[85vh] p-0 gap-0"
           onPointerDownOutside={(e) => e.preventDefault()}
         >
-          <div className="px-6 pt-6 pb-2 shrink-0">
-            <DialogHeader>
+          <div className="px-6 pt-6 pb-2 shrink-0 flex items-center justify-between">
+            <DialogHeader className="flex-1">
               <DialogTitle className="text-green-400">
                 {editId ? "Edit Revenue Entry" : "New Revenue Entry"}
               </DialogTitle>
             </DialogHeader>
+            {form.supporter_id && !isNewSupporter && (
+              <button
+                type="button"
+                onClick={() => setSupporterDetailsOpen(!supporterDetailsOpen)}
+                className={`text-xs px-2.5 py-1 rounded border transition-colors mr-8 ${
+                  supporterDetailsOpen
+                    ? "border-green-500/50 text-green-400 bg-green-500/10"
+                    : "border-white/15 text-white/40 hover:text-white/70 hover:border-white/30"
+                }`}
+              >
+                {supporterDetailsOpen ? "Close Supporter Info" : "Edit Supporter Info"}
+              </button>
+            )}
           </div>
           <div className="overflow-y-auto flex-1 px-6 pb-4 space-y-4 pt-2">
              {/* Supporter */}
@@ -513,18 +526,14 @@ const AdminRevenue = () => {
             </div>
 
             {/* Collapsible Supporter Details */}
-            {(form.supporter_id || isNewSupporter) && (
+            {(form.supporter_id || isNewSupporter) && supporterDetailsOpen && (
               <div className="border border-white/10 rounded-lg overflow-hidden">
-                <button
-                  type="button"
-                  onClick={() => setSupporterDetailsOpen(!supporterDetailsOpen)}
-                  className="w-full flex items-center justify-between px-3 py-2.5 text-sm font-medium text-white/70 hover:text-white hover:bg-white/5 transition-colors"
-                >
-                  <span>{isNewSupporter ? "New Supporter Details" : "Edit Supporter Info"}</span>
-                  <ChevronRight className={`w-4 h-4 transition-transform ${supporterDetailsOpen ? "rotate-90" : ""}`} />
-                </button>
-                {supporterDetailsOpen && (
-                  <div className="px-3 pb-3 space-y-3 border-t border-white/10 pt-3">
+                {isNewSupporter && (
+                  <div className="px-3 py-2 text-xs font-medium text-green-400 border-b border-white/10 bg-green-500/5">
+                    New Supporter Details
+                  </div>
+                )}
+                <div className="px-3 pb-3 space-y-3 pt-3">
                     {/* Supporter Name */}
                     <div className="space-y-1">
                       <Label className="text-white/50 text-xs">Supporter Name {isNewSupporter && <span className="text-red-400">*</span>}</Label>
@@ -634,8 +643,7 @@ const AdminRevenue = () => {
                         placeholder="Internal notes…"
                       />
                     </div>
-                  </div>
-                )}
+                </div>
               </div>
             )}
 
