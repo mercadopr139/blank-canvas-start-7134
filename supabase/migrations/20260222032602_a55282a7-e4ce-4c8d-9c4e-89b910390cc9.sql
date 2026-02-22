@@ -1,0 +1,1 @@
+ALTER TABLE public.revenue ADD COLUMN reference_id text DEFAULT NULL;

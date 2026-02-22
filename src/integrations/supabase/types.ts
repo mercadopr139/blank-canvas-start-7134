@@ -375,6 +375,7 @@ export type Database = {
           logged_by: string | null
           notes: string | null
           payment_method: string | null
+          reference_id: string | null
           reporting_required: boolean
           revenue_type: string
           supporter_id: string | null
@@ -391,6 +392,7 @@ export type Database = {
           logged_by?: string | null
           notes?: string | null
           payment_method?: string | null
+          reference_id?: string | null
           reporting_required?: boolean
           revenue_type: string
           supporter_id?: string | null
@@ -407,6 +409,7 @@ export type Database = {
           logged_by?: string | null
           notes?: string | null
           payment_method?: string | null
+          reference_id?: string | null
           reporting_required?: boolean
           revenue_type?: string
           supporter_id?: string | null
