@@ -510,7 +510,7 @@ const AdminSupportersDatabase = () => {
               sortedRows.map((s, idx) =>
               <tr
                 key={s.id}
-                className={`border-b border-white/10 transition-colors hover:bg-white/10 ${selected.has(s.id) ? "bg-red-950/20" : idx % 2 === 1 ? "bg-zinc-700/40" : ""}`}>
+                className={`border-b border-white/10 transition-colors hover:bg-white/10 ${selected.has(s.id) ? "bg-red-950/20" : idx % 2 === 1 ? "bg-zinc-700/60" : ""}`}>
 
                     <td className="p-4 px-3 align-middle">
                       <input
