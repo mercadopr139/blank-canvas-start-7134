@@ -3,7 +3,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
-import { Upload, Pencil, Trash2, Star, Search, Plus } from "lucide-react";
+import { Upload, Pencil, Trash2, Star, Search, Plus, MapPin } from "lucide-react";
+import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
 import ValidatedPhoneInput from "@/components/admin/ValidatedPhoneInput";
 import ValidatedEmailInput from "@/components/admin/ValidatedEmailInput";
 import ValidatedAddressInput from "@/components/admin/ValidatedAddressInput";
@@ -490,7 +491,7 @@ const AdminSupportersDatabase = () => {
                 <th className="h-12 px-4 text-left align-middle font-medium text-white bg-green-600">Relationship Owner</th>
                 <th className="h-12 px-4 text-left align-middle font-medium text-white bg-green-600">Primary Contact Email</th>
                 <th className="h-12 px-4 text-left align-middle font-medium text-white bg-green-600">Primary Contact Phone</th>
-                <th className="h-12 px-4 text-left align-middle font-medium text-white bg-green-600">Address</th>
+                <th className="h-12 px-2 w-12 text-center align-middle font-medium text-white bg-green-600" title="Address"><MapPin className="w-4 h-4 mx-auto" /></th>
                 <th className="h-12 px-4 text-left align-middle font-medium text-white bg-green-600 min-w-[280px]">Internal Strategic Notes</th>
                 <th className="h-12 px-4 w-20 text-right align-middle font-medium text-white bg-green-600">Actions</th>
                 <th className="h-12 px-4 w-20 text-right align-middle font-medium text-white bg-green-600">Actions</th>
@@ -694,30 +695,62 @@ const AdminSupportersDatabase = () => {
                   <a href={`tel:${s.phone}`} className="text-green-400 hover:underline">{e164ToDisplay(s.phone)}</a> :
                   "—"}
                     </td>
-                    {/* Address — double-click to edit */}
-                    <td
-                  className="p-4 align-middle text-white/70 text-sm cursor-pointer select-none"
-                  onDoubleClick={() => setInlineEdit({ id: s.id, field: "address" })}
-                  title="Double-click to edit">
-
-                      {inlineEdit?.id === s.id && inlineEdit.field === "address" ?
-                  <ValidatedAddressInput
-                    value={s.address ?? ""}
-                    onSelect={async (addr) => {
-                      setRows((prev) => prev.map((r) => r.id === s.id ? { ...r, address: addr.address } : r));
-                      setInlineEdit(null);
-                      await supabase.from("supporters").update({
-                        address: addr.address,
-                        address_street: addr.address_street,
-                        address_city: addr.address_city,
-                        address_state: addr.address_state,
-                        address_zip: addr.address_zip,
-                        address_country: addr.address_country
-                      } as any).eq("id", s.id);
-                    }}
-                    className="bg-white text-black text-sm rounded px-1.5 py-1 border border-white/20 w-full h-8" /> :
-
-                  s.address || "—"}
+                    {/* Address — icon popover */}
+                    <td className="p-2 align-middle text-center">
+                      {s.address ? (
+                        <Popover>
+                          <PopoverTrigger asChild>
+                            <button className="p-1.5 rounded text-green-400 hover:bg-white/10 transition-colors" title={s.address}>
+                              <MapPin className="w-4 h-4" />
+                            </button>
+                          </PopoverTrigger>
+                          <PopoverContent side="left" className="w-72 bg-zinc-900 border-white/10 text-white p-4 space-y-3">
+                            <p className="text-sm leading-relaxed">{s.address}</p>
+                            <div className="flex gap-2">
+                              <a
+                                href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(s.address)}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-xs text-green-400 hover:underline flex items-center gap-1"
+                              >
+                                <MapPin className="w-3 h-3" /> Open in Maps
+                              </a>
+                              <button
+                                onClick={() => setInlineEdit({ id: s.id, field: "address" })}
+                                className="text-xs text-white/50 hover:text-white flex items-center gap-1"
+                              >
+                                <Pencil className="w-3 h-3" /> Edit
+                              </button>
+                            </div>
+                            {inlineEdit?.id === s.id && inlineEdit.field === "address" && (
+                              <ValidatedAddressInput
+                                value={s.address ?? ""}
+                                onSelect={async (addr) => {
+                                  setRows((prev) => prev.map((r) => r.id === s.id ? { ...r, address: addr.address } : r));
+                                  setInlineEdit(null);
+                                  await supabase.from("supporters").update({
+                                    address: addr.address,
+                                    address_street: addr.address_street,
+                                    address_city: addr.address_city,
+                                    address_state: addr.address_state,
+                                    address_zip: addr.address_zip,
+                                    address_country: addr.address_country
+                                  } as any).eq("id", s.id);
+                                }}
+                                className="bg-white text-black text-sm rounded px-1.5 py-1 border border-white/20 w-full h-8"
+                              />
+                            )}
+                          </PopoverContent>
+                        </Popover>
+                      ) : (
+                        <button
+                          onClick={() => setInlineEdit({ id: s.id, field: "address" })}
+                          className="p-1.5 rounded text-white/20 hover:text-white/50 hover:bg-white/5 transition-colors"
+                          title="Add address"
+                        >
+                          <MapPin className="w-4 h-4" />
+                        </button>
+                      )}
                     </td>
                     {/* Notes — double-click to edit */}
                     <td
