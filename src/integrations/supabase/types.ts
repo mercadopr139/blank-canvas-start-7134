@@ -513,6 +513,7 @@ export type Database = {
       }
       signals: {
         Row: {
+          completed_at: string | null
           created_at: string
           description: string | null
           id: string
@@ -527,6 +528,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          completed_at?: string | null
           created_at?: string
           description?: string | null
           id?: string
@@ -541,6 +543,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          completed_at?: string | null
           created_at?: string
           description?: string | null
           id?: string
