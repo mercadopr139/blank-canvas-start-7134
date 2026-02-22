@@ -527,13 +527,14 @@ const AdminRevenue = () => {
 
             {/* Collapsible Supporter Details */}
             {(form.supporter_id || isNewSupporter) && supporterDetailsOpen && (
-              <div className="border border-white/10 rounded-lg overflow-hidden">
-                {isNewSupporter && (
-                  <div className="px-3 py-2 text-xs font-medium text-green-400 border-b border-white/10 bg-green-500/5">
-                    New Supporter Details
-                  </div>
-                )}
-                <div className="px-3 pb-3 space-y-3 pt-3">
+              <div className="bg-zinc-800/60 border border-white/[0.08] rounded-lg p-4 space-y-3">
+                <div>
+                  <h4 className="text-xs font-semibold tracking-wide uppercase text-white/60">
+                    {isNewSupporter ? "New Supporter Information" : "Supporter Information"}
+                  </h4>
+                  <div className="mt-1.5 h-px bg-white/[0.08]" />
+                </div>
+                <div className="space-y-3">
                     {/* Supporter Name */}
                     <div className="space-y-1">
                       <Label className="text-white/50 text-xs">Supporter Name {isNewSupporter && <span className="text-red-400">*</span>}</Label>
