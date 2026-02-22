@@ -1,4 +1,6 @@
 import { useState } from "react";
+import ValidatedPhoneInput from "@/components/admin/ValidatedPhoneInput";
+import ValidatedEmailInput from "@/components/admin/ValidatedEmailInput";
 import { format } from "date-fns";
 import { CalendarIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -331,11 +333,11 @@ const NewRevenueModal = ({ open, onOpenChange, onCreated }: Props) => {
                     />
                     <div className="space-y-1">
                       <Label className="text-white/70">Donor Email</Label>
-                      <Input type="email" value={donorEmail} onChange={(e) => setDonorEmail(e.target.value)} className="bg-white/5 border-white/20 text-white" />
+                      <ValidatedEmailInput value={donorEmail} onChange={setDonorEmail} className="bg-white/5 border-white/20 text-white" />
                     </div>
                     <div className="space-y-1">
                       <Label className="text-white/70">Donor Phone</Label>
-                      <Input type="tel" value={donorPhone} onChange={(e) => setDonorPhone(e.target.value)} className="bg-white/5 border-white/20 text-white" />
+                      <ValidatedPhoneInput value={donorPhone} onChange={setDonorPhone} className="bg-white/5 border-white/20 text-white" />
                     </div>
                   </>
                 )}
@@ -424,11 +426,11 @@ const NewRevenueModal = ({ open, onOpenChange, onCreated }: Props) => {
                         />
                         <div className="space-y-1">
                           <Label className="text-white/70">Sponsor Email *</Label>
-                          <Input type="email" value={sponsorEmail} onChange={(e) => setSponsorEmail(e.target.value)} placeholder="For receipt delivery" className="bg-white/5 border-white/20 text-white placeholder:text-white/30" />
+                          <ValidatedEmailInput value={sponsorEmail} onChange={setSponsorEmail} className="bg-white/5 border-white/20 text-white" />
                         </div>
                         <div className="space-y-1">
                           <Label className="text-white/70">Sponsor Phone</Label>
-                          <Input type="tel" value={sponsorPhone} onChange={(e) => setSponsorPhone(e.target.value)} className="bg-white/5 border-white/20 text-white" />
+                          <ValidatedPhoneInput value={sponsorPhone} onChange={setSponsorPhone} className="bg-white/5 border-white/20 text-white" />
                         </div>
                       </>
                     )}
