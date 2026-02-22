@@ -1,0 +1,1 @@
+ALTER TYPE public.engagement_type ADD VALUE 'Monthly Postcard';

@@ -826,6 +826,7 @@ export type Database = {
         | "Event"
         | "Report Sent"
         | "Video Update Sent"
+        | "Monthly Postcard"
       household_income:
         | "Under $25,000"
         | "$25,000 - $49,999"
@@ -1020,6 +1021,7 @@ export const Constants = {
         "Event",
         "Report Sent",
         "Video Update Sent",
+        "Monthly Postcard",
       ],
       household_income: [
         "Under $25,000",
