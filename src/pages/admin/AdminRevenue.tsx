@@ -651,7 +651,7 @@ const AdminRevenue = () => {
             {/* Supporter Email (shown when no details panel, for quick entry) */}
             {!supporterDetailsOpen && !isNewSupporter &&
             <div className="space-y-1.5">
-                <Label className="text-white/70">Supporter Email</Label>
+                <Label className="text-white/70">Email</Label>
                 <Input
                 type="email"
                 value={form.supporter_email}
