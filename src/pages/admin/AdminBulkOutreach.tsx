@@ -320,10 +320,10 @@ const AdminBulkOutreach = () => {
                       className="border-white/40 data-[state=checked]:bg-green-600 data-[state=checked]:border-green-600"
                     />
                   </TableHead>
-                  <TableHead className="text-white/70">Name</TableHead>
-                  <TableHead className="text-white/70">Email</TableHead>
-                  <TableHead className="text-white/70">Status</TableHead>
-                  <TableHead className="text-white/70">Tags</TableHead>
+                  <TableHead className="text-green-400">Name</TableHead>
+                  <TableHead className="text-green-400">Email</TableHead>
+                  <TableHead className="text-green-400">Status</TableHead>
+                  <TableHead className="text-green-400">Tags</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>

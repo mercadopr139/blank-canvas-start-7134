@@ -397,16 +397,16 @@ const AdminSupportersDatabase = () => {
                   />
                 </th>
                 <th className="h-12 px-4 w-8 text-center align-middle font-medium text-white/70 text-xs">HOF</th>
-                <th className="h-12 px-4 text-left align-middle font-medium text-white/70">Supporter Name</th>
-                <th className="h-12 px-4 text-left align-middle font-medium text-white/70">Supporter Category</th>
-                <th className="h-12 px-4 text-left align-middle font-medium text-white/70">Primary Revenue Stream</th>
-                <th className="h-12 px-4 text-left align-middle font-medium text-white/70">Status</th>
-                <th className="h-12 px-4 text-left align-middle font-medium text-white/70">Relationship Owner</th>
-                <th className="h-12 px-4 text-left align-middle font-medium text-white/70">Primary Contact Email</th>
-                <th className="h-12 px-4 text-left align-middle font-medium text-white/70">Primary Contact Phone</th>
-                <th className="h-12 px-4 text-left align-middle font-medium text-white/70">Address</th>
-                <th className="h-12 px-4 text-left align-middle font-medium text-white/70 min-w-[280px]">Internal Strategic Notes</th>
-                <th className="h-12 px-4 w-20 text-right align-middle font-medium text-white/70">Actions</th>
+                <th className="h-12 px-4 text-left align-middle font-medium text-green-400">Supporter Name</th>
+                <th className="h-12 px-4 text-left align-middle font-medium text-green-400">Supporter Category</th>
+                <th className="h-12 px-4 text-left align-middle font-medium text-green-400">Primary Revenue Stream</th>
+                <th className="h-12 px-4 text-left align-middle font-medium text-green-400">Status</th>
+                <th className="h-12 px-4 text-left align-middle font-medium text-green-400">Relationship Owner</th>
+                <th className="h-12 px-4 text-left align-middle font-medium text-green-400">Primary Contact Email</th>
+                <th className="h-12 px-4 text-left align-middle font-medium text-green-400">Primary Contact Phone</th>
+                <th className="h-12 px-4 text-left align-middle font-medium text-green-400">Address</th>
+                <th className="h-12 px-4 text-left align-middle font-medium text-green-400 min-w-[280px]">Internal Strategic Notes</th>
+                <th className="h-12 px-4 w-20 text-right align-middle font-medium text-green-400">Actions</th>
               </tr>
             </thead>
             <tbody className="[&_tr:last-child]:border-0">
