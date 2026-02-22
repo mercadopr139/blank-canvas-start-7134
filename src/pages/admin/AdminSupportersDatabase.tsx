@@ -54,6 +54,8 @@ interface SupporterRow {
   status: string | null;
   relationship_owner: string | null;
   supporter_category: string | null;
+  receipt_2026_status: string;
+  receipt_2026_sent_at: string | null;
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -142,7 +144,7 @@ const AdminSupportersDatabase = () => {
     setLoadingRows(true);
     const { data } = await supabase
       .from("supporters")
-      .select("id, name, email, phone, address, story, is_hall_of_fame, primary_revenue_stream, status, relationship_owner, supporter_category")
+      .select("id, name, email, phone, address, story, is_hall_of_fame, primary_revenue_stream, status, relationship_owner, supporter_category, receipt_2026_status, receipt_2026_sent_at")
       .order("name");
     setRows((data ?? []) as SupporterRow[]);
     setLoadingRows(false);
@@ -238,6 +240,7 @@ const AdminSupportersDatabase = () => {
     name: "", email: null, phone: null, address: null, story: null,
     is_hall_of_fame: false, primary_revenue_stream: null, status: null,
     relationship_owner: null, supporter_category: null,
+    receipt_2026_status: "Not Sent", receipt_2026_sent_at: null,
   });
   const [newSupporter, setNewSupporter] = useState<Omit<SupporterRow, "id">>(emptyNew());
 
@@ -492,17 +495,18 @@ const AdminSupportersDatabase = () => {
                 <th className="h-12 px-4 text-left align-middle font-medium text-white bg-green-600">Primary Contact Phone</th>
                 <th className="h-12 px-4 text-left align-middle font-medium text-white bg-green-600">Address</th>
                 <th className="h-12 px-4 text-left align-middle font-medium text-white bg-green-600 min-w-[280px]">Internal Strategic Notes</th>
+                <th className="h-12 px-4 text-left align-middle font-medium text-white bg-green-600">Receipt Status</th>
                 <th className="h-12 px-4 w-20 text-right align-middle font-medium text-white bg-green-600">Actions</th>
               </tr>
             </thead>
             <tbody className="[&_tr:last-child]:border-0">
               {loadingRows ? (
                 <tr className="border-b border-white/10">
-                   <td colSpan={12} className="p-4 text-center py-12 text-white/50 align-middle">Loading…</td>
+                   <td colSpan={13} className="p-4 text-center py-12 text-white/50 align-middle">Loading…</td>
                 </tr>
               ) : rows.length === 0 ? (
                 <tr className="border-b border-white/10">
-                   <td colSpan={12} className="p-4 text-center py-12 text-white/50 align-middle">No supporters yet. Import a CSV to get started.</td>
+                   <td colSpan={13} className="p-4 text-center py-12 text-white/50 align-middle">No supporters yet. Import a CSV to get started.</td>
                 </tr>
               ) : (
                 sortedRows.map((s) => (
@@ -719,6 +723,23 @@ const AdminSupportersDatabase = () => {
                           className="bg-white text-black text-xs rounded px-1.5 py-1 border border-white/20 w-full resize-y"
                         />
                       ) : s.story || "—"}
+                    </td>
+                    {/* Receipt Status */}
+                    <td className="p-4 align-middle text-sm">
+                      <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${
+                        s.receipt_2026_status === "Sent" 
+                          ? "bg-green-600/20 text-green-400" 
+                          : s.receipt_2026_status === "Not Sent" 
+                          ? "bg-yellow-600/20 text-yellow-400"
+                          : "bg-white/10 text-white/50"
+                      }`}>
+                        {s.receipt_2026_status || "Not Sent"}
+                      </span>
+                      {s.receipt_2026_sent_at && (
+                        <p className="text-[10px] text-white/30 mt-0.5">
+                          {new Date(s.receipt_2026_sent_at).toLocaleDateString()}
+                        </p>
+                      )}
                     </td>
                     <td className="p-4 align-middle text-right">
                       <div className="flex justify-end gap-1">
