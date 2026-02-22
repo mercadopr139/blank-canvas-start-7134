@@ -525,9 +525,11 @@ export type Database = {
           address: string | null
           created_at: string
           email: string | null
+          email_opt_in: boolean
           id: string
           is_hall_of_fame: boolean
           name: string
+          outreach_tags: string[] | null
           phone: string | null
           primary_revenue_stream: string | null
           receipt_2026_last_sent_to: string | null
@@ -535,6 +537,7 @@ export type Database = {
           receipt_2026_sent_at: string | null
           receipt_2026_status: string
           relationship_owner: string | null
+          sms_opt_in: boolean
           status: string | null
           story: string | null
           supporter_category: string | null
@@ -544,9 +547,11 @@ export type Database = {
           address?: string | null
           created_at?: string
           email?: string | null
+          email_opt_in?: boolean
           id?: string
           is_hall_of_fame?: boolean
           name: string
+          outreach_tags?: string[] | null
           phone?: string | null
           primary_revenue_stream?: string | null
           receipt_2026_last_sent_to?: string | null
@@ -554,6 +559,7 @@ export type Database = {
           receipt_2026_sent_at?: string | null
           receipt_2026_status?: string
           relationship_owner?: string | null
+          sms_opt_in?: boolean
           status?: string | null
           story?: string | null
           supporter_category?: string | null
@@ -563,9 +569,11 @@ export type Database = {
           address?: string | null
           created_at?: string
           email?: string | null
+          email_opt_in?: boolean
           id?: string
           is_hall_of_fame?: boolean
           name?: string
+          outreach_tags?: string[] | null
           phone?: string | null
           primary_revenue_stream?: string | null
           receipt_2026_last_sent_to?: string | null
@@ -573,6 +581,7 @@ export type Database = {
           receipt_2026_sent_at?: string | null
           receipt_2026_status?: string
           relationship_owner?: string | null
+          sms_opt_in?: boolean
           status?: string | null
           story?: string | null
           supporter_category?: string | null
