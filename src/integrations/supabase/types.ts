@@ -580,6 +580,53 @@ export type Database = {
         }
         Relationships: []
       }
+      tasks: {
+        Row: {
+          assigned_to: string | null
+          created_at: string
+          created_by: string | null
+          due_date: string | null
+          id: string
+          notes: string | null
+          status: Database["public"]["Enums"]["task_status"]
+          supporter_id: string
+          task_type: Database["public"]["Enums"]["task_type"]
+          updated_at: string
+        }
+        Insert: {
+          assigned_to?: string | null
+          created_at?: string
+          created_by?: string | null
+          due_date?: string | null
+          id?: string
+          notes?: string | null
+          status?: Database["public"]["Enums"]["task_status"]
+          supporter_id: string
+          task_type: Database["public"]["Enums"]["task_type"]
+          updated_at?: string
+        }
+        Update: {
+          assigned_to?: string | null
+          created_at?: string
+          created_by?: string | null
+          due_date?: string | null
+          id?: string
+          notes?: string | null
+          status?: Database["public"]["Enums"]["task_status"]
+          supporter_id?: string
+          task_type?: Database["public"]["Enums"]["task_type"]
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tasks_supporter_id_fkey"
+            columns: ["supporter_id"]
+            isOneToOne: false
+            referencedRelation: "supporters"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_roles: {
         Row: {
           created_at: string
@@ -810,6 +857,14 @@ export type Database = {
         | "Dennis Township"
         | "Woodbine"
         | "Other"
+      task_status: "Open" | "Completed"
+      task_type:
+        | "Call"
+        | "Proposal"
+        | "Thank You"
+        | "Renewal"
+        | "Report Deadline"
+        | "Follow-Up"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -999,6 +1054,15 @@ export const Constants = {
         "Dennis Township",
         "Woodbine",
         "Other",
+      ],
+      task_status: ["Open", "Completed"],
+      task_type: [
+        "Call",
+        "Proposal",
+        "Thank You",
+        "Renewal",
+        "Report Deadline",
+        "Follow-Up",
       ],
     },
   },
