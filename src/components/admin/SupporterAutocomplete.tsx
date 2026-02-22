@@ -8,6 +8,12 @@ interface Supporter {
   name: string;
   email: string | null;
   phone: string | null;
+  address?: string | null;
+  supporter_category?: string | null;
+  primary_revenue_stream?: string | null;
+  status?: string | null;
+  relationship_owner?: string | null;
+  story?: string | null;
 }
 
 interface Props {
@@ -16,10 +22,11 @@ interface Props {
   value: string;
   onChange: (name: string) => void;
   onSelect: (supporter: Supporter) => void;
+  onCreateNew?: () => void;
   placeholder?: string;
 }
 
-const SupporterAutocomplete = ({ label, required, value, onChange, onSelect, placeholder }: Props) => {
+const SupporterAutocomplete = ({ label, required, value, onChange, onSelect, onCreateNew, placeholder }: Props) => {
   const [suggestions, setSuggestions] = useState<Supporter[]>([]);
   const [open, setOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -34,10 +41,9 @@ const SupporterAutocomplete = ({ label, required, value, onChange, onSelect, pla
     const timeout = setTimeout(async () => {
       const { data } = await supabase
         .from("supporters")
-        .select("id, name, email, phone")
+        .select("id, name, email, phone, address, supporter_category, primary_revenue_stream, status, relationship_owner, story")
         .ilike("name", `%${trimmed}%`)
         .limit(8);
-      // Sort: names starting with the query first, then alphabetical
       const sorted = (data || []).sort((a, b) => {
         const aStarts = a.name.toLowerCase().startsWith(trimmed.toLowerCase());
         const bStarts = b.name.toLowerCase().startsWith(trimmed.toLowerCase());
@@ -46,7 +52,7 @@ const SupporterAutocomplete = ({ label, required, value, onChange, onSelect, pla
         return a.name.localeCompare(b.name);
       });
       setSuggestions(sorted);
-      setOpen(sorted.length > 0);
+      setOpen(true);
     }, 200);
     return () => clearTimeout(timeout);
   }, [value]);
@@ -72,8 +78,20 @@ const SupporterAutocomplete = ({ label, required, value, onChange, onSelect, pla
         className="bg-white/5 border-white/20 text-white placeholder:text-white/30"
         autoComplete="off"
       />
-      {open && suggestions.length > 0 && (
+      {open && (
         <ul className="absolute z-50 left-0 right-0 mt-1 bg-zinc-900 border border-white/20 rounded-md shadow-lg max-h-48 overflow-y-auto">
+          {onCreateNew && (
+            <li
+              className="px-3 py-2 cursor-pointer hover:bg-white/10 text-sm border-b border-white/10"
+              onMouseDown={(e) => {
+                e.preventDefault();
+                onCreateNew();
+                setOpen(false);
+              }}
+            >
+              <span className="text-green-400 font-medium">+ Create New Supporter</span>
+            </li>
+          )}
           {suggestions.map((s) => (
             <li
               key={s.id}
@@ -90,6 +108,9 @@ const SupporterAutocomplete = ({ label, required, value, onChange, onSelect, pla
               {s.phone && <span className="text-white/40 ml-2 text-xs">{s.phone}</span>}
             </li>
           ))}
+          {suggestions.length === 0 && !onCreateNew && (
+            <li className="px-3 py-2 text-sm text-white/40">No matches</li>
+          )}
         </ul>
       )}
     </div>
