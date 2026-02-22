@@ -1,0 +1,1 @@
+ALTER TABLE public.signals ADD COLUMN date_assigned DATE DEFAULT CURRENT_DATE;

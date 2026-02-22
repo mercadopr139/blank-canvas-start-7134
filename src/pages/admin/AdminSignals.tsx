@@ -58,6 +58,22 @@ const AdminSignals = () => {
     signal_kind: "" as string,
   });
 
+  const today = new Date().toISOString().slice(0, 10);
+
+  const { data: todayCoreSignals = [] } = useQuery({
+    queryKey: ["signals", "today-core"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("signals")
+        .select("*")
+        .eq("date_assigned", today)
+        .eq("priority_layer", "Core" as any)
+        .order("created_at", { ascending: true });
+      if (error) throw error;
+      return data as Signal[];
+    },
+  });
+
   const { data: signals = [], isLoading } = useQuery({
     queryKey: ["signals", filterPillar, filterStatus],
     queryFn: async () => {
@@ -158,18 +174,40 @@ const AdminSignals = () => {
               <CardContent className="p-5">
                 <h3 className="text-base font-bold text-amber-400 mb-3">Core 3</h3>
                 <div className="space-y-2">
-                  <div className="flex items-center gap-3 p-3 rounded-md bg-white/[0.03] border border-white/5">
-                    <Circle className="w-5 h-5 text-white/20 shrink-0" />
-                    <span className="text-white/30 text-sm italic">No signals yet</span>
-                  </div>
-                  <div className="flex items-center gap-3 p-3 rounded-md bg-white/[0.03] border border-white/5">
-                    <Circle className="w-5 h-5 text-white/20 shrink-0" />
-                    <span className="text-white/30 text-sm italic">No signals yet</span>
-                  </div>
-                  <div className="flex items-center gap-3 p-3 rounded-md bg-white/[0.03] border border-white/5">
-                    <Circle className="w-5 h-5 text-white/20 shrink-0" />
-                    <span className="text-white/30 text-sm italic">No signals yet</span>
-                  </div>
+                  {todayCoreSignals.length === 0 ? (
+                    <>
+                      {[1, 2, 3].map((i) => (
+                        <div key={i} className="flex items-center gap-3 p-3 rounded-md bg-white/[0.03] border border-white/5">
+                          <Circle className="w-5 h-5 text-white/20 shrink-0" />
+                          <span className="text-white/30 text-sm italic">No signals yet</span>
+                        </div>
+                      ))}
+                    </>
+                  ) : (
+                    todayCoreSignals.map((signal) => (
+                      <div key={signal.id} className="flex items-center gap-3 p-3 rounded-md bg-white/[0.03] border border-white/5">
+                        <button
+                          onClick={() => toggleStatus.mutate({ id: signal.id, current: signal.status })}
+                          className="shrink-0"
+                          aria-label="Toggle status"
+                        >
+                          {signal.status === "Complete" ? (
+                            <CheckCircle2 className="w-5 h-5 text-green-400" />
+                          ) : (
+                            <Circle className="w-5 h-5 text-white/30 hover:text-white/60" />
+                          )}
+                        </button>
+                        <span className={`text-sm ${signal.status === "Complete" ? "line-through text-white/40" : "text-white"}`}>
+                          {signal.title || "(Untitled)"}
+                        </span>
+                        {signal.pillar && (
+                          <Badge variant="outline" className={`text-[10px] ml-auto ${PILLAR_COLORS[signal.pillar] || "border-white/20 text-white/60"}`}>
+                            {signal.pillar}
+                          </Badge>
+                        )}
+                      </div>
+                    ))
+                  )}
                 </div>
               </CardContent>
             </Card>

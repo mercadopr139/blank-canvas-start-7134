@@ -515,6 +515,7 @@ export type Database = {
         Row: {
           completed_at: string | null
           created_at: string
+          date_assigned: string | null
           description: string | null
           id: string
           metadata: Json | null
@@ -530,6 +531,7 @@ export type Database = {
         Insert: {
           completed_at?: string | null
           created_at?: string
+          date_assigned?: string | null
           description?: string | null
           id?: string
           metadata?: Json | null
@@ -545,6 +547,7 @@ export type Database = {
         Update: {
           completed_at?: string | null
           created_at?: string
+          date_assigned?: string | null
           description?: string | null
           id?: string
           metadata?: Json | null
