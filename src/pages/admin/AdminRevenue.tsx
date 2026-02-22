@@ -46,6 +46,7 @@ const emptyForm = {
   amount: "",
   revenue_type: "Donation",
   payment_method: "",
+  reference_id: "",
   invoice_sent: false,
   reporting_required: false,
   thank_you_sent: false,
@@ -72,7 +73,7 @@ const AdminRevenue = () => {
     setLoading(true);
     const { data } = await supabase
       .from("revenue")
-      .select("id, supporter_id, date, amount, revenue_type, payment_method, invoice_sent, reporting_required, thank_you_sent, thank_you_date, logged_by, notes")
+      .select("id, supporter_id, date, amount, revenue_type, payment_method, reference_id, invoice_sent, reporting_required, thank_you_sent, thank_you_date, logged_by, notes")
       .order("date", { ascending: false });
 
     // Fetch supporter names for linked records
@@ -117,6 +118,7 @@ const AdminRevenue = () => {
       amount: String(r.amount),
       revenue_type: r.revenue_type,
       payment_method: r.payment_method || "",
+      reference_id: (r as any).reference_id || "",
       invoice_sent: r.invoice_sent,
       reporting_required: r.reporting_required,
       thank_you_sent: r.thank_you_sent,
@@ -173,6 +175,7 @@ const AdminRevenue = () => {
       amount: parseFloat(form.amount.replace(/,/g, "")) || 0,
       revenue_type: form.revenue_type,
       payment_method: form.payment_method || null,
+      reference_id: form.reference_id || null,
       invoice_sent: form.invoice_sent,
       reporting_required: form.reporting_required,
       thank_you_sent: form.thank_you_sent,
@@ -198,7 +201,7 @@ const AdminRevenue = () => {
       revenue_type: form.revenue_type === "Sponsorship" ? "Fundraising" : form.revenue_type as any,
       method: (payload.payment_method || "Other") as any,
       receipt_status: "Not Needed" as any,
-      reference_id: null,
+      reference_id: form.reference_id || null,
       notes: payload.notes,
       supporter_id: supporterId,
     };
@@ -496,6 +499,17 @@ const AdminRevenue = () => {
                   ))}
                 </SelectContent>
               </Select>
+            </div>
+
+            {/* Reference ID / Check # */}
+            <div className="space-y-1.5">
+              <Label className="text-white/70">Reference ID / Check #</Label>
+              <Input
+                value={form.reference_id}
+                onChange={(e) => setForm({ ...form, reference_id: e.target.value })}
+                className="bg-white/5 border-white/10 text-white"
+                placeholder="Check #, confirmation code, etc."
+              />
             </div>
 
             {/* Checkboxes */}
