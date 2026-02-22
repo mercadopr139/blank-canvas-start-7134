@@ -122,7 +122,7 @@ const AdminRevenue = () => {
     const payload = {
       supporter_id: form.supporter_id || null,
       date: form.date,
-      amount: parseFloat(form.amount) || 0,
+      amount: parseFloat(form.amount.replace(/,/g, "")) || 0,
       revenue_type: form.revenue_type,
       payment_method: form.payment_method || null,
       invoice_sent: form.invoice_sent,
@@ -303,15 +303,35 @@ const AdminRevenue = () => {
             {/* Amount */}
             <div className="space-y-1.5">
               <Label className="text-white/70">Amount <span className="text-red-400">*</span></Label>
-              <Input
-                type="number"
-                step="0.01"
-                min="0"
-                value={form.amount}
-                onChange={(e) => setForm({ ...form, amount: e.target.value })}
-                className="bg-white/5 border-white/10 text-white"
-                placeholder="0.00"
-              />
+              <div className="relative">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-white/50 text-sm">$</span>
+                <Input
+                  type="text"
+                  inputMode="decimal"
+                  value={form.amount}
+                  onChange={(e) => {
+                    // Allow digits, dots, and commas while typing
+                    const raw = e.target.value.replace(/[^0-9.,]/g, "");
+                    setForm({ ...form, amount: raw });
+                  }}
+                  onBlur={() => {
+                    // Format on blur
+                    const num = parseFloat(form.amount.replace(/,/g, ""));
+                    if (!isNaN(num)) {
+                      setForm((f) => ({ ...f, amount: num.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) }));
+                    }
+                  }}
+                  onFocus={() => {
+                    // Strip formatting on focus for easy editing
+                    const num = parseFloat(form.amount.replace(/,/g, ""));
+                    if (!isNaN(num)) {
+                      setForm((f) => ({ ...f, amount: String(num) }));
+                    }
+                  }}
+                  className="bg-white/5 border-white/10 text-white pl-7"
+                  placeholder="0.00"
+                />
+              </div>
             </div>
 
             {/* Revenue Type */}
