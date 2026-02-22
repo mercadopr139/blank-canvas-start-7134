@@ -527,7 +527,7 @@ const AdminRevenue = () => {
 
             {/* Collapsible Supporter Details */}
             {(form.supporter_id || isNewSupporter) && supporterDetailsOpen && (
-              <div className="bg-zinc-800/60 border border-white/[0.08] rounded-lg p-4 space-y-3">
+              <div className="bg-zinc-900 border border-green-500/30 rounded-lg p-4 space-y-3 shadow-[0_0_12px_rgba(34,197,94,0.06)]">
                 <div>
                   <h4 className="text-xs font-semibold tracking-wide uppercase text-white/60">
                     {isNewSupporter ? "New Supporter Information" : "Supporter Information"}
