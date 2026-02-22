@@ -602,26 +602,41 @@ const AdminSupportersDatabase = () => {
                         </select>
                       ) : s.primary_revenue_stream || "—"}
                     </td>
-                    {/* Status — double-click to edit */}
+                    {/* Status — double-click to edit (multi-select) */}
                     <td
                       className="p-4 align-middle text-white/70 text-sm cursor-pointer select-none"
                       onDoubleClick={() => setInlineEdit({ id: s.id, field: "status" })}
                       title="Double-click to edit"
                     >
                       {inlineEdit?.id === s.id && inlineEdit.field === "status" ? (
-                        <select
-                          ref={(el) => { inlineInputRef.current = el; }}
-                          autoFocus
-                          defaultValue={s.status ?? ""}
-                          onChange={(e) => saveInlineEdit(s.id, "status", e.target.value)}
-                          onKeyDown={(e) => { if (e.key === "Escape") setInlineEdit(null); }}
-                          className="bg-white text-black text-xs rounded px-1.5 py-1 border border-white/20 cursor-pointer"
-                        >
-                          <option value="">—</option>
-                          {SUPPORTER_STATUSES.map((st) => (
-                            <option key={st} value={st}>{st}</option>
-                          ))}
-                        </select>
+                        (() => {
+                          const currentVals = (s.status ?? "").split(",").map(v => v.trim()).filter(Boolean);
+                          return (
+                            <div className="bg-white text-black text-xs rounded px-2 py-1.5 border border-white/20 space-y-1 min-w-[140px]">
+                              {SUPPORTER_STATUSES.map((st) => (
+                                <label key={st} className="flex items-center gap-1.5 cursor-pointer hover:bg-gray-100 rounded px-1">
+                                  <input
+                                    type="checkbox"
+                                    checked={currentVals.includes(st)}
+                                    onChange={(e) => {
+                                      const next = e.target.checked
+                                        ? [...currentVals, st]
+                                        : currentVals.filter(v => v !== st);
+                                      const val = next.join(", ");
+                                      saveInlineEdit(s.id, "status", val);
+                                    }}
+                                    className="accent-green-600"
+                                  />
+                                  <span>{st}</span>
+                                </label>
+                              ))}
+                              <button
+                                onClick={() => setInlineEdit(null)}
+                                className="text-[10px] text-gray-500 hover:text-black mt-1 w-full text-center"
+                              >Done</button>
+                            </div>
+                          );
+                        })()
                       ) : s.status || "—"}
                     </td>
                     {/* Relationship Owner — double-click to edit */}
@@ -836,17 +851,27 @@ const AdminSupportersDatabase = () => {
                   </Select>
                 </div>
                 <div className="space-y-1.5">
-                  <Label className="text-white/70">Status</Label>
-                  <Select value={editRow.status ?? ""} onValueChange={(v) => setEditRow({ ...editRow, status: v || null })}>
-                    <SelectTrigger className="bg-white/5 border-white/10 text-white">
-                      <SelectValue placeholder="— not set —" />
-                    </SelectTrigger>
-                    <SelectContent className="bg-zinc-900 border-white/10 text-white">
-                      {SUPPORTER_STATUSES.map((s) => (
-                        <SelectItem key={s} value={s} className="text-white focus:bg-white/10 focus:text-white">{s}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <Label className="text-white/70">Supporter ID</Label>
+                  <div className="grid grid-cols-2 gap-2 bg-white/5 border border-white/10 rounded-md p-3">
+                    {SUPPORTER_STATUSES.map((st) => {
+                      const vals = (editRow.status ?? "").split(",").map(v => v.trim()).filter(Boolean);
+                      const checked = vals.includes(st);
+                      return (
+                        <label key={st} className="flex items-center gap-2 cursor-pointer text-sm text-white/80 hover:text-white">
+                          <input
+                            type="checkbox"
+                            checked={checked}
+                            onChange={(e) => {
+                              const next = e.target.checked ? [...vals, st] : vals.filter(v => v !== st);
+                              setEditRow({ ...editRow, status: next.join(", ") || null });
+                            }}
+                            className="accent-green-500 w-4 h-4"
+                          />
+                          {st}
+                        </label>
+                      );
+                    })}
+                  </div>
                 </div>
                 <div className="space-y-1.5">
                   <Label className="text-white/70">Relationship Owner</Label>
@@ -956,12 +981,26 @@ const AdminSupportersDatabase = () => {
             </div>
             <div className="space-y-1.5">
               <Label className="text-white/70">Supporter ID</Label>
-              <Select value={newSupporter.status ?? ""} onValueChange={(v) => setNewSupporter({ ...newSupporter, status: v })}>
-                <SelectTrigger className="bg-white/5 border-white/10 text-white"><SelectValue placeholder="Select status" /></SelectTrigger>
-                <SelectContent className="bg-zinc-900 border-white/10 text-white">
-                  {SUPPORTER_STATUSES.map((s) => <SelectItem key={s} value={s} className="focus:bg-white/10">{s}</SelectItem>)}
-                </SelectContent>
-              </Select>
+              <div className="grid grid-cols-2 gap-2 bg-white/5 border border-white/10 rounded-md p-3">
+                {SUPPORTER_STATUSES.map((st) => {
+                  const vals = (newSupporter.status ?? "").split(",").map(v => v.trim()).filter(Boolean);
+                  const checked = vals.includes(st);
+                  return (
+                    <label key={st} className="flex items-center gap-2 cursor-pointer text-sm text-white/80 hover:text-white">
+                      <input
+                        type="checkbox"
+                        checked={checked}
+                        onChange={(e) => {
+                          const next = e.target.checked ? [...vals, st] : vals.filter(v => v !== st);
+                          setNewSupporter({ ...newSupporter, status: next.join(", ") || null });
+                        }}
+                        className="accent-green-500 w-4 h-4"
+                      />
+                      {st}
+                    </label>
+                  );
+                })}
+              </div>
             </div>
             <div className="space-y-1.5">
               <Label className="text-white/70">Relationship Owner</Label>
