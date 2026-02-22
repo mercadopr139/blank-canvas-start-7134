@@ -1,56 +1,24 @@
 
 
-# Dark Theme for All Command Center Pages
+## What We're Doing
 
-## Overview
-Apply the Command Center's black background and pillar-specific color theming across every admin page. Each page will inherit the accent color of its parent pillar so users can instantly associate which section they're in.
+Removing the "Revenue Stream" dropdown from the **Edit Supporter Info** panel inside the Revenue modal. The main "Revenue Type" dropdown on the Revenue form stays exactly as-is.
 
-## Color Mapping
+## Will This Affect Other Tables?
 
-| Pillar | Accent Color | Used For |
-|--------|-------------|----------|
-| Operations | NLA Red (`#bf0f3e`) | Borders, icons, accent text, active states |
-| Sales & Marketing | Green (`green-500`) | Borders, icons, accent text |
-| Finance | Sky Blue (`sky-300`) | Borders, icons, accent text |
+**No.** Here's why:
 
-## Pages to Update
+- The "Revenue Stream" field in the supporter info section writes to the `supporters` table column called `primary_revenue_stream`. It's a profile-level label on the supporter -- it does NOT affect the revenue entry itself.
+- The "Revenue Type" on the main form writes to the `revenue` table column `revenue_type`. This is what actually categorizes each transaction.
+- Removing the dropdown from this modal simply means you won't accidentally overwrite the supporter's profile-level revenue stream while logging a transaction. You can still edit it from the Supporters Database page.
+- No database changes needed.
 
-### 1. Pillar Landing Pages (3 files)
-**AdminOperations.tsx** - Black background, red-accented cards with red borders, white text
-**AdminSalesMarketing.tsx** - Black background, green-accented icon and "Coming Soon" text
-**AdminFinance.tsx** - Black background, sky-blue-accented cards with sky-blue borders, white text
+## Changes
 
-### 2. Operations Sub-Pages (2 files)
-**AdminRegistrations.tsx** - Black background, red accent on header icon, white text on tables/cards
-**AdminRegistrationAnalytics.tsx** - Black background, red accent on stat cards and chart containers, white text
+**File: `src/pages/admin/AdminRevenue.tsx`**
 
-### 3. Finance Sub-Pages (3 files)
-**AdminInvoices.tsx** - Black background, sky-blue accent on header icon, white text on tables/cards/controls
-**AdminServiceCalendar.tsx** - Black background, sky-blue accent on calendar elements, white text
-**AdminClients.tsx** - Black background, sky-blue accent on header icon, white text on tables
+1. Remove the "Revenue Stream" `<Select>` block (lines 566-578) from the supporter details card.
+2. Rearrange the remaining grid items (Category, Status, Relationship Owner) into a clean layout.
+3. Remove the `PRIMARY_STREAMS` constant since it won't be used anywhere else in this file.
+4. Exclude `primary_revenue_stream` from the supporter save/update logic so the existing value on the supporter record is preserved (not overwritten with blank).
 
-### 4. Login Page (1 file)
-**AdminLogin.tsx** - Black background to match the overall Command Center feel
-
-## What Changes Per Page
-
-Each page will receive the same pattern of changes:
-
-- **Outer wrapper**: `bg-muted/30` becomes `bg-black text-white`
-- **Header**: `bg-background border-b border-border` becomes `bg-black border-b border-white/10`
-- **Header text**: `text-foreground` becomes `text-white`, `text-muted-foreground` becomes `text-white/50`
-- **Back button and Log out button**: Ghost/outline styles updated with white text and black background hover states
-- **Cards**: `bg-background` becomes `bg-white/5 border-white/10 text-white` (or pillar-colored borders on landing pages)
-- **Tables**: Background becomes `bg-white/5`, header text `text-white/70`, row text `text-white`, borders `border-white/10`
-- **Inputs/Selects**: Dark-styled with `bg-white/5 border-white/10 text-white`
-- **Badges**: Adjusted for dark background contrast
-- **Muted text**: `text-muted-foreground` becomes `text-white/50`
-- **Accent links/text**: Uses the pillar color (red for Operations pages, sky-blue for Finance pages)
-- **Pillar landing page cards**: Get `border-2` with the pillar accent color, matching the Dashboard card style
-
-## Technical Details
-
-- All changes are CSS class swaps only -- no logic or data changes
-- 9 files total will be edited
-- Modal dialogs (AlertDialog, Dialog, ClientFormDialog, ServiceEntryModal) will keep their default styling since they overlay the page and have their own contained styles
-- Chart colors in AdminRegistrationAnalytics will be adjusted for visibility on dark backgrounds
