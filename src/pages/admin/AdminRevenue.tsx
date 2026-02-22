@@ -40,6 +40,7 @@ interface RevenueRow {
   payment_method: string | null;
   logged_by: string | null;
   notes: string | null;
+  receipt_2026_status: string | null;
 }
 
 const emptyForm = {
@@ -95,15 +96,16 @@ const AdminRevenue = () => {
     // Fetch supporter names for linked records
     const revenueRows = (data ?? []) as any[];
     const supporterIds = [...new Set(revenueRows.map((r) => r.supporter_id).filter(Boolean))];
-    let supporterMap: Record<string, string> = {};
+    let supporterMap: Record<string, { name: string; receipt_2026_status: string }> = {};
     if (supporterIds.length > 0) {
-      const { data: sData } = await supabase.from("supporters").select("id, name").in("id", supporterIds);
-      (sData ?? []).forEach((s: any) => {supporterMap[s.id] = s.name;});
+      const { data: sData } = await supabase.from("supporters").select("id, name, receipt_2026_status").in("id", supporterIds);
+      (sData ?? []).forEach((s: any) => {supporterMap[s.id] = { name: s.name, receipt_2026_status: s.receipt_2026_status };});
     }
 
     setRows(revenueRows.map((r) => ({
       ...r,
-      supporter_name: r.supporter_id ? supporterMap[r.supporter_id] || "Unknown" : null
+      supporter_name: r.supporter_id ? supporterMap[r.supporter_id]?.name || "Unknown" : null,
+      receipt_2026_status: r.supporter_id ? supporterMap[r.supporter_id]?.receipt_2026_status || null : null,
     })));
     setLoading(false);
   }, []);
@@ -414,17 +416,18 @@ const AdminRevenue = () => {
                 <th className="h-12 px-4 text-left align-middle font-medium text-white bg-green-600">Payment Method</th>
                 <th className="h-12 px-4 text-left align-middle font-medium text-white bg-green-600">Ref / Check #</th>
                 <th className="h-12 px-4 text-left align-middle font-medium text-white bg-green-600">Logged By</th>
+                <th className="h-12 px-4 text-center align-middle font-medium text-white bg-green-600">Receipt</th>
                 <th className="h-12 px-4 w-20 text-right align-middle font-medium text-white bg-green-600">Actions</th>
               </tr>
             </thead>
             <tbody className="[&_tr:last-child]:border-0">
               {loading ?
               <tr className="border-b border-white/10">
-                  <td colSpan={8} className="p-4 text-center py-12 text-white/50 align-middle">Loading…</td>
+                  <td colSpan={9} className="p-4 text-center py-12 text-white/50 align-middle">Loading…</td>
                 </tr> :
               rows.length === 0 ?
               <tr className="border-b border-white/10">
-                  <td colSpan={8} className="p-4 text-center py-12 text-white/50 align-middle">No revenue records yet.</td>
+                  <td colSpan={9} className="p-4 text-center py-12 text-white/50 align-middle">No revenue records yet.</td>
                 </tr> :
 
               rows.map((r) =>
@@ -436,6 +439,19 @@ const AdminRevenue = () => {
                     <td className="p-4 align-middle text-white/70 text-sm">{r.payment_method || "—"}</td>
                     <td className="p-4 align-middle text-white/60 text-sm">{(r as any).reference_id || "—"}</td>
                     <td className="p-4 align-middle text-white/70 text-sm">{r.logged_by || "—"}</td>
+                    <td className="p-4 align-middle text-center">
+                      {(r.revenue_type === "Donation" || r.revenue_type === "Sponsorship") ? (
+                        <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${
+                          r.receipt_2026_status === "Sent"
+                            ? "bg-green-600/20 text-green-400"
+                            : "bg-yellow-600/20 text-yellow-400"
+                        }`}>
+                          {r.receipt_2026_status === "Sent" ? "Sent" : "Not Sent"}
+                        </span>
+                      ) : (
+                        <span className="text-white/20 text-xs">—</span>
+                      )}
+                    </td>
                     <td className="p-4 align-middle text-right">
                       <div className="flex justify-end gap-1">
                         <button
