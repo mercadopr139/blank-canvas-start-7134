@@ -29,7 +29,8 @@ export default function ValidatedAddressInput({
   const [showDropdown, setShowDropdown] = useState(false);
   const [highlightedIndex, setHighlightedIndex] = useState(-1);
   const [verified, setVerified] = useState(!!value);
-  const [touched, setTouched] = useState(false);
+  const [showError, setShowError] = useState(false);
+  const [focused, setFocused] = useState(false);
   const debounceRef = useRef<ReturnType<typeof setTimeout>>();
   const wrapperRef = useRef<HTMLDivElement>(null);
 
@@ -74,6 +75,7 @@ export default function ValidatedAddressInput({
     const structured = nominatimToStructured(s);
     setInputValue(structured.address);
     setVerified(true);
+    setShowError(false);
     setShowDropdown(false);
     onSelect(structured);
   };
@@ -94,7 +96,12 @@ export default function ValidatedAddressInput({
     }
   };
 
-  const showError = requireVerified && touched && inputValue.trim() && !verified;
+  const handleBlur = () => {
+    setFocused(false);
+    if (requireVerified && inputValue.trim() && !verified) {
+      setShowError(true);
+    }
+  };
 
   return (
     <div ref={wrapperRef} className="relative space-y-1">
@@ -103,17 +110,21 @@ export default function ValidatedAddressInput({
         onChange={(e) => {
           setInputValue(e.target.value);
           setVerified(false);
-          setTouched(true);
+          setShowError(false);
           onChange?.(e.target.value);
           fetchSuggestions(e.target.value);
         }}
-        onFocus={() => suggestions.length > 0 && setShowDropdown(true)}
-        onBlur={() => setTouched(true)}
+        onFocus={() => {
+          setFocused(true);
+          setShowError(false);
+          if (suggestions.length > 0) setShowDropdown(true);
+        }}
+        onBlur={handleBlur}
         onKeyDown={handleKeyDown}
         placeholder={placeholder}
         className={cn(className, showError && "border-red-500")}
       />
-      {showError && (
+      {showError && !focused && (
         <p className="text-red-400 text-xs">Please select a verified address from the suggestions.</p>
       )}
       {showDropdown && (
