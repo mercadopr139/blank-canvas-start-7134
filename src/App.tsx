@@ -38,6 +38,7 @@ import AdminSupporters from "./pages/admin/AdminSupporters";
 import AdminSupportersDatabase from "./pages/admin/AdminSupportersDatabase";
 import AdminSupporterDetail from "./pages/admin/AdminSupporterDetail";
 import AdminEngagements from "./pages/admin/AdminEngagements";
+import AdminTasks from "./pages/admin/AdminTasks";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -105,6 +106,7 @@ const App = () => (
               <Route path="supporters/:id" element={<AdminSupporterDetail />} />
               <Route path="supporters-database" element={<AdminSupportersDatabase />} />
               <Route path="engagements" element={<AdminEngagements />} />
+              <Route path="tasks" element={<AdminTasks />} />
             </Route>
 
             {/* Finance section — sidebar layout wraps sub-pages */}
