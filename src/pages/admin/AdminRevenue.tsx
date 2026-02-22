@@ -637,6 +637,8 @@ const AdminRevenue = () => {
               </div>
             }
 
+            {/* Rest of form - only shown after supporter selected/created, or in edit mode */}
+            {(form.supporter_id || isNewSupporter || editId) && <>
             {/* Supporter Email (shown when no details panel, for quick entry) */}
             {!supporterDetailsOpen && !isNewSupporter &&
             <div className="space-y-1.5">
@@ -657,7 +659,6 @@ const AdminRevenue = () => {
                 value={form.date}
                 onChange={(e) => setForm({ ...form, date: e.target.value })}
                 className="bg-white/5 border-white/10 text-white" />
-
             </div>
 
             {/* Amount */}
@@ -670,19 +671,16 @@ const AdminRevenue = () => {
                   inputMode="decimal"
                   value={form.amount}
                   onChange={(e) => {
-                    // Allow digits, dots, and commas while typing
                     const raw = e.target.value.replace(/[^0-9.,]/g, "");
                     setForm({ ...form, amount: raw });
                   }}
                   onBlur={() => {
-                    // Format on blur
                     const num = parseFloat(form.amount.replace(/,/g, ""));
                     if (!isNaN(num)) {
                       setForm((f) => ({ ...f, amount: num.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) }));
                     }
                   }}
                   onFocus={() => {
-                    // Strip formatting on focus for easy editing
                     const num = parseFloat(form.amount.replace(/,/g, ""));
                     if (!isNaN(num)) {
                       setForm((f) => ({ ...f, amount: String(num) }));
@@ -690,7 +688,6 @@ const AdminRevenue = () => {
                   }}
                   className="bg-white/5 border-white/10 text-white pl-7"
                   placeholder="0.00" />
-
               </div>
             </div>
 
@@ -732,9 +729,7 @@ const AdminRevenue = () => {
                 onChange={(e) => setForm({ ...form, reference_id: e.target.value })}
                 className="bg-white/5 border-white/10 text-white"
                 placeholder="Check #, confirmation code, etc." />
-
             </div>
-
 
             {/* Logged By */}
             <div className="space-y-1.5">
@@ -744,7 +739,6 @@ const AdminRevenue = () => {
                 onChange={(e) => setForm({ ...form, logged_by: e.target.value })}
                 className="bg-white/5 border-white/10 text-white"
                 placeholder="Person's name…" />
-
             </div>
 
             {/* Notes */}
@@ -755,8 +749,8 @@ const AdminRevenue = () => {
                 value={form.notes}
                 onChange={(e) => setForm({ ...form, notes: e.target.value })}
                 className="w-full rounded-md bg-white/5 border border-white/10 text-white text-sm px-3 py-2 resize-none focus:outline-none focus:ring-1 focus:ring-green-500" />
-
             </div>
+            </>}
           </div>
 
           <div className="px-6 py-4 border-t border-white/10 shrink-0 flex justify-end gap-2">
