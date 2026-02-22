@@ -511,6 +511,36 @@ export type Database = {
         }
         Relationships: []
       }
+      signals: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          metadata: Json | null
+          signal_type: string
+          source: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          metadata?: Json | null
+          signal_type: string
+          source?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          metadata?: Json | null
+          signal_type?: string
+          source?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       supporters: {
         Row: {
           address: string | null
