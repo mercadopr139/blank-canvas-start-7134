@@ -488,7 +488,7 @@ const AdminRevenue = () => {
               </button>
             }
           </div>
-          <div className="overflow-y-auto flex-1 px-6 pb-4 space-y-4 pt-2">
+           <div className={`flex-1 px-6 pb-4 space-y-4 pt-2 ${(form.supporter_id || isNewSupporter || editId) ? 'overflow-y-auto' : 'overflow-visible'}`}>
              {/* Supporter */}
             <div className="space-y-1.5">
               <SupporterAutocomplete
