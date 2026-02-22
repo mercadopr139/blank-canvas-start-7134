@@ -40,6 +40,7 @@ import AdminSupporterDetail from "./pages/admin/AdminSupporterDetail";
 import AdminEngagements from "./pages/admin/AdminEngagements";
 import AdminTasks from "./pages/admin/AdminTasks";
 import AdminBulkOutreach from "./pages/admin/AdminBulkOutreach";
+import AdminSignals from "./pages/admin/AdminSignals";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -129,6 +130,16 @@ const App = () => (
               <Route path="deposits/:id" element={<AdminDepositDetail />} />
               <Route path="master-revenue-tracker" element={<AdminMasterRevenueTracker />} />
             </Route>
+
+            {/* Signals — standalone admin page */}
+            <Route
+              path="/admin/signals"
+              element={
+                <ProtectedRoute requireAdmin>
+                  <AdminSignals />
+                </ProtectedRoute>
+              }
+            />
             
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
