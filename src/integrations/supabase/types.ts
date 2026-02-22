@@ -522,6 +522,7 @@ export type Database = {
           signal_kind: Database["public"]["Enums"]["signal_kind"] | null
           signal_type: string
           source: string | null
+          status: Database["public"]["Enums"]["signal_status"]
           title: string | null
           updated_at: string
         }
@@ -535,6 +536,7 @@ export type Database = {
           signal_kind?: Database["public"]["Enums"]["signal_kind"] | null
           signal_type: string
           source?: string | null
+          status?: Database["public"]["Enums"]["signal_status"]
           title?: string | null
           updated_at?: string
         }
@@ -548,6 +550,7 @@ export type Database = {
           signal_kind?: Database["public"]["Enums"]["signal_kind"] | null
           signal_type?: string
           source?: string | null
+          status?: Database["public"]["Enums"]["signal_status"]
           title?: string | null
           updated_at?: string
         }
@@ -923,6 +926,7 @@ export type Database = {
         | "Finance"
         | "Vision"
         | "Personal"
+      signal_status: "Pending" | "Complete"
       task_status: "Open" | "Completed"
       task_type:
         | "Call"
@@ -1131,6 +1135,7 @@ export const Constants = {
         "Vision",
         "Personal",
       ],
+      signal_status: ["Pending", "Complete"],
       task_status: ["Open", "Completed"],
       task_type: [
         "Call",
