@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
+import { useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import SupporterAutocomplete from "@/components/admin/SupporterAutocomplete";
 
@@ -68,6 +69,7 @@ const emptySupporterDetails = {
 
 const AdminRevenue = () => {
   const { toast } = useToast();
+  const [searchParams, setSearchParams] = useSearchParams();
 
   // ── Receipt flow state ──────────────────────────────────────────────────
   const [receiptOpen, setReceiptOpen] = useState(false);
@@ -102,6 +104,23 @@ const AdminRevenue = () => {
   }, []);
 
   useEffect(() => { fetchRows(); }, [fetchRows]);
+
+  // Auto-open modal from sidebar "Add Revenue" button
+  useEffect(() => {
+    if (searchParams.get("new") === "1") {
+      setSearchParams({}, { replace: true });
+      // Small delay to ensure state is ready
+      setTimeout(() => {
+        setEditId(null);
+        setForm(emptyForm);
+        setSupporterSearch("");
+        setSupporterDetails(emptySupporterDetails);
+        setSupporterDetailsOpen(false);
+        setIsNewSupporter(false);
+        setModalOpen(true);
+      }, 100);
+    }
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Modal state ─────────────────────────────────────────────────────────
   const [modalOpen, setModalOpen] = useState(false);

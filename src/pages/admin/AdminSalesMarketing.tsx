@@ -1,14 +1,9 @@
-import { BarChart3, HandCoins, Users, Database, MessageSquare, ClipboardList, Mail, LucideIcon } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { BarChart3, HandCoins, Users, Database, MessageSquare, ClipboardList, Mail, Plus } from "lucide-react";
 import AdminSectionLayout, { SectionCard } from "@/components/admin/AdminSectionLayout";
+import { Button } from "@/components/ui/button";
 
-interface SMTile {
-  title: string;
-  description: string;
-  icon: LucideIcon;
-  href: string;
-}
-
-const baseTiles: SMTile[] = [
+const baseTiles = [
   {
     title: "Revenue",
     description: "Track all incoming revenue",
@@ -63,17 +58,33 @@ const sidebarCards: SectionCard[] = baseTiles.map((t) => ({
   icon: t.icon,
 }));
 
-const AdminSalesMarketing = () => (
-  <AdminSectionLayout
-    section="sales-marketing"
-    title="Sales & Marketing"
-    subtitle="Outreach & Retention"
-    accent="green"
-    accentHex="#22c55e"
-    cards={sidebarCards}
-    backHref="/admin/dashboard"
-    storageKey="nla_sm_custom_cards"
-  />
-);
+const AdminSalesMarketing = () => {
+  const navigate = useNavigate();
+
+  const addRevenueAction = (
+    <Button
+      size="sm"
+      className="w-full bg-green-600 hover:bg-green-500 text-white text-sm font-medium"
+      onClick={() => navigate("/admin/sales-marketing/revenue?new=1")}
+    >
+      <Plus className="w-4 h-4 mr-1.5" />
+      Add Revenue
+    </Button>
+  );
+
+  return (
+    <AdminSectionLayout
+      section="sales-marketing"
+      title="Sales & Marketing"
+      subtitle="Outreach & Retention"
+      accent="green"
+      accentHex="#22c55e"
+      cards={sidebarCards}
+      backHref="/admin/dashboard"
+      storageKey="nla_sm_custom_cards"
+      sidebarAction={addRevenueAction}
+    />
+  );
+};
 
 export default AdminSalesMarketing;
