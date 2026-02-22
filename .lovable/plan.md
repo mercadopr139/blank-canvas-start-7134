@@ -1,24 +1,33 @@
 
 
-## What We're Doing
+## Sync "Add Supporter" Modal with "Edit Supporter Info"
 
-Removing the "Revenue Stream" dropdown from the **Edit Supporter Info** panel inside the Revenue modal. The main "Revenue Type" dropdown on the Revenue form stays exactly as-is.
+Both forms write to the same supporters table, so they need identical field labels and dropdown options.
 
-## Will This Affect Other Tables?
+### Changes to `src/pages/admin/AdminSupportersDatabase.tsx`
 
-**No.** Here's why:
+1. **Update `SUPPORTER_STATUSES`** from `["Active", "Prospect", "Lapsed", "Past"]` to `["Donor", "Sponsor", "Meal Train", "Partner", "Advocate", "Volunteer", "Coach"]`
 
-- The "Revenue Stream" field in the supporter info section writes to the `supporters` table column called `primary_revenue_stream`. It's a profile-level label on the supporter -- it does NOT affect the revenue entry itself.
-- The "Revenue Type" on the main form writes to the `revenue` table column `revenue_type`. This is what actually categorizes each transaction.
-- Removing the dropdown from this modal simply means you won't accidentally overwrite the supporter's profile-level revenue stream while logging a transaction. You can still edit it from the Supporters Database page.
-- No database changes needed.
+2. **Rename the "Status" label** to "Supporter ID" to match the Revenue page
 
-## Changes
+3. **Update `PRIMARY_REVENUE_STREAMS`** -- remove "Mixed" so it matches Revenue page: `["Donation", "Sponsorship", "Fee for Service", "Re-Grant"]`
 
-**File: `src/pages/admin/AdminRevenue.tsx`**
+### Verify in `src/pages/admin/AdminRevenue.tsx`
 
-1. Remove the "Revenue Stream" `<Select>` block (lines 566-578) from the supporter details card.
-2. Rearrange the remaining grid items (Category, Status, Relationship Owner) into a clean layout.
-3. Remove the `PRIMARY_STREAMS` constant since it won't be used anywhere else in this file.
-4. Exclude `primary_revenue_stream` from the supporter save/update logic so the existing value on the supporter record is preserved (not overwritten with blank).
+4. Confirm the Revenue Stream field was removed from Edit Supporter Info (per earlier plan). If it's still there, remove it so the two forms stay consistent -- you previously asked for it to be removed.
+
+5. Confirm `SUPPORTER_STATUSES` is `["Donor", "Sponsor", "Meal Train", "Partner", "Advocate", "Volunteer", "Coach"]` (per earlier edit).
+
+### No database changes needed
+Both forms write to the same `supporters` table columns (`status`, `primary_revenue_stream`, etc.) as plain text -- no enum constraints in the database. So updating the frontend dropdown options is all that's needed.
+
+### Technical Details
+
+- **File 1** (`AdminSupportersDatabase.tsx`):
+  - Line 38: Change `SUPPORTER_STATUSES` constant
+  - Line 37: Remove "Mixed" from `PRIMARY_REVENUE_STREAMS`
+  - Line 753: Change label from "Status" to "Supporter ID"
+
+- **File 2** (`AdminRevenue.tsx`):
+  - Verify lines 53, 567-578, 580 reflect the earlier approved changes (Status options + label rename + Revenue Stream removal)
 
