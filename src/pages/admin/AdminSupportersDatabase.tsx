@@ -34,8 +34,8 @@ const FIELD_LABELS: Record<MappableField, string> = {
 };
 
 
-const PRIMARY_REVENUE_STREAMS = ["Donation", "Sponsorship", "Fee for Service", "Re-Grant", "Mixed"] as const;
-const SUPPORTER_STATUSES = ["Active", "Prospect", "Lapsed", "Past"] as const;
+const PRIMARY_REVENUE_STREAMS = ["Donation", "Sponsorship", "Fee for Service", "Re-Grant"] as const;
+const SUPPORTER_STATUSES = ["Donor", "Sponsor", "Meal Train", "Partner", "Advocate", "Volunteer", "Coach"] as const;
 const SUPPORTER_CATEGORIES = ["Individual", "Organization"] as const;
 
 interface SupporterRow {
@@ -750,7 +750,7 @@ const AdminSupportersDatabase = () => {
               </Select>
             </div>
             <div className="space-y-1.5">
-              <Label className="text-white/70">Status</Label>
+              <Label className="text-white/70">Supporter ID</Label>
               <Select value={newSupporter.status ?? ""} onValueChange={(v) => setNewSupporter({ ...newSupporter, status: v })}>
                 <SelectTrigger className="bg-white/5 border-white/10 text-white"><SelectValue placeholder="Select status" /></SelectTrigger>
                 <SelectContent className="bg-zinc-900 border-white/10 text-white">
