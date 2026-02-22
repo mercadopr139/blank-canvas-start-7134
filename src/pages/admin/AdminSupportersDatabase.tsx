@@ -507,10 +507,10 @@ const AdminSupportersDatabase = () => {
                    <td colSpan={12} className="p-4 text-center py-12 text-white/50 align-middle">No supporters yet. Import a CSV to get started.</td>
                 </tr> :
 
-              sortedRows.map((s) =>
+              sortedRows.map((s, idx) =>
               <tr
                 key={s.id}
-                className={`border-b border-white/10 transition-colors hover:bg-white/5 ${selected.has(s.id) ? "bg-red-950/20" : ""}`}>
+                className={`border-b border-white/10 transition-colors hover:bg-white/10 ${selected.has(s.id) ? "bg-red-950/20" : idx % 2 === 1 ? "bg-white/[0.04]" : ""}`}>
 
                     <td className="p-4 px-3 align-middle">
                       <input
