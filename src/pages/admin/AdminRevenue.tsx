@@ -10,15 +10,15 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Plus, Pencil, Trash2 } from "lucide-react";
 import {
-  Dialog, DialogContent, DialogHeader, DialogTitle,
-} from "@/components/ui/dialog";
+  Dialog, DialogContent, DialogHeader, DialogTitle } from
+"@/components/ui/dialog";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
-  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from
+"@/components/ui/alert-dialog";
 import {
-  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
-} from "@/components/ui/select";
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from
+"@/components/ui/select";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -46,23 +46,23 @@ const emptyForm = {
   payment_method: "",
   reference_id: "",
   logged_by: "",
-  notes: "",
+  notes: ""
 };
 
 const SUPPORTER_CATEGORIES = ["Individual", "Organization"] as const;
-const SUPPORTER_STATUSES = ["Donor", "Sponsor", "Meal Train", "Partner", "Advocate", "Volunteer", "Coach"] as const;
-
+const SUPPORTER_STATUSES = ["Active", "Lapsed", "Prospect", "New"] as const;
+const PRIMARY_STREAMS = ["Donation", "Sponsorship", "Fee for Service", "Re-Grant"] as const;
 
 const emptySupporterDetails = {
   name: "",
   supporter_category: "",
-  
+  primary_revenue_stream: "",
   status: "",
   relationship_owner: "",
   email: "",
   phone: "",
   address: "",
-  story: "",
+  story: ""
 };
 
 // ─── Component ────────────────────────────────────────────────────────────────
@@ -82,28 +82,28 @@ const AdminRevenue = () => {
 
   const fetchRows = useCallback(async () => {
     setLoading(true);
-    const { data } = await supabase
-      .from("revenue")
-      .select("id, supporter_id, date, amount, revenue_type, payment_method, reference_id, logged_by, notes")
-      .order("date", { ascending: false });
+    const { data } = await supabase.
+    from("revenue").
+    select("id, supporter_id, date, amount, revenue_type, payment_method, reference_id, logged_by, notes").
+    order("date", { ascending: false });
 
     // Fetch supporter names for linked records
     const revenueRows = (data ?? []) as any[];
-    const supporterIds = [...new Set(revenueRows.map(r => r.supporter_id).filter(Boolean))];
+    const supporterIds = [...new Set(revenueRows.map((r) => r.supporter_id).filter(Boolean))];
     let supporterMap: Record<string, string> = {};
     if (supporterIds.length > 0) {
       const { data: sData } = await supabase.from("supporters").select("id, name").in("id", supporterIds);
-      (sData ?? []).forEach((s: any) => { supporterMap[s.id] = s.name; });
+      (sData ?? []).forEach((s: any) => {supporterMap[s.id] = s.name;});
     }
 
-    setRows(revenueRows.map(r => ({
+    setRows(revenueRows.map((r) => ({
       ...r,
-      supporter_name: r.supporter_id ? (supporterMap[r.supporter_id] || "Unknown") : null,
+      supporter_name: r.supporter_id ? supporterMap[r.supporter_id] || "Unknown" : null
     })));
     setLoading(false);
   }, []);
 
-  useEffect(() => { fetchRows(); }, [fetchRows]);
+  useEffect(() => {fetchRows();}, [fetchRows]);
 
   // Auto-open modal from sidebar "Add Revenue" button
   useEffect(() => {
@@ -127,10 +127,10 @@ const AdminRevenue = () => {
   const [editId, setEditId] = useState<string | null>(null);
   const [form, setForm] = useState(emptyForm);
   const [saving, setSaving] = useState(false);
-   const [supporterSearch, setSupporterSearch] = useState("");
-   const [supporterDetails, setSupporterDetails] = useState(emptySupporterDetails);
-   const [supporterDetailsOpen, setSupporterDetailsOpen] = useState(false);
-   const [isNewSupporter, setIsNewSupporter] = useState(false);
+  const [supporterSearch, setSupporterSearch] = useState("");
+  const [supporterDetails, setSupporterDetails] = useState(emptySupporterDetails);
+  const [supporterDetailsOpen, setSupporterDetailsOpen] = useState(false);
+  const [isNewSupporter, setIsNewSupporter] = useState(false);
 
   const openNew = () => {
     setEditId(null);
@@ -156,30 +156,30 @@ const AdminRevenue = () => {
       payment_method: r.payment_method || "",
       reference_id: (r as any).reference_id || "",
       logged_by: r.logged_by || "",
-      notes: r.notes || "",
+      notes: r.notes || ""
     });
     // Load supporter details if linked
     if (r.supporter_id) {
-      supabase.from("supporters")
-        .select("name, email, phone, address, supporter_category, primary_revenue_stream, status, relationship_owner, story")
-        .eq("id", r.supporter_id)
-        .maybeSingle()
-        .then(({ data }) => {
-          if (data) {
-            setSupporterDetails({
-              name: data.name || "",
-              supporter_category: data.supporter_category || "",
-              
-              status: data.status || "",
-              relationship_owner: data.relationship_owner || "",
-              email: data.email || "",
-              phone: data.phone || "",
-              address: data.address || "",
-              story: data.story || "",
-            });
-            setForm(f => ({ ...f, supporter_email: data.email || "" }));
-          }
-        });
+      supabase.from("supporters").
+      select("name, email, phone, address, supporter_category, primary_revenue_stream, status, relationship_owner, story").
+      eq("id", r.supporter_id).
+      maybeSingle().
+      then(({ data }) => {
+        if (data) {
+          setSupporterDetails({
+            name: data.name || "",
+            supporter_category: data.supporter_category || "",
+            primary_revenue_stream: data.primary_revenue_stream || "",
+            status: data.status || "",
+            relationship_owner: data.relationship_owner || "",
+            email: data.email || "",
+            phone: data.phone || "",
+            address: data.address || "",
+            story: data.story || ""
+          });
+          setForm((f) => ({ ...f, supporter_email: data.email || "" }));
+        }
+      });
     } else {
       setSupporterDetails(emptySupporterDetails);
     }
@@ -194,27 +194,27 @@ const AdminRevenue = () => {
       phone: details.phone || null,
       address: details.address || null,
       supporter_category: details.supporter_category || null,
-      
+      primary_revenue_stream: details.primary_revenue_stream || null,
       status: details.status || null,
       relationship_owner: details.relationship_owner || null,
-      story: details.story || null,
+      story: details.story || null
     };
 
-    const { data: existing } = await supabase
-      .from("supporters")
-      .select("id")
-      .eq("name", name)
-      .maybeSingle();
+    const { data: existing } = await supabase.
+    from("supporters").
+    select("id").
+    eq("name", name).
+    maybeSingle();
     if (existing) {
       await supabase.from("supporters").update(insertData as any).eq("id", existing.id);
       return existing.id;
     }
 
-    const { data: created, error } = await supabase
-      .from("supporters")
-      .insert(insertData as any)
-      .select("id")
-      .single();
+    const { data: created, error } = await supabase.
+    from("supporters").
+    insert(insertData as any).
+    select("id").
+    single();
     if (error) return null;
     return created.id;
   };
@@ -227,16 +227,16 @@ const AdminRevenue = () => {
       phone: supporterDetails.phone || null,
       address: supporterDetails.address || null,
       supporter_category: supporterDetails.supporter_category || null,
-      
+      primary_revenue_stream: supporterDetails.primary_revenue_stream || null,
       status: supporterDetails.status || null,
       relationship_owner: supporterDetails.relationship_owner || null,
-      story: supporterDetails.story || null,
+      story: supporterDetails.story || null
     };
     await supabase.from("supporters").update(updateData as any).eq("id", supporterId);
   };
 
   const isQualifyingForReceipt = (type: string) =>
-    type === "Donation" || type === "Sponsorship";
+  type === "Donation" || type === "Sponsorship";
 
   const handleSave = async () => {
     if (!form.date || !form.amount) return;
@@ -248,7 +248,7 @@ const AdminRevenue = () => {
       const name = supporterDetails.name || supporterSearch.trim();
       supporterId = await findOrCreateSupporter(name, supporterDetails);
       if (supporterId) {
-        setForm(f => ({ ...f, supporter_id: supporterId! }));
+        setForm((f) => ({ ...f, supporter_id: supporterId! }));
       }
     } else if (supporterId) {
       // Save any edits to supporter details
@@ -263,7 +263,7 @@ const AdminRevenue = () => {
       payment_method: form.payment_method || null,
       reference_id: form.reference_id || null,
       logged_by: form.logged_by || null,
-      notes: form.notes || null,
+      notes: form.notes || null
     };
 
     if (editId) {
@@ -285,7 +285,7 @@ const AdminRevenue = () => {
       receipt_status: "Not Needed" as any,
       reference_id: form.reference_id || null,
       notes: payload.notes,
-      supporter_id: supporterId,
+      supporter_id: supporterId
     };
     if (form.revenue_type === "Sponsorship") {
       donationsPayload.revenue_description = "Sponsor";
@@ -327,13 +327,13 @@ const AdminRevenue = () => {
 
     // Also delete matching record from donations table (synced on create)
     if (supporterId && rowDate && rowAmount != null) {
-      const { data: matchingDonations } = await supabase
-        .from("donations")
-        .select("id")
-        .eq("supporter_id", supporterId)
-        .eq("deposit_date", rowDate)
-        .eq("amount", rowAmount)
-        .limit(1);
+      const { data: matchingDonations } = await supabase.
+      from("donations").
+      select("id").
+      eq("supporter_id", supporterId).
+      eq("deposit_date", rowDate).
+      eq("amount", rowAmount).
+      limit(1);
 
       if (matchingDonations && matchingDonations.length > 0) {
         await supabase.from("donations").delete().eq("id", matchingDonations[0].id);
@@ -342,15 +342,15 @@ const AdminRevenue = () => {
 
     // If supporter has no remaining qualifying donations, clean up
     if (supporterId) {
-      const { data: remaining } = await supabase
-        .from("donations")
-        .select("id")
-        .eq("supporter_id", supporterId);
+      const { data: remaining } = await supabase.
+      from("donations").
+      select("id").
+      eq("supporter_id", supporterId);
 
-      const { data: remainingRevenue } = await supabase
-        .from("revenue")
-        .select("id")
-        .eq("supporter_id", supporterId);
+      const { data: remainingRevenue } = await supabase.
+      from("revenue").
+      select("id").
+      eq("supporter_id", supporterId);
 
       if ((!remaining || remaining.length === 0) && (!remainingRevenue || remainingRevenue.length === 0)) {
         await supabase.from("supporters").delete().eq("id", supporterId);
@@ -365,7 +365,7 @@ const AdminRevenue = () => {
 
   // ── Helpers ─────────────────────────────────────────────────────────────
   const fmtCurrency = (n: number) =>
-    n.toLocaleString("en-US", { style: "currency", currency: "USD", minimumFractionDigits: 2 });
+  n.toLocaleString("en-US", { style: "currency", currency: "USD", minimumFractionDigits: 2 });
 
   const fmtDate = (d: string) => {
     const [y, m, day] = d.split("-");
@@ -379,7 +379,7 @@ const AdminRevenue = () => {
     <div className="bg-black text-white flex flex-col" style={{ height: 'calc(100vh - 73px)' }}>
       {/* Page header */}
       <div className="border-b border-white/10 px-4 py-3 flex-shrink-0">
-        <h2 className="text-base font-semibold text-green-400">Revenue</h2>
+        <h2 className="text-base font-semibold text-green-400">2026 Revenue</h2>
         <p className="text-xs text-white/50">Track all incoming revenue records</p>
       </div>
 
@@ -390,8 +390,8 @@ const AdminRevenue = () => {
           <Button
             size="sm"
             className="bg-green-500 hover:bg-green-400 text-black gap-1.5"
-            onClick={openNew}
-          >
+            onClick={openNew}>
+
             <Plus className="w-4 h-4" />
             New Revenue Entry
           </Button>
@@ -413,17 +413,17 @@ const AdminRevenue = () => {
               </tr>
             </thead>
             <tbody className="[&_tr:last-child]:border-0">
-              {loading ? (
-                <tr className="border-b border-white/10">
+              {loading ?
+              <tr className="border-b border-white/10">
                   <td colSpan={8} className="p-4 text-center py-12 text-white/50 align-middle">Loading…</td>
-                </tr>
-              ) : rows.length === 0 ? (
-                <tr className="border-b border-white/10">
+                </tr> :
+              rows.length === 0 ?
+              <tr className="border-b border-white/10">
                   <td colSpan={8} className="p-4 text-center py-12 text-white/50 align-middle">No revenue records yet.</td>
-                </tr>
-              ) : (
-                rows.map((r) => (
-                  <tr key={r.id} className="border-b border-white/10 transition-colors hover:bg-white/5">
+                </tr> :
+
+              rows.map((r) =>
+              <tr key={r.id} className="border-b border-white/10 transition-colors hover:bg-white/5">
                     <td className="p-4 align-middle text-white/70 text-sm">{fmtDate(r.date)}</td>
                     <td className="p-4 align-middle text-white font-medium text-sm">{r.supporter_name || "—"}</td>
                     <td className="p-4 align-middle text-right text-green-400 font-medium text-sm">{fmtCurrency(r.amount)}</td>
@@ -434,54 +434,54 @@ const AdminRevenue = () => {
                     <td className="p-4 align-middle text-right">
                       <div className="flex justify-end gap-1">
                         <button
-                          onClick={() => openEdit(r)}
-                          className="p-1.5 rounded text-white/40 hover:text-green-400 hover:bg-white/5 transition-colors"
-                          title="Edit"
-                        >
+                      onClick={() => openEdit(r)}
+                      className="p-1.5 rounded text-white/40 hover:text-green-400 hover:bg-white/5 transition-colors"
+                      title="Edit">
+
                           <Pencil className="w-3.5 h-3.5" />
                         </button>
                         <button
-                          onClick={() => setDeleteId(r.id)}
-                          className="p-1.5 rounded text-white/40 hover:text-red-400 hover:bg-white/5 transition-colors"
-                          title="Delete"
-                        >
+                      onClick={() => setDeleteId(r.id)}
+                      className="p-1.5 rounded text-white/40 hover:text-red-400 hover:bg-white/5 transition-colors"
+                      title="Delete">
+
                           <Trash2 className="w-3.5 h-3.5" />
                         </button>
                       </div>
                     </td>
                   </tr>
-                ))
-              )}
+              )
+              }
             </tbody>
           </table>
         </div>
       </div>
 
       {/* ── Create / Edit Modal ───────────────────────────────────────────── */}
-      <Dialog open={modalOpen} onOpenChange={(o) => { if (!o) setModalOpen(false); }}>
+      <Dialog open={modalOpen} onOpenChange={(o) => {if (!o) setModalOpen(false);}}>
         <DialogContent
           className="bg-zinc-900 border-white/10 text-white sm:max-w-md flex flex-col max-h-[85vh] p-0 gap-0"
-          onPointerDownOutside={(e) => e.preventDefault()}
-        >
+          onPointerDownOutside={(e) => e.preventDefault()}>
+
           <div className="px-6 pt-6 pb-2 shrink-0 flex items-center justify-between">
             <DialogHeader className="flex-1">
               <DialogTitle className="text-green-400">
                 {editId ? "Edit Revenue Entry" : "New Revenue Entry"}
               </DialogTitle>
             </DialogHeader>
-            {form.supporter_id && !isNewSupporter && (
-              <button
-                type="button"
-                onClick={() => setSupporterDetailsOpen(!supporterDetailsOpen)}
-                className={`text-xs px-2.5 py-1 rounded border transition-colors mr-8 ${
-                  supporterDetailsOpen
-                    ? "border-green-500/50 text-green-400 bg-green-500/10"
-                    : "border-white/15 text-white/40 hover:text-white/70 hover:border-white/30"
-                }`}
-              >
+            {form.supporter_id && !isNewSupporter &&
+            <button
+              type="button"
+              onClick={() => setSupporterDetailsOpen(!supporterDetailsOpen)}
+              className={`text-xs px-2.5 py-1 rounded border transition-colors mr-8 ${
+              supporterDetailsOpen ?
+              "border-green-500/50 text-green-400 bg-green-500/10" :
+              "border-white/15 text-white/40 hover:text-white/70 hover:border-white/30"}`
+              }>
+
                 {supporterDetailsOpen ? "Close Supporter Info" : "Edit Supporter Info"}
               </button>
-            )}
+            }
           </div>
           <div className="overflow-y-auto flex-1 px-6 pb-4 space-y-4 pt-2">
              {/* Supporter */}
@@ -504,13 +504,13 @@ const AdminRevenue = () => {
                   setSupporterDetails({
                     name: s.name,
                     supporter_category: s.supporter_category || "",
-                    
+                    primary_revenue_stream: s.primary_revenue_stream || "",
                     status: s.status || "",
                     relationship_owner: s.relationship_owner || "",
                     email: s.email || "",
                     phone: s.phone || "",
                     address: s.address || "",
-                    story: s.story || "",
+                    story: s.story || ""
                   });
                   setIsNewSupporter(false);
                 }}
@@ -521,13 +521,13 @@ const AdminRevenue = () => {
                   setSupporterDetailsOpen(true);
                   setIsNewSupporter(true);
                 }}
-                placeholder="Type to search supporters…"
-              />
+                placeholder="Type to search supporters…" />
+
             </div>
 
             {/* Collapsible Supporter Details */}
-            {(form.supporter_id || isNewSupporter) && supporterDetailsOpen && (
-              <div className="bg-zinc-900 border border-green-500/30 rounded-lg p-4 space-y-3 shadow-[0_0_12px_rgba(34,197,94,0.06)]">
+            {(form.supporter_id || isNewSupporter) && supporterDetailsOpen &&
+            <div className="bg-zinc-800/60 border border-white/[0.08] rounded-lg p-4 space-y-3">
                 <div>
                   <h4 className="text-xs font-semibold tracking-wide uppercase text-white/60">
                     {isNewSupporter ? "New Supporter Information" : "Supporter Information"}
@@ -539,14 +539,14 @@ const AdminRevenue = () => {
                     <div className="space-y-1">
                       <Label className="text-white/50 text-xs">Supporter Name {isNewSupporter && <span className="text-red-400">*</span>}</Label>
                       <Input
-                        value={supporterDetails.name}
-                        onChange={(e) => {
-                          setSupporterDetails({ ...supporterDetails, name: e.target.value });
-                          if (isNewSupporter) setSupporterSearch(e.target.value);
-                        }}
-                        className="bg-white/5 border-white/10 text-white h-8 text-sm"
-                        placeholder="Full name…"
-                      />
+                    value={supporterDetails.name}
+                    onChange={(e) => {
+                      setSupporterDetails({ ...supporterDetails, name: e.target.value });
+                      if (isNewSupporter) setSupporterSearch(e.target.value);
+                    }}
+                    className="bg-white/5 border-white/10 text-white h-8 text-sm"
+                    placeholder="Full name…" />
+
                     </div>
                     {/* Two-column grid for compact fields */}
                     <div className="grid grid-cols-2 gap-3">
@@ -557,97 +557,110 @@ const AdminRevenue = () => {
                             <SelectValue placeholder="Select…" />
                           </SelectTrigger>
                           <SelectContent className="bg-zinc-900 border-white/10 text-white">
-                            {SUPPORTER_CATEGORIES.map((c) => (
-                              <SelectItem key={c} value={c} className="text-white focus:bg-white/10 focus:text-white">{c}</SelectItem>
-                            ))}
+                            {SUPPORTER_CATEGORIES.map((c) =>
+                        <SelectItem key={c} value={c} className="text-white focus:bg-white/10 focus:text-white">{c}</SelectItem>
+                        )}
                           </SelectContent>
                         </Select>
                       </div>
                       <div className="space-y-1">
-                        <Label className="text-white/50 text-xs">Supporter ID</Label>
+                        <Label className="text-white/50 text-xs">Revenue Stream</Label>
+                        <Select value={supporterDetails.primary_revenue_stream} onValueChange={(v) => setSupporterDetails({ ...supporterDetails, primary_revenue_stream: v })}>
+                          <SelectTrigger className="bg-white/5 border-white/10 text-white h-8 text-sm">
+                            <SelectValue placeholder="Select…" />
+                          </SelectTrigger>
+                          <SelectContent className="bg-zinc-900 border-white/10 text-white">
+                            {PRIMARY_STREAMS.map((s) =>
+                        <SelectItem key={s} value={s} className="text-white focus:bg-white/10 focus:text-white">{s}</SelectItem>
+                        )}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-1">
+                        <Label className="text-white/50 text-xs">Status</Label>
                         <Select value={supporterDetails.status} onValueChange={(v) => setSupporterDetails({ ...supporterDetails, status: v })}>
                           <SelectTrigger className="bg-white/5 border-white/10 text-white h-8 text-sm">
                             <SelectValue placeholder="Select…" />
                           </SelectTrigger>
                           <SelectContent className="bg-zinc-900 border-white/10 text-white">
-                            {SUPPORTER_STATUSES.map((s) => (
-                              <SelectItem key={s} value={s} className="text-white focus:bg-white/10 focus:text-white">{s}</SelectItem>
-                            ))}
+                            {SUPPORTER_STATUSES.map((s) =>
+                        <SelectItem key={s} value={s} className="text-white focus:bg-white/10 focus:text-white">{s}</SelectItem>
+                        )}
                           </SelectContent>
                         </Select>
                       </div>
                       <div className="space-y-1">
                         <Label className="text-white/50 text-xs">Relationship Owner</Label>
                         <Input
-                          value={supporterDetails.relationship_owner}
-                          onChange={(e) => setSupporterDetails({ ...supporterDetails, relationship_owner: e.target.value })}
-                          className="bg-white/5 border-white/10 text-white h-8 text-sm"
-                          placeholder="Owner name…"
-                        />
+                      value={supporterDetails.relationship_owner}
+                      onChange={(e) => setSupporterDetails({ ...supporterDetails, relationship_owner: e.target.value })}
+                      className="bg-white/5 border-white/10 text-white h-8 text-sm"
+                      placeholder="Owner name…" />
+
                       </div>
                     </div>
                     {/* Contact fields */}
                     <div className="space-y-1">
                       <Label className="text-white/50 text-xs">Primary Contact Email</Label>
                       <Input
-                        type="email"
-                        value={supporterDetails.email}
-                        onChange={(e) => {
-                          setSupporterDetails({ ...supporterDetails, email: e.target.value });
-                          setForm(f => ({ ...f, supporter_email: e.target.value }));
-                        }}
-                        className="bg-white/5 border-white/10 text-white h-8 text-sm"
-                        placeholder="email@example.com"
-                      />
+                    type="email"
+                    value={supporterDetails.email}
+                    onChange={(e) => {
+                      setSupporterDetails({ ...supporterDetails, email: e.target.value });
+                      setForm((f) => ({ ...f, supporter_email: e.target.value }));
+                    }}
+                    className="bg-white/5 border-white/10 text-white h-8 text-sm"
+                    placeholder="email@example.com" />
+
                     </div>
                     <div className="grid grid-cols-2 gap-3">
                       <div className="space-y-1">
                         <Label className="text-white/50 text-xs">Phone</Label>
                         <Input
-                          type="tel"
-                          value={supporterDetails.phone}
-                          onChange={(e) => setSupporterDetails({ ...supporterDetails, phone: e.target.value })}
-                          className="bg-white/5 border-white/10 text-white h-8 text-sm"
-                          placeholder="(555) 555-5555"
-                        />
+                      type="tel"
+                      value={supporterDetails.phone}
+                      onChange={(e) => setSupporterDetails({ ...supporterDetails, phone: e.target.value })}
+                      className="bg-white/5 border-white/10 text-white h-8 text-sm"
+                      placeholder="(555) 555-5555" />
+
                       </div>
                       <div className="space-y-1">
                         <Label className="text-white/50 text-xs">Address</Label>
                         <Input
-                          value={supporterDetails.address}
-                          onChange={(e) => setSupporterDetails({ ...supporterDetails, address: e.target.value })}
-                          className="bg-white/5 border-white/10 text-white h-8 text-sm"
-                          placeholder="Street address…"
-                        />
+                      value={supporterDetails.address}
+                      onChange={(e) => setSupporterDetails({ ...supporterDetails, address: e.target.value })}
+                      className="bg-white/5 border-white/10 text-white h-8 text-sm"
+                      placeholder="Street address…" />
+
                       </div>
                     </div>
                     <div className="space-y-1">
                       <Label className="text-white/50 text-xs">Internal Strategic Notes</Label>
                       <textarea
-                        rows={2}
-                        value={supporterDetails.story}
-                        onChange={(e) => setSupporterDetails({ ...supporterDetails, story: e.target.value })}
-                        className="w-full rounded-md bg-white/5 border border-white/10 text-white text-xs px-3 py-2 resize-none focus:outline-none focus:ring-1 focus:ring-green-500"
-                        placeholder="Internal notes…"
-                      />
+                    rows={2}
+                    value={supporterDetails.story}
+                    onChange={(e) => setSupporterDetails({ ...supporterDetails, story: e.target.value })}
+                    className="w-full rounded-md bg-white/5 border border-white/10 text-white text-xs px-3 py-2 resize-none focus:outline-none focus:ring-1 focus:ring-green-500"
+                    placeholder="Internal notes…" />
+
                     </div>
                 </div>
               </div>
-            )}
+            }
 
             {/* Supporter Email (shown when no details panel, for quick entry) */}
-            {!supporterDetailsOpen && !isNewSupporter && (
-              <div className="space-y-1.5">
+            {!supporterDetailsOpen && !isNewSupporter &&
+            <div className="space-y-1.5">
                 <Label className="text-white/70">Supporter Email</Label>
                 <Input
-                  type="email"
-                  value={form.supporter_email}
-                  onChange={(e) => setForm({ ...form, supporter_email: e.target.value })}
-                  className="bg-white/5 border-white/10 text-white"
-                  placeholder="Email for receipt delivery…"
-                />
+                type="email"
+                value={form.supporter_email}
+                onChange={(e) => setForm({ ...form, supporter_email: e.target.value })}
+                className="bg-white/5 border-white/10 text-white"
+                placeholder="Email for receipt delivery…" />
+
               </div>
-            )}
+            }
 
             {/* Date */}
             <div className="space-y-1.5">
@@ -656,8 +669,8 @@ const AdminRevenue = () => {
                 type="date"
                 value={form.date}
                 onChange={(e) => setForm({ ...form, date: e.target.value })}
-                className="bg-white/5 border-white/10 text-white"
-              />
+                className="bg-white/5 border-white/10 text-white" />
+
             </div>
 
             {/* Amount */}
@@ -689,8 +702,8 @@ const AdminRevenue = () => {
                     }
                   }}
                   className="bg-white/5 border-white/10 text-white pl-7"
-                  placeholder="0.00"
-                />
+                  placeholder="0.00" />
+
               </div>
             </div>
 
@@ -702,9 +715,9 @@ const AdminRevenue = () => {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent className="bg-zinc-900 border-white/10 text-white">
-                  {REVENUE_TYPES.map((t) => (
-                    <SelectItem key={t} value={t} className="text-white focus:bg-white/10 focus:text-white">{t}</SelectItem>
-                  ))}
+                  {REVENUE_TYPES.map((t) =>
+                  <SelectItem key={t} value={t} className="text-white focus:bg-white/10 focus:text-white">{t}</SelectItem>
+                  )}
                 </SelectContent>
               </Select>
             </div>
@@ -717,9 +730,9 @@ const AdminRevenue = () => {
                   <SelectValue placeholder="— not set —" />
                 </SelectTrigger>
                 <SelectContent className="bg-zinc-900 border-white/10 text-white">
-                  {PAYMENT_METHODS.map((m) => (
-                    <SelectItem key={m} value={m} className="text-white focus:bg-white/10 focus:text-white">{m}</SelectItem>
-                  ))}
+                  {PAYMENT_METHODS.map((m) =>
+                  <SelectItem key={m} value={m} className="text-white focus:bg-white/10 focus:text-white">{m}</SelectItem>
+                  )}
                 </SelectContent>
               </Select>
             </div>
@@ -731,8 +744,8 @@ const AdminRevenue = () => {
                 value={form.reference_id}
                 onChange={(e) => setForm({ ...form, reference_id: e.target.value })}
                 className="bg-white/5 border-white/10 text-white"
-                placeholder="Check #, confirmation code, etc."
-              />
+                placeholder="Check #, confirmation code, etc." />
+
             </div>
 
 
@@ -743,8 +756,8 @@ const AdminRevenue = () => {
                 value={form.logged_by}
                 onChange={(e) => setForm({ ...form, logged_by: e.target.value })}
                 className="bg-white/5 border-white/10 text-white"
-                placeholder="Person's name…"
-              />
+                placeholder="Person's name…" />
+
             </div>
 
             {/* Notes */}
@@ -754,8 +767,8 @@ const AdminRevenue = () => {
                 rows={2}
                 value={form.notes}
                 onChange={(e) => setForm({ ...form, notes: e.target.value })}
-                className="w-full rounded-md bg-white/5 border border-white/10 text-white text-sm px-3 py-2 resize-none focus:outline-none focus:ring-1 focus:ring-green-500"
-              />
+                className="w-full rounded-md bg-white/5 border border-white/10 text-white text-sm px-3 py-2 resize-none focus:outline-none focus:ring-1 focus:ring-green-500" />
+
             </div>
           </div>
 
@@ -766,8 +779,8 @@ const AdminRevenue = () => {
             <Button
               onClick={handleSave}
               disabled={!form.date || !form.amount || saving}
-              className="bg-green-500 hover:bg-green-400 text-black"
-            >
+              className="bg-green-500 hover:bg-green-400 text-black">
+
               {saving ? "Saving…" : editId ? "Save Changes" : "Create Entry"}
             </Button>
           </div>
@@ -775,7 +788,7 @@ const AdminRevenue = () => {
       </Dialog>
 
       {/* ── Delete Confirmation ────────────────────────────────────────────── */}
-      <AlertDialog open={!!deleteId} onOpenChange={(o) => { if (!o) setDeleteId(null); }}>
+      <AlertDialog open={!!deleteId} onOpenChange={(o) => {if (!o) setDeleteId(null);}}>
         <AlertDialogContent className="bg-zinc-900 border-white/10 text-white">
           <AlertDialogHeader>
             <AlertDialogTitle className="text-white">Delete revenue record?</AlertDialogTitle>
@@ -790,8 +803,8 @@ const AdminRevenue = () => {
             <AlertDialogAction
               onClick={handleDelete}
               disabled={deleting}
-              className="bg-red-600 hover:bg-red-500 text-white"
-            >
+              className="bg-red-600 hover:bg-red-500 text-white">
+
               {deleting ? "Deleting…" : "Delete"}
             </AlertDialogAction>
           </AlertDialogFooter>
@@ -807,10 +820,10 @@ const AdminRevenue = () => {
         onComplete={() => {
           setReceiptOpen(false);
           fetchRows();
-        }}
-      />
-    </div>
-  );
+        }} />
+
+    </div>);
+
 };
 
 export default AdminRevenue;
