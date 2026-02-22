@@ -499,6 +499,32 @@ ${ORG_WEBSITE}`;
       })
       .eq("id", supporter_id);
 
+    // Auto-create Engagement record (deduplicate by checking for existing)
+    const today = new Date().toISOString().split("T")[0];
+    const { data: existingEng } = await supabase
+      .from("engagements")
+      .select("id")
+      .eq("supporter_id", supporter_id)
+      .eq("engagement_type", "Email")
+      .eq("date", today)
+      .ilike("summary", "%Receipt%thank%")
+      .maybeSingle();
+
+    if (!existingEng) {
+      // Get the user's email to use as logged_by
+      const { data: userData } = await supabase.auth.getUser(token);
+      const loggedBy = userData?.user?.email || "Admin";
+
+      await supabase.from("engagements").insert({
+        supporter_id,
+        engagement_type: "Email",
+        date: today,
+        summary: "Receipt + personal thank-you sent",
+        outcome: "Positive",
+        logged_by: loggedBy,
+      });
+    }
+
     return new Response(
       JSON.stringify({ success: true, sent_to: supporter.email }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
