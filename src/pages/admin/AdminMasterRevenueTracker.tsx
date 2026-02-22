@@ -284,13 +284,13 @@ const AdminMasterRevenueTracker = () => {
           <Table>
             <TableHeader>
               <TableRow className="border-white/10 hover:bg-transparent">
-                <TableHead className="text-green-400">Month</TableHead>
-                <TableHead className="text-green-400 text-right font-semibold bg-green-500/10">Total Revenue</TableHead>
-                <TableHead className="text-green-400 text-right">Donations</TableHead>
-                <TableHead className="text-green-400 text-right">Fundraising</TableHead>
-                <TableHead className="text-green-400 text-right">Fee for Service</TableHead>
-                <TableHead className="text-green-400 text-right">Re-Grants</TableHead>
-                <TableHead className="text-green-400 text-right">Cumulative YTD</TableHead>
+                <TableHead className="text-white bg-green-600">Month</TableHead>
+                <TableHead className="text-white bg-green-600 text-right font-semibold">Total Revenue</TableHead>
+                <TableHead className="text-white bg-green-600 text-right">Donations</TableHead>
+                <TableHead className="text-white bg-green-600 text-right">Fundraising</TableHead>
+                <TableHead className="text-white bg-green-600 text-right">Fee for Service</TableHead>
+                <TableHead className="text-white bg-green-600 text-right">Re-Grants</TableHead>
+                <TableHead className="text-white bg-green-600 text-right">Cumulative YTD</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -334,11 +334,11 @@ const AdminMasterRevenueTracker = () => {
               <Table>
                 <TableHeader>
                   <TableRow className="border-white/10 hover:bg-transparent">
-                     <TableHead className="text-green-400">Date</TableHead>
-                     <TableHead className="text-green-400">Name</TableHead>
-                     <TableHead className="text-green-400 text-right">Amount</TableHead>
-                     <TableHead className="text-green-400">Method</TableHead>
-                     <TableHead className="text-green-400">Ref ID</TableHead>
+                     <TableHead className="text-white bg-green-600">Date</TableHead>
+                     <TableHead className="text-white bg-green-600">Name</TableHead>
+                     <TableHead className="text-white bg-green-600 text-right">Amount</TableHead>
+                     <TableHead className="text-white bg-green-600">Method</TableHead>
+                     <TableHead className="text-white bg-green-600">Ref ID</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
