@@ -4,7 +4,8 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Plus, Pencil, Trash2, Check, X } from "lucide-react";
+import { Plus, Pencil, Trash2, Check, X, Send } from "lucide-react";
+import { toast } from "sonner";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle,
 } from "@/components/ui/dialog";
@@ -143,6 +144,70 @@ const AdminEngagements = () => {
     await fetchRows();
   };
 
+  // ── Bulk Postcard state ────────────────────────────────────────────────
+  const [postcardOpen, setPostcardOpen] = useState(false);
+  const [postcardDate, setPostcardDate] = useState(new Date().toISOString().slice(0, 10));
+  const [postcardSummary, setPostcardSummary] = useState("");
+  const [postcardLoggedBy, setPostcardLoggedBy] = useState("");
+  const [postcardSaving, setPostcardSaving] = useState(false);
+
+  const handleBulkPostcard = async () => {
+    if (!postcardDate) return;
+    setPostcardSaving(true);
+
+    // 1. Get active supporters
+    const { data: activeSupporters } = await supabase
+      .from("supporters")
+      .select("id")
+      .eq("status", "Active");
+
+    const activeIds = (activeSupporters ?? []).map((s: any) => s.id);
+    if (activeIds.length === 0) {
+      toast.error("No active supporters found.");
+      setPostcardSaving(false);
+      return;
+    }
+
+    // 2. Check existing postcards for that date to avoid duplicates
+    const { data: existing } = await supabase
+      .from("engagements")
+      .select("supporter_id")
+      .eq("date", postcardDate)
+      .eq("engagement_type", "Monthly Postcard")
+      .in("supporter_id", activeIds);
+
+    const existingIds = new Set((existing ?? []).map((e: any) => e.supporter_id));
+    const toInsert = activeIds
+      .filter((id: string) => !existingIds.has(id))
+      .map((id: string) => ({
+        supporter_id: id,
+        date: postcardDate,
+        engagement_type: "Monthly Postcard" as const,
+        summary: postcardSummary || null,
+        logged_by: postcardLoggedBy || null,
+        follow_up_needed: false,
+      }));
+
+    if (toInsert.length === 0) {
+      toast.info("All active supporters already have a postcard entry for this date.");
+      setPostcardSaving(false);
+      return;
+    }
+
+    const { error } = await supabase.from("engagements").insert(toInsert);
+    if (error) {
+      toast.error("Failed to create postcard records.");
+    } else {
+      toast.success(`Created ${toInsert.length} postcard record${toInsert.length !== 1 ? "s" : ""}.${existingIds.size > 0 ? ` Skipped ${existingIds.size} duplicate${existingIds.size !== 1 ? "s" : ""}.` : ""}`);
+    }
+
+    setPostcardSaving(false);
+    setPostcardOpen(false);
+    setPostcardSummary("");
+    setPostcardLoggedBy("");
+    await fetchRows();
+  };
+
   // ── Helpers ─────────────────────────────────────────────────────────────
   const fmtDate = (d: string) => { const [y, m, day] = d.split("-"); return `${m}/${day}/${y}`; };
   const BoolIcon = ({ value }: { value: boolean }) =>
@@ -162,9 +227,14 @@ const AdminEngagements = () => {
         {/* Toolbar */}
         <div className="flex items-center justify-between mb-4 flex-shrink-0">
           <p className="text-sm text-white/50">{rows.length} record{rows.length !== 1 ? "s" : ""}</p>
-          <Button size="sm" className="bg-green-500 hover:bg-green-400 text-black gap-1.5" onClick={openNew}>
-            <Plus className="w-4 h-4" /> New Engagement
-          </Button>
+          <div className="flex gap-2">
+            <Button size="sm" variant="outline" className="border-white/10 text-white/70 hover:text-white hover:bg-white/10 gap-1.5" onClick={() => setPostcardOpen(true)}>
+              <Send className="w-4 h-4" /> Log Monthly Postcard
+            </Button>
+            <Button size="sm" className="bg-green-500 hover:bg-green-400 text-black gap-1.5" onClick={openNew}>
+              <Plus className="w-4 h-4" /> New Engagement
+            </Button>
+          </div>
         </div>
 
         {/* Table */}
@@ -337,6 +407,41 @@ const AdminEngagements = () => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* ── Bulk Postcard Modal ───────────────────────────────────────────── */}
+      <Dialog open={postcardOpen} onOpenChange={(o) => { if (!o) setPostcardOpen(false); }}>
+        <DialogContent
+          className="bg-zinc-900 border-white/10 text-white sm:max-w-md p-0 gap-0"
+          onPointerDownOutside={(e) => e.preventDefault()}
+        >
+          <div className="px-6 pt-6 pb-2">
+            <DialogHeader>
+              <DialogTitle className="text-green-400">Log Monthly Postcard</DialogTitle>
+            </DialogHeader>
+            <p className="text-xs text-white/50 mt-1">Creates a "Monthly Postcard" engagement for every Active supporter. Duplicates are automatically skipped.</p>
+          </div>
+          <div className="px-6 pb-4 space-y-4 pt-2">
+            <div className="space-y-1.5">
+              <Label className="text-white/70">Date <span className="text-red-400">*</span></Label>
+              <Input type="date" value={postcardDate} onChange={(e) => setPostcardDate(e.target.value)} className="bg-white/5 border-white/10 text-white" />
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-white/70">Summary</Label>
+              <Textarea value={postcardSummary} onChange={(e) => setPostcardSummary(e.target.value)} className="bg-white/5 border-white/10 text-white min-h-[80px]" placeholder='e.g. "March Program Highlight postcard mailed."' />
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-white/70">Logged By</Label>
+              <Input value={postcardLoggedBy} onChange={(e) => setPostcardLoggedBy(e.target.value)} className="bg-white/5 border-white/10 text-white" placeholder="Name" />
+            </div>
+          </div>
+          <div className="border-t border-white/10 px-6 py-4 flex justify-end gap-2">
+            <Button variant="ghost" className="text-white/70 hover:text-white hover:bg-white/10" onClick={() => setPostcardOpen(false)}>Cancel</Button>
+            <Button className="bg-green-500 hover:bg-green-400 text-black" onClick={handleBulkPostcard} disabled={postcardSaving || !postcardDate}>
+              {postcardSaving ? "Creating…" : "Create for All Active"}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
