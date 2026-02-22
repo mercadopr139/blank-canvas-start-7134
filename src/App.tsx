@@ -37,6 +37,7 @@ import AdminMasterRevenueTracker from "./pages/admin/AdminMasterRevenueTracker";
 import AdminSupporters from "./pages/admin/AdminSupporters";
 import AdminSupportersDatabase from "./pages/admin/AdminSupportersDatabase";
 import AdminSupporterDetail from "./pages/admin/AdminSupporterDetail";
+import AdminEngagements from "./pages/admin/AdminEngagements";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -103,6 +104,7 @@ const App = () => (
               <Route path="supporters" element={<AdminSupporters />} />
               <Route path="supporters/:id" element={<AdminSupporterDetail />} />
               <Route path="supporters-database" element={<AdminSupportersDatabase />} />
+              <Route path="engagements" element={<AdminEngagements />} />
             </Route>
 
             {/* Finance section — sidebar layout wraps sub-pages */}
