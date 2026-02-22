@@ -27,6 +27,7 @@ type Signal = {
   status: string;
   created_at: string;
   completed_at: string | null;
+  date_assigned: string | null;
   signal_type: string;
   source: string | null;
   description: string | null;
@@ -83,6 +84,20 @@ const AdminSignals = () => {
         .eq("date_assigned", today)
         .eq("priority_layer", "Bonus" as any)
         .order("created_at", { ascending: true });
+      if (error) throw error;
+      return data as Signal[];
+    },
+  });
+
+  const { data: carryoverSignals = [] } = useQuery({
+    queryKey: ["signals", "carryover"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("signals")
+        .select("*")
+        .eq("status", "Pending" as any)
+        .lt("date_assigned", today)
+        .order("date_assigned", { ascending: true });
       if (error) throw error;
       return data as Signal[];
     },
@@ -179,6 +194,37 @@ const AdminSignals = () => {
       </header>
 
       <main className="container mx-auto px-4 py-8">
+        {/* Carryover */}
+        {carryoverSignals.length > 0 && (
+          <div className="mb-6">
+            <h2 className="text-lg font-semibold text-red-400 mb-3">Carryover</h2>
+            <Card className="bg-white/5 border border-red-400/30 text-white">
+              <CardContent className="p-5">
+                <div className="space-y-2">
+                  {carryoverSignals.map((signal) => (
+                    <div key={signal.id} className="flex items-center gap-3 p-3 rounded-md bg-white/[0.03] border border-white/5">
+                      <button
+                        onClick={() => toggleStatus.mutate({ id: signal.id, current: signal.status })}
+                        className="shrink-0"
+                        aria-label="Toggle status"
+                      >
+                        <Circle className="w-5 h-5 text-red-400/60 hover:text-red-400" />
+                      </button>
+                      <span className="text-sm text-white">{signal.title || "(Untitled)"}</span>
+                      <span className="text-[10px] text-white/30 ml-auto">{signal.date_assigned}</span>
+                      {signal.pillar && (
+                        <Badge variant="outline" className={`text-[10px] ${PILLAR_COLORS[signal.pillar] || "border-white/20 text-white/60"}`}>
+                          {signal.pillar}
+                        </Badge>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        )}
+
         {/* Today's Signals */}
         <div className="mb-8">
           <h2 className="text-lg font-semibold text-white mb-4">Today's Signals</h2>
