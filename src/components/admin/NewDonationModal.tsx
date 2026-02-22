@@ -1,4 +1,5 @@
 import { useState } from "react";
+import ValidatedEmailInput from "@/components/admin/ValidatedEmailInput";
 import { format } from "date-fns";
 import { CalendarIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -118,10 +119,9 @@ const NewDonationModal = ({ open, onOpenChange, onCreated }: Props) => {
           {/* Donor Email */}
           <div className="space-y-1">
             <Label className="text-white/70">Donor Email</Label>
-            <Input
-              type="email"
+            <ValidatedEmailInput
               value={donorEmail}
-              onChange={(e) => setDonorEmail(e.target.value)}
+              onChange={setDonorEmail}
               className="bg-white/5 border-white/20 text-white"
             />
           </div>

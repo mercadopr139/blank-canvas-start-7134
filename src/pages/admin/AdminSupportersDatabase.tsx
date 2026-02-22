@@ -4,6 +4,10 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Upload, Pencil, Trash2, Star, Search, Plus } from "lucide-react";
+import ValidatedPhoneInput from "@/components/admin/ValidatedPhoneInput";
+import ValidatedEmailInput from "@/components/admin/ValidatedEmailInput";
+import ValidatedAddressInput from "@/components/admin/ValidatedAddressInput";
+import { isValidPhone, isValidEmail, e164ToDisplay } from "@/lib/validators";
 import SupporterRevenueSection from "@/components/admin/SupporterRevenueSection";
 import SupporterEngagementSection from "@/components/admin/SupporterEngagementSection";
 import SupporterTasksSection from "@/components/admin/SupporterTasksSection";
@@ -639,13 +643,14 @@ const AdminSupportersDatabase = () => {
                       title="Double-click to edit"
                     >
                       {inlineEdit?.id === s.id && inlineEdit.field === "email" ? (
-                        <input
-                          ref={(el) => { inlineInputRef.current = el; }}
-                          defaultValue={s.email ?? ""}
-                          onBlur={(e) => saveInlineEdit(s.id, "email", e.target.value)}
-                          onKeyDown={(e) => handleInlineKeyDown(e, s.id, "email")}
-                          className="bg-white text-black text-sm rounded px-1.5 py-1 border border-white/20 w-full"
-                          type="email"
+                        <ValidatedEmailInput
+                          value={s.email ?? ""}
+                          onChange={(val) => {
+                            if (isValidEmail(val)) {
+                              saveInlineEdit(s.id, "email", val);
+                            }
+                          }}
+                          className="bg-white text-black text-sm rounded px-1.5 py-1 border border-white/20 w-full h-8"
                         />
                       ) : s.email ? (
                         <a href={`mailto:${s.email}`} className="text-green-400 hover:underline">{s.email}</a>
@@ -658,16 +663,19 @@ const AdminSupportersDatabase = () => {
                       title="Double-click to edit"
                     >
                       {inlineEdit?.id === s.id && inlineEdit.field === "phone" ? (
-                        <input
-                          ref={(el) => { inlineInputRef.current = el; }}
-                          defaultValue={s.phone ?? ""}
-                          onBlur={(e) => saveInlineEdit(s.id, "phone", e.target.value)}
-                          onKeyDown={(e) => handleInlineKeyDown(e, s.id, "phone")}
-                          className="bg-white text-black text-sm rounded px-1.5 py-1 border border-white/20 w-full"
-                          type="tel"
+                        <ValidatedPhoneInput
+                          value={s.phone ?? ""}
+                          onChange={(e164) => {
+                            if (e164 && isValidPhone(e164)) {
+                              saveInlineEdit(s.id, "phone", e164);
+                            } else if (!e164) {
+                              saveInlineEdit(s.id, "phone", "");
+                            }
+                          }}
+                          className="bg-white text-black text-sm rounded px-1.5 py-1 border border-white/20 w-full h-8"
                         />
                       ) : s.phone ? (
-                        <a href={`tel:${s.phone}`} className="text-green-400 hover:underline">{s.phone}</a>
+                        <a href={`tel:${s.phone}`} className="text-green-400 hover:underline">{e164ToDisplay(s.phone)}</a>
                       ) : "—"}
                     </td>
                     {/* Address — double-click to edit */}
@@ -677,12 +685,21 @@ const AdminSupportersDatabase = () => {
                       title="Double-click to edit"
                     >
                       {inlineEdit?.id === s.id && inlineEdit.field === "address" ? (
-                        <input
-                          ref={(el) => { inlineInputRef.current = el; }}
-                          defaultValue={s.address ?? ""}
-                          onBlur={(e) => saveInlineEdit(s.id, "address", e.target.value)}
-                          onKeyDown={(e) => handleInlineKeyDown(e, s.id, "address")}
-                          className="bg-white text-black text-sm rounded px-1.5 py-1 border border-white/20 w-full"
+                        <ValidatedAddressInput
+                          value={s.address ?? ""}
+                          onSelect={async (addr) => {
+                            setRows((prev) => prev.map((r) => r.id === s.id ? { ...r, address: addr.address } : r));
+                            setInlineEdit(null);
+                            await supabase.from("supporters").update({
+                              address: addr.address,
+                              address_street: addr.address_street,
+                              address_city: addr.address_city,
+                              address_state: addr.address_state,
+                              address_zip: addr.address_zip,
+                              address_country: addr.address_country,
+                            } as any).eq("id", s.id);
+                          }}
+                          className="bg-white text-black text-sm rounded px-1.5 py-1 border border-white/20 w-full h-8"
                         />
                       ) : s.address || "—"}
                     </td>
@@ -762,25 +779,25 @@ const AdminSupportersDatabase = () => {
                 </div>
                 <div className="space-y-1.5">
                   <Label className="text-white/70">Primary Contact Email</Label>
-                  <Input
+                  <ValidatedEmailInput
                     value={editRow.email ?? ""}
-                    onChange={(e) => setEditRow({ ...editRow, email: e.target.value })}
+                    onChange={(val) => setEditRow({ ...editRow, email: val })}
                     className="bg-white/5 border-white/10 text-white"
                   />
                 </div>
                 <div className="space-y-1.5">
                   <Label className="text-white/70">Primary Contact Phone</Label>
-                  <Input
+                  <ValidatedPhoneInput
                     value={editRow.phone ?? ""}
-                    onChange={(e) => setEditRow({ ...editRow, phone: e.target.value })}
+                    onChange={(e164) => setEditRow({ ...editRow, phone: e164 })}
                     className="bg-white/5 border-white/10 text-white"
                   />
                 </div>
                 <div className="space-y-1.5">
                   <Label className="text-white/70">Address</Label>
-                  <Input
+                  <ValidatedAddressInput
                     value={editRow.address ?? ""}
-                    onChange={(e) => setEditRow({ ...editRow, address: e.target.value })}
+                    onSelect={(addr) => setEditRow({ ...editRow, address: addr.address })}
                     className="bg-white/5 border-white/10 text-white"
                   />
                 </div>
@@ -876,15 +893,27 @@ const AdminSupportersDatabase = () => {
             </div>
             <div className="space-y-1.5">
               <Label className="text-white/70">Email</Label>
-              <Input type="email" value={newSupporter.email ?? ""} onChange={(e) => setNewSupporter({ ...newSupporter, email: e.target.value })} className="bg-white/5 border-white/10 text-white" placeholder="email@example.com" />
+              <ValidatedEmailInput
+                value={newSupporter.email ?? ""}
+                onChange={(val) => setNewSupporter({ ...newSupporter, email: val })}
+                className="bg-white/5 border-white/10 text-white"
+              />
             </div>
             <div className="space-y-1.5">
               <Label className="text-white/70">Phone</Label>
-              <Input type="tel" value={newSupporter.phone ?? ""} onChange={(e) => setNewSupporter({ ...newSupporter, phone: e.target.value })} className="bg-white/5 border-white/10 text-white" placeholder="+1 (555) 123-4567" />
+              <ValidatedPhoneInput
+                value={newSupporter.phone ?? ""}
+                onChange={(e164) => setNewSupporter({ ...newSupporter, phone: e164 })}
+                className="bg-white/5 border-white/10 text-white"
+              />
             </div>
             <div className="space-y-1.5">
               <Label className="text-white/70">Address</Label>
-              <Input value={newSupporter.address ?? ""} onChange={(e) => setNewSupporter({ ...newSupporter, address: e.target.value })} className="bg-white/5 border-white/10 text-white" placeholder="Street address…" />
+              <ValidatedAddressInput
+                value={newSupporter.address ?? ""}
+                onSelect={(addr) => setNewSupporter({ ...newSupporter, address: addr.address })}
+                className="bg-white/5 border-white/10 text-white"
+              />
             </div>
             <div className="space-y-1.5">
               <Label className="text-white/70">Supporter Category</Label>

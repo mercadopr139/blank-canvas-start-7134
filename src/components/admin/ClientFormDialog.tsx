@@ -1,4 +1,6 @@
 import { useState, useEffect } from "react";
+import ValidatedEmailInput from "@/components/admin/ValidatedEmailInput";
+import ValidatedPhoneInput from "@/components/admin/ValidatedPhoneInput";
 import { z } from "zod";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -214,19 +216,16 @@ export default function ClientFormDialog({
             </div>
             <div className="space-y-2">
               <Label htmlFor="billing_email">Billing Email</Label>
-              <Input
-                id="billing_email"
-                type="email"
+              <ValidatedEmailInput
                 value={formData.billing_email}
-                onChange={(e) => setFormData({ ...formData, billing_email: e.target.value })}
+                onChange={(val) => setFormData({ ...formData, billing_email: val })}
               />
             </div>
             <div className="space-y-2">
               <Label htmlFor="phone">Phone</Label>
-              <Input
-                id="phone"
+              <ValidatedPhoneInput
                 value={formData.phone}
-                onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                onChange={(e164) => setFormData({ ...formData, phone: e164 })}
               />
             </div>
           </div>

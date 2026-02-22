@@ -2,6 +2,11 @@ import { useState, useEffect, useCallback } from "react";
 import { useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import SupporterAutocomplete from "@/components/admin/SupporterAutocomplete";
+import ValidatedPhoneInput from "@/components/admin/ValidatedPhoneInput";
+import ValidatedEmailInput from "@/components/admin/ValidatedEmailInput";
+import ValidatedAddressInput from "@/components/admin/ValidatedAddressInput";
+
+
 
 import SendReceiptFlow from "@/components/admin/SendReceiptFlow";
 import { useToast } from "@/hooks/use-toast";
@@ -589,36 +594,31 @@ const AdminRevenue = () => {
                     {/* Contact fields */}
                     <div className="space-y-1">
                       <Label className="text-white/50 text-xs">Primary Contact Email</Label>
-                      <Input
-                    type="email"
-                    value={supporterDetails.email}
-                    onChange={(e) => {
-                      setSupporterDetails({ ...supporterDetails, email: e.target.value });
-                      setForm((f) => ({ ...f, supporter_email: e.target.value }));
-                    }}
-                    className="bg-white/5 border-white/10 text-white h-8 text-sm"
-                    placeholder="email@example.com" />
-
+                      <ValidatedEmailInput
+                        value={supporterDetails.email}
+                        onChange={(val) => {
+                          setSupporterDetails({ ...supporterDetails, email: val });
+                          setForm((f) => ({ ...f, supporter_email: val }));
+                        }}
+                        className="bg-white/5 border-white/10 text-white h-8 text-sm"
+                      />
                     </div>
                     <div className="grid grid-cols-2 gap-3">
                       <div className="space-y-1">
                         <Label className="text-white/50 text-xs">Phone</Label>
-                        <Input
-                      type="tel"
-                      value={supporterDetails.phone}
-                      onChange={(e) => setSupporterDetails({ ...supporterDetails, phone: e.target.value })}
-                      className="bg-white/5 border-white/10 text-white h-8 text-sm"
-                      placeholder="(555) 555-5555" />
-
+                        <ValidatedPhoneInput
+                          value={supporterDetails.phone}
+                          onChange={(e164) => setSupporterDetails({ ...supporterDetails, phone: e164 })}
+                          className="bg-white/5 border-white/10 text-white h-8 text-sm"
+                        />
                       </div>
                       <div className="space-y-1">
                         <Label className="text-white/50 text-xs">Address</Label>
-                        <Input
-                      value={supporterDetails.address}
-                      onChange={(e) => setSupporterDetails({ ...supporterDetails, address: e.target.value })}
-                      className="bg-white/5 border-white/10 text-white h-8 text-sm"
-                      placeholder="Street address…" />
-
+                        <ValidatedAddressInput
+                          value={supporterDetails.address}
+                          onSelect={(addr) => setSupporterDetails({ ...supporterDetails, address: addr.address })}
+                          className="bg-white/5 border-white/10 text-white h-8 text-sm"
+                        />
                       </div>
                     </div>
                     <div className="space-y-1">
@@ -639,13 +639,11 @@ const AdminRevenue = () => {
             {!supporterDetailsOpen && !isNewSupporter &&
             <div className="space-y-1.5">
                 <Label className="text-white/70">Email</Label>
-                <Input
-                type="email"
-                value={form.supporter_email}
-                onChange={(e) => setForm({ ...form, supporter_email: e.target.value })}
-                className="bg-white/5 border-white/10 text-white"
-                placeholder="Email for receipt delivery…" />
-
+                <ValidatedEmailInput
+                  value={form.supporter_email}
+                  onChange={(val) => setForm({ ...form, supporter_email: val })}
+                  className="bg-white/5 border-white/10 text-white"
+                />
               </div>
             }
 

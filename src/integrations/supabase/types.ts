@@ -514,6 +514,11 @@ export type Database = {
       supporters: {
         Row: {
           address: string | null
+          address_city: string | null
+          address_country: string | null
+          address_state: string | null
+          address_street: string | null
+          address_zip: string | null
           created_at: string
           email: string | null
           email_opt_in: boolean
@@ -536,6 +541,11 @@ export type Database = {
         }
         Insert: {
           address?: string | null
+          address_city?: string | null
+          address_country?: string | null
+          address_state?: string | null
+          address_street?: string | null
+          address_zip?: string | null
           created_at?: string
           email?: string | null
           email_opt_in?: boolean
@@ -558,6 +568,11 @@ export type Database = {
         }
         Update: {
           address?: string | null
+          address_city?: string | null
+          address_country?: string | null
+          address_state?: string | null
+          address_street?: string | null
+          address_zip?: string | null
           created_at?: string
           email?: string | null
           email_opt_in?: boolean
