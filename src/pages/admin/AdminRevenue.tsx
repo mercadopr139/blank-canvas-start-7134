@@ -1,12 +1,13 @@
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import SupporterAutocomplete from "@/components/admin/SupporterAutocomplete";
+
 import SendReceiptFlow from "@/components/admin/SendReceiptFlow";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
-import { Plus, Pencil, Trash2 } from "lucide-react";
+import { Plus, Pencil, Trash2, ChevronRight } from "lucide-react";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle,
 } from "@/components/ui/dialog";
@@ -45,6 +46,22 @@ const emptyForm = {
   reference_id: "",
   logged_by: "",
   notes: "",
+};
+
+const SUPPORTER_CATEGORIES = ["Individual", "Organization"] as const;
+const SUPPORTER_STATUSES = ["Active", "Lapsed", "Prospect", "New"] as const;
+const PRIMARY_STREAMS = ["Donation", "Sponsorship", "Fee for Service", "Re-Grant"] as const;
+
+const emptySupporterDetails = {
+  name: "",
+  supporter_category: "",
+  primary_revenue_stream: "",
+  status: "",
+  relationship_owner: "",
+  email: "",
+  phone: "",
+  address: "",
+  story: "",
 };
 
 // ─── Component ────────────────────────────────────────────────────────────────
@@ -91,18 +108,26 @@ const AdminRevenue = () => {
   const [editId, setEditId] = useState<string | null>(null);
   const [form, setForm] = useState(emptyForm);
   const [saving, setSaving] = useState(false);
-  const [supporterSearch, setSupporterSearch] = useState("");
+   const [supporterSearch, setSupporterSearch] = useState("");
+   const [supporterDetails, setSupporterDetails] = useState(emptySupporterDetails);
+   const [supporterDetailsOpen, setSupporterDetailsOpen] = useState(false);
+   const [isNewSupporter, setIsNewSupporter] = useState(false);
 
   const openNew = () => {
     setEditId(null);
     setForm(emptyForm);
     setSupporterSearch("");
+    setSupporterDetails(emptySupporterDetails);
+    setSupporterDetailsOpen(false);
+    setIsNewSupporter(false);
     setModalOpen(true);
   };
 
   const openEdit = (r: RevenueRow) => {
     setEditId(r.id);
     setSupporterSearch(r.supporter_name || "");
+    setSupporterDetailsOpen(false);
+    setIsNewSupporter(false);
     setForm({
       supporter_id: r.supporter_id || "",
       supporter_email: "",
@@ -114,28 +139,81 @@ const AdminRevenue = () => {
       logged_by: r.logged_by || "",
       notes: r.notes || "",
     });
+    // Load supporter details if linked
+    if (r.supporter_id) {
+      supabase.from("supporters")
+        .select("name, email, phone, address, supporter_category, primary_revenue_stream, status, relationship_owner, story")
+        .eq("id", r.supporter_id)
+        .maybeSingle()
+        .then(({ data }) => {
+          if (data) {
+            setSupporterDetails({
+              name: data.name || "",
+              supporter_category: data.supporter_category || "",
+              primary_revenue_stream: data.primary_revenue_stream || "",
+              status: data.status || "",
+              relationship_owner: data.relationship_owner || "",
+              email: data.email || "",
+              phone: data.phone || "",
+              address: data.address || "",
+              story: data.story || "",
+            });
+            setForm(f => ({ ...f, supporter_email: data.email || "" }));
+          }
+        });
+    } else {
+      setSupporterDetails(emptySupporterDetails);
+    }
     setModalOpen(true);
   };
 
-  /** Find or create a supporter by name, optionally with email */
-  const findOrCreateSupporter = async (name: string, email?: string): Promise<string | null> => {
+  /** Find or create a supporter by name, with full details */
+  const findOrCreateSupporter = async (name: string, details: typeof emptySupporterDetails): Promise<string | null> => {
+    const insertData: Record<string, any> = {
+      name,
+      email: details.email || null,
+      phone: details.phone || null,
+      address: details.address || null,
+      supporter_category: details.supporter_category || null,
+      primary_revenue_stream: details.primary_revenue_stream || null,
+      status: details.status || null,
+      relationship_owner: details.relationship_owner || null,
+      story: details.story || null,
+    };
+
     const { data: existing } = await supabase
       .from("supporters")
       .select("id")
       .eq("name", name)
       .maybeSingle();
     if (existing) {
-      if (email) await supabase.from("supporters").update({ email }).eq("id", existing.id);
+      await supabase.from("supporters").update(insertData as any).eq("id", existing.id);
       return existing.id;
     }
 
     const { data: created, error } = await supabase
       .from("supporters")
-      .insert({ name, email: email || null })
+      .insert(insertData as any)
       .select("id")
       .single();
     if (error) return null;
     return created.id;
+  };
+
+  /** Save supporter details back to the supporters table */
+  const saveSupporterDetails = async (supporterId: string) => {
+    const updateData: Record<string, any> = {
+      name: supporterDetails.name || supporterSearch.trim(),
+      email: supporterDetails.email || null,
+      phone: supporterDetails.phone || null,
+      address: supporterDetails.address || null,
+      supporter_category: supporterDetails.supporter_category || null,
+      primary_revenue_stream: supporterDetails.primary_revenue_stream || null,
+      status: supporterDetails.status || null,
+      relationship_owner: supporterDetails.relationship_owner || null,
+      story: supporterDetails.story || null,
+    };
+    await supabase.from("supporters").update(updateData as any).eq("id", supporterId);
   };
 
   const isQualifyingForReceipt = (type: string) =>
@@ -147,14 +225,15 @@ const AdminRevenue = () => {
 
     // If supporter not yet linked but we have a name typed, find/create
     let supporterId = form.supporter_id || null;
-    if (!supporterId && supporterSearch.trim()) {
-      supporterId = await findOrCreateSupporter(supporterSearch.trim(), form.supporter_email.trim() || undefined);
+    if (!supporterId && (supporterSearch.trim() || isNewSupporter)) {
+      const name = supporterDetails.name || supporterSearch.trim();
+      supporterId = await findOrCreateSupporter(name, supporterDetails);
       if (supporterId) {
         setForm(f => ({ ...f, supporter_id: supporterId! }));
       }
-    } else if (supporterId && form.supporter_email.trim()) {
-      // Update email on existing supporter
-      await supabase.from("supporters").update({ email: form.supporter_email.trim() }).eq("id", supporterId);
+    } else if (supporterId) {
+      // Save any edits to supporter details
+      await saveSupporterDetails(supporterId);
     }
 
     const payload = {
@@ -380,27 +459,180 @@ const AdminRevenue = () => {
                 value={supporterSearch}
                 onChange={(val) => {
                   setSupporterSearch(val);
-                  if (!val) setForm({ ...form, supporter_id: "", supporter_email: "" });
+                  if (!val) {
+                    setForm({ ...form, supporter_id: "", supporter_email: "" });
+                    setSupporterDetails(emptySupporterDetails);
+                    setSupporterDetailsOpen(false);
+                    setIsNewSupporter(false);
+                  }
                 }}
                 onSelect={(s) => {
                   setForm({ ...form, supporter_id: s.id, supporter_email: s.email || "" });
                   setSupporterSearch(s.name);
+                  setSupporterDetails({
+                    name: s.name,
+                    supporter_category: s.supporter_category || "",
+                    primary_revenue_stream: s.primary_revenue_stream || "",
+                    status: s.status || "",
+                    relationship_owner: s.relationship_owner || "",
+                    email: s.email || "",
+                    phone: s.phone || "",
+                    address: s.address || "",
+                    story: s.story || "",
+                  });
+                  setIsNewSupporter(false);
+                }}
+                onCreateNew={() => {
+                  setSupporterSearch("");
+                  setForm({ ...form, supporter_id: "" });
+                  setSupporterDetails({ ...emptySupporterDetails });
+                  setSupporterDetailsOpen(true);
+                  setIsNewSupporter(true);
                 }}
                 placeholder="Type to search supporters…"
               />
             </div>
 
-            {/* Supporter Email */}
-            <div className="space-y-1.5">
-              <Label className="text-white/70">Supporter Email</Label>
-              <Input
-                type="email"
-                value={form.supporter_email}
-                onChange={(e) => setForm({ ...form, supporter_email: e.target.value })}
-                className="bg-white/5 border-white/10 text-white"
-                placeholder="Email for receipt delivery…"
-              />
-            </div>
+            {/* Collapsible Supporter Details */}
+            {(form.supporter_id || isNewSupporter) && (
+              <div className="border border-white/10 rounded-lg overflow-hidden">
+                <button
+                  type="button"
+                  onClick={() => setSupporterDetailsOpen(!supporterDetailsOpen)}
+                  className="w-full flex items-center justify-between px-3 py-2.5 text-sm font-medium text-white/70 hover:text-white hover:bg-white/5 transition-colors"
+                >
+                  <span>{isNewSupporter ? "New Supporter Details" : "Edit Supporter Info"}</span>
+                  <ChevronRight className={`w-4 h-4 transition-transform ${supporterDetailsOpen ? "rotate-90" : ""}`} />
+                </button>
+                {supporterDetailsOpen && (
+                  <div className="px-3 pb-3 space-y-3 border-t border-white/10 pt-3">
+                    {/* Supporter Name */}
+                    <div className="space-y-1">
+                      <Label className="text-white/50 text-xs">Supporter Name {isNewSupporter && <span className="text-red-400">*</span>}</Label>
+                      <Input
+                        value={supporterDetails.name}
+                        onChange={(e) => {
+                          setSupporterDetails({ ...supporterDetails, name: e.target.value });
+                          if (isNewSupporter) setSupporterSearch(e.target.value);
+                        }}
+                        className="bg-white/5 border-white/10 text-white h-8 text-sm"
+                        placeholder="Full name…"
+                      />
+                    </div>
+                    {/* Two-column grid for compact fields */}
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="space-y-1">
+                        <Label className="text-white/50 text-xs">Category</Label>
+                        <Select value={supporterDetails.supporter_category} onValueChange={(v) => setSupporterDetails({ ...supporterDetails, supporter_category: v })}>
+                          <SelectTrigger className="bg-white/5 border-white/10 text-white h-8 text-sm">
+                            <SelectValue placeholder="Select…" />
+                          </SelectTrigger>
+                          <SelectContent className="bg-zinc-900 border-white/10 text-white">
+                            {SUPPORTER_CATEGORIES.map((c) => (
+                              <SelectItem key={c} value={c} className="text-white focus:bg-white/10 focus:text-white">{c}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-1">
+                        <Label className="text-white/50 text-xs">Revenue Stream</Label>
+                        <Select value={supporterDetails.primary_revenue_stream} onValueChange={(v) => setSupporterDetails({ ...supporterDetails, primary_revenue_stream: v })}>
+                          <SelectTrigger className="bg-white/5 border-white/10 text-white h-8 text-sm">
+                            <SelectValue placeholder="Select…" />
+                          </SelectTrigger>
+                          <SelectContent className="bg-zinc-900 border-white/10 text-white">
+                            {PRIMARY_STREAMS.map((s) => (
+                              <SelectItem key={s} value={s} className="text-white focus:bg-white/10 focus:text-white">{s}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-1">
+                        <Label className="text-white/50 text-xs">Status</Label>
+                        <Select value={supporterDetails.status} onValueChange={(v) => setSupporterDetails({ ...supporterDetails, status: v })}>
+                          <SelectTrigger className="bg-white/5 border-white/10 text-white h-8 text-sm">
+                            <SelectValue placeholder="Select…" />
+                          </SelectTrigger>
+                          <SelectContent className="bg-zinc-900 border-white/10 text-white">
+                            {SUPPORTER_STATUSES.map((s) => (
+                              <SelectItem key={s} value={s} className="text-white focus:bg-white/10 focus:text-white">{s}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-1">
+                        <Label className="text-white/50 text-xs">Relationship Owner</Label>
+                        <Input
+                          value={supporterDetails.relationship_owner}
+                          onChange={(e) => setSupporterDetails({ ...supporterDetails, relationship_owner: e.target.value })}
+                          className="bg-white/5 border-white/10 text-white h-8 text-sm"
+                          placeholder="Owner name…"
+                        />
+                      </div>
+                    </div>
+                    {/* Contact fields */}
+                    <div className="space-y-1">
+                      <Label className="text-white/50 text-xs">Primary Contact Email</Label>
+                      <Input
+                        type="email"
+                        value={supporterDetails.email}
+                        onChange={(e) => {
+                          setSupporterDetails({ ...supporterDetails, email: e.target.value });
+                          setForm(f => ({ ...f, supporter_email: e.target.value }));
+                        }}
+                        className="bg-white/5 border-white/10 text-white h-8 text-sm"
+                        placeholder="email@example.com"
+                      />
+                    </div>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="space-y-1">
+                        <Label className="text-white/50 text-xs">Phone</Label>
+                        <Input
+                          type="tel"
+                          value={supporterDetails.phone}
+                          onChange={(e) => setSupporterDetails({ ...supporterDetails, phone: e.target.value })}
+                          className="bg-white/5 border-white/10 text-white h-8 text-sm"
+                          placeholder="(555) 555-5555"
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <Label className="text-white/50 text-xs">Address</Label>
+                        <Input
+                          value={supporterDetails.address}
+                          onChange={(e) => setSupporterDetails({ ...supporterDetails, address: e.target.value })}
+                          className="bg-white/5 border-white/10 text-white h-8 text-sm"
+                          placeholder="Street address…"
+                        />
+                      </div>
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-white/50 text-xs">Internal Strategic Notes</Label>
+                      <textarea
+                        rows={2}
+                        value={supporterDetails.story}
+                        onChange={(e) => setSupporterDetails({ ...supporterDetails, story: e.target.value })}
+                        className="w-full rounded-md bg-white/5 border border-white/10 text-white text-xs px-3 py-2 resize-none focus:outline-none focus:ring-1 focus:ring-green-500"
+                        placeholder="Internal notes…"
+                      />
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Supporter Email (shown when no details panel, for quick entry) */}
+            {!supporterDetailsOpen && !isNewSupporter && (
+              <div className="space-y-1.5">
+                <Label className="text-white/70">Supporter Email</Label>
+                <Input
+                  type="email"
+                  value={form.supporter_email}
+                  onChange={(e) => setForm({ ...form, supporter_email: e.target.value })}
+                  className="bg-white/5 border-white/10 text-white"
+                  placeholder="Email for receipt delivery…"
+                />
+              </div>
+            )}
 
             {/* Date */}
             <div className="space-y-1.5">
