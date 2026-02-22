@@ -149,6 +149,46 @@ const AdminSignals = () => {
       </header>
 
       <main className="container mx-auto px-4 py-8">
+        {/* Today's Signals */}
+        <div className="mb-8">
+          <h2 className="text-lg font-semibold text-white mb-4">Today's Signals</h2>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {/* Core 3 */}
+            <Card className="bg-white/5 border-2 border-amber-400/40 text-white">
+              <CardContent className="p-5">
+                <h3 className="text-base font-bold text-amber-400 mb-3">Core 3</h3>
+                <div className="space-y-2">
+                  <div className="flex items-center gap-3 p-3 rounded-md bg-white/[0.03] border border-white/5">
+                    <Circle className="w-5 h-5 text-white/20 shrink-0" />
+                    <span className="text-white/30 text-sm italic">No signals yet</span>
+                  </div>
+                  <div className="flex items-center gap-3 p-3 rounded-md bg-white/[0.03] border border-white/5">
+                    <Circle className="w-5 h-5 text-white/20 shrink-0" />
+                    <span className="text-white/30 text-sm italic">No signals yet</span>
+                  </div>
+                  <div className="flex items-center gap-3 p-3 rounded-md bg-white/[0.03] border border-white/5">
+                    <Circle className="w-5 h-5 text-white/20 shrink-0" />
+                    <span className="text-white/30 text-sm italic">No signals yet</span>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Bonus */}
+            <Card className="bg-white/5 border border-white/10 text-white">
+              <CardContent className="p-5">
+                <h3 className="text-base font-bold text-white/60 mb-3">Bonus</h3>
+                <div className="space-y-2">
+                  <div className="flex items-center gap-3 p-3 rounded-md bg-white/[0.03] border border-white/5">
+                    <Circle className="w-5 h-5 text-white/20 shrink-0" />
+                    <span className="text-white/30 text-sm italic">No signals yet</span>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+
         {/* Stats */}
         <div className="flex gap-4 mb-6">
           <Card className="bg-white/5 border-white/10 text-white flex-1">
