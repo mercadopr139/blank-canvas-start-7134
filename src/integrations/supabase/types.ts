@@ -517,6 +517,7 @@ export type Database = {
           description: string | null
           id: string
           metadata: Json | null
+          pillar: Database["public"]["Enums"]["signal_pillar"] | null
           signal_type: string
           source: string | null
           title: string | null
@@ -527,6 +528,7 @@ export type Database = {
           description?: string | null
           id?: string
           metadata?: Json | null
+          pillar?: Database["public"]["Enums"]["signal_pillar"] | null
           signal_type: string
           source?: string | null
           title?: string | null
@@ -537,6 +539,7 @@ export type Database = {
           description?: string | null
           id?: string
           metadata?: Json | null
+          pillar?: Database["public"]["Enums"]["signal_pillar"] | null
           signal_type?: string
           source?: string | null
           title?: string | null
@@ -906,6 +909,12 @@ export type Database = {
         | "Dennis Township"
         | "Woodbine"
         | "Other"
+      signal_pillar:
+        | "Operations"
+        | "Sales & Marketing"
+        | "Finance"
+        | "Vision"
+        | "Personal"
       task_status: "Open" | "Completed"
       task_type:
         | "Call"
@@ -1104,6 +1113,13 @@ export const Constants = {
         "Dennis Township",
         "Woodbine",
         "Other",
+      ],
+      signal_pillar: [
+        "Operations",
+        "Sales & Marketing",
+        "Finance",
+        "Vision",
+        "Personal",
       ],
       task_status: ["Open", "Completed"],
       task_type: [
