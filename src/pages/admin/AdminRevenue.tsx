@@ -1,6 +1,8 @@
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import SupporterAutocomplete from "@/components/admin/SupporterAutocomplete";
+import SendReceiptFlow from "@/components/admin/SendReceiptFlow";
+import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
@@ -54,6 +56,13 @@ const emptyForm = {
 // ─── Component ────────────────────────────────────────────────────────────────
 
 const AdminRevenue = () => {
+  const { toast } = useToast();
+
+  // ── Receipt flow state ──────────────────────────────────────────────────
+  const [receiptOpen, setReceiptOpen] = useState(false);
+  const [receiptSupporterId, setReceiptSupporterId] = useState("");
+  const [receiptSupporterName, setReceiptSupporterName] = useState("");
+
   // ── Data state ──────────────────────────────────────────────────────────
   const [rows, setRows] = useState<RevenueRow[]>([]);
   const [loading, setLoading] = useState(true);
@@ -116,11 +125,42 @@ const AdminRevenue = () => {
     setModalOpen(true);
   };
 
+  /** Find or create a supporter by name */
+  const findOrCreateSupporter = async (name: string): Promise<string | null> => {
+    const { data: existing } = await supabase
+      .from("supporters")
+      .select("id")
+      .eq("name", name)
+      .maybeSingle();
+    if (existing) return existing.id;
+
+    const { data: created, error } = await supabase
+      .from("supporters")
+      .insert({ name })
+      .select("id")
+      .single();
+    if (error) return null;
+    return created.id;
+  };
+
+  const isQualifyingForReceipt = (type: string) =>
+    type === "Donation" || type === "Sponsorship";
+
   const handleSave = async () => {
     if (!form.date || !form.amount) return;
     setSaving(true);
+
+    // If supporter not yet linked but we have a name typed, find/create
+    let supporterId = form.supporter_id || null;
+    if (!supporterId && supporterSearch.trim()) {
+      supporterId = await findOrCreateSupporter(supporterSearch.trim());
+      if (supporterId) {
+        setForm(f => ({ ...f, supporter_id: supporterId! }));
+      }
+    }
+
     const payload = {
-      supporter_id: form.supporter_id || null,
+      supporter_id: supporterId,
       date: form.date,
       amount: parseFloat(form.amount.replace(/,/g, "")) || 0,
       revenue_type: form.revenue_type,
@@ -138,9 +178,41 @@ const AdminRevenue = () => {
     } else {
       await supabase.from("revenue").insert(payload);
     }
+
+    // Also sync to donations table (for Master Revenue Tracker)
+    const donorName = supporterSearch.trim() || "N/A";
+    const donationsPayload: Record<string, any> = {
+      donor_name: donorName,
+      source_name: donorName,
+      amount: payload.amount,
+      date_received: form.date,
+      deposit_date: form.date,
+      revenue_type: form.revenue_type === "Sponsorship" ? "Fundraising" : form.revenue_type as any,
+      method: (payload.payment_method || "Other") as any,
+      receipt_status: "Not Needed" as any,
+      reference_id: null,
+      notes: payload.notes,
+      supporter_id: supporterId,
+    };
+    if (form.revenue_type === "Sponsorship") {
+      donationsPayload.revenue_description = "Sponsor";
+    }
+
+    if (!editId) {
+      await supabase.from("donations").insert(donationsPayload as any);
+    }
+
+    toast({ title: editId ? "Revenue updated." : "Revenue saved." });
     setSaving(false);
     setModalOpen(false);
     await fetchRows();
+
+    // Trigger receipt flow for qualifying new entries
+    if (!editId && isQualifyingForReceipt(form.revenue_type) && supporterId) {
+      setReceiptSupporterId(supporterId);
+      setReceiptSupporterName(donorName);
+      setReceiptOpen(true);
+    }
   };
 
   // ── Delete state ────────────────────────────────────────────────────────
@@ -469,6 +541,18 @@ const AdminRevenue = () => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* ── Receipt Flow ───────────────────────────────────────────────── */}
+      <SendReceiptFlow
+        open={receiptOpen}
+        onOpenChange={setReceiptOpen}
+        supporterId={receiptSupporterId}
+        supporterName={receiptSupporterName}
+        onComplete={() => {
+          setReceiptOpen(false);
+          fetchRows();
+        }}
+      />
     </div>
   );
 };
