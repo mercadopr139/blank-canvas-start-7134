@@ -51,12 +51,12 @@ const emptyForm = {
 
 const SUPPORTER_CATEGORIES = ["Individual", "Organization"] as const;
 const SUPPORTER_STATUSES = ["Active", "Lapsed", "Prospect", "New"] as const;
-const PRIMARY_STREAMS = ["Donation", "Sponsorship", "Fee for Service", "Re-Grant"] as const;
+
 
 const emptySupporterDetails = {
   name: "",
   supporter_category: "",
-  primary_revenue_stream: "",
+  
   status: "",
   relationship_owner: "",
   email: "",
@@ -169,7 +169,7 @@ const AdminRevenue = () => {
             setSupporterDetails({
               name: data.name || "",
               supporter_category: data.supporter_category || "",
-              primary_revenue_stream: data.primary_revenue_stream || "",
+              
               status: data.status || "",
               relationship_owner: data.relationship_owner || "",
               email: data.email || "",
@@ -194,7 +194,7 @@ const AdminRevenue = () => {
       phone: details.phone || null,
       address: details.address || null,
       supporter_category: details.supporter_category || null,
-      primary_revenue_stream: details.primary_revenue_stream || null,
+      
       status: details.status || null,
       relationship_owner: details.relationship_owner || null,
       story: details.story || null,
@@ -227,7 +227,7 @@ const AdminRevenue = () => {
       phone: supporterDetails.phone || null,
       address: supporterDetails.address || null,
       supporter_category: supporterDetails.supporter_category || null,
-      primary_revenue_stream: supporterDetails.primary_revenue_stream || null,
+      
       status: supporterDetails.status || null,
       relationship_owner: supporterDetails.relationship_owner || null,
       story: supporterDetails.story || null,
@@ -504,7 +504,7 @@ const AdminRevenue = () => {
                   setSupporterDetails({
                     name: s.name,
                     supporter_category: s.supporter_category || "",
-                    primary_revenue_stream: s.primary_revenue_stream || "",
+                    
                     status: s.status || "",
                     relationship_owner: s.relationship_owner || "",
                     email: s.email || "",
@@ -559,19 +559,6 @@ const AdminRevenue = () => {
                           <SelectContent className="bg-zinc-900 border-white/10 text-white">
                             {SUPPORTER_CATEGORIES.map((c) => (
                               <SelectItem key={c} value={c} className="text-white focus:bg-white/10 focus:text-white">{c}</SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      <div className="space-y-1">
-                        <Label className="text-white/50 text-xs">Revenue Stream</Label>
-                        <Select value={supporterDetails.primary_revenue_stream} onValueChange={(v) => setSupporterDetails({ ...supporterDetails, primary_revenue_stream: v })}>
-                          <SelectTrigger className="bg-white/5 border-white/10 text-white h-8 text-sm">
-                            <SelectValue placeholder="Select…" />
-                          </SelectTrigger>
-                          <SelectContent className="bg-zinc-900 border-white/10 text-white">
-                            {PRIMARY_STREAMS.map((s) => (
-                              <SelectItem key={s} value={s} className="text-white focus:bg-white/10 focus:text-white">{s}</SelectItem>
                             ))}
                           </SelectContent>
                         </Select>
