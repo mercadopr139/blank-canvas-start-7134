@@ -115,6 +115,48 @@
   letter-spacing: -0.02em;
 }
 
+/* Admin dark-mode overrides for dropdowns/selects inside dark containers */
+[class*="bg-zinc-9"] [data-radix-popper-content-wrapper],
+[class*="bg-black"] [data-radix-popper-content-wrapper],
+[class*="bg-zinc-9"] [role="listbox"],
+[class*="bg-black"] [role="listbox"] {
+  z-index: 200 !important;
+}
+
+/* Ensure select/popover content in admin dark sections has solid backgrounds */
+[class*="bg-zinc-9"] [data-radix-select-content],
+[class*="bg-black"] [data-radix-select-content] {
+  background-color: hsl(240 6% 10%);
+  border-color: hsl(0 0% 20%);
+  color: hsl(0 0% 95%);
+}
+
+[class*="bg-zinc-9"] [data-radix-select-content] [role="option"],
+[class*="bg-black"] [data-radix-select-content] [role="option"] {
+  color: hsl(0 0% 90%);
+}
+
+[class*="bg-zinc-9"] [data-radix-select-content] [role="option"]:hover,
+[class*="bg-black"] [data-radix-select-content] [role="option"]:hover,
+[class*="bg-zinc-9"] [data-radix-select-content] [role="option"][data-highlighted],
+[class*="bg-black"] [data-radix-select-content] [role="option"][data-highlighted] {
+  background-color: hsl(0 0% 20%);
+  color: white;
+}
+
+[class*="bg-zinc-9"] [data-radix-select-viewport],
+[class*="bg-black"] [data-radix-select-viewport] {
+  background-color: hsl(240 6% 10%);
+}
+
+/* Same for popover (calendar pickers etc.) */
+[class*="bg-zinc-9"] [data-radix-popover-content],
+[class*="bg-black"] [data-radix-popover-content] {
+  background-color: hsl(240 6% 10%);
+  border-color: hsl(0 0% 20%);
+  color: hsl(0 0% 95%);
+}
+
 /* Mobile only: increase Core Values image size */
 @media (max-width: 768px) {
   .core-values img {
