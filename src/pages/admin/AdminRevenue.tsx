@@ -6,7 +6,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
-import { Plus, Pencil, Trash2, Check, X } from "lucide-react";
+import { Plus, Pencil, Trash2 } from "lucide-react";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle,
 } from "@/components/ui/dialog";
@@ -31,10 +31,6 @@ interface RevenueRow {
   amount: number;
   revenue_type: string;
   payment_method: string | null;
-  invoice_sent: boolean;
-  reporting_required: boolean;
-  thank_you_sent: boolean;
-  thank_you_date: string | null;
   logged_by: string | null;
   notes: string | null;
 }
@@ -47,10 +43,6 @@ const emptyForm = {
   revenue_type: "Donation",
   payment_method: "",
   reference_id: "",
-  invoice_sent: false,
-  reporting_required: false,
-  thank_you_sent: false,
-  thank_you_date: "",
   logged_by: "",
   notes: "",
 };
@@ -73,7 +65,7 @@ const AdminRevenue = () => {
     setLoading(true);
     const { data } = await supabase
       .from("revenue")
-      .select("id, supporter_id, date, amount, revenue_type, payment_method, reference_id, invoice_sent, reporting_required, thank_you_sent, thank_you_date, logged_by, notes")
+      .select("id, supporter_id, date, amount, revenue_type, payment_method, reference_id, logged_by, notes")
       .order("date", { ascending: false });
 
     // Fetch supporter names for linked records
@@ -119,10 +111,6 @@ const AdminRevenue = () => {
       revenue_type: r.revenue_type,
       payment_method: r.payment_method || "",
       reference_id: (r as any).reference_id || "",
-      invoice_sent: r.invoice_sent,
-      reporting_required: r.reporting_required,
-      thank_you_sent: r.thank_you_sent,
-      thank_you_date: r.thank_you_date || "",
       logged_by: r.logged_by || "",
       notes: r.notes || "",
     });
@@ -176,10 +164,6 @@ const AdminRevenue = () => {
       revenue_type: form.revenue_type,
       payment_method: form.payment_method || null,
       reference_id: form.reference_id || null,
-      invoice_sent: form.invoice_sent,
-      reporting_required: form.reporting_required,
-      thank_you_sent: form.thank_you_sent,
-      thank_you_date: form.thank_you_date || null,
       logged_by: form.logged_by || null,
       notes: form.notes || null,
     };
@@ -290,10 +274,6 @@ const AdminRevenue = () => {
     return `${m}/${day}/${y}`;
   };
 
-  const BoolIcon = ({ value }: { value: boolean }) =>
-    value
-      ? <Check className="w-4 h-4 text-green-400 mx-auto" />
-      : <X className="w-4 h-4 text-white/20 mx-auto" />;
 
   // ─── Render ─────────────────────────────────────────────────────────────
 
@@ -329,9 +309,7 @@ const AdminRevenue = () => {
                 <th className="h-12 px-4 text-right align-middle font-medium text-white bg-green-600">Amount</th>
                 <th className="h-12 px-4 text-left align-middle font-medium text-white bg-green-600">Revenue Type</th>
                 <th className="h-12 px-4 text-left align-middle font-medium text-white bg-green-600">Payment Method</th>
-                <th className="h-12 px-4 text-center align-middle font-medium text-white bg-green-600">Thank You</th>
-                <th className="h-12 px-4 text-center align-middle font-medium text-white bg-green-600">Invoice</th>
-                <th className="h-12 px-4 text-center align-middle font-medium text-white bg-green-600">Reporting</th>
+                <th className="h-12 px-4 text-left align-middle font-medium text-white bg-green-600">Ref / Check #</th>
                 <th className="h-12 px-4 text-left align-middle font-medium text-white bg-green-600">Logged By</th>
                 <th className="h-12 px-4 w-20 text-right align-middle font-medium text-white bg-green-600">Actions</th>
               </tr>
@@ -339,11 +317,11 @@ const AdminRevenue = () => {
             <tbody className="[&_tr:last-child]:border-0">
               {loading ? (
                 <tr className="border-b border-white/10">
-                  <td colSpan={10} className="p-4 text-center py-12 text-white/50 align-middle">Loading…</td>
+                  <td colSpan={8} className="p-4 text-center py-12 text-white/50 align-middle">Loading…</td>
                 </tr>
               ) : rows.length === 0 ? (
                 <tr className="border-b border-white/10">
-                  <td colSpan={10} className="p-4 text-center py-12 text-white/50 align-middle">No revenue records yet.</td>
+                  <td colSpan={8} className="p-4 text-center py-12 text-white/50 align-middle">No revenue records yet.</td>
                 </tr>
               ) : (
                 rows.map((r) => (
@@ -353,9 +331,7 @@ const AdminRevenue = () => {
                     <td className="p-4 align-middle text-right text-green-400 font-medium text-sm">{fmtCurrency(r.amount)}</td>
                     <td className="p-4 align-middle text-white/70 text-sm">{r.revenue_type}</td>
                     <td className="p-4 align-middle text-white/70 text-sm">{r.payment_method || "—"}</td>
-                    <td className="p-4 align-middle text-center"><BoolIcon value={r.thank_you_sent} /></td>
-                    <td className="p-4 align-middle text-center"><BoolIcon value={r.invoice_sent} /></td>
-                    <td className="p-4 align-middle text-center"><BoolIcon value={r.reporting_required} /></td>
+                    <td className="p-4 align-middle text-white/60 text-sm">{(r as any).reference_id || "—"}</td>
                     <td className="p-4 align-middle text-white/70 text-sm">{r.logged_by || "—"}</td>
                     <td className="p-4 align-middle text-right">
                       <div className="flex justify-end gap-1">
@@ -512,49 +488,6 @@ const AdminRevenue = () => {
               />
             </div>
 
-            {/* Checkboxes */}
-            <div className="grid grid-cols-2 gap-3">
-              <label className="flex items-center gap-2 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={form.invoice_sent}
-                  onChange={(e) => setForm({ ...form, invoice_sent: e.target.checked })}
-                  className="accent-green-500 w-4 h-4"
-                />
-                <span className="text-sm text-white/70">Invoice Sent</span>
-              </label>
-              <label className="flex items-center gap-2 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={form.reporting_required}
-                  onChange={(e) => setForm({ ...form, reporting_required: e.target.checked })}
-                  className="accent-green-500 w-4 h-4"
-                />
-                <span className="text-sm text-white/70">Reporting Required</span>
-              </label>
-              <label className="flex items-center gap-2 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={form.thank_you_sent}
-                  onChange={(e) => setForm({ ...form, thank_you_sent: e.target.checked })}
-                  className="accent-green-500 w-4 h-4"
-                />
-                <span className="text-sm text-white/70">Thank You Sent</span>
-              </label>
-            </div>
-
-            {/* Thank You Date */}
-            {form.thank_you_sent && (
-              <div className="space-y-1.5">
-                <Label className="text-white/70">Thank You Date</Label>
-                <Input
-                  type="date"
-                  value={form.thank_you_date}
-                  onChange={(e) => setForm({ ...form, thank_you_date: e.target.value })}
-                  className="bg-white/5 border-white/10 text-white"
-                />
-              </div>
-            )}
 
             {/* Logged By */}
             <div className="space-y-1.5">

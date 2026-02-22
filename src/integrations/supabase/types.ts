@@ -371,16 +371,12 @@ export type Database = {
           created_at: string
           date: string
           id: string
-          invoice_sent: boolean
           logged_by: string | null
           notes: string | null
           payment_method: string | null
           reference_id: string | null
-          reporting_required: boolean
           revenue_type: string
           supporter_id: string | null
-          thank_you_date: string | null
-          thank_you_sent: boolean
           updated_at: string
         }
         Insert: {
@@ -388,16 +384,12 @@ export type Database = {
           created_at?: string
           date: string
           id?: string
-          invoice_sent?: boolean
           logged_by?: string | null
           notes?: string | null
           payment_method?: string | null
           reference_id?: string | null
-          reporting_required?: boolean
           revenue_type: string
           supporter_id?: string | null
-          thank_you_date?: string | null
-          thank_you_sent?: boolean
           updated_at?: string
         }
         Update: {
@@ -405,16 +397,12 @@ export type Database = {
           created_at?: string
           date?: string
           id?: string
-          invoice_sent?: boolean
           logged_by?: string | null
           notes?: string | null
           payment_method?: string | null
           reference_id?: string | null
-          reporting_required?: boolean
           revenue_type?: string
           supporter_id?: string | null
-          thank_you_date?: string | null
-          thank_you_sent?: boolean
           updated_at?: string
         }
         Relationships: [

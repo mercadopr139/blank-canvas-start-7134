@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
-import { Plus, Pencil, Trash2, Check, X } from "lucide-react";
+import { Plus, Pencil, Trash2 } from "lucide-react";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
@@ -17,9 +17,7 @@ interface RevenueRecord {
   amount: number;
   revenue_type: string;
   payment_method: string | null;
-  thank_you_sent: boolean;
-  invoice_sent: boolean;
-  reporting_required: boolean;
+  reference_id: string | null;
   logged_by: string | null;
   notes: string | null;
 }
@@ -29,9 +27,7 @@ const emptyForm = {
   amount: "",
   revenue_type: "Donation",
   payment_method: "",
-  thank_you_sent: false,
-  invoice_sent: false,
-  reporting_required: false,
+  reference_id: "",
   logged_by: "",
   notes: "",
 };
@@ -54,7 +50,7 @@ const SupporterRevenueSection = ({ supporterId, supporterName }: Props) => {
     setLoading(true);
     const { data } = await supabase
       .from("revenue")
-      .select("id, date, amount, revenue_type, payment_method, thank_you_sent, invoice_sent, reporting_required, logged_by, notes")
+      .select("id, date, amount, revenue_type, payment_method, reference_id, logged_by, notes")
       .eq("supporter_id", supporterId)
       .order("date", { ascending: false });
     setRecords((data ?? []) as RevenueRecord[]);
@@ -76,9 +72,7 @@ const SupporterRevenueSection = ({ supporterId, supporterName }: Props) => {
       amount: String(r.amount),
       revenue_type: r.revenue_type,
       payment_method: r.payment_method || "",
-      thank_you_sent: r.thank_you_sent,
-      invoice_sent: r.invoice_sent,
-      reporting_required: r.reporting_required,
+      reference_id: r.reference_id || "",
       logged_by: r.logged_by || "",
       notes: r.notes || "",
     });
@@ -94,9 +88,7 @@ const SupporterRevenueSection = ({ supporterId, supporterName }: Props) => {
       amount: parseFloat(form.amount) || 0,
       revenue_type: form.revenue_type,
       payment_method: form.payment_method || null,
-      thank_you_sent: form.thank_you_sent,
-      invoice_sent: form.invoice_sent,
-      reporting_required: form.reporting_required,
+      reference_id: form.reference_id || null,
       logged_by: form.logged_by || null,
       notes: form.notes || null,
     };
@@ -178,18 +170,12 @@ const SupporterRevenueSection = ({ supporterId, supporterName }: Props) => {
             </div>
           </div>
           <div className="flex items-center gap-4">
-            <label className="flex items-center gap-1.5 cursor-pointer">
-              <input type="checkbox" checked={form.thank_you_sent} onChange={(e) => setForm({ ...form, thank_you_sent: e.target.checked })} className="accent-green-500 w-3.5 h-3.5" />
-              <span className="text-xs text-white/60">Thank You</span>
-            </label>
-            <label className="flex items-center gap-1.5 cursor-pointer">
-              <input type="checkbox" checked={form.invoice_sent} onChange={(e) => setForm({ ...form, invoice_sent: e.target.checked })} className="accent-green-500 w-3.5 h-3.5" />
-              <span className="text-xs text-white/60">Invoice</span>
-            </label>
-            <label className="flex items-center gap-1.5 cursor-pointer">
-              <input type="checkbox" checked={form.reporting_required} onChange={(e) => setForm({ ...form, reporting_required: e.target.checked })} className="accent-green-500 w-3.5 h-3.5" />
-              <span className="text-xs text-white/60">Reporting</span>
-            </label>
+            {/* Reference ID */}
+            <div className="flex-1 space-y-1">
+              <Label className="text-white/50 text-xs">Ref / Check #</Label>
+              <Input value={form.reference_id} onChange={(e) => setForm({ ...form, reference_id: e.target.value })}
+                className="bg-white/5 border-white/10 text-white h-8 text-xs" placeholder="Check #, code…" />
+            </div>
           </div>
           <div className="space-y-1">
             <Label className="text-white/50 text-xs">Logged By</Label>
@@ -220,7 +206,7 @@ const SupporterRevenueSection = ({ supporterId, supporterName }: Props) => {
                   <th className="px-3 py-2 text-left font-medium text-white/60">Date</th>
                   <th className="px-3 py-2 text-right font-medium text-white/60">Amount</th>
                   <th className="px-3 py-2 text-left font-medium text-white/60">Type</th>
-                  <th className="px-3 py-2 text-center font-medium text-white/60">TY</th>
+                  <th className="px-3 py-2 text-left font-medium text-white/60">Ref #</th>
                   <th className="px-3 py-2 w-16 text-right font-medium text-white/60"></th>
                 </tr>
               </thead>
@@ -230,11 +216,7 @@ const SupporterRevenueSection = ({ supporterId, supporterName }: Props) => {
                     <td className="px-3 py-1.5 text-white/70">{fmtDate(r.date)}</td>
                     <td className="px-3 py-1.5 text-right text-green-400 font-medium">{fmtCurrency(r.amount)}</td>
                     <td className="px-3 py-1.5 text-white/60">{r.revenue_type}</td>
-                    <td className="px-3 py-1.5 text-center">
-                      {r.thank_you_sent
-                        ? <Check className="w-3.5 h-3.5 text-green-400 mx-auto" />
-                        : <X className="w-3.5 h-3.5 text-white/20 mx-auto" />}
-                    </td>
+                    <td className="px-3 py-1.5 text-white/50">{r.reference_id || "—"}</td>
                     <td className="px-3 py-1.5 text-right">
                       <div className="flex justify-end gap-0.5">
                         <button onClick={() => openEdit(r)} className="p-1 rounded text-white/30 hover:text-green-400 hover:bg-white/5" title="Edit">
