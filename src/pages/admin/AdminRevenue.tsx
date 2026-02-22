@@ -230,9 +230,51 @@ const AdminRevenue = () => {
   const handleDelete = async () => {
     if (!deleteId) return;
     setDeleting(true);
+
+    // Find the revenue row to get supporter info before deleting
+    const rowToDelete = rows.find((r) => r.id === deleteId);
+    const supporterId = rowToDelete?.supporter_id;
+    const rowDate = rowToDelete?.date;
+    const rowAmount = rowToDelete?.amount;
+
+    // Delete from revenue table
     await supabase.from("revenue").delete().eq("id", deleteId);
+
+    // Also delete matching record from donations table (synced on create)
+    if (supporterId && rowDate && rowAmount != null) {
+      const { data: matchingDonations } = await supabase
+        .from("donations")
+        .select("id")
+        .eq("supporter_id", supporterId)
+        .eq("deposit_date", rowDate)
+        .eq("amount", rowAmount)
+        .limit(1);
+
+      if (matchingDonations && matchingDonations.length > 0) {
+        await supabase.from("donations").delete().eq("id", matchingDonations[0].id);
+      }
+    }
+
+    // If supporter has no remaining qualifying donations, clean up
+    if (supporterId) {
+      const { data: remaining } = await supabase
+        .from("donations")
+        .select("id")
+        .eq("supporter_id", supporterId);
+
+      const { data: remainingRevenue } = await supabase
+        .from("revenue")
+        .select("id")
+        .eq("supporter_id", supporterId);
+
+      if ((!remaining || remaining.length === 0) && (!remainingRevenue || remainingRevenue.length === 0)) {
+        await supabase.from("supporters").delete().eq("id", supporterId);
+      }
+    }
+
     setDeleting(false);
     setDeleteId(null);
+    toast({ title: "Revenue record deleted from all tables." });
     await fetchRows();
   };
 
