@@ -50,8 +50,8 @@ const emptyForm = {
 };
 
 const SUPPORTER_CATEGORIES = ["Individual", "Organization"] as const;
-const SUPPORTER_STATUSES = ["Active", "Lapsed", "Prospect", "New"] as const;
-const PRIMARY_STREAMS = ["Donation", "Sponsorship", "Fee for Service", "Re-Grant"] as const;
+const SUPPORTER_STATUSES = ["Donor", "Sponsor", "Meal Train", "Partner", "Advocate", "Volunteer", "Coach"] as const;
+
 
 const emptySupporterDetails = {
   name: "",
@@ -564,20 +564,7 @@ const AdminRevenue = () => {
                         </Select>
                       </div>
                       <div className="space-y-1">
-                        <Label className="text-white/50 text-xs">Revenue Stream</Label>
-                        <Select value={supporterDetails.primary_revenue_stream} onValueChange={(v) => setSupporterDetails({ ...supporterDetails, primary_revenue_stream: v })}>
-                          <SelectTrigger className="bg-white/5 border-white/10 text-white h-8 text-sm">
-                            <SelectValue placeholder="Select…" />
-                          </SelectTrigger>
-                          <SelectContent className="bg-zinc-900 border-white/10 text-white">
-                            {PRIMARY_STREAMS.map((s) =>
-                        <SelectItem key={s} value={s} className="text-white focus:bg-white/10 focus:text-white">{s}</SelectItem>
-                        )}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      <div className="space-y-1">
-                        <Label className="text-white/50 text-xs">Status</Label>
+                        <Label className="text-white/50 text-xs">Supporter ID</Label>
                         <Select value={supporterDetails.status} onValueChange={(v) => setSupporterDetails({ ...supporterDetails, status: v })}>
                           <SelectTrigger className="bg-white/5 border-white/10 text-white h-8 text-sm">
                             <SelectValue placeholder="Select…" />
