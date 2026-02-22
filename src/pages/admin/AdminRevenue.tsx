@@ -321,16 +321,16 @@ const AdminRevenue = () => {
           <table className="w-full caption-bottom text-sm min-w-[1100px]">
             <thead className="sticky top-0 z-10 bg-black shadow-[0_1px_0_rgba(255,255,255,0.12)] [&_tr]:border-b">
               <tr className="border-b border-white/10">
-                <th className="h-12 px-4 text-left align-middle font-medium text-white/70">Date</th>
-                <th className="h-12 px-4 text-left align-middle font-medium text-white/70">Supporter</th>
-                <th className="h-12 px-4 text-right align-middle font-medium text-white/70">Amount</th>
-                <th className="h-12 px-4 text-left align-middle font-medium text-white/70">Revenue Type</th>
-                <th className="h-12 px-4 text-left align-middle font-medium text-white/70">Payment Method</th>
-                <th className="h-12 px-4 text-center align-middle font-medium text-white/70">Thank You</th>
-                <th className="h-12 px-4 text-center align-middle font-medium text-white/70">Invoice</th>
-                <th className="h-12 px-4 text-center align-middle font-medium text-white/70">Reporting</th>
-                <th className="h-12 px-4 text-left align-middle font-medium text-white/70">Logged By</th>
-                <th className="h-12 px-4 w-20 text-right align-middle font-medium text-white/70">Actions</th>
+                <th className="h-12 px-4 text-left align-middle font-medium text-green-400">Date</th>
+                <th className="h-12 px-4 text-left align-middle font-medium text-green-400">Supporter</th>
+                <th className="h-12 px-4 text-right align-middle font-medium text-green-400">Amount</th>
+                <th className="h-12 px-4 text-left align-middle font-medium text-green-400">Revenue Type</th>
+                <th className="h-12 px-4 text-left align-middle font-medium text-green-400">Payment Method</th>
+                <th className="h-12 px-4 text-center align-middle font-medium text-green-400">Thank You</th>
+                <th className="h-12 px-4 text-center align-middle font-medium text-green-400">Invoice</th>
+                <th className="h-12 px-4 text-center align-middle font-medium text-green-400">Reporting</th>
+                <th className="h-12 px-4 text-left align-middle font-medium text-green-400">Logged By</th>
+                <th className="h-12 px-4 w-20 text-right align-middle font-medium text-green-400">Actions</th>
               </tr>
             </thead>
             <tbody className="[&_tr:last-child]:border-0">

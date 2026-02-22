@@ -166,7 +166,7 @@ const AdminDonations = () => {
             <TableHeader>
               <TableRow className="border-white/10 hover:bg-transparent">
                 {columns.map((col) => (
-                  <TableHead key={col} className="text-white/70">
+                  <TableHead key={col} className="text-green-400">
                     {col}
                   </TableHead>
                 ))}

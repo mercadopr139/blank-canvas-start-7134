@@ -141,11 +141,11 @@ const AdminSupporterDetail = () => {
           <Table>
             <TableHeader>
               <TableRow className="border-white/10 hover:bg-transparent">
-                <TableHead className="text-white/70">Deposit Date</TableHead>
-                <TableHead className="text-white/70">Amount</TableHead>
-                <TableHead className="text-white/70">Method</TableHead>
-                <TableHead className="text-white/70">Reference ID</TableHead>
-                <TableHead className="text-white/70">Notes</TableHead>
+                <TableHead className="text-green-400">Deposit Date</TableHead>
+                <TableHead className="text-green-400">Amount</TableHead>
+                <TableHead className="text-green-400">Method</TableHead>
+                <TableHead className="text-green-400">Reference ID</TableHead>
+                <TableHead className="text-green-400">Notes</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
