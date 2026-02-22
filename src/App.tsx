@@ -103,7 +103,6 @@ const App = () => (
               <Route index element={<AdminSalesMarketingIndex />} />
               <Route path="revenue" element={<AdminRevenue />} />
               <Route path="master-revenue-tracker" element={<AdminMasterRevenueTracker />} />
-              <Route path="supporters" element={<AdminSupporters />} />
               <Route path="supporters/:id" element={<AdminSupporterDetail />} />
               <Route path="supporters-database" element={<AdminSupportersDatabase />} />
               <Route path="engagements" element={<AdminEngagements />} />
@@ -129,8 +128,6 @@ const App = () => (
               <Route path="deposits" element={<AdminDeposits />} />
               <Route path="deposits/:id" element={<AdminDepositDetail />} />
               <Route path="master-revenue-tracker" element={<AdminMasterRevenueTracker />} />
-              <Route path="supporters" element={<AdminSupporters />} />
-              <Route path="supporters/:id" element={<AdminSupporterDetail />} />
             </Route>
             
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}

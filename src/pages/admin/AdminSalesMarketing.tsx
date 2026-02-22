@@ -1,5 +1,5 @@
 import { useNavigate } from "react-router-dom";
-import { BarChart3, HandCoins, Users, Database, MessageSquare, ClipboardList, Mail, Plus } from "lucide-react";
+import { BarChart3, HandCoins, Database, MessageSquare, ClipboardList, Mail, Plus } from "lucide-react";
 import AdminSectionLayout, { SectionCard } from "@/components/admin/AdminSectionLayout";
 import { Button } from "@/components/ui/button";
 
@@ -15,12 +15,6 @@ const baseTiles = [
     description: "Monthly totals and year-to-date revenue",
     icon: BarChart3,
     href: "/admin/sales-marketing/master-revenue-tracker",
-  },
-  {
-    title: "NLA Donor/Sponsor History",
-    description: "Supporters & 2026 receipts",
-    icon: Users,
-    href: "/admin/sales-marketing/supporters",
   },
   {
     title: "Supporters Database",
