@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import SupporterAutocomplete from "@/components/admin/SupporterAutocomplete";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
@@ -19,11 +20,6 @@ import {
 
 const REVENUE_TYPES = ["Donation", "Sponsorship", "Fee for Service", "Re-Grant"] as const;
 const PAYMENT_METHODS = ["Cash", "Check", "Zelle", "Stripe", "ACH", "In-Kind"] as const;
-
-interface SupporterOption {
-  id: string;
-  name: string;
-}
 
 interface RevenueRow {
   id: string;
@@ -61,7 +57,6 @@ const AdminRevenue = () => {
   // ── Data state ──────────────────────────────────────────────────────────
   const [rows, setRows] = useState<RevenueRow[]>([]);
   const [loading, setLoading] = useState(true);
-  const [supporters, setSupporters] = useState<SupporterOption[]>([]);
 
   const fetchRows = useCallback(async () => {
     setLoading(true);
@@ -86,27 +81,25 @@ const AdminRevenue = () => {
     setLoading(false);
   }, []);
 
-  const fetchSupporters = useCallback(async () => {
-    const { data } = await supabase.from("supporters").select("id, name").order("name");
-    setSupporters((data ?? []) as SupporterOption[]);
-  }, []);
-
-  useEffect(() => { fetchRows(); fetchSupporters(); }, [fetchRows, fetchSupporters]);
+  useEffect(() => { fetchRows(); }, [fetchRows]);
 
   // ── Modal state ─────────────────────────────────────────────────────────
   const [modalOpen, setModalOpen] = useState(false);
   const [editId, setEditId] = useState<string | null>(null);
   const [form, setForm] = useState(emptyForm);
   const [saving, setSaving] = useState(false);
+  const [supporterSearch, setSupporterSearch] = useState("");
 
   const openNew = () => {
     setEditId(null);
     setForm(emptyForm);
+    setSupporterSearch("");
     setModalOpen(true);
   };
 
   const openEdit = (r: RevenueRow) => {
     setEditId(r.id);
+    setSupporterSearch(r.supporter_name || "");
     setForm({
       supporter_id: r.supporter_id || "",
       date: r.date,
@@ -281,17 +274,19 @@ const AdminRevenue = () => {
           <div className="overflow-y-auto flex-1 px-6 pb-4 space-y-4 pt-2">
             {/* Supporter */}
             <div className="space-y-1.5">
-              <Label className="text-white/70">Supporter</Label>
-              <Select value={form.supporter_id} onValueChange={(v) => setForm({ ...form, supporter_id: v })}>
-                <SelectTrigger className="bg-white/5 border-white/10 text-white">
-                  <SelectValue placeholder="— select supporter —" />
-                </SelectTrigger>
-                <SelectContent className="bg-zinc-900 border-white/10 text-white max-h-60">
-                  {supporters.map((s) => (
-                    <SelectItem key={s.id} value={s.id} className="text-white focus:bg-white/10 focus:text-white">{s.name}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <SupporterAutocomplete
+                label="Supporter"
+                value={supporterSearch}
+                onChange={(val) => {
+                  setSupporterSearch(val);
+                  if (!val) setForm({ ...form, supporter_id: "" });
+                }}
+                onSelect={(s) => {
+                  setForm({ ...form, supporter_id: s.id });
+                  setSupporterSearch(s.name);
+                }}
+                placeholder="Type to search supporters…"
+              />
             </div>
 
             {/* Date */}
