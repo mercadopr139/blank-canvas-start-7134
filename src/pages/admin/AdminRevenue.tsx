@@ -50,7 +50,7 @@ const emptyForm = {
 };
 
 const SUPPORTER_CATEGORIES = ["Individual", "Organization"] as const;
-const SUPPORTER_STATUSES = ["Active", "Lapsed", "Prospect", "New"] as const;
+const SUPPORTER_STATUSES = ["Donor", "Sponsor", "Meal Train", "Partner", "Advocate", "Volunteer", "Coach"] as const;
 
 
 const emptySupporterDetails = {
@@ -564,7 +564,7 @@ const AdminRevenue = () => {
                         </Select>
                       </div>
                       <div className="space-y-1">
-                        <Label className="text-white/50 text-xs">Status</Label>
+                        <Label className="text-white/50 text-xs">Supporter ID</Label>
                         <Select value={supporterDetails.status} onValueChange={(v) => setSupporterDetails({ ...supporterDetails, status: v })}>
                           <SelectTrigger className="bg-white/5 border-white/10 text-white h-8 text-sm">
                             <SelectValue placeholder="Select…" />
