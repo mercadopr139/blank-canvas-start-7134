@@ -1,4 +1,4 @@
-import { BarChart3, HandCoins, Users, Database, MessageSquare, ClipboardList, LucideIcon } from "lucide-react";
+import { BarChart3, HandCoins, Users, Database, MessageSquare, ClipboardList, Mail, LucideIcon } from "lucide-react";
 import AdminSectionLayout, { SectionCard } from "@/components/admin/AdminSectionLayout";
 
 interface SMTile {
@@ -44,6 +44,12 @@ const baseTiles: SMTile[] = [
     description: "Manage supporter tasks & deadlines",
     icon: ClipboardList,
     href: "/admin/sales-marketing/tasks",
+  },
+  {
+    title: "Bulk Outreach",
+    description: "Send targeted emails to supporters",
+    icon: Mail,
+    href: "/admin/sales-marketing/bulk-outreach",
   },
 ];
 
