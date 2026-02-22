@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
-import { Upload, Pencil, Trash2, Star } from "lucide-react";
+import { Upload, Pencil, Trash2, Star, Search } from "lucide-react";
 import SupporterRevenueSection from "@/components/admin/SupporterRevenueSection";
 import SupporterEngagementSection from "@/components/admin/SupporterEngagementSection";
 import SupporterTasksSection from "@/components/admin/SupporterTasksSection";
@@ -147,13 +147,23 @@ const AdminSupportersDatabase = () => {
 
   useEffect(() => { fetchRows(); }, [fetchRows]);
 
+  // ── Search ──────────────────────────────────────────────────────────────────
+  const [search, setSearch] = useState("");
+
   // Sort: Hall of Fame first (alphabetically within group), then everyone else (alphabetically)
-  const sortedRows = [...rows].sort((a, b) => {
-    const aHof = a.is_hall_of_fame ? 0 : 1;
-    const bHof = b.is_hall_of_fame ? 0 : 1;
-    if (aHof !== bHof) return aHof - bHof;
-    return a.name.localeCompare(b.name);
-  });
+  const sortedRows = [...rows]
+    .filter((s) => {
+      if (!search.trim()) return true;
+      const q = search.toLowerCase();
+      return [s.name, s.email, s.phone, s.address, s.story, s.supporter_category, s.primary_revenue_stream, s.status, s.relationship_owner]
+        .some((field) => field?.toLowerCase().includes(q));
+    })
+    .sort((a, b) => {
+      const aHof = a.is_hall_of_fame ? 0 : 1;
+      const bHof = b.is_hall_of_fame ? 0 : 1;
+      if (aHof !== bHof) return aHof - bHof;
+      return a.name.localeCompare(b.name);
+    });
 
   // ── Edit state ────────────────────────────────────────────────────────────
   const [editRow, setEditRow] = useState<SupporterRow | null>(null);
@@ -342,10 +352,16 @@ const AdminSupportersDatabase = () => {
 
       <div className="flex flex-col flex-1 min-h-0 px-4 py-4">
         {/* Toolbar */}
-        <div className="flex items-center justify-between mb-4 flex-shrink-0">
-          <p className="text-sm text-white/50">
-            Import supporters from a CSV export (e.g. Monday.com).
-          </p>
+        <div className="flex items-center justify-between mb-4 flex-shrink-0 gap-3">
+          <div className="relative flex-1 max-w-sm">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/40" />
+            <Input
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search supporters…"
+              className="pl-9 bg-white/5 border-white/10 text-white placeholder:text-white/30 h-9"
+            />
+          </div>
           <Button
             size="sm"
             className="bg-green-500 hover:bg-green-400 text-black gap-1.5"
