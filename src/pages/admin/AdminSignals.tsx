@@ -11,7 +11,11 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { ArrowLeft, Plus, CheckCircle2, Circle, Trash2, LogOut } from "lucide-react";
+import { format } from "date-fns";
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { cn } from "@/lib/utils";
+import { ArrowLeft, Plus, CheckCircle2, Circle, Trash2, LogOut, CalendarIcon } from "lucide-react";
 
 const PILLARS = ["Operations", "Sales & Marketing", "Finance", "Vision", "Personal"] as const;
 const PRIORITY_LAYERS = ["Core", "Bonus"] as const;
@@ -57,6 +61,7 @@ const AdminSignals = () => {
     pillar: "" as string,
     priority_layer: "" as string,
     signal_kind: "" as string,
+    date_assigned: new Date(),
   });
 
   const today = new Date().toISOString().slice(0, 10);
@@ -124,13 +129,14 @@ const AdminSignals = () => {
         signal_kind: form.signal_kind || null,
         signal_type: form.signal_kind || "Action",
         status: "Pending",
+        date_assigned: format(form.date_assigned, "yyyy-MM-dd"),
       } as any);
       if (error) throw error;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["signals"] });
       setShowAdd(false);
-      setForm({ title: "", pillar: "", priority_layer: "", signal_kind: "" });
+      setForm({ title: "", pillar: "", priority_layer: "", signal_kind: "", date_assigned: new Date() });
       toast.success("Signal added");
     },
     onError: (e: any) => toast.error(e.message),
@@ -486,6 +492,32 @@ const AdminSignals = () => {
                   ))}
                 </SelectContent>
               </Select>
+            </div>
+            <div>
+              <Label>Date Assigned</Label>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className={cn(
+                      "w-full justify-start text-left font-normal bg-white/5 border-white/20 text-white hover:bg-white/10 hover:text-white",
+                      !form.date_assigned && "text-white/40"
+                    )}
+                  >
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {form.date_assigned ? format(form.date_assigned, "PPP") : <span>Pick a date</span>}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0 bg-zinc-900 border-white/20 z-[200]" align="start">
+                  <Calendar
+                    mode="single"
+                    selected={form.date_assigned}
+                    onSelect={(d) => d && setForm({ ...form, date_assigned: d })}
+                    initialFocus
+                    className={cn("p-3 pointer-events-auto")}
+                  />
+                </PopoverContent>
+              </Popover>
             </div>
           </div>
           <DialogFooter>
