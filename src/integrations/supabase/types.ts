@@ -519,6 +519,7 @@ export type Database = {
           metadata: Json | null
           signal_type: string
           source: string | null
+          title: string | null
           updated_at: string
         }
         Insert: {
@@ -528,6 +529,7 @@ export type Database = {
           metadata?: Json | null
           signal_type: string
           source?: string | null
+          title?: string | null
           updated_at?: string
         }
         Update: {
@@ -537,6 +539,7 @@ export type Database = {
           metadata?: Json | null
           signal_type?: string
           source?: string | null
+          title?: string | null
           updated_at?: string
         }
         Relationships: []
