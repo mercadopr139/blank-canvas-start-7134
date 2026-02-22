@@ -3,7 +3,7 @@ import nlaLogoWhite from "@/assets/nla-logo-white.png";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Settings, LogOut, Briefcase, TrendingUp, DollarSign, ArrowLeft } from "lucide-react";
+import { Settings, LogOut, Briefcase, TrendingUp, DollarSign, ArrowLeft, Signal } from "lucide-react";
 
 const AdminDashboard = () => {
   const { user, signOut } = useAuth();
@@ -93,8 +93,24 @@ const AdminDashboard = () => {
           )}
         </div>
 
-        {/* Settings Card */}
-        <div className="flex justify-center mt-12">
+        {/* Utility Cards */}
+        <div className="flex justify-center gap-4 mt-12">
+          <Card
+            className="opacity-60 w-48 bg-white/5 border border-white/20 text-white cursor-pointer hover:opacity-80 transition-opacity"
+            onClick={() => navigate("/admin/signals")}
+          >
+            <CardHeader className="p-4 pb-2">
+              <div className="w-8 h-8 rounded-md flex items-center justify-center bg-white/5 text-white/40 mb-1">
+                <Signal className="w-4 h-4" />
+              </div>
+              <CardTitle className="text-sm text-white">PD – Signals</CardTitle>
+              <CardDescription className="text-xs text-white/40">Executive Focus & Daily Signals</CardDescription>
+            </CardHeader>
+            <CardContent className="px-4 pb-3 pt-0">
+              <p className="text-xs font-medium text-white/40">Open →</p>
+            </CardContent>
+          </Card>
+
           <Card className="opacity-60 w-48 bg-white/5 border border-white/20 text-white">
             <CardHeader className="p-4 pb-2">
               <div className="w-8 h-8 rounded-md flex items-center justify-center bg-white/5 text-white/40 mb-1">
