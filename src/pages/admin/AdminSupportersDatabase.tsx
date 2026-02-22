@@ -384,9 +384,9 @@ const AdminSupportersDatabase = () => {
         {/* Supporters table — fills remaining height, scrolls both axes */}
         <div className="flex-1 min-h-0 rounded-lg border border-white/10 overflow-auto">
           <table className="w-full caption-bottom text-sm min-w-[1200px]">
-            <thead className="sticky top-0 z-10 bg-black shadow-[0_1px_0_rgba(255,255,255,0.12)] [&_tr]:border-b">
+            <thead className="sticky top-0 z-10 bg-green-600 shadow-[0_1px_0_rgba(255,255,255,0.12)] [&_tr]:border-b">
               <tr className="border-b border-white/10">
-                <th className="h-12 px-3 w-10 text-left align-middle font-medium text-white/70">
+                <th className="h-12 px-3 w-10 text-left align-middle font-medium text-white bg-green-600">
                   <input
                     type="checkbox"
                     checked={allSelected}
@@ -396,17 +396,17 @@ const AdminSupportersDatabase = () => {
                     title="Select all"
                   />
                 </th>
-                <th className="h-12 px-4 w-8 text-center align-middle font-medium text-white/70 text-xs">HOF</th>
-                <th className="h-12 px-4 text-left align-middle font-medium text-green-400">Supporter Name</th>
-                <th className="h-12 px-4 text-left align-middle font-medium text-green-400">Supporter Category</th>
-                <th className="h-12 px-4 text-left align-middle font-medium text-green-400">Primary Revenue Stream</th>
-                <th className="h-12 px-4 text-left align-middle font-medium text-green-400">Status</th>
-                <th className="h-12 px-4 text-left align-middle font-medium text-green-400">Relationship Owner</th>
-                <th className="h-12 px-4 text-left align-middle font-medium text-green-400">Primary Contact Email</th>
-                <th className="h-12 px-4 text-left align-middle font-medium text-green-400">Primary Contact Phone</th>
-                <th className="h-12 px-4 text-left align-middle font-medium text-green-400">Address</th>
-                <th className="h-12 px-4 text-left align-middle font-medium text-green-400 min-w-[280px]">Internal Strategic Notes</th>
-                <th className="h-12 px-4 w-20 text-right align-middle font-medium text-green-400">Actions</th>
+                <th className="h-12 px-4 w-8 text-center align-middle font-medium text-white text-xs bg-green-600">HOF</th>
+                <th className="h-12 px-4 text-left align-middle font-medium text-white bg-green-600">Supporter Name</th>
+                <th className="h-12 px-4 text-left align-middle font-medium text-white bg-green-600">Supporter Category</th>
+                <th className="h-12 px-4 text-left align-middle font-medium text-white bg-green-600">Primary Revenue Stream</th>
+                <th className="h-12 px-4 text-left align-middle font-medium text-white bg-green-600">Status</th>
+                <th className="h-12 px-4 text-left align-middle font-medium text-white bg-green-600">Relationship Owner</th>
+                <th className="h-12 px-4 text-left align-middle font-medium text-white bg-green-600">Primary Contact Email</th>
+                <th className="h-12 px-4 text-left align-middle font-medium text-white bg-green-600">Primary Contact Phone</th>
+                <th className="h-12 px-4 text-left align-middle font-medium text-white bg-green-600">Address</th>
+                <th className="h-12 px-4 text-left align-middle font-medium text-white bg-green-600 min-w-[280px]">Internal Strategic Notes</th>
+                <th className="h-12 px-4 w-20 text-right align-middle font-medium text-white bg-green-600">Actions</th>
               </tr>
             </thead>
             <tbody className="[&_tr:last-child]:border-0">

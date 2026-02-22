@@ -109,12 +109,12 @@ const AdminSupporters = () => {
           <Table>
             <TableHeader>
               <TableRow className="border-white/10 hover:bg-transparent">
-                <TableHead className="text-green-400">Supporter Name</TableHead>
-                <TableHead className="text-green-400">Email</TableHead>
-                <TableHead className="text-green-400">2026 Total</TableHead>
-                <TableHead className="text-green-400">Receipt Status</TableHead>
-                <TableHead className="text-green-400">Last Sent</TableHead>
-                <TableHead className="text-green-400"></TableHead>
+                <TableHead className="text-white bg-green-600">Supporter Name</TableHead>
+                <TableHead className="text-white bg-green-600">Email</TableHead>
+                <TableHead className="text-white bg-green-600">2026 Total</TableHead>
+                <TableHead className="text-white bg-green-600">Receipt Status</TableHead>
+                <TableHead className="text-white bg-green-600">Last Sent</TableHead>
+                <TableHead className="text-white bg-green-600"></TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
