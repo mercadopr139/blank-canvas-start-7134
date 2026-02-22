@@ -167,7 +167,33 @@ const AdminSupportersDatabase = () => {
   // ── Edit state ────────────────────────────────────────────────────────────
   const [editRow, setEditRow] = useState<SupporterRow | null>(null);
   const [editSaving, setEditSaving] = useState(false);
-  const [editingCategoryId, setEditingCategoryId] = useState<string | null>(null);
+  const [inlineEdit, setInlineEdit] = useState<{ id: string; field: keyof SupporterRow } | null>(null);
+  const inlineInputRef = useRef<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement | null>(null);
+
+
+
+  const saveInlineEdit = async (id: string, field: keyof SupporterRow, value: string) => {
+    const dbValue = value.trim() || null;
+    setRows((prev) => prev.map((r) => r.id === id ? { ...r, [field]: dbValue } : r));
+    setInlineEdit(null);
+    await supabase.from("supporters").update({ [field]: dbValue }).eq("id", id);
+  };
+
+  const handleInlineKeyDown = (e: React.KeyboardEvent, id: string, field: keyof SupporterRow) => {
+    if (e.key === "Escape") { setInlineEdit(null); return; }
+    if (e.key === "Enter" && field !== "story") {
+      saveInlineEdit(id, field, (e.target as HTMLInputElement).value);
+    }
+  };
+
+  useEffect(() => {
+    if (inlineEdit && inlineInputRef.current) {
+      inlineInputRef.current.focus();
+      if ('select' in inlineInputRef.current && inlineInputRef.current.tagName !== 'SELECT') {
+        (inlineInputRef.current as HTMLInputElement).select();
+      }
+    }
+  }, [inlineEdit]);
 
   const handleEditSave = async () => {
     if (!editRow) return;
@@ -505,24 +531,37 @@ const AdminSupportersDatabase = () => {
                         />
                       </button>
                     </td>
-                    <td className="p-4 align-middle text-white font-medium">{s.name}</td>
+                    {/* Name — double-click to edit */}
+                    <td
+                      className="p-4 align-middle text-white font-medium cursor-pointer select-none"
+                      onDoubleClick={() => setInlineEdit({ id: s.id, field: "name" })}
+                      title="Double-click to edit"
+                    >
+                      {inlineEdit?.id === s.id && inlineEdit.field === "name" ? (
+                        <input
+                          ref={(el) => { inlineInputRef.current = el; }}
+                          defaultValue={s.name}
+                          onBlur={(e) => saveInlineEdit(s.id, "name", e.target.value)}
+                          onKeyDown={(e) => handleInlineKeyDown(e, s.id, "name")}
+                          className="bg-white text-black text-sm rounded px-1.5 py-1 border border-white/20 w-full"
+                        />
+                      ) : s.name}
+                    </td>
                     {/* Category — double-click to edit inline */}
                     <td
                       className="p-4 align-middle text-white/60 text-sm cursor-pointer select-none"
-                      onDoubleClick={() => setEditingCategoryId(s.id)}
+                      onDoubleClick={() => setInlineEdit({ id: s.id, field: "supporter_category" })}
                       title="Double-click to edit"
                     >
-                      {editingCategoryId === s.id ? (
+                      {inlineEdit?.id === s.id && inlineEdit.field === "supporter_category" ? (
                         <select
+                          ref={(el) => { inlineInputRef.current = el; }}
                           autoFocus
                           defaultValue={s.supporter_category ?? ""}
                           onChange={async (e) => {
-                            const newCat = e.target.value;
-                            await supabase.from("supporters").update({ supporter_category: newCat }).eq("id", s.id);
-                            setRows((prev) => prev.map((r) => r.id === s.id ? { ...r, supporter_category: newCat } : r));
-                            setEditingCategoryId(null);
+                            await saveInlineEdit(s.id, "supporter_category", e.target.value);
                           }}
-                          onKeyDown={(e) => { if (e.key === "Escape") setEditingCategoryId(null); }}
+                          onKeyDown={(e) => { if (e.key === "Escape") setInlineEdit(null); }}
                           className="bg-white text-black text-xs rounded px-1.5 py-1 border border-white/20 cursor-pointer"
                         >
                           {SUPPORTER_CATEGORIES.map((c) => (
@@ -533,27 +572,143 @@ const AdminSupportersDatabase = () => {
                         s.supporter_category || "—"
                       )}
                     </td>
-                    <td className="p-4 align-middle text-white/70 text-sm">{s.primary_revenue_stream || "—"}</td>
-                    <td className="p-4 align-middle text-white/70 text-sm">{s.status || "—"}</td>
-                    <td className="p-4 align-middle text-white/70 text-sm">{s.relationship_owner || "—"}</td>
-                    <td className="p-4 align-middle text-white/70 text-sm">
-                      {s.email
-                        ? <a href={`mailto:${s.email}`} className="text-green-400 hover:underline">{s.email}</a>
-                        : "—"}
+                    {/* Primary Revenue Stream — double-click to edit */}
+                    <td
+                      className="p-4 align-middle text-white/70 text-sm cursor-pointer select-none"
+                      onDoubleClick={() => setInlineEdit({ id: s.id, field: "primary_revenue_stream" })}
+                      title="Double-click to edit"
+                    >
+                      {inlineEdit?.id === s.id && inlineEdit.field === "primary_revenue_stream" ? (
+                        <select
+                          ref={(el) => { inlineInputRef.current = el; }}
+                          autoFocus
+                          defaultValue={s.primary_revenue_stream ?? ""}
+                          onChange={(e) => saveInlineEdit(s.id, "primary_revenue_stream", e.target.value)}
+                          onKeyDown={(e) => { if (e.key === "Escape") setInlineEdit(null); }}
+                          className="bg-white text-black text-xs rounded px-1.5 py-1 border border-white/20 cursor-pointer"
+                        >
+                          <option value="">—</option>
+                          {PRIMARY_REVENUE_STREAMS.map((r) => (
+                            <option key={r} value={r}>{r}</option>
+                          ))}
+                        </select>
+                      ) : s.primary_revenue_stream || "—"}
                     </td>
-                    <td className="p-4 align-middle text-white/70 text-sm">
-                      {s.phone
-                        ? <a href={`tel:${s.phone}`} className="text-green-400 hover:underline">{s.phone}</a>
-                        : "—"}
+                    {/* Status — double-click to edit */}
+                    <td
+                      className="p-4 align-middle text-white/70 text-sm cursor-pointer select-none"
+                      onDoubleClick={() => setInlineEdit({ id: s.id, field: "status" })}
+                      title="Double-click to edit"
+                    >
+                      {inlineEdit?.id === s.id && inlineEdit.field === "status" ? (
+                        <select
+                          ref={(el) => { inlineInputRef.current = el; }}
+                          autoFocus
+                          defaultValue={s.status ?? ""}
+                          onChange={(e) => saveInlineEdit(s.id, "status", e.target.value)}
+                          onKeyDown={(e) => { if (e.key === "Escape") setInlineEdit(null); }}
+                          className="bg-white text-black text-xs rounded px-1.5 py-1 border border-white/20 cursor-pointer"
+                        >
+                          <option value="">—</option>
+                          {SUPPORTER_STATUSES.map((st) => (
+                            <option key={st} value={st}>{st}</option>
+                          ))}
+                        </select>
+                      ) : s.status || "—"}
                     </td>
-                    <td className="p-4 align-middle text-white/70 text-sm">{s.address || "—"}</td>
-                    <td className="p-4 align-middle text-white/50 text-xs min-w-[280px] whitespace-pre-wrap break-words align-top py-3">{s.story || "—"}</td>
+                    {/* Relationship Owner — double-click to edit */}
+                    <td
+                      className="p-4 align-middle text-white/70 text-sm cursor-pointer select-none"
+                      onDoubleClick={() => setInlineEdit({ id: s.id, field: "relationship_owner" })}
+                      title="Double-click to edit"
+                    >
+                      {inlineEdit?.id === s.id && inlineEdit.field === "relationship_owner" ? (
+                        <input
+                          ref={(el) => { inlineInputRef.current = el; }}
+                          defaultValue={s.relationship_owner ?? ""}
+                          onBlur={(e) => saveInlineEdit(s.id, "relationship_owner", e.target.value)}
+                          onKeyDown={(e) => handleInlineKeyDown(e, s.id, "relationship_owner")}
+                          className="bg-white text-black text-sm rounded px-1.5 py-1 border border-white/20 w-full"
+                        />
+                      ) : s.relationship_owner || "—"}
+                    </td>
+                    {/* Email — double-click to edit */}
+                    <td
+                      className="p-4 align-middle text-white/70 text-sm cursor-pointer select-none"
+                      onDoubleClick={() => setInlineEdit({ id: s.id, field: "email" })}
+                      title="Double-click to edit"
+                    >
+                      {inlineEdit?.id === s.id && inlineEdit.field === "email" ? (
+                        <input
+                          ref={(el) => { inlineInputRef.current = el; }}
+                          defaultValue={s.email ?? ""}
+                          onBlur={(e) => saveInlineEdit(s.id, "email", e.target.value)}
+                          onKeyDown={(e) => handleInlineKeyDown(e, s.id, "email")}
+                          className="bg-white text-black text-sm rounded px-1.5 py-1 border border-white/20 w-full"
+                          type="email"
+                        />
+                      ) : s.email ? (
+                        <a href={`mailto:${s.email}`} className="text-green-400 hover:underline">{s.email}</a>
+                      ) : "—"}
+                    </td>
+                    {/* Phone — double-click to edit */}
+                    <td
+                      className="p-4 align-middle text-white/70 text-sm cursor-pointer select-none"
+                      onDoubleClick={() => setInlineEdit({ id: s.id, field: "phone" })}
+                      title="Double-click to edit"
+                    >
+                      {inlineEdit?.id === s.id && inlineEdit.field === "phone" ? (
+                        <input
+                          ref={(el) => { inlineInputRef.current = el; }}
+                          defaultValue={s.phone ?? ""}
+                          onBlur={(e) => saveInlineEdit(s.id, "phone", e.target.value)}
+                          onKeyDown={(e) => handleInlineKeyDown(e, s.id, "phone")}
+                          className="bg-white text-black text-sm rounded px-1.5 py-1 border border-white/20 w-full"
+                          type="tel"
+                        />
+                      ) : s.phone ? (
+                        <a href={`tel:${s.phone}`} className="text-green-400 hover:underline">{s.phone}</a>
+                      ) : "—"}
+                    </td>
+                    {/* Address — double-click to edit */}
+                    <td
+                      className="p-4 align-middle text-white/70 text-sm cursor-pointer select-none"
+                      onDoubleClick={() => setInlineEdit({ id: s.id, field: "address" })}
+                      title="Double-click to edit"
+                    >
+                      {inlineEdit?.id === s.id && inlineEdit.field === "address" ? (
+                        <input
+                          ref={(el) => { inlineInputRef.current = el; }}
+                          defaultValue={s.address ?? ""}
+                          onBlur={(e) => saveInlineEdit(s.id, "address", e.target.value)}
+                          onKeyDown={(e) => handleInlineKeyDown(e, s.id, "address")}
+                          className="bg-white text-black text-sm rounded px-1.5 py-1 border border-white/20 w-full"
+                        />
+                      ) : s.address || "—"}
+                    </td>
+                    {/* Notes — double-click to edit */}
+                    <td
+                      className="p-4 align-middle text-white/50 text-xs min-w-[280px] whitespace-pre-wrap break-words align-top py-3 cursor-pointer select-none"
+                      onDoubleClick={() => setInlineEdit({ id: s.id, field: "story" })}
+                      title="Double-click to edit"
+                    >
+                      {inlineEdit?.id === s.id && inlineEdit.field === "story" ? (
+                        <textarea
+                          ref={(el) => { inlineInputRef.current = el; }}
+                          defaultValue={s.story ?? ""}
+                          onBlur={(e) => saveInlineEdit(s.id, "story", e.target.value)}
+                          onKeyDown={(e) => { if (e.key === "Escape") setInlineEdit(null); }}
+                          rows={3}
+                          className="bg-white text-black text-xs rounded px-1.5 py-1 border border-white/20 w-full resize-y"
+                        />
+                      ) : s.story || "—"}
+                    </td>
                     <td className="p-4 align-middle text-right">
                       <div className="flex justify-end gap-1">
                         <button
                           onClick={() => setEditRow({ ...s })}
                           className="p-1.5 rounded text-white/40 hover:text-green-400 hover:bg-white/5 transition-colors"
-                          title="Edit"
+                          title="Edit full record"
                         >
                           <Pencil className="w-3.5 h-3.5" />
                         </button>
