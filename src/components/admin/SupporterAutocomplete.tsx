@@ -37,8 +37,16 @@ const SupporterAutocomplete = ({ label, required, value, onChange, onSelect, pla
         .select("id, name, email, phone")
         .ilike("name", `%${trimmed}%`)
         .limit(8);
-      setSuggestions(data || []);
-      setOpen((data?.length ?? 0) > 0);
+      // Sort: names starting with the query first, then alphabetical
+      const sorted = (data || []).sort((a, b) => {
+        const aStarts = a.name.toLowerCase().startsWith(trimmed.toLowerCase());
+        const bStarts = b.name.toLowerCase().startsWith(trimmed.toLowerCase());
+        if (aStarts && !bStarts) return -1;
+        if (!aStarts && bStarts) return 1;
+        return a.name.localeCompare(b.name);
+      });
+      setSuggestions(sorted);
+      setOpen(sorted.length > 0);
     }, 200);
     return () => clearTimeout(timeout);
   }, [value]);
