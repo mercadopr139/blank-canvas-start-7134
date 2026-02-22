@@ -404,47 +404,89 @@ Deno.serve(async (req) => {
     }
 
     // Build email body
-    let personalBlock = "";
-    let personalText = "";
-    if (personal_message) {
-      personalBlock = `<p style="margin:0 0 16px;color:#333;">${personal_message.replace(/\n/g, "<br/>")}</p>`;
-      personalText = `${personal_message}\n\n`;
-    }
+    const logoUrl = `${supabaseUrl}/storage/v1/object/public/email-assets/nla-logo.png`;
+
+    const personalHtml = personal_message
+      ? `<p style="margin:0 0 24px;color:#222;font-size:15px;line-height:1.7;">${personal_message.replace(/\n/g, "<br/>")}</p>`
+      : "";
+
+    const personalText = personal_message ? `${personal_message}\n\n` : "";
 
     const emailBody = `<!DOCTYPE html>
 <html lang="en">
 <head><meta charset="utf-8"/><meta name="viewport" content="width=device-width"/></head>
-<body style="margin:0;padding:0;background:#f9f9f9;">
-<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f9f9f9;">
-<tr><td align="center" style="padding:24px 0;">
-<table role="presentation" width="600" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:8px;padding:32px;font-family:Arial,sans-serif;color:#333;">
-<tr><td>
-  <h2 style="margin:0 0 8px;color:#1a1a1a;">No Limits Academy</h2>
-  <p style="margin:0 0 20px;color:#888;font-size:13px;">Annual Donation Receipt — 2026</p>
-  ${personalBlock}
-  <p style="margin:0 0 12px;">Dear ${receiptName},</p>
-  <p style="margin:0 0 12px;">Please find your 2026 annual donation receipt attached to this email.</p>
-  <p style="margin:0 0 12px;">Thank you for your generous support of ${ORG_NAME}! Your contribution helps us use the discipline of boxing to promote personal, professional, and spiritual development within our community.</p>
-  <p style="margin:0 0 0;color:#888;font-size:12px;">You may reply directly to this email with any questions.</p>
-</td></tr>
+<body style="margin:0;padding:0;background:#f4f4f4;font-family:Georgia,'Times New Roman',serif;">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f4f4f4;">
+<tr><td align="center" style="padding:32px 16px;">
+<table role="presentation" width="600" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:12px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,0.08);">
+
+  <!-- Logo Header -->
+  <tr>
+    <td align="center" style="background:#000000;padding:28px 32px;">
+      <img src="${logoUrl}" alt="No Limits Academy" width="160" style="display:block;max-width:160px;height:auto;" />
+    </td>
+  </tr>
+
+  <!-- Body Content -->
+  <tr>
+    <td style="padding:36px 40px 20px;">
+      <p style="margin:0 0 20px;color:#222;font-size:15px;line-height:1.7;">Dear ${receiptName},</p>
+      ${personalHtml}
+      <p style="margin:0 0 20px;color:#222;font-size:15px;line-height:1.7;">Please find your <strong>2026 Annual Donation Receipt</strong> attached to this email for your records.</p>
+      <p style="margin:0 0 28px;color:#222;font-size:15px;line-height:1.7;">Thank you for your generous support. Your contribution helps us use the discipline of boxing to promote personal, professional, and spiritual development within our community.</p>
+    </td>
+  </tr>
+
+  <!-- Sign-off -->
+  <tr>
+    <td style="padding:0 40px 32px;">
+      <p style="margin:0 0 4px;color:#222;font-size:15px;">Sincerely,</p>
+      <p style="margin:0 0 16px;color:#000;font-size:16px;font-weight:bold;">No Limits Academy Inc.</p>
+      <p style="margin:0 0 4px;color:#555;font-size:13px;">
+        <a href="https://www.nolimitsboxingacademy.org" style="color:#1a73e8;text-decoration:none;font-weight:bold;">www.nolimitsboxingacademy.org</a>
+      </p>
+      <p style="margin:0;color:#555;font-size:13px;">
+        <a href="https://www.instagram.com/nolimitsboxingacademy/" style="color:#555;text-decoration:none;">Instagram</a>
+        &nbsp;&bull;&nbsp;
+        <a href="https://www.facebook.com/nolimitsboxingacademy/" style="color:#555;text-decoration:none;">Facebook</a>
+        &nbsp;&bull;&nbsp;
+        <a href="mailto:info@nolimitsboxingacademy.org" style="color:#555;text-decoration:none;">info@nolimitsboxingacademy.org</a>
+      </p>
+    </td>
+  </tr>
+
+  <!-- Footer -->
+  <tr>
+    <td style="background:#f9f9f9;padding:16px 40px;border-top:1px solid #eee;">
+      <p style="margin:0;color:#999;font-size:11px;line-height:1.5;text-align:center;">
+        You may reply directly to this email with any questions.<br/>
+        No Limits Academy Inc. &bull; EIN: 84-3998071 &bull; 501(c)(3) Nonprofit
+      </p>
+    </td>
+  </tr>
+
 </table>
 </td></tr>
 </table>
 </body>
 </html>`;
 
-    // Plain text version (critical for spam scoring)
-    const textBody = `${personalText}Dear ${receiptName},
+    // Plain text version
+    const textBody = `Dear ${receiptName},
 
-Please find your 2026 annual donation receipt attached to this email.
+${personalText}Please find your 2026 Annual Donation Receipt attached to this email for your records.
 
-Thank you for your generous support of ${ORG_NAME}! Your contribution helps us use the discipline of boxing to promote personal, professional, and spiritual development within our community.
+Thank you for your generous support. Your contribution helps us use the discipline of boxing to promote personal, professional, and spiritual development within our community.
 
-You may reply directly to this email with any questions.
-
+Sincerely,
 No Limits Academy Inc.
-${ORG_PHONE} | ${ORG_EMAIL}
-${ORG_WEBSITE}`;
+
+www.nolimitsboxingacademy.org
+Instagram: @nolimitsboxingacademy
+Facebook: facebook.com/nolimitsboxingacademy
+Email: info@nolimitsboxingacademy.org
+
+EIN: 84-3998071 | 501(c)(3) Nonprofit`;
 
     // Send via Resend with PDF attachment
     const resendRes = await fetch("https://api.resend.com/emails", {
