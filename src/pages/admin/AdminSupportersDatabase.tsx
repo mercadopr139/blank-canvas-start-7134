@@ -12,15 +12,15 @@ import SupporterRevenueSection from "@/components/admin/SupporterRevenueSection"
 import SupporterEngagementSection from "@/components/admin/SupporterEngagementSection";
 import SupporterTasksSection from "@/components/admin/SupporterTasksSection";
 import {
-  Dialog, DialogContent, DialogHeader, DialogTitle,
-} from "@/components/ui/dialog";
+  Dialog, DialogContent, DialogHeader, DialogTitle } from
+"@/components/ui/dialog";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
-  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from
+"@/components/ui/alert-dialog";
 import {
-  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
-} from "@/components/ui/select";
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from
+"@/components/ui/select";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -34,7 +34,7 @@ const FIELD_LABELS: Record<MappableField, string> = {
   story: "Internal Strategic Notes",
   email: "Primary Contact Email",
   phone: "Primary Contact Phone",
-  address: "Address",
+  address: "Address"
 };
 
 
@@ -103,14 +103,14 @@ function parseCsv(text: string): CsvRow[] {
   const allHeaders = parseCsvLine(lines[headerIdx]);
   const dataLines = lines.slice(headerIdx + 1).filter(Boolean);
 
-  return dataLines
-    .map((line) => {
-      const values = parseCsvLine(line);
-      const row: CsvRow = {};
-      allHeaders.forEach((h, i) => { if (h) row[h] = values[i] ?? ""; });
-      return row;
-    })
-    .filter((row) => Object.values(row).some((v) => v !== "")); // skip fully-blank data rows
+  return dataLines.
+  map((line) => {
+    const values = parseCsvLine(line);
+    const row: CsvRow = {};
+    allHeaders.forEach((h, i) => {if (h) row[h] = values[i] ?? "";});
+    return row;
+  }).
+  filter((row) => Object.values(row).some((v) => v !== "")); // skip fully-blank data rows
 }
 
 /** Normalise to E.164. Assumes US (+1) if no country code. Returns null if empty. */
@@ -140,38 +140,38 @@ const AdminSupportersDatabase = () => {
 
   const fetchRows = useCallback(async () => {
     setLoadingRows(true);
-    const { data } = await supabase
-      .from("supporters")
-      .select("id, name, email, phone, address, story, is_hall_of_fame, primary_revenue_stream, status, relationship_owner, supporter_category")
-      .order("name");
+    const { data } = await supabase.
+    from("supporters").
+    select("id, name, email, phone, address, story, is_hall_of_fame, primary_revenue_stream, status, relationship_owner, supporter_category").
+    order("name");
     setRows((data ?? []) as SupporterRow[]);
     setLoadingRows(false);
   }, []);
 
-  useEffect(() => { fetchRows(); }, [fetchRows]);
+  useEffect(() => {fetchRows();}, [fetchRows]);
 
   // ── Search ──────────────────────────────────────────────────────────────────
   const [search, setSearch] = useState("");
 
   // Sort: Hall of Fame first (alphabetically within group), then everyone else (alphabetically)
-  const sortedRows = [...rows]
-    .filter((s) => {
-      if (!search.trim()) return true;
-      const q = search.toLowerCase();
-      return [s.name, s.email, s.phone, s.address, s.story, s.supporter_category, s.primary_revenue_stream, s.status, s.relationship_owner]
-        .some((field) => field?.toLowerCase().includes(q));
-    })
-    .sort((a, b) => {
-      const aHof = a.is_hall_of_fame ? 0 : 1;
-      const bHof = b.is_hall_of_fame ? 0 : 1;
-      if (aHof !== bHof) return aHof - bHof;
-      return a.name.localeCompare(b.name);
-    });
+  const sortedRows = [...rows].
+  filter((s) => {
+    if (!search.trim()) return true;
+    const q = search.toLowerCase();
+    return [s.name, s.email, s.phone, s.address, s.story, s.supporter_category, s.primary_revenue_stream, s.status, s.relationship_owner].
+    some((field) => field?.toLowerCase().includes(q));
+  }).
+  sort((a, b) => {
+    const aHof = a.is_hall_of_fame ? 0 : 1;
+    const bHof = b.is_hall_of_fame ? 0 : 1;
+    if (aHof !== bHof) return aHof - bHof;
+    return a.name.localeCompare(b.name);
+  });
 
   // ── Edit state ────────────────────────────────────────────────────────────
   const [editRow, setEditRow] = useState<SupporterRow | null>(null);
   const [editSaving, setEditSaving] = useState(false);
-  const [inlineEdit, setInlineEdit] = useState<{ id: string; field: keyof SupporterRow } | null>(null);
+  const [inlineEdit, setInlineEdit] = useState<{id: string;field: keyof SupporterRow;} | null>(null);
   const inlineInputRef = useRef<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement | null>(null);
 
 
@@ -184,7 +184,7 @@ const AdminSupportersDatabase = () => {
   };
 
   const handleInlineKeyDown = (e: React.KeyboardEvent, id: string, field: keyof SupporterRow) => {
-    if (e.key === "Escape") { setInlineEdit(null); return; }
+    if (e.key === "Escape") {setInlineEdit(null);return;}
     if (e.key === "Enter" && field !== "story") {
       saveInlineEdit(id, field, (e.target as HTMLInputElement).value);
     }
@@ -211,7 +211,7 @@ const AdminSupportersDatabase = () => {
       supporter_category: editRow.supporter_category || null,
       primary_revenue_stream: editRow.primary_revenue_stream || null,
       status: editRow.status || null,
-      relationship_owner: editRow.relationship_owner || null,
+      relationship_owner: editRow.relationship_owner || null
     }).eq("id", editRow.id);
     setEditSaving(false);
     setEditRow(null);
@@ -237,7 +237,7 @@ const AdminSupportersDatabase = () => {
   const emptyNew = (): Omit<SupporterRow, "id"> => ({
     name: "", email: null, phone: null, address: null, story: null,
     is_hall_of_fame: false, primary_revenue_stream: null, status: null,
-    relationship_owner: null, supporter_category: null,
+    relationship_owner: null, supporter_category: null
   });
   const [newSupporter, setNewSupporter] = useState<Omit<SupporterRow, "id">>(emptyNew());
 
@@ -253,7 +253,7 @@ const AdminSupportersDatabase = () => {
       supporter_category: newSupporter.supporter_category || null,
       primary_revenue_stream: newSupporter.primary_revenue_stream || null,
       status: newSupporter.status || null,
-      relationship_owner: newSupporter.relationship_owner?.trim() || null,
+      relationship_owner: newSupporter.relationship_owner?.trim() || null
     });
     setAddSaving(false);
     setAddOpen(false);
@@ -280,7 +280,7 @@ const AdminSupportersDatabase = () => {
   const toggleOne = (id: string) => {
     setSelected((prev) => {
       const next = new Set(prev);
-      if (next.has(id)) next.delete(id); else next.add(id);
+      if (next.has(id)) next.delete(id);else next.add(id);
       return next;
     });
   };
@@ -301,10 +301,10 @@ const AdminSupportersDatabase = () => {
   const [csvHeaders, setCsvHeaders] = useState<string[]>([]);
   const [csvData, setCsvData] = useState<CsvRow[]>([]);
   const [mapping, setMapping] = useState<Record<MappableField, string>>({
-    name: "__skip__", story: "__skip__", email: "__skip__", phone: "__skip__", address: "__skip__",
+    name: "__skip__", story: "__skip__", email: "__skip__", phone: "__skip__", address: "__skip__"
   });
   const [importing, setImporting] = useState(false);
-  const [summary, setSummary] = useState<{ created: number; updated: number; skipped: number } | null>(null);
+  const [summary, setSummary] = useState<{created: number;updated: number;skipped: number;} | null>(null);
 
   const resetImport = () => {
     setCsvHeaders([]);
@@ -333,10 +333,10 @@ const AdminSupportersDatabase = () => {
           story: ["story", "notes", "bio", "description", "note", "comments"],
           email: ["email", "e-mail", "email address", "emailaddress"],
           phone: ["phone", "phone number", "phonenumber", "tel", "telephone", "mobile", "cell"],
-          address: ["address", "addr", "mailing address", "street address"],
+          address: ["address", "addr", "mailing address", "street address"]
         };
         const match = headers.find((h) =>
-          aliases[field].includes(h.toLowerCase().trim())
+        aliases[field].includes(h.toLowerCase().trim())
         );
         if (match) autoMap[field] = match;
       });
@@ -355,7 +355,7 @@ const AdminSupportersDatabase = () => {
 
     for (const row of csvData) {
       const name = row[mapping.name]?.trim();
-      if (!name) { skipped++; continue; }
+      if (!name) {skipped++;continue;}
 
       const rawEmail = mapping.email && mapping.email !== "__skip__" ? row[mapping.email] ?? "" : "";
       const rawPhone = mapping.phone && mapping.phone !== "__skip__" ? row[mapping.phone] ?? "" : "";
@@ -373,11 +373,11 @@ const AdminSupportersDatabase = () => {
         continue;
       }
 
-      const { data: existing } = await supabase
-        .from("supporters")
-        .select("id, email, story, phone, address")
-        .eq("email", email)
-        .maybeSingle();
+      const { data: existing } = await supabase.
+      from("supporters").
+      select("id, email, story, phone, address").
+      eq("email", email).
+      maybeSingle();
 
       if (existing) {
         const patch: Record<string, string | null> = {};
@@ -418,15 +418,15 @@ const AdminSupportersDatabase = () => {
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Search supporters…"
-              className="pl-9 bg-white/5 border-white/10 text-white placeholder:text-white/30 h-9"
-            />
+              className="pl-9 bg-white/5 border-white/10 text-white placeholder:text-white/30 h-9" />
+
           </div>
           <div className="flex items-center gap-2">
             <Button
               size="sm"
               className="bg-green-500 hover:bg-green-400 text-black gap-1.5"
-              onClick={() => { setNewSupporter(emptyNew()); setAddOpen(true); }}
-            >
+              onClick={() => {setNewSupporter(emptyNew());setAddOpen(true);}}>
+
               <Plus className="w-4 h-4" />
               Add Supporter
             </Button>
@@ -434,8 +434,8 @@ const AdminSupportersDatabase = () => {
               size="sm"
               variant="outline"
               className="border-green-500/40 text-green-400 hover:bg-green-500/10 gap-1.5"
-              onClick={() => { resetImport(); setImportOpen(true); }}
-            >
+              onClick={() => {resetImport();setImportOpen(true);}}>
+
               <Upload className="w-4 h-4" />
               Import CSV
             </Button>
@@ -443,29 +443,29 @@ const AdminSupportersDatabase = () => {
         </div>
 
         {/* Bulk action bar */}
-        {selected.size > 0 && (
-          <div className="flex items-center gap-3 mb-3 px-3 py-2 rounded-md bg-red-950/40 border border-red-600/30 flex-shrink-0">
+        {selected.size > 0 &&
+        <div className="flex items-center gap-3 mb-3 px-3 py-2 rounded-md bg-red-950/40 border border-red-600/30 flex-shrink-0">
             <span className="text-sm text-white/70">
               <span className="font-semibold text-white">{selected.size}</span> row{selected.size !== 1 ? "s" : ""} selected
             </span>
             <Button
-              size="sm"
-              variant="ghost"
-              className="text-white/50 hover:text-white hover:bg-white/10 text-xs h-7"
-              onClick={() => setSelected(new Set())}
-            >
+            size="sm"
+            variant="ghost"
+            className="text-white/50 hover:text-white hover:bg-white/10 text-xs h-7"
+            onClick={() => setSelected(new Set())}>
+
               Clear
             </Button>
             <Button
-              size="sm"
-              className="bg-red-600 hover:bg-red-500 text-white text-xs h-7 gap-1.5 ml-auto"
-              onClick={() => setBulkDeleteOpen(true)}
-            >
+            size="sm"
+            className="bg-red-600 hover:bg-red-500 text-white text-xs h-7 gap-1.5 ml-auto"
+            onClick={() => setBulkDeleteOpen(true)}>
+
               <Trash2 className="w-3.5 h-3.5" />
               Delete {selected.size} Selected
             </Button>
           </div>
-        )}
+        }
 
         {/* Supporters table — fills remaining height, scrolls both axes */}
         <div className="flex-1 min-h-0 rounded-lg border border-white/10 overflow-auto">
@@ -476,17 +476,17 @@ const AdminSupportersDatabase = () => {
                   <input
                     type="checkbox"
                     checked={allSelected}
-                    ref={(el) => { if (el) el.indeterminate = someSelected; }}
+                    ref={(el) => {if (el) el.indeterminate = someSelected;}}
                     onChange={toggleAll}
                     className="accent-green-500 w-4 h-4 cursor-pointer"
-                    title="Select all"
-                  />
+                    title="Select all" />
+
                 </th>
                 <th className="h-12 px-4 w-8 text-center align-middle font-medium text-white text-xs bg-green-600">HOF</th>
                 <th className="h-12 px-4 text-left align-middle font-medium text-white bg-green-600">Supporter Name</th>
                 <th className="h-12 px-4 text-left align-middle font-medium text-white bg-green-600">Supporter Category</th>
                 <th className="h-12 px-4 text-left align-middle font-medium text-white bg-green-600">Primary Revenue Stream</th>
-                <th className="h-12 px-4 text-left align-middle font-medium text-white bg-green-600">Status</th>
+                <th className="h-12 px-4 text-left align-middle font-medium text-white bg-green-600">Supporter Status</th>
                 <th className="h-12 px-4 text-left align-middle font-medium text-white bg-green-600">Relationship Owner</th>
                 <th className="h-12 px-4 text-left align-middle font-medium text-white bg-green-600">Primary Contact Email</th>
                 <th className="h-12 px-4 text-left align-middle font-medium text-white bg-green-600">Primary Contact Phone</th>
@@ -497,272 +497,272 @@ const AdminSupportersDatabase = () => {
               </tr>
             </thead>
             <tbody className="[&_tr:last-child]:border-0">
-              {loadingRows ? (
-                <tr className="border-b border-white/10">
+              {loadingRows ?
+              <tr className="border-b border-white/10">
                    <td colSpan={12} className="p-4 text-center py-12 text-white/50 align-middle">Loading…</td>
-                </tr>
-              ) : rows.length === 0 ? (
-                <tr className="border-b border-white/10">
+                </tr> :
+              rows.length === 0 ?
+              <tr className="border-b border-white/10">
                    <td colSpan={12} className="p-4 text-center py-12 text-white/50 align-middle">No supporters yet. Import a CSV to get started.</td>
-                </tr>
-              ) : (
-                sortedRows.map((s) => (
-                  <tr
-                    key={s.id}
-                    className={`border-b border-white/10 transition-colors hover:bg-white/5 ${selected.has(s.id) ? "bg-red-950/20" : ""}`}
-                  >
+                </tr> :
+
+              sortedRows.map((s) =>
+              <tr
+                key={s.id}
+                className={`border-b border-white/10 transition-colors hover:bg-white/5 ${selected.has(s.id) ? "bg-red-950/20" : ""}`}>
+
                     <td className="p-4 px-3 align-middle">
                       <input
-                        type="checkbox"
-                        checked={selected.has(s.id)}
-                        onChange={() => toggleOne(s.id)}
-                        className="accent-green-500 w-4 h-4 cursor-pointer"
-                      />
+                    type="checkbox"
+                    checked={selected.has(s.id)}
+                    onChange={() => toggleOne(s.id)}
+                    className="accent-green-500 w-4 h-4 cursor-pointer" />
+
                     </td>
                     {/* ★ HOF star toggle */}
                     <td className="p-4 px-2 text-center align-middle">
                       <button
-                        title={s.is_hall_of_fame ? "Remove from Hall of Fame" : "Add to Hall of Fame"}
-                        onClick={async () => {
-                          const newHof = !s.is_hall_of_fame;
-                          await supabase.from("supporters").update({ is_hall_of_fame: newHof } as any).eq("id", s.id);
-                          setRows((prev) => prev.map((r) => r.id === s.id ? { ...r, is_hall_of_fame: newHof } : r));
-                        }}
-                        className="p-0.5 rounded hover:bg-white/10 transition-colors"
-                      >
+                    title={s.is_hall_of_fame ? "Remove from Hall of Fame" : "Add to Hall of Fame"}
+                    onClick={async () => {
+                      const newHof = !s.is_hall_of_fame;
+                      await supabase.from("supporters").update({ is_hall_of_fame: newHof } as any).eq("id", s.id);
+                      setRows((prev) => prev.map((r) => r.id === s.id ? { ...r, is_hall_of_fame: newHof } : r));
+                    }}
+                    className="p-0.5 rounded hover:bg-white/10 transition-colors">
+
                         <Star
-                          className={`w-4 h-4 ${s.is_hall_of_fame ? "text-yellow-400 fill-yellow-400" : "text-white/30"}`}
-                          strokeWidth={1.5}
-                        />
+                      className={`w-4 h-4 ${s.is_hall_of_fame ? "text-yellow-400 fill-yellow-400" : "text-white/30"}`}
+                      strokeWidth={1.5} />
+
                       </button>
                     </td>
                     {/* Name — double-click to edit */}
                     <td
-                      className="p-4 align-middle text-white font-medium cursor-pointer select-none"
-                      onDoubleClick={() => setInlineEdit({ id: s.id, field: "name" })}
-                      title="Double-click to edit"
-                    >
-                      {inlineEdit?.id === s.id && inlineEdit.field === "name" ? (
-                        <input
-                          ref={(el) => { inlineInputRef.current = el; }}
-                          defaultValue={s.name}
-                          onBlur={(e) => saveInlineEdit(s.id, "name", e.target.value)}
-                          onKeyDown={(e) => handleInlineKeyDown(e, s.id, "name")}
-                          className="bg-white text-black text-sm rounded px-1.5 py-1 border border-white/20 w-full"
-                        />
-                      ) : s.name}
+                  className="p-4 align-middle text-white font-medium cursor-pointer select-none"
+                  onDoubleClick={() => setInlineEdit({ id: s.id, field: "name" })}
+                  title="Double-click to edit">
+
+                      {inlineEdit?.id === s.id && inlineEdit.field === "name" ?
+                  <input
+                    ref={(el) => {inlineInputRef.current = el;}}
+                    defaultValue={s.name}
+                    onBlur={(e) => saveInlineEdit(s.id, "name", e.target.value)}
+                    onKeyDown={(e) => handleInlineKeyDown(e, s.id, "name")}
+                    className="bg-white text-black text-sm rounded px-1.5 py-1 border border-white/20 w-full" /> :
+
+                  s.name}
                     </td>
                     {/* Category — double-click to edit inline */}
                     <td
-                      className="p-4 align-middle text-white/60 text-sm cursor-pointer select-none"
-                      onDoubleClick={() => setInlineEdit({ id: s.id, field: "supporter_category" })}
-                      title="Double-click to edit"
-                    >
-                      {inlineEdit?.id === s.id && inlineEdit.field === "supporter_category" ? (
-                        <select
-                          ref={(el) => { inlineInputRef.current = el; }}
-                          autoFocus
-                          defaultValue={s.supporter_category ?? ""}
-                          onChange={async (e) => {
-                            await saveInlineEdit(s.id, "supporter_category", e.target.value);
-                          }}
-                          onKeyDown={(e) => { if (e.key === "Escape") setInlineEdit(null); }}
-                          className="bg-white text-black text-xs rounded px-1.5 py-1 border border-white/20 cursor-pointer"
-                        >
-                          {SUPPORTER_CATEGORIES.map((c) => (
-                            <option key={c} value={c}>{c}</option>
-                          ))}
-                        </select>
-                      ) : (
-                        s.supporter_category || "—"
-                      )}
+                  className="p-4 align-middle text-white/60 text-sm cursor-pointer select-none"
+                  onDoubleClick={() => setInlineEdit({ id: s.id, field: "supporter_category" })}
+                  title="Double-click to edit">
+
+                      {inlineEdit?.id === s.id && inlineEdit.field === "supporter_category" ?
+                  <select
+                    ref={(el) => {inlineInputRef.current = el;}}
+                    autoFocus
+                    defaultValue={s.supporter_category ?? ""}
+                    onChange={async (e) => {
+                      await saveInlineEdit(s.id, "supporter_category", e.target.value);
+                    }}
+                    onKeyDown={(e) => {if (e.key === "Escape") setInlineEdit(null);}}
+                    className="bg-white text-black text-xs rounded px-1.5 py-1 border border-white/20 cursor-pointer">
+
+                          {SUPPORTER_CATEGORIES.map((c) =>
+                    <option key={c} value={c}>{c}</option>
+                    )}
+                        </select> :
+
+                  s.supporter_category || "—"
+                  }
                     </td>
                     {/* Primary Revenue Stream — double-click to edit */}
                     <td
-                      className="p-4 align-middle text-white/70 text-sm cursor-pointer select-none"
-                      onDoubleClick={() => setInlineEdit({ id: s.id, field: "primary_revenue_stream" })}
-                      title="Double-click to edit"
-                    >
-                      {inlineEdit?.id === s.id && inlineEdit.field === "primary_revenue_stream" ? (
-                        <select
-                          ref={(el) => { inlineInputRef.current = el; }}
-                          autoFocus
-                          defaultValue={s.primary_revenue_stream ?? ""}
-                          onChange={(e) => saveInlineEdit(s.id, "primary_revenue_stream", e.target.value)}
-                          onKeyDown={(e) => { if (e.key === "Escape") setInlineEdit(null); }}
-                          className="bg-white text-black text-xs rounded px-1.5 py-1 border border-white/20 cursor-pointer"
-                        >
+                  className="p-4 align-middle text-white/70 text-sm cursor-pointer select-none"
+                  onDoubleClick={() => setInlineEdit({ id: s.id, field: "primary_revenue_stream" })}
+                  title="Double-click to edit">
+
+                      {inlineEdit?.id === s.id && inlineEdit.field === "primary_revenue_stream" ?
+                  <select
+                    ref={(el) => {inlineInputRef.current = el;}}
+                    autoFocus
+                    defaultValue={s.primary_revenue_stream ?? ""}
+                    onChange={(e) => saveInlineEdit(s.id, "primary_revenue_stream", e.target.value)}
+                    onKeyDown={(e) => {if (e.key === "Escape") setInlineEdit(null);}}
+                    className="bg-white text-black text-xs rounded px-1.5 py-1 border border-white/20 cursor-pointer">
+
                           <option value="">—</option>
-                          {PRIMARY_REVENUE_STREAMS.map((r) => (
-                            <option key={r} value={r}>{r}</option>
-                          ))}
-                        </select>
-                      ) : s.primary_revenue_stream || "—"}
+                          {PRIMARY_REVENUE_STREAMS.map((r) =>
+                    <option key={r} value={r}>{r}</option>
+                    )}
+                        </select> :
+                  s.primary_revenue_stream || "—"}
                     </td>
                     {/* Status — double-click to edit (multi-select) */}
                     <td
-                      className="p-4 align-middle text-white/70 text-sm cursor-pointer select-none"
-                      onDoubleClick={() => setInlineEdit({ id: s.id, field: "status" })}
-                      title="Double-click to edit"
-                    >
-                      {inlineEdit?.id === s.id && inlineEdit.field === "status" ? (
-                        (() => {
-                          const currentVals = (s.status ?? "").split(",").map(v => v.trim()).filter(Boolean);
-                          return (
-                            <div className="bg-white text-black text-xs rounded px-2 py-1.5 border border-white/20 space-y-1 min-w-[140px]">
-                              {SUPPORTER_STATUSES.map((st) => (
-                                <label key={st} className="flex items-center gap-1.5 cursor-pointer hover:bg-gray-100 rounded px-1">
+                  className="p-4 align-middle text-white/70 text-sm cursor-pointer select-none"
+                  onDoubleClick={() => setInlineEdit({ id: s.id, field: "status" })}
+                  title="Double-click to edit">
+
+                      {inlineEdit?.id === s.id && inlineEdit.field === "status" ?
+                  (() => {
+                    const currentVals = (s.status ?? "").split(",").map((v) => v.trim()).filter(Boolean);
+                    return (
+                      <div className="bg-white text-black text-xs rounded px-2 py-1.5 border border-white/20 space-y-1 min-w-[140px]">
+                              {SUPPORTER_STATUSES.map((st) =>
+                        <label key={st} className="flex items-center gap-1.5 cursor-pointer hover:bg-gray-100 rounded px-1">
                                   <input
-                                    type="checkbox"
-                                    checked={currentVals.includes(st)}
-                                    onChange={(e) => {
-                                      const next = e.target.checked
-                                        ? [...currentVals, st]
-                                        : currentVals.filter(v => v !== st);
-                                      const val = next.join(", ");
-                                      saveInlineEdit(s.id, "status", val);
-                                    }}
-                                    className="accent-green-600"
-                                  />
+                            type="checkbox"
+                            checked={currentVals.includes(st)}
+                            onChange={(e) => {
+                              const next = e.target.checked ?
+                              [...currentVals, st] :
+                              currentVals.filter((v) => v !== st);
+                              const val = next.join(", ");
+                              saveInlineEdit(s.id, "status", val);
+                            }}
+                            className="accent-green-600" />
+
                                   <span>{st}</span>
                                 </label>
-                              ))}
+                        )}
                               <button
-                                onClick={() => setInlineEdit(null)}
-                                className="text-[10px] text-gray-500 hover:text-black mt-1 w-full text-center"
-                              >Done</button>
-                            </div>
-                          );
-                        })()
-                      ) : s.status || "—"}
+                          onClick={() => setInlineEdit(null)}
+                          className="text-[10px] text-gray-500 hover:text-black mt-1 w-full text-center">
+                          Done</button>
+                            </div>);
+
+                  })() :
+                  s.status || "—"}
                     </td>
                     {/* Relationship Owner — double-click to edit */}
                     <td
-                      className="p-4 align-middle text-white/70 text-sm cursor-pointer select-none"
-                      onDoubleClick={() => setInlineEdit({ id: s.id, field: "relationship_owner" })}
-                      title="Double-click to edit"
-                    >
-                      {inlineEdit?.id === s.id && inlineEdit.field === "relationship_owner" ? (
-                        <input
-                          ref={(el) => { inlineInputRef.current = el; }}
-                          defaultValue={s.relationship_owner ?? ""}
-                          onBlur={(e) => saveInlineEdit(s.id, "relationship_owner", e.target.value)}
-                          onKeyDown={(e) => handleInlineKeyDown(e, s.id, "relationship_owner")}
-                          className="bg-white text-black text-sm rounded px-1.5 py-1 border border-white/20 w-full"
-                        />
-                      ) : s.relationship_owner || "—"}
+                  className="p-4 align-middle text-white/70 text-sm cursor-pointer select-none"
+                  onDoubleClick={() => setInlineEdit({ id: s.id, field: "relationship_owner" })}
+                  title="Double-click to edit">
+
+                      {inlineEdit?.id === s.id && inlineEdit.field === "relationship_owner" ?
+                  <input
+                    ref={(el) => {inlineInputRef.current = el;}}
+                    defaultValue={s.relationship_owner ?? ""}
+                    onBlur={(e) => saveInlineEdit(s.id, "relationship_owner", e.target.value)}
+                    onKeyDown={(e) => handleInlineKeyDown(e, s.id, "relationship_owner")}
+                    className="bg-white text-black text-sm rounded px-1.5 py-1 border border-white/20 w-full" /> :
+
+                  s.relationship_owner || "—"}
                     </td>
                     {/* Email — double-click to edit */}
                     <td
-                      className="p-4 align-middle text-white/70 text-sm cursor-pointer select-none"
-                      onDoubleClick={() => setInlineEdit({ id: s.id, field: "email" })}
-                      title="Double-click to edit"
-                    >
-                      {inlineEdit?.id === s.id && inlineEdit.field === "email" ? (
-                        <ValidatedEmailInput
-                          value={s.email ?? ""}
-                          onChange={(val) => {
-                            if (isValidEmail(val)) {
-                              saveInlineEdit(s.id, "email", val);
-                            }
-                          }}
-                          className="bg-white text-black text-sm rounded px-1.5 py-1 border border-white/20 w-full h-8"
-                        />
-                      ) : s.email ? (
-                        <a href={`mailto:${s.email}`} className="text-green-400 hover:underline">{s.email}</a>
-                      ) : "—"}
+                  className="p-4 align-middle text-white/70 text-sm cursor-pointer select-none"
+                  onDoubleClick={() => setInlineEdit({ id: s.id, field: "email" })}
+                  title="Double-click to edit">
+
+                      {inlineEdit?.id === s.id && inlineEdit.field === "email" ?
+                  <ValidatedEmailInput
+                    value={s.email ?? ""}
+                    onChange={(val) => {
+                      if (isValidEmail(val)) {
+                        saveInlineEdit(s.id, "email", val);
+                      }
+                    }}
+                    className="bg-white text-black text-sm rounded px-1.5 py-1 border border-white/20 w-full h-8" /> :
+
+                  s.email ?
+                  <a href={`mailto:${s.email}`} className="text-green-400 hover:underline">{s.email}</a> :
+                  "—"}
                     </td>
                     {/* Phone — double-click to edit */}
                     <td
-                      className="p-4 align-middle text-white/70 text-sm cursor-pointer select-none"
-                      onDoubleClick={() => setInlineEdit({ id: s.id, field: "phone" })}
-                      title="Double-click to edit"
-                    >
-                      {inlineEdit?.id === s.id && inlineEdit.field === "phone" ? (
-                        <ValidatedPhoneInput
-                          value={s.phone ?? ""}
-                          onChange={(e164) => {
-                            if (e164 && isValidPhone(e164)) {
-                              saveInlineEdit(s.id, "phone", e164);
-                            } else if (!e164) {
-                              saveInlineEdit(s.id, "phone", "");
-                            }
-                          }}
-                          className="bg-white text-black text-sm rounded px-1.5 py-1 border border-white/20 w-full h-8"
-                        />
-                      ) : s.phone ? (
-                        <a href={`tel:${s.phone}`} className="text-green-400 hover:underline">{e164ToDisplay(s.phone)}</a>
-                      ) : "—"}
+                  className="p-4 align-middle text-white/70 text-sm cursor-pointer select-none"
+                  onDoubleClick={() => setInlineEdit({ id: s.id, field: "phone" })}
+                  title="Double-click to edit">
+
+                      {inlineEdit?.id === s.id && inlineEdit.field === "phone" ?
+                  <ValidatedPhoneInput
+                    value={s.phone ?? ""}
+                    onChange={(e164) => {
+                      if (e164 && isValidPhone(e164)) {
+                        saveInlineEdit(s.id, "phone", e164);
+                      } else if (!e164) {
+                        saveInlineEdit(s.id, "phone", "");
+                      }
+                    }}
+                    className="bg-white text-black text-sm rounded px-1.5 py-1 border border-white/20 w-full h-8" /> :
+
+                  s.phone ?
+                  <a href={`tel:${s.phone}`} className="text-green-400 hover:underline">{e164ToDisplay(s.phone)}</a> :
+                  "—"}
                     </td>
                     {/* Address — double-click to edit */}
                     <td
-                      className="p-4 align-middle text-white/70 text-sm cursor-pointer select-none"
-                      onDoubleClick={() => setInlineEdit({ id: s.id, field: "address" })}
-                      title="Double-click to edit"
-                    >
-                      {inlineEdit?.id === s.id && inlineEdit.field === "address" ? (
-                        <ValidatedAddressInput
-                          value={s.address ?? ""}
-                          onSelect={async (addr) => {
-                            setRows((prev) => prev.map((r) => r.id === s.id ? { ...r, address: addr.address } : r));
-                            setInlineEdit(null);
-                            await supabase.from("supporters").update({
-                              address: addr.address,
-                              address_street: addr.address_street,
-                              address_city: addr.address_city,
-                              address_state: addr.address_state,
-                              address_zip: addr.address_zip,
-                              address_country: addr.address_country,
-                            } as any).eq("id", s.id);
-                          }}
-                          className="bg-white text-black text-sm rounded px-1.5 py-1 border border-white/20 w-full h-8"
-                        />
-                      ) : s.address || "—"}
+                  className="p-4 align-middle text-white/70 text-sm cursor-pointer select-none"
+                  onDoubleClick={() => setInlineEdit({ id: s.id, field: "address" })}
+                  title="Double-click to edit">
+
+                      {inlineEdit?.id === s.id && inlineEdit.field === "address" ?
+                  <ValidatedAddressInput
+                    value={s.address ?? ""}
+                    onSelect={async (addr) => {
+                      setRows((prev) => prev.map((r) => r.id === s.id ? { ...r, address: addr.address } : r));
+                      setInlineEdit(null);
+                      await supabase.from("supporters").update({
+                        address: addr.address,
+                        address_street: addr.address_street,
+                        address_city: addr.address_city,
+                        address_state: addr.address_state,
+                        address_zip: addr.address_zip,
+                        address_country: addr.address_country
+                      } as any).eq("id", s.id);
+                    }}
+                    className="bg-white text-black text-sm rounded px-1.5 py-1 border border-white/20 w-full h-8" /> :
+
+                  s.address || "—"}
                     </td>
                     {/* Notes — double-click to edit */}
                     <td
-                      className="p-4 align-middle text-white/50 text-xs min-w-[280px] whitespace-pre-wrap break-words align-top py-3 cursor-pointer select-none"
-                      onDoubleClick={() => setInlineEdit({ id: s.id, field: "story" })}
-                      title="Double-click to edit"
-                    >
-                      {inlineEdit?.id === s.id && inlineEdit.field === "story" ? (
-                        <textarea
-                          ref={(el) => { inlineInputRef.current = el; }}
-                          defaultValue={s.story ?? ""}
-                          onBlur={(e) => saveInlineEdit(s.id, "story", e.target.value)}
-                          onKeyDown={(e) => { if (e.key === "Escape") setInlineEdit(null); }}
-                          rows={3}
-                          className="bg-white text-black text-xs rounded px-1.5 py-1 border border-white/20 w-full resize-y"
-                        />
-                      ) : s.story || "—"}
+                  className="p-4 align-middle text-white/50 text-xs min-w-[280px] whitespace-pre-wrap break-words align-top py-3 cursor-pointer select-none"
+                  onDoubleClick={() => setInlineEdit({ id: s.id, field: "story" })}
+                  title="Double-click to edit">
+
+                      {inlineEdit?.id === s.id && inlineEdit.field === "story" ?
+                  <textarea
+                    ref={(el) => {inlineInputRef.current = el;}}
+                    defaultValue={s.story ?? ""}
+                    onBlur={(e) => saveInlineEdit(s.id, "story", e.target.value)}
+                    onKeyDown={(e) => {if (e.key === "Escape") setInlineEdit(null);}}
+                    rows={3}
+                    className="bg-white text-black text-xs rounded px-1.5 py-1 border border-white/20 w-full resize-y" /> :
+
+                  s.story || "—"}
                     </td>
                     <td className="p-4 align-middle text-right">
                       <div className="flex justify-end gap-1">
                         <button
-                          onClick={() => setEditRow({ ...s })}
-                          className="p-1.5 rounded text-white/40 hover:text-green-400 hover:bg-white/5 transition-colors"
-                          title="Edit full record"
-                        >
+                      onClick={() => setEditRow({ ...s })}
+                      className="p-1.5 rounded text-white/40 hover:text-green-400 hover:bg-white/5 transition-colors"
+                      title="Edit full record">
+
                           <Pencil className="w-3.5 h-3.5" />
                         </button>
                         <button
-                          onClick={() => setDeleteId(s.id)}
-                          className="p-1.5 rounded text-white/40 hover:text-red-400 hover:bg-white/5 transition-colors"
-                          title="Delete"
-                        >
+                      onClick={() => setDeleteId(s.id)}
+                      className="p-1.5 rounded text-white/40 hover:text-red-400 hover:bg-white/5 transition-colors"
+                      title="Delete">
+
                           <Trash2 className="w-3.5 h-3.5" />
                         </button>
                       </div>
                     </td>
                   </tr>
-                ))
-              )}
+              )
+              }
             </tbody>
           </table>
         </div>
       </div>
       {/* ── Edit Modal ────────────────────────────────────────────────────────── */}
-      <Dialog open={!!editRow} onOpenChange={(o) => { if (!o) setEditRow(null); }}>
+      <Dialog open={!!editRow} onOpenChange={(o) => {if (!o) setEditRow(null);}}>
         <DialogContent className="bg-zinc-900 border-white/10 text-white sm:max-w-2xl flex flex-col max-h-[85vh] p-0 gap-0">
           <div className="px-6 pt-6 pb-2 shrink-0">
             <DialogHeader>
@@ -770,15 +770,15 @@ const AdminSupportersDatabase = () => {
             </DialogHeader>
           </div>
           <div className="overflow-y-auto flex-1 px-6 pb-4 space-y-4 pt-2">
-            {editRow && (
-              <>
+            {editRow &&
+            <>
                 <div className="space-y-1.5">
                   <Label className="text-white/70">Supporter Name <span className="text-red-400">*</span></Label>
                   <Input
-                    value={editRow.name}
-                    onChange={(e) => setEditRow({ ...editRow, name: e.target.value })}
-                    className="bg-white/5 border-white/10 text-white"
-                  />
+                  value={editRow.name}
+                  onChange={(e) => setEditRow({ ...editRow, name: e.target.value })}
+                  className="bg-white/5 border-white/10 text-white" />
+
                 </div>
                 <div className="space-y-1.5">
                   <Label className="text-white/70">Supporter Category</Label>
@@ -787,35 +787,35 @@ const AdminSupportersDatabase = () => {
                       <SelectValue placeholder="— not set —" />
                     </SelectTrigger>
                     <SelectContent className="bg-zinc-900 border-white/10 text-white">
-                      {SUPPORTER_CATEGORIES.map((c) => (
-                        <SelectItem key={c} value={c} className="text-white focus:bg-white/10 focus:text-white">{c}</SelectItem>
-                      ))}
+                      {SUPPORTER_CATEGORIES.map((c) =>
+                    <SelectItem key={c} value={c} className="text-white focus:bg-white/10 focus:text-white">{c}</SelectItem>
+                    )}
                     </SelectContent>
                   </Select>
                 </div>
                 <div className="space-y-1.5">
                   <Label className="text-white/70">Primary Contact Email</Label>
                   <ValidatedEmailInput
-                    value={editRow.email ?? ""}
-                    onChange={(val) => setEditRow({ ...editRow, email: val })}
-                    className="bg-white/5 border-white/10 text-white"
-                  />
+                  value={editRow.email ?? ""}
+                  onChange={(val) => setEditRow({ ...editRow, email: val })}
+                  className="bg-white/5 border-white/10 text-white" />
+
                 </div>
                 <div className="space-y-1.5">
                   <Label className="text-white/70">Primary Contact Phone</Label>
                   <ValidatedPhoneInput
-                    value={editRow.phone ?? ""}
-                    onChange={(e164) => setEditRow({ ...editRow, phone: e164 })}
-                    className="bg-white/5 border-white/10 text-white"
-                  />
+                  value={editRow.phone ?? ""}
+                  onChange={(e164) => setEditRow({ ...editRow, phone: e164 })}
+                  className="bg-white/5 border-white/10 text-white" />
+
                 </div>
                 <div className="space-y-1.5">
                   <Label className="text-white/70">Address</Label>
                   <ValidatedAddressInput
-                    value={editRow.address ?? ""}
-                    onSelect={(addr) => setEditRow({ ...editRow, address: addr.address })}
-                    className="bg-white/5 border-white/10 text-white"
-                  />
+                  value={editRow.address ?? ""}
+                  onSelect={(addr) => setEditRow({ ...editRow, address: addr.address })}
+                  className="bg-white/5 border-white/10 text-white" />
+
                 </div>
                 <div className="space-y-1.5">
                   <Label className="text-white/70">Primary Revenue Stream</Label>
@@ -824,9 +824,9 @@ const AdminSupportersDatabase = () => {
                       <SelectValue placeholder="— not set —" />
                     </SelectTrigger>
                     <SelectContent className="bg-zinc-900 border-white/10 text-white">
-                      {PRIMARY_REVENUE_STREAMS.map((r) => (
-                        <SelectItem key={r} value={r} className="text-white focus:bg-white/10 focus:text-white">{r}</SelectItem>
-                      ))}
+                      {PRIMARY_REVENUE_STREAMS.map((r) =>
+                    <SelectItem key={r} value={r} className="text-white focus:bg-white/10 focus:text-white">{r}</SelectItem>
+                    )}
                     </SelectContent>
                   </Select>
                 </div>
@@ -834,42 +834,42 @@ const AdminSupportersDatabase = () => {
                   <Label className="text-white/70">Supporter ID</Label>
                   <div className="grid grid-cols-2 gap-2 bg-white/5 border border-white/10 rounded-md p-3">
                     {SUPPORTER_STATUSES.map((st) => {
-                      const vals = (editRow.status ?? "").split(",").map(v => v.trim()).filter(Boolean);
-                      const checked = vals.includes(st);
-                      return (
-                        <label key={st} className="flex items-center gap-2 cursor-pointer text-sm text-white/80 hover:text-white">
+                    const vals = (editRow.status ?? "").split(",").map((v) => v.trim()).filter(Boolean);
+                    const checked = vals.includes(st);
+                    return (
+                      <label key={st} className="flex items-center gap-2 cursor-pointer text-sm text-white/80 hover:text-white">
                           <input
-                            type="checkbox"
-                            checked={checked}
-                            onChange={(e) => {
-                              const next = e.target.checked ? [...vals, st] : vals.filter(v => v !== st);
-                              setEditRow({ ...editRow, status: next.join(", ") || null });
-                            }}
-                            className="accent-green-500 w-4 h-4"
-                          />
+                          type="checkbox"
+                          checked={checked}
+                          onChange={(e) => {
+                            const next = e.target.checked ? [...vals, st] : vals.filter((v) => v !== st);
+                            setEditRow({ ...editRow, status: next.join(", ") || null });
+                          }}
+                          className="accent-green-500 w-4 h-4" />
+
                           {st}
-                        </label>
-                      );
-                    })}
+                        </label>);
+
+                  })}
                   </div>
                 </div>
                 <div className="space-y-1.5">
                   <Label className="text-white/70">Relationship Owner</Label>
                   <Input
-                    value={editRow.relationship_owner ?? ""}
-                    onChange={(e) => setEditRow({ ...editRow, relationship_owner: e.target.value })}
-                    className="bg-white/5 border-white/10 text-white"
-                    placeholder="Person's name…"
-                  />
+                  value={editRow.relationship_owner ?? ""}
+                  onChange={(e) => setEditRow({ ...editRow, relationship_owner: e.target.value })}
+                  className="bg-white/5 border-white/10 text-white"
+                  placeholder="Person's name…" />
+
                 </div>
                 <div className="space-y-1.5">
                   <Label className="text-white/70">Internal Strategic Notes</Label>
                   <textarea
-                    rows={3}
-                    value={editRow.story ?? ""}
-                    onChange={(e) => setEditRow({ ...editRow, story: e.target.value })}
-                    className="w-full rounded-md bg-white/5 border border-white/10 text-white text-sm px-3 py-2 resize-none focus:outline-none focus:ring-1 focus:ring-green-500"
-                  />
+                  rows={3}
+                  value={editRow.story ?? ""}
+                  onChange={(e) => setEditRow({ ...editRow, story: e.target.value })}
+                  className="w-full rounded-md bg-white/5 border border-white/10 text-white text-sm px-3 py-2 resize-none focus:outline-none focus:ring-1 focus:ring-green-500" />
+
                 </div>
 
                 {/* ── Revenue History ─────────────────────────────── */}
@@ -887,7 +887,7 @@ const AdminSupportersDatabase = () => {
                   <SupporterTasksSection supporterId={editRow.id} supporterName={editRow.name} />
                 </div>
               </>
-            )}
+            }
           </div>
           <div className="px-6 py-4 border-t border-white/10 shrink-0 flex justify-end gap-2">
             <Button variant="ghost" onClick={() => setEditRow(null)} className="text-white hover:bg-white/10">
@@ -896,8 +896,8 @@ const AdminSupportersDatabase = () => {
             <Button
               onClick={handleEditSave}
               disabled={!editRow?.name?.trim() || editSaving}
-              className="bg-green-500 hover:bg-green-400 text-black"
-            >
+              className="bg-green-500 hover:bg-green-400 text-black">
+
               {editSaving ? "Saving…" : "Save Changes"}
             </Button>
           </div>
@@ -905,7 +905,7 @@ const AdminSupportersDatabase = () => {
       </Dialog>
 
       {/* ── Add Supporter Modal ──────────────────────────────────────────────── */}
-      <Dialog open={addOpen} onOpenChange={(o) => { if (!o) setNewSupporter(emptyNew()); setAddOpen(o); }}>
+      <Dialog open={addOpen} onOpenChange={(o) => {if (!o) setNewSupporter(emptyNew());setAddOpen(o);}}>
         <DialogContent className="bg-zinc-900 border-white/10 text-white sm:max-w-lg flex flex-col max-h-[85vh] p-0 gap-0">
           <div className="px-6 pt-6 pb-2 shrink-0">
             <DialogHeader>
@@ -922,24 +922,24 @@ const AdminSupportersDatabase = () => {
               <ValidatedEmailInput
                 value={newSupporter.email ?? ""}
                 onChange={(val) => setNewSupporter({ ...newSupporter, email: val })}
-                className="bg-white/5 border-white/10 text-white"
-              />
+                className="bg-white/5 border-white/10 text-white" />
+
             </div>
             <div className="space-y-1.5">
               <Label className="text-white/70">Phone</Label>
               <ValidatedPhoneInput
                 value={newSupporter.phone ?? ""}
                 onChange={(e164) => setNewSupporter({ ...newSupporter, phone: e164 })}
-                className="bg-white/5 border-white/10 text-white"
-              />
+                className="bg-white/5 border-white/10 text-white" />
+
             </div>
             <div className="space-y-1.5">
               <Label className="text-white/70">Address</Label>
               <ValidatedAddressInput
                 value={newSupporter.address ?? ""}
                 onSelect={(addr) => setNewSupporter({ ...newSupporter, address: addr.address })}
-                className="bg-white/5 border-white/10 text-white"
-              />
+                className="bg-white/5 border-white/10 text-white" />
+
             </div>
             <div className="space-y-1.5">
               <Label className="text-white/70">Supporter Category</Label>
@@ -963,7 +963,7 @@ const AdminSupportersDatabase = () => {
               <Label className="text-white/70">Supporter ID</Label>
               <div className="grid grid-cols-2 gap-2 bg-white/5 border border-white/10 rounded-md p-3">
                 {SUPPORTER_STATUSES.map((st) => {
-                  const vals = (newSupporter.status ?? "").split(",").map(v => v.trim()).filter(Boolean);
+                  const vals = (newSupporter.status ?? "").split(",").map((v) => v.trim()).filter(Boolean);
                   const checked = vals.includes(st);
                   return (
                     <label key={st} className="flex items-center gap-2 cursor-pointer text-sm text-white/80 hover:text-white">
@@ -971,14 +971,14 @@ const AdminSupportersDatabase = () => {
                         type="checkbox"
                         checked={checked}
                         onChange={(e) => {
-                          const next = e.target.checked ? [...vals, st] : vals.filter(v => v !== st);
+                          const next = e.target.checked ? [...vals, st] : vals.filter((v) => v !== st);
                           setNewSupporter({ ...newSupporter, status: next.join(", ") || null });
                         }}
-                        className="accent-green-500 w-4 h-4"
-                      />
+                        className="accent-green-500 w-4 h-4" />
+
                       {st}
-                    </label>
-                  );
+                    </label>);
+
                 })}
               </div>
             </div>
@@ -992,7 +992,7 @@ const AdminSupportersDatabase = () => {
             </div>
           </div>
           <div className="px-6 py-4 border-t border-white/10 shrink-0 flex justify-end gap-2">
-            <Button variant="ghost" onClick={() => { setNewSupporter(emptyNew()); setAddOpen(false); }} className="text-white hover:bg-white/10">Cancel</Button>
+            <Button variant="ghost" onClick={() => {setNewSupporter(emptyNew());setAddOpen(false);}} className="text-white hover:bg-white/10">Cancel</Button>
             <Button onClick={handleAddSave} disabled={!newSupporter.name.trim() || addSaving} className="bg-green-500 hover:bg-green-400 text-black">
               {addSaving ? "Saving…" : "Add Supporter"}
             </Button>
@@ -1001,7 +1001,7 @@ const AdminSupportersDatabase = () => {
       </Dialog>
 
       {/* ── Delete Confirmation ───────────────────────────────────────────────── */}
-      <AlertDialog open={!!deleteId} onOpenChange={(o) => { if (!o) setDeleteId(null); }}>
+      <AlertDialog open={!!deleteId} onOpenChange={(o) => {if (!o) setDeleteId(null);}}>
         <AlertDialogContent className="bg-zinc-900 border-white/10 text-white">
           <AlertDialogHeader>
             <AlertDialogTitle className="text-white">Delete supporter?</AlertDialogTitle>
@@ -1016,8 +1016,8 @@ const AdminSupportersDatabase = () => {
             <AlertDialogAction
               onClick={handleDelete}
               disabled={deleting}
-              className="bg-red-600 hover:bg-red-500 text-white"
-            >
+              className="bg-red-600 hover:bg-red-500 text-white">
+
               {deleting ? "Deleting…" : "Delete"}
             </AlertDialogAction>
           </AlertDialogFooter>
@@ -1025,7 +1025,7 @@ const AdminSupportersDatabase = () => {
       </AlertDialog>
 
       {/* ── Bulk Delete Confirmation ──────────────────────────────────────────── */}
-      <AlertDialog open={bulkDeleteOpen} onOpenChange={(o) => { if (!o) setBulkDeleteOpen(false); }}>
+      <AlertDialog open={bulkDeleteOpen} onOpenChange={(o) => {if (!o) setBulkDeleteOpen(false);}}>
         <AlertDialogContent className="bg-zinc-900 border-white/10 text-white">
           <AlertDialogHeader>
             <AlertDialogTitle className="text-white">Delete {selected.size} supporter{selected.size !== 1 ? "s" : ""}?</AlertDialogTitle>
@@ -1040,8 +1040,8 @@ const AdminSupportersDatabase = () => {
             <AlertDialogAction
               onClick={handleBulkDelete}
               disabled={bulkDeleting}
-              className="bg-red-600 hover:bg-red-500 text-white"
-            >
+              className="bg-red-600 hover:bg-red-500 text-white">
+
               {bulkDeleting ? "Deleting…" : `Delete ${selected.size}`}
             </AlertDialogAction>
           </AlertDialogFooter>
@@ -1049,7 +1049,7 @@ const AdminSupportersDatabase = () => {
       </AlertDialog>
 
       {/* ── Import Modal ──────────────────────────────────────────────────────── */}
-      <Dialog open={importOpen} onOpenChange={(o) => { if (!o) resetImport(); setImportOpen(o); }}>
+      <Dialog open={importOpen} onOpenChange={(o) => {if (!o) resetImport();setImportOpen(o);}}>
         <DialogContent className="bg-zinc-900 border-white/10 text-white sm:max-w-lg flex flex-col max-h-[85vh] p-0 gap-0">
           <div className="px-6 pt-6 pb-2 shrink-0">
             <DialogHeader>
@@ -1065,81 +1065,81 @@ const AdminSupportersDatabase = () => {
                 type="file"
                 accept=".csv"
                 onChange={handleFileChange}
-                className="w-full text-sm text-white/70 file:mr-3 file:py-1.5 file:px-3 file:rounded file:border-0 file:bg-white/10 file:text-white file:text-sm file:cursor-pointer cursor-pointer"
-              />
+                className="w-full text-sm text-white/70 file:mr-3 file:py-1.5 file:px-3 file:rounded file:border-0 file:bg-white/10 file:text-white file:text-sm file:cursor-pointer cursor-pointer" />
+
             </div>
 
-            {csvHeaders.length > 0 && (
-              <div className="space-y-3">
+            {csvHeaders.length > 0 &&
+            <div className="space-y-3">
                 <p className="text-sm font-medium text-white/80">Column Mapping</p>
-                {MAPPABLE_FIELDS.map((field) => (
-                  <div key={field} className="flex items-center gap-3">
+                {MAPPABLE_FIELDS.map((field) =>
+              <div key={field} className="flex items-center gap-3">
                     <span className="w-20 text-sm text-white/60 shrink-0">
                       {FIELD_LABELS[field]}
                       {field === "name" && <span className="text-red-400 ml-0.5">*</span>}
                     </span>
                     <Select
-                      value={mapping[field]}
-                      onValueChange={(v) => setMapping((prev) => ({ ...prev, [field]: v }))}
-                    >
+                  value={mapping[field]}
+                  onValueChange={(v) => setMapping((prev) => ({ ...prev, [field]: v }))}>
+
                       <SelectTrigger className="flex-1 bg-white/5 border-white/10 text-white h-8 text-sm">
                         <SelectValue placeholder="— skip —" />
                       </SelectTrigger>
                       <SelectContent className="bg-zinc-900 border-white/10 text-white">
                         <SelectItem value="__skip__" className="focus:bg-white/10">— skip —</SelectItem>
-                        {csvHeaders.map((h) => (
-                          <SelectItem key={h} value={h} className="focus:bg-white/10">{h}</SelectItem>
-                        ))}
+                        {csvHeaders.map((h) =>
+                    <SelectItem key={h} value={h} className="focus:bg-white/10">{h}</SelectItem>
+                    )}
                       </SelectContent>
                     </Select>
                   </div>
-                ))}
+              )}
                 <p className="text-xs text-white/40">
                   {csvData.length} row{csvData.length !== 1 ? "s" : ""} detected
                 </p>
-                {mapping.name === "__skip__" && (
-                  <p className="text-xs text-amber-400">
+                {mapping.name === "__skip__" &&
+              <p className="text-xs text-amber-400">
                     ⚠ Map a column to <strong>Name*</strong> to enable import.
                   </p>
-                )}
+              }
               </div>
-            )}
+            }
 
             <p className="text-xs text-white/30 leading-relaxed">
               Emails are lowercased. Phone numbers are stored in E.164 format (+1 assumed for 10-digit US numbers). Blank emails are always inserted as new records.
             </p>
 
-            {summary && (
-              <div className="rounded-md bg-green-600/10 border border-green-600/30 px-4 py-3 text-sm text-green-300">
+            {summary &&
+            <div className="rounded-md bg-green-600/10 border border-green-600/30 px-4 py-3 text-sm text-green-300">
                 Import complete — <strong>{summary.created}</strong> created,{" "}
                 <strong>{summary.updated}</strong> updated,{" "}
                 <strong>{summary.skipped}</strong> skipped.
               </div>
-            )}
+            }
           </div>
 
           <div className="px-6 py-4 border-t border-white/10 shrink-0 flex justify-end gap-2">
             <Button
               variant="ghost"
-              onClick={() => { resetImport(); setImportOpen(false); }}
-              className="text-white hover:bg-white/10"
-            >
+              onClick={() => {resetImport();setImportOpen(false);}}
+              className="text-white hover:bg-white/10">
+
               {summary ? "Close" : "Cancel"}
             </Button>
-            {!summary && (
-              <Button
-                disabled={!csvData.length || mapping.name === "__skip__" || importing}
-                onClick={handleImport}
-                className="bg-green-500 hover:bg-green-400 text-black"
-              >
+            {!summary &&
+            <Button
+              disabled={!csvData.length || mapping.name === "__skip__" || importing}
+              onClick={handleImport}
+              className="bg-green-500 hover:bg-green-400 text-black">
+
                 {importing ? "Importing…" : `Import ${csvData.length || ""} Rows`}
               </Button>
-            )}
+            }
           </div>
         </DialogContent>
       </Dialog>
-    </div>
-  );
+    </div>);
+
 };
 
 export default AdminSupportersDatabase;
