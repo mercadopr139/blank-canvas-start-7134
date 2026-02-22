@@ -250,6 +250,56 @@ export type Database = {
           },
         ]
       }
+      engagements: {
+        Row: {
+          created_at: string
+          date: string
+          engagement_type: Database["public"]["Enums"]["engagement_type"]
+          follow_up_date: string | null
+          follow_up_needed: boolean
+          id: string
+          logged_by: string | null
+          outcome: Database["public"]["Enums"]["engagement_outcome"] | null
+          summary: string | null
+          supporter_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          date: string
+          engagement_type: Database["public"]["Enums"]["engagement_type"]
+          follow_up_date?: string | null
+          follow_up_needed?: boolean
+          id?: string
+          logged_by?: string | null
+          outcome?: Database["public"]["Enums"]["engagement_outcome"] | null
+          summary?: string | null
+          supporter_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          date?: string
+          engagement_type?: Database["public"]["Enums"]["engagement_type"]
+          follow_up_date?: string | null
+          follow_up_needed?: boolean
+          id?: string
+          logged_by?: string | null
+          outcome?: Database["public"]["Enums"]["engagement_outcome"] | null
+          summary?: string | null
+          supporter_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "engagements_supporter_id_fkey"
+            columns: ["supporter_id"]
+            isOneToOne: false
+            referencedRelation: "supporters"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       invoices: {
         Row: {
           client_id: string
@@ -720,6 +770,15 @@ export type Database = {
         | "Other"
         | "Venmo"
         | "Square"
+      engagement_outcome: "Positive" | "Neutral" | "No Response"
+      engagement_type:
+        | "Call"
+        | "Email"
+        | "Text"
+        | "Meeting"
+        | "Event"
+        | "Report Sent"
+        | "Video Update Sent"
       household_income:
         | "Under $25,000"
         | "$25,000 - $49,999"
@@ -897,6 +956,16 @@ export const Constants = {
       child_sex: ["Male", "Female"],
       deposit_status: ["Draft", "Deposited"],
       donation_method: ["Check", "PayPal", "Cash", "Other", "Venmo", "Square"],
+      engagement_outcome: ["Positive", "Neutral", "No Response"],
+      engagement_type: [
+        "Call",
+        "Email",
+        "Text",
+        "Meeting",
+        "Event",
+        "Report Sent",
+        "Video Update Sent",
+      ],
       household_income: [
         "Under $25,000",
         "$25,000 - $49,999",
