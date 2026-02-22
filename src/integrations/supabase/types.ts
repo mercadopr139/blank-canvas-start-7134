@@ -518,6 +518,7 @@ export type Database = {
           id: string
           metadata: Json | null
           pillar: Database["public"]["Enums"]["signal_pillar"] | null
+          priority_layer: Database["public"]["Enums"]["priority_layer"] | null
           signal_type: string
           source: string | null
           title: string | null
@@ -529,6 +530,7 @@ export type Database = {
           id?: string
           metadata?: Json | null
           pillar?: Database["public"]["Enums"]["signal_pillar"] | null
+          priority_layer?: Database["public"]["Enums"]["priority_layer"] | null
           signal_type: string
           source?: string | null
           title?: string | null
@@ -540,6 +542,7 @@ export type Database = {
           id?: string
           metadata?: Json | null
           pillar?: Database["public"]["Enums"]["signal_pillar"] | null
+          priority_layer?: Database["public"]["Enums"]["priority_layer"] | null
           signal_type?: string
           source?: string | null
           title?: string | null
@@ -887,6 +890,7 @@ export type Database = {
         | "$150,000 or more"
       invoice_status: "draft" | "sent" | "paid"
       lunch_status: "Yes" | "No" | "Not Applicable"
+      priority_layer: "Core" | "Bonus"
       rate_type:
         | "per_day"
         | "per_session"
@@ -1090,6 +1094,7 @@ export const Constants = {
       ],
       invoice_status: ["draft", "sent", "paid"],
       lunch_status: ["Yes", "No", "Not Applicable"],
+      priority_layer: ["Core", "Bonus"],
       rate_type: [
         "per_day",
         "per_session",
