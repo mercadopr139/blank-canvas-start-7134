@@ -41,6 +41,7 @@ interface RevenueRow {
 
 const emptyForm = {
   supporter_id: "" as string,
+  supporter_email: "",
   date: new Date().toISOString().slice(0, 10),
   amount: "",
   revenue_type: "Donation",
@@ -111,6 +112,7 @@ const AdminRevenue = () => {
     setSupporterSearch(r.supporter_name || "");
     setForm({
       supporter_id: r.supporter_id || "",
+      supporter_email: "",
       date: r.date,
       amount: String(r.amount),
       revenue_type: r.revenue_type,
@@ -125,18 +127,21 @@ const AdminRevenue = () => {
     setModalOpen(true);
   };
 
-  /** Find or create a supporter by name */
-  const findOrCreateSupporter = async (name: string): Promise<string | null> => {
+  /** Find or create a supporter by name, optionally with email */
+  const findOrCreateSupporter = async (name: string, email?: string): Promise<string | null> => {
     const { data: existing } = await supabase
       .from("supporters")
       .select("id")
       .eq("name", name)
       .maybeSingle();
-    if (existing) return existing.id;
+    if (existing) {
+      if (email) await supabase.from("supporters").update({ email }).eq("id", existing.id);
+      return existing.id;
+    }
 
     const { data: created, error } = await supabase
       .from("supporters")
-      .insert({ name })
+      .insert({ name, email: email || null })
       .select("id")
       .single();
     if (error) return null;
@@ -153,10 +158,13 @@ const AdminRevenue = () => {
     // If supporter not yet linked but we have a name typed, find/create
     let supporterId = form.supporter_id || null;
     if (!supporterId && supporterSearch.trim()) {
-      supporterId = await findOrCreateSupporter(supporterSearch.trim());
+      supporterId = await findOrCreateSupporter(supporterSearch.trim(), form.supporter_email.trim() || undefined);
       if (supporterId) {
         setForm(f => ({ ...f, supporter_id: supporterId! }));
       }
+    } else if (supporterId && form.supporter_email.trim()) {
+      // Update email on existing supporter
+      await supabase.from("supporters").update({ email: form.supporter_email.trim() }).eq("id", supporterId);
     }
 
     const payload = {
@@ -344,20 +352,32 @@ const AdminRevenue = () => {
             </DialogHeader>
           </div>
           <div className="overflow-y-auto flex-1 px-6 pb-4 space-y-4 pt-2">
-            {/* Supporter */}
+             {/* Supporter */}
             <div className="space-y-1.5">
               <SupporterAutocomplete
                 label="Supporter"
                 value={supporterSearch}
                 onChange={(val) => {
                   setSupporterSearch(val);
-                  if (!val) setForm({ ...form, supporter_id: "" });
+                  if (!val) setForm({ ...form, supporter_id: "", supporter_email: "" });
                 }}
                 onSelect={(s) => {
-                  setForm({ ...form, supporter_id: s.id });
+                  setForm({ ...form, supporter_id: s.id, supporter_email: s.email || "" });
                   setSupporterSearch(s.name);
                 }}
                 placeholder="Type to search supporters…"
+              />
+            </div>
+
+            {/* Supporter Email */}
+            <div className="space-y-1.5">
+              <Label className="text-white/70">Supporter Email</Label>
+              <Input
+                type="email"
+                value={form.supporter_email}
+                onChange={(e) => setForm({ ...form, supporter_email: e.target.value })}
+                className="bg-white/5 border-white/10 text-white"
+                placeholder="Email for receipt delivery…"
               />
             </div>
 
