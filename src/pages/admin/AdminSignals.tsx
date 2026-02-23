@@ -15,7 +15,8 @@ import { format } from "date-fns";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
-import { ArrowLeft, Plus, CheckCircle2, Circle, Trash2, LogOut, CalendarIcon } from "lucide-react";
+import { ArrowLeft, Plus, CheckCircle2, Circle, Trash2, LogOut, CalendarIcon, Archive } from "lucide-react";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 
 const PILLARS = ["Operations", "Sales & Marketing", "Finance", "Vision", "Personal"] as const;
 const PRIORITY_LAYERS = ["Core", "Bonus"] as const;
@@ -165,6 +166,25 @@ const AdminSignals = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["signals"] });
       toast.success("Signal deleted");
+    },
+    onError: (e: any) => toast.error(e.message),
+  });
+
+  const [showArchiveConfirm, setShowArchiveConfirm] = useState(false);
+
+  const archiveMutation = useMutation({
+    mutationFn: async () => {
+      const { error } = await supabase
+        .from("signals")
+        .update({ is_archived: true, archived_at: new Date().toISOString() } as any)
+        .eq("status", "Complete" as any)
+        .eq("is_archived", false as any);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["signals"] });
+      setShowArchiveConfirm(false);
+      toast.success("Completed signals archived");
     },
     onError: (e: any) => toast.error(e.message),
   });
@@ -452,6 +472,40 @@ const AdminSignals = () => {
           </div>
         )}
       </main>
+
+        {/* Archive completed button */}
+        <div className="mt-8 flex justify-center">
+          <Button
+            variant="outline"
+            onClick={() => setShowArchiveConfirm(true)}
+            className="border-white/20 text-white/60 hover:text-white bg-transparent hover:bg-white/5"
+          >
+            <Archive className="w-4 h-4 mr-2" />
+            Archive completed
+          </Button>
+        </div>
+
+      {/* Archive Confirmation */}
+      <AlertDialog open={showArchiveConfirm} onOpenChange={setShowArchiveConfirm}>
+        <AlertDialogContent className="bg-zinc-900 border-white/20 text-white">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Archive all completed, unarchived signals?</AlertDialogTitle>
+            <AlertDialogDescription className="text-white/50">
+              This will archive all signals with status "Complete" that haven't been archived yet. Pending items will not be affected.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel className="bg-transparent border-white/20 text-white/60 hover:bg-white/5 hover:text-white">Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => archiveMutation.mutate()}
+              disabled={archiveMutation.isPending}
+              className="bg-amber-400 text-black hover:bg-amber-500"
+            >
+              {archiveMutation.isPending ? "Archiving..." : "Archive"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {/* Add Signal Dialog */}
       <Dialog open={showAdd} onOpenChange={setShowAdd}>
