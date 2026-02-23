@@ -15,13 +15,13 @@ import { format } from "date-fns";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
-import { ArrowLeft, Plus, CheckCircle2, Circle, Trash2, LogOut, CalendarIcon, Archive } from "lucide-react";
+import { ArrowLeft, Plus, CheckCircle2, Circle, LogOut, CalendarIcon, Archive } from "lucide-react";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 
 const PILLARS = ["Operations", "Sales & Marketing", "Finance", "Vision", "Personal"] as const;
 const PRIORITY_LAYERS = ["Core", "Bonus"] as const;
 const SIGNAL_KINDS = ["Outcome", "Action"] as const;
-const STATUSES = ["Pending", "Complete"] as const;
+
 
 type Signal = {
   id: string;
@@ -53,8 +53,6 @@ const AdminSignals = () => {
   const { user, signOut } = useAuth();
   const queryClient = useQueryClient();
   const [showAdd, setShowAdd] = useState(false);
-  const [filterPillar, setFilterPillar] = useState<string>("all");
-  const [filterStatus, setFilterStatus] = useState<string>("all");
 
   // Form state
   const [form, setForm] = useState({
@@ -111,17 +109,6 @@ const AdminSignals = () => {
     },
   });
 
-  const { data: signals = [], isLoading } = useQuery({
-    queryKey: ["signals", filterPillar, filterStatus],
-    queryFn: async () => {
-      let q = supabase.from("signals").select("*").eq("is_archived", false as any).order("created_at", { ascending: false });
-      if (filterPillar !== "all") q = q.eq("pillar", filterPillar as any);
-      if (filterStatus !== "all") q = q.eq("status", filterStatus as any);
-      const { data, error } = await q;
-      if (error) throw error;
-      return data as Signal[];
-    },
-  });
 
   const addMutation = useMutation({
     mutationFn: async () => {
@@ -161,17 +148,6 @@ const AdminSignals = () => {
     onError: (e: any) => toast.error(e.message),
   });
 
-  const deleteMutation = useMutation({
-    mutationFn: async (id: string) => {
-      const { error } = await supabase.from("signals").delete().eq("id", id);
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["signals"] });
-      toast.success("Signal deleted");
-    },
-    onError: (e: any) => toast.error(e.message),
-  });
 
   const [showArchiveConfirm, setShowArchiveConfirm] = useState(false);
 
@@ -197,8 +173,9 @@ const AdminSignals = () => {
     navigate("/admin/login", { replace: true });
   };
 
-  const pendingCount = signals.filter((s) => s.status === "Pending").length;
-  const completeCount = signals.filter((s) => s.status === "Complete").length;
+  const allToday = [...todayCoreSignals, ...todayBonusSignals];
+  const pendingCount = allToday.filter((s) => s.status === "Pending").length;
+  const completeCount = allToday.filter((s) => s.status === "Complete").length;
 
   return (
     <div className="min-h-screen bg-black text-white">
@@ -392,110 +369,15 @@ const AdminSignals = () => {
           </Card>
         </div>
 
-        {/* Filters + Add */}
-        <div className="flex flex-wrap items-center gap-3 mb-6">
-          <Select value={filterPillar} onValueChange={setFilterPillar}>
-            <SelectTrigger className="w-[180px] bg-white/5 border-white/20 text-white">
-              <SelectValue placeholder="All Pillars" />
-            </SelectTrigger>
-            <SelectContent className="bg-zinc-900 border-white/20 z-[200]">
-              <SelectItem value="all" className="text-black">All Pillars</SelectItem>
-              {PILLARS.map((p) => (
-                <SelectItem key={p} value={p} className="text-black">{p}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-
-          <Select value={filterStatus} onValueChange={setFilterStatus}>
-            <SelectTrigger className="w-[150px] bg-white/5 border-white/20 text-white">
-              <SelectValue placeholder="All Statuses" />
-            </SelectTrigger>
-            <SelectContent className="bg-zinc-900 border-white/20 z-[200]">
-              <SelectItem value="all" className="text-black">All Statuses</SelectItem>
-              {STATUSES.map((s) => (
-                <SelectItem key={s} value={s} className="text-black">{s}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-
-          <Button onClick={() => setShowAdd(true)} className="ml-auto bg-white text-black hover:bg-white/90">
+        {/* Add Signal Button */}
+        <div className="flex justify-end mb-6">
+          <Button onClick={() => setShowAdd(true)} className="bg-white text-black hover:bg-white/90">
             <Plus className="w-4 h-4 mr-2" />
             Add Signal
           </Button>
         </div>
-
-        {/* Signal List */}
-        {isLoading ? (
-          <div className="flex justify-center py-16">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white" />
-          </div>
-        ) : signals.length === 0 ? (
-          <div className="text-center py-16 text-white/40">
-            <p className="text-lg">No signals yet. Add your first one!</p>
-          </div>
-        ) : (
-          <div className="space-y-2">
-            {signals.map((signal) => (
-              <div
-                key={signal.id}
-                className={`flex items-center gap-4 p-4 rounded-lg border transition-colors ${
-                  signal.status === "Complete"
-                    ? "bg-white/[0.02] border-white/5 opacity-60"
-                    : "bg-white/5 border-white/10"
-                }`}
-              >
-                {/* Toggle status */}
-                <button
-                  onClick={() => toggleStatus.mutate({ id: signal.id, current: signal.status })}
-                  className="shrink-0"
-                  aria-label="Toggle status"
-                >
-                  {signal.status === "Complete" ? (
-                    <CheckCircle2 className="w-6 h-6 text-green-400" />
-                  ) : (
-                    <Circle className="w-6 h-6 text-white/30 hover:text-white/60" />
-                  )}
-                </button>
-
-                {/* Content */}
-                <div className="flex-1 min-w-0">
-                  <p className={`font-medium ${signal.status === "Complete" ? "line-through text-white/50" : "text-white"}`}>
-                    {signal.title || "(Untitled)"}
-                  </p>
-                  <div className="flex flex-wrap gap-2 mt-1">
-                    {signal.pillar && (
-                      <Badge variant="outline" className={`text-xs ${PILLAR_COLORS[signal.pillar] || "border-white/20 text-white/60"}`}>
-                        {signal.pillar}
-                      </Badge>
-                    )}
-                    {signal.priority_layer && (
-                      <Badge variant="outline" className={`text-xs ${signal.priority_layer === "Core" ? "border-amber-400/40 text-amber-400" : "border-white/20 text-white/40"}`}>
-                        {signal.priority_layer}
-                      </Badge>
-                    )}
-                    {signal.signal_kind && (
-                      <Badge variant="outline" className="text-xs border-white/20 text-white/40">
-                        {signal.signal_kind}
-                      </Badge>
-                    )}
-                  </div>
-                </div>
-
-                {/* Delete */}
-                <button
-                  onClick={() => deleteMutation.mutate(signal.id)}
-                  className="shrink-0 text-white/20 hover:text-red-400 transition-colors"
-                  aria-label="Delete signal"
-                >
-                  <Trash2 className="w-4 h-4" />
-                </button>
-              </div>
-            ))}
-          </div>
-        )}
       </main>
 
-      {/* Archive Confirmation */}
       <AlertDialog open={showArchiveConfirm} onOpenChange={setShowArchiveConfirm}>
         <AlertDialogContent className="bg-zinc-900 border-white/20 text-white">
           <AlertDialogHeader>
