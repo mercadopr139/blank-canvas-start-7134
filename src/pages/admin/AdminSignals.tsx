@@ -109,17 +109,8 @@ const AdminSignals = () => {
     },
   });
 
-  const { data: archivedCount = 0 } = useQuery({
-    queryKey: ["signals", "archived-count"],
-    queryFn: async () => {
-      const { count, error } = await supabase
-        .from("signals")
-        .select("*", { count: "exact", head: true })
-        .eq("is_archived", true as any);
-      if (error) throw error;
-      return count ?? 0;
-    },
-  });
+
+
 
 
   const addMutation = useMutation({
@@ -374,11 +365,6 @@ const AdminSignals = () => {
             className="text-white/40 hover:text-white/70"
           >
             View Archive →
-            {archivedCount > 0 && (
-              <Badge variant="outline" className="ml-2 border-white/20 text-white/50 text-[10px]">
-                {archivedCount}
-              </Badge>
-            )}
           </Button>
         </div>
 
