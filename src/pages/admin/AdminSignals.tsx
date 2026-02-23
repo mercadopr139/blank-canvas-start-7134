@@ -61,10 +61,10 @@ const AdminSignals = () => {
     pillar: "" as string,
     priority_layer: "" as string,
     signal_kind: "" as string,
-    date_assigned: new Date(),
+    date_assigned: new Date(new Date().getFullYear(), new Date().getMonth(), new Date().getDate()),
   });
 
-  const today = new Date().toISOString().slice(0, 10);
+  const today = format(new Date(), "yyyy-MM-dd");
 
   const { data: todayCoreSignals = [] } = useQuery({
     queryKey: ["signals", "today-core"],
@@ -135,7 +135,7 @@ const AdminSignals = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["signals"] });
       setShowAdd(false);
-      setForm({ title: "", pillar: "", priority_layer: "", signal_kind: "", date_assigned: new Date() });
+      setForm({ title: "", pillar: "", priority_layer: "", signal_kind: "", date_assigned: new Date(new Date().getFullYear(), new Date().getMonth(), new Date().getDate()) });
       toast.success("Signal added");
     },
     onError: (e: any) => toast.error(e.message),
