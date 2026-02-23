@@ -1,4 +1,5 @@
 import { useState } from "react";
+import nlaLogo from "@/assets/nla-logo-white.png";
 import { useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -479,6 +480,11 @@ const AdminSignals = () => {
             <Plus className="w-4 h-4 mr-2" />
             Add Signal
           </Button>
+        </div>
+
+        {/* Visual divider with NLA logo */}
+        <div className="flex items-center justify-center my-10 opacity-15">
+          <img src={nlaLogo} alt="NLA" className="h-12" />
         </div>
 
         {/* On Deck */}
