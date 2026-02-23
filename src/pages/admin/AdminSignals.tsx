@@ -199,6 +199,14 @@ const AdminSignals = () => {
       </header>
 
       <main className="container mx-auto px-4 py-8">
+        {/* Day Won Banner */}
+        {todayCoreSignals.length + todayBonusSignals.length > 0 &&
+          todayCoreSignals.every(s => s.status === "Complete") &&
+          todayBonusSignals.every(s => s.status === "Complete") && (
+          <p className="text-center text-2xl font-bold text-amber-400 mb-6 tracking-wide" style={{ textShadow: "0 0 20px rgba(251,191,36,0.4)" }}>
+            Day Won.
+          </p>
+        )}
         {/* Scoreboard */}
         <p className="text-sm text-white/50 mb-4">
           Remaining today: <span className="text-amber-400 font-semibold">{todayCoreSignals.filter(s => s.status === "Pending").length + todayBonusSignals.filter(s => s.status === "Pending").length}</span>
