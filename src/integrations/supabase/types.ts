@@ -513,11 +513,13 @@ export type Database = {
       }
       signals: {
         Row: {
+          archived_at: string | null
           completed_at: string | null
           created_at: string
           date_assigned: string | null
           description: string | null
           id: string
+          is_archived: boolean
           metadata: Json | null
           pillar: Database["public"]["Enums"]["signal_pillar"] | null
           priority_layer: Database["public"]["Enums"]["priority_layer"] | null
@@ -529,11 +531,13 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          archived_at?: string | null
           completed_at?: string | null
           created_at?: string
           date_assigned?: string | null
           description?: string | null
           id?: string
+          is_archived?: boolean
           metadata?: Json | null
           pillar?: Database["public"]["Enums"]["signal_pillar"] | null
           priority_layer?: Database["public"]["Enums"]["priority_layer"] | null
@@ -545,11 +549,13 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          archived_at?: string | null
           completed_at?: string | null
           created_at?: string
           date_assigned?: string | null
           description?: string | null
           id?: string
+          is_archived?: boolean
           metadata?: Json | null
           pillar?: Database["public"]["Enums"]["signal_pillar"] | null
           priority_layer?: Database["public"]["Enums"]["priority_layer"] | null
