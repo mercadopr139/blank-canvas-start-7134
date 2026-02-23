@@ -13,7 +13,7 @@ import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
 import { format } from "date-fns";
-import { ArrowLeft, Plus, CheckCircle2, Circle, LogOut, Archive } from "lucide-react";
+import { ArrowLeft, Plus, CheckCircle2, Circle, LogOut, Archive, ArrowRight } from "lucide-react";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 
 const PILLARS = ["Operations", "Sales & Marketing", "Finance", "Vision", "Personal"] as const;
@@ -107,8 +107,38 @@ const AdminSignals = () => {
     },
   });
 
+  const { data: onDeckSignals = [] } = useQuery({
+    queryKey: ["signals", "on-deck"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("signals")
+        .select("*")
+        .is("date_assigned", null)
+        .eq("status", "Pending" as any)
+        .eq("is_archived", false as any)
+        .order("created_at", { ascending: false });
+      if (error) throw error;
+      return data as Signal[];
+    },
+  });
 
-
+  const scheduleMutation = useMutation({
+    mutationFn: async ({ id, priority }: { id: string; priority: "Core" | "Bonus" }) => {
+      const { error } = await supabase
+        .from("signals")
+        .update({
+          date_assigned: format(new Date(), "yyyy-MM-dd"),
+          priority_layer: priority,
+        } as any)
+        .eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["signals"] });
+      toast.success("Signal scheduled for today");
+    },
+    onError: (e: any) => toast.error(e.message),
+  });
 
 
   const addMutation = useMutation({
@@ -242,6 +272,48 @@ const AdminSignals = () => {
         <p className="text-sm text-white/50 mb-4">
           Remaining today: <span className="text-amber-400 font-semibold">{todayCoreSignals.filter(s => s.status === "Pending").length + todayBonusSignals.filter(s => s.status === "Pending").length}</span>
         </p>
+
+        {/* On Deck */}
+        {onDeckSignals.length > 0 && (
+          <div className="mb-6">
+            <h2 className="text-lg font-semibold text-sky-400 mb-3">On Deck <span className="text-sm font-normal text-white/40">({onDeckSignals.length})</span></h2>
+            <Card className="bg-white/5 border border-sky-400/30 text-white">
+              <CardContent className="p-5">
+                <div className="space-y-2">
+                  {onDeckSignals.map((signal) => (
+                    <div key={signal.id} className="flex items-center gap-3 p-3 rounded-md bg-white/[0.03] border border-white/5">
+                      <span className="text-sm text-white flex-1">{signal.title || "(Untitled)"}</span>
+                      {signal.pillar && (
+                        <Badge variant="outline" className={`text-[10px] shrink-0 ${PILLAR_COLORS[signal.pillar] || "border-white/20 text-white/60"}`}>
+                          {signal.pillar}
+                        </Badge>
+                      )}
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="h-7 text-xs border-rose-500/40 text-rose-400 hover:bg-rose-500/20 hover:text-rose-300 shrink-0"
+                        onClick={() => scheduleMutation.mutate({ id: signal.id, priority: "Core" })}
+                        disabled={scheduleMutation.isPending}
+                      >
+                        Core 3 <ArrowRight className="w-3 h-3 ml-1" />
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="h-7 text-xs border-amber-400/40 text-amber-400 hover:bg-amber-400/20 hover:text-amber-300 shrink-0"
+                        onClick={() => scheduleMutation.mutate({ id: signal.id, priority: "Bonus" })}
+                        disabled={scheduleMutation.isPending}
+                      >
+                        Bonus <ArrowRight className="w-3 h-3 ml-1" />
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        )}
+
         {/* Carryover */}
         {carryoverSignals.length > 0 && (
           <div className="mb-6">
