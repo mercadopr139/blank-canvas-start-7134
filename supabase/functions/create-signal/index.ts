@@ -20,10 +20,10 @@ serve(async (req) => {
       pillar: pillar || "Operations",
       status: "Pending",
       signal_kind: "Action",
+      signal_type: "Action",
       priority_layer: "Core",
       date_assigned: null,
       is_archived: false,
-      created_at: new Date()
     })
 
     if (error) throw error
