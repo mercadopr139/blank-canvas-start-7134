@@ -18,6 +18,11 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 
 const PILLARS = ["Operations", "Sales & Marketing", "Finance", "Vision", "Personal"] as const;
 
+const formatCreatedDate = (iso: string) => {
+  const d = new Date(iso);
+  return `${d.getMonth() + 1}/${d.getDate()}`;
+};
+
 const SIGNAL_KINDS = ["Outcome", "Action"] as const;
 
 
@@ -296,6 +301,7 @@ const AdminSignals = () => {
                         )}
                       </button>
                       <span className={`text-sm ${signal.status === "Complete" ? "line-through text-white/40" : "text-white"}`}>{signal.title || "(Untitled)"}</span>
+                      <span className="text-[10px] text-white/20 shrink-0">{formatCreatedDate(signal.created_at)}</span>
                       <span className="text-[10px] text-white/30 ml-auto">{signal.date_assigned}</span>
                       {signal.pillar && (
                         <Badge variant="outline" className={`text-[10px] ${PILLAR_COLORS[signal.pillar] || "border-white/20 text-white/60"}`}>
@@ -336,6 +342,7 @@ const AdminSignals = () => {
                             <Circle className="w-5 h-5 text-white/30 hover:text-white/60" />
                           </button>
                           <span className="text-sm text-white">{signal.title || "(Untitled)"}</span>
+                          <span className="text-[10px] text-white/20 shrink-0">{formatCreatedDate(signal.created_at)}</span>
                           {signal.pillar && (
                             <Badge variant="outline" className={`text-[10px] ml-auto ${PILLAR_COLORS[signal.pillar] || "border-white/20 text-white/60"}`}>{signal.pillar}</Badge>
                           )}
@@ -386,6 +393,7 @@ const AdminSignals = () => {
                             <Circle className="w-5 h-5 text-white/30 hover:text-white/60" />
                           </button>
                           <span className="text-sm text-white">{signal.title || "(Untitled)"}</span>
+                          <span className="text-[10px] text-white/20 shrink-0">{formatCreatedDate(signal.created_at)}</span>
                           {signal.pillar && (
                             <Badge variant="outline" className={`text-[10px] ml-auto ${PILLAR_COLORS[signal.pillar] || "border-white/20 text-white/60"}`}>{signal.pillar}</Badge>
                           )}
@@ -483,6 +491,7 @@ const AdminSignals = () => {
                   {onDeckSignals.map((signal) => (
                     <div key={signal.id} className="flex items-center gap-3 p-3 rounded-md bg-white/[0.03] border border-white/5">
                       <span className="text-sm text-white/60 flex-1">{signal.title || "(Untitled)"}</span>
+                      <span className="text-[10px] text-white/20 shrink-0">{formatCreatedDate(signal.created_at)}</span>
                       {signal.pillar && (
                         <Badge variant="outline" className={`text-[10px] shrink-0 ${PILLAR_COLORS[signal.pillar] || "border-white/20 text-white/60"}`}>
                           {signal.pillar}
