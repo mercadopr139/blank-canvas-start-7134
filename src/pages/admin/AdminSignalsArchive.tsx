@@ -13,13 +13,8 @@ import { startOfMonth, endOfMonth, subMonths, subDays, isWithinInterval, isAfter
 
 const PILLARS = ["Operations", "Sales & Marketing", "Finance", "Vision", "Personal"] as const;
 
-const PILLAR_COLORS: Record<string, string> = {
-  Operations: "bg-[#bf0f3e]/20 text-[#bf0f3e] border-[#bf0f3e]/40",
-  "Sales & Marketing": "bg-green-500/20 text-green-400 border-green-500/40",
-  Finance: "bg-sky-300/20 text-sky-300 border-sky-300/40",
-  Vision: "bg-amber-400/20 text-amber-400 border-amber-400/40",
-  Personal: "bg-purple-400/20 text-purple-400 border-purple-400/40",
-};
+// Pillar colors used for badge styling elsewhere
+
 
 const PILLAR_BORDER: Record<string, string> = {
   Operations: "border-[#bf0f3e]/50",
@@ -68,6 +63,7 @@ const AdminSignalsArchive = () => {
   const navigate = useNavigate();
   const { user, signOut } = useAuth();
   const [selectedFilter, setSelectedFilter] = useState(FILTER_OPTIONS[0].value);
+  const [activePillar, setActivePillar] = useState<string | null>(null);
   const queryClient = useQueryClient();
 
   const unarchiveMutation = useMutation({
@@ -154,6 +150,17 @@ const AdminSignalsArchive = () => {
   const totalPctChange = prevTotal > 0 ? Math.round(((total - prevTotal) / prevTotal) * 100) : null;
   const showComparison = selectedFilter !== "all";
 
+  // Drill-down: filtered signals for active pillar
+  const drillDownSignals = useMemo(() => {
+    if (!activePillar) return [];
+    return filtered.filter((s) => s.pillar === activePillar);
+  }, [filtered, activePillar]);
+
+  // Label for drill-down header
+  const filterLabel = useMemo(() => {
+    const opt = FILTER_OPTIONS.find((o) => o.value === selectedFilter);
+    return opt?.label || selectedFilter;
+  }, [selectedFilter]);
   const handleLogout = async () => {
     await signOut();
     navigate("/admin/login", { replace: true });
@@ -218,7 +225,11 @@ const AdminSignalsArchive = () => {
             </CardContent>
           </Card>
           {pillarCounts.map(({ pillar, count, pct, diff }) => (
-            <Card key={pillar} className={`bg-white/5 text-white ${PILLAR_BORDER[pillar] || "border-white/10"}`}>
+            <Card
+              key={pillar}
+              className={`bg-white/5 text-white cursor-pointer transition-all hover:bg-white/10 ${activePillar === pillar ? "ring-1 ring-white/40" : ""} ${PILLAR_BORDER[pillar] || "border-white/10"}`}
+              onClick={() => setActivePillar(activePillar === pillar ? null : pillar)}
+            >
               <CardContent className="p-4 text-center">
                 <p className="text-2xl font-bold text-white/80">{count}</p>
                 <p className="text-xs text-white/50 truncate">{pillar}</p>
@@ -235,49 +246,61 @@ const AdminSignalsArchive = () => {
           </p>
         )}
 
-        {/* Archived List */}
+        {/* Pillar Drill-Down */}
         {isLoading ? (
           <div className="flex justify-center py-16">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white" />
           </div>
-        ) : filtered.length === 0 ? (
-          <div className="text-center py-16 text-white/40">
-            <Archive className="w-10 h-10 mx-auto mb-3 opacity-40" />
-            <p className="text-lg">No archived signals{selectedFilter !== "all" ? " in this period" : " yet"}.</p>
+        ) : !activePillar ? (
+          <div className="text-center py-12 text-white/30">
+            <p className="text-sm">Click a pillar card above to view its archived signals.</p>
+          </div>
+        ) : drillDownSignals.length === 0 ? (
+          <div className="text-center py-12 text-white/40">
+            <Archive className="w-8 h-8 mx-auto mb-2 opacity-40" />
+            <p className="text-sm">No archived signals for {activePillar} in this period.</p>
+            <Button variant="ghost" size="sm" onClick={() => setActivePillar(null)} className="mt-3 text-white/40 hover:text-white/70">
+              ← Back to Summary
+            </Button>
           </div>
         ) : (
-          <div className="space-y-2">
-            {filtered.map((signal) => (
-              <div
-                key={signal.id}
-                className="flex items-center gap-4 p-4 rounded-lg border bg-white/[0.02] border-white/5 opacity-70"
-              >
-                <div className="flex-1 min-w-0">
-                  <span className="text-sm text-white/60">{signal.title || "(Untitled)"}</span>
-                </div>
-                {signal.pillar && (
-                  <Badge variant="outline" className={`text-[10px] shrink-0 ${PILLAR_COLORS[signal.pillar] || "border-white/20 text-white/60"}`}>
-                    {signal.pillar}
-                  </Badge>
-                )}
-                {signal.priority_layer && (
-                  <Badge variant="outline" className="text-[10px] border-white/20 text-white/40 shrink-0">
-                    {signal.priority_layer}
-                  </Badge>
-                )}
-                <span className="text-[10px] text-white/30 shrink-0">
-                  {signal.archived_at ? new Date(signal.archived_at).toLocaleDateString() : "—"}
-                </span>
-                <button
-                  onClick={() => unarchiveMutation.mutate(signal.id)}
-                  className="shrink-0 text-white/20 hover:text-amber-400 transition-colors"
-                  aria-label="Unarchive signal"
-                  title="Unarchive"
+          <div>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-sm font-semibold text-white/80">
+                {activePillar} Archive – {filterLabel}
+              </h3>
+              <Button variant="ghost" size="sm" onClick={() => setActivePillar(null)} className="text-white/40 hover:text-white/70 text-xs">
+                ← Back to Summary
+              </Button>
+            </div>
+            <div className="space-y-2">
+              {drillDownSignals.map((signal) => (
+                <div
+                  key={signal.id}
+                  className="flex items-center gap-4 p-4 rounded-lg border bg-white/[0.02] border-white/5 opacity-70"
                 >
-                  <Undo2 className="w-4 h-4" />
-                </button>
-              </div>
-            ))}
+                  <div className="flex-1 min-w-0">
+                    <span className="text-sm text-white/60">{signal.title || "(Untitled)"}</span>
+                  </div>
+                  {signal.priority_layer && (
+                    <Badge variant="outline" className="text-[10px] border-white/20 text-white/40 shrink-0">
+                      {signal.priority_layer}
+                    </Badge>
+                  )}
+                  <span className="text-[10px] text-white/30 shrink-0">
+                    {signal.archived_at ? new Date(signal.archived_at).toLocaleDateString() : "—"}
+                  </span>
+                  <button
+                    onClick={() => unarchiveMutation.mutate(signal.id)}
+                    className="shrink-0 text-white/20 hover:text-amber-400 transition-colors"
+                    aria-label="Unarchive signal"
+                    title="Unarchive"
+                  >
+                    <Undo2 className="w-4 h-4" />
+                  </button>
+                </div>
+              ))}
+            </div>
           </div>
         )}
       </main>
