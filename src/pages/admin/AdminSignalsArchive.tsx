@@ -7,9 +7,9 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ArrowLeft, LogOut, Archive, Undo2 } from "lucide-react";
+import { ArrowLeft, LogOut, Archive, Undo2, TrendingUp, TrendingDown, Minus } from "lucide-react";
 import { toast } from "sonner";
-import { subDays, startOfMonth, isAfter } from "date-fns";
+import { startOfMonth, endOfMonth, subMonths, isWithinInterval, format } from "date-fns";
 
 const PILLARS = ["Operations", "Sales & Marketing", "Finance", "Vision", "Personal"] as const;
 
@@ -37,19 +37,26 @@ type Signal = {
   archived_at: string | null;
 };
 
-type DateRange = "7d" | "this_month" | "30d" | "all";
-
-const DATE_RANGE_LABELS: Record<DateRange, string> = {
-  "7d": "Last 7 Days",
-  this_month: "This Month",
-  "30d": "Last 30 Days",
-  all: "All Time",
+// Build month options: current month + last 11 months + "all"
+const buildMonthOptions = () => {
+  const options: { value: string; label: string }[] = [];
+  const now = new Date();
+  for (let i = 0; i < 12; i++) {
+    const d = subMonths(now, i);
+    const value = format(d, "yyyy-MM");
+    const label = i === 0 ? `This Month (${format(d, "MMM yyyy")})` : format(d, "MMM yyyy");
+    options.push({ value, label });
+  }
+  options.push({ value: "all", label: "All Time" });
+  return options;
 };
+
+const MONTH_OPTIONS = buildMonthOptions();
 
 const AdminSignalsArchive = () => {
   const navigate = useNavigate();
   const { user, signOut } = useAuth();
-  const [dateRange, setDateRange] = useState<DateRange>("all");
+  const [selectedMonth, setSelectedMonth] = useState(MONTH_OPTIONS[0].value);
   const queryClient = useQueryClient();
 
   const unarchiveMutation = useMutation({
@@ -80,41 +87,62 @@ const AdminSignalsArchive = () => {
     },
   });
 
-  const filtered = useMemo(() => {
-    if (dateRange === "all") return allArchived;
-    const now = new Date();
-    let cutoff: Date;
-    switch (dateRange) {
-      case "7d":
-        cutoff = subDays(now, 7);
-        break;
-      case "this_month":
-        cutoff = startOfMonth(now);
-        break;
-      case "30d":
-        cutoff = subDays(now, 30);
-        break;
-      default:
-        return allArchived;
-    }
-    return allArchived.filter(
-      (s) => s.archived_at && isAfter(new Date(s.archived_at), cutoff)
+  // Filter for selected month
+  const filterByMonth = (signals: Signal[], monthKey: string) => {
+    if (monthKey === "all") return signals;
+    const [year, month] = monthKey.split("-").map(Number);
+    const start = startOfMonth(new Date(year, month - 1));
+    const end = endOfMonth(new Date(year, month - 1));
+    return signals.filter(
+      (s) => s.archived_at && isWithinInterval(new Date(s.archived_at), { start, end })
     );
-  }, [allArchived, dateRange]);
+  };
+
+  const filtered = useMemo(() => filterByMonth(allArchived, selectedMonth), [allArchived, selectedMonth]);
+
+  // Previous month for comparison
+  const prevMonthSignals = useMemo(() => {
+    if (selectedMonth === "all") return [];
+    const [year, month] = selectedMonth.split("-").map(Number);
+    const prevDate = subMonths(new Date(year, month - 1), 1);
+    const prevKey = format(prevDate, "yyyy-MM");
+    return filterByMonth(allArchived, prevKey);
+  }, [allArchived, selectedMonth]);
 
   const total = filtered.length;
+  const prevTotal = prevMonthSignals.length;
+
   const pillarCounts = PILLARS.map((p) => {
     const count = filtered.filter((s) => s.pillar === p).length;
+    const prevCount = prevMonthSignals.filter((s) => s.pillar === p).length;
     return {
       pillar: p,
       count,
       pct: total > 0 ? Math.round((count / total) * 100) : 0,
+      diff: count - prevCount,
+      prevCount,
     };
   });
+
+  const totalDiff = total - prevTotal;
+  const totalPctChange = prevTotal > 0 ? Math.round(((total - prevTotal) / prevTotal) * 100) : null;
+  const showComparison = selectedMonth !== "all";
 
   const handleLogout = async () => {
     await signOut();
     navigate("/admin/login", { replace: true });
+  };
+
+  const DiffIndicator = ({ diff, pctChange }: { diff: number; pctChange?: number | null }) => {
+    if (diff === 0) return <span className="text-[10px] text-white/30 flex items-center gap-0.5"><Minus className="w-3 h-3" /> 0</span>;
+    const positive = diff > 0;
+    return (
+      <span className={`text-[10px] flex items-center gap-0.5 ${positive ? "text-green-400" : "text-red-400"}`}>
+        {positive ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
+        {positive ? "+" : ""}{diff}
+        {pctChange != null && ` (${pctChange > 0 ? "+" : ""}${pctChange}%)`}
+      </span>
+    );
   };
 
   return (
@@ -138,40 +166,48 @@ const AdminSignalsArchive = () => {
       </header>
 
       <main className="container mx-auto px-4 py-8">
-        {/* Date Filter */}
+        {/* Month Filter */}
         <div className="mb-6">
-          <Select value={dateRange} onValueChange={(v) => setDateRange(v as DateRange)}>
-            <SelectTrigger className="w-[180px] bg-white/5 border-white/20 text-white">
+          <Select value={selectedMonth} onValueChange={setSelectedMonth}>
+            <SelectTrigger className="w-[220px] bg-white/5 border-white/20 text-white">
               <SelectValue />
             </SelectTrigger>
             <SelectContent className="bg-zinc-900 border-white/20 z-[200]">
-              {(Object.keys(DATE_RANGE_LABELS) as DateRange[]).map((key) => (
-                <SelectItem key={key} value={key} className="text-white hover:bg-white/10 focus:bg-white/10 focus:text-white">
-                  {DATE_RANGE_LABELS[key]}
+              {MONTH_OPTIONS.map((opt) => (
+                <SelectItem key={opt.value} value={opt.value} className="text-white hover:bg-white/10 focus:bg-white/10 focus:text-white">
+                  {opt.label}
                 </SelectItem>
               ))}
             </SelectContent>
           </Select>
         </div>
 
-        {/* Pillar Breakdown */}
-        <div className="grid grid-cols-3 sm:grid-cols-6 gap-3 mb-8">
-        <Card className="bg-white/5 border-white/10 text-white">
+        {/* Pillar Breakdown + Comparison */}
+        <div className="grid grid-cols-3 sm:grid-cols-6 gap-3 mb-4">
+          <Card className="bg-white/5 border-white/10 text-white">
             <CardContent className="p-4 text-center">
               <p className="text-2xl font-bold text-amber-400">{total}</p>
               <p className="text-xs text-white/50">Total</p>
+              {showComparison && <DiffIndicator diff={totalDiff} pctChange={totalPctChange} />}
             </CardContent>
           </Card>
-          {pillarCounts.map(({ pillar, count, pct }) => (
+          {pillarCounts.map(({ pillar, count, pct, diff }) => (
             <Card key={pillar} className="bg-white/5 border-white/10 text-white">
               <CardContent className="p-4 text-center">
                 <p className="text-2xl font-bold text-white/80">{count}</p>
                 <p className="text-xs text-white/50 truncate">{pillar}</p>
                 <p className="text-[10px] text-white/30">{pct}%</p>
+                {showComparison && <DiffIndicator diff={diff} />}
               </CardContent>
             </Card>
           ))}
         </div>
+
+        {showComparison && (
+          <p className="text-[10px] text-white/30 text-center mb-8">
+            Compared to previous month ({prevTotal} total)
+          </p>
+        )}
 
         {/* Archived List */}
         {isLoading ? (
@@ -181,7 +217,7 @@ const AdminSignalsArchive = () => {
         ) : filtered.length === 0 ? (
           <div className="text-center py-16 text-white/40">
             <Archive className="w-10 h-10 mx-auto mb-3 opacity-40" />
-            <p className="text-lg">No archived signals{dateRange !== "all" ? " in this period" : " yet"}.</p>
+            <p className="text-lg">No archived signals{selectedMonth !== "all" ? " this month" : " yet"}.</p>
           </div>
         ) : (
           <div className="space-y-2">
