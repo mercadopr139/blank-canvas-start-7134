@@ -10,6 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { ArrowLeft, LogOut, Archive, Undo2, TrendingUp, TrendingDown, Minus, Repeat } from "lucide-react";
 import { toast } from "sonner";
 import { startOfMonth, endOfMonth, subMonths, subDays, isWithinInterval, isAfter, format } from "date-fns";
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Legend } from "recharts";
 
 const PILLARS = ["Operations", "Sales & Marketing", "Finance", "Vision", "Personal"] as const;
 
@@ -195,6 +196,37 @@ const AdminSignalsArchive = () => {
   const totalPctChange = prevTotal > 0 ? Math.round(((total - prevTotal) / prevTotal) * 100) : null;
   const showComparison = selectedFilter !== "all";
 
+  // Monthly trend data (last 12 months)
+  const PILLAR_CHART_COLORS: Record<string, string> = {
+    Operations: "#bf0f3e",
+    "Sales & Marketing": "#22c55e",
+    Finance: "#7dd3fc",
+    Vision: "#fbbf24",
+    Personal: "#c084fc",
+  };
+
+  const monthlyTrendData = useMemo(() => {
+    const now = new Date();
+    const months: { key: string; label: string }[] = [];
+    for (let i = 11; i >= 0; i--) {
+      const d = subMonths(now, i);
+      months.push({ key: format(d, "yyyy-MM"), label: format(d, "MMM") });
+    }
+    return months.map(({ key, label }) => {
+      const [year, month] = key.split("-").map(Number);
+      const start = startOfMonth(new Date(year, month - 1));
+      const end = endOfMonth(new Date(year, month - 1));
+      const inMonth = allArchived.filter(
+        (s) => s.archived_at && isWithinInterval(new Date(s.archived_at), { start, end })
+      );
+      const row: Record<string, any> = { month: label, Total: inMonth.length };
+      PILLARS.forEach((p) => {
+        row[p] = inMonth.filter((s) => s.pillar === p).length;
+      });
+      return row;
+    });
+  }, [allArchived]);
+
   // Drill-down: filtered signals for active pillar
   const drillDownSignals = useMemo(() => {
     if (!activePillar) return [];
@@ -364,6 +396,48 @@ const AdminSignalsArchive = () => {
             </div>
           ) : null;
         })()}
+
+        {/* Monthly Trend Charts */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+          {/* Total Archived by Month */}
+          <Card className="bg-white/5 border-white/10 text-white">
+            <CardContent className="p-5">
+              <h3 className="text-sm font-semibold text-white/80 mb-4">Archived Signals by Month</h3>
+              <div className="h-52">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={monthlyTrendData}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
+                    <XAxis dataKey="month" tick={{ fill: "rgba(255,255,255,0.4)", fontSize: 11 }} axisLine={false} tickLine={false} />
+                    <YAxis tick={{ fill: "rgba(255,255,255,0.3)", fontSize: 11 }} axisLine={false} tickLine={false} allowDecimals={false} />
+                    <Tooltip contentStyle={{ background: "#18181b", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 8, color: "#fff", fontSize: 12 }} />
+                    <Bar dataKey="Total" fill="#fbbf24" radius={[4, 4, 0, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Pillar Mix by Month (Stacked) */}
+          <Card className="bg-white/5 border-white/10 text-white">
+            <CardContent className="p-5">
+              <h3 className="text-sm font-semibold text-white/80 mb-4">Pillar Mix by Month</h3>
+              <div className="h-52">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={monthlyTrendData}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
+                    <XAxis dataKey="month" tick={{ fill: "rgba(255,255,255,0.4)", fontSize: 11 }} axisLine={false} tickLine={false} />
+                    <YAxis tick={{ fill: "rgba(255,255,255,0.3)", fontSize: 11 }} axisLine={false} tickLine={false} allowDecimals={false} />
+                    <Tooltip contentStyle={{ background: "#18181b", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 8, color: "#fff", fontSize: 12 }} />
+                    <Legend wrapperStyle={{ fontSize: 10, color: "rgba(255,255,255,0.5)" }} />
+                    {PILLARS.map((p) => (
+                      <Bar key={p} dataKey={p} stackId="pillar" fill={PILLAR_CHART_COLORS[p]} radius={0} />
+                    ))}
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
 
         {showComparison && (
           <p className="text-[10px] text-white/30 text-center mb-8">
