@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ArrowLeft, LogOut, Archive, Undo2, TrendingUp, TrendingDown, Minus } from "lucide-react";
+import { ArrowLeft, LogOut, Archive, Undo2, TrendingUp, TrendingDown, Minus, Repeat } from "lucide-react";
 import { toast } from "sonner";
 import { startOfMonth, endOfMonth, subMonths, subDays, isWithinInterval, isAfter, format } from "date-fns";
 
@@ -327,6 +327,43 @@ const AdminSignalsArchive = () => {
             </CardContent>
           </Card>
         </div>
+
+        {/* Top 5 Reopened Signals */}
+        {(() => {
+          const top5 = [...allReopened]
+            .sort((a, b) => {
+              if (b.reopen_count !== a.reopen_count) return b.reopen_count - a.reopen_count;
+              const aDate = a.reopened_at ? new Date(a.reopened_at).getTime() : 0;
+              const bDate = b.reopened_at ? new Date(b.reopened_at).getTime() : 0;
+              return bDate - aDate;
+            })
+            .slice(0, 5);
+          return top5.length > 0 ? (
+            <div className="mb-6">
+              <div className="flex items-center gap-2 mb-3">
+                <Repeat className="w-4 h-4 text-orange-400" />
+                <h3 className="text-sm font-semibold text-white/80">Top 5 Reopened Signals</h3>
+                <span className="text-[10px] text-white/30 ml-auto">Friction detector</span>
+              </div>
+              <div className="space-y-1.5">
+                {top5.map((s) => (
+                  <div key={s.id} className="flex items-center gap-3 p-3 rounded-lg border bg-white/[0.02] border-white/5">
+                    <span className="text-sm text-white/70 flex-1 min-w-0 truncate">{s.title || "(Untitled)"}</span>
+                    {s.pillar && (
+                      <Badge variant="outline" className={`text-[10px] shrink-0 text-white/50 ${PILLAR_BORDER[s.pillar] || "border-white/20"}`}>
+                        {s.pillar}
+                      </Badge>
+                    )}
+                    <span className="text-xs font-bold text-orange-400 shrink-0">×{s.reopen_count}</span>
+                    <span className="text-[10px] text-white/30 shrink-0 w-20 text-right">
+                      {s.reopened_at ? format(new Date(s.reopened_at), "MMM d, yyyy") : "—"}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ) : null;
+        })()}
 
         {showComparison && (
           <p className="text-[10px] text-white/30 text-center mb-8">
