@@ -45,6 +45,7 @@ const buildOptions = () => {
   const now = new Date();
   for (let i = 0; i < 12; i++) {
     const d = subMonths(now, i);
+    if (d.getFullYear() < 2026) break;
     const value = format(d, "yyyy-MM");
     const label = i === 0 ? `This Month (${format(d, "MMM yyyy")})` : format(d, "MMM yyyy");
     options.push({ value, label });
