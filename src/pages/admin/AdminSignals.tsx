@@ -509,7 +509,7 @@ const AdminSignals = () => {
                       <Button
                         size="sm"
                         variant="outline"
-                        className="h-7 text-xs bg-transparent border-amber-400/30 text-amber-400 hover:bg-amber-400/10 hover:text-amber-300 shrink-0"
+                        className="h-7 text-xs bg-transparent border-white/20 text-white/50 hover:bg-white/5 hover:text-white/70 shrink-0"
                         onClick={() => scheduleMutation.mutate({ id: signal.id, priority: "Bonus" })}
                         disabled={scheduleMutation.isPending}
                       >
