@@ -9,7 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ArrowLeft, LogOut, Archive, Undo2, TrendingUp, TrendingDown, Minus } from "lucide-react";
 import { toast } from "sonner";
-import { startOfMonth, endOfMonth, subMonths, isWithinInterval, format } from "date-fns";
+import { startOfMonth, endOfMonth, subMonths, subDays, isWithinInterval, isAfter, format } from "date-fns";
 
 const PILLARS = ["Operations", "Sales & Marketing", "Finance", "Vision", "Personal"] as const;
 
@@ -37,9 +37,11 @@ type Signal = {
   archived_at: string | null;
 };
 
-// Build month options: current month + last 11 months + "all"
-const buildMonthOptions = () => {
-  const options: { value: string; label: string }[] = [];
+const buildOptions = () => {
+  const options: { value: string; label: string }[] = [
+    { value: "7d", label: "Last 7 Days" },
+    { value: "30d", label: "Last 30 Days" },
+  ];
   const now = new Date();
   for (let i = 0; i < 12; i++) {
     const d = subMonths(now, i);
@@ -51,12 +53,12 @@ const buildMonthOptions = () => {
   return options;
 };
 
-const MONTH_OPTIONS = buildMonthOptions();
+const FILTER_OPTIONS = buildOptions();
 
 const AdminSignalsArchive = () => {
   const navigate = useNavigate();
   const { user, signOut } = useAuth();
-  const [selectedMonth, setSelectedMonth] = useState(MONTH_OPTIONS[0].value);
+  const [selectedFilter, setSelectedFilter] = useState(FILTER_OPTIONS[0].value);
   const queryClient = useQueryClient();
 
   const unarchiveMutation = useMutation({
@@ -87,10 +89,15 @@ const AdminSignalsArchive = () => {
     },
   });
 
-  // Filter for selected month
-  const filterByMonth = (signals: Signal[], monthKey: string) => {
-    if (monthKey === "all") return signals;
-    const [year, month] = monthKey.split("-").map(Number);
+  // Filter signals by the selected filter key
+  const filterByKey = (signals: Signal[], key: string) => {
+    if (key === "all") return signals;
+    if (key === "7d" || key === "30d") {
+      const cutoff = subDays(new Date(), key === "7d" ? 7 : 30);
+      return signals.filter((s) => s.archived_at && isAfter(new Date(s.archived_at), cutoff));
+    }
+    // Month key like "2026-02"
+    const [year, month] = key.split("-").map(Number);
     const start = startOfMonth(new Date(year, month - 1));
     const end = endOfMonth(new Date(year, month - 1));
     return signals.filter(
@@ -98,23 +105,33 @@ const AdminSignalsArchive = () => {
     );
   };
 
-  const filtered = useMemo(() => filterByMonth(allArchived, selectedMonth), [allArchived, selectedMonth]);
+  const filtered = useMemo(() => filterByKey(allArchived, selectedFilter), [allArchived, selectedFilter]);
 
-  // Previous month for comparison
-  const prevMonthSignals = useMemo(() => {
-    if (selectedMonth === "all") return [];
-    const [year, month] = selectedMonth.split("-").map(Number);
+  // Previous period for comparison
+  const prevPeriodSignals = useMemo(() => {
+    if (selectedFilter === "all") return [];
+    if (selectedFilter === "7d") {
+      const start = subDays(new Date(), 14);
+      const end = subDays(new Date(), 7);
+      return allArchived.filter((s) => s.archived_at && isAfter(new Date(s.archived_at), start) && !isAfter(new Date(s.archived_at), end));
+    }
+    if (selectedFilter === "30d") {
+      const start = subDays(new Date(), 60);
+      const end = subDays(new Date(), 30);
+      return allArchived.filter((s) => s.archived_at && isAfter(new Date(s.archived_at), start) && !isAfter(new Date(s.archived_at), end));
+    }
+    const [year, month] = selectedFilter.split("-").map(Number);
     const prevDate = subMonths(new Date(year, month - 1), 1);
     const prevKey = format(prevDate, "yyyy-MM");
-    return filterByMonth(allArchived, prevKey);
-  }, [allArchived, selectedMonth]);
+    return filterByKey(allArchived, prevKey);
+  }, [allArchived, selectedFilter]);
 
   const total = filtered.length;
-  const prevTotal = prevMonthSignals.length;
+  const prevTotal = prevPeriodSignals.length;
 
   const pillarCounts = PILLARS.map((p) => {
     const count = filtered.filter((s) => s.pillar === p).length;
-    const prevCount = prevMonthSignals.filter((s) => s.pillar === p).length;
+    const prevCount = prevPeriodSignals.filter((s) => s.pillar === p).length;
     return {
       pillar: p,
       count,
@@ -126,7 +143,7 @@ const AdminSignalsArchive = () => {
 
   const totalDiff = total - prevTotal;
   const totalPctChange = prevTotal > 0 ? Math.round(((total - prevTotal) / prevTotal) * 100) : null;
-  const showComparison = selectedMonth !== "all";
+  const showComparison = selectedFilter !== "all";
 
   const handleLogout = async () => {
     await signOut();
@@ -166,14 +183,14 @@ const AdminSignalsArchive = () => {
       </header>
 
       <main className="container mx-auto px-4 py-8">
-        {/* Month Filter */}
+        {/* Filter */}
         <div className="mb-6">
-          <Select value={selectedMonth} onValueChange={setSelectedMonth}>
+          <Select value={selectedFilter} onValueChange={setSelectedFilter}>
             <SelectTrigger className="w-[220px] bg-white/5 border-white/20 text-white">
               <SelectValue />
             </SelectTrigger>
             <SelectContent className="bg-zinc-900 border-white/20 z-[200]">
-              {MONTH_OPTIONS.map((opt) => (
+              {FILTER_OPTIONS.map((opt) => (
                 <SelectItem key={opt.value} value={opt.value} className="text-white hover:bg-white/10 focus:bg-white/10 focus:text-white">
                   {opt.label}
                 </SelectItem>
@@ -205,7 +222,7 @@ const AdminSignalsArchive = () => {
 
         {showComparison && (
           <p className="text-[10px] text-white/30 text-center mb-8">
-            Compared to previous month ({prevTotal} total)
+            Compared to previous period ({prevTotal} total)
           </p>
         )}
 
@@ -217,7 +234,7 @@ const AdminSignalsArchive = () => {
         ) : filtered.length === 0 ? (
           <div className="text-center py-16 text-white/40">
             <Archive className="w-10 h-10 mx-auto mb-3 opacity-40" />
-            <p className="text-lg">No archived signals{selectedMonth !== "all" ? " this month" : " yet"}.</p>
+            <p className="text-lg">No archived signals{selectedFilter !== "all" ? " in this period" : " yet"}.</p>
           </div>
         ) : (
           <div className="space-y-2">
