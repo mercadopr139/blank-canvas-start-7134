@@ -38,6 +38,8 @@ type Signal = {
   source: string | null;
   description: string | null;
   archived_at: string | null;
+  reopened_at: string | null;
+  reopen_count: number;
 };
 
 const buildOptions = () => {
@@ -68,9 +70,22 @@ const AdminSignalsArchive = () => {
 
   const unarchiveMutation = useMutation({
     mutationFn: async (id: string) => {
+      // First get current reopen_count
+      const { data: current, error: fetchErr } = await supabase
+        .from("signals")
+        .select("reopen_count")
+        .eq("id", id)
+        .single();
+      if (fetchErr) throw fetchErr;
+      const currentCount = (current as any)?.reopen_count ?? 0;
       const { error } = await supabase
         .from("signals")
-        .update({ is_archived: false, archived_at: null } as any)
+        .update({
+          is_archived: false,
+          archived_at: null,
+          reopened_at: new Date().toISOString(),
+          reopen_count: currentCount + 1,
+        } as any)
         .eq("id", id);
       if (error) throw error;
     },
@@ -93,6 +108,36 @@ const AdminSignalsArchive = () => {
       return data as unknown as Signal[];
     },
   });
+
+  // Fetch all signals that have ever been reopened (regardless of current archive status)
+  const { data: allReopened = [] } = useQuery({
+    queryKey: ["signals", "reopened"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("signals")
+        .select("*")
+        .gt("reopen_count", 0 as any)
+        .order("reopened_at", { ascending: false });
+      if (error) throw error;
+      return data as unknown as Signal[];
+    },
+  });
+
+  const filterReopenedByKey = (signals: Signal[], key: string) => {
+    if (key === "all") return signals;
+    if (key === "7d" || key === "30d") {
+      const cutoff = subDays(new Date(), key === "7d" ? 7 : 30);
+      return signals.filter((s) => s.reopened_at && isAfter(new Date(s.reopened_at), cutoff));
+    }
+    const [year, month] = key.split("-").map(Number);
+    const start = startOfMonth(new Date(year, month - 1));
+    const end = endOfMonth(new Date(year, month - 1));
+    return signals.filter(
+      (s) => s.reopened_at && isWithinInterval(new Date(s.reopened_at), { start, end })
+    );
+  };
+
+  const reopenedInRange = useMemo(() => filterReopenedByKey(allReopened, selectedFilter), [allReopened, selectedFilter]);
 
   // Filter signals by the selected filter key
   const filterByKey = (signals: Signal[], key: string) => {
@@ -268,6 +313,19 @@ const AdminSignalsArchive = () => {
               </Card>
             );
           })}
+        </div>
+
+        {/* Reopened Rate */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4">
+          <Card className="bg-white/5 border-orange-500/40 text-white">
+            <CardContent className="p-4 text-center">
+              <p className="text-2xl font-bold text-orange-400">{reopenedInRange.length}</p>
+              <p className="text-xs text-white/50">Reopened</p>
+              <p className="text-[10px] text-white/30">
+                {total > 0 ? Math.round((reopenedInRange.length / total) * 100) : 0}% of archived
+              </p>
+            </CardContent>
+          </Card>
         </div>
 
         {showComparison && (

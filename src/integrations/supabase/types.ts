@@ -523,6 +523,8 @@ export type Database = {
           metadata: Json | null
           pillar: Database["public"]["Enums"]["signal_pillar"] | null
           priority_layer: Database["public"]["Enums"]["priority_layer"] | null
+          reopen_count: number
+          reopened_at: string | null
           signal_kind: Database["public"]["Enums"]["signal_kind"] | null
           signal_type: string
           source: string | null
@@ -541,6 +543,8 @@ export type Database = {
           metadata?: Json | null
           pillar?: Database["public"]["Enums"]["signal_pillar"] | null
           priority_layer?: Database["public"]["Enums"]["priority_layer"] | null
+          reopen_count?: number
+          reopened_at?: string | null
           signal_kind?: Database["public"]["Enums"]["signal_kind"] | null
           signal_type: string
           source?: string | null
@@ -559,6 +563,8 @@ export type Database = {
           metadata?: Json | null
           pillar?: Database["public"]["Enums"]["signal_pillar"] | null
           priority_layer?: Database["public"]["Enums"]["priority_layer"] | null
+          reopen_count?: number
+          reopened_at?: string | null
           signal_kind?: Database["public"]["Enums"]["signal_kind"] | null
           signal_type?: string
           source?: string | null
