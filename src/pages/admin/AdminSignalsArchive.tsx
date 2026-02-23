@@ -1,0 +1,144 @@
+import { useNavigate } from "react-router-dom";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { ArrowLeft, LogOut, Archive } from "lucide-react";
+
+const PILLARS = ["Operations", "Sales & Marketing", "Finance", "Vision", "Personal"] as const;
+
+const PILLAR_COLORS: Record<string, string> = {
+  Operations: "bg-[#bf0f3e]/20 text-[#bf0f3e] border-[#bf0f3e]/40",
+  "Sales & Marketing": "bg-green-500/20 text-green-400 border-green-500/40",
+  Finance: "bg-sky-300/20 text-sky-300 border-sky-300/40",
+  Vision: "bg-amber-400/20 text-amber-400 border-amber-400/40",
+  Personal: "bg-purple-400/20 text-purple-400 border-purple-400/40",
+};
+
+type Signal = {
+  id: string;
+  title: string | null;
+  pillar: string | null;
+  priority_layer: string | null;
+  signal_kind: string | null;
+  status: string;
+  created_at: string;
+  completed_at: string | null;
+  date_assigned: string | null;
+  signal_type: string;
+  source: string | null;
+  description: string | null;
+  archived_at: string | null;
+};
+
+const AdminSignalsArchive = () => {
+  const navigate = useNavigate();
+  const { user, signOut } = useAuth();
+
+  const { data: archived = [], isLoading } = useQuery({
+    queryKey: ["signals", "archived"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("signals")
+        .select("*")
+        .eq("is_archived", true as any)
+        .order("archived_at", { ascending: false });
+      if (error) throw error;
+      return data as unknown as Signal[];
+    },
+  });
+
+  const pillarCounts = PILLARS.map((p) => ({
+    pillar: p,
+    count: archived.filter((s) => s.pillar === p).length,
+  }));
+
+  const handleLogout = async () => {
+    await signOut();
+    navigate("/admin/login", { replace: true });
+  };
+
+  return (
+    <div className="min-h-screen bg-black text-white">
+      <header className="bg-black border-b border-white/10">
+        <div className="container mx-auto px-4 py-4 flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <Button variant="ghost" size="icon" onClick={() => navigate("/admin/signals")} aria-label="Back">
+              <ArrowLeft className="w-5 h-5" />
+            </Button>
+            <div>
+              <h1 className="text-xl font-bold text-white">Archive – Signals</h1>
+              <p className="text-sm text-white/50">{user?.email}</p>
+            </div>
+          </div>
+          <Button variant="outline" onClick={handleLogout} className="border-white/20 text-white bg-black hover:bg-black hover:text-white">
+            <LogOut className="w-4 h-4 mr-2" />
+            Log out
+          </Button>
+        </div>
+      </header>
+
+      <main className="container mx-auto px-4 py-8">
+        {/* Pillar Breakdown */}
+        <div className="grid grid-cols-3 sm:grid-cols-6 gap-3 mb-8">
+          <Card className="bg-white/5 border-white/10 text-white">
+            <CardContent className="p-4 text-center">
+              <p className="text-2xl font-bold text-amber-400">{archived.length}</p>
+              <p className="text-xs text-white/50">Total</p>
+            </CardContent>
+          </Card>
+          {pillarCounts.map(({ pillar, count }) => (
+            <Card key={pillar} className="bg-white/5 border-white/10 text-white">
+              <CardContent className="p-4 text-center">
+                <p className="text-2xl font-bold text-white/80">{count}</p>
+                <p className="text-xs text-white/50 truncate">{pillar}</p>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+
+        {/* Archived List */}
+        {isLoading ? (
+          <div className="flex justify-center py-16">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white" />
+          </div>
+        ) : archived.length === 0 ? (
+          <div className="text-center py-16 text-white/40">
+            <Archive className="w-10 h-10 mx-auto mb-3 opacity-40" />
+            <p className="text-lg">No archived signals yet.</p>
+          </div>
+        ) : (
+          <div className="space-y-2">
+            {archived.map((signal) => (
+              <div
+                key={signal.id}
+                className="flex items-center gap-4 p-4 rounded-lg border bg-white/[0.02] border-white/5 opacity-70"
+              >
+                <div className="flex-1 min-w-0">
+                  <span className="text-sm text-white/60">{signal.title || "(Untitled)"}</span>
+                </div>
+                {signal.pillar && (
+                  <Badge variant="outline" className={`text-[10px] shrink-0 ${PILLAR_COLORS[signal.pillar] || "border-white/20 text-white/60"}`}>
+                    {signal.pillar}
+                  </Badge>
+                )}
+                {signal.priority_layer && (
+                  <Badge variant="outline" className="text-[10px] border-white/20 text-white/40 shrink-0">
+                    {signal.priority_layer}
+                  </Badge>
+                )}
+                <span className="text-[10px] text-white/30 shrink-0">
+                  {signal.archived_at ? new Date(signal.archived_at).toLocaleDateString() : "—"}
+                </span>
+              </div>
+            ))}
+          </div>
+        )}
+      </main>
+    </div>
+  );
+};
+
+export default AdminSignalsArchive;
