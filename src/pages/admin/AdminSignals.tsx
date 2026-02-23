@@ -541,7 +541,7 @@ const AdminSignals = () => {
                 </SelectTrigger>
                 <SelectContent className="bg-zinc-900 border-white/20 z-[200]">
                   {PILLARS.map((p) => (
-                    <SelectItem key={p} value={p} className="text-black">{p}</SelectItem>
+                    <SelectItem key={p} value={p} className="text-white hover:bg-white/10 focus:bg-white/10 focus:text-white">{p}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -554,7 +554,7 @@ const AdminSignals = () => {
                 </SelectTrigger>
                 <SelectContent className="bg-zinc-900 border-white/20 z-[200]">
                   {PRIORITY_LAYERS.map((p) => (
-                    <SelectItem key={p} value={p} className="text-black">{p}</SelectItem>
+                    <SelectItem key={p} value={p} className="text-white hover:bg-white/10 focus:bg-white/10 focus:text-white">{p}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -567,7 +567,7 @@ const AdminSignals = () => {
                 </SelectTrigger>
                 <SelectContent className="bg-zinc-900 border-white/20 z-[200]">
                   {SIGNAL_KINDS.map((k) => (
-                    <SelectItem key={k} value={k} className="text-black">{k}</SelectItem>
+                    <SelectItem key={k} value={k} className="text-white hover:bg-white/10 focus:bg-white/10 focus:text-white">{k}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
