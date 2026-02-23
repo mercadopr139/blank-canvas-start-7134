@@ -199,6 +199,10 @@ const AdminSignals = () => {
       </header>
 
       <main className="container mx-auto px-4 py-8">
+        {/* Scoreboard */}
+        <p className="text-sm text-white/50 mb-4">
+          Remaining today: <span className="text-amber-400 font-semibold">{todayCoreSignals.filter(s => s.status === "Pending").length + todayBonusSignals.filter(s => s.status === "Pending").length}</span>
+        </p>
         {/* Carryover */}
         {carryoverSignals.length > 0 && (
           <div className="mb-6">
