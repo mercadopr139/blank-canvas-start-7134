@@ -102,10 +102,15 @@ const AdminSignalsArchive = () => {
     );
   }, [allArchived, dateRange]);
 
-  const pillarCounts = PILLARS.map((p) => ({
-    pillar: p,
-    count: filtered.filter((s) => s.pillar === p).length,
-  }));
+  const total = filtered.length;
+  const pillarCounts = PILLARS.map((p) => {
+    const count = filtered.filter((s) => s.pillar === p).length;
+    return {
+      pillar: p,
+      count,
+      pct: total > 0 ? Math.round((count / total) * 100) : 0,
+    };
+  });
 
   const handleLogout = async () => {
     await signOut();
@@ -151,17 +156,18 @@ const AdminSignalsArchive = () => {
 
         {/* Pillar Breakdown */}
         <div className="grid grid-cols-3 sm:grid-cols-6 gap-3 mb-8">
-          <Card className="bg-white/5 border-white/10 text-white">
+        <Card className="bg-white/5 border-white/10 text-white">
             <CardContent className="p-4 text-center">
-              <p className="text-2xl font-bold text-amber-400">{filtered.length}</p>
+              <p className="text-2xl font-bold text-amber-400">{total}</p>
               <p className="text-xs text-white/50">Total</p>
             </CardContent>
           </Card>
-          {pillarCounts.map(({ pillar, count }) => (
+          {pillarCounts.map(({ pillar, count, pct }) => (
             <Card key={pillar} className="bg-white/5 border-white/10 text-white">
               <CardContent className="p-4 text-center">
                 <p className="text-2xl font-bold text-white/80">{count}</p>
                 <p className="text-xs text-white/50 truncate">{pillar}</p>
+                <p className="text-[10px] text-white/30">{pct}%</p>
               </CardContent>
             </Card>
           ))}
