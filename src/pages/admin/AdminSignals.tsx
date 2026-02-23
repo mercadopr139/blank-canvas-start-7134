@@ -10,6 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { Calendar } from "@/components/ui/calendar";
@@ -53,7 +54,7 @@ const AdminSignals = () => {
   const { user, signOut } = useAuth();
   const queryClient = useQueryClient();
   const [showAdd, setShowAdd] = useState(false);
-
+  const [selectedForArchive, setSelectedForArchive] = useState<Set<string>>(new Set());
   // Form state
   const [form, setForm] = useState({
     title: "",
@@ -166,10 +167,36 @@ const AdminSignals = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["signals"] });
       setShowArchiveConfirm(false);
+      setSelectedForArchive(new Set());
       toast.success("Completed signals archived");
     },
     onError: (e: any) => toast.error(e.message),
   });
+
+  const archiveSelectedMutation = useMutation({
+    mutationFn: async (ids: string[]) => {
+      const { error } = await supabase
+        .from("signals")
+        .update({ is_archived: true, archived_at: new Date().toISOString() } as any)
+        .in("id", ids);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["signals"] });
+      setSelectedForArchive(new Set());
+      toast.success("Selected signals archived");
+    },
+    onError: (e: any) => toast.error(e.message),
+  });
+
+  const toggleSelected = (id: string) => {
+    setSelectedForArchive((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
 
   const handleLogout = async () => {
     await signOut();
@@ -285,6 +312,11 @@ const AdminSignals = () => {
                           <p className="text-[10px] uppercase tracking-wider text-white/30 mt-3 mb-1">Completed (ready to archive)</p>
                           {todayCoreSignals.filter(s => s.status === "Complete").map((signal) => (
                             <div key={signal.id} className="flex items-center gap-3 p-3 rounded-md bg-white/[0.03] border border-white/5 opacity-50">
+                              <Checkbox
+                                checked={selectedForArchive.has(signal.id)}
+                                onCheckedChange={() => toggleSelected(signal.id)}
+                                className="shrink-0 border-white/30 data-[state=checked]:bg-amber-400 data-[state=checked]:border-amber-400"
+                              />
                               <button onClick={() => toggleStatus.mutate({ id: signal.id, current: signal.status })} className="shrink-0" aria-label="Toggle status">
                                 <CheckCircle2 className="w-5 h-5 text-green-400" />
                               </button>
@@ -330,6 +362,11 @@ const AdminSignals = () => {
                           <p className="text-[10px] uppercase tracking-wider text-white/30 mt-3 mb-1">Completed (ready to archive)</p>
                           {todayBonusSignals.filter(s => s.status === "Complete").map((signal) => (
                             <div key={signal.id} className="flex items-center gap-3 p-3 rounded-md bg-white/[0.03] border border-white/5 opacity-50">
+                              <Checkbox
+                                checked={selectedForArchive.has(signal.id)}
+                                onCheckedChange={() => toggleSelected(signal.id)}
+                                className="shrink-0 border-white/30 data-[state=checked]:bg-amber-400 data-[state=checked]:border-amber-400"
+                              />
                               <button onClick={() => toggleStatus.mutate({ id: signal.id, current: signal.status })} className="shrink-0" aria-label="Toggle status">
                                 <CheckCircle2 className="w-5 h-5 text-green-400" />
                               </button>
@@ -350,7 +387,17 @@ const AdminSignals = () => {
         </div>
 
         {/* Archive actions */}
-        <div className="mb-6 flex items-center justify-center gap-4">
+        <div className="mb-6 flex flex-wrap items-center justify-center gap-3">
+          {selectedForArchive.size > 0 && (
+            <Button
+              variant="outline"
+              onClick={() => archiveSelectedMutation.mutate(Array.from(selectedForArchive))}
+              className="border-amber-400/40 text-amber-400 hover:text-amber-300 bg-transparent hover:bg-amber-400/10"
+            >
+              <Archive className="w-4 h-4 mr-2" />
+              Archive selected ({selectedForArchive.size})
+            </Button>
+          )}
           <Button
             variant="outline"
             onClick={() => setShowArchiveConfirm(true)}
