@@ -354,6 +354,25 @@ const AdminSignals = () => {
           </div>
         </div>
 
+        {/* Archive actions */}
+        <div className="mb-6 flex items-center justify-center gap-4">
+          <Button
+            variant="outline"
+            onClick={() => setShowArchiveConfirm(true)}
+            className="border-white/20 text-white/60 hover:text-white bg-transparent hover:bg-white/5"
+          >
+            <Archive className="w-4 h-4 mr-2" />
+            Archive completed
+          </Button>
+          <Button
+            variant="ghost"
+            onClick={() => navigate("/admin/signals/archive")}
+            className="text-white/40 hover:text-white/70"
+          >
+            View Archive →
+          </Button>
+        </div>
+
         {/* Stats */}
         <div className="flex gap-4 mb-6">
           <Card className="bg-white/5 border-white/10 text-white flex-1">
@@ -472,25 +491,6 @@ const AdminSignals = () => {
           </div>
         )}
       </main>
-
-        {/* Archive actions */}
-        <div className="mt-8 flex items-center justify-center gap-4">
-          <Button
-            variant="outline"
-            onClick={() => setShowArchiveConfirm(true)}
-            className="border-white/20 text-white/60 hover:text-white bg-transparent hover:bg-white/5"
-          >
-            <Archive className="w-4 h-4 mr-2" />
-            Archive completed
-          </Button>
-          <Button
-            variant="ghost"
-            onClick={() => navigate("/admin/signals/archive")}
-            className="text-white/40 hover:text-white/70"
-          >
-            View Archive →
-          </Button>
-        </div>
 
       {/* Archive Confirmation */}
       <AlertDialog open={showArchiveConfirm} onOpenChange={setShowArchiveConfirm}>
