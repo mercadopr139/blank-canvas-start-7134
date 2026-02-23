@@ -21,6 +21,14 @@ const PILLAR_COLORS: Record<string, string> = {
   Personal: "bg-purple-400/20 text-purple-400 border-purple-400/40",
 };
 
+const PILLAR_BORDER: Record<string, string> = {
+  Operations: "border-[#bf0f3e]/50",
+  "Sales & Marketing": "border-green-500/50",
+  Finance: "border-sky-300/50",
+  Vision: "border-amber-400/50",
+  Personal: "border-purple-400/50",
+};
+
 type Signal = {
   id: string;
   title: string | null;
@@ -210,7 +218,7 @@ const AdminSignalsArchive = () => {
             </CardContent>
           </Card>
           {pillarCounts.map(({ pillar, count, pct, diff }) => (
-            <Card key={pillar} className="bg-white/5 border-white/10 text-white">
+            <Card key={pillar} className={`bg-white/5 text-white ${PILLAR_BORDER[pillar] || "border-white/10"}`}>
               <CardContent className="p-4 text-center">
                 <p className="text-2xl font-bold text-white/80">{count}</p>
                 <p className="text-xs text-white/50 truncate">{pillar}</p>
