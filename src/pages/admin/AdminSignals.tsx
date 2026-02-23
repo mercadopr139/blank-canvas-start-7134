@@ -255,7 +255,7 @@ const AdminSignals = () => {
               <CardContent className="p-5">
                 <h3 className="text-base font-bold text-amber-400 mb-3">Core 3</h3>
                 <div className="space-y-2">
-                  {todayCoreSignals.length === 0 ? (
+                  {todayCoreSignals.filter(s => s.status === "Pending").length === 0 && todayCoreSignals.filter(s => s.status === "Complete").length === 0 ? (
                     <>
                       {[1, 2, 3].map((i) => (
                         <div key={i} className="flex items-center gap-3 p-3 rounded-md bg-white/[0.03] border border-white/5">
@@ -265,29 +265,35 @@ const AdminSignals = () => {
                       ))}
                     </>
                   ) : (
-                    todayCoreSignals.map((signal) => (
-                      <div key={signal.id} className="flex items-center gap-3 p-3 rounded-md bg-white/[0.03] border border-white/5">
-                        <button
-                          onClick={() => toggleStatus.mutate({ id: signal.id, current: signal.status })}
-                          className="shrink-0"
-                          aria-label="Toggle status"
-                        >
-                          {signal.status === "Complete" ? (
-                            <CheckCircle2 className="w-5 h-5 text-green-400" />
-                          ) : (
+                    <>
+                      {todayCoreSignals.filter(s => s.status === "Pending").map((signal) => (
+                        <div key={signal.id} className="flex items-center gap-3 p-3 rounded-md bg-white/[0.03] border border-white/5">
+                          <button onClick={() => toggleStatus.mutate({ id: signal.id, current: signal.status })} className="shrink-0" aria-label="Toggle status">
                             <Circle className="w-5 h-5 text-white/30 hover:text-white/60" />
+                          </button>
+                          <span className="text-sm text-white">{signal.title || "(Untitled)"}</span>
+                          {signal.pillar && (
+                            <Badge variant="outline" className={`text-[10px] ml-auto ${PILLAR_COLORS[signal.pillar] || "border-white/20 text-white/60"}`}>{signal.pillar}</Badge>
                           )}
-                        </button>
-                        <span className={`text-sm ${signal.status === "Complete" ? "line-through text-white/40" : "text-white"}`}>
-                          {signal.title || "(Untitled)"}
-                        </span>
-                        {signal.pillar && (
-                          <Badge variant="outline" className={`text-[10px] ml-auto ${PILLAR_COLORS[signal.pillar] || "border-white/20 text-white/60"}`}>
-                            {signal.pillar}
-                          </Badge>
-                        )}
-                      </div>
-                    ))
+                        </div>
+                      ))}
+                      {todayCoreSignals.filter(s => s.status === "Complete").length > 0 && (
+                        <>
+                          <p className="text-[10px] uppercase tracking-wider text-white/30 mt-3 mb-1">Completed (ready to archive)</p>
+                          {todayCoreSignals.filter(s => s.status === "Complete").map((signal) => (
+                            <div key={signal.id} className="flex items-center gap-3 p-3 rounded-md bg-white/[0.03] border border-white/5 opacity-50">
+                              <button onClick={() => toggleStatus.mutate({ id: signal.id, current: signal.status })} className="shrink-0" aria-label="Toggle status">
+                                <CheckCircle2 className="w-5 h-5 text-green-400" />
+                              </button>
+                              <span className="text-sm line-through text-white/40">{signal.title || "(Untitled)"}</span>
+                              {signal.pillar && (
+                                <Badge variant="outline" className={`text-[10px] ml-auto ${PILLAR_COLORS[signal.pillar] || "border-white/20 text-white/60"}`}>{signal.pillar}</Badge>
+                              )}
+                            </div>
+                          ))}
+                        </>
+                      )}
+                    </>
                   )}
                 </div>
               </CardContent>
@@ -304,29 +310,35 @@ const AdminSignals = () => {
                       <span className="text-white/30 text-sm italic">No signals yet</span>
                     </div>
                   ) : (
-                    todayBonusSignals.map((signal) => (
-                      <div key={signal.id} className="flex items-center gap-3 p-3 rounded-md bg-white/[0.03] border border-white/5">
-                        <button
-                          onClick={() => toggleStatus.mutate({ id: signal.id, current: signal.status })}
-                          className="shrink-0"
-                          aria-label="Toggle status"
-                        >
-                          {signal.status === "Complete" ? (
-                            <CheckCircle2 className="w-5 h-5 text-green-400" />
-                          ) : (
+                    <>
+                      {todayBonusSignals.filter(s => s.status === "Pending").map((signal) => (
+                        <div key={signal.id} className="flex items-center gap-3 p-3 rounded-md bg-white/[0.03] border border-white/5">
+                          <button onClick={() => toggleStatus.mutate({ id: signal.id, current: signal.status })} className="shrink-0" aria-label="Toggle status">
                             <Circle className="w-5 h-5 text-white/30 hover:text-white/60" />
+                          </button>
+                          <span className="text-sm text-white">{signal.title || "(Untitled)"}</span>
+                          {signal.pillar && (
+                            <Badge variant="outline" className={`text-[10px] ml-auto ${PILLAR_COLORS[signal.pillar] || "border-white/20 text-white/60"}`}>{signal.pillar}</Badge>
                           )}
-                        </button>
-                        <span className={`text-sm ${signal.status === "Complete" ? "line-through text-white/40" : "text-white"}`}>
-                          {signal.title || "(Untitled)"}
-                        </span>
-                        {signal.pillar && (
-                          <Badge variant="outline" className={`text-[10px] ml-auto ${PILLAR_COLORS[signal.pillar] || "border-white/20 text-white/60"}`}>
-                            {signal.pillar}
-                          </Badge>
-                        )}
-                      </div>
-                    ))
+                        </div>
+                      ))}
+                      {todayBonusSignals.filter(s => s.status === "Complete").length > 0 && (
+                        <>
+                          <p className="text-[10px] uppercase tracking-wider text-white/30 mt-3 mb-1">Completed (ready to archive)</p>
+                          {todayBonusSignals.filter(s => s.status === "Complete").map((signal) => (
+                            <div key={signal.id} className="flex items-center gap-3 p-3 rounded-md bg-white/[0.03] border border-white/5 opacity-50">
+                              <button onClick={() => toggleStatus.mutate({ id: signal.id, current: signal.status })} className="shrink-0" aria-label="Toggle status">
+                                <CheckCircle2 className="w-5 h-5 text-green-400" />
+                              </button>
+                              <span className="text-sm line-through text-white/40">{signal.title || "(Untitled)"}</span>
+                              {signal.pillar && (
+                                <Badge variant="outline" className={`text-[10px] ml-auto ${PILLAR_COLORS[signal.pillar] || "border-white/20 text-white/60"}`}>{signal.pillar}</Badge>
+                              )}
+                            </div>
+                          ))}
+                        </>
+                      )}
+                    </>
                   )}
                 </div>
               </CardContent>
