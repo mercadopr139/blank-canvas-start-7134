@@ -281,9 +281,9 @@ const AdminSignals = () => {
           <h2 className="text-lg font-semibold text-white mb-4">Today's Signals</h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             {/* Core 3 */}
-            <Card className="bg-white/5 border-2 border-amber-400/40 text-white">
+            <Card className="bg-white/5 border-2 border-rose-500/40 text-white">
               <CardContent className="p-5">
-                <h3 className="text-base font-bold text-amber-400 mb-3">Core 3</h3>
+                <h3 className="text-base font-bold text-rose-500 mb-3">Core 3</h3>
                 <div className="space-y-2">
                   {todayCoreSignals.filter(s => s.status === "Pending").length === 0 && todayCoreSignals.filter(s => s.status === "Complete").length === 0 ? (
                     <>
@@ -315,7 +315,7 @@ const AdminSignals = () => {
                               <Checkbox
                                 checked={selectedForArchive.has(signal.id)}
                                 onCheckedChange={() => toggleSelected(signal.id)}
-                                className="shrink-0 border-white/30 data-[state=checked]:bg-amber-400 data-[state=checked]:border-amber-400"
+                                className="shrink-0 border-white/30 data-[state=checked]:bg-rose-500 data-[state=checked]:border-rose-500"
                               />
                               <button onClick={() => toggleStatus.mutate({ id: signal.id, current: signal.status })} className="shrink-0" aria-label="Toggle status">
                                 <CheckCircle2 className="w-5 h-5 text-green-400" />
@@ -365,7 +365,7 @@ const AdminSignals = () => {
                               <Checkbox
                                 checked={selectedForArchive.has(signal.id)}
                                 onCheckedChange={() => toggleSelected(signal.id)}
-                                className="shrink-0 border-white/30 data-[state=checked]:bg-amber-400 data-[state=checked]:border-amber-400"
+                                className="shrink-0 border-white/30 data-[state=checked]:bg-rose-500 data-[state=checked]:border-rose-500"
                               />
                               <button onClick={() => toggleStatus.mutate({ id: signal.id, current: signal.status })} className="shrink-0" aria-label="Toggle status">
                                 <CheckCircle2 className="w-5 h-5 text-green-400" />
