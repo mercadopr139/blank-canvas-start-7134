@@ -99,7 +99,9 @@ const AdminSignals = () => {
       const { data, error } = await supabase
         .from("signals")
         .select("*")
+        .not("date_assigned", "is", null)
         .lt("date_assigned", today)
+        .eq("status", "Pending" as any)
         .eq("is_archived", false as any)
         .order("date_assigned", { ascending: true });
       if (error) throw error;
