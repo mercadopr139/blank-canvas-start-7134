@@ -100,7 +100,6 @@ const AdminSignals = () => {
       const { data, error } = await supabase
         .from("signals")
         .select("*")
-        .eq("status", "Pending" as any)
         .lt("date_assigned", today)
         .order("date_assigned", { ascending: true });
       if (error) throw error;
@@ -214,9 +213,13 @@ const AdminSignals = () => {
                         className="shrink-0"
                         aria-label="Toggle status"
                       >
-                        <Circle className="w-5 h-5 text-red-400/60 hover:text-red-400" />
+                        {signal.status === "Complete" ? (
+                          <CheckCircle2 className="w-5 h-5 text-green-400" />
+                        ) : (
+                          <Circle className="w-5 h-5 text-red-400/60 hover:text-red-400" />
+                        )}
                       </button>
-                      <span className="text-sm text-white">{signal.title || "(Untitled)"}</span>
+                      <span className={`text-sm ${signal.status === "Complete" ? "line-through text-white/40" : "text-white"}`}>{signal.title || "(Untitled)"}</span>
                       <span className="text-[10px] text-white/30 ml-auto">{signal.date_assigned}</span>
                       {signal.pillar && (
                         <Badge variant="outline" className={`text-[10px] ${PILLAR_COLORS[signal.pillar] || "border-white/20 text-white/60"}`}>
