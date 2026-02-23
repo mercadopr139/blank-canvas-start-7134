@@ -240,8 +240,8 @@ const AdminSignalsArchive = () => {
           ))}
         </div>
 
-        {/* Outcomes vs Actions */}
-        <div className="grid grid-cols-2 gap-3 mb-4">
+        {/* Outcomes vs Actions | Core vs Bonus */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
           {(["Outcome", "Action"] as const).map((kind) => {
             const kindCount = filtered.filter((s) => s.signal_kind === kind).length;
             const kindPct = total > 0 ? Math.round((kindCount / total) * 100) : 0;
@@ -251,6 +251,19 @@ const AdminSignalsArchive = () => {
                   <p className="text-2xl font-bold text-white/80">{kindCount}</p>
                   <p className="text-xs text-white/50">{kind}s</p>
                   <p className="text-[10px] text-white/30">{kindPct}%</p>
+                </CardContent>
+              </Card>
+            );
+          })}
+          {(["Core", "Bonus"] as const).map((layer) => {
+            const layerCount = filtered.filter((s) => s.priority_layer === layer).length;
+            const layerPct = total > 0 ? Math.round((layerCount / total) * 100) : 0;
+            return (
+              <Card key={layer} className={`bg-white/5 text-white ${layer === "Core" ? "border-amber-400/40" : "border-white/10"}`}>
+                <CardContent className="p-4 text-center">
+                  <p className="text-2xl font-bold text-white/80">{layerCount}</p>
+                  <p className="text-xs text-white/50">{layer}</p>
+                  <p className="text-[10px] text-white/30">{layerPct}%</p>
                 </CardContent>
               </Card>
             );
