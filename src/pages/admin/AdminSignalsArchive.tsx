@@ -259,7 +259,7 @@ const AdminSignalsArchive = () => {
             const layerCount = filtered.filter((s) => s.priority_layer === layer).length;
             const layerPct = total > 0 ? Math.round((layerCount / total) * 100) : 0;
             return (
-              <Card key={layer} className={`bg-white/5 text-white ${layer === "Core" ? "border-amber-400/40" : "border-white/10"}`}>
+              <Card key={layer} className={`bg-white/5 text-white ${layer === "Core" ? "border-rose-500/40" : "border-white/10"}`}>
                 <CardContent className="p-4 text-center">
                   <p className="text-2xl font-bold text-white/80">{layerCount}</p>
                   <p className="text-xs text-white/50">{layer}</p>
