@@ -75,6 +75,7 @@ const AdminSignals = () => {
         .select("*")
         .eq("date_assigned", today)
         .eq("priority_layer", "Core" as any)
+        .eq("is_archived", false as any)
         .order("created_at", { ascending: true });
       if (error) throw error;
       return data as Signal[];
@@ -89,6 +90,7 @@ const AdminSignals = () => {
         .select("*")
         .eq("date_assigned", today)
         .eq("priority_layer", "Bonus" as any)
+        .eq("is_archived", false as any)
         .order("created_at", { ascending: true });
       if (error) throw error;
       return data as Signal[];
@@ -102,6 +104,7 @@ const AdminSignals = () => {
         .from("signals")
         .select("*")
         .lt("date_assigned", today)
+        .eq("is_archived", false as any)
         .order("date_assigned", { ascending: true });
       if (error) throw error;
       return data as Signal[];
@@ -111,7 +114,7 @@ const AdminSignals = () => {
   const { data: signals = [], isLoading } = useQuery({
     queryKey: ["signals", filterPillar, filterStatus],
     queryFn: async () => {
-      let q = supabase.from("signals").select("*").order("created_at", { ascending: false });
+      let q = supabase.from("signals").select("*").eq("is_archived", false as any).order("created_at", { ascending: false });
       if (filterPillar !== "all") q = q.eq("pillar", filterPillar as any);
       if (filterStatus !== "all") q = q.eq("status", filterStatus as any);
       const { data, error } = await q;
