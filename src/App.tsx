@@ -41,6 +41,7 @@ import AdminEngagements from "./pages/admin/AdminEngagements";
 import AdminTasks from "./pages/admin/AdminTasks";
 import AdminBulkOutreach from "./pages/admin/AdminBulkOutreach";
 import AdminSignals from "./pages/admin/AdminSignals";
+import AdminSignalsArchive from "./pages/admin/AdminSignalsArchive";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -131,12 +132,20 @@ const App = () => (
               <Route path="master-revenue-tracker" element={<AdminMasterRevenueTracker />} />
             </Route>
 
-            {/* Signals — standalone admin page */}
+            {/* Signals — standalone admin pages */}
             <Route
               path="/admin/signals"
               element={
                 <ProtectedRoute requireAdmin>
                   <AdminSignals />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin/signals/archive"
+              element={
+                <ProtectedRoute requireAdmin>
+                  <AdminSignalsArchive />
                 </ProtectedRoute>
               }
             />

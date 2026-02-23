@@ -473,8 +473,8 @@ const AdminSignals = () => {
         )}
       </main>
 
-        {/* Archive completed button */}
-        <div className="mt-8 flex justify-center">
+        {/* Archive actions */}
+        <div className="mt-8 flex items-center justify-center gap-4">
           <Button
             variant="outline"
             onClick={() => setShowArchiveConfirm(true)}
@@ -482,6 +482,13 @@ const AdminSignals = () => {
           >
             <Archive className="w-4 h-4 mr-2" />
             Archive completed
+          </Button>
+          <Button
+            variant="ghost"
+            onClick={() => navigate("/admin/signals/archive")}
+            className="text-white/40 hover:text-white/70"
+          >
+            View Archive →
           </Button>
         </div>
 
