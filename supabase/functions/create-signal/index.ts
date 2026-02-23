@@ -3,7 +3,8 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2"
 
 serve(async (req) => {
   try {
-    const { title, pillar, token } = await req.json()
+    const body = await req.json()
+    const { title, pillar, token } = body
 
     if (token !== Deno.env.get("SIGNALS_WEBHOOK_TOKEN")) {
       return new Response("Unauthorized", { status: 401 })
@@ -19,10 +20,10 @@ serve(async (req) => {
       pillar: pillar || "Operations",
       status: "Pending",
       signal_kind: "Action",
-      signal_type: "Action",
-      priority_layer: null,
+      priority_layer: "Core",
       date_assigned: null,
       is_archived: false,
+      created_at: new Date()
     })
 
     if (error) throw error
