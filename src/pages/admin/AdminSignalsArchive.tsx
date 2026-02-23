@@ -1,3 +1,4 @@
+import { useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -5,7 +6,9 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ArrowLeft, LogOut, Archive } from "lucide-react";
+import { subDays, startOfMonth, isAfter } from "date-fns";
 
 const PILLARS = ["Operations", "Sales & Marketing", "Finance", "Vision", "Personal"] as const;
 
@@ -33,11 +36,21 @@ type Signal = {
   archived_at: string | null;
 };
 
+type DateRange = "7d" | "this_month" | "30d" | "all";
+
+const DATE_RANGE_LABELS: Record<DateRange, string> = {
+  "7d": "Last 7 Days",
+  this_month: "This Month",
+  "30d": "Last 30 Days",
+  all: "All Time",
+};
+
 const AdminSignalsArchive = () => {
   const navigate = useNavigate();
   const { user, signOut } = useAuth();
+  const [dateRange, setDateRange] = useState<DateRange>("all");
 
-  const { data: archived = [], isLoading } = useQuery({
+  const { data: allArchived = [], isLoading } = useQuery({
     queryKey: ["signals", "archived"],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -50,9 +63,31 @@ const AdminSignalsArchive = () => {
     },
   });
 
+  const filtered = useMemo(() => {
+    if (dateRange === "all") return allArchived;
+    const now = new Date();
+    let cutoff: Date;
+    switch (dateRange) {
+      case "7d":
+        cutoff = subDays(now, 7);
+        break;
+      case "this_month":
+        cutoff = startOfMonth(now);
+        break;
+      case "30d":
+        cutoff = subDays(now, 30);
+        break;
+      default:
+        return allArchived;
+    }
+    return allArchived.filter(
+      (s) => s.archived_at && isAfter(new Date(s.archived_at), cutoff)
+    );
+  }, [allArchived, dateRange]);
+
   const pillarCounts = PILLARS.map((p) => ({
     pillar: p,
-    count: archived.filter((s) => s.pillar === p).length,
+    count: filtered.filter((s) => s.pillar === p).length,
   }));
 
   const handleLogout = async () => {
@@ -81,11 +116,27 @@ const AdminSignalsArchive = () => {
       </header>
 
       <main className="container mx-auto px-4 py-8">
+        {/* Date Filter */}
+        <div className="mb-6">
+          <Select value={dateRange} onValueChange={(v) => setDateRange(v as DateRange)}>
+            <SelectTrigger className="w-[180px] bg-white/5 border-white/20 text-white">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent className="bg-zinc-900 border-white/20 z-[200]">
+              {(Object.keys(DATE_RANGE_LABELS) as DateRange[]).map((key) => (
+                <SelectItem key={key} value={key} className="text-white hover:bg-white/10 focus:bg-white/10 focus:text-white">
+                  {DATE_RANGE_LABELS[key]}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
         {/* Pillar Breakdown */}
         <div className="grid grid-cols-3 sm:grid-cols-6 gap-3 mb-8">
           <Card className="bg-white/5 border-white/10 text-white">
             <CardContent className="p-4 text-center">
-              <p className="text-2xl font-bold text-amber-400">{archived.length}</p>
+              <p className="text-2xl font-bold text-amber-400">{filtered.length}</p>
               <p className="text-xs text-white/50">Total</p>
             </CardContent>
           </Card>
@@ -104,14 +155,14 @@ const AdminSignalsArchive = () => {
           <div className="flex justify-center py-16">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white" />
           </div>
-        ) : archived.length === 0 ? (
+        ) : filtered.length === 0 ? (
           <div className="text-center py-16 text-white/40">
             <Archive className="w-10 h-10 mx-auto mb-3 opacity-40" />
-            <p className="text-lg">No archived signals yet.</p>
+            <p className="text-lg">No archived signals{dateRange !== "all" ? " in this period" : " yet"}.</p>
           </div>
         ) : (
           <div className="space-y-2">
-            {archived.map((signal) => (
+            {filtered.map((signal) => (
               <div
                 key={signal.id}
                 className="flex items-center gap-4 p-4 rounded-lg border bg-white/[0.02] border-white/5 opacity-70"
