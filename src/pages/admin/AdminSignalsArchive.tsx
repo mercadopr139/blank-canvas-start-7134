@@ -240,6 +240,23 @@ const AdminSignalsArchive = () => {
           ))}
         </div>
 
+        {/* Outcomes vs Actions */}
+        <div className="grid grid-cols-2 gap-3 mb-4">
+          {(["Outcome", "Action"] as const).map((kind) => {
+            const kindCount = filtered.filter((s) => s.signal_kind === kind).length;
+            const kindPct = total > 0 ? Math.round((kindCount / total) * 100) : 0;
+            return (
+              <Card key={kind} className="bg-white/5 border-white/10 text-white">
+                <CardContent className="p-4 text-center">
+                  <p className="text-2xl font-bold text-white/80">{kindCount}</p>
+                  <p className="text-xs text-white/50">{kind}s</p>
+                  <p className="text-[10px] text-white/30">{kindPct}%</p>
+                </CardContent>
+              </Card>
+            );
+          })}
+        </div>
+
         {showComparison && (
           <p className="text-[10px] text-white/30 text-center mb-8">
             Compared to previous period ({prevTotal} total)
