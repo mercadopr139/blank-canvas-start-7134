@@ -1,13 +1,14 @@
 import { useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ArrowLeft, LogOut, Archive } from "lucide-react";
+import { ArrowLeft, LogOut, Archive, Undo2 } from "lucide-react";
+import { toast } from "sonner";
 import { subDays, startOfMonth, isAfter } from "date-fns";
 
 const PILLARS = ["Operations", "Sales & Marketing", "Finance", "Vision", "Personal"] as const;
@@ -49,6 +50,22 @@ const AdminSignalsArchive = () => {
   const navigate = useNavigate();
   const { user, signOut } = useAuth();
   const [dateRange, setDateRange] = useState<DateRange>("all");
+  const queryClient = useQueryClient();
+
+  const unarchiveMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase
+        .from("signals")
+        .update({ is_archived: false, archived_at: null } as any)
+        .eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["signals"] });
+      toast.success("Signal unarchived");
+    },
+    onError: (e: any) => toast.error(e.message),
+  });
 
   const { data: allArchived = [], isLoading } = useQuery({
     queryKey: ["signals", "archived"],
@@ -183,6 +200,14 @@ const AdminSignalsArchive = () => {
                 <span className="text-[10px] text-white/30 shrink-0">
                   {signal.archived_at ? new Date(signal.archived_at).toLocaleDateString() : "—"}
                 </span>
+                <button
+                  onClick={() => unarchiveMutation.mutate(signal.id)}
+                  className="shrink-0 text-white/20 hover:text-amber-400 transition-colors"
+                  aria-label="Unarchive signal"
+                  title="Unarchive"
+                >
+                  <Undo2 className="w-4 h-4" />
+                </button>
               </div>
             ))}
           </div>
