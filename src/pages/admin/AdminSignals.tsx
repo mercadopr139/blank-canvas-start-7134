@@ -483,8 +483,8 @@ const AdminSignals = () => {
         </div>
 
         {/* Visual divider with NLA logo */}
-        <div className="flex items-center justify-center my-10 opacity-15">
-          <img src={nlaLogo} alt="NLA" className="h-12" />
+        <div className="flex items-center justify-center my-10">
+          <img src={nlaLogo} alt="NLA" className="h-24" />
         </div>
 
         {/* On Deck */}
