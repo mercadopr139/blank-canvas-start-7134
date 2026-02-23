@@ -13,14 +13,11 @@ import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
 import { format } from "date-fns";
-import { Calendar } from "@/components/ui/calendar";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { cn } from "@/lib/utils";
-import { ArrowLeft, Plus, CheckCircle2, Circle, LogOut, CalendarIcon, Archive } from "lucide-react";
+import { ArrowLeft, Plus, CheckCircle2, Circle, LogOut, Archive } from "lucide-react";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 
 const PILLARS = ["Operations", "Sales & Marketing", "Finance", "Vision", "Personal"] as const;
-const PRIORITY_LAYERS = ["Core", "Bonus"] as const;
+
 const SIGNAL_KINDS = ["Outcome", "Action"] as const;
 
 
@@ -61,7 +58,7 @@ const AdminSignals = () => {
     pillar: "" as string,
     priority_layer: "" as string,
     signal_kind: "" as string,
-    date_assigned: new Date(new Date().getFullYear(), new Date().getMonth(), new Date().getDate()),
+    bucket: "core" as "ondeck" | "core" | "bonus",
   });
 
   const today = format(new Date(), "yyyy-MM-dd");
@@ -116,21 +113,25 @@ const AdminSignals = () => {
 
   const addMutation = useMutation({
     mutationFn: async () => {
+      const todayStr = format(new Date(), "yyyy-MM-dd");
+      const dateAssigned = form.bucket === "ondeck" ? null : todayStr;
+      const priorityLayer = form.bucket === "core" ? "Core" : form.bucket === "bonus" ? "Bonus" : (form.priority_layer || null);
       const { error } = await supabase.from("signals").insert({
         title: form.title,
         pillar: form.pillar || null,
-        priority_layer: form.priority_layer || null,
+        priority_layer: priorityLayer,
         signal_kind: form.signal_kind || null,
         signal_type: form.signal_kind || "Action",
         status: "Pending",
-        date_assigned: format(form.date_assigned, "yyyy-MM-dd"),
+        is_archived: false,
+        date_assigned: dateAssigned,
       } as any);
       if (error) throw error;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["signals"] });
       setShowAdd(false);
-      setForm({ title: "", pillar: "", priority_layer: "", signal_kind: "", date_assigned: new Date(new Date().getFullYear(), new Date().getMonth(), new Date().getDate()) });
+      setForm({ title: "", pillar: "", priority_layer: "", signal_kind: "", bucket: "core" });
       toast.success("Signal added");
     },
     onError: (e: any) => toast.error(e.message),
@@ -469,6 +470,19 @@ const AdminSignals = () => {
           </DialogHeader>
           <div className="space-y-4">
             <div>
+              <Label>Bucket *</Label>
+              <Select value={form.bucket} onValueChange={(v: "ondeck" | "core" | "bonus") => setForm({ ...form, bucket: v })}>
+                <SelectTrigger className="bg-white/5 border-white/20 text-white">
+                  <SelectValue placeholder="Select bucket" />
+                </SelectTrigger>
+                <SelectContent className="bg-zinc-900 border-white/20 z-[200]">
+                  <SelectItem value="ondeck" className="text-white hover:bg-white/10 focus:bg-white/10 focus:text-white">On Deck</SelectItem>
+                  <SelectItem value="core" className="text-white hover:bg-white/10 focus:bg-white/10 focus:text-white">Core 3 (Today)</SelectItem>
+                  <SelectItem value="bonus" className="text-white hover:bg-white/10 focus:bg-white/10 focus:text-white">Bonus (Today)</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
               <Label>Title *</Label>
               <Input
                 value={form.title}
@@ -491,19 +505,6 @@ const AdminSignals = () => {
               </Select>
             </div>
             <div>
-              <Label>Priority Layer</Label>
-              <Select value={form.priority_layer} onValueChange={(v) => setForm({ ...form, priority_layer: v })}>
-                <SelectTrigger className="bg-white/5 border-white/20 text-white">
-                  <SelectValue placeholder="Core or Bonus" />
-                </SelectTrigger>
-                <SelectContent className="bg-zinc-900 border-white/20 z-[200]">
-                  {PRIORITY_LAYERS.map((p) => (
-                    <SelectItem key={p} value={p} className="text-white hover:bg-white/10 focus:bg-white/10 focus:text-white">{p}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div>
               <Label>Signal Kind</Label>
               <Select value={form.signal_kind} onValueChange={(v) => setForm({ ...form, signal_kind: v })}>
                 <SelectTrigger className="bg-white/5 border-white/20 text-white">
@@ -515,32 +516,6 @@ const AdminSignals = () => {
                   ))}
                 </SelectContent>
               </Select>
-            </div>
-            <div>
-              <Label>Date Assigned</Label>
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button
-                    variant="outline"
-                    className={cn(
-                      "w-full justify-start text-left font-normal bg-white/5 border-white/20 text-white hover:bg-white/10 hover:text-white",
-                      !form.date_assigned && "text-white/40"
-                    )}
-                  >
-                    <CalendarIcon className="mr-2 h-4 w-4" />
-                    {form.date_assigned ? format(form.date_assigned, "PPP") : <span>Pick a date</span>}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0 bg-zinc-900 border-white/20 z-[200]" align="start">
-                  <Calendar
-                    mode="single"
-                    selected={form.date_assigned}
-                    onSelect={(d) => d && setForm({ ...form, date_assigned: d })}
-                    initialFocus
-                    className={cn("p-3 pointer-events-auto")}
-                  />
-                </PopoverContent>
-              </Popover>
             </div>
           </div>
           <DialogFooter>
