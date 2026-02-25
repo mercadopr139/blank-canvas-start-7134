@@ -100,33 +100,7 @@ const AdminSignalsArchive = () => {
     setDrilldownBucketFilter(null);
   };
 
-  // Fetch incomplete (pending, not archived) signals for drilldown
-  const { data: incompleteSignals = [] } = useQuery({
-    queryKey: ["signals", "incomplete"],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("signals")
-        .select("*")
-        .eq("status", "Pending" as any)
-        .eq("is_archived", false as any)
-        .order("created_at", { ascending: false });
-      if (error) throw error;
-      return data as unknown as Signal[];
-    },
-  });
 
-  const drilldownResults = useMemo(() => {
-    if (!drilldown) return [];
-    let results = incompleteSignals.filter(drilldown.filterFn);
-    if (drilldownSearch) {
-      const q = drilldownSearch.toLowerCase();
-      results = results.filter((s) => (s.title || "").toLowerCase().includes(q) || (s.description || "").toLowerCase().includes(q));
-    }
-    if (drilldownPillarFilter) results = results.filter((s) => s.pillar === drilldownPillarFilter);
-    if (drilldownKindFilter) results = results.filter((s) => s.signal_kind === drilldownKindFilter);
-    if (drilldownBucketFilter) results = results.filter((s) => s.priority_layer === drilldownBucketFilter);
-    return results;
-  }, [drilldown, incompleteSignals, drilldownSearch, drilldownPillarFilter, drilldownKindFilter, drilldownBucketFilter]);
 
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
@@ -225,6 +199,19 @@ const AdminSignalsArchive = () => {
   };
 
   const filtered = useMemo(() => filterByKey(allArchived, selectedFilter), [allArchived, selectedFilter]);
+
+  const drilldownResults = useMemo(() => {
+    if (!drilldown) return [];
+    let results = filtered.filter(drilldown.filterFn);
+    if (drilldownSearch) {
+      const q = drilldownSearch.toLowerCase();
+      results = results.filter((s) => (s.title || "").toLowerCase().includes(q) || (s.description || "").toLowerCase().includes(q));
+    }
+    if (drilldownPillarFilter) results = results.filter((s) => s.pillar === drilldownPillarFilter);
+    if (drilldownKindFilter) results = results.filter((s) => s.signal_kind === drilldownKindFilter);
+    if (drilldownBucketFilter) results = results.filter((s) => s.priority_layer === drilldownBucketFilter);
+    return results;
+  }, [drilldown, filtered, drilldownSearch, drilldownPillarFilter, drilldownKindFilter, drilldownBucketFilter]);
 
   const prevPeriodSignals = useMemo(() => {
     if (selectedFilter === "all") return [];
@@ -612,9 +599,9 @@ const AdminSignalsArchive = () => {
       <Sheet open={!!drilldown} onOpenChange={(open) => { if (!open) setDrilldown(null); }}>
         <SheetContent side="right" className="w-full sm:max-w-lg bg-zinc-950 border-white/10 text-white overflow-y-auto">
           <SheetHeader className="mb-4">
-            <SheetTitle className="text-white text-lg">{drilldown?.label} — Incomplete</SheetTitle>
+            <SheetTitle className="text-white text-lg">{drilldown?.label} — Completed</SheetTitle>
             <SheetDescription className="text-white/50 text-sm">
-              Showing incomplete signals for {filterLabel}
+              Showing completed signals for {filterLabel}
             </SheetDescription>
           </SheetHeader>
 
@@ -622,7 +609,7 @@ const AdminSignalsArchive = () => {
           <div className="relative mb-4">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/30" />
             <Input
-              placeholder="Search incomplete signals…"
+              placeholder="Search completed signals…"
               value={drilldownSearch}
               onChange={(e) => setDrilldownSearch(e.target.value)}
               className="pl-9 bg-white/5 border-white/10 text-white placeholder:text-white/30"
@@ -647,7 +634,7 @@ const AdminSignalsArchive = () => {
           {/* Results */}
           <div className="space-y-2">
             {drilldownResults.length === 0 ? (
-              <p className="text-center text-white/30 py-8 text-sm">No incomplete signals match this filter.</p>
+              <p className="text-center text-white/30 py-8 text-sm">No completed signals match this filter.</p>
             ) : (
               drilldownResults.map((signal) => (
                 <div key={signal.id} className="flex items-start gap-3 p-3 rounded-lg border bg-white/[0.03] border-white/5 hover:bg-white/[0.06] transition-colors">
