@@ -24,6 +24,7 @@ export default function DailyVerse() {
   const [generating, setGenerating] = useState(false);
   const [needsSeed, setNeedsSeed] = useState(false);
   const [seeding, setSeeding] = useState(false);
+  const [autoGenTried, setAutoGenTried] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -68,6 +69,13 @@ export default function DailyVerse() {
     load();
     return () => { cancelled = true; };
   }, [y, m, d]);
+
+  useEffect(() => {
+    if (!autoGenTried && missing && m === 1 && d === 1) {
+      setAutoGenTried(true);
+      generateYear();
+    }
+  }, [autoGenTried, missing, m, d]);
 
   async function generateYear() {
     setGenerating(true);
