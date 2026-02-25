@@ -625,12 +625,16 @@ const AdminSignalsArchive = () => {
             />
           </div>
 
-          {/* Filter Chips */}
+          {/* Filter Chips — hide pillar chips when drilldown is already pillar-scoped */}
           <div className="flex flex-wrap gap-1.5 mb-4">
-            {PILLARS.map((p) => (
-              <FilterChip key={p} label={p} active={drilldownPillarFilter === p} onClick={() => setDrilldownPillarFilter(drilldownPillarFilter === p ? null : p)} />
-            ))}
-            <span className="w-px h-5 bg-white/10 mx-1 self-center" />
+            {!PILLARS.includes(drilldown?.label as any) && (
+              <>
+                {PILLARS.map((p) => (
+                  <FilterChip key={p} label={p} active={drilldownPillarFilter === p} onClick={() => setDrilldownPillarFilter(drilldownPillarFilter === p ? null : p)} />
+                ))}
+                <span className="w-px h-5 bg-white/10 mx-1 self-center" />
+              </>
+            )}
             {(["Outcome", "Action"] as const).map((k) => (
               <FilterChip key={k} label={k} active={drilldownKindFilter === k} onClick={() => setDrilldownKindFilter(drilldownKindFilter === k ? null : k)} />
             ))}
