@@ -25,13 +25,7 @@ const PILLAR_BORDER: Record<string, string> = {
   Personal: "border-purple-400/50",
 };
 
-const PILLAR_COLORS: Record<string, string> = {
-  Operations: "bg-[#bf0f3e]/20 text-[#bf0f3e] border-[#bf0f3e]/40",
-  "Sales & Marketing": "bg-green-500/20 text-green-400 border-green-500/40",
-  Finance: "bg-sky-300/20 text-sky-300 border-sky-300/40",
-  Vision: "bg-amber-400/20 text-amber-400 border-amber-400/40",
-  Personal: "bg-purple-400/20 text-purple-400 border-purple-400/40",
-};
+// (PILLAR_COLORS removed – badge colors no longer used in drilldown)
 
 type Signal = {
   id: string;
@@ -85,9 +79,6 @@ const AdminSignalsArchive = () => {
   // Drilldown state
   const [drilldown, setDrilldown] = useState<DrilldownFilter>(null);
   const [drilldownSearch, setDrilldownSearch] = useState("");
-  const [drilldownPillarFilter, setDrilldownPillarFilter] = useState<string | null>(null);
-  const [drilldownKindFilter, setDrilldownKindFilter] = useState<string | null>(null);
-  const [drilldownBucketFilter, setDrilldownBucketFilter] = useState<string | null>(null);
 
   // Trash state
   const [trashTarget, setTrashTarget] = useState<string | null>(null);
@@ -95,9 +86,6 @@ const AdminSignalsArchive = () => {
   const openDrilldown = (label: string, filterFn: (s: Signal) => boolean) => {
     setDrilldown({ label, filterFn });
     setDrilldownSearch("");
-    setDrilldownPillarFilter(null);
-    setDrilldownKindFilter(null);
-    setDrilldownBucketFilter(null);
   };
 
 
@@ -216,11 +204,8 @@ const AdminSignalsArchive = () => {
       const q = drilldownSearch.toLowerCase();
       results = results.filter((s) => (s.title || "").toLowerCase().includes(q) || (s.description || "").toLowerCase().includes(q));
     }
-    if (drilldownPillarFilter) results = results.filter((s) => s.pillar === drilldownPillarFilter);
-    if (drilldownKindFilter) results = results.filter((s) => s.signal_kind === drilldownKindFilter);
-    if (drilldownBucketFilter) results = results.filter((s) => s.priority_layer === drilldownBucketFilter);
     return results;
-  }, [drilldown, filtered, drilldownSearch, drilldownPillarFilter, drilldownKindFilter, drilldownBucketFilter]);
+  }, [drilldown, filtered, drilldownSearch]);
 
   const prevPeriodSignals = useMemo(() => {
     if (selectedFilter === "all") return [];
@@ -335,17 +320,6 @@ const AdminSignalsArchive = () => {
     </Card>
   );
 
-  // Chip filter component
-  const FilterChip = ({ label, active, onClick }: { label: string; active: boolean; onClick: () => void }) => (
-    <button
-      onClick={onClick}
-      className={`px-2.5 py-1 rounded-full text-[11px] font-medium transition-all border ${
-        active ? "bg-white/20 border-white/40 text-white" : "bg-white/5 border-white/10 text-white/50 hover:bg-white/10"
-      }`}
-    >
-      {label}
-    </button>
-  );
 
   return (
     <div className="min-h-screen bg-black text-white">
@@ -615,76 +589,50 @@ const AdminSignalsArchive = () => {
           </SheetHeader>
 
           {/* Search */}
-          <div className="relative mb-4">
+          <div className="relative mb-5">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/30" />
             <Input
-              placeholder="Search completed signals…"
+              placeholder="Search signals…"
               value={drilldownSearch}
               onChange={(e) => setDrilldownSearch(e.target.value)}
               className="pl-9 bg-white/5 border-white/10 text-white placeholder:text-white/30"
             />
           </div>
 
-          {/* Filter Chips — hide pillar chips when drilldown is already pillar-scoped */}
-          <div className="flex flex-wrap gap-1.5 mb-4">
-            {!PILLARS.includes(drilldown?.label as any) && (
-              <>
-                {PILLARS.map((p) => (
-                  <FilterChip key={p} label={p} active={drilldownPillarFilter === p} onClick={() => setDrilldownPillarFilter(drilldownPillarFilter === p ? null : p)} />
-                ))}
-                <span className="w-px h-5 bg-white/10 mx-1 self-center" />
-              </>
-            )}
-            {(["Outcome", "Action"] as const).map((k) => (
-              <FilterChip key={k} label={k} active={drilldownKindFilter === k} onClick={() => setDrilldownKindFilter(drilldownKindFilter === k ? null : k)} />
-            ))}
-            <span className="w-px h-5 bg-white/10 mx-1 self-center" />
-            {(["Core", "Bonus"] as const).map((b) => (
-              <FilterChip key={b} label={b} active={drilldownBucketFilter === b} onClick={() => setDrilldownBucketFilter(drilldownBucketFilter === b ? null : b)} />
-            ))}
-          </div>
-
           {/* Results */}
-          <div className="space-y-2">
+          <div className="space-y-1.5">
             {drilldownResults.length === 0 ? (
-              <p className="text-center text-white/30 py-8 text-sm">No completed signals match this filter.</p>
+              <p className="text-center text-white/30 py-8 text-sm">No signals match this filter.</p>
             ) : (
-              drilldownResults.map((signal) => (
-                <div key={signal.id} className="flex items-start gap-3 p-3 rounded-lg border bg-white/[0.03] border-white/5 hover:bg-white/[0.06] transition-colors">
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm text-white mb-1">{signal.title || "(Untitled)"}</p>
-                    <div className="flex flex-wrap gap-1.5">
-                      {signal.pillar && (
-                        <Badge variant="outline" className={`text-[10px] ${PILLAR_COLORS[signal.pillar] || "border-white/20 text-white/60"}`}>
-                          {signal.pillar}
-                        </Badge>
-                      )}
-                      {signal.signal_kind && (
-                        <Badge variant="outline" className="text-[10px] border-white/20 text-white/40">
-                          {signal.signal_kind}
-                        </Badge>
-                      )}
-                      {signal.priority_layer && (
-                        <Badge variant="outline" className={`text-[10px] ${signal.priority_layer === "Core" ? "border-rose-500/40 text-rose-400" : "border-white/20 text-white/40"}`}>
-                          {signal.priority_layer}
-                        </Badge>
-                      )}
-                    </div>
-                    <div className="flex gap-3 mt-1.5 text-[10px] text-white/30">
-                      {signal.date_assigned && <span>Due: {signal.date_assigned}</span>}
-                      <span>Created: {format(new Date(signal.created_at), "M/d/yy")}</span>
-                    </div>
-                  </div>
-                  <button
-                    onClick={(e) => { e.stopPropagation(); setTrashTarget(signal.id); }}
-                    className="shrink-0 mt-1 text-white/20 hover:text-red-400 transition-colors"
-                    aria-label="Move to Trash"
-                    title="Move to Trash"
+              drilldownResults.map((signal) => {
+                const pillarColor = signal.pillar ? PILLAR_CHART_COLORS[signal.pillar] || "rgba(255,255,255,0.3)" : "rgba(255,255,255,0.1)";
+                const metaParts: string[] = [];
+                if (signal.signal_kind) metaParts.push(signal.signal_kind);
+                if (signal.priority_layer) metaParts.push(signal.priority_layer);
+                return (
+                  <div
+                    key={signal.id}
+                    className="group flex items-center gap-3 p-3 rounded-lg border bg-white/[0.02] border-white/5 hover:bg-white/[0.05] transition-colors"
                   >
-                    <Trash2 className="w-4 h-4" />
-                  </button>
-                </div>
-              ))
+                    <div className="w-1 self-stretch rounded-full shrink-0" style={{ backgroundColor: pillarColor }} />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm text-white/80 leading-snug">{signal.title || "(Untitled)"}</p>
+                      <p className="text-[11px] text-white/35 mt-0.5">
+                        {[signal.pillar, ...metaParts].filter(Boolean).join(" · ")}
+                        {signal.archived_at && ` · ${format(new Date(signal.archived_at), "MMM d")}`}
+                      </p>
+                    </div>
+                    <button
+                      onClick={(e) => { e.stopPropagation(); setTrashTarget(signal.id); }}
+                      className="shrink-0 text-white/10 group-hover:text-white/30 hover:!text-red-400 transition-colors"
+                      aria-label="Move to Trash"
+                      title="Move to Trash"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                );
+              })
             )}
           </div>
         </SheetContent>
