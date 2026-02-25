@@ -6,16 +6,16 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ArrowLeft, LogOut, Archive, Undo2, TrendingUp, TrendingDown, Minus, Repeat } from "lucide-react";
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import { ArrowLeft, LogOut, Archive, Undo2, TrendingUp, TrendingDown, Minus, Repeat, Trash2, Search } from "lucide-react";
 import { toast } from "sonner";
 import { startOfMonth, endOfMonth, subMonths, subDays, isWithinInterval, isAfter, format } from "date-fns";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Legend } from "recharts";
 
 const PILLARS = ["Operations", "Sales & Marketing", "Finance", "Vision", "Personal"] as const;
-
-// Pillar colors used for badge styling elsewhere
-
 
 const PILLAR_BORDER: Record<string, string> = {
   Operations: "border-[#bf0f3e]/50",
@@ -23,6 +23,14 @@ const PILLAR_BORDER: Record<string, string> = {
   Finance: "border-sky-300/50",
   Vision: "border-amber-400/50",
   Personal: "border-purple-400/50",
+};
+
+const PILLAR_COLORS: Record<string, string> = {
+  Operations: "bg-[#bf0f3e]/20 text-[#bf0f3e] border-[#bf0f3e]/40",
+  "Sales & Marketing": "bg-green-500/20 text-green-400 border-green-500/40",
+  Finance: "bg-sky-300/20 text-sky-300 border-sky-300/40",
+  Vision: "bg-amber-400/20 text-amber-400 border-amber-400/40",
+  Personal: "bg-purple-400/20 text-purple-400 border-purple-400/40",
 };
 
 type Signal = {
@@ -42,6 +50,11 @@ type Signal = {
   reopened_at: string | null;
   reopen_count: number;
 };
+
+type DrilldownFilter = {
+  label: string;
+  filterFn: (s: Signal) => boolean;
+} | null;
 
 const buildOptions = () => {
   const options: { value: string; label: string }[] = [
@@ -69,9 +82,67 @@ const AdminSignalsArchive = () => {
   const [activePillar, setActivePillar] = useState<string | null>(null);
   const queryClient = useQueryClient();
 
+  // Drilldown state
+  const [drilldown, setDrilldown] = useState<DrilldownFilter>(null);
+  const [drilldownSearch, setDrilldownSearch] = useState("");
+  const [drilldownPillarFilter, setDrilldownPillarFilter] = useState<string | null>(null);
+  const [drilldownKindFilter, setDrilldownKindFilter] = useState<string | null>(null);
+  const [drilldownBucketFilter, setDrilldownBucketFilter] = useState<string | null>(null);
+
+  // Delete state
+  const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
+
+  const openDrilldown = (label: string, filterFn: (s: Signal) => boolean) => {
+    setDrilldown({ label, filterFn });
+    setDrilldownSearch("");
+    setDrilldownPillarFilter(null);
+    setDrilldownKindFilter(null);
+    setDrilldownBucketFilter(null);
+  };
+
+  // Fetch incomplete (pending, not archived) signals for drilldown
+  const { data: incompleteSignals = [] } = useQuery({
+    queryKey: ["signals", "incomplete"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("signals")
+        .select("*")
+        .eq("status", "Pending" as any)
+        .eq("is_archived", false as any)
+        .order("created_at", { ascending: false });
+      if (error) throw error;
+      return data as unknown as Signal[];
+    },
+  });
+
+  const drilldownResults = useMemo(() => {
+    if (!drilldown) return [];
+    let results = incompleteSignals.filter(drilldown.filterFn);
+    if (drilldownSearch) {
+      const q = drilldownSearch.toLowerCase();
+      results = results.filter((s) => (s.title || "").toLowerCase().includes(q) || (s.description || "").toLowerCase().includes(q));
+    }
+    if (drilldownPillarFilter) results = results.filter((s) => s.pillar === drilldownPillarFilter);
+    if (drilldownKindFilter) results = results.filter((s) => s.signal_kind === drilldownKindFilter);
+    if (drilldownBucketFilter) results = results.filter((s) => s.priority_layer === drilldownBucketFilter);
+    return results;
+  }, [drilldown, incompleteSignals, drilldownSearch, drilldownPillarFilter, drilldownKindFilter, drilldownBucketFilter]);
+
+  const deleteMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from("signals").delete().eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["signals"] });
+      setDeleteTarget(null);
+      toast.success("Signal deleted");
+    },
+    onError: () => toast.error("Couldn't delete. Try again."),
+  });
+
   const unarchiveMutation = useMutation({
     mutationFn: async (id: string) => {
-      // First get current reopen_count
       const { data: current, error: fetchErr } = await supabase
         .from("signals")
         .select("reopen_count")
@@ -110,7 +181,6 @@ const AdminSignalsArchive = () => {
     },
   });
 
-  // Fetch all signals that have ever been reopened (regardless of current archive status)
   const { data: allReopened = [] } = useQuery({
     queryKey: ["signals", "reopened"],
     queryFn: async () => {
@@ -140,14 +210,12 @@ const AdminSignalsArchive = () => {
 
   const reopenedInRange = useMemo(() => filterReopenedByKey(allReopened, selectedFilter), [allReopened, selectedFilter]);
 
-  // Filter signals by the selected filter key
   const filterByKey = (signals: Signal[], key: string) => {
     if (key === "all") return signals;
     if (key === "7d" || key === "30d") {
       const cutoff = subDays(new Date(), key === "7d" ? 7 : 30);
       return signals.filter((s) => s.archived_at && isAfter(new Date(s.archived_at), cutoff));
     }
-    // Month key like "2026-02"
     const [year, month] = key.split("-").map(Number);
     const start = startOfMonth(new Date(year, month - 1));
     const end = endOfMonth(new Date(year, month - 1));
@@ -158,7 +226,6 @@ const AdminSignalsArchive = () => {
 
   const filtered = useMemo(() => filterByKey(allArchived, selectedFilter), [allArchived, selectedFilter]);
 
-  // Previous period for comparison
   const prevPeriodSignals = useMemo(() => {
     if (selectedFilter === "all") return [];
     if (selectedFilter === "7d") {
@@ -183,20 +250,13 @@ const AdminSignalsArchive = () => {
   const pillarCounts = PILLARS.map((p) => {
     const count = filtered.filter((s) => s.pillar === p).length;
     const prevCount = prevPeriodSignals.filter((s) => s.pillar === p).length;
-    return {
-      pillar: p,
-      count,
-      pct: total > 0 ? Math.round((count / total) * 100) : 0,
-      diff: count - prevCount,
-      prevCount,
-    };
+    return { pillar: p, count, pct: total > 0 ? Math.round((count / total) * 100) : 0, diff: count - prevCount, prevCount };
   });
 
   const totalDiff = total - prevTotal;
   const totalPctChange = prevTotal > 0 ? Math.round(((total - prevTotal) / prevTotal) * 100) : null;
   const showComparison = selectedFilter !== "all";
 
-  // Monthly trend data (last 12 months)
   const PILLAR_CHART_COLORS: Record<string, string> = {
     Operations: "#bf0f3e",
     "Sales & Marketing": "#22c55e",
@@ -227,17 +287,16 @@ const AdminSignalsArchive = () => {
     });
   }, [allArchived]);
 
-  // Drill-down: filtered signals for active pillar
   const drillDownSignals = useMemo(() => {
     if (!activePillar) return [];
     return filtered.filter((s) => s.pillar === activePillar);
   }, [filtered, activePillar]);
 
-  // Label for drill-down header
   const filterLabel = useMemo(() => {
     const opt = FILTER_OPTIONS.find((o) => o.value === selectedFilter);
     return opt?.label || selectedFilter;
   }, [selectedFilter]);
+
   const handleLogout = async () => {
     await signOut();
     navigate("/admin/login", { replace: true });
@@ -254,6 +313,43 @@ const AdminSignalsArchive = () => {
       </span>
     );
   };
+
+  // Clickable metric card component
+  const MetricCard = ({
+    value, label, subLabel, onClick, className = "", valueClassName = "text-white/80",
+    diff, pctChange, showDiff = false,
+  }: {
+    value: number; label: string; subLabel?: string; onClick: () => void;
+    className?: string; valueClassName?: string;
+    diff?: number; pctChange?: number | null; showDiff?: boolean;
+  }) => (
+    <Card
+      className={`bg-white/5 text-white cursor-pointer transition-all hover:bg-white/10 hover:ring-1 hover:ring-white/20 focus-visible:ring-2 focus-visible:ring-amber-400 ${className}`}
+      onClick={onClick}
+      tabIndex={0}
+      role="button"
+      onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onClick(); } }}
+    >
+      <CardContent className="p-4 text-center">
+        <p className={`text-2xl font-bold ${valueClassName}`}>{value}</p>
+        <p className="text-xs text-white/50">{label}</p>
+        {subLabel && <p className="text-[10px] text-white/30">{subLabel}</p>}
+        {showDiff && diff !== undefined && <DiffIndicator diff={diff} pctChange={pctChange} />}
+      </CardContent>
+    </Card>
+  );
+
+  // Chip filter component
+  const FilterChip = ({ label, active, onClick }: { label: string; active: boolean; onClick: () => void }) => (
+    <button
+      onClick={onClick}
+      className={`px-2.5 py-1 rounded-full text-[11px] font-medium transition-all border ${
+        active ? "bg-white/20 border-white/40 text-white" : "bg-white/5 border-white/10 text-white/50 hover:bg-white/10"
+      }`}
+    >
+      {label}
+    </button>
+  );
 
   return (
     <div className="min-h-screen bg-black text-white">
@@ -294,26 +390,30 @@ const AdminSignalsArchive = () => {
 
         {/* Pillar Breakdown + Comparison */}
         <div className="grid grid-cols-3 sm:grid-cols-6 gap-3 mb-4">
-          <Card className="bg-white/5 border-white/10 text-white">
-            <CardContent className="p-4 text-center">
-              <p className="text-2xl font-bold text-amber-400">{total}</p>
-              <p className="text-xs text-white/50">Total</p>
-              {showComparison && <DiffIndicator diff={totalDiff} pctChange={totalPctChange} />}
-            </CardContent>
-          </Card>
+          <MetricCard
+            value={total}
+            label="Total"
+            valueClassName="text-amber-400"
+            className="border-white/10"
+            onClick={() => openDrilldown("Total", () => true)}
+            diff={totalDiff}
+            pctChange={totalPctChange}
+            showDiff={showComparison}
+          />
           {pillarCounts.map(({ pillar, count, pct, diff }) => (
-            <Card
+            <MetricCard
               key={pillar}
-              className={`bg-white/5 text-white cursor-pointer transition-all hover:bg-white/10 ${activePillar === pillar ? "ring-1 ring-white/40" : ""} ${PILLAR_BORDER[pillar] || "border-white/10"}`}
-              onClick={() => setActivePillar(activePillar === pillar ? null : pillar)}
-            >
-              <CardContent className="p-4 text-center">
-                <p className="text-2xl font-bold text-white/80">{count}</p>
-                <p className="text-xs text-white/50 truncate">{pillar}</p>
-                <p className="text-[10px] text-white/30">{pct}%</p>
-                {showComparison && <DiffIndicator diff={diff} />}
-              </CardContent>
-            </Card>
+              value={count}
+              label={pillar}
+              subLabel={`${pct}%`}
+              className={`${activePillar === pillar ? "ring-1 ring-white/40" : ""} ${PILLAR_BORDER[pillar] || "border-white/10"}`}
+              onClick={() => {
+                setActivePillar(activePillar === pillar ? null : pillar);
+                openDrilldown(pillar, (s) => s.pillar === pillar);
+              }}
+              diff={diff}
+              showDiff={showComparison}
+            />
           ))}
         </div>
 
@@ -323,41 +423,42 @@ const AdminSignalsArchive = () => {
             const kindCount = filtered.filter((s) => s.signal_kind === kind).length;
             const kindPct = total > 0 ? Math.round((kindCount / total) * 100) : 0;
             return (
-              <Card key={kind} className="bg-white/5 border-white/10 text-white">
-                <CardContent className="p-4 text-center">
-                  <p className="text-2xl font-bold text-white/80">{kindCount}</p>
-                  <p className="text-xs text-white/50">{kind}s</p>
-                  <p className="text-[10px] text-white/30">{kindPct}%</p>
-                </CardContent>
-              </Card>
+              <MetricCard
+                key={kind}
+                value={kindCount}
+                label={`${kind}s`}
+                subLabel={`${kindPct}%`}
+                className="border-white/10"
+                onClick={() => openDrilldown(`${kind}s`, (s) => s.signal_kind === kind)}
+              />
             );
           })}
           {(["Core", "Bonus"] as const).map((layer) => {
             const layerCount = filtered.filter((s) => s.priority_layer === layer).length;
             const layerPct = total > 0 ? Math.round((layerCount / total) * 100) : 0;
             return (
-              <Card key={layer} className={`bg-white/5 text-white ${layer === "Core" ? "border-rose-500/40" : "border-white/10"}`}>
-                <CardContent className="p-4 text-center">
-                  <p className="text-2xl font-bold text-white/80">{layerCount}</p>
-                  <p className="text-xs text-white/50">{layer}</p>
-                  <p className="text-[10px] text-white/30">{layerPct}%</p>
-                </CardContent>
-              </Card>
+              <MetricCard
+                key={layer}
+                value={layerCount}
+                label={layer}
+                subLabel={`${layerPct}%`}
+                className={layer === "Core" ? "border-rose-500/40" : "border-white/10"}
+                onClick={() => openDrilldown(layer, (s) => s.priority_layer === layer)}
+              />
             );
           })}
         </div>
 
         {/* Reopened Rate */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4">
-          <Card className="bg-white/5 border-orange-500/40 text-white">
-            <CardContent className="p-4 text-center">
-              <p className="text-2xl font-bold text-orange-400">{reopenedInRange.length}</p>
-              <p className="text-xs text-white/50">Reopened</p>
-              <p className="text-[10px] text-white/30">
-                {total > 0 ? Math.round((reopenedInRange.length / total) * 100) : 0}% of archived
-              </p>
-            </CardContent>
-          </Card>
+          <MetricCard
+            value={reopenedInRange.length}
+            label="Reopened"
+            subLabel={`${total > 0 ? Math.round((reopenedInRange.length / total) * 100) : 0}% of archived`}
+            valueClassName="text-orange-400"
+            className="border-orange-500/40"
+            onClick={() => openDrilldown("Reopened", (s) => s.reopen_count > 0)}
+          />
         </div>
 
         {/* Top 5 Reopened Signals */}
@@ -399,7 +500,6 @@ const AdminSignalsArchive = () => {
 
         {/* Monthly Trend Charts */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-          {/* Total Archived by Month */}
           <Card className="bg-white/5 border-white/10 text-white">
             <CardContent className="p-5">
               <h3 className="text-sm font-semibold text-white/80 mb-4">Archived Signals by Month</h3>
@@ -417,7 +517,6 @@ const AdminSignalsArchive = () => {
             </CardContent>
           </Card>
 
-          {/* Pillar Mix by Month (Stacked) */}
           <Card className="bg-white/5 border-white/10 text-white">
             <CardContent className="p-5">
               <h3 className="text-sm font-semibold text-white/80 mb-4">Pillar Mix by Month</h3>
@@ -445,7 +544,7 @@ const AdminSignalsArchive = () => {
           </p>
         )}
 
-        {/* Pillar Drill-Down */}
+        {/* Pillar Drill-Down (existing archive view) */}
         {isLoading ? (
           <div className="flex justify-center py-16">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white" />
@@ -474,10 +573,7 @@ const AdminSignalsArchive = () => {
             </div>
             <div className="space-y-2">
               {drillDownSignals.map((signal) => (
-                <div
-                  key={signal.id}
-                  className="flex items-center gap-4 p-4 rounded-lg border bg-white/[0.02] border-white/5 opacity-70"
-                >
+                <div key={signal.id} className="flex items-center gap-4 p-4 rounded-lg border bg-white/[0.02] border-white/5 opacity-70">
                   <div className="flex-1 min-w-0">
                     <span className="text-sm text-white/60">{signal.title || "(Untitled)"}</span>
                   </div>
@@ -497,12 +593,121 @@ const AdminSignalsArchive = () => {
                   >
                     <Undo2 className="w-4 h-4" />
                   </button>
+                  <button
+                    onClick={(e) => { e.stopPropagation(); setDeleteTarget(signal.id); }}
+                    className="shrink-0 text-white/20 hover:text-red-400 transition-colors"
+                    aria-label="Delete signal"
+                    title="Delete"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
                 </div>
               ))}
             </div>
           </div>
         )}
       </main>
+
+      {/* Drilldown Sheet */}
+      <Sheet open={!!drilldown} onOpenChange={(open) => { if (!open) setDrilldown(null); }}>
+        <SheetContent side="right" className="w-full sm:max-w-lg bg-zinc-950 border-white/10 text-white overflow-y-auto">
+          <SheetHeader className="mb-4">
+            <SheetTitle className="text-white text-lg">{drilldown?.label} — Incomplete</SheetTitle>
+            <SheetDescription className="text-white/50 text-sm">
+              Showing incomplete signals for {filterLabel}
+            </SheetDescription>
+          </SheetHeader>
+
+          {/* Search */}
+          <div className="relative mb-4">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/30" />
+            <Input
+              placeholder="Search incomplete signals…"
+              value={drilldownSearch}
+              onChange={(e) => setDrilldownSearch(e.target.value)}
+              className="pl-9 bg-white/5 border-white/10 text-white placeholder:text-white/30"
+            />
+          </div>
+
+          {/* Filter Chips */}
+          <div className="flex flex-wrap gap-1.5 mb-4">
+            {PILLARS.map((p) => (
+              <FilterChip key={p} label={p} active={drilldownPillarFilter === p} onClick={() => setDrilldownPillarFilter(drilldownPillarFilter === p ? null : p)} />
+            ))}
+            <span className="w-px h-5 bg-white/10 mx-1 self-center" />
+            {(["Outcome", "Action"] as const).map((k) => (
+              <FilterChip key={k} label={k} active={drilldownKindFilter === k} onClick={() => setDrilldownKindFilter(drilldownKindFilter === k ? null : k)} />
+            ))}
+            <span className="w-px h-5 bg-white/10 mx-1 self-center" />
+            {(["Core", "Bonus"] as const).map((b) => (
+              <FilterChip key={b} label={b} active={drilldownBucketFilter === b} onClick={() => setDrilldownBucketFilter(drilldownBucketFilter === b ? null : b)} />
+            ))}
+          </div>
+
+          {/* Results */}
+          <div className="space-y-2">
+            {drilldownResults.length === 0 ? (
+              <p className="text-center text-white/30 py-8 text-sm">No incomplete signals match this filter.</p>
+            ) : (
+              drilldownResults.map((signal) => (
+                <div key={signal.id} className="flex items-start gap-3 p-3 rounded-lg border bg-white/[0.03] border-white/5 hover:bg-white/[0.06] transition-colors">
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm text-white mb-1">{signal.title || "(Untitled)"}</p>
+                    <div className="flex flex-wrap gap-1.5">
+                      {signal.pillar && (
+                        <Badge variant="outline" className={`text-[10px] ${PILLAR_COLORS[signal.pillar] || "border-white/20 text-white/60"}`}>
+                          {signal.pillar}
+                        </Badge>
+                      )}
+                      {signal.signal_kind && (
+                        <Badge variant="outline" className="text-[10px] border-white/20 text-white/40">
+                          {signal.signal_kind}
+                        </Badge>
+                      )}
+                      {signal.priority_layer && (
+                        <Badge variant="outline" className={`text-[10px] ${signal.priority_layer === "Core" ? "border-rose-500/40 text-rose-400" : "border-white/20 text-white/40"}`}>
+                          {signal.priority_layer}
+                        </Badge>
+                      )}
+                    </div>
+                    <div className="flex gap-3 mt-1.5 text-[10px] text-white/30">
+                      {signal.date_assigned && <span>Due: {signal.date_assigned}</span>}
+                      <span>Created: {format(new Date(signal.created_at), "M/d/yy")}</span>
+                    </div>
+                  </div>
+                  <button
+                    onClick={(e) => { e.stopPropagation(); setDeleteTarget(signal.id); }}
+                    className="shrink-0 mt-1 text-white/20 hover:text-red-400 transition-colors"
+                    aria-label="Delete signal"
+                    title="Delete"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                </div>
+              ))
+            )}
+          </div>
+        </SheetContent>
+      </Sheet>
+
+      {/* Delete Confirmation */}
+      <AlertDialog open={!!deleteTarget} onOpenChange={(open) => { if (!open) setDeleteTarget(null); }}>
+        <AlertDialogContent className="bg-zinc-900 border-white/10 text-white">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-white">Delete this signal?</AlertDialogTitle>
+            <AlertDialogDescription className="text-white/50">This can't be undone.</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel className="bg-white/5 border-white/10 text-white hover:bg-white/10 hover:text-white">Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-red-600 text-white hover:bg-red-700"
+              onClick={() => deleteTarget && deleteMutation.mutate(deleteTarget)}
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
