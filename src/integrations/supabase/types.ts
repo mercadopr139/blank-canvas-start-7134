@@ -14,6 +14,42 @@ export type Database = {
   }
   public: {
     Tables: {
+      calendar_verses: {
+        Row: {
+          created_at: string
+          day: number
+          id: string
+          is_trashed: boolean
+          month: number
+          reference: string
+          text: string
+          theme: string | null
+          year: number
+        }
+        Insert: {
+          created_at?: string
+          day: number
+          id?: string
+          is_trashed?: boolean
+          month: number
+          reference: string
+          text: string
+          theme?: string | null
+          year: number
+        }
+        Update: {
+          created_at?: string
+          day?: number
+          id?: string
+          is_trashed?: boolean
+          month?: number
+          reference?: string
+          text?: string
+          theme?: string | null
+          year?: number
+        }
+        Relationships: []
+      }
       client_services: {
         Row: {
           client_id: string
