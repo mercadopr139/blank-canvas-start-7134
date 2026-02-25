@@ -42,6 +42,7 @@ import AdminTasks from "./pages/admin/AdminTasks";
 import AdminBulkOutreach from "./pages/admin/AdminBulkOutreach";
 import AdminSignals from "./pages/admin/AdminSignals";
 import AdminSignalsArchive from "./pages/admin/AdminSignalsArchive";
+import AdminSignalsTrash from "./pages/admin/AdminSignalsTrash";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -146,6 +147,14 @@ const App = () => (
               element={
                 <ProtectedRoute requireAdmin>
                   <AdminSignalsArchive />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin/signals/trash"
+              element={
+                <ProtectedRoute requireAdmin>
+                  <AdminSignalsTrash />
                 </ProtectedRoute>
               }
             />
