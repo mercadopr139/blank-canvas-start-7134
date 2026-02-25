@@ -20,11 +20,14 @@ export default function DailyVerse() {
 
   const [verse, setVerse] = useState<CalendarVerseRow | null>(null);
   const [missing, setMissing] = useState(false);
+  const [yearIncomplete, setYearIncomplete] = useState(false);
+  const [generating, setGenerating] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
 
     async function load() {
+      // Fetch today's verse
       const { data, error } = await supabase
         .from("calendar_verses")
         .select("id,year,month,day,reference,text,theme,is_trashed")
@@ -39,16 +42,27 @@ export default function DailyVerse() {
       if (error) {
         console.error("DailyVerse load error:", error);
         setMissing(true);
-        return;
-      }
-
-      if (!data) {
+      } else if (!data) {
         setMissing(true);
-        return;
+      } else {
+        setVerse(data);
+        setMissing(false);
       }
 
-      setVerse(data);
-      setMissing(false);
+      // Check if the full year is populated
+      const isLeap = (y % 4 === 0 && y % 100 !== 0) || y % 400 === 0;
+      const totalDays = isLeap ? 366 : 365;
+
+      const { count, error: countErr } = await supabase
+        .from("calendar_verses")
+        .select("id", { count: "exact", head: true })
+        .eq("year", y)
+        .eq("is_trashed", false);
+
+      if (cancelled) return;
+      if (!countErr && (count ?? 0) < totalDays) {
+        setYearIncomplete(true);
+      }
     }
 
     load();
@@ -56,6 +70,7 @@ export default function DailyVerse() {
   }, [y, m, d]);
 
   async function generateYear() {
+    setGenerating(true);
     const { data: lib, error: libErr } = await supabase
       .from("verse_library")
       .select("sort_index,reference,text,theme")
@@ -64,12 +79,13 @@ export default function DailyVerse() {
 
     if (libErr) {
       console.error("verse_library load error:", libErr);
+      setGenerating(false);
       return;
     }
 
     if (!lib || lib.length < 365) {
-      console.error(`verse_library needs at least 365 verses. Found: ${lib?.length ?? 0}`);
       alert(`Verse library incomplete. Add at least 365 verses (found ${lib?.length ?? 0}).`);
+      setGenerating(false);
       return;
     }
 
@@ -100,6 +116,7 @@ export default function DailyVerse() {
 
     if (upsertErr) {
       console.error("calendar_verses upsert error:", upsertErr);
+      setGenerating(false);
       return;
     }
 
@@ -119,13 +136,14 @@ export default function DailyVerse() {
         {verse?.theme ? ` • ${verse.theme}` : ""}
       </p>
 
-      {missing && (
+      {yearIncomplete && (
         <div className="mt-3">
           <button
             onClick={generateYear}
-            className="px-3 py-1.5 text-xs rounded-lg border border-white/20 bg-white/5 text-white/50 hover:bg-white/10 hover:text-white/70 cursor-pointer transition-colors"
+            disabled={generating}
+            className="px-3 py-1.5 text-xs rounded-lg border border-white/20 bg-white/5 text-white/50 hover:bg-white/10 hover:text-white/70 cursor-pointer transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
           >
-            Generate {y} Verse Calendar
+            {generating ? "Generating…" : `Generate ${y} Verse Calendar`}
           </button>
         </div>
       )}
