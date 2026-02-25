@@ -14,7 +14,7 @@ import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
 import { format } from "date-fns";
-import { ArrowLeft, Plus, CheckCircle2, Circle, LogOut, Archive, ArrowRight } from "lucide-react";
+import { ArrowLeft, Plus, CheckCircle2, Circle, LogOut, Archive, ArrowRight, Trash2 } from "lucide-react";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 
 const PILLARS = ["Operations", "Sales & Marketing", "Finance", "Vision", "Personal"] as const;
@@ -78,6 +78,7 @@ const AdminSignals = () => {
         .eq("date_assigned", today)
         .eq("priority_layer", "Core" as any)
         .eq("is_archived", false as any)
+        .eq("is_trashed", false as any)
         .order("created_at", { ascending: true });
       if (error) throw error;
       return data as Signal[];
@@ -93,6 +94,7 @@ const AdminSignals = () => {
         .eq("date_assigned", today)
         .eq("priority_layer", "Bonus" as any)
         .eq("is_archived", false as any)
+        .eq("is_trashed", false as any)
         .order("created_at", { ascending: true });
       if (error) throw error;
       return data as Signal[];
@@ -109,6 +111,7 @@ const AdminSignals = () => {
         .lt("date_assigned", today)
         .eq("status", "Pending" as any)
         .eq("is_archived", false as any)
+        .eq("is_trashed", false as any)
         .order("date_assigned", { ascending: true });
       if (error) throw error;
       return data as Signal[];
@@ -124,6 +127,7 @@ const AdminSignals = () => {
         .is("date_assigned", null)
         .eq("status", "Pending" as any)
         .eq("is_archived", false as any)
+        .eq("is_trashed", false as any)
         .order("created_at", { ascending: false });
       if (error) throw error;
       return data as Signal[];
@@ -200,7 +204,8 @@ const AdminSignals = () => {
         .from("signals")
         .update({ is_archived: true, archived_at: new Date().toISOString() } as any)
         .eq("status", "Complete" as any)
-        .eq("is_archived", false as any);
+        .eq("is_archived", false as any)
+        .eq("is_trashed", false as any);
       if (error) throw error;
     },
     onSuccess: () => {
@@ -455,6 +460,14 @@ const AdminSignals = () => {
             className="text-white/40 hover:text-white/70"
           >
             View Archive →
+          </Button>
+          <Button
+            variant="ghost"
+            onClick={() => navigate("/admin/signals/trash")}
+            className="text-white/40 hover:text-white/70"
+          >
+            <Trash2 className="w-4 h-4 mr-1" />
+            Trash
           </Button>
         </div>
 

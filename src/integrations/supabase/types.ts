@@ -517,9 +517,12 @@ export type Database = {
           completed_at: string | null
           created_at: string
           date_assigned: string | null
+          deleted_at: string | null
+          deleted_by: string | null
           description: string | null
           id: string
           is_archived: boolean
+          is_trashed: boolean
           metadata: Json | null
           pillar: Database["public"]["Enums"]["signal_pillar"] | null
           priority_layer: Database["public"]["Enums"]["priority_layer"] | null
@@ -530,6 +533,8 @@ export type Database = {
           source: string | null
           status: Database["public"]["Enums"]["signal_status"]
           title: string | null
+          trashed_at: string | null
+          trashed_by: string | null
           updated_at: string
         }
         Insert: {
@@ -537,9 +542,12 @@ export type Database = {
           completed_at?: string | null
           created_at?: string
           date_assigned?: string | null
+          deleted_at?: string | null
+          deleted_by?: string | null
           description?: string | null
           id?: string
           is_archived?: boolean
+          is_trashed?: boolean
           metadata?: Json | null
           pillar?: Database["public"]["Enums"]["signal_pillar"] | null
           priority_layer?: Database["public"]["Enums"]["priority_layer"] | null
@@ -550,6 +558,8 @@ export type Database = {
           source?: string | null
           status?: Database["public"]["Enums"]["signal_status"]
           title?: string | null
+          trashed_at?: string | null
+          trashed_by?: string | null
           updated_at?: string
         }
         Update: {
@@ -557,9 +567,12 @@ export type Database = {
           completed_at?: string | null
           created_at?: string
           date_assigned?: string | null
+          deleted_at?: string | null
+          deleted_by?: string | null
           description?: string | null
           id?: string
           is_archived?: boolean
+          is_trashed?: boolean
           metadata?: Json | null
           pillar?: Database["public"]["Enums"]["signal_pillar"] | null
           priority_layer?: Database["public"]["Enums"]["priority_layer"] | null
@@ -570,6 +583,8 @@ export type Database = {
           source?: string | null
           status?: Database["public"]["Enums"]["signal_status"]
           title?: string | null
+          trashed_at?: string | null
+          trashed_by?: string | null
           updated_at?: string
         }
         Relationships: []

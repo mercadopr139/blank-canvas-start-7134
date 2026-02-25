@@ -89,8 +89,8 @@ const AdminSignalsArchive = () => {
   const [drilldownKindFilter, setDrilldownKindFilter] = useState<string | null>(null);
   const [drilldownBucketFilter, setDrilldownBucketFilter] = useState<string | null>(null);
 
-  // Delete state
-  const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
+  // Trash state
+  const [trashTarget, setTrashTarget] = useState<string | null>(null);
 
   const openDrilldown = (label: string, filterFn: (s: Signal) => boolean) => {
     setDrilldown({ label, filterFn });
@@ -102,17 +102,24 @@ const AdminSignalsArchive = () => {
 
 
 
-  const deleteMutation = useMutation({
+  const trashMutation = useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase.from("signals").delete().eq("id", id);
+      const { error } = await supabase
+        .from("signals")
+        .update({
+          is_trashed: true,
+          trashed_at: new Date().toISOString(),
+          trashed_by: user?.id || null,
+        } as any)
+        .eq("id", id);
       if (error) throw error;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["signals"] });
-      setDeleteTarget(null);
-      toast.success("Signal deleted");
+      setTrashTarget(null);
+      toast.success("Moved to Trash");
     },
-    onError: () => toast.error("Couldn't delete. Try again."),
+    onError: () => toast.error("Action failed. Try again."),
   });
 
   const unarchiveMutation = useMutation({
@@ -149,6 +156,7 @@ const AdminSignalsArchive = () => {
         .from("signals")
         .select("*")
         .eq("is_archived", true as any)
+        .eq("is_trashed", false as any)
         .order("archived_at", { ascending: false });
       if (error) throw error;
       return data as unknown as Signal[];
@@ -162,6 +170,7 @@ const AdminSignalsArchive = () => {
         .from("signals")
         .select("*")
         .gt("reopen_count", 0 as any)
+        .eq("is_trashed", false as any)
         .order("reopened_at", { ascending: false });
       if (error) throw error;
       return data as unknown as Signal[];
@@ -581,10 +590,10 @@ const AdminSignalsArchive = () => {
                     <Undo2 className="w-4 h-4" />
                   </button>
                   <button
-                    onClick={(e) => { e.stopPropagation(); setDeleteTarget(signal.id); }}
+                    onClick={(e) => { e.stopPropagation(); setTrashTarget(signal.id); }}
                     className="shrink-0 text-white/20 hover:text-red-400 transition-colors"
-                    aria-label="Delete signal"
-                    title="Delete"
+                    aria-label="Move to Trash"
+                    title="Move to Trash"
                   >
                     <Trash2 className="w-4 h-4" />
                   </button>
@@ -663,10 +672,10 @@ const AdminSignalsArchive = () => {
                     </div>
                   </div>
                   <button
-                    onClick={(e) => { e.stopPropagation(); setDeleteTarget(signal.id); }}
+                    onClick={(e) => { e.stopPropagation(); setTrashTarget(signal.id); }}
                     className="shrink-0 mt-1 text-white/20 hover:text-red-400 transition-colors"
-                    aria-label="Delete signal"
-                    title="Delete"
+                    aria-label="Move to Trash"
+                    title="Move to Trash"
                   >
                     <Trash2 className="w-4 h-4" />
                   </button>
@@ -677,20 +686,20 @@ const AdminSignalsArchive = () => {
         </SheetContent>
       </Sheet>
 
-      {/* Delete Confirmation */}
-      <AlertDialog open={!!deleteTarget} onOpenChange={(open) => { if (!open) setDeleteTarget(null); }}>
+      {/* Move to Trash Confirmation */}
+      <AlertDialog open={!!trashTarget} onOpenChange={(open) => { if (!open) setTrashTarget(null); }}>
         <AlertDialogContent className="bg-zinc-900 border-white/10 text-white">
           <AlertDialogHeader>
-            <AlertDialogTitle className="text-white">Delete this signal?</AlertDialogTitle>
-            <AlertDialogDescription className="text-white/50">This can't be undone.</AlertDialogDescription>
+            <AlertDialogTitle className="text-white">Move this signal to Trash?</AlertDialogTitle>
+            <AlertDialogDescription className="text-white/50">You can restore it later or permanently delete it from Trash.</AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel className="bg-white/5 border-white/10 text-white hover:bg-white/10 hover:text-white">Cancel</AlertDialogCancel>
             <AlertDialogAction
               className="bg-red-600 text-white hover:bg-red-700"
-              onClick={() => deleteTarget && deleteMutation.mutate(deleteTarget)}
+              onClick={() => trashTarget && trashMutation.mutate(trashTarget)}
             >
-              Delete
+              Move to Trash
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
