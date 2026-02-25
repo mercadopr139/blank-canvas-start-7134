@@ -12,41 +12,6 @@ type CalendarVerseRow = {
   is_trashed: boolean;
 };
 
-function generateVerseLibrary(year: number) {
-  const baseVerses = [
-    { ref: "Colossians 3:23", text: "Whatever you do, work at it with all your heart, as working for the Lord." },
-    { ref: "Galatians 6:9", text: "Let us not become weary in doing good." },
-    { ref: "Proverbs 16:3", text: "Commit to the Lord whatever you do." },
-    { ref: "2 Timothy 4:7", text: "I have fought the good fight, I have kept the faith." },
-    { ref: "Isaiah 40:31", text: "Those who hope in the Lord will renew their strength." },
-    { ref: "Joshua 1:9", text: "Be strong and courageous." },
-    { ref: "Romans 12:11", text: "Never be lacking in zeal, but keep your spiritual fervor." },
-    { ref: "Psalm 37:5", text: "Commit your way to the Lord; trust in him." },
-  ];
-
-  const results: { year: number; month: number; day: number; reference: string; text: string; theme: string; is_trashed: boolean }[] = [];
-  let verseIndex = 0;
-
-  for (let month = 1; month <= 12; month++) {
-    const daysInMonth = new Date(year, month, 0).getDate();
-    for (let day = 1; day <= daysInMonth; day++) {
-      const verse = baseVerses[verseIndex % baseVerses.length];
-      results.push({
-        year,
-        month,
-        day,
-        reference: verse.ref,
-        text: verse.text,
-        theme: "Work & Faith",
-        is_trashed: false,
-      });
-      verseIndex++;
-    }
-  }
-
-  return results;
-}
-
 export default function DailyVerse() {
   const today = useMemo(() => new Date(), []);
   const y = today.getFullYear();
@@ -91,14 +56,50 @@ export default function DailyVerse() {
   }, [y, m, d]);
 
   async function generateYear() {
-    const verses = generateVerseLibrary(y);
+    const { data: lib, error: libErr } = await supabase
+      .from("verse_library")
+      .select("sort_index,reference,text,theme")
+      .eq("is_trashed", false)
+      .order("sort_index", { ascending: true });
 
-    const { error } = await supabase
+    if (libErr) {
+      console.error("verse_library load error:", libErr);
+      return;
+    }
+
+    if (!lib || lib.length < 365) {
+      console.error(`verse_library needs at least 365 verses. Found: ${lib?.length ?? 0}`);
+      alert(`Verse library incomplete. Add at least 365 verses (found ${lib?.length ?? 0}).`);
+      return;
+    }
+
+    const rows: any[] = [];
+    let dayOfYear = 0;
+
+    for (let month = 1; month <= 12; month++) {
+      const daysInMonth = new Date(y, month, 0).getDate();
+      for (let day = 1; day <= daysInMonth; day++) {
+        dayOfYear += 1;
+        const idx = Math.min(dayOfYear, 365) - 1;
+        const v = lib[idx];
+        rows.push({
+          year: y,
+          month,
+          day,
+          reference: v.reference,
+          text: v.text,
+          theme: v.theme ?? "Work & Faith",
+          is_trashed: false,
+        });
+      }
+    }
+
+    const { error: upsertErr } = await supabase
       .from("calendar_verses")
-      .insert(verses, { ignoreDuplicates: true } as any);
+      .upsert(rows, { onConflict: "year,month,day", ignoreDuplicates: true });
 
-    if (error) {
-      console.error("Generation error:", error);
+    if (upsertErr) {
+      console.error("calendar_verses upsert error:", upsertErr);
       return;
     }
 
