@@ -49,11 +49,11 @@ const DailyVerse = () => {
   }, []);
 
   return (
-    <div className="text-center max-w-md mx-auto">
-      <p className="text-sm italic text-white/50 leading-relaxed">
+    <div className="text-center max-w-2xl mx-auto">
+      <p className="text-xl md:text-2xl italic text-white/50 leading-relaxed">
         "{verse.text}"
       </p>
-      <p className="text-xs text-white/30 mt-1.5">— {verse.ref}</p>
+      <p className="text-sm text-white/30 mt-2">— {verse.ref}</p>
     </div>
   );
 };
