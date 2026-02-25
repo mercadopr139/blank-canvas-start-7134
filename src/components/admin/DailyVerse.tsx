@@ -22,12 +22,13 @@ export default function DailyVerse() {
   const [missing, setMissing] = useState(false);
   const [yearIncomplete, setYearIncomplete] = useState(false);
   const [generating, setGenerating] = useState(false);
+  const [needsSeed, setNeedsSeed] = useState(false);
+  const [seeding, setSeeding] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
 
     async function load() {
-      // Fetch today's verse
       const { data, error } = await supabase
         .from("calendar_verses")
         .select("id,year,month,day,reference,text,theme,is_trashed")
@@ -49,7 +50,6 @@ export default function DailyVerse() {
         setMissing(false);
       }
 
-      // Check if the full year is populated
       const isLeap = (y % 4 === 0 && y % 100 !== 0) || y % 400 === 0;
       const totalDays = isLeap ? 366 : 365;
 
@@ -84,6 +84,7 @@ export default function DailyVerse() {
     }
 
     if (!lib || lib.length < 365) {
+      setNeedsSeed(true);
       alert(`Verse library incomplete. Add at least 365 verses (found ${lib?.length ?? 0}).`);
       setGenerating(false);
       return;
@@ -123,6 +124,48 @@ export default function DailyVerse() {
     window.location.reload();
   }
 
+  async function seedVerseLibrary() {
+    setSeeding(true);
+
+    const starter = [
+      { reference: "Colossians 3:23", text: "Whatever you do, work at it with all your heart, as working for the Lord.", theme: "Hard Work & Faith" },
+      { reference: "Galatians 6:9", text: "Let us not become weary in doing good, for at the proper time we will reap a harvest if we do not give up.", theme: "Perseverance" },
+      { reference: "Proverbs 16:3", text: "Commit to the Lord whatever you do, and he will establish your plans.", theme: "Discipline" },
+      { reference: "1 Corinthians 15:58", text: "Always give yourselves fully to the work of the Lord, because you know that your labor in the Lord is not in vain.", theme: "Purpose" },
+      { reference: "James 1:12", text: "Blessed is the one who perseveres under trial because… that person will receive the crown of life.", theme: "Endurance" },
+      { reference: "Proverbs 21:5", text: "The plans of the diligent lead surely to abundance.", theme: "Diligence" },
+      { reference: "Ecclesiastes 9:10", text: "Whatever your hand finds to do, do it with all your might.", theme: "Work Ethic" },
+      { reference: "Joshua 1:9", text: "Be strong and courageous… for the Lord your God will be with you wherever you go.", theme: "Courage" },
+      { reference: "Isaiah 40:31", text: "Those who hope in the Lord will renew their strength.", theme: "Strength" },
+      { reference: "2 Timothy 4:7", text: "I have fought the good fight… I have kept the faith.", theme: "Faith" },
+      { reference: "Romans 12:11", text: "Never be lacking in zeal, but keep your spiritual fervor, serving the Lord.", theme: "Intensity" },
+      { reference: "Hebrews 12:1", text: "Let us run with perseverance the race marked out for us.", theme: "Perseverance" },
+    ];
+
+    const rows = Array.from({ length: 365 }).map((_, i) => {
+      const v = starter[i % starter.length];
+      return {
+        sort_index: i + 1,
+        reference: v.reference,
+        text: v.text,
+        theme: v.theme,
+        is_trashed: false,
+      };
+    });
+
+    const { error } = await supabase.from("verse_library").insert(rows);
+
+    if (error) {
+      console.error("seedVerseLibrary error:", error);
+      alert("Seed failed. Check console for details.");
+      setSeeding(false);
+      return;
+    }
+
+    setSeeding(false);
+    window.location.reload();
+  }
+
   const displayText = verse?.text ?? (missing ? "Daily verse not set for today yet." : "Loading today's verse…");
   const displayRef = verse?.reference ?? (missing ? `${m}/${d}/${y}` : "");
 
@@ -144,6 +187,18 @@ export default function DailyVerse() {
             className="px-3 py-1.5 text-xs rounded-lg border border-white/20 bg-white/5 text-white/50 hover:bg-white/10 hover:text-white/70 cursor-pointer transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
           >
             {generating ? "Generating…" : `Generate ${y} Verse Calendar`}
+          </button>
+        </div>
+      )}
+
+      {needsSeed && (
+        <div className="mt-2.5">
+          <button
+            onClick={seedVerseLibrary}
+            disabled={seeding}
+            className="px-3 py-1.5 text-xs rounded-lg border border-white/20 bg-white/5 text-white/50 hover:bg-white/10 hover:text-white/70 cursor-pointer transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+          >
+            {seeding ? "Seeding library…" : "Seed Verse Library (365)"}
           </button>
         </div>
       )}
