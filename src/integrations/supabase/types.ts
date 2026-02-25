@@ -777,6 +777,36 @@ export type Database = {
         }
         Relationships: []
       }
+      verse_library: {
+        Row: {
+          created_at: string
+          id: string
+          is_trashed: boolean
+          reference: string
+          sort_index: number
+          text: string
+          theme: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_trashed?: boolean
+          reference: string
+          sort_index: number
+          text: string
+          theme?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_trashed?: boolean
+          reference?: string
+          sort_index?: number
+          text?: string
+          theme?: string | null
+        }
+        Relationships: []
+      }
       youth_registrations: {
         Row: {
           adults_in_household: number
