@@ -1,5 +1,6 @@
 import { useState } from "react";
 import nlaLogo from "@/assets/nla-logo-white.png";
+import DailyVerse from "@/components/admin/DailyVerse";
 import { useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -496,7 +497,8 @@ const AdminSignals = () => {
         </div>
 
         {/* Visual divider with NLA logo */}
-        <div className="flex items-center justify-center my-10">
+        <div className="flex flex-col items-center justify-center my-10 gap-4">
+          <DailyVerse />
           <a href="/admin/dashboard" className="cursor-pointer">
             <img src={nlaLogo} alt="NLA" className="h-24" />
           </a>
