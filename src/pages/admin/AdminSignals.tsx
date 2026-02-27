@@ -6,17 +6,17 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
+
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { toast } from "sonner";
 import { format } from "date-fns";
-import { ArrowLeft, Plus, CheckCircle2, Circle, LogOut, Archive, ArrowRight, Trash2, MoreVertical } from "lucide-react";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { ArrowLeft, Plus, CheckCircle2, Circle, LogOut, Archive, ArrowRight, Trash2, MoreVertical, Flame, Target, Zap } from "lucide-react";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 
 const PILLARS = ["Operations", "Sales & Marketing", "Finance", "Vision", "Personal"] as const;
@@ -27,7 +27,6 @@ const formatCreatedDate = (iso: string) => {
 };
 
 const SIGNAL_KINDS = ["Outcome", "Action"] as const;
-
 
 type Signal = {
   id: string;
@@ -54,13 +53,19 @@ const PILLAR_COLORS: Record<string, string> = {
   Personal: "bg-purple-400/20 text-purple-400 border-purple-400/40",
 };
 
+const getGreeting = () => {
+  const h = new Date().getHours();
+  if (h < 12) return "Good morning";
+  if (h < 17) return "Good afternoon";
+  return "Good evening";
+};
+
 const AdminSignals = () => {
   const navigate = useNavigate();
   const { user, signOut } = useAuth();
   const queryClient = useQueryClient();
   const [showAdd, setShowAdd] = useState(false);
   const [selectedForArchive, setSelectedForArchive] = useState<Set<string>>(new Set());
-  // Form state
   const [form, setForm] = useState({
     title: "",
     pillar: "" as string,
@@ -70,6 +75,7 @@ const AdminSignals = () => {
   });
 
   const today = format(new Date(), "yyyy-MM-dd");
+  const todayDisplay = format(new Date(), "EEEE, MMMM d");
 
   const { data: todayCoreSignals = [] } = useQuery({
     queryKey: ["signals", "today-core"],
@@ -214,7 +220,6 @@ const AdminSignals = () => {
     onError: (e: any) => toast.error(e.message),
   });
 
-
   const [showArchiveConfirm, setShowArchiveConfirm] = useState(false);
 
   const archiveMutation = useMutation({
@@ -267,328 +272,379 @@ const AdminSignals = () => {
   };
 
   const allToday = [...todayCoreSignals, ...todayBonusSignals];
-  const pendingCount = allToday.filter((s) => s.status === "Pending").length;
+  const totalToday = allToday.length;
   const completeCount = allToday.filter((s) => s.status === "Complete").length;
+  const pendingCount = totalToday - completeCount;
+  const progressPct = totalToday > 0 ? Math.round((completeCount / totalToday) * 100) : 0;
+  const dayWon = totalToday > 0 && completeCount === totalToday;
+
+  // Progress ring SVG params
+  const ringR = 38;
+  const ringC = 2 * Math.PI * ringR;
+  const ringOffset = ringC - (progressPct / 100) * ringC;
 
   return (
     <div className="min-h-screen bg-black text-white">
       {/* Header */}
-      <header className="bg-black border-b border-white/10">
-        <div className="container mx-auto px-4 py-4 flex items-center justify-between">
+      <header className="relative overflow-hidden border-b border-white/[0.06]">
+        {/* Subtle gradient backdrop */}
+        <div className="absolute inset-0 bg-gradient-to-r from-rose-950/20 via-black to-amber-950/10" />
+        <div className="relative container mx-auto px-4 py-5 flex items-center justify-between">
           <div className="flex items-center gap-4">
-            <Button variant="ghost" size="icon" onClick={() => navigate("/admin/dashboard")} aria-label="Back">
+            <Button variant="ghost" size="icon" onClick={() => navigate("/admin/dashboard")} aria-label="Back" className="text-white/40 hover:text-white hover:bg-white/5">
               <ArrowLeft className="w-5 h-5" />
             </Button>
             <div>
-              <h1 className="text-xl font-bold text-white">Program Director – Signals</h1>
-              <p className="text-sm text-white/50">{user?.email}</p>
+              <p className="text-xs uppercase tracking-[0.2em] text-white/30 mb-0.5">{todayDisplay}</p>
+              <h1 className="text-lg font-semibold text-white">{getGreeting()}, Josh</h1>
             </div>
           </div>
-          <Button variant="outline" onClick={handleLogout} className="border-white/20 text-white bg-black hover:bg-black hover:text-white">
-            <LogOut className="w-4 h-4 mr-2" />
+          <Button variant="ghost" onClick={handleLogout} className="text-white/30 hover:text-white/60 hover:bg-white/5 text-xs">
+            <LogOut className="w-3.5 h-3.5 mr-1.5" />
             Log out
           </Button>
         </div>
       </header>
 
-      <main className="container mx-auto px-4 py-8">
+      <main className="container mx-auto px-4 py-6 max-w-4xl">
+
         {/* Day Won Banner */}
-        {todayCoreSignals.length + todayBonusSignals.length > 0 &&
-          todayCoreSignals.every(s => s.status === "Complete") &&
-          todayBonusSignals.every(s => s.status === "Complete") && (
-          <p className="text-center text-2xl font-bold text-amber-400 mb-6 tracking-wide" style={{ textShadow: "0 0 20px rgba(251,191,36,0.4)" }}>
-            Day Won.
-          </p>
+        {dayWon && (
+          <div className="text-center py-6 mb-6 rounded-2xl bg-gradient-to-r from-amber-500/10 via-amber-400/5 to-amber-500/10 border border-amber-400/20">
+            <p className="text-3xl font-bold text-amber-400 tracking-wide" style={{ textShadow: "0 0 30px rgba(251,191,36,0.3)" }}>
+              🏆 Day Won.
+            </p>
+            <p className="text-xs text-amber-400/50 mt-1">All signals complete</p>
+          </div>
         )}
-        {/* Scoreboard */}
-        <p className="text-sm text-white/50 mb-4">
-          Remaining today: <span className="text-amber-400 font-semibold">{todayCoreSignals.filter(s => s.status === "Pending").length + todayBonusSignals.filter(s => s.status === "Pending").length}</span>
-        </p>
+
+        {/* Progress Ring + Stats Row */}
+        <div className="flex items-center gap-6 mb-8">
+          {/* Ring */}
+          <div className="relative shrink-0">
+            <svg width="96" height="96" viewBox="0 0 96 96" className="-rotate-90">
+              <circle cx="48" cy="48" r={ringR} fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth="5" />
+              <circle
+                cx="48" cy="48" r={ringR}
+                fill="none"
+                stroke={dayWon ? "#fbbf24" : progressPct > 0 ? "#4ade80" : "rgba(255,255,255,0.1)"}
+                strokeWidth="5"
+                strokeLinecap="round"
+                strokeDasharray={ringC}
+                strokeDashoffset={ringOffset}
+                className="transition-all duration-700 ease-out"
+              />
+            </svg>
+            <div className="absolute inset-0 flex flex-col items-center justify-center">
+              <span className="text-xl font-bold text-white">{progressPct}%</span>
+            </div>
+          </div>
+          {/* Stat pills */}
+          <div className="flex flex-col gap-2 flex-1">
+            <div className="flex items-center gap-3">
+              <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-amber-400/10 border border-amber-400/20">
+                <Target className="w-3.5 h-3.5 text-amber-400" />
+                <span className="text-sm font-semibold text-amber-400">{pendingCount}</span>
+                <span className="text-xs text-amber-400/60">remaining</span>
+              </div>
+              <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-green-500/10 border border-green-500/20">
+                <CheckCircle2 className="w-3.5 h-3.5 text-green-400" />
+                <span className="text-sm font-semibold text-green-400">{completeCount}</span>
+                <span className="text-xs text-green-400/60">done</span>
+              </div>
+            </div>
+            {carryoverSignals.length > 0 && (
+              <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-red-500/10 border border-red-500/20 w-fit">
+                <Flame className="w-3.5 h-3.5 text-red-400" />
+                <span className="text-sm font-semibold text-red-400">{carryoverSignals.length}</span>
+                <span className="text-xs text-red-400/60">carryover</span>
+              </div>
+            )}
+          </div>
+          {/* Add Signal */}
+          <Button
+            onClick={() => setShowAdd(true)}
+            className="shrink-0 bg-white text-black hover:bg-white/90 font-semibold shadow-lg shadow-white/5"
+          >
+            <Plus className="w-4 h-4 mr-1.5" />
+            Add Signal
+          </Button>
+        </div>
 
         {/* Carryover */}
         {carryoverSignals.length > 0 && (
           <div className="mb-6">
-            <h2 className="text-lg font-semibold text-red-400 mb-3">Carryover</h2>
-            <Card className="bg-white/5 border border-red-400/30 text-white">
-              <CardContent className="p-5">
-                <div className="space-y-2">
-                  {carryoverSignals.map((signal) => (
-                    <div key={signal.id} className="flex items-center gap-3 p-3 rounded-md bg-white/[0.03] border border-white/5">
-                      <button
-                        onClick={() => toggleStatus.mutate({ id: signal.id, current: signal.status })}
-                        className="shrink-0"
-                        aria-label="Toggle status"
-                      >
-                        {signal.status === "Complete" ? (
-                          <CheckCircle2 className="w-5 h-5 text-green-400" />
-                        ) : (
-                          <Circle className="w-5 h-5 text-red-400/60 hover:text-red-400" />
-                        )}
-                      </button>
-                      <span className={`text-sm ${signal.status === "Complete" ? "line-through text-white/40" : "text-white"}`}>{signal.title || "(Untitled)"}</span>
-                      <span className="text-[10px] text-white/20 shrink-0">{formatCreatedDate(signal.created_at)}</span>
-                      <span className="text-[10px] text-white/30 ml-auto">{signal.date_assigned}</span>
-                      {signal.pillar && (
-                        <Badge variant="outline" className={`text-[10px] ${PILLAR_COLORS[signal.pillar] || "border-white/20 text-white/60"}`}>
-                          {signal.pillar}
-                        </Badge>
+            <div className="flex items-center gap-2 mb-3">
+              <Flame className="w-4 h-4 text-red-400" />
+              <h2 className="text-sm font-semibold uppercase tracking-wider text-red-400">Carryover</h2>
+              <span className="text-xs text-red-400/40">({carryoverSignals.length})</span>
+            </div>
+            <div className="rounded-xl border border-red-500/20 bg-gradient-to-b from-red-950/20 to-transparent overflow-hidden">
+              <div className="divide-y divide-white/[0.04]">
+                {carryoverSignals.map((signal) => (
+                  <div key={signal.id} className="flex items-center gap-3 px-4 py-3 hover:bg-white/[0.02] transition-colors">
+                    <button
+                      onClick={() => toggleStatus.mutate({ id: signal.id, current: signal.status })}
+                      className="shrink-0"
+                      aria-label="Toggle status"
+                    >
+                      {signal.status === "Complete" ? (
+                        <CheckCircle2 className="w-5 h-5 text-green-400" />
+                      ) : (
+                        <Circle className="w-5 h-5 text-red-400/40 hover:text-red-400 transition-colors" />
                       )}
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <button className="shrink-0 p-1 rounded hover:bg-white/10 text-white/30 hover:text-white/60 transition-colors" aria-label="Move signal">
-                            <MoreVertical className="w-4 h-4" />
-                          </button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end" className="bg-zinc-900 border-white/10 text-white">
-                          <DropdownMenuItem onClick={() => scheduleMutation.mutate({ id: signal.id, priority: "Core" })} className="text-rose-400 focus:text-rose-400 focus:bg-white/5">
-                            Move to Core 3
-                          </DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => scheduleMutation.mutate({ id: signal.id, priority: "Bonus" })} className="text-white/60 focus:text-white focus:bg-white/5">
-                            Move to Bonus
-                          </DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => moveToOnDeckMutation.mutate(signal.id)} className="text-white/40 focus:text-white/60 focus:bg-white/5">
-                            Move to On Deck
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
+                    </button>
+                    <span className={`text-sm flex-1 ${signal.status === "Complete" ? "line-through text-white/30" : "text-white/80"}`}>
+                      {signal.title || "(Untitled)"}
+                    </span>
+                    <span className="text-[10px] text-white/15 shrink-0 tabular-nums">{signal.date_assigned}</span>
+                    {signal.pillar && (
+                      <Badge variant="outline" className={`text-[10px] ${PILLAR_COLORS[signal.pillar] || "border-white/20 text-white/60"}`}>
+                        {signal.pillar}
+                      </Badge>
+                    )}
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <button className="shrink-0 p-1 rounded hover:bg-white/10 text-white/20 hover:text-white/50 transition-colors" aria-label="Move signal">
+                          <MoreVertical className="w-4 h-4" />
+                        </button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end" className="bg-zinc-900 border-white/10 text-white">
+                        <DropdownMenuItem onClick={() => scheduleMutation.mutate({ id: signal.id, priority: "Core" })} className="text-rose-400 focus:text-rose-400 focus:bg-white/5">
+                          Move to Core 3
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => scheduleMutation.mutate({ id: signal.id, priority: "Bonus" })} className="text-white/60 focus:text-white focus:bg-white/5">
+                          Move to Bonus
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => moveToOnDeckMutation.mutate(signal.id)} className="text-white/40 focus:text-white/60 focus:bg-white/5">
+                          Move to On Deck
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </div>
+                ))}
+              </div>
+            </div>
           </div>
         )}
 
         {/* Today's Signals */}
-        <div className="mb-8">
-          <h2 className="text-lg font-semibold text-white mb-4">Today's Signals</h2>
+        <div className="mb-6">
+          <h2 className="text-sm font-semibold uppercase tracking-wider text-white/40 mb-4">Today's Signals</h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             {/* Core 3 */}
-            <Card className="bg-white/5 border-2 border-rose-500/40 text-white">
-              <CardContent className="p-5">
-                <h3 className="text-base font-bold text-rose-500 mb-3">Core 3</h3>
-                <div className="space-y-2">
-                  {todayCoreSignals.filter(s => s.status === "Pending").length === 0 && todayCoreSignals.filter(s => s.status === "Complete").length === 0 ? (
-                    <>
-                      {[1, 2, 3].map((i) => (
-                        <div key={i} className="flex items-center gap-3 p-3 rounded-md bg-white/[0.03] border border-white/5">
-                          <Circle className="w-5 h-5 text-white/20 shrink-0" />
-                          <span className="text-white/30 text-sm italic">No signals yet</span>
-                        </div>
-                      ))}
-                    </>
-                  ) : (
-                    <>
-                      {todayCoreSignals.filter(s => s.status === "Pending").map((signal) => (
-                        <div key={signal.id} className="flex items-center gap-3 p-3 rounded-md bg-white/[0.03] border border-white/5">
-                          <button onClick={() => toggleStatus.mutate({ id: signal.id, current: signal.status })} className="shrink-0" aria-label="Toggle status">
-                            <Circle className="w-5 h-5 text-white/30 hover:text-white/60" />
-                          </button>
-                          <span className="text-sm text-white">{signal.title || "(Untitled)"}</span>
-                          <span className="text-[10px] text-white/20 shrink-0">{formatCreatedDate(signal.created_at)}</span>
-                          {signal.pillar && (
-                            <Badge variant="outline" className={`text-[10px] ml-auto ${PILLAR_COLORS[signal.pillar] || "border-white/20 text-white/60"}`}>{signal.pillar}</Badge>
-                          )}
-                        </div>
-                      ))}
-                      {todayCoreSignals.filter(s => s.status === "Complete").length > 0 && (
-                        <>
-                          <p className="text-[10px] uppercase tracking-wider text-white/30 mt-3 mb-1">Completed (ready to archive)</p>
-                          {todayCoreSignals.filter(s => s.status === "Complete").map((signal) => (
-                            <div key={signal.id} className="flex items-center gap-3 p-3 rounded-md bg-white/[0.03] border border-white/5 opacity-50">
-                              <Checkbox
-                                checked={selectedForArchive.has(signal.id)}
-                                onCheckedChange={() => toggleSelected(signal.id)}
-                                className="shrink-0 border-white/30 data-[state=checked]:bg-rose-500 data-[state=checked]:border-rose-500"
-                              />
-                              <button onClick={() => toggleStatus.mutate({ id: signal.id, current: signal.status })} className="shrink-0" aria-label="Toggle status">
-                                <CheckCircle2 className="w-5 h-5 text-green-400" />
-                              </button>
-                              <span className="text-sm line-through text-white/40">{signal.title || "(Untitled)"}</span>
-                              {signal.pillar && (
-                                <Badge variant="outline" className={`text-[10px] ml-auto ${PILLAR_COLORS[signal.pillar] || "border-white/20 text-white/60"}`}>{signal.pillar}</Badge>
-                              )}
-                            </div>
-                          ))}
-                        </>
-                      )}
-                    </>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
+            <div className="rounded-xl border-2 border-rose-500/30 bg-gradient-to-b from-rose-950/30 to-black/0 overflow-hidden">
+              <div className="px-4 pt-4 pb-2 flex items-center gap-2">
+                <Target className="w-4 h-4 text-rose-500" />
+                <h3 className="text-sm font-bold text-rose-500 uppercase tracking-wider">Core 3</h3>
+              </div>
+              <div className="px-3 pb-3 space-y-1">
+                {todayCoreSignals.filter(s => s.status === "Pending").length === 0 && todayCoreSignals.filter(s => s.status === "Complete").length === 0 ? (
+                  <>
+                    {[1, 2, 3].map((i) => (
+                      <div key={i} className="flex items-center gap-3 px-3 py-2.5 rounded-lg bg-white/[0.02] border border-white/[0.04]">
+                        <Circle className="w-4 h-4 text-white/10 shrink-0" />
+                        <span className="text-white/15 text-sm italic">Empty slot</span>
+                      </div>
+                    ))}
+                  </>
+                ) : (
+                  <>
+                    {todayCoreSignals.filter(s => s.status === "Pending").map((signal) => (
+                      <div key={signal.id} className="flex items-center gap-3 px-3 py-2.5 rounded-lg bg-white/[0.03] border border-white/[0.06] hover:bg-white/[0.05] transition-colors">
+                        <button onClick={() => toggleStatus.mutate({ id: signal.id, current: signal.status })} className="shrink-0" aria-label="Toggle status">
+                          <Circle className="w-4 h-4 text-rose-500/50 hover:text-rose-400 transition-colors" />
+                        </button>
+                        <span className="text-sm text-white flex-1">{signal.title || "(Untitled)"}</span>
+                        <span className="text-[10px] text-white/15 shrink-0">{formatCreatedDate(signal.created_at)}</span>
+                        {signal.pillar && (
+                          <Badge variant="outline" className={`text-[9px] ${PILLAR_COLORS[signal.pillar] || "border-white/20 text-white/60"}`}>{signal.pillar}</Badge>
+                        )}
+                      </div>
+                    ))}
+                    {todayCoreSignals.filter(s => s.status === "Complete").length > 0 && (
+                      <>
+                        <p className="text-[9px] uppercase tracking-[0.15em] text-white/20 mt-3 mb-1 px-1">Completed</p>
+                        {todayCoreSignals.filter(s => s.status === "Complete").map((signal) => (
+                          <div key={signal.id} className="flex items-center gap-3 px-3 py-2 rounded-lg bg-white/[0.01] border border-white/[0.03] opacity-40">
+                            <Checkbox
+                              checked={selectedForArchive.has(signal.id)}
+                              onCheckedChange={() => toggleSelected(signal.id)}
+                              className="shrink-0 border-white/20 data-[state=checked]:bg-rose-500 data-[state=checked]:border-rose-500"
+                            />
+                            <button onClick={() => toggleStatus.mutate({ id: signal.id, current: signal.status })} className="shrink-0" aria-label="Toggle status">
+                              <CheckCircle2 className="w-4 h-4 text-green-400" />
+                            </button>
+                            <span className="text-sm line-through text-white/30 flex-1">{signal.title || "(Untitled)"}</span>
+                            {signal.pillar && (
+                              <Badge variant="outline" className={`text-[9px] ${PILLAR_COLORS[signal.pillar] || "border-white/20 text-white/60"}`}>{signal.pillar}</Badge>
+                            )}
+                          </div>
+                        ))}
+                      </>
+                    )}
+                  </>
+                )}
+              </div>
+            </div>
 
             {/* Bonus */}
-            <Card className="bg-white/5 border border-white/10 text-white">
-              <CardContent className="p-5">
-                <h3 className="text-base font-bold text-white/60 mb-3">Bonus</h3>
-                <div className="space-y-2">
-                  {todayBonusSignals.length === 0 ? (
-                    <div className="flex items-center gap-3 p-3 rounded-md bg-white/[0.03] border border-white/5">
-                      <Circle className="w-5 h-5 text-white/20 shrink-0" />
-                      <span className="text-white/30 text-sm italic">No signals yet</span>
-                    </div>
-                  ) : (
-                    <>
-                      {todayBonusSignals.filter(s => s.status === "Pending").map((signal) => (
-                        <div key={signal.id} className="flex items-center gap-3 p-3 rounded-md bg-white/[0.03] border border-white/5">
-                          <button onClick={() => toggleStatus.mutate({ id: signal.id, current: signal.status })} className="shrink-0" aria-label="Toggle status">
-                            <Circle className="w-5 h-5 text-white/30 hover:text-white/60" />
-                          </button>
-                          <span className="text-sm text-white">{signal.title || "(Untitled)"}</span>
-                          <span className="text-[10px] text-white/20 shrink-0">{formatCreatedDate(signal.created_at)}</span>
-                          {signal.pillar && (
-                            <Badge variant="outline" className={`text-[10px] ml-auto ${PILLAR_COLORS[signal.pillar] || "border-white/20 text-white/60"}`}>{signal.pillar}</Badge>
-                          )}
-                        </div>
-                      ))}
-                      {todayBonusSignals.filter(s => s.status === "Complete").length > 0 && (
-                        <>
-                          <p className="text-[10px] uppercase tracking-wider text-white/30 mt-3 mb-1">Completed (ready to archive)</p>
-                          {todayBonusSignals.filter(s => s.status === "Complete").map((signal) => (
-                            <div key={signal.id} className="flex items-center gap-3 p-3 rounded-md bg-white/[0.03] border border-white/5 opacity-50">
-                              <Checkbox
-                                checked={selectedForArchive.has(signal.id)}
-                                onCheckedChange={() => toggleSelected(signal.id)}
-                                className="shrink-0 border-white/30 data-[state=checked]:bg-rose-500 data-[state=checked]:border-rose-500"
-                              />
-                              <button onClick={() => toggleStatus.mutate({ id: signal.id, current: signal.status })} className="shrink-0" aria-label="Toggle status">
-                                <CheckCircle2 className="w-5 h-5 text-green-400" />
-                              </button>
-                              <span className="text-sm line-through text-white/40">{signal.title || "(Untitled)"}</span>
-                              {signal.pillar && (
-                                <Badge variant="outline" className={`text-[10px] ml-auto ${PILLAR_COLORS[signal.pillar] || "border-white/20 text-white/60"}`}>{signal.pillar}</Badge>
-                              )}
-                            </div>
-                          ))}
-                        </>
-                      )}
-                    </>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
+            <div className="rounded-xl border border-white/[0.08] bg-gradient-to-b from-white/[0.03] to-transparent overflow-hidden">
+              <div className="px-4 pt-4 pb-2 flex items-center gap-2">
+                <Zap className="w-4 h-4 text-white/30" />
+                <h3 className="text-sm font-bold text-white/40 uppercase tracking-wider">Bonus</h3>
+              </div>
+              <div className="px-3 pb-3 space-y-1">
+                {todayBonusSignals.length === 0 ? (
+                  <div className="flex items-center gap-3 px-3 py-2.5 rounded-lg bg-white/[0.02] border border-white/[0.04]">
+                    <Circle className="w-4 h-4 text-white/10 shrink-0" />
+                    <span className="text-white/15 text-sm italic">Empty slot</span>
+                  </div>
+                ) : (
+                  <>
+                    {todayBonusSignals.filter(s => s.status === "Pending").map((signal) => (
+                      <div key={signal.id} className="flex items-center gap-3 px-3 py-2.5 rounded-lg bg-white/[0.03] border border-white/[0.06] hover:bg-white/[0.05] transition-colors">
+                        <button onClick={() => toggleStatus.mutate({ id: signal.id, current: signal.status })} className="shrink-0" aria-label="Toggle status">
+                          <Circle className="w-4 h-4 text-white/25 hover:text-white/50 transition-colors" />
+                        </button>
+                        <span className="text-sm text-white flex-1">{signal.title || "(Untitled)"}</span>
+                        <span className="text-[10px] text-white/15 shrink-0">{formatCreatedDate(signal.created_at)}</span>
+                        {signal.pillar && (
+                          <Badge variant="outline" className={`text-[9px] ${PILLAR_COLORS[signal.pillar] || "border-white/20 text-white/60"}`}>{signal.pillar}</Badge>
+                        )}
+                      </div>
+                    ))}
+                    {todayBonusSignals.filter(s => s.status === "Complete").length > 0 && (
+                      <>
+                        <p className="text-[9px] uppercase tracking-[0.15em] text-white/20 mt-3 mb-1 px-1">Completed</p>
+                        {todayBonusSignals.filter(s => s.status === "Complete").map((signal) => (
+                          <div key={signal.id} className="flex items-center gap-3 px-3 py-2 rounded-lg bg-white/[0.01] border border-white/[0.03] opacity-40">
+                            <Checkbox
+                              checked={selectedForArchive.has(signal.id)}
+                              onCheckedChange={() => toggleSelected(signal.id)}
+                              className="shrink-0 border-white/20 data-[state=checked]:bg-rose-500 data-[state=checked]:border-rose-500"
+                            />
+                            <button onClick={() => toggleStatus.mutate({ id: signal.id, current: signal.status })} className="shrink-0" aria-label="Toggle status">
+                              <CheckCircle2 className="w-4 h-4 text-green-400" />
+                            </button>
+                            <span className="text-sm line-through text-white/30 flex-1">{signal.title || "(Untitled)"}</span>
+                            {signal.pillar && (
+                              <Badge variant="outline" className={`text-[9px] ${PILLAR_COLORS[signal.pillar] || "border-white/20 text-white/60"}`}>{signal.pillar}</Badge>
+                            )}
+                          </div>
+                        ))}
+                      </>
+                    )}
+                  </>
+                )}
+              </div>
+            </div>
           </div>
         </div>
 
-        {/* Archive actions */}
-        <div className="mb-6 flex flex-wrap items-center justify-center gap-3">
+        {/* Archive toolbar */}
+        <div className="mb-8 flex flex-wrap items-center justify-center gap-2">
           {selectedForArchive.size > 0 && (
             <Button
               variant="outline"
+              size="sm"
               onClick={() => archiveSelectedMutation.mutate(Array.from(selectedForArchive))}
-              className="border-amber-400/40 text-amber-400 hover:text-amber-300 bg-transparent hover:bg-amber-400/10"
+              className="border-amber-400/30 text-amber-400 hover:text-amber-300 bg-transparent hover:bg-amber-400/10 text-xs h-8"
             >
-              <Archive className="w-4 h-4 mr-2" />
+              <Archive className="w-3.5 h-3.5 mr-1.5" />
               Archive selected ({selectedForArchive.size})
             </Button>
           )}
           <Button
-            variant="outline"
+            variant="ghost"
+            size="sm"
             onClick={() => setShowArchiveConfirm(true)}
-            className="border-white/20 text-white/60 hover:text-white bg-transparent hover:bg-white/5"
+            className="text-white/30 hover:text-white/60 text-xs h-8"
           >
-            <Archive className="w-4 h-4 mr-2" />
+            <Archive className="w-3.5 h-3.5 mr-1.5" />
             Archive completed
           </Button>
+          <span className="w-px h-4 bg-white/10" />
           <Button
             variant="ghost"
+            size="sm"
             onClick={() => navigate("/admin/signals/archive")}
-            className="text-white/40 hover:text-white/70"
+            className="text-white/25 hover:text-white/50 text-xs h-8"
           >
             View Archive →
           </Button>
           <Button
             variant="ghost"
+            size="sm"
             onClick={() => navigate("/admin/signals/trash")}
-            className="text-white/40 hover:text-white/70"
+            className="text-white/25 hover:text-white/50 text-xs h-8"
           >
-            <Trash2 className="w-4 h-4 mr-1" />
+            <Trash2 className="w-3.5 h-3.5 mr-1" />
             Trash
           </Button>
         </div>
 
-        {/* Stats */}
-        <div className="flex gap-4 mb-6">
-          <Card className="bg-white/5 border-white/10 text-white flex-1">
-            <CardContent className="p-4 text-center">
-              <p className="text-3xl font-bold text-amber-400">{pendingCount}</p>
-              <p className="text-sm text-white/50">Pending</p>
-            </CardContent>
-          </Card>
-          <Card className="bg-white/5 border-white/10 text-white flex-1">
-            <CardContent className="p-4 text-center">
-              <p className="text-3xl font-bold text-green-400">{completeCount}</p>
-              <p className="text-sm text-white/50">Complete</p>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Add Signal Button */}
-        <div className="flex justify-end mb-6">
-          <Button onClick={() => setShowAdd(true)} className="bg-white text-black hover:bg-white/90">
-            <Plus className="w-4 h-4 mr-2" />
-            Add Signal
-          </Button>
-        </div>
-
-        {/* Visual divider with NLA logo */}
-        <div className="flex flex-col items-center justify-center my-10 gap-4">
+        {/* Divider — Verse + Logo */}
+        <div className="flex flex-col items-center justify-center my-10 gap-5">
+          <div className="w-16 h-px bg-gradient-to-r from-transparent via-white/10 to-transparent" />
           <DailyVerse />
-          <a href="/admin/dashboard" className="cursor-pointer">
-            <img src={nlaLogo} alt="NLA" className="h-24" />
+          <a href="/admin/dashboard" className="cursor-pointer opacity-60 hover:opacity-90 transition-opacity">
+            <img src={nlaLogo} alt="NLA" className="h-20" />
           </a>
+          <div className="w-16 h-px bg-gradient-to-r from-transparent via-white/10 to-transparent" />
         </div>
 
         {/* On Deck */}
         {onDeckSignals.length > 0 && (
           <div className="mb-6">
-            <h2 className="text-lg font-semibold text-white/40 mb-3">On Deck <span className="text-sm font-normal text-white/30">({onDeckSignals.length})</span></h2>
-            <Card className="bg-white/5 border border-white/10 text-white">
-              <CardContent className="p-5">
-                <div className="space-y-2">
-                  {onDeckSignals.map((signal) => (
-                    <div key={signal.id} className="flex items-center gap-3 p-3 rounded-md bg-white/[0.03] border border-white/5">
-                      <span className="text-sm text-white/60 flex-1">{signal.title || "(Untitled)"}</span>
-                      <span className="text-[10px] text-white/20 shrink-0">{formatCreatedDate(signal.created_at)}</span>
-                      {signal.pillar && (
-                        <Badge variant="outline" className={`text-[10px] shrink-0 ${PILLAR_COLORS[signal.pillar] || "border-white/20 text-white/60"}`}>
-                          {signal.pillar}
-                        </Badge>
-                      )}
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="h-7 text-xs bg-transparent border-rose-500/30 text-rose-400 hover:bg-rose-500/10 hover:text-rose-300 shrink-0"
-                        onClick={() => scheduleMutation.mutate({ id: signal.id, priority: "Core" })}
-                        disabled={scheduleMutation.isPending}
-                      >
-                        Core 3 <ArrowRight className="w-3 h-3 ml-1" />
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="h-7 text-xs bg-transparent border-white/20 text-white/50 hover:bg-white/5 hover:text-white/70 shrink-0"
-                        onClick={() => scheduleMutation.mutate({ id: signal.id, priority: "Bonus" })}
-                        disabled={scheduleMutation.isPending}
-                      >
-                        Bonus <ArrowRight className="w-3 h-3 ml-1" />
-                      </Button>
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
+            <div className="flex items-center gap-2 mb-3">
+              <h2 className="text-sm font-semibold uppercase tracking-wider text-white/25">On Deck</h2>
+              <span className="text-xs text-white/15">({onDeckSignals.length})</span>
+            </div>
+            <div className="rounded-xl border border-white/[0.06] overflow-hidden">
+              <div className="divide-y divide-white/[0.04]">
+                {onDeckSignals.map((signal) => (
+                  <div key={signal.id} className="flex items-center gap-3 px-4 py-3 hover:bg-white/[0.02] transition-colors">
+                    <span className="text-sm text-white/40 flex-1">{signal.title || "(Untitled)"}</span>
+                    <span className="text-[10px] text-white/15 shrink-0 tabular-nums">{formatCreatedDate(signal.created_at)}</span>
+                    {signal.pillar && (
+                      <Badge variant="outline" className={`text-[9px] shrink-0 ${PILLAR_COLORS[signal.pillar] || "border-white/20 text-white/60"}`}>
+                        {signal.pillar}
+                      </Badge>
+                    )}
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className="h-6 text-[10px] text-rose-400/60 hover:text-rose-400 hover:bg-rose-500/10 px-2 shrink-0"
+                      onClick={() => scheduleMutation.mutate({ id: signal.id, priority: "Core" })}
+                      disabled={scheduleMutation.isPending}
+                    >
+                      Core 3 <ArrowRight className="w-3 h-3 ml-1" />
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className="h-6 text-[10px] text-white/30 hover:text-white/60 hover:bg-white/5 px-2 shrink-0"
+                      onClick={() => scheduleMutation.mutate({ id: signal.id, priority: "Bonus" })}
+                      disabled={scheduleMutation.isPending}
+                    >
+                      Bonus <ArrowRight className="w-3 h-3 ml-1" />
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            </div>
           </div>
         )}
       </main>
 
+      {/* Archive Confirm */}
       <AlertDialog open={showArchiveConfirm} onOpenChange={setShowArchiveConfirm}>
         <AlertDialogContent className="bg-zinc-900 border-white/20 text-white">
           <AlertDialogHeader>
-            <AlertDialogTitle>Archive all completed, unarchived signals?</AlertDialogTitle>
+            <AlertDialogTitle>Archive all completed signals?</AlertDialogTitle>
             <AlertDialogDescription className="text-white/50">
-              This will archive all signals with status "Complete" that haven't been archived yet. Pending items will not be affected.
+              Pending items will not be affected.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -606,18 +662,18 @@ const AdminSignals = () => {
 
       {/* Add Signal Dialog */}
       <Dialog open={showAdd} onOpenChange={setShowAdd}>
-        <DialogContent className="bg-zinc-900 border-white/20 text-white">
+        <DialogContent className="bg-zinc-900 border-white/10 text-white">
           <DialogHeader>
             <DialogTitle>Add Signal</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
             <div>
-              <Label>Bucket *</Label>
+              <Label className="text-white/60">Bucket *</Label>
               <Select value={form.bucket} onValueChange={(v: "ondeck" | "core" | "bonus") => setForm({ ...form, bucket: v })}>
-                <SelectTrigger className="bg-white/5 border-white/20 text-white">
+                <SelectTrigger className="bg-white/5 border-white/10 text-white mt-1">
                   <SelectValue placeholder="Select bucket" />
                 </SelectTrigger>
-                <SelectContent className="bg-zinc-900 border-white/20 z-[200]">
+                <SelectContent className="bg-zinc-900 border-white/10 z-[200]">
                   <SelectItem value="ondeck" className="text-white hover:bg-white/10 focus:bg-white/10 focus:text-white">On Deck</SelectItem>
                   <SelectItem value="core" className="text-white hover:bg-white/10 focus:bg-white/10 focus:text-white">Core 3 (Today)</SelectItem>
                   <SelectItem value="bonus" className="text-white hover:bg-white/10 focus:bg-white/10 focus:text-white">Bonus (Today)</SelectItem>
@@ -625,21 +681,21 @@ const AdminSignals = () => {
               </Select>
             </div>
             <div>
-              <Label>Title *</Label>
+              <Label className="text-white/60">Title *</Label>
               <Input
                 value={form.title}
                 onChange={(e) => setForm({ ...form, title: e.target.value })}
-                className="bg-white/5 border-white/20 text-white"
+                className="bg-white/5 border-white/10 text-white mt-1"
                 placeholder="What's the signal?"
               />
             </div>
             <div>
-              <Label>Pillar</Label>
+              <Label className="text-white/60">Pillar</Label>
               <Select value={form.pillar} onValueChange={(v) => setForm({ ...form, pillar: v })}>
-                <SelectTrigger className="bg-white/5 border-white/20 text-white">
+                <SelectTrigger className="bg-white/5 border-white/10 text-white mt-1">
                   <SelectValue placeholder="Select pillar" />
                 </SelectTrigger>
-                <SelectContent className="bg-zinc-900 border-white/20 z-[200]">
+                <SelectContent className="bg-zinc-900 border-white/10 z-[200]">
                   {PILLARS.map((p) => (
                     <SelectItem key={p} value={p} className="text-white hover:bg-white/10 focus:bg-white/10 focus:text-white">{p}</SelectItem>
                   ))}
@@ -647,12 +703,12 @@ const AdminSignals = () => {
               </Select>
             </div>
             <div>
-              <Label>Signal Kind</Label>
+              <Label className="text-white/60">Signal Kind</Label>
               <Select value={form.signal_kind} onValueChange={(v) => setForm({ ...form, signal_kind: v })}>
-                <SelectTrigger className="bg-white/5 border-white/20 text-white">
+                <SelectTrigger className="bg-white/5 border-white/10 text-white mt-1">
                   <SelectValue placeholder="Outcome or Action" />
                 </SelectTrigger>
-                <SelectContent className="bg-zinc-900 border-white/20 z-[200]">
+                <SelectContent className="bg-zinc-900 border-white/10 z-[200]">
                   {SIGNAL_KINDS.map((k) => (
                     <SelectItem key={k} value={k} className="text-white hover:bg-white/10 focus:bg-white/10 focus:text-white">{k}</SelectItem>
                   ))}
@@ -661,7 +717,7 @@ const AdminSignals = () => {
             </div>
           </div>
           <DialogFooter>
-            <Button variant="ghost" onClick={() => setShowAdd(false)} className="text-white/60">Cancel</Button>
+            <Button variant="ghost" onClick={() => setShowAdd(false)} className="text-white/40 hover:text-white/60">Cancel</Button>
             <Button
               onClick={() => addMutation.mutate()}
               disabled={!form.title.trim() || addMutation.isPending}
