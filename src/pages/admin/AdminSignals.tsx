@@ -15,7 +15,8 @@ import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
 import { format } from "date-fns";
-import { ArrowLeft, Plus, CheckCircle2, Circle, LogOut, Archive, ArrowRight, Trash2 } from "lucide-react";
+import { ArrowLeft, Plus, CheckCircle2, Circle, LogOut, Archive, ArrowRight, Trash2, MoreVertical } from "lucide-react";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 
 const PILLARS = ["Operations", "Sales & Marketing", "Finance", "Vision", "Personal"] as const;
@@ -153,6 +154,23 @@ const AdminSignals = () => {
     onError: (e: any) => toast.error(e.message),
   });
 
+  const moveToOnDeckMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase
+        .from("signals")
+        .update({
+          date_assigned: null,
+          priority_layer: null,
+        } as any)
+        .eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["signals"] });
+      toast.success("Moved to On Deck");
+    },
+    onError: (e: any) => toast.error(e.message),
+  });
 
   const addMutation = useMutation({
     mutationFn: async () => {
@@ -315,6 +333,24 @@ const AdminSignals = () => {
                           {signal.pillar}
                         </Badge>
                       )}
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <button className="shrink-0 p-1 rounded hover:bg-white/10 text-white/30 hover:text-white/60 transition-colors" aria-label="Move signal">
+                            <MoreVertical className="w-4 h-4" />
+                          </button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="bg-zinc-900 border-white/10 text-white">
+                          <DropdownMenuItem onClick={() => scheduleMutation.mutate({ id: signal.id, priority: "Core" })} className="text-rose-400 focus:text-rose-400 focus:bg-white/5">
+                            Move to Core 3
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => scheduleMutation.mutate({ id: signal.id, priority: "Bonus" })} className="text-white/60 focus:text-white focus:bg-white/5">
+                            Move to Bonus
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => moveToOnDeckMutation.mutate(signal.id)} className="text-white/40 focus:text-white/60 focus:bg-white/5">
+                            Move to On Deck
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
                     </div>
                   ))}
                 </div>
