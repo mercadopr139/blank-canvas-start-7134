@@ -81,10 +81,13 @@ const AdminSignals = () => {
     title: "",
     pillar: "",
     signal_kind: "",
-    bucket: "core" as "core" | "bonus",
+    bucket: "core" as "ondeck" | "core" | "bonus",
     status: "Pending" as string,
     description: "",
   });
+
+  // On Deck trash confirmation
+  const [trashConfirmId, setTrashConfirmId] = useState<string | null>(null);
 
   const today = format(new Date(), "yyyy-MM-dd");
   const todayDisplay = format(new Date(), "EEEE, MMMM d");
@@ -275,6 +278,7 @@ const AdminSignals = () => {
       if (!editingSignal) return;
       const todayStr = format(new Date(), "yyyy-MM-dd");
       const newStatus = editForm.status;
+      const isOnDeck = editForm.bucket === "ondeck";
       const { error } = await supabase
         .from("signals")
         .update({
@@ -282,11 +286,11 @@ const AdminSignals = () => {
           pillar: editForm.pillar || null,
           signal_kind: editForm.signal_kind || null,
           signal_type: editForm.signal_kind || editingSignal.signal_type,
-          priority_layer: editForm.bucket === "core" ? "Core" : "Bonus",
+          priority_layer: isOnDeck ? null : (editForm.bucket === "core" ? "Core" : "Bonus"),
           status: newStatus,
           completed_at: newStatus === "Complete" ? (editingSignal.completed_at || new Date().toISOString()) : null,
           description: editForm.description || null,
-          date_assigned: todayStr,
+          date_assigned: isOnDeck ? null : todayStr,
         } as any)
         .eq("id", editingSignal.id);
       if (error) throw error;
@@ -296,7 +300,7 @@ const AdminSignals = () => {
       setEditingSignal(null);
       toast.success("Signal updated");
     },
-    onError: (e: any) => toast.error(e.message),
+    onError: () => toast.error("Action failed. Try again."),
   });
 
   // Trash from edit modal
@@ -320,7 +324,7 @@ const AdminSignals = () => {
     onError: (e: any) => toast.error(e.message),
   });
 
-  const openEditSignal = (signal: Signal, bucket: "core" | "bonus") => {
+  const openEditSignal = (signal: Signal, bucket: "ondeck" | "core" | "bonus") => {
     setEditingSignal(signal);
     setEditForm({
       title: signal.title || "",
@@ -677,7 +681,11 @@ const AdminSignals = () => {
             <div className="rounded-xl border border-white/[0.06] overflow-hidden">
               <div className="divide-y divide-white/[0.04]">
                 {onDeckSignals.map((signal) => (
-                  <div key={signal.id} className="flex items-center gap-3 px-4 py-3 hover:bg-white/[0.02] transition-colors">
+                  <div
+                    key={signal.id}
+                    className="flex items-center gap-3 px-4 py-3 hover:bg-white/[0.04] transition-colors cursor-pointer"
+                    onClick={() => openEditSignal(signal, "ondeck")}
+                  >
                     <span className="text-sm text-white/40 flex-1">{signal.title || "(Untitled)"}</span>
                     <span className="text-[10px] text-white/15 shrink-0 tabular-nums">{formatCreatedDate(signal.created_at)}</span>
                     {signal.pillar && (
@@ -689,7 +697,7 @@ const AdminSignals = () => {
                       size="sm"
                       variant="ghost"
                       className="h-6 text-[10px] text-rose-400/60 hover:text-rose-400 hover:bg-rose-500/10 px-2 shrink-0"
-                      onClick={() => scheduleMutation.mutate({ id: signal.id, priority: "Core" })}
+                      onClick={(e) => { e.stopPropagation(); scheduleMutation.mutate({ id: signal.id, priority: "Core" }); }}
                       disabled={scheduleMutation.isPending}
                     >
                       Core 3 <ArrowRight className="w-3 h-3 ml-1" />
@@ -698,11 +706,18 @@ const AdminSignals = () => {
                       size="sm"
                       variant="ghost"
                       className="h-6 text-[10px] text-white/30 hover:text-white/60 hover:bg-white/5 px-2 shrink-0"
-                      onClick={() => scheduleMutation.mutate({ id: signal.id, priority: "Bonus" })}
+                      onClick={(e) => { e.stopPropagation(); scheduleMutation.mutate({ id: signal.id, priority: "Bonus" }); }}
                       disabled={scheduleMutation.isPending}
                     >
                       Bonus <ArrowRight className="w-3 h-3 ml-1" />
                     </Button>
+                    <button
+                      className="shrink-0 p-1 rounded hover:bg-red-500/10 text-white/15 hover:text-red-400 transition-colors"
+                      aria-label="Move to Trash"
+                      onClick={(e) => { e.stopPropagation(); setTrashConfirmId(signal.id); }}
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
                   </div>
                 ))}
               </div>
@@ -807,7 +822,7 @@ const AdminSignals = () => {
         <DialogContent className="bg-zinc-900 border-white/10 text-white" onPointerDownOutside={(e) => e.preventDefault()}>
           <DialogHeader>
             <p className="text-[10px] uppercase tracking-[0.15em] text-white/30 mb-1">
-              Editing {editForm.bucket === "core" ? "Core" : "Bonus"} Signal
+              Editing {editForm.bucket === "core" ? "Core" : editForm.bucket === "bonus" ? "Bonus" : "On Deck"} Signal
             </p>
             <DialogTitle>Edit Signal</DialogTitle>
           </DialogHeader>
@@ -851,11 +866,12 @@ const AdminSignals = () => {
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <Label className="text-white/60">Bucket</Label>
-                <Select value={editForm.bucket} onValueChange={(v: "core" | "bonus") => setEditForm({ ...editForm, bucket: v })}>
+                <Select value={editForm.bucket} onValueChange={(v: "ondeck" | "core" | "bonus") => setEditForm({ ...editForm, bucket: v })}>
                   <SelectTrigger className="bg-white/5 border-white/10 text-white mt-1">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent className="bg-zinc-900 border-white/10 z-[200]">
+                    <SelectItem value="ondeck" className="text-white hover:bg-white/10 focus:bg-white/10 focus:text-white">On Deck</SelectItem>
                     <SelectItem value="core" className="text-white hover:bg-white/10 focus:bg-white/10 focus:text-white">Core</SelectItem>
                     <SelectItem value="bonus" className="text-white hover:bg-white/10 focus:bg-white/10 focus:text-white">Bonus</SelectItem>
                   </SelectContent>
@@ -906,6 +922,27 @@ const AdminSignals = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* On Deck Trash Confirm */}
+      <AlertDialog open={!!trashConfirmId} onOpenChange={(open) => { if (!open) setTrashConfirmId(null); }}>
+        <AlertDialogContent className="bg-zinc-900 border-white/20 text-white">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Move this task to Trash?</AlertDialogTitle>
+            <AlertDialogDescription className="text-white/50">
+              You can restore it later from Trash.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel className="bg-transparent border-white/20 text-white/60 hover:bg-white/5 hover:text-white">Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => { if (trashConfirmId) trashSignalMutation.mutate(trashConfirmId); setTrashConfirmId(null); }}
+              className="bg-red-500 text-white hover:bg-red-600"
+            >
+              Move to Trash
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
