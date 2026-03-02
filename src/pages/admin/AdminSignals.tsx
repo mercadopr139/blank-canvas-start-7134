@@ -6,8 +6,8 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
-
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
@@ -73,6 +73,17 @@ const AdminSignals = () => {
     priority_layer: "" as string,
     signal_kind: "" as string,
     bucket: "core" as "ondeck" | "core" | "bonus",
+  });
+
+  // Edit signal state
+  const [editingSignal, setEditingSignal] = useState<Signal | null>(null);
+  const [editForm, setEditForm] = useState({
+    title: "",
+    pillar: "",
+    signal_kind: "",
+    bucket: "core" as "core" | "bonus",
+    status: "Pending" as string,
+    description: "",
   });
 
   const today = format(new Date(), "yyyy-MM-dd");
@@ -258,6 +269,69 @@ const AdminSignals = () => {
     onError: (e: any) => toast.error(e.message),
   });
 
+  // Edit signal mutation
+  const editSignalMutation = useMutation({
+    mutationFn: async () => {
+      if (!editingSignal) return;
+      const todayStr = format(new Date(), "yyyy-MM-dd");
+      const newStatus = editForm.status;
+      const { error } = await supabase
+        .from("signals")
+        .update({
+          title: editForm.title,
+          pillar: editForm.pillar || null,
+          signal_kind: editForm.signal_kind || null,
+          signal_type: editForm.signal_kind || editingSignal.signal_type,
+          priority_layer: editForm.bucket === "core" ? "Core" : "Bonus",
+          status: newStatus,
+          completed_at: newStatus === "Complete" ? (editingSignal.completed_at || new Date().toISOString()) : null,
+          description: editForm.description || null,
+          date_assigned: todayStr,
+        } as any)
+        .eq("id", editingSignal.id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["signals"] });
+      setEditingSignal(null);
+      toast.success("Signal updated");
+    },
+    onError: (e: any) => toast.error(e.message),
+  });
+
+  // Trash from edit modal
+  const trashSignalMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase
+        .from("signals")
+        .update({
+          is_trashed: true,
+          trashed_at: new Date().toISOString(),
+          trashed_by: user?.id || null,
+        } as any)
+        .eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["signals"] });
+      setEditingSignal(null);
+      toast.success("Moved to Trash");
+    },
+    onError: (e: any) => toast.error(e.message),
+  });
+
+  const openEditSignal = (signal: Signal, bucket: "core" | "bonus") => {
+    setEditingSignal(signal);
+    setEditForm({
+      title: signal.title || "",
+      pillar: signal.pillar || "",
+      signal_kind: signal.signal_kind || "",
+      bucket,
+      status: signal.status,
+      description: signal.description || "",
+    });
+  };
+
   const toggleSelected = (id: string) => {
     setSelectedForArchive((prev) => {
       const next = new Set(prev);
@@ -284,11 +358,59 @@ const AdminSignals = () => {
   const ringC = 2 * Math.PI * ringR;
   const ringOffset = ringC - (progressPct / 100) * ringC;
 
+  // Helper to render a clickable signal row (pending)
+  const renderPendingRow = (signal: Signal, bucket: "core" | "bonus") => (
+    <div
+      key={signal.id}
+      className="flex items-center gap-3 px-3 py-2.5 rounded-lg bg-white/[0.03] border border-white/[0.06] hover:bg-white/[0.07] transition-colors cursor-pointer"
+      onClick={() => openEditSignal(signal, bucket)}
+    >
+      <button
+        onClick={(e) => { e.stopPropagation(); toggleStatus.mutate({ id: signal.id, current: signal.status }); }}
+        className="shrink-0"
+        aria-label="Toggle status"
+      >
+        <Circle className={`w-4 h-4 ${bucket === "core" ? "text-rose-500/50 hover:text-rose-400" : "text-white/25 hover:text-white/50"} transition-colors`} />
+      </button>
+      <span className="text-sm text-white flex-1">{signal.title || "(Untitled)"}</span>
+      <span className="text-[10px] text-white/15 shrink-0">{formatCreatedDate(signal.created_at)}</span>
+      {signal.pillar && (
+        <Badge variant="outline" className={`text-[9px] ${PILLAR_COLORS[signal.pillar] || "border-white/20 text-white/60"}`}>{signal.pillar}</Badge>
+      )}
+    </div>
+  );
+
+  // Helper to render a completed signal row
+  const renderCompletedRow = (signal: Signal, bucket: "core" | "bonus") => (
+    <div
+      key={signal.id}
+      className="flex items-center gap-3 px-3 py-2 rounded-lg bg-white/[0.01] border border-white/[0.03] opacity-40 hover:opacity-60 transition-opacity cursor-pointer"
+      onClick={() => openEditSignal(signal, bucket)}
+    >
+      <Checkbox
+        checked={selectedForArchive.has(signal.id)}
+        onCheckedChange={(e) => { toggleSelected(signal.id); }}
+        onClick={(e) => e.stopPropagation()}
+        className="shrink-0 border-white/20 data-[state=checked]:bg-rose-500 data-[state=checked]:border-rose-500"
+      />
+      <button
+        onClick={(e) => { e.stopPropagation(); toggleStatus.mutate({ id: signal.id, current: signal.status }); }}
+        className="shrink-0"
+        aria-label="Toggle status"
+      >
+        <CheckCircle2 className="w-4 h-4 text-green-400" />
+      </button>
+      <span className="text-sm line-through text-white/30 flex-1">{signal.title || "(Untitled)"}</span>
+      {signal.pillar && (
+        <Badge variant="outline" className={`text-[9px] ${PILLAR_COLORS[signal.pillar] || "border-white/20 text-white/60"}`}>{signal.pillar}</Badge>
+      )}
+    </div>
+  );
+
   return (
     <div className="min-h-screen bg-black text-white">
       {/* Header */}
       <header className="relative overflow-hidden border-b border-white/[0.06]">
-        {/* Subtle gradient backdrop */}
         <div className="absolute inset-0 bg-gradient-to-r from-rose-950/20 via-black to-amber-950/10" />
         <div className="relative container mx-auto px-4 py-5 flex items-center justify-between">
           <div className="flex items-center gap-4">
@@ -321,7 +443,6 @@ const AdminSignals = () => {
 
         {/* Progress Ring + Stats Row */}
         <div className="flex items-center gap-6 mb-8">
-          {/* Ring */}
           <div className="relative shrink-0">
             <svg width="96" height="96" viewBox="0 0 96 96" className="-rotate-90">
               <circle cx="48" cy="48" r={ringR} fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth="5" />
@@ -340,7 +461,6 @@ const AdminSignals = () => {
               <span className="text-xl font-bold text-white">{progressPct}%</span>
             </div>
           </div>
-          {/* Stat pills */}
           <div className="flex flex-col gap-2 flex-1">
             <div className="flex items-center gap-3">
               <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-amber-400/10 border border-amber-400/20">
@@ -362,7 +482,6 @@ const AdminSignals = () => {
               </div>
             )}
           </div>
-          {/* Add Signal */}
           <Button
             onClick={() => setShowAdd(true)}
             className="shrink-0 bg-white text-black hover:bg-white/90 font-semibold shadow-lg shadow-white/5"
@@ -451,37 +570,11 @@ const AdminSignals = () => {
                   </>
                 ) : (
                   <>
-                    {todayCoreSignals.filter(s => s.status === "Pending").map((signal) => (
-                      <div key={signal.id} className="flex items-center gap-3 px-3 py-2.5 rounded-lg bg-white/[0.03] border border-white/[0.06] hover:bg-white/[0.05] transition-colors">
-                        <button onClick={() => toggleStatus.mutate({ id: signal.id, current: signal.status })} className="shrink-0" aria-label="Toggle status">
-                          <Circle className="w-4 h-4 text-rose-500/50 hover:text-rose-400 transition-colors" />
-                        </button>
-                        <span className="text-sm text-white flex-1">{signal.title || "(Untitled)"}</span>
-                        <span className="text-[10px] text-white/15 shrink-0">{formatCreatedDate(signal.created_at)}</span>
-                        {signal.pillar && (
-                          <Badge variant="outline" className={`text-[9px] ${PILLAR_COLORS[signal.pillar] || "border-white/20 text-white/60"}`}>{signal.pillar}</Badge>
-                        )}
-                      </div>
-                    ))}
+                    {todayCoreSignals.filter(s => s.status === "Pending").map((signal) => renderPendingRow(signal, "core"))}
                     {todayCoreSignals.filter(s => s.status === "Complete").length > 0 && (
                       <>
                         <p className="text-[9px] uppercase tracking-[0.15em] text-white/20 mt-3 mb-1 px-1">Completed</p>
-                        {todayCoreSignals.filter(s => s.status === "Complete").map((signal) => (
-                          <div key={signal.id} className="flex items-center gap-3 px-3 py-2 rounded-lg bg-white/[0.01] border border-white/[0.03] opacity-40">
-                            <Checkbox
-                              checked={selectedForArchive.has(signal.id)}
-                              onCheckedChange={() => toggleSelected(signal.id)}
-                              className="shrink-0 border-white/20 data-[state=checked]:bg-rose-500 data-[state=checked]:border-rose-500"
-                            />
-                            <button onClick={() => toggleStatus.mutate({ id: signal.id, current: signal.status })} className="shrink-0" aria-label="Toggle status">
-                              <CheckCircle2 className="w-4 h-4 text-green-400" />
-                            </button>
-                            <span className="text-sm line-through text-white/30 flex-1">{signal.title || "(Untitled)"}</span>
-                            {signal.pillar && (
-                              <Badge variant="outline" className={`text-[9px] ${PILLAR_COLORS[signal.pillar] || "border-white/20 text-white/60"}`}>{signal.pillar}</Badge>
-                            )}
-                          </div>
-                        ))}
+                        {todayCoreSignals.filter(s => s.status === "Complete").map((signal) => renderCompletedRow(signal, "core"))}
                       </>
                     )}
                   </>
@@ -503,37 +596,11 @@ const AdminSignals = () => {
                   </div>
                 ) : (
                   <>
-                    {todayBonusSignals.filter(s => s.status === "Pending").map((signal) => (
-                      <div key={signal.id} className="flex items-center gap-3 px-3 py-2.5 rounded-lg bg-white/[0.03] border border-white/[0.06] hover:bg-white/[0.05] transition-colors">
-                        <button onClick={() => toggleStatus.mutate({ id: signal.id, current: signal.status })} className="shrink-0" aria-label="Toggle status">
-                          <Circle className="w-4 h-4 text-white/25 hover:text-white/50 transition-colors" />
-                        </button>
-                        <span className="text-sm text-white flex-1">{signal.title || "(Untitled)"}</span>
-                        <span className="text-[10px] text-white/15 shrink-0">{formatCreatedDate(signal.created_at)}</span>
-                        {signal.pillar && (
-                          <Badge variant="outline" className={`text-[9px] ${PILLAR_COLORS[signal.pillar] || "border-white/20 text-white/60"}`}>{signal.pillar}</Badge>
-                        )}
-                      </div>
-                    ))}
+                    {todayBonusSignals.filter(s => s.status === "Pending").map((signal) => renderPendingRow(signal, "bonus"))}
                     {todayBonusSignals.filter(s => s.status === "Complete").length > 0 && (
                       <>
                         <p className="text-[9px] uppercase tracking-[0.15em] text-white/20 mt-3 mb-1 px-1">Completed</p>
-                        {todayBonusSignals.filter(s => s.status === "Complete").map((signal) => (
-                          <div key={signal.id} className="flex items-center gap-3 px-3 py-2 rounded-lg bg-white/[0.01] border border-white/[0.03] opacity-40">
-                            <Checkbox
-                              checked={selectedForArchive.has(signal.id)}
-                              onCheckedChange={() => toggleSelected(signal.id)}
-                              className="shrink-0 border-white/20 data-[state=checked]:bg-rose-500 data-[state=checked]:border-rose-500"
-                            />
-                            <button onClick={() => toggleStatus.mutate({ id: signal.id, current: signal.status })} className="shrink-0" aria-label="Toggle status">
-                              <CheckCircle2 className="w-4 h-4 text-green-400" />
-                            </button>
-                            <span className="text-sm line-through text-white/30 flex-1">{signal.title || "(Untitled)"}</span>
-                            {signal.pillar && (
-                              <Badge variant="outline" className={`text-[9px] ${PILLAR_COLORS[signal.pillar] || "border-white/20 text-white/60"}`}>{signal.pillar}</Badge>
-                            )}
-                          </div>
-                        ))}
+                        {todayBonusSignals.filter(s => s.status === "Complete").map((signal) => renderCompletedRow(signal, "bonus"))}
                       </>
                     )}
                   </>
@@ -730,6 +797,111 @@ const AdminSignals = () => {
               className="bg-white text-black hover:bg-white/90"
             >
               {addMutation.isPending ? "Adding..." : "Add Signal"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Signal Dialog */}
+      <Dialog open={!!editingSignal} onOpenChange={(open) => { if (!open) setEditingSignal(null); }}>
+        <DialogContent className="bg-zinc-900 border-white/10 text-white" onPointerDownOutside={(e) => e.preventDefault()}>
+          <DialogHeader>
+            <p className="text-[10px] uppercase tracking-[0.15em] text-white/30 mb-1">
+              Editing {editForm.bucket === "core" ? "Core" : "Bonus"} Signal
+            </p>
+            <DialogTitle>Edit Signal</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label className="text-white/60">Title *</Label>
+              <Input
+                value={editForm.title}
+                onChange={(e) => setEditForm({ ...editForm, title: e.target.value })}
+                className="bg-white/5 border-white/10 text-white mt-1"
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <Label className="text-white/60">Pillar</Label>
+                <Select value={editForm.pillar} onValueChange={(v) => setEditForm({ ...editForm, pillar: v })}>
+                  <SelectTrigger className="bg-white/5 border-white/10 text-white mt-1">
+                    <SelectValue placeholder="Select pillar" />
+                  </SelectTrigger>
+                  <SelectContent className="bg-zinc-900 border-white/10 z-[200]">
+                    {PILLARS.map((p) => (
+                      <SelectItem key={p} value={p} className="text-white hover:bg-white/10 focus:bg-white/10 focus:text-white">{p}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label className="text-white/60">Type</Label>
+                <Select value={editForm.signal_kind} onValueChange={(v) => setEditForm({ ...editForm, signal_kind: v })}>
+                  <SelectTrigger className="bg-white/5 border-white/10 text-white mt-1">
+                    <SelectValue placeholder="Outcome / Action" />
+                  </SelectTrigger>
+                  <SelectContent className="bg-zinc-900 border-white/10 z-[200]">
+                    {SIGNAL_KINDS.map((k) => (
+                      <SelectItem key={k} value={k} className="text-white hover:bg-white/10 focus:bg-white/10 focus:text-white">{k}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <Label className="text-white/60">Bucket</Label>
+                <Select value={editForm.bucket} onValueChange={(v: "core" | "bonus") => setEditForm({ ...editForm, bucket: v })}>
+                  <SelectTrigger className="bg-white/5 border-white/10 text-white mt-1">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent className="bg-zinc-900 border-white/10 z-[200]">
+                    <SelectItem value="core" className="text-white hover:bg-white/10 focus:bg-white/10 focus:text-white">Core</SelectItem>
+                    <SelectItem value="bonus" className="text-white hover:bg-white/10 focus:bg-white/10 focus:text-white">Bonus</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label className="text-white/60">Status</Label>
+                <Select value={editForm.status} onValueChange={(v) => setEditForm({ ...editForm, status: v })}>
+                  <SelectTrigger className="bg-white/5 border-white/10 text-white mt-1">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent className="bg-zinc-900 border-white/10 z-[200]">
+                    <SelectItem value="Pending" className="text-white hover:bg-white/10 focus:bg-white/10 focus:text-white">Pending</SelectItem>
+                    <SelectItem value="Complete" className="text-white hover:bg-white/10 focus:bg-white/10 focus:text-white">Complete</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <div>
+              <Label className="text-white/60">Notes</Label>
+              <Textarea
+                value={editForm.description}
+                onChange={(e) => setEditForm({ ...editForm, description: e.target.value })}
+                className="bg-white/5 border-white/10 text-white mt-1"
+                placeholder="Optional notes..."
+                rows={3}
+              />
+            </div>
+          </div>
+          <DialogFooter className="flex-col sm:flex-row gap-2 sm:gap-0">
+            <Button
+              variant="ghost"
+              onClick={() => editingSignal && trashSignalMutation.mutate(editingSignal.id)}
+              disabled={trashSignalMutation.isPending}
+              className="text-red-400/70 hover:text-red-400 hover:bg-red-500/10 mr-auto"
+            >
+              <Trash2 className="w-3.5 h-3.5 mr-1.5" />
+              Move to Trash
+            </Button>
+            <Button variant="ghost" onClick={() => setEditingSignal(null)} className="text-white/40 hover:text-white/60">Cancel</Button>
+            <Button
+              onClick={() => editSignalMutation.mutate()}
+              disabled={!editForm.title.trim() || editSignalMutation.isPending}
+              className="bg-white text-black hover:bg-white/90"
+            >
+              {editSignalMutation.isPending ? "Saving..." : "Save Changes"}
             </Button>
           </DialogFooter>
         </DialogContent>
