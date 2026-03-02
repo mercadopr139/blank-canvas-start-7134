@@ -1,5 +1,8 @@
-import { useState } from "react";
-import { DndContext, closestCenter, PointerSensor, useSensor, useSensors, DragEndEvent, DragOverlay } from "@dnd-kit/core";
+import { useState, useCallback } from "react";
+import {
+  DndContext, rectIntersection, PointerSensor, useSensor, useSensors,
+  DragEndEvent, DragStartEvent, DragOverlay, useDroppable,
+} from "@dnd-kit/core";
 import { SortableContext, verticalListSortingStrategy, useSortable, arrayMove } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import nlaLogo from "@/assets/nla-logo-white.png";
@@ -15,7 +18,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { Checkbox } from "@/components/ui/checkbox";
+
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { toast } from "sonner";
 import { format } from "date-fns";
@@ -49,6 +52,8 @@ type Signal = {
   updated_at: string;
 };
 
+type BucketId = "core" | "bonus" | "ondeck";
+
 const PILLAR_COLORS: Record<string, string> = {
   Operations: "bg-[#bf0f3e]/20 text-[#bf0f3e] border-[#bf0f3e]/40",
   "Sales & Marketing": "bg-green-500/20 text-green-400 border-green-500/40",
@@ -64,36 +69,62 @@ const getGreeting = () => {
   return "Good evening";
 };
 
-// Sortable On Deck row component
-const SortableOnDeckRow = ({
+/* ─── Droppable Container ─── */
+const DroppableColumn = ({ id, children, isOver }: { id: string; children: React.ReactNode; isOver?: boolean }) => {
+  const { setNodeRef, isOver: hovering } = useDroppable({ id });
+  const active = isOver ?? hovering;
+  return (
+    <div
+      ref={setNodeRef}
+      className={`transition-all duration-200 rounded-xl ${active ? "ring-2 ring-white/20 bg-white/[0.03]" : ""}`}
+    >
+      {children}
+    </div>
+  );
+};
+
+/* ─── Sortable Row (shared for all columns) ─── */
+const SortableSignalRow = ({
   signal,
+  bucket,
   onEdit,
-  onScheduleCore,
-  onScheduleBonus,
-  onTrash,
-  schedulePending,
+  onToggleStatus,
+  extraActions,
 }: {
   signal: Signal;
+  bucket: BucketId;
   onEdit: () => void;
-  onScheduleCore: () => void;
-  onScheduleBonus: () => void;
-  onTrash: () => void;
-  schedulePending: boolean;
+  onToggleStatus: () => void;
+  extraActions?: React.ReactNode;
 }) => {
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: signal.id });
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+    id: signal.id,
+    data: { bucket },
+  });
   const style = {
     transform: CSS.Transform.toString(transform),
     transition,
-    opacity: isDragging ? 0.4 : 1,
+    opacity: isDragging ? 0.3 : 1,
   };
+
+  const isComplete = signal.status === "Complete";
 
   return (
     <div
       ref={setNodeRef}
       style={style}
-      className={`flex items-center gap-3 px-4 py-3 hover:bg-white/[0.04] transition-colors cursor-pointer ${isDragging ? "ring-1 ring-white/20 bg-white/[0.06]" : ""}`}
+      className={`flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors cursor-pointer ${
+        isDragging ? "ring-1 ring-white/20 bg-white/[0.06]" : ""
+      } ${
+        isComplete
+          ? "bg-white/[0.01] border border-white/[0.03] opacity-40 hover:opacity-60"
+          : bucket === "ondeck"
+            ? "hover:bg-white/[0.04]"
+            : "bg-white/[0.03] border border-white/[0.06] hover:bg-white/[0.07]"
+      }`}
       onClick={onEdit}
     >
+      {/* Drag handle */}
       <button
         className="shrink-0 p-0.5 text-white/15 hover:text-white/40 cursor-grab active:cursor-grabbing touch-none"
         {...attributes}
@@ -103,38 +134,34 @@ const SortableOnDeckRow = ({
       >
         <GripVertical className="w-4 h-4" />
       </button>
-      <span className="text-sm text-white/40 flex-1">{signal.title || "(Untitled)"}</span>
+
+      {/* Status toggle */}
+      <button
+        onClick={(e) => { e.stopPropagation(); onToggleStatus(); }}
+        className="shrink-0"
+        aria-label="Toggle status"
+      >
+        {isComplete ? (
+          <CheckCircle2 className="w-4 h-4 text-green-400" />
+        ) : (
+          <Circle className={`w-4 h-4 ${bucket === "core" ? "text-rose-500/50 hover:text-rose-400" : "text-white/25 hover:text-white/50"} transition-colors`} />
+        )}
+      </button>
+
+      {/* Title */}
+      <span className={`text-sm flex-1 ${isComplete ? "line-through text-white/30" : "text-white"}`}>
+        {signal.title || "(Untitled)"}
+      </span>
+
       <span className="text-[10px] text-white/15 shrink-0 tabular-nums">{formatCreatedDate(signal.created_at)}</span>
+
       {signal.pillar && (
         <Badge variant="outline" className={`text-[9px] shrink-0 ${PILLAR_COLORS[signal.pillar] || "border-white/20 text-white/60"}`}>
           {signal.pillar}
         </Badge>
       )}
-      <Button
-        size="sm"
-        variant="ghost"
-        className="h-6 text-[10px] text-rose-400/60 hover:text-rose-400 hover:bg-rose-500/10 px-2 shrink-0"
-        onClick={(e) => { e.stopPropagation(); onScheduleCore(); }}
-        disabled={schedulePending}
-      >
-        Core 3 <ArrowRight className="w-3 h-3 ml-1" />
-      </Button>
-      <Button
-        size="sm"
-        variant="ghost"
-        className="h-6 text-[10px] text-white/30 hover:text-white/60 hover:bg-white/5 px-2 shrink-0"
-        onClick={(e) => { e.stopPropagation(); onScheduleBonus(); }}
-        disabled={schedulePending}
-      >
-        Bonus <ArrowRight className="w-3 h-3 ml-1" />
-      </Button>
-      <button
-        className="shrink-0 p-1 rounded hover:bg-red-500/10 text-white/15 hover:text-red-400 transition-colors"
-        aria-label="Move to Trash"
-        onClick={(e) => { e.stopPropagation(); onTrash(); }}
-      >
-        <Trash2 className="w-3.5 h-3.5" />
-      </button>
+
+      {extraActions}
     </div>
   );
 };
@@ -150,22 +177,22 @@ const AdminSignals = () => {
     pillar: "" as string,
     priority_layer: "" as string,
     signal_kind: "" as string,
-    bucket: "core" as "ondeck" | "core" | "bonus",
+    bucket: "core" as BucketId,
   });
 
-  // Edit signal state
   const [editingSignal, setEditingSignal] = useState<Signal | null>(null);
   const [editForm, setEditForm] = useState({
     title: "",
     pillar: "",
     signal_kind: "",
-    bucket: "core" as "ondeck" | "core" | "bonus",
+    bucket: "core" as BucketId,
     status: "Pending" as string,
     description: "",
   });
 
-  // On Deck trash confirmation
   const [trashConfirmId, setTrashConfirmId] = useState<string | null>(null);
+  const [draggingId, setDraggingId] = useState<string | null>(null);
+  const [, setDraggingBucket] = useState<BucketId | null>(null);
 
   const today = format(new Date(), "yyyy-MM-dd");
   const todayDisplay = format(new Date(), "EEEE, MMMM d");
@@ -180,6 +207,7 @@ const AdminSignals = () => {
         .eq("priority_layer", "Core" as any)
         .eq("is_archived", false as any)
         .eq("is_trashed", false as any)
+        .order("today_sort_order" as any, { ascending: true, nullsFirst: false })
         .order("created_at", { ascending: true });
       if (error) throw error;
       return data as Signal[];
@@ -196,6 +224,7 @@ const AdminSignals = () => {
         .eq("priority_layer", "Bonus" as any)
         .eq("is_archived", false as any)
         .eq("is_trashed", false as any)
+        .order("today_sort_order" as any, { ascending: true, nullsFirst: false })
         .order("created_at", { ascending: true });
       if (error) throw error;
       return data as Signal[];
@@ -351,7 +380,6 @@ const AdminSignals = () => {
     onError: (e: any) => toast.error(e.message),
   });
 
-  // Edit signal mutation
   const editSignalMutation = useMutation({
     mutationFn: async () => {
       if (!editingSignal) return;
@@ -382,7 +410,6 @@ const AdminSignals = () => {
     onError: () => toast.error("Action failed. Try again."),
   });
 
-  // Trash from edit modal
   const trashSignalMutation = useMutation({
     mutationFn: async (id: string) => {
       const { error } = await supabase
@@ -403,41 +430,179 @@ const AdminSignals = () => {
     onError: (e: any) => toast.error(e.message),
   });
 
-  // DnD sensors for On Deck
+  // ─── Cross-column DnD ───
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } })
   );
-  const [draggingId, setDraggingId] = useState<string | null>(null);
 
-  const reorderOnDeckMutation = useMutation({
-    mutationFn: async (reordered: Signal[]) => {
-      const updates = reordered.map((s, i) =>
-        supabase.from("signals").update({ deck_sort_order: (i + 1) * 10 } as any).eq("id", s.id)
+  // Batch reorder mutation for any bucket
+  const reorderMutation = useMutation({
+    mutationFn: async ({ items, field }: { items: Signal[]; field: "today_sort_order" | "deck_sort_order" }) => {
+      const updates = items.map((s, i) =>
+        supabase.from("signals").update({ [field]: (i + 1) * 10 } as any).eq("id", s.id)
       );
       const results = await Promise.all(updates);
       const failed = results.find(r => r.error);
       if (failed?.error) throw failed.error;
     },
-    onSuccess: () => toast.success("On Deck order updated"),
     onError: () => {
-      queryClient.invalidateQueries({ queryKey: ["signals", "on-deck"] });
+      queryClient.invalidateQueries({ queryKey: ["signals"] });
       toast.error("Couldn't save order. Try again.");
     },
   });
 
-  const handleOnDeckDragEnd = (event: DragEndEvent) => {
-    setDraggingId(null);
-    const { active, over } = event;
-    if (!over || active.id === over.id) return;
-    const oldIndex = onDeckSignals.findIndex(s => s.id === active.id);
-    const newIndex = onDeckSignals.findIndex(s => s.id === over.id);
-    if (oldIndex === -1 || newIndex === -1) return;
-    const reordered = arrayMove(onDeckSignals, oldIndex, newIndex);
-    queryClient.setQueryData(["signals", "on-deck"], reordered);
-    reorderOnDeckMutation.mutate(reordered);
+  // Cross-column move mutation
+  const crossMoveMutation = useMutation({
+    mutationFn: async ({
+      signalId,
+      targetBucket,
+      newCoreList,
+      newBonusList,
+      newOnDeckList,
+    }: {
+      signalId: string;
+      targetBucket: BucketId;
+      newCoreList: Signal[];
+      newBonusList: Signal[];
+      newOnDeckList: Signal[];
+    }) => {
+      const todayStr = format(new Date(), "yyyy-MM-dd");
+      // Update the moved signal's bucket
+      const updateData: Record<string, any> = {};
+      if (targetBucket === "ondeck") {
+        updateData.date_assigned = null;
+        updateData.priority_layer = null;
+      } else {
+        updateData.date_assigned = todayStr;
+        updateData.priority_layer = targetBucket === "core" ? "Core" : "Bonus";
+      }
+      const { error } = await supabase.from("signals").update(updateData as any).eq("id", signalId);
+      if (error) throw error;
+
+      // Reindex all affected lists
+      const allUpdates: Array<PromiseLike<any>> = [];
+      newCoreList.forEach((s, i) => {
+        allUpdates.push(supabase.from("signals").update({ today_sort_order: (i + 1) * 10 } as any).eq("id", s.id));
+      });
+      newBonusList.forEach((s, i) => {
+        allUpdates.push(supabase.from("signals").update({ today_sort_order: (i + 1) * 10 } as any).eq("id", s.id));
+      });
+      newOnDeckList.forEach((s, i) => {
+        allUpdates.push(supabase.from("signals").update({ deck_sort_order: (i + 1) * 10 } as any).eq("id", s.id));
+      });
+      const results = await Promise.all(allUpdates);
+      const failed = results.find((r: any) => r.error);
+      if (failed?.error) throw (failed as any).error;
+    },
+    onError: () => {
+      queryClient.invalidateQueries({ queryKey: ["signals"] });
+      toast.error("Couldn't save order. Try again.");
+    },
+  });
+
+  const getBucketForSignal = useCallback((signalId: string): BucketId | null => {
+    if (todayCoreSignals.find(s => s.id === signalId)) return "core";
+    if (todayBonusSignals.find(s => s.id === signalId)) return "bonus";
+    if (onDeckSignals.find(s => s.id === signalId)) return "ondeck";
+    return null;
+  }, [todayCoreSignals, todayBonusSignals, onDeckSignals]);
+
+  const getListForBucket = useCallback((bucket: BucketId): Signal[] => {
+    if (bucket === "core") return todayCoreSignals;
+    if (bucket === "bonus") return todayBonusSignals;
+    return onDeckSignals;
+  }, [todayCoreSignals, todayBonusSignals, onDeckSignals]);
+
+  const getQueryKeyForBucket = (bucket: BucketId) => {
+    if (bucket === "core") return ["signals", "today-core"];
+    if (bucket === "bonus") return ["signals", "today-bonus"];
+    return ["signals", "on-deck"];
   };
 
-  const openEditSignal = (signal: Signal, bucket: "ondeck" | "core" | "bonus") => {
+  const handleDragStart = (event: DragStartEvent) => {
+    const id = event.active.id as string;
+    setDraggingId(id);
+    setDraggingBucket(getBucketForSignal(id));
+  };
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+    setDraggingId(null);
+    setDraggingBucket(null);
+    if (!over) return;
+
+    const activeId = active.id as string;
+    const sourceBucket = getBucketForSignal(activeId);
+    if (!sourceBucket) return;
+
+    // Determine target bucket: if over a droppable container, use that; otherwise check if over another sortable item
+    let targetBucket: BucketId;
+    const overId = over.id as string;
+    if (overId === "core" || overId === "bonus" || overId === "ondeck") {
+      targetBucket = overId as BucketId;
+    } else {
+      // Over a sortable item - find which bucket it's in
+      const overBucket = getBucketForSignal(overId);
+      targetBucket = overBucket || sourceBucket;
+    }
+
+    // Guardrail: Core 3 max limit
+    if (targetBucket === "core" && sourceBucket !== "core") {
+      if (todayCoreSignals.length >= 3) {
+        toast.error("Core 3 limit reached (3 max)");
+        return;
+      }
+    }
+
+    if (sourceBucket === targetBucket) {
+      // Same-column reorder
+      const list = [...getListForBucket(sourceBucket)];
+      const oldIndex = list.findIndex(s => s.id === activeId);
+      const overIndex = list.findIndex(s => s.id === overId);
+      if (oldIndex === -1 || overIndex === -1 || oldIndex === overIndex) return;
+      const reordered = arrayMove(list, oldIndex, overIndex);
+      queryClient.setQueryData(getQueryKeyForBucket(sourceBucket), reordered);
+      const field = sourceBucket === "ondeck" ? "deck_sort_order" : "today_sort_order";
+      reorderMutation.mutate({ items: reordered, field });
+      toast.success("Order updated");
+    } else {
+      // Cross-column move
+      const signal = getListForBucket(sourceBucket).find(s => s.id === activeId);
+      if (!signal) return;
+
+      const newSourceList = getListForBucket(sourceBucket).filter(s => s.id !== activeId);
+      const targetList = [...getListForBucket(targetBucket)];
+
+      // Insert at position if dropped on an item, otherwise append
+      const overIndex = targetList.findIndex(s => s.id === overId);
+      if (overIndex >= 0) {
+        targetList.splice(overIndex, 0, signal);
+      } else {
+        targetList.push(signal);
+      }
+
+      // Optimistic updates
+      queryClient.setQueryData(getQueryKeyForBucket(sourceBucket), newSourceList);
+      queryClient.setQueryData(getQueryKeyForBucket(targetBucket), targetList);
+
+      const newCoreList = targetBucket === "core" ? targetList : sourceBucket === "core" ? newSourceList : todayCoreSignals;
+      const newBonusList = targetBucket === "bonus" ? targetList : sourceBucket === "bonus" ? newSourceList : todayBonusSignals;
+      const newOnDeckList = targetBucket === "ondeck" ? targetList : sourceBucket === "ondeck" ? newSourceList : onDeckSignals;
+
+      crossMoveMutation.mutate({
+        signalId: activeId,
+        targetBucket,
+        newCoreList,
+        newBonusList,
+        newOnDeckList,
+      });
+
+      const label = targetBucket === "core" ? "Core 3" : targetBucket === "bonus" ? "Bonus" : "On Deck";
+      toast.success(`Moved to ${label}`);
+    }
+  };
+
+  const openEditSignal = (signal: Signal, bucket: BucketId) => {
     setEditingSignal(signal);
     setEditForm({
       title: signal.title || "",
@@ -475,54 +640,12 @@ const AdminSignals = () => {
   const ringC = 2 * Math.PI * ringR;
   const ringOffset = ringC - (progressPct / 100) * ringC;
 
-  // Helper to render a clickable signal row (pending)
-  const renderPendingRow = (signal: Signal, bucket: "core" | "bonus") => (
-    <div
-      key={signal.id}
-      className="flex items-center gap-3 px-3 py-2.5 rounded-lg bg-white/[0.03] border border-white/[0.06] hover:bg-white/[0.07] transition-colors cursor-pointer"
-      onClick={() => openEditSignal(signal, bucket)}
-    >
-      <button
-        onClick={(e) => { e.stopPropagation(); toggleStatus.mutate({ id: signal.id, current: signal.status }); }}
-        className="shrink-0"
-        aria-label="Toggle status"
-      >
-        <Circle className={`w-4 h-4 ${bucket === "core" ? "text-rose-500/50 hover:text-rose-400" : "text-white/25 hover:text-white/50"} transition-colors`} />
-      </button>
-      <span className="text-sm text-white flex-1">{signal.title || "(Untitled)"}</span>
-      <span className="text-[10px] text-white/15 shrink-0">{formatCreatedDate(signal.created_at)}</span>
-      {signal.pillar && (
-        <Badge variant="outline" className={`text-[9px] ${PILLAR_COLORS[signal.pillar] || "border-white/20 text-white/60"}`}>{signal.pillar}</Badge>
-      )}
-    </div>
-  );
-
-  // Helper to render a completed signal row
-  const renderCompletedRow = (signal: Signal, bucket: "core" | "bonus") => (
-    <div
-      key={signal.id}
-      className="flex items-center gap-3 px-3 py-2 rounded-lg bg-white/[0.01] border border-white/[0.03] opacity-40 hover:opacity-60 transition-opacity cursor-pointer"
-      onClick={() => openEditSignal(signal, bucket)}
-    >
-      <Checkbox
-        checked={selectedForArchive.has(signal.id)}
-        onCheckedChange={(e) => { toggleSelected(signal.id); }}
-        onClick={(e) => e.stopPropagation()}
-        className="shrink-0 border-white/20 data-[state=checked]:bg-rose-500 data-[state=checked]:border-rose-500"
-      />
-      <button
-        onClick={(e) => { e.stopPropagation(); toggleStatus.mutate({ id: signal.id, current: signal.status }); }}
-        className="shrink-0"
-        aria-label="Toggle status"
-      >
-        <CheckCircle2 className="w-4 h-4 text-green-400" />
-      </button>
-      <span className="text-sm line-through text-white/30 flex-1">{signal.title || "(Untitled)"}</span>
-      {signal.pillar && (
-        <Badge variant="outline" className={`text-[9px] ${PILLAR_COLORS[signal.pillar] || "border-white/20 text-white/60"}`}>{signal.pillar}</Badge>
-      )}
-    </div>
-  );
+  // Find the dragged signal for overlay
+  const draggedSignal = draggingId
+    ? (todayCoreSignals.find(s => s.id === draggingId)
+      || todayBonusSignals.find(s => s.id === draggingId)
+      || onDeckSignals.find(s => s.id === draggingId))
+    : null;
 
   return (
     <div className="min-h-screen bg-black text-white">
@@ -666,176 +789,212 @@ const AdminSignals = () => {
           </div>
         )}
 
-        {/* Today's Signals */}
-        <div className="mb-6">
-          <h2 className="text-sm font-semibold uppercase tracking-wider text-white/40 mb-4">Today's Signals</h2>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            {/* Core 3 */}
-            <div className="rounded-xl border-2 border-rose-500/30 bg-gradient-to-b from-rose-950/30 to-black/0 overflow-hidden">
-              <div className="px-4 pt-4 pb-2 flex items-center gap-2">
-                <Target className="w-4 h-4 text-rose-500" />
-                <h3 className="text-sm font-bold text-rose-500 uppercase tracking-wider">Core 3</h3>
-              </div>
-              <div className="px-3 pb-3 space-y-1">
-                {todayCoreSignals.filter(s => s.status === "Pending").length === 0 && todayCoreSignals.filter(s => s.status === "Complete").length === 0 ? (
-                  <>
-                    {[1, 2, 3].map((i) => (
-                      <div key={i} className="flex items-center gap-3 px-3 py-2.5 rounded-lg bg-white/[0.02] border border-white/[0.04]">
-                        <Circle className="w-4 h-4 text-white/10 shrink-0" />
-                        <span className="text-white/15 text-sm italic">Empty slot</span>
-                      </div>
-                    ))}
-                  </>
-                ) : (
-                  <>
-                    {todayCoreSignals.filter(s => s.status === "Pending").map((signal) => renderPendingRow(signal, "core"))}
-                    {todayCoreSignals.filter(s => s.status === "Complete").length > 0 && (
-                      <>
-                        <p className="text-[9px] uppercase tracking-[0.15em] text-white/20 mt-3 mb-1 px-1">Completed</p>
-                        {todayCoreSignals.filter(s => s.status === "Complete").map((signal) => renderCompletedRow(signal, "core"))}
-                      </>
-                    )}
-                  </>
-                )}
-              </div>
-            </div>
-
-            {/* Bonus */}
-            <div className="rounded-xl border border-white/[0.08] bg-gradient-to-b from-white/[0.03] to-transparent overflow-hidden">
-              <div className="px-4 pt-4 pb-2 flex items-center gap-2">
-                <Zap className="w-4 h-4 text-white/30" />
-                <h3 className="text-sm font-bold text-white/40 uppercase tracking-wider">Bonus</h3>
-              </div>
-              <div className="px-3 pb-3 space-y-1">
-                {todayBonusSignals.length === 0 ? (
-                  <div className="flex items-center gap-3 px-3 py-2.5 rounded-lg bg-white/[0.02] border border-white/[0.04]">
-                    <Circle className="w-4 h-4 text-white/10 shrink-0" />
-                    <span className="text-white/15 text-sm italic">Empty slot</span>
-                  </div>
-                ) : (
-                  <>
-                    {todayBonusSignals.filter(s => s.status === "Pending").map((signal) => renderPendingRow(signal, "bonus"))}
-                    {todayBonusSignals.filter(s => s.status === "Complete").length > 0 && (
-                      <>
-                        <p className="text-[9px] uppercase tracking-[0.15em] text-white/20 mt-3 mb-1 px-1">Completed</p>
-                        {todayBonusSignals.filter(s => s.status === "Complete").map((signal) => renderCompletedRow(signal, "bonus"))}
-                      </>
-                    )}
-                  </>
-                )}
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Archive toolbar */}
-        <div className="mb-8 flex flex-wrap items-center justify-center gap-2">
-          {selectedForArchive.size > 0 && (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => archiveSelectedMutation.mutate(Array.from(selectedForArchive))}
-              className="border-amber-400/30 text-amber-400 hover:text-amber-300 bg-transparent hover:bg-amber-400/10 text-xs h-8"
-            >
-              <Archive className="w-3.5 h-3.5 mr-1.5" />
-              Archive selected ({selectedForArchive.size})
-            </Button>
-          )}
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => setShowArchiveConfirm(true)}
-            className="text-white/30 hover:text-white/60 text-xs h-8"
-          >
-            <Archive className="w-3.5 h-3.5 mr-1.5" />
-            Archive completed
-          </Button>
-          <span className="w-px h-4 bg-white/10" />
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => navigate("/admin/signals/archive")}
-            className="text-white/25 hover:text-white/50 text-xs h-8"
-          >
-            View Archive →
-          </Button>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => navigate("/admin/signals/trash")}
-            className="text-white/25 hover:text-white/50 text-xs h-8"
-          >
-            <Trash2 className="w-3.5 h-3.5 mr-1" />
-            Trash
-          </Button>
-        </div>
-
-        {/* Vision Cloud */}
-        <div className="mb-8">
-          <VisionCloud />
-        </div>
-
-        {/* Divider — Verse + Logo */}
-        <div className="flex flex-col items-center justify-center my-10 gap-5">
-          <div className="w-16 h-px bg-gradient-to-r from-transparent via-white/10 to-transparent" />
-          <DailyVerse />
-          <a href="/admin/dashboard" className="cursor-pointer opacity-60 hover:opacity-90 transition-opacity">
-            <img src={nlaLogo} alt="NLA" className="h-20" />
-          </a>
-          <div className="w-16 h-px bg-gradient-to-r from-transparent via-white/10 to-transparent" />
-        </div>
-
-        {/* On Deck */}
-        {onDeckSignals.length > 0 && (
+        {/* ─── Unified DnD Context for Core 3 / Bonus / On Deck ─── */}
+        <DndContext
+          sensors={sensors}
+          collisionDetection={rectIntersection}
+          onDragStart={handleDragStart}
+          onDragEnd={handleDragEnd}
+          onDragCancel={() => { setDraggingId(null); setDraggingBucket(null); }}
+        >
+          {/* Today's Signals */}
           <div className="mb-6">
-            <div className="flex items-center gap-2 mb-3">
-              <h2 className="text-sm font-semibold uppercase tracking-wider text-white/25">On Deck</h2>
-              <span className="text-xs text-white/15">({onDeckSignals.length})</span>
-            </div>
-            <DndContext
-              sensors={sensors}
-              collisionDetection={closestCenter}
-              onDragStart={(e) => setDraggingId(e.active.id as string)}
-              onDragEnd={handleOnDeckDragEnd}
-              onDragCancel={() => setDraggingId(null)}
-            >
-              <SortableContext items={onDeckSignals.map(s => s.id)} strategy={verticalListSortingStrategy}>
-                <div className="rounded-xl border border-white/[0.06] overflow-hidden">
-                  <div className="divide-y divide-white/[0.04]">
-                    {onDeckSignals.map((signal) => (
-                      <SortableOnDeckRow
-                        key={signal.id}
-                        signal={signal}
-                        onEdit={() => openEditSignal(signal, "ondeck")}
-                        onScheduleCore={() => scheduleMutation.mutate({ id: signal.id, priority: "Core" })}
-                        onScheduleBonus={() => scheduleMutation.mutate({ id: signal.id, priority: "Bonus" })}
-                        onTrash={() => setTrashConfirmId(signal.id)}
-                        schedulePending={scheduleMutation.isPending}
-                      />
-                    ))}
+            <h2 className="text-sm font-semibold uppercase tracking-wider text-white/40 mb-4">Today's Signals</h2>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {/* Core 3 */}
+              <DroppableColumn id="core">
+                <div className="rounded-xl border-2 border-rose-500/30 bg-gradient-to-b from-rose-950/30 to-black/0 overflow-hidden">
+                  <div className="px-4 pt-4 pb-2 flex items-center gap-2">
+                    <Target className="w-4 h-4 text-rose-500" />
+                    <h3 className="text-sm font-bold text-rose-500 uppercase tracking-wider">Core 3</h3>
                   </div>
-                </div>
-              </SortableContext>
-              <DragOverlay>
-                {draggingId ? (() => {
-                  const s = onDeckSignals.find(x => x.id === draggingId);
-                  if (!s) return null;
-                  return (
-                    <div className="flex items-center gap-3 px-4 py-3 bg-zinc-800/95 border border-white/20 rounded-lg shadow-xl shadow-black/40">
-                      <GripVertical className="w-4 h-4 text-white/30 shrink-0" />
-                      <span className="text-sm text-white/60 flex-1">{s.title || "(Untitled)"}</span>
-                      {s.pillar && (
-                        <Badge variant="outline" className={`text-[9px] shrink-0 ${PILLAR_COLORS[s.pillar] || "border-white/20 text-white/60"}`}>
-                          {s.pillar}
-                        </Badge>
+                  <SortableContext items={todayCoreSignals.map(s => s.id)} strategy={verticalListSortingStrategy}>
+                    <div className="px-3 pb-3 space-y-1 min-h-[80px]">
+                      {todayCoreSignals.length === 0 ? (
+                        <>
+                          {[1, 2, 3].map((i) => (
+                            <div key={i} className="flex items-center gap-3 px-3 py-2.5 rounded-lg bg-white/[0.02] border border-white/[0.04]">
+                              <Circle className="w-4 h-4 text-white/10 shrink-0" />
+                              <span className="text-white/15 text-sm italic">Empty slot</span>
+                            </div>
+                          ))}
+                        </>
+                      ) : (
+                        todayCoreSignals.map((signal) => (
+                          <SortableSignalRow
+                            key={signal.id}
+                            signal={signal}
+                            bucket="core"
+                            onEdit={() => openEditSignal(signal, "core")}
+                            onToggleStatus={() => toggleStatus.mutate({ id: signal.id, current: signal.status })}
+                          />
+                        ))
                       )}
                     </div>
-                  );
-                })() : null}
-              </DragOverlay>
-            </DndContext>
+                  </SortableContext>
+                </div>
+              </DroppableColumn>
+
+              {/* Bonus */}
+              <DroppableColumn id="bonus">
+                <div className="rounded-xl border border-white/[0.08] bg-gradient-to-b from-white/[0.03] to-transparent overflow-hidden">
+                  <div className="px-4 pt-4 pb-2 flex items-center gap-2">
+                    <Zap className="w-4 h-4 text-white/30" />
+                    <h3 className="text-sm font-bold text-white/40 uppercase tracking-wider">Bonus</h3>
+                  </div>
+                  <SortableContext items={todayBonusSignals.map(s => s.id)} strategy={verticalListSortingStrategy}>
+                    <div className="px-3 pb-3 space-y-1 min-h-[80px]">
+                      {todayBonusSignals.length === 0 ? (
+                        <div className="flex items-center gap-3 px-3 py-2.5 rounded-lg bg-white/[0.02] border border-white/[0.04]">
+                          <Circle className="w-4 h-4 text-white/10 shrink-0" />
+                          <span className="text-white/15 text-sm italic">Empty slot</span>
+                        </div>
+                      ) : (
+                        todayBonusSignals.map((signal) => (
+                          <SortableSignalRow
+                            key={signal.id}
+                            signal={signal}
+                            bucket="bonus"
+                            onEdit={() => openEditSignal(signal, "bonus")}
+                            onToggleStatus={() => toggleStatus.mutate({ id: signal.id, current: signal.status })}
+                          />
+                        ))
+                      )}
+                    </div>
+                  </SortableContext>
+                </div>
+              </DroppableColumn>
+            </div>
           </div>
-        )}
+
+          {/* Archive toolbar */}
+          <div className="mb-8 flex flex-wrap items-center justify-center gap-2">
+            {selectedForArchive.size > 0 && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => archiveSelectedMutation.mutate(Array.from(selectedForArchive))}
+                className="border-amber-400/30 text-amber-400 hover:text-amber-300 bg-transparent hover:bg-amber-400/10 text-xs h-8"
+              >
+                <Archive className="w-3.5 h-3.5 mr-1.5" />
+                Archive selected ({selectedForArchive.size})
+              </Button>
+            )}
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setShowArchiveConfirm(true)}
+              className="text-white/30 hover:text-white/60 text-xs h-8"
+            >
+              <Archive className="w-3.5 h-3.5 mr-1.5" />
+              Archive completed
+            </Button>
+            <span className="w-px h-4 bg-white/10" />
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => navigate("/admin/signals/archive")}
+              className="text-white/25 hover:text-white/50 text-xs h-8"
+            >
+              View Archive →
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => navigate("/admin/signals/trash")}
+              className="text-white/25 hover:text-white/50 text-xs h-8"
+            >
+              <Trash2 className="w-3.5 h-3.5 mr-1" />
+              Trash
+            </Button>
+          </div>
+
+          {/* Vision Cloud */}
+          <div className="mb-8">
+            <VisionCloud />
+          </div>
+
+          {/* Divider — Verse + Logo */}
+          <div className="flex flex-col items-center justify-center my-10 gap-5">
+            <div className="w-16 h-px bg-gradient-to-r from-transparent via-white/10 to-transparent" />
+            <DailyVerse />
+            <a href="/admin/dashboard" className="cursor-pointer opacity-60 hover:opacity-90 transition-opacity">
+              <img src={nlaLogo} alt="NLA" className="h-20" />
+            </a>
+            <div className="w-16 h-px bg-gradient-to-r from-transparent via-white/10 to-transparent" />
+          </div>
+
+          {/* On Deck */}
+          {onDeckSignals.length > 0 && (
+            <div className="mb-6">
+              <div className="flex items-center gap-2 mb-3">
+                <h2 className="text-sm font-semibold uppercase tracking-wider text-white/25">On Deck</h2>
+                <span className="text-xs text-white/15">({onDeckSignals.length})</span>
+              </div>
+              <DroppableColumn id="ondeck">
+                <SortableContext items={onDeckSignals.map(s => s.id)} strategy={verticalListSortingStrategy}>
+                  <div className="rounded-xl border border-white/[0.06] overflow-hidden">
+                    <div className="divide-y divide-white/[0.04]">
+                      {onDeckSignals.map((signal) => (
+                        <SortableSignalRow
+                          key={signal.id}
+                          signal={signal}
+                          bucket="ondeck"
+                          onEdit={() => openEditSignal(signal, "ondeck")}
+                          onToggleStatus={() => toggleStatus.mutate({ id: signal.id, current: signal.status })}
+                          extraActions={
+                            <>
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                className="h-6 text-[10px] text-rose-400/60 hover:text-rose-400 hover:bg-rose-500/10 px-2 shrink-0"
+                                onClick={(e) => { e.stopPropagation(); scheduleMutation.mutate({ id: signal.id, priority: "Core" }); }}
+                                disabled={scheduleMutation.isPending}
+                              >
+                                Core 3 <ArrowRight className="w-3 h-3 ml-1" />
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                className="h-6 text-[10px] text-white/30 hover:text-white/60 hover:bg-white/5 px-2 shrink-0"
+                                onClick={(e) => { e.stopPropagation(); scheduleMutation.mutate({ id: signal.id, priority: "Bonus" }); }}
+                                disabled={scheduleMutation.isPending}
+                              >
+                                Bonus <ArrowRight className="w-3 h-3 ml-1" />
+                              </Button>
+                              <button
+                                className="shrink-0 p-1 rounded hover:bg-red-500/10 text-white/15 hover:text-red-400 transition-colors"
+                                aria-label="Move to Trash"
+                                onClick={(e) => { e.stopPropagation(); setTrashConfirmId(signal.id); }}
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            </>
+                          }
+                        />
+                      ))}
+                    </div>
+                  </div>
+                </SortableContext>
+              </DroppableColumn>
+            </div>
+          )}
+
+          {/* Global Drag Overlay */}
+          <DragOverlay>
+            {draggedSignal ? (
+              <div className="flex items-center gap-3 px-4 py-3 bg-zinc-800/95 border border-white/20 rounded-lg shadow-xl shadow-black/40">
+                <GripVertical className="w-4 h-4 text-white/30 shrink-0" />
+                <span className="text-sm text-white/60 flex-1">{draggedSignal.title || "(Untitled)"}</span>
+                {draggedSignal.pillar && (
+                  <Badge variant="outline" className={`text-[9px] shrink-0 ${PILLAR_COLORS[draggedSignal.pillar] || "border-white/20 text-white/60"}`}>
+                    {draggedSignal.pillar}
+                  </Badge>
+                )}
+              </div>
+            ) : null}
+          </DragOverlay>
+        </DndContext>
       </main>
 
       {/* Archive Confirm */}
@@ -869,7 +1028,7 @@ const AdminSignals = () => {
           <div className="space-y-4">
             <div>
               <Label className="text-white/60">Bucket *</Label>
-              <Select value={form.bucket} onValueChange={(v: "ondeck" | "core" | "bonus") => setForm({ ...form, bucket: v })}>
+              <Select value={form.bucket} onValueChange={(v: BucketId) => setForm({ ...form, bucket: v })}>
                 <SelectTrigger className="bg-white/5 border-white/10 text-white mt-1">
                   <SelectValue placeholder="Select bucket" />
                 </SelectTrigger>
@@ -978,7 +1137,7 @@ const AdminSignals = () => {
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <Label className="text-white/60">Bucket</Label>
-                <Select value={editForm.bucket} onValueChange={(v: "ondeck" | "core" | "bonus") => setEditForm({ ...editForm, bucket: v })}>
+                <Select value={editForm.bucket} onValueChange={(v: BucketId) => setEditForm({ ...editForm, bucket: v })}>
                   <SelectTrigger className="bg-white/5 border-white/10 text-white mt-1">
                     <SelectValue />
                   </SelectTrigger>
