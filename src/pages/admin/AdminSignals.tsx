@@ -463,12 +463,12 @@ const AdminSignals = () => {
     navigate("/admin/login", { replace: true });
   };
 
-  const allToday = [...todayCoreSignals, ...todayBonusSignals];
-  const totalToday = allToday.length;
-  const completeCount = allToday.filter((s) => s.status === "Complete").length;
-  const pendingCount = totalToday - completeCount;
-  const progressPct = totalToday > 0 ? Math.round((completeCount / totalToday) * 100) : 0;
-  const dayWon = totalToday > 0 && completeCount === totalToday;
+  // Core 3 progress only
+  const totalCore3 = todayCoreSignals.length;
+  const doneCore3 = todayCoreSignals.filter((s) => s.status === "Complete").length;
+  const remainingCore3 = totalCore3 - doneCore3;
+  const progressPct = totalCore3 > 0 ? Math.round((doneCore3 / totalCore3) * 100) : 0;
+  const dayWon = totalCore3 > 0 && doneCore3 === totalCore3;
 
   // Progress ring SVG params
   const ringR = 38;
@@ -576,18 +576,19 @@ const AdminSignals = () => {
             </svg>
             <div className="absolute inset-0 flex flex-col items-center justify-center">
               <span className="text-xl font-bold text-white">{progressPct}%</span>
+              <span className="text-[8px] uppercase tracking-wider text-white/25 mt-0.5">Core 3</span>
             </div>
           </div>
           <div className="flex flex-col gap-2 flex-1">
             <div className="flex items-center gap-3">
               <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-amber-400/10 border border-amber-400/20">
                 <Target className="w-3.5 h-3.5 text-amber-400" />
-                <span className="text-sm font-semibold text-amber-400">{pendingCount}</span>
+                <span className="text-sm font-semibold text-amber-400">{remainingCore3}</span>
                 <span className="text-xs text-amber-400/60">remaining</span>
               </div>
               <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-green-500/10 border border-green-500/20">
                 <CheckCircle2 className="w-3.5 h-3.5 text-green-400" />
-                <span className="text-sm font-semibold text-green-400">{completeCount}</span>
+                <span className="text-sm font-semibold text-green-400">{doneCore3}</span>
                 <span className="text-xs text-green-400/60">done</span>
               </div>
             </div>
