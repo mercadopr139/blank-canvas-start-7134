@@ -657,6 +657,11 @@ const AdminSignals = () => {
             <Button variant="ghost" size="icon" onClick={() => navigate("/admin/dashboard")} aria-label="Back" className="text-white/40 hover:text-white hover:bg-white/5">
               <ArrowLeft className="w-5 h-5" />
             </Button>
+            <img
+              src={nlaLogo}
+              alt="NLA"
+              className="h-10 w-auto opacity-[0.92] hover:opacity-100 hover:drop-shadow-[0_0_6px_rgba(255,255,255,0.15)] transition-all duration-300 hidden sm:block"
+            />
             <div>
               <p className="text-xs uppercase tracking-[0.2em] text-white/30 mb-0.5">{todayDisplay}</p>
               <h1 className="text-lg font-semibold text-white">{getGreeting()}, Josh</h1>
