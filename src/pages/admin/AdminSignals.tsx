@@ -18,6 +18,7 @@ import { toast } from "sonner";
 import { format } from "date-fns";
 import { ArrowLeft, Plus, CheckCircle2, Circle, LogOut, Archive, ArrowRight, Trash2, MoreVertical, Flame, Target, Zap } from "lucide-react";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import VisionCloud from "@/components/admin/VisionCloud";
 
 const PILLARS = ["Operations", "Sales & Marketing", "Finance", "Vision", "Personal"] as const;
 
@@ -582,6 +583,11 @@ const AdminSignals = () => {
             <Trash2 className="w-3.5 h-3.5 mr-1" />
             Trash
           </Button>
+        </div>
+
+        {/* Vision Cloud */}
+        <div className="mb-8">
+          <VisionCloud />
         </div>
 
         {/* Divider — Verse + Logo */}

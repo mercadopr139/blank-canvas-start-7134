@@ -807,6 +807,39 @@ export type Database = {
         }
         Relationships: []
       }
+      vision_cloud_items: {
+        Row: {
+          active: boolean
+          created_at: string
+          description: string | null
+          id: string
+          pillar: string
+          title: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          active?: boolean
+          created_at?: string
+          description?: string | null
+          id?: string
+          pillar: string
+          title: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          active?: boolean
+          created_at?: string
+          description?: string | null
+          id?: string
+          pillar?: string
+          title?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       youth_registrations: {
         Row: {
           adults_in_household: number
