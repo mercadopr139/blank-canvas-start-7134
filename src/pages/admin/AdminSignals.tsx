@@ -1,4 +1,7 @@
 import { useState } from "react";
+import { DndContext, closestCenter, PointerSensor, useSensor, useSensors, DragEndEvent, DragOverlay } from "@dnd-kit/core";
+import { SortableContext, verticalListSortingStrategy, useSortable, arrayMove } from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 import nlaLogo from "@/assets/nla-logo-white.png";
 import DailyVerse from "@/components/admin/DailyVerse";
 import { useNavigate } from "react-router-dom";
@@ -16,7 +19,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { toast } from "sonner";
 import { format } from "date-fns";
-import { ArrowLeft, Plus, CheckCircle2, Circle, LogOut, Archive, ArrowRight, Trash2, MoreVertical, Flame, Target, Zap } from "lucide-react";
+import { ArrowLeft, Plus, CheckCircle2, Circle, LogOut, Archive, ArrowRight, Trash2, MoreVertical, Flame, Target, Zap, GripVertical } from "lucide-react";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import VisionCloud from "@/components/admin/VisionCloud";
 
@@ -59,6 +62,81 @@ const getGreeting = () => {
   if (h < 12) return "Good morning";
   if (h < 17) return "Good afternoon";
   return "Good evening";
+};
+
+// Sortable On Deck row component
+const SortableOnDeckRow = ({
+  signal,
+  onEdit,
+  onScheduleCore,
+  onScheduleBonus,
+  onTrash,
+  schedulePending,
+}: {
+  signal: Signal;
+  onEdit: () => void;
+  onScheduleCore: () => void;
+  onScheduleBonus: () => void;
+  onTrash: () => void;
+  schedulePending: boolean;
+}) => {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: signal.id });
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.4 : 1,
+  };
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      className={`flex items-center gap-3 px-4 py-3 hover:bg-white/[0.04] transition-colors cursor-pointer ${isDragging ? "ring-1 ring-white/20 bg-white/[0.06]" : ""}`}
+      onClick={onEdit}
+    >
+      <button
+        className="shrink-0 p-0.5 text-white/15 hover:text-white/40 cursor-grab active:cursor-grabbing touch-none"
+        {...attributes}
+        {...listeners}
+        onClick={(e) => e.stopPropagation()}
+        aria-label="Drag to reorder"
+      >
+        <GripVertical className="w-4 h-4" />
+      </button>
+      <span className="text-sm text-white/40 flex-1">{signal.title || "(Untitled)"}</span>
+      <span className="text-[10px] text-white/15 shrink-0 tabular-nums">{formatCreatedDate(signal.created_at)}</span>
+      {signal.pillar && (
+        <Badge variant="outline" className={`text-[9px] shrink-0 ${PILLAR_COLORS[signal.pillar] || "border-white/20 text-white/60"}`}>
+          {signal.pillar}
+        </Badge>
+      )}
+      <Button
+        size="sm"
+        variant="ghost"
+        className="h-6 text-[10px] text-rose-400/60 hover:text-rose-400 hover:bg-rose-500/10 px-2 shrink-0"
+        onClick={(e) => { e.stopPropagation(); onScheduleCore(); }}
+        disabled={schedulePending}
+      >
+        Core 3 <ArrowRight className="w-3 h-3 ml-1" />
+      </Button>
+      <Button
+        size="sm"
+        variant="ghost"
+        className="h-6 text-[10px] text-white/30 hover:text-white/60 hover:bg-white/5 px-2 shrink-0"
+        onClick={(e) => { e.stopPropagation(); onScheduleBonus(); }}
+        disabled={schedulePending}
+      >
+        Bonus <ArrowRight className="w-3 h-3 ml-1" />
+      </Button>
+      <button
+        className="shrink-0 p-1 rounded hover:bg-red-500/10 text-white/15 hover:text-red-400 transition-colors"
+        aria-label="Move to Trash"
+        onClick={(e) => { e.stopPropagation(); onTrash(); }}
+      >
+        <Trash2 className="w-3.5 h-3.5" />
+      </button>
+    </div>
+  );
 };
 
 const AdminSignals = () => {
@@ -151,7 +229,8 @@ const AdminSignals = () => {
         .eq("status", "Pending" as any)
         .eq("is_archived", false as any)
         .eq("is_trashed", false as any)
-        .order("created_at", { ascending: false });
+        .order("deck_sort_order" as any, { ascending: true, nullsFirst: false })
+        .order("created_at", { ascending: true });
       if (error) throw error;
       return data as Signal[];
     },
@@ -323,6 +402,40 @@ const AdminSignals = () => {
     },
     onError: (e: any) => toast.error(e.message),
   });
+
+  // DnD sensors for On Deck
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 5 } })
+  );
+  const [draggingId, setDraggingId] = useState<string | null>(null);
+
+  const reorderOnDeckMutation = useMutation({
+    mutationFn: async (reordered: Signal[]) => {
+      const updates = reordered.map((s, i) =>
+        supabase.from("signals").update({ deck_sort_order: (i + 1) * 10 } as any).eq("id", s.id)
+      );
+      const results = await Promise.all(updates);
+      const failed = results.find(r => r.error);
+      if (failed?.error) throw failed.error;
+    },
+    onSuccess: () => toast.success("On Deck order updated"),
+    onError: () => {
+      queryClient.invalidateQueries({ queryKey: ["signals", "on-deck"] });
+      toast.error("Couldn't save order. Try again.");
+    },
+  });
+
+  const handleOnDeckDragEnd = (event: DragEndEvent) => {
+    setDraggingId(null);
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+    const oldIndex = onDeckSignals.findIndex(s => s.id === active.id);
+    const newIndex = onDeckSignals.findIndex(s => s.id === over.id);
+    if (oldIndex === -1 || newIndex === -1) return;
+    const reordered = arrayMove(onDeckSignals, oldIndex, newIndex);
+    queryClient.setQueryData(["signals", "on-deck"], reordered);
+    reorderOnDeckMutation.mutate(reordered);
+  };
 
   const openEditSignal = (signal: Signal, bucket: "ondeck" | "core" | "bonus") => {
     setEditingSignal(signal);
@@ -678,50 +791,48 @@ const AdminSignals = () => {
               <h2 className="text-sm font-semibold uppercase tracking-wider text-white/25">On Deck</h2>
               <span className="text-xs text-white/15">({onDeckSignals.length})</span>
             </div>
-            <div className="rounded-xl border border-white/[0.06] overflow-hidden">
-              <div className="divide-y divide-white/[0.04]">
-                {onDeckSignals.map((signal) => (
-                  <div
-                    key={signal.id}
-                    className="flex items-center gap-3 px-4 py-3 hover:bg-white/[0.04] transition-colors cursor-pointer"
-                    onClick={() => openEditSignal(signal, "ondeck")}
-                  >
-                    <span className="text-sm text-white/40 flex-1">{signal.title || "(Untitled)"}</span>
-                    <span className="text-[10px] text-white/15 shrink-0 tabular-nums">{formatCreatedDate(signal.created_at)}</span>
-                    {signal.pillar && (
-                      <Badge variant="outline" className={`text-[9px] shrink-0 ${PILLAR_COLORS[signal.pillar] || "border-white/20 text-white/60"}`}>
-                        {signal.pillar}
-                      </Badge>
-                    )}
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      className="h-6 text-[10px] text-rose-400/60 hover:text-rose-400 hover:bg-rose-500/10 px-2 shrink-0"
-                      onClick={(e) => { e.stopPropagation(); scheduleMutation.mutate({ id: signal.id, priority: "Core" }); }}
-                      disabled={scheduleMutation.isPending}
-                    >
-                      Core 3 <ArrowRight className="w-3 h-3 ml-1" />
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      className="h-6 text-[10px] text-white/30 hover:text-white/60 hover:bg-white/5 px-2 shrink-0"
-                      onClick={(e) => { e.stopPropagation(); scheduleMutation.mutate({ id: signal.id, priority: "Bonus" }); }}
-                      disabled={scheduleMutation.isPending}
-                    >
-                      Bonus <ArrowRight className="w-3 h-3 ml-1" />
-                    </Button>
-                    <button
-                      className="shrink-0 p-1 rounded hover:bg-red-500/10 text-white/15 hover:text-red-400 transition-colors"
-                      aria-label="Move to Trash"
-                      onClick={(e) => { e.stopPropagation(); setTrashConfirmId(signal.id); }}
-                    >
-                      <Trash2 className="w-3.5 h-3.5" />
-                    </button>
+            <DndContext
+              sensors={sensors}
+              collisionDetection={closestCenter}
+              onDragStart={(e) => setDraggingId(e.active.id as string)}
+              onDragEnd={handleOnDeckDragEnd}
+              onDragCancel={() => setDraggingId(null)}
+            >
+              <SortableContext items={onDeckSignals.map(s => s.id)} strategy={verticalListSortingStrategy}>
+                <div className="rounded-xl border border-white/[0.06] overflow-hidden">
+                  <div className="divide-y divide-white/[0.04]">
+                    {onDeckSignals.map((signal) => (
+                      <SortableOnDeckRow
+                        key={signal.id}
+                        signal={signal}
+                        onEdit={() => openEditSignal(signal, "ondeck")}
+                        onScheduleCore={() => scheduleMutation.mutate({ id: signal.id, priority: "Core" })}
+                        onScheduleBonus={() => scheduleMutation.mutate({ id: signal.id, priority: "Bonus" })}
+                        onTrash={() => setTrashConfirmId(signal.id)}
+                        schedulePending={scheduleMutation.isPending}
+                      />
+                    ))}
                   </div>
-                ))}
-              </div>
-            </div>
+                </div>
+              </SortableContext>
+              <DragOverlay>
+                {draggingId ? (() => {
+                  const s = onDeckSignals.find(x => x.id === draggingId);
+                  if (!s) return null;
+                  return (
+                    <div className="flex items-center gap-3 px-4 py-3 bg-zinc-800/95 border border-white/20 rounded-lg shadow-xl shadow-black/40">
+                      <GripVertical className="w-4 h-4 text-white/30 shrink-0" />
+                      <span className="text-sm text-white/60 flex-1">{s.title || "(Untitled)"}</span>
+                      {s.pillar && (
+                        <Badge variant="outline" className={`text-[9px] shrink-0 ${PILLAR_COLORS[s.pillar] || "border-white/20 text-white/60"}`}>
+                          {s.pillar}
+                        </Badge>
+                      )}
+                    </div>
+                  );
+                })() : null}
+              </DragOverlay>
+            </DndContext>
           </div>
         )}
       </main>
