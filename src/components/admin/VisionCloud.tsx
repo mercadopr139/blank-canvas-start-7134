@@ -10,7 +10,26 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { toast } from "sonner";
-import { Plus, Pencil, ArchiveX, Cloud } from "lucide-react";
+import { Plus, Pencil, ArchiveX, Cloud, GripVertical } from "lucide-react";
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  DragEndEvent,
+  DragStartEvent,
+  DragOverlay,
+} from "@dnd-kit/core";
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  useSortable,
+  verticalListSortingStrategy,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 
 const PILLARS = ["Operations", "Sales & Marketing", "Finance", "Vision", "Personal"] as const;
 
@@ -22,14 +41,6 @@ const PILLAR_CHIP_COLORS: Record<string, string> = {
   Personal: "bg-purple-400/15 text-purple-400 border-purple-400/30",
 };
 
-const PILLAR_GLOW: Record<string, string> = {
-  Operations: "shadow-[0_0_12px_rgba(191,15,62,0.15)]",
-  "Sales & Marketing": "shadow-[0_0_12px_rgba(74,222,128,0.12)]",
-  Finance: "shadow-[0_0_12px_rgba(125,211,252,0.12)]",
-  Vision: "shadow-[0_0_12px_rgba(251,191,36,0.12)]",
-  Personal: "shadow-[0_0_12px_rgba(192,132,252,0.12)]",
-};
-
 type VisionItem = {
   id: string;
   user_id: string;
@@ -37,16 +48,92 @@ type VisionItem = {
   description: string | null;
   pillar: string;
   active: boolean;
+  sort_order: number;
   created_at: string;
   updated_at: string;
 };
 
+/* ── Sortable Row ── */
+function SortableRow({
+  item,
+  onEdit,
+  onArchive,
+}: {
+  item: VisionItem;
+  onEdit: (item: VisionItem) => void;
+  onArchive: (id: string) => void;
+}) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: item.id });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.4 : 1,
+  };
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      className={`group flex items-center gap-3 px-4 py-3 rounded-xl border bg-white/[0.04] border-white/[0.08] hover:bg-white/[0.07] transition-colors ${isDragging ? "ring-1 ring-white/20" : ""}`}
+    >
+      {/* Drag handle */}
+      <button
+        {...attributes}
+        {...listeners}
+        className="cursor-grab active:cursor-grabbing p-1 rounded text-white/20 hover:text-white/50 transition-colors touch-none"
+        aria-label="Drag to reorder"
+      >
+        <GripVertical className="w-4 h-4" />
+      </button>
+
+      {/* Title */}
+      <span className="flex-1 text-sm text-white/80 font-medium truncate">{item.title}</span>
+
+      {/* Pillar badge */}
+      <Badge variant="outline" className={`text-[9px] px-1.5 py-0 h-4 shrink-0 ${PILLAR_CHIP_COLORS[item.pillar] || "border-white/20 text-white/60"}`}>
+        {item.pillar}
+      </Badge>
+
+      {/* Actions */}
+      <div className="hidden group-hover:flex items-center gap-0.5 shrink-0">
+        <button onClick={() => onEdit(item)} className="p-1 rounded-full hover:bg-white/10 text-white/30 hover:text-white/70 transition-colors" aria-label="Edit">
+          <Pencil className="w-3 h-3" />
+        </button>
+        <button onClick={() => onArchive(item.id)} className="p-1 rounded-full hover:bg-white/10 text-white/30 hover:text-white/70 transition-colors" aria-label="Archive">
+          <ArchiveX className="w-3 h-3" />
+        </button>
+      </div>
+    </div>
+  );
+}
+
+/* ── Overlay preview while dragging ── */
+function DragOverlayRow({ item }: { item: VisionItem }) {
+  return (
+    <div className="flex items-center gap-3 px-4 py-3 rounded-xl border bg-white/[0.09] border-white/20 shadow-lg shadow-black/30">
+      <GripVertical className="w-4 h-4 text-white/40" />
+      <span className="flex-1 text-sm text-white/90 font-medium truncate">{item.title}</span>
+      <Badge variant="outline" className={`text-[9px] px-1.5 py-0 h-4 shrink-0 ${PILLAR_CHIP_COLORS[item.pillar] || "border-white/20 text-white/60"}`}>
+        {item.pillar}
+      </Badge>
+    </div>
+  );
+}
+
+/* ── Main Component ── */
 export default function VisionCloud() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const [showModal, setShowModal] = useState(false);
   const [editingItem, setEditingItem] = useState<VisionItem | null>(null);
   const [form, setForm] = useState({ title: "", description: "", pillar: "Vision" });
+  const [activeId, setActiveId] = useState<string | null>(null);
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
+  );
 
   const { data: items = [] } = useQuery({
     queryKey: ["vision-cloud-items"],
@@ -55,6 +142,7 @@ export default function VisionCloud() {
         .from("vision_cloud_items" as any)
         .select("*")
         .eq("active", true)
+        .order("sort_order", { ascending: true })
         .order("created_at", { ascending: true });
       if (error) throw error;
       return (data as any[]) as VisionItem[];
@@ -71,9 +159,11 @@ export default function VisionCloud() {
           .eq("id", editingItem.id);
         if (error) throw error;
       } else {
+        // New items get sort_order after current max
+        const maxOrder = items.length > 0 ? Math.max(...items.map((i) => i.sort_order)) : 0;
         const { error } = await supabase
           .from("vision_cloud_items" as any)
-          .insert({ title: form.title, description: form.description || null, pillar: form.pillar, user_id: user!.id, active: true } as any);
+          .insert({ title: form.title, description: form.description || null, pillar: form.pillar, user_id: user!.id, active: true, sort_order: maxOrder + 10 } as any);
         if (error) throw error;
       }
     },
@@ -100,6 +190,45 @@ export default function VisionCloud() {
     onError: (e: any) => toast.error(e.message),
   });
 
+  const reorderMutation = useMutation({
+    mutationFn: async (reordered: VisionItem[]) => {
+      const updates = reordered.map((item, idx) => ({
+        id: item.id,
+        sort_order: (idx + 1) * 10,
+      }));
+      // Batch update each item's sort_order
+      for (const u of updates) {
+        const { error } = await supabase
+          .from("vision_cloud_items" as any)
+          .update({ sort_order: u.sort_order } as any)
+          .eq("id", u.id);
+        if (error) throw error;
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["vision-cloud-items"] });
+      toast.success("Order updated");
+    },
+    onError: (e: any) => toast.error(e.message),
+  });
+
+  const handleDragStart = (event: DragStartEvent) => setActiveId(event.active.id as string);
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    setActiveId(null);
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+
+    const oldIndex = items.findIndex((i) => i.id === active.id);
+    const newIndex = items.findIndex((i) => i.id === over.id);
+    if (oldIndex === -1 || newIndex === -1) return;
+
+    const reordered = arrayMove(items, oldIndex, newIndex);
+    // Optimistic update
+    queryClient.setQueryData(["vision-cloud-items"], reordered);
+    reorderMutation.mutate(reordered);
+  };
+
   const openAdd = () => {
     setEditingItem(null);
     setForm({ title: "", description: "", pillar: "Vision" });
@@ -118,24 +247,23 @@ export default function VisionCloud() {
     setForm({ title: "", description: "", pillar: "Vision" });
   };
 
+  const activeItem = activeId ? items.find((i) => i.id === activeId) : null;
+
   return (
     <>
-      {/* Vision Cloud Container */}
       <div className="relative rounded-[2rem] border border-white/[0.08] bg-gradient-to-br from-white/[0.04] via-white/[0.02] to-white/[0.01] backdrop-blur-sm p-6 md:p-8 overflow-hidden">
-        {/* Subtle glow outline */}
         <div className="absolute inset-0 rounded-[2rem] ring-1 ring-inset ring-white/[0.06] pointer-events-none" />
-        {/* Background blob decorations */}
         <div className="absolute -top-20 -right-20 w-60 h-60 bg-amber-400/[0.03] rounded-full blur-3xl pointer-events-none" />
         <div className="absolute -bottom-16 -left-16 w-48 h-48 bg-purple-400/[0.03] rounded-full blur-3xl pointer-events-none" />
 
         {/* Header */}
-        <div className="relative flex items-start justify-between mb-6">
+        <div className="relative flex items-start justify-between mb-4">
           <div>
             <div className="flex items-center gap-2 mb-1">
               <Cloud className="w-4 h-4 text-white/30" />
               <h2 className="text-sm font-bold uppercase tracking-[0.15em] text-white/50">Big Picture Focus</h2>
             </div>
-            <p className="text-xs text-white/20 italic">What deserves strategic time right now?</p>
+            <p className="text-xs text-white/20 italic">Drag items to prioritize.</p>
           </div>
           <div className="flex items-center gap-3">
             {items.length > 0 && (
@@ -154,42 +282,22 @@ export default function VisionCloud() {
           </div>
         </div>
 
-        {/* Cloud Chips */}
-        <div className="relative flex flex-wrap gap-3 min-h-[60px]">
+        {/* Vertical List */}
+        <div className="relative space-y-2 min-h-[60px]">
           {items.length === 0 ? (
             <div className="w-full text-center py-8">
               <Cloud className="w-8 h-8 text-white/10 mx-auto mb-2" />
               <p className="text-xs text-white/15 italic">No strategic focus areas yet</p>
             </div>
           ) : (
-            items.map((item) => (
-              <div
-                key={item.id}
-                className={`group relative flex items-center gap-2 px-4 py-2.5 rounded-2xl border bg-white/[0.04] border-white/[0.08] hover:bg-white/[0.07] hover:-translate-y-0.5 transition-all duration-200 cursor-default ${PILLAR_GLOW[item.pillar] || ""}`}
-              >
-                <span className="text-sm text-white/80 font-medium">{item.title}</span>
-                <Badge variant="outline" className={`text-[9px] px-1.5 py-0 h-4 ${PILLAR_CHIP_COLORS[item.pillar] || "border-white/20 text-white/60"}`}>
-                  {item.pillar}
-                </Badge>
-                {/* Action icons on hover */}
-                <div className="hidden group-hover:flex items-center gap-0.5 ml-1">
-                  <button
-                    onClick={() => openEdit(item)}
-                    className="p-1 rounded-full hover:bg-white/10 text-white/30 hover:text-white/70 transition-colors"
-                    aria-label="Edit"
-                  >
-                    <Pencil className="w-3 h-3" />
-                  </button>
-                  <button
-                    onClick={() => archiveMutation.mutate(item.id)}
-                    className="p-1 rounded-full hover:bg-white/10 text-white/30 hover:text-white/70 transition-colors"
-                    aria-label="Archive"
-                  >
-                    <ArchiveX className="w-3 h-3" />
-                  </button>
-                </div>
-              </div>
-            ))
+            <DndContext sensors={sensors} collisionDetection={closestCenter} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
+              <SortableContext items={items.map((i) => i.id)} strategy={verticalListSortingStrategy}>
+                {items.map((item) => (
+                  <SortableRow key={item.id} item={item} onEdit={openEdit} onArchive={(id) => archiveMutation.mutate(id)} />
+                ))}
+              </SortableContext>
+              <DragOverlay>{activeItem ? <DragOverlayRow item={activeItem} /> : null}</DragOverlay>
+            </DndContext>
           )}
         </div>
       </div>
@@ -203,22 +311,11 @@ export default function VisionCloud() {
           <div className="space-y-4">
             <div>
               <Label className="text-white/60">Title *</Label>
-              <Input
-                value={form.title}
-                onChange={(e) => setForm({ ...form, title: e.target.value })}
-                className="bg-white/5 border-white/10 text-white mt-1"
-                placeholder="e.g. Launch summer program"
-              />
+              <Input value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} className="bg-white/5 border-white/10 text-white mt-1" placeholder="e.g. Launch summer program" />
             </div>
             <div>
               <Label className="text-white/60">Description</Label>
-              <Textarea
-                value={form.description}
-                onChange={(e) => setForm({ ...form, description: e.target.value })}
-                className="bg-white/5 border-white/10 text-white mt-1"
-                placeholder="Optional details..."
-                rows={3}
-              />
+              <Textarea value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} className="bg-white/5 border-white/10 text-white mt-1" placeholder="Optional details..." rows={3} />
             </div>
             <div>
               <Label className="text-white/60">Pillar</Label>
@@ -236,11 +333,7 @@ export default function VisionCloud() {
           </div>
           <DialogFooter>
             <Button variant="ghost" onClick={closeModal} className="text-white/40 hover:text-white/60">Cancel</Button>
-            <Button
-              onClick={() => upsertMutation.mutate()}
-              disabled={!form.title.trim() || upsertMutation.isPending}
-              className="bg-white text-black hover:bg-white/90"
-            >
+            <Button onClick={() => upsertMutation.mutate()} disabled={!form.title.trim() || upsertMutation.isPending} className="bg-white text-black hover:bg-white/90">
               {upsertMutation.isPending ? "Saving..." : editingItem ? "Save Changes" : "Add to Cloud"}
             </Button>
           </DialogFooter>
