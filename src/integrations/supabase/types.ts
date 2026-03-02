@@ -553,6 +553,7 @@ export type Database = {
           completed_at: string | null
           created_at: string
           date_assigned: string | null
+          deck_sort_order: number | null
           deleted_at: string | null
           deleted_by: string | null
           description: string | null
@@ -578,6 +579,7 @@ export type Database = {
           completed_at?: string | null
           created_at?: string
           date_assigned?: string | null
+          deck_sort_order?: number | null
           deleted_at?: string | null
           deleted_by?: string | null
           description?: string | null
@@ -603,6 +605,7 @@ export type Database = {
           completed_at?: string | null
           created_at?: string
           date_assigned?: string | null
+          deck_sort_order?: number | null
           deleted_at?: string | null
           deleted_by?: string | null
           description?: string | null
