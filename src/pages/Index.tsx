@@ -61,7 +61,7 @@ const Index = () => {
             <Button asChild size="lg" className="bg-white hover:bg-neutral-100 text-black font-semibold">
               <Link to="/rookie-orientation">
                 <Users className="mr-2 h-5 w-5" />
-                Enrolled Boxers Only
+                Access NLA Bulletin Board
               </Link>
             </Button>
             <p className="mt-2 text-xs text-primary-foreground/70">Password Protected</p>
