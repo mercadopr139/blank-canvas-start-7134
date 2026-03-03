@@ -47,7 +47,7 @@ const MealTrainSection = () => {
             <img src={mealTrainBg} alt="" className="absolute inset-0 w-full h-full object-cover opacity-15" />
             <div className="absolute inset-0 bg-muted/80" />
             <h3 className="relative z-10 text-lg font-bold text-foreground">Program Highlights</h3>
-            <ul className="space-y-5">
+            <ul className="relative z-10 space-y-5">
               {bullets.map((b, i) => (
                 <li key={i} className="flex items-start gap-4">
                   <div className="mt-0.5 flex-shrink-0 w-10 h-10 rounded-xl bg-foreground flex items-center justify-center">
