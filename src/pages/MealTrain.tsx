@@ -122,11 +122,11 @@ const MealTrain = () => {
                 <a href="https://mudhenbrew.com/" target="_blank" rel="noopener noreferrer">
                   <img src={mudhenBrewingLogo} alt="Mud Hen Brewing Co." className="h-12 md:h-18 w-auto object-contain grayscale hover:grayscale-0 transition-all duration-300" />
                 </a>
-                <a href="https://www.facebook.com/capesquaretheatre/" target="_blank" rel="noopener noreferrer">
-                  <img src={capeSquareLogo} alt="Cape Square Entertainment" className="h-20 md:h-26 w-auto object-contain grayscale hover:grayscale-0 transition-all duration-300" />
+                <a href="https://www.facebook.com/capesquaretheatre/" target="_blank" rel="noopener noreferrer" onClick={(e) => { e.preventDefault(); e.stopPropagation(); window.open("https://www.facebook.com/capesquaretheatre/", "_blank"); }}>
+                  <img src={capeSquareLogo} alt="Cape Square Entertainment" className="h-20 md:h-26 w-auto object-contain grayscale hover:grayscale-0 transition-all duration-300 pointer-events-none" />
                 </a>
-                <a href="https://www.facebook.com/p/Matts-familyTaste-the-Love-100066342476858/" target="_blank" rel="noopener noreferrer">
-                  <img src={mattsFamilyLogo} alt="Matt's Family - Taste the Love" className="h-44 md:h-52 w-auto object-contain grayscale hover:grayscale-0 transition-all duration-300" />
+                <a href="https://www.facebook.com/p/Matts-familyTaste-the-Love-100066342476858/" target="_blank" rel="noopener noreferrer" onClick={(e) => { e.preventDefault(); e.stopPropagation(); window.open("https://www.facebook.com/p/Matts-familyTaste-the-Love-100066342476858/", "_blank"); }}>
+                  <img src={mattsFamilyLogo} alt="Matt's Family - Taste the Love" className="h-44 md:h-52 w-auto object-contain grayscale hover:grayscale-0 transition-all duration-300 pointer-events-none" />
                 </a>
               </div>
             </div>
