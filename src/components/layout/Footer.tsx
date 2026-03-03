@@ -1,5 +1,5 @@
 import { cn } from "@/lib/utils";
-import { Instagram, Facebook } from "lucide-react";
+import { Instagram, Facebook, MapPin } from "lucide-react";
 
 interface FooterProps {
   className?: string;
@@ -35,6 +35,15 @@ const Footer = ({ className }: FooterProps) => {
               <Facebook className="h-5 w-5 pointer-events-none" />
             </a>
           </div>
+          <a
+            href="https://www.google.com/maps/search/?api=1&query=1086+Rt+47+South,+Rio+Grande,+NJ+08242"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center gap-1.5 text-sm text-white/80 hover:text-white transition-colors"
+          >
+            <MapPin className="h-4 w-4 shrink-0" />
+            1086 Rt 47 South, Rio Grande, NJ 08242
+          </a>
           <a
             href="mailto:info@nolimitsboxingacademy.org"
             className="text-sm text-white/80 hover:text-white transition-colors"
