@@ -47,9 +47,9 @@ type ScheduleBlock = {
 };
 const ScheduleBlockComponent = ({
   blocks
-}: {
-  blocks: ScheduleBlock[];
-}) => <div className="space-y-4">
+
+
+}: {blocks: ScheduleBlock[];}) => <div className="space-y-4">
     {blocks.map((block, index) => <div key={index} className="bg-muted rounded-xl p-6 md:p-8">
         <div className="flex flex-col md:flex-row md:items-start gap-4">
           <div className="md:w-48 flex-shrink-0">
@@ -86,9 +86,9 @@ const DailyRhythmSection = ({
         <div className="max-w-4xl mx-auto">
           {/* Section header */}
           <div className="text-left mb-12">
-            <h2 className="text-3xl md:text-4xl lg:text-5xl font-black text-foreground mb-4">
-              Daily Rhythm
-            </h2>
+            <h2 className="text-3xl md:text-4xl lg:text-5xl font-black text-foreground mb-4">Tuesday Rhythm
+
+          </h2>
           </div>
 
           {/* Senior Boxing Schedule */}
