@@ -116,10 +116,18 @@ const MealTrain = () => {
                 Proudly supported by local businesses who help fuel our youth
               </p>
               <div className="flex flex-wrap items-center justify-center gap-10 md:gap-14">
-                <img src={tacoCaballitoLogo} alt="Taco Caballito Tequileria" className="h-16 md:h-22 w-auto object-contain grayscale hover:grayscale-0 transition-all duration-300" />
-                <img src={mudhenBrewingLogo} alt="Mud Hen Brewing Co." className="h-12 md:h-18 w-auto object-contain grayscale hover:grayscale-0 transition-all duration-300" />
-                <img src={capeSquareLogo} alt="Cape Square Entertainment" className="h-20 md:h-26 w-auto object-contain grayscale hover:grayscale-0 transition-all duration-300" />
-                <img src={mattsFamilyLogo} alt="Matt's Family - Taste the Love" className="h-44 md:h-52 w-auto object-contain grayscale hover:grayscale-0 transition-all duration-300" />
+                <a href="https://tacocaballitotequileria.com/" target="_blank" rel="noopener noreferrer">
+                  <img src={tacoCaballitoLogo} alt="Taco Caballito Tequileria" className="h-16 md:h-22 w-auto object-contain grayscale hover:grayscale-0 transition-all duration-300" />
+                </a>
+                <a href="https://mudhenbrew.com/" target="_blank" rel="noopener noreferrer">
+                  <img src={mudhenBrewingLogo} alt="Mud Hen Brewing Co." className="h-12 md:h-18 w-auto object-contain grayscale hover:grayscale-0 transition-all duration-300" />
+                </a>
+                <a href="https://www.facebook.com/capesquaretheatre/" target="_blank" rel="noopener noreferrer">
+                  <img src={capeSquareLogo} alt="Cape Square Entertainment" className="h-20 md:h-26 w-auto object-contain grayscale hover:grayscale-0 transition-all duration-300" />
+                </a>
+                <a href="https://www.facebook.com/p/Matts-familyTaste-the-Love-100066342476858/" target="_blank" rel="noopener noreferrer">
+                  <img src={mattsFamilyLogo} alt="Matt's Family - Taste the Love" className="h-44 md:h-52 w-auto object-contain grayscale hover:grayscale-0 transition-all duration-300" />
+                </a>
               </div>
             </div>
           </div>
