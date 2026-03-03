@@ -5,6 +5,7 @@ import Footer from "@/components/layout/Footer";
 import HeroSection from "@/components/sections/HeroSection";
 import FreeAccessMarquee from "@/components/sections/FreeAccessMarquee";
 import ImpactStrip from "@/components/sections/ImpactStrip";
+import CoreValuesSection from "@/components/sections/CoreValuesSection";
 import AboutSection from "@/components/sections/AboutSection";
 import ProgramsSection from "@/components/sections/ProgramsSection";
 import DailyRhythmSection from "@/components/sections/DailyRhythmSection";
@@ -49,6 +50,7 @@ const Index = () => {
         <HeroSection />
         <FreeAccessMarquee />
         <ImpactStrip />
+        <CoreValuesSection />
         <AboutSection />
         <AwardsSection />
         <ProgramsSection onMoreInfo={handleMoreInfo} />
