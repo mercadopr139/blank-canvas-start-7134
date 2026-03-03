@@ -14,8 +14,8 @@ const ImpactStrip = () => {
     },
     {
       icon: Bus,
-      value: "Free",
-      label: "Transportation",
+      value: "Transportation",
+      label: "Free transportation offered for specific in-need areas",
     },
     {
       icon: Utensils,
