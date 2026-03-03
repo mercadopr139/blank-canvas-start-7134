@@ -244,20 +244,20 @@ const ProgramsExtrasSection = () => {
   }], []);
   const [openId, setOpenId] = useState<string | null>(null);
   const [bankingBoxingOpen, setBankingBoxingOpen] = useState(false);
-  const openItem = items.find(x => x.id === openId) || null;
+  const openItem = items.find((x) => x.id === openId) || null;
 
 
   // Sort items alphabetically by title
   const sortedItems = [...items].sort((a, b) => a.title.localeCompare(b.title));
 
   // Create a combined list with link items inserted alphabetically
-  type ListItem = { type: 'modal'; item: ProgramItem } | { type: 'link'; title: string; to: string } | { type: 'video'; title: string };
-  
+  type ListItem = {type: 'modal';item: ProgramItem;} | {type: 'link';title: string;to: string;} | {type: 'video';title: string;};
+
   const allItems: ListItem[] = [
-    ...sortedItems.map(item => ({ type: 'modal' as const, item })),
-    { type: 'link' as const, title: 'Gym Buddies', to: '/gym-buddies' },
-    { type: 'video' as const, title: 'Banking & Boxing' }
-  ].sort((a, b) => {
+  ...sortedItems.map((item) => ({ type: 'modal' as const, item })),
+  { type: 'link' as const, title: 'Gym Buddies', to: '/gym-buddies' },
+  { type: 'video' as const, title: 'Banking & Boxing' }].
+  sort((a, b) => {
     const titleA = a.type === 'modal' ? a.item.title : a.title;
     const titleB = b.type === 'modal' ? b.item.title : b.title;
     return titleA.localeCompare(titleB);
@@ -266,59 +266,59 @@ const ProgramsExtrasSection = () => {
   return <section className="py-16 md:py-20 bg-background relative overflow-hidden">
       {/* Background image on the right */}
       <div className="absolute right-0 top-0 bottom-0 w-full md:w-1/3 pointer-events-none">
-        <img 
-          src={coachingRingsideImage} 
-          alt="" 
-          className="h-full w-full object-cover object-[60%_20%] opacity-25 md:opacity-100"
-        />
+        <img
+        src={coachingRingsideImage}
+        alt=""
+        className="h-full w-full object-cover object-[60%_20%] opacity-25 md:opacity-100" />
+      
         <div className="absolute inset-0 bg-gradient-to-r from-background via-background/60 via-30% to-transparent" />
       </div>
       <div className="container relative z-10">
-        <h2 className="text-2xl md:text-3xl font-bold text-foreground">
-          More Programs at NLA
-        </h2>
+        <h2 className="text-2xl md:text-3xl font-bold text-foreground">Extended Programs at NLA
+
+      </h2>
         <p className="mt-3 text-base md:text-lg text-muted-foreground max-w-3xl">
           These programs strengthen the core experience and show how NLA extends impact beyond boxing & fitness training.
         </p>
 
         {/* Bullet-style list - alphabetically sorted */}
         <ul className="mt-6 space-y-3">
-          {allItems.map((listItem, idx) => (
-            <li key={listItem.type === 'modal' ? listItem.item.id : listItem.title} className="flex items-start gap-3">
+          {allItems.map((listItem, idx) =>
+        <li key={listItem.type === 'modal' ? listItem.item.id : listItem.title} className="flex items-start gap-3">
               <span className="mt-2.5 h-2 w-2 rounded-full bg-foreground flex-shrink-0" />
-              {listItem.type === 'modal' ? (
-                <button 
-                  type="button" 
-                  onClick={() => setOpenId(listItem.item.id)} 
-                  className="text-left text-lg font-medium text-foreground underline underline-offset-4 hover:text-foreground/80 transition-colors" 
-                  aria-haspopup="dialog"
-                >
+              {listItem.type === 'modal' ?
+          <button
+            type="button"
+            onClick={() => setOpenId(listItem.item.id)}
+            className="text-left text-lg font-medium text-foreground underline underline-offset-4 hover:text-foreground/80 transition-colors"
+            aria-haspopup="dialog">
+            
                   {listItem.item.title}
-                </button>
-              ) : listItem.type === 'link' ? (
-                <Link 
-                  to={listItem.to} 
-                  state={{ fromPrograms: true }} 
-                  className="text-left text-lg font-medium text-foreground underline underline-offset-4 hover:text-foreground/80 transition-colors"
-                >
+                </button> :
+          listItem.type === 'link' ?
+          <Link
+            to={listItem.to}
+            state={{ fromPrograms: true }}
+            className="text-left text-lg font-medium text-foreground underline underline-offset-4 hover:text-foreground/80 transition-colors">
+            
                   {listItem.title}
-                </Link>
-              ) : (
-                <button 
-                  type="button" 
-                  onClick={() => setBankingBoxingOpen(true)} 
-                  className="text-left text-lg font-medium text-foreground underline underline-offset-4 hover:text-foreground/80 transition-colors" 
-                  aria-haspopup="dialog"
-                >
+                </Link> :
+
+          <button
+            type="button"
+            onClick={() => setBankingBoxingOpen(true)}
+            className="text-left text-lg font-medium text-foreground underline underline-offset-4 hover:text-foreground/80 transition-colors"
+            aria-haspopup="dialog">
+            
                   {listItem.title}
                 </button>
-              )}
+          }
             </li>
-          ))}
+        )}
         </ul>
 
         {/* Modal */}
-        <Dialog open={!!openItem} onOpenChange={open => !open && setOpenId(null)}>
+        <Dialog open={!!openItem} onOpenChange={(open) => !open && setOpenId(null)}>
           <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle className="text-2xl font-bold">
