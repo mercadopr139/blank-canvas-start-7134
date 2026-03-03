@@ -4,7 +4,7 @@ import { Utensils, Users, Heart } from "lucide-react";
 
 const bullets = [
   { icon: Utensils, text: "Free meals after scheduled program days (5x/week)" },
-  { icon: Heart, text: "Consistency, community, and care for youth athletes" },
+  { icon: Heart, text: "Consistency, community, and care for youth participants" },
   { icon: Users, text: "Volunteer- and partner-supported meal preparation & delivery" },
 ];
 
