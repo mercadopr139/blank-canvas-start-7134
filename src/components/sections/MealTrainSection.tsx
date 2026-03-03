@@ -34,7 +34,7 @@ const MealTrainSection = () => {
               </p>
             </div>
 
-            <div className="mt-8">
+            <div className="mt-8 flex justify-center">
               <Button asChild variant="default" className="bg-foreground text-background hover:bg-foreground/90">
                 <Link to="/meal-train">More Info</Link>
               </Button>
