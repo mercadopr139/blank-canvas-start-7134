@@ -68,7 +68,8 @@ const AboutSection = () => {
                 </h2>
                 
                 <p className="text-xl text-foreground leading-relaxed my-12">
-                  We are a place where young people are known, challenged, and supported—every single day. Built on consistency, discipline, and real relationships, we create a culture of high expectations and dependable support, balancing tough love with an unwavering commitment to every kid we serve.
+                  We are a place where young people are known, challenged, and supported—every single day. Built on consistency, discipline, and real relationships, the culture here is one of high expectations and dependable support, balancing tough love with an unwavering commitment to every kid who walks through those doors. 
+
                 </p>
                 
                 <p className="text-3xl lg:text-4xl font-bold text-primary mt-16">
@@ -79,6 +80,5 @@ const AboutSection = () => {
           </div>
         </div>
       </div>
-    </section>;
-};
+    </section>;};
 export default AboutSection;
