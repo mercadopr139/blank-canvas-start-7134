@@ -43,7 +43,9 @@ const MealTrainSection = () => {
           </div>
 
           {/* Right column – highlight card */}
-          <div className="rounded-2xl bg-muted p-8 md:p-10 flex flex-col gap-6">
+          <div className="relative rounded-2xl overflow-hidden p-8 md:p-10 flex flex-col gap-6">
+            <img src={mealTrainBg} alt="" className="absolute inset-0 w-full h-full object-cover opacity-15" />
+            <div className="absolute inset-0 bg-muted/80" />
             <h3 className="text-lg font-bold text-foreground">Program Highlights</h3>
             <ul className="space-y-5">
               {bullets.map((b, i) => (
