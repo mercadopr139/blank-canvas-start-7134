@@ -28,7 +28,7 @@ const ImpactSection = () => {
             
 
             <p className="text-lg md:text-xl text-foreground/80 leading-relaxed">
-              Impact at NLA is built through consistency—youth commit to the program, and our staff commits to them. By showing up every day during one of the most chaotic seasons of a young person's life, we become a steady, reliable presence that helps guide their personal journey.
+              Impact at NLA is built through consistency. Youth commit to the program, and our staff commits to them. By becoming a steady, reliable presence during one of the most chaotic seasons of a young person’s life, we can help guide their personal journeys.
             </p>
 
             {/* Impact Stats */}
