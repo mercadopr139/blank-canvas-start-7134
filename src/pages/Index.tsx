@@ -9,6 +9,7 @@ import CoreValuesSection from "@/components/sections/CoreValuesSection";
 import AboutSection from "@/components/sections/AboutSection";
 import ProgramsSection from "@/components/sections/ProgramsSection";
 import DailyRhythmSection from "@/components/sections/DailyRhythmSection";
+import MealTrainSection from "@/components/sections/MealTrainSection";
 import ImpactSection from "@/components/sections/ImpactSection";
 import AwardsSection from "@/components/sections/AwardsSection";
 import { Button } from "@/components/ui/button";
@@ -54,6 +55,7 @@ const Index = () => {
         <AwardsSection />
         <AboutSection />
         <ProgramsSection onMoreInfo={handleMoreInfo} />
+        <MealTrainSection />
         <ImpactSection />
 
         {/* Rookie Orientation Section */}
