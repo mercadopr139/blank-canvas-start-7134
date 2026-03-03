@@ -22,12 +22,16 @@ const HeroSection = () => {
           </h1>
 
           {/* Supporting statement */}
-          <p className="text-xl md:text-2xl lg:text-3xl font-semibold text-primary-foreground/70 mb-12">We Build Disciplined, Confident & Accountable Young People.
+          <p className="text-xl md:text-2xl lg:text-3xl font-semibold text-primary-foreground/70 mb-12">Building Disciplined, Confident & Accountable Young People.
 
           </p>
 
           {/* Main paragraph */}
-          <p className="text-lg md:text-xl font-medium text-primary-foreground/80 mb-10 max-w-3xl leading-relaxed">No Limits Academy is a FREE, year-round youth development center serving kids & young adults, 7–19 years old, of Cape May County. Monday through Friday, 2:30 PM–8:30 PM, we use boxing, mentorship, and structure set young people for success in life.
+          <p className="text-lg md:text-xl font-medium text-primary-foreground/80 mb-10 max-w-3xl leading-relaxed">No Limits Academy is a FREE, year-round youth development center serving kids & young adults, 7–19 years old, of Cape May County. Monday through Friday, 2:30 PM–8:30 PM, we use boxing, 
+
+boxing mentorship, and structure to set young people up for success in life.
+
+
             <span className="text-nla font-bold">FREE</span>, year-round youth development center serving youth, 7–19 years old, of Cape May County. We show up Monday through Friday, 2:30 PM–8:30 PM, using boxing, mentorship, and structure to build disciplined, confident, and accountable young people.
           </p>
 
@@ -47,8 +51,4 @@ const HeroSection = () => {
           </div>
         </div>
       </div>
-    </section>);
-
-};
-
-export default HeroSection;
+    </section>);};export default HeroSection;
