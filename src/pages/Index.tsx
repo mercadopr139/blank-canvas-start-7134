@@ -54,7 +54,7 @@ const Index = () => {
 
         {/* Rookie Orientation Section */}
         <section className="w-full bg-muted-foreground py-10 md:py-14 flex flex-col items-center text-center px-5">
-            <h2 className="text-xl md:text-2xl font-semibold mb-3 text-primary-foreground">NLA Bulletin Board</h2>
+            <h2 className="text-xl md:text-2xl font-semibold mb-3 text-primary-foreground">Enrolled Boxers Only</h2>
             <p className="mb-6 max-w-md text-primary-foreground">
               Access Rookie Orientation materials and get started with everything you need to know.
             </p>
@@ -80,12 +80,12 @@ const Index = () => {
 
       {/* Contact Button - Fixed, hidden when footer is visible */}
       <Button
-        className={`fixed bottom-6 right-6 z-40 text-white font-semibold shadow-lg transition-opacity duration-300 ${footerVisible ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}
-        style={{ backgroundColor: '#bf0f3e' }}
-        size="lg"
-        onClick={() => setContactOpen(true)}
-        aria-label="Open contact options"
-      >
+      className={`fixed bottom-6 right-6 z-40 text-white font-semibold shadow-lg transition-opacity duration-300 ${footerVisible ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}
+      style={{ backgroundColor: '#bf0f3e' }}
+      size="lg"
+      onClick={() => setContactOpen(true)}
+      aria-label="Open contact options">
+      
         <MessageCircle className="mr-2 h-5 w-5" />
         Click to Contact Us
       </Button>
