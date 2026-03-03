@@ -27,7 +27,7 @@ const HeroSection = () => {
           </p>
 
           {/* Main paragraph */}
-          <p className="text-lg md:text-xl font-medium text-primary-foreground/80 mb-10 max-w-3xl leading-relaxed">No Limits Academy is a <span className="text-nla font-bold">FREE</span>, year-round youth development center serving kids & young adults, 7–19 years old, of Cape May County. Monday through Friday, 2:30 PM–8:30 PM, we use boxing, mentorship, and structure to set young people up for success in life.
+          <p className="text-lg md:text-xl font-medium text-primary-foreground/80 mb-10 max-w-3xl leading-relaxed">No Limits Academy is a <span className="text-nla font-bold">FREE</span>, year-round youth development center serving kids &amp; young adults, 7–19 years old, of Cape May County. Monday through Friday, 2:30 PM–8:30 PM, we use boxing, mentorship, and structure to set young people up for success in life.
           </p>
 
           {/* Mission Badge */}
