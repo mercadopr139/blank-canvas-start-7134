@@ -51,8 +51,8 @@ const Index = () => {
         <FreeAccessMarquee />
         <ImpactStrip />
         <CoreValuesSection />
-        <AboutSection />
         <AwardsSection />
+        <AboutSection />
         <ProgramsSection onMoreInfo={handleMoreInfo} />
         <ImpactSection />
 
