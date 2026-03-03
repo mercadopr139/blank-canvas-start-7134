@@ -9,6 +9,7 @@ import AboutSection from "@/components/sections/AboutSection";
 import ProgramsSection from "@/components/sections/ProgramsSection";
 import DailyRhythmSection from "@/components/sections/DailyRhythmSection";
 import ImpactSection from "@/components/sections/ImpactSection";
+import AwardsSection from "@/components/sections/AwardsSection";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { MessageCircle, Users } from "lucide-react";
@@ -49,6 +50,7 @@ const Index = () => {
         <FreeAccessMarquee />
         <ImpactStrip />
         <AboutSection />
+        <AwardsSection />
         <ProgramsSection onMoreInfo={handleMoreInfo} />
         <ImpactSection />
 
