@@ -54,7 +54,7 @@ const Index = () => {
 
         {/* Rookie Orientation Section */}
         <section className="w-full bg-muted-foreground py-10 md:py-14 flex flex-col items-center text-center px-5">
-            <h2 className="text-xl md:text-2xl font-semibold mb-3 text-primary-foreground">Are you new to the program?</h2>
+            <h2 className="text-xl md:text-2xl font-semibold mb-3 text-primary-foreground">NLA Bulletin Board</h2>
             <p className="mb-6 max-w-md text-primary-foreground">
               Access Rookie Orientation materials and get started with everything you need to know.
             </p>
