@@ -33,7 +33,7 @@ const ProgramsSection = ({
               Our Programs
             </h2>
           </div>
-          <p className="text-lg md:text-xl text-primary-foreground/70 max-w-3xl leading-relaxed">Our <span className="underline">two core programs</span> are designed to meet youth where they are and grow with them over time. Each includes <span className="font-bold text-primary-foreground/70">fitness training</span>, mentorship, support, and opportunities for <span className="font-bold text-[#bf0f3e]">personal, professional, and spiritual</span> development.</p>
+          <p className="text-lg md:text-xl text-primary-foreground/70 max-w-3xl leading-relaxed">Our <span className="underline">two core programs</span> are designed to meet youth where they are and grow with them over time. Each includes <span className="font-bold text-primary-foreground/70">fitness training</span>, mentorship, support, and opportunities for <span className="font-bold" style={{ color: '#bf0f3e' }}>personal, professional, and spiritual</span> development.</p>
         </div>
 
         {/* Program cards */}
