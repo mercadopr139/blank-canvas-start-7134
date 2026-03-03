@@ -1,6 +1,7 @@
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Utensils, Users, Heart } from "lucide-react";
+import mealTrainBg from "@/assets/meal-train/meal-train-volunteers-serving.png";
 
 const bullets = [
   { icon: Utensils, text: "Free meals after scheduled program days (5x/week)" },
