@@ -386,7 +386,10 @@ export type Database = {
           error: string | null
           id: string
           invoice_id: string
+          last_checked_at: string | null
           message: string | null
+          provider_message_id: string | null
+          provider_status: string | null
           sent_at: string
           sent_by_user_id: string | null
           sent_to: string
@@ -399,7 +402,10 @@ export type Database = {
           error?: string | null
           id?: string
           invoice_id: string
+          last_checked_at?: string | null
           message?: string | null
+          provider_message_id?: string | null
+          provider_status?: string | null
           sent_at?: string
           sent_by_user_id?: string | null
           sent_to: string
@@ -412,7 +418,10 @@ export type Database = {
           error?: string | null
           id?: string
           invoice_id?: string
+          last_checked_at?: string | null
           message?: string | null
+          provider_message_id?: string | null
+          provider_status?: string | null
           sent_at?: string
           sent_by_user_id?: string | null
           sent_to?: string

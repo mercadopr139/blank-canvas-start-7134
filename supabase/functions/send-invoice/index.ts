@@ -268,6 +268,7 @@ const handler = async (req: Request): Promise<Response> => {
       sent_by_user_id: user.id,
       type: sendType,
       status: "success",
+      provider_message_id: emailResponse.data?.id || null,
     });
 
     // Update invoice tracking
