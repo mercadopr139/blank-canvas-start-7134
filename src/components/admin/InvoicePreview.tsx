@@ -311,7 +311,10 @@ export default function InvoicePreview({
       return;
     }
 
-    if (approvalStatus !== "approved") {
+    // For invoices that haven't been sent yet, require approval
+    // For already-sent invoices (resend), skip approval check
+    const alreadySent = existingInvoice.status === "sent" || existingInvoice.status === "paid";
+    if (!alreadySent && approvalStatus !== "approved") {
       if (approvalStatus === "pending_approval") {
         toast({ title: "Waiting for approval from Chrissy", description: "Invoice cannot be sent until approved.", variant: "destructive" });
       } else if (approvalStatus === "rejected") {
@@ -329,7 +332,7 @@ export default function InvoicePreview({
     if (!storedPdf || invoiceTotal <= 0) {
       toast({ 
         title: "Cannot send: invoice PDF or total is missing", 
-        description: "Please regenerate the invoice by clicking 'Update Draft' first.",
+        description: "Please regenerate the invoice by clicking 'Regenerate PDF' first.",
         variant: "destructive" 
       });
       return;
@@ -695,48 +698,55 @@ No Limits Academy`,
 
           {/* Right side: Status actions */}
           <div className="flex flex-wrap gap-3">
+            {/* Save / Regenerate PDF — always available */}
             {!existingInvoice && (
               <Button onClick={handleSaveDraftWithPdf} disabled={isLoading || isSavingDraft}>
                 {isSavingDraft ? "Generating PDF..." : "Save as Draft"}
               </Button>
             )}
-            {existingInvoice && existingInvoice.status === "draft" && (
-              <>
-                <Button variant="outline" onClick={handleSaveDraftWithPdf} disabled={isLoading || isSavingDraft}>
-                  {isSavingDraft ? "Generating PDF..." : "Update Draft"}
-                </Button>
-                {approvalStatus === "draft" && (
-                  <Button 
-                    variant="secondary" 
-                    onClick={handleSubmitForApproval} 
-                    disabled={isLoading || isSubmittingApproval}
-                  >
-                    <ShieldCheck className="w-4 h-4 mr-2" />
-                    {isSubmittingApproval ? "Submitting..." : "Submit for Approval"}
-                  </Button>
-                )}
-                {approvalStatus === "approved" && (
-                  <Button 
-                    variant="secondary" 
-                    onClick={handleOpenSendModal} 
-                    disabled={isLoading || !client.billing_email}
-                    title={!client.billing_email ? "Client has no billing email" : ""}
-                  >
-                    <Mail className="w-4 h-4 mr-2" />
-                    Send Invoice
-                  </Button>
-                )}
-                <Button onClick={onMarkSent} disabled={isLoading}>
-                  {isLoading ? "Updating..." : "Mark as Sent"}
-                </Button>
-              </>
+            {existingInvoice && (
+              <Button variant="outline" onClick={handleSaveDraftWithPdf} disabled={isLoading || isSavingDraft}>
+                {isSavingDraft ? "Generating PDF..." : hasPdf ? "Regenerate PDF" : "Generate & Lock PDF"}
+              </Button>
             )}
-            {existingInvoice && existingInvoice.status === "sent" && (
+
+            {/* Submit for Approval — available when not yet submitted or after rejection */}
+            {existingInvoice && (approvalStatus === "draft" || approvalStatus === "rejected") && (
+              <Button 
+                variant="secondary" 
+                onClick={handleSubmitForApproval} 
+                disabled={isLoading || isSubmittingApproval}
+              >
+                <ShieldCheck className="w-4 h-4 mr-2" />
+                {isSubmittingApproval ? "Submitting..." : approvalStatus === "rejected" ? "Re-submit for Approval" : "Submit for Approval"}
+              </Button>
+            )}
+
+            {/* Send to Vendor — available when approved */}
+            {existingInvoice && approvalStatus === "approved" && (
+              <Button 
+                variant="secondary" 
+                onClick={handleOpenSendModal} 
+                disabled={isLoading || !client.billing_email}
+                title={!client.billing_email ? "Client has no billing email" : ""}
+              >
+                <Mail className="w-4 h-4 mr-2" />
+                {status === "sent" || status === "paid" ? "Resend Invoice" : "Send Invoice"}
+              </Button>
+            )}
+
+            {/* Status progression */}
+            {existingInvoice && status === "draft" && (
+              <Button onClick={onMarkSent} disabled={isLoading}>
+                {isLoading ? "Updating..." : "Mark as Sent"}
+              </Button>
+            )}
+            {existingInvoice && status === "sent" && (
               <Button onClick={onMarkPaid} disabled={isLoading}>
                 {isLoading ? "Updating..." : "Mark as Paid"}
               </Button>
             )}
-            {existingInvoice && existingInvoice.status === "paid" && (
+            {existingInvoice && status === "paid" && (
               <p className="text-primary font-medium">✓ Invoice Paid</p>
             )}
           </div>
