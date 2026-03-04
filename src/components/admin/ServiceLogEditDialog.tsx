@@ -90,7 +90,7 @@ export default function ServiceLogEditDialog({
         <DialogHeader>
           <DialogTitle>Edit Service Log</DialogTitle>
           <DialogDescription>
-            {format(new Date(serviceLog.service_date), "MMMM d, yyyy")}
+            {format(new Date(serviceLog.service_date + "T00:00:00"), "MMMM d, yyyy")}
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">

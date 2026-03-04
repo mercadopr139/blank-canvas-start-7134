@@ -89,7 +89,7 @@ export default function InvoicePreview({
   // Calculate line items from service logs
   const calculateLineItems = (): LineItem[] => {
     const sortedLogs = [...serviceLogs].sort(
-      (a, b) => new Date(a.service_date).getTime() - new Date(b.service_date).getTime()
+      (a, b) => new Date(a.service_date + "T00:00:00").getTime() - new Date(b.service_date + "T00:00:00").getTime()
     );
 
     return sortedLogs.map((log) => ({
@@ -649,7 +649,7 @@ No Limits Academy`,
                 lineItems.map((item, index) => (
                   <tr key={index} className="border-t">
                     <td className="px-4 py-3 text-sm">
-                      {format(new Date(item.date), "MMM d, yyyy")}
+                      {format(new Date(item.date + "T00:00:00"), "MMM d, yyyy")}
                     </td>
                     {hasMultipleServices && (
                       <td className="px-4 py-3 text-sm">

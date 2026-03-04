@@ -33,7 +33,7 @@ function formatCurrency(amount: number): string {
 
 function calculateLineItems(serviceLogs: ServiceLog[]): LineItem[] {
   const sortedLogs = [...serviceLogs].sort(
-    (a, b) => new Date(a.service_date).getTime() - new Date(b.service_date).getTime()
+    (a, b) => new Date(a.service_date + "T00:00:00").getTime() - new Date(b.service_date + "T00:00:00").getTime()
   );
 
   return sortedLogs.map((log) => ({
@@ -99,8 +99,8 @@ export function generateInvoicePdf(data: InvoicePdfData): jsPDF {
 
   const formattedDatesList = isPerDayClient && serviceLogs.length > 0
     ? [...serviceLogs]
-      .sort((a, b) => new Date(a.service_date).getTime() - new Date(b.service_date).getTime())
-      .map(log => format(new Date(log.service_date), "MMM. d"))
+      .sort((a, b) => new Date(a.service_date + "T00:00:00").getTime() - new Date(b.service_date + "T00:00:00").getTime())
+      .map(log => format(new Date(log.service_date + "T00:00:00"), "MMM. d"))
       .join(", ")
     : "";
 
@@ -268,7 +268,7 @@ export function generateInvoicePdf(data: InvoicePdfData): jsPDF {
 
   const tableData = lineItems.map((item) => {
     const row = [
-      format(new Date(item.date), "MMM d, yyyy"),
+      format(new Date(item.date + "T00:00:00"), "MMM d, yyyy"),
       ...(hasMultipleServices ? [item.serviceType] : []),
       item.billingMethod === "hourly" ? "Hourly" : item.billingMethod === "per_day" ? "Per Day" : "Flat Rate",
       item.billingMethod === "hourly" ? `${item.hours || 0} hrs` : "—",
