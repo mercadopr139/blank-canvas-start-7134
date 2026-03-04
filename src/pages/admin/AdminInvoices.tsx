@@ -660,10 +660,26 @@ export default function AdminInvoices() {
         </div>
 
         {/* Invoice Preview */}
-        {showPreview && selectedClient && <InvoicePreview client={selectedClient} serviceLogs={serviceLogs} invoiceNumber={existingInvoice?.invoice_number || tempInvoiceNumber} issueDate={existingInvoice?.issue_date ? new Date(existingInvoice.issue_date) : new Date()} month={parseInt(selectedMonth)} year={parseInt(selectedYear)} existingInvoice={existingInvoice} onSaveDraft={handleSaveDraft} onMarkSent={handleMarkSent} onMarkPaid={handleMarkPaid} onInvoiceUpdated={() => {
-        handleGeneratePreview();
-        fetchInvoices();
-      }} isLoading={isLoading} />}
+        {showPreview && selectedClient && (
+          <div className="space-y-3">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => {
+                setShowPreview(false);
+                setExistingInvoice(null);
+              }}
+              className="text-white/70 hover:text-white hover:bg-white/10"
+            >
+              <ArrowLeft className="w-4 h-4 mr-2" />
+              Back to Controls
+            </Button>
+            <InvoicePreview client={selectedClient} serviceLogs={serviceLogs} invoiceNumber={existingInvoice?.invoice_number || tempInvoiceNumber} issueDate={existingInvoice?.issue_date ? new Date(existingInvoice.issue_date) : new Date()} month={parseInt(selectedMonth)} year={parseInt(selectedYear)} existingInvoice={existingInvoice} onSaveDraft={handleSaveDraft} onMarkSent={handleMarkSent} onMarkPaid={handleMarkPaid} onInvoiceUpdated={() => {
+              handleGeneratePreview();
+              fetchInvoices();
+            }} isLoading={isLoading} />
+          </div>
+        )}
 
         {/* Saved Invoices List */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
