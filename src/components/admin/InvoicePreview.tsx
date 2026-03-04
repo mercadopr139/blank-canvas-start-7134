@@ -145,8 +145,12 @@ export default function InvoicePreview({
   };
 
   const summary = calculateSummary();
-  const subtotal = summary.invoiceTotal;
-  const total = subtotal;
+  // When service logs have been cleared but invoice exists with a saved total, use the DB value
+  const hasNoLogs = lineItems.length === 0;
+  const storedTotal = existingInvoice?.total ? Number(existingInvoice.total) : 0;
+  const storedSubtotal = existingInvoice?.subtotal ? Number(existingInvoice.subtotal) : 0;
+  const subtotal = hasNoLogs && storedSubtotal > 0 ? storedSubtotal : summary.invoiceTotal;
+  const total = hasNoLogs && storedTotal > 0 ? storedTotal : subtotal;
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat("en-US", {
@@ -166,6 +170,7 @@ export default function InvoicePreview({
     issueDate,
     month,
     year,
+    overrideTotal: total,
   };
 
   const handleDownloadPdf = async () => {
