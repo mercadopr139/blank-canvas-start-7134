@@ -253,23 +253,7 @@ export default function AdminInvoices() {
 
     setServiceLogs(logs || []);
 
-    if (searchParams.get("clearServiceDays") === "true" && logs && logs.length > 0) {
-      const ids = logs.map((l) => l.id);
-      const { error: clearError } = await supabase
-        .from("service_logs")
-        .delete()
-        .in("id", ids);
-
-      if (clearError) {
-        toast({
-          title: "Couldn't clear service days",
-          description: clearError.message,
-          variant: "destructive",
-        });
-      } else {
-        toast({ title: "Service days cleared" });
-      }
-    }
+    // Service logs persist — no auto-clear
 
     const { data: existingInv } = await supabase
       .from("invoices")
@@ -288,7 +272,7 @@ export default function AdminInvoices() {
     setShowPreview(true);
     setIsLoading(false);
 
-    if (searchParams.get("autoGenerate") || searchParams.get("clearServiceDays")) {
+    if (searchParams.get("autoGenerate")) {
       setSearchParams({}, { replace: true });
     }
   }, [selectedClientId, selectedMonth, selectedYear, searchParams, setSearchParams, toast]);
