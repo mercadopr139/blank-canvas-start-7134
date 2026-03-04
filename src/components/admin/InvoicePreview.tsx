@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { format } from "date-fns";
-import { Download, Mail, Copy, Check, ShieldCheck, Clock, XCircle } from "lucide-react";
+import { Download, Mail, Copy, Check, ShieldCheck, Clock, XCircle, AlertTriangle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { downloadInvoicePdf, getInvoicePdfBase64 } from "@/lib/generateInvoicePdf";
@@ -47,7 +47,7 @@ interface InvoicePreviewProps {
   month: number;
   year: number;
   existingInvoice?: Invoice | null;
-  onSaveDraft: (subtotal: number, total: number) => void;
+  onSaveDraft: (subtotal: number, total: number, pdfBase64: string) => void;
   onMarkSent: () => void;
   onMarkPaid: () => void;
   onInvoiceUpdated?: () => void;
@@ -79,6 +79,7 @@ export default function InvoicePreview({
   const [showSendModal, setShowSendModal] = useState(false);
   const [showApprovalModal, setShowApprovalModal] = useState(false);
   const [isSubmittingApproval, setIsSubmittingApproval] = useState(false);
+  const [isSavingDraft, setIsSavingDraft] = useState(false);
   const { toast } = useToast();
   
   // Get rate info - for display purposes, we derive from line items if client rate is 0
@@ -128,9 +129,7 @@ export default function InvoicePreview({
     const flatItems = lineItems.filter(item => item.billingMethod === "flat_rate" || item.billingMethod === "per_day");
 
     const totalHours = hourlyItems.reduce((sum, item) => sum + (item.hours || 0), 0);
-    // Sum actual line totals instead of recalculating from hourly rate
     const hourlyTotal = hourlyItems.reduce((sum, item) => sum + (item.lineTotal || 0), 0);
-    // Derive effective hourly rate for display
     const effectiveHourlyRate = totalHours > 0 ? hourlyTotal / totalHours : clientHourlyRate;
     const flatTotal = flatItems.reduce((sum, item) => sum + (item.lineTotal || item.flatAmount || 0), 0);
     const invoiceTotal = hourlyTotal + flatTotal;
@@ -182,11 +181,50 @@ export default function InvoicePreview({
     }
   };
 
+  /** Generate PDF and save draft with locked-in total + PDF */
+  const handleSaveDraftWithPdf = async () => {
+    setIsSavingDraft(true);
+    try {
+      const pdfBase64 = await getInvoicePdfBase64(pdfData);
+      onSaveDraft(subtotal, total, pdfBase64);
+    } catch (error: any) {
+      toast({ title: "Error generating PDF", description: error.message, variant: "destructive" });
+    } finally {
+      setIsSavingDraft(false);
+    }
+  };
+
   const handleSubmitForApproval = async () => {
     if (!existingInvoice) {
       toast({ title: "Please save the invoice first", variant: "destructive" });
       return;
     }
+
+    // Ensure we have a stored PDF before submitting
+    const storedPdf = (existingInvoice as any).pdf_base64;
+    if (!storedPdf || storedTotal <= 0) {
+      // Regenerate and store PDF first
+      setIsSavingDraft(true);
+      try {
+        const pdfBase64 = await getInvoicePdfBase64(pdfData);
+        const { error: saveError } = await supabase
+          .from("invoices")
+          .update({
+            subtotal,
+            total,
+            pdf_base64: pdfBase64,
+            pdf_generated_at: new Date().toISOString(),
+          })
+          .eq("id", existingInvoice.id);
+        if (saveError) throw saveError;
+      } catch (error: any) {
+        toast({ title: "Error saving PDF", description: error.message, variant: "destructive" });
+        setIsSavingDraft(false);
+        return;
+      }
+      setIsSavingDraft(false);
+    }
+
     setIsSubmittingApproval(true);
     try {
       // Update invoice approval status
@@ -238,7 +276,6 @@ export default function InvoicePreview({
   const handleResendApproval = async () => {
     if (!existingInvoice) return;
     
-    // Fetch the existing approval token
     const { data: approval } = await supabase
       .from("invoice_approvals")
       .select("token")
@@ -249,7 +286,6 @@ export default function InvoicePreview({
       .maybeSingle();
 
     if (!approval) {
-      // Create new approval
       await handleSubmitForApproval();
       return;
     }
@@ -286,6 +322,19 @@ export default function InvoicePreview({
       return;
     }
 
+    // Hard block: must have stored PDF and valid total
+    const storedPdf = (existingInvoice as any).pdf_base64;
+    const invoiceTotal = existingInvoice.total ? Number(existingInvoice.total) : 0;
+
+    if (!storedPdf || invoiceTotal <= 0) {
+      toast({ 
+        title: "Cannot send: invoice PDF or total is missing", 
+        description: "Please regenerate the invoice by clicking 'Update Draft' first.",
+        variant: "destructive" 
+      });
+      return;
+    }
+
     if (!client.billing_email) {
       toast({ title: "Client has no billing email", description: "Please add a billing email to the client record.", variant: "destructive" });
       return;
@@ -294,13 +343,24 @@ export default function InvoicePreview({
     setShowSendModal(true);
   };
 
+  /** Send invoice using STORED PDF and STORED total — never regenerate */
   const handleSendInvoice = async (emailNote: string) => {
     if (!existingInvoice) return;
 
+    const storedPdf = (existingInvoice as any).pdf_base64 as string | null;
+    const invoiceTotal = existingInvoice.total ? Number(existingInvoice.total) : 0;
+
+    if (!storedPdf || invoiceTotal <= 0) {
+      toast({ 
+        title: "Cannot send: invoice PDF or total is missing", 
+        description: "Please regenerate the invoice by clicking 'Update Draft' first.",
+        variant: "destructive" 
+      });
+      return;
+    }
+
     setIsSending(true);
     try {
-      const pdfBase64 = await getInvoicePdfBase64(pdfData);
-      
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) {
         throw new Error("Not authenticated");
@@ -314,8 +374,8 @@ export default function InvoicePreview({
           billingEmail: client.billing_email,
           month,
           year,
-          total,
-          pdfBase64,
+          total: invoiceTotal, // USE STORED TOTAL
+          pdfBase64: storedPdf, // USE STORED PDF
           emailNote: emailNote || null,
         },
       });
@@ -333,6 +393,7 @@ export default function InvoicePreview({
           <div className="mt-1 space-y-1 text-sm">
             <p><span className="text-muted-foreground">To:</span> {client.billing_email}</p>
             <p><span className="text-muted-foreground">Invoice:</span> {existingInvoice.invoice_number}</p>
+            <p><span className="text-muted-foreground">Amount:</span> {formatCurrency(invoiceTotal)}</p>
             <p><span className="text-muted-foreground">Sent:</span> {sentTime}</p>
           </div>
         ),
@@ -375,6 +436,10 @@ No Limits Academy`,
     toast({ title: "Email draft copied to clipboard" });
     setTimeout(() => setCopied(false), 2000);
   };
+
+  // Check if stored PDF exists
+  const hasPdf = !!(existingInvoice as any)?.pdf_base64;
+  const pdfGeneratedAt = (existingInvoice as any)?.pdf_generated_at;
 
   return (
     <>
@@ -475,7 +540,6 @@ No Limits Academy`,
         <div className="bg-muted/50 rounded-lg p-4 space-y-2">
           <h3 className="font-semibold mb-3">Invoice Summary</h3>
           {hasMultipleServices ? (
-            // Show breakdown by service type
             serviceGroups.map((group) => (
               <div key={group.serviceName} className="flex justify-between text-sm">
                 <span>{group.serviceName}:</span>
@@ -501,9 +565,26 @@ No Limits Academy`,
           <Separator className="my-2" />
           <div className="flex justify-between font-semibold text-lg">
             <span>Total Due:</span>
-            <span className="text-primary">{formatCurrency(summary.invoiceTotal)}</span>
+            <span className="text-primary">{formatCurrency(total)}</span>
           </div>
         </div>
+
+        {/* PDF Status Indicator */}
+        {existingInvoice && (
+          <div className={`flex items-center gap-2 text-xs ${hasPdf ? 'text-green-600' : 'text-amber-600'}`}>
+            {hasPdf ? (
+              <>
+                <Check className="w-3 h-3" />
+                <span>PDF locked{pdfGeneratedAt ? ` on ${format(new Date(pdfGeneratedAt), "MMM d, yyyy 'at' h:mm a")}` : ''}</span>
+              </>
+            ) : (
+              <>
+                <AlertTriangle className="w-3 h-3" />
+                <span>PDF not yet generated — save/update draft to lock the PDF</span>
+              </>
+            )}
+          </div>
+        )}
 
         {/* Line Items Table */}
         <div className="border rounded-lg overflow-hidden">
@@ -523,7 +604,9 @@ No Limits Academy`,
               {lineItems.length === 0 ? (
                 <tr>
                   <td colSpan={hasMultipleServices ? 5 : 4} className="px-4 py-8 text-center text-muted-foreground">
-                    No service days logged yet. Add days to generate an invoice.
+                    {storedTotal > 0 
+                      ? `Service days cleared. Stored total: ${formatCurrency(storedTotal)}`
+                      : "No service days logged yet. Add days to generate an invoice."}
                   </td>
                 </tr>
               ) : (
@@ -613,14 +696,14 @@ No Limits Academy`,
           {/* Right side: Status actions */}
           <div className="flex flex-wrap gap-3">
             {!existingInvoice && (
-              <Button onClick={() => onSaveDraft(subtotal, total)} disabled={isLoading}>
-                {isLoading ? "Saving..." : "Save as Draft"}
+              <Button onClick={handleSaveDraftWithPdf} disabled={isLoading || isSavingDraft}>
+                {isSavingDraft ? "Generating PDF..." : "Save as Draft"}
               </Button>
             )}
             {existingInvoice && existingInvoice.status === "draft" && (
               <>
-                <Button variant="outline" onClick={() => onSaveDraft(subtotal, total)} disabled={isLoading}>
-                  Update Draft
+                <Button variant="outline" onClick={handleSaveDraftWithPdf} disabled={isLoading || isSavingDraft}>
+                  {isSavingDraft ? "Generating PDF..." : "Update Draft"}
                 </Button>
                 {approvalStatus === "draft" && (
                   <Button 
