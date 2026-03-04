@@ -43,6 +43,7 @@ import AdminBulkOutreach from "./pages/admin/AdminBulkOutreach";
 import AdminSignals from "./pages/admin/AdminSignals";
 import AdminSignalsArchive from "./pages/admin/AdminSignalsArchive";
 import AdminSignalsTrash from "./pages/admin/AdminSignalsTrash";
+import InvoiceApproval from "./pages/InvoiceApproval";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -66,8 +67,9 @@ const App = () => (
             <Route path="/vision" element={<Vision />} />
             <Route path="/rookie-orientation" element={<RookieOrientation />} />
             <Route path="/house-rules-test" element={<HouseRulesTest />} />
-             <Route path="/register" element={<Register />} />
+            <Route path="/register" element={<Register />} />
             <Route path="/supporters" element={<Supporters />} />
+            <Route path="/approvals/invoice/:token" element={<InvoiceApproval />} />
             
             {/* Admin Routes */}
             <Route path="/admin" element={<AdminIndex />} />

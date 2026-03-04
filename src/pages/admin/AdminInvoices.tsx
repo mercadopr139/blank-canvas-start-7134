@@ -67,6 +67,18 @@ const statusColors: Record<string, string> = {
   sent: "bg-blue-500/10 text-blue-600",
   paid: "bg-green-500/10 text-green-600"
 };
+const approvalColors: Record<string, string> = {
+  draft: "bg-muted text-muted-foreground",
+  pending_approval: "bg-amber-500/10 text-amber-600",
+  approved: "bg-green-500/10 text-green-600",
+  rejected: "bg-red-500/10 text-red-600",
+};
+const approvalLabels: Record<string, string> = {
+  draft: "Not Submitted",
+  pending_approval: "Pending Approval",
+  approved: "Approved",
+  rejected: "Rejected",
+};
 export default function AdminInvoices() {
   const [searchParams, setSearchParams] = useSearchParams();
   const [clients, setClients] = useState<Client[]>([]);
@@ -123,10 +135,52 @@ export default function AdminInvoices() {
     }
   };
 
-  // Fetch clients on mount
+  // Fetch clients on mount + subscribe to realtime invoice changes
   useEffect(() => {
     fetchClients();
     fetchInvoices();
+    
+    // Poll for approval status changes every 30 seconds
+    const pollInterval = setInterval(() => {
+      fetchInvoices();
+    }, 30000);
+
+    // Realtime listener for invoice approval changes
+    const channel = supabase
+      .channel('invoice-approvals')
+      .on(
+        'postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'invoices' },
+        (payload) => {
+          const newRecord = payload.new as any;
+          const oldRecord = payload.old as any;
+          
+          if (oldRecord.approval_status !== newRecord.approval_status) {
+            fetchInvoices();
+            
+            if (newRecord.approval_status === 'approved') {
+              toast({
+                title: "✓ Invoice Approved!",
+                description: `Invoice ${newRecord.invoice_number} has been approved by Chrissy. Ready to send to vendor.`,
+                duration: 10000,
+              });
+            } else if (newRecord.approval_status === 'rejected') {
+              toast({
+                title: "Invoice Rejected",
+                description: `Invoice ${newRecord.invoice_number} was rejected. ${newRecord.approval_notes ? `Notes: ${newRecord.approval_notes}` : 'Review and re-submit.'}`,
+                variant: "destructive",
+                duration: 10000,
+              });
+            }
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      clearInterval(pollInterval);
+      supabase.removeChannel(channel);
+    };
   }, []);
   const fetchInvoices = async () => {
     const {
@@ -587,6 +641,7 @@ export default function AdminInvoices() {
                       <TableHead className="text-white/70">Client</TableHead>
                       <TableHead className="text-white/70">Period</TableHead>
                       <TableHead className="text-white/70">Status</TableHead>
+                      <TableHead className="text-white/70">Approval</TableHead>
                       <TableHead className="text-right text-white/70">Total</TableHead>
                       <TableHead className="text-white/70">Created</TableHead>
                       <TableHead className="text-right text-white/70">Actions</TableHead>
@@ -604,6 +659,16 @@ export default function AdminInvoices() {
                           <Badge className={statusColors[invoice.status]}>
                             {invoice.status.charAt(0).toUpperCase() + invoice.status.slice(1)}
                           </Badge>
+                        </TableCell>
+                        <TableCell>
+                          {(() => {
+                            const as = (invoice as any).approval_status || "draft";
+                            return (
+                              <Badge className={approvalColors[as] || approvalColors.draft}>
+                                {approvalLabels[as] || "—"}
+                              </Badge>
+                            );
+                          })()}
                         </TableCell>
                         <TableCell className="text-right text-white">{formatCurrency(invoice.total)}</TableCell>
                         <TableCell className="text-white/70">{format(new Date(invoice.created_at), "MMM d, yyyy")}</TableCell>

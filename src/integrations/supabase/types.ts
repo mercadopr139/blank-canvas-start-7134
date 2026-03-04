@@ -336,8 +336,57 @@ export type Database = {
           },
         ]
       }
+      invoice_approvals: {
+        Row: {
+          approver_email: string
+          created_at: string
+          id: string
+          invoice_id: string
+          notes: string | null
+          requested_by_user_id: string | null
+          responded_at: string | null
+          status: string
+          token: string
+        }
+        Insert: {
+          approver_email?: string
+          created_at?: string
+          id?: string
+          invoice_id: string
+          notes?: string | null
+          requested_by_user_id?: string | null
+          responded_at?: string | null
+          status?: string
+          token?: string
+        }
+        Update: {
+          approver_email?: string
+          created_at?: string
+          id?: string
+          invoice_id?: string
+          notes?: string | null
+          requested_by_user_id?: string | null
+          responded_at?: string | null
+          status?: string
+          token?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "invoice_approvals_invoice_id_fkey"
+            columns: ["invoice_id"]
+            isOneToOne: false
+            referencedRelation: "invoices"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       invoices: {
         Row: {
+          approval_notes: string | null
+          approval_request_sent_at: string | null
+          approval_status: string
+          approved_at: string | null
+          approved_by: string | null
           client_id: string
           created_at: string
           due_date: string | null
@@ -356,6 +405,11 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          approval_notes?: string | null
+          approval_request_sent_at?: string | null
+          approval_status?: string
+          approved_at?: string | null
+          approved_by?: string | null
           client_id: string
           created_at?: string
           due_date?: string | null
@@ -374,6 +428,11 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          approval_notes?: string | null
+          approval_request_sent_at?: string | null
+          approval_status?: string
+          approved_at?: string | null
+          approved_by?: string | null
           client_id?: string
           created_at?: string
           due_date?: string | null
