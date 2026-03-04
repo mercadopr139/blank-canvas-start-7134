@@ -13,6 +13,7 @@ interface LineItem {
   hours: number | null;
   flatAmount: number | null;
   lineTotal: number;
+  serviceType: string;
 }
 
 interface InvoiceSummary {
@@ -37,10 +38,11 @@ function calculateLineItems(serviceLogs: ServiceLog[]): LineItem[] {
 
   return sortedLogs.map((log) => ({
     date: log.service_date,
-    billingMethod: ((log as any).billing_method || "hourly") as "hourly" | "flat_rate",
+    billingMethod: ((log as any).billing_method || "hourly") as "hourly" | "flat_rate" | "per_day",
     hours: (log as any).hours || null,
     flatAmount: (log as any).flat_amount || null,
     lineTotal: (log as any).line_total || 0,
+    serviceType: log.service_type || "Service",
   }));
 }
 
@@ -49,20 +51,12 @@ function calculateSummary(lineItems: LineItem[], hourlyRate: number): InvoiceSum
   const flatItems = lineItems.filter(item => item.billingMethod === "flat_rate" || item.billingMethod === "per_day");
 
   const totalHours = hourlyItems.reduce((sum, item) => sum + (item.hours || 0), 0);
-  // Sum actual line totals instead of recalculating from hourly rate
   const hourlyTotal = hourlyItems.reduce((sum, item) => sum + (item.lineTotal || 0), 0);
-  // Derive effective hourly rate for display (use passed rate as fallback)
   const effectiveHourlyRate = totalHours > 0 ? hourlyTotal / totalHours : hourlyRate;
   const flatTotal = flatItems.reduce((sum, item) => sum + (item.lineTotal || item.flatAmount || 0), 0);
   const invoiceTotal = hourlyTotal + flatTotal;
 
-  return {
-    totalHours,
-    hourlyRate: effectiveHourlyRate,
-    hourlyTotal,
-    flatTotal,
-    invoiceTotal,
-  };
+  return { totalHours, hourlyRate: effectiveHourlyRate, hourlyTotal, flatTotal, invoiceTotal };
 }
 
 export interface InvoicePdfData {
@@ -76,6 +70,14 @@ export interface InvoicePdfData {
   overrideTotal?: number;
 }
 
+// ─── Colors ───
+const BRAND_DARK = [17, 24, 39] as const;    // #111827
+const BRAND_GRAY = [107, 114, 128] as const; // #6b7280
+const LIGHT_BG = [249, 250, 251] as const;   // #f9fafb
+const ACCENT = [59, 130, 246] as const;      // #3b82f6
+const TABLE_HEAD = [31, 41, 55] as const;    // #1f2937
+const BORDER = [229, 231, 235] as const;     // #e5e7eb
+
 export function generateInvoicePdf(data: InvoicePdfData): jsPDF {
   const { client, serviceLogs, invoiceNumber, issueDate, month, year, logoBase64, overrideTotal } = data;
   const hourlyRate = (client as any).hourly_rate || 0;
@@ -85,199 +87,338 @@ export function generateInvoicePdf(data: InvoicePdfData): jsPDF {
 
   const lineItems = calculateLineItems(serviceLogs);
   let summary = calculateSummary(lineItems, hourlyRate);
-  
-  // Use override total when service logs are empty but we have a stored total
+
   if (overrideTotal && overrideTotal > 0 && summary.invoiceTotal === 0) {
     summary = { ...summary, invoiceTotal: overrideTotal, hourlyTotal: overrideTotal };
   }
 
   const monthName = new Date(year, month - 1).toLocaleString("default", { month: "long" });
-  
-  // Check if this is a Per Day client
-  const isPerDayClient = lineItems.some(item => item.billingMethod === "per_day") || 
-                          (client as any).rate_type === "per_day";
-  
-  // Build formatted dates list for Per Day invoices
+
+  const isPerDayClient = lineItems.some(item => item.billingMethod === "per_day") ||
+    (client as any).rate_type === "per_day";
+
   const formattedDatesList = isPerDayClient && serviceLogs.length > 0
     ? [...serviceLogs]
-        .sort((a, b) => new Date(a.service_date).getTime() - new Date(b.service_date).getTime())
-        .map(log => {
-          const date = new Date(log.service_date);
-          return format(date, "MMM. d");
-        })
-        .join(", ")
+      .sort((a, b) => new Date(a.service_date).getTime() - new Date(b.service_date).getTime())
+      .map(log => format(new Date(log.service_date), "MMM. d"))
+      .join(", ")
     : "";
 
-  const doc = new jsPDF();
-  const pageWidth = doc.internal.pageSize.getWidth();
-  
-  // Add logo if available
-  let headerTextStartX = 20;
+  const hasMultipleServices = new Set(lineItems.map(i => i.serviceType)).size > 1;
+
+  const doc = new jsPDF({ unit: "mm", format: "a4" });
+  const pageWidth = doc.internal.pageSize.getWidth();   // 210
+  const pageHeight = doc.internal.pageSize.getHeight();  // 297
+  const marginL = 18;
+  const marginR = 18;
+  const contentW = pageWidth - marginL - marginR;
+
+  // ─── Helper: draw horizontal rule ───
+  const drawHR = (y: number) => {
+    doc.setDrawColor(...BORDER);
+    doc.setLineWidth(0.3);
+    doc.line(marginL, y, pageWidth - marginR, y);
+  };
+
+  // ─── HEADER BAND ───
+  // Light background band
+  doc.setFillColor(...LIGHT_BG);
+  doc.rect(0, 0, pageWidth, 52, "F");
+
+  // Logo
+  let logoRightEdge = marginL;
   if (logoBase64) {
     try {
-      doc.addImage(logoBase64, "PNG", 20, 12, 30, 30);
-      headerTextStartX = 55;
+      doc.addImage(logoBase64, "PNG", marginL, 8, 28, 28);
+      logoRightEdge = marginL + 32;
     } catch (e) {
       console.error("Failed to add logo to PDF:", e);
     }
   }
-  
-  // Header
-  doc.setFontSize(24);
+
+  // Title
+  doc.setTextColor(...BRAND_DARK);
+  doc.setFontSize(22);
   doc.setFont("helvetica", "bold");
-  doc.text("INVOICE", headerTextStartX, 30);
-  
-  doc.setFontSize(12);
-  doc.setFont("helvetica", "normal");
-  doc.text("No Limits Academy", headerTextStartX, 40);
-  
-  // Invoice details (right side)
+  doc.text("INVOICE", logoRightEdge, 22);
+
   doc.setFontSize(10);
-  doc.text(`Invoice #: ${invoiceNumber}`, pageWidth - 70, 30);
-  doc.text(`Issue Date: ${format(issueDate, "MMM d, yyyy")}`, pageWidth - 70, 37);
-  doc.text(`Period: ${monthName} ${year}`, pageWidth - 70, 44);
-  
-  // Bill To section
+  doc.setFont("helvetica", "normal");
+  doc.setTextColor(...BRAND_GRAY);
+  doc.text("No Limits Academy", logoRightEdge, 29);
+
+  // Right-aligned meta
+  const metaX = pageWidth - marginR;
+  doc.setFontSize(9);
+  doc.setTextColor(...BRAND_GRAY);
+  doc.text("Invoice #", metaX - 40, 14);
+  doc.text("Issue Date", metaX - 40, 21);
+  doc.text("Period", metaX - 40, 28);
+
+  doc.setTextColor(...BRAND_DARK);
+  doc.setFont("helvetica", "bold");
+  doc.text(invoiceNumber, metaX, 14, { align: "right" });
+  doc.setFont("helvetica", "normal");
+  doc.text(format(issueDate, "MMM d, yyyy"), metaX, 21, { align: "right" });
+  doc.text(`${monthName} ${year}`, metaX, 28, { align: "right" });
+
+  // Accent stripe under header
+  doc.setFillColor(...ACCENT);
+  doc.rect(0, 52, pageWidth, 1.2, "F");
+
+  // ─── BILL TO + RATE ───
+  let y = 62;
+  doc.setFontSize(8);
+  doc.setFont("helvetica", "bold");
+  doc.setTextColor(...BRAND_GRAY);
+  doc.text("BILL TO", marginL, y);
+
+  y += 5;
   doc.setFontSize(11);
   doc.setFont("helvetica", "bold");
-  doc.text("Bill To:", 20, 60);
-  
+  doc.setTextColor(...BRAND_DARK);
+  doc.text(client.client_name, marginL, y);
+  y += 5;
+
+  doc.setFontSize(9);
   doc.setFont("helvetica", "normal");
-  doc.setFontSize(10);
-  let yPos = 67;
-  doc.text(client.client_name, 20, yPos);
-  yPos += 6;
-  
-  if (client.contact_name) {
-    doc.text(client.contact_name, 20, yPos);
-    yPos += 6;
-  }
-  if (client.billing_email) {
-    doc.text(client.billing_email, 20, yPos);
-    yPos += 6;
-  }
+  doc.setTextColor(...BRAND_GRAY);
+
+  if (client.contact_name) { doc.text(client.contact_name, marginL, y); y += 4.5; }
+  if (client.billing_email) { doc.text(client.billing_email, marginL, y); y += 4.5; }
   if (client.billing_address) {
-    const addressLines = client.billing_address.split("\n");
-    addressLines.forEach((line) => {
-      doc.text(line, 20, yPos);
-      yPos += 5;
+    client.billing_address.split("\n").forEach((line) => {
+      doc.text(line, marginL, y); y += 4.5;
     });
   }
 
-  // Rate info
+  // Rate info on right
   if (hourlyRate > 0) {
-    doc.setFontSize(10);
-    doc.text(`Hourly Rate: ${formatCurrency(hourlyRate)} / hour`, pageWidth - 70, 60);
-  }
-
-  // Service description
-  if (client.service_description_default) {
-    yPos += 5;
+    doc.setFontSize(9);
+    doc.setTextColor(...BRAND_GRAY);
+    doc.text("Hourly Rate", metaX - 40, 62);
+    doc.setTextColor(...BRAND_DARK);
     doc.setFont("helvetica", "bold");
-    doc.text("Service Description:", 20, yPos);
-    yPos += 6;
+    doc.text(`${formatCurrency(hourlyRate)} / hr`, metaX, 62, { align: "right" });
     doc.setFont("helvetica", "normal");
-    doc.text(client.service_description_default, 20, yPos);
-    yPos += 10;
-  } else {
-    yPos += 10;
   }
 
-  // Per Day schedule info (Time, Days, Dates)
-  if (isPerDayClient) {
+  // ─── SERVICE DESCRIPTION ───
+  if (client.service_description_default) {
+    y += 3;
+    drawHR(y);
+    y += 6;
+    doc.setFontSize(8);
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(...BRAND_GRAY);
+    doc.text("SERVICE DESCRIPTION", marginL, y);
+    y += 5;
+    doc.setFontSize(9);
+    doc.setFont("helvetica", "normal");
+    doc.setTextColor(...BRAND_DARK);
+    const descLines = doc.splitTextToSize(client.service_description_default, contentW);
+    doc.text(descLines, marginL, y);
+    y += descLines.length * 4.5;
+  }
+
+  // ─── PER DAY SCHEDULE ───
+  if (isPerDayClient && (serviceTime || serviceDays || formattedDatesList)) {
+    y += 3;
+    drawHR(y);
+    y += 6;
+    doc.setFontSize(8);
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(...BRAND_GRAY);
+    doc.text("SCHEDULE", marginL, y);
+    y += 5;
+    doc.setFontSize(9);
+    doc.setTextColor(...BRAND_DARK);
+
     if (serviceTime) {
       doc.setFont("helvetica", "bold");
-      doc.text("Time:", 20, yPos);
+      doc.text("Time:", marginL, y);
       doc.setFont("helvetica", "normal");
-      doc.text(serviceTime, 45, yPos);
-      yPos += 6;
+      doc.text(serviceTime, marginL + 18, y);
+      y += 4.5;
     }
     if (serviceDays) {
       doc.setFont("helvetica", "bold");
-      doc.text("Day(s):", 20, yPos);
+      doc.text("Day(s):", marginL, y);
       doc.setFont("helvetica", "normal");
-      doc.text(serviceDays, 45, yPos);
-      yPos += 6;
+      doc.text(serviceDays, marginL + 18, y);
+      y += 4.5;
     }
     if (formattedDatesList) {
       doc.setFont("helvetica", "bold");
-      doc.text("Date(s):", 20, yPos);
+      doc.text("Date(s):", marginL, y);
       doc.setFont("helvetica", "normal");
-      // Handle long date lists by wrapping
-      const maxWidth = pageWidth - 65;
-      const splitDates = doc.splitTextToSize(formattedDatesList, maxWidth);
-      doc.text(splitDates, 45, yPos);
-      yPos += 6 * splitDates.length;
+      const splitDates = doc.splitTextToSize(formattedDatesList, contentW - 20);
+      doc.text(splitDates, marginL + 18, y);
+      y += 4.5 * splitDates.length;
     }
-    yPos += 4;
   }
 
-  // Summary section
-  const summaryStartY = Math.max(yPos, 95);
-  doc.setFillColor(245, 245, 245);
-  doc.rect(20, summaryStartY, pageWidth - 40, 30, "F");
-  
-  doc.setFontSize(11);
-  doc.setFont("helvetica", "bold");
-  doc.text("Invoice Summary", 25, summaryStartY + 8);
-  
-  doc.setFontSize(9);
-  doc.setFont("helvetica", "normal");
-  let summaryY = summaryStartY + 16;
-  
-  if (summary.totalHours > 0) {
-    doc.text(`Hourly Services: ${summary.totalHours} hrs × ${formatCurrency(summary.hourlyRate)}/hr = ${formatCurrency(summary.hourlyTotal)}`, 25, summaryY);
-    summaryY += 6;
-  }
-  if (summary.flatTotal > 0) {
-    doc.text(`${programTitle}: ${formatCurrency(summary.flatTotal)}`, 25, summaryY);
-    summaryY += 6;
-  }
-  
-  doc.setFont("helvetica", "bold");
-  doc.text(`Total Due: ${formatCurrency(summary.invoiceTotal)}`, pageWidth - 25, summaryStartY + 20, { align: "right" });
+  // ─── LINE ITEMS TABLE ───
+  y += 4;
+  drawHR(y);
+  y += 2;
 
-  // Line items table
-  const tableStartY = summaryStartY + 40;
-  
-  const tableData = lineItems.map((item) => [
-    format(new Date(item.date), "MMM d, yyyy"),
-    item.billingMethod === "hourly" ? "Hourly" : "Flat Rate",
-    item.billingMethod === "hourly" ? `${item.hours || 0} hrs` : "—",
-    formatCurrency(item.lineTotal),
-  ]);
+  const tableHead = hasMultipleServices
+    ? [["Date", "Service", "Type", "Hours", "Amount"]]
+    : [["Date", "Type", "Hours", "Amount"]];
 
-  if (tableData.length === 0) {
-    tableData.push(["", "No service logs for this period", "", ""]);
-  }
-
-  autoTable(doc, {
-    startY: tableStartY,
-    head: [["Date", "Type", "Hours", "Amount"]],
-    body: tableData,
-    theme: "grid",
-    headStyles: {
-      fillColor: [51, 51, 51],
-      textColor: [255, 255, 255],
-      fontStyle: "bold",
-    },
-    styles: {
-      fontSize: 9,
-      cellPadding: 4,
-    },
-    columnStyles: {
-      0: { cellWidth: 40 },
-      1: { cellWidth: 40 },
-      2: { cellWidth: 30, halign: "center" },
-      3: { cellWidth: 40, halign: "right" },
-    },
+  const tableData = lineItems.map((item) => {
+    const row = [
+      format(new Date(item.date), "MMM d, yyyy"),
+      ...(hasMultipleServices ? [item.serviceType] : []),
+      item.billingMethod === "hourly" ? "Hourly" : item.billingMethod === "per_day" ? "Per Day" : "Flat Rate",
+      item.billingMethod === "hourly" ? `${item.hours || 0} hrs` : "—",
+      formatCurrency(item.lineTotal),
+    ];
+    return row;
   });
 
-  // Footer
+  if (tableData.length === 0) {
+    const cols = hasMultipleServices ? 5 : 4;
+    const emptyRow = Array(cols).fill("");
+    emptyRow[1] = "No service logs for this period";
+    tableData.push(emptyRow);
+  }
+
+  const colStyles: Record<number, any> = hasMultipleServices
+    ? {
+      0: { cellWidth: 30 },
+      1: { cellWidth: 38 },
+      2: { cellWidth: 28 },
+      3: { cellWidth: 24, halign: "center" as const },
+      4: { cellWidth: 30, halign: "right" as const },
+    }
+    : {
+      0: { cellWidth: 38 },
+      1: { cellWidth: 35 },
+      2: { cellWidth: 30, halign: "center" as const },
+      3: { cellWidth: 35, halign: "right" as const },
+    };
+
+  autoTable(doc, {
+    startY: y,
+    head: tableHead,
+    body: tableData,
+    theme: "striped",
+    headStyles: {
+      fillColor: [...TABLE_HEAD],
+      textColor: [255, 255, 255],
+      fontStyle: "bold",
+      fontSize: 8.5,
+      cellPadding: 3.5,
+    },
+    bodyStyles: {
+      fontSize: 8.5,
+      cellPadding: 3,
+      textColor: [...BRAND_DARK],
+    },
+    alternateRowStyles: {
+      fillColor: [248, 249, 250],
+    },
+    styles: {
+      lineColor: [...BORDER],
+      lineWidth: 0.2,
+    },
+    columnStyles: colStyles,
+    margin: { left: marginL, right: marginR },
+  });
+
+  // Get Y after table
+  y = (doc as any).lastAutoTable.finalY + 6;
+
+  // ─── SUMMARY BOX ───
+  // Ensure enough space for summary + signature (about 65mm)
+  if (y + 65 > pageHeight - 20) {
+    doc.addPage();
+    y = 20;
+  }
+
+  const boxH = summary.totalHours > 0 && summary.flatTotal > 0 ? 42 : 34;
+  doc.setFillColor(...LIGHT_BG);
+  doc.setDrawColor(...BORDER);
+  doc.roundedRect(marginL, y, contentW, boxH, 3, 3, "FD");
+
+  doc.setFontSize(8);
+  doc.setFont("helvetica", "bold");
+  doc.setTextColor(...BRAND_GRAY);
+  doc.text("INVOICE SUMMARY", marginL + 6, y + 7);
+
+  let sY = y + 14;
+  doc.setFontSize(9);
+  doc.setTextColor(...BRAND_DARK);
+
+  if (summary.totalHours > 0) {
+    doc.setFont("helvetica", "normal");
+    doc.text(`Hourly Services: ${summary.totalHours} hrs × ${formatCurrency(summary.hourlyRate)}/hr`, marginL + 6, sY);
+    doc.text(formatCurrency(summary.hourlyTotal), pageWidth - marginR - 6, sY, { align: "right" });
+    sY += 6;
+  }
+  if (summary.flatTotal > 0) {
+    doc.setFont("helvetica", "normal");
+    doc.text(`${programTitle}:`, marginL + 6, sY);
+    doc.text(formatCurrency(summary.flatTotal), pageWidth - marginR - 6, sY, { align: "right" });
+    sY += 6;
+  }
+
+  // Total line
+  drawHR(sY - 1);
+  sY += 3;
+  doc.setFontSize(13);
+  doc.setFont("helvetica", "bold");
+  doc.text("Total Due:", marginL + 6, sY + 1);
+  doc.setTextColor(...ACCENT);
+  doc.text(formatCurrency(summary.invoiceTotal), pageWidth - marginR - 6, sY + 1, { align: "right" });
+
+  y = y + boxH + 6;
+
+  // ─── PAYMENT TERMS ───
+  doc.setFontSize(8.5);
+  doc.setFont("helvetica", "normal");
+  doc.setTextColor(...BRAND_GRAY);
+  doc.text("Payment Terms: Due within 30 days of invoice date.", marginL, y);
+  y += 10;
+
+  // ─── THANK YOU SIGNATURE ───
+  if (y + 40 > pageHeight - 15) {
+    doc.addPage();
+    y = 20;
+  }
+
+  drawHR(y);
+  y += 8;
+
+  doc.setFontSize(11);
+  doc.setFont("helvetica", "bold");
+  doc.setTextColor(...BRAND_DARK);
+  doc.text("Thank you for your partnership!", marginL, y);
+  y += 6;
+
   doc.setFontSize(9);
   doc.setFont("helvetica", "normal");
-  doc.setTextColor(128, 128, 128);
-  doc.text("Thank you for your business!", 20, doc.internal.pageSize.getHeight() - 20);
+  doc.setTextColor(...BRAND_GRAY);
+  doc.text("We truly appreciate your support and look forward to continuing our work together.", marginL, y);
+  y += 8;
+
+  doc.setFont("helvetica", "bold");
+  doc.setTextColor(...BRAND_DARK);
+  doc.text("Josh Mercado", marginL, y);
+  y += 4.5;
+  doc.setFont("helvetica", "normal");
+  doc.setTextColor(...BRAND_GRAY);
+  doc.text("Executive Director, No Limits Academy", marginL, y);
+  y += 4;
+  doc.text("joshmercado@nolimitsboxingacademy.org", marginL, y);
+
+  // ─── FOOTER ───
+  const footerY = pageHeight - 10;
+  doc.setFontSize(7);
+  doc.setTextColor(180, 180, 180);
+  doc.text("No Limits Academy  •  If you have questions, reply to joshmercado@nolimitsboxingacademy.org", pageWidth / 2, footerY, { align: "center" });
 
   return doc;
 }
