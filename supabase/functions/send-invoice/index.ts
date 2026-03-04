@@ -19,42 +19,40 @@ interface SendInvoiceRequest {
   total: number;
   pdfBase64: string;
   emailNote?: string | null;
+  // Resend fields
+  isResend?: boolean;
+  resendSubject?: string;
+  resendMessage?: string;
+  resendTo?: string;
 }
 
 const handler = async (req: Request): Promise<Response> => {
-  // Handle CORS preflight requests
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
   }
 
   try {
-    // Verify authentication
     const authHeader = req.headers.get("Authorization");
     if (!authHeader) {
-      console.error("No authorization header");
-      return new Response(
-        JSON.stringify({ error: "Unauthorized" }),
-        { status: 401, headers: { "Content-Type": "application/json", ...corsHeaders } }
-      );
+      return new Response(JSON.stringify({ error: "Unauthorized" }), {
+        status: 401,
+        headers: { "Content-Type": "application/json", ...corsHeaders },
+      });
     }
 
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    // Verify the JWT token and check admin role
     const token = authHeader.replace("Bearer ", "");
     const { data: { user }, error: authError } = await supabase.auth.getUser(token);
-    
     if (authError || !user) {
-      console.error("Auth error:", authError);
-      return new Response(
-        JSON.stringify({ error: "Unauthorized" }),
-        { status: 401, headers: { "Content-Type": "application/json", ...corsHeaders } }
-      );
+      return new Response(JSON.stringify({ error: "Unauthorized" }), {
+        status: 401,
+        headers: { "Content-Type": "application/json", ...corsHeaders },
+      });
     }
 
-    // Check admin role
     const { data: roleData, error: roleError } = await supabase
       .from("user_roles")
       .select("role")
@@ -63,22 +61,28 @@ const handler = async (req: Request): Promise<Response> => {
       .maybeSingle();
 
     if (roleError || !roleData) {
-      console.error("Role check failed:", roleError);
-      return new Response(
-        JSON.stringify({ error: "Admin access required" }),
-        { status: 403, headers: { "Content-Type": "application/json", ...corsHeaders } }
-      );
+      return new Response(JSON.stringify({ error: "Admin access required" }), {
+        status: 403,
+        headers: { "Content-Type": "application/json", ...corsHeaders },
+      });
     }
 
     const body: SendInvoiceRequest = await req.json();
-    const { invoiceId, invoiceNumber, clientName, billingEmail, month, year, total, pdfBase64, emailNote } = body;
+    const {
+      invoiceId, invoiceNumber, clientName, billingEmail,
+      month, year, total, pdfBase64, emailNote,
+      isResend, resendSubject, resendMessage, resendTo,
+    } = body;
 
-    console.log(`Sending invoice ${invoiceNumber} to ${billingEmail}`, emailNote ? "(with note)" : "");
-
-    // Validate required fields
-    if (!invoiceId || !invoiceNumber || !billingEmail || !pdfBase64) {
+    if (!invoiceId || !invoiceNumber || !pdfBase64) {
       throw new Error("Missing required fields");
     }
+
+    const recipientEmail = isResend && resendTo ? resendTo : billingEmail;
+    if (!recipientEmail) throw new Error("No recipient email");
+
+    const sendType = isResend ? "resend" : "initial";
+    console.log(`Sending invoice ${invoiceNumber} (${sendType}) to ${recipientEmail}`);
 
     const monthName = new Date(year, month - 1).toLocaleString("default", { month: "long" });
     const formattedTotal = new Intl.NumberFormat("en-US", {
@@ -86,54 +90,44 @@ const handler = async (req: Request): Promise<Response> => {
       currency: "USD",
     }).format(total);
 
-    // Format the optional note with line breaks preserved
-    const noteHtml = emailNote 
-      ? `
-        <table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin: 0 0 24px 0;">
+    // Build subject
+    const emailSubject = isResend && resendSubject
+      ? resendSubject
+      : `Invoice ${invoiceNumber} – No Limits Academy`;
+
+    // Build HTML body
+    const noteOrMessage = isResend && resendMessage ? resendMessage : emailNote;
+    const noteHtml = noteOrMessage
+      ? `<table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin: 0 0 24px 0;">
           <tr>
             <td style="background-color: #f0f7ff; border: 1px solid #d0e3f7; border-left: 4px solid #3b82f6; border-radius: 8px; padding: 16px;">
-              <p style="margin: 0; font-family: Arial, sans-serif; font-size: 14px; line-height: 1.6; color: #1e3a5f; white-space: pre-wrap;">${emailNote.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</p>
+              <p style="margin: 0; font-family: Arial, sans-serif; font-size: 14px; line-height: 1.6; color: #1e3a5f; white-space: pre-wrap;">${noteOrMessage.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</p>
             </td>
           </tr>
         </table>`
       : '';
 
-    // Send email with PDF attachment
     const emailResponse = await resend.emails.send({
       from: "No Limits Academy <joshmercado@nolimitsboxingacademy.org>",
-      to: [billingEmail],
-      subject: `Invoice ${invoiceNumber} – No Limits Academy`,
-      html: `
-<!DOCTYPE html>
+      to: [recipientEmail],
+      subject: emailSubject,
+      html: `<!DOCTYPE html>
 <html>
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-</head>
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>
 <body style="margin: 0; padding: 0; background-color: #f5f5f5; font-family: Arial, sans-serif;">
   <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color: #f5f5f5; padding: 32px 16px;">
     <tr>
       <td align="left">
         <table width="600" cellpadding="0" cellspacing="0" border="0" style="max-width: 600px; background-color: #ffffff; border: 1px solid #e5e5e5; border-radius: 8px;">
-          
-          <!-- Header -->
           <tr>
             <td style="padding: 32px 32px 24px 32px; border-bottom: 1px solid #e5e5e5;">
               <h1 style="margin: 0; font-family: Arial, sans-serif; font-size: 24px; font-weight: bold; color: #111827;">No Limits Academy</h1>
             </td>
           </tr>
-          
-          <!-- Content -->
           <tr>
             <td style="padding: 32px;">
-              
-              <!-- Invoice Title -->
-              <h2 style="margin: 0 0 24px 0; font-family: Arial, sans-serif; font-size: 20px; font-weight: 600; color: #374151;">Invoice ${invoiceNumber}</h2>
-              
-              <!-- Note Box (if exists) -->
+              <h2 style="margin: 0 0 24px 0; font-family: Arial, sans-serif; font-size: 20px; font-weight: 600; color: #374151;">${isResend ? 'Reminder: ' : ''}Invoice ${invoiceNumber}</h2>
               ${noteHtml}
-              
-              <!-- Amount Card -->
               <table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin: 0 0 24px 0;">
                 <tr>
                   <td style="background-color: #f9fafb; border: 1px solid #e5e5e5; border-radius: 8px; padding: 24px;">
@@ -143,27 +137,20 @@ const handler = async (req: Request): Promise<Response> => {
                   </td>
                 </tr>
               </table>
-              
-              <!-- Service Period -->
               <p style="margin: 0 0 24px 0; font-family: Arial, sans-serif; font-size: 15px; line-height: 1.6; color: #374151;">Please find attached your invoice for services rendered during <strong>${monthName} ${year}</strong>.</p>
-              
             </td>
           </tr>
-          
-          <!-- Footer -->
           <tr>
             <td style="padding: 24px 32px; border-top: 1px solid #e5e5e5; background-color: #fafafa;">
               <p style="margin: 0; font-family: Arial, sans-serif; font-size: 14px; color: #6b7280;">If you have questions, reply to this email.</p>
             </td>
           </tr>
-          
         </table>
       </td>
     </tr>
   </table>
 </body>
-</html>
-      `,
+</html>`,
       attachments: [
         {
           filename: `NLA_Invoice_${invoiceNumber}.pdf`,
@@ -172,30 +159,71 @@ const handler = async (req: Request): Promise<Response> => {
       ],
     });
 
-    console.log("Resend API response:", emailResponse);
-
-    // Check if there was an error from Resend
     if (emailResponse.error) {
       console.error("Resend API error:", emailResponse.error);
+
+      // Log failed send
+      await supabase.from("invoice_sends").insert({
+        invoice_id: invoiceId,
+        sent_to: recipientEmail,
+        subject: emailSubject,
+        message: noteOrMessage || null,
+        sent_by_user_id: user.id,
+        type: sendType,
+        status: "failed",
+        error: emailResponse.error.message,
+      });
+
       throw new Error(`Email sending failed: ${emailResponse.error.message}`);
     }
 
     console.log("Email sent successfully, ID:", emailResponse.data?.id);
 
-    // Update invoice with sent info and note
+    // Log successful send
+    await supabase.from("invoice_sends").insert({
+      invoice_id: invoiceId,
+      sent_to: recipientEmail,
+      subject: emailSubject,
+      message: noteOrMessage || null,
+      sent_by_user_id: user.id,
+      type: sendType,
+      status: "success",
+    });
+
+    // Update invoice tracking
+    const updateFields: Record<string, any> = {
+      last_sent_at: new Date().toISOString(),
+      vendor_email: recipientEmail,
+    };
+
+    if (!isResend) {
+      // Initial send
+      updateFields.status = "sent";
+      updateFields.sent_at = new Date().toISOString();
+      updateFields.sent_to = recipientEmail;
+      updateFields.email_note = emailNote || null;
+      updateFields.send_count = 1;
+    }
+
+    // For resend, increment send_count via raw update
+    if (isResend) {
+      // First get current count
+      const { data: currentInv } = await supabase
+        .from("invoices")
+        .select("send_count")
+        .eq("id", invoiceId)
+        .single();
+      
+      updateFields.send_count = ((currentInv as any)?.send_count || 0) + 1;
+    }
+
     const { error: updateError } = await supabase
       .from("invoices")
-      .update({
-        status: "sent",
-        sent_at: new Date().toISOString(),
-        sent_to: billingEmail,
-        email_note: emailNote || null,
-      })
+      .update(updateFields)
       .eq("id", invoiceId);
 
     if (updateError) {
       console.error("Error updating invoice:", updateError);
-      // Still return success since email was sent
     }
 
     return new Response(

@@ -380,6 +380,56 @@ export type Database = {
           },
         ]
       }
+      invoice_sends: {
+        Row: {
+          created_at: string
+          error: string | null
+          id: string
+          invoice_id: string
+          message: string | null
+          sent_at: string
+          sent_by_user_id: string | null
+          sent_to: string
+          status: string
+          subject: string
+          type: string
+        }
+        Insert: {
+          created_at?: string
+          error?: string | null
+          id?: string
+          invoice_id: string
+          message?: string | null
+          sent_at?: string
+          sent_by_user_id?: string | null
+          sent_to: string
+          status?: string
+          subject: string
+          type?: string
+        }
+        Update: {
+          created_at?: string
+          error?: string | null
+          id?: string
+          invoice_id?: string
+          message?: string | null
+          sent_at?: string
+          sent_by_user_id?: string | null
+          sent_to?: string
+          status?: string
+          subject?: string
+          type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "invoice_sends_invoice_id_fkey"
+            columns: ["invoice_id"]
+            isOneToOne: false
+            referencedRelation: "invoices"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       invoices: {
         Row: {
           approval_notes: string | null
@@ -396,15 +446,18 @@ export type Database = {
           invoice_number: string
           invoice_year: number
           issue_date: string | null
+          last_sent_at: string | null
           notes: string | null
           pdf_base64: string | null
           pdf_generated_at: string | null
+          send_count: number
           sent_at: string | null
           sent_to: string | null
           status: Database["public"]["Enums"]["invoice_status"]
           subtotal: number | null
           total: number | null
           updated_at: string
+          vendor_email: string | null
         }
         Insert: {
           approval_notes?: string | null
@@ -421,15 +474,18 @@ export type Database = {
           invoice_number: string
           invoice_year: number
           issue_date?: string | null
+          last_sent_at?: string | null
           notes?: string | null
           pdf_base64?: string | null
           pdf_generated_at?: string | null
+          send_count?: number
           sent_at?: string | null
           sent_to?: string | null
           status?: Database["public"]["Enums"]["invoice_status"]
           subtotal?: number | null
           total?: number | null
           updated_at?: string
+          vendor_email?: string | null
         }
         Update: {
           approval_notes?: string | null
@@ -446,15 +502,18 @@ export type Database = {
           invoice_number?: string
           invoice_year?: number
           issue_date?: string | null
+          last_sent_at?: string | null
           notes?: string | null
           pdf_base64?: string | null
           pdf_generated_at?: string | null
+          send_count?: number
           sent_at?: string | null
           sent_to?: string | null
           status?: Database["public"]["Enums"]["invoice_status"]
           subtotal?: number | null
           total?: number | null
           updated_at?: string
+          vendor_email?: string | null
         }
         Relationships: [
           {
