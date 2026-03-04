@@ -77,9 +77,9 @@ function renderInvoiceEmailHtml({
           <!-- Header -->
           <tr>
             <td style="padding: 36px 32px 28px 32px; text-align: center; background: linear-gradient(180deg, #ffffff 0%, #f9fafb 100%);">
-              <img src="${LOGO_URL}" alt="No Limits Academy" style="height: 80px; width: auto; display: inline-block;" />
-              <p style="margin: 14px 0 0 0; font-family: Georgia, 'Times New Roman', serif; font-size: 20px; font-weight: 700; color: #111827; letter-spacing: 0.3px;">No Limits Academy</p>
-              <p style="margin: 4px 0 0 0; font-family: Arial, Helvetica, sans-serif; font-size: 12px; color: #9ca3af; letter-spacing: 0.5px;">Empowering Youth Through Boxing &amp; Mentorship</p>
+              <img src="${LOGO_URL}" alt="No Limits Academy" style="height: 44px; width: auto; display: inline-block;" />
+              <p style="margin: 12px 0 0 0; font-family: Georgia, 'Times New Roman', serif; font-size: 18px; font-weight: 700; color: #111827; letter-spacing: 0.3px;">No Limits Academy</p>
+              <p style="margin: 4px 0 0 0; font-family: Arial, Helvetica, sans-serif; font-size: 12px; color: #9ca3af; letter-spacing: 0.3px; font-style: italic;">Through boxing, we develop children personally, professionally, &amp; spiritually.</p>
             </td>
           </tr>
 
