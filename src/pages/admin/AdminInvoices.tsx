@@ -13,8 +13,7 @@ import InvoicePreview from "@/components/admin/InvoicePreview";
 import ClientFormDialog from "@/components/admin/ClientFormDialog";
 import SentInvoicesTable from "@/components/admin/SentInvoicesTable";
 import SendInvoiceModal from "@/components/admin/SendInvoiceModal";
-import { ArrowLeft, FileText, Eye, CalendarDays, Plus, Pencil, Trash2, Mail, AlertTriangle, Send, Radar } from "lucide-react";
-import ResendCenterDrawer from "@/components/admin/ResendCenterDrawer";
+import { ArrowLeft, FileText, Eye, CalendarDays, Plus, Pencil, Trash2, Mail, AlertTriangle, Send } from "lucide-react";
 import { format } from "date-fns";
 import type { Tables } from "@/integrations/supabase/types";
 type Client = Tables<"clients">;
@@ -103,7 +102,6 @@ export default function AdminInvoices() {
   const [resendInvoice, setResendInvoice] = useState<(Invoice & { client_name?: string }) | null>(null);
   const [isResending, setIsResending] = useState(false);
   const [sendHistory, setSendHistory] = useState<any[]>([]);
-  const [showResendCenter, setShowResendCenter] = useState(false);
   const autoGenerateTriggered = useRef(false);
   const {
     toast
@@ -574,19 +572,9 @@ export default function AdminInvoices() {
               <h1 className="text-xl font-semibold text-white">Invoices</h1>
             </div>
           </div>
-          <div className="flex items-center gap-2">
-            <Button
-              size="sm"
-              onClick={() => setShowResendCenter(true)}
-              className="bg-sky-600 hover:bg-sky-700 text-white gap-2"
-            >
-              <Radar className="w-4 h-4" />
-              Resend Center
-            </Button>
-            <Button variant="outline" size="sm" onClick={signOut} className="bg-black border-white text-white hover:bg-black hover:text-white">
-              Log out
-            </Button>
-          </div>
+          <Button variant="outline" size="sm" onClick={signOut} className="bg-black border-white text-white hover:bg-black hover:text-white">
+            Log out
+          </Button>
         </div>
       </header>
 
@@ -782,18 +770,6 @@ export default function AdminInvoices() {
                                 Last sent: {format(new Date((invoice as any).last_sent_at), "MMM d")}
                               </span>
                             )}
-                            {(() => {
-                              const lastSend = sendHistory.find((s: any) => s.invoice_id === invoice.id);
-                              if (lastSend) {
-                                const st = lastSend.status === "success" ? "Sent" : lastSend.status === "delivered" ? "Delivered" : lastSend.status === "failed" ? "Failed" : lastSend.status;
-                                return (
-                                  <span className={`text-[10px] ${lastSend.status === "failed" ? "text-red-400" : "text-green-400"}`}>
-                                    Last: {st}
-                                  </span>
-                                );
-                              }
-                              return null;
-                            })()}
                           </div>
                         </TableCell>
                         <TableCell className="text-right">
@@ -904,21 +880,5 @@ export default function AdminInvoices() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-      {/* Resend Center Drawer */}
-      <ResendCenterDrawer
-        open={showResendCenter}
-        onOpenChange={setShowResendCenter}
-        invoices={invoices}
-        onResendInvoice={(inv) => {
-          const hasPdf = !!(inv as any).pdf_base64;
-          const invoiceTotal = inv.total ? Number(inv.total) : 0;
-          if (!hasPdf || invoiceTotal <= 0) {
-            toast({ title: "Cannot send: No PDF attached. Regenerate invoice PDF first.", variant: "destructive" });
-            return;
-          }
-          setResendInvoice(inv);
-        }}
-        onViewInvoice={handleViewInvoice}
-      />
     </div>;
 }
