@@ -12,7 +12,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import InvoicePreview from "@/components/admin/InvoicePreview";
 import ClientFormDialog from "@/components/admin/ClientFormDialog";
 import SentInvoicesTable from "@/components/admin/SentInvoicesTable";
-import ResendInvoiceModal from "@/components/admin/ResendInvoiceModal";
+import SendInvoiceModal from "@/components/admin/SendInvoiceModal";
 import { ArrowLeft, FileText, Eye, CalendarDays, Plus, Pencil, Trash2, Mail, AlertTriangle, Send } from "lucide-react";
 import { format } from "date-fns";
 import type { Tables } from "@/integrations/supabase/types";
@@ -504,7 +504,7 @@ export default function AdminInvoices() {
   };
 
   // Resend handler
-  const handleResendInvoice = async (data: { to: string; subject: string; message: string }) => {
+  const handleResendInvoice = async (note: string, recipientEmail: string) => {
     if (!resendInvoice) return;
     const inv = resendInvoice;
     const invoiceTotal = inv.total ? Number(inv.total) : 0;
@@ -522,15 +522,14 @@ export default function AdminInvoices() {
           invoiceId: inv.id,
           invoiceNumber: inv.invoice_number,
           clientName: inv.client_name || "Client",
-          billingEmail: data.to,
+          billingEmail: recipientEmail,
           month: inv.invoice_month,
           year: inv.invoice_year,
           total: invoiceTotal,
           pdfBase64: storedPdf,
           isResend: true,
-          resendTo: data.to,
-          resendSubject: data.subject,
-          resendMessage: data.message,
+          resendTo: recipientEmail,
+          emailNote: note || null,
         },
       });
 
@@ -539,7 +538,7 @@ export default function AdminInvoices() {
       setResendInvoice(null);
       toast({
         title: "✓ Reminder sent",
-        description: `Invoice ${inv.invoice_number} resent to ${data.to}`,
+        description: `Invoice ${inv.invoice_number} resent to ${recipientEmail}`,
         duration: 8000,
       });
       fetchInvoices();
@@ -825,16 +824,18 @@ export default function AdminInvoices() {
 
       {/* Resend Invoice Modal */}
       {resendInvoice && (
-        <ResendInvoiceModal
+        <SendInvoiceModal
           open={!!resendInvoice}
           onOpenChange={(open) => { if (!open) setResendInvoice(null); }}
           onSend={handleResendInvoice}
           clientName={resendInvoice.client_name || "Client"}
-          vendorEmail={(resendInvoice as any).vendor_email || resendInvoice.sent_to || ""}
+          billingEmail={(resendInvoice as any).vendor_email || resendInvoice.sent_to || ""}
           invoiceNumber={resendInvoice.invoice_number}
-          period={`${MONTHS.find(m => m.value === String(resendInvoice.invoice_month))?.label} ${resendInvoice.invoice_year}`}
+          month={resendInvoice.invoice_month}
+          year={resendInvoice.invoice_year}
           total={resendInvoice.total ? Number(resendInvoice.total) : 0}
           isSending={isResending}
+          mode="resend"
         />
       )}
 
