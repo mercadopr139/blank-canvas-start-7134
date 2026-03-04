@@ -50,6 +50,7 @@ const handler = async (req: Request): Promise<Response> => {
 
       // Fetch client details
       let clientName = "Unknown";
+      let serviceLogs: any[] = [];
       if (invoice) {
         const { data: client } = await supabase
           .from("clients")
@@ -57,6 +58,22 @@ const handler = async (req: Request): Promise<Response> => {
           .eq("id", invoice.client_id)
           .single();
         if (client) clientName = client.client_name;
+
+        // Fetch service logs for this invoice's client/month/year
+        const startDate = `${invoice.invoice_year}-${String(invoice.invoice_month).padStart(2, '0')}-01`;
+        const endDate = invoice.invoice_month === 12
+          ? `${invoice.invoice_year + 1}-01-01`
+          : `${invoice.invoice_year}-${String(invoice.invoice_month + 1).padStart(2, '0')}-01`;
+
+        const { data: logs } = await supabase
+          .from("service_logs")
+          .select("service_date, service_type, hours, flat_amount, line_total, billing_method, notes")
+          .eq("client_id", invoice.client_id)
+          .gte("service_date", startDate)
+          .lt("service_date", endDate)
+          .order("service_date", { ascending: true });
+
+        serviceLogs = logs || [];
       }
 
       return new Response(
@@ -64,6 +81,7 @@ const handler = async (req: Request): Promise<Response> => {
           approval,
           invoice,
           clientName,
+          serviceLogs,
         }),
         { status: 200, headers: { "Content-Type": "application/json", ...corsHeaders } }
       );
