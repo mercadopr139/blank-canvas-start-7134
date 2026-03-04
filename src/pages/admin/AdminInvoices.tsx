@@ -65,13 +65,13 @@ const YEARS = Array.from({
 }));
 const statusColors: Record<string, string> = {
   draft: "bg-muted text-muted-foreground",
-  sent: "bg-blue-500/10 text-blue-600",
+  sent: "bg-green-500/10 text-green-600",
   paid: "bg-green-500/10 text-green-600"
 };
 const approvalColors: Record<string, string> = {
   draft: "bg-muted text-muted-foreground",
   pending_approval: "bg-amber-500/10 text-amber-600",
-  approved: "bg-green-500/10 text-green-600",
+  approved: "bg-blue-500/10 text-blue-600",
   rejected: "bg-red-500/10 text-red-600",
 };
 const approvalLabels: Record<string, string> = {
