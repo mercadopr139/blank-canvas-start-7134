@@ -109,8 +109,8 @@ export function generateInvoicePdf(data: InvoicePdfData): jsPDF {
   const doc = new jsPDF({ unit: "mm", format: "a4" });
   const pageWidth = doc.internal.pageSize.getWidth();   // 210
   const pageHeight = doc.internal.pageSize.getHeight();  // 297
-  const marginL = 18;
-  const marginR = 18;
+  const marginL = 14;
+  const marginR = 14;
   const contentW = pageWidth - marginL - marginR;
 
   // ─── Helper: draw horizontal rule ───
@@ -121,16 +121,15 @@ export function generateInvoicePdf(data: InvoicePdfData): jsPDF {
   };
 
   // ─── HEADER BAND ───
-  // Light background band
   doc.setFillColor(...LIGHT_BG);
-  doc.rect(0, 0, pageWidth, 52, "F");
+  doc.rect(0, 0, pageWidth, 44, "F");
 
   // Logo
   let logoRightEdge = marginL;
   if (logoBase64) {
     try {
-      doc.addImage(logoBase64, "PNG", marginL, 8, 28, 28);
-      logoRightEdge = marginL + 32;
+      doc.addImage(logoBase64, "PNG", marginL, 6, 24, 24);
+      logoRightEdge = marginL + 28;
     } catch (e) {
       console.error("Failed to add logo to PDF:", e);
     }
@@ -138,130 +137,130 @@ export function generateInvoicePdf(data: InvoicePdfData): jsPDF {
 
   // Title
   doc.setTextColor(...BRAND_DARK);
-  doc.setFontSize(22);
+  doc.setFontSize(18);
   doc.setFont("helvetica", "bold");
-  doc.text("INVOICE", logoRightEdge, 22);
+  doc.text("INVOICE", logoRightEdge, 18);
 
-  doc.setFontSize(10);
+  doc.setFontSize(9);
   doc.setFont("helvetica", "normal");
   doc.setTextColor(...BRAND_GRAY);
-  doc.text("No Limits Academy", logoRightEdge, 29);
+  doc.text("No Limits Academy", logoRightEdge, 24);
 
   // Right-aligned meta
   const metaX = pageWidth - marginR;
-  doc.setFontSize(9);
+  doc.setFontSize(8);
   doc.setTextColor(...BRAND_GRAY);
-  doc.text("Invoice #", metaX - 40, 14);
-  doc.text("Issue Date", metaX - 40, 21);
-  doc.text("Period", metaX - 40, 28);
+  doc.text("Invoice #", metaX - 38, 12);
+  doc.text("Issue Date", metaX - 38, 18);
+  doc.text("Period", metaX - 38, 24);
 
   doc.setTextColor(...BRAND_DARK);
   doc.setFont("helvetica", "bold");
-  doc.text(invoiceNumber, metaX, 14, { align: "right" });
+  doc.text(invoiceNumber, metaX, 12, { align: "right" });
   doc.setFont("helvetica", "normal");
-  doc.text(format(issueDate, "MMM d, yyyy"), metaX, 21, { align: "right" });
-  doc.text(`${monthName} ${year}`, metaX, 28, { align: "right" });
+  doc.text(format(issueDate, "MMM d, yyyy"), metaX, 18, { align: "right" });
+  doc.text(`${monthName} ${year}`, metaX, 24, { align: "right" });
 
   // Accent stripe under header
   doc.setFillColor(...ACCENT);
-  doc.rect(0, 52, pageWidth, 1.2, "F");
+  doc.rect(0, 44, pageWidth, 0.8, "F");
 
   // ─── BILL TO + RATE ───
-  let y = 62;
-  doc.setFontSize(8);
+  let y = 50;
+  doc.setFontSize(7);
   doc.setFont("helvetica", "bold");
   doc.setTextColor(...BRAND_GRAY);
   doc.text("BILL TO", marginL, y);
 
-  y += 5;
-  doc.setFontSize(11);
+  y += 4;
+  doc.setFontSize(10);
   doc.setFont("helvetica", "bold");
   doc.setTextColor(...BRAND_DARK);
   doc.text(client.client_name, marginL, y);
-  y += 5;
+  y += 4;
 
-  doc.setFontSize(9);
+  doc.setFontSize(8);
   doc.setFont("helvetica", "normal");
   doc.setTextColor(...BRAND_GRAY);
 
-  if (client.contact_name) { doc.text(client.contact_name, marginL, y); y += 4.5; }
-  if (client.billing_email) { doc.text(client.billing_email, marginL, y); y += 4.5; }
+  if (client.contact_name) { doc.text(client.contact_name, marginL, y); y += 3.5; }
+  if (client.billing_email) { doc.text(client.billing_email, marginL, y); y += 3.5; }
   if (client.billing_address) {
     client.billing_address.split("\n").forEach((line) => {
-      doc.text(line, marginL, y); y += 4.5;
+      doc.text(line, marginL, y); y += 3.5;
     });
   }
 
   // Rate info on right
   if (hourlyRate > 0) {
-    doc.setFontSize(9);
+    doc.setFontSize(8);
     doc.setTextColor(...BRAND_GRAY);
-    doc.text("Hourly Rate", metaX - 40, 62);
+    doc.text("Hourly Rate", metaX - 38, 50);
     doc.setTextColor(...BRAND_DARK);
     doc.setFont("helvetica", "bold");
-    doc.text(`${formatCurrency(hourlyRate)} / hr`, metaX, 62, { align: "right" });
+    doc.text(`${formatCurrency(hourlyRate)} / hr`, metaX, 50, { align: "right" });
     doc.setFont("helvetica", "normal");
   }
 
   // ─── SERVICE DESCRIPTION ───
   if (client.service_description_default) {
-    y += 3;
+    y += 2;
     drawHR(y);
-    y += 6;
-    doc.setFontSize(8);
+    y += 4;
+    doc.setFontSize(7);
     doc.setFont("helvetica", "bold");
     doc.setTextColor(...BRAND_GRAY);
     doc.text("SERVICE DESCRIPTION", marginL, y);
-    y += 5;
-    doc.setFontSize(9);
+    y += 4;
+    doc.setFontSize(8);
     doc.setFont("helvetica", "normal");
     doc.setTextColor(...BRAND_DARK);
     const descLines = doc.splitTextToSize(client.service_description_default, contentW);
     doc.text(descLines, marginL, y);
-    y += descLines.length * 4.5;
+    y += descLines.length * 3.5;
   }
 
   // ─── PER DAY SCHEDULE ───
   if (isPerDayClient && (serviceTime || serviceDays || formattedDatesList)) {
-    y += 3;
+    y += 2;
     drawHR(y);
-    y += 6;
-    doc.setFontSize(8);
+    y += 4;
+    doc.setFontSize(7);
     doc.setFont("helvetica", "bold");
     doc.setTextColor(...BRAND_GRAY);
     doc.text("SCHEDULE", marginL, y);
-    y += 5;
-    doc.setFontSize(9);
+    y += 4;
+    doc.setFontSize(8);
     doc.setTextColor(...BRAND_DARK);
 
     if (serviceTime) {
       doc.setFont("helvetica", "bold");
       doc.text("Time:", marginL, y);
       doc.setFont("helvetica", "normal");
-      doc.text(serviceTime, marginL + 18, y);
-      y += 4.5;
+      doc.text(serviceTime, marginL + 16, y);
+      y += 3.5;
     }
     if (serviceDays) {
       doc.setFont("helvetica", "bold");
       doc.text("Day(s):", marginL, y);
       doc.setFont("helvetica", "normal");
-      doc.text(serviceDays, marginL + 18, y);
-      y += 4.5;
+      doc.text(serviceDays, marginL + 16, y);
+      y += 3.5;
     }
     if (formattedDatesList) {
       doc.setFont("helvetica", "bold");
       doc.text("Date(s):", marginL, y);
       doc.setFont("helvetica", "normal");
-      const splitDates = doc.splitTextToSize(formattedDatesList, contentW - 20);
-      doc.text(splitDates, marginL + 18, y);
-      y += 4.5 * splitDates.length;
+      const splitDates = doc.splitTextToSize(formattedDatesList, contentW - 18);
+      doc.text(splitDates, marginL + 16, y);
+      y += 3.5 * splitDates.length;
     }
   }
 
   // ─── LINE ITEMS TABLE ───
-  y += 4;
-  drawHR(y);
   y += 2;
+  drawHR(y);
+  y += 1;
 
   const tableHead = hasMultipleServices
     ? [["Date", "Service", "Type", "Hours", "Amount"]]
@@ -309,12 +308,12 @@ export function generateInvoicePdf(data: InvoicePdfData): jsPDF {
       fillColor: [...TABLE_HEAD],
       textColor: [255, 255, 255],
       fontStyle: "bold",
-      fontSize: 8.5,
-      cellPadding: 3.5,
+      fontSize: 7.5,
+      cellPadding: 2.5,
     },
     bodyStyles: {
-      fontSize: 8.5,
-      cellPadding: 3,
+      fontSize: 7.5,
+      cellPadding: 2,
       textColor: [...BRAND_DARK],
     },
     alternateRowStyles: {
@@ -329,89 +328,77 @@ export function generateInvoicePdf(data: InvoicePdfData): jsPDF {
   });
 
   // Get Y after table
-  y = (doc as any).lastAutoTable.finalY + 6;
+  y = (doc as any).lastAutoTable.finalY + 4;
 
-  // ─── SUMMARY BOX ───
-  // Ensure enough space for summary + signature (about 65mm)
-  if (y + 65 > pageHeight - 20) {
-    doc.addPage();
-    y = 20;
-  }
-
-  const boxH = summary.totalHours > 0 && summary.flatTotal > 0 ? 42 : 34;
+  const boxH = summary.totalHours > 0 && summary.flatTotal > 0 ? 36 : 28;
   doc.setFillColor(...LIGHT_BG);
   doc.setDrawColor(...BORDER);
   doc.roundedRect(marginL, y, contentW, boxH, 3, 3, "FD");
 
-  doc.setFontSize(8);
+  doc.setFontSize(7);
   doc.setFont("helvetica", "bold");
   doc.setTextColor(...BRAND_GRAY);
   doc.text("INVOICE SUMMARY", marginL + 6, y + 7);
 
-  let sY = y + 14;
-  doc.setFontSize(9);
+  let sY = y + 11;
+  doc.setFontSize(8);
   doc.setTextColor(...BRAND_DARK);
 
   if (summary.totalHours > 0) {
     doc.setFont("helvetica", "normal");
     doc.text(`Hourly Services: ${summary.totalHours} hrs × ${formatCurrency(summary.hourlyRate)}/hr`, marginL + 6, sY);
     doc.text(formatCurrency(summary.hourlyTotal), pageWidth - marginR - 6, sY, { align: "right" });
-    sY += 6;
+    sY += 5;
   }
   if (summary.flatTotal > 0) {
     doc.setFont("helvetica", "normal");
     doc.text(`${programTitle}:`, marginL + 6, sY);
     doc.text(formatCurrency(summary.flatTotal), pageWidth - marginR - 6, sY, { align: "right" });
-    sY += 6;
+    sY += 5;
   }
 
   // Total line
   drawHR(sY - 1);
   sY += 3;
-  doc.setFontSize(13);
+  doc.setFontSize(11);
   doc.setFont("helvetica", "bold");
   doc.text("Total Due:", marginL + 6, sY + 1);
   doc.setTextColor(...ACCENT);
   doc.text(formatCurrency(summary.invoiceTotal), pageWidth - marginR - 6, sY + 1, { align: "right" });
 
-  y = y + boxH + 6;
+  y = y + boxH + 4;
 
   // ─── PAYMENT TERMS ───
-  doc.setFontSize(8.5);
+  doc.setFontSize(8);
   doc.setFont("helvetica", "normal");
   doc.setTextColor(...BRAND_GRAY);
   doc.text("Payment Terms: Due within 30 days of invoice date.", marginL, y);
-  y += 10;
+  y += 6;
 
   // ─── THANK YOU SIGNATURE ───
-  if (y + 40 > pageHeight - 15) {
-    doc.addPage();
-    y = 20;
-  }
-
   drawHR(y);
-  y += 8;
+  y += 5;
 
-  doc.setFontSize(11);
+  doc.setFontSize(9);
   doc.setFont("helvetica", "bold");
   doc.setTextColor(...BRAND_DARK);
   doc.text("Thank you for your partnership!", marginL, y);
-  y += 6;
+  y += 5;
 
-  doc.setFontSize(9);
+  doc.setFontSize(8);
   doc.setFont("helvetica", "normal");
   doc.setTextColor(...BRAND_GRAY);
   doc.text("We truly appreciate your support and look forward to continuing our work together.", marginL, y);
-  y += 8;
+  y += 6;
 
   doc.setFont("helvetica", "bold");
   doc.setTextColor(...BRAND_DARK);
   doc.text("Josh Mercado", marginL, y);
-  y += 4.5;
+  y += 3.5;
   doc.setFont("helvetica", "normal");
   doc.setTextColor(...BRAND_GRAY);
   doc.text("Program Director, No Limits Academy", marginL, y);
-  y += 4;
+  y += 3.5;
   doc.text("joshmercado@nolimitsboxingacademy.org", marginL, y);
 
   // ─── FOOTER ───
