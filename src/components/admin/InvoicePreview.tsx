@@ -80,6 +80,7 @@ export default function InvoicePreview({
   const [showApprovalModal, setShowApprovalModal] = useState(false);
   const [isSubmittingApproval, setIsSubmittingApproval] = useState(false);
   const [isSavingDraft, setIsSavingDraft] = useState(false);
+  const [isBypassingApproval, setIsBypassingApproval] = useState(false);
   const { toast } = useToast();
   
   // Get rate info - for display purposes, we derive from line items if client rate is 0
@@ -270,6 +271,30 @@ export default function InvoicePreview({
       toast({ title: "Error submitting for approval", description: error.message, variant: "destructive" });
     } finally {
       setIsSubmittingApproval(false);
+    }
+  };
+
+  const handleBypassApproval = async () => {
+    if (!existingInvoice) return;
+    setIsBypassingApproval(true);
+    try {
+      const { error } = await supabase
+        .from("invoices")
+        .update({
+          approval_status: "approved",
+          approved_at: new Date().toISOString(),
+          approved_by: "Bypassed by admin",
+        })
+        .eq("id", existingInvoice.id);
+
+      if (error) throw error;
+
+      toast({ title: "Approval bypassed", description: "Invoice is now approved and ready to send." });
+      onInvoiceUpdated?.();
+    } catch (error: any) {
+      toast({ title: "Error bypassing approval", description: error.message, variant: "destructive" });
+    } finally {
+      setIsBypassingApproval(false);
     }
   };
 
@@ -720,14 +745,23 @@ No Limits Academy`,
 
             {/* Submit for Approval — available when not yet submitted or after rejection */}
             {existingInvoice && (approvalStatus === "draft" || approvalStatus === "rejected") && (
-              <Button 
-                variant="secondary" 
-                onClick={handleSubmitForApproval} 
-                disabled={isLoading || isSubmittingApproval}
-              >
-                <ShieldCheck className="w-4 h-4 mr-2" />
-                {isSubmittingApproval ? "Submitting..." : approvalStatus === "rejected" ? "Re-submit for Approval" : "Submit for Approval"}
-              </Button>
+              <div className="flex gap-2">
+                <Button 
+                  variant="secondary" 
+                  onClick={handleSubmitForApproval} 
+                  disabled={isLoading || isSubmittingApproval}
+                >
+                  <ShieldCheck className="w-4 h-4 mr-2" />
+                  {isSubmittingApproval ? "Submitting..." : approvalStatus === "rejected" ? "Re-submit for Approval" : "Submit for Approval"}
+                </Button>
+                <Button 
+                  variant="outline" 
+                  onClick={handleBypassApproval} 
+                  disabled={isLoading || isBypassingApproval}
+                >
+                  {isBypassingApproval ? "Approving..." : "Bypass Approval"}
+                </Button>
+              </div>
             )}
 
             {/* Send to Vendor — available when approved */}
