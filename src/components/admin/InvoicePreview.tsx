@@ -347,7 +347,7 @@ export default function InvoicePreview({
   };
 
   /** Send invoice using STORED PDF and STORED total — never regenerate */
-  const handleSendInvoice = async (emailNote: string) => {
+  const handleSendInvoice = async (emailNote: string, recipientEmail: string) => {
     if (!existingInvoice) return;
 
     const storedPdf = (existingInvoice as any).pdf_base64 as string | null;
@@ -369,17 +369,20 @@ export default function InvoicePreview({
         throw new Error("Not authenticated");
       }
 
-      const { data, error } = await supabase.functions.invoke("send-invoice", {
+      const isResend = status === "sent" || status === "paid";
+      const { error } = await supabase.functions.invoke("send-invoice", {
         body: {
           invoiceId: existingInvoice.id,
           invoiceNumber: existingInvoice.invoice_number,
           clientName: client.client_name,
-          billingEmail: client.billing_email,
+          billingEmail: recipientEmail || client.billing_email,
           month,
           year,
-          total: invoiceTotal, // USE STORED TOTAL
-          pdfBase64: storedPdf, // USE STORED PDF
+          total: invoiceTotal,
+          pdfBase64: storedPdf,
           emailNote: emailNote || null,
+          isResend,
+          resendTo: isResend ? recipientEmail : undefined,
         },
       });
 
@@ -390,11 +393,12 @@ export default function InvoicePreview({
         dateStyle: "medium",
         timeStyle: "short",
       });
+      const sentTo = recipientEmail || client.billing_email;
       toast({ 
         title: "✓ Invoice sent successfully", 
         description: (
           <div className="mt-1 space-y-1 text-sm">
-            <p><span className="text-muted-foreground">To:</span> {client.billing_email}</p>
+            <p><span className="text-muted-foreground">To:</span> {sentTo}</p>
             <p><span className="text-muted-foreground">Invoice:</span> {existingInvoice.invoice_number}</p>
             <p><span className="text-muted-foreground">Amount:</span> {formatCurrency(invoiceTotal)}</p>
             <p><span className="text-muted-foreground">Sent:</span> {sentTime}</p>
@@ -453,8 +457,12 @@ No Limits Academy`,
       clientName={client.client_name}
       billingEmail={client.billing_email || ""}
       invoiceNumber={existingInvoice?.invoice_number || invoiceNumber}
+      month={month}
+      year={year}
+      total={total}
       existingNote={(existingInvoice as any)?.email_note}
       isSending={isSending}
+      mode={status === "sent" || status === "paid" ? "resend" : "initial"}
     />
     <ApprovalRequestModal
       open={showApprovalModal}
