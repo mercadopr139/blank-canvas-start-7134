@@ -12,7 +12,8 @@ import { useAuth } from "@/contexts/AuthContext";
 import InvoicePreview from "@/components/admin/InvoicePreview";
 import ClientFormDialog from "@/components/admin/ClientFormDialog";
 import SentInvoicesTable from "@/components/admin/SentInvoicesTable";
-import { ArrowLeft, FileText, Eye, CalendarDays, Plus, Pencil, Trash2, Mail, AlertTriangle } from "lucide-react";
+import ResendInvoiceModal from "@/components/admin/ResendInvoiceModal";
+import { ArrowLeft, FileText, Eye, CalendarDays, Plus, Pencil, Trash2, Mail, AlertTriangle, Send } from "lucide-react";
 import { format } from "date-fns";
 import type { Tables } from "@/integrations/supabase/types";
 type Client = Tables<"clients">;
@@ -98,6 +99,9 @@ export default function AdminInvoices() {
   const [deleteClientId, setDeleteClientId] = useState<string | null>(null);
   const [deleteInvoiceId, setDeleteInvoiceId] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<string>("all");
+  const [resendInvoice, setResendInvoice] = useState<(Invoice & { client_name?: string }) | null>(null);
+  const [isResending, setIsResending] = useState(false);
+  const [sendHistory, setSendHistory] = useState<any[]>([]);
   const autoGenerateTriggered = useRef(false);
   const {
     toast
@@ -498,6 +502,69 @@ export default function AdminInvoices() {
       setDeleteInvoiceId(null);
     }
   };
+
+  // Resend handler
+  const handleResendInvoice = async (data: { to: string; subject: string; message: string }) => {
+    if (!resendInvoice) return;
+    const inv = resendInvoice;
+    const invoiceTotal = inv.total ? Number(inv.total) : 0;
+    const storedPdf = (inv as any).pdf_base64 as string | null;
+
+    if (!storedPdf || invoiceTotal <= 0) {
+      toast({ title: "Cannot resend: PDF or total missing", description: "Regenerate the invoice first.", variant: "destructive" });
+      return;
+    }
+
+    setIsResending(true);
+    try {
+      const { error } = await supabase.functions.invoke("send-invoice", {
+        body: {
+          invoiceId: inv.id,
+          invoiceNumber: inv.invoice_number,
+          clientName: inv.client_name || "Client",
+          billingEmail: data.to,
+          month: inv.invoice_month,
+          year: inv.invoice_year,
+          total: invoiceTotal,
+          pdfBase64: storedPdf,
+          isResend: true,
+          resendTo: data.to,
+          resendSubject: data.subject,
+          resendMessage: data.message,
+        },
+      });
+
+      if (error) throw error;
+
+      setResendInvoice(null);
+      toast({
+        title: "✓ Reminder sent",
+        description: `Invoice ${inv.invoice_number} resent to ${data.to}`,
+        duration: 8000,
+      });
+      fetchInvoices();
+      fetchSendHistory();
+    } catch (error: any) {
+      toast({ title: "Resend failed — please try again", description: error.message, variant: "destructive" });
+    } finally {
+      setIsResending(false);
+    }
+  };
+
+  // Fetch send history
+  const fetchSendHistory = async () => {
+    const { data } = await supabase
+      .from("invoice_sends")
+      .select("*")
+      .order("sent_at", { ascending: false })
+      .limit(100);
+    setSendHistory(data || []);
+  };
+
+  useEffect(() => {
+    fetchSendHistory();
+  }, []);
+
   const selectedClient = clients.find(c => c.id === selectedClientId);
   const clientToDelete = clients.find(c => c.id === deleteClientId);
   const invoiceToDelete = invoices.find(inv => inv.id === deleteInvoiceId);
@@ -689,14 +756,46 @@ export default function AdminInvoices() {
                                 No PDF
                               </Badge>
                             )}
+                            {(invoice as any).send_count > 1 && (
+                              <Badge variant="outline" className="text-[10px] px-1.5 py-0 border-sky-500/50 text-sky-400 gap-1">
+                                Resent ×{(invoice as any).send_count}
+                              </Badge>
+                            )}
                           </div>
                         </TableCell>
-                        <TableCell className="text-white/70">{format(new Date(invoice.created_at), "MMM d, yyyy")}</TableCell>
+                        <TableCell>
+                          <div className="flex flex-col text-white/70">
+                            <span>{format(new Date(invoice.created_at), "MMM d, yyyy")}</span>
+                            {(invoice as any).last_sent_at && (
+                              <span className="text-[10px] text-white/40">
+                                Last sent: {format(new Date((invoice as any).last_sent_at), "MMM d")}
+                              </span>
+                            )}
+                          </div>
+                        </TableCell>
                         <TableCell className="text-right">
                           <div className="flex items-center justify-end gap-1">
                             <Button variant="ghost" size="sm" onClick={() => handleViewInvoice(invoice)} title="View invoice" className="text-white hover:bg-white/10 hover:text-white">
                               <Eye className="w-4 h-4" />
                             </Button>
+                            {invoice.status === "sent" || invoice.status === "paid" ? (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => {
+                                  if (!hasPdf || invoiceTotal <= 0) {
+                                    toast({ title: "Cannot send: No PDF attached. Regenerate invoice PDF first.", variant: "destructive" });
+                                    return;
+                                  }
+                                  setResendInvoice(invoice);
+                                }}
+                                disabled={!hasPdf || invoiceTotal <= 0}
+                                title={!hasPdf ? "Cannot send: No PDF attached. Regenerate invoice PDF first." : "Resend invoice"}
+                                className="text-sky-400 hover:bg-white/10 hover:text-sky-300"
+                              >
+                                <Send className="w-4 h-4" />
+                              </Button>
+                            ) : null}
                             <Button variant="ghost" size="sm" onClick={() => setDeleteInvoiceId(invoice.id)} className="text-destructive hover:text-destructive hover:bg-white/10" title="Delete invoice">
                               <Trash2 className="w-4 h-4" />
                             </Button>
@@ -718,11 +817,26 @@ export default function AdminInvoices() {
                   View all invoices that have been emailed to partners
                 </p>
               </div>
-              <SentInvoicesTable invoices={invoices} />
+              <SentInvoicesTable invoices={invoices} sendHistory={sendHistory} />
             </div>
           </TabsContent>
         </Tabs>
       </main>
+
+      {/* Resend Invoice Modal */}
+      {resendInvoice && (
+        <ResendInvoiceModal
+          open={!!resendInvoice}
+          onOpenChange={(open) => { if (!open) setResendInvoice(null); }}
+          onSend={handleResendInvoice}
+          clientName={resendInvoice.client_name || "Client"}
+          vendorEmail={(resendInvoice as any).vendor_email || resendInvoice.sent_to || ""}
+          invoiceNumber={resendInvoice.invoice_number}
+          period={`${MONTHS.find(m => m.value === String(resendInvoice.invoice_month))?.label} ${resendInvoice.invoice_year}`}
+          total={resendInvoice.total ? Number(resendInvoice.total) : 0}
+          isSending={isResending}
+        />
+      )}
 
       {/* Add/Edit Client Modal */}
       <ClientFormDialog open={showClientDialog} onOpenChange={open => {
