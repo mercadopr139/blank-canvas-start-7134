@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useRef } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Link, useSearchParams, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import {
@@ -68,38 +68,6 @@ export default function AdminServiceCalendar() {
   const { signOut } = useAuth();
   const navigate = useNavigate();
 
-  // Keep latest values for cleanup (avoid stale closures)
-  const selectedClientIdRef = useRef<string>("");
-  const currentMonthRef = useRef<Date>(new Date());
-  const navigatingAwayRef = useRef(false);
-
-  useEffect(() => {
-    selectedClientIdRef.current = selectedClientId;
-    currentMonthRef.current = currentMonth;
-  }, [selectedClientId, currentMonth]);
-
-  // Auto-clear service days when leaving this screen (unmount).
-  // Skip if we're navigating to Generate Preview (it handles its own clear).
-  useEffect(() => {
-    return () => {
-      if (navigatingAwayRef.current) return;
-
-      const clientId = selectedClientIdRef.current;
-      const monthDate = currentMonthRef.current;
-
-      if (!clientId) return;
-
-      const monthStart = format(startOfMonth(monthDate), "yyyy-MM-dd");
-      const monthEnd = format(endOfMonth(monthDate), "yyyy-MM-dd");
-
-      void supabase
-        .from("service_logs")
-        .delete()
-        .eq("client_id", clientId)
-        .gte("service_date", monthStart)
-        .lte("service_date", monthEnd);
-    };
-  }, []);
 
   // Apply URL filters on mount
   useEffect(() => {
@@ -218,45 +186,15 @@ export default function AdminServiceCalendar() {
 
   const selectedClient = clients.find((c) => c.id === selectedClientId);
 
-  const clearServiceDaysForCurrentMonth = async () => {
-    const clientId = selectedClientIdRef.current || selectedClientId;
-    const monthDate = currentMonthRef.current || currentMonth;
-
-    if (!clientId) return;
-
-    const monthStart = format(startOfMonth(monthDate), "yyyy-MM-dd");
-    const monthEnd = format(endOfMonth(monthDate), "yyyy-MM-dd");
-
-    const { error } = await supabase
-      .from("service_logs")
-      .delete()
-      .eq("client_id", clientId)
-      .gte("service_date", monthStart)
-      .lte("service_date", monthEnd);
-
-    if (error) {
-      console.error("[ServiceCalendar] auto-clear failed", error);
-    }
-  };
-
-  const handleBack = async () => {
-    // Mark that we're navigating away so unmount cleanup doesn't double-delete
-    navigatingAwayRef.current = true;
-    // Clear service days first so the next time you open the calendar you don't see stale boxes.
-    try {
-      await clearServiceDaysForCurrentMonth();
-    } finally {
-      navigate("/admin/finance");
-    }
+  const handleBack = () => {
+    navigate("/admin/finance");
   };
 
   const handleGeneratePreview = () => {
-    // Mark that we're navigating away so unmount cleanup doesn't run
-    navigatingAwayRef.current = true;
     const month = currentMonth.getMonth() + 1;
     const year = currentMonth.getFullYear();
     navigate(
-      `/admin/finance/invoices?client=${selectedClientId}&month=${month}&year=${year}&autoGenerate=true&clearServiceDays=true`,
+      `/admin/finance/invoices?client=${selectedClientId}&month=${month}&year=${year}&autoGenerate=true`,
     );
   };
 
