@@ -4,12 +4,13 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { format } from "date-fns";
-import { Download, Mail, Copy, Check } from "lucide-react";
+import { Download, Mail, Copy, Check, ShieldCheck, Clock, XCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { downloadInvoicePdf, getInvoicePdfBase64 } from "@/lib/generateInvoicePdf";
 import type { Tables } from "@/integrations/supabase/types";
 import SendInvoiceModal from "./SendInvoiceModal";
+import ApprovalRequestModal from "./ApprovalRequestModal";
 import nlaLogo from "@/assets/nla-logo.png";
 
 type Client = Tables<"clients">;
@@ -76,6 +77,8 @@ export default function InvoicePreview({
   const [isSending, setIsSending] = useState(false);
   const [copied, setCopied] = useState(false);
   const [showSendModal, setShowSendModal] = useState(false);
+  const [showApprovalModal, setShowApprovalModal] = useState(false);
+  const [isSubmittingApproval, setIsSubmittingApproval] = useState(false);
   const { toast } = useToast();
   
   // Get rate info - for display purposes, we derive from line items if client rate is 0
@@ -153,6 +156,7 @@ export default function InvoicePreview({
   };
 
   const monthName = new Date(year, month - 1).toLocaleString("default", { month: "long" });
+  const approvalStatus = (existingInvoice as any)?.approval_status || "draft";
   const status = existingInvoice?.status || "draft";
 
   const pdfData = {
@@ -173,9 +177,107 @@ export default function InvoicePreview({
     }
   };
 
+  const handleSubmitForApproval = async () => {
+    if (!existingInvoice) {
+      toast({ title: "Please save the invoice first", variant: "destructive" });
+      return;
+    }
+    setIsSubmittingApproval(true);
+    try {
+      // Update invoice approval status
+      const { error: updateError } = await supabase
+        .from("invoices")
+        .update({
+          approval_status: "pending_approval",
+          approval_request_sent_at: new Date().toISOString(),
+        })
+        .eq("id", existingInvoice.id);
+
+      if (updateError) throw updateError;
+
+      // Create approval record
+      const { data: approvalData, error: approvalError } = await supabase
+        .from("invoice_approvals")
+        .insert({
+          invoice_id: existingInvoice.id,
+          requested_by_user_id: (await supabase.auth.getUser()).data.user?.id,
+        })
+        .select()
+        .single();
+
+      if (approvalError) throw approvalError;
+
+      // Send approval email
+      await supabase.functions.invoke("send-approval-request", {
+        body: {
+          invoiceId: existingInvoice.id,
+          invoiceNumber: existingInvoice.invoice_number,
+          clientName: client.client_name,
+          month,
+          year,
+          total,
+          approvalToken: approvalData.token,
+        },
+      });
+
+      setShowApprovalModal(true);
+      toast({ title: "Approval request sent to Chrissy" });
+      onInvoiceUpdated?.();
+    } catch (error: any) {
+      toast({ title: "Error submitting for approval", description: error.message, variant: "destructive" });
+    } finally {
+      setIsSubmittingApproval(false);
+    }
+  };
+
+  const handleResendApproval = async () => {
+    if (!existingInvoice) return;
+    
+    // Fetch the existing approval token
+    const { data: approval } = await supabase
+      .from("invoice_approvals")
+      .select("token")
+      .eq("invoice_id", existingInvoice.id)
+      .eq("status", "pending")
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (!approval) {
+      // Create new approval
+      await handleSubmitForApproval();
+      return;
+    }
+
+    await supabase.functions.invoke("send-approval-request", {
+      body: {
+        invoiceId: existingInvoice.id,
+        invoiceNumber: existingInvoice.invoice_number,
+        clientName: client.client_name,
+        month,
+        year,
+        total,
+        approvalToken: approval.token,
+      },
+    });
+
+    toast({ title: "Approval request resent to Chrissy" });
+  };
+
   const handleOpenSendModal = () => {
     if (!existingInvoice) {
       toast({ title: "Please save the invoice first", variant: "destructive" });
+      return;
+    }
+
+    if (approvalStatus !== "approved") {
+      if (approvalStatus === "pending_approval") {
+        toast({ title: "Waiting for approval from Chrissy", description: "Invoice cannot be sent until approved.", variant: "destructive" });
+      } else if (approvalStatus === "rejected") {
+        toast({ title: "Invoice was rejected", description: "Cannot send until corrected and re-submitted for approval.", variant: "destructive" });
+      } else {
+        toast({ title: "Submit for approval first", description: "Invoice must be approved before sending.", variant: "destructive" });
+      }
       return;
     }
 
@@ -281,6 +383,14 @@ No Limits Academy`,
       existingNote={(existingInvoice as any)?.email_note}
       isSending={isSending}
     />
+    <ApprovalRequestModal
+      open={showApprovalModal}
+      onOpenChange={setShowApprovalModal}
+      invoiceNumber={existingInvoice?.invoice_number || invoiceNumber}
+      clientName={client.client_name}
+      onResendApproval={handleResendApproval}
+      approvalStatus={approvalStatus}
+    />
     <Card className="w-full">
       <CardHeader className="flex flex-row items-start justify-between">
         <div className="flex items-start gap-4">
@@ -296,6 +406,24 @@ No Limits Academy`,
           <Badge className={statusColors[status]}>
             {status.charAt(0).toUpperCase() + status.slice(1)}
           </Badge>
+          {approvalStatus === "pending_approval" && (
+            <Badge className="bg-amber-500/10 text-amber-600">
+              <Clock className="w-3 h-3 mr-1" />
+              Pending Approval
+            </Badge>
+          )}
+          {approvalStatus === "approved" && (
+            <Badge className="bg-green-500/10 text-green-600">
+              <ShieldCheck className="w-3 h-3 mr-1" />
+              Approved
+            </Badge>
+          )}
+          {approvalStatus === "rejected" && (
+            <Badge className="bg-red-500/10 text-red-600">
+              <XCircle className="w-3 h-3 mr-1" />
+              Rejected
+            </Badge>
+          )}
         </div>
       </CardHeader>
       <CardContent className="space-y-6">
@@ -420,6 +548,48 @@ No Limits Academy`,
           </table>
         </div>
 
+        {/* Approval Status Banner */}
+        {existingInvoice && approvalStatus === "pending_approval" && (
+          <div className="flex items-center gap-3 p-3 rounded-lg bg-amber-500/10 border border-amber-500/20">
+            <Clock className="w-5 h-5 text-amber-500 shrink-0" />
+            <div className="flex-1">
+              <p className="text-sm font-medium">Waiting for approval from Chrissy</p>
+              <p className="text-xs text-muted-foreground">Invoice cannot be sent to vendor until approved.</p>
+            </div>
+            <Button variant="outline" size="sm" onClick={() => setShowApprovalModal(true)}>
+              View Status
+            </Button>
+          </div>
+        )}
+        {existingInvoice && approvalStatus === "rejected" && (
+          <div className="flex items-center gap-3 p-3 rounded-lg bg-red-500/10 border border-red-500/20">
+            <XCircle className="w-5 h-5 text-red-500 shrink-0" />
+            <div className="flex-1">
+              <p className="text-sm font-medium">Invoice rejected by Chrissy</p>
+              {(existingInvoice as any)?.approval_notes && (
+                <p className="text-xs text-muted-foreground mt-1">
+                  Notes: {(existingInvoice as any).approval_notes}
+                </p>
+              )}
+            </div>
+            <Button variant="outline" size="sm" onClick={handleSubmitForApproval} disabled={isSubmittingApproval}>
+              Re-submit for Approval
+            </Button>
+          </div>
+        )}
+        {existingInvoice && approvalStatus === "approved" && existingInvoice.status === "draft" && (
+          <div className="flex items-center gap-3 p-3 rounded-lg bg-green-500/10 border border-green-500/20">
+            <ShieldCheck className="w-5 h-5 text-green-500 shrink-0" />
+            <div className="flex-1">
+              <p className="text-sm font-medium">Approved by Chrissy — ready to send!</p>
+            </div>
+            <Button size="sm" onClick={handleOpenSendModal} disabled={isLoading || !client.billing_email}>
+              <Mail className="w-4 h-4 mr-2" />
+              Send to Vendor
+            </Button>
+          </div>
+        )}
+
         {/* Action Buttons */}
         <Separator />
         <div className="flex flex-wrap gap-3 justify-between items-center">
@@ -447,15 +617,27 @@ No Limits Academy`,
                 <Button variant="outline" onClick={() => onSaveDraft(subtotal, total)} disabled={isLoading}>
                   Update Draft
                 </Button>
-                <Button 
-                  variant="secondary" 
-                  onClick={handleOpenSendModal} 
-                  disabled={isLoading || !client.billing_email}
-                  title={!client.billing_email ? "Client has no billing email" : ""}
-                >
-                  <Mail className="w-4 h-4 mr-2" />
-                  Send Invoice
-                </Button>
+                {approvalStatus === "draft" && (
+                  <Button 
+                    variant="secondary" 
+                    onClick={handleSubmitForApproval} 
+                    disabled={isLoading || isSubmittingApproval}
+                  >
+                    <ShieldCheck className="w-4 h-4 mr-2" />
+                    {isSubmittingApproval ? "Submitting..." : "Submit for Approval"}
+                  </Button>
+                )}
+                {approvalStatus === "approved" && (
+                  <Button 
+                    variant="secondary" 
+                    onClick={handleOpenSendModal} 
+                    disabled={isLoading || !client.billing_email}
+                    title={!client.billing_email ? "Client has no billing email" : ""}
+                  >
+                    <Mail className="w-4 h-4 mr-2" />
+                    Send Invoice
+                  </Button>
+                )}
                 <Button onClick={onMarkSent} disabled={isLoading}>
                   {isLoading ? "Updating..." : "Mark as Sent"}
                 </Button>
