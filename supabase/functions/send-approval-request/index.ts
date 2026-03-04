@@ -74,6 +74,67 @@ const handler = async (req: Request): Promise<Response> => {
       currency: "USD",
     }).format(total);
 
+    // Fetch service logs for this invoice period
+    const startDate = `${year}-${String(month).padStart(2, '0')}-01`;
+    const endDate = month === 12
+      ? `${year + 1}-01-01`
+      : `${year}-${String(month + 1).padStart(2, '0')}-01`;
+
+    // Get the invoice to find client_id
+    const { data: invoice } = await supabase
+      .from("invoices")
+      .select("client_id")
+      .eq("id", invoiceId)
+      .single();
+
+    let serviceLogRows = "";
+    if (invoice) {
+      const { data: logs } = await supabase
+        .from("service_logs")
+        .select("service_date, service_type, hours, flat_amount, line_total, billing_method")
+        .eq("client_id", invoice.client_id)
+        .gte("service_date", startDate)
+        .lt("service_date", endDate)
+        .order("service_date", { ascending: true });
+
+      if (logs && logs.length > 0) {
+        serviceLogRows = logs.map((log: any) => {
+          const d = new Date(log.service_date + "T00:00:00");
+          const dateStr = d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+          const amount = new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(log.line_total || 0);
+          const hours = log.hours != null ? log.hours : "—";
+          return `<tr>
+            <td style="padding: 8px 12px; font-family: Arial, sans-serif; font-size: 13px; color: #374151; border-bottom: 1px solid #f3f4f6;">${dateStr}</td>
+            <td style="padding: 8px 12px; font-family: Arial, sans-serif; font-size: 13px; color: #374151; border-bottom: 1px solid #f3f4f6;">${log.service_type || "Service"}</td>
+            <td style="padding: 8px 12px; font-family: Arial, sans-serif; font-size: 13px; color: #374151; border-bottom: 1px solid #f3f4f6; text-align: right;">${hours}</td>
+            <td style="padding: 8px 12px; font-family: Arial, sans-serif; font-size: 13px; color: #374151; border-bottom: 1px solid #f3f4f6; text-align: right;">${amount}</td>
+          </tr>`;
+        }).join("");
+      }
+    }
+
+    const serviceLogTable = serviceLogRows ? `
+      <table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin: 0 0 24px 0;">
+        <tr>
+          <td style="background-color: #ffffff; border: 1px solid #e5e5e5; border-radius: 8px; padding: 0; overflow: hidden;">
+            <p style="margin: 0; padding: 16px 12px 8px 12px; font-family: Arial, sans-serif; font-size: 13px; color: #6b7280; text-transform: uppercase; letter-spacing: 0.5px;">Service Dates</p>
+            <table width="100%" cellpadding="0" cellspacing="0" border="0">
+              <tr style="background-color: #f9fafb;">
+                <th style="padding: 8px 12px; font-family: Arial, sans-serif; font-size: 12px; color: #6b7280; text-align: left; font-weight: 600;">Date</th>
+                <th style="padding: 8px 12px; font-family: Arial, sans-serif; font-size: 12px; color: #6b7280; text-align: left; font-weight: 600;">Service</th>
+                <th style="padding: 8px 12px; font-family: Arial, sans-serif; font-size: 12px; color: #6b7280; text-align: right; font-weight: 600;">Hours</th>
+                <th style="padding: 8px 12px; font-family: Arial, sans-serif; font-size: 12px; color: #6b7280; text-align: right; font-weight: 600;">Amount</th>
+              </tr>
+              ${serviceLogRows}
+              <tr style="background-color: #f9fafb;">
+                <td colspan="3" style="padding: 10px 12px; font-family: Arial, sans-serif; font-size: 14px; color: #111827; font-weight: 700;">Total</td>
+                <td style="padding: 10px 12px; font-family: Arial, sans-serif; font-size: 14px; color: #111827; font-weight: 700; text-align: right;">${formattedTotal}</td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+      </table>` : "";
+
     // Build approval page URL
     const approvalPageUrl = `https://blank-canvas-start-7134.lovable.app/approvals/invoice/${approvalToken}`;
 
@@ -135,6 +196,9 @@ const handler = async (req: Request): Promise<Response> => {
                   </td>
                 </tr>
               </table>
+
+              <!-- Service Log Details -->
+              ${serviceLogTable}
 
               <!-- Action Buttons -->
               <table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin: 0 0 16px 0;">
