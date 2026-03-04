@@ -73,17 +73,23 @@ export interface InvoicePdfData {
   month: number;
   year: number;
   logoBase64?: string;
+  overrideTotal?: number;
 }
 
 export function generateInvoicePdf(data: InvoicePdfData): jsPDF {
-  const { client, serviceLogs, invoiceNumber, issueDate, month, year, logoBase64 } = data;
+  const { client, serviceLogs, invoiceNumber, issueDate, month, year, logoBase64, overrideTotal } = data;
   const hourlyRate = (client as any).hourly_rate || 0;
   const serviceTime = (client as any).service_time || "";
   const serviceDays = (client as any).service_days || "";
   const programTitle = (client as any).program_title || "Service Total";
 
   const lineItems = calculateLineItems(serviceLogs);
-  const summary = calculateSummary(lineItems, hourlyRate);
+  let summary = calculateSummary(lineItems, hourlyRate);
+  
+  // Use override total when service logs are empty but we have a stored total
+  if (overrideTotal && overrideTotal > 0 && summary.invoiceTotal === 0) {
+    summary = { ...summary, invoiceTotal: overrideTotal, hourlyTotal: overrideTotal };
+  }
 
   const monthName = new Date(year, month - 1).toLocaleString("default", { month: "long" });
   
