@@ -74,7 +74,7 @@ export interface InvoicePdfData {
 const BRAND_DARK = [17, 24, 39] as const;    // #111827
 const BRAND_GRAY = [107, 114, 128] as const; // #6b7280
 const LIGHT_BG = [249, 250, 251] as const;   // #f9fafb
-const ACCENT = [59, 130, 246] as const;      // #3b82f6
+const ACCENT = [17, 24, 39] as const;        // #111827 (black)
 const TABLE_HEAD = [31, 41, 55] as const;    // #1f2937
 const BORDER = [229, 231, 235] as const;     // #e5e7eb
 
@@ -410,7 +410,7 @@ export function generateInvoicePdf(data: InvoicePdfData): jsPDF {
   y += 4.5;
   doc.setFont("helvetica", "normal");
   doc.setTextColor(...BRAND_GRAY);
-  doc.text("Executive Director, No Limits Academy", marginL, y);
+  doc.text("Program Director, No Limits Academy", marginL, y);
   y += 4;
   doc.text("joshmercado@nolimitsboxingacademy.org", marginL, y);
 
