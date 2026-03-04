@@ -397,6 +397,8 @@ export type Database = {
           invoice_year: number
           issue_date: string | null
           notes: string | null
+          pdf_base64: string | null
+          pdf_generated_at: string | null
           sent_at: string | null
           sent_to: string | null
           status: Database["public"]["Enums"]["invoice_status"]
@@ -420,6 +422,8 @@ export type Database = {
           invoice_year: number
           issue_date?: string | null
           notes?: string | null
+          pdf_base64?: string | null
+          pdf_generated_at?: string | null
           sent_at?: string | null
           sent_to?: string | null
           status?: Database["public"]["Enums"]["invoice_status"]
@@ -443,6 +447,8 @@ export type Database = {
           invoice_year?: number
           issue_date?: string | null
           notes?: string | null
+          pdf_base64?: string | null
+          pdf_generated_at?: string | null
           sent_at?: string | null
           sent_to?: string | null
           status?: Database["public"]["Enums"]["invoice_status"]

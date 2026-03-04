@@ -12,7 +12,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import InvoicePreview from "@/components/admin/InvoicePreview";
 import ClientFormDialog from "@/components/admin/ClientFormDialog";
 import SentInvoicesTable from "@/components/admin/SentInvoicesTable";
-import { ArrowLeft, FileText, Eye, CalendarDays, Plus, Pencil, Trash2, Mail } from "lucide-react";
+import { ArrowLeft, FileText, Eye, CalendarDays, Plus, Pencil, Trash2, Mail, AlertTriangle } from "lucide-react";
 import { format } from "date-fns";
 import type { Tables } from "@/integrations/supabase/types";
 type Client = Tables<"clients">;
@@ -115,7 +115,6 @@ export default function AdminInvoices() {
     if (clientId) setSelectedClientId(clientId);
     if (month) setSelectedMonth(month);
     if (year) setSelectedYear(year);
-    // Check for tab param
     const tabParam = searchParams.get("tab");
     if (tabParam === "sent") setActiveTab("sent");
   }, []);
@@ -135,17 +134,14 @@ export default function AdminInvoices() {
     }
   };
 
-  // Fetch clients on mount + subscribe to realtime invoice changes
   useEffect(() => {
     fetchClients();
     fetchInvoices();
     
-    // Poll for approval status changes every 30 seconds
     const pollInterval = setInterval(() => {
       fetchInvoices();
     }, 30000);
 
-    // Realtime listener for invoice approval changes
     const channel = supabase
       .channel('invoice-approvals')
       .on(
@@ -196,7 +192,6 @@ export default function AdminInvoices() {
         variant: "destructive"
       });
     } else {
-      // Fetch client names
       const invoicesWithClients = await Promise.all((data || []).map(async inv => {
         const client = clients.find(c => c.id === inv.client_id);
         if (client) {
@@ -205,7 +200,6 @@ export default function AdminInvoices() {
             client_name: client.client_name
           };
         }
-        // Fallback fetch if clients not loaded yet
         const {
           data: clientData
         } = await supabase.from("clients").select("client_name").eq("id", inv.client_id).single();
@@ -229,11 +223,9 @@ export default function AdminInvoices() {
 
     setIsLoading(true);
 
-    // Prefer explicit URL params when coming from the calendar
     const month = parseInt(searchParams.get("month") ?? selectedMonth);
     const year = parseInt(searchParams.get("year") ?? selectedYear);
 
-    // Fetch service logs for the selected month/year
     const startDate = `${year}-${String(month).padStart(2, "0")}-01`;
     const endDate = new Date(year, month, 0).toISOString().split("T")[0];
 
@@ -257,8 +249,6 @@ export default function AdminInvoices() {
 
     setServiceLogs(logs || []);
 
-    // Auto-clear service days when coming from the calendar "Generate Preview" action.
-    // (We keep the logs in UI state so the preview still renders.)
     if (searchParams.get("clearServiceDays") === "true" && logs && logs.length > 0) {
       const ids = logs.map((l) => l.id);
       const { error: clearError } = await supabase
@@ -277,7 +267,6 @@ export default function AdminInvoices() {
       }
     }
 
-    // Check for existing invoice
     const { data: existingInv } = await supabase
       .from("invoices")
       .select("*")
@@ -288,7 +277,6 @@ export default function AdminInvoices() {
 
     setExistingInvoice(existingInv);
 
-    // Generate temp invoice number for preview
     if (!existingInv) {
       setTempInvoiceNumber(`INV-XXXXX (auto-generated on save)`);
     }
@@ -296,13 +284,11 @@ export default function AdminInvoices() {
     setShowPreview(true);
     setIsLoading(false);
 
-    // Clear URL params after auto-generation
     if (searchParams.get("autoGenerate") || searchParams.get("clearServiceDays")) {
       setSearchParams({}, { replace: true });
     }
   }, [selectedClientId, selectedMonth, selectedYear, searchParams, setSearchParams, toast]);
 
-  // Auto-generate preview when navigating from Service Calendar
   useEffect(() => {
     const shouldAutoGenerate = searchParams.get("autoGenerate") === "true";
     const clientId = searchParams.get("client");
@@ -311,32 +297,48 @@ export default function AdminInvoices() {
       handleGeneratePreview(clientId);
     }
   }, [searchParams, clients, handleGeneratePreview]);
-  const handleSaveDraft = async (subtotal: number, total: number) => {
+
+  /** Save draft with locked-in total + PDF base64 */
+  const handleSaveDraft = async (subtotal: number, total: number, pdfBase64: string) => {
     if (!selectedClientId) return;
     setIsLoading(true);
     try {
       if (existingInvoice) {
-        // Update existing
         const { error } = await supabase
           .from("invoices")
-          .update({ subtotal, total })
+          .update({ 
+            subtotal, 
+            total,
+            pdf_base64: pdfBase64,
+            pdf_generated_at: new Date().toISOString(),
+          })
           .eq("id", existingInvoice.id);
         if (error) throw error;
 
-        toast({ title: "Invoice updated" });
+        // Update local state so UI reflects stored PDF
+        setExistingInvoice({
+          ...existingInvoice,
+          subtotal,
+          total,
+          pdf_base64: pdfBase64,
+          pdf_generated_at: new Date().toISOString(),
+        } as any);
+
+        toast({ title: "Invoice updated — PDF locked" });
       } else {
-        // Create new - invoice_number is auto-generated by trigger
         const { data, error } = await supabase
           .from("invoices")
           .insert([
             {
-              invoice_number: "", // will be auto-generated by trigger
+              invoice_number: "",
               client_id: selectedClientId,
               invoice_month: parseInt(selectedMonth),
               invoice_year: parseInt(selectedYear),
               subtotal,
               total,
               issue_date: format(new Date(), "yyyy-MM-dd"),
+              pdf_base64: pdfBase64,
+              pdf_generated_at: new Date().toISOString(),
             },
           ])
           .select()
@@ -345,7 +347,7 @@ export default function AdminInvoices() {
         if (error) throw error;
 
         setExistingInvoice(data);
-        toast({ title: "Invoice saved as draft" });
+        toast({ title: "Invoice saved — PDF locked" });
       }
 
       fetchInvoices();
@@ -359,6 +361,7 @@ export default function AdminInvoices() {
       setIsLoading(false);
     }
   };
+
   const handleMarkSent = async () => {
     if (!existingInvoice) return;
     setIsLoading(true);
@@ -420,12 +423,10 @@ export default function AdminInvoices() {
     setSelectedMonth(String(invoice.invoice_month));
     setSelectedYear(String(invoice.invoice_year));
 
-    // Generate preview directly with invoice data
     setIsLoading(true);
     const month = invoice.invoice_month;
     const year = invoice.invoice_year;
 
-    // Fetch service logs for the invoice period
     const startDate = `${year}-${String(month).padStart(2, "0")}-01`;
     const endDate = new Date(year, month, 0).toISOString().split("T")[0];
     const {
@@ -648,7 +649,11 @@ export default function AdminInvoices() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {invoices.map(invoice => <TableRow key={invoice.id} className="border-white/10 hover:bg-white/5">
+                    {invoices.map(invoice => {
+                      const invoiceTotal = invoice.total ? Number(invoice.total) : 0;
+                      const hasPdf = !!(invoice as any).pdf_base64;
+                      return (
+                      <TableRow key={invoice.id} className="border-white/10 hover:bg-white/5">
                         <TableCell className="font-medium text-white">{invoice.invoice_number}</TableCell>
                         <TableCell className="text-white">{invoice.client_name}</TableCell>
                         <TableCell>
@@ -670,7 +675,22 @@ export default function AdminInvoices() {
                             );
                           })()}
                         </TableCell>
-                        <TableCell className="text-right text-white">{formatCurrency(invoice.total)}</TableCell>
+                        <TableCell className="text-right">
+                          <div className="flex flex-col items-end gap-0.5">
+                            <span className="text-white">{formatCurrency(invoice.total)}</span>
+                            {invoiceTotal === 0 && (
+                              <Badge variant="outline" className="text-[10px] px-1.5 py-0 border-amber-500/50 text-amber-400 gap-1">
+                                <AlertTriangle className="w-2.5 h-2.5" />
+                                Total missing
+                              </Badge>
+                            )}
+                            {!hasPdf && invoiceTotal > 0 && (
+                              <Badge variant="outline" className="text-[10px] px-1.5 py-0 border-amber-500/50 text-amber-400 gap-1">
+                                No PDF
+                              </Badge>
+                            )}
+                          </div>
+                        </TableCell>
                         <TableCell className="text-white/70">{format(new Date(invoice.created_at), "MMM d, yyyy")}</TableCell>
                         <TableCell className="text-right">
                           <div className="flex items-center justify-end gap-1">
@@ -682,7 +702,9 @@ export default function AdminInvoices() {
                             </Button>
                           </div>
                         </TableCell>
-                      </TableRow>)}
+                      </TableRow>
+                    );
+                    })}
                   </TableBody>
                 </Table>}
             </div>
