@@ -8,6 +8,16 @@ import { CheckCircle, XCircle, Loader2, FileText, AlertCircle } from "lucide-rea
 
 import nlaLogo from "@/assets/nla-logo.png";
 
+interface ServiceLogItem {
+  service_date: string;
+  service_type: string | null;
+  hours: number | null;
+  flat_amount: number | null;
+  line_total: number | null;
+  billing_method: string | null;
+  notes: string | null;
+}
+
 interface ApprovalData {
   approval: {
     id: string;
@@ -27,6 +37,7 @@ interface ApprovalData {
     approval_status: string;
   };
   clientName: string;
+  serviceLogs: ServiceLogItem[];
 }
 
 export default function InvoiceApproval() {
@@ -144,7 +155,7 @@ export default function InvoiceApproval() {
 
   if (!data) return null;
 
-  const { invoice, clientName } = data;
+  const { invoice, clientName, serviceLogs } = data;
 
   // Already submitted
   if (submitted) {
@@ -218,6 +229,50 @@ export default function InvoiceApproval() {
             </div>
           </CardContent>
         </Card>
+
+        {/* Service Log Details */}
+        {serviceLogs && serviceLogs.length > 0 && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg">Service Dates</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b">
+                      <th className="text-left py-2 font-medium text-muted-foreground">Date</th>
+                      <th className="text-left py-2 font-medium text-muted-foreground">Service</th>
+                      <th className="text-right py-2 font-medium text-muted-foreground">Hours</th>
+                      <th className="text-right py-2 font-medium text-muted-foreground">Amount</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {serviceLogs.map((log, i) => (
+                      <tr key={i} className="border-b last:border-0">
+                        <td className="py-2">
+                          {new Date(log.service_date + "T00:00:00").toLocaleDateString("en-US", {
+                            month: "short",
+                            day: "numeric",
+                          })}
+                        </td>
+                        <td className="py-2">{log.service_type || "Service"}</td>
+                        <td className="py-2 text-right">{log.hours ?? "—"}</td>
+                        <td className="py-2 text-right">{formatCurrency(log.line_total || 0)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                  <tfoot>
+                    <tr className="font-semibold">
+                      <td className="pt-3" colSpan={3}>Total</td>
+                      <td className="pt-3 text-right">{formatCurrency(invoice.total || 0)}</td>
+                    </tr>
+                  </tfoot>
+                </table>
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
         {/* Notes + Actions */}
         <Card>
