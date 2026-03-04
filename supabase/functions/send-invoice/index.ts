@@ -123,7 +123,7 @@ function renderInvoiceEmailHtml({
               <table width="100%" cellpadding="0" cellspacing="0" border="0">
                 <tr>
                   <td style="padding-top: 20px; border-top: 1px solid #e5e7eb;">
-                    <p style="margin: 0 0 4px 0; font-family: Georgia, 'Times New Roman', serif; font-size: 15px; color: #374151;">With gratitude,</p>
+                    <p style="margin: 0 0 14px 0; font-family: Georgia, 'Times New Roman', serif; font-size: 15px; color: #374151;">With Gratitude,</p>
                     <p style="margin: 0 0 2px 0; font-family: Georgia, 'Times New Roman', serif; font-size: 16px; font-weight: 700; color: #111827;">Josh Mercado</p>
                     <p style="margin: 0 0 2px 0; font-family: Arial, Helvetica, sans-serif; font-size: 13px; color: #6b7280;">Program Director, No Limits Academy</p>
                     <p style="margin: 0; font-family: Arial, Helvetica, sans-serif; font-size: 13px; color: #6b7280;">joshmercado@nolimitsboxingacademy.org</p>
