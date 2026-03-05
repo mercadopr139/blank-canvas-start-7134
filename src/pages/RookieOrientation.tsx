@@ -224,7 +224,7 @@ const RookieOrientation = () => {
             <OrientationStep stepNumber={3} title="MISSION STATEMENT" videoId={VIDEO_IDS.step3} />
 
             {/* STEP 4: House Rules Intro & Test */}
-            <OrientationStep stepNumber={4} title="HOUSE RULES INTRO & TEST" videoId={VIDEO_IDS.step4} secondaryButtonLabel="READ HOUSE RULES" secondaryButtonLink="#step-5" />
+            <OrientationStep stepNumber={4} title="HOUSE RULES INTRO & TEST" videoId={VIDEO_IDS.step4} secondaryButtonLabel="READ HOUSE RULES" secondaryButtonLink={HOUSE_RULES_TEST_URL} />
 
             {/* STEP 5: House Rules Test + Admin Bypass */}
             <Step5WithBypass testUrl={HOUSE_RULES_TEST_URL} />
