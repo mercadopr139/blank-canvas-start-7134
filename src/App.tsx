@@ -15,6 +15,7 @@ import ImpactStory from "./pages/ImpactStory";
 import Vision from "./pages/Vision";
 import RookieOrientation from "./pages/RookieOrientation";
 import HouseRulesTest from "./pages/HouseRulesTest";
+import HouseRules from "./pages/HouseRules";
 import AdminIndex from "./pages/admin/AdminIndex";
 import AdminLogin from "./pages/admin/AdminLogin";
 import AdminDashboard from "./pages/admin/AdminDashboard";
@@ -67,6 +68,7 @@ const App = () => (
             <Route path="/vision" element={<Vision />} />
             <Route path="/rookie-orientation" element={<RookieOrientation />} />
             <Route path="/house-rules-test" element={<HouseRulesTest />} />
+            <Route path="/house-rules" element={<HouseRules />} />
             <Route path="/register" element={<Register />} />
             <Route path="/supporters" element={<Supporters />} />
             <Route path="/approvals/invoice/:token" element={<InvoiceApproval />} />
