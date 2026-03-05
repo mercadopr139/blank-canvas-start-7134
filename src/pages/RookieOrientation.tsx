@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { AlertCircle, Lock, Smartphone, KeyRound } from "lucide-react";
+import { Link } from "react-router-dom";
 import Header from "@/components/layout/Header";
 import Footer from "@/components/layout/Footer";
 import OrientationStep from "@/components/orientation/OrientationStep";
@@ -65,7 +66,7 @@ const Step5WithBypass = ({ testUrl }: { testUrl: string }) => {
             className="w-full text-white font-bold text-base py-6"
             style={{ backgroundColor: "#bf0f3e" }}
           >
-            <a href={testUrl}>OPEN TEST</a>
+            <Link to={testUrl}>OPEN TEST</Link>
           </Button>
 
           {/* Admin bypass */}
