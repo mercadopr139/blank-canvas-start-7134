@@ -8,61 +8,61 @@ const houseRules = [
     number: 1,
     title: "RESPECT",
     description:
-      "Address all coaches, mentors, and adults as 'Coach,' 'Sir,' or 'Ma'am.' Greet everyone who walks through the door. Respect is earned and given freely at NLA.",
+      'Greet all coaches, mentors, and adults upon arrival and departure. Address all coaches, mentors, and adults as "Coach," "Sir," or "Ma\'am."',
   },
   {
     number: 2,
     title: "BE ON TIME",
     description:
-      "Being 'on time' at NLA means arriving 15 minutes early. If you're early, you're on time. If you're on time, you're late. If you're late, don't bother.",
+      "Being on time means you are 15 minutes early. No call, no show is unacceptable. 100% attendance is not required. 100% communication is required.",
   },
   {
     number: 3,
     title: "BE PREPARED",
     description:
-      "Show up with the right attitude, equipment, and attire. Being prepared means you're ready to work the moment practice begins.",
+      "Show up at the right time with the right attitude, the right equipment, and right attire.",
   },
   {
     number: 4,
     title: "SUPPORT YOUR TEAM",
     description:
-      "The gym is a community far bigger than you. Cheer on your teammates, encourage one another, and lift each other up. We win together.",
+      "The gym is a community far bigger than you. Always contribute to the team and remember, to whom much is given, much will be required.",
   },
   {
     number: 5,
     title: "RESPECT YOUR TEAM",
     description:
-      "If you have an issue with a fellow NLA Boxer, love and correct them — squash the issue immediately. No grudges, no drama. Handle it face to face.",
+      "Never fight a fellow NLA Boxer. Love and correct them. If there is an issue, squash it immediately.",
   },
   {
     number: 6,
     title: "BE CREDIBLE",
     description:
-      "Tell the entire truth, never lie, and remain accountable. No stealing, no drugs, no dishonesty. Your word is your bond at NLA.",
+      "Tell the entire truth, never lie, and remain accountable for your actions. We will not steal. We will not do drugs.",
   },
   {
     number: 7,
     title: "NO SOCIAL MEDIA",
     description:
-      "NLA has a social media director to ensure our values are never misrepresented. Do not post NLA content without approval. Protect the brand.",
+      "We are internally driven. NLA has a social media director that will ensure our values are never misrepresented.",
   },
   {
     number: 8,
     title: "BE A LEADER",
     description:
-      "In the absence of direction, lead and take action. Don't wait to be told what to do. Step up, take initiative, and set the example.",
+      "Leaders outwork everyone in the room. If you are unsure if something is your responsibility, be assertive and make it your responsibility. In the absence of direction, NLA Boxers lead and take action. Take ownership and pride in whatever role you have.",
   },
   {
     number: 9,
     title: "KEEP YOUR HOUSE ORDERLY",
     description:
-      "The gym is cleaned daily. Put equipment back where it belongs. If you see something out of place, fix it. This is your house — treat it that way.",
+      "Clean the gym daily, never neglect or take it for granted. Make improvements when needed and keep it secure.",
   },
   {
     number: 10,
     title: "WE ARE NOT VICTIMS",
     description:
-      "Resiliency is developed through challenging circumstances. We don't complain, we don't quit, and we don't make excuses. We overcome.",
+      "Life is unfair, unforgiving, and exhausting. Our past is our past. Resiliency is developed through challenging circumstances.",
   },
 ];
 
