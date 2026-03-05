@@ -220,14 +220,26 @@ const AdminSignals = () => {
       const { data, error } = await supabase
         .from("signals")
         .select("*")
-        .eq("date_assigned", today)
+        .lte("date_assigned", today)
         .eq("priority_layer", "Bonus" as any)
+        .eq("status", "Pending" as any)
         .eq("is_archived", false as any)
         .eq("is_trashed", false as any)
         .order("today_sort_order" as any, { ascending: true, nullsFirst: false })
         .order("created_at", { ascending: true });
       if (error) throw error;
-      return data as Signal[];
+      // Also include completed bonus signals from today
+      const { data: completedToday, error: err2 } = await supabase
+        .from("signals")
+        .select("*")
+        .eq("date_assigned", today)
+        .eq("priority_layer", "Bonus" as any)
+        .eq("status", "Complete" as any)
+        .eq("is_archived", false as any)
+        .eq("is_trashed", false as any)
+        .order("today_sort_order" as any, { ascending: true, nullsFirst: false });
+      if (err2) throw err2;
+      return [...(data || []), ...(completedToday || [])] as Signal[];
     },
   });
 
@@ -240,6 +252,7 @@ const AdminSignals = () => {
         .not("date_assigned", "is", null)
         .lt("date_assigned", today)
         .eq("status", "Pending" as any)
+        .eq("priority_layer", "Core" as any)
         .eq("is_archived", false as any)
         .eq("is_trashed", false as any)
         .order("date_assigned", { ascending: true });
