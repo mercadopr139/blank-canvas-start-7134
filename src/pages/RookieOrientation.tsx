@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { AlertCircle, Lock, Smartphone, KeyRound } from "lucide-react";
+import { AlertCircle, Lock, Smartphone, KeyRound, XCircle } from "lucide-react";
 import { Link } from "react-router-dom";
 import Header from "@/components/layout/Header";
 import Footer from "@/components/layout/Footer";
@@ -36,6 +36,7 @@ const Step5WithBypass = ({ testUrl }: { testUrl: string }) => {
   const [showBypass, setShowBypass] = useState(false);
   const [bypassCode, setBypassCode] = useState("");
   const [bypassError, setBypassError] = useState("");
+  const hasPassed = localStorage.getItem("house_rules_test_passed") === "true";
 
   const handleBypassSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -46,6 +47,12 @@ const Step5WithBypass = ({ testUrl }: { testUrl: string }) => {
     } else {
       setBypassError("Incorrect password.");
     }
+  };
+
+  const handleReset = () => {
+    localStorage.removeItem("house_rules_test_passed");
+    sessionStorage.removeItem(ADMIN_BYPASS_KEY);
+    window.location.reload();
   };
 
   return (
@@ -69,30 +76,45 @@ const Step5WithBypass = ({ testUrl }: { testUrl: string }) => {
             <Link to={testUrl}>OPEN TEST</Link>
           </Button>
 
-          {/* Admin bypass */}
-          {!showBypass ? (
-            <button
-              onClick={() => setShowBypass(true)}
-              className="flex items-center gap-1.5 text-xs text-neutral-500 hover:text-neutral-300 transition-colors mx-auto"
-            >
-              <KeyRound className="h-3 w-3" />
-              Admin bypass
-            </button>
-          ) : (
-            <form onSubmit={handleBypassSubmit} className="flex gap-2">
-              <Input
-                type="password"
-                value={bypassCode}
-                onChange={(e) => setBypassCode(e.target.value)}
-                placeholder="Admin password"
-                className="text-sm bg-neutral-800 border-neutral-700 text-white"
-                autoFocus
-              />
-              <Button type="submit" size="sm" className="bg-[#bf0f3e] hover:bg-[#bf0f3e]/90 text-white">
-                Go
-              </Button>
-            </form>
-          )}
+          {/* Admin controls */}
+          <div className="flex items-center justify-center gap-3">
+            {!showBypass ? (
+              <button
+                onClick={() => setShowBypass(true)}
+                className="flex items-center gap-1.5 text-xs text-neutral-500 hover:text-neutral-300 transition-colors"
+              >
+                <KeyRound className="h-3 w-3" />
+                Admin bypass
+              </button>
+            ) : (
+              <form onSubmit={handleBypassSubmit} className="flex gap-2">
+                <Input
+                  type="password"
+                  value={bypassCode}
+                  onChange={(e) => setBypassCode(e.target.value)}
+                  placeholder="Admin password"
+                  className="text-sm bg-neutral-800 border-neutral-700 text-white"
+                  autoFocus
+                />
+                <Button type="submit" size="sm" className="bg-[#bf0f3e] hover:bg-[#bf0f3e]/90 text-white">
+                  Go
+                </Button>
+              </form>
+            )}
+
+            {hasPassed && (
+              <>
+                <span className="text-neutral-700 text-xs">|</span>
+                <button
+                  onClick={handleReset}
+                  className="flex items-center gap-1.5 text-xs text-neutral-500 hover:text-neutral-300 transition-colors"
+                >
+                  <XCircle className="h-3 w-3" />
+                  Reset test
+                </button>
+              </>
+            )}
+          </div>
           {bypassError && (
             <p className="text-red-400 text-xs text-center">{bypassError}</p>
           )}
