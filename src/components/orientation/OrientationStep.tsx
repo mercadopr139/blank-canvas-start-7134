@@ -84,7 +84,11 @@ const OrientationStep = ({
               className="w-full text-white font-bold text-base py-6"
               style={{ backgroundColor: "#bf0f3e" }}
             >
-              <a href={secondaryButtonLink}>{secondaryButtonLabel}</a>
+              {secondaryButtonLink.startsWith("#") ? (
+                <a href={secondaryButtonLink}>{secondaryButtonLabel}</a>
+              ) : (
+                <Link to={secondaryButtonLink}>{secondaryButtonLabel}</Link>
+              )}
             </Button>
           </div>
         )}
