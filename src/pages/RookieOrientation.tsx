@@ -4,7 +4,6 @@ import { Input } from "@/components/ui/input";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { AlertCircle, Lock, Smartphone, KeyRound, XCircle } from "lucide-react";
 import Header from "@/components/layout/Header";
-import Header from "@/components/layout/Header";
 import Footer from "@/components/layout/Footer";
 import OrientationStep from "@/components/orientation/OrientationStep";
 import OrientationStepGated from "@/components/orientation/OrientationStepGated";
