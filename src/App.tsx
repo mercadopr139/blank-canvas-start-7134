@@ -27,7 +27,9 @@ import AdminServiceCalendar from "./pages/admin/AdminServiceCalendar";
 import AdminInvoices from "./pages/admin/AdminInvoices";
  import AdminRegistrations from "./pages/admin/AdminRegistrations";
  import AdminBilling from "./pages/admin/AdminBilling";
- import AdminRegistrationAnalytics from "./pages/admin/AdminRegistrationAnalytics";
+import AdminRegistrationAnalytics from "./pages/admin/AdminRegistrationAnalytics";
+import AdminAttendance from "./pages/admin/AdminAttendance";
+import CheckIn from "./pages/CheckIn";
 import Register from "./pages/Register";
 import Supporters from "./pages/Supporters";
 import AdminDonations from "./pages/admin/AdminDonations";
@@ -71,6 +73,7 @@ const App = () => (
             <Route path="/house-rules" element={<HouseRules />} />
             <Route path="/register" element={<Register />} />
             <Route path="/supporters" element={<Supporters />} />
+            <Route path="/check-in" element={<CheckIn />} />
             <Route path="/approvals/invoice/:token" element={<InvoiceApproval />} />
             
             {/* Admin Routes */}
@@ -96,6 +99,7 @@ const App = () => (
               <Route index element={<AdminOperationsIndex />} />
               <Route path="registrations" element={<AdminRegistrations />} />
               <Route path="registration-analytics" element={<AdminRegistrationAnalytics />} />
+              <Route path="attendance" element={<AdminAttendance />} />
             </Route>
 
             {/* Sales & Marketing section — sidebar layout wraps sub-pages */}

@@ -14,6 +14,38 @@ export type Database = {
   }
   public: {
     Tables: {
+      attendance_records: {
+        Row: {
+          check_in_at: string
+          check_in_date: string
+          created_at: string
+          id: string
+          registration_id: string
+        }
+        Insert: {
+          check_in_at?: string
+          check_in_date?: string
+          created_at?: string
+          id?: string
+          registration_id: string
+        }
+        Update: {
+          check_in_at?: string
+          check_in_date?: string
+          created_at?: string
+          id?: string
+          registration_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "attendance_records_registration_id_fkey"
+            columns: ["registration_id"]
+            isOneToOne: false
+            referencedRelation: "youth_registrations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       calendar_verses: {
         Row: {
           created_at: string
@@ -1008,6 +1040,7 @@ export type Database = {
           household_income_range: Database["public"]["Enums"]["household_income"]
           id: string
           important_child_notes: string | null
+          is_bald_eagle: boolean
           liability_waiver_name: string
           liability_waiver_signature_url: string
           media_consent_name: string
@@ -1051,6 +1084,7 @@ export type Database = {
           household_income_range: Database["public"]["Enums"]["household_income"]
           id?: string
           important_child_notes?: string | null
+          is_bald_eagle?: boolean
           liability_waiver_name: string
           liability_waiver_signature_url: string
           media_consent_name: string
@@ -1094,6 +1128,7 @@ export type Database = {
           household_income_range?: Database["public"]["Enums"]["household_income"]
           id?: string
           important_child_notes?: string | null
+          is_bald_eagle?: boolean
           liability_waiver_name?: string
           liability_waiver_signature_url?: string
           media_consent_name?: string
