@@ -124,7 +124,7 @@ const AdminRegistrations = () => {
             <TableHead className="text-white/70">Program</TableHead>
             <TableHead className="text-white/70">District</TableHead>
             <TableHead className="text-white/70">Parent</TableHead>
-            <TableHead className="text-white/70">Status</TableHead>
+            <TableHead className="text-white/70">Attendance</TableHead>
             <TableHead className="text-white/70">Alerts</TableHead>
             <TableHead className="text-right text-white/70">Actions</TableHead>
           </TableRow>
