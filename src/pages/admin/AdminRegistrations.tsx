@@ -16,6 +16,16 @@ import { Search, Eye, AlertTriangle, ExternalLink, Users, Loader2, Pencil, Trash
 import { format, parseISO, differenceInYears } from "date-fns";
 import { toast } from "sonner";
 
+const HeadshotInHeader = ({ headshotPath }: { registrationId: string; headshotPath: string }) => {
+  const [url, setUrl] = useState<string | null>(null);
+  useEffect(() => {
+    supabase.storage.from("registration-signatures").createSignedUrl(headshotPath, 300)
+      .then(({ data }) => { if (data?.signedUrl) setUrl(data.signedUrl); });
+  }, [headshotPath]);
+  if (!url) return <div className="w-16 h-16 rounded-full bg-muted animate-pulse shrink-0" />;
+  return <img src={url} alt="Youth" className="w-16 h-16 rounded-full object-cover border-2 border-border shrink-0" />;
+};
+
 const AdminRegistrations = () => {
   const queryClient = useQueryClient();
   const [searchQuery, setSearchQuery] = useState("");
