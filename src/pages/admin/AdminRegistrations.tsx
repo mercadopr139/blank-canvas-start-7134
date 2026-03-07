@@ -172,9 +172,15 @@ const AdminRegistrations = () => {
                           {reg.parent_first_name} {reg.parent_last_name}
                         </TableCell>
                         <TableCell>
-                          <Badge variant="secondary" className="text-xs whitespace-nowrap bg-[#bf0f3e]/10 text-[#bf0f3e] border-[#bf0f3e]/30">
-                            {reg.child_boxing_program?.split(" ")[1] || reg.child_boxing_program}
-                          </Badge>
+                          {reg.child_boxing_program?.includes("Senior") ? (
+                            <Badge variant="secondary" className="text-xs whitespace-nowrap bg-[#bf0f3e]/10 border-[#bf0f3e]/30" style={{ color: '#bf0f3e' }}>
+                              Senior Boxer
+                            </Badge>
+                          ) : (
+                            <Badge variant="secondary" className="text-xs whitespace-nowrap bg-blue-500/10 text-blue-500 border-blue-500/30">
+                              Junior Boxer
+                            </Badge>
+                          )}
                         </TableCell>
                         <TableCell className="text-sm text-white/70">{reg.child_school_district}</TableCell>
                         <TableCell>
