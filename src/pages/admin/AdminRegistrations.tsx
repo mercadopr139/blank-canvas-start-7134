@@ -558,13 +558,7 @@ const RegistrationDetail = ({ registration: reg }: { registration: any }) => {
               <Loader2 className="w-4 h-4 animate-spin" /> Loading photo...
             </div>
           ) : signedUrls.child_headshot_url ? (
-            <a href={signedUrls.child_headshot_url} target="_blank" rel="noopener noreferrer">
-              <img 
-                src={signedUrls.child_headshot_url} 
-                alt="Child headshot" 
-                className="w-24 h-24 object-cover rounded-lg border border-border hover:opacity-80 transition-opacity"
-              />
-            </a>
+            <HeadshotThumbnail headshotPath={reg.child_headshot_url} size="lg" />
           ) : (
             <p className="text-sm text-muted-foreground">Unable to load photo</p>
           )}
