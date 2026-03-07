@@ -35,6 +35,12 @@ const HeadshotThumbnail = ({ headshotPath, size = "sm" }: { headshotPath: string
       />
       {fullscreen && (
         <div className="fixed inset-0 z-[9999] bg-black/80 flex items-center justify-center" onClick={() => setFullscreen(false)}>
+          <button
+            onClick={(e) => { e.stopPropagation(); setFullscreen(false); }}
+            className="absolute top-4 right-4 text-white bg-black/50 hover:bg-black/70 rounded-full p-2 transition-colors"
+          >
+            <XCircle className="w-8 h-8" />
+          </button>
           <img src={url} alt="Youth fullscreen" className="max-w-[90vw] max-h-[90vh] object-contain rounded-lg" />
         </div>
       )}
