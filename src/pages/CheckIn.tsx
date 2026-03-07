@@ -31,6 +31,7 @@ const CheckIn = () => {
       const { data } = await supabase
         .from("youth_registrations")
         .select("id, child_first_name, child_last_name, child_boxing_program, child_headshot_url")
+        .eq("approved_for_attendance", true)
         .or(`child_first_name.ilike.%${search}%,child_last_name.ilike.%${search}%`)
         .order("child_last_name")
         .limit(20);
