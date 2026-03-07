@@ -174,9 +174,9 @@ const AdminRegistrations = () => {
                       <TableHead className="text-white/70">Date</TableHead>
                       <TableHead className="text-white/70">Child</TableHead>
                       <TableHead className="text-white/70">Age</TableHead>
-                      <TableHead className="text-white/70">Parent</TableHead>
                       <TableHead className="text-white/70">Program</TableHead>
                       <TableHead className="text-white/70">District</TableHead>
+                      <TableHead className="text-white/70">Parent</TableHead>
                       <TableHead className="text-white/70">Alerts</TableHead>
                       <TableHead className="text-right text-white/70">Actions</TableHead>
                     </TableRow>
@@ -198,9 +198,6 @@ const AdminRegistrations = () => {
                           {reg.child_first_name} {reg.child_last_name}
                         </TableCell>
                         <TableCell className="text-white">{calculateAge(reg.child_date_of_birth)}</TableCell>
-                        <TableCell className="text-white">
-                          {reg.parent_first_name} {reg.parent_last_name}
-                        </TableCell>
                         <TableCell>
                           {reg.child_boxing_program?.includes("Senior") ? (
                             <Badge variant="secondary" className="text-xs whitespace-nowrap bg-[#bf0f3e]/10 border-[#bf0f3e]/30" style={{ color: '#bf0f3e' }}>
@@ -213,6 +210,9 @@ const AdminRegistrations = () => {
                           )}
                         </TableCell>
                         <TableCell className="text-sm text-white/70">{reg.child_school_district}</TableCell>
+                        <TableCell className="text-white">
+                          {reg.parent_first_name} {reg.parent_last_name}
+                        </TableCell>
                         <TableCell>
                           {hasMedicalAlerts(reg) && (
                             <Badge variant="destructive" className="gap-1">
