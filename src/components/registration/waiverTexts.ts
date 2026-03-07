@@ -45,7 +45,7 @@
  
    spiritual_development: `At No Limits Academy, we respect each individual's unique spiritual journey. Participation in any aspect of spiritual development is entirely voluntary. We do not require youth participants to read, engage with, or participate in spiritual practices or teachings. For youth who are curious or willing to explore their spiritual development, we are here to offer support and guidance.
  
- NLA's focus is on providing a nurturing, caring, and encouraging environment where youth can explore God, at their own pace, if they choose to do so. By signing below, I understand NLA's Spiritual Development Policy.`,
+NLA's focus is on providing a nurturing, caring, and encouraging environment where youth can explore God, at their own pace, if they choose to do so. By signing below, I understand NLA's Spiritual Development Policy.`,
  
    counseling_services: `As part of our commitment to supporting the emotional, social, and mental well-being of our participants, our program offers on-site counseling services. These may include both informal counseling (such as supportive conversations, wellness check-ins, and guidance provided by trained staff) and formal counseling (scheduled sessions with a qualified licensed counselor or mental health professional).
  
