@@ -252,7 +252,7 @@ const AdminRegistrations = () => {
         <DialogContent className="max-w-2xl max-h-[90vh]">
           <DialogHeader className="flex flex-row items-center gap-4">
             {selectedRegistration?.child_headshot_url && (
-              <HeadshotInHeader registrationId={selectedRegistration.id} headshotPath={selectedRegistration.child_headshot_url} />
+              <HeadshotThumbnail headshotPath={selectedRegistration.child_headshot_url} size="lg" />
             )}
             <DialogTitle>
               {selectedRegistration?.child_first_name} {selectedRegistration?.child_last_name}
