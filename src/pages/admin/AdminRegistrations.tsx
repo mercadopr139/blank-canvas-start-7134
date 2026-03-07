@@ -12,7 +12,8 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Search, Eye, AlertTriangle, ExternalLink, Users, Loader2, Pencil, Trash2, CheckCircle2, XCircle } from "lucide-react";
+import { Search, Eye, AlertTriangle, ExternalLink, Users, Loader2, Pencil, Trash2, CheckCircle2, XCircle, ShieldCheck } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
 import { format, parseISO, differenceInYears } from "date-fns";
 import { toast } from "sonner";
 
@@ -274,7 +275,22 @@ const AdminRegistrations = () => {
           </DialogHeader>
           <ScrollArea className="flex-1 overflow-auto pr-4">
             {selectedRegistration && (
-              <RegistrationDetail registration={selectedRegistration} />
+              <RegistrationDetail
+                registration={selectedRegistration}
+                onApprovalChange={async (approved: boolean) => {
+                  const { error } = await supabase
+                    .from("youth_registrations")
+                    .update({ approved_for_attendance: approved })
+                    .eq("id", selectedRegistration.id);
+                  if (error) {
+                    toast.error("Failed to update approval status");
+                  } else {
+                    toast.success(approved ? "Approved for attendance" : "Attendance approval removed");
+                    setSelectedRegistration({ ...selectedRegistration, approved_for_attendance: approved });
+                    queryClient.invalidateQueries({ queryKey: ["youth-registrations"] });
+                  }
+                }}
+              />
             )}
           </ScrollArea>
         </DialogContent>
@@ -444,7 +460,7 @@ const SelectField = ({
 );
 
 /* ── View Detail ── */
-const RegistrationDetail = ({ registration: reg }: { registration: any }) => {
+const RegistrationDetail = ({ registration: reg, onApprovalChange }: { registration: any; onApprovalChange: (approved: boolean) => void }) => {
   const age = differenceInYears(new Date(), parseISO(reg.child_date_of_birth));
   const [signedUrls, setSignedUrls] = useState<Record<string, string>>({});
   const [loadingUrls, setLoadingUrls] = useState(true);
@@ -486,6 +502,25 @@ const RegistrationDetail = ({ registration: reg }: { registration: any }) => {
 
   return (
     <div className="space-y-6">
+      {/* Attendance Approval Toggle */}
+      <Card className={`border ${reg.approved_for_attendance ? 'border-green-500/30 bg-green-500/5' : 'border-amber-500/30 bg-amber-500/5'}`}>
+        <CardContent className="flex items-center justify-between py-4 px-4">
+          <div className="flex items-center gap-3">
+            <ShieldCheck className={`w-5 h-5 ${reg.approved_for_attendance ? 'text-green-500' : 'text-amber-500'}`} />
+            <div>
+              <p className="font-medium text-sm">Approved for Attendance</p>
+              <p className="text-xs text-muted-foreground">
+                {reg.approved_for_attendance ? "This youth will appear in the kiosk check-in." : "This youth will NOT appear in the kiosk until approved."}
+              </p>
+            </div>
+          </div>
+          <Switch
+            checked={!!reg.approved_for_attendance}
+            onCheckedChange={onApprovalChange}
+          />
+        </CardContent>
+      </Card>
+
       {(reg.allergies || reg.asthma_inhaler_info) && (
         <Card className="border-destructive bg-destructive/5">
           <CardHeader className="pb-2">

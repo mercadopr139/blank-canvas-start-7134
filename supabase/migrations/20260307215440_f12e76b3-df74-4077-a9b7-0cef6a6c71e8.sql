@@ -1,0 +1,1 @@
+ALTER TABLE public.youth_registrations ADD COLUMN approved_for_attendance boolean NOT NULL DEFAULT false;

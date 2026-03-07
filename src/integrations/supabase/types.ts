@@ -1018,6 +1018,7 @@ export type Database = {
         Row: {
           adults_in_household: number
           allergies: string | null
+          approved_for_attendance: boolean
           asthma_inhaler_info: string | null
           child_boxing_program: Database["public"]["Enums"]["boxing_program"]
           child_date_of_birth: string
@@ -1062,6 +1063,7 @@ export type Database = {
         Insert: {
           adults_in_household: number
           allergies?: string | null
+          approved_for_attendance?: boolean
           asthma_inhaler_info?: string | null
           child_boxing_program: Database["public"]["Enums"]["boxing_program"]
           child_date_of_birth: string
@@ -1106,6 +1108,7 @@ export type Database = {
         Update: {
           adults_in_household?: number
           allergies?: string | null
+          approved_for_attendance?: boolean
           asthma_inhaler_info?: string | null
           child_boxing_program?: Database["public"]["Enums"]["boxing_program"]
           child_date_of_birth?: string
