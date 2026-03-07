@@ -595,13 +595,13 @@ const SEX_OPTIONS = ["Male", "Female"] as const;
                       <SelectValue placeholder="Select..." />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="Dad and Mom">Dad and Mom</SelectItem>
-                      <SelectItem value="Dad Only">Dad Only</SelectItem>
-                      <SelectItem value="Dad + Partner">Dad + Partner</SelectItem>
-                      <SelectItem value="Mom Only">Mom Only</SelectItem>
-                      <SelectItem value="Mom + Partner">Mom + Partner</SelectItem>
-                      <SelectItem value="Grandparent(s)">Grandparent(s)</SelectItem>
-                      <SelectItem value="Other">Other</SelectItem>
+                      <SelectItem value="2">Dad and Mom</SelectItem>
+                      <SelectItem value="1">Dad Only</SelectItem>
+                      <SelectItem value="2_dp">Dad + Partner</SelectItem>
+                      <SelectItem value="1_m">Mom Only</SelectItem>
+                      <SelectItem value="2_mp">Mom + Partner</SelectItem>
+                      <SelectItem value="1_g">Grandparent(s)</SelectItem>
+                      <SelectItem value="1_o">Other</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
