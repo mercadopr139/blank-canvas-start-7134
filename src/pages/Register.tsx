@@ -15,6 +15,7 @@ import WaiverSection from "@/components/registration/WaiverSection";
 import { WAIVER_TEXTS } from "@/components/registration/waiverTexts";
 import ChildPrimaryAddressField from "@/components/registration/ChildPrimaryAddressField";
  import nlaLogo from "@/assets/nla-logo.png";
+ import { digitsOnly, formatPhoneDisplay, toE164, isValidPhone } from "@/lib/validators";
  
 const SEX_OPTIONS = ["Male", "Female"] as const;
  const RACE_OPTIONS = [
