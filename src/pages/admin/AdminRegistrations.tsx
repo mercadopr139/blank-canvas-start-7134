@@ -539,16 +539,26 @@ const RegistrationDetail = ({ registration: reg }: { registration: any }) => {
           </div>
         ) : (
           <>
-            <SignatureRow label="Medical Consent" name={reg.medical_consent_name} url={signedUrls.medical_consent_signature_url} />
-            <SignatureRow label="Liability Waiver" name={reg.liability_waiver_name} url={signedUrls.liability_waiver_signature_url} />
-            <SignatureRow label="Transportation/Excursions" name={reg.transportation_excursions_waiver_name} url={signedUrls.transportation_excursions_signature_url} />
-            <SignatureRow label="Media Consent" name={reg.media_consent_name} url={signedUrls.media_consent_signature_url} />
-            <SignatureRow label="Spiritual Development" name={reg.spiritual_development_policy_name} url={signedUrls.spiritual_development_policy_signature_url} />
-            {reg.counseling_services_name && (
-              <SignatureRow label="Counseling Services" name={reg.counseling_services_name} url={signedUrls.counseling_services_signature_url} />
-            )}
+            <SignatureRow label="Medical Consent" name={reg.medical_consent_name} url={signedUrls.medical_consent_signature_url} completed={!!reg.medical_consent_name} />
+            <SignatureRow label="Liability Waiver" name={reg.liability_waiver_name} url={signedUrls.liability_waiver_signature_url} completed={!!reg.liability_waiver_name} />
+            <SignatureRow label="Transportation/Excursions" name={reg.transportation_excursions_waiver_name} url={signedUrls.transportation_excursions_signature_url} completed={!!reg.transportation_excursions_waiver_name} />
+            <SignatureRow label="Media Consent" name={reg.media_consent_name} url={signedUrls.media_consent_signature_url} completed={!!reg.media_consent_name} />
+            <SignatureRow label="Spiritual Development" name={reg.spiritual_development_policy_name} url={signedUrls.spiritual_development_policy_signature_url} completed={!!reg.spiritual_development_policy_name} />
+            <SignatureRow label="Counseling Services" name={reg.counseling_services_name || ""} url={signedUrls.counseling_services_signature_url} completed={!!reg.counseling_services_name} />
           </>
         )}
+      </Section>
+
+      <Section title="Final Verification">
+        <InfoRow label="Final Signature" value={reg.final_signature_name || "Not provided"} />
+        <div className="flex items-center justify-between text-sm py-2 border-b border-border/50">
+          <span className="text-muted-foreground">Headshot Uploaded</span>
+          {reg.child_headshot_url ? (
+            <CheckCircle2 className="w-5 h-5 text-green-500" />
+          ) : (
+            <XCircle className="w-5 h-5 text-destructive" />
+          )}
+        </div>
       </Section>
 
       {reg.child_headshot_url && (
