@@ -164,6 +164,7 @@ const AdminRegistrations = () => {
                 <Table>
                   <TableHeader>
                     <TableRow className="border-white/10 hover:bg-white/5">
+                      <TableHead className="text-white/70 w-12">Photo</TableHead>
                       <TableHead className="text-white/70">Date</TableHead>
                       <TableHead className="text-white/70">Child</TableHead>
                       <TableHead className="text-white/70">Age</TableHead>
