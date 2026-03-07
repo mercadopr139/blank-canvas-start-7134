@@ -109,6 +109,96 @@ const AdminRegistrations = () => {
   const programs = [...new Set(registrations?.map((r) => r.child_boxing_program) || [])];
   const districts = [...new Set(registrations?.map((r) => r.child_school_district) || [])];
 
+  const newSubmissions = filteredRegistrations?.filter((r) => !r.approved_for_attendance) || [];
+  const approvedRegistrations = filteredRegistrations?.filter((r) => r.approved_for_attendance) || [];
+
+  const renderTable = (rows: any[], emptyMessage: string) => (
+    <div className="overflow-x-auto">
+      <Table>
+        <TableHeader>
+          <TableRow className="border-white/10 hover:bg-transparent">
+            <TableHead className="text-white/70 w-12">Photo</TableHead>
+            <TableHead className="text-white/70">Date</TableHead>
+            <TableHead className="text-white/70">Child</TableHead>
+            <TableHead className="text-white/70">Age</TableHead>
+            <TableHead className="text-white/70">Program</TableHead>
+            <TableHead className="text-white/70">District</TableHead>
+            <TableHead className="text-white/70">Parent</TableHead>
+            <TableHead className="text-white/70">Status</TableHead>
+            <TableHead className="text-white/70">Alerts</TableHead>
+            <TableHead className="text-right text-white/70">Actions</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {rows.length === 0 ? (
+            <TableRow className="border-white/10 hover:bg-transparent">
+              <TableCell colSpan={10} className="text-center py-8 text-white/40">{emptyMessage}</TableCell>
+            </TableRow>
+          ) : rows.map((reg) => (
+            <TableRow key={reg.id} className="border-white/10 hover:bg-white/5">
+              <TableCell>
+                {reg.child_headshot_url ? (
+                  <HeadshotThumbnail headshotPath={reg.child_headshot_url} size="sm" />
+                ) : (
+                  <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center text-muted-foreground text-xs">N/A</div>
+                )}
+              </TableCell>
+              <TableCell className="whitespace-nowrap text-white">
+                {format(parseISO(reg.submission_date), "MMM d, yyyy")}
+              </TableCell>
+              <TableCell className="font-medium text-white">
+                {reg.child_first_name} {reg.child_last_name}
+              </TableCell>
+              <TableCell className="text-white">{calculateAge(reg.child_date_of_birth)}</TableCell>
+              <TableCell>
+                {reg.child_boxing_program?.includes("Senior") ? (
+                  <Badge variant="secondary" className="text-xs whitespace-nowrap bg-[#bf0f3e]/10 border-[#bf0f3e]/30" style={{ color: '#bf0f3e' }}>
+                    Senior Boxer
+                  </Badge>
+                ) : (
+                  <Badge variant="secondary" className="text-xs whitespace-nowrap bg-blue-500/10 text-blue-500 border-blue-500/30">
+                    Junior Boxer
+                  </Badge>
+                )}
+              </TableCell>
+              <TableCell className="text-sm text-white/70">{reg.child_school_district}</TableCell>
+              <TableCell className="text-white">
+                {reg.parent_first_name} {reg.parent_last_name}
+              </TableCell>
+              <TableCell>
+                {reg.approved_for_attendance ? (
+                  <Badge className="bg-green-500/15 text-green-500 border-green-500/30 text-xs">APPROVED</Badge>
+                ) : (
+                  <Badge className="bg-red-500/15 text-red-500 border-red-500/30 text-xs">REVIEW</Badge>
+                )}
+              </TableCell>
+              <TableCell>
+                {hasMedicalAlerts(reg) && (
+                  <Badge variant="destructive" className="gap-1">
+                    <AlertTriangle className="w-3 h-3" /> Medical
+                  </Badge>
+                )}
+              </TableCell>
+              <TableCell className="text-right">
+                <div className="flex items-center justify-end gap-1">
+                  <Button size="sm" variant="ghost" onClick={() => setSelectedRegistration(reg)} className="text-blue-400 hover:text-blue-300 hover:bg-blue-500/10 h-8 w-8 p-0" title="View">
+                    <Eye className="w-4 h-4" />
+                  </Button>
+                  <Button size="sm" variant="ghost" onClick={() => setEditingRegistration({ ...reg })} className="text-amber-400 hover:text-amber-300 hover:bg-amber-500/10 h-8 w-8 p-0" title="Edit">
+                    <Pencil className="w-4 h-4" />
+                  </Button>
+                  <Button size="sm" variant="ghost" onClick={() => setDeletingRegistration(reg)} className="text-red-400 hover:text-red-300 hover:bg-red-500/10 h-8 w-8 p-0" title="Delete">
+                    <Trash2 className="w-4 h-4" />
+                  </Button>
+                </div>
+              </TableCell>
+            </TableRow>
+          ))}
+        </TableBody>
+      </Table>
+    </div>
+  );
+
   return (
     <div className="bg-black text-white">
       <div className="border-b border-white/10 px-4 py-3">
