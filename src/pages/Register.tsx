@@ -15,6 +15,7 @@ import WaiverSection from "@/components/registration/WaiverSection";
 import { WAIVER_TEXTS } from "@/components/registration/waiverTexts";
 import ChildPrimaryAddressField from "@/components/registration/ChildPrimaryAddressField";
  import nlaLogo from "@/assets/nla-logo.png";
+ import { digitsOnly, formatPhoneDisplay, toE164, isValidPhone } from "@/lib/validators";
  
 const SEX_OPTIONS = ["Male", "Female"] as const;
  const RACE_OPTIONS = [
@@ -221,6 +222,13 @@ const SEX_OPTIONS = ["Male", "Female"] as const;
          return `Please fill in all required fields. Missing: ${field.replace(/_/g, " ")}`;
        }
      }
+
+     if (!isValidPhone(formData.parent_phone)) {
+       return "Please enter a valid 10-digit parent/guardian phone number.";
+     }
+     if (formData.child_phone && !isValidPhone(formData.child_phone)) {
+       return "Please enter a valid 10-digit child phone number.";
+     }
  
      const requiredSignatures: (keyof Signatures)[] = [
        "medical_consent", "liability_waiver", "transportation_excursions",
@@ -293,8 +301,8 @@ const SEX_OPTIONS = ["Male", "Female"] as const;
          child_race_ethnicity: formData.child_race_ethnicity as any,
          parent_first_name: formData.parent_first_name.trim(),
          parent_last_name: formData.parent_last_name.trim(),
-         parent_phone: formData.parent_phone.trim(),
-         child_phone: formData.child_phone.trim() || null,
+         parent_phone: toE164(formData.parent_phone) || formData.parent_phone.trim(),
+         child_phone: formData.child_phone ? (toE164(formData.child_phone) || formData.child_phone.trim()) : null,
          parent_email: formData.parent_email.trim(),
          child_primary_address: formData.child_primary_address.trim(),
          child_school_district: formData.child_school_district as any,
@@ -475,11 +483,18 @@ const SEX_OPTIONS = ["Male", "Female"] as const;
                  <Input
                    id="parent_phone"
                    type="tel"
+                   placeholder="(555) 555-5555"
                    value={formData.parent_phone}
-                   onChange={(e) => handleInputChange("parent_phone", e.target.value)}
+                   onChange={(e) => {
+                     const digits = digitsOnly(e.target.value).slice(0, 10);
+                     handleInputChange("parent_phone", formatPhoneDisplay(digits));
+                   }}
                    className="mt-2"
                    required
                  />
+                 {formData.parent_phone && !isValidPhone(formData.parent_phone) && (
+                   <p className="text-sm text-destructive mt-1">Please enter a valid 10-digit phone number</p>
+                 )}
                </div>
 
                {/* Child's Cell Phone # */}
@@ -489,10 +504,17 @@ const SEX_OPTIONS = ["Male", "Female"] as const;
                  <Input
                    id="child_phone"
                    type="tel"
+                   placeholder="(555) 555-5555"
                    value={formData.child_phone}
-                   onChange={(e) => handleInputChange("child_phone", e.target.value)}
+                   onChange={(e) => {
+                     const digits = digitsOnly(e.target.value).slice(0, 10);
+                     handleInputChange("child_phone", formatPhoneDisplay(digits));
+                   }}
                    className="mt-2"
                  />
+                 {formData.child_phone && !isValidPhone(formData.child_phone) && (
+                   <p className="text-sm text-destructive mt-1">Please enter a valid 10-digit phone number</p>
+                 )}
                </div>
 
                {/* Parent/Guardian Email */}
