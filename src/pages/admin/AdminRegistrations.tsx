@@ -16,14 +16,30 @@ import { Search, Eye, AlertTriangle, ExternalLink, Users, Loader2, Pencil, Trash
 import { format, parseISO, differenceInYears } from "date-fns";
 import { toast } from "sonner";
 
-const HeadshotInHeader = ({ headshotPath }: { registrationId: string; headshotPath: string }) => {
+const HeadshotThumbnail = ({ headshotPath, size = "sm" }: { headshotPath: string; size?: "sm" | "lg" }) => {
   const [url, setUrl] = useState<string | null>(null);
+  const [fullscreen, setFullscreen] = useState(false);
   useEffect(() => {
     supabase.storage.from("registration-signatures").createSignedUrl(headshotPath, 300)
       .then(({ data }) => { if (data?.signedUrl) setUrl(data.signedUrl); });
   }, [headshotPath]);
-  if (!url) return <div className="w-16 h-16 rounded-full bg-muted animate-pulse shrink-0" />;
-  return <img src={url} alt="Youth" className="w-16 h-16 rounded-full object-cover border-2 border-border shrink-0" />;
+  const sizeClass = size === "lg" ? "w-28 h-28" : "w-10 h-10";
+  if (!url) return <div className={`${sizeClass} rounded-full bg-muted animate-pulse shrink-0`} />;
+  return (
+    <>
+      <img
+        src={url}
+        alt="Youth"
+        className={`${sizeClass} rounded-full object-cover border-2 border-border shrink-0 cursor-pointer hover:opacity-80 transition-opacity`}
+        onClick={() => setFullscreen(true)}
+      />
+      {fullscreen && (
+        <div className="fixed inset-0 z-[9999] bg-black/80 flex items-center justify-center" onClick={() => setFullscreen(false)}>
+          <img src={url} alt="Youth fullscreen" className="max-w-[90vw] max-h-[90vh] object-contain rounded-lg" />
+        </div>
+      )}
+    </>
+  );
 };
 
 const AdminRegistrations = () => {
@@ -148,6 +164,7 @@ const AdminRegistrations = () => {
                 <Table>
                   <TableHeader>
                     <TableRow className="border-white/10 hover:bg-white/5">
+                      <TableHead className="text-white/70 w-12">Photo</TableHead>
                       <TableHead className="text-white/70">Date</TableHead>
                       <TableHead className="text-white/70">Child</TableHead>
                       <TableHead className="text-white/70">Age</TableHead>
@@ -161,6 +178,13 @@ const AdminRegistrations = () => {
                   <TableBody>
                     {filteredRegistrations?.map((reg) => (
                       <TableRow key={reg.id} className="border-white/10 hover:bg-white/5">
+                        <TableCell>
+                          {reg.child_headshot_url ? (
+                            <HeadshotThumbnail headshotPath={reg.child_headshot_url} size="sm" />
+                          ) : (
+                            <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center text-muted-foreground text-xs">N/A</div>
+                          )}
+                        </TableCell>
                         <TableCell className="whitespace-nowrap text-white">
                           {format(parseISO(reg.submission_date), "MMM d, yyyy")}
                         </TableCell>
@@ -236,7 +260,7 @@ const AdminRegistrations = () => {
         <DialogContent className="max-w-2xl max-h-[90vh]">
           <DialogHeader className="flex flex-row items-center gap-4">
             {selectedRegistration?.child_headshot_url && (
-              <HeadshotInHeader registrationId={selectedRegistration.id} headshotPath={selectedRegistration.child_headshot_url} />
+              <HeadshotThumbnail headshotPath={selectedRegistration.child_headshot_url} size="lg" />
             )}
             <DialogTitle>
               {selectedRegistration?.child_first_name} {selectedRegistration?.child_last_name}
@@ -534,13 +558,7 @@ const RegistrationDetail = ({ registration: reg }: { registration: any }) => {
               <Loader2 className="w-4 h-4 animate-spin" /> Loading photo...
             </div>
           ) : signedUrls.child_headshot_url ? (
-            <a href={signedUrls.child_headshot_url} target="_blank" rel="noopener noreferrer">
-              <img 
-                src={signedUrls.child_headshot_url} 
-                alt="Child headshot" 
-                className="w-24 h-24 object-cover rounded-lg border border-border hover:opacity-80 transition-opacity"
-              />
-            </a>
+            <HeadshotThumbnail headshotPath={reg.child_headshot_url} size="lg" />
           ) : (
             <p className="text-sm text-muted-foreground">Unable to load photo</p>
           )}
