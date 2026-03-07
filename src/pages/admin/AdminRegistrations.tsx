@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -8,15 +8,22 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Search, Eye, AlertTriangle, ExternalLink, Users, Loader2 } from "lucide-react";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Search, Eye, AlertTriangle, ExternalLink, Users, Loader2, Pencil, Trash2 } from "lucide-react";
 import { format, parseISO, differenceInYears } from "date-fns";
+import { toast } from "sonner";
 
 const AdminRegistrations = () => {
+  const queryClient = useQueryClient();
   const [searchQuery, setSearchQuery] = useState("");
   const [programFilter, setProgramFilter] = useState<string>("all");
   const [districtFilter, setDistrictFilter] = useState<string>("all");
   const [selectedRegistration, setSelectedRegistration] = useState<any | null>(null);
+  const [editingRegistration, setEditingRegistration] = useState<any | null>(null);
+  const [deletingRegistration, setDeletingRegistration] = useState<any | null>(null);
 
   const { data: registrations, isLoading } = useQuery({
     queryKey: ["youth-registrations"],
@@ -49,6 +56,21 @@ const AdminRegistrations = () => {
 
   const hasMedicalAlerts = (reg: any) => {
     return (reg.allergies && reg.allergies.trim()) || (reg.asthma_inhaler_info && reg.asthma_inhaler_info.trim());
+  };
+
+  const handleDelete = async () => {
+    if (!deletingRegistration) return;
+    const { error } = await supabase
+      .from("youth_registrations")
+      .delete()
+      .eq("id", deletingRegistration.id);
+    if (error) {
+      toast.error("Failed to delete registration");
+    } else {
+      toast.success("Registration deleted");
+      queryClient.invalidateQueries({ queryKey: ["youth-registrations"] });
+    }
+    setDeletingRegistration(null);
   };
 
   const programs = [...new Set(registrations?.map((r) => r.child_boxing_program) || [])];
@@ -153,14 +175,35 @@ const AdminRegistrations = () => {
                           )}
                         </TableCell>
                         <TableCell className="text-right">
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => setSelectedRegistration(reg)}
-                            className="border-white/10 text-white hover:bg-white/10 hover:text-white"
-                          >
-                            <Eye className="w-4 h-4" />
-                          </Button>
+                          <div className="flex items-center justify-end gap-1">
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={() => setSelectedRegistration(reg)}
+                              className="text-blue-400 hover:text-blue-300 hover:bg-blue-500/10 h-8 w-8 p-0"
+                              title="View"
+                            >
+                              <Eye className="w-4 h-4" />
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={() => setEditingRegistration({ ...reg })}
+                              className="text-amber-400 hover:text-amber-300 hover:bg-amber-500/10 h-8 w-8 p-0"
+                              title="Edit"
+                            >
+                              <Pencil className="w-4 h-4" />
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={() => setDeletingRegistration(reg)}
+                              className="text-red-400 hover:text-red-300 hover:bg-red-500/10 h-8 w-8 p-0"
+                              title="Delete"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </Button>
+                          </div>
                         </TableCell>
                       </TableRow>
                     ))}
@@ -172,7 +215,7 @@ const AdminRegistrations = () => {
         </Card>
       </div>
 
-      {/* Detail Dialog */}
+      {/* View Detail Dialog */}
       <Dialog open={!!selectedRegistration} onOpenChange={() => setSelectedRegistration(null)}>
         <DialogContent className="max-w-2xl max-h-[90vh]">
           <DialogHeader>
@@ -187,10 +230,171 @@ const AdminRegistrations = () => {
           </ScrollArea>
         </DialogContent>
       </Dialog>
+
+      {/* Edit Dialog */}
+      <Dialog open={!!editingRegistration} onOpenChange={() => setEditingRegistration(null)}>
+        <DialogContent className="max-w-2xl max-h-[90vh]">
+          <DialogHeader>
+            <DialogTitle>Edit Registration</DialogTitle>
+          </DialogHeader>
+          <ScrollArea className="max-h-[70vh] pr-4">
+            {editingRegistration && (
+              <EditRegistrationForm
+                registration={editingRegistration}
+                onSave={async (updated) => {
+                  const { id, created_at: _ca, updated_at: _ua, submission_date: _sd, ...rest } = updated;
+                  const { error } = await supabase
+                    .from("youth_registrations")
+                    .update(rest)
+                    .eq("id", id);
+                  if (error) {
+                    toast.error("Failed to save changes");
+                  } else {
+                    toast.success("Registration updated");
+                    queryClient.invalidateQueries({ queryKey: ["youth-registrations"] });
+                    setEditingRegistration(null);
+                  }
+                }}
+                onCancel={() => setEditingRegistration(null)}
+              />
+            )}
+          </ScrollArea>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Confirmation */}
+      <AlertDialog open={!!deletingRegistration} onOpenChange={() => setDeletingRegistration(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Registration</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to permanently delete the registration for{" "}
+              <strong>{deletingRegistration?.child_first_name} {deletingRegistration?.child_last_name}</strong>?
+              This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
 
+/* ── Edit Form ── */
+const EditRegistrationForm = ({
+  registration,
+  onSave,
+  onCancel,
+}: {
+  registration: any;
+  onSave: (updated: any) => void;
+  onCancel: () => void;
+}) => {
+  const [form, setForm] = useState(registration);
+  const set = (key: string, value: any) => setForm((f: any) => ({ ...f, [key]: value }));
+
+  return (
+    <div className="space-y-5">
+      <Section title="Child Information">
+        <div className="grid grid-cols-2 gap-3">
+          <Field label="First Name" value={form.child_first_name} onChange={(v) => set("child_first_name", v)} />
+          <Field label="Last Name" value={form.child_last_name} onChange={(v) => set("child_last_name", v)} />
+        </div>
+        <Field label="Date of Birth" value={form.child_date_of_birth} onChange={(v) => set("child_date_of_birth", v)} type="date" />
+        <div className="grid grid-cols-2 gap-3">
+          <SelectField label="Sex" value={form.child_sex} onChange={(v) => set("child_sex", v)} options={["Male", "Female"]} />
+          <SelectField
+            label="Program"
+            value={form.child_boxing_program}
+            onChange={(v) => set("child_boxing_program", v)}
+            options={["Junior Boxing (Ages 7-10)", "Senior Boxing (Ages 11-19)", "Grit & Grace (Ages 11-19)"]}
+          />
+        </div>
+        <Field label="Phone" value={form.child_phone || ""} onChange={(v) => set("child_phone", v)} />
+        <Field label="Primary Address" value={form.child_primary_address} onChange={(v) => set("child_primary_address", v)} />
+      </Section>
+
+      <Section title="Parent/Guardian">
+        <div className="grid grid-cols-2 gap-3">
+          <Field label="First Name" value={form.parent_first_name} onChange={(v) => set("parent_first_name", v)} />
+          <Field label="Last Name" value={form.parent_last_name} onChange={(v) => set("parent_last_name", v)} />
+        </div>
+        <Field label="Phone" value={form.parent_phone} onChange={(v) => set("parent_phone", v)} />
+        <Field label="Email" value={form.parent_email} onChange={(v) => set("parent_email", v)} />
+      </Section>
+
+      <Section title="School & Demographics">
+        <SelectField
+          label="School District"
+          value={form.child_school_district}
+          onChange={(v) => set("child_school_district", v)}
+          options={["Cape May City", "Lower Cape May Regional", "Middle Township", "Ocean City", "Upper Township", "Wildwood", "Wildwood Crest", "North Wildwood", "West Cape May", "Dennis Township", "Woodbine", "Other"]}
+        />
+        <Field label="Grade Level" value={form.child_grade_level?.toString() || ""} onChange={(v) => set("child_grade_level", v ? parseInt(v) : null)} type="number" />
+        <SelectField
+          label="Race/Ethnicity"
+          value={form.child_race_ethnicity}
+          onChange={(v) => set("child_race_ethnicity", v)}
+          options={["American Indian or Alaska Native", "Asian", "Black or African American", "Hispanic or Latino", "Native Hawaiian or Other Pacific Islander", "White", "Two or More Races"]}
+        />
+      </Section>
+
+      <Section title="Medical">
+        <Field label="Allergies" value={form.allergies || ""} onChange={(v) => set("allergies", v)} textarea />
+        <Field label="Asthma/Inhaler Info" value={form.asthma_inhaler_info || ""} onChange={(v) => set("asthma_inhaler_info", v)} textarea />
+        <Field label="Important Notes" value={form.important_child_notes || ""} onChange={(v) => set("important_child_notes", v)} textarea />
+      </Section>
+
+      <div className="flex justify-end gap-3 pt-4 border-t">
+        <Button variant="outline" onClick={onCancel}>Cancel</Button>
+        <Button onClick={() => onSave(form)}>Save Changes</Button>
+      </div>
+    </div>
+  );
+};
+
+/* ── Reusable form fields ── */
+const Field = ({
+  label, value, onChange, type = "text", textarea = false,
+}: {
+  label: string; value: string; onChange: (v: string) => void; type?: string; textarea?: boolean;
+}) => (
+  <div className="space-y-1">
+    <Label className="text-xs text-muted-foreground">{label}</Label>
+    {textarea ? (
+      <Textarea value={value} onChange={(e) => onChange(e.target.value)} className="text-sm" rows={2} />
+    ) : (
+      <Input value={value} onChange={(e) => onChange(e.target.value)} type={type} className="text-sm" />
+    )}
+  </div>
+);
+
+const SelectField = ({
+  label, value, onChange, options,
+}: {
+  label: string; value: string; onChange: (v: string) => void; options: string[];
+}) => (
+  <div className="space-y-1">
+    <Label className="text-xs text-muted-foreground">{label}</Label>
+    <Select value={value} onValueChange={onChange}>
+      <SelectTrigger className="text-sm">
+        <SelectValue />
+      </SelectTrigger>
+      <SelectContent>
+        {options.map((o) => (
+          <SelectItem key={o} value={o}>{o}</SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
+  </div>
+);
+
+/* ── View Detail ── */
 const RegistrationDetail = ({ registration: reg }: { registration: any }) => {
   const age = differenceInYears(new Date(), parseISO(reg.child_date_of_birth));
   const [signedUrls, setSignedUrls] = useState<Record<string, string>>({});
