@@ -242,7 +242,7 @@ const AdminRegistrations = () => {
               <EditRegistrationForm
                 registration={editingRegistration}
                 onSave={async (updated) => {
-                  const { id, created_at, updated_at, submission_date, ...rest } = updated;
+                  const { id, created_at: _ca, updated_at: _ua, submission_date: _sd, ...rest } = updated;
                   const { error } = await supabase
                     .from("youth_registrations")
                     .update(rest)
