@@ -308,7 +308,12 @@ const SEX_OPTIONS = ["Male", "Female"] as const;
          child_school_district: formData.child_school_district as any,
          child_grade_level: formData.child_grade_level ? parseInt(formData.child_grade_level) : null,
          child_boxing_program: formData.child_boxing_program as any,
-         adults_in_household: parseInt(formData.adults_in_household),
+          adults_in_household: (() => {
+            const v = formData.adults_in_household;
+            if (v === "1" || v === "1_m" || v === "1_g" || v === "1_o") return 1;
+            if (v === "2" || v === "2_dp" || v === "2_mp") return 2;
+            return 1;
+          })(),
          siblings_in_household: parseInt(formData.siblings_in_household),
          household_income_range: formData.household_income_range as any,
          free_or_reduced_lunch: formData.free_or_reduced_lunch as any || null,
