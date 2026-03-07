@@ -598,11 +598,16 @@ const InfoRow = ({ label, value }: { label: string; value: string | number }) =>
   </div>
 );
 
-const SignatureRow = ({ label, name, url }: { label: string; name: string; url?: string }) => (
+const SignatureRow = ({ label, name, url, completed }: { label: string; name: string; url?: string; completed?: boolean }) => (
   <div className="flex items-center justify-between text-sm py-2 border-b border-border/50">
-    <div>
+    <div className="flex items-center gap-2">
+      {completed ? (
+        <CheckCircle2 className="w-4 h-4 text-green-500 shrink-0" />
+      ) : (
+        <XCircle className="w-4 h-4 text-destructive shrink-0" />
+      )}
       <span className="text-muted-foreground">{label}</span>
-      <span className="ml-2 font-medium">({name})</span>
+      {name && <span className="font-medium">({name})</span>}
     </div>
     {url ? (
       <a
@@ -614,7 +619,7 @@ const SignatureRow = ({ label, name, url }: { label: string; name: string; url?:
         View <ExternalLink className="w-3 h-3" />
       </a>
     ) : (
-      <span className="text-muted-foreground text-xs">Unavailable</span>
+      <span className="text-muted-foreground text-xs">{completed ? "Signed" : "Not completed"}</span>
     )}
   </div>
 );
