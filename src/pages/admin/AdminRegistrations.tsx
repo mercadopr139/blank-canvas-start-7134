@@ -272,7 +272,7 @@ const AdminRegistrations = () => {
               {selectedRegistration?.child_first_name} {selectedRegistration?.child_last_name}
             </DialogTitle>
           </DialogHeader>
-          <ScrollArea className="max-h-[70vh] pr-4">
+          <ScrollArea className="flex-1 overflow-auto pr-4">
             {selectedRegistration && (
               <RegistrationDetail registration={selectedRegistration} />
             )}
