@@ -552,20 +552,23 @@ const SEX_OPTIONS = ["Male", "Female"] as const;
                  </Select>
                </div>
 
-               {/* Child's Grade Level */}
-               <div>
-                 <Label htmlFor="child_grade_level" className="text-base font-medium">Child's Grade Level <span className="text-destructive">*</span></Label>
-                 <p className="text-sm text-muted-foreground">Use # Only (Ex: 9 for ninth grade)</p>
-                 <p className="text-sm text-muted-foreground">Skip if not applicable</p>
-                 <Input
-                   id="child_grade_level"
-                   type="number"
-                   min="1"
-                   max="12"
-                   value={formData.child_grade_level}
-                   onChange={(e) => handleInputChange("child_grade_level", e.target.value)}
-                   className="mt-2"
-                 />
+                {/* Child's Grade Level */}
+                <div>
+                  <Label htmlFor="child_grade_level" className="text-base font-medium">Child's Grade Level</Label>
+                  <p className="text-sm text-muted-foreground">Skip if not applicable</p>
+                  <Select value={formData.child_grade_level} onValueChange={(val) => handleInputChange("child_grade_level", val === "skip" ? "" : val)}>
+                    <SelectTrigger className="mt-2">
+                      <SelectValue placeholder="Select grade level" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="skip">Not Applicable</SelectItem>
+                      {Array.from({ length: 12 }, (_, i) => i + 1).map((g) => (
+                        <SelectItem key={g} value={String(g)}>
+                          {g === 1 ? "1st" : g === 2 ? "2nd" : g === 3 ? "3rd" : `${g}th`} Grade
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                </div>
 
                {/* Child's Boxing Program */}
