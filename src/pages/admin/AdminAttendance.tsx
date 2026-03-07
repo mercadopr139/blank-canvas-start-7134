@@ -331,7 +331,7 @@ const AdminAttendance = () => {
           </div>
 
           {/* Calendar Grid */}
-          <div className="grid grid-cols-7 gap-1">
+          <div className="grid grid-cols-7 gap-1.5">
             {calendarDays.map((day, idx) => {
               if (day === null) {
                 return <div key={`empty-${idx}`} className="aspect-square" />;
@@ -350,21 +350,28 @@ const AdminAttendance = () => {
                   key={dateStr}
                   onClick={() => count > 0 && setSelectedDay(dateStr)}
                   className={`
-                    aspect-square rounded-lg flex flex-col items-center justify-center gap-0.5 text-sm transition-all relative
-                    ${isSelected ? "bg-blue-500/30 border border-blue-400/50 ring-1 ring-blue-400/30" : ""}
+                    aspect-square rounded-lg p-1.5 flex flex-col items-center justify-center transition-all relative
+                    ${isSelected ? "bg-blue-500/25 border border-blue-400/50 ring-1 ring-blue-400/30" : ""}
                     ${isCurrentDay && !isSelected ? "border border-white/30" : ""}
-                    ${!isSelected && !isCurrentDay ? "border border-transparent" : ""}
+                    ${!isSelected && !isCurrentDay ? "border border-white/[0.06]" : ""}
                     ${count > 0 ? "hover:bg-white/10 cursor-pointer" : "cursor-default"}
                     bg-white/[0.03]
                   `}
                 >
-                  <span className={`text-xs ${isCurrentDay ? "text-blue-400 font-bold" : "text-white/50"}`}>
+                  {/* Date — top right */}
+                  <span className={`absolute top-1 right-1.5 text-[10px] leading-none ${isCurrentDay ? "text-blue-400 font-semibold" : "text-white/35"}`}>
                     {day}
                   </span>
+
+                  {/* Attendance count — centered circle */}
                   {count > 0 ? (
-                    <span className="text-sm font-bold text-green-400">{count}</span>
+                    <span className="w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-green-500/20 border border-green-500/40 flex items-center justify-center text-sm sm:text-base font-bold text-green-400">
+                      {count}
+                    </span>
                   ) : (
-                    <span className="text-xs text-white/10">·</span>
+                    <span className="w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-white/[0.03] border border-white/[0.06] flex items-center justify-center text-xs text-white/15">
+                      0
+                    </span>
                   )}
                 </button>
               );
