@@ -178,6 +178,13 @@ const AdminRegistrations = () => {
                   <TableBody>
                     {filteredRegistrations?.map((reg) => (
                       <TableRow key={reg.id} className="border-white/10 hover:bg-white/5">
+                        <TableCell>
+                          {reg.child_headshot_url ? (
+                            <HeadshotThumbnail headshotPath={reg.child_headshot_url} size="sm" />
+                          ) : (
+                            <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center text-muted-foreground text-xs">N/A</div>
+                          )}
+                        </TableCell>
                         <TableCell className="whitespace-nowrap text-white">
                           {format(parseISO(reg.submission_date), "MMM d, yyyy")}
                         </TableCell>
