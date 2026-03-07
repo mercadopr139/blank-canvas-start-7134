@@ -218,7 +218,10 @@ const AdminRegistrations = () => {
       {/* View Detail Dialog */}
       <Dialog open={!!selectedRegistration} onOpenChange={() => setSelectedRegistration(null)}>
         <DialogContent className="max-w-2xl max-h-[90vh]">
-          <DialogHeader>
+          <DialogHeader className="flex flex-row items-center gap-4">
+            {selectedRegistration?.child_headshot_url && (
+              <HeadshotInHeader registrationId={selectedRegistration.id} headshotPath={selectedRegistration.child_headshot_url} />
+            )}
             <DialogTitle>
               {selectedRegistration?.child_first_name} {selectedRegistration?.child_last_name}
             </DialogTitle>
