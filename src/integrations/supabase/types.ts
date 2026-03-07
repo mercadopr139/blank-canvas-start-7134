@@ -1203,6 +1203,12 @@ export type Database = {
         | "$75,000 - $99,999"
         | "$100,000 - $149,999"
         | "$150,000 or more"
+        | "Less than $25,000"
+        | "Less than $35,000"
+        | "Less than $45,000"
+        | "Less than $65,000"
+        | "Less than $80,000"
+        | "Greater than $80,001"
       invoice_status: "draft" | "sent" | "paid"
       lunch_status: "Yes" | "No" | "Not Applicable"
       priority_layer: "Core" | "Bonus"
@@ -1228,6 +1234,13 @@ export type Database = {
         | "Dennis Township"
         | "Woodbine"
         | "Other"
+        | "Lower Township"
+        | "Cape May Tech"
+        | "Avalon/Stone Harbor"
+        | "Wildwood Catholic Academy"
+        | "Homeschool, Hybrid, or Alternative Form of Schooling"
+        | "Cape May/West Cape May"
+        | "Wildwood/Wildwood Crest/North Wildwood"
       signal_kind: "Outcome" | "Action"
       signal_pillar:
         | "Operations"
@@ -1408,6 +1421,12 @@ export const Constants = {
         "$75,000 - $99,999",
         "$100,000 - $149,999",
         "$150,000 or more",
+        "Less than $25,000",
+        "Less than $35,000",
+        "Less than $45,000",
+        "Less than $65,000",
+        "Less than $80,000",
+        "Greater than $80,001",
       ],
       invoice_status: ["draft", "sent", "paid"],
       lunch_status: ["Yes", "No", "Not Applicable"],
@@ -1435,6 +1454,13 @@ export const Constants = {
         "Dennis Township",
         "Woodbine",
         "Other",
+        "Lower Township",
+        "Cape May Tech",
+        "Avalon/Stone Harbor",
+        "Wildwood Catholic Academy",
+        "Homeschool, Hybrid, or Alternative Form of Schooling",
+        "Cape May/West Cape May",
+        "Wildwood/Wildwood Crest/North Wildwood",
       ],
       signal_kind: ["Outcome", "Action"],
       signal_pillar: [
