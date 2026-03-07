@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Star, Search, AlertTriangle, Users, CalendarCheck, Eye } from "lucide-react";
+import { Star, Search, AlertTriangle, Users, Eye } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { startOfWeek, startOfMonth, format, differenceInCalendarDays } from "date-fns";
@@ -98,7 +98,6 @@ const AdminAttendance = () => {
 
   const baldEagles = registrations.filter((r) => r.is_bald_eagle);
   const baldEaglesPresent = baldEagles.filter((r) => getStats(r.id).present).length;
-  const baldEaglesWeek = baldEagles.reduce((sum, r) => sum + getStats(r.id).weekCount, 0);
   const baldEaglesMonth = baldEagles.reduce((sum, r) => sum + getStats(r.id).monthCount, 0);
 
   // Alerts: Bald Eagles with no attendance for 7+ days
