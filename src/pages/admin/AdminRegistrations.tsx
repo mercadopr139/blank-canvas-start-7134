@@ -12,7 +12,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Search, Eye, AlertTriangle, ExternalLink, Users, Loader2, Pencil, Trash2 } from "lucide-react";
+import { Search, Eye, AlertTriangle, ExternalLink, Users, Loader2, Pencil, Trash2, CheckCircle2, XCircle } from "lucide-react";
 import { format, parseISO, differenceInYears } from "date-fns";
 import { toast } from "sonner";
 
