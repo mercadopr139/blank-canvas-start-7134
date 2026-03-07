@@ -222,6 +222,13 @@ const SEX_OPTIONS = ["Male", "Female"] as const;
          return `Please fill in all required fields. Missing: ${field.replace(/_/g, " ")}`;
        }
      }
+
+     if (!isValidPhone(formData.parent_phone)) {
+       return "Please enter a valid 10-digit parent/guardian phone number.";
+     }
+     if (formData.child_phone && !isValidPhone(formData.child_phone)) {
+       return "Please enter a valid 10-digit child phone number.";
+     }
  
      const requiredSignatures: (keyof Signatures)[] = [
        "medical_consent", "liability_waiver", "transportation_excursions",
