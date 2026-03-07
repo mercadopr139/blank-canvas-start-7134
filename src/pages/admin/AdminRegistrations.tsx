@@ -16,14 +16,30 @@ import { Search, Eye, AlertTriangle, ExternalLink, Users, Loader2, Pencil, Trash
 import { format, parseISO, differenceInYears } from "date-fns";
 import { toast } from "sonner";
 
-const HeadshotInHeader = ({ headshotPath }: { registrationId: string; headshotPath: string }) => {
+const HeadshotThumbnail = ({ headshotPath, size = "sm" }: { headshotPath: string; size?: "sm" | "lg" }) => {
   const [url, setUrl] = useState<string | null>(null);
+  const [fullscreen, setFullscreen] = useState(false);
   useEffect(() => {
     supabase.storage.from("registration-signatures").createSignedUrl(headshotPath, 300)
       .then(({ data }) => { if (data?.signedUrl) setUrl(data.signedUrl); });
   }, [headshotPath]);
-  if (!url) return <div className="w-16 h-16 rounded-full bg-muted animate-pulse shrink-0" />;
-  return <img src={url} alt="Youth" className="w-16 h-16 rounded-full object-cover border-2 border-border shrink-0" />;
+  const sizeClass = size === "lg" ? "w-28 h-28" : "w-10 h-10";
+  if (!url) return <div className={`${sizeClass} rounded-full bg-muted animate-pulse shrink-0`} />;
+  return (
+    <>
+      <img
+        src={url}
+        alt="Youth"
+        className={`${sizeClass} rounded-full object-cover border-2 border-border shrink-0 cursor-pointer hover:opacity-80 transition-opacity`}
+        onClick={() => setFullscreen(true)}
+      />
+      {fullscreen && (
+        <div className="fixed inset-0 z-[9999] bg-black/80 flex items-center justify-center" onClick={() => setFullscreen(false)}>
+          <img src={url} alt="Youth fullscreen" className="max-w-[90vw] max-h-[90vh] object-contain rounded-lg" />
+        </div>
+      )}
+    </>
+  );
 };
 
 const AdminRegistrations = () => {
