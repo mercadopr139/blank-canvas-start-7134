@@ -342,10 +342,10 @@ const AdminAttendanceReports = () => {
         ] as [ReportType, string][]).map(([val, label]) => (
           <Button
             key={val}
-            variant={reportType === val ? "default" : "outline"}
+            variant="ghost"
             size="sm"
             onClick={() => setReportType(val)}
-            className={reportType === val ? "bg-red-600 hover:bg-red-700 text-white" : "border-white/20 text-white/70 hover:text-white hover:bg-white/10"}
+            className={reportType === val ? "bg-red-600 hover:bg-red-700 text-white" : "bg-white/10 border border-white/20 text-white/70 hover:text-white hover:bg-white/15"}
           >
             {label}
           </Button>
