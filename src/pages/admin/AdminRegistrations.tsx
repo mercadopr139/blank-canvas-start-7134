@@ -12,7 +12,8 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Search, Eye, AlertTriangle, ExternalLink, Users, Loader2, Pencil, Trash2, CheckCircle2, XCircle, ShieldCheck } from "lucide-react";
+import { Search, Eye, AlertTriangle, ExternalLink, Loader2, Pencil, Trash2, CheckCircle2, XCircle, ShieldCheck, Upload, ImageOff } from "lucide-react";
+import YouthImportModal from "@/components/admin/YouthImportModal";
 import { Switch } from "@/components/ui/switch";
 import { format, parseISO, differenceInYears } from "date-fns";
 import { toast } from "sonner";
@@ -57,6 +58,7 @@ const AdminRegistrations = () => {
   const [selectedRegistration, setSelectedRegistration] = useState<any | null>(null);
   const [editingRegistration, setEditingRegistration] = useState<any | null>(null);
   const [deletingRegistration, setDeletingRegistration] = useState<any | null>(null);
+  const [importOpen, setImportOpen] = useState(false);
 
   const { data: registrations, isLoading } = useQuery({
     queryKey: ["youth-registrations"],
@@ -201,9 +203,14 @@ const AdminRegistrations = () => {
 
   return (
     <div className="bg-black text-white">
-      <div className="border-b border-white/10 px-4 py-3">
-        <h2 className="text-base font-semibold text-white">Youth Registrations</h2>
-        <p className="text-xs text-white/50">{filteredRegistrations?.length || 0} registrations</p>
+      <div className="border-b border-white/10 px-4 py-3 flex items-center justify-between">
+        <div>
+          <h2 className="text-base font-semibold text-white">Youth Registrations</h2>
+          <p className="text-xs text-white/50">{filteredRegistrations?.length || 0} registrations</p>
+        </div>
+        <Button size="sm" onClick={() => setImportOpen(true)} className="bg-white/10 hover:bg-white/15 text-white border border-white/20 gap-1.5">
+          <Upload className="w-3.5 h-3.5" /> Import from Monday.com
+        </Button>
       </div>
 
       <div className="container mx-auto px-4 py-6 space-y-6">
@@ -369,6 +376,65 @@ const AdminRegistrations = () => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Import Modal */}
+      <YouthImportModal
+        open={importOpen}
+        onOpenChange={setImportOpen}
+        existingRegistrations={registrations || []}
+        onImportComplete={() => queryClient.invalidateQueries({ queryKey: ["youth-registrations"] })}
+      />
+
+      {/* Imported Records Needing Photo Review */}
+      {(() => {
+        const needsPhoto = (registrations || []).filter(
+          (r: any) => r.approved_for_attendance && !r.child_headshot_url &&
+            r.medical_consent_name === "Imported from Monday.com"
+        );
+        if (needsPhoto.length === 0) return null;
+        return (
+          <div className="container mx-auto px-4 pb-6">
+            <div className="flex items-center gap-3 mb-3">
+              <h3 className="text-lg font-semibold text-white flex items-center gap-2">
+                <ImageOff className="w-5 h-5 text-amber-400" /> Imported Records Needing Photo Review
+              </h3>
+              <Badge className="bg-amber-500/15 text-amber-400 border-amber-500/30 text-xs">{needsPhoto.length}</Badge>
+            </div>
+            <Card className="bg-amber-500/5 border-amber-500/20">
+              <CardContent className="p-0">
+                <div className="overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow className="border-white/10 hover:bg-transparent">
+                        <TableHead className="text-white/70">Child Name</TableHead>
+                        <TableHead className="text-white/70">DOB</TableHead>
+                        <TableHead className="text-white/70">Program</TableHead>
+                        <TableHead className="text-white/70">Photo Status</TableHead>
+                        <TableHead className="text-white/70 text-right">Action</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {needsPhoto.map((r: any) => (
+                        <TableRow key={r.id} className="border-white/10">
+                          <TableCell className="text-white font-medium">{r.child_first_name} {r.child_last_name}</TableCell>
+                          <TableCell className="text-white/60">{format(parseISO(r.child_date_of_birth), "MMM d, yyyy")}</TableCell>
+                          <TableCell className="text-white/60 text-xs">{r.child_boxing_program}</TableCell>
+                          <TableCell><Badge className="bg-amber-500/15 text-amber-400 border-amber-500/30 text-xs">Photo Missing</Badge></TableCell>
+                          <TableCell className="text-right">
+                            <Button size="sm" variant="ghost" onClick={() => setEditingRegistration({ ...r })} className="text-amber-400 hover:text-amber-300 hover:bg-amber-500/10 h-8 gap-1">
+                              <Pencil className="w-3.5 h-3.5" /> Edit Profile
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        );
+      })()}
     </div>
   );
 };
