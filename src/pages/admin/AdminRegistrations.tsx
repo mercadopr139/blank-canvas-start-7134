@@ -26,10 +26,13 @@ const HeadshotThumbnail = ({ headshotPath, size = "sm" }: { headshotPath: string
   useEffect(() => {
     supabase.storage.from("registration-signatures").createSignedUrl(headshotPath, 300)
       .then(({ data }) => {
-        if (!data?.signedUrl) return;
-        const signedUrl = data.signedUrl.startsWith("http")
-          ? data.signedUrl
-          : `${import.meta.env.VITE_SUPABASE_URL}/storage/v1${data.signedUrl}`;
+        const rawSignedUrl = (data as { signedUrl?: string; signedURL?: string } | null)?.signedUrl
+          ?? (data as { signedUrl?: string; signedURL?: string } | null)?.signedURL;
+        if (!rawSignedUrl) return;
+
+        const signedUrl = rawSignedUrl.startsWith("http")
+          ? rawSignedUrl
+          : `${import.meta.env.VITE_SUPABASE_URL}/storage/v1${rawSignedUrl}`;
         setUrl(signedUrl);
       });
   }, [headshotPath]);
