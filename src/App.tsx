@@ -102,6 +102,7 @@ const App = () => (
               <Route path="registration-analytics" element={<AdminRegistrationAnalytics />} />
               <Route path="attendance" element={<AdminAttendance />} />
               <Route path="attendance-reports" element={<AdminAttendanceReports />} />
+            </Route>
 
             {/* Sales & Marketing section — sidebar layout wraps sub-pages */}
             <Route
