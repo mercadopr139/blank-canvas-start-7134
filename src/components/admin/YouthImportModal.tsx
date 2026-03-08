@@ -178,14 +178,14 @@ function normalizeRace(val: string): string | null {
   if (v.includes("american indian") || v.includes("alaska native") || v.includes("native american")) return "American Indian or Alaska Native";
   if (v.includes("native hawaiian") || v.includes("pacific islander")) return "Native Hawaiian or Other Pacific Islander";
   // Check exact match
-  const exact = ["American Indian or Alaska Native","Asian","Black or African American","Hispanic or Latino","Native Hawaiian or Other Pacific Islander","White","Two or More Races"];
+  const exact = ["American Indian or Alaska Native", "Asian", "Black or African American", "Hispanic or Latino", "Native Hawaiian or Other Pacific Islander", "White", "Two or More Races"];
   const match = exact.find((e) => e.toLowerCase() === v);
   return match || null;
 }
 
 function normalizeSchoolDistrict(val: string): string | null {
   const v = val.trim().toLowerCase();
-  const districts = ["Cape May City","Lower Cape May Regional","Middle Township","Ocean City","Upper Township","Wildwood","Wildwood Crest","North Wildwood","West Cape May","Dennis Township","Woodbine","Other","Lower Township","Cape May Tech","Avalon/Stone Harbor","Wildwood Catholic Academy","Homeschool, Hybrid, or Alternative Form of Schooling","Cape May/West Cape May","Wildwood/Wildwood Crest/North Wildwood"];
+  const districts = ["Cape May City", "Lower Cape May Regional", "Middle Township", "Ocean City", "Upper Township", "Wildwood", "Wildwood Crest", "North Wildwood", "West Cape May", "Dennis Township", "Woodbine", "Other", "Lower Township", "Cape May Tech", "Avalon/Stone Harbor", "Wildwood Catholic Academy", "Homeschool, Hybrid, or Alternative Form of Schooling", "Cape May/West Cape May", "Wildwood/Wildwood Crest/North Wildwood"];
   const exact = districts.find((d) => d.toLowerCase() === v);
   if (exact) return exact;
   // Fuzzy matches
@@ -210,7 +210,7 @@ function normalizeSchoolDistrict(val: string): string | null {
 
 function normalizeHouseholdIncome(val: string): string | null {
   const v = val.trim().toLowerCase();
-  const incomes = ["Under $25,000","$25,000 - $49,999","$50,000 - $74,999","$75,000 - $99,999","$100,000 - $149,999","$150,000 or more","Less than $25,000","Less than $35,000","Less than $45,000","Less than $65,000","Less than $80,000","Greater than $80,001"];
+  const incomes = ["Under $25,000", "$25,000 - $49,999", "$50,000 - $74,999", "$75,000 - $99,999", "$100,000 - $149,999", "$150,000 or more", "Less than $25,000", "Less than $35,000", "Less than $45,000", "Less than $65,000", "Less than $80,000", "Greater than $80,001"];
   const exact = incomes.find((i) => i.toLowerCase() === v);
   if (exact) return exact;
   // Fuzzy
@@ -338,58 +338,58 @@ const YouthImportModal = ({ open, onOpenChange, existingRegistrations, onImportC
   };
 
   /* ── Sanitize Import Row ── */
-  const sanitizeImportRow = (data: Record<string, string>): { sanitizedData: Record<string, string>; wasSanitized: boolean } => {
+  const sanitizeImportRow = (data: Record<string, string>): {sanitizedData: Record<string, string>;wasSanitized: boolean;} => {
     const sanitized = { ...data };
     let changed = false;
 
     // Date normalization
     if (sanitized.child_date_of_birth) {
       const normalized = normalizeDate(sanitized.child_date_of_birth);
-      if (normalized && normalized !== sanitized.child_date_of_birth) { sanitized.child_date_of_birth = normalized; changed = true; }
-      else if (normalized) sanitized.child_date_of_birth = normalized;
+      if (normalized && normalized !== sanitized.child_date_of_birth) {sanitized.child_date_of_birth = normalized;changed = true;} else
+      if (normalized) sanitized.child_date_of_birth = normalized;
     }
 
     // Trim all string values
     for (const key of Object.keys(sanitized)) {
-      if (sanitized[key] && sanitized[key] !== sanitized[key].trim()) { sanitized[key] = sanitized[key].trim(); changed = true; }
+      if (sanitized[key] && sanitized[key] !== sanitized[key].trim()) {sanitized[key] = sanitized[key].trim();changed = true;}
     }
 
     // Normalize enum fields and track if any were changed
     if (sanitized.child_sex) {
       const norm = normalizeSex(sanitized.child_sex);
-      if (norm && norm !== sanitized.child_sex) { sanitized.child_sex = norm; changed = true; }
+      if (norm && norm !== sanitized.child_sex) {sanitized.child_sex = norm;changed = true;}
     }
     if (sanitized.child_race_ethnicity) {
       const norm = normalizeRace(sanitized.child_race_ethnicity);
-      if (norm && norm !== sanitized.child_race_ethnicity) { sanitized.child_race_ethnicity = norm; changed = true; }
+      if (norm && norm !== sanitized.child_race_ethnicity) {sanitized.child_race_ethnicity = norm;changed = true;}
     }
     if (sanitized.child_boxing_program) {
       const norm = normalizeBoxingProgram(sanitized.child_boxing_program);
-      if (norm && norm !== sanitized.child_boxing_program) { sanitized.child_boxing_program = norm; changed = true; }
+      if (norm && norm !== sanitized.child_boxing_program) {sanitized.child_boxing_program = norm;changed = true;}
     }
     if (sanitized.child_school_district) {
       const norm = normalizeSchoolDistrict(sanitized.child_school_district);
-      if (norm && norm !== sanitized.child_school_district) { sanitized.child_school_district = norm; changed = true; }
+      if (norm && norm !== sanitized.child_school_district) {sanitized.child_school_district = norm;changed = true;}
     }
     if (sanitized.household_income_range) {
       const norm = normalizeHouseholdIncome(sanitized.household_income_range);
-      if (norm && norm !== sanitized.household_income_range) { sanitized.household_income_range = norm; changed = true; }
+      if (norm && norm !== sanitized.household_income_range) {sanitized.household_income_range = norm;changed = true;}
     }
     if (sanitized.free_or_reduced_lunch) {
       const norm = normalizeFreeLunch(sanitized.free_or_reduced_lunch);
-      if (norm && norm !== sanitized.free_or_reduced_lunch) { sanitized.free_or_reduced_lunch = norm; changed = true; }
+      if (norm && norm !== sanitized.free_or_reduced_lunch) {sanitized.free_or_reduced_lunch = norm;changed = true;}
     }
     if (sanitized.parent_phone) {
       const norm = normalizePhone(sanitized.parent_phone);
-      if (norm !== sanitized.parent_phone) { sanitized.parent_phone = norm; changed = true; }
+      if (norm !== sanitized.parent_phone) {sanitized.parent_phone = norm;changed = true;}
     }
     if (sanitized.child_phone) {
       const norm = normalizePhone(sanitized.child_phone);
-      if (norm !== sanitized.child_phone) { sanitized.child_phone = norm; changed = true; }
+      if (norm !== sanitized.child_phone) {sanitized.child_phone = norm;changed = true;}
     }
     if (sanitized.parent_email) {
       const lower = sanitized.parent_email.trim().toLowerCase();
-      if (lower !== sanitized.parent_email) { sanitized.parent_email = lower; changed = true; }
+      if (lower !== sanitized.parent_email) {sanitized.parent_email = lower;changed = true;}
     }
 
     return { sanitizedData: sanitized, wasSanitized: changed };
