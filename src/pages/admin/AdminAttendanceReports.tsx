@@ -482,7 +482,7 @@ const AdminAttendanceReports = () => {
                     variant={baldEaglesOnly ? "default" : "outline"}
                     size="sm"
                     onClick={() => setBaldEaglesOnly((v) => !v)}
-                    className={baldEaglesOnly ? "bg-amber-600 hover:bg-amber-700 text-white h-9" : "border-white/20 text-white/70 hover:text-white hover:bg-white/10 h-9"}
+                    className={baldEaglesOnly ? "bg-amber-600 hover:bg-amber-700 text-white h-9" : "border-white/20 text-foreground hover:text-foreground hover:bg-white/10 h-9"}
                   >
                     <Star className="w-3.5 h-3.5 mr-1" /> Bald Eagles Only
                   </Button>
