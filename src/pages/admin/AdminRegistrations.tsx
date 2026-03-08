@@ -203,9 +203,14 @@ const AdminRegistrations = () => {
 
   return (
     <div className="bg-black text-white">
-      <div className="border-b border-white/10 px-4 py-3">
-        <h2 className="text-base font-semibold text-white">Youth Registrations</h2>
-        <p className="text-xs text-white/50">{filteredRegistrations?.length || 0} registrations</p>
+      <div className="border-b border-white/10 px-4 py-3 flex items-center justify-between">
+        <div>
+          <h2 className="text-base font-semibold text-white">Youth Registrations</h2>
+          <p className="text-xs text-white/50">{filteredRegistrations?.length || 0} registrations</p>
+        </div>
+        <Button size="sm" onClick={() => setImportOpen(true)} className="bg-white/10 hover:bg-white/15 text-white border border-white/20 gap-1.5">
+          <Upload className="w-3.5 h-3.5" /> Import from Monday.com
+        </Button>
       </div>
 
       <div className="container mx-auto px-4 py-6 space-y-6">
