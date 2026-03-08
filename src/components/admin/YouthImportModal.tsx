@@ -22,25 +22,25 @@ function parseCSV(text: string): string[][] {
       if (text[i] === '"') {
         i++;
         while (i < text.length) {
-          if (text[i] === '"' && text[i + 1] === '"') { value += '"'; i += 2; }
-          else if (text[i] === '"') { i++; break; }
-          else { value += text[i]; i++; }
+          if (text[i] === '"' && text[i + 1] === '"') {value += '"';i += 2;} else
+          if (text[i] === '"') {i++;break;} else
+          {value += text[i];i++;}
         }
-        if (text[i] === ",") i++;
-        else if (text[i] === "\r" || text[i] === "\n") { if (text[i] === "\r" && text[i + 1] === "\n") i++; i++; row.push(value); break; }
+        if (text[i] === ",") i++;else
+        if (text[i] === "\r" || text[i] === "\n") {if (text[i] === "\r" && text[i + 1] === "\n") i++;i++;row.push(value);break;}
       } else {
         const nextComma = text.indexOf(",", i);
         const nextNewline = text.indexOf("\n", i);
         const nextCR = text.indexOf("\r", i);
         let end = text.length;
         let isEnd = true;
-        if (nextComma >= 0 && nextComma < end) { end = nextComma; isEnd = false; }
-        if (nextNewline >= 0 && nextNewline < end) { end = nextNewline; isEnd = true; }
-        if (nextCR >= 0 && nextCR < end) { end = nextCR; isEnd = true; }
+        if (nextComma >= 0 && nextComma < end) {end = nextComma;isEnd = false;}
+        if (nextNewline >= 0 && nextNewline < end) {end = nextNewline;isEnd = true;}
+        if (nextCR >= 0 && nextCR < end) {end = nextCR;isEnd = true;}
         value = text.substring(i, end).trim();
         i = end;
-        if (!isEnd && text[i] === ",") i++;
-        else { if (text[i] === "\r") i++; if (text[i] === "\n") i++; row.push(value); break; }
+        if (!isEnd && text[i] === ",") i++;else
+        {if (text[i] === "\r") i++;if (text[i] === "\n") i++;row.push(value);break;}
       }
       row.push(value);
     }
@@ -50,7 +50,7 @@ function parseCSV(text: string): string[][] {
 }
 
 /* ───── Column Mapping ───── */
-const FIELD_MAP: Record<string, { dbField: string; aliases: string[] }> = {
+const FIELD_MAP: Record<string, {dbField: string;aliases: string[];}> = {
   child_first_name: { dbField: "child_first_name", aliases: ["first name of child", "child first name", "first name", "child's first name"] },
   child_last_name: { dbField: "child_last_name", aliases: ["last name of child", "child last name", "last name", "child's last name"] },
   child_sex: { dbField: "child_sex", aliases: ["child's sex", "sex", "gender"] },
@@ -72,7 +72,7 @@ const FIELD_MAP: Record<string, { dbField: string; aliases: string[] }> = {
   allergies: { dbField: "allergies", aliases: ["allergies", "what allergies"] },
   asthma_inhaler_info: { dbField: "asthma_inhaler_info", aliases: ["inhaler", "asthma", "inhaler info"] },
   important_child_notes: { dbField: "important_child_notes", aliases: ["important information", "coach notes", "notes about child"] },
-  photo_url: { dbField: "_photo_url", aliases: ["headshot", "photo", "picture", "image", "file", "photo url", "image url", "profile photo", "child photo", "upload a picture"] },
+  photo_url: { dbField: "_photo_url", aliases: ["headshot", "photo", "picture", "image", "file", "photo url", "image url", "profile photo", "child photo", "upload a picture"] }
 };
 
 function autoMapColumns(headers: string[]): Record<number, string> {
@@ -195,8 +195,8 @@ const YouthImportModal = ({ open, onOpenChange, existingRegistrations, onImportC
       Object.entries(columnMapping).forEach(([colIdx, fieldKey]) => {
         const val = row[Number(colIdx)]?.trim() || "";
         if (fieldKey === "photo_url") {
-          if (val && isUrl(val)) photoUrl = val;
-          else if (val) warnings.push("Photo field is not a valid URL");
+          if (val && isUrl(val)) photoUrl = val;else
+          if (val) warnings.push("Photo field is not a valid URL");
         } else {
           data[fieldKey] = val;
         }
@@ -205,7 +205,7 @@ const YouthImportModal = ({ open, onOpenChange, existingRegistrations, onImportC
       // Validate required
       let valid = true;
       REQUIRED_FIELDS.forEach((f) => {
-        if (!data[f]) { warnings.push(`Missing ${f.replace(/_/g, " ")}`); valid = false; }
+        if (!data[f]) {warnings.push(`Missing ${f.replace(/_/g, " ")}`);valid = false;}
       });
 
       // Check duplicates
@@ -214,11 +214,11 @@ const YouthImportModal = ({ open, onOpenChange, existingRegistrations, onImportC
       if (data.child_first_name && data.child_last_name && data.child_date_of_birth) {
         const match = existingRegistrations.find(
           (r) =>
-            r.child_first_name.toLowerCase() === data.child_first_name.toLowerCase() &&
-            r.child_last_name.toLowerCase() === data.child_last_name.toLowerCase() &&
-            r.child_date_of_birth === data.child_date_of_birth
+          r.child_first_name.toLowerCase() === data.child_first_name.toLowerCase() &&
+          r.child_last_name.toLowerCase() === data.child_last_name.toLowerCase() &&
+          r.child_date_of_birth === data.child_date_of_birth
         );
-        if (match) { isDuplicate = true; duplicateId = match.id; }
+        if (match) {isDuplicate = true;duplicateId = match.id;}
       }
 
       return { rowIndex: rowIdx, data, photoUrl, isDuplicate, duplicateId, warnings, valid };
@@ -243,7 +243,7 @@ const YouthImportModal = ({ open, onOpenChange, existingRegistrations, onImportC
   const executeImport = async () => {
     setStep("importing");
     setIsImporting(true);
-    let imported = 0, updated = 0, photosImported = 0, skipped = 0, photoErrors = 0;
+    let imported = 0,updated = 0,photosImported = 0,skipped = 0,photoErrors = 0;
     const needsReview: ImportRow[] = [];
 
     const { data: { session } } = await supabase.auth.getSession();
@@ -251,24 +251,24 @@ const YouthImportModal = ({ open, onOpenChange, existingRegistrations, onImportC
 
     for (let i = 0; i < importRows.length; i++) {
       const row = importRows[i];
-      setImportProgress(Math.round(((i + 1) / importRows.length) * 100));
+      setImportProgress(Math.round((i + 1) / importRows.length * 100));
 
-      if (!row.valid) { skipped++; needsReview.push(row); continue; }
+      if (!row.valid) {skipped++;needsReview.push(row);continue;}
 
       // Handle duplicates
       if (row.isDuplicate) {
-        if (duplicateAction === "skip") { skipped++; continue; }
+        if (duplicateAction === "skip") {skipped++;continue;}
         // Update existing
         const updateData = buildInsertData(row.data);
         delete (updateData as any).approved_for_attendance;
         const { error } = await supabase.from("youth_registrations").update(updateData as any).eq("id", row.duplicateId!);
-        if (error) { skipped++; needsReview.push({ ...row, warnings: [...row.warnings, `Update failed: ${error.message}`] }); continue; }
+        if (error) {skipped++;needsReview.push({ ...row, warnings: [...row.warnings, `Update failed: ${error.message}`] });continue;}
 
         // Photo for update
         if (duplicateAction === "update_with_photo" && row.photoUrl && accessToken) {
           const photoResult = await importPhoto(row.photoUrl, row.duplicateId!, accessToken);
-          if (photoResult) photosImported++;
-          else { photoErrors++; needsReview.push({ ...row, warnings: [...row.warnings, "Photo import failed"] }); }
+          if (photoResult) photosImported++;else
+          {photoErrors++;needsReview.push({ ...row, warnings: [...row.warnings, "Photo import failed"] });}
         }
         updated++;
         continue;
@@ -277,13 +277,13 @@ const YouthImportModal = ({ open, onOpenChange, existingRegistrations, onImportC
       // Insert new
       const insertData = buildInsertData(row.data);
       const { data: inserted, error } = await supabase.from("youth_registrations").insert(insertData as any).select("id").single();
-      if (error) { skipped++; needsReview.push({ ...row, warnings: [...row.warnings, `Insert failed: ${error.message}`] }); continue; }
+      if (error) {skipped++;needsReview.push({ ...row, warnings: [...row.warnings, `Insert failed: ${error.message}`] });continue;}
 
       // Photo for new record
       if (row.photoUrl && inserted && accessToken) {
         const photoResult = await importPhoto(row.photoUrl, inserted.id, accessToken);
-        if (photoResult) photosImported++;
-        else { photoErrors++; needsReview.push({ ...row, warnings: [...row.warnings, "Photo import failed – needs manual upload"] }); }
+        if (photoResult) photosImported++;else
+        {photoErrors++;needsReview.push({ ...row, warnings: [...row.warnings, "Photo import failed – needs manual upload"] });}
       } else if (!row.photoUrl) {
         needsReview.push({ ...row, warnings: [...row.warnings, "No photo URL provided"], duplicateId: inserted?.id || null });
       }
@@ -311,7 +311,7 @@ const YouthImportModal = ({ open, onOpenChange, existingRegistrations, onImportC
       media_consent_name: "Imported from Monday.com",
       media_consent_signature_url: "",
       spiritual_development_policy_name: "Imported from Monday.com",
-      spiritual_development_policy_signature_url: "",
+      spiritual_development_policy_signature_url: ""
     };
 
     if (data.child_first_name) rec.child_first_name = data.child_first_name.trim();
@@ -356,7 +356,7 @@ const YouthImportModal = ({ open, onOpenChange, existingRegistrations, onImportC
   const importPhoto = async (url: string, registrationId: string, _accessToken: string): Promise<boolean> => {
     try {
       const resp = await supabase.functions.invoke("import-youth-photo", {
-        body: { photoUrl: url, registrationId },
+        body: { photoUrl: url, registrationId }
       });
       return !resp.error && resp.data?.success;
     } catch {
@@ -366,13 +366,13 @@ const YouthImportModal = ({ open, onOpenChange, existingRegistrations, onImportC
 
   const mappableFields = Object.entries(FIELD_MAP).map(([key, { aliases }]) => ({
     key,
-    label: aliases[0].replace(/\b\w/g, (c) => c.toUpperCase()),
+    label: aliases[0].replace(/\b\w/g, (c) => c.toUpperCase())
   }));
 
   const mappedFieldKeys = new Set(Object.values(columnMapping));
 
   return (
-    <Dialog open={open} onOpenChange={(v) => { if (!v) reset(); onOpenChange(v); }}>
+    <Dialog open={open} onOpenChange={(v) => {if (!v) reset();onOpenChange(v);}}>
       <DialogContent className="max-w-3xl max-h-[90vh] overflow-hidden flex flex-col bg-black border-white/10 text-white">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
@@ -383,8 +383,8 @@ const YouthImportModal = ({ open, onOpenChange, existingRegistrations, onImportC
 
         <ScrollArea className="flex-1 overflow-auto pr-2">
           {/* Step 1: Upload */}
-          {step === "upload" && (
-            <div className="space-y-6 py-4">
+          {step === "upload" &&
+          <div className="space-y-6 py-4">
               <p className="text-sm text-white/60">
                 Upload a CSV export from Monday.com. If the export includes photo/image URLs, they will be imported automatically.
               </p>
@@ -394,7 +394,7 @@ const YouthImportModal = ({ open, onOpenChange, existingRegistrations, onImportC
                 <label className="cursor-pointer">
                   <Input type="file" accept=".csv" onChange={handleFileUpload} className="hidden" />
                   <Button variant="outline" className="border-white/20 text-white hover:bg-white/10" asChild>
-                    <span>Select CSV File</span>
+                    <span className="text-primary">Select CSV File</span>
                   </Button>
                 </label>
               </div>
@@ -405,73 +405,73 @@ const YouthImportModal = ({ open, onOpenChange, existingRegistrations, onImportC
                 <p className="text-white/40 text-xs mt-2">Photos will be downloaded and stored securely. If a photo URL is inaccessible, the profile is still imported and flagged for manual photo upload.</p>
               </div>
             </div>
-          )}
+          }
 
           {/* Step 2: Column Mapping */}
-          {step === "mapping" && (
-            <div className="space-y-4 py-4">
+          {step === "mapping" &&
+          <div className="space-y-4 py-4">
               <p className="text-sm text-white/60">
                 We detected <strong>{csvRows.length}</strong> rows. Map your CSV columns to registration fields below.
               </p>
               <div className="space-y-2 max-h-[400px] overflow-y-auto">
-                {csvHeaders.map((header, idx) => (
-                  <div key={idx} className="flex items-center gap-3 p-2 rounded bg-white/5">
+                {csvHeaders.map((header, idx) =>
+              <div key={idx} className="flex items-center gap-3 p-2 rounded bg-white/5">
                     <span className="text-sm text-white/70 w-48 truncate" title={header}>{header}</span>
                     <span className="text-white/30">→</span>
                     <Select
-                      value={columnMapping[idx] || "_skip"}
-                      onValueChange={(v) => setColumnMapping((m) => ({ ...m, [idx]: v === "_skip" ? undefined! : v }))}
-                    >
+                  value={columnMapping[idx] || "_skip"}
+                  onValueChange={(v) => setColumnMapping((m) => ({ ...m, [idx]: v === "_skip" ? undefined! : v }))}>
+                  
                       <SelectTrigger className="w-56 bg-white/5 border-white/20 text-white h-8 text-sm">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="_skip">— Skip —</SelectItem>
-                        {mappableFields.map((f) => (
-                          <SelectItem key={f.key} value={f.key} disabled={mappedFieldKeys.has(f.key) && columnMapping[idx] !== f.key}>
+                        {mappableFields.map((f) =>
+                    <SelectItem key={f.key} value={f.key} disabled={mappedFieldKeys.has(f.key) && columnMapping[idx] !== f.key}>
                             {f.label} {f.key === "photo_url" && "📷"}
                           </SelectItem>
-                        ))}
+                    )}
                       </SelectContent>
                     </Select>
-                    {columnMapping[idx] && (
-                      <Badge className="bg-green-500/15 text-green-500 border-green-500/30 text-[10px]">Mapped</Badge>
-                    )}
+                    {columnMapping[idx] &&
+                <Badge className="bg-green-500/15 text-green-500 border-green-500/30 text-[10px]">Mapped</Badge>
+                }
                   </div>
-                ))}
+              )}
               </div>
               <div className="flex justify-end gap-3 pt-3 border-t border-white/10">
                 <Button variant="outline" onClick={() => setStep("upload")} className="border-white/20 text-white hover:bg-white/10">Back</Button>
                 <Button onClick={buildPreview} className="bg-red-600 hover:bg-red-700">Preview Import</Button>
               </div>
             </div>
-          )}
+          }
 
           {/* Step 3: Preview */}
-          {step === "preview" && (
-            <div className="space-y-4 py-4">
+          {step === "preview" &&
+          <div className="space-y-4 py-4">
               {/* Summary cards */}
               <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
                 {[
-                  { label: "Total Rows", value: previewStats.total, color: "" },
-                  { label: "Ready", value: previewStats.valid, color: "text-green-400" },
-                  { label: "With Photos", value: previewStats.withPhotos, color: "text-blue-400" },
-                  { label: "No Photo", value: previewStats.missingPhotos, color: "text-amber-400" },
-                  { label: "Duplicates", value: previewStats.duplicates, color: "text-yellow-400" },
-                  { label: "Warnings", value: previewStats.withWarnings, color: "text-red-400" },
-                ].map((s) => (
-                  <Card key={s.label} className="bg-white/5 border-white/10">
+              { label: "Total Rows", value: previewStats.total, color: "" },
+              { label: "Ready", value: previewStats.valid, color: "text-green-400" },
+              { label: "With Photos", value: previewStats.withPhotos, color: "text-blue-400" },
+              { label: "No Photo", value: previewStats.missingPhotos, color: "text-amber-400" },
+              { label: "Duplicates", value: previewStats.duplicates, color: "text-yellow-400" },
+              { label: "Warnings", value: previewStats.withWarnings, color: "text-red-400" }].
+              map((s) =>
+              <Card key={s.label} className="bg-white/5 border-white/10">
                     <CardContent className="pt-3 pb-2 text-center">
                       <p className="text-[10px] text-white/50">{s.label}</p>
                       <p className={`text-lg font-bold ${s.color || "text-white"}`}>{s.value}</p>
                     </CardContent>
                   </Card>
-                ))}
+              )}
               </div>
 
               {/* Duplicate handling */}
-              {previewStats.duplicates > 0 && (
-                <div className="flex items-center gap-3 p-3 bg-yellow-500/10 border border-yellow-500/30 rounded-lg">
+              {previewStats.duplicates > 0 &&
+            <div className="flex items-center gap-3 p-3 bg-yellow-500/10 border border-yellow-500/30 rounded-lg">
                   <AlertTriangle className="w-4 h-4 text-yellow-400 flex-shrink-0" />
                   <span className="text-sm text-yellow-400">{previewStats.duplicates} duplicate(s) found.</span>
                   <Select value={duplicateAction} onValueChange={(v: DuplicateAction) => setDuplicateAction(v)}>
@@ -485,7 +485,7 @@ const YouthImportModal = ({ open, onOpenChange, existingRegistrations, onImportC
                     </SelectContent>
                   </Select>
                 </div>
-              )}
+            }
 
               {/* Preview table */}
               <div className="overflow-x-auto max-h-[300px] overflow-y-auto">
@@ -501,30 +501,30 @@ const YouthImportModal = ({ open, onOpenChange, existingRegistrations, onImportC
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {importRows.slice(0, 50).map((row, i) => (
-                      <TableRow key={i} className="border-white/10">
+                    {importRows.slice(0, 50).map((row, i) =>
+                  <TableRow key={i} className="border-white/10">
                         <TableCell className="text-white/40 text-xs">{i + 1}</TableCell>
                         <TableCell className="text-white text-sm">{row.data.child_first_name || "—"} {row.data.child_last_name || "—"}</TableCell>
                         <TableCell className="text-white/60 text-xs">{row.data.child_boxing_program || "Default"}</TableCell>
                         <TableCell className="text-white/60 text-xs">{row.data.child_school_district || "Other"}</TableCell>
                         <TableCell>
-                          {row.photoUrl ? (
-                            <Badge className="bg-blue-500/15 text-blue-400 border-blue-500/30 text-[10px]">URL Found</Badge>
-                          ) : (
-                            <Badge className="bg-white/5 text-white/30 border-white/10 text-[10px]">Missing</Badge>
-                          )}
+                          {row.photoUrl ?
+                      <Badge className="bg-blue-500/15 text-blue-400 border-blue-500/30 text-[10px]">URL Found</Badge> :
+
+                      <Badge className="bg-white/5 text-white/30 border-white/10 text-[10px]">Missing</Badge>
+                      }
                         </TableCell>
                         <TableCell>
-                          {!row.valid ? (
-                            <Badge className="bg-red-500/15 text-red-400 border-red-500/30 text-[10px]">Invalid</Badge>
-                          ) : row.isDuplicate ? (
-                            <Badge className="bg-yellow-500/15 text-yellow-400 border-yellow-500/30 text-[10px]">Duplicate</Badge>
-                          ) : (
-                            <Badge className="bg-green-500/15 text-green-400 border-green-500/30 text-[10px]">Ready</Badge>
-                          )}
+                          {!row.valid ?
+                      <Badge className="bg-red-500/15 text-red-400 border-red-500/30 text-[10px]">Invalid</Badge> :
+                      row.isDuplicate ?
+                      <Badge className="bg-yellow-500/15 text-yellow-400 border-yellow-500/30 text-[10px]">Duplicate</Badge> :
+
+                      <Badge className="bg-green-500/15 text-green-400 border-green-500/30 text-[10px]">Ready</Badge>
+                      }
                         </TableCell>
                       </TableRow>
-                    ))}
+                  )}
                   </TableBody>
                 </Table>
               </div>
@@ -537,11 +537,11 @@ const YouthImportModal = ({ open, onOpenChange, existingRegistrations, onImportC
                 </Button>
               </div>
             </div>
-          )}
+          }
 
           {/* Step 4: Importing */}
-          {step === "importing" && (
-            <div className="py-12 text-center space-y-4">
+          {step === "importing" &&
+          <div className="py-12 text-center space-y-4">
               <Loader2 className="w-10 h-10 mx-auto animate-spin text-red-400" />
               <p className="text-white/70">Importing records and downloading photos...</p>
               <div className="w-64 mx-auto bg-white/10 rounded-full h-2">
@@ -549,56 +549,56 @@ const YouthImportModal = ({ open, onOpenChange, existingRegistrations, onImportC
               </div>
               <p className="text-sm text-white/40">{importProgress}% complete</p>
             </div>
-          )}
+          }
 
           {/* Step 5: Results */}
-          {step === "results" && results && (
-            <div className="space-y-4 py-4">
+          {step === "results" && results &&
+          <div className="space-y-4 py-4">
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                 {[
-                  { label: "Records Imported", value: results.imported, icon: CheckCircle2, color: "text-green-400" },
-                  { label: "Records Updated", value: results.updated, icon: CheckCircle2, color: "text-blue-400" },
-                  { label: "Photos Imported", value: results.photosImported, icon: Camera, color: "text-green-400" },
-                  { label: "Records Skipped", value: results.skipped, icon: AlertTriangle, color: "text-amber-400" },
-                  { label: "Photo Errors", value: results.photoErrors, icon: ImageOff, color: "text-red-400" },
-                  { label: "Needs Review", value: results.needsReview.length, icon: AlertTriangle, color: "text-yellow-400" },
-                ].map((s) => (
-                  <Card key={s.label} className="bg-white/5 border-white/10">
+              { label: "Records Imported", value: results.imported, icon: CheckCircle2, color: "text-green-400" },
+              { label: "Records Updated", value: results.updated, icon: CheckCircle2, color: "text-blue-400" },
+              { label: "Photos Imported", value: results.photosImported, icon: Camera, color: "text-green-400" },
+              { label: "Records Skipped", value: results.skipped, icon: AlertTriangle, color: "text-amber-400" },
+              { label: "Photo Errors", value: results.photoErrors, icon: ImageOff, color: "text-red-400" },
+              { label: "Needs Review", value: results.needsReview.length, icon: AlertTriangle, color: "text-yellow-400" }].
+              map((s) =>
+              <Card key={s.label} className="bg-white/5 border-white/10">
                     <CardContent className="pt-3 pb-2 text-center">
                       <s.icon className={`w-5 h-5 mx-auto mb-1 ${s.color}`} />
                       <p className="text-[10px] text-white/50">{s.label}</p>
                       <p className={`text-xl font-bold ${s.color}`}>{s.value}</p>
                     </CardContent>
                   </Card>
-                ))}
+              )}
               </div>
 
-              {results.needsReview.length > 0 && (
-                <div>
+              {results.needsReview.length > 0 &&
+            <div>
                   <p className="text-sm font-medium text-white/70 mb-2">Records Needing Review</p>
                   <div className="max-h-[200px] overflow-y-auto space-y-1">
-                    {results.needsReview.map((row, i) => (
-                      <div key={i} className="flex items-center gap-3 p-2 rounded bg-white/5 text-sm">
+                    {results.needsReview.map((row, i) =>
+                <div key={i} className="flex items-center gap-3 p-2 rounded bg-white/5 text-sm">
                         <span className="text-white">{row.data.child_first_name} {row.data.child_last_name}</span>
                         <span className="text-white/30">–</span>
                         <span className="text-white/40 text-xs">{row.warnings.join("; ")}</span>
                       </div>
-                    ))}
+                )}
                   </div>
                 </div>
-              )}
+            }
 
               <div className="flex justify-end pt-3 border-t border-white/10">
-                <Button onClick={() => { reset(); onOpenChange(false); }} className="bg-white/10 hover:bg-white/15 text-white">
+                <Button onClick={() => {reset();onOpenChange(false);}} className="bg-white/10 hover:bg-white/15 text-white">
                   Done
                 </Button>
               </div>
             </div>
-          )}
+          }
         </ScrollArea>
       </DialogContent>
-    </Dialog>
-  );
+    </Dialog>);
+
 };
 
 export default YouthImportModal;
