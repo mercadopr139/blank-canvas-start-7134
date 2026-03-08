@@ -24,6 +24,19 @@ interface MondayItem {
   }>;
 }
 
+interface MondayFileCandidate {
+  assetId?: string;
+  name?: string;
+  public_url?: string;
+  url?: string;
+}
+
+interface ImageDimensions {
+  width: number;
+  height: number;
+}
+
+
 const DASH_REGEX = /[\u2010\u2011\u2012\u2013\u2014\u2015\u2212]/g;
 
 const normalizeBoardText = (value: string) =>
@@ -117,6 +130,188 @@ async function mondayQuery(
 
   return data.data;
 }
+
+const SIGNATURE_HINTS = [
+  "sign",
+  "signature",
+  "sig",
+  "waiver",
+  "consent",
+  "liability",
+  "transport",
+  "medical",
+  "media",
+  "spiritual",
+  "counsel",
+  "initial",
+];
+
+const HEADSHOT_HINTS = ["headshot", "head shot", "photo", "picture", "pic", "profile", "portrait", "avatar"];
+
+const normalizeHintText = (value: string) =>
+  value
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim();
+
+const scoreCandidateByName = (candidate: MondayFileCandidate) => {
+  const haystack = normalizeHintText(`${candidate.name || ""} ${candidate.public_url || ""} ${candidate.url || ""}`);
+  let score = 0;
+
+  for (const hint of HEADSHOT_HINTS) {
+    if (haystack.includes(hint)) score += 3;
+  }
+  for (const hint of SIGNATURE_HINTS) {
+    if (haystack.includes(hint)) score -= 6;
+  }
+
+  return score;
+};
+
+const parseMondayColumnFiles = (columnValue: string | null): MondayFileCandidate[] => {
+  if (!columnValue) return [];
+
+  try {
+    const parsed = JSON.parse(columnValue);
+    const files = Array.isArray(parsed?.files) ? parsed.files : [];
+    return files
+      .map((file: Record<string, unknown>) => ({
+        assetId: typeof file?.assetId === "number" || typeof file?.assetId === "string" ? String(file.assetId) : undefined,
+        name: typeof file?.name === "string" ? file.name : undefined,
+        public_url: typeof file?.public_url === "string" ? file.public_url : undefined,
+        url: typeof file?.url === "string" ? file.url : undefined,
+      }))
+      .filter((file: MondayFileCandidate) => Boolean(file.assetId || file.public_url || file.url));
+  } catch {
+    return [];
+  }
+};
+
+const getPngDimensions = (bytes: Uint8Array): ImageDimensions | null => {
+  if (bytes.length < 24) return null;
+  if (bytes[0] !== 0x89 || bytes[1] !== 0x50 || bytes[2] !== 0x4e || bytes[3] !== 0x47) return null;
+  const width = (bytes[16] << 24) | (bytes[17] << 16) | (bytes[18] << 8) | bytes[19];
+  const height = (bytes[20] << 24) | (bytes[21] << 16) | (bytes[22] << 8) | bytes[23];
+  if (width <= 0 || height <= 0) return null;
+  return { width, height };
+};
+
+const getJpegDimensions = (bytes: Uint8Array): ImageDimensions | null => {
+  if (bytes.length < 4 || bytes[0] !== 0xff || bytes[1] !== 0xd8) return null;
+
+  let offset = 2;
+  while (offset + 9 < bytes.length) {
+    if (bytes[offset] !== 0xff) {
+      offset += 1;
+      continue;
+    }
+
+    const marker = bytes[offset + 1];
+    const length = (bytes[offset + 2] << 8) | bytes[offset + 3];
+    if (length < 2) return null;
+
+    const isSof =
+      marker === 0xc0 || marker === 0xc1 || marker === 0xc2 || marker === 0xc3 ||
+      marker === 0xc5 || marker === 0xc6 || marker === 0xc7 || marker === 0xc9 ||
+      marker === 0xca || marker === 0xcb || marker === 0xcd || marker === 0xce || marker === 0xcf;
+
+    if (isSof && offset + 8 < bytes.length) {
+      const height = (bytes[offset + 5] << 8) | bytes[offset + 6];
+      const width = (bytes[offset + 7] << 8) | bytes[offset + 8];
+      if (width > 0 && height > 0) return { width, height };
+      return null;
+    }
+
+    offset += 2 + length;
+  }
+
+  return null;
+};
+
+const getWebpDimensions = (bytes: Uint8Array): ImageDimensions | null => {
+  if (bytes.length < 30) return null;
+  const riff = String.fromCharCode(...bytes.slice(0, 4));
+  const webp = String.fromCharCode(...bytes.slice(8, 12));
+  if (riff !== "RIFF" || webp !== "WEBP") return null;
+
+  const chunk = String.fromCharCode(...bytes.slice(12, 16));
+  if (chunk === "VP8X" && bytes.length >= 30) {
+    const width = 1 + bytes[24] + (bytes[25] << 8) + (bytes[26] << 16);
+    const height = 1 + bytes[27] + (bytes[28] << 8) + (bytes[29] << 16);
+    return { width, height };
+  }
+
+  return null;
+};
+
+const getImageDimensions = (contentType: string, imageData: ArrayBuffer): ImageDimensions | null => {
+  const bytes = new Uint8Array(imageData);
+  if (contentType.includes("png")) return getPngDimensions(bytes);
+  if (contentType.includes("jpeg") || contentType.includes("jpg")) return getJpegDimensions(bytes);
+  if (contentType.includes("webp")) return getWebpDimensions(bytes);
+  return getPngDimensions(bytes) || getJpegDimensions(bytes) || getWebpDimensions(bytes);
+};
+
+const isLikelySignatureImage = (dimensions: ImageDimensions | null) => {
+  if (!dimensions) return false;
+  const ratio = dimensions.width / Math.max(1, dimensions.height);
+  return ratio >= 2.3 || dimensions.height <= 140;
+};
+
+const buildCandidateUrls = (candidate: MondayFileCandidate, refreshed: MondayFileCandidate | null) => {
+  const urls = [candidate.public_url, candidate.url, refreshed?.public_url, refreshed?.url].filter(
+    (value): value is string => Boolean(value && value.length > 0)
+  );
+  return Array.from(new Set(urls));
+};
+
+const fetchBestPhotoForCandidate = async (
+  candidateUrls: string[],
+  authVariants: Array<Record<string, string>>
+): Promise<Response | null> => {
+  for (const candidateUrl of candidateUrls) {
+    for (const headers of authVariants) {
+      try {
+        const res = await fetch(candidateUrl, {
+          headers,
+          redirect: "follow",
+        });
+
+        if (!res.ok) continue;
+
+        const contentType = (res.headers.get("content-type") || "").toLowerCase();
+        if (!contentType.startsWith("image/")) continue;
+
+        return res;
+      } catch {
+        // try next candidate
+      }
+    }
+  }
+
+  return null;
+};
+
+const hasNonSignatureExistingPhoto = async (supabase: ReturnType<typeof createClient>, path: string) => {
+  try {
+    const { data: existingFile, error } = await supabase.storage
+      .from("registration-signatures")
+      .download(path);
+
+    if (error || !existingFile) return false;
+
+    const contentType = (existingFile.type || "").toLowerCase();
+    if (!contentType.startsWith("image/")) return false;
+
+    const imageData = await existingFile.arrayBuffer();
+    if (imageData.byteLength < 500) return false;
+
+    const dims = getImageDimensions(contentType, imageData);
+    return !isLikelySignatureImage(dims);
+  } catch {
+    return false;
+  }
+};
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -357,34 +552,18 @@ Deno.serve(async (req) => {
           continue;
         }
 
-        // Find photo in the file column
+        // Find photo candidates strictly from the selected file column (no generic asset fallback)
         const photoCol = item.column_values.find((c) => c.id === photoColumnId);
-        let photoUrl: string | null = null;
+        const parsedFiles = parseMondayColumnFiles(photoCol?.value ?? null);
 
-        // First priority: parse the specific photo column JSON
-        if (photoCol?.value) {
-          try {
-            const parsed = JSON.parse(photoCol.value);
-            const file = parsed?.files?.[0];
-            if (file?.public_url || file?.url) {
-              photoUrl = file.public_url || file.url;
-            }
-          } catch {
-            // not JSON, continue to fallback
-          }
-        }
-
-        // Fallback: use item assets only if no photo found in specific column
-        if (!photoUrl && item.assets?.length) {
-          const asset = item.assets[0];
-          photoUrl = asset.public_url || asset.url;
-        }
-
-        if (!photoUrl) {
+        if (parsedFiles.length === 0) {
           results.skipped_no_photo++;
           results.details.push({ mondayName: `${firstName} ${lastName}`, status: "no_photo" });
           continue;
         }
+
+        const rankedCandidates = [...parsedFiles]
+          .sort((a, b) => scoreCandidateByName(b) - scoreCandidateByName(a));
 
         // Match to registration
         const normalize = (s: string) => s.toLowerCase().replace(/[^a-z]/g, "");
@@ -402,26 +581,9 @@ Deno.serve(async (req) => {
 
         results.matched++;
 
-        // Skip if already has a valid image photo; replace if stored file is broken/non-image
+        // Skip if already has a non-signature headshot image
         if (match.child_headshot_url) {
-          let hasValidExistingPhoto = false;
-          try {
-            const { data: existingObject } = await supabase
-              .schema("storage")
-              .from("objects")
-              .select("metadata")
-              .eq("bucket_id", "registration-signatures")
-              .eq("name", match.child_headshot_url)
-              .maybeSingle();
-
-            const metadata = existingObject?.metadata as { mimetype?: string; size?: number; contentLength?: number } | null;
-            const existingMime = (metadata?.mimetype || "").toLowerCase();
-            const existingSize = Number(metadata?.size ?? metadata?.contentLength ?? 0);
-
-            hasValidExistingPhoto = existingMime.startsWith("image/") && existingSize > 500;
-          } catch {
-            hasValidExistingPhoto = false;
-          }
+          const hasValidExistingPhoto = await hasNonSignatureExistingPhoto(supabase, match.child_headshot_url);
 
           if (hasValidExistingPhoto) {
             results.skipped_already_has_photo++;
@@ -434,102 +596,103 @@ Deno.serve(async (req) => {
           }
         }
 
-        // Download and upload the photo
+        // Download and upload the best headshot candidate from the selected column
         try {
-          const candidateUrls = [photoUrl];
-
-          // Refresh asset URLs — only from the specific photo column's file
-          if (photoCol?.value) {
-            try {
-              const parsed = JSON.parse(photoCol.value);
-              const assetId = parsed?.files?.[0]?.assetId;
-              if (assetId) {
-                const assetData = await mondayQuery(mondayToken, `{
-                  assets(ids: [${assetId}]) {
-                    public_url
-                    url
-                  }
-                }`);
-                const freshAsset = assetData?.assets?.[0];
-                const refreshed = [freshAsset?.public_url, freshAsset?.url]
-                  .filter((u): u is string => Boolean(u));
-                for (const u of refreshed) {
-                  if (!candidateUrls.includes(u)) candidateUrls.push(u);
-                }
-              }
-            } catch {
-              // ignore refresh errors
-            }
-          }
-
           const baseHeaders = {
             "User-Agent": "Mozilla/5.0",
             Accept: "image/*,*/*;q=0.8",
           };
 
-          // Monday asset endpoints can behave differently; try Bearer, raw token, and no auth.
           const authVariants: Array<Record<string, string>> = [
             { ...baseHeaders, Authorization: `Bearer ${mondayToken}` },
             { ...baseHeaders, Authorization: mondayToken },
             baseHeaders,
           ];
 
-          let imageRes: Response | null = null;
+          let uploadedPath: string | null = null;
 
-          for (const candidateUrl of candidateUrls) {
-            for (const headers of authVariants) {
+          for (const candidate of rankedCandidates) {
+            if (scoreCandidateByName(candidate) < 0) {
+              continue;
+            }
+
+            let refreshed: MondayFileCandidate | null = null;
+            if (candidate.assetId) {
               try {
-                const res = await fetch(candidateUrl, {
-                  headers,
-                  redirect: "follow",
-                });
-
-                if (!res.ok) continue;
-
-                const contentType = (res.headers.get("content-type") || "").toLowerCase();
-                if (!contentType.startsWith("image/")) continue;
-
-                imageRes = res;
-                break;
+                const assetData = await mondayQuery(mondayToken, `{
+                  assets(ids: [${candidate.assetId}]) {
+                    public_url
+                    url
+                  }
+                }`);
+                const freshAsset = assetData?.assets?.[0];
+                refreshed = {
+                  assetId: candidate.assetId,
+                  name: candidate.name,
+                  public_url: freshAsset?.public_url,
+                  url: freshAsset?.url,
+                };
               } catch {
-                // try next attempt
+                refreshed = null;
               }
             }
 
-            if (imageRes) break;
+            const candidateUrls = buildCandidateUrls(candidate, refreshed);
+            if (candidateUrls.length === 0) {
+              continue;
+            }
+
+            const imageRes = await fetchBestPhotoForCandidate(candidateUrls, authVariants);
+            if (!imageRes) {
+              continue;
+            }
+
+            const contentType = (imageRes.headers.get("content-type") || "").toLowerCase();
+            const imageData = await imageRes.arrayBuffer();
+
+            if (imageData.byteLength < 500 || !contentType.startsWith("image/")) {
+              continue;
+            }
+
+            const dimensions = getImageDimensions(contentType, imageData);
+            if (isLikelySignatureImage(dimensions)) {
+              continue;
+            }
+
+            const ext = contentType.includes("png") ? "png" : contentType.includes("webp") ? "webp" : "jpg";
+            const fileName = `monday_headshot_${match.id}_${Date.now()}.${ext}`;
+            const { data: uploadData, error: uploadError } = await supabase.storage
+              .from("registration-signatures")
+              .upload(fileName, imageData, { contentType, upsert: false });
+
+            if (uploadError) {
+              results.errors.push(`Upload failed for ${firstName} ${lastName}: ${uploadError.message}`);
+              continue;
+            }
+
+            const { error: updateError } = await supabase
+              .from("youth_registrations")
+              .update({ child_headshot_url: uploadData.path })
+              .eq("id", match.id);
+
+            if (updateError) {
+              results.errors.push(`Update failed for ${firstName} ${lastName}: ${updateError.message}`);
+              continue;
+            }
+
+            uploadedPath = uploadData.path;
+            break;
           }
 
-          if (!imageRes) {
-            results.errors.push(`Failed to download photo for ${firstName} ${lastName}`);
-            results.details.push({ mondayName: `${firstName} ${lastName}`, status: "download_failed", matchedTo: `${match.child_first_name} ${match.child_last_name}` });
+          if (!uploadedPath) {
+            results.skipped_no_photo++;
+            results.details.push({
+              mondayName: `${firstName} ${lastName}`,
+              status: "signature_filtered_or_no_valid_photo",
+              matchedTo: `${match.child_first_name} ${match.child_last_name}`,
+            });
             continue;
           }
-
-          const contentType = (imageRes.headers.get("content-type") || "").toLowerCase();
-          const ext = contentType.includes("png") ? "png" : contentType.includes("webp") ? "webp" : "jpg";
-          const imageData = await imageRes.arrayBuffer();
-
-          if (imageData.byteLength < 100) {
-            results.errors.push(`Downloaded file too small for ${firstName} ${lastName}`);
-            continue;
-          }
-
-          const fileName = `monday_headshot_${match.id}_${Date.now()}.${ext}`;
-          const { data: uploadData, error: uploadError } = await supabase.storage
-            .from("registration-signatures")
-            .upload(fileName, imageData, { contentType, upsert: false });
-
-          if (uploadError) {
-            results.errors.push(`Upload failed for ${firstName} ${lastName}: ${uploadError.message}`);
-            results.details.push({ mondayName: `${firstName} ${lastName}`, status: "upload_failed", matchedTo: `${match.child_first_name} ${match.child_last_name}` });
-            continue;
-          }
-
-          // Update registration
-          await supabase
-            .from("youth_registrations")
-            .update({ child_headshot_url: uploadData.path })
-            .eq("id", match.id);
 
           results.uploaded++;
           results.details.push({
