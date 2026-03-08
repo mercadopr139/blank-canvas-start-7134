@@ -110,10 +110,12 @@ const AdminRegistrations = () => {
   };
 
   const handleDeleteAll = async () => {
+    const ids = registrations?.map((r) => r.id) || [];
+    if (ids.length === 0) return;
     const { error } = await supabase
       .from("youth_registrations")
       .delete()
-      .gte("id", "00000000-0000-0000-0000-000000000000");
+      .in("id", ids);
     if (error) {
       toast.error("Failed to delete all registrations");
     } else {
@@ -408,9 +410,9 @@ const AdminRegistrations = () => {
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel className="bg-white/5 border-white/10 text-white hover:bg-white/10 hover:text-white">Cancel</AlertDialogCancel>
-            <AlertDialogAction className="bg-red-600 text-white hover:bg-red-700" onClick={() => setDeleteAllStep(2)}>
+            <Button className="bg-red-600 text-white hover:bg-red-700" onClick={() => setDeleteAllStep(2)}>
               Yes, Delete All
-            </AlertDialogAction>
+            </Button>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
