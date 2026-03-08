@@ -12,7 +12,8 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Search, Eye, AlertTriangle, ExternalLink, Users, Loader2, Pencil, Trash2, CheckCircle2, XCircle, ShieldCheck } from "lucide-react";
+import { Search, Eye, AlertTriangle, ExternalLink, Users, Loader2, Pencil, Trash2, CheckCircle2, XCircle, ShieldCheck, Upload, ImageOff, Camera } from "lucide-react";
+import YouthImportModal from "@/components/admin/YouthImportModal";
 import { Switch } from "@/components/ui/switch";
 import { format, parseISO, differenceInYears } from "date-fns";
 import { toast } from "sonner";
@@ -57,6 +58,7 @@ const AdminRegistrations = () => {
   const [selectedRegistration, setSelectedRegistration] = useState<any | null>(null);
   const [editingRegistration, setEditingRegistration] = useState<any | null>(null);
   const [deletingRegistration, setDeletingRegistration] = useState<any | null>(null);
+  const [importOpen, setImportOpen] = useState(false);
 
   const { data: registrations, isLoading } = useQuery({
     queryKey: ["youth-registrations"],
