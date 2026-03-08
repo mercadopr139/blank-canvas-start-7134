@@ -402,15 +402,36 @@ Deno.serve(async (req) => {
 
         results.matched++;
 
-        // Skip if already has a photo
+        // Skip if already has a valid image photo; replace if stored file is broken/non-image
         if (match.child_headshot_url) {
-          results.skipped_already_has_photo++;
-          results.details.push({
-            mondayName: `${firstName} ${lastName}`,
-            status: "already_has_photo",
-            matchedTo: `${match.child_first_name} ${match.child_last_name}`,
-          });
-          continue;
+          let hasValidExistingPhoto = false;
+          try {
+            const { data: existingObject } = await supabase
+              .schema("storage")
+              .from("objects")
+              .select("metadata")
+              .eq("bucket_id", "registration-signatures")
+              .eq("name", match.child_headshot_url)
+              .maybeSingle();
+
+            const metadata = existingObject?.metadata as { mimetype?: string; size?: number; contentLength?: number } | null;
+            const existingMime = (metadata?.mimetype || "").toLowerCase();
+            const existingSize = Number(metadata?.size ?? metadata?.contentLength ?? 0);
+
+            hasValidExistingPhoto = existingMime.startsWith("image/") && existingSize > 500;
+          } catch {
+            hasValidExistingPhoto = false;
+          }
+
+          if (hasValidExistingPhoto) {
+            results.skipped_already_has_photo++;
+            results.details.push({
+              mondayName: `${firstName} ${lastName}`,
+              status: "already_has_photo",
+              matchedTo: `${match.child_first_name} ${match.child_last_name}`,
+            });
+            continue;
+          }
         }
 
         // Download and upload the photo
@@ -457,7 +478,13 @@ Deno.serve(async (req) => {
             continue;
           }
 
-          const contentType = imageRes.headers.get("content-type") || "image/jpeg";
+          const contentType = (imageRes.headers.get("content-type") || "").toLowerCase();
+          if (!contentType.startsWith("image/")) {
+            results.errors.push(`Downloaded non-image content for ${firstName} ${lastName}: ${contentType || "unknown"}`);
+            results.details.push({ mondayName: `${firstName} ${lastName}`, status: "invalid_image_content", matchedTo: `${match.child_first_name} ${match.child_last_name}` });
+            continue;
+          }
+
           const ext = contentType.includes("png") ? "png" : contentType.includes("webp") ? "webp" : "jpg";
           const imageData = await imageRes.arrayBuffer();
 
