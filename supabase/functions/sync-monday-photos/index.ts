@@ -24,6 +24,19 @@ interface MondayItem {
   }>;
 }
 
+interface MondayFileCandidate {
+  assetId?: string;
+  name?: string;
+  public_url?: string;
+  url?: string;
+}
+
+interface ImageDimensions {
+  width: number;
+  height: number;
+}
+
+
 const DASH_REGEX = /[\u2010\u2011\u2012\u2013\u2014\u2015\u2212]/g;
 
 const normalizeBoardText = (value: string) =>
