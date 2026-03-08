@@ -148,7 +148,7 @@ Deno.serve(async (req) => {
       // Paginated board listing to avoid Monday.com complexity/rate-limit errors
       const PAGE_SIZE = 50;
       const page = Math.max(1, Number(body.page || 1));
-      const search = String(body.search || "").trim().toLowerCase();
+      const search = String(body.search || "").trim();
 
       const data = await mondayQuery(mondayToken, `{
         boards(limit: ${PAGE_SIZE}, page: ${page}, state: all) {
@@ -161,8 +161,9 @@ Deno.serve(async (req) => {
         ...b,
         items_count: 0,
       }));
+
       const boards = search
-        ? rawBoards.filter((b: { name: string }) => b.name.toLowerCase().includes(search))
+        ? rawBoards.filter((b: { name: string }) => boardMatchesSearch(b.name, search))
         : rawBoards;
 
       return new Response(JSON.stringify({
