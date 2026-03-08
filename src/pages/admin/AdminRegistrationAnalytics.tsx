@@ -79,11 +79,14 @@ const AdminRegistrationAnalytics = () => {
     .sort((a, b) => b.count - a.count);
 
   const lunchCounts = registrations?.reduce((acc, r) => {
-    const status = r.free_or_reduced_lunch || "Not Specified";
-    acc[status] = (acc[status] || 0) + 1;
+    const status = r.free_or_reduced_lunch;
+    if (status === "Yes" || status === "No") {
+      acc[status] = (acc[status] || 0) + 1;
+    }
     return acc;
   }, {} as Record<string, number>);
 
+  const lunchTotal = Object.values(lunchCounts || {}).reduce((s, v) => s + v, 0);
   const lunchData = Object.entries(lunchCounts || {}).map(([name, value]) => ({ name, value }));
 
   const chartConfig = {
@@ -190,6 +193,7 @@ const AdminRegistrationAnalytics = () => {
                 <CardHeader>
                   <CardTitle className="text-base flex items-center gap-2 text-white">
                     <Utensils className="w-4 h-4 text-[#bf0f3e]" /> Free/Reduced Lunch
+                    <span className="text-xs text-white/40 font-normal ml-2">({lunchTotal} responded)</span>
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
