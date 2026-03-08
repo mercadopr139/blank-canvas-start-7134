@@ -722,7 +722,7 @@ const YouthImportModal = ({ open, onOpenChange, existingRegistrations, onImportC
           {/* Step 5: Results */}
           {step === "results" && results &&
           <div className="space-y-4 py-4">
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                 {[
               { label: "Records Imported", value: results.imported, icon: CheckCircle2, color: "text-green-400" },
               { label: "Records Updated", value: results.updated, icon: CheckCircle2, color: "text-blue-400" },
