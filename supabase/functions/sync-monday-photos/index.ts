@@ -438,21 +438,24 @@ Deno.serve(async (req) => {
         try {
           const candidateUrls = [photoUrl];
 
-          // Refresh asset URLs from Monday when available
-          if (item.assets?.length) {
-            const assetId = item.assets[0].id;
+          // Refresh asset URLs — only from the specific photo column's file
+          if (photoCol?.value) {
             try {
-              const assetData = await mondayQuery(mondayToken, `{
-                assets(ids: [${assetId}]) {
-                  public_url
-                  url
+              const parsed = JSON.parse(photoCol.value);
+              const assetId = parsed?.files?.[0]?.assetId;
+              if (assetId) {
+                const assetData = await mondayQuery(mondayToken, `{
+                  assets(ids: [${assetId}]) {
+                    public_url
+                    url
+                  }
+                }`);
+                const freshAsset = assetData?.assets?.[0];
+                const refreshed = [freshAsset?.public_url, freshAsset?.url]
+                  .filter((u): u is string => Boolean(u));
+                for (const u of refreshed) {
+                  if (!candidateUrls.includes(u)) candidateUrls.push(u);
                 }
-              }`);
-              const freshAsset = assetData?.assets?.[0];
-              const refreshed = [freshAsset?.public_url, freshAsset?.url]
-                .filter((u): u is string => Boolean(u));
-              for (const u of refreshed) {
-                if (!candidateUrls.includes(u)) candidateUrls.push(u);
               }
             } catch {
               // ignore refresh errors
