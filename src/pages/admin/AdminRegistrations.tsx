@@ -234,6 +234,9 @@ const AdminRegistrations = () => {
           <Button size="sm" onClick={() => setImportOpen(true)} className="bg-white/10 hover:bg-white/15 text-white border border-white/20 gap-1.5">
             <Upload className="w-3.5 h-3.5" /> Import from Monday.com
           </Button>
+          <Button size="sm" onClick={() => setBulkPhotoOpen(true)} className="bg-white/10 hover:bg-white/15 text-white border border-white/20 gap-1.5">
+            <ImageOff className="w-3.5 h-3.5" /> Bulk Import Youth Photos
+          </Button>
         </div>
       </div>
 
@@ -444,6 +447,14 @@ const AdminRegistrations = () => {
       <YouthImportModal
         open={importOpen}
         onOpenChange={setImportOpen}
+        existingRegistrations={registrations || []}
+        onImportComplete={() => queryClient.invalidateQueries({ queryKey: ["youth-registrations"] })}
+      />
+
+      {/* Bulk Photo Import Modal */}
+      <BulkPhotoImportModal
+        open={bulkPhotoOpen}
+        onOpenChange={setBulkPhotoOpen}
         existingRegistrations={registrations || []}
         onImportComplete={() => queryClient.invalidateQueries({ queryKey: ["youth-registrations"] })}
       />
