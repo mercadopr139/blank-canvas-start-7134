@@ -179,12 +179,23 @@ const AdminRegistrationAnalytics = () => {
                 </CardHeader>
                 <CardContent>
                   <ChartContainer config={chartConfig} className="h-[300px]">
-                    <BarChart data={districtData} layout="vertical">
-                      <XAxis type="number" tick={{ fill: "rgba(255,255,255,0.5)" }} />
-                      <YAxis dataKey="name" type="category" width={130} tick={{ fontSize: 11, fill: "rgba(255,255,255,0.7)" }} />
+                    <PieChart>
+                      <Pie
+                        data={districtData}
+                        dataKey="count"
+                        nameKey="name"
+                        cx="50%"
+                        cy="50%"
+                        outerRadius={100}
+                        label={({ name, percent }) => `${name} (${(percent * 100).toFixed(0)}%)`}
+                        labelLine={false}
+                      >
+                        {districtData.map((_, index) => (
+                          <Cell key={`district-${index}`} fill={COLORS[index % COLORS.length]} />
+                        ))}
+                      </Pie>
                       <ChartTooltip content={<ChartTooltipContent />} />
-                      <Bar dataKey="count" fill="#bf0f3e" radius={4} />
-                    </BarChart>
+                    </PieChart>
                   </ChartContainer>
                 </CardContent>
               </Card>
