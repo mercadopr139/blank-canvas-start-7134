@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Card, CardContent } from "@/components/ui/card";
-import { Upload, FileText, AlertTriangle, CheckCircle2, ImageOff, Loader2, Camera } from "lucide-react";
+import { Upload, FileText, AlertTriangle, CheckCircle2, ImageOff, Loader2, Camera, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 
 /* ───── CSV Parser (RFC-compliant) ───── */
@@ -91,17 +91,41 @@ function autoMapColumns(headers: string[]): Record<number, string> {
 
 const isUrl = (s: string) => /^https?:\/\//i.test(s.trim());
 
+/* ───── Date Normalization ───── */
+function normalizeDate(val: string): string | null {
+  const v = val.trim();
+  if (!v) return null;
+  // Already ISO: YYYY-MM-DD
+  if (/^\d{4}-\d{2}-\d{2}$/.test(v)) return v;
+  // MM/DD/YYYY or M/D/YYYY
+  const slashMatch = v.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})$/);
+  if (slashMatch) {
+    const [, m, d, y] = slashMatch;
+    return `${y}-${m.padStart(2, "0")}-${d.padStart(2, "0")}`;
+  }
+  // MM-DD-YYYY
+  const dashMatch = v.match(/^(\d{1,2})-(\d{1,2})-(\d{4})$/);
+  if (dashMatch) {
+    const [, m, d, y] = dashMatch;
+    return `${y}-${m.padStart(2, "0")}-${d.padStart(2, "0")}`;
+  }
+  // Try JS Date parse as last resort
+  const parsed = new Date(v);
+  if (!isNaN(parsed.getTime())) {
+    return parsed.toISOString().split("T")[0];
+  }
+  return null;
+}
+
 /* ───── Program Mapping (monday.com labels → DB enum) ───── */
-function normalizeBoxingProgram(val: string): string {
+function normalizeBoxingProgram(val: string): string | null {
   const v = val.trim().toLowerCase();
   if (v.includes("senior") || v.includes("11-19") || v.includes("11–19")) return "Senior Boxing (Ages 11-19)";
   if (v.includes("junior") || v.includes("7-10") || v.includes("7–10")) return "Junior Boxing (Ages 7-10)";
   if (v.includes("grit") || v.includes("grace")) return "Grit & Grace (Ages 11-19)";
-  // If it already matches an enum value exactly, pass through
   const exact = ["Junior Boxing (Ages 7-10)", "Senior Boxing (Ages 11-19)", "Grit & Grace (Ages 11-19)"];
   const match = exact.find((e) => e.toLowerCase() === v);
-  if (match) return match;
-  return ""; // will fall through to default
+  return match || null;
 }
 
 type DuplicateAction = "skip" | "update" | "update_with_photo";
@@ -123,6 +147,7 @@ interface ImportResult {
   photosImported: number;
   skipped: number;
   photoErrors: number;
+  sanitizedCount: number;
   needsReview: ImportRow[];
 }
 
@@ -312,7 +337,65 @@ const YouthImportModal = ({ open, onOpenChange, existingRegistrations, onImportC
     setStep("preview");
   };
 
-  /* ── Preview stats ── */
+  /* ── Sanitize Import Row ── */
+  const sanitizeImportRow = (data: Record<string, string>): { sanitizedData: Record<string, string>; wasSanitized: boolean } => {
+    const sanitized = { ...data };
+    let changed = false;
+
+    // Date normalization
+    if (sanitized.child_date_of_birth) {
+      const normalized = normalizeDate(sanitized.child_date_of_birth);
+      if (normalized && normalized !== sanitized.child_date_of_birth) { sanitized.child_date_of_birth = normalized; changed = true; }
+      else if (normalized) sanitized.child_date_of_birth = normalized;
+    }
+
+    // Trim all string values
+    for (const key of Object.keys(sanitized)) {
+      if (sanitized[key] && sanitized[key] !== sanitized[key].trim()) { sanitized[key] = sanitized[key].trim(); changed = true; }
+    }
+
+    // Normalize enum fields and track if any were changed
+    if (sanitized.child_sex) {
+      const norm = normalizeSex(sanitized.child_sex);
+      if (norm && norm !== sanitized.child_sex) { sanitized.child_sex = norm; changed = true; }
+    }
+    if (sanitized.child_race_ethnicity) {
+      const norm = normalizeRace(sanitized.child_race_ethnicity);
+      if (norm && norm !== sanitized.child_race_ethnicity) { sanitized.child_race_ethnicity = norm; changed = true; }
+    }
+    if (sanitized.child_boxing_program) {
+      const norm = normalizeBoxingProgram(sanitized.child_boxing_program);
+      if (norm && norm !== sanitized.child_boxing_program) { sanitized.child_boxing_program = norm; changed = true; }
+    }
+    if (sanitized.child_school_district) {
+      const norm = normalizeSchoolDistrict(sanitized.child_school_district);
+      if (norm && norm !== sanitized.child_school_district) { sanitized.child_school_district = norm; changed = true; }
+    }
+    if (sanitized.household_income_range) {
+      const norm = normalizeHouseholdIncome(sanitized.household_income_range);
+      if (norm && norm !== sanitized.household_income_range) { sanitized.household_income_range = norm; changed = true; }
+    }
+    if (sanitized.free_or_reduced_lunch) {
+      const norm = normalizeFreeLunch(sanitized.free_or_reduced_lunch);
+      if (norm && norm !== sanitized.free_or_reduced_lunch) { sanitized.free_or_reduced_lunch = norm; changed = true; }
+    }
+    if (sanitized.parent_phone) {
+      const norm = normalizePhone(sanitized.parent_phone);
+      if (norm !== sanitized.parent_phone) { sanitized.parent_phone = norm; changed = true; }
+    }
+    if (sanitized.child_phone) {
+      const norm = normalizePhone(sanitized.child_phone);
+      if (norm !== sanitized.child_phone) { sanitized.child_phone = norm; changed = true; }
+    }
+    if (sanitized.parent_email) {
+      const lower = sanitized.parent_email.trim().toLowerCase();
+      if (lower !== sanitized.parent_email) { sanitized.parent_email = lower; changed = true; }
+    }
+
+    return { sanitizedData: sanitized, wasSanitized: changed };
+  };
+
+
   const previewStats = useMemo(() => {
     const total = importRows.length;
     const valid = importRows.filter((r) => r.valid).length;
@@ -327,7 +410,7 @@ const YouthImportModal = ({ open, onOpenChange, existingRegistrations, onImportC
   const executeImport = async () => {
     setStep("importing");
     setIsImporting(true);
-    let imported = 0,updated = 0,photosImported = 0,skipped = 0,photoErrors = 0;
+    let imported = 0,updated = 0,photosImported = 0,skipped = 0,photoErrors = 0,sanitizedCount = 0;
     const needsReview: ImportRow[] = [];
 
     const { data: { session } } = await supabase.auth.getSession();
@@ -339,16 +422,18 @@ const YouthImportModal = ({ open, onOpenChange, existingRegistrations, onImportC
 
       if (!row.valid) {skipped++;needsReview.push(row);continue;}
 
+      // Sanitize data before building insert
+      const { sanitizedData, wasSanitized } = sanitizeImportRow(row.data);
+      if (wasSanitized) sanitizedCount++;
+
       // Handle duplicates
       if (row.isDuplicate) {
         if (duplicateAction === "skip") {skipped++;continue;}
-        // Update existing
-        const updateData = buildInsertData(row.data);
+        const updateData = buildInsertData(sanitizedData);
         delete (updateData as any).approved_for_attendance;
         const { error } = await supabase.from("youth_registrations").update(updateData as any).eq("id", row.duplicateId!);
         if (error) {skipped++;needsReview.push({ ...row, warnings: [...row.warnings, `Update failed: ${error.message}`] });continue;}
 
-        // Photo for update
         if (duplicateAction === "update_with_photo" && row.photoUrl && accessToken) {
           const photoResult = await importPhoto(row.photoUrl, row.duplicateId!, accessToken);
           if (photoResult) photosImported++;else
@@ -359,11 +444,10 @@ const YouthImportModal = ({ open, onOpenChange, existingRegistrations, onImportC
       }
 
       // Insert new
-      const insertData = buildInsertData(row.data);
+      const insertData = buildInsertData(sanitizedData);
       const { data: inserted, error } = await supabase.from("youth_registrations").insert(insertData as any).select("id").single();
       if (error) {skipped++;needsReview.push({ ...row, warnings: [...row.warnings, `Insert failed: ${error.message}`] });continue;}
 
-      // Photo for new record
       if (row.photoUrl && inserted && accessToken) {
         const photoResult = await importPhoto(row.photoUrl, inserted.id, accessToken);
         if (photoResult) photosImported++;else
@@ -375,7 +459,7 @@ const YouthImportModal = ({ open, onOpenChange, existingRegistrations, onImportC
       imported++;
     }
 
-    setResults({ imported, updated, photosImported, skipped, photoErrors, needsReview });
+    setResults({ imported, updated, photosImported, skipped, photoErrors, sanitizedCount, needsReview });
     setIsImporting(false);
     setStep("results");
     onImportComplete();
@@ -638,13 +722,14 @@ const YouthImportModal = ({ open, onOpenChange, existingRegistrations, onImportC
           {/* Step 5: Results */}
           {step === "results" && results &&
           <div className="space-y-4 py-4">
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                 {[
               { label: "Records Imported", value: results.imported, icon: CheckCircle2, color: "text-green-400" },
               { label: "Records Updated", value: results.updated, icon: CheckCircle2, color: "text-blue-400" },
               { label: "Photos Imported", value: results.photosImported, icon: Camera, color: "text-green-400" },
               { label: "Records Skipped", value: results.skipped, icon: AlertTriangle, color: "text-amber-400" },
               { label: "Photo Errors", value: results.photoErrors, icon: ImageOff, color: "text-red-400" },
+              { label: "Sanitized Values", value: results.sanitizedCount, icon: Sparkles, color: "text-purple-400" },
               { label: "Needs Review", value: results.needsReview.length, icon: AlertTriangle, color: "text-yellow-400" }].
               map((s) =>
               <Card key={s.label} className="bg-white/5 border-white/10">
