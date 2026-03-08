@@ -361,14 +361,8 @@ Deno.serve(async (req) => {
         const photoCol = item.column_values.find((c) => c.id === photoColumnId);
         let photoUrl: string | null = null;
 
-        // Prefer item assets to avoid additional API calls per row
-        if (item.assets?.length) {
-          const asset = item.assets[0];
-          photoUrl = asset.public_url || asset.url;
-        }
-
-        // Fallback: parse file column JSON for direct URLs
-        if (!photoUrl && photoCol?.value) {
+        // First priority: parse the specific photo column JSON
+        if (photoCol?.value) {
           try {
             const parsed = JSON.parse(photoCol.value);
             const file = parsed?.files?.[0];
@@ -376,8 +370,14 @@ Deno.serve(async (req) => {
               photoUrl = file.public_url || file.url;
             }
           } catch {
-            // not JSON
+            // not JSON, continue to fallback
           }
+        }
+
+        // Fallback: use item assets only if no photo found in specific column
+        if (!photoUrl && item.assets?.length) {
+          const asset = item.assets[0];
+          photoUrl = asset.public_url || asset.url;
         }
 
         if (!photoUrl) {
@@ -438,21 +438,24 @@ Deno.serve(async (req) => {
         try {
           const candidateUrls = [photoUrl];
 
-          // Refresh asset URLs from Monday when available
-          if (item.assets?.length) {
-            const assetId = item.assets[0].id;
+          // Refresh asset URLs — only from the specific photo column's file
+          if (photoCol?.value) {
             try {
-              const assetData = await mondayQuery(mondayToken, `{
-                assets(ids: [${assetId}]) {
-                  public_url
-                  url
+              const parsed = JSON.parse(photoCol.value);
+              const assetId = parsed?.files?.[0]?.assetId;
+              if (assetId) {
+                const assetData = await mondayQuery(mondayToken, `{
+                  assets(ids: [${assetId}]) {
+                    public_url
+                    url
+                  }
+                }`);
+                const freshAsset = assetData?.assets?.[0];
+                const refreshed = [freshAsset?.public_url, freshAsset?.url]
+                  .filter((u): u is string => Boolean(u));
+                for (const u of refreshed) {
+                  if (!candidateUrls.includes(u)) candidateUrls.push(u);
                 }
-              }`);
-              const freshAsset = assetData?.assets?.[0];
-              const refreshed = [freshAsset?.public_url, freshAsset?.url]
-                .filter((u): u is string => Boolean(u));
-              for (const u of refreshed) {
-                if (!candidateUrls.includes(u)) candidateUrls.push(u);
               }
             } catch {
               // ignore refresh errors
