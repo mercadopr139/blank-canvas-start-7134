@@ -566,6 +566,63 @@ export type Database = {
           },
         ]
       }
+      registration_form_fields: {
+        Row: {
+          created_at: string
+          db_column: string | null
+          default_value: string | null
+          field_key: string
+          field_type: string
+          help_text: string | null
+          id: string
+          is_active: boolean
+          is_core: boolean
+          label: string
+          options: Json | null
+          placeholder: string | null
+          required: boolean
+          section: string | null
+          sort_order: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          db_column?: string | null
+          default_value?: string | null
+          field_key: string
+          field_type?: string
+          help_text?: string | null
+          id?: string
+          is_active?: boolean
+          is_core?: boolean
+          label: string
+          options?: Json | null
+          placeholder?: string | null
+          required?: boolean
+          section?: string | null
+          sort_order?: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          db_column?: string | null
+          default_value?: string | null
+          field_key?: string
+          field_type?: string
+          help_text?: string | null
+          id?: string
+          is_active?: boolean
+          is_core?: boolean
+          label?: string
+          options?: Json | null
+          placeholder?: string | null
+          required?: boolean
+          section?: string | null
+          sort_order?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       revenue: {
         Row: {
           amount: number
@@ -1034,6 +1091,7 @@ export type Database = {
           counseling_services_name: string | null
           counseling_services_signature_url: string | null
           created_at: string
+          custom_fields_data: Json | null
           final_signature_name: string | null
           free_or_reduced_lunch:
             | Database["public"]["Enums"]["lunch_status"]
@@ -1079,6 +1137,7 @@ export type Database = {
           counseling_services_name?: string | null
           counseling_services_signature_url?: string | null
           created_at?: string
+          custom_fields_data?: Json | null
           final_signature_name?: string | null
           free_or_reduced_lunch?:
             | Database["public"]["Enums"]["lunch_status"]
@@ -1124,6 +1183,7 @@ export type Database = {
           counseling_services_name?: string | null
           counseling_services_signature_url?: string | null
           created_at?: string
+          custom_fields_data?: Json | null
           final_signature_name?: string | null
           free_or_reduced_lunch?:
             | Database["public"]["Enums"]["lunch_status"]
