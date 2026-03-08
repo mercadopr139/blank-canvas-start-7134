@@ -1,4 +1,4 @@
-import { Users, BarChart3, ClipboardList, LucideIcon, CalendarCheck, FileBarChart } from "lucide-react";
+import { Users, BarChart3, ClipboardList, LucideIcon, CalendarCheck, FileBarChart, Settings2 } from "lucide-react";
 import AdminSectionLayout, { SectionCard } from "@/components/admin/AdminSectionLayout";
 
 interface OperationsTile {
@@ -40,6 +40,12 @@ const baseTiles: OperationsTile[] = [
     description: "Run & export attendance reports",
     icon: FileBarChart,
     href: "/admin/operations/attendance-reports",
+  },
+  {
+    title: "Form Builder",
+    description: "Edit the registration form fields",
+    icon: Settings2,
+    href: "/admin/operations/form-builder",
   },
 ];
 
