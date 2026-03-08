@@ -97,12 +97,18 @@ async function mondayQuery(
       .map((error: { extensions?: { retry_in_seconds?: number } }) => error.extensions?.retry_in_seconds)
       .find((value: number | undefined) => typeof value === "number" && value > 0);
 
-    const isComplexityBudgetError = data.errors.some(
-      (error: { extensions?: { code?: string } }) => error.extensions?.code === "COMPLEXITY_BUDGET_EXHAUSTED"
+    const shouldRetry = data.errors.some(
+      (error: { extensions?: { code?: string } }) =>
+        error.extensions?.code === "COMPLEXITY_BUDGET_EXHAUSTED" ||
+        error.extensions?.code === "RATE_LIMITED"
     );
 
-    if (isComplexityBudgetError && retryInSeconds && attempt < 2) {
-      await new Promise((resolve) => setTimeout(resolve, Math.min(retryInSeconds, 60) * 1000));
+    // Keep retries short to avoid function request timeouts
+    if (shouldRetry && attempt < 3) {
+      const waitSeconds = retryInSeconds
+        ? Math.min(retryInSeconds, 5)
+        : Math.min(2 ** (attempt + 1), 5);
+      await new Promise((resolve) => setTimeout(resolve, waitSeconds * 1000));
       return mondayQuery(token, query, variables, attempt + 1);
     }
 
@@ -249,9 +255,12 @@ Deno.serve(async (req) => {
         });
       }
 
-      // Fetch items from Monday board with pagination using scoped columns to reduce complexity
-      let allItems: MondayItem[] = [];
-      let cursor: string | null = null;
+      // Fetch a single batch from Monday board (cursor-based) to avoid request timeouts
+      const batchSizeRaw = Number(body.batchSize ?? 20);
+      const batchSize = Number.isFinite(batchSizeRaw)
+        ? Math.max(5, Math.min(50, Math.floor(batchSizeRaw)))
+        : 20;
+      const inputCursor = typeof body.cursor === "string" && body.cursor.length > 0 ? body.cursor : null;
 
       const columnIds = [photoColumnId, firstNameColumnId, lastNameColumnId].filter(
         (id): id is string => Boolean(id)
@@ -260,10 +269,12 @@ Deno.serve(async (req) => {
         ? `(ids: [${columnIds.map((id) => `"${id}"`).join(", ")}])`
         : "";
 
-      // First page
-      const firstPage = await mondayQuery(mondayToken, `{
-        boards(ids: [${boardId}]) {
-          items_page(limit: 50) {
+      let allItems: MondayItem[] = [];
+      let nextCursor: string | null = null;
+
+      if (inputCursor) {
+        const nextPage = await mondayQuery(mondayToken, `{
+          next_items_page(limit: ${batchSize}, cursor: "${inputCursor}") {
             cursor
             items {
               id
@@ -273,40 +284,43 @@ Deno.serve(async (req) => {
                 text
                 value
               }
-            }
-          }
-        }
-      }`);
-
-      const page = firstPage.boards[0]?.items_page;
-      if (page) {
-        allItems = page.items || [];
-        cursor = page.cursor;
-      }
-
-      // Subsequent pages
-      while (cursor) {
-        const nextPage = await mondayQuery(mondayToken, `{
-          next_items_page(limit: 50, cursor: "${cursor}") {
-            cursor
-            items {
-              id
-              name
-              column_values${columnValuesArg} {
+              assets {
                 id
-                text
-                value
+                public_url
+                url
               }
             }
           }
         }`);
         const np = nextPage.next_items_page;
-        if (np?.items?.length) {
-          allItems = [...allItems, ...np.items];
-          cursor = np.cursor;
-        } else {
-          cursor = null;
-        }
+        allItems = np?.items || [];
+        nextCursor = np?.cursor || null;
+      } else {
+        const firstPage = await mondayQuery(mondayToken, `{
+          boards(ids: [${boardId}]) {
+            items_page(limit: ${batchSize}) {
+              cursor
+              items {
+                id
+                name
+                column_values${columnValuesArg} {
+                  id
+                  text
+                  value
+                }
+                assets {
+                  id
+                  public_url
+                  url
+                }
+              }
+            }
+          }
+        }`);
+
+        const page = firstPage.boards[0]?.items_page;
+        allItems = page?.items || [];
+        nextCursor = page?.cursor || null;
       }
 
       const results = {
@@ -318,6 +332,8 @@ Deno.serve(async (req) => {
         skipped_no_match: 0,
         errors: [] as string[],
         details: [] as Array<{ mondayName: string; status: string; matchedTo?: string }>,
+        next_cursor: nextCursor,
+        has_more: Boolean(nextCursor),
       };
 
       for (const item of allItems) {
@@ -345,27 +361,19 @@ Deno.serve(async (req) => {
         const photoCol = item.column_values.find((c) => c.id === photoColumnId);
         let photoUrl: string | null = null;
 
-        // Parse the file column value for asset info
-        if (photoCol?.value) {
+        // Prefer item assets to avoid additional API calls per row
+        if (item.assets?.length) {
+          const asset = item.assets[0];
+          photoUrl = asset.public_url || asset.url;
+        }
+
+        // Fallback: parse file column JSON for direct URLs
+        if (!photoUrl && photoCol?.value) {
           try {
             const parsed = JSON.parse(photoCol.value);
             const file = parsed?.files?.[0];
-
             if (file?.public_url || file?.url) {
               photoUrl = file.public_url || file.url;
-            }
-
-            const assetId = file?.assetId;
-            if (!photoUrl && assetId) {
-              const assetData = await mondayQuery(mondayToken, `{
-                assets(ids: [${assetId}]) {
-                  public_url
-                  url
-                }
-              }`);
-              if (assetData.assets?.[0]) {
-                photoUrl = assetData.assets[0].public_url || assetData.assets[0].url;
-              }
             }
           } catch {
             // not JSON

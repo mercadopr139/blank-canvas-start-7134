@@ -19,6 +19,8 @@ interface SyncResult {
   skipped_no_match: number;
   errors: string[];
   details: Array<{ mondayName: string; status: string; matchedTo?: string }>;
+  next_cursor?: string | null;
+  has_more?: boolean;
 }
 
 type Step = "boards" | "columns" | "syncing" | "results";
@@ -146,21 +148,64 @@ export default function MondaySyncModal({ open, onOpenChange, onSyncComplete }: 
       toast.error("Please select the photo column");
       return;
     }
+
     setStep("syncing");
-    setProgress("Fetching items from Monday.com and matching photos...");
+    setProgress("Starting sync...");
+
     try {
-      const data = await invoke({
-        action: "sync_photos",
-        boardId: selectedBoard,
-        photoColumnId: photoColumn,
-        firstNameColumnId: firstNameColumn || null,
-        lastNameColumnId: lastNameColumn || null,
-      });
-      setResults(data);
+      let cursor: string | null = null;
+      let batch = 0;
+      const aggregate: SyncResult = {
+        total_monday_items: 0,
+        matched: 0,
+        uploaded: 0,
+        skipped_no_photo: 0,
+        skipped_already_has_photo: 0,
+        skipped_no_match: 0,
+        errors: [],
+        details: [],
+        next_cursor: null,
+        has_more: false,
+      };
+
+      do {
+        batch += 1;
+        setProgress(`Syncing batch ${batch}...`);
+
+        const data: SyncResult = await invoke({
+          action: "sync_photos",
+          boardId: selectedBoard,
+          photoColumnId: photoColumn,
+          firstNameColumnId: firstNameColumn && firstNameColumn !== "__none" ? firstNameColumn : null,
+          lastNameColumnId: lastNameColumn && lastNameColumn !== "__none" ? lastNameColumn : null,
+          cursor,
+          batchSize: 20,
+        });
+
+        aggregate.total_monday_items += data.total_monday_items || 0;
+        aggregate.matched += data.matched || 0;
+        aggregate.uploaded += data.uploaded || 0;
+        aggregate.skipped_no_photo += data.skipped_no_photo || 0;
+        aggregate.skipped_already_has_photo += data.skipped_already_has_photo || 0;
+        aggregate.skipped_no_match += data.skipped_no_match || 0;
+        aggregate.errors.push(...(data.errors || []));
+        aggregate.details.push(...(data.details || []));
+
+        cursor = data.next_cursor || null;
+        aggregate.next_cursor = cursor;
+        aggregate.has_more = Boolean(cursor);
+
+        setProgress(`Processed ${aggregate.total_monday_items} records so far...`);
+      } while (cursor);
+
+      setResults(aggregate);
       setStep("results");
       onSyncComplete();
-      if (data.uploaded > 0) {
-        toast.success(`Successfully imported ${data.uploaded} photos`);
+
+      if (aggregate.uploaded > 0) {
+        toast.success(`Successfully imported ${aggregate.uploaded} photos`);
+      } else {
+        toast.info("Sync finished, but no new photos were imported");
       }
     } catch (err) {
       toast.error("Sync failed: " + String(err));
