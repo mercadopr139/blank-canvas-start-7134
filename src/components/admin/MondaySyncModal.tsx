@@ -34,6 +34,9 @@ export default function MondaySyncModal({ open, onOpenChange, onSyncComplete }: 
   const [step, setStep] = useState<Step>("boards");
   const [loading, setLoading] = useState(false);
   const [boards, setBoards] = useState<Board[]>([]);
+  const [boardPage, setBoardPage] = useState(1);
+  const [hasMoreBoards, setHasMoreBoards] = useState(false);
+  const [boardSearch, setBoardSearch] = useState("");
   const [columns, setColumns] = useState<Column[]>([]);
   const [selectedBoard, setSelectedBoard] = useState<string>("");
   const [photoColumn, setPhotoColumn] = useState<string>("");
@@ -46,6 +49,9 @@ export default function MondaySyncModal({ open, onOpenChange, onSyncComplete }: 
     setStep("boards");
     setLoading(false);
     setBoards([]);
+    setBoardPage(1);
+    setHasMoreBoards(false);
+    setBoardSearch("");
     setColumns([]);
     setSelectedBoard("");
     setPhotoColumn("");
@@ -63,12 +69,17 @@ export default function MondaySyncModal({ open, onOpenChange, onSyncComplete }: 
     return data;
   };
 
-  const loadBoards = async () => {
+  const loadBoards = async (page = 1, search = "") => {
     setLoading(true);
     try {
-      const data = await invoke({ action: "list_boards" });
+      const data = await invoke({ action: "list_boards", page, search });
       setBoards(data.boards || []);
-    } catch (err) {
+      setBoardPage(data.page || page);
+      setHasMoreBoards(Boolean(data.hasMore));
+      if (selectedBoard && !(data.boards || []).some((b: Board) => b.id === selectedBoard)) {
+        setSelectedBoard("");
+      }
+    } catch {
       toast.error("Failed to load Monday.com boards");
     }
     setLoading(false);
