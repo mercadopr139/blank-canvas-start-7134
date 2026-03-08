@@ -99,26 +99,30 @@ Deno.serve(async (req) => {
 
     // Step 1: List boards so the user can pick the right one
     if (action === "list_boards") {
-      // Fetch up to 200 boards across all workspaces
+      // Monday's boards API commonly caps page size at 50
+      const PAGE_SIZE = 50;
+      const MAX_PAGES = 20; // up to 1,000 boards
+
       let allBoards: Array<{ id: string; name: string; items_count: number }> = [];
-      let page = 1;
-      let hasMore = true;
-      while (hasMore && page <= 4) {
+
+      for (let page = 1; page <= MAX_PAGES; page++) {
         const data = await mondayQuery(mondayToken, `{
-          boards(limit: 200, page: ${page}) {
+          boards(limit: ${PAGE_SIZE}, page: ${page}, state: all) {
             id
             name
             items_count
           }
         }`);
-        if (data.boards?.length) {
-          allBoards = [...allBoards, ...data.boards];
-          hasMore = data.boards.length === 200;
-          page++;
-        } else {
-          hasMore = false;
-        }
+
+        const pageBoards = data.boards || [];
+        if (pageBoards.length === 0) break;
+
+        allBoards = [...allBoards, ...pageBoards];
+
+        // Last page when fewer than PAGE_SIZE are returned
+        if (pageBoards.length < PAGE_SIZE) break;
       }
+
       return new Response(JSON.stringify({ boards: allBoards }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
