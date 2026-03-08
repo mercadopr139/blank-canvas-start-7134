@@ -60,6 +60,7 @@ const AdminRegistrations = () => {
   const [editingRegistration, setEditingRegistration] = useState<any | null>(null);
   const [deletingRegistration, setDeletingRegistration] = useState<any | null>(null);
   const [importOpen, setImportOpen] = useState(false);
+  const [bulkPhotoOpen, setBulkPhotoOpen] = useState(false);
   const [deleteAllStep, setDeleteAllStep] = useState<0 | 1 | 2>(0);
 
   const { data: registrations, isLoading } = useQuery({
