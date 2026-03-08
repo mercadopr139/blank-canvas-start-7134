@@ -255,9 +255,12 @@ Deno.serve(async (req) => {
         });
       }
 
-      // Fetch items from Monday board with pagination using scoped columns to reduce complexity
-      let allItems: MondayItem[] = [];
-      let cursor: string | null = null;
+      // Fetch a single batch from Monday board (cursor-based) to avoid request timeouts
+      const batchSizeRaw = Number(body.batchSize ?? 20);
+      const batchSize = Number.isFinite(batchSizeRaw)
+        ? Math.max(5, Math.min(50, Math.floor(batchSizeRaw)))
+        : 20;
+      const inputCursor = typeof body.cursor === "string" && body.cursor.length > 0 ? body.cursor : null;
 
       const columnIds = [photoColumnId, firstNameColumnId, lastNameColumnId].filter(
         (id): id is string => Boolean(id)
@@ -266,39 +269,12 @@ Deno.serve(async (req) => {
         ? `(ids: [${columnIds.map((id) => `"${id}"`).join(", ")}])`
         : "";
 
-      // First page
-      const firstPage = await mondayQuery(mondayToken, `{
-        boards(ids: [${boardId}]) {
-          items_page(limit: 50) {
-            cursor
-            items {
-              id
-              name
-              column_values${columnValuesArg} {
-                id
-                text
-                value
-              }
-              assets {
-                id
-                public_url
-                url
-              }
-            }
-          }
-        }
-      }`);
+      let allItems: MondayItem[] = [];
+      let nextCursor: string | null = null;
 
-      const page = firstPage.boards[0]?.items_page;
-      if (page) {
-        allItems = page.items || [];
-        cursor = page.cursor;
-      }
-
-      // Subsequent pages
-      while (cursor) {
+      if (inputCursor) {
         const nextPage = await mondayQuery(mondayToken, `{
-          next_items_page(limit: 50, cursor: "${cursor}") {
+          next_items_page(limit: ${batchSize}, cursor: "${inputCursor}") {
             cursor
             items {
               id
@@ -317,12 +293,34 @@ Deno.serve(async (req) => {
           }
         }`);
         const np = nextPage.next_items_page;
-        if (np?.items?.length) {
-          allItems = [...allItems, ...np.items];
-          cursor = np.cursor;
-        } else {
-          cursor = null;
-        }
+        allItems = np?.items || [];
+        nextCursor = np?.cursor || null;
+      } else {
+        const firstPage = await mondayQuery(mondayToken, `{
+          boards(ids: [${boardId}]) {
+            items_page(limit: ${batchSize}) {
+              cursor
+              items {
+                id
+                name
+                column_values${columnValuesArg} {
+                  id
+                  text
+                  value
+                }
+                assets {
+                  id
+                  public_url
+                  url
+                }
+              }
+            }
+          }
+        }`);
+
+        const page = firstPage.boards[0]?.items_page;
+        allItems = page?.items || [];
+        nextCursor = page?.cursor || null;
       }
 
       const results = {
@@ -334,6 +332,8 @@ Deno.serve(async (req) => {
         skipped_no_match: 0,
         errors: [] as string[],
         details: [] as Array<{ mondayName: string; status: string; matchedTo?: string }>,
+        next_cursor: nextCursor,
+        has_more: Boolean(nextCursor),
       };
 
       for (const item of allItems) {
