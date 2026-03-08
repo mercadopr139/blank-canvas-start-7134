@@ -194,7 +194,7 @@ export default function MondaySyncModal({ open, onOpenChange, onSyncComplete }: 
                       }`}
                     >
                       <div className="font-medium text-sm">{b.name}</div>
-                      <div className="text-xs text-muted-foreground">{b.items_count} items</div>
+                      <div className="text-xs text-muted-foreground">{typeof b.items_count === "number" ? `${b.items_count} items` : "Board"}</div>
                     </button>
                   ))}
                 </div>
