@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Card, CardContent } from "@/components/ui/card";
-import { Upload, FileText, AlertTriangle, CheckCircle2, ImageOff, Loader2, Camera } from "lucide-react";
+import { Upload, FileText, AlertTriangle, CheckCircle2, ImageOff, Loader2, Camera, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 
 /* ───── CSV Parser (RFC-compliant) ───── */
@@ -729,6 +729,7 @@ const YouthImportModal = ({ open, onOpenChange, existingRegistrations, onImportC
               { label: "Photos Imported", value: results.photosImported, icon: Camera, color: "text-green-400" },
               { label: "Records Skipped", value: results.skipped, icon: AlertTriangle, color: "text-amber-400" },
               { label: "Photo Errors", value: results.photoErrors, icon: ImageOff, color: "text-red-400" },
+              { label: "Sanitized Values", value: results.sanitizedCount, icon: Sparkles, color: "text-purple-400" },
               { label: "Needs Review", value: results.needsReview.length, icon: AlertTriangle, color: "text-yellow-400" }].
               map((s) =>
               <Card key={s.label} className="bg-white/5 border-white/10">
