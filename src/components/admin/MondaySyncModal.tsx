@@ -201,7 +201,7 @@ export default function MondaySyncModal({ open, onOpenChange, onSyncComplete }: 
                 Loading boards...
               </div>
             ) : boards.length === 0 ? (
-              <p className="text-sm text-muted-foreground py-4">No boards found. Check your API token.</p>
+              <p className="text-sm text-muted-foreground py-4">No boards found for that search. Try a shorter term like “2025” or “Master”.</p>
             ) : (
               <>
                 <p className="text-sm text-muted-foreground">Select the Monday.com board containing youth registrations:</p>
