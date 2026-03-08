@@ -59,6 +59,7 @@ const AdminRegistrations = () => {
   const [editingRegistration, setEditingRegistration] = useState<any | null>(null);
   const [deletingRegistration, setDeletingRegistration] = useState<any | null>(null);
   const [importOpen, setImportOpen] = useState(false);
+  const [deleteAllStep, setDeleteAllStep] = useState<0 | 1 | 2>(0);
 
   const { data: registrations, isLoading } = useQuery({
     queryKey: ["youth-registrations"],
@@ -106,6 +107,20 @@ const AdminRegistrations = () => {
       queryClient.invalidateQueries({ queryKey: ["youth-registrations"] });
     }
     setDeletingRegistration(null);
+  };
+
+  const handleDeleteAll = async () => {
+    const { error } = await supabase
+      .from("youth_registrations")
+      .delete()
+      .gte("id", "00000000-0000-0000-0000-000000000000");
+    if (error) {
+      toast.error("Failed to delete all registrations");
+    } else {
+      toast.success("All registrations deleted");
+      queryClient.invalidateQueries({ queryKey: ["youth-registrations"] });
+    }
+    setDeleteAllStep(0);
   };
 
   const programs = [...new Set(registrations?.map((r) => r.child_boxing_program) || [])];
@@ -208,9 +223,14 @@ const AdminRegistrations = () => {
           <h2 className="text-base font-semibold text-white">Youth Registrations</h2>
           <p className="text-xs text-white/50">{filteredRegistrations?.length || 0} registrations</p>
         </div>
-        <Button size="sm" onClick={() => setImportOpen(true)} className="bg-white/10 hover:bg-white/15 text-white border border-white/20 gap-1.5">
-          <Upload className="w-3.5 h-3.5" /> Import from Monday.com
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button size="sm" onClick={() => setDeleteAllStep(1)} variant="destructive" className="gap-1.5">
+            <Trash2 className="w-3.5 h-3.5" /> Delete All
+          </Button>
+          <Button size="sm" onClick={() => setImportOpen(true)} className="bg-white/10 hover:bg-white/15 text-white border border-white/20 gap-1.5">
+            <Upload className="w-3.5 h-3.5" /> Import from Monday.com
+          </Button>
+        </div>
       </div>
 
       <div className="container mx-auto px-4 py-6 space-y-6">
@@ -372,6 +392,45 @@ const AdminRegistrations = () => {
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction onClick={handleDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
               Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Delete All - Step 1 */}
+      <AlertDialog open={deleteAllStep === 1} onOpenChange={(open) => { if (!open) setDeleteAllStep(0); }}>
+        <AlertDialogContent className="bg-zinc-900 border-white/10 text-white">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-white">Delete All Registrations?</AlertDialogTitle>
+            <AlertDialogDescription className="text-white/50">
+              This will permanently delete <strong className="text-red-400">{registrations?.length || 0}</strong> youth registrations. This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel className="bg-white/5 border-white/10 text-white hover:bg-white/10 hover:text-white">Cancel</AlertDialogCancel>
+            <AlertDialogAction className="bg-red-600 text-white hover:bg-red-700" onClick={() => setDeleteAllStep(2)}>
+              Yes, Delete All
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Delete All - Step 2 (Final Confirmation) */}
+      <AlertDialog open={deleteAllStep === 2} onOpenChange={(open) => { if (!open) setDeleteAllStep(0); }}>
+        <AlertDialogContent className="bg-zinc-900 border-red-500/30 text-white">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-red-400 flex items-center gap-2">
+              <AlertTriangle className="w-5 h-5" /> Are you absolutely sure?
+            </AlertDialogTitle>
+            <AlertDialogDescription className="text-white/50">
+              You are about to delete <strong className="text-red-400">ALL {registrations?.length || 0} registrations</strong>. 
+              This is irreversible — all youth data, waivers, and photos will be permanently lost.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel className="bg-white/5 border-white/10 text-white hover:bg-white/10 hover:text-white">Cancel</AlertDialogCancel>
+            <AlertDialogAction className="bg-red-600 text-white hover:bg-red-700" onClick={handleDeleteAll}>
+              I'm Sure — Delete Everything
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
