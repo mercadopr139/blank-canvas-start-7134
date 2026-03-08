@@ -178,7 +178,7 @@ const AdminRegistrationAnalytics = () => {
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <ChartContainer config={chartConfig} className="h-[300px]">
+                  <ChartContainer config={chartConfig} className="h-[500px]">
                     <PieChart>
                       <Pie
                         data={districtData}
@@ -186,9 +186,16 @@ const AdminRegistrationAnalytics = () => {
                         nameKey="name"
                         cx="50%"
                         cy="50%"
-                        outerRadius={100}
-                        label={({ name, percent }) => `${name} (${(percent * 100).toFixed(0)}%)`}
-                        labelLine={false}
+                        outerRadius={140}
+                        label={({ name, percent, x, y, midAngle }) => {
+                          const pct = (percent * 100).toFixed(0);
+                          return (
+                            <text x={x} y={y} textAnchor={midAngle > 180 ? "end" : "start"} dominantBaseline="central" fill="rgba(255,255,255,0.85)" fontSize={11}>
+                              {`${name} (${pct}%)`}
+                            </text>
+                          );
+                        }}
+                        labelLine={true}
                       >
                         {districtData.map((_, index) => (
                           <Cell key={`district-${index}`} fill={COLORS[index % COLORS.length]} />
