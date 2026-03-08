@@ -147,6 +147,7 @@ interface ImportResult {
   photosImported: number;
   skipped: number;
   photoErrors: number;
+  sanitizedCount: number;
   needsReview: ImportRow[];
 }
 
