@@ -352,7 +352,7 @@ const YouthImportModal = ({ open, onOpenChange, existingRegistrations, onImportC
   const executeImport = async () => {
     setStep("importing");
     setIsImporting(true);
-    let imported = 0,updated = 0,photosImported = 0,skipped = 0,photoErrors = 0;
+    let imported = 0,updated = 0,photosImported = 0,skipped = 0,photoErrors = 0,sanitizedCount = 0;
     const needsReview: ImportRow[] = [];
 
     const { data: { session } } = await supabase.auth.getSession();
@@ -364,16 +364,18 @@ const YouthImportModal = ({ open, onOpenChange, existingRegistrations, onImportC
 
       if (!row.valid) {skipped++;needsReview.push(row);continue;}
 
+      // Sanitize data before building insert
+      const { sanitizedData, wasSanitized } = sanitizeImportRow(row.data);
+      if (wasSanitized) sanitizedCount++;
+
       // Handle duplicates
       if (row.isDuplicate) {
         if (duplicateAction === "skip") {skipped++;continue;}
-        // Update existing
-        const updateData = buildInsertData(row.data);
+        const updateData = buildInsertData(sanitizedData);
         delete (updateData as any).approved_for_attendance;
         const { error } = await supabase.from("youth_registrations").update(updateData as any).eq("id", row.duplicateId!);
         if (error) {skipped++;needsReview.push({ ...row, warnings: [...row.warnings, `Update failed: ${error.message}`] });continue;}
 
-        // Photo for update
         if (duplicateAction === "update_with_photo" && row.photoUrl && accessToken) {
           const photoResult = await importPhoto(row.photoUrl, row.duplicateId!, accessToken);
           if (photoResult) photosImported++;else
@@ -384,11 +386,10 @@ const YouthImportModal = ({ open, onOpenChange, existingRegistrations, onImportC
       }
 
       // Insert new
-      const insertData = buildInsertData(row.data);
+      const insertData = buildInsertData(sanitizedData);
       const { data: inserted, error } = await supabase.from("youth_registrations").insert(insertData as any).select("id").single();
       if (error) {skipped++;needsReview.push({ ...row, warnings: [...row.warnings, `Insert failed: ${error.message}`] });continue;}
 
-      // Photo for new record
       if (row.photoUrl && inserted && accessToken) {
         const photoResult = await importPhoto(row.photoUrl, inserted.id, accessToken);
         if (photoResult) photosImported++;else
@@ -400,7 +401,7 @@ const YouthImportModal = ({ open, onOpenChange, existingRegistrations, onImportC
       imported++;
     }
 
-    setResults({ imported, updated, photosImported, skipped, photoErrors, needsReview });
+    setResults({ imported, updated, photosImported, skipped, photoErrors, sanitizedCount, needsReview });
     setIsImporting(false);
     setStep("results");
     onImportComplete();
