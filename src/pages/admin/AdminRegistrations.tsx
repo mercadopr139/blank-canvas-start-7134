@@ -109,6 +109,20 @@ const AdminRegistrations = () => {
     setDeletingRegistration(null);
   };
 
+  const handleDeleteAll = async () => {
+    const { error } = await supabase
+      .from("youth_registrations")
+      .delete()
+      .gte("id", "00000000-0000-0000-0000-000000000000");
+    if (error) {
+      toast.error("Failed to delete all registrations");
+    } else {
+      toast.success("All registrations deleted");
+      queryClient.invalidateQueries({ queryKey: ["youth-registrations"] });
+    }
+    setDeleteAllStep(0);
+  };
+
   const programs = [...new Set(registrations?.map((r) => r.child_boxing_program) || [])];
   const districts = [...new Set(registrations?.map((r) => r.child_school_district) || [])];
 
