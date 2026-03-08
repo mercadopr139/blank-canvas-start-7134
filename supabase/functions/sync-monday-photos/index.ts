@@ -131,7 +131,188 @@ async function mondayQuery(
   return data.data;
 }
 
-Deno.serve(async (req) => {
+const SIGNATURE_HINTS = [
+  "sign",
+  "signature",
+  "sig",
+  "waiver",
+  "consent",
+  "liability",
+  "transport",
+  "medical",
+  "media",
+  "spiritual",
+  "counsel",
+  "initial",
+];
+
+const HEADSHOT_HINTS = ["headshot", "head shot", "photo", "picture", "pic", "profile", "portrait", "avatar"];
+
+const normalizeHintText = (value: string) =>
+  value
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim();
+
+const scoreCandidateByName = (candidate: MondayFileCandidate) => {
+  const haystack = normalizeHintText(`${candidate.name || ""} ${candidate.public_url || ""} ${candidate.url || ""}`);
+  let score = 0;
+
+  for (const hint of HEADSHOT_HINTS) {
+    if (haystack.includes(hint)) score += 3;
+  }
+  for (const hint of SIGNATURE_HINTS) {
+    if (haystack.includes(hint)) score -= 6;
+  }
+
+  return score;
+};
+
+const parseMondayColumnFiles = (columnValue: string | null): MondayFileCandidate[] => {
+  if (!columnValue) return [];
+
+  try {
+    const parsed = JSON.parse(columnValue);
+    const files = Array.isArray(parsed?.files) ? parsed.files : [];
+    return files
+      .map((file: Record<string, unknown>) => ({
+        assetId: typeof file?.assetId === "number" || typeof file?.assetId === "string" ? String(file.assetId) : undefined,
+        name: typeof file?.name === "string" ? file.name : undefined,
+        public_url: typeof file?.public_url === "string" ? file.public_url : undefined,
+        url: typeof file?.url === "string" ? file.url : undefined,
+      }))
+      .filter((file: MondayFileCandidate) => Boolean(file.assetId || file.public_url || file.url));
+  } catch {
+    return [];
+  }
+};
+
+const getPngDimensions = (bytes: Uint8Array): ImageDimensions | null => {
+  if (bytes.length < 24) return null;
+  if (bytes[0] !== 0x89 || bytes[1] !== 0x50 || bytes[2] !== 0x4e || bytes[3] !== 0x47) return null;
+  const width = (bytes[16] << 24) | (bytes[17] << 16) | (bytes[18] << 8) | bytes[19];
+  const height = (bytes[20] << 24) | (bytes[21] << 16) | (bytes[22] << 8) | bytes[23];
+  if (width <= 0 || height <= 0) return null;
+  return { width, height };
+};
+
+const getJpegDimensions = (bytes: Uint8Array): ImageDimensions | null => {
+  if (bytes.length < 4 || bytes[0] !== 0xff || bytes[1] !== 0xd8) return null;
+
+  let offset = 2;
+  while (offset + 9 < bytes.length) {
+    if (bytes[offset] !== 0xff) {
+      offset += 1;
+      continue;
+    }
+
+    const marker = bytes[offset + 1];
+    const length = (bytes[offset + 2] << 8) | bytes[offset + 3];
+    if (length < 2) return null;
+
+    const isSof =
+      marker === 0xc0 || marker === 0xc1 || marker === 0xc2 || marker === 0xc3 ||
+      marker === 0xc5 || marker === 0xc6 || marker === 0xc7 || marker === 0xc9 ||
+      marker === 0xca || marker === 0xcb || marker === 0xcd || marker === 0xce || marker === 0xcf;
+
+    if (isSof && offset + 8 < bytes.length) {
+      const height = (bytes[offset + 5] << 8) | bytes[offset + 6];
+      const width = (bytes[offset + 7] << 8) | bytes[offset + 8];
+      if (width > 0 && height > 0) return { width, height };
+      return null;
+    }
+
+    offset += 2 + length;
+  }
+
+  return null;
+};
+
+const getWebpDimensions = (bytes: Uint8Array): ImageDimensions | null => {
+  if (bytes.length < 30) return null;
+  const riff = String.fromCharCode(...bytes.slice(0, 4));
+  const webp = String.fromCharCode(...bytes.slice(8, 12));
+  if (riff !== "RIFF" || webp !== "WEBP") return null;
+
+  const chunk = String.fromCharCode(...bytes.slice(12, 16));
+  if (chunk === "VP8X" && bytes.length >= 30) {
+    const width = 1 + bytes[24] + (bytes[25] << 8) + (bytes[26] << 16);
+    const height = 1 + bytes[27] + (bytes[28] << 8) + (bytes[29] << 16);
+    return { width, height };
+  }
+
+  return null;
+};
+
+const getImageDimensions = (contentType: string, imageData: ArrayBuffer): ImageDimensions | null => {
+  const bytes = new Uint8Array(imageData);
+  if (contentType.includes("png")) return getPngDimensions(bytes);
+  if (contentType.includes("jpeg") || contentType.includes("jpg")) return getJpegDimensions(bytes);
+  if (contentType.includes("webp")) return getWebpDimensions(bytes);
+  return getPngDimensions(bytes) || getJpegDimensions(bytes) || getWebpDimensions(bytes);
+};
+
+const isLikelySignatureImage = (dimensions: ImageDimensions | null) => {
+  if (!dimensions) return false;
+  const ratio = dimensions.width / Math.max(1, dimensions.height);
+  return ratio >= 2.3 || dimensions.height <= 140;
+};
+
+const buildCandidateUrls = (candidate: MondayFileCandidate, refreshed: MondayFileCandidate | null) => {
+  const urls = [candidate.public_url, candidate.url, refreshed?.public_url, refreshed?.url].filter(
+    (value): value is string => Boolean(value && value.length > 0)
+  );
+  return Array.from(new Set(urls));
+};
+
+const fetchBestPhotoForCandidate = async (
+  candidateUrls: string[],
+  authVariants: Array<Record<string, string>>
+): Promise<Response | null> => {
+  for (const candidateUrl of candidateUrls) {
+    for (const headers of authVariants) {
+      try {
+        const res = await fetch(candidateUrl, {
+          headers,
+          redirect: "follow",
+        });
+
+        if (!res.ok) continue;
+
+        const contentType = (res.headers.get("content-type") || "").toLowerCase();
+        if (!contentType.startsWith("image/")) continue;
+
+        return res;
+      } catch {
+        // try next candidate
+      }
+    }
+  }
+
+  return null;
+};
+
+const hasNonSignatureExistingPhoto = async (supabase: ReturnType<typeof createClient>, path: string) => {
+  try {
+    const { data: existingFile, error } = await supabase.storage
+      .from("registration-signatures")
+      .download(path);
+
+    if (error || !existingFile) return false;
+
+    const contentType = (existingFile.type || "").toLowerCase();
+    if (!contentType.startsWith("image/")) return false;
+
+    const imageData = await existingFile.arrayBuffer();
+    if (imageData.byteLength < 500) return false;
+
+    const dims = getImageDimensions(contentType, imageData);
+    return !isLikelySignatureImage(dims);
+  } catch {
+    return false;
+  }
+};
+
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
