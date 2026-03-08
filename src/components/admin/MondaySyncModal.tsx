@@ -3,7 +3,6 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Loader2, CheckCircle2, XCircle, AlertTriangle, CloudDownload } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
@@ -101,7 +100,7 @@ export default function MondaySyncModal({ open, onOpenChange, onSyncComplete }: 
       if (fn) setFirstNameColumn(fn.id);
       const ln = cols.find(c => c.title.toLowerCase().includes("last name") || c.title.toLowerCase() === "last");
       if (ln) setLastNameColumn(ln.id);
-    } catch (err) {
+    } catch {
       toast.error("Failed to load board columns");
     }
     setLoading(false);
