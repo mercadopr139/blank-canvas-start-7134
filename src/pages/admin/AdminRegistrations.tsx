@@ -12,9 +12,10 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Search, Eye, AlertTriangle, ExternalLink, Loader2, Pencil, Trash2, CheckCircle2, XCircle, ShieldCheck, Upload, ImageOff } from "lucide-react";
+import { Search, Eye, AlertTriangle, ExternalLink, Loader2, Pencil, Trash2, CheckCircle2, XCircle, ShieldCheck, Upload, ImageOff, CloudDownload } from "lucide-react";
 import YouthImportModal from "@/components/admin/YouthImportModal";
 import BulkPhotoImportModal from "@/components/admin/BulkPhotoImportModal";
+import MondaySyncModal from "@/components/admin/MondaySyncModal";
 import { Switch } from "@/components/ui/switch";
 import { format, parseISO, differenceInYears } from "date-fns";
 import { toast } from "sonner";
@@ -61,6 +62,7 @@ const AdminRegistrations = () => {
   const [deletingRegistration, setDeletingRegistration] = useState<any | null>(null);
   const [importOpen, setImportOpen] = useState(false);
   const [bulkPhotoOpen, setBulkPhotoOpen] = useState(false);
+  const [mondaySyncOpen, setMondaySyncOpen] = useState(false);
   const [deleteAllStep, setDeleteAllStep] = useState<0 | 1 | 2>(0);
 
   const { data: registrations, isLoading } = useQuery({
@@ -236,6 +238,9 @@ const AdminRegistrations = () => {
           </Button>
           <Button size="sm" onClick={() => setBulkPhotoOpen(true)} className="bg-white/10 hover:bg-white/15 text-white border border-white/20 gap-1.5">
             <ImageOff className="w-3.5 h-3.5" /> Bulk Import Youth Photos
+          </Button>
+          <Button size="sm" onClick={() => setMondaySyncOpen(true)} className="bg-white/10 hover:bg-white/15 text-white border border-white/20 gap-1.5">
+            <CloudDownload className="w-3.5 h-3.5" /> Sync Photos from Monday.com
           </Button>
         </div>
       </div>
@@ -509,6 +514,12 @@ const AdminRegistrations = () => {
           </div>
         );
       })()}
+
+      <MondaySyncModal
+        open={mondaySyncOpen}
+        onOpenChange={setMondaySyncOpen}
+        onSyncComplete={() => queryClient.invalidateQueries({ queryKey: ["youth-registrations"] })}
+      />
     </div>
   );
 };

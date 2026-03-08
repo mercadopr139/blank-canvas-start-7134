@@ -1,0 +1,398 @@
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers":
+    "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
+};
+
+const MONDAY_API_URL = "https://api.monday.com/v2";
+
+interface MondayItem {
+  id: string;
+  name: string;
+  column_values: Array<{
+    id: string;
+    text: string;
+    value: string | null;
+  }>;
+  assets: Array<{
+    id: string;
+    name: string;
+    public_url: string;
+    url: string;
+  }>;
+}
+
+async function mondayQuery(token: string, query: string, variables?: Record<string, unknown>) {
+  const res = await fetch(MONDAY_API_URL, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: token,
+      "API-Version": "2024-10",
+    },
+    body: JSON.stringify({ query, variables }),
+  });
+  const data = await res.json();
+  if (data.errors) {
+    throw new Error(`Monday API error: ${JSON.stringify(data.errors)}`);
+  }
+  return data.data;
+}
+
+Deno.serve(async (req) => {
+  if (req.method === "OPTIONS") {
+    return new Response(null, { headers: corsHeaders });
+  }
+
+  try {
+    // Auth check
+    const authHeader = req.headers.get("Authorization");
+    if (!authHeader?.startsWith("Bearer ")) {
+      return new Response(JSON.stringify({ error: "Unauthorized" }), {
+        status: 401,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
+    const token = authHeader.replace("Bearer ", "");
+    const anonClient = createClient(supabaseUrl, Deno.env.get("SUPABASE_ANON_KEY")!, {
+      global: { headers: { Authorization: authHeader } },
+    });
+    const { data: userData, error: authError } = await anonClient.auth.getUser(token);
+    if (authError || !userData?.user) {
+      return new Response(JSON.stringify({ error: "Unauthorized" }), {
+        status: 401,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    const { data: roleData } = await supabase
+      .from("user_roles")
+      .select("role")
+      .eq("user_id", userData.user.id)
+      .eq("role", "admin")
+      .maybeSingle();
+
+    if (!roleData) {
+      return new Response(JSON.stringify({ error: "Admin access required" }), {
+        status: 403,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    const mondayToken = Deno.env.get("MONDAY_API_TOKEN");
+    if (!mondayToken) {
+      return new Response(JSON.stringify({ error: "MONDAY_API_TOKEN not configured" }), {
+        status: 500,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    const body = await req.json().catch(() => ({}));
+    const action = body.action || "list_boards";
+
+    // Step 1: List boards so the user can pick the right one
+    if (action === "list_boards") {
+      const data = await mondayQuery(mondayToken, `{
+        boards(limit: 50) {
+          id
+          name
+          items_count
+        }
+      }`);
+      return new Response(JSON.stringify({ boards: data.boards }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // Step 2: Get board columns to find the photo column
+    if (action === "get_columns") {
+      const boardId = body.boardId;
+      if (!boardId) {
+        return new Response(JSON.stringify({ error: "boardId required" }), {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      const data = await mondayQuery(mondayToken, `{
+        boards(ids: [${boardId}]) {
+          columns {
+            id
+            title
+            type
+          }
+        }
+      }`);
+      return new Response(JSON.stringify({ columns: data.boards[0]?.columns || [] }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // Step 3: Sync photos from a specific board
+    if (action === "sync_photos") {
+      const boardId = body.boardId;
+      const photoColumnId = body.photoColumnId;
+      const firstNameColumnId = body.firstNameColumnId || null;
+      const lastNameColumnId = body.lastNameColumnId || null;
+
+      if (!boardId || !photoColumnId) {
+        return new Response(JSON.stringify({ error: "boardId and photoColumnId required" }), {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      // Get all existing registrations
+      const { data: registrations } = await supabase
+        .from("youth_registrations")
+        .select("id, child_first_name, child_last_name, child_headshot_url, submission_date");
+
+      if (!registrations || registrations.length === 0) {
+        return new Response(JSON.stringify({ error: "No registrations found to match against" }), {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      // Fetch items from Monday board with pagination
+      let allItems: MondayItem[] = [];
+      let cursor: string | null = null;
+      let hasMore = true;
+
+      // First page
+      const firstPage = await mondayQuery(mondayToken, `{
+        boards(ids: [${boardId}]) {
+          items_page(limit: 100) {
+            cursor
+            items {
+              id
+              name
+              column_values {
+                id
+                text
+                value
+              }
+              assets {
+                id
+                name
+                public_url
+                url
+              }
+            }
+          }
+        }
+      }`);
+
+      const page = firstPage.boards[0]?.items_page;
+      if (page) {
+        allItems = page.items || [];
+        cursor = page.cursor;
+      }
+
+      // Subsequent pages
+      while (cursor) {
+        const nextPage = await mondayQuery(mondayToken, `{
+          next_items_page(limit: 100, cursor: "${cursor}") {
+            cursor
+            items {
+              id
+              name
+              column_values {
+                id
+                text
+                value
+              }
+              assets {
+                id
+                name
+                public_url
+                url
+              }
+            }
+          }
+        }`);
+        const np = nextPage.next_items_page;
+        if (np?.items?.length) {
+          allItems = [...allItems, ...np.items];
+          cursor = np.cursor;
+        } else {
+          cursor = null;
+        }
+      }
+
+      const results = {
+        total_monday_items: allItems.length,
+        matched: 0,
+        uploaded: 0,
+        skipped_no_photo: 0,
+        skipped_already_has_photo: 0,
+        skipped_no_match: 0,
+        errors: [] as string[],
+        details: [] as Array<{ mondayName: string; status: string; matchedTo?: string }>,
+      };
+
+      for (const item of allItems) {
+        // Extract first/last name from Monday item
+        let firstName = "";
+        let lastName = "";
+
+        if (firstNameColumnId && lastNameColumnId) {
+          firstName = item.column_values.find((c) => c.id === firstNameColumnId)?.text?.trim() || "";
+          lastName = item.column_values.find((c) => c.id === lastNameColumnId)?.text?.trim() || "";
+        } else {
+          // Try to parse from item name (usually "First Last")
+          const parts = item.name.trim().split(/\s+/);
+          firstName = parts[0] || "";
+          lastName = parts.slice(1).join(" ") || "";
+        }
+
+        if (!firstName && !lastName) {
+          results.skipped_no_match++;
+          results.details.push({ mondayName: item.name, status: "no_name" });
+          continue;
+        }
+
+        // Find photo in the file column
+        const photoCol = item.column_values.find((c) => c.id === photoColumnId);
+        let photoUrl: string | null = null;
+
+        // Check assets on the item
+        if (item.assets?.length) {
+          const asset = item.assets[0];
+          photoUrl = asset.public_url || asset.url;
+        }
+
+        // Also try parsing the column value for file info
+        if (!photoUrl && photoCol?.value) {
+          try {
+            const parsed = JSON.parse(photoCol.value);
+            if (parsed?.files?.length) {
+              const assetId = parsed.files[0].assetId;
+              // Get public URL for the asset
+              if (assetId) {
+                const assetData = await mondayQuery(mondayToken, `{
+                  assets(ids: [${assetId}]) {
+                    public_url
+                    url
+                  }
+                }`);
+                if (assetData.assets?.[0]) {
+                  photoUrl = assetData.assets[0].public_url || assetData.assets[0].url;
+                }
+              }
+            }
+          } catch {
+            // not JSON
+          }
+        }
+
+        if (!photoUrl) {
+          results.skipped_no_photo++;
+          results.details.push({ mondayName: `${firstName} ${lastName}`, status: "no_photo" });
+          continue;
+        }
+
+        // Match to registration
+        const normalize = (s: string) => s.toLowerCase().replace(/[^a-z]/g, "");
+        const match = registrations.find(
+          (r) =>
+            normalize(r.child_first_name) === normalize(firstName) &&
+            normalize(r.child_last_name) === normalize(lastName)
+        );
+
+        if (!match) {
+          results.skipped_no_match++;
+          results.details.push({ mondayName: `${firstName} ${lastName}`, status: "no_match" });
+          continue;
+        }
+
+        results.matched++;
+
+        // Skip if already has a photo
+        if (match.child_headshot_url) {
+          results.skipped_already_has_photo++;
+          results.details.push({
+            mondayName: `${firstName} ${lastName}`,
+            status: "already_has_photo",
+            matchedTo: `${match.child_first_name} ${match.child_last_name}`,
+          });
+          continue;
+        }
+
+        // Download and upload the photo
+        try {
+          const imageRes = await fetch(photoUrl, {
+            headers: {
+              Authorization: mondayToken,
+              "User-Agent": "Mozilla/5.0",
+              Accept: "image/*,*/*;q=0.8",
+            },
+            redirect: "follow",
+          });
+
+          if (!imageRes.ok) {
+            results.errors.push(`Failed to download photo for ${firstName} ${lastName}: ${imageRes.status}`);
+            results.details.push({ mondayName: `${firstName} ${lastName}`, status: "download_failed", matchedTo: `${match.child_first_name} ${match.child_last_name}` });
+            continue;
+          }
+
+          const contentType = imageRes.headers.get("content-type") || "image/jpeg";
+          const ext = contentType.includes("png") ? "png" : contentType.includes("webp") ? "webp" : "jpg";
+          const imageData = await imageRes.arrayBuffer();
+
+          if (imageData.byteLength < 100) {
+            results.errors.push(`Downloaded file too small for ${firstName} ${lastName}`);
+            continue;
+          }
+
+          const fileName = `monday_headshot_${match.id}_${Date.now()}.${ext}`;
+          const { data: uploadData, error: uploadError } = await supabase.storage
+            .from("registration-signatures")
+            .upload(fileName, imageData, { contentType, upsert: false });
+
+          if (uploadError) {
+            results.errors.push(`Upload failed for ${firstName} ${lastName}: ${uploadError.message}`);
+            results.details.push({ mondayName: `${firstName} ${lastName}`, status: "upload_failed", matchedTo: `${match.child_first_name} ${match.child_last_name}` });
+            continue;
+          }
+
+          // Update registration
+          await supabase
+            .from("youth_registrations")
+            .update({ child_headshot_url: uploadData.path })
+            .eq("id", match.id);
+
+          results.uploaded++;
+          results.details.push({
+            mondayName: `${firstName} ${lastName}`,
+            status: "uploaded",
+            matchedTo: `${match.child_first_name} ${match.child_last_name}`,
+          });
+        } catch (err) {
+          results.errors.push(`Error processing ${firstName} ${lastName}: ${String(err)}`);
+          results.details.push({ mondayName: `${firstName} ${lastName}`, status: "error" });
+        }
+      }
+
+      return new Response(JSON.stringify(results), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    return new Response(JSON.stringify({ error: "Invalid action" }), {
+      status: 400,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+  } catch (err) {
+    return new Response(
+      JSON.stringify({ error: "Internal error", detail: String(err) }),
+      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  }
+});
