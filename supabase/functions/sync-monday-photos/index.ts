@@ -99,31 +99,29 @@ Deno.serve(async (req) => {
 
     // Step 1: List boards so the user can pick the right one
     if (action === "list_boards") {
-      // Monday's boards API commonly caps page size at 50
+      // Paginated board listing to avoid Monday.com complexity/rate-limit errors
       const PAGE_SIZE = 50;
-      const MAX_PAGES = 20; // up to 1,000 boards
+      const page = Math.max(1, Number(body.page || 1));
+      const search = String(body.search || "").trim().toLowerCase();
 
-      let allBoards: Array<{ id: string; name: string; items_count: number }> = [];
+      const data = await mondayQuery(mondayToken, `{
+        boards(limit: ${PAGE_SIZE}, page: ${page}, state: all) {
+          id
+          name
+          items_count
+        }
+      }`);
 
-      for (let page = 1; page <= MAX_PAGES; page++) {
-        const data = await mondayQuery(mondayToken, `{
-          boards(limit: ${PAGE_SIZE}, page: ${page}, state: all) {
-            id
-            name
-            items_count
-          }
-        }`);
+      const rawBoards = data.boards || [];
+      const boards = search
+        ? rawBoards.filter((b: { name: string }) => b.name.toLowerCase().includes(search))
+        : rawBoards;
 
-        const pageBoards = data.boards || [];
-        if (pageBoards.length === 0) break;
-
-        allBoards = [...allBoards, ...pageBoards];
-
-        // Last page when fewer than PAGE_SIZE are returned
-        if (pageBoards.length < PAGE_SIZE) break;
-      }
-
-      return new Response(JSON.stringify({ boards: allBoards }), {
+      return new Response(JSON.stringify({
+        boards,
+        page,
+        hasMore: rawBoards.length === PAGE_SIZE,
+      }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
