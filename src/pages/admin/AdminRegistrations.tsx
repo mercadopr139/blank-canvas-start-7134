@@ -25,7 +25,13 @@ const HeadshotThumbnail = ({ headshotPath, size = "sm" }: { headshotPath: string
   const [fullscreen, setFullscreen] = useState(false);
   useEffect(() => {
     supabase.storage.from("registration-signatures").createSignedUrl(headshotPath, 300)
-      .then(({ data }) => { if (data?.signedUrl) setUrl(data.signedUrl); });
+      .then(({ data }) => {
+        if (!data?.signedUrl) return;
+        const signedUrl = data.signedUrl.startsWith("http")
+          ? data.signedUrl
+          : `${import.meta.env.VITE_SUPABASE_URL}/storage/v1${data.signedUrl}`;
+        setUrl(signedUrl);
+      });
   }, [headshotPath]);
   const sizeClass = size === "lg" ? "w-28 h-28" : "w-10 h-10";
   if (!url) return <div className={`${sizeClass} rounded-full bg-muted animate-pulse shrink-0`} />;
