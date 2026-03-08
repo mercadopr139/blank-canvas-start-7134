@@ -97,12 +97,18 @@ async function mondayQuery(
       .map((error: { extensions?: { retry_in_seconds?: number } }) => error.extensions?.retry_in_seconds)
       .find((value: number | undefined) => typeof value === "number" && value > 0);
 
-    const isComplexityBudgetError = data.errors.some(
-      (error: { extensions?: { code?: string } }) => error.extensions?.code === "COMPLEXITY_BUDGET_EXHAUSTED"
+    const shouldRetry = data.errors.some(
+      (error: { extensions?: { code?: string } }) =>
+        error.extensions?.code === "COMPLEXITY_BUDGET_EXHAUSTED" ||
+        error.extensions?.code === "RATE_LIMITED"
     );
 
-    if (isComplexityBudgetError && retryInSeconds && attempt < 2) {
-      await new Promise((resolve) => setTimeout(resolve, Math.min(retryInSeconds, 60) * 1000));
+    // Keep retries short to avoid function request timeouts
+    if (shouldRetry && attempt < 3) {
+      const waitSeconds = retryInSeconds
+        ? Math.min(retryInSeconds, 5)
+        : Math.min(2 ** (attempt + 1), 5);
+      await new Promise((resolve) => setTimeout(resolve, waitSeconds * 1000));
       return mondayQuery(token, query, variables, attempt + 1);
     }
 
