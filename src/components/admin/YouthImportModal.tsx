@@ -136,11 +136,82 @@ interface Props {
 const REQUIRED_FIELDS = ["child_first_name", "child_last_name", "child_date_of_birth"];
 
 /* ─── Normalize values for DB enums ─── */
-function normalizeSex(val: string): string {
+function normalizeSex(val: string): string | null {
   const v = val.trim().toLowerCase();
-  if (v.startsWith("m")) return "Male";
-  if (v.startsWith("f")) return "Female";
-  return val;
+  if (v === "m" || v === "male") return "Male";
+  if (v === "f" || v === "female") return "Female";
+  return null;
+}
+
+function normalizeRace(val: string): string | null {
+  const v = val.trim().toLowerCase();
+  if (v.includes("african american") || v === "black" || v.includes("black/african")) return "Black or African American";
+  if (v.includes("hispanic") || v.includes("latino") || v.includes("latina")) return "Hispanic or Latino";
+  if (v.includes("caucasian") || v === "white" || v.includes("white/caucasian")) return "White";
+  if (v.includes("two or more") || v.includes("multiracial") || v.includes("multi-racial") || v.includes("mixed")) return "Two or More Races";
+  if (v.includes("asian")) return "Asian";
+  if (v.includes("american indian") || v.includes("alaska native") || v.includes("native american")) return "American Indian or Alaska Native";
+  if (v.includes("native hawaiian") || v.includes("pacific islander")) return "Native Hawaiian or Other Pacific Islander";
+  // Check exact match
+  const exact = ["American Indian or Alaska Native","Asian","Black or African American","Hispanic or Latino","Native Hawaiian or Other Pacific Islander","White","Two or More Races"];
+  const match = exact.find((e) => e.toLowerCase() === v);
+  return match || null;
+}
+
+function normalizeSchoolDistrict(val: string): string | null {
+  const v = val.trim().toLowerCase();
+  const districts = ["Cape May City","Lower Cape May Regional","Middle Township","Ocean City","Upper Township","Wildwood","Wildwood Crest","North Wildwood","West Cape May","Dennis Township","Woodbine","Other","Lower Township","Cape May Tech","Avalon/Stone Harbor","Wildwood Catholic Academy","Homeschool, Hybrid, or Alternative Form of Schooling","Cape May/West Cape May","Wildwood/Wildwood Crest/North Wildwood"];
+  const exact = districts.find((d) => d.toLowerCase() === v);
+  if (exact) return exact;
+  // Fuzzy matches
+  if (v.includes("middle")) return "Middle Township";
+  if (v.includes("lower cape")) return "Lower Cape May Regional";
+  if (v.includes("lower")) return "Lower Township";
+  if (v.includes("upper")) return "Upper Township";
+  if (v.includes("ocean city")) return "Ocean City";
+  if (v.includes("wildwood crest")) return "Wildwood Crest";
+  if (v.includes("north wildwood")) return "North Wildwood";
+  if (v.includes("wildwood catholic")) return "Wildwood Catholic Academy";
+  if (v.includes("wildwood")) return "Wildwood";
+  if (v.includes("cape may tech")) return "Cape May Tech";
+  if (v.includes("cape may") && v.includes("west")) return "Cape May/West Cape May";
+  if (v.includes("cape may")) return "Cape May City";
+  if (v.includes("dennis")) return "Dennis Township";
+  if (v.includes("woodbine")) return "Woodbine";
+  if (v.includes("avalon") || v.includes("stone harbor")) return "Avalon/Stone Harbor";
+  if (v.includes("homeschool") || v.includes("hybrid") || v.includes("alternative")) return "Homeschool, Hybrid, or Alternative Form of Schooling";
+  return null;
+}
+
+function normalizeHouseholdIncome(val: string): string | null {
+  const v = val.trim().toLowerCase();
+  const incomes = ["Under $25,000","$25,000 - $49,999","$50,000 - $74,999","$75,000 - $99,999","$100,000 - $149,999","$150,000 or more","Less than $25,000","Less than $35,000","Less than $45,000","Less than $65,000","Less than $80,000","Greater than $80,001"];
+  const exact = incomes.find((i) => i.toLowerCase() === v);
+  if (exact) return exact;
+  // Fuzzy
+  if (v.includes("under") && v.includes("25")) return "Under $25,000";
+  if (v.includes("less") && v.includes("25")) return "Less than $25,000";
+  if (v.includes("less") && v.includes("35")) return "Less than $35,000";
+  if (v.includes("less") && v.includes("45")) return "Less than $45,000";
+  if (v.includes("less") && v.includes("65")) return "Less than $65,000";
+  if (v.includes("less") && v.includes("80")) return "Less than $80,000";
+  if (v.includes("greater") || v.includes("80,001") || v.includes("80001")) return "Greater than $80,001";
+  if (v.includes("150")) return "$150,000 or more";
+  if (v.includes("100")) return "$100,000 - $149,999";
+  if (v.includes("75")) return "$75,000 - $99,999";
+  if (v.includes("50")) return "$50,000 - $74,999";
+  if (v.includes("25")) return "$25,000 - $49,999";
+  return null;
+}
+
+function normalizeFreeLunch(val: string): string | null {
+  const v = val.trim().toLowerCase();
+  if (v === "yes" || v === "y" || v === "true") return "Yes";
+  if (v === "no" || v === "n" || v === "false") return "No";
+  if (v.includes("not applicable") || v === "n/a" || v === "na") return "Not Applicable";
+  const exact = ["Yes", "No", "Not Applicable"];
+  const match = exact.find((e) => e.toLowerCase() === v);
+  return match || null;
 }
 
 function normalizePhone(val: string): string {
@@ -329,27 +400,27 @@ const YouthImportModal = ({ open, onOpenChange, existingRegistrations, onImportC
 
     if (data.child_first_name) rec.child_first_name = data.child_first_name.trim();
     if (data.child_last_name) rec.child_last_name = data.child_last_name.trim();
-    if (data.child_sex) rec.child_sex = normalizeSex(data.child_sex);
+    if (data.child_sex) rec.child_sex = normalizeSex(data.child_sex) || null;
     if (data.child_date_of_birth) rec.child_date_of_birth = data.child_date_of_birth;
-    if (data.child_race_ethnicity) rec.child_race_ethnicity = data.child_race_ethnicity;
+    if (data.child_race_ethnicity) rec.child_race_ethnicity = normalizeRace(data.child_race_ethnicity) || null;
     if (data.parent_first_name) rec.parent_first_name = data.parent_first_name.trim();
     if (data.parent_last_name) rec.parent_last_name = data.parent_last_name.trim();
     if (data.parent_phone) rec.parent_phone = normalizePhone(data.parent_phone);
     if (data.child_phone) rec.child_phone = normalizePhone(data.child_phone);
     if (data.parent_email) rec.parent_email = data.parent_email.trim().toLowerCase();
     if (data.child_primary_address) rec.child_primary_address = data.child_primary_address;
-    if (data.child_school_district) rec.child_school_district = data.child_school_district;
+    if (data.child_school_district) rec.child_school_district = normalizeSchoolDistrict(data.child_school_district) || null;
     if (data.child_grade_level) rec.child_grade_level = parseInt(data.child_grade_level) || null;
-    if (data.child_boxing_program) rec.child_boxing_program = normalizeBoxingProgram(data.child_boxing_program);
+    if (data.child_boxing_program) rec.child_boxing_program = normalizeBoxingProgram(data.child_boxing_program) || null;
     if (data.adults_in_household) rec.adults_in_household = parseInt(data.adults_in_household) || 1;
     if (data.siblings_in_household) rec.siblings_in_household = parseInt(data.siblings_in_household) || 0;
-    if (data.household_income_range) rec.household_income_range = data.household_income_range;
-    if (data.free_or_reduced_lunch) rec.free_or_reduced_lunch = data.free_or_reduced_lunch;
+    if (data.household_income_range) rec.household_income_range = normalizeHouseholdIncome(data.household_income_range) || null;
+    if (data.free_or_reduced_lunch) rec.free_or_reduced_lunch = normalizeFreeLunch(data.free_or_reduced_lunch) || null;
     if (data.allergies) rec.allergies = data.allergies;
     if (data.asthma_inhaler_info) rec.asthma_inhaler_info = data.asthma_inhaler_info;
     if (data.important_child_notes) rec.important_child_notes = data.important_child_notes;
 
-    // Ensure required enum fields have valid defaults
+    // Ensure required enum fields have valid defaults when null
     if (!rec.child_sex) rec.child_sex = "Male";
     if (!rec.child_race_ethnicity) rec.child_race_ethnicity = "Two or More Races";
     if (!rec.child_school_district) rec.child_school_district = "Other";
