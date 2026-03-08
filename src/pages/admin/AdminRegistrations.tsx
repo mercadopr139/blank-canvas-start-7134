@@ -410,9 +410,9 @@ const AdminRegistrations = () => {
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel className="bg-white/5 border-white/10 text-white hover:bg-white/10 hover:text-white">Cancel</AlertDialogCancel>
-            <AlertDialogAction className="bg-red-600 text-white hover:bg-red-700" onClick={() => setDeleteAllStep(2)}>
+            <Button className="bg-red-600 text-white hover:bg-red-700" onClick={() => setDeleteAllStep(2)}>
               Yes, Delete All
-            </AlertDialogAction>
+            </Button>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
