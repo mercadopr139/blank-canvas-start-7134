@@ -71,11 +71,46 @@ export default function MondaySyncModal({ open, onOpenChange, onSyncComplete }: 
   const loadBoards = async (page = 1, search = "") => {
     setLoading(true);
     try {
-      const data = await invoke({ action: "list_boards", page, search });
-      setBoards(data.boards || []);
+      const normalizedSearch = search.trim();
+
+      // If searching from page 1, walk pages until we find at least one match.
+      if (normalizedSearch && page === 1) {
+        let currentPage = 1;
+        let hasMore = true;
+
+        while (hasMore && currentPage <= 20) {
+          const data = await invoke({ action: "list_boards", page: currentPage, search: normalizedSearch });
+          const foundBoards: Board[] = data.boards || [];
+
+          if (foundBoards.length > 0) {
+            setBoards(foundBoards);
+            setBoardPage(data.page || currentPage);
+            setHasMoreBoards(Boolean(data.hasMore));
+            if (selectedBoard && !foundBoards.some((b) => b.id === selectedBoard)) {
+              setSelectedBoard("");
+            }
+            setLoading(false);
+            return;
+          }
+
+          hasMore = Boolean(data.hasMore);
+          currentPage += 1;
+        }
+
+        setBoards([]);
+        setBoardPage(1);
+        setHasMoreBoards(false);
+        if (selectedBoard) setSelectedBoard("");
+        setLoading(false);
+        return;
+      }
+
+      const data = await invoke({ action: "list_boards", page, search: normalizedSearch });
+      const pageBoards: Board[] = data.boards || [];
+      setBoards(pageBoards);
       setBoardPage(data.page || page);
       setHasMoreBoards(Boolean(data.hasMore));
-      if (selectedBoard && !(data.boards || []).some((b: Board) => b.id === selectedBoard)) {
+      if (selectedBoard && !pageBoards.some((b) => b.id === selectedBoard)) {
         setSelectedBoard("");
       }
     } catch {
