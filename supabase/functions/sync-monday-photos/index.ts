@@ -273,6 +273,11 @@ Deno.serve(async (req) => {
                 text
                 value
               }
+              assets {
+                id
+                public_url
+                url
+              }
             }
           }
         }
@@ -296,6 +301,11 @@ Deno.serve(async (req) => {
                 id
                 text
                 value
+              }
+              assets {
+                id
+                public_url
+                url
               }
             }
           }
