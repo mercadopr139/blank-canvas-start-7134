@@ -276,7 +276,7 @@ const YouthImportModal = ({ open, onOpenChange, existingRegistrations, onImportC
 
       // Insert new
       const insertData = buildInsertData(row.data);
-      const { data: inserted, error } = await supabase.from("youth_registrations").insert(insertData).select("id").single();
+      const { data: inserted, error } = await supabase.from("youth_registrations").insert(insertData as any).select("id").single();
       if (error) { skipped++; needsReview.push({ ...row, warnings: [...row.warnings, `Insert failed: ${error.message}`] }); continue; }
 
       // Photo for new record
@@ -353,7 +353,7 @@ const YouthImportModal = ({ open, onOpenChange, existingRegistrations, onImportC
     return rec;
   };
 
-  const importPhoto = async (url: string, registrationId: string, accessToken: string): Promise<boolean> => {
+  const importPhoto = async (url: string, registrationId: string, _accessToken: string): Promise<boolean> => {
     try {
       const resp = await supabase.functions.invoke("import-youth-photo", {
         body: { photoUrl: url, registrationId },
