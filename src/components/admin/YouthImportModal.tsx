@@ -261,7 +261,7 @@ const YouthImportModal = ({ open, onOpenChange, existingRegistrations, onImportC
         // Update existing
         const updateData = buildInsertData(row.data);
         delete (updateData as any).approved_for_attendance;
-        const { error } = await supabase.from("youth_registrations").update(updateData).eq("id", row.duplicateId!);
+        const { error } = await supabase.from("youth_registrations").update(updateData as any).eq("id", row.duplicateId!);
         if (error) { skipped++; needsReview.push({ ...row, warnings: [...row.warnings, `Update failed: ${error.message}`] }); continue; }
 
         // Photo for update
