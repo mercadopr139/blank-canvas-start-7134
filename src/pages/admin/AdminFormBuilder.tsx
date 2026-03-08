@@ -1,19 +1,19 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Card, CardContent } from "@/components/ui/card";
+
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Separator } from "@/components/ui/separator";
+
 import {
-  GripVertical, Plus, Trash2, Eye, Save, Pencil, X, ArrowLeft,
+  GripVertical, Plus, Trash2, Eye, Save, Pencil,
   Type, AlignLeft, Hash, CalendarDays, ChevronDown, CheckSquare, Phone, Mail,
   MapPin, Upload, Heading, FileText, ToggleLeft, List
 } from "lucide-react";
@@ -362,13 +362,6 @@ const AdminFormBuilder = () => {
     }
   };
 
-  // Group fields by section
-  const sections = fields.reduce<Record<string, FormField[]>>((acc, field) => {
-    const section = field.section || "Other";
-    if (!acc[section]) acc[section] = [];
-    acc[section].push(field);
-    return acc;
-  }, {});
 
   if (isLoading) {
     return (
