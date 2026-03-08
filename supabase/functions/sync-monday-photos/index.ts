@@ -551,34 +551,18 @@ const hasNonSignatureExistingPhoto = async (supabase: ReturnType<typeof createCl
           continue;
         }
 
-        // Find photo in the file column
+        // Find photo candidates strictly from the selected file column (no generic asset fallback)
         const photoCol = item.column_values.find((c) => c.id === photoColumnId);
-        let photoUrl: string | null = null;
+        const parsedFiles = parseMondayColumnFiles(photoCol?.value ?? null);
 
-        // First priority: parse the specific photo column JSON
-        if (photoCol?.value) {
-          try {
-            const parsed = JSON.parse(photoCol.value);
-            const file = parsed?.files?.[0];
-            if (file?.public_url || file?.url) {
-              photoUrl = file.public_url || file.url;
-            }
-          } catch {
-            // not JSON, continue to fallback
-          }
-        }
-
-        // Fallback: use item assets only if no photo found in specific column
-        if (!photoUrl && item.assets?.length) {
-          const asset = item.assets[0];
-          photoUrl = asset.public_url || asset.url;
-        }
-
-        if (!photoUrl) {
+        if (parsedFiles.length === 0) {
           results.skipped_no_photo++;
           results.details.push({ mondayName: `${firstName} ${lastName}`, status: "no_photo" });
           continue;
         }
+
+        const rankedCandidates = [...parsedFiles]
+          .sort((a, b) => scoreCandidateByName(b) - scoreCandidateByName(a));
 
         // Match to registration
         const normalize = (s: string) => s.toLowerCase().replace(/[^a-z]/g, "");
