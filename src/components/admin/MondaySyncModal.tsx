@@ -173,16 +173,12 @@ export default function MondaySyncModal({ open, onOpenChange, onSyncComplete }: 
     onOpenChange(v);
   };
 
-  // Load boards on open
-  const handleOpen = () => {
-    if (boards.length === 0 && step === "boards") {
-      loadBoards(1, boardSearch);
+  // Load boards once when modal opens
+  useEffect(() => {
+    if (open) {
+      void loadBoards(1, "");
     }
-  };
-
-  if (open && boards.length === 0 && step === "boards" && !loading) {
-    handleOpen();
-  }
+  }, [open]);
 
   const fileColumns = columns.filter(c => c.type === "file" || c.title.toLowerCase().includes("photo") || c.title.toLowerCase().includes("picture") || c.title.toLowerCase().includes("image") || c.title.toLowerCase().includes("upload"));
   const textColumns = columns.filter(c => c.type === "text" || c.type === "name" || c.type === "short-text");
