@@ -178,31 +178,22 @@ const AdminRegistrationAnalytics = () => {
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <ChartContainer config={chartConfig} className="h-[500px]">
-                    <PieChart>
-                      <Pie
-                        data={districtData}
-                        dataKey="count"
-                        nameKey="name"
-                        cx="50%"
-                        cy="50%"
-                        outerRadius={140}
-                        label={({ name, percent, x, y, midAngle }) => {
-                          const pct = (percent * 100).toFixed(0);
-                          return (
-                            <text x={x} y={y} textAnchor={midAngle > 180 ? "end" : "start"} dominantBaseline="central" fill="rgba(255,255,255,0.85)" fontSize={11}>
-                              {`${name} (${pct}%)`}
-                            </text>
-                          );
-                        }}
-                        labelLine={true}
-                      >
+                  <ChartContainer config={chartConfig} className="h-[400px]">
+                    <BarChart data={districtData} layout="vertical" margin={{ left: 8, right: 40 }}>
+                      <XAxis type="number" tick={{ fill: "rgba(255,255,255,0.5)", fontSize: 11 }} />
+                      <YAxis
+                        dataKey="name"
+                        type="category"
+                        width={200}
+                        tick={{ fill: "rgba(255,255,255,0.7)", fontSize: 11 }}
+                      />
+                      <ChartTooltip content={<ChartTooltipContent />} />
+                      <Bar dataKey="count" fill="#bf0f3e" radius={4}>
                         {districtData.map((_, index) => (
                           <Cell key={`district-${index}`} fill={COLORS[index % COLORS.length]} />
                         ))}
-                      </Pie>
-                      <ChartTooltip content={<ChartTooltipContent />} />
-                    </PieChart>
+                      </Bar>
+                    </BarChart>
                   </ChartContainer>
                 </CardContent>
               </Card>
