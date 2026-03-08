@@ -169,35 +169,36 @@ const AdminRegistrationAnalytics = () => {
               </Card>
             </div>
 
-            {/* Charts Row 2 */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              <Card className="bg-white/5 border-white/10">
-                <CardHeader>
-                  <CardTitle className="text-base flex items-center gap-2 text-white">
-                    <School className="w-4 h-4 text-[#bf0f3e]" /> By School District
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <ChartContainer config={chartConfig} className="h-[400px]">
-                    <BarChart data={districtData} layout="vertical" margin={{ left: 8, right: 40 }}>
-                      <XAxis type="number" tick={{ fill: "rgba(255,255,255,0.5)", fontSize: 11 }} />
-                      <YAxis
-                        dataKey="name"
-                        type="category"
-                        width={200}
-                        tick={{ fill: "rgba(255,255,255,0.7)", fontSize: 11 }}
-                      />
-                      <ChartTooltip content={<ChartTooltipContent />} />
-                      <Bar dataKey="count" fill="#bf0f3e" radius={4}>
-                        {districtData.map((_, index) => (
-                          <Cell key={`district-${index}`} fill={COLORS[index % COLORS.length]} />
-                        ))}
-                      </Bar>
-                    </BarChart>
-                  </ChartContainer>
-                </CardContent>
-              </Card>
+            {/* School District - full width */}
+            <Card className="bg-white/5 border-white/10">
+              <CardHeader>
+                <CardTitle className="text-base flex items-center gap-2 text-white">
+                  <School className="w-4 h-4 text-[#bf0f3e]" /> By School District
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <ChartContainer config={chartConfig} style={{ height: `${Math.max(300, districtData.length * 36)}px` }}>
+                  <BarChart data={districtData} layout="vertical" margin={{ left: 8, right: 40 }}>
+                    <XAxis type="number" tick={{ fill: "rgba(255,255,255,0.5)", fontSize: 11 }} />
+                    <YAxis
+                      dataKey="name"
+                      type="category"
+                      width={200}
+                      tick={{ fill: "rgba(255,255,255,0.7)", fontSize: 11 }}
+                    />
+                    <ChartTooltip content={<ChartTooltipContent />} />
+                    <Bar dataKey="count" fill="#bf0f3e" radius={4}>
+                      {districtData.map((_, index) => (
+                        <Cell key={`district-${index}`} fill={COLORS[index % COLORS.length]} />
+                      ))}
+                    </Bar>
+                  </BarChart>
+                </ChartContainer>
+              </CardContent>
+            </Card>
 
+            {/* Lunch chart */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               <Card className="bg-white/5 border-white/10">
                 <CardHeader>
                   <CardTitle className="text-base flex items-center gap-2 text-white">
