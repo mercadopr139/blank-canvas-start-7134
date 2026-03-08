@@ -91,17 +91,41 @@ function autoMapColumns(headers: string[]): Record<number, string> {
 
 const isUrl = (s: string) => /^https?:\/\//i.test(s.trim());
 
+/* ───── Date Normalization ───── */
+function normalizeDate(val: string): string | null {
+  const v = val.trim();
+  if (!v) return null;
+  // Already ISO: YYYY-MM-DD
+  if (/^\d{4}-\d{2}-\d{2}$/.test(v)) return v;
+  // MM/DD/YYYY or M/D/YYYY
+  const slashMatch = v.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})$/);
+  if (slashMatch) {
+    const [, m, d, y] = slashMatch;
+    return `${y}-${m.padStart(2, "0")}-${d.padStart(2, "0")}`;
+  }
+  // MM-DD-YYYY
+  const dashMatch = v.match(/^(\d{1,2})-(\d{1,2})-(\d{4})$/);
+  if (dashMatch) {
+    const [, m, d, y] = dashMatch;
+    return `${y}-${m.padStart(2, "0")}-${d.padStart(2, "0")}`;
+  }
+  // Try JS Date parse as last resort
+  const parsed = new Date(v);
+  if (!isNaN(parsed.getTime())) {
+    return parsed.toISOString().split("T")[0];
+  }
+  return null;
+}
+
 /* ───── Program Mapping (monday.com labels → DB enum) ───── */
-function normalizeBoxingProgram(val: string): string {
+function normalizeBoxingProgram(val: string): string | null {
   const v = val.trim().toLowerCase();
   if (v.includes("senior") || v.includes("11-19") || v.includes("11–19")) return "Senior Boxing (Ages 11-19)";
   if (v.includes("junior") || v.includes("7-10") || v.includes("7–10")) return "Junior Boxing (Ages 7-10)";
   if (v.includes("grit") || v.includes("grace")) return "Grit & Grace (Ages 11-19)";
-  // If it already matches an enum value exactly, pass through
   const exact = ["Junior Boxing (Ages 7-10)", "Senior Boxing (Ages 11-19)", "Grit & Grace (Ages 11-19)"];
   const match = exact.find((e) => e.toLowerCase() === v);
-  if (match) return match;
-  return ""; // will fall through to default
+  return match || null;
 }
 
 type DuplicateAction = "skip" | "update" | "update_with_photo";
