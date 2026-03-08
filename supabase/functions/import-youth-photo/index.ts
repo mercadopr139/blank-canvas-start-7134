@@ -24,12 +24,11 @@ Deno.serve(async (req) => {
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
+    // Verify user auth
     const token = authHeader.replace("Bearer ", "");
-    const anonClient = createClient(supabaseUrl, Deno.env.get("SUPABASE_ANON_KEY")!, {
-      global: { headers: { Authorization: authHeader } },
-    });
-    const { data, error: authError } = await anonClient.auth.getUser(token);
-    if (authError || !data?.user) {
+    const { data: userData, error: authError } = await supabase.auth.getUser(token);
+    if (authError || !userData?.user) {
+      console.error("Auth error:", authError?.message || "No user found");
       return new Response(JSON.stringify({ error: "Unauthorized" }), {
         status: 401,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -39,7 +38,7 @@ Deno.serve(async (req) => {
     const { data: roleData } = await supabase
       .from("user_roles")
       .select("role")
-      .eq("user_id", data.user.id)
+      .eq("user_id", userData.user.id)
       .eq("role", "admin")
       .maybeSingle();
 
@@ -59,17 +58,30 @@ Deno.serve(async (req) => {
       );
     }
 
+    // Build fetch headers - add Monday API token for Monday.com URLs
+    const fetchHeaders: Record<string, string> = {
+      "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+      "Accept": "image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8",
+    };
+
+    const isMondayUrl = photoUrl.includes("monday.com");
+    if (isMondayUrl) {
+      const mondayToken = Deno.env.get("MONDAY_API_TOKEN");
+      if (mondayToken) {
+        fetchHeaders["Authorization"] = mondayToken;
+        fetchHeaders["Cookie"] = "";
+      }
+    }
+
     // Download the image from the URL
     let imageResponse: Response;
     try {
       imageResponse = await fetch(photoUrl, {
-        headers: {
-          "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-          "Accept": "image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8",
-        },
+        headers: fetchHeaders,
         redirect: "follow",
       });
     } catch (fetchErr) {
+      console.error("Fetch error for URL:", photoUrl, "Error:", String(fetchErr));
       return new Response(
         JSON.stringify({ error: "Failed to download image", detail: String(fetchErr) }),
         { status: 422, headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -77,6 +89,7 @@ Deno.serve(async (req) => {
     }
 
     if (!imageResponse.ok) {
+      console.error("Image download failed:", imageResponse.status, "URL:", photoUrl);
       return new Response(
         JSON.stringify({ error: `Image download failed: ${imageResponse.status}` }),
         { status: 422, headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -125,6 +138,7 @@ Deno.serve(async (req) => {
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (err) {
+    console.error("Internal error:", String(err));
     return new Response(
       JSON.stringify({ error: "Internal error", detail: String(err) }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
