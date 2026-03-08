@@ -514,6 +514,12 @@ const AdminRegistrations = () => {
           </div>
         );
       })()}
+
+      <MondaySyncModal
+        open={mondaySyncOpen}
+        onOpenChange={setMondaySyncOpen}
+        onSyncComplete={() => queryClient.invalidateQueries({ queryKey: ["youth-registrations"] })}
+      />
     </div>
   );
 };
