@@ -91,6 +91,19 @@ function autoMapColumns(headers: string[]): Record<number, string> {
 
 const isUrl = (s: string) => /^https?:\/\//i.test(s.trim());
 
+/* ───── Program Mapping (monday.com labels → DB enum) ───── */
+function normalizeBoxingProgram(val: string): string {
+  const v = val.trim().toLowerCase();
+  if (v.includes("senior") || v.includes("11-19") || v.includes("11–19")) return "Senior Boxing (Ages 11-19)";
+  if (v.includes("junior") || v.includes("7-10") || v.includes("7–10")) return "Junior Boxing (Ages 7-10)";
+  if (v.includes("grit") || v.includes("grace")) return "Grit & Grace (Ages 11-19)";
+  // If it already matches an enum value exactly, pass through
+  const exact = ["Junior Boxing (Ages 7-10)", "Senior Boxing (Ages 11-19)", "Grit & Grace (Ages 11-19)"];
+  const match = exact.find((e) => e.toLowerCase() === v);
+  if (match) return match;
+  return ""; // will fall through to default
+}
+
 type DuplicateAction = "skip" | "update" | "update_with_photo";
 type ImportStep = "upload" | "mapping" | "preview" | "importing" | "results";
 
@@ -195,8 +208,8 @@ const YouthImportModal = ({ open, onOpenChange, existingRegistrations, onImportC
       Object.entries(columnMapping).forEach(([colIdx, fieldKey]) => {
         const val = row[Number(colIdx)]?.trim() || "";
         if (fieldKey === "photo_url") {
-          if (val && isUrl(val)) photoUrl = val;else
-          if (val) warnings.push("Photo field is not a valid URL");
+          if (val && isUrl(val)) photoUrl = val;
+          else if (val) warnings.push("Photo value is not a URL – will import without photo");
         } else {
           data[fieldKey] = val;
         }
@@ -327,7 +340,7 @@ const YouthImportModal = ({ open, onOpenChange, existingRegistrations, onImportC
     if (data.child_primary_address) rec.child_primary_address = data.child_primary_address;
     if (data.child_school_district) rec.child_school_district = data.child_school_district;
     if (data.child_grade_level) rec.child_grade_level = parseInt(data.child_grade_level) || null;
-    if (data.child_boxing_program) rec.child_boxing_program = data.child_boxing_program;
+    if (data.child_boxing_program) rec.child_boxing_program = normalizeBoxingProgram(data.child_boxing_program);
     if (data.adults_in_household) rec.adults_in_household = parseInt(data.adults_in_household) || 1;
     if (data.siblings_in_household) rec.siblings_in_household = parseInt(data.siblings_in_household) || 0;
     if (data.household_income_range) rec.household_income_range = data.household_income_range;
