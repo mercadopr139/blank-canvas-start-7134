@@ -24,9 +24,12 @@ interface MondayItem {
   }>;
 }
 
+const DASH_REGEX = /[\u2010\u2011\u2012\u2013\u2014\u2015\u2212]/g;
+
 const normalizeBoardText = (value: string) =>
   value
     .toLowerCase()
+    .replace(DASH_REGEX, "-")
     .replace(/&/g, " and ")
     .replace(/[^a-z0-9\s-]/g, " ")
     .replace(/\s+/g, " ")
@@ -40,10 +43,12 @@ const stemToken = (token: string) => {
 };
 
 const expandShortYearRange = (text: string) =>
-  text.replace(/\b(20\d{2})\s*[-/]\s*(\d{2})\b/g, (_, start, end2) => {
-    const endYear = `${start.slice(0, 2)}${end2}`;
-    return `${start}-${end2} ${start}-${endYear} ${start} ${endYear}`;
-  });
+  text
+    .replace(DASH_REGEX, "-")
+    .replace(/\b(20\d{2})\s*[-/]\s*(\d{2})\b/g, (_, start, end2) => {
+      const endYear = `${start.slice(0, 2)}${end2}`;
+      return `${start}-${end2} ${start}-${endYear} ${start} ${endYear}`;
+    });
 
 const boardMatchesSearch = (boardName: string, rawSearch: string) => {
   const search = rawSearch.trim();
