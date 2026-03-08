@@ -337,7 +337,65 @@ const YouthImportModal = ({ open, onOpenChange, existingRegistrations, onImportC
     setStep("preview");
   };
 
-  /* ── Preview stats ── */
+  /* ── Sanitize Import Row ── */
+  const sanitizeImportRow = (data: Record<string, string>): { sanitizedData: Record<string, string>; wasSanitized: boolean } => {
+    const sanitized = { ...data };
+    let changed = false;
+
+    // Date normalization
+    if (sanitized.child_date_of_birth) {
+      const normalized = normalizeDate(sanitized.child_date_of_birth);
+      if (normalized && normalized !== sanitized.child_date_of_birth) { sanitized.child_date_of_birth = normalized; changed = true; }
+      else if (normalized) sanitized.child_date_of_birth = normalized;
+    }
+
+    // Trim all string values
+    for (const key of Object.keys(sanitized)) {
+      if (sanitized[key] && sanitized[key] !== sanitized[key].trim()) { sanitized[key] = sanitized[key].trim(); changed = true; }
+    }
+
+    // Normalize enum fields and track if any were changed
+    if (sanitized.child_sex) {
+      const norm = normalizeSex(sanitized.child_sex);
+      if (norm && norm !== sanitized.child_sex) { sanitized.child_sex = norm; changed = true; }
+    }
+    if (sanitized.child_race_ethnicity) {
+      const norm = normalizeRace(sanitized.child_race_ethnicity);
+      if (norm && norm !== sanitized.child_race_ethnicity) { sanitized.child_race_ethnicity = norm; changed = true; }
+    }
+    if (sanitized.child_boxing_program) {
+      const norm = normalizeBoxingProgram(sanitized.child_boxing_program);
+      if (norm && norm !== sanitized.child_boxing_program) { sanitized.child_boxing_program = norm; changed = true; }
+    }
+    if (sanitized.child_school_district) {
+      const norm = normalizeSchoolDistrict(sanitized.child_school_district);
+      if (norm && norm !== sanitized.child_school_district) { sanitized.child_school_district = norm; changed = true; }
+    }
+    if (sanitized.household_income_range) {
+      const norm = normalizeHouseholdIncome(sanitized.household_income_range);
+      if (norm && norm !== sanitized.household_income_range) { sanitized.household_income_range = norm; changed = true; }
+    }
+    if (sanitized.free_or_reduced_lunch) {
+      const norm = normalizeFreeLunch(sanitized.free_or_reduced_lunch);
+      if (norm && norm !== sanitized.free_or_reduced_lunch) { sanitized.free_or_reduced_lunch = norm; changed = true; }
+    }
+    if (sanitized.parent_phone) {
+      const norm = normalizePhone(sanitized.parent_phone);
+      if (norm !== sanitized.parent_phone) { sanitized.parent_phone = norm; changed = true; }
+    }
+    if (sanitized.child_phone) {
+      const norm = normalizePhone(sanitized.child_phone);
+      if (norm !== sanitized.child_phone) { sanitized.child_phone = norm; changed = true; }
+    }
+    if (sanitized.parent_email) {
+      const lower = sanitized.parent_email.trim().toLowerCase();
+      if (lower !== sanitized.parent_email) { sanitized.parent_email = lower; changed = true; }
+    }
+
+    return { sanitizedData: sanitized, wasSanitized: changed };
+  };
+
+
   const previewStats = useMemo(() => {
     const total = importRows.length;
     const valid = importRows.filter((r) => r.valid).length;
