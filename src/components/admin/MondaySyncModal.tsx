@@ -142,7 +142,7 @@ export default function MondaySyncModal({ open, onOpenChange, onSyncComplete }: 
   // Load boards on open
   const handleOpen = () => {
     if (boards.length === 0 && step === "boards") {
-      loadBoards();
+      loadBoards(1, boardSearch);
     }
   };
 
