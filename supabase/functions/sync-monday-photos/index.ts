@@ -406,16 +406,19 @@ Deno.serve(async (req) => {
         if (match.child_headshot_url) {
           let hasValidExistingPhoto = false;
           try {
-            const { data: signedData, error: signedError } = await supabase.storage
-              .from("registration-signatures")
-              .createSignedUrl(match.child_headshot_url, 60);
+            const { data: existingObject } = await supabase
+              .schema("storage")
+              .from("objects")
+              .select("metadata")
+              .eq("bucket_id", "registration-signatures")
+              .eq("name", match.child_headshot_url)
+              .maybeSingle();
 
-            if (!signedError && signedData?.signedUrl) {
-              const existingRes = await fetch(signedData.signedUrl, { method: "GET", redirect: "follow" });
-              const existingType = (existingRes.headers.get("content-type") || "").toLowerCase();
-              hasValidExistingPhoto = existingRes.ok && existingType.startsWith("image/");
-              await existingRes.arrayBuffer();
-            }
+            const metadata = existingObject?.metadata as { mimetype?: string; size?: number; contentLength?: number } | null;
+            const existingMime = (metadata?.mimetype || "").toLowerCase();
+            const existingSize = Number(metadata?.size ?? metadata?.contentLength ?? 0);
+
+            hasValidExistingPhoto = existingMime.startsWith("image/") && existingSize > 500;
           } catch {
             hasValidExistingPhoto = false;
           }
