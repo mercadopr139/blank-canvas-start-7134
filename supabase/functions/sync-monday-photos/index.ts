@@ -24,6 +24,52 @@ interface MondayItem {
   }>;
 }
 
+const normalizeBoardText = (value: string) =>
+  value
+    .toLowerCase()
+    .replace(/&/g, " and ")
+    .replace(/[^a-z0-9\s-]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+
+const stemToken = (token: string) => {
+  if (token.endsWith("ies") && token.length > 4) return `${token.slice(0, -3)}y`;
+  if (token.endsWith("es") && token.length > 4) return token.slice(0, -2);
+  if (token.endsWith("s") && token.length > 3) return token.slice(0, -1);
+  return token;
+};
+
+const expandShortYearRange = (text: string) =>
+  text.replace(/\b(20\d{2})\s*[-/]\s*(\d{2})\b/g, (_, start, end2) => {
+    const endYear = `${start.slice(0, 2)}${end2}`;
+    return `${start}-${end2} ${start}-${endYear} ${start} ${endYear}`;
+  });
+
+const boardMatchesSearch = (boardName: string, rawSearch: string) => {
+  const search = rawSearch.trim();
+  if (!search) return true;
+
+  const normalizedBoard = normalizeBoardText(expandShortYearRange(boardName));
+  const normalizedSearch = normalizeBoardText(expandShortYearRange(search));
+
+  if (!normalizedSearch) return true;
+  if (normalizedBoard.includes(normalizedSearch)) return true;
+
+  const boardTokens = normalizedBoard.split(" ").filter(Boolean).map(stemToken);
+  const searchTokens = normalizedSearch.split(" ").filter(Boolean).map(stemToken);
+
+  if (searchTokens.length === 0) return true;
+
+  return searchTokens.every((token) =>
+    boardTokens.some(
+      (boardToken) =>
+        boardToken === token ||
+        boardToken.includes(token) ||
+        (token.length >= 4 && token.includes(boardToken))
+    )
+  );
+};
+
 async function mondayQuery(token: string, query: string, variables?: Record<string, unknown>) {
   const res = await fetch(MONDAY_API_URL, {
     method: "POST",
