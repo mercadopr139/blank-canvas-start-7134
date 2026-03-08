@@ -75,7 +75,12 @@ const boardMatchesSearch = (boardName: string, rawSearch: string) => {
   );
 };
 
-async function mondayQuery(token: string, query: string, variables?: Record<string, unknown>) {
+async function mondayQuery(
+  token: string,
+  query: string,
+  variables?: Record<string, unknown>,
+  attempt = 0
+) {
   const res = await fetch(MONDAY_API_URL, {
     method: "POST",
     headers: {
@@ -85,10 +90,25 @@ async function mondayQuery(token: string, query: string, variables?: Record<stri
     },
     body: JSON.stringify({ query, variables }),
   });
+
   const data = await res.json();
   if (data.errors) {
+    const retryInSeconds = data.errors
+      .map((error: { extensions?: { retry_in_seconds?: number } }) => error.extensions?.retry_in_seconds)
+      .find((value: number | undefined) => typeof value === "number" && value > 0);
+
+    const isComplexityBudgetError = data.errors.some(
+      (error: { extensions?: { code?: string } }) => error.extensions?.code === "COMPLEXITY_BUDGET_EXHAUSTED"
+    );
+
+    if (isComplexityBudgetError && retryInSeconds && attempt < 2) {
+      await new Promise((resolve) => setTimeout(resolve, Math.min(retryInSeconds, 60) * 1000));
+      return mondayQuery(token, query, variables, attempt + 1);
+    }
+
     throw new Error(`Monday API error: ${JSON.stringify(data.errors)}`);
   }
+
   return data.data;
 }
 
