@@ -208,8 +208,8 @@ const YouthImportModal = ({ open, onOpenChange, existingRegistrations, onImportC
       Object.entries(columnMapping).forEach(([colIdx, fieldKey]) => {
         const val = row[Number(colIdx)]?.trim() || "";
         if (fieldKey === "photo_url") {
-          if (val && isUrl(val)) photoUrl = val;
-          else if (val) warnings.push("Photo value is not a URL – will import without photo");
+          if (val && isUrl(val)) photoUrl = val;else
+          if (val) warnings.push("Photo value is not a URL – will import without photo");
         } else {
           data[fieldKey] = val;
         }
