@@ -8,13 +8,13 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import {
   Star, Search, AlertTriangle, Users, Eye, ChevronLeft, ChevronRight, CalendarDays,
-  Clock, TrendingUp, School, UserCheck, Lightbulb, BarChart3, Activity
+  Clock, TrendingUp, School, Lightbulb, Activity
 } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell,
-  LineChart, Line, PieChart, Pie,
+  LineChart, Line,
 } from "recharts";
 import {
   startOfWeek, startOfMonth, endOfMonth, format, differenceInCalendarDays,
@@ -68,7 +68,7 @@ const AdminAttendance = () => {
   const [calendarFilter, setCalendarFilter] = useState<"all" | "bald-eagles">("all");
   const [calendarProgramFilter, setCalendarProgramFilter] = useState<string>("all");
   const [drillDistrictFilter, setDrillDistrictFilter] = useState<string | null>(null);
-  const [drillDowFilter, setDrillDowFilter] = useState<number | null>(null);
+  
 
   const calMonthStart = format(startOfMonth(calendarMonth), "yyyy-MM-dd");
   const calMonthEnd = format(endOfMonth(calendarMonth), "yyyy-MM-dd");
