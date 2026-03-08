@@ -1,4 +1,4 @@
-import { useState, useMemo, useRef } from "react";
+import { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -7,15 +7,8 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import {
-  FileText, Download, Users, Star, CalendarDays, BarChart3, School, TrendingUp,
-  Search, ChevronDown
-} from "lucide-react";
-import {
-  format, startOfWeek, endOfWeek, startOfMonth, endOfMonth, startOfYear, endOfYear,
-  eachDayOfInterval, eachWeekOfInterval, eachMonthOfInterval, addDays, parseISO, getDay,
-  isWithinInterval, isSameDay
-} from "date-fns";
+import { FileText, Download, Star, BarChart3, School, Search } from "lucide-react";
+import { format, startOfWeek, endOfWeek, startOfMonth, endOfMonth, startOfYear, endOfYear, parseISO } from "date-fns";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from "recharts";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";

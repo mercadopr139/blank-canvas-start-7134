@@ -1,4 +1,4 @@
-import { Users, BarChart3, ClipboardList, LucideIcon, CalendarCheck } from "lucide-react";
+import { Users, BarChart3, ClipboardList, LucideIcon, CalendarCheck, FileBarChart } from "lucide-react";
 import AdminSectionLayout, { SectionCard } from "@/components/admin/AdminSectionLayout";
 
 interface OperationsTile {
@@ -34,6 +34,12 @@ const baseTiles: OperationsTile[] = [
     description: "Daily attendance & Bald Eagles",
     icon: CalendarCheck,
     href: "/admin/operations/attendance",
+  },
+  {
+    title: "Attendance Reports",
+    description: "Run & export attendance reports",
+    icon: FileBarChart,
+    href: "/admin/operations/attendance-reports",
   },
 ];
 
