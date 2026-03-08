@@ -11,3 +11,6 @@ verify_jwt = false
 
 [functions.create-signal]
 verify_jwt = false
+
+[functions.import-youth-photo]
+verify_jwt = false
