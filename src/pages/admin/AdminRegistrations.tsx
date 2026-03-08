@@ -15,6 +15,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Search, Eye, AlertTriangle, ExternalLink, Loader2, Pencil, Trash2, CheckCircle2, XCircle, ShieldCheck, Upload, ImageOff } from "lucide-react";
 import YouthImportModal from "@/components/admin/YouthImportModal";
 import BulkPhotoImportModal from "@/components/admin/BulkPhotoImportModal";
+import MondaySyncModal from "@/components/admin/MondaySyncModal";
 import { Switch } from "@/components/ui/switch";
 import { format, parseISO, differenceInYears } from "date-fns";
 import { toast } from "sonner";
