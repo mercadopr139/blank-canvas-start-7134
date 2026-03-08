@@ -14,6 +14,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Search, Eye, AlertTriangle, ExternalLink, Loader2, Pencil, Trash2, CheckCircle2, XCircle, ShieldCheck, Upload, ImageOff } from "lucide-react";
 import YouthImportModal from "@/components/admin/YouthImportModal";
+import BulkPhotoImportModal from "@/components/admin/BulkPhotoImportModal";
 import { Switch } from "@/components/ui/switch";
 import { format, parseISO, differenceInYears } from "date-fns";
 import { toast } from "sonner";
@@ -59,6 +60,7 @@ const AdminRegistrations = () => {
   const [editingRegistration, setEditingRegistration] = useState<any | null>(null);
   const [deletingRegistration, setDeletingRegistration] = useState<any | null>(null);
   const [importOpen, setImportOpen] = useState(false);
+  const [bulkPhotoOpen, setBulkPhotoOpen] = useState(false);
   const [deleteAllStep, setDeleteAllStep] = useState<0 | 1 | 2>(0);
 
   const { data: registrations, isLoading } = useQuery({
@@ -231,6 +233,9 @@ const AdminRegistrations = () => {
           </Button>
           <Button size="sm" onClick={() => setImportOpen(true)} className="bg-white/10 hover:bg-white/15 text-white border border-white/20 gap-1.5">
             <Upload className="w-3.5 h-3.5" /> Import from Monday.com
+          </Button>
+          <Button size="sm" onClick={() => setBulkPhotoOpen(true)} className="bg-white/10 hover:bg-white/15 text-white border border-white/20 gap-1.5">
+            <ImageOff className="w-3.5 h-3.5" /> Bulk Import Youth Photos
           </Button>
         </div>
       </div>
@@ -442,6 +447,14 @@ const AdminRegistrations = () => {
       <YouthImportModal
         open={importOpen}
         onOpenChange={setImportOpen}
+        existingRegistrations={registrations || []}
+        onImportComplete={() => queryClient.invalidateQueries({ queryKey: ["youth-registrations"] })}
+      />
+
+      {/* Bulk Photo Import Modal */}
+      <BulkPhotoImportModal
+        open={bulkPhotoOpen}
+        onOpenChange={setBulkPhotoOpen}
         existingRegistrations={registrations || []}
         onImportComplete={() => queryClient.invalidateQueries({ queryKey: ["youth-registrations"] })}
       />
