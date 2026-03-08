@@ -75,7 +75,12 @@ const boardMatchesSearch = (boardName: string, rawSearch: string) => {
   );
 };
 
-async function mondayQuery(token: string, query: string, variables?: Record<string, unknown>) {
+async function mondayQuery(
+  token: string,
+  query: string,
+  variables?: Record<string, unknown>,
+  attempt = 0
+) {
   const res = await fetch(MONDAY_API_URL, {
     method: "POST",
     headers: {
@@ -85,10 +90,25 @@ async function mondayQuery(token: string, query: string, variables?: Record<stri
     },
     body: JSON.stringify({ query, variables }),
   });
+
   const data = await res.json();
   if (data.errors) {
+    const retryInSeconds = data.errors
+      .map((error: { extensions?: { retry_in_seconds?: number } }) => error.extensions?.retry_in_seconds)
+      .find((value: number | undefined) => typeof value === "number" && value > 0);
+
+    const isComplexityBudgetError = data.errors.some(
+      (error: { extensions?: { code?: string } }) => error.extensions?.code === "COMPLEXITY_BUDGET_EXHAUSTED"
+    );
+
+    if (isComplexityBudgetError && retryInSeconds && attempt < 2) {
+      await new Promise((resolve) => setTimeout(resolve, Math.min(retryInSeconds, 60) * 1000));
+      return mondayQuery(token, query, variables, attempt + 1);
+    }
+
     throw new Error(`Monday API error: ${JSON.stringify(data.errors)}`);
   }
+
   return data.data;
 }
 
@@ -229,29 +249,29 @@ Deno.serve(async (req) => {
         });
       }
 
-      // Fetch items from Monday board with pagination
+      // Fetch items from Monday board with pagination using scoped columns to reduce complexity
       let allItems: MondayItem[] = [];
       let cursor: string | null = null;
-      let hasMore = true;
+
+      const columnIds = [photoColumnId, firstNameColumnId, lastNameColumnId].filter(
+        (id): id is string => Boolean(id)
+      );
+      const columnValuesArg = columnIds.length
+        ? `(ids: [${columnIds.map((id) => `"${id}"`).join(", ")}])`
+        : "";
 
       // First page
       const firstPage = await mondayQuery(mondayToken, `{
         boards(ids: [${boardId}]) {
-          items_page(limit: 100) {
+          items_page(limit: 50) {
             cursor
             items {
               id
               name
-              column_values {
+              column_values${columnValuesArg} {
                 id
                 text
                 value
-              }
-              assets {
-                id
-                name
-                public_url
-                url
               }
             }
           }
@@ -267,21 +287,15 @@ Deno.serve(async (req) => {
       // Subsequent pages
       while (cursor) {
         const nextPage = await mondayQuery(mondayToken, `{
-          next_items_page(limit: 100, cursor: "${cursor}") {
+          next_items_page(limit: 50, cursor: "${cursor}") {
             cursor
             items {
               id
               name
-              column_values {
+              column_values${columnValuesArg} {
                 id
                 text
                 value
-              }
-              assets {
-                id
-                name
-                public_url
-                url
               }
             }
           }
@@ -331,29 +345,26 @@ Deno.serve(async (req) => {
         const photoCol = item.column_values.find((c) => c.id === photoColumnId);
         let photoUrl: string | null = null;
 
-        // Check assets on the item
-        if (item.assets?.length) {
-          const asset = item.assets[0];
-          photoUrl = asset.public_url || asset.url;
-        }
-
-        // Also try parsing the column value for file info
-        if (!photoUrl && photoCol?.value) {
+        // Parse the file column value for asset info
+        if (photoCol?.value) {
           try {
             const parsed = JSON.parse(photoCol.value);
-            if (parsed?.files?.length) {
-              const assetId = parsed.files[0].assetId;
-              // Get public URL for the asset
-              if (assetId) {
-                const assetData = await mondayQuery(mondayToken, `{
-                  assets(ids: [${assetId}]) {
-                    public_url
-                    url
-                  }
-                }`);
-                if (assetData.assets?.[0]) {
-                  photoUrl = assetData.assets[0].public_url || assetData.assets[0].url;
+            const file = parsed?.files?.[0];
+
+            if (file?.public_url || file?.url) {
+              photoUrl = file.public_url || file.url;
+            }
+
+            const assetId = file?.assetId;
+            if (!photoUrl && assetId) {
+              const assetData = await mondayQuery(mondayToken, `{
+                assets(ids: [${assetId}]) {
+                  public_url
+                  url
                 }
+              }`);
+              if (assetData.assets?.[0]) {
+                photoUrl = assetData.assets[0].public_url || assetData.assets[0].url;
               }
             }
           } catch {
