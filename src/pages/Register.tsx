@@ -1,837 +1,634 @@
- import { useState } from "react";
- import { useNavigate } from "react-router-dom";
- import { supabase } from "@/integrations/supabase/client";
- import { Button } from "@/components/ui/button";
- import { Input } from "@/components/ui/input";
- import { Label } from "@/components/ui/label";
- import { Textarea } from "@/components/ui/textarea";
- import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
- import { Card, CardContent } from "@/components/ui/card";
- import { useToast } from "@/hooks/use-toast";
- import { CheckCircle2, Loader2, Upload } from "lucide-react";
- import Header from "@/components/layout/Header";
- import Footer from "@/components/layout/Footer";
+import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Card, CardContent } from "@/components/ui/card";
+import { useToast } from "@/hooks/use-toast";
+import { CheckCircle2, Loader2, Upload } from "lucide-react";
+import Header from "@/components/layout/Header";
+import Footer from "@/components/layout/Footer";
 import WaiverSection from "@/components/registration/WaiverSection";
 import { WAIVER_TEXTS } from "@/components/registration/waiverTexts";
 import ChildPrimaryAddressField from "@/components/registration/ChildPrimaryAddressField";
- import nlaLogo from "@/assets/nla-logo.png";
- import { digitsOnly, formatPhoneDisplay, toE164, isValidPhone } from "@/lib/validators";
- 
-const SEX_OPTIONS = ["Male", "Female"] as const;
- const RACE_OPTIONS = [
-   "American Indian or Alaska Native",
-   "Asian",
-   "Black or African American",
-   "Hispanic or Latino",
-   "Native Hawaiian or Other Pacific Islander",
-   "White",
-   "Two or More Races",
- ] as const;
- const SCHOOL_DISTRICTS = [
-   "Wildwood Catholic Academy",
-   "Lower Township",
-   "Cape May Tech",
-   "Avalon/Stone Harbor",
-   "Homeschool, Hybrid, or Alternative Form of Schooling",
-   "Upper Township",
-   "Cape May/West Cape May",
-   "Woodbine",
-   "Middle Township",
-   "Ocean City",
-   "Wildwood/Wildwood Crest/North Wildwood",
-   "Other",
- ] as const;
- const BOXING_PROGRAMS = [
-  "Junior Boxing (Ages 7-10)",
-  "Senior Boxing (Ages 11-19)",
- ] as const;
- const INCOME_RANGES = [
-   "Less than $25,000",
-   "Less than $35,000",
-   "Less than $45,000",
-   "Less than $65,000",
-   "Less than $80,000",
-   "Greater than $80,001",
- ] as const;
- const LUNCH_OPTIONS = ["Yes", "No"] as const;
- 
- interface FormData {
-   child_first_name: string;
-   child_last_name: string;
-   child_sex: string;
-   child_date_of_birth: string;
-   child_race_ethnicity: string;
-   parent_first_name: string;
-   parent_last_name: string;
-   parent_phone: string;
-   child_phone: string;
-   parent_email: string;
-   child_primary_address: string;
-   child_school_district: string;
-   child_grade_level: string;
-   child_boxing_program: string;
-   adults_in_household: string;
-   siblings_in_household: string;
-   household_income_range: string;
-   free_or_reduced_lunch: string;
-   allergies: string;
-   asthma_inhaler_info: string;
-   important_child_notes: string;
-   medical_consent_name: string;
-   liability_waiver_name: string;
-   transportation_excursions_waiver_name: string;
-   media_consent_name: string;
-   spiritual_development_policy_name: string;
-   counseling_services_name: string;
-   final_signature_name: string;
- }
- 
- interface Signatures {
-   medical_consent: Blob | null;
-   liability_waiver: Blob | null;
-   transportation_excursions: Blob | null;
-   media_consent: Blob | null;
-   spiritual_development: Blob | null;
-   counseling_services: Blob | null;
- }
- 
- interface Acknowledgements {
-   medical_consent: boolean;
-   liability_waiver: boolean;
-   transportation_excursions: boolean;
-   media_consent: boolean;
-   spiritual_development: boolean;
-   counseling_services: boolean;
- }
- 
- const Register = () => {
-   const navigate = useNavigate();
-   const { toast } = useToast();
-   const [isSubmitting, setIsSubmitting] = useState(false);
-   const [isSubmitted, setIsSubmitted] = useState(false);
-   const [childHeadshot, setChildHeadshot] = useState<File | null>(null);
-   const [headshotPreview, setHeadshotPreview] = useState<string | null>(null);
-   const [formData, setFormData] = useState<FormData>({
-     child_first_name: "",
-     child_last_name: "",
-     child_sex: "",
-     child_date_of_birth: "",
-     child_race_ethnicity: "",
-     parent_first_name: "",
-     parent_last_name: "",
-     parent_phone: "",
-     child_phone: "",
-     parent_email: "",
-     child_primary_address: "",
-     child_school_district: "",
-     child_grade_level: "",
-     child_boxing_program: "",
-     adults_in_household: "",
-     siblings_in_household: "",
-     household_income_range: "",
-     free_or_reduced_lunch: "",
-     allergies: "",
-     asthma_inhaler_info: "",
-     important_child_notes: "",
-     medical_consent_name: "",
-     liability_waiver_name: "",
-     transportation_excursions_waiver_name: "",
-     media_consent_name: "",
-     spiritual_development_policy_name: "",
-     counseling_services_name: "",
-     final_signature_name: "",
-   });
-   const [signatures, setSignatures] = useState<Signatures>({
-     medical_consent: null,
-     liability_waiver: null,
-     transportation_excursions: null,
-     media_consent: null,
-     spiritual_development: null,
-     counseling_services: null,
-   });
-   const [acknowledgements, setAcknowledgements] = useState<Acknowledgements>({
-     medical_consent: false,
-     liability_waiver: false,
-     transportation_excursions: false,
-     media_consent: false,
-     spiritual_development: false,
-     counseling_services: false,
-   });
- 
-   const handleInputChange = (field: keyof FormData, value: string) => {
-     setFormData(prev => ({ ...prev, [field]: value }));
-   };
- 
-   const handleSignatureChange = (field: keyof Signatures, blob: Blob | null) => {
-     setSignatures(prev => ({ ...prev, [field]: blob }));
-   };
- 
-   const handleAcknowledgementChange = (field: keyof Acknowledgements, value: boolean) => {
-     setAcknowledgements(prev => ({ ...prev, [field]: value }));
-   };
- 
-    const uploadSignature = async (blob: Blob, prefix: string): Promise<string> => {
-      const fileName = `${prefix}_${Date.now()}_${Math.random().toString(36).substring(7)}.png`;
-      const { data, error } = await supabase.storage
-        .from("registration-signatures")
-        .upload(fileName, blob, { contentType: "image/png" });
-      
+import nlaLogo from "@/assets/nla-logo.png";
+import { digitsOnly, formatPhoneDisplay, toE164, isValidPhone } from "@/lib/validators";
+
+type FormFieldDef = {
+  id: string;
+  field_key: string;
+  field_type: string;
+  label: string;
+  help_text: string | null;
+  placeholder: string | null;
+  required: boolean;
+  options: any;
+  sort_order: number;
+  is_active: boolean;
+  is_core: boolean;
+  db_column: string | null;
+  default_value: string | null;
+  section: string | null;
+};
+
+interface Signatures {
+  medical_consent: Blob | null;
+  liability_waiver: Blob | null;
+  transportation_excursions: Blob | null;
+  media_consent: Blob | null;
+  spiritual_development: Blob | null;
+  counseling_services: Blob | null;
+}
+
+interface Acknowledgements {
+  medical_consent: boolean;
+  liability_waiver: boolean;
+  transportation_excursions: boolean;
+  media_consent: boolean;
+  spiritual_development: boolean;
+  counseling_services: boolean;
+}
+
+const parseOptions = (opts: any): string[] => {
+  if (!opts) return [];
+  if (Array.isArray(opts)) return opts;
+  try { return JSON.parse(opts); } catch { return []; }
+};
+
+const Register = () => {
+  const navigate = useNavigate();
+  const { toast } = useToast();
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isSubmitted, setIsSubmitted] = useState(false);
+  const [childHeadshot, setChildHeadshot] = useState<File | null>(null);
+  const [headshotPreview, setHeadshotPreview] = useState<string | null>(null);
+  const [formValues, setFormValues] = useState<Record<string, string>>({});
+  const [signatures, setSignatures] = useState<Signatures>({
+    medical_consent: null, liability_waiver: null, transportation_excursions: null,
+    media_consent: null, spiritual_development: null, counseling_services: null,
+  });
+  const [acknowledgements, setAcknowledgements] = useState<Acknowledgements>({
+    medical_consent: false, liability_waiver: false, transportation_excursions: false,
+    media_consent: false, spiritual_development: false, counseling_services: false,
+  });
+
+  // Fetch form fields from DB
+  const { data: formFields, isLoading: fieldsLoading } = useQuery({
+    queryKey: ["registration-form-fields"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("registration_form_fields")
+        .select("*")
+        .eq("is_active", true)
+        .order("sort_order", { ascending: true });
       if (error) throw error;
-      
-      // Store the file path - admins will use signed URLs to access
-      return data.path;
-    };
- 
-   const handleHeadshotChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-     const file = e.target.files?.[0];
-     if (file) {
-       setChildHeadshot(file);
-       const reader = new FileReader();
-       reader.onloadend = () => {
-         setHeadshotPreview(reader.result as string);
-       };
-       reader.readAsDataURL(file);
-     }
-   };
- 
-    const uploadHeadshot = async (file: File): Promise<string> => {
-      const fileName = `headshot_${Date.now()}_${Math.random().toString(36).substring(7)}.${file.name.split('.').pop()}`;
-      const { data, error } = await supabase.storage
-        .from("registration-signatures")
-        .upload(fileName, file, { contentType: file.type });
-      
+      return data as FormFieldDef[];
+    },
+  });
+
+  const handleInputChange = (key: string, value: string) => {
+    setFormValues(prev => ({ ...prev, [key]: value }));
+  };
+
+  const handleSignatureChange = (field: keyof Signatures, blob: Blob | null) => {
+    setSignatures(prev => ({ ...prev, [field]: blob }));
+  };
+  const handleAcknowledgementChange = (field: keyof Acknowledgements, value: boolean) => {
+    setAcknowledgements(prev => ({ ...prev, [field]: value }));
+  };
+
+  const uploadSignature = async (blob: Blob, prefix: string): Promise<string> => {
+    const fileName = `${prefix}_${Date.now()}_${Math.random().toString(36).substring(7)}.png`;
+    const { data, error } = await supabase.storage
+      .from("registration-signatures")
+      .upload(fileName, blob, { contentType: "image/png" });
+    if (error) throw error;
+    return data.path;
+  };
+
+  const handleHeadshotChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setChildHeadshot(file);
+      const reader = new FileReader();
+      reader.onloadend = () => setHeadshotPreview(reader.result as string);
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const uploadHeadshot = async (file: File): Promise<string> => {
+    const fileName = `headshot_${Date.now()}_${Math.random().toString(36).substring(7)}.${file.name.split('.').pop()}`;
+    const { data, error } = await supabase.storage
+      .from("registration-signatures")
+      .upload(fileName, file, { contentType: file.type });
+    if (error) throw error;
+    return data.path;
+  };
+
+  const validateForm = (): string | null => {
+    if (!formFields) return "Form not loaded";
+
+    for (const field of formFields) {
+      if (!field.required || !field.is_active) continue;
+      if (field.field_key === "child_headshot") {
+        if (!childHeadshot) return `Please upload a picture of your participant.`;
+        continue;
+      }
+      if (["section_header", "paragraph"].includes(field.field_type)) continue;
+
+      const val = formValues[field.field_key];
+      if (!val || !val.trim()) {
+        return `Please fill in: ${field.label}`;
+      }
+    }
+
+    // Validate phones
+    const parentPhone = formValues["parent_phone"];
+    if (parentPhone && !isValidPhone(parentPhone)) return "Please enter a valid 10-digit parent/guardian phone number.";
+    const childPhone = formValues["child_phone"];
+    if (childPhone && childPhone.trim() && !isValidPhone(childPhone)) return "Please enter a valid 10-digit child phone number.";
+
+    // Validate email
+    const email = formValues["parent_email"];
+    if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return "Please enter a valid email address.";
+
+    // Waiver validations
+    const requiredSignatures: (keyof Signatures)[] = [
+      "medical_consent", "liability_waiver", "transportation_excursions",
+      "media_consent", "spiritual_development", "counseling_services"
+    ];
+    for (const sig of requiredSignatures) {
+      if (!signatures[sig]) return `Please sign all waivers. Missing: ${sig.replace(/_/g, " ")}`;
+    }
+    for (const ack of Object.keys(acknowledgements) as (keyof Acknowledgements)[]) {
+      if (!acknowledgements[ack]) return "Please acknowledge all waivers by checking the boxes.";
+    }
+
+    // Waiver names
+    const waiverNames = ["medical_consent_name", "liability_waiver_name", "transportation_excursions_waiver_name",
+      "media_consent_name", "spiritual_development_policy_name", "counseling_services_name", "final_signature_name"];
+    for (const wn of waiverNames) {
+      if (!formValues[wn]?.trim()) return `Please fill in your name for all waiver signatures.`;
+    }
+
+    return null;
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const validationError = validateForm();
+    if (validationError) {
+      toast({ title: "Validation Error", description: validationError, variant: "destructive" });
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      const [medicalSigUrl, liabilitySigUrl, transportSigUrl, mediaSigUrl, spiritualSigUrl, counselingSigUrl] = await Promise.all([
+        uploadSignature(signatures.medical_consent!, "medical"),
+        uploadSignature(signatures.liability_waiver!, "liability"),
+        uploadSignature(signatures.transportation_excursions!, "transport"),
+        uploadSignature(signatures.media_consent!, "media"),
+        uploadSignature(signatures.spiritual_development!, "spiritual"),
+        uploadSignature(signatures.counseling_services!, "counseling"),
+      ]);
+      const headshotUrl = await uploadHeadshot(childHeadshot!);
+
+      // Build core fields payload
+      const adultsVal = formValues["adults_in_household"] || "1";
+      const adultsNum = (() => {
+        if (adultsVal === "1" || adultsVal === "1_m" || adultsVal === "1_g" || adultsVal === "1_o" ||
+            adultsVal === "Dad Only" || adultsVal === "Mom Only" || adultsVal === "Grandparent(s)" || adultsVal === "Other") return 1;
+        return 2;
+      })();
+
+      const siblingsVal = formValues["siblings_in_household"] || "0";
+      const siblingsNum = (() => {
+        if (siblingsVal === "Only child") return 0;
+        const match = siblingsVal.match(/\d+/);
+        return match ? parseInt(match[0]) : parseInt(siblingsVal) || 0;
+      })();
+
+      // Collect custom fields (non-core)
+      const customData: Record<string, string> = {};
+      for (const field of (formFields || [])) {
+        if (!field.is_core && !["section_header", "paragraph"].includes(field.field_type)) {
+          const val = formValues[field.field_key];
+          if (val) customData[field.field_key] = val;
+        }
+      }
+
+      const { error } = await (supabase.from("youth_registrations") as any).insert({
+        submission_date: new Date().toISOString().split("T")[0],
+        child_first_name: (formValues["child_first_name"] || "").trim(),
+        child_last_name: (formValues["child_last_name"] || "").trim(),
+        child_sex: formValues["child_sex"] as any,
+        child_date_of_birth: formValues["child_date_of_birth"],
+        child_race_ethnicity: formValues["child_race_ethnicity"] as any,
+        parent_first_name: (formValues["parent_first_name"] || "").trim(),
+        parent_last_name: (formValues["parent_last_name"] || "").trim(),
+        parent_phone: toE164(formValues["parent_phone"] || "") || (formValues["parent_phone"] || "").trim(),
+        child_phone: formValues["child_phone"] ? (toE164(formValues["child_phone"]) || formValues["child_phone"].trim()) : null,
+        parent_email: (formValues["parent_email"] || "").trim(),
+        child_primary_address: (formValues["child_primary_address"] || "").trim(),
+        child_school_district: formValues["child_school_district"] as any,
+        child_grade_level: formValues["child_grade_level"] ? parseInt(formValues["child_grade_level"]) : null,
+        child_boxing_program: formValues["child_boxing_program"] as any,
+        adults_in_household: adultsNum,
+        siblings_in_household: siblingsNum,
+        household_income_range: formValues["household_income_range"] as any,
+        free_or_reduced_lunch: (formValues["free_or_reduced_lunch"] as any) || null,
+        allergies: (formValues["allergies"] || "").trim() || null,
+        asthma_inhaler_info: (formValues["asthma_inhaler_info"] || "").trim() || null,
+        important_child_notes: (formValues["important_child_notes"] || "").trim() || null,
+        medical_consent_name: (formValues["medical_consent_name"] || "").trim(),
+        medical_consent_signature_url: medicalSigUrl,
+        liability_waiver_name: (formValues["liability_waiver_name"] || "").trim(),
+        liability_waiver_signature_url: liabilitySigUrl,
+        transportation_excursions_waiver_name: (formValues["transportation_excursions_waiver_name"] || "").trim(),
+        transportation_excursions_signature_url: transportSigUrl,
+        media_consent_name: (formValues["media_consent_name"] || "").trim(),
+        media_consent_signature_url: mediaSigUrl,
+        spiritual_development_policy_name: (formValues["spiritual_development_policy_name"] || "").trim(),
+        spiritual_development_policy_signature_url: spiritualSigUrl,
+        counseling_services_name: (formValues["counseling_services_name"] || "").trim(),
+        counseling_services_signature_url: counselingSigUrl,
+        child_headshot_url: headshotUrl,
+        final_signature_name: (formValues["final_signature_name"] || "").trim(),
+        custom_fields_data: Object.keys(customData).length > 0 ? customData : null,
+      });
+
       if (error) throw error;
-      
-      // Store the file path - admins will use signed URLs to access
-      return data.path;
-    };
- 
-   const validateForm = (): string | null => {
-     const requiredFields: (keyof FormData)[] = [
-       "child_first_name", "child_last_name", "child_sex", "child_date_of_birth",
-       "child_race_ethnicity", "parent_first_name", "parent_last_name", "parent_phone",
-       "parent_email", "child_primary_address", "child_school_district", "child_boxing_program",
-       "adults_in_household", "siblings_in_household", "household_income_range",
-       "medical_consent_name", "liability_waiver_name", "transportation_excursions_waiver_name",
-       "media_consent_name", "spiritual_development_policy_name", "counseling_services_name",
-       "final_signature_name"
-     ];
- 
-     for (const field of requiredFields) {
-       if (!formData[field]) {
-         return `Please fill in all required fields. Missing: ${field.replace(/_/g, " ")}`;
-       }
-     }
+      setIsSubmitted(true);
+      toast({ title: "Registration Submitted!", description: "Thank you for registering with NLA Youth Boxing." });
+    } catch (error: any) {
+      console.error("Registration error:", error);
+      toast({ title: "Submission Failed", description: error.message || "Please try again.", variant: "destructive" });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
-     if (!isValidPhone(formData.parent_phone)) {
-       return "Please enter a valid 10-digit parent/guardian phone number.";
-     }
-     if (formData.child_phone && !isValidPhone(formData.child_phone)) {
-       return "Please enter a valid 10-digit child phone number.";
-     }
- 
-     const requiredSignatures: (keyof Signatures)[] = [
-       "medical_consent", "liability_waiver", "transportation_excursions",
-       "media_consent", "spiritual_development", "counseling_services"
-     ];
- 
-     for (const sig of requiredSignatures) {
-       if (!signatures[sig]) {
-         return `Please sign all waivers. Missing signature for: ${sig.replace(/_/g, " ")}`;
-       }
-     }
- 
-     for (const ack of Object.keys(acknowledgements) as (keyof Acknowledgements)[]) {
-       if (!acknowledgements[ack]) {
-         return `Please acknowledge all waivers by checking the boxes.`;
-       }
-     }
- 
-     if (!childHeadshot) {
-       return "Please upload a headshot photo of your child.";
-     }
- 
-     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-     if (!emailRegex.test(formData.parent_email)) {
-       return "Please enter a valid email address.";
-     }
- 
-     return null;
-   };
- 
-   const handleSubmit = async (e: React.FormEvent) => {
-     e.preventDefault();
-     
-     const validationError = validateForm();
-     if (validationError) {
-       toast({ title: "Validation Error", description: validationError, variant: "destructive" });
-       return;
-     }
- 
-     setIsSubmitting(true);
- 
-     try {
-       // Upload all signatures
-       const [
-         medicalSigUrl,
-         liabilitySigUrl,
-         transportSigUrl,
-         mediaSigUrl,
-         spiritualSigUrl,
-         counselingSigUrl
-       ] = await Promise.all([
-         uploadSignature(signatures.medical_consent!, "medical"),
-         uploadSignature(signatures.liability_waiver!, "liability"),
-         uploadSignature(signatures.transportation_excursions!, "transport"),
-         uploadSignature(signatures.media_consent!, "media"),
-         uploadSignature(signatures.spiritual_development!, "spiritual"),
-         uploadSignature(signatures.counseling_services!, "counseling"),
-       ]);
- 
-       // Upload headshot
-       const headshotUrl = await uploadHeadshot(childHeadshot!);
- 
-       // Insert registration
-       const { error } = await (supabase.from("youth_registrations") as any).insert({
-         submission_date: new Date().toISOString().split("T")[0],
-         child_first_name: formData.child_first_name.trim(),
-         child_last_name: formData.child_last_name.trim(),
-         child_sex: formData.child_sex as any,
-         child_date_of_birth: formData.child_date_of_birth,
-         child_race_ethnicity: formData.child_race_ethnicity as any,
-         parent_first_name: formData.parent_first_name.trim(),
-         parent_last_name: formData.parent_last_name.trim(),
-         parent_phone: toE164(formData.parent_phone) || formData.parent_phone.trim(),
-         child_phone: formData.child_phone ? (toE164(formData.child_phone) || formData.child_phone.trim()) : null,
-         parent_email: formData.parent_email.trim(),
-         child_primary_address: formData.child_primary_address.trim(),
-         child_school_district: formData.child_school_district as any,
-         child_grade_level: formData.child_grade_level ? parseInt(formData.child_grade_level) : null,
-         child_boxing_program: formData.child_boxing_program as any,
-          adults_in_household: (() => {
-            const v = formData.adults_in_household;
-            if (v === "1" || v === "1_m" || v === "1_g" || v === "1_o") return 1;
-            if (v === "2" || v === "2_dp" || v === "2_mp") return 2;
-            return 1;
-          })(),
-         siblings_in_household: parseInt(formData.siblings_in_household),
-         household_income_range: formData.household_income_range as any,
-         free_or_reduced_lunch: formData.free_or_reduced_lunch as any || null,
-         allergies: formData.allergies.trim() || null,
-         asthma_inhaler_info: formData.asthma_inhaler_info.trim() || null,
-         important_child_notes: formData.important_child_notes.trim() || null,
-         medical_consent_name: formData.medical_consent_name.trim(),
-         medical_consent_signature_url: medicalSigUrl,
-         liability_waiver_name: formData.liability_waiver_name.trim(),
-         liability_waiver_signature_url: liabilitySigUrl,
-         transportation_excursions_waiver_name: formData.transportation_excursions_waiver_name.trim(),
-         transportation_excursions_signature_url: transportSigUrl,
-         media_consent_name: formData.media_consent_name.trim(),
-         media_consent_signature_url: mediaSigUrl,
-         spiritual_development_policy_name: formData.spiritual_development_policy_name.trim(),
-         spiritual_development_policy_signature_url: spiritualSigUrl,
-         counseling_services_name: formData.counseling_services_name.trim(),
-         counseling_services_signature_url: counselingSigUrl,
-         child_headshot_url: headshotUrl,
-         final_signature_name: formData.final_signature_name.trim(),
-       });
- 
-       if (error) throw error;
- 
-       setIsSubmitted(true);
-       toast({ title: "Registration Submitted!", description: "Thank you for registering with NLA Youth Boxing." });
-     } catch (error: any) {
-       console.error("Registration error:", error);
-       toast({ 
-         title: "Submission Failed", 
-         description: error.message || "Please try again.", 
-         variant: "destructive" 
-       });
-     } finally {
-       setIsSubmitting(false);
-     }
-   };
- 
-   if (isSubmitted) {
-     return (
-       <div className="min-h-screen flex flex-col bg-background">
-         <Header />
-         <main className="flex-1 flex items-center justify-center p-4">
-           <Card className="max-w-lg w-full text-center">
-             <CardContent className="pt-8 pb-8">
-               <CheckCircle2 className="w-16 h-16 text-primary mx-auto mb-4" />
-               <h2 className="text-2xl font-bold mb-2">Registration Complete!</h2>
-               <p className="text-muted-foreground mb-6">
-                 Thank you for registering your child with NLA Youth Boxing. 
-                 We will be in touch soon with next steps.
-               </p>
-               <Button onClick={() => navigate("/")}>Return to Home</Button>
-             </CardContent>
-           </Card>
-         </main>
-         <Footer />
-       </div>
-     );
-   }
- 
-   return (
-     <div className="min-h-screen flex flex-col bg-background">
-       <Header />
-       <main className="flex-1 container mx-auto px-4 py-8 max-w-xl">
-         <Card className="shadow-lg">
-           <CardContent className="pt-8 pb-8">
-             {/* Header */}
-             <div className="text-center mb-8">
-               <img src={nlaLogo} alt="No Limits Academy" className="w-20 h-20 mx-auto mb-4 object-contain" />
-               <h1 className="text-2xl font-bold mb-2">2025-26 Registration</h1>
-               <p className="text-muted-foreground text-sm">Must complete before participation at No Limits Academy.</p>
-             </div>
- 
-             <form onSubmit={handleSubmit} className="space-y-6">
-               {/* Today's Date - Auto-filled but shown */}
-               <div>
-                 <Label className="text-base font-medium">Today's Date <span className="text-destructive">*</span></Label>
-                 <Input
-                   type="date"
-                   value={new Date().toISOString().split('T')[0]}
-                   disabled
-                   className="mt-2 bg-muted"
-                 />
-               </div>
+  /* ─── Render a single dynamic field ─── */
+  const renderDynamicField = (field: FormFieldDef) => {
+    const val = formValues[field.field_key] || "";
+    const opts = parseOptions(field.options);
 
-               {/* First Name of Child */}
-               <div>
-                 <Label htmlFor="child_first_name" className="text-base font-medium">First Name of Child <span className="text-destructive">*</span></Label>
-                 <Input
-                   id="child_first_name"
-                   value={formData.child_first_name}
-                   onChange={(e) => handleInputChange("child_first_name", e.target.value)}
-                   className="mt-2"
-                   required
-                 />
-               </div>
+    switch (field.field_type) {
+      case "section_header":
+        return (
+          <div key={field.id} className="pt-4 pb-1">
+            <h3 className="text-lg font-semibold">{field.label}</h3>
+            {field.help_text && <p className="text-sm text-muted-foreground">{field.help_text}</p>}
+          </div>
+        );
+      case "paragraph":
+        return (
+          <div key={field.id} className="py-2">
+            <p className="text-sm text-muted-foreground whitespace-pre-wrap">{field.label}</p>
+            {field.help_text && <p className="text-sm text-muted-foreground">{field.help_text}</p>}
+          </div>
+        );
+      case "short_text":
+        return (
+          <div key={field.id}>
+            <Label className="text-base font-medium">{field.label} {field.required && <span className="text-destructive">*</span>}</Label>
+            {field.help_text && <p className="text-sm text-muted-foreground">{field.help_text}</p>}
+            <Input value={val} onChange={e => handleInputChange(field.field_key, e.target.value)} placeholder={field.placeholder || ""} className="mt-2" />
+          </div>
+        );
+      case "long_text":
+        return (
+          <div key={field.id}>
+            <Label className="text-base font-medium">{field.label} {field.required && <span className="text-destructive">*</span>}</Label>
+            {field.help_text && <p className="text-sm text-muted-foreground">{field.help_text}</p>}
+            <Textarea value={val} onChange={e => handleInputChange(field.field_key, e.target.value)} placeholder={field.placeholder || ""} className="mt-2" maxLength={2000} />
+          </div>
+        );
+      case "number":
+        return (
+          <div key={field.id}>
+            <Label className="text-base font-medium">{field.label} {field.required && <span className="text-destructive">*</span>}</Label>
+            {field.help_text && <p className="text-sm text-muted-foreground">{field.help_text}</p>}
+            <Input type="number" value={val} onChange={e => handleInputChange(field.field_key, e.target.value)} placeholder={field.placeholder || ""} className="mt-2" />
+          </div>
+        );
+      case "date":
+        return (
+          <div key={field.id}>
+            <Label className="text-base font-medium">{field.label} {field.required && <span className="text-destructive">*</span>}</Label>
+            {field.help_text && <p className="text-sm text-muted-foreground">{field.help_text}</p>}
+            <Input type="date" value={val} onChange={e => handleInputChange(field.field_key, e.target.value)} className="mt-2" />
+          </div>
+        );
+      case "dropdown":
+        return (
+          <div key={field.id}>
+            <Label className="text-base font-medium">{field.label} {field.required && <span className="text-destructive">*</span>}</Label>
+            {field.help_text && <p className="text-sm text-muted-foreground">{field.help_text}</p>}
+            <Select value={val} onValueChange={v => handleInputChange(field.field_key, v)}>
+              <SelectTrigger className="mt-2"><SelectValue placeholder={field.placeholder || "Select..."} /></SelectTrigger>
+              <SelectContent>
+                {opts.map(opt => <SelectItem key={opt} value={opt}>{opt}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          </div>
+        );
+      case "multi_select":
+        return (
+          <div key={field.id}>
+            <Label className="text-base font-medium">{field.label} {field.required && <span className="text-destructive">*</span>}</Label>
+            {field.help_text && <p className="text-sm text-muted-foreground">{field.help_text}</p>}
+            <div className="mt-2 space-y-2">
+              {opts.map(opt => {
+                const selected = val.split(",").filter(Boolean);
+                const checked = selected.includes(opt);
+                return (
+                  <div key={opt} className="flex items-center gap-2">
+                    <Checkbox
+                      checked={checked}
+                      onCheckedChange={(c) => {
+                        const newSel = c ? [...selected, opt] : selected.filter(s => s !== opt);
+                        handleInputChange(field.field_key, newSel.join(","));
+                      }}
+                    />
+                    <span className="text-sm">{opt}</span>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        );
+      case "yes_no":
+        return (
+          <div key={field.id}>
+            <Label className="text-base font-medium">{field.label} {field.required && <span className="text-destructive">*</span>}</Label>
+            {field.help_text && <p className="text-sm text-muted-foreground">{field.help_text}</p>}
+            <Select value={val} onValueChange={v => handleInputChange(field.field_key, v)}>
+              <SelectTrigger className="mt-2"><SelectValue placeholder="Select..." /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="Yes">Yes</SelectItem>
+                <SelectItem value="No">No</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        );
+      case "checkbox":
+        return (
+          <div key={field.id} className="flex items-start gap-3 py-1">
+            <Checkbox
+              checked={val === "true"}
+              onCheckedChange={(c) => handleInputChange(field.field_key, c ? "true" : "")}
+              className="mt-1"
+            />
+            <div>
+              <Label className="text-base font-medium">{field.label} {field.required && <span className="text-destructive">*</span>}</Label>
+              {field.help_text && <p className="text-sm text-muted-foreground">{field.help_text}</p>}
+            </div>
+          </div>
+        );
+      case "phone":
+        return (
+          <div key={field.id}>
+            <Label className="text-base font-medium">{field.label} {field.required && <span className="text-destructive">*</span>}</Label>
+            {field.help_text && <p className="text-sm text-muted-foreground">{field.help_text}</p>}
+            <Input
+              type="tel"
+              placeholder={field.placeholder || "(555) 555-5555"}
+              value={val}
+              onChange={e => {
+                const digits = digitsOnly(e.target.value).slice(0, 10);
+                handleInputChange(field.field_key, formatPhoneDisplay(digits));
+              }}
+              className="mt-2"
+            />
+            {val && !isValidPhone(val) && <p className="text-sm text-destructive mt-1">Please enter a valid 10-digit phone number</p>}
+          </div>
+        );
+      case "email":
+        return (
+          <div key={field.id}>
+            <Label className="text-base font-medium">{field.label} {field.required && <span className="text-destructive">*</span>}</Label>
+            {field.help_text && <p className="text-sm text-muted-foreground">{field.help_text}</p>}
+            <Input type="email" value={val} onChange={e => handleInputChange(field.field_key, e.target.value)} placeholder={field.placeholder || ""} className="mt-2" />
+          </div>
+        );
+      case "address":
+        return (
+          <div key={field.id}>
+            <Label className="text-base font-medium">{field.label} {field.required && <span className="text-destructive">*</span>}</Label>
+            {field.help_text && <p className="text-sm text-muted-foreground">{field.help_text}</p>}
+            <ChildPrimaryAddressField
+              value={val}
+              onChange={v => handleInputChange(field.field_key, v)}
+              className="mt-2"
+            />
+          </div>
+        );
+      case "file_upload":
+        // The headshot upload uses special handling
+        if (field.field_key === "child_headshot") {
+          return (
+            <div key={field.id}>
+              <Label className="text-base font-medium">{field.label} {field.required && <span className="text-destructive">*</span>}</Label>
+              {field.help_text && <p className="text-sm text-muted-foreground">{field.help_text}</p>}
+              <div className="mt-2">
+                <div className="flex items-center gap-4">
+                  <label className="flex items-center gap-2 px-4 py-2 border border-input rounded-md cursor-pointer hover:bg-muted transition-colors">
+                    <Upload className="w-4 h-4" />
+                    <span className="text-sm">Choose Photo</span>
+                    <input type="file" accept="image/*" onChange={handleHeadshotChange} className="hidden" />
+                  </label>
+                  {childHeadshot && <span className="text-sm text-muted-foreground">{childHeadshot.name}</span>}
+                </div>
+                {headshotPreview && (
+                  <div className="mt-4">
+                    <img src={headshotPreview} alt="Preview" className="w-32 h-32 object-cover rounded-lg border border-border" />
+                  </div>
+                )}
+              </div>
+            </div>
+          );
+        }
+        return (
+          <div key={field.id}>
+            <Label className="text-base font-medium">{field.label} {field.required && <span className="text-destructive">*</span>}</Label>
+            {field.help_text && <p className="text-sm text-muted-foreground">{field.help_text}</p>}
+            <div className="mt-2">
+              <label className="flex items-center gap-2 px-4 py-2 border border-input rounded-md cursor-pointer hover:bg-muted transition-colors">
+                <Upload className="w-4 h-4" />
+                <span className="text-sm">Choose File</span>
+                <input type="file" className="hidden" />
+              </label>
+            </div>
+          </div>
+        );
+      default:
+        return (
+          <div key={field.id}>
+            <Label className="text-base font-medium">{field.label}</Label>
+            <Input value={val} onChange={e => handleInputChange(field.field_key, e.target.value)} className="mt-2" />
+          </div>
+        );
+    }
+  };
 
-               {/* Last Name of Child */}
-               <div>
-                 <Label htmlFor="child_last_name" className="text-base font-medium">Last Name of Child <span className="text-destructive">*</span></Label>
-                 <Input
-                   id="child_last_name"
-                   value={formData.child_last_name}
-                   onChange={(e) => handleInputChange("child_last_name", e.target.value)}
-                   className="mt-2"
-                   required
-                 />
-               </div>
+  if (isSubmitted) {
+    return (
+      <div className="min-h-screen flex flex-col bg-background">
+        <Header />
+        <main className="flex-1 flex items-center justify-center p-4">
+          <Card className="max-w-lg w-full text-center">
+            <CardContent className="pt-8 pb-8">
+              <CheckCircle2 className="w-16 h-16 text-primary mx-auto mb-4" />
+              <h2 className="text-2xl font-bold mb-2">Registration Complete!</h2>
+              <p className="text-muted-foreground mb-6">
+                Thank you for registering your child with NLA Youth Boxing. We will be in touch soon with next steps.
+              </p>
+              <Button onClick={() => navigate("/")}>Return to Home</Button>
+            </CardContent>
+          </Card>
+        </main>
+        <Footer />
+      </div>
+    );
+  }
 
-               {/* Child's Sex */}
-               <div>
-                 <Label htmlFor="child_sex" className="text-base font-medium">Child's Sex <span className="text-destructive">*</span></Label>
-                 <Select value={formData.child_sex} onValueChange={(v) => handleInputChange("child_sex", v)}>
-                   <SelectTrigger className="mt-2"><SelectValue placeholder="Select..." /></SelectTrigger>
-                   <SelectContent>
-                     {SEX_OPTIONS.map(opt => <SelectItem key={opt} value={opt}>{opt}</SelectItem>)}
-                   </SelectContent>
-                 </Select>
-               </div>
+  return (
+    <div className="min-h-screen flex flex-col bg-background">
+      <Header />
+      <main className="flex-1 container mx-auto px-4 py-8 max-w-xl">
+        <Card className="shadow-lg">
+          <CardContent className="pt-8 pb-8">
+            <div className="text-center mb-8">
+              <img src={nlaLogo} alt="No Limits Academy" className="w-20 h-20 mx-auto mb-4 object-contain" />
+              <h1 className="text-2xl font-bold mb-2">2025-26 Registration</h1>
+              <p className="text-muted-foreground text-sm">Must complete before participation at No Limits Academy.</p>
+            </div>
 
-               {/* Child's Date of Birth */}
-               <div>
-                 <Label htmlFor="child_date_of_birth" className="text-base font-medium">Child's Date of Birth <span className="text-destructive">*</span></Label>
-                 <Input
-                   id="child_date_of_birth"
-                   type="date"
-                   value={formData.child_date_of_birth}
-                   onChange={(e) => handleInputChange("child_date_of_birth", e.target.value)}
-                   className="mt-2"
-                   required
-                 />
-               </div>
-
-               {/* Child's Race/Ethnicity */}
-               <div>
-                 <Label htmlFor="child_race_ethnicity" className="text-base font-medium">Child's Race/Ethnicity <span className="text-destructive">*</span></Label>
-                 <Select value={formData.child_race_ethnicity} onValueChange={(v) => handleInputChange("child_race_ethnicity", v)}>
-                   <SelectTrigger className="mt-2"><SelectValue placeholder="Select..." /></SelectTrigger>
-                   <SelectContent>
-                     {RACE_OPTIONS.map(opt => <SelectItem key={opt} value={opt}>{opt}</SelectItem>)}
-                   </SelectContent>
-                 </Select>
-               </div>
-
-               {/* First Name of Parent/Guardian */}
-               <div>
-                 <Label htmlFor="parent_first_name" className="text-base font-medium">First Name of Parent/Guardian <span className="text-destructive">*</span></Label>
-                 <Input
-                   id="parent_first_name"
-                   value={formData.parent_first_name}
-                   onChange={(e) => handleInputChange("parent_first_name", e.target.value)}
-                   className="mt-2"
-                   required
-                 />
-               </div>
-
-               {/* Last Name of Parent/Guardian */}
-               <div>
-                 <Label htmlFor="parent_last_name" className="text-base font-medium">Last Name of Parent/Guardian <span className="text-destructive">*</span></Label>
-                 <Input
-                   id="parent_last_name"
-                   value={formData.parent_last_name}
-                   onChange={(e) => handleInputChange("parent_last_name", e.target.value)}
-                   className="mt-2"
-                   required
-                 />
-               </div>
-
-               {/* Parent/Guardian Cell Phone # */}
-               <div>
-                 <Label htmlFor="parent_phone" className="text-base font-medium">Parent/Guardian Cell Phone # <span className="text-destructive">*</span></Label>
-                 <Input
-                   id="parent_phone"
-                   type="tel"
-                   placeholder="(555) 555-5555"
-                   value={formData.parent_phone}
-                   onChange={(e) => {
-                     const digits = digitsOnly(e.target.value).slice(0, 10);
-                     handleInputChange("parent_phone", formatPhoneDisplay(digits));
-                   }}
-                   className="mt-2"
-                   required
-                 />
-                 {formData.parent_phone && !isValidPhone(formData.parent_phone) && (
-                   <p className="text-sm text-destructive mt-1">Please enter a valid 10-digit phone number</p>
-                 )}
-               </div>
-
-               {/* Child's Cell Phone # */}
-               <div>
-                 <Label htmlFor="child_phone" className="text-base font-medium">Child's Cell Phone #</Label>
-                 <p className="text-sm text-muted-foreground">If no cell phone, SKIP</p>
-                 <Input
-                   id="child_phone"
-                   type="tel"
-                   placeholder="(555) 555-5555"
-                   value={formData.child_phone}
-                   onChange={(e) => {
-                     const digits = digitsOnly(e.target.value).slice(0, 10);
-                     handleInputChange("child_phone", formatPhoneDisplay(digits));
-                   }}
-                   className="mt-2"
-                 />
-                 {formData.child_phone && !isValidPhone(formData.child_phone) && (
-                   <p className="text-sm text-destructive mt-1">Please enter a valid 10-digit phone number</p>
-                 )}
-               </div>
-
-               {/* Parent/Guardian Email */}
-               <div>
-                 <Label htmlFor="parent_email" className="text-base font-medium">Parent/Guardian Email <span className="text-destructive">*</span></Label>
-                 <Input
-                   id="parent_email"
-                   type="email"
-                   value={formData.parent_email}
-                   onChange={(e) => handleInputChange("parent_email", e.target.value)}
-                   className="mt-2"
-                   required
-                 />
-               </div>
-
-                {/* Child's Primary Address */}
+            {fieldsLoading ? (
+              <div className="text-center py-12">
+                <Loader2 className="w-8 h-8 animate-spin mx-auto text-muted-foreground" />
+                <p className="text-sm text-muted-foreground mt-2">Loading form...</p>
+              </div>
+            ) : (
+              <form onSubmit={handleSubmit} className="space-y-6">
+                {/* Today's Date */}
                 <div>
-                  <Label htmlFor="child_primary_address" className="text-base font-medium">Child's Primary Address <span className="text-destructive">*</span></Label>
-                  <p className="text-sm text-muted-foreground">MUST BE FULL MAILING ADDRESS</p>
-                  <ChildPrimaryAddressField
-                    value={formData.child_primary_address}
-                    onChange={(v) => handleInputChange("child_primary_address", v)}
-                    className="mt-2"
+                  <Label className="text-base font-medium">Today's Date <span className="text-destructive">*</span></Label>
+                  <Input type="date" value={new Date().toISOString().split('T')[0]} disabled className="mt-2 bg-muted" />
+                </div>
+
+                {/* Dynamic fields from DB */}
+                {(formFields || []).map(renderDynamicField)}
+
+                {/* === WAIVERS (always rendered, not editable via form builder) === */}
+                <div className="border-t pt-6">
+                  <WaiverSection
+                    title="Signature Required:"
+                    text={WAIVER_TEXTS.medical_consent}
+                    nameValue={formValues["medical_consent_name"] || ""}
+                    onNameChange={v => handleInputChange("medical_consent_name", v)}
+                    onSignatureChange={blob => handleSignatureChange("medical_consent", blob)}
+                    acknowledged={acknowledgements.medical_consent}
+                    onAcknowledgeChange={v => handleAcknowledgementChange("medical_consent", v)}
                   />
                 </div>
 
-               {/* Child's School District */}
-               <div>
-                 <Label htmlFor="child_school_district" className="text-base font-medium">Child's School District <span className="text-destructive">*</span></Label>
-                 <Select value={formData.child_school_district} onValueChange={(v) => handleInputChange("child_school_district", v)}>
-                   <SelectTrigger className="mt-2"><SelectValue placeholder="Select..." /></SelectTrigger>
-                   <SelectContent>
-                     {SCHOOL_DISTRICTS.map(opt => <SelectItem key={opt} value={opt}>{opt}</SelectItem>)}
-                   </SelectContent>
-                 </Select>
-               </div>
-
-                {/* Child's Grade Level */}
-                <div>
-                  <Label htmlFor="child_grade_level" className="text-base font-medium">Child's Grade Level</Label>
-                  <p className="text-sm text-muted-foreground">Skip if not applicable</p>
-                  <Select value={formData.child_grade_level} onValueChange={(val) => handleInputChange("child_grade_level", val === "skip" ? "" : val)}>
-                    <SelectTrigger className="mt-2">
-                      <SelectValue placeholder="Select grade level" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="skip">Not Applicable</SelectItem>
-                      {Array.from({ length: 12 }, (_, i) => i + 1).map((g) => (
-                        <SelectItem key={g} value={String(g)}>
-                          {g === 1 ? "1st" : g === 2 ? "2nd" : g === 3 ? "3rd" : `${g}th`} Grade
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-               </div>
-
-               {/* Child's Boxing Program */}
-               <div>
-                 <Label htmlFor="child_boxing_program" className="text-base font-medium">Child's Boxing Program <span className="text-destructive">*</span></Label>
-                 <Select value={formData.child_boxing_program} onValueChange={(v) => handleInputChange("child_boxing_program", v)}>
-                   <SelectTrigger className="mt-2"><SelectValue placeholder="Select..." /></SelectTrigger>
-                   <SelectContent>
-                     {BOXING_PROGRAMS.map(opt => <SelectItem key={opt} value={opt}>{opt}</SelectItem>)}
-                   </SelectContent>
-                 </Select>
-               </div>
-
-               {/* Adult(s) in Child's primary household */}
-                <div>
-                  <Label htmlFor="adults_in_household" className="text-base font-medium">Adult(s) in Child's primary household <span className="text-destructive">*</span></Label>
-                  <Select value={formData.adults_in_household} onValueChange={(value) => handleInputChange("adults_in_household", value)}>
-                    <SelectTrigger className="mt-2">
-                      <SelectValue placeholder="Select..." />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="2">Dad and Mom</SelectItem>
-                      <SelectItem value="1">Dad Only</SelectItem>
-                      <SelectItem value="2_dp">Dad + Partner</SelectItem>
-                      <SelectItem value="1_m">Mom Only</SelectItem>
-                      <SelectItem value="2_mp">Mom + Partner</SelectItem>
-                      <SelectItem value="1_g">Grandparent(s)</SelectItem>
-                      <SelectItem value="1_o">Other</SelectItem>
-                    </SelectContent>
-                  </Select>
+                <div className="border-t pt-6">
+                  <WaiverSection
+                    title="Release of Liability & Waiver Form"
+                    text={WAIVER_TEXTS.liability_waiver}
+                    nameValue={formValues["liability_waiver_name"] || ""}
+                    onNameChange={v => handleInputChange("liability_waiver_name", v)}
+                    onSignatureChange={blob => handleSignatureChange("liability_waiver", blob)}
+                    acknowledged={acknowledgements.liability_waiver}
+                    onAcknowledgeChange={v => handleAcknowledgementChange("liability_waiver", v)}
+                  />
                 </div>
 
-               {/* How many siblings in Child's primary household? */}
-                <div>
-                  <Label htmlFor="siblings_in_household" className="text-base font-medium">How many siblings in Child's primary household? <span className="text-destructive">*</span></Label>
-                  <Select value={formData.siblings_in_household} onValueChange={(value) => handleInputChange("siblings_in_household", value)}>
-                    <SelectTrigger className="mt-2">
-                      <SelectValue placeholder="Select..." />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="0">Only child</SelectItem>
-                      <SelectItem value="1">Child + 1 sibling</SelectItem>
-                      <SelectItem value="2">Child + 2 siblings</SelectItem>
-                      <SelectItem value="3">Child + 3 siblings</SelectItem>
-                      <SelectItem value="4">Child + 4 siblings</SelectItem>
-                      <SelectItem value="5">Child + 5 siblings</SelectItem>
-                      <SelectItem value="6">Child + 6 siblings</SelectItem>
-                      <SelectItem value="7">Other</SelectItem>
-                    </SelectContent>
-                  </Select>
+                <div className="border-t pt-6">
+                  <WaiverSection
+                    title="Waiver and Permission - Transportation and Excursions"
+                    text={WAIVER_TEXTS.transportation_excursions}
+                    nameValue={formValues["transportation_excursions_waiver_name"] || ""}
+                    onNameChange={v => handleInputChange("transportation_excursions_waiver_name", v)}
+                    onSignatureChange={blob => handleSignatureChange("transportation_excursions", blob)}
+                    acknowledged={acknowledgements.transportation_excursions}
+                    onAcknowledgeChange={v => handleAcknowledgementChange("transportation_excursions", v)}
+                  />
                 </div>
 
-               {/* Household Income */}
-               <div>
-                 <Label htmlFor="household_income_range" className="text-base font-medium">For Program funding purposes, please indicate which below reflects your total household income. <span className="text-destructive">*</span></Label>
-                 <p className="text-sm text-muted-foreground">This information is completely confidential and is used for data collection.</p>
-                 <Select value={formData.household_income_range} onValueChange={(v) => handleInputChange("household_income_range", v)}>
-                   <SelectTrigger className="mt-2"><SelectValue placeholder="Select..." /></SelectTrigger>
-                   <SelectContent>
-                     {INCOME_RANGES.map(opt => <SelectItem key={opt} value={opt}>{opt}</SelectItem>)}
-                   </SelectContent>
-                 </Select>
-               </div>
+                <div className="border-t pt-6">
+                  <WaiverSection
+                    title="Media Consent, Release & Waiver"
+                    text={WAIVER_TEXTS.media_consent}
+                    nameValue={formValues["media_consent_name"] || ""}
+                    onNameChange={v => handleInputChange("media_consent_name", v)}
+                    onSignatureChange={blob => handleSignatureChange("media_consent", blob)}
+                    acknowledged={acknowledgements.media_consent}
+                    onAcknowledgeChange={v => handleAcknowledgementChange("media_consent", v)}
+                  />
+                </div>
 
-               {/* Free or reduced lunch */}
-               <div>
-                 <Label htmlFor="free_or_reduced_lunch" className="text-base font-medium">For Program funding purposes, does your Child receive free or reduced lunch at school?</Label>
-                 <p className="text-sm text-muted-foreground">Skip if not applicable</p>
-                 <Select value={formData.free_or_reduced_lunch} onValueChange={(v) => handleInputChange("free_or_reduced_lunch", v)}>
-                   <SelectTrigger className="mt-2"><SelectValue placeholder="Select..." /></SelectTrigger>
-                   <SelectContent>
-                     {LUNCH_OPTIONS.map(opt => <SelectItem key={opt} value={opt}>{opt}</SelectItem>)}
-                   </SelectContent>
-                 </Select>
-               </div>
+                <div className="border-t pt-6">
+                  <WaiverSection
+                    title="Spiritual Development Policy"
+                    text={WAIVER_TEXTS.spiritual_development}
+                    nameValue={formValues["spiritual_development_policy_name"] || ""}
+                    onNameChange={v => handleInputChange("spiritual_development_policy_name", v)}
+                    onSignatureChange={blob => handleSignatureChange("spiritual_development", blob)}
+                    acknowledged={acknowledgements.spiritual_development}
+                    onAcknowledgeChange={v => handleAcknowledgementChange("spiritual_development", v)}
+                  />
+                </div>
 
-               {/* Allergies */}
-               <div>
-                 <Label htmlFor="allergies" className="text-base font-medium">What allergies does your child have?   If none, please skip question.</Label>
-                 <p className="text-sm text-muted-foreground">If your child requires an epinephrine injection, <strong>YOU MUST PROVIDE</strong> No Limits Academy Coaches with an up-to-date epi-pen that will remain at the No Limits Academy facility. NO EXCEPTIONS.</p>
-                 <Textarea
-                   id="allergies"
-                   value={formData.allergies}
-                   onChange={(e) => handleInputChange("allergies", e.target.value)}
-                   className="mt-2"
-                   maxLength={2000}
-                 />
-               </div>
+                <div className="border-t pt-6">
+                  <WaiverSection
+                    title="Counseling Services Notice & Consent"
+                    text={WAIVER_TEXTS.counseling_services}
+                    nameValue={formValues["counseling_services_name"] || ""}
+                    onNameChange={v => handleInputChange("counseling_services_name", v)}
+                    onSignatureChange={blob => handleSignatureChange("counseling_services", blob)}
+                    acknowledged={acknowledgements.counseling_services}
+                    onAcknowledgeChange={v => handleAcknowledgementChange("counseling_services", v)}
+                  />
+                </div>
 
-               {/* Asthma */}
-               <div>
-                 <Label htmlFor="asthma_inhaler_info" className="text-base font-medium">If your child has asthma, please fill in the following information. If your child does not have asthma, please skip question.</Label>
-                 <p className="text-sm text-muted-foreground">Name of the inhaler your child takes prior to strenuous exercise.</p>
-                 <p className="text-sm text-muted-foreground"><strong>YOU MUST PROVIDE</strong> an inhaler that will remain at the No Limits Academy facility. NO EXCEPTIONS.</p>
-                 <Textarea
-                   id="asthma_inhaler_info"
-                   value={formData.asthma_inhaler_info}
-                   onChange={(e) => handleInputChange("asthma_inhaler_info", e.target.value)}
-                   className="mt-2"
-                   maxLength={2000}
-                 />
-               </div>
+                {/* Final typed name */}
+                <div className="border-t pt-6">
+                  <Label htmlFor="final_signature_name" className="text-base font-medium">
+                    Please TYPE the FIRST and LAST name used in the Signatures above. <span className="text-destructive">*</span>
+                  </Label>
+                  <Input
+                    id="final_signature_name"
+                    value={formValues["final_signature_name"] || ""}
+                    onChange={e => handleInputChange("final_signature_name", e.target.value)}
+                    className="mt-2"
+                    required
+                  />
+                </div>
 
-               {/* Medical Consent - Signature Required */}
-               <div className="border-t pt-6">
-                 <WaiverSection
-                   title="Signature Required:"
-                   text={WAIVER_TEXTS.medical_consent}
-                   nameValue={formData.medical_consent_name}
-                   onNameChange={(v) => handleInputChange("medical_consent_name", v)}
-                   onSignatureChange={(blob) => handleSignatureChange("medical_consent", blob)}
-                   acknowledged={acknowledgements.medical_consent}
-                   onAcknowledgeChange={(v) => handleAcknowledgementChange("medical_consent", v)}
-                 />
-               </div>
+                <div className="pt-6">
+                  <Button type="submit" size="lg" disabled={isSubmitting} className="w-full">
+                    {isSubmitting ? (
+                      <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Submitting...</>
+                    ) : "Submit"}
+                  </Button>
+                </div>
+              </form>
+            )}
+          </CardContent>
+        </Card>
+      </main>
+      <Footer />
+    </div>
+  );
+};
 
-               {/* Coach Notes */}
-               <div>
-                 <Label htmlFor="important_child_notes" className="text-base font-medium">Please share any important information about your child that would help our coaches support them.</Label>
-                 <p className="text-sm text-muted-foreground">Ex: Recent life changes, social challenges, medical needs, etc.</p>
-                 <p className="text-sm text-muted-foreground">Skip if not applicable</p>
-                 <Textarea
-                   id="important_child_notes"
-                   value={formData.important_child_notes}
-                   onChange={(e) => handleInputChange("important_child_notes", e.target.value)}
-                   className="mt-2"
-                   rows={4}
-                 />
-               </div>
-
-               {/* Release of Liability & Waiver Form */}
-               <div className="border-t pt-6">
-                 <WaiverSection
-                   title="Release of Liability & Waiver Form"
-                   text={WAIVER_TEXTS.liability_waiver}
-                   nameValue={formData.liability_waiver_name}
-                   onNameChange={(v) => handleInputChange("liability_waiver_name", v)}
-                   onSignatureChange={(blob) => handleSignatureChange("liability_waiver", blob)}
-                   acknowledged={acknowledgements.liability_waiver}
-                   onAcknowledgeChange={(v) => handleAcknowledgementChange("liability_waiver", v)}
-                 />
-               </div>
-
-               {/* Waiver and Permission - Transportation and Excursions */}
-               <div className="border-t pt-6">
-                 <WaiverSection
-                   title="Waiver and Permission - Transportation and Excursions"
-                   text={WAIVER_TEXTS.transportation_excursions}
-                   nameValue={formData.transportation_excursions_waiver_name}
-                   onNameChange={(v) => handleInputChange("transportation_excursions_waiver_name", v)}
-                   onSignatureChange={(blob) => handleSignatureChange("transportation_excursions", blob)}
-                   acknowledged={acknowledgements.transportation_excursions}
-                   onAcknowledgeChange={(v) => handleAcknowledgementChange("transportation_excursions", v)}
-                 />
-               </div>
-
-               {/* Media Consent, Release & Waiver */}
-               <div className="border-t pt-6">
-                 <WaiverSection
-                   title="Media Consent, Release & Waiver"
-                   text={WAIVER_TEXTS.media_consent}
-                   nameValue={formData.media_consent_name}
-                   onNameChange={(v) => handleInputChange("media_consent_name", v)}
-                   onSignatureChange={(blob) => handleSignatureChange("media_consent", blob)}
-                   acknowledged={acknowledgements.media_consent}
-                   onAcknowledgeChange={(v) => handleAcknowledgementChange("media_consent", v)}
-                 />
-               </div>
-
-               {/* Spiritual Development Policy */}
-               <div className="border-t pt-6">
-                 <WaiverSection
-                   title="Spiritual Development Policy"
-                   text={WAIVER_TEXTS.spiritual_development}
-                   nameValue={formData.spiritual_development_policy_name}
-                   onNameChange={(v) => handleInputChange("spiritual_development_policy_name", v)}
-                   onSignatureChange={(blob) => handleSignatureChange("spiritual_development", blob)}
-                   acknowledged={acknowledgements.spiritual_development}
-                   onAcknowledgeChange={(v) => handleAcknowledgementChange("spiritual_development", v)}
-                 />
-               </div>
-
-               {/* Counseling Services Notice & Consent */}
-               <div className="border-t pt-6">
-                 <WaiverSection
-                   title="Counseling Services Notice & Consent"
-                   text={WAIVER_TEXTS.counseling_services}
-                   nameValue={formData.counseling_services_name}
-                   onNameChange={(v) => handleInputChange("counseling_services_name", v)}
-                   onSignatureChange={(blob) => handleSignatureChange("counseling_services", blob)}
-                   acknowledged={acknowledgements.counseling_services}
-                   onAcknowledgeChange={(v) => handleAcknowledgementChange("counseling_services", v)}
-                 />
-               </div>
-
-               {/* Final typed name */}
-               <div className="border-t pt-6">
-                 <Label htmlFor="final_signature_name" className="text-base font-medium">Please TYPE the FIRST and LAST name used in the Signatures above. <span className="text-destructive">*</span></Label>
-                 <Input
-                   id="final_signature_name"
-                   value={formData.final_signature_name}
-                   onChange={(e) => handleInputChange("final_signature_name", e.target.value)}
-                   className="mt-2"
-                   required
-                 />
-               </div>
-
-               {/* Child Headshot Upload */}
-               <div>
-                 <Label className="text-base font-medium">For safety & security, upload a picture (headshot) of your child. <span className="text-destructive">*</span></Label>
-                 <div className="mt-2">
-                   <div className="flex items-center gap-4">
-                     <label className="flex items-center gap-2 px-4 py-2 border border-input rounded-md cursor-pointer hover:bg-muted transition-colors">
-                       <Upload className="w-4 h-4" />
-                       <span className="text-sm">Choose Photo</span>
-                       <input
-                         type="file"
-                         accept="image/*"
-                         onChange={handleHeadshotChange}
-                         className="hidden"
-                       />
-                     </label>
-                     {childHeadshot && (
-                       <span className="text-sm text-muted-foreground">{childHeadshot.name}</span>
-                     )}
-                   </div>
-                   {headshotPreview && (
-                     <div className="mt-4">
-                       <img
-                         src={headshotPreview}
-                         alt="Child headshot preview"
-                         className="w-32 h-32 object-cover rounded-lg border border-border"
-                       />
-                     </div>
-                   )}
-                 </div>
-               </div>
-
-               {/* Submit */}
-               <div className="pt-6">
-                 <Button type="submit" size="lg" disabled={isSubmitting} className="w-full">
-                   {isSubmitting ? (
-                     <>
-                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                       Submitting...
-                     </>
-                   ) : (
-                     "Submit"
-                   )}
-                 </Button>
-               </div>
-             </form>
-           </CardContent>
-         </Card>
-       </main>
-       <Footer />
-     </div>
-   );
- };
- 
- export default Register;
+export default Register;
