@@ -43,13 +43,13 @@
            htmlFor={`ack-${title.replace(/\s/g, "-")}`} 
            className="text-sm leading-relaxed cursor-pointer"
          >
-           I have read and agree to the terms of this {title.toLowerCase()}. *
+           I have read and agree to the terms of this {title.toLowerCase()}. <span className="text-destructive">*</span>
          </Label>
        </div>
  
        {/* Name Input */}
        <div>
-         <Label>Type Your Full Name *</Label>
+         <Label>Type Your Full Name <span className="text-destructive">*</span></Label>
          <Input
            value={nameValue}
            onChange={(e) => onNameChange(e.target.value)}
@@ -60,7 +60,7 @@
  
        {/* Signature Canvas */}
        <div>
-         <Label>Signature *</Label>
+         <Label>Signature <span className="text-destructive">*</span></Label>
          <SignatureCanvas onSignatureChange={onSignatureChange} />
        </div>
      </div>
