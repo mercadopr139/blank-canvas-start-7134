@@ -99,14 +99,27 @@ Deno.serve(async (req) => {
 
     // Step 1: List boards so the user can pick the right one
     if (action === "list_boards") {
-      const data = await mondayQuery(mondayToken, `{
-        boards(limit: 50) {
-          id
-          name
-          items_count
+      // Fetch up to 200 boards across all workspaces
+      let allBoards: Array<{ id: string; name: string; items_count: number }> = [];
+      let page = 1;
+      let hasMore = true;
+      while (hasMore && page <= 4) {
+        const data = await mondayQuery(mondayToken, `{
+          boards(limit: 200, page: ${page}) {
+            id
+            name
+            items_count
+          }
+        }`);
+        if (data.boards?.length) {
+          allBoards = [...allBoards, ...data.boards];
+          hasMore = data.boards.length === 200;
+          page++;
+        } else {
+          hasMore = false;
         }
-      }`);
-      return new Response(JSON.stringify({ boards: data.boards }), {
+      }
+      return new Response(JSON.stringify({ boards: allBoards }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
