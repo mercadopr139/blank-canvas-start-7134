@@ -175,6 +175,14 @@ export default function MondaySyncModal({ open, onOpenChange, onSyncComplete }: 
             ) : (
               <>
                 <p className="text-sm text-muted-foreground">Select the Monday.com board containing youth registrations:</p>
+                <div className="flex gap-2">
+                  <Input
+                    value={boardSearch}
+                    onChange={(e) => setBoardSearch(e.target.value)}
+                    placeholder="Search boards by name..."
+                  />
+                  <Button variant="outline" onClick={() => loadBoards(1, boardSearch)} disabled={loading}>Search</Button>
+                </div>
                 <div className="space-y-2 max-h-[300px] overflow-y-auto">
                   {boards.map((b) => (
                     <button
@@ -190,6 +198,23 @@ export default function MondaySyncModal({ open, onOpenChange, onSyncComplete }: 
                       <div className="text-xs text-muted-foreground">{b.items_count} items</div>
                     </button>
                   ))}
+                </div>
+                <div className="flex items-center justify-between gap-2">
+                  <Button
+                    variant="outline"
+                    onClick={() => loadBoards(Math.max(1, boardPage - 1), boardSearch)}
+                    disabled={loading || boardPage <= 1}
+                  >
+                    Previous
+                  </Button>
+                  <p className="text-xs text-muted-foreground">Page {boardPage}</p>
+                  <Button
+                    variant="outline"
+                    onClick={() => loadBoards(boardPage + 1, boardSearch)}
+                    disabled={loading || !hasMoreBoards}
+                  >
+                    Next Page
+                  </Button>
                 </div>
                 <Button onClick={loadColumns} disabled={!selectedBoard || loading} className="w-full">
                   Next: Map Columns
