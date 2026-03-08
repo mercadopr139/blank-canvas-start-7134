@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -173,16 +173,12 @@ export default function MondaySyncModal({ open, onOpenChange, onSyncComplete }: 
     onOpenChange(v);
   };
 
-  // Load boards on open
-  const handleOpen = () => {
-    if (boards.length === 0 && step === "boards") {
-      loadBoards(1, boardSearch);
+  // Load boards once when modal opens
+  useEffect(() => {
+    if (open) {
+      void loadBoards(1, "");
     }
-  };
-
-  if (open && boards.length === 0 && step === "boards" && !loading) {
-    handleOpen();
-  }
+  }, [open]);
 
   const fileColumns = columns.filter(c => c.type === "file" || c.title.toLowerCase().includes("photo") || c.title.toLowerCase().includes("picture") || c.title.toLowerCase().includes("image") || c.title.toLowerCase().includes("upload"));
   const textColumns = columns.filter(c => c.type === "text" || c.type === "name" || c.type === "short-text");
@@ -205,7 +201,7 @@ export default function MondaySyncModal({ open, onOpenChange, onSyncComplete }: 
                 Loading boards...
               </div>
             ) : boards.length === 0 ? (
-              <p className="text-sm text-muted-foreground py-4">No boards found. Check your API token.</p>
+              <p className="text-sm text-muted-foreground py-4">No boards found for that search. Try a shorter term like “2025” or “Master”.</p>
             ) : (
               <>
                 <p className="text-sm text-muted-foreground">Select the Monday.com board containing youth registrations:</p>

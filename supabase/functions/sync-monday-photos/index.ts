@@ -24,6 +24,57 @@ interface MondayItem {
   }>;
 }
 
+const DASH_REGEX = /[\u2010\u2011\u2012\u2013\u2014\u2015\u2212]/g;
+
+const normalizeBoardText = (value: string) =>
+  value
+    .toLowerCase()
+    .replace(DASH_REGEX, "-")
+    .replace(/&/g, " and ")
+    .replace(/[^a-z0-9\s-]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+
+const stemToken = (token: string) => {
+  if (token.endsWith("ies") && token.length > 4) return `${token.slice(0, -3)}y`;
+  if (token.endsWith("es") && token.length > 4) return token.slice(0, -2);
+  if (token.endsWith("s") && token.length > 3) return token.slice(0, -1);
+  return token;
+};
+
+const expandShortYearRange = (text: string) =>
+  text
+    .replace(DASH_REGEX, "-")
+    .replace(/\b(20\d{2})\s*[-/]\s*(\d{2})\b/g, (_, start, end2) => {
+      const endYear = `${start.slice(0, 2)}${end2}`;
+      return `${start}-${end2} ${start}-${endYear} ${start} ${endYear}`;
+    });
+
+const boardMatchesSearch = (boardName: string, rawSearch: string) => {
+  const search = rawSearch.trim();
+  if (!search) return true;
+
+  const normalizedBoard = normalizeBoardText(expandShortYearRange(boardName));
+  const normalizedSearch = normalizeBoardText(expandShortYearRange(search));
+
+  if (!normalizedSearch) return true;
+  if (normalizedBoard.includes(normalizedSearch)) return true;
+
+  const boardTokens = normalizedBoard.split(" ").filter(Boolean).map(stemToken);
+  const searchTokens = normalizedSearch.split(" ").filter(Boolean).map(stemToken);
+
+  if (searchTokens.length === 0) return true;
+
+  return searchTokens.every((token) =>
+    boardTokens.some(
+      (boardToken) =>
+        boardToken === token ||
+        boardToken.includes(token) ||
+        (token.length >= 4 && token.includes(boardToken))
+    )
+  );
+};
+
 async function mondayQuery(token: string, query: string, variables?: Record<string, unknown>) {
   const res = await fetch(MONDAY_API_URL, {
     method: "POST",
@@ -102,7 +153,7 @@ Deno.serve(async (req) => {
       // Paginated board listing to avoid Monday.com complexity/rate-limit errors
       const PAGE_SIZE = 50;
       const page = Math.max(1, Number(body.page || 1));
-      const search = String(body.search || "").trim().toLowerCase();
+      const search = String(body.search || "").trim();
 
       const data = await mondayQuery(mondayToken, `{
         boards(limit: ${PAGE_SIZE}, page: ${page}, state: all) {
@@ -115,8 +166,9 @@ Deno.serve(async (req) => {
         ...b,
         items_count: 0,
       }));
+
       const boards = search
-        ? rawBoards.filter((b: { name: string }) => b.name.toLowerCase().includes(search))
+        ? rawBoards.filter((b: { name: string }) => boardMatchesSearch(b.name, search))
         : rawBoards;
 
       return new Response(JSON.stringify({
