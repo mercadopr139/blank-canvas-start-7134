@@ -415,7 +415,7 @@ Deno.serve(async (req) => {
 
         // Download and upload the photo
         try {
-          const imageRes = await fetch(photoUrl, {
+          let imageRes = await fetch(photoUrl, {
             headers: {
               Authorization: mondayToken,
               "User-Agent": "Mozilla/5.0",
@@ -423,6 +423,33 @@ Deno.serve(async (req) => {
             },
             redirect: "follow",
           });
+
+          // If initial download fails, try to get a fresh asset URL via Monday API
+          if (!imageRes.ok && item.assets?.length) {
+            const assetId = item.assets[0].id;
+            try {
+              const assetData = await mondayQuery(mondayToken, `{
+                assets(ids: [${assetId}]) {
+                  public_url
+                  url
+                }
+              }`);
+              const freshAsset = assetData?.assets?.[0];
+              const freshUrl = freshAsset?.public_url || freshAsset?.url;
+              if (freshUrl && freshUrl !== photoUrl) {
+                imageRes = await fetch(freshUrl, {
+                  headers: {
+                    Authorization: mondayToken,
+                    "User-Agent": "Mozilla/5.0",
+                    Accept: "image/*,*/*;q=0.8",
+                  },
+                  redirect: "follow",
+                });
+              }
+            } catch {
+              // ignore retry errors
+            }
+          }
 
           if (!imageRes.ok) {
             results.errors.push(`Failed to download photo for ${firstName} ${lastName}: ${imageRes.status}`);
