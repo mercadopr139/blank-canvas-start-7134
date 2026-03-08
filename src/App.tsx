@@ -29,6 +29,7 @@ import AdminInvoices from "./pages/admin/AdminInvoices";
  import AdminBilling from "./pages/admin/AdminBilling";
 import AdminRegistrationAnalytics from "./pages/admin/AdminRegistrationAnalytics";
 import AdminAttendance from "./pages/admin/AdminAttendance";
+import AdminAttendanceReports from "./pages/admin/AdminAttendanceReports";
 import CheckIn from "./pages/CheckIn";
 import Register from "./pages/Register";
 import Supporters from "./pages/Supporters";
@@ -100,6 +101,7 @@ const App = () => (
               <Route path="registrations" element={<AdminRegistrations />} />
               <Route path="registration-analytics" element={<AdminRegistrationAnalytics />} />
               <Route path="attendance" element={<AdminAttendance />} />
+              <Route path="attendance-reports" element={<AdminAttendanceReports />} />
             </Route>
 
             {/* Sales & Marketing section — sidebar layout wraps sub-pages */}
