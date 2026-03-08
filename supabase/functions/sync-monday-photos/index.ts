@@ -436,17 +436,10 @@ Deno.serve(async (req) => {
 
         // Download and upload the photo
         try {
-          let imageRes = await fetch(photoUrl, {
-            headers: {
-              Authorization: mondayToken,
-              "User-Agent": "Mozilla/5.0",
-              Accept: "image/*,*/*;q=0.8",
-            },
-            redirect: "follow",
-          });
+          const candidateUrls = [photoUrl];
 
-          // If initial download fails, try to get a fresh asset URL via Monday API
-          if (!imageRes.ok && item.assets?.length) {
+          // Refresh asset URLs from Monday when available
+          if (item.assets?.length) {
             const assetId = item.assets[0].id;
             try {
               const assetData = await mondayQuery(mondayToken, `{
@@ -456,35 +449,60 @@ Deno.serve(async (req) => {
                 }
               }`);
               const freshAsset = assetData?.assets?.[0];
-              const freshUrl = freshAsset?.public_url || freshAsset?.url;
-              if (freshUrl && freshUrl !== photoUrl) {
-                imageRes = await fetch(freshUrl, {
-                  headers: {
-                    Authorization: mondayToken,
-                    "User-Agent": "Mozilla/5.0",
-                    Accept: "image/*,*/*;q=0.8",
-                  },
-                  redirect: "follow",
-                });
+              const refreshed = [freshAsset?.public_url, freshAsset?.url]
+                .filter((u): u is string => Boolean(u));
+              for (const u of refreshed) {
+                if (!candidateUrls.includes(u)) candidateUrls.push(u);
               }
             } catch {
-              // ignore retry errors
+              // ignore refresh errors
             }
           }
 
-          if (!imageRes.ok) {
-            results.errors.push(`Failed to download photo for ${firstName} ${lastName}: ${imageRes.status}`);
+          const baseHeaders = {
+            "User-Agent": "Mozilla/5.0",
+            Accept: "image/*,*/*;q=0.8",
+          };
+
+          // Monday asset endpoints can behave differently; try Bearer, raw token, and no auth.
+          const authVariants: Array<Record<string, string>> = [
+            { ...baseHeaders, Authorization: `Bearer ${mondayToken}` },
+            { ...baseHeaders, Authorization: mondayToken },
+            baseHeaders,
+          ];
+
+          let imageRes: Response | null = null;
+
+          for (const candidateUrl of candidateUrls) {
+            for (const headers of authVariants) {
+              try {
+                const res = await fetch(candidateUrl, {
+                  headers,
+                  redirect: "follow",
+                });
+
+                if (!res.ok) continue;
+
+                const contentType = (res.headers.get("content-type") || "").toLowerCase();
+                if (!contentType.startsWith("image/")) continue;
+
+                imageRes = res;
+                break;
+              } catch {
+                // try next attempt
+              }
+            }
+
+            if (imageRes) break;
+          }
+
+          if (!imageRes) {
+            results.errors.push(`Failed to download photo for ${firstName} ${lastName}`);
             results.details.push({ mondayName: `${firstName} ${lastName}`, status: "download_failed", matchedTo: `${match.child_first_name} ${match.child_last_name}` });
             continue;
           }
 
           const contentType = (imageRes.headers.get("content-type") || "").toLowerCase();
-          if (!contentType.startsWith("image/")) {
-            results.errors.push(`Downloaded non-image content for ${firstName} ${lastName}: ${contentType || "unknown"}`);
-            results.details.push({ mondayName: `${firstName} ${lastName}`, status: "invalid_image_content", matchedTo: `${match.child_first_name} ${match.child_last_name}` });
-            continue;
-          }
-
           const ext = contentType.includes("png") ? "png" : contentType.includes("webp") ? "webp" : "jpg";
           const imageData = await imageRes.arrayBuffer();
 

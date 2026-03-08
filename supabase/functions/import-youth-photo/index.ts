@@ -58,45 +58,52 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Build fetch headers - add Monday API token for Monday.com URLs
-    const fetchHeaders: Record<string, string> = {
+    // Build fetch headers - Monday file URLs can require different auth styles
+    const baseHeaders: Record<string, string> = {
       "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-      "Accept": "image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8",
+      "Accept": "image/*,*/*;q=0.8",
     };
 
     const isMondayUrl = photoUrl.includes("monday.com");
-    if (isMondayUrl) {
-      const mondayToken = Deno.env.get("MONDAY_API_TOKEN");
-      if (mondayToken) {
-        fetchHeaders["Authorization"] = mondayToken;
-        fetchHeaders["Cookie"] = "";
+    const mondayToken = isMondayUrl ? Deno.env.get("MONDAY_API_TOKEN") : null;
+
+    const authVariants: Array<Record<string, string>> = mondayToken
+      ? [
+          { ...baseHeaders, Authorization: `Bearer ${mondayToken}` },
+          { ...baseHeaders, Authorization: mondayToken },
+          baseHeaders,
+        ]
+      : [baseHeaders];
+
+    // Download image with auth fallbacks
+    let imageResponse: Response | null = null;
+    for (const headers of authVariants) {
+      try {
+        const res = await fetch(photoUrl, {
+          headers,
+          redirect: "follow",
+        });
+
+        if (!res.ok) continue;
+
+        const ct = (res.headers.get("content-type") || "").toLowerCase();
+        if (!ct.startsWith("image/")) continue;
+
+        imageResponse = res;
+        break;
+      } catch {
+        // try next auth variant
       }
     }
 
-    // Download the image from the URL
-    let imageResponse: Response;
-    try {
-      imageResponse = await fetch(photoUrl, {
-        headers: fetchHeaders,
-        redirect: "follow",
-      });
-    } catch (fetchErr) {
-      console.error("Fetch error for URL:", photoUrl, "Error:", String(fetchErr));
+    if (!imageResponse) {
       return new Response(
-        JSON.stringify({ error: "Failed to download image", detail: String(fetchErr) }),
+        JSON.stringify({ error: "Failed to download image or file was not a valid image" }),
         { status: 422, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    if (!imageResponse.ok) {
-      console.error("Image download failed:", imageResponse.status, "URL:", photoUrl);
-      return new Response(
-        JSON.stringify({ error: `Image download failed: ${imageResponse.status}` }),
-        { status: 422, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-
-    const contentType = imageResponse.headers.get("content-type") || "image/jpeg";
+    const contentType = (imageResponse.headers.get("content-type") || "image/jpeg").toLowerCase();
     const ext = contentType.includes("png") ? "png" : contentType.includes("webp") ? "webp" : "jpg";
     const imageData = await imageResponse.arrayBuffer();
 
