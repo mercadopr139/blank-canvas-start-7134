@@ -400,27 +400,27 @@ const YouthImportModal = ({ open, onOpenChange, existingRegistrations, onImportC
 
     if (data.child_first_name) rec.child_first_name = data.child_first_name.trim();
     if (data.child_last_name) rec.child_last_name = data.child_last_name.trim();
-    if (data.child_sex) rec.child_sex = normalizeSex(data.child_sex);
+    if (data.child_sex) rec.child_sex = normalizeSex(data.child_sex) || null;
     if (data.child_date_of_birth) rec.child_date_of_birth = data.child_date_of_birth;
-    if (data.child_race_ethnicity) rec.child_race_ethnicity = data.child_race_ethnicity;
+    if (data.child_race_ethnicity) rec.child_race_ethnicity = normalizeRace(data.child_race_ethnicity) || null;
     if (data.parent_first_name) rec.parent_first_name = data.parent_first_name.trim();
     if (data.parent_last_name) rec.parent_last_name = data.parent_last_name.trim();
     if (data.parent_phone) rec.parent_phone = normalizePhone(data.parent_phone);
     if (data.child_phone) rec.child_phone = normalizePhone(data.child_phone);
     if (data.parent_email) rec.parent_email = data.parent_email.trim().toLowerCase();
     if (data.child_primary_address) rec.child_primary_address = data.child_primary_address;
-    if (data.child_school_district) rec.child_school_district = data.child_school_district;
+    if (data.child_school_district) rec.child_school_district = normalizeSchoolDistrict(data.child_school_district) || null;
     if (data.child_grade_level) rec.child_grade_level = parseInt(data.child_grade_level) || null;
-    if (data.child_boxing_program) rec.child_boxing_program = normalizeBoxingProgram(data.child_boxing_program);
+    if (data.child_boxing_program) rec.child_boxing_program = normalizeBoxingProgram(data.child_boxing_program) || null;
     if (data.adults_in_household) rec.adults_in_household = parseInt(data.adults_in_household) || 1;
     if (data.siblings_in_household) rec.siblings_in_household = parseInt(data.siblings_in_household) || 0;
-    if (data.household_income_range) rec.household_income_range = data.household_income_range;
-    if (data.free_or_reduced_lunch) rec.free_or_reduced_lunch = data.free_or_reduced_lunch;
+    if (data.household_income_range) rec.household_income_range = normalizeHouseholdIncome(data.household_income_range) || null;
+    if (data.free_or_reduced_lunch) rec.free_or_reduced_lunch = normalizeFreeLunch(data.free_or_reduced_lunch) || null;
     if (data.allergies) rec.allergies = data.allergies;
     if (data.asthma_inhaler_info) rec.asthma_inhaler_info = data.asthma_inhaler_info;
     if (data.important_child_notes) rec.important_child_notes = data.important_child_notes;
 
-    // Ensure required enum fields have valid defaults
+    // Ensure required enum fields have valid defaults when null
     if (!rec.child_sex) rec.child_sex = "Male";
     if (!rec.child_race_ethnicity) rec.child_race_ethnicity = "Two or More Races";
     if (!rec.child_school_district) rec.child_school_district = "Other";
