@@ -355,27 +355,19 @@ Deno.serve(async (req) => {
         const photoCol = item.column_values.find((c) => c.id === photoColumnId);
         let photoUrl: string | null = null;
 
-        // Parse the file column value for asset info
-        if (photoCol?.value) {
+        // Prefer item assets to avoid additional API calls per row
+        if (item.assets?.length) {
+          const asset = item.assets[0];
+          photoUrl = asset.public_url || asset.url;
+        }
+
+        // Fallback: parse file column JSON for direct URLs
+        if (!photoUrl && photoCol?.value) {
           try {
             const parsed = JSON.parse(photoCol.value);
             const file = parsed?.files?.[0];
-
             if (file?.public_url || file?.url) {
               photoUrl = file.public_url || file.url;
-            }
-
-            const assetId = file?.assetId;
-            if (!photoUrl && assetId) {
-              const assetData = await mondayQuery(mondayToken, `{
-                assets(ids: [${assetId}]) {
-                  public_url
-                  url
-                }
-              }`);
-              if (assetData.assets?.[0]) {
-                photoUrl = assetData.assets[0].public_url || assetData.assets[0].url;
-              }
             }
           } catch {
             // not JSON
