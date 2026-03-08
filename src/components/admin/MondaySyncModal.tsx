@@ -1,14 +1,14 @@
 import { useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Loader2, CheckCircle2, XCircle, AlertTriangle, CloudDownload } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
-interface Board { id: string; name: string; items_count: number; }
+interface Board { id: string; name: string; items_count?: number; }
 interface Column { id: string; title: string; type: string; }
 interface SyncResult {
   total_monday_items: number;
@@ -33,6 +33,9 @@ export default function MondaySyncModal({ open, onOpenChange, onSyncComplete }: 
   const [step, setStep] = useState<Step>("boards");
   const [loading, setLoading] = useState(false);
   const [boards, setBoards] = useState<Board[]>([]);
+  const [boardPage, setBoardPage] = useState(1);
+  const [hasMoreBoards, setHasMoreBoards] = useState(false);
+  const [boardSearch, setBoardSearch] = useState("");
   const [columns, setColumns] = useState<Column[]>([]);
   const [selectedBoard, setSelectedBoard] = useState<string>("");
   const [photoColumn, setPhotoColumn] = useState<string>("");
@@ -45,6 +48,9 @@ export default function MondaySyncModal({ open, onOpenChange, onSyncComplete }: 
     setStep("boards");
     setLoading(false);
     setBoards([]);
+    setBoardPage(1);
+    setHasMoreBoards(false);
+    setBoardSearch("");
     setColumns([]);
     setSelectedBoard("");
     setPhotoColumn("");
@@ -62,12 +68,52 @@ export default function MondaySyncModal({ open, onOpenChange, onSyncComplete }: 
     return data;
   };
 
-  const loadBoards = async () => {
+  const loadBoards = async (page = 1, search = "") => {
     setLoading(true);
     try {
-      const data = await invoke({ action: "list_boards" });
-      setBoards(data.boards || []);
-    } catch (err) {
+      const normalizedSearch = search.trim();
+
+      // If searching from page 1, walk pages until we find at least one match.
+      if (normalizedSearch && page === 1) {
+        let currentPage = 1;
+        let hasMore = true;
+
+        while (hasMore && currentPage <= 20) {
+          const data = await invoke({ action: "list_boards", page: currentPage, search: normalizedSearch });
+          const foundBoards: Board[] = data.boards || [];
+
+          if (foundBoards.length > 0) {
+            setBoards(foundBoards);
+            setBoardPage(data.page || currentPage);
+            setHasMoreBoards(Boolean(data.hasMore));
+            if (selectedBoard && !foundBoards.some((b) => b.id === selectedBoard)) {
+              setSelectedBoard("");
+            }
+            setLoading(false);
+            return;
+          }
+
+          hasMore = Boolean(data.hasMore);
+          currentPage += 1;
+        }
+
+        setBoards([]);
+        setBoardPage(1);
+        setHasMoreBoards(false);
+        if (selectedBoard) setSelectedBoard("");
+        setLoading(false);
+        return;
+      }
+
+      const data = await invoke({ action: "list_boards", page, search: normalizedSearch });
+      const pageBoards: Board[] = data.boards || [];
+      setBoards(pageBoards);
+      setBoardPage(data.page || page);
+      setHasMoreBoards(Boolean(data.hasMore));
+      if (selectedBoard && !pageBoards.some((b) => b.id === selectedBoard)) {
+        setSelectedBoard("");
+      }
+    } catch {
       toast.error("Failed to load Monday.com boards");
     }
     setLoading(false);
@@ -89,7 +135,7 @@ export default function MondaySyncModal({ open, onOpenChange, onSyncComplete }: 
       if (fn) setFirstNameColumn(fn.id);
       const ln = cols.find(c => c.title.toLowerCase().includes("last name") || c.title.toLowerCase() === "last");
       if (ln) setLastNameColumn(ln.id);
-    } catch (err) {
+    } catch {
       toast.error("Failed to load board columns");
     }
     setLoading(false);
@@ -130,7 +176,7 @@ export default function MondaySyncModal({ open, onOpenChange, onSyncComplete }: 
   // Load boards on open
   const handleOpen = () => {
     if (boards.length === 0 && step === "boards") {
-      loadBoards();
+      loadBoards(1, boardSearch);
     }
   };
 
@@ -163,6 +209,14 @@ export default function MondaySyncModal({ open, onOpenChange, onSyncComplete }: 
             ) : (
               <>
                 <p className="text-sm text-muted-foreground">Select the Monday.com board containing youth registrations:</p>
+                <div className="flex gap-2">
+                  <Input
+                    value={boardSearch}
+                    onChange={(e) => setBoardSearch(e.target.value)}
+                    placeholder="Search boards by name..."
+                  />
+                  <Button variant="outline" onClick={() => loadBoards(1, boardSearch)} disabled={loading}>Search</Button>
+                </div>
                 <div className="space-y-2 max-h-[300px] overflow-y-auto">
                   {boards.map((b) => (
                     <button
@@ -175,9 +229,26 @@ export default function MondaySyncModal({ open, onOpenChange, onSyncComplete }: 
                       }`}
                     >
                       <div className="font-medium text-sm">{b.name}</div>
-                      <div className="text-xs text-muted-foreground">{b.items_count} items</div>
+                      <div className="text-xs text-muted-foreground">{typeof b.items_count === "number" ? `${b.items_count} items` : "Board"}</div>
                     </button>
                   ))}
+                </div>
+                <div className="flex items-center justify-between gap-2">
+                  <Button
+                    variant="outline"
+                    onClick={() => loadBoards(Math.max(1, boardPage - 1), boardSearch)}
+                    disabled={loading || boardPage <= 1}
+                  >
+                    Previous
+                  </Button>
+                  <p className="text-xs text-muted-foreground">Page {boardPage}</p>
+                  <Button
+                    variant="outline"
+                    onClick={() => loadBoards(boardPage + 1, boardSearch)}
+                    disabled={loading || !hasMoreBoards}
+                  >
+                    Next Page
+                  </Button>
                 </div>
                 <Button onClick={loadColumns} disabled={!selectedBoard || loading} className="w-full">
                   Next: Map Columns

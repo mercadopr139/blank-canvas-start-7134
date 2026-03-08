@@ -99,27 +99,31 @@ Deno.serve(async (req) => {
 
     // Step 1: List boards so the user can pick the right one
     if (action === "list_boards") {
-      // Fetch up to 200 boards across all workspaces
-      let allBoards: Array<{ id: string; name: string; items_count: number }> = [];
-      let page = 1;
-      let hasMore = true;
-      while (hasMore && page <= 4) {
-        const data = await mondayQuery(mondayToken, `{
-          boards(limit: 200, page: ${page}) {
-            id
-            name
-            items_count
-          }
-        }`);
-        if (data.boards?.length) {
-          allBoards = [...allBoards, ...data.boards];
-          hasMore = data.boards.length === 200;
-          page++;
-        } else {
-          hasMore = false;
+      // Paginated board listing to avoid Monday.com complexity/rate-limit errors
+      const PAGE_SIZE = 50;
+      const page = Math.max(1, Number(body.page || 1));
+      const search = String(body.search || "").trim().toLowerCase();
+
+      const data = await mondayQuery(mondayToken, `{
+        boards(limit: ${PAGE_SIZE}, page: ${page}, state: all) {
+          id
+          name
         }
-      }
-      return new Response(JSON.stringify({ boards: allBoards }), {
+      }`);
+
+      const rawBoards = (data.boards || []).map((b: { id: string; name: string }) => ({
+        ...b,
+        items_count: 0,
+      }));
+      const boards = search
+        ? rawBoards.filter((b: { name: string }) => b.name.toLowerCase().includes(search))
+        : rawBoards;
+
+      return new Response(JSON.stringify({
+        boards,
+        page,
+        hasMore: rawBoards.length === PAGE_SIZE,
+      }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
