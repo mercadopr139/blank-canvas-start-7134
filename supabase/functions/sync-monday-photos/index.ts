@@ -108,11 +108,13 @@ Deno.serve(async (req) => {
         boards(limit: ${PAGE_SIZE}, page: ${page}, state: all) {
           id
           name
-          items_count
         }
       }`);
 
-      const rawBoards = data.boards || [];
+      const rawBoards = (data.boards || []).map((b: { id: string; name: string }) => ({
+        ...b,
+        items_count: 0,
+      }));
       const boards = search
         ? rawBoards.filter((b: { name: string }) => b.name.toLowerCase().includes(search))
         : rawBoards;

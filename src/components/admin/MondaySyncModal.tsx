@@ -8,7 +8,7 @@ import { Loader2, CheckCircle2, XCircle, AlertTriangle, CloudDownload } from "lu
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
-interface Board { id: string; name: string; items_count: number; }
+interface Board { id: string; name: string; items_count?: number; }
 interface Column { id: string; title: string; type: string; }
 interface SyncResult {
   total_monday_items: number;
