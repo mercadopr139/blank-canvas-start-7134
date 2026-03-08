@@ -193,6 +193,7 @@ const AdminRegistrationAnalytics = () => {
                 <CardHeader>
                   <CardTitle className="text-base flex items-center gap-2 text-white">
                     <Utensils className="w-4 h-4 text-[#bf0f3e]" /> Free/Reduced Lunch
+                    <span className="text-xs text-white/40 font-normal ml-2">({lunchTotal} responded)</span>
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
