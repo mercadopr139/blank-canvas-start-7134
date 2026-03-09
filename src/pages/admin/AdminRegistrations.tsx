@@ -19,7 +19,7 @@ import MondaySyncModal from "@/components/admin/MondaySyncModal";
 import { Switch } from "@/components/ui/switch";
 import { format, parseISO, differenceInYears, differenceInMonths } from "date-fns";
 import { toast } from "sonner";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 
 const HeadshotThumbnail = ({ headshotPath, size = "sm" }: { headshotPath: string; size?: "sm" | "lg" }) => {
   const [url, setUrl] = useState<string | null>(null);
@@ -237,16 +237,12 @@ const AdminRegistrations = () => {
                   const age = calculateAge(reg.child_date_of_birth);
                   if (typeof age === "string") return age;
                   return (
-                    <TooltipProvider>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <span className="cursor-default underline decoration-dotted underline-offset-4 decoration-white/30">{age.display}</span>
-                        </TooltipTrigger>
-                        <TooltipContent>
-                          <p className="whitespace-pre-line">{age.tooltip}</p>
-                        </TooltipContent>
-                      </Tooltip>
-                    </TooltipProvider>
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <button className="underline decoration-dotted underline-offset-4 decoration-white/30 cursor-pointer hover:text-white/80">{age.display}</button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-3 text-sm whitespace-pre-line">{age.tooltip}</PopoverContent>
+                    </Popover>
                   );
                 })()}
               </TableCell>
