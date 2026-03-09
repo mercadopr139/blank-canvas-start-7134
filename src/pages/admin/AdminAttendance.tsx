@@ -473,6 +473,17 @@ const getHeadshotUrl = (url: string | null): string | null => {
   }, [calendarMonth]);
 
   /* ───── FILTERED TABLE ───── */
+  // Build a map of registration_id -> earliest check_in_at today for sorting & display
+  const todayCheckInMap = useMemo(() => {
+    const map: Record<string, string> = {};
+    todayRecords.forEach((r) => {
+      if (!map[r.registration_id] || r.check_in_at < map[r.registration_id]) {
+        map[r.registration_id] = r.check_in_at;
+      }
+    });
+    return map;
+  }, [todayRecords]);
+
   const filtered = registrations
     .filter((r) => todayRegIds.has(r.id))
     .filter((r) => filter === "all" || r.is_bald_eagle)
@@ -481,7 +492,8 @@ const getHeadshotUrl = (url: string | null): string | null => {
       (r) =>
         r.child_first_name.toLowerCase().includes(search.toLowerCase()) ||
         r.child_last_name.toLowerCase().includes(search.toLowerCase())
-    );
+    )
+    .sort((a, b) => (todayCheckInMap[a.id] || "").localeCompare(todayCheckInMap[b.id] || ""));
 
   const toggleBaldEagle = async (reg: Registration) => {
     const { error } = await supabase
