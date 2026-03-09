@@ -80,7 +80,7 @@ const AdminRegistrations = () => {
   const [districtFilter, setDistrictFilter] = useState<string>("all");
   const [selectedRegistration, setSelectedRegistration] = useState<any | null>(null);
   const [editingRegistration, setEditingRegistration] = useState<any | null>(null);
-  const [deletingRegistration, setDeletingRegistration] = useState<any | null>(null);
+  
   const [importOpen, setImportOpen] = useState(false);
   const [bulkPhotoOpen, setBulkPhotoOpen] = useState(false);
   const [mondaySyncOpen, setMondaySyncOpen] = useState(false);
@@ -158,20 +158,6 @@ const AdminRegistrations = () => {
     return (reg.allergies && reg.allergies.trim()) || (reg.asthma_inhaler_info && reg.asthma_inhaler_info.trim());
   };
 
-  const handleDelete = async () => {
-    if (!deletingRegistration) return;
-    const { error } = await supabase
-      .from("youth_registrations")
-      .delete()
-      .eq("id", deletingRegistration.id);
-    if (error) {
-      toast.error("Failed to delete registration");
-    } else {
-      toast.success("Registration deleted");
-      queryClient.invalidateQueries({ queryKey: ["youth-registrations"] });
-    }
-    setDeletingRegistration(null);
-  };
 
   const handleDeleteAll = async () => {
     const ids = registrations?.map((r) => r.id) || [];
@@ -282,9 +268,6 @@ const AdminRegistrations = () => {
                   </Button>
                   <Button size="sm" variant="ghost" onClick={() => setEditingRegistration({ ...reg })} className="text-amber-400 hover:text-amber-300 hover:bg-amber-500/10 h-8 w-8 p-0" title="Edit">
                     <Pencil className="w-4 h-4" />
-                  </Button>
-                  <Button size="sm" variant="ghost" onClick={() => setDeletingRegistration(reg)} className="text-red-400 hover:text-red-300 hover:bg-red-500/10 h-8 w-8 p-0" title="Delete">
-                    <Trash2 className="w-4 h-4" />
                   </Button>
                 </div>
               </TableCell>
@@ -464,31 +447,25 @@ const AdminRegistrations = () => {
                   }
                 }}
                 onCancel={() => setEditingRegistration(null)}
+                onDelete={async (id: string) => {
+                  const { error } = await supabase
+                    .from("youth_registrations")
+                    .delete()
+                    .eq("id", id);
+                  if (error) {
+                    toast.error("Failed to delete registration");
+                  } else {
+                    toast.success("Registration permanently deleted");
+                    queryClient.invalidateQueries({ queryKey: ["youth-registrations"] });
+                    setEditingRegistration(null);
+                  }
+                }}
               />
             )}
           </ScrollArea>
         </DialogContent>
       </Dialog>
 
-      {/* Delete Confirmation */}
-      <AlertDialog open={!!deletingRegistration} onOpenChange={() => setDeletingRegistration(null)}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Delete Registration</AlertDialogTitle>
-            <AlertDialogDescription>
-              Are you sure you want to permanently delete the registration for{" "}
-              <strong>{deletingRegistration?.child_first_name} {deletingRegistration?.child_last_name}</strong>?
-              This action cannot be undone.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
-              Delete
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
 
       {/* Delete All - Step 1 */}
       <AlertDialog open={deleteAllStep === 1} onOpenChange={(open) => { if (!open) setDeleteAllStep(0); }}>
@@ -610,13 +587,19 @@ const EditRegistrationForm = ({
   registration,
   onSave,
   onCancel,
+  onDelete,
 }: {
   registration: any;
   onSave: (updated: any) => void;
   onCancel: () => void;
+  onDelete?: (id: string) => void;
 }) => {
   const [form, setForm] = useState(registration);
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+  const [deleteInput, setDeleteInput] = useState("");
   const set = (key: string, value: any) => setForm((f: any) => ({ ...f, [key]: value }));
+
+  const childFullName = `${form.child_first_name} ${form.child_last_name}`;
 
   return (
     <div className="space-y-5">
@@ -721,6 +704,75 @@ const EditRegistrationForm = ({
         <Button variant="outline" onClick={onCancel}>Cancel</Button>
         <Button onClick={() => onSave(form)}>Save Changes</Button>
       </div>
+
+      {/* Danger Zone */}
+      {onDelete && (
+        <div className="mt-12 pt-6 border-t-2 border-destructive/30">
+          <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-5 space-y-3">
+            <div className="flex items-center gap-2">
+              <AlertTriangle className="w-5 h-5 text-destructive" />
+              <h3 className="text-sm font-semibold text-destructive">Danger Zone</h3>
+            </div>
+            <p className="text-sm text-muted-foreground">
+              Delete this youth registration permanently. This action cannot be undone.
+            </p>
+            <Button
+              variant="destructive"
+              size="sm"
+              onClick={() => { setDeleteConfirmOpen(true); setDeleteInput(""); }}
+              className="gap-1.5"
+            >
+              <Trash2 className="w-3.5 h-3.5" /> Delete Registration
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <AlertTriangle className="w-5 h-5 text-destructive" />
+              Permanently Delete Registration
+            </AlertDialogTitle>
+            <AlertDialogDescription asChild>
+              <div className="space-y-3">
+                <p>
+                  Are you sure you want to permanently delete this youth registration?
+                  This action <strong>cannot be undone</strong>.
+                </p>
+                <div className="rounded-md bg-destructive/10 border border-destructive/20 p-3 text-sm">
+                  You are deleting: <strong className="text-destructive">{childFullName}</strong>
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Type <strong>DELETE</strong> to confirm:</Label>
+                  <Input
+                    value={deleteInput}
+                    onChange={(e) => setDeleteInput(e.target.value)}
+                    placeholder="DELETE"
+                    className="font-mono"
+                    autoFocus
+                  />
+                </div>
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setDeleteInput("")}>Cancel</AlertDialogCancel>
+            <Button
+              variant="destructive"
+              disabled={deleteInput !== "DELETE"}
+              onClick={() => {
+                onDelete(form.id);
+                setDeleteConfirmOpen(false);
+              }}
+            >
+              Permanently Delete
+            </Button>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
