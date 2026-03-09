@@ -135,6 +135,7 @@ const exportPdf = (title: string, dateRange: string, summaryRows: [string, strin
 
 /* ───────── Component ───────── */
 const AdminAttendanceReports = () => {
+  const queryClient = useQueryClient();
   const [reportType, setReportType] = useState<ReportType>("daily");
   const [selectedDate, setSelectedDate] = useState(format(new Date(), "yyyy-MM-dd"));
   const [selectedWeekStart, setSelectedWeekStart] = useState(format(startOfWeek(new Date(), { weekStartsOn: 1 }), "yyyy-MM-dd"));
@@ -149,6 +150,16 @@ const AdminAttendanceReports = () => {
   const [districtFilter, setDistrictFilter] = useState("all");
   const [sexFilter, setSexFilter] = useState("all");
   const [baldEaglesOnly, setBaldEaglesOnly] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string; date: string } | null>(null);
+
+  const handleDeleteSingle = async () => {
+    if (!deleteTarget) return;
+    const { error } = await supabase.from("attendance_records").delete().eq("id", deleteTarget.id);
+    if (error) { toast.error("Failed to delete check-in"); return; }
+    toast.success(`Removed check-in for ${deleteTarget.name}`);
+    setDeleteTarget(null);
+    queryClient.invalidateQueries({ queryKey: ["report-attendance"] });
+  };
 
   // Fetch all registrations
   const { data: registrations = [] } = useQuery({
