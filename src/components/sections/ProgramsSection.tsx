@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Link } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -114,9 +115,9 @@ const ProgramsSection = ({
             </p>
           </div>
           <Button className="w-full mt-4 bg-primary hover:bg-primary/90 text-primary-foreground font-semibold" asChild>
-            <a href="https://wkf.ms/45C6tce" target="_blank" rel="noopener noreferrer">
+            <Link to="/register">
               SIGN-UP
-            </a>
+            </Link>
           </Button>
         </DialogContent>
       </Dialog>
@@ -166,9 +167,9 @@ const ProgramsSection = ({
             </p>
           </div>
           <Button className="w-full mt-4 bg-foreground hover:bg-foreground/90 text-background font-semibold" asChild>
-            <a href="https://wkf.ms/45C6tce" target="_blank" rel="noopener noreferrer">
+            <Link to="/register">
               SIGN-UP
-            </a>
+            </Link>
           </Button>
         </DialogContent>
       </Dialog>
