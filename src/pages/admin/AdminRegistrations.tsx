@@ -77,7 +77,7 @@ const AdminRegistrations = () => {
   const [districtFilter, setDistrictFilter] = useState<string>("all");
   const [selectedRegistration, setSelectedRegistration] = useState<any | null>(null);
   const [editingRegistration, setEditingRegistration] = useState<any | null>(null);
-  
+  const [csvFallbackUrl, setCsvFallbackUrl] = useState<string | null>(null);
 
   const { data: registrations, isLoading } = useQuery({
     queryKey: ["youth-registrations"],
