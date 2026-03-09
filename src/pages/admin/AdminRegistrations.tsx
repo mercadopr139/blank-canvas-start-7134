@@ -80,7 +80,7 @@ const AdminRegistrations = () => {
   const [districtFilter, setDistrictFilter] = useState<string>("all");
   const [selectedRegistration, setSelectedRegistration] = useState<any | null>(null);
   const [editingRegistration, setEditingRegistration] = useState<any | null>(null);
-  const [deletingRegistration, setDeletingRegistration] = useState<any | null>(null);
+  
   const [importOpen, setImportOpen] = useState(false);
   const [bulkPhotoOpen, setBulkPhotoOpen] = useState(false);
   const [mondaySyncOpen, setMondaySyncOpen] = useState(false);
@@ -158,20 +158,6 @@ const AdminRegistrations = () => {
     return (reg.allergies && reg.allergies.trim()) || (reg.asthma_inhaler_info && reg.asthma_inhaler_info.trim());
   };
 
-  const handleDelete = async () => {
-    if (!deletingRegistration) return;
-    const { error } = await supabase
-      .from("youth_registrations")
-      .delete()
-      .eq("id", deletingRegistration.id);
-    if (error) {
-      toast.error("Failed to delete registration");
-    } else {
-      toast.success("Registration deleted");
-      queryClient.invalidateQueries({ queryKey: ["youth-registrations"] });
-    }
-    setDeletingRegistration(null);
-  };
 
   const handleDeleteAll = async () => {
     const ids = registrations?.map((r) => r.id) || [];
