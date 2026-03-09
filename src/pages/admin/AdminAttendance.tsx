@@ -87,6 +87,16 @@ const AdminAttendance = () => {
     invalidateAttendance();
   };
 
+const getHeadshotUrl = (url: string | null): string | null => {
+  if (!url) return null;
+  if (url.startsWith("http")) return url;
+  const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+  if (url.startsWith("youth-photos/")) {
+    return `${supabaseUrl}/storage/v1/object/public/youth-photos/${url}`;
+  }
+  return `${supabaseUrl}/storage/v1/object/public/registration-signatures/${url}`;
+};
+
 
   const calMonthStart = format(startOfMonth(calendarMonth), "yyyy-MM-dd");
   const calMonthEnd = format(endOfMonth(calendarMonth), "yyyy-MM-dd");
@@ -853,8 +863,8 @@ const AdminAttendance = () => {
                       <TableRow key={a.id} className="border-white/10 cursor-pointer hover:bg-white/5" onClick={() => setSelectedYouth(a)}>
                         <TableCell>
                           <div className="w-8 h-8 rounded-full bg-white/10 overflow-hidden">
-                            {a.child_headshot_url ? (
-                              <img src={a.child_headshot_url} alt="" className="w-full h-full object-cover" />
+                            {getHeadshotUrl(a.child_headshot_url) ? (
+                              <img src={getHeadshotUrl(a.child_headshot_url)!} alt="" className="w-full h-full object-cover" />
                             ) : (
                               <span className="flex items-center justify-center w-full h-full text-xs text-white/40">{a.child_first_name[0]}</span>
                             )}
@@ -907,8 +917,8 @@ const AdminAttendance = () => {
                         <TableRow key={r.id} className="border-white/10 cursor-pointer hover:bg-white/5" onClick={() => setSelectedYouth(r)}>
                           <TableCell>
                             <div className="w-8 h-8 rounded-full bg-white/10 overflow-hidden">
-                              {r.child_headshot_url ? (
-                                <img src={r.child_headshot_url} alt="" className="w-full h-full object-cover" />
+                              {getHeadshotUrl(r.child_headshot_url) ? (
+                                <img src={getHeadshotUrl(r.child_headshot_url)!} alt="" className="w-full h-full object-cover" />
                               ) : (
                                 <span className="flex items-center justify-center w-full h-full text-xs text-white/40">{r.child_first_name[0]}</span>
                               )}
@@ -1028,8 +1038,8 @@ const AdminAttendance = () => {
                 {daySignIns.map((s) => (
                   <div key={s.id} className="flex items-center gap-3 p-2.5 rounded-lg bg-white/5 border border-white/5">
                     <div className="w-8 h-8 rounded-full bg-white/10 overflow-hidden flex-shrink-0">
-                      {s.reg.child_headshot_url ? (
-                        <img src={s.reg.child_headshot_url} alt="" className="w-full h-full object-cover" />
+                      {getHeadshotUrl(s.reg.child_headshot_url) ? (
+                        <img src={getHeadshotUrl(s.reg.child_headshot_url)!} alt="" className="w-full h-full object-cover" />
                       ) : (
                         <span className="flex items-center justify-center w-full h-full text-xs text-white/40">{s.reg.child_first_name[0]}</span>
                       )}
@@ -1137,8 +1147,8 @@ const AdminAttendance = () => {
               <DialogHeader>
                 <DialogTitle className="flex items-center gap-3">
                   <div className="w-12 h-12 rounded-full bg-white/10 overflow-hidden flex-shrink-0">
-                    {selectedYouth.child_headshot_url ? (
-                      <img src={selectedYouth.child_headshot_url} alt="" className="w-full h-full object-cover" />
+                    {getHeadshotUrl(selectedYouth.child_headshot_url) ? (
+                      <img src={getHeadshotUrl(selectedYouth.child_headshot_url)!} alt="" className="w-full h-full object-cover" />
                     ) : (
                       <span className="flex items-center justify-center w-full h-full text-lg text-white/40">{selectedYouth.child_first_name[0]}</span>
                     )}
