@@ -123,6 +123,7 @@ const CheckIn = () => {
     setError(null);
     setCheckedIn(null);
     setAlreadyIn(null);
+    setShowCelebration(false);
     const today = new Date().toISOString().split("T")[0];
     const { error: insertError } = await supabase
       .from("attendance_records")
@@ -138,11 +139,14 @@ const CheckIn = () => {
       return;
     }
     setCheckedIn(y.id);
+    setCheckedInName(`${y.child_first_name} ${y.child_last_name}`);
+    setShowCelebration(true);
     setTimeout(() => {
       setCheckedIn(null);
+      setShowCelebration(false);
       setSearch("");
       setYouth([]);
-    }, 2500);
+    }, 3500);
   };
 
   return (
