@@ -1,4 +1,4 @@
-import { Users, BarChart3, ClipboardList, LucideIcon, CalendarCheck, FileBarChart, Settings2 } from "lucide-react";
+import { Users, BarChart3, ClipboardList, LucideIcon, CalendarCheck, FileBarChart, Settings2, Star } from "lucide-react";
 import AdminSectionLayout, { SectionCard } from "@/components/admin/AdminSectionLayout";
 
 interface OperationsTile {
