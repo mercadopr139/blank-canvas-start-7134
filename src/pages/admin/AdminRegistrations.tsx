@@ -119,18 +119,25 @@ const AdminRegistrations = () => {
     };
   }, [queryClient]);
 
-  const filteredRegistrations = registrations?.filter((reg) => {
-    const matchesSearch =
-      searchQuery === "" ||
-      `${reg.child_first_name} ${reg.child_last_name}`.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      `${reg.parent_first_name} ${reg.parent_last_name}`.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      reg.parent_email?.toLowerCase().includes(searchQuery.toLowerCase());
+  const filteredRegistrations = registrations
+    ?.filter((reg) => {
+      const matchesSearch =
+        searchQuery === "" ||
+        `${reg.child_first_name} ${reg.child_last_name}`.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        `${reg.parent_first_name} ${reg.parent_last_name}`.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        reg.parent_email?.toLowerCase().includes(searchQuery.toLowerCase());
 
-    const matchesProgram = programFilter === "all" || reg.child_boxing_program === programFilter;
-    const matchesDistrict = districtFilter === "all" || reg.child_school_district === districtFilter;
+      const matchesProgram = programFilter === "all" || reg.child_boxing_program === programFilter;
+      const matchesDistrict = districtFilter === "all" || reg.child_school_district === districtFilter;
 
-    return matchesSearch && matchesProgram && matchesDistrict;
-  });
+      return matchesSearch && matchesProgram && matchesDistrict;
+    })
+    .sort((a, b) => {
+      // Sort alphabetically by last name, then first name
+      const lastNameCompare = a.child_last_name.localeCompare(b.child_last_name);
+      if (lastNameCompare !== 0) return lastNameCompare;
+      return a.child_first_name.localeCompare(b.child_first_name);
+    });
 
   const calculateAge = (dob: string) => {
     return differenceInYears(new Date(), parseISO(dob));
@@ -212,7 +219,7 @@ const AdminRegistrations = () => {
                 {format(parseISO(reg.submission_date), "MMM d, yyyy")}
               </TableCell>
               <TableCell className="font-medium text-white">
-                {reg.child_first_name} {reg.child_last_name}
+                {reg.child_last_name}, {reg.child_first_name}
               </TableCell>
               <TableCell className="text-white">{calculateAge(reg.child_date_of_birth)}</TableCell>
               <TableCell>
@@ -351,7 +358,15 @@ const AdminRegistrations = () => {
           <div className="flex items-center gap-3 mb-3">
             <h3 className="text-lg font-semibold text-white">Approved Youth Registrations</h3>
             {approvedRegistrations.length > 0 && (
-              <Badge className="bg-green-500/15 text-green-500 border-green-500/30 text-xs">{approvedRegistrations.length}</Badge>
+              <>
+                <Badge className="bg-green-500/15 text-green-500 border-green-500/30 text-xs">{approvedRegistrations.length}</Badge>
+                <Badge className="bg-[#bf0f3e]/10 border-[#bf0f3e]/30 text-xs" style={{ color: '#bf0f3e' }}>
+                  {approvedRegistrations.filter(r => r.child_boxing_program?.includes("Senior")).length} Senior
+                </Badge>
+                <Badge className="bg-blue-500/10 text-blue-500 border-blue-500/30 text-xs">
+                  {approvedRegistrations.filter(r => r.child_boxing_program?.includes("Junior")).length} Junior
+                </Badge>
+              </>
             )}
           </div>
           <Card className="bg-white/5 border-white/10">
