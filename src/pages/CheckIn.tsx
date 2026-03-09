@@ -28,15 +28,51 @@ interface Youth {
   child_headshot_url: string | null;
 }
 
+// Confetti particle component
+const Confetti = () => {
+  const colors = ['#22c55e', '#facc15', '#ef4444', '#3b82f6', '#a855f7', '#f97316'];
+  const particles = Array.from({ length: 50 }, (_, i) => ({
+    id: i,
+    left: Math.random() * 100,
+    delay: Math.random() * 0.5,
+    duration: 1 + Math.random() * 2,
+    color: colors[Math.floor(Math.random() * colors.length)],
+    size: 8 + Math.random() * 8,
+  }));
+
+  return (
+    <div className="fixed inset-0 pointer-events-none overflow-hidden z-50">
+      {particles.map((p) => (
+        <div
+          key={p.id}
+          className="absolute animate-confetti"
+          style={{
+            left: `${p.left}%`,
+            top: '-20px',
+            width: p.size,
+            height: p.size,
+            backgroundColor: p.color,
+            borderRadius: Math.random() > 0.5 ? '50%' : '2px',
+            animationDelay: `${p.delay}s`,
+            animationDuration: `${p.duration}s`,
+          }}
+        />
+      ))}
+    </div>
+  );
+};
+
 const CheckIn = () => {
   const [search, setSearch] = useState("");
   const [youth, setYouth] = useState<Youth[]>([]);
   const [loading, setLoading] = useState(false);
   const [checkedIn, setCheckedIn] = useState<string | null>(null);
+  const [checkedInName, setCheckedInName] = useState<string>("");
   const [alreadyIn, setAlreadyIn] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [photoModalOpen, setPhotoModalOpen] = useState(false);
   const [selectedYouth, setSelectedYouth] = useState<Youth | null>(null);
+  const [showCelebration, setShowCelebration] = useState(false);
 
   useEffect(() => {
     if (search.length < 2) {
