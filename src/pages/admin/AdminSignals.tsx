@@ -690,10 +690,10 @@ const AdminSignals = () => {
 
       <main className="container mx-auto px-4 py-6 max-w-4xl">
 
-        {/* Supporting row: Upcoming Events (left) + Logo & Verse (right) */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8 items-start">
+        {/* ═══ Reflection / Awareness Section ═══ */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
           {/* Upcoming Events – dimmed supporting widget */}
-          <div className="opacity-60">
+          <div className="opacity-50 hover:opacity-70 transition-opacity">
             <UpcomingEventsWidget />
           </div>
 
@@ -706,7 +706,14 @@ const AdminSignals = () => {
           </div>
         </div>
 
-        {/* Day Won Banner */}
+        {/* ═══ Divider ═══ */}
+        <div className="my-10 flex items-center gap-4">
+          <div className="flex-1 h-px bg-gradient-to-r from-transparent via-white/8 to-transparent" />
+          <div className="w-1 h-1 rounded-full bg-white/10" />
+          <div className="flex-1 h-px bg-gradient-to-r from-transparent via-white/8 to-transparent" />
+        </div>
+
+        {/* ═══ Action Bar ═══ */}
         {dayWon && (
           <div className="text-center py-6 mb-6 rounded-2xl bg-gradient-to-r from-amber-500/10 via-amber-400/5 to-amber-500/10 border border-amber-400/20">
             <p className="text-3xl font-bold text-amber-400 tracking-wide" style={{ textShadow: "0 0 30px rgba(251,191,36,0.3)" }}>
@@ -716,8 +723,8 @@ const AdminSignals = () => {
           </div>
         )}
 
-        {/* Progress Ring + Stats Row */}
-        <div className="flex items-center gap-6 mb-8">
+        <div className="flex items-center gap-6 mb-10 py-4 px-5 rounded-xl bg-white/[0.02] border border-white/[0.06]">
+          {/* Progress Ring */}
           <div className="relative shrink-0">
             <svg width="96" height="96" viewBox="0 0 96 96" className="-rotate-90">
               <circle cx="48" cy="48" r={ringR} fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth="5" />
@@ -737,6 +744,8 @@ const AdminSignals = () => {
               <span className="text-[8px] uppercase tracking-wider text-white/25 mt-0.5">Core 3</span>
             </div>
           </div>
+
+          {/* Stats */}
           <div className="flex flex-col gap-2 flex-1">
             <div className="flex items-center gap-3">
               <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-amber-400/10 border border-amber-400/20">
@@ -758,9 +767,11 @@ const AdminSignals = () => {
               </div>
             )}
           </div>
+
+          {/* Add Signal */}
           <Button
             onClick={() => setShowAdd(true)}
-            className="shrink-0 bg-white text-black hover:bg-white/90 font-semibold shadow-lg shadow-white/5"
+            className="shrink-0 bg-white text-black hover:bg-white/90 font-semibold shadow-lg shadow-white/5 px-5 py-2.5 text-sm"
           >
             <Plus className="w-4 h-4 mr-1.5" />
             Add Signal
