@@ -690,6 +690,11 @@ const AdminSignals = () => {
 
       <main className="container mx-auto px-4 py-6 max-w-4xl">
 
+        {/* Upcoming Events – top-left */}
+        <div className="mb-6 max-w-sm">
+          <UpcomingEventsWidget />
+        </div>
+
         {/* Day Won Banner */}
         {dayWon && (
           <div className="text-center py-6 mb-6 rounded-2xl bg-gradient-to-r from-amber-500/10 via-amber-400/5 to-amber-500/10 border border-amber-400/20">
