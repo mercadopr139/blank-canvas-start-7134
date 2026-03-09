@@ -496,6 +496,28 @@ const AdminRegistrations = () => {
         </DialogContent>
       </Dialog>
 
+      {/* CSV Fallback Download Dialog */}
+      <Dialog open={!!csvFallbackUrl} onOpenChange={(open) => { if (!open) { if (csvFallbackUrl) URL.revokeObjectURL(csvFallbackUrl); setCsvFallbackUrl(null); } }}>
+        <DialogContent className="bg-zinc-900 border-white/10 text-white max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-white">CSV Export Ready</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-white/70">
+            If the file didn't download automatically (common in preview mode), use the buttons below.
+          </p>
+          <div className="flex flex-col gap-2 pt-2">
+            <Button asChild className="gap-2">
+              <a href={csvFallbackUrl || "#"} download={`Youth_Registrations_Export_${format(new Date(), "yyyy-MM-dd")}.csv`}>
+                <Download className="w-4 h-4" /> Download CSV
+              </a>
+            </Button>
+            <Button variant="outline" className="gap-2 border-white/20 text-white hover:bg-white/10" onClick={() => { if (csvFallbackUrl) window.open(csvFallbackUrl, "_blank"); }}>
+              <ExternalLink className="w-4 h-4" /> Open CSV in New Tab
+            </Button>
+          </div>
+          <p className="text-xs text-white/40 pt-1">On the published site, downloads work automatically.</p>
+        </DialogContent>
+      </Dialog>
 
     </div>
   );
