@@ -51,6 +51,8 @@ import facilityHighWork from "@/assets/facility/facility-high-work.png";
 import facilityFinishedCourt from "@/assets/facility/facility-finished-court.png";
 import facilityFinishedGymNew from "@/assets/facility/facility-finished-gym-new.jpg";
 import facilityFinishedCourtNew from "@/assets/facility/facility-finished-court-new.jpg";
+import facilityFinishedLearningCenter from "@/assets/facility/facility-finished-learning-center.jpg";
+import facilityFinishedTeenCenter from "@/assets/facility/facility-finished-teen-center.jpg";
 
 type FacilityImg = {src: string;alt: string;};
 
@@ -267,7 +269,7 @@ McNally coached Navy boxing for 37 years and interestingly, in the late 1970s, h
 
               {/* Featured finished facility photos */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                {[{ src: facilityFinishedGymNew, alt: "The finished Boxing Facility" }, { src: facilityFinishedCourtNew, alt: "The finished Performance Center" }].
+                {[{ src: facilityFinishedGymNew, alt: "The Finished Boxing Facility" }, { src: facilityFinishedCourtNew, alt: "The Finished Performance Center" }, { src: facilityFinishedLearningCenter, alt: "The Finished Learning Center" }, { src: facilityFinishedTeenCenter, alt: "The Finished Teen Center" }].
                 map((img, idx) =>
                 <div key={`featured-${idx}`} className="relative overflow-hidden rounded-xl group">
                     <button
