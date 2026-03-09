@@ -12,7 +12,7 @@ import { AlertDialog, AlertDialogCancel, AlertDialogContent, AlertDialogDescript
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Search, Eye, AlertTriangle, ExternalLink, Loader2, Pencil, Trash2, CheckCircle2, XCircle, ShieldCheck, Download } from "lucide-react";
+import { Search, Eye, AlertTriangle, ExternalLink, Loader2, Pencil, Trash2, CheckCircle2, XCircle, ShieldCheck, Download, Star } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { format, parseISO, differenceInYears, differenceInMonths } from "date-fns";
 import { toast } from "sonner";
@@ -75,6 +75,7 @@ const AdminRegistrations = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [programFilter, setProgramFilter] = useState<string>("all");
   const [districtFilter, setDistrictFilter] = useState<string>("all");
+  const [baldEagleFilter, setBaldEagleFilter] = useState<string>("all");
   const [selectedRegistration, setSelectedRegistration] = useState<any | null>(null);
   const [editingRegistration, setEditingRegistration] = useState<any | null>(null);
   const [csvFallbackUrl, setCsvFallbackUrl] = useState<string | null>(null);
@@ -124,8 +125,9 @@ const AdminRegistrations = () => {
 
       const matchesProgram = programFilter === "all" || reg.child_boxing_program === programFilter;
       const matchesDistrict = districtFilter === "all" || reg.child_school_district === districtFilter;
+      const matchesBaldEagle = baldEagleFilter === "all" || (baldEagleFilter === "yes" ? reg.is_bald_eagle : !reg.is_bald_eagle);
 
-      return matchesSearch && matchesProgram && matchesDistrict;
+      return matchesSearch && matchesProgram && matchesDistrict && matchesBaldEagle;
     })
     .sort((a, b) => {
       // Sort alphabetically by last name, then first name
@@ -156,7 +158,7 @@ const AdminRegistrations = () => {
   const buildCsvString = () => {
     const rows = filteredRegistrations || [];
     if (rows.length === 0) return null;
-    const headers = ["Child Name", "Date of Birth", "Age", "Program", "District", "Parent Name", "Parent Email", "Parent Phone", "Medical Alert", "Registration Date", "Attendance Status"];
+    const headers = ["Child Name", "Date of Birth", "Age", "Program", "District", "Parent Name", "Parent Email", "Parent Phone", "Bald Eagle", "Medical Alert", "Registration Date", "Attendance Status"];
     const csvRows = rows.map((r: any) => {
       const age = calculateAge(r.child_date_of_birth);
       const ageStr = typeof age === "string" ? age : age.tooltip.split("\n")[0];
@@ -170,6 +172,7 @@ const AdminRegistrations = () => {
         `${r.parent_first_name || ""} ${r.parent_last_name || ""}`.trim(),
         r.parent_email || "",
         r.parent_phone || "",
+        r.is_bald_eagle ? "Yes" : "No",
         medical,
         r.submission_date ? format(parseISO(r.submission_date), "MM/dd/yyyy") : "",
         r.approved_for_attendance ? "Approved" : "Pending",
@@ -219,6 +222,19 @@ const AdminRegistrations = () => {
   const programs = [...new Set(registrations?.map((r) => r.child_boxing_program) || [])];
   const districts = [...new Set(registrations?.map((r) => r.child_school_district) || [])];
 
+  const toggleBaldEagle = async (reg: any) => {
+    const newValue = !reg.is_bald_eagle;
+    const { error } = await supabase
+      .from("youth_registrations")
+      .update({ is_bald_eagle: newValue })
+      .eq("id", reg.id);
+    if (error) {
+      toast.error("Failed to update Bald Eagle status");
+      return;
+    }
+    queryClient.invalidateQueries({ queryKey: ["youth-registrations"] });
+    toast.success(newValue ? "Marked as Bald Eagle" : "Removed Bald Eagle status");
+  };
   const newSubmissions = filteredRegistrations?.filter((r) => !r.approved_for_attendance) || [];
   const approvedRegistrations = filteredRegistrations?.filter((r) => r.approved_for_attendance) || [];
 
@@ -234,6 +250,7 @@ const AdminRegistrations = () => {
             <TableHead className="text-white/70">Program</TableHead>
             <TableHead className="text-white/70">District</TableHead>
             <TableHead className="text-white/70">Parent</TableHead>
+            <TableHead className="text-white/70 w-10 text-center">🦅</TableHead>
             <TableHead className="text-white/70">Attendance</TableHead>
             <TableHead className="text-white/70">Alerts</TableHead>
             <TableHead className="text-right text-white/70">Actions</TableHead>
@@ -242,7 +259,7 @@ const AdminRegistrations = () => {
         <TableBody>
           {rows.length === 0 ? (
             <TableRow className="border-white/10 hover:bg-transparent">
-              <TableCell colSpan={10} className="text-center py-8 text-white/40">{emptyMessage}</TableCell>
+              <TableCell colSpan={11} className="text-center py-8 text-white/40">{emptyMessage}</TableCell>
             </TableRow>
           ) : rows.map((reg) => (
             <TableRow key={reg.id} className="border-white/10 hover:bg-white/5">
@@ -287,6 +304,17 @@ const AdminRegistrations = () => {
               <TableCell className="text-sm text-white/70">{reg.child_school_district}</TableCell>
               <TableCell className="text-white">
                 {reg.parent_first_name} {reg.parent_last_name}
+              </TableCell>
+              <TableCell className="text-center">
+                <button
+                  onClick={(e) => { e.stopPropagation(); toggleBaldEagle(reg); }}
+                  className="hover:scale-110 transition-transform"
+                  title={reg.is_bald_eagle ? "Remove Bald Eagle" : "Mark as Bald Eagle"}
+                >
+                  <Star
+                    className={`w-5 h-5 ${reg.is_bald_eagle ? "fill-amber-400 text-amber-400" : "text-white/20 hover:text-white/40"}`}
+                  />
+                </button>
               </TableCell>
               <TableCell>
                 {reg.approved_for_attendance ? (
@@ -367,6 +395,16 @@ const AdminRegistrations = () => {
                   {districts.map((d) => (
                     <SelectItem key={d} value={d}>{d}</SelectItem>
                   ))}
+                </SelectContent>
+              </Select>
+              <Select value={baldEagleFilter} onValueChange={setBaldEagleFilter}>
+                <SelectTrigger className="w-full md:w-[180px] bg-white/5 border-white/10 text-white">
+                  <SelectValue placeholder="Bald Eagles" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Youth</SelectItem>
+                  <SelectItem value="yes">Bald Eagles Only</SelectItem>
+                  <SelectItem value="no">Non Bald Eagles</SelectItem>
                 </SelectContent>
               </Select>
             </div>
