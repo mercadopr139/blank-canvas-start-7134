@@ -147,8 +147,8 @@ const CheckIn = () => {
             >
               <CardContent className="flex items-center gap-4 p-4">
                 <div className="w-12 h-12 rounded-full bg-white/10 flex items-center justify-center overflow-hidden flex-shrink-0">
-                  {y.child_headshot_url ? (
-                    <img src={y.child_headshot_url} alt="" className="w-full h-full object-cover" />
+                  {getHeadshotUrl(y.child_headshot_url) ? (
+                    <img src={getHeadshotUrl(y.child_headshot_url)!} alt="" className="w-full h-full object-cover" />
                   ) : (
                     <span className="text-lg font-bold text-white/50">
                       {y.child_first_name[0]}
