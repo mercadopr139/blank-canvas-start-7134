@@ -854,7 +854,7 @@ const AdminSignals = () => {
                     <Target className="w-4 h-4 text-rose-500" />
                     <h3 className="text-sm font-bold text-rose-500 uppercase tracking-wider">Core 3</h3>
                   </div>
-                  <SortableContext items={todayCoreSignals.map(s => s.id)} strategy={verticalListSortingStrategy}>
+                  <SortableContext items={[...todayCoreSignals].sort((a, b) => (b.status === "Complete" ? 1 : 0) - (a.status === "Complete" ? 1 : 0)).map(s => s.id)} strategy={verticalListSortingStrategy}>
                     <div className="px-3 pb-3 space-y-1 min-h-[80px]">
                       {todayCoreSignals.length === 0 ? (
                         <>
@@ -866,7 +866,7 @@ const AdminSignals = () => {
                           ))}
                         </>
                       ) : (
-                        todayCoreSignals.map((signal) => (
+                        [...todayCoreSignals].sort((a, b) => (b.status === "Complete" ? 1 : 0) - (a.status === "Complete" ? 1 : 0)).map((signal) => (
                           <SortableSignalRow
                             key={signal.id}
                             signal={signal}
