@@ -146,7 +146,15 @@ const CheckIn = () => {
               } ${alreadyIn === y.id ? "border-yellow-500 bg-yellow-500/10" : ""}`}
             >
               <CardContent className="flex items-center gap-4 p-4">
-                <div className="w-12 h-12 rounded-full bg-white/10 flex items-center justify-center overflow-hidden flex-shrink-0">
+                <div 
+                  className="w-12 h-12 rounded-full bg-white/10 flex items-center justify-center overflow-hidden flex-shrink-0 cursor-pointer hover:ring-2 hover:ring-white/30 transition-all"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setSelectedYouth(y);
+                    setPhotoModalOpen(true);
+                  }}
+                  title="Update photo"
+                >
                   {getHeadshotUrl(y.child_headshot_url) ? (
                     <img src={getHeadshotUrl(y.child_headshot_url)!} alt="" className="w-full h-full object-cover" />
                   ) : (
@@ -155,7 +163,7 @@ const CheckIn = () => {
                     </span>
                   )}
                 </div>
-                <div className="flex-1 min-w-0 cursor-pointer" onClick={() => !checkedIn && handleCheckIn(y)}>
+                <div className="flex-1 min-w-0">
                   <p className="font-semibold text-lg">
                     {y.child_first_name} {y.child_last_name}
                   </p>
@@ -163,9 +171,10 @@ const CheckIn = () => {
                 </div>
                 <div className="flex items-center gap-2">
                   {checkedIn === y.id && (
-                    <div className="flex items-center gap-2 text-green-400">
-                      <CheckCircle2 className="w-6 h-6" />
-                      <span className="font-medium">Checked In!</span>
+                    <div className="flex flex-col items-center text-green-400 animate-in fade-in zoom-in duration-300">
+                      <CheckCircle2 className="w-8 h-8 mb-1" />
+                      <span className="font-bold text-lg">CHECKED-IN!</span>
+                      <span className="text-xs text-white/60 italic">"Iron sharpens iron"</span>
                     </div>
                   )}
                   {alreadyIn === y.id && (
@@ -177,13 +186,11 @@ const CheckIn = () => {
                       variant="outline"
                       onClick={(e) => {
                         e.stopPropagation();
-                        setSelectedYouth(y);
-                        setPhotoModalOpen(true);
+                        handleCheckIn(y);
                       }}
-                      className="gap-2 bg-white/5 hover:bg-white/10 border-white/20 text-white"
+                      className="border-green-500 text-green-400 hover:bg-green-500/10 hover:text-green-300 font-semibold px-4"
                     >
-                      <Camera className="w-4 h-4" />
-                      Update Photo
+                      SIGN IN
                     </Button>
                   )}
                 </div>
