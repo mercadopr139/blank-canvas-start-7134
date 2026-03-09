@@ -1118,7 +1118,7 @@ const getHeadshotUrl = (url: string | null): string | null => {
                   <TableHead className="text-white/60 w-10"></TableHead>
                   <TableHead className="text-white/60">Name</TableHead>
                   <TableHead className="text-white/60">Program</TableHead>
-                  <TableHead className="text-white/60">Today</TableHead>
+                  <TableHead className="text-white/60">Time</TableHead>
                   <TableHead className="text-white/60">This Week</TableHead>
                   <TableHead className="text-white/60">This Month</TableHead>
                   <TableHead className="text-white/60 w-10"></TableHead>
