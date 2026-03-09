@@ -18,7 +18,7 @@ import {
 } from "recharts";
 import {
   startOfWeek, startOfMonth, endOfMonth, format, differenceInCalendarDays,
-  addMonths, subMonths, getDay, getDaysInMonth, isToday, parseISO, endOfWeek,
+  addMonths, subMonths, subWeeks, getDay, getDaysInMonth, isToday, parseISO, endOfWeek,
 } from "date-fns";
 import { toast } from "sonner";
 
