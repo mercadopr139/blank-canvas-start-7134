@@ -1147,8 +1147,8 @@ const getHeadshotUrl = (url: string | null): string | null => {
               <DialogHeader>
                 <DialogTitle className="flex items-center gap-3">
                   <div className="w-12 h-12 rounded-full bg-white/10 overflow-hidden flex-shrink-0">
-                    {selectedYouth.child_headshot_url ? (
-                      <img src={selectedYouth.child_headshot_url} alt="" className="w-full h-full object-cover" />
+                    {getHeadshotUrl(selectedYouth.child_headshot_url) ? (
+                      <img src={getHeadshotUrl(selectedYouth.child_headshot_url)!} alt="" className="w-full h-full object-cover" />
                     ) : (
                       <span className="flex items-center justify-center w-full h-full text-lg text-white/40">{selectedYouth.child_first_name[0]}</span>
                     )}
