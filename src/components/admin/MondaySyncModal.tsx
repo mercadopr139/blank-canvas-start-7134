@@ -131,7 +131,7 @@ export default function MondaySyncModal({ open, onOpenChange, onSyncComplete }: 
 
       // Auto-detect common column names
       const cols: Column[] = data.columns || [];
-      const photo = cols.find(c => c.type === "file" || c.title.toLowerCase().includes("photo") || c.title.toLowerCase().includes("picture") || c.title.toLowerCase().includes("upload"));
+      const photo = cols.find(c => c.type === "file" || c.title.toLowerCase().includes("photo") || c.title.toLowerCase().includes("picture") || c.title.toLowerCase().includes("upload") || c.title.toLowerCase().includes("headshot") || c.title.toLowerCase().includes("avatar") || c.title.toLowerCase().includes("image"));
       if (photo) setPhotoColumn(photo.id);
       const fn = cols.find(c => c.title.toLowerCase().includes("first name") || c.title.toLowerCase() === "first");
       if (fn) setFirstNameColumn(fn.id);
