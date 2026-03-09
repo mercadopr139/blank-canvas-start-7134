@@ -371,12 +371,11 @@ const getHeadshotUrl = (url: string | null): string | null => {
       insights.push(`${weakest.day} attendance tends to be lower than midweek attendance.`);
     }
 
-    // Program comparison this week
-    const weekJr = weekRecords.filter((a) => regMap[a.registration_id]?.child_boxing_program.includes("Junior")).length;
-    const weekSr = weekRecords.filter((a) => regMap[a.registration_id]?.child_boxing_program.includes("Senior")).length;
-    if (weekJr > 0 || weekSr > 0) {
-      if (weekSr > weekJr) insights.push("Senior Boxer attendance is higher than Junior Boxer attendance this week.");
-      else if (weekJr > weekSr) insights.push("Junior Boxer attendance is higher than Senior Boxer attendance this week.");
+    // Program unique youth this week
+    const weekJrIds = new Set(weekRecords.filter((a) => regMap[a.registration_id]?.child_boxing_program.includes("Junior")).map((a) => a.registration_id));
+    const weekSrIds = new Set(weekRecords.filter((a) => regMap[a.registration_id]?.child_boxing_program.includes("Senior")).map((a) => a.registration_id));
+    if (weekJrIds.size > 0 || weekSrIds.size > 0) {
+      insights.push(`${weekSrIds.size} Senior Boxers and ${weekJrIds.size} Junior Boxers attended this week (Junior Boxing meets once per week).`);
     }
 
     // Top district today
