@@ -196,7 +196,7 @@ const LilChampsCheckIn = () => {
         <h1 className={`font-black tracking-tight text-center transition-all duration-500 ${
           isIdle ? "text-3xl md:text-5xl mb-1" : "text-2xl md:text-3xl mb-1"
         }`}>
-          <span style={{ color: '#2dd4bf' }}>Lil' Champ Corner</span> Check-In
+          <span style={{ color: '#38bdf8' }}>Lil' Champ Corner</span> Check-In
         </h1>
         <p className={`text-white/50 text-center transition-all duration-500 ${
           isIdle ? "text-lg md:text-xl mb-4" : "text-sm md:text-base mb-3"
