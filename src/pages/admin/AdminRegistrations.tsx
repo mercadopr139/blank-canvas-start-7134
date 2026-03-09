@@ -129,11 +129,12 @@ const AdminRegistrations = () => {
       const matchesProgram = programFilter === "all" || reg.child_boxing_program === programFilter;
       const matchesDistrict = districtFilter === "all" || reg.child_school_district === districtFilter;
       const matchesBaldEagle = baldEagleFilter === "all" || (baldEagleFilter === "yes" ? reg.is_bald_eagle : !reg.is_bald_eagle);
+      const matchesExtended = extendedProgramFilter === "all"
+        || (extendedProgramFilter === "unassigned" ? !(reg as any).extended_program : (reg as any).extended_program === extendedProgramFilter);
 
-      return matchesSearch && matchesProgram && matchesDistrict && matchesBaldEagle;
+      return matchesSearch && matchesProgram && matchesDistrict && matchesBaldEagle && matchesExtended;
     })
     .sort((a, b) => {
-      // Sort alphabetically by last name, then first name
       const lastNameCompare = a.child_last_name.localeCompare(b.child_last_name);
       if (lastNameCompare !== 0) return lastNameCompare;
       return a.child_first_name.localeCompare(b.child_first_name);
