@@ -68,6 +68,7 @@ const Register = () => {
   const [childHeadshot, setChildHeadshot] = useState<File | null>(null);
   const [headshotPreview, setHeadshotPreview] = useState<string | null>(null);
   const [formValues, setFormValues] = useState<Record<string, string>>({});
+  const [honeypot, setHoneypot] = useState(""); // Spam protection
   const [signatures, setSignatures] = useState<Signatures>({
     medical_consent: null, liability_waiver: null, transportation_excursions: null,
     media_consent: null, spiritual_development: null, counseling_services: null,
@@ -130,7 +131,54 @@ const Register = () => {
     return data.path;
   };
 
+  const checkForDuplicates = async (): Promise<string | null> => {
+    const childFirst = (formValues["child_first_name"] || "").trim().toLowerCase();
+    const childLast = (formValues["child_last_name"] || "").trim().toLowerCase();
+    const dob = formValues["child_date_of_birth"];
+    const parentEmail = (formValues["parent_email"] || "").trim().toLowerCase();
+
+    if (!childFirst || !childLast || !dob) return null;
+
+    try {
+      const { data, error } = await supabase
+        .from("youth_registrations")
+        .select("id, child_first_name, child_last_name, parent_email")
+        .eq("child_date_of_birth", dob);
+
+      if (error) throw error;
+
+      if (data && data.length > 0) {
+        for (const existing of data) {
+          const existingFirst = (existing.child_first_name || "").toLowerCase();
+          const existingLast = (existing.child_last_name || "").toLowerCase();
+          const existingEmail = (existing.parent_email || "").toLowerCase();
+
+          // Check if names match
+          if (existingFirst === childFirst && existingLast === childLast) {
+            return `A registration for ${formValues["child_first_name"]} ${formValues["child_last_name"]} with this date of birth already exists. If you need to update information, please contact us.`;
+          }
+
+          // Check if email matches with same DOB
+          if (parentEmail && existingEmail === parentEmail) {
+            return `A registration with this parent email and date of birth already exists. If you need to update information, please contact us.`;
+          }
+        }
+      }
+    } catch (error) {
+      console.error("Duplicate check error:", error);
+      // Don't block submission if duplicate check fails
+    }
+
+    return null;
+  };
+
   const validateForm = (): string | null => {
+    // Honeypot spam protection
+    if (honeypot) {
+      console.warn("Honeypot triggered - likely spam");
+      return "Invalid submission. Please try again.";
+    }
+
     if (!formFields) return "Form not loaded";
 
     for (const field of formFields) {
@@ -181,9 +229,17 @@ const Register = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
     const validationError = validateForm();
     if (validationError) {
       toast({ title: "Validation Error", description: validationError, variant: "destructive" });
+      return;
+    }
+
+    // Check for duplicates
+    const duplicateError = await checkForDuplicates();
+    if (duplicateError) {
+      toast({ title: "Duplicate Registration", description: duplicateError, variant: "destructive" });
       return;
     }
 
