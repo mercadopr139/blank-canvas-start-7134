@@ -706,6 +706,12 @@ const EditRegistrationForm = ({
       </Section>
 
       <Section title="Status & Flags">
+        <SelectField
+          label="Extended Program"
+          value={form.extended_program || "Unassigned"}
+          onChange={(v) => set("extended_program", v === "Unassigned" ? null : v)}
+          options={["Unassigned", ...EXTENDED_PROGRAMS]}
+        />
         <div className="flex items-center justify-between py-2">
           <Label className="text-sm">Bald Eagle</Label>
           <Switch checked={!!form.is_bald_eagle} onCheckedChange={(v) => set("is_bald_eagle", v)} />
