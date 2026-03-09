@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Settings, LogOut, Briefcase, TrendingUp, DollarSign, ArrowLeft, Signal } from "lucide-react";
 import UpcomingEventsWidget from "@/components/admin/UpcomingEventsWidget";
+import InviteAdminModal from "@/components/admin/InviteAdminModal";
 
 const AdminDashboard = () => {
   const { user, signOut } = useAuth();
@@ -59,10 +60,13 @@ const AdminDashboard = () => {
               <p className="text-sm text-white/50">{user?.email}</p>
             </div>
           </div>
-          <Button variant="outline" onClick={handleLogout} className="border-white/20 text-white bg-black hover:bg-black hover:text-white">
-            <LogOut className="w-4 h-4 mr-2" />
-            Log out
-          </Button>
+          <div className="flex items-center gap-2">
+            <InviteAdminModal />
+            <Button variant="outline" onClick={handleLogout} className="border-white/20 text-white bg-black hover:bg-black hover:text-white">
+              <LogOut className="w-4 h-4 mr-2" />
+              Log out
+            </Button>
+          </div>
         </div>
       </header>
 
