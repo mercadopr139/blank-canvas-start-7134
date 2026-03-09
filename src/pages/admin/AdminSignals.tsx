@@ -949,13 +949,8 @@ const AdminSignals = () => {
             <VisionCloud />
           </div>
 
-          {/* Divider — Verse + Logo */}
-          <div className="flex flex-col items-center justify-center my-10 gap-5">
-            <div className="w-16 h-px bg-gradient-to-r from-transparent via-white/10 to-transparent" />
-            <DailyVerse />
-            <a href="/admin/dashboard" className="cursor-pointer opacity-60 hover:opacity-90 transition-opacity">
-              <img src={nlaLogo} alt="NLA" className="h-20" />
-            </a>
+          {/* Thin divider */}
+          <div className="flex justify-center my-10">
             <div className="w-16 h-px bg-gradient-to-r from-transparent via-white/10 to-transparent" />
           </div>
 
