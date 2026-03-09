@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Search, CheckCircle2 } from "lucide-react";
 import nlaLogo from "@/assets/nla-logo-white.png";
 import PhotoUploadModal from "@/components/admin/PhotoUploadModal";
+import CoachPasswordModal from "@/components/checkin/CoachPasswordModal";
 
 const getHeadshotUrl = (url: string | null): string | null => {
   if (!url) return null;
@@ -71,6 +72,7 @@ const CheckIn = () => {
   const [alreadyIn, setAlreadyIn] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [photoModalOpen, setPhotoModalOpen] = useState(false);
+  const [passwordModalOpen, setPasswordModalOpen] = useState(false);
   const [selectedYouth, setSelectedYouth] = useState<Youth | null>(null);
   const [showCelebration, setShowCelebration] = useState(false);
 
@@ -211,15 +213,7 @@ const CheckIn = () => {
               } ${alreadyIn === y.id ? "border-yellow-500 bg-yellow-500/10" : ""}`}
             >
               <CardContent className="flex items-center gap-4 p-4">
-                <div 
-                  className="w-12 h-12 rounded-full bg-white/10 flex items-center justify-center overflow-hidden flex-shrink-0 cursor-pointer hover:ring-2 hover:ring-white/30 transition-all"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setSelectedYouth(y);
-                    setPhotoModalOpen(true);
-                  }}
-                  title="Update photo"
-                >
+                <div className="w-12 h-12 rounded-full bg-white/10 flex items-center justify-center overflow-hidden flex-shrink-0">
                   {getHeadshotUrl(y.child_headshot_url) ? (
                     <img src={getHeadshotUrl(y.child_headshot_url)!} alt="" className="w-full h-full object-cover" />
                   ) : (
@@ -233,6 +227,17 @@ const CheckIn = () => {
                     {y.child_first_name} {y.child_last_name}
                   </p>
                   <p className="text-sm text-white/50">{y.child_boxing_program}</p>
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setSelectedYouth(y);
+                      setPasswordModalOpen(true);
+                    }}
+                    className="text-xs text-blue-400/70 hover:text-blue-300 mt-0.5 underline underline-offset-2"
+                  >
+                    Change Profile Pic
+                  </button>
                 </div>
                 <div className="flex items-center gap-2">
                   {checkedIn === y.id && (
@@ -264,6 +269,21 @@ const CheckIn = () => {
           ))}
         </div>
       </div>
+
+      {selectedYouth && (
+        <CoachPasswordModal
+          open={passwordModalOpen}
+          onClose={() => {
+            setPasswordModalOpen(false);
+            setSelectedYouth(null);
+          }}
+          onSuccess={() => {
+            setPasswordModalOpen(false);
+            setPhotoModalOpen(true);
+          }}
+          registrationId={selectedYouth.id}
+        />
+      )}
 
       {selectedYouth && (
         <PhotoUploadModal
