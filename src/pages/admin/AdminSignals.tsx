@@ -690,9 +690,20 @@ const AdminSignals = () => {
 
       <main className="container mx-auto px-4 py-6 max-w-4xl">
 
-        {/* Upcoming Events – top-left */}
-        <div className="mb-6 max-w-sm">
-          <UpcomingEventsWidget />
+        {/* Supporting row: Upcoming Events (left) + Logo & Verse (right) */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8 items-start">
+          {/* Upcoming Events – dimmed supporting widget */}
+          <div className="opacity-60">
+            <UpcomingEventsWidget />
+          </div>
+
+          {/* Logo + Daily Verse */}
+          <div className="flex flex-col items-center justify-center text-center py-4 gap-4">
+            <a href="/admin/dashboard" className="cursor-pointer opacity-70 hover:opacity-90 transition-opacity">
+              <img src={nlaLogo} alt="No Limits Academy" className="h-14 w-auto" />
+            </a>
+            <DailyVerse />
+          </div>
         </div>
 
         {/* Day Won Banner */}
