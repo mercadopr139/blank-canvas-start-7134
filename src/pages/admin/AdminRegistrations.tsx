@@ -141,14 +141,17 @@ const AdminRegistrations = () => {
     });
 
   const calculateAge = (dob: string) => {
-    if (!dob) return "—";
+    if (!dob) return { display: "—", tooltip: "" };
     const birthDate = parseISO(dob);
     const now = new Date();
     const years = differenceInYears(now, birthDate);
     const totalMonths = differenceInMonths(now, birthDate);
     const months = totalMonths - years * 12;
-    if (years < 0 || months < 0) return "—";
-    return `${years}y ${months}m`;
+    if (years < 0 || months < 0) return { display: "—", tooltip: "" };
+    return {
+      display: `${years}`,
+      tooltip: `${years} years, ${months} months\nDOB: ${format(birthDate, "MMMM d, yyyy")}`,
+    };
   };
 
   const hasMedicalAlerts = (reg: any) => {
