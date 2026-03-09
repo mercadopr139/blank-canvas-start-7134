@@ -7,6 +7,19 @@ import { Search, CheckCircle2, Camera } from "lucide-react";
 import nlaLogo from "@/assets/nla-logo-white.png";
 import PhotoUploadModal from "@/components/admin/PhotoUploadModal";
 
+const getHeadshotUrl = (url: string | null): string | null => {
+  if (!url) return null;
+  if (url.startsWith("http")) return url;
+  // It's a storage path — resolve to public URL
+  const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+  // Check which bucket the path belongs to
+  if (url.startsWith("youth-photos/")) {
+    return `${supabaseUrl}/storage/v1/object/public/youth-photos/${url}`;
+  }
+  // Default: registration-signatures bucket (used by import-youth-photo edge function)
+  return `${supabaseUrl}/storage/v1/object/public/registration-signatures/${url}`;
+};
+
 interface Youth {
   id: string;
   child_first_name: string;
