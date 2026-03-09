@@ -863,8 +863,8 @@ const getHeadshotUrl = (url: string | null): string | null => {
                       <TableRow key={a.id} className="border-white/10 cursor-pointer hover:bg-white/5" onClick={() => setSelectedYouth(a)}>
                         <TableCell>
                           <div className="w-8 h-8 rounded-full bg-white/10 overflow-hidden">
-                            {a.child_headshot_url ? (
-                              <img src={a.child_headshot_url} alt="" className="w-full h-full object-cover" />
+                            {getHeadshotUrl(a.child_headshot_url) ? (
+                              <img src={getHeadshotUrl(a.child_headshot_url)!} alt="" className="w-full h-full object-cover" />
                             ) : (
                               <span className="flex items-center justify-center w-full h-full text-xs text-white/40">{a.child_first_name[0]}</span>
                             )}
