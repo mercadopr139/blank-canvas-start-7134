@@ -110,7 +110,7 @@ const AdminLilChampsAttendance = () => {
             type="date"
             value={dateFilter}
             onChange={(e) => setDateFilter(e.target.value)}
-            className="pl-9 w-[180px]"
+            className="pl-9 w-[180px] text-foreground"
           />
         </div>
       </div>
