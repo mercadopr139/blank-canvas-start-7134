@@ -89,7 +89,7 @@ const AdminLilChampsAttendance = () => {
     <div className="space-y-6">
       <div className="flex items-center justify-between flex-wrap gap-4">
         <h2 className="text-2xl font-bold text-white">Lil Champ's Corner Attendance</h2>
-        <Button variant="outline" size="sm" onClick={exportCsv} className="gap-2">
+        <Button variant="outline" size="sm" onClick={exportCsv} className="gap-2 text-foreground">
           <Download className="w-4 h-4" /> Export CSV
         </Button>
       </div>
