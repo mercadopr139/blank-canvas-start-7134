@@ -70,12 +70,15 @@ const HeadshotThumbnail = ({ headshotPath, size = "sm" }: { headshotPath: string
   );
 };
 
+const EXTENDED_PROGRAMS = ["Rams Program", "Hawk Squad", "Islanders", "Lil Champs Corner"] as const;
+
 const AdminRegistrations = () => {
   const queryClient = useQueryClient();
   const [searchQuery, setSearchQuery] = useState("");
   const [programFilter, setProgramFilter] = useState<string>("all");
   const [districtFilter, setDistrictFilter] = useState<string>("all");
   const [baldEagleFilter, setBaldEagleFilter] = useState<string>("all");
+  const [extendedProgramFilter, setExtendedProgramFilter] = useState<string>("all");
   const [selectedRegistration, setSelectedRegistration] = useState<any | null>(null);
   const [editingRegistration, setEditingRegistration] = useState<any | null>(null);
   const [csvFallbackUrl, setCsvFallbackUrl] = useState<string | null>(null);
