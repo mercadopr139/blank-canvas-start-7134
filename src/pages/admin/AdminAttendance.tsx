@@ -70,8 +70,6 @@ const AdminAttendance = () => {
   const [calendarProgramFilter, setCalendarProgramFilter] = useState<string>("all");
   const [drillDistrictFilter, setDrillDistrictFilter] = useState<string | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string; date: string } | null>(null);
-  const [clearTodayOpen, setClearTodayOpen] = useState(false);
-  const [clearTodayConfirm, setClearTodayConfirm] = useState("");
 
   const invalidateAttendance = () => {
     queryClient.invalidateQueries({ queryKey: ["attendance-records-current"] });
@@ -89,15 +87,6 @@ const AdminAttendance = () => {
     invalidateAttendance();
   };
 
-  const handleClearToday = async () => {
-    const todayDate = new Date().toISOString().split("T")[0];
-    const { error } = await supabase.from("attendance_records").delete().eq("check_in_date", todayDate);
-    if (error) { toast.error("Failed to clear today's attendance"); return; }
-    toast.success("Today's attendance cleared successfully");
-    setClearTodayOpen(false);
-    setClearTodayConfirm("");
-    invalidateAttendance();
-  };
 
   const calMonthStart = format(startOfMonth(calendarMonth), "yyyy-MM-dd");
   const calMonthEnd = format(endOfMonth(calendarMonth), "yyyy-MM-dd");
@@ -506,14 +495,6 @@ const AdminAttendance = () => {
           <h2 className="text-xl font-bold text-white flex items-center gap-2">
             <Activity className="w-5 h-5 text-red-400" /> Attendance Insights
           </h2>
-          <Button
-            variant="outline"
-            size="sm"
-            className="border-red-500/40 text-red-400 hover:bg-red-500/10 hover:text-red-300 gap-1.5"
-            onClick={() => setClearTodayOpen(true)}
-          >
-            <Trash2 className="w-3.5 h-3.5" /> Clear Today's Attendance
-          </Button>
         </div>
 
         {/* Key Insight Cards */}
@@ -1246,34 +1227,6 @@ const AdminAttendance = () => {
         </DialogContent>
       </Dialog>
 
-      {/* Clear Today Confirmation */}
-      <Dialog open={clearTodayOpen} onOpenChange={(open) => { if (!open) { setClearTodayOpen(false); setClearTodayConfirm(""); } }}>
-        <DialogContent className="bg-zinc-900 border-white/10 text-white max-w-sm">
-          <DialogHeader>
-            <DialogTitle className="text-red-400 flex items-center gap-2"><AlertTriangle className="w-5 h-5" /> Clear Today's Attendance</DialogTitle>
-          </DialogHeader>
-          <p className="text-sm text-white/70">
-            Are you sure you want to clear <span className="font-bold text-white">all</span> attendance records for today only?
-          </p>
-          <p className="text-sm text-white/70">
-            This will remove today's check-ins but will <span className="font-medium text-white">not</span> affect previous days.
-          </p>
-          <p className="text-sm text-white/60 font-medium">{totalPresentToday} attendance record{totalPresentToday !== 1 ? "s" : ""} from today will be removed.</p>
-          <div className="pt-1">
-            <label className="text-xs text-white/50 block mb-1">Type <span className="font-mono font-bold text-white">CLEAR TODAY</span> to confirm</label>
-            <Input
-              value={clearTodayConfirm}
-              onChange={(e) => setClearTodayConfirm(e.target.value)}
-              placeholder="CLEAR TODAY"
-              className="bg-white/5 border-white/20 text-white placeholder:text-white/20"
-            />
-          </div>
-          <div className="flex gap-2 justify-end pt-2">
-            <Button variant="outline" size="sm" className="border-white/20 text-white" onClick={() => { setClearTodayOpen(false); setClearTodayConfirm(""); }}>Cancel</Button>
-            <Button variant="destructive" size="sm" disabled={clearTodayConfirm !== "CLEAR TODAY"} onClick={handleClearToday}>Clear Today's Attendance</Button>
-          </div>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 };
