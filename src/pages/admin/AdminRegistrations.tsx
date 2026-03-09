@@ -78,6 +78,7 @@ const AdminRegistrations = () => {
   const [selectedRegistration, setSelectedRegistration] = useState<any | null>(null);
   const [editingRegistration, setEditingRegistration] = useState<any | null>(null);
   const [csvFallbackUrl, setCsvFallbackUrl] = useState<string | null>(null);
+  const [csvExportCount, setCsvExportCount] = useState(0);
 
   const { data: registrations, isLoading } = useQuery({
     queryKey: ["youth-registrations"],
@@ -201,6 +202,7 @@ const AdminRegistrations = () => {
 
       // Also store the blob URL as fallback for iframe/preview environments
       setCsvFallbackUrl(url);
+      setCsvExportCount(rows.length);
 
       setTimeout(() => {
         document.body.removeChild(a);
@@ -497,14 +499,13 @@ const AdminRegistrations = () => {
       </Dialog>
 
       {/* CSV Fallback Download Dialog */}
-      <Dialog open={!!csvFallbackUrl} onOpenChange={(open) => { if (!open) { if (csvFallbackUrl) URL.revokeObjectURL(csvFallbackUrl); setCsvFallbackUrl(null); } }}>
-        <DialogContent className="bg-zinc-900 border-white/10 text-white max-w-md">
+      <Dialog open={!!csvFallbackUrl} onOpenChange={(open) => { if (!open) { if (csvFallbackUrl) URL.revokeObjectURL(csvFallbackUrl); setCsvFallbackUrl(null); setCsvExportCount(0); } }}>
+        <DialogContent className="bg-zinc-900 border-white/10 text-white max-w-sm">
           <DialogHeader>
-            <DialogTitle className="text-white">CSV Export Ready</DialogTitle>
+            <DialogTitle className="text-white text-lg">Export Ready</DialogTitle>
           </DialogHeader>
-          <p className="text-sm text-white/70">
-            If the file didn't download automatically (common in preview mode), use the buttons below.
-          </p>
+          <p className="text-base font-medium text-white">{csvExportCount} records prepared for download</p>
+          <p className="text-sm text-white/60">Preview mode may block automatic downloads. Use one of the options below.</p>
           <div className="flex flex-col gap-2 pt-2">
             <Button asChild className="gap-2">
               <a href={csvFallbackUrl || "#"} download={`Youth_Registrations_Export_${format(new Date(), "yyyy-MM-dd")}.csv`}>
@@ -514,8 +515,10 @@ const AdminRegistrations = () => {
             <Button variant="outline" className="gap-2 border-white/20 text-white hover:bg-white/10" onClick={() => { if (csvFallbackUrl) window.open(csvFallbackUrl, "_blank"); }}>
               <ExternalLink className="w-4 h-4" /> Open CSV in New Tab
             </Button>
+            <Button variant="ghost" className="text-white/50 hover:text-white" onClick={() => { if (csvFallbackUrl) URL.revokeObjectURL(csvFallbackUrl); setCsvFallbackUrl(null); setCsvExportCount(0); }}>
+              Close
+            </Button>
           </div>
-          <p className="text-xs text-white/40 pt-1">On the published site, downloads work automatically.</p>
         </DialogContent>
       </Dialog>
 
