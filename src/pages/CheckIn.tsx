@@ -28,15 +28,51 @@ interface Youth {
   child_headshot_url: string | null;
 }
 
+// Confetti particle component
+const Confetti = () => {
+  const colors = ['#22c55e', '#facc15', '#ef4444', '#3b82f6', '#a855f7', '#f97316'];
+  const particles = Array.from({ length: 50 }, (_, i) => ({
+    id: i,
+    left: Math.random() * 100,
+    delay: Math.random() * 0.5,
+    duration: 1 + Math.random() * 2,
+    color: colors[Math.floor(Math.random() * colors.length)],
+    size: 8 + Math.random() * 8,
+  }));
+
+  return (
+    <div className="fixed inset-0 pointer-events-none overflow-hidden z-50">
+      {particles.map((p) => (
+        <div
+          key={p.id}
+          className="absolute animate-confetti"
+          style={{
+            left: `${p.left}%`,
+            top: '-20px',
+            width: p.size,
+            height: p.size,
+            backgroundColor: p.color,
+            borderRadius: Math.random() > 0.5 ? '50%' : '2px',
+            animationDelay: `${p.delay}s`,
+            animationDuration: `${p.duration}s`,
+          }}
+        />
+      ))}
+    </div>
+  );
+};
+
 const CheckIn = () => {
   const [search, setSearch] = useState("");
   const [youth, setYouth] = useState<Youth[]>([]);
   const [loading, setLoading] = useState(false);
   const [checkedIn, setCheckedIn] = useState<string | null>(null);
+  const [checkedInName, setCheckedInName] = useState<string>("");
   const [alreadyIn, setAlreadyIn] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [photoModalOpen, setPhotoModalOpen] = useState(false);
   const [selectedYouth, setSelectedYouth] = useState<Youth | null>(null);
+  const [showCelebration, setShowCelebration] = useState(false);
 
   useEffect(() => {
     if (search.length < 2) {
@@ -87,6 +123,7 @@ const CheckIn = () => {
     setError(null);
     setCheckedIn(null);
     setAlreadyIn(null);
+    setShowCelebration(false);
     const today = new Date().toISOString().split("T")[0];
     const { error: insertError } = await supabase
       .from("attendance_records")
@@ -102,15 +139,42 @@ const CheckIn = () => {
       return;
     }
     setCheckedIn(y.id);
+    setCheckedInName(`${y.child_first_name} ${y.child_last_name}`);
+    setShowCelebration(true);
     setTimeout(() => {
       setCheckedIn(null);
+      setShowCelebration(false);
       setSearch("");
       setYouth([]);
-    }, 2500);
+    }, 3500);
   };
 
   return (
     <div className="min-h-screen bg-black text-white flex flex-col">
+      {/* Celebration Overlay */}
+      {showCelebration && (
+        <>
+          <Confetti />
+          <div className="fixed inset-0 bg-black/80 z-40 flex items-center justify-center animate-in fade-in duration-200">
+            <div className="text-center animate-in zoom-in duration-500">
+              <CheckCircle2 className="w-24 h-24 text-green-400 mx-auto mb-4 animate-bounce" />
+              <h2 className="text-5xl md:text-6xl font-black text-green-400 mb-2 tracking-tight">
+                CHECKED-IN!
+              </h2>
+              <p className="text-2xl md:text-3xl text-white/80 font-medium mb-2">
+                {checkedInName}
+              </p>
+              <p className="text-xl text-white/60 italic">
+                "Iron sharpens iron"
+              </p>
+              <p className="text-sm text-white/40 mt-1">
+                — Proverbs 27:17
+              </p>
+            </div>
+          </div>
+        </>
+      )}
+
       {/* Header */}
       <header className="py-6 text-center border-b border-white/10">
         <img src={nlaLogo} alt="No Limits Academy" className="h-20 mx-auto mb-2" />
