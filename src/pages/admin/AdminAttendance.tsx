@@ -857,7 +857,7 @@ const getHeadshotUrl = (url: string | null): string | null => {
                       <TableHead className="text-white/60">Last Name</TableHead>
                       <TableHead className="text-white/60">Program</TableHead>
                       <TableHead className="text-white/60">Last Attended</TableHead>
-                      <TableHead className="text-white/60">Days Since</TableHead>
+                      <TableHead className="text-white/60">Last Week Practices</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -877,8 +877,8 @@ const getHeadshotUrl = (url: string | null): string | null => {
                         <TableCell className="text-white/60 text-xs">{a.child_boxing_program}</TableCell>
                         <TableCell className="text-white/60">{a.lastDate === "Never" ? "Never" : format(new Date(a.lastDate), "MMM d")}</TableCell>
                         <TableCell>
-                          <Badge variant={a.daysSince >= 14 ? "destructive" : "outline"} className={a.daysSince >= 14 ? "" : "border-yellow-500 text-yellow-400"}>
-                            {a.daysSince >= 999 ? "No record" : `${a.daysSince} days`}
+                          <Badge variant={a.prevWeekCount === 0 ? "destructive" : "outline"} className={a.prevWeekCount === 0 ? "" : "border-yellow-500 text-yellow-400"}>
+                            {a.prevWeekCount === 0 ? "None" : `${a.prevWeekCount}`}
                           </Badge>
                         </TableCell>
                       </TableRow>
