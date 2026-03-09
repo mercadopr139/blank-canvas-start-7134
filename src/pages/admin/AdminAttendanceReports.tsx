@@ -746,7 +746,18 @@ const AdminAttendanceReports = () => {
                         <TableCell className="text-white/60 text-xs">{reg?.child_boxing_program || ""}</TableCell>
                         <TableCell className="text-white/60 text-xs">{reg?.child_school_district || ""}</TableCell>
                         <TableCell className="text-white/50 text-xs">{format(new Date(a.check_in_at), "h:mm a")}</TableCell>
-                        <TableCell className="text-white/40 text-xs">{reg?.child_sex?.charAt(0) || ""}</TableCell>
+                        <TableCell>
+                          <button
+                            onClick={() => {
+                              const reg = regMap[a.registration_id];
+                              setDeleteTarget({ id: a.id, name: reg ? `${reg.child_first_name} ${reg.child_last_name}` : "Unknown", date: a.check_in_date });
+                            }}
+                            className="p-1 rounded hover:bg-red-500/20 text-white/30 hover:text-red-400 transition-colors"
+                            title="Remove check-in"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </TableCell>
                       </TableRow>
                     );
                   })
@@ -756,6 +767,22 @@ const AdminAttendanceReports = () => {
           </div>
         </CardContent>
       </Card>
+
+      {/* Delete Single Check-In Confirmation */}
+      <Dialog open={!!deleteTarget} onOpenChange={(open) => { if (!open) setDeleteTarget(null); }}>
+        <DialogContent className="bg-zinc-900 border-white/10 text-white max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="text-white">Remove Check-In?</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-white/70">
+            This will delete <span className="font-medium text-white">{deleteTarget?.name}</span>'s check-in for <span className="font-medium text-white">{deleteTarget?.date ? format(parseISO(deleteTarget.date), "MMMM d, yyyy") : ""}</span>.
+          </p>
+          <div className="flex gap-2 justify-end pt-2">
+            <Button variant="outline" size="sm" className="border-white/20 text-white" onClick={() => setDeleteTarget(null)}>Cancel</Button>
+            <Button variant="destructive" size="sm" onClick={handleDeleteSingle}>Remove Check-In</Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
