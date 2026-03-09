@@ -1,7 +1,7 @@
 import { useState, useRef } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Camera, RotateCcw, Save, X } from "lucide-react";
+import { Camera, Upload, RotateCcw, Save, X } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -18,59 +18,16 @@ export default function PhotoUploadModal({
   open,
   onClose,
   registrationId,
-  currentPhotoUrl,
   onPhotoUpdated,
   youthName,
 }: PhotoUploadModalProps) {
-  const [capturedImage, setCapturedImage] = useState<string | null>(null);
+  const [capturedImage, setCapturedImage] = useState<Blob | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
+  const cameraInputRef = useRef<HTMLInputElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const videoRef = useRef<HTMLVideoElement>(null);
-  const [stream, setStream] = useState<MediaStream | null>(null);
 
-  const startCamera = async () => {
-    try {
-      const mediaStream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: "user", width: 640, height: 640 },
-        audio: false,
-      });
-      setStream(mediaStream);
-      if (videoRef.current) {
-        videoRef.current.srcObject = mediaStream;
-      }
-    } catch (error) {
-      toast.error("Failed to access camera. Please use file upload instead.");
-      console.error("Camera error:", error);
-    }
-  };
-
-  const stopCamera = () => {
-    if (stream) {
-      stream.getTracks().forEach((track) => track.stop());
-      setStream(null);
-    }
-  };
-
-  const capturePhoto = () => {
-    if (!videoRef.current) return;
-    const canvas = document.createElement("canvas");
-    canvas.width = 640;
-    canvas.height = 640;
-    const ctx = canvas.getContext("2d");
-    if (!ctx) return;
-    ctx.drawImage(videoRef.current, 0, 0, 640, 640);
-    const dataUrl = canvas.toBlob((blob) => {
-      if (blob) {
-        const url = URL.createObjectURL(blob);
-        setCapturedImage(url);
-        stopCamera();
-      }
-    }, "image/jpeg", 0.9);
-  };
-
-  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+  const processFile = (file: File) => {
     if (!file.type.startsWith("image/")) {
       toast.error("Please select an image file");
       return;
@@ -91,8 +48,8 @@ export default function PhotoUploadModal({
         ctx.drawImage(img, x, y, img.width * scale, img.height * scale);
         canvas.toBlob((blob) => {
           if (blob) {
-            const url = URL.createObjectURL(blob);
-            setCapturedImage(url);
+            setCapturedImage(blob);
+            setPreviewUrl(URL.createObjectURL(blob));
           }
         }, "image/jpeg", 0.9);
       };
@@ -101,31 +58,34 @@ export default function PhotoUploadModal({
     reader.readAsDataURL(file);
   };
 
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) processFile(file);
+    // Reset input so same file can be re-selected
+    e.target.value = "";
+  };
+
   const uploadPhoto = async () => {
     if (!capturedImage) return;
     setUploading(true);
     try {
-      const blob = await fetch(capturedImage).then((r) => r.blob());
       const fileName = `youth-photos/${registrationId}/profile.jpg`;
-      
-      // Upload to storage (overwrites existing)
+
       const { error: uploadError } = await supabase.storage
         .from("youth-photos")
-        .upload(fileName, blob, {
+        .upload(fileName, capturedImage, {
           contentType: "image/jpeg",
           upsert: true,
         });
 
       if (uploadError) throw uploadError;
 
-      // Get public URL
       const { data: publicUrlData } = supabase.storage
         .from("youth-photos")
         .getPublicUrl(fileName);
 
       const publicUrl = publicUrlData.publicUrl;
 
-      // Update registration record
       const { error: updateError } = await supabase
         .from("youth_registrations")
         .update({ child_headshot_url: publicUrl })
@@ -133,91 +93,93 @@ export default function PhotoUploadModal({
 
       if (updateError) throw updateError;
 
-      toast.success("Photo updated successfully");
+      toast.success("Profile picture updated successfully");
       onPhotoUpdated(publicUrl);
       handleClose();
     } catch (error) {
       console.error("Upload error:", error);
-      toast.error("Failed to upload photo");
+      toast.error("Failed to upload photo. Please try again.");
     } finally {
       setUploading(false);
     }
   };
 
   const handleClose = () => {
-    stopCamera();
     setCapturedImage(null);
+    if (previewUrl) URL.revokeObjectURL(previewUrl);
+    setPreviewUrl(null);
     onClose();
+  };
+
+  const resetCapture = () => {
+    setCapturedImage(null);
+    if (previewUrl) URL.revokeObjectURL(previewUrl);
+    setPreviewUrl(null);
   };
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="max-w-lg">
+      <DialogContent className="max-w-md bg-zinc-900 border-white/10 text-white">
         <DialogHeader>
-          <DialogTitle>Update Photo - {youthName}</DialogTitle>
+          <DialogTitle className="text-white">Update Photo — {youthName}</DialogTitle>
         </DialogHeader>
 
         <div className="space-y-4">
-          {!capturedImage && !stream && (
+          {!previewUrl && (
             <div className="space-y-3">
+              {/* Camera input — uses native device camera on mobile/iPad */}
+              <input
+                ref={cameraInputRef}
+                type="file"
+                accept="image/*"
+                capture="environment"
+                className="hidden"
+                onChange={handleFileChange}
+              />
               <Button
-                onClick={startCamera}
-                className="w-full gap-2"
+                onClick={() => cameraInputRef.current?.click()}
+                className="w-full gap-2 h-14 text-lg bg-white/10 hover:bg-white/20 text-white border border-white/20"
                 variant="outline"
               >
-                <Camera className="w-4 h-4" />
-                Open Camera
+                <Camera className="w-5 h-5" />
+                Take Photo
               </Button>
-              <div className="text-center text-sm text-muted-foreground">or</div>
-              <Button
-                onClick={() => fileInputRef.current?.click()}
-                className="w-full"
-                variant="secondary"
-              >
-                Choose from Files
-              </Button>
+
+              <div className="text-center text-sm text-white/40">or</div>
+
+              {/* File picker — opens photo library / files */}
               <input
                 ref={fileInputRef}
                 type="file"
                 accept="image/*"
                 className="hidden"
-                onChange={handleFileSelect}
+                onChange={handleFileChange}
               />
+              <Button
+                onClick={() => fileInputRef.current?.click()}
+                className="w-full gap-2 h-12 bg-white/5 hover:bg-white/10 text-white/80 border border-white/10"
+                variant="outline"
+              >
+                <Upload className="w-4 h-4" />
+                Choose from Library
+              </Button>
             </div>
           )}
 
-          {stream && !capturedImage && (
-            <div className="space-y-3">
-              <video
-                ref={videoRef}
-                autoPlay
-                playsInline
-                className="w-full rounded-lg bg-black"
-              />
-              <div className="flex gap-2">
-                <Button onClick={capturePhoto} className="flex-1">
-                  <Camera className="w-4 h-4 mr-2" />
-                  Capture Photo
-                </Button>
-                <Button onClick={stopCamera} variant="outline">
-                  <X className="w-4 h-4" />
-                </Button>
+          {previewUrl && (
+            <div className="space-y-4">
+              <div className="relative rounded-xl overflow-hidden border-2 border-white/10">
+                <img
+                  src={previewUrl}
+                  alt="Preview"
+                  className="w-full aspect-square object-cover"
+                />
               </div>
-            </div>
-          )}
-
-          {capturedImage && (
-            <div className="space-y-3">
-              <img
-                src={capturedImage}
-                alt="Preview"
-                className="w-full rounded-lg border"
-              />
-              <div className="flex gap-2">
+              <div className="flex gap-3">
                 <Button
-                  onClick={() => setCapturedImage(null)}
+                  onClick={resetCapture}
                   variant="outline"
-                  className="flex-1"
+                  className="flex-1 h-12 bg-white/5 border-white/20 text-white hover:bg-white/10"
                 >
                   <RotateCcw className="w-4 h-4 mr-2" />
                   Retake
@@ -225,7 +187,7 @@ export default function PhotoUploadModal({
                 <Button
                   onClick={uploadPhoto}
                   disabled={uploading}
-                  className="flex-1"
+                  className="flex-1 h-12 bg-green-600 hover:bg-green-500 text-white font-bold"
                 >
                   {uploading ? (
                     "Saving..."
@@ -237,7 +199,8 @@ export default function PhotoUploadModal({
                   )}
                 </Button>
               </div>
-              <Button onClick={handleClose} variant="ghost" className="w-full">
+              <Button onClick={handleClose} variant="ghost" className="w-full text-white/50 hover:text-white hover:bg-white/5">
+                <X className="w-4 h-4 mr-2" />
                 Cancel
               </Button>
             </div>
