@@ -151,6 +151,30 @@ const CheckIn = () => {
 
   return (
     <div className="min-h-screen bg-black text-white flex flex-col">
+      {/* Celebration Overlay */}
+      {showCelebration && (
+        <>
+          <Confetti />
+          <div className="fixed inset-0 bg-black/80 z-40 flex items-center justify-center animate-in fade-in duration-200">
+            <div className="text-center animate-in zoom-in duration-500">
+              <CheckCircle2 className="w-24 h-24 text-green-400 mx-auto mb-4 animate-bounce" />
+              <h2 className="text-5xl md:text-6xl font-black text-green-400 mb-2 tracking-tight">
+                CHECKED-IN!
+              </h2>
+              <p className="text-2xl md:text-3xl text-white/80 font-medium mb-2">
+                {checkedInName}
+              </p>
+              <p className="text-xl text-white/60 italic">
+                "Iron sharpens iron"
+              </p>
+              <p className="text-sm text-white/40 mt-1">
+                — Proverbs 27:17
+              </p>
+            </div>
+          </div>
+        </>
+      )}
+
       {/* Header */}
       <header className="py-6 text-center border-b border-white/10">
         <img src={nlaLogo} alt="No Limits Academy" className="h-20 mx-auto mb-2" />
