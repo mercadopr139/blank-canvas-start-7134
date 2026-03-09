@@ -17,8 +17,9 @@ import YouthImportModal from "@/components/admin/YouthImportModal";
 import BulkPhotoImportModal from "@/components/admin/BulkPhotoImportModal";
 import MondaySyncModal from "@/components/admin/MondaySyncModal";
 import { Switch } from "@/components/ui/switch";
-import { format, parseISO, differenceInYears } from "date-fns";
+import { format, parseISO, differenceInYears, differenceInMonths } from "date-fns";
 import { toast } from "sonner";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 const HeadshotThumbnail = ({ headshotPath, size = "sm" }: { headshotPath: string; size?: "sm" | "lg" }) => {
   const [url, setUrl] = useState<string | null>(null);
@@ -140,7 +141,14 @@ const AdminRegistrations = () => {
     });
 
   const calculateAge = (dob: string) => {
-    return differenceInYears(new Date(), parseISO(dob));
+    if (!dob) return "—";
+    const birthDate = parseISO(dob);
+    const now = new Date();
+    const years = differenceInYears(now, birthDate);
+    const totalMonths = differenceInMonths(now, birthDate);
+    const months = totalMonths - years * 12;
+    if (years < 0 || months < 0) return "—";
+    return `${years}y ${months}m`;
   };
 
   const hasMedicalAlerts = (reg: any) => {
@@ -221,7 +229,18 @@ const AdminRegistrations = () => {
               <TableCell className="font-medium text-white">
                 {reg.child_last_name}, {reg.child_first_name}
               </TableCell>
-              <TableCell className="text-white">{calculateAge(reg.child_date_of_birth)}</TableCell>
+              <TableCell className="text-white">
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <span className="cursor-default">{calculateAge(reg.child_date_of_birth)}</span>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>DOB: {reg.child_date_of_birth ? format(parseISO(reg.child_date_of_birth), "MMMM d, yyyy") : "Unknown"}</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              </TableCell>
               <TableCell>
                 {reg.child_boxing_program?.includes("Senior") ? (
                   <Badge variant="secondary" className="text-xs whitespace-nowrap bg-[#bf0f3e]/10 border-[#bf0f3e]/30" style={{ color: '#bf0f3e' }}>
@@ -739,7 +758,8 @@ const SelectField = ({
 
 /* ── View Detail ── */
 const RegistrationDetail = ({ registration: reg, onApprovalChange }: { registration: any; onApprovalChange: (approved: boolean) => void }) => {
-  const age = differenceInYears(new Date(), parseISO(reg.child_date_of_birth));
+  const ageYears = differenceInYears(new Date(), parseISO(reg.child_date_of_birth));
+  const ageMonths = differenceInMonths(new Date(), parseISO(reg.child_date_of_birth)) - ageYears * 12;
   const [signedUrls, setSignedUrls] = useState<Record<string, string>>({});
   const [loadingUrls, setLoadingUrls] = useState(true);
 
@@ -815,7 +835,7 @@ const RegistrationDetail = ({ registration: reg, onApprovalChange }: { registrat
 
       <Section title="Child Information">
         <InfoRow label="Name" value={`${reg.child_first_name} ${reg.child_last_name}`} />
-        <InfoRow label="Age" value={`${age} years old`} />
+        <InfoRow label="Age" value={`${ageYears} years ${ageMonths} months`} />
         <InfoRow label="Date of Birth" value={format(parseISO(reg.child_date_of_birth), "MMMM d, yyyy")} />
         <InfoRow label="Sex" value={reg.child_sex} />
         <InfoRow label="Race/Ethnicity" value={reg.child_race_ethnicity} />
