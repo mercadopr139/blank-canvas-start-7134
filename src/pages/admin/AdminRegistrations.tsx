@@ -202,6 +202,7 @@ const AdminRegistrations = () => {
 
       // Also store the blob URL as fallback for iframe/preview environments
       setCsvFallbackUrl(url);
+      setCsvExportCount(rows.length);
 
       setTimeout(() => {
         document.body.removeChild(a);
