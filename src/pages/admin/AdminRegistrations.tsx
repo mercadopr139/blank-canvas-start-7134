@@ -446,6 +446,18 @@ const AdminRegistrations = () => {
                   <SelectItem value="no">Non Bald Eagles</SelectItem>
                 </SelectContent>
               </Select>
+              <Select value={extendedProgramFilter} onValueChange={setExtendedProgramFilter}>
+                <SelectTrigger className="w-full md:w-[200px] bg-white/5 border-white/10 text-white">
+                  <SelectValue placeholder="Extended Program" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Extended Programs</SelectItem>
+                  {EXTENDED_PROGRAMS.map((p) => (
+                    <SelectItem key={p} value={p}>{p}</SelectItem>
+                  ))}
+                  <SelectItem value="unassigned">Unassigned</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
           </CardContent>
         </Card>
