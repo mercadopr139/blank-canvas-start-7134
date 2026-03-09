@@ -474,6 +474,7 @@ const getHeadshotUrl = (url: string | null): string | null => {
 
   /* ───── FILTERED TABLE ───── */
   const filtered = registrations
+    .filter((r) => todayRegIds.has(r.id))
     .filter((r) => filter === "all" || r.is_bald_eagle)
     .filter((r) => drillDistrictFilter ? r.child_school_district === drillDistrictFilter : true)
     .filter(
