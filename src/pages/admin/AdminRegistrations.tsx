@@ -141,14 +141,17 @@ const AdminRegistrations = () => {
     });
 
   const calculateAge = (dob: string) => {
-    if (!dob) return "—";
+    if (!dob) return { display: "—", tooltip: "" };
     const birthDate = parseISO(dob);
     const now = new Date();
     const years = differenceInYears(now, birthDate);
     const totalMonths = differenceInMonths(now, birthDate);
     const months = totalMonths - years * 12;
-    if (years < 0 || months < 0) return "—";
-    return `${years}y ${months}m`;
+    if (years < 0 || months < 0) return { display: "—", tooltip: "" };
+    return {
+      display: `${years}`,
+      tooltip: `${years} years, ${months} months\nDOB: ${format(birthDate, "MMMM d, yyyy")}`,
+    };
   };
 
   const hasMedicalAlerts = (reg: any) => {
@@ -230,16 +233,22 @@ const AdminRegistrations = () => {
                 {reg.child_last_name}, {reg.child_first_name}
               </TableCell>
               <TableCell className="text-white">
-                <TooltipProvider>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <span className="cursor-default">{calculateAge(reg.child_date_of_birth)}</span>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      <p>DOB: {reg.child_date_of_birth ? format(parseISO(reg.child_date_of_birth), "MMMM d, yyyy") : "Unknown"}</p>
-                    </TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
+                {(() => {
+                  const age = calculateAge(reg.child_date_of_birth);
+                  if (typeof age === "string") return age;
+                  return (
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <span className="cursor-default underline decoration-dotted underline-offset-4 decoration-white/30">{age.display}</span>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p className="whitespace-pre-line">{age.tooltip}</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  );
+                })()}
               </TableCell>
               <TableCell>
                 {reg.child_boxing_program?.includes("Senior") ? (
