@@ -538,15 +538,46 @@ const Register = () => {
     return (
       <div className="min-h-screen flex flex-col bg-background">
         <Header />
-        <main className="flex-1 flex items-center justify-center p-4">
-          <Card className="max-w-lg w-full text-center">
-            <CardContent className="pt-8 pb-8">
-              <CheckCircle2 className="w-16 h-16 text-primary mx-auto mb-4" />
-              <h2 className="text-2xl font-bold mb-2">Registration Complete!</h2>
-              <p className="text-muted-foreground mb-6">
-                Thank you for registering your child with NLA Youth Boxing. We will be in touch soon with next steps.
-              </p>
-              <Button onClick={() => navigate("/")}>Return to Home</Button>
+        <main className="flex-1 container max-w-2xl mx-auto px-4 py-12">
+          <Card className="border-2 border-primary/20 shadow-lg">
+            <CardContent className="pt-12 pb-12 text-center space-y-6">
+              <div className="flex justify-center">
+                <div className="w-20 h-20 rounded-full bg-primary/10 flex items-center justify-center">
+                  <CheckCircle2 className="w-12 h-12 text-primary" />
+                </div>
+              </div>
+              <div className="space-y-3">
+                <h1 className="text-3xl font-bold text-foreground">Registration Submitted!</h1>
+                <p className="text-lg text-muted-foreground">
+                  Thank you for registering with No Limits Boxing Academy.
+                </p>
+              </div>
+              <div className="bg-muted/30 rounded-lg p-6 text-left space-y-3">
+                <h2 className="font-semibold text-lg">What happens next?</h2>
+                <ul className="space-y-2 text-sm text-muted-foreground">
+                  <li className="flex items-start gap-2">
+                    <CheckCircle2 className="w-4 h-4 text-primary mt-0.5 flex-shrink-0" />
+                    <span>Our team will review your submission within 1-2 business days</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <CheckCircle2 className="w-4 h-4 text-primary mt-0.5 flex-shrink-0" />
+                    <span>You'll receive a confirmation email at <strong>{formValues["parent_email"]}</strong></span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <CheckCircle2 className="w-4 h-4 text-primary mt-0.5 flex-shrink-0" />
+                    <span>Once approved, {formValues["child_first_name"]} will be able to check in at our facility</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <CheckCircle2 className="w-4 h-4 text-primary mt-0.5 flex-shrink-0" />
+                    <span>If you have questions, contact us at <a href="mailto:info@nolimitsboxingacademy.org" className="text-primary hover:underline">info@nolimitsboxingacademy.org</a></span>
+                  </li>
+                </ul>
+              </div>
+              <div className="pt-4">
+                <Button onClick={() => navigate("/")} size="lg" className="min-w-48">
+                  Return to Home
+                </Button>
+              </div>
             </CardContent>
           </Card>
         </main>
@@ -574,6 +605,18 @@ const Register = () => {
               </div>
             ) : (
               <form onSubmit={handleSubmit} className="space-y-6">
+                {/* Honeypot field for spam protection - hidden from users */}
+                <input
+                  type="text"
+                  name="website"
+                  value={honeypot}
+                  onChange={(e) => setHoneypot(e.target.value)}
+                  style={{ position: 'absolute', left: '-9999px', width: '1px', height: '1px' }}
+                  tabIndex={-1}
+                  autoComplete="off"
+                  aria-hidden="true"
+                />
+
                 {/* Today's Date */}
                 <div>
                   <Label className="text-base font-medium">Today's Date <span className="text-destructive">*</span></Label>
