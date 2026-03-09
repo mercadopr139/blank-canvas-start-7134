@@ -271,6 +271,21 @@ const CheckIn = () => {
       </div>
 
       {selectedYouth && (
+        <CoachPasswordModal
+          open={passwordModalOpen}
+          onClose={() => {
+            setPasswordModalOpen(false);
+            setSelectedYouth(null);
+          }}
+          onSuccess={() => {
+            setPasswordModalOpen(false);
+            setPhotoModalOpen(true);
+          }}
+          registrationId={selectedYouth.id}
+        />
+      )}
+
+      {selectedYouth && (
         <PhotoUploadModal
           open={photoModalOpen}
           onClose={() => {
