@@ -77,7 +77,7 @@ const AdminRegistrations = () => {
   const [districtFilter, setDistrictFilter] = useState<string>("all");
   const [selectedRegistration, setSelectedRegistration] = useState<any | null>(null);
   const [editingRegistration, setEditingRegistration] = useState<any | null>(null);
-  
+  const [csvFallbackUrl, setCsvFallbackUrl] = useState<string | null>(null);
 
   const { data: registrations, isLoading } = useQuery({
     queryKey: ["youth-registrations"],
@@ -152,6 +152,31 @@ const AdminRegistrations = () => {
   };
 
 
+  const buildCsvString = () => {
+    const rows = filteredRegistrations || [];
+    if (rows.length === 0) return null;
+    const headers = ["Child Name", "Date of Birth", "Age", "Program", "District", "Parent Name", "Parent Email", "Parent Phone", "Medical Alert", "Registration Date", "Attendance Status"];
+    const csvRows = rows.map((r: any) => {
+      const age = calculateAge(r.child_date_of_birth);
+      const ageStr = typeof age === "string" ? age : age.tooltip.split("\n")[0];
+      const medical = hasMedicalAlerts(r) ? "Yes" : "No";
+      return [
+        `${r.child_first_name || ""} ${r.child_last_name || ""}`.trim(),
+        r.child_date_of_birth ? format(parseISO(r.child_date_of_birth), "MM/dd/yyyy") : "",
+        ageStr,
+        r.child_boxing_program || "",
+        r.child_school_district || "",
+        `${r.parent_first_name || ""} ${r.parent_last_name || ""}`.trim(),
+        r.parent_email || "",
+        r.parent_phone || "",
+        medical,
+        r.submission_date ? format(parseISO(r.submission_date), "MM/dd/yyyy") : "",
+        r.approved_for_attendance ? "Approved" : "Pending",
+      ].map(v => `"${String(v ?? "").replace(/"/g, '""')}"`).join(",");
+    });
+    return "\uFEFF" + [headers.join(","), ...csvRows].join("\r\n");
+  };
+
   const exportFilteredCsv = () => {
     try {
       const rows = filteredRegistrations || [];
@@ -159,39 +184,29 @@ const AdminRegistrations = () => {
         toast.error("No records to export");
         return;
       }
-      const headers = ["Child Name", "Date of Birth", "Age", "Program", "District", "Parent Name", "Parent Email", "Parent Phone", "Medical Alert", "Registration Date", "Attendance Status"];
-      const csvRows = rows.map((r: any) => {
-        const age = calculateAge(r.child_date_of_birth);
-        const ageStr = typeof age === "string" ? age : age.tooltip.split("\n")[0];
-        const medical = hasMedicalAlerts(r) ? "Yes" : "No";
-        return [
-          `${r.child_first_name || ""} ${r.child_last_name || ""}`.trim(),
-          r.child_date_of_birth ? format(parseISO(r.child_date_of_birth), "MM/dd/yyyy") : "",
-          ageStr,
-          r.child_boxing_program || "",
-          r.child_school_district || "",
-          `${r.parent_first_name || ""} ${r.parent_last_name || ""}`.trim(),
-          r.parent_email || "",
-          r.parent_phone || "",
-          medical,
-          r.submission_date ? format(parseISO(r.submission_date), "MM/dd/yyyy") : "",
-          r.approved_for_attendance ? "Approved" : "Pending",
-        ].map(v => `"${String(v ?? "").replace(/"/g, '""')}"`).join(",");
-      });
-      const csv = "\uFEFF" + [headers.join(","), ...csvRows].join("\r\n");
+      const csv = buildCsvString();
+      if (!csv) return;
+
       const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
       const url = URL.createObjectURL(blob);
+      const filename = `Youth_Registrations_Export_${format(new Date(), "yyyy-MM-dd")}.csv`;
+
+      // Try direct download first
       const a = document.createElement("a");
       a.href = url;
-      a.download = `Youth_Registrations_Export_${format(new Date(), "yyyy-MM-dd")}.csv`;
+      a.download = filename;
       a.style.display = "none";
       document.body.appendChild(a);
       a.click();
+
+      // Also store the blob URL as fallback for iframe/preview environments
+      setCsvFallbackUrl(url);
+
       setTimeout(() => {
         document.body.removeChild(a);
-        URL.revokeObjectURL(url);
-      }, 100);
-      toast.success(`Filtered list exported successfully — ${rows.length} records`);
+      }, 200);
+
+      toast.success(`Export created — ${rows.length} records. If the file didn't download, use the fallback dialog.`);
     } catch (err) {
       console.error("Export failed:", err);
       toast.error("Export failed. Please try again.");
@@ -481,6 +496,28 @@ const AdminRegistrations = () => {
         </DialogContent>
       </Dialog>
 
+      {/* CSV Fallback Download Dialog */}
+      <Dialog open={!!csvFallbackUrl} onOpenChange={(open) => { if (!open) { if (csvFallbackUrl) URL.revokeObjectURL(csvFallbackUrl); setCsvFallbackUrl(null); } }}>
+        <DialogContent className="bg-zinc-900 border-white/10 text-white max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-white">CSV Export Ready</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-white/70">
+            If the file didn't download automatically (common in preview mode), use the buttons below.
+          </p>
+          <div className="flex flex-col gap-2 pt-2">
+            <Button asChild className="gap-2">
+              <a href={csvFallbackUrl || "#"} download={`Youth_Registrations_Export_${format(new Date(), "yyyy-MM-dd")}.csv`}>
+                <Download className="w-4 h-4" /> Download CSV
+              </a>
+            </Button>
+            <Button variant="outline" className="gap-2 border-white/20 text-white hover:bg-white/10" onClick={() => { if (csvFallbackUrl) window.open(csvFallbackUrl, "_blank"); }}>
+              <ExternalLink className="w-4 h-4" /> Open CSV in New Tab
+            </Button>
+          </div>
+          <p className="text-xs text-white/40 pt-1">On the published site, downloads work automatically.</p>
+        </DialogContent>
+      </Dialog>
 
     </div>
   );
