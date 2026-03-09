@@ -418,16 +418,21 @@ const getHeadshotUrl = (url: string | null): string | null => {
       .map(([date, count]) => ({ date: format(parseISO(date), "M/d"), count }));
   }, [attendance, regMap]);
 
-  const alerts = baldEagles
-    .map((r) => {
-      const records = attendanceByReg[r.id] || [];
-      const prevWeekCount = records.filter((rec) => rec.check_in_date >= prevWeekStart && rec.check_in_date <= prevWeekEnd).length;
-      if (prevWeekCount > 2) return null;
-      const lastDate = records.length > 0 ? records[0].check_in_date : null;
-      return { ...r, prevWeekCount, lastDate: lastDate || "Never" };
-    })
-    .filter(Boolean)
-    .sort((a, b) => (a?.prevWeekCount || 0) - (b?.prevWeekCount || 0)) as (Registration & { prevWeekCount: number; lastDate: string })[];
+  // Check if any attendance was recorded during the previous week at all
+  const anyPrevWeekAttendance = (attendance || []).some((rec) => rec.check_in_date >= prevWeekStart && rec.check_in_date <= prevWeekEnd);
+
+  const alerts = anyPrevWeekAttendance
+    ? (baldEagles
+        .map((r) => {
+          const records = attendanceByReg[r.id] || [];
+          const prevWeekCount = records.filter((rec) => rec.check_in_date >= prevWeekStart && rec.check_in_date <= prevWeekEnd).length;
+          if (prevWeekCount > 2) return null;
+          const lastDate = records.length > 0 ? records[0].check_in_date : null;
+          return { ...r, prevWeekCount, lastDate: lastDate || "Never" };
+        })
+        .filter(Boolean)
+        .sort((a, b) => (a?.prevWeekCount || 0) - (b?.prevWeekCount || 0)) as (Registration & { prevWeekCount: number; lastDate: string })[])
+    : [];
 
   /* ───── CALENDAR ───── */
   const calendarRegIds = useMemo(() => {
