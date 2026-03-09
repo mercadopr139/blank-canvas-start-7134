@@ -20,3 +20,9 @@ verify_jwt = false
 
 [functions.validate-coach-password]
 verify_jwt = false
+
+[functions.check-admin-allowlist]
+verify_jwt = false
+
+[functions.invite-admin]
+verify_jwt = false
