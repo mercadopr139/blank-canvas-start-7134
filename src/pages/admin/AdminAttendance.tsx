@@ -1061,7 +1061,13 @@ const AdminAttendance = () => {
                       <p className="text-xs text-white/40">{s.reg.child_boxing_program}</p>
                     </div>
                     <span className="text-xs text-white/50 flex-shrink-0">{format(new Date(s.check_in_at), "h:mm a")}</span>
-                  </div>
+                    <button
+                      onClick={(e) => { e.stopPropagation(); setDeleteTarget({ id: s.id, name: `${s.reg.child_first_name} ${s.reg.child_last_name}`, date: s.check_in_date }); }}
+                      className="p-1 rounded hover:bg-red-500/20 text-white/30 hover:text-red-400 transition-colors flex-shrink-0"
+                      title="Remove check-in"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
                 ))}
                 {daySignIns.length === 0 && <p className="text-sm text-white/30 text-center py-4">No sign-ins for this day</p>}
               </div>
@@ -1200,9 +1206,18 @@ const AdminAttendance = () => {
                       <p className="text-sm text-white/30">No attendance records</p>
                     ) : (
                       allAttendance.map((a) => (
-                        <div key={a.id} className="flex justify-between p-2 rounded bg-white/5 text-sm">
+                        <div key={a.id} className="flex items-center justify-between p-2 rounded bg-white/5 text-sm">
                           <span>{format(new Date(a.check_in_date), "EEEE, MMM d, yyyy")}</span>
-                          <span className="text-white/40">{format(new Date(a.check_in_at), "h:mm a")}</span>
+                          <div className="flex items-center gap-2">
+                            <span className="text-white/40">{format(new Date(a.check_in_at), "h:mm a")}</span>
+                            <button
+                              onClick={() => setDeleteTarget({ id: a.id, name: `${selectedYouth!.child_first_name} ${selectedYouth!.child_last_name}`, date: a.check_in_date })}
+                              className="p-1 rounded hover:bg-red-500/20 text-white/30 hover:text-red-400 transition-colors"
+                              title="Remove check-in"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
                         </div>
                       ))
                     )}
@@ -1211,6 +1226,51 @@ const AdminAttendance = () => {
               </div>
             </>
           )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Single Check-In Confirmation */}
+      <Dialog open={!!deleteTarget} onOpenChange={(open) => { if (!open) setDeleteTarget(null); }}>
+        <DialogContent className="bg-zinc-900 border-white/10 text-white max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="text-white">Remove Check-In?</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-white/70">
+            This will delete <span className="font-medium text-white">{deleteTarget?.name}</span>'s check-in for <span className="font-medium text-white">{deleteTarget?.date ? format(new Date(deleteTarget.date + "T12:00:00"), "MMMM d, yyyy") : ""}</span>.
+          </p>
+          <div className="flex gap-2 justify-end pt-2">
+            <Button variant="outline" size="sm" className="border-white/20 text-white" onClick={() => setDeleteTarget(null)}>Cancel</Button>
+            <Button variant="destructive" size="sm" onClick={handleDeleteSingle}>Remove Check-In</Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Clear Today Confirmation */}
+      <Dialog open={clearTodayOpen} onOpenChange={(open) => { if (!open) { setClearTodayOpen(false); setClearTodayConfirm(""); } }}>
+        <DialogContent className="bg-zinc-900 border-white/10 text-white max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="text-red-400 flex items-center gap-2"><AlertTriangle className="w-5 h-5" /> Clear Today's Attendance</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-white/70">
+            Are you sure you want to clear <span className="font-bold text-white">all</span> attendance records for today only?
+          </p>
+          <p className="text-sm text-white/70">
+            This will remove today's check-ins but will <span className="font-medium text-white">not</span> affect previous days.
+          </p>
+          <p className="text-sm text-white/60 font-medium">{totalPresentToday} attendance record{totalPresentToday !== 1 ? "s" : ""} from today will be removed.</p>
+          <div className="pt-1">
+            <label className="text-xs text-white/50 block mb-1">Type <span className="font-mono font-bold text-white">CLEAR TODAY</span> to confirm</label>
+            <Input
+              value={clearTodayConfirm}
+              onChange={(e) => setClearTodayConfirm(e.target.value)}
+              placeholder="CLEAR TODAY"
+              className="bg-white/5 border-white/20 text-white placeholder:text-white/20"
+            />
+          </div>
+          <div className="flex gap-2 justify-end pt-2">
+            <Button variant="outline" size="sm" className="border-white/20 text-white" onClick={() => { setClearTodayOpen(false); setClearTodayConfirm(""); }}>Cancel</Button>
+            <Button variant="destructive" size="sm" disabled={clearTodayConfirm !== "CLEAR TODAY"} onClick={handleClearToday}>Clear Today's Attendance</Button>
+          </div>
         </DialogContent>
       </Dialog>
     </div>
