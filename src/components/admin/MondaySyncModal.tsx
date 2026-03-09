@@ -131,7 +131,7 @@ export default function MondaySyncModal({ open, onOpenChange, onSyncComplete }: 
 
       // Auto-detect common column names
       const cols: Column[] = data.columns || [];
-      const photo = cols.find(c => c.type === "file" || c.title.toLowerCase().includes("photo") || c.title.toLowerCase().includes("picture") || c.title.toLowerCase().includes("upload"));
+      const photo = cols.find(c => c.type === "file" || c.title.toLowerCase().includes("photo") || c.title.toLowerCase().includes("picture") || c.title.toLowerCase().includes("upload") || c.title.toLowerCase().includes("headshot") || c.title.toLowerCase().includes("avatar") || c.title.toLowerCase().includes("image"));
       if (photo) setPhotoColumn(photo.id);
       const fn = cols.find(c => c.title.toLowerCase().includes("first name") || c.title.toLowerCase() === "first");
       if (fn) setFirstNameColumn(fn.id);
@@ -351,7 +351,7 @@ export default function MondaySyncModal({ open, onOpenChange, onSyncComplete }: 
 
             <div className="flex gap-2">
               <Button variant="outline" onClick={() => setStep("boards")} className="flex-1">Back</Button>
-              <Button onClick={startSync} disabled={!photoColumn} className="flex-1">
+              <Button onClick={startSync} disabled={loading} className="flex-1">
                 Start Photo Sync
               </Button>
             </div>
