@@ -351,7 +351,7 @@ export default function MondaySyncModal({ open, onOpenChange, onSyncComplete }: 
 
             <div className="flex gap-2">
               <Button variant="outline" onClick={() => setStep("boards")} className="flex-1">Back</Button>
-              <Button onClick={startSync} disabled={!photoColumn} className="flex-1">
+              <Button onClick={startSync} disabled={loading} className="flex-1">
                 Start Photo Sync
               </Button>
             </div>
