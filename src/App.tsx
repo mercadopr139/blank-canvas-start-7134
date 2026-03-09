@@ -107,6 +107,7 @@ const App = () => (
               <Route path="attendance" element={<AdminAttendance />} />
               <Route path="attendance-reports" element={<AdminAttendanceReports />} />
               <Route path="form-builder" element={<AdminFormBuilder />} />
+              <Route path="lil-champs-attendance" element={<AdminLilChampsAttendance />} />
             </Route>
 
             {/* Sales & Marketing section — sidebar layout wraps sub-pages */}

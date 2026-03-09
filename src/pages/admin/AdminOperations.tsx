@@ -47,6 +47,12 @@ const baseTiles: OperationsTile[] = [
     icon: Settings2,
     href: "/admin/operations/form-builder",
   },
+  {
+    title: "Lil Champ's Corner",
+    description: "Attendance for Lil Champ's Corner",
+    icon: Star,
+    href: "/admin/operations/lil-champs-attendance",
+  },
 ];
 
 // Blank index – main panel is empty until a sidebar item is selected
