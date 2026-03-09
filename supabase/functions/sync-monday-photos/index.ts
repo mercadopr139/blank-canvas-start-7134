@@ -430,6 +430,7 @@ Deno.serve(async (req) => {
       const photoColumnId = body.photoColumnId;
       const firstNameColumnId = body.firstNameColumnId || null;
       const lastNameColumnId = body.lastNameColumnId || null;
+      const forceReplace = Boolean(body.forceReplace);
 
       if (!boardId || !photoColumnId) {
         return new Response(JSON.stringify({ error: "boardId and photoColumnId required" }), {
@@ -581,8 +582,8 @@ Deno.serve(async (req) => {
 
         results.matched++;
 
-        // Skip if already has a non-signature headshot image
-        if (match.child_headshot_url) {
+        // Skip if already has a non-signature headshot image (unless forceReplace is enabled)
+        if (match.child_headshot_url && !forceReplace) {
           const hasValidExistingPhoto = await hasNonSignatureExistingPhoto(supabase, match.child_headshot_url);
 
           if (hasValidExistingPhoto) {
@@ -595,8 +596,6 @@ Deno.serve(async (req) => {
             continue;
           }
         }
-
-        // Download and upload the best headshot candidate from the selected column
         try {
           const baseHeaders = {
             "User-Agent": "Mozilla/5.0",

@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Switch } from "@/components/ui/switch";
 import { Loader2, CheckCircle2, XCircle, AlertTriangle, CloudDownload } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -45,6 +46,7 @@ export default function MondaySyncModal({ open, onOpenChange, onSyncComplete }: 
   const [lastNameColumn, setLastNameColumn] = useState<string>("");
   const [results, setResults] = useState<SyncResult | null>(null);
   const [progress, setProgress] = useState("");
+  const [forceReplace, setForceReplace] = useState(true);
 
   const reset = () => {
     setStep("boards");
@@ -60,6 +62,7 @@ export default function MondaySyncModal({ open, onOpenChange, onSyncComplete }: 
     setLastNameColumn("");
     setResults(null);
     setProgress("");
+    setForceReplace(true);
   };
 
   const invoke = async (body: Record<string, unknown>) => {
@@ -178,6 +181,7 @@ export default function MondaySyncModal({ open, onOpenChange, onSyncComplete }: 
           photoColumnId: photoColumn,
           firstNameColumnId: firstNameColumn && firstNameColumn !== "__none" ? firstNameColumn : null,
           lastNameColumnId: lastNameColumn && lastNameColumn !== "__none" ? lastNameColumn : null,
+          forceReplace,
           cursor,
           batchSize: 20,
         });
@@ -346,6 +350,16 @@ export default function MondaySyncModal({ open, onOpenChange, onSyncComplete }: 
                     ))}
                   </SelectContent>
                 </Select>
+              </div>
+
+              <div className="flex items-start justify-between gap-3 rounded-lg border border-border p-3">
+                <div className="space-y-1">
+                  <p className="text-sm font-medium">Replace existing photos</p>
+                  <p className="text-xs text-muted-foreground">
+                    Turn this on to re-import and fix records that currently show a signature or the wrong image.
+                  </p>
+                </div>
+                <Switch checked={forceReplace} onCheckedChange={setForceReplace} />
               </div>
             </div>
 
