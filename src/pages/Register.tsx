@@ -322,6 +322,27 @@ const Register = () => {
       if (error) throw error;
       setIsSubmitted(true);
       toast({ title: "Registration Submitted!", description: "Thank you for registering with NLA Youth Boxing." });
+
+      // Send admin notification email (fire-and-forget, don't block user)
+      try {
+        await supabase.functions.invoke("notify-new-registration", {
+          body: {
+            child_first_name: (formValues["child_first_name"] || "").trim(),
+            child_last_name: (formValues["child_last_name"] || "").trim(),
+            child_date_of_birth: formValues["child_date_of_birth"],
+            child_boxing_program: formValues["child_boxing_program"],
+            child_school_district: formValues["child_school_district"],
+            parent_first_name: (formValues["parent_first_name"] || "").trim(),
+            parent_last_name: (formValues["parent_last_name"] || "").trim(),
+            parent_phone: toE164(formValues["parent_phone"] || "") || (formValues["parent_phone"] || "").trim(),
+            parent_email: (formValues["parent_email"] || "").trim(),
+            submission_date: new Date().toISOString().split("T")[0],
+            child_headshot_url: headshotUrl || null,
+          },
+        });
+      } catch (notifyErr) {
+        console.error("Admin notification failed (non-blocking):", notifyErr);
+      }
     } catch (error: any) {
       console.error("Registration error:", error);
       toast({ title: "Submission Failed", description: error.message || "Please try again.", variant: "destructive" });
