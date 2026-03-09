@@ -35,14 +35,25 @@ function calculateAge(dob: string): number {
   return age;
 }
 
+function resolveHeadshotUrl(url: string | null | undefined): string | null {
+  if (!url) return null;
+  if (url.startsWith("http")) return url;
+  const supabaseUrl = Deno.env.get("SUPABASE_URL") || "";
+  if (url.startsWith("youth-photos/")) {
+    return `${supabaseUrl}/storage/v1/object/public/youth-photos/${url}`;
+  }
+  return `${supabaseUrl}/storage/v1/object/public/registration-signatures/${url}`;
+}
+
 function renderEmailHtml(reg: RegistrationData): string {
   const childName = `${reg.child_first_name} ${reg.child_last_name}`;
   const parentName = `${reg.parent_first_name} ${reg.parent_last_name}`;
   const age = calculateAge(reg.child_date_of_birth);
 
-  const headshotBlock = reg.child_headshot_url
+  const resolvedHeadshot = resolveHeadshotUrl(reg.child_headshot_url);
+  const headshotBlock = resolvedHeadshot
     ? `<tr><td style="padding:0 0 24px 0;text-align:center;">
-        <img src="${reg.child_headshot_url}" alt="${childName}" style="width:120px;height:120px;border-radius:50%;object-fit:cover;border:3px solid #e5e7eb;" />
+        <img src="${resolvedHeadshot}" alt="${childName}" style="width:120px;height:120px;border-radius:50%;object-fit:cover;border:3px solid #e5e7eb;" />
        </td></tr>`
     : "";
 
