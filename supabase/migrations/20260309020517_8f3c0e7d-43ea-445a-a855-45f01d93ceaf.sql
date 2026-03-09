@@ -1,0 +1,1 @@
+DELETE FROM attendance_records;
