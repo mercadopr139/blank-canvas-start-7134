@@ -888,7 +888,7 @@ const AdminSignals = () => {
                     <Zap className="w-4 h-4 text-white/30" />
                     <h3 className="text-sm font-bold text-white/40 uppercase tracking-wider">Bonus</h3>
                   </div>
-                  <SortableContext items={todayBonusSignals.map(s => s.id)} strategy={verticalListSortingStrategy}>
+                  <SortableContext items={[...todayBonusSignals].sort((a, b) => (b.status === "Complete" ? 1 : 0) - (a.status === "Complete" ? 1 : 0)).map(s => s.id)} strategy={verticalListSortingStrategy}>
                     <div className="px-3 pb-3 space-y-1 min-h-[80px]">
                       {todayBonusSignals.length === 0 ? (
                         <div className="flex items-center gap-3 px-3 py-2.5 rounded-lg bg-white/[0.02] border border-white/[0.04]">
@@ -896,7 +896,7 @@ const AdminSignals = () => {
                           <span className="text-white/15 text-sm italic">Empty slot</span>
                         </div>
                       ) : (
-                        todayBonusSignals.map((signal) => (
+                        [...todayBonusSignals].sort((a, b) => (b.status === "Complete" ? 1 : 0) - (a.status === "Complete" ? 1 : 0)).map((signal) => (
                           <SortableSignalRow
                             key={signal.id}
                             signal={signal}
