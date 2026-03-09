@@ -78,10 +78,6 @@ const AdminRegistrations = () => {
   const [selectedRegistration, setSelectedRegistration] = useState<any | null>(null);
   const [editingRegistration, setEditingRegistration] = useState<any | null>(null);
   
-  const [importOpen, setImportOpen] = useState(false);
-  const [bulkPhotoOpen, setBulkPhotoOpen] = useState(false);
-  const [mondaySyncOpen, setMondaySyncOpen] = useState(false);
-  const [deleteAllStep, setDeleteAllStep] = useState<0 | 1 | 2>(0);
 
   const { data: registrations, isLoading } = useQuery({
     queryKey: ["youth-registrations"],
@@ -156,21 +152,6 @@ const AdminRegistrations = () => {
   };
 
 
-  const handleDeleteAll = async () => {
-    const ids = registrations?.map((r) => r.id) || [];
-    if (ids.length === 0) return;
-    const { error } = await supabase
-      .from("youth_registrations")
-      .delete()
-      .in("id", ids);
-    if (error) {
-      toast.error("Failed to delete all registrations");
-    } else {
-      toast.success("All registrations deleted");
-      queryClient.invalidateQueries({ queryKey: ["youth-registrations"] });
-    }
-    setDeleteAllStep(0);
-  };
 
   const programs = [...new Set(registrations?.map((r) => r.child_boxing_program) || [])];
   const districts = [...new Set(registrations?.map((r) => r.child_school_district) || [])];
@@ -450,117 +431,6 @@ const AdminRegistrations = () => {
       </Dialog>
 
 
-      {/* Delete All - Step 1 */}
-      <AlertDialog open={deleteAllStep === 1} onOpenChange={(open) => { if (!open) setDeleteAllStep(0); }}>
-        <AlertDialogContent className="bg-zinc-900 border-white/10 text-white">
-          <AlertDialogHeader>
-            <AlertDialogTitle className="text-white">Delete All Registrations?</AlertDialogTitle>
-            <AlertDialogDescription className="text-white/50">
-              This will permanently delete <strong className="text-red-400">{registrations?.length || 0}</strong> youth registrations. This action cannot be undone.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel className="bg-white/5 border-white/10 text-white hover:bg-white/10 hover:text-white">Cancel</AlertDialogCancel>
-            <Button className="bg-red-600 text-white hover:bg-red-700" onClick={() => setDeleteAllStep(2)}>
-              Yes, Delete All
-            </Button>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-
-      {/* Delete All - Step 2 (Final Confirmation) */}
-      <AlertDialog open={deleteAllStep === 2} onOpenChange={(open) => { if (!open) setDeleteAllStep(0); }}>
-        <AlertDialogContent className="bg-zinc-900 border-red-500/30 text-white">
-          <AlertDialogHeader>
-            <AlertDialogTitle className="text-red-400 flex items-center gap-2">
-              <AlertTriangle className="w-5 h-5" /> Are you absolutely sure?
-            </AlertDialogTitle>
-            <AlertDialogDescription className="text-white/50">
-              You are about to delete <strong className="text-red-400">ALL {registrations?.length || 0} registrations</strong>. 
-              This is irreversible — all youth data, waivers, and photos will be permanently lost.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel className="bg-white/5 border-white/10 text-white hover:bg-white/10 hover:text-white">Cancel</AlertDialogCancel>
-            <AlertDialogAction className="bg-red-600 text-white hover:bg-red-700" onClick={handleDeleteAll}>
-              I'm Sure — Delete Everything
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-
-      {/* Import Modal */}
-      <YouthImportModal
-        open={importOpen}
-        onOpenChange={setImportOpen}
-        existingRegistrations={registrations || []}
-        onImportComplete={() => queryClient.invalidateQueries({ queryKey: ["youth-registrations"] })}
-      />
-
-      {/* Bulk Photo Import Modal */}
-      <BulkPhotoImportModal
-        open={bulkPhotoOpen}
-        onOpenChange={setBulkPhotoOpen}
-        existingRegistrations={registrations || []}
-        onImportComplete={() => queryClient.invalidateQueries({ queryKey: ["youth-registrations"] })}
-      />
-
-      {/* Imported Records Needing Photo Review */}
-      {(() => {
-        const needsPhoto = (registrations || []).filter(
-          (r: any) => r.approved_for_attendance && !r.child_headshot_url &&
-            r.medical_consent_name === "Imported from Monday.com"
-        );
-        if (needsPhoto.length === 0) return null;
-        return (
-          <div className="container mx-auto px-4 pb-6">
-            <div className="flex items-center gap-3 mb-3">
-              <h3 className="text-lg font-semibold text-white flex items-center gap-2">
-                <ImageOff className="w-5 h-5 text-amber-400" /> Imported Records Needing Photo Review
-              </h3>
-              <Badge className="bg-amber-500/15 text-amber-400 border-amber-500/30 text-xs">{needsPhoto.length}</Badge>
-            </div>
-            <Card className="bg-amber-500/5 border-amber-500/20">
-              <CardContent className="p-0">
-                <div className="overflow-x-auto">
-                  <Table>
-                    <TableHeader>
-                      <TableRow className="border-white/10 hover:bg-transparent">
-                        <TableHead className="text-white/70">Child Name</TableHead>
-                        <TableHead className="text-white/70">DOB</TableHead>
-                        <TableHead className="text-white/70">Program</TableHead>
-                        <TableHead className="text-white/70">Photo Status</TableHead>
-                        <TableHead className="text-white/70 text-right">Action</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {needsPhoto.map((r: any) => (
-                        <TableRow key={r.id} className="border-white/10">
-                          <TableCell className="text-white font-medium">{r.child_first_name} {r.child_last_name}</TableCell>
-                          <TableCell className="text-white/60">{format(parseISO(r.child_date_of_birth), "MMM d, yyyy")}</TableCell>
-                          <TableCell className="text-white/60 text-xs">{r.child_boxing_program}</TableCell>
-                          <TableCell><Badge className="bg-amber-500/15 text-amber-400 border-amber-500/30 text-xs">Photo Missing</Badge></TableCell>
-                          <TableCell className="text-right">
-                            <Button size="sm" variant="ghost" onClick={() => setEditingRegistration({ ...r })} className="text-amber-400 hover:text-amber-300 hover:bg-amber-500/10 h-8 gap-1">
-                              <Pencil className="w-3.5 h-3.5" /> Edit Profile
-                            </Button>
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-        );
-      })()}
-
-      <MondaySyncModal
-        open={mondaySyncOpen}
-        onOpenChange={setMondaySyncOpen}
-        onSyncComplete={() => queryClient.invalidateQueries({ queryKey: ["youth-registrations"] })}
-      />
     </div>
   );
 };
