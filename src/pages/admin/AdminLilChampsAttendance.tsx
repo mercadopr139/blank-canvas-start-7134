@@ -145,7 +145,7 @@ const AdminLilChampsAttendance = () => {
                       <TableCell className="text-white/70">{calculateAge(r.child_date_of_birth)}</TableCell>
                       <TableCell className="text-white/70">{r.check_in_date}</TableCell>
                       <TableCell className="text-white/70">{format(new Date(r.check_in_at), "h:mm a")}</TableCell>
-                      <TableCell><span className="text-xs bg-yellow-500/20 text-yellow-400 px-2 py-0.5 rounded-full">Lil Champs Corner</span></TableCell>
+                      <TableCell><span className="text-xs px-2 py-0.5 rounded-full" style={{ backgroundColor: 'rgba(56,189,248,0.15)', color: '#38bdf8' }}>Lil Champs Corner</span></TableCell>
                     </TableRow>
                   ))
                 )}
