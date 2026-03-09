@@ -417,11 +417,11 @@ const AdminRegistrations = () => {
 
       {/* Edit Dialog */}
       <Dialog open={!!editingRegistration} onOpenChange={() => setEditingRegistration(null)}>
-        <DialogContent className="max-w-2xl max-h-[90vh]">
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-hidden flex flex-col">
           <DialogHeader>
             <DialogTitle>Edit Registration</DialogTitle>
           </DialogHeader>
-          <ScrollArea className="max-h-[70vh] pr-4">
+          <ScrollArea className="flex-1 overflow-auto pr-4">
             {editingRegistration && (
               <EditRegistrationForm
                 registration={editingRegistration}
