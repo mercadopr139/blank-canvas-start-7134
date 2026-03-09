@@ -68,6 +68,7 @@ const Register = () => {
   const [childHeadshot, setChildHeadshot] = useState<File | null>(null);
   const [headshotPreview, setHeadshotPreview] = useState<string | null>(null);
   const [formValues, setFormValues] = useState<Record<string, string>>({});
+  const [honeypot, setHoneypot] = useState(""); // Spam protection
   const [signatures, setSignatures] = useState<Signatures>({
     medical_consent: null, liability_waiver: null, transportation_excursions: null,
     media_consent: null, spiritual_development: null, counseling_services: null,
@@ -130,7 +131,54 @@ const Register = () => {
     return data.path;
   };
 
+  const checkForDuplicates = async (): Promise<string | null> => {
+    const childFirst = (formValues["child_first_name"] || "").trim().toLowerCase();
+    const childLast = (formValues["child_last_name"] || "").trim().toLowerCase();
+    const dob = formValues["child_date_of_birth"];
+    const parentEmail = (formValues["parent_email"] || "").trim().toLowerCase();
+
+    if (!childFirst || !childLast || !dob) return null;
+
+    try {
+      const { data, error } = await supabase
+        .from("youth_registrations")
+        .select("id, child_first_name, child_last_name, parent_email")
+        .eq("child_date_of_birth", dob);
+
+      if (error) throw error;
+
+      if (data && data.length > 0) {
+        for (const existing of data) {
+          const existingFirst = (existing.child_first_name || "").toLowerCase();
+          const existingLast = (existing.child_last_name || "").toLowerCase();
+          const existingEmail = (existing.parent_email || "").toLowerCase();
+
+          // Check if names match
+          if (existingFirst === childFirst && existingLast === childLast) {
+            return `A registration for ${formValues["child_first_name"]} ${formValues["child_last_name"]} with this date of birth already exists. If you need to update information, please contact us.`;
+          }
+
+          // Check if email matches with same DOB
+          if (parentEmail && existingEmail === parentEmail) {
+            return `A registration with this parent email and date of birth already exists. If you need to update information, please contact us.`;
+          }
+        }
+      }
+    } catch (error) {
+      console.error("Duplicate check error:", error);
+      // Don't block submission if duplicate check fails
+    }
+
+    return null;
+  };
+
   const validateForm = (): string | null => {
+    // Honeypot spam protection
+    if (honeypot) {
+      console.warn("Honeypot triggered - likely spam");
+      return "Invalid submission. Please try again.";
+    }
+
     if (!formFields) return "Form not loaded";
 
     for (const field of formFields) {
@@ -181,9 +229,17 @@ const Register = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
     const validationError = validateForm();
     if (validationError) {
       toast({ title: "Validation Error", description: validationError, variant: "destructive" });
+      return;
+    }
+
+    // Check for duplicates
+    const duplicateError = await checkForDuplicates();
+    if (duplicateError) {
+      toast({ title: "Duplicate Registration", description: duplicateError, variant: "destructive" });
       return;
     }
 
@@ -482,15 +538,46 @@ const Register = () => {
     return (
       <div className="min-h-screen flex flex-col bg-background">
         <Header />
-        <main className="flex-1 flex items-center justify-center p-4">
-          <Card className="max-w-lg w-full text-center">
-            <CardContent className="pt-8 pb-8">
-              <CheckCircle2 className="w-16 h-16 text-primary mx-auto mb-4" />
-              <h2 className="text-2xl font-bold mb-2">Registration Complete!</h2>
-              <p className="text-muted-foreground mb-6">
-                Thank you for registering your child with NLA Youth Boxing. We will be in touch soon with next steps.
-              </p>
-              <Button onClick={() => navigate("/")}>Return to Home</Button>
+        <main className="flex-1 container max-w-2xl mx-auto px-4 py-12">
+          <Card className="border-2 border-primary/20 shadow-lg">
+            <CardContent className="pt-12 pb-12 text-center space-y-6">
+              <div className="flex justify-center">
+                <div className="w-20 h-20 rounded-full bg-primary/10 flex items-center justify-center">
+                  <CheckCircle2 className="w-12 h-12 text-primary" />
+                </div>
+              </div>
+              <div className="space-y-3">
+                <h1 className="text-3xl font-bold text-foreground">Registration Submitted!</h1>
+                <p className="text-lg text-muted-foreground">
+                  Thank you for registering with No Limits Boxing Academy.
+                </p>
+              </div>
+              <div className="bg-muted/30 rounded-lg p-6 text-left space-y-3">
+                <h2 className="font-semibold text-lg">What happens next?</h2>
+                <ul className="space-y-2 text-sm text-muted-foreground">
+                  <li className="flex items-start gap-2">
+                    <CheckCircle2 className="w-4 h-4 text-primary mt-0.5 flex-shrink-0" />
+                    <span>Our team will review your submission within 1-2 business days</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <CheckCircle2 className="w-4 h-4 text-primary mt-0.5 flex-shrink-0" />
+                    <span>You'll receive a confirmation email at <strong>{formValues["parent_email"]}</strong></span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <CheckCircle2 className="w-4 h-4 text-primary mt-0.5 flex-shrink-0" />
+                    <span>Once approved, {formValues["child_first_name"]} will be able to check in at our facility</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <CheckCircle2 className="w-4 h-4 text-primary mt-0.5 flex-shrink-0" />
+                    <span>If you have questions, contact us at <a href="mailto:info@nolimitsboxingacademy.org" className="text-primary hover:underline">info@nolimitsboxingacademy.org</a></span>
+                  </li>
+                </ul>
+              </div>
+              <div className="pt-4">
+                <Button onClick={() => navigate("/")} size="lg" className="min-w-48">
+                  Return to Home
+                </Button>
+              </div>
             </CardContent>
           </Card>
         </main>
@@ -518,6 +605,18 @@ const Register = () => {
               </div>
             ) : (
               <form onSubmit={handleSubmit} className="space-y-6">
+                {/* Honeypot field for spam protection - hidden from users */}
+                <input
+                  type="text"
+                  name="website"
+                  value={honeypot}
+                  onChange={(e) => setHoneypot(e.target.value)}
+                  style={{ position: 'absolute', left: '-9999px', width: '1px', height: '1px' }}
+                  tabIndex={-1}
+                  autoComplete="off"
+                  aria-hidden="true"
+                />
+
                 {/* Today's Date */}
                 <div>
                   <Label className="text-base font-medium">Today's Date <span className="text-destructive">*</span></Label>
