@@ -1,9 +1,9 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Search, CheckCircle2 } from "lucide-react";
+import { Search, CheckCircle2, Users } from "lucide-react";
 import nlaLogo from "@/assets/nla-logo-white.png";
 import PhotoUploadModal from "@/components/admin/PhotoUploadModal";
 import CoachPasswordModal from "@/components/checkin/CoachPasswordModal";
@@ -71,7 +71,34 @@ const CheckIn = () => {
   const [passwordModalOpen, setPasswordModalOpen] = useState(false);
   const [selectedYouth, setSelectedYouth] = useState<Youth | null>(null);
   const [showCelebration, setShowCelebration] = useState(false);
+  const [todayCount, setTodayCount] = useState(0);
+  const [counterPulse, setCounterPulse] = useState(false);
   const searchRef = useRef<HTMLInputElement>(null);
+
+  // Fetch today's check-in count
+  const fetchCount = useCallback(async () => {
+    const { data } = await supabase.rpc("get_today_checkin_count");
+    if (typeof data === "number") setTodayCount(data);
+  }, []);
+
+  useEffect(() => {
+    fetchCount();
+  }, [fetchCount]);
+
+  // Realtime: listen for new attendance inserts to update counter
+  useEffect(() => {
+    const channel = supabase
+      .channel("attendance_counter")
+      .on(
+        "postgres_changes",
+        { event: "INSERT", schema: "public", table: "attendance_records" },
+        () => {
+          fetchCount();
+        }
+      )
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [fetchCount]);
 
   // Auto-focus search on mount and after celebration
   useEffect(() => {
@@ -115,7 +142,6 @@ const CheckIn = () => {
     return () => { supabase.removeChannel(channel); };
   }, []);
 
-  // ENTER to check in if only one result
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === "Enter" && youth.length === 1 && !checkedIn && !alreadyIn) {
       handleCheckIn(youth[0]);
@@ -141,6 +167,12 @@ const CheckIn = () => {
       }
       return;
     }
+
+    // Immediately bump local counter + pulse
+    setTodayCount((c) => c + 1);
+    setCounterPulse(true);
+    setTimeout(() => setCounterPulse(false), 1000);
+
     setCheckedIn(y.id);
     setCheckedInName(`${y.child_first_name} ${y.child_last_name}`);
     setShowCelebration(true);
@@ -154,6 +186,7 @@ const CheckIn = () => {
 
   const hasResults = youth.length > 0;
   const showEmpty = !loading && search.length >= 2 && youth.length === 0;
+  const isIdle = !hasResults && !showEmpty;
 
   return (
     <div className="min-h-screen bg-black text-white flex flex-col">
@@ -181,38 +214,49 @@ const CheckIn = () => {
         </>
       )}
 
-      {/* Main kiosk layout - centers when no results */}
+      {/* Main kiosk layout */}
       <div className={`flex-1 flex flex-col items-center px-4 md:px-8 transition-all duration-500 ${
-        hasResults || showEmpty ? "justify-start pt-8 md:pt-12" : "justify-center"
+        isIdle ? "justify-center" : "justify-start pt-8 md:pt-12"
       }`}>
         {/* Logo */}
         <img
           src={nlaLogo}
           alt="No Limits Academy"
           className={`mx-auto mb-4 transition-all duration-500 ${
-            hasResults || showEmpty ? "h-16 md:h-20" : "h-28 md:h-40"
+            isIdle ? "h-28 md:h-40" : "h-16 md:h-20"
           }`}
         />
 
         {/* Title */}
         <h1 className={`font-black tracking-tight text-center transition-all duration-500 ${
-          hasResults || showEmpty ? "text-2xl md:text-3xl mb-1" : "text-4xl md:text-6xl mb-2"
+          isIdle ? "text-4xl md:text-6xl mb-2" : "text-2xl md:text-3xl mb-1"
         }`}>
           Attendance Check-In
         </h1>
-        <p className={`text-white/50 text-center mb-6 transition-all duration-500 ${
-          hasResults || showEmpty ? "text-sm md:text-base" : "text-lg md:text-xl"
+        <p className={`text-white/50 text-center transition-all duration-500 ${
+          isIdle ? "text-lg md:text-xl mb-4" : "text-sm md:text-base mb-3"
         }`}>
           Search your name and tap to check in
         </p>
 
-        {/* Search bar */}
-        <div className={`w-full transition-all duration-500 ${
-          hasResults || showEmpty ? "max-w-2xl" : "max-w-2xl"
+        {/* Live attendance counter */}
+        <div className={`flex items-center gap-2.5 rounded-full border border-white/10 bg-white/[0.04] px-5 py-2 mb-6 transition-all duration-300 ${
+          counterPulse ? "scale-110 border-green-500/50 bg-green-500/10" : ""
         }`}>
+          <Users className={`w-5 h-5 transition-colors ${counterPulse ? "text-green-400" : "text-white/40"}`} />
+          <span className="text-white/50 text-sm md:text-base font-medium">Tonight's Check-Ins:</span>
+          <span className={`font-black text-xl md:text-2xl tabular-nums transition-colors ${
+            counterPulse ? "text-green-400" : "text-white"
+          }`}>
+            {todayCount}
+          </span>
+        </div>
+
+        {/* Search bar */}
+        <div className="w-full max-w-2xl">
           <div className="relative mb-6">
             <Search className={`absolute left-4 md:left-5 top-1/2 -translate-y-1/2 text-white/40 transition-all duration-500 ${
-              hasResults || showEmpty ? "w-6 h-6" : "w-7 h-7 md:w-8 md:h-8"
+              isIdle ? "w-7 h-7 md:w-8 md:h-8" : "w-6 h-6"
             }`} />
             <Input
               ref={searchRef}
@@ -221,9 +265,9 @@ const CheckIn = () => {
               onKeyDown={handleKeyDown}
               placeholder="Type your name to check in"
               className={`pl-12 md:pl-14 bg-white/5 border-2 border-white/20 text-white placeholder:text-white/30 focus:border-green-500/60 rounded-2xl transition-all duration-500 ${
-                hasResults || showEmpty
-                  ? "text-xl md:text-2xl h-16 md:h-18"
-                  : "text-2xl md:text-3xl h-18 md:h-22"
+                isIdle
+                  ? "text-2xl md:text-3xl h-18 md:h-22"
+                  : "text-xl md:text-2xl h-16 md:h-18"
               }`}
               autoFocus
             />
@@ -248,7 +292,6 @@ const CheckIn = () => {
                 style={{ animationDelay: `${index * 80}ms`, animationFillMode: 'both' }}
               >
                 <CardContent className="flex items-center gap-5 md:gap-6 p-5 md:p-6">
-                  {/* Large avatar */}
                   <div className="w-16 h-16 md:w-20 md:h-20 rounded-full bg-white/10 flex items-center justify-center overflow-hidden flex-shrink-0 ring-2 ring-white/10">
                     {getHeadshotUrl(y.child_headshot_url) ? (
                       <img src={getHeadshotUrl(y.child_headshot_url)!} alt="" className="w-full h-full object-cover" />
@@ -259,7 +302,6 @@ const CheckIn = () => {
                     )}
                   </div>
 
-                  {/* Name & program */}
                   <div className="flex-1 min-w-0">
                     <p className="font-bold text-xl md:text-2xl leading-tight">
                       {y.child_first_name} {y.child_last_name}
@@ -280,7 +322,6 @@ const CheckIn = () => {
                     </button>
                   </div>
 
-                  {/* Action area */}
                   <div className="flex items-center flex-shrink-0">
                     {checkedIn === y.id && (
                       <div className="flex flex-col items-center text-green-400 animate-in fade-in zoom-in duration-300">
