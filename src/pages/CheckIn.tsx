@@ -124,7 +124,8 @@ const CheckIn = () => {
     setCheckedIn(null);
     setAlreadyIn(null);
     setShowCelebration(false);
-    const today = new Date().toISOString().split("T")[0];
+    // Use Eastern Time to determine today's date
+    const today = new Date().toLocaleDateString('en-CA', { timeZone: 'America/New_York' });
     const { error: insertError } = await supabase
       .from("attendance_records")
       .insert({ registration_id: y.id, check_in_date: today });
