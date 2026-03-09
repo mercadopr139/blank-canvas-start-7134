@@ -10,12 +10,13 @@ import CoachPasswordModal from "@/components/checkin/CoachPasswordModal";
 
 const getHeadshotUrl = (url: string | null): string | null => {
   if (!url) return null;
-  if (url.startsWith("http")) return url;
+  const bustParam = `?v=${Date.now()}`;
+  if (url.startsWith("http")) return url + bustParam;
   const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
   if (url.startsWith("youth-photos/")) {
-    return `${supabaseUrl}/storage/v1/object/public/youth-photos/${url}`;
+    return `${supabaseUrl}/storage/v1/object/public/youth-photos/${url}${bustParam}`;
   }
-  return `${supabaseUrl}/storage/v1/object/public/registration-signatures/${url}`;
+  return `${supabaseUrl}/storage/v1/object/public/registration-signatures/${url}${bustParam}`;
 };
 
 interface Youth {
