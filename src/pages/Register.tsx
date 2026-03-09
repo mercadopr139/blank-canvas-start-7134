@@ -293,7 +293,7 @@ const Register = () => {
         parent_email: (formValues["parent_email"] || "").trim(),
         child_primary_address: (formValues["child_primary_address"] || "").trim(),
         child_school_district: formValues["child_school_district"] as any,
-        child_grade_level: formValues["child_grade_level"] ? parseInt(formValues["child_grade_level"]) : null,
+        child_grade_level: formValues["child_grade_level"] && formValues["child_grade_level"] !== "not_applicable" ? parseInt(formValues["child_grade_level"]) : null,
         child_boxing_program: formValues["child_boxing_program"] as any,
         adults_in_household: adultsNum,
         siblings_in_household: siblingsNum,
@@ -386,7 +386,7 @@ const Register = () => {
         // Special handling for grade level dropdown
         if (field.field_key === "child_grade_level") {
           const gradeOptions = [
-            { value: "", label: "Not Applicable" },
+            { value: "not_applicable", label: "Not Applicable" },
             { value: "1", label: "1st Grade" },
             { value: "2", label: "2nd Grade" },
             { value: "3", label: "3rd Grade" },
@@ -407,7 +407,7 @@ const Register = () => {
               <Select value={val} onValueChange={v => handleInputChange(field.field_key, v)}>
                 <SelectTrigger className="mt-2"><SelectValue placeholder={field.placeholder || "Select grade level"} /></SelectTrigger>
                 <SelectContent>
-                  {gradeOptions.map(opt => <SelectItem key={opt.value || "na"} value={opt.value}>{opt.label}</SelectItem>)}
+                  {gradeOptions.map(opt => <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>)}
                 </SelectContent>
               </Select>
             </div>
