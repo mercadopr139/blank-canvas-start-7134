@@ -420,14 +420,14 @@ const getHeadshotUrl = (url: string | null): string | null => {
 
   const alerts = baldEagles
     .map((r) => {
-      const stats = getStats(r.id);
-      if (!stats.lastDate) return { ...r, daysSince: 999, lastDate: "Never" };
-      const days = differenceInCalendarDays(now, new Date(stats.lastDate));
-      if (days >= 7) return { ...r, daysSince: days, lastDate: stats.lastDate };
-      return null;
+      const records = attendanceByReg[r.id] || [];
+      const prevWeekCount = records.filter((rec) => rec.check_in_date >= prevWeekStart && rec.check_in_date <= prevWeekEnd).length;
+      if (prevWeekCount > 2) return null;
+      const lastDate = records.length > 0 ? records[0].check_in_date : null;
+      return { ...r, prevWeekCount, lastDate: lastDate || "Never" };
     })
     .filter(Boolean)
-    .sort((a, b) => (b?.daysSince || 0) - (a?.daysSince || 0)) as (Registration & { daysSince: number; lastDate: string })[];
+    .sort((a, b) => (a?.prevWeekCount || 0) - (b?.prevWeekCount || 0)) as (Registration & { prevWeekCount: number; lastDate: string })[];
 
   /* ───── CALENDAR ───── */
   const calendarRegIds = useMemo(() => {
