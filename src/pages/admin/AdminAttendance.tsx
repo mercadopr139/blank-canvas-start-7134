@@ -18,7 +18,7 @@ import {
 } from "recharts";
 import {
   startOfWeek, startOfMonth, endOfMonth, format, differenceInCalendarDays,
-  addMonths, subMonths, getDay, getDaysInMonth, isToday, parseISO, endOfWeek,
+  addMonths, subMonths, subWeeks, getDay, getDaysInMonth, isToday, parseISO, endOfWeek,
 } from "date-fns";
 import { toast } from "sonner";
 
@@ -51,6 +51,8 @@ const now = new Date();
 const todayStr = now.toISOString().split("T")[0];
 const weekStart = format(startOfWeek(now, { weekStartsOn: 1 }), "yyyy-MM-dd");
 const weekEnd = format(endOfWeek(now, { weekStartsOn: 1 }), "yyyy-MM-dd");
+const prevWeekStart = format(startOfWeek(subWeeks(now, 1), { weekStartsOn: 1 }), "yyyy-MM-dd");
+const prevWeekEnd = format(endOfWeek(subWeeks(now, 1), { weekStartsOn: 1 }), "yyyy-MM-dd");
 const currentMonthStart = format(startOfMonth(now), "yyyy-MM-dd");
 const currentMonthEnd = format(endOfMonth(now), "yyyy-MM-dd");
 const prevMonthStart = format(startOfMonth(subMonths(now, 1)), "yyyy-MM-dd");
@@ -418,14 +420,14 @@ const getHeadshotUrl = (url: string | null): string | null => {
 
   const alerts = baldEagles
     .map((r) => {
-      const stats = getStats(r.id);
-      if (!stats.lastDate) return { ...r, daysSince: 999, lastDate: "Never" };
-      const days = differenceInCalendarDays(now, new Date(stats.lastDate));
-      if (days >= 7) return { ...r, daysSince: days, lastDate: stats.lastDate };
-      return null;
+      const records = attendanceByReg[r.id] || [];
+      const prevWeekCount = records.filter((rec) => rec.check_in_date >= prevWeekStart && rec.check_in_date <= prevWeekEnd).length;
+      if (prevWeekCount > 2) return null;
+      const lastDate = records.length > 0 ? records[0].check_in_date : null;
+      return { ...r, prevWeekCount, lastDate: lastDate || "Never" };
     })
     .filter(Boolean)
-    .sort((a, b) => (b?.daysSince || 0) - (a?.daysSince || 0)) as (Registration & { daysSince: number; lastDate: string })[];
+    .sort((a, b) => (a?.prevWeekCount || 0) - (b?.prevWeekCount || 0)) as (Registration & { prevWeekCount: number; lastDate: string })[];
 
   /* ───── CALENDAR ───── */
   const calendarRegIds = useMemo(() => {
@@ -855,7 +857,7 @@ const getHeadshotUrl = (url: string | null): string | null => {
                       <TableHead className="text-white/60">Last Name</TableHead>
                       <TableHead className="text-white/60">Program</TableHead>
                       <TableHead className="text-white/60">Last Attended</TableHead>
-                      <TableHead className="text-white/60">Days Since</TableHead>
+                      <TableHead className="text-white/60">Last Week Practices</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -875,8 +877,8 @@ const getHeadshotUrl = (url: string | null): string | null => {
                         <TableCell className="text-white/60 text-xs">{a.child_boxing_program}</TableCell>
                         <TableCell className="text-white/60">{a.lastDate === "Never" ? "Never" : format(new Date(a.lastDate), "MMM d")}</TableCell>
                         <TableCell>
-                          <Badge variant={a.daysSince >= 14 ? "destructive" : "outline"} className={a.daysSince >= 14 ? "" : "border-yellow-500 text-yellow-400"}>
-                            {a.daysSince >= 999 ? "No record" : `${a.daysSince} days`}
+                          <Badge variant={a.prevWeekCount === 0 ? "destructive" : "outline"} className={a.prevWeekCount === 0 ? "" : "border-yellow-500 text-yellow-400"}>
+                            {a.prevWeekCount === 0 ? "None" : `${a.prevWeekCount}`}
                           </Badge>
                         </TableCell>
                       </TableRow>
