@@ -100,6 +100,10 @@ const AdminDashboard = () => {
 
         {/* Bottom utility section */}
         <div className="flex flex-col items-center gap-6 mt-12">
+          <div className="w-full max-w-sm">
+            <UpcomingEventsWidget />
+          </div>
+
           <div className="flex justify-center gap-4">
             <Card
               className="opacity-60 w-48 bg-white/5 border border-white/20 text-white cursor-pointer hover:opacity-80 transition-opacity"
@@ -126,10 +130,6 @@ const AdminDashboard = () => {
                 <CardDescription className="text-xs text-white/40">Coming soon</CardDescription>
               </CardHeader>
             </Card>
-          </div>
-
-          <div className="w-full max-w-sm">
-            <UpcomingEventsWidget />
           </div>
         </div>
       </main>
