@@ -23,18 +23,29 @@ import { toast } from "sonner";
 const HeadshotThumbnail = ({ headshotPath, size = "sm" }: { headshotPath: string; size?: "sm" | "lg" }) => {
   const [url, setUrl] = useState<string | null>(null);
   const [fullscreen, setFullscreen] = useState(false);
+  
   useEffect(() => {
-    supabase.storage.from("registration-signatures").createSignedUrl(headshotPath, 300)
-      .then(({ data }) => {
-        const rawSignedUrl = (data as { signedUrl?: string; signedURL?: string } | null)?.signedUrl
-          ?? (data as { signedUrl?: string; signedURL?: string } | null)?.signedURL;
-        if (!rawSignedUrl) return;
+    // Check if this is a public youth-photos URL or a signed URL from registration-signatures
+    if (headshotPath.includes('youth-photos')) {
+      // Public URL - use directly
+      const publicUrl = headshotPath.startsWith("http")
+        ? headshotPath
+        : `${import.meta.env.VITE_SUPABASE_URL}/storage/v1/object/public/youth-photos/${headshotPath.replace('youth-photos/', '')}`;
+      setUrl(publicUrl);
+    } else {
+      // Private signature URL - create signed URL
+      supabase.storage.from("registration-signatures").createSignedUrl(headshotPath, 300)
+        .then(({ data }) => {
+          const rawSignedUrl = (data as { signedUrl?: string; signedURL?: string } | null)?.signedUrl
+            ?? (data as { signedUrl?: string; signedURL?: string } | null)?.signedURL;
+          if (!rawSignedUrl) return;
 
-        const signedUrl = rawSignedUrl.startsWith("http")
-          ? rawSignedUrl
-          : `${import.meta.env.VITE_SUPABASE_URL}/storage/v1${rawSignedUrl}`;
-        setUrl(signedUrl);
-      });
+          const signedUrl = rawSignedUrl.startsWith("http")
+            ? rawSignedUrl
+            : `${import.meta.env.VITE_SUPABASE_URL}/storage/v1${rawSignedUrl}`;
+          setUrl(signedUrl);
+        });
+    }
   }, [headshotPath]);
   const sizeClass = size === "lg" ? "w-28 h-28" : "w-10 h-10";
   if (!url) return <div className={`${sizeClass} rounded-full bg-muted animate-pulse shrink-0`} />;
@@ -85,6 +96,28 @@ const AdminRegistrations = () => {
       return data;
     },
   });
+
+  // Realtime subscription for photo updates
+  useEffect(() => {
+    const channel = supabase
+      .channel("admin_youth_photos")
+      .on(
+        "postgres_changes",
+        {
+          event: "UPDATE",
+          schema: "public",
+          table: "youth_registrations",
+        },
+        (payload) => {
+          queryClient.invalidateQueries({ queryKey: ["youth-registrations"] });
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [queryClient]);
 
   const filteredRegistrations = registrations?.filter((reg) => {
     const matchesSearch =
