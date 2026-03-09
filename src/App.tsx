@@ -78,6 +78,7 @@ const App = () => (
             <Route path="/register" element={<Register />} />
             <Route path="/supporters" element={<Supporters />} />
             <Route path="/check-in" element={<CheckIn />} />
+            <Route path="/check-in/lil-champs-corner" element={<LilChampsCheckIn />} />
             <Route path="/approvals/invoice/:token" element={<InvoiceApproval />} />
             
             {/* Admin Routes */}
