@@ -1,0 +1,1 @@
+ALTER TABLE public.youth_registrations ADD COLUMN extended_program text DEFAULT NULL;

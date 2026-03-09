@@ -1137,6 +1137,7 @@ export type Database = {
           counseling_services_signature_url: string | null
           created_at: string
           custom_fields_data: Json | null
+          extended_program: string | null
           final_signature_name: string | null
           free_or_reduced_lunch:
             | Database["public"]["Enums"]["lunch_status"]
@@ -1183,6 +1184,7 @@ export type Database = {
           counseling_services_signature_url?: string | null
           created_at?: string
           custom_fields_data?: Json | null
+          extended_program?: string | null
           final_signature_name?: string | null
           free_or_reduced_lunch?:
             | Database["public"]["Enums"]["lunch_status"]
@@ -1229,6 +1231,7 @@ export type Database = {
           counseling_services_signature_url?: string | null
           created_at?: string
           custom_fields_data?: Json | null
+          extended_program?: string | null
           final_signature_name?: string | null
           free_or_reduced_lunch?:
             | Database["public"]["Enums"]["lunch_status"]

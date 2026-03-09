@@ -70,12 +70,15 @@ const HeadshotThumbnail = ({ headshotPath, size = "sm" }: { headshotPath: string
   );
 };
 
+const EXTENDED_PROGRAMS = ["Rams Program", "Hawk Squad", "Islanders", "Lil Champs Corner"] as const;
+
 const AdminRegistrations = () => {
   const queryClient = useQueryClient();
   const [searchQuery, setSearchQuery] = useState("");
   const [programFilter, setProgramFilter] = useState<string>("all");
   const [districtFilter, setDistrictFilter] = useState<string>("all");
   const [baldEagleFilter, setBaldEagleFilter] = useState<string>("all");
+  const [extendedProgramFilter, setExtendedProgramFilter] = useState<string>("all");
   const [selectedRegistration, setSelectedRegistration] = useState<any | null>(null);
   const [editingRegistration, setEditingRegistration] = useState<any | null>(null);
   const [csvFallbackUrl, setCsvFallbackUrl] = useState<string | null>(null);
@@ -126,11 +129,12 @@ const AdminRegistrations = () => {
       const matchesProgram = programFilter === "all" || reg.child_boxing_program === programFilter;
       const matchesDistrict = districtFilter === "all" || reg.child_school_district === districtFilter;
       const matchesBaldEagle = baldEagleFilter === "all" || (baldEagleFilter === "yes" ? reg.is_bald_eagle : !reg.is_bald_eagle);
+      const matchesExtended = extendedProgramFilter === "all"
+        || (extendedProgramFilter === "unassigned" ? !(reg as any).extended_program : (reg as any).extended_program === extendedProgramFilter);
 
-      return matchesSearch && matchesProgram && matchesDistrict && matchesBaldEagle;
+      return matchesSearch && matchesProgram && matchesDistrict && matchesBaldEagle && matchesExtended;
     })
     .sort((a, b) => {
-      // Sort alphabetically by last name, then first name
       const lastNameCompare = a.child_last_name.localeCompare(b.child_last_name);
       if (lastNameCompare !== 0) return lastNameCompare;
       return a.child_first_name.localeCompare(b.child_first_name);
@@ -158,7 +162,7 @@ const AdminRegistrations = () => {
   const buildCsvString = () => {
     const rows = filteredRegistrations || [];
     if (rows.length === 0) return null;
-    const headers = ["Child Name", "Date of Birth", "Age", "Program", "District", "Parent Name", "Parent Email", "Parent Phone", "Bald Eagle", "Medical Alert", "Registration Date", "Attendance Status"];
+    const headers = ["Child Name", "Date of Birth", "Age", "Program", "Extended Program", "District", "Parent Name", "Parent Email", "Parent Phone", "Bald Eagle", "Medical Alert", "Registration Date", "Attendance Status"];
     const csvRows = rows.map((r: any) => {
       const age = calculateAge(r.child_date_of_birth);
       const ageStr = typeof age === "string" ? age : age.tooltip.split("\n")[0];
@@ -168,6 +172,7 @@ const AdminRegistrations = () => {
         r.child_date_of_birth ? format(parseISO(r.child_date_of_birth), "MM/dd/yyyy") : "",
         ageStr,
         r.child_boxing_program || "",
+        r.extended_program || "Unassigned",
         r.child_school_district || "",
         `${r.parent_first_name || ""} ${r.parent_last_name || ""}`.trim(),
         r.parent_email || "",
@@ -238,28 +243,42 @@ const AdminRegistrations = () => {
   const newSubmissions = filteredRegistrations?.filter((r) => !r.approved_for_attendance) || [];
   const approvedRegistrations = filteredRegistrations?.filter((r) => r.approved_for_attendance) || [];
 
+  const updateExtendedProgram = async (regId: string, value: string | null) => {
+    const { error } = await supabase
+      .from("youth_registrations")
+      .update({ extended_program: value } as any)
+      .eq("id", regId);
+    if (error) {
+      toast.error("Failed to update Extended Program");
+      return;
+    }
+    queryClient.invalidateQueries({ queryKey: ["youth-registrations"] });
+    toast.success("Extended Program updated");
+  };
+
   const renderTable = (rows: any[], emptyMessage: string) => (
-    <div className="overflow-x-auto">
+    <div className="overflow-auto max-h-[70vh]">
       <Table>
-        <TableHeader>
+        <TableHeader className="sticky top-0 z-10 bg-black shadow-[0_1px_0_0_rgba(255,255,255,0.1)]">
           <TableRow className="border-white/10 hover:bg-transparent">
-            <TableHead className="text-white/70 w-12">Photo</TableHead>
-            <TableHead className="text-white/70">Date</TableHead>
-            <TableHead className="text-white/70">Child</TableHead>
-            <TableHead className="text-white/70">Age</TableHead>
-            <TableHead className="text-white/70">Program</TableHead>
-            <TableHead className="text-white/70">District</TableHead>
-            <TableHead className="text-white/70">Parent</TableHead>
-            <TableHead className="text-white/70 w-10 text-center">🦅</TableHead>
-            <TableHead className="text-white/70">Attendance</TableHead>
-            <TableHead className="text-white/70">Alerts</TableHead>
-            <TableHead className="text-right text-white/70">Actions</TableHead>
+            <TableHead className="text-white/70 w-12 bg-black">Photo</TableHead>
+            <TableHead className="text-white/70 bg-black">Date</TableHead>
+            <TableHead className="text-white/70 bg-black">Child</TableHead>
+            <TableHead className="text-white/70 bg-black">Age</TableHead>
+            <TableHead className="text-white/70 bg-black">Program</TableHead>
+            <TableHead className="text-white/70 bg-black">Extended</TableHead>
+            <TableHead className="text-white/70 bg-black">District</TableHead>
+            <TableHead className="text-white/70 bg-black">Parent</TableHead>
+            <TableHead className="text-white/70 w-10 text-center bg-black">🦅</TableHead>
+            <TableHead className="text-white/70 bg-black">Attendance</TableHead>
+            <TableHead className="text-white/70 bg-black">Alerts</TableHead>
+            <TableHead className="text-right text-white/70 bg-black">Actions</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
           {rows.length === 0 ? (
             <TableRow className="border-white/10 hover:bg-transparent">
-              <TableCell colSpan={11} className="text-center py-8 text-white/40">{emptyMessage}</TableCell>
+              <TableCell colSpan={12} className="text-center py-8 text-white/40">{emptyMessage}</TableCell>
             </TableRow>
           ) : rows.map((reg) => (
             <TableRow key={reg.id} className="border-white/10 hover:bg-white/5">
@@ -295,11 +314,31 @@ const AdminRegistrations = () => {
                   <Badge variant="secondary" className="text-xs whitespace-nowrap bg-[#bf0f3e]/10 border-[#bf0f3e]/30" style={{ color: '#bf0f3e' }}>
                     Senior Boxer
                   </Badge>
+                ) : reg.child_boxing_program?.includes("Grit") ? (
+                  <Badge variant="secondary" className="text-xs whitespace-nowrap bg-purple-500/10 text-purple-400 border-purple-500/30">
+                    Grit & Grace
+                  </Badge>
                 ) : (
                   <Badge variant="secondary" className="text-xs whitespace-nowrap bg-blue-500/10 text-blue-500 border-blue-500/30">
                     Junior Boxer
                   </Badge>
                 )}
+              </TableCell>
+              <TableCell>
+                <Select
+                  value={reg.extended_program || "unassigned"}
+                  onValueChange={(v) => updateExtendedProgram(reg.id, v === "unassigned" ? null : v)}
+                >
+                  <SelectTrigger className="h-7 w-[140px] text-xs bg-white/5 border-white/10 text-white/70">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="unassigned"><span className="text-white/30">—</span></SelectItem>
+                    {EXTENDED_PROGRAMS.map((p) => (
+                      <SelectItem key={p} value={p}>{p}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </TableCell>
               <TableCell className="text-sm text-white/70">{reg.child_school_district}</TableCell>
               <TableCell className="text-white">
@@ -405,6 +444,18 @@ const AdminRegistrations = () => {
                   <SelectItem value="all">All Youth</SelectItem>
                   <SelectItem value="yes">Bald Eagles Only</SelectItem>
                   <SelectItem value="no">Non Bald Eagles</SelectItem>
+                </SelectContent>
+              </Select>
+              <Select value={extendedProgramFilter} onValueChange={setExtendedProgramFilter}>
+                <SelectTrigger className="w-full md:w-[200px] bg-white/5 border-white/10 text-white">
+                  <SelectValue placeholder="Extended Program" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Extended Programs</SelectItem>
+                  {EXTENDED_PROGRAMS.map((p) => (
+                    <SelectItem key={p} value={p}>{p}</SelectItem>
+                  ))}
+                  <SelectItem value="unassigned">Unassigned</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -655,6 +706,12 @@ const EditRegistrationForm = ({
       </Section>
 
       <Section title="Status & Flags">
+        <SelectField
+          label="Extended Program"
+          value={form.extended_program || "Unassigned"}
+          onChange={(v) => set("extended_program", v === "Unassigned" ? null : v)}
+          options={["Unassigned", ...EXTENDED_PROGRAMS]}
+        />
         <div className="flex items-center justify-between py-2">
           <Label className="text-sm">Bald Eagle</Label>
           <Switch checked={!!form.is_bald_eagle} onCheckedChange={(v) => set("is_bald_eagle", v)} />
@@ -895,6 +952,7 @@ const RegistrationDetail = ({ registration: reg, onApprovalChange }: { registrat
 
       <Section title="Program & Household">
         <InfoRow label="Boxing Program" value={reg.child_boxing_program} />
+        <InfoRow label="Extended Program" value={(reg as any).extended_program || "Unassigned"} />
         <InfoRow label="Adults in Household" value={reg.adults_in_household} />
         <InfoRow label="Siblings in Household" value={reg.siblings_in_household} />
       </Section>
