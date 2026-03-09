@@ -7,6 +7,19 @@ import { Search, CheckCircle2, Camera } from "lucide-react";
 import nlaLogo from "@/assets/nla-logo-white.png";
 import PhotoUploadModal from "@/components/admin/PhotoUploadModal";
 
+const getHeadshotUrl = (url: string | null): string | null => {
+  if (!url) return null;
+  if (url.startsWith("http")) return url;
+  // It's a storage path — resolve to public URL
+  const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+  // Check which bucket the path belongs to
+  if (url.startsWith("youth-photos/")) {
+    return `${supabaseUrl}/storage/v1/object/public/youth-photos/${url}`;
+  }
+  // Default: registration-signatures bucket (used by import-youth-photo edge function)
+  return `${supabaseUrl}/storage/v1/object/public/registration-signatures/${url}`;
+};
+
 interface Youth {
   id: string;
   child_first_name: string;
@@ -134,8 +147,8 @@ const CheckIn = () => {
             >
               <CardContent className="flex items-center gap-4 p-4">
                 <div className="w-12 h-12 rounded-full bg-white/10 flex items-center justify-center overflow-hidden flex-shrink-0">
-                  {y.child_headshot_url ? (
-                    <img src={y.child_headshot_url} alt="" className="w-full h-full object-cover" />
+                  {getHeadshotUrl(y.child_headshot_url) ? (
+                    <img src={getHeadshotUrl(y.child_headshot_url)!} alt="" className="w-full h-full object-cover" />
                   ) : (
                     <span className="text-lg font-bold text-white/50">
                       {y.child_first_name[0]}
