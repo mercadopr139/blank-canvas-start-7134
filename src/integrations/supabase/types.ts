@@ -1270,6 +1270,16 @@ export type Database = {
         }
         Returns: boolean
       }
+      search_kiosk_youth: {
+        Args: { _search: string }
+        Returns: {
+          child_boxing_program: Database["public"]["Enums"]["boxing_program"]
+          child_first_name: string
+          child_headshot_url: string
+          child_last_name: string
+          id: string
+        }[]
+      }
     }
     Enums: {
       app_role: "admin" | "moderator" | "user"
