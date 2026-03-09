@@ -62,57 +62,64 @@ function renderEmailHtml(reg: RegistrationData): string {
 <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"></head>
 <body style="margin:0;padding:0;background-color:#f3f4f6;font-family:Georgia,'Times New Roman',serif;">
   <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#f3f4f6;">
-    <tr><td align="center" style="padding:32px 16px;">
-      <table role="presentation" width="600" cellpadding="0" cellspacing="0" style="background-color:#ffffff;border-radius:12px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,0.08);">
+    <tr><td align="center" style="padding:40px 16px;">
+      <table role="presentation" width="600" cellpadding="0" cellspacing="0" style="background-color:#ffffff;border-radius:16px;overflow:hidden;box-shadow:0 8px 30px rgba(0,0,0,0.06);">
         
         <!-- Header -->
-        <tr><td style="background-color:#111111;padding:28px 32px;text-align:center;">
-          <img src="${LOGO_URL}" alt="NLA" style="height:44px;margin-bottom:8px;" />
-          <p style="color:#9ca3af;font-size:11px;margin:0;font-style:italic;">Through boxing, we develop children personally, professionally, &amp; spiritually.</p>
+        <tr><td style="background-color:#111111;padding:32px 32px 28px 32px;text-align:center;">
+          <img src="${LOGO_URL}" alt="NLA" style="height:56px;margin-bottom:10px;" />
+          <p style="color:#9ca3af;font-size:12px;margin:0;font-style:italic;letter-spacing:0.3px;">Through boxing, we develop children personally, professionally, &amp; spiritually.</p>
         </td></tr>
 
         <!-- Body -->
-        <tr><td style="padding:32px;">
-          <h1 style="color:#111;font-size:22px;margin:0 0 8px 0;">New Registration Submitted</h1>
-          <p style="color:#6b7280;font-size:14px;margin:0 0 24px 0;">A new youth registration is awaiting your review and approval.</p>
+        <tr><td style="padding:36px 36px 28px 36px;">
+          <h1 style="color:#111;font-size:24px;margin:0 0 6px 0;font-weight:700;">New Registration</h1>
+          <p style="color:#6b7280;font-size:14px;margin:0 0 28px 0;line-height:1.5;">A new youth registration is awaiting your review and approval.</p>
 
           ${headshotBlock}
 
           <!-- Details Card -->
-          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#f9fafb;border-radius:8px;border:1px solid #e5e7eb;">
-            <tr><td style="padding:20px 24px;">
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#fafafa;border-radius:12px;border:1px solid #eee;">
+            <tr><td style="padding:24px 28px;">
               <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
                 <tr>
-                  <td style="padding:6px 0;color:#6b7280;font-size:13px;width:140px;">Child Name</td>
-                  <td style="padding:6px 0;color:#111;font-size:14px;font-weight:600;">${childName}</td>
+                  <td style="padding:8px 0;color:#9ca3af;font-size:12px;width:120px;text-transform:uppercase;letter-spacing:0.5px;vertical-align:top;">Child</td>
+                  <td style="padding:8px 0;color:#111;font-size:15px;font-weight:600;">${childName}</td>
                 </tr>
+                <tr><td colspan="2" style="border-bottom:1px solid #f0f0f0;"></td></tr>
                 <tr>
-                  <td style="padding:6px 0;color:#6b7280;font-size:13px;">Age</td>
-                  <td style="padding:6px 0;color:#111;font-size:14px;font-weight:600;">${age} years old</td>
+                  <td style="padding:8px 0;color:#9ca3af;font-size:12px;text-transform:uppercase;letter-spacing:0.5px;vertical-align:top;">Age</td>
+                  <td style="padding:8px 0;color:#111;font-size:15px;font-weight:600;">${age} years old</td>
                 </tr>
+                <tr><td colspan="2" style="border-bottom:1px solid #f0f0f0;"></td></tr>
                 <tr>
-                  <td style="padding:6px 0;color:#6b7280;font-size:13px;">Program</td>
-                  <td style="padding:6px 0;color:#111;font-size:14px;font-weight:600;">${reg.child_boxing_program}</td>
+                  <td style="padding:8px 0;color:#9ca3af;font-size:12px;text-transform:uppercase;letter-spacing:0.5px;vertical-align:top;">Program</td>
+                  <td style="padding:8px 0;color:#111;font-size:15px;font-weight:600;">${reg.child_boxing_program}</td>
                 </tr>
+                <tr><td colspan="2" style="border-bottom:1px solid #f0f0f0;"></td></tr>
                 <tr>
-                  <td style="padding:6px 0;color:#6b7280;font-size:13px;">District</td>
-                  <td style="padding:6px 0;color:#111;font-size:14px;font-weight:600;">${reg.child_school_district}</td>
+                  <td style="padding:8px 0;color:#9ca3af;font-size:12px;text-transform:uppercase;letter-spacing:0.5px;vertical-align:top;">District</td>
+                  <td style="padding:8px 0;color:#111;font-size:15px;font-weight:600;">${reg.child_school_district}</td>
                 </tr>
+                <tr><td colspan="2" style="border-bottom:1px solid #f0f0f0;"></td></tr>
                 <tr>
-                  <td style="padding:6px 0;color:#6b7280;font-size:13px;">Parent</td>
-                  <td style="padding:6px 0;color:#111;font-size:14px;font-weight:600;">${parentName}</td>
+                  <td style="padding:8px 0;color:#9ca3af;font-size:12px;text-transform:uppercase;letter-spacing:0.5px;vertical-align:top;">Parent</td>
+                  <td style="padding:8px 0;color:#111;font-size:15px;font-weight:600;">${parentName}</td>
                 </tr>
+                <tr><td colspan="2" style="border-bottom:1px solid #f0f0f0;"></td></tr>
                 <tr>
-                  <td style="padding:6px 0;color:#6b7280;font-size:13px;">Parent Phone</td>
-                  <td style="padding:6px 0;color:#111;font-size:14px;font-weight:600;">${reg.parent_phone}</td>
+                  <td style="padding:8px 0;color:#9ca3af;font-size:12px;text-transform:uppercase;letter-spacing:0.5px;vertical-align:top;">Phone</td>
+                  <td style="padding:8px 0;color:#111;font-size:15px;font-weight:600;">${reg.parent_phone}</td>
                 </tr>
+                <tr><td colspan="2" style="border-bottom:1px solid #f0f0f0;"></td></tr>
                 <tr>
-                  <td style="padding:6px 0;color:#6b7280;font-size:13px;">Parent Email</td>
-                  <td style="padding:6px 0;color:#111;font-size:14px;font-weight:600;">${reg.parent_email}</td>
+                  <td style="padding:8px 0;color:#9ca3af;font-size:12px;text-transform:uppercase;letter-spacing:0.5px;vertical-align:top;">Email</td>
+                  <td style="padding:8px 0;color:#111;font-size:15px;font-weight:600;"><a href="mailto:${reg.parent_email}" style="color:#111;text-decoration:underline;">${reg.parent_email}</a></td>
                 </tr>
+                <tr><td colspan="2" style="border-bottom:1px solid #f0f0f0;"></td></tr>
                 <tr>
-                  <td style="padding:6px 0;color:#6b7280;font-size:13px;">Submitted</td>
-                  <td style="padding:6px 0;color:#111;font-size:14px;font-weight:600;">${reg.submission_date}</td>
+                  <td style="padding:8px 0;color:#9ca3af;font-size:12px;text-transform:uppercase;letter-spacing:0.5px;vertical-align:top;">Submitted</td>
+                  <td style="padding:8px 0;color:#111;font-size:15px;font-weight:600;">${reg.submission_date}</td>
                 </tr>
               </table>
             </td></tr>
@@ -120,8 +127,8 @@ function renderEmailHtml(reg: RegistrationData): string {
 
           <!-- CTA Button -->
           <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
-            <tr><td style="padding:28px 0 0 0;text-align:center;">
-              <a href="${DASHBOARD_URL}" style="display:inline-block;background-color:#111;color:#ffffff;font-size:14px;font-weight:600;padding:14px 32px;border-radius:8px;text-decoration:none;">
+            <tr><td style="padding:32px 0 0 0;text-align:center;">
+              <a href="${DASHBOARD_URL}" style="display:inline-block;background-color:#111;color:#ffffff;font-size:14px;font-weight:600;padding:14px 36px;border-radius:10px;text-decoration:none;letter-spacing:0.3px;">
                 Review Registration →
               </a>
             </td></tr>
@@ -129,8 +136,8 @@ function renderEmailHtml(reg: RegistrationData): string {
         </td></tr>
 
         <!-- Footer -->
-        <tr><td style="padding:20px 32px;background-color:#f9fafb;border-top:1px solid #e5e7eb;text-align:center;">
-          <p style="color:#9ca3af;font-size:11px;margin:0;">No Limits Academy · Cape May County, NJ</p>
+        <tr><td style="padding:24px 36px;background-color:#fafafa;border-top:1px solid #eee;text-align:center;">
+          <p style="color:#b0b0b0;font-size:11px;margin:0;letter-spacing:0.2px;">No Limits Academy · Cape May County, NJ</p>
         </td></tr>
 
       </table>
