@@ -952,6 +952,7 @@ const RegistrationDetail = ({ registration: reg, onApprovalChange }: { registrat
 
       <Section title="Program & Household">
         <InfoRow label="Boxing Program" value={reg.child_boxing_program} />
+        <InfoRow label="Extended Program" value={(reg as any).extended_program || "Unassigned"} />
         <InfoRow label="Adults in Household" value={reg.adults_in_household} />
         <InfoRow label="Siblings in Household" value={reg.siblings_in_household} />
       </Section>
