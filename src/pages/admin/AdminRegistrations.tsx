@@ -162,7 +162,7 @@ const AdminRegistrations = () => {
   const buildCsvString = () => {
     const rows = filteredRegistrations || [];
     if (rows.length === 0) return null;
-    const headers = ["Child Name", "Date of Birth", "Age", "Program", "District", "Parent Name", "Parent Email", "Parent Phone", "Bald Eagle", "Medical Alert", "Registration Date", "Attendance Status"];
+    const headers = ["Child Name", "Date of Birth", "Age", "Program", "Extended Program", "District", "Parent Name", "Parent Email", "Parent Phone", "Bald Eagle", "Medical Alert", "Registration Date", "Attendance Status"];
     const csvRows = rows.map((r: any) => {
       const age = calculateAge(r.child_date_of_birth);
       const ageStr = typeof age === "string" ? age : age.tooltip.split("\n")[0];
@@ -172,6 +172,7 @@ const AdminRegistrations = () => {
         r.child_date_of_birth ? format(parseISO(r.child_date_of_birth), "MM/dd/yyyy") : "",
         ageStr,
         r.child_boxing_program || "",
+        r.extended_program || "Unassigned",
         r.child_school_district || "",
         `${r.parent_first_name || ""} ${r.parent_last_name || ""}`.trim(),
         r.parent_email || "",
