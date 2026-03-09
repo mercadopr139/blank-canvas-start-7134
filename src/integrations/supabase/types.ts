@@ -41,6 +41,7 @@ export type Database = {
           check_in_date: string
           created_at: string
           id: string
+          program_source: string
           registration_id: string
         }
         Insert: {
@@ -48,6 +49,7 @@ export type Database = {
           check_in_date?: string
           created_at?: string
           id?: string
+          program_source?: string
           registration_id: string
         }
         Update: {
@@ -55,6 +57,7 @@ export type Database = {
           check_in_date?: string
           created_at?: string
           id?: string
+          program_source?: string
           registration_id?: string
         }
         Relationships: [
@@ -1266,6 +1269,7 @@ export type Database = {
     }
     Functions: {
       get_today_checkin_count: { Args: never; Returns: number }
+      get_today_lil_champs_count: { Args: never; Returns: number }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
@@ -1277,6 +1281,16 @@ export type Database = {
         Args: { _search: string }
         Returns: {
           child_boxing_program: Database["public"]["Enums"]["boxing_program"]
+          child_first_name: string
+          child_headshot_url: string
+          child_last_name: string
+          id: string
+        }[]
+      }
+      search_lil_champs_youth: {
+        Args: { _search: string }
+        Returns: {
+          child_date_of_birth: string
           child_first_name: string
           child_headshot_url: string
           child_last_name: string
