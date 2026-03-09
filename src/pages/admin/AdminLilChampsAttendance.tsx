@@ -89,9 +89,27 @@ const AdminLilChampsAttendance = () => {
     <div className="space-y-6">
       <div className="flex items-center justify-between flex-wrap gap-4">
         <h2 className="text-2xl font-bold text-white">Lil Champ's Corner Attendance</h2>
-        <Button variant="outline" size="sm" onClick={exportCsv} className="gap-2 text-foreground">
-          <Download className="w-4 h-4" /> Export CSV
-        </Button>
+        <div className="flex gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={async () => {
+              if (!confirm("Delete ALL Lil Champs Corner attendance records? This cannot be undone.")) return;
+              const { error } = await supabase
+                .from("attendance_records")
+                .delete()
+                .eq("program_source", "Lil Champs Corner");
+              if (error) { alert("Failed to clear: " + error.message); return; }
+              setRecords([]);
+            }}
+            className="gap-2 text-red-400 border-red-500/30 hover:bg-red-500/10"
+          >
+            Clear All
+          </Button>
+          <Button variant="outline" size="sm" onClick={exportCsv} className="gap-2 text-foreground">
+            <Download className="w-4 h-4" /> Export CSV
+          </Button>
+        </div>
       </div>
 
       <div className="flex flex-wrap gap-3">
