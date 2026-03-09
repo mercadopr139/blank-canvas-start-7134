@@ -629,7 +629,7 @@ const EditRegistrationForm = ({
           label="School District"
           value={form.child_school_district}
           onChange={(v) => set("child_school_district", v)}
-          options={["Cape May City", "Lower Cape May Regional", "Middle Township", "Ocean City", "Upper Township", "Wildwood", "Wildwood Crest", "North Wildwood", "West Cape May", "Dennis Township", "Woodbine", "Other"]}
+          options={["Cape May City", "Cape May/West Cape May", "Lower Cape May Regional", "Lower Township", "Middle Township", "Ocean City", "Upper Township", "Wildwood", "Wildwood Crest", "North Wildwood", "Wildwood/Wildwood Crest/North Wildwood", "West Cape May", "Dennis Township", "Woodbine", "Cape May Tech", "Avalon/Stone Harbor", "Wildwood Catholic Academy", "Homeschool, Hybrid, or Alternative Form of Schooling", "Other"]}
         />
         <Field label="Grade Level" value={form.child_grade_level?.toString() || ""} onChange={(v) => set("child_grade_level", v ? parseInt(v) : null)} type="number" />
         <SelectField
@@ -640,10 +640,57 @@ const EditRegistrationForm = ({
         />
       </Section>
 
+      <Section title="Household">
+        <div className="grid grid-cols-2 gap-3">
+          <Field label="Adults in Household" value={form.adults_in_household?.toString() || ""} onChange={(v) => set("adults_in_household", v ? parseInt(v) : 0)} type="number" />
+          <Field label="Siblings in Household" value={form.siblings_in_household?.toString() || ""} onChange={(v) => set("siblings_in_household", v ? parseInt(v) : 0)} type="number" />
+        </div>
+        <SelectField
+          label="Household Income"
+          value={form.household_income_range}
+          onChange={(v) => set("household_income_range", v)}
+          options={["Under $25,000", "$25,000 - $49,999", "$50,000 - $74,999", "$75,000 - $99,999", "$100,000 - $149,999", "$150,000 or more", "Less than $25,000", "Less than $35,000", "Less than $45,000", "Less than $65,000", "Less than $80,000", "Greater than $80,001"]}
+        />
+        <SelectField
+          label="Free/Reduced Lunch"
+          value={form.free_or_reduced_lunch || "Not Applicable"}
+          onChange={(v) => set("free_or_reduced_lunch", v)}
+          options={["Yes", "No", "Not Applicable"]}
+        />
+      </Section>
+
       <Section title="Medical">
         <Field label="Allergies" value={form.allergies || ""} onChange={(v) => set("allergies", v)} textarea />
         <Field label="Asthma/Inhaler Info" value={form.asthma_inhaler_info || ""} onChange={(v) => set("asthma_inhaler_info", v)} textarea />
         <Field label="Important Notes" value={form.important_child_notes || ""} onChange={(v) => set("important_child_notes", v)} textarea />
+      </Section>
+
+      <Section title="Status & Flags">
+        <div className="flex items-center justify-between py-2">
+          <Label className="text-sm">Bald Eagle</Label>
+          <Switch checked={!!form.is_bald_eagle} onCheckedChange={(v) => set("is_bald_eagle", v)} />
+        </div>
+        <div className="flex items-center justify-between py-2">
+          <Label className="text-sm">Approved for Attendance</Label>
+          <Switch checked={!!form.approved_for_attendance} onCheckedChange={(v) => set("approved_for_attendance", v)} />
+        </div>
+      </Section>
+
+      <Section title="Submission Info (Read-Only)">
+        <div className="space-y-1 text-sm text-muted-foreground">
+          <div className="flex justify-between py-1 border-b border-border/50">
+            <span>Submitted</span>
+            <span className="text-foreground">{form.submission_date}</span>
+          </div>
+          <div className="flex justify-between py-1 border-b border-border/50">
+            <span>Registration ID</span>
+            <span className="text-foreground font-mono text-xs">{form.id}</span>
+          </div>
+          <div className="flex justify-between py-1 border-b border-border/50">
+            <span>Final Signature</span>
+            <span className="text-foreground">{form.final_signature_name || "—"}</span>
+          </div>
+        </div>
       </Section>
 
       <div className="flex justify-end gap-3 pt-4 border-t">
