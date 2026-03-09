@@ -2,8 +2,10 @@ import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
-import { Search, CheckCircle2 } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Search, CheckCircle2, Camera } from "lucide-react";
 import nlaLogo from "@/assets/nla-logo-white.png";
+import PhotoUploadModal from "@/components/admin/PhotoUploadModal";
 
 interface Youth {
   id: string;
@@ -20,6 +22,8 @@ const CheckIn = () => {
   const [checkedIn, setCheckedIn] = useState<string | null>(null);
   const [alreadyIn, setAlreadyIn] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [photoModalOpen, setPhotoModalOpen] = useState(false);
+  const [selectedYouth, setSelectedYouth] = useState<Youth | null>(null);
 
   useEffect(() => {
     if (search.length < 2) {
@@ -40,6 +44,31 @@ const CheckIn = () => {
     }, 300);
     return () => clearTimeout(timeout);
   }, [search]);
+
+  // Realtime subscription for photo updates
+  useEffect(() => {
+    const channel = supabase
+      .channel("youth_photos")
+      .on(
+        "postgres_changes",
+        {
+          event: "UPDATE",
+          schema: "public",
+          table: "youth_registrations",
+        },
+        (payload) => {
+          const updated = payload.new as Youth;
+          setYouth((prev) =>
+            prev.map((y) => (y.id === updated.id ? { ...y, child_headshot_url: updated.child_headshot_url } : y))
+          );
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, []);
 
   const handleCheckIn = async (y: Youth) => {
     setError(null);
@@ -99,10 +128,9 @@ const CheckIn = () => {
           {youth.map((y) => (
             <Card
               key={y.id}
-              className={`bg-white/5 border-white/10 text-white cursor-pointer hover:bg-white/10 transition-all ${
+              className={`bg-white/5 border-white/10 text-white transition-all ${
                 checkedIn === y.id ? "border-green-500 bg-green-500/10" : ""
               } ${alreadyIn === y.id ? "border-yellow-500 bg-yellow-500/10" : ""}`}
-              onClick={() => !checkedIn && handleCheckIn(y)}
             >
               <CardContent className="flex items-center gap-4 p-4">
                 <div className="w-12 h-12 rounded-full bg-white/10 flex items-center justify-center overflow-hidden flex-shrink-0">
@@ -114,26 +142,61 @@ const CheckIn = () => {
                     </span>
                   )}
                 </div>
-                <div className="flex-1 min-w-0">
+                <div className="flex-1 min-w-0 cursor-pointer" onClick={() => !checkedIn && handleCheckIn(y)}>
                   <p className="font-semibold text-lg">
                     {y.child_first_name} {y.child_last_name}
                   </p>
                   <p className="text-sm text-white/50">{y.child_boxing_program}</p>
                 </div>
-                {checkedIn === y.id && (
-                  <div className="flex items-center gap-2 text-green-400">
-                    <CheckCircle2 className="w-6 h-6" />
-                    <span className="font-medium">Checked In!</span>
-                  </div>
-                )}
-                {alreadyIn === y.id && (
-                  <span className="text-yellow-400 text-sm font-medium">Already checked in today</span>
-                )}
+                <div className="flex items-center gap-2">
+                  {checkedIn === y.id && (
+                    <div className="flex items-center gap-2 text-green-400">
+                      <CheckCircle2 className="w-6 h-6" />
+                      <span className="font-medium">Checked In!</span>
+                    </div>
+                  )}
+                  {alreadyIn === y.id && (
+                    <span className="text-yellow-400 text-sm font-medium">Already checked in today</span>
+                  )}
+                  {!checkedIn && !alreadyIn && (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setSelectedYouth(y);
+                        setPhotoModalOpen(true);
+                      }}
+                      className="gap-2 bg-white/5 hover:bg-white/10 border-white/20 text-white"
+                    >
+                      <Camera className="w-4 h-4" />
+                      Update Photo
+                    </Button>
+                  )}
+                </div>
               </CardContent>
             </Card>
           ))}
         </div>
       </div>
+
+      {selectedYouth && (
+        <PhotoUploadModal
+          open={photoModalOpen}
+          onClose={() => {
+            setPhotoModalOpen(false);
+            setSelectedYouth(null);
+          }}
+          registrationId={selectedYouth.id}
+          currentPhotoUrl={selectedYouth.child_headshot_url}
+          onPhotoUpdated={(newUrl) => {
+            setYouth((prev) =>
+              prev.map((y) => (y.id === selectedYouth.id ? { ...y, child_headshot_url: newUrl } : y))
+            );
+          }}
+          youthName={`${selectedYouth.child_first_name} ${selectedYouth.child_last_name}`}
+        />
+      )}
     </div>
   );
 };
