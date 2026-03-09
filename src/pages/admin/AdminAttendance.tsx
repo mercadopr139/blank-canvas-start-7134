@@ -87,6 +87,16 @@ const AdminAttendance = () => {
     invalidateAttendance();
   };
 
+const getHeadshotUrl = (url: string | null): string | null => {
+  if (!url) return null;
+  if (url.startsWith("http")) return url;
+  const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+  if (url.startsWith("youth-photos/")) {
+    return `${supabaseUrl}/storage/v1/object/public/youth-photos/${url}`;
+  }
+  return `${supabaseUrl}/storage/v1/object/public/registration-signatures/${url}`;
+};
+
 
   const calMonthStart = format(startOfMonth(calendarMonth), "yyyy-MM-dd");
   const calMonthEnd = format(endOfMonth(calendarMonth), "yyyy-MM-dd");
