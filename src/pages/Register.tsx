@@ -546,30 +546,43 @@ const Register = () => {
                   <CheckCircle2 className="w-12 h-12 text-primary" />
                 </div>
               </div>
-              <div className="space-y-3">
-                <h1 className="text-3xl font-bold text-foreground">Registration Submitted!</h1>
+              <div className="space-y-2">
+                <h1 className="text-3xl font-bold text-foreground">Registration Submitted</h1>
                 <p className="text-lg text-muted-foreground">
-                  Thank you for registering with No Limits Boxing Academy.
+                  Thank you for registering with No Limits Academy.
                 </p>
               </div>
-              <div className="bg-muted/30 rounded-lg p-6 text-left space-y-3">
-                <h2 className="font-semibold text-lg">What happens next?</h2>
-                <ul className="space-y-2 text-sm text-muted-foreground">
-                  <li className="flex items-start gap-2">
-                    <CheckCircle2 className="w-4 h-4 text-primary mt-0.5 flex-shrink-0" />
-                    <span>Our team will review your submission within 1-2 business days</span>
+              <div className="bg-primary/5 border border-primary/20 rounded-lg p-6 text-left space-y-4">
+                <h2 className="font-semibold text-xl text-center text-foreground">What happens next?</h2>
+                <ul className="space-y-3 text-base text-foreground">
+                  <li className="flex items-start gap-3">
+                    <CheckCircle2 className="w-5 h-5 text-primary mt-0.5 flex-shrink-0" />
+                    <span>Report to NLA facility.</span>
                   </li>
-                  <li className="flex items-start gap-2">
-                    <CheckCircle2 className="w-4 h-4 text-primary mt-0.5 flex-shrink-0" />
-                    <span>You'll receive a confirmation email at <strong>{formValues["parent_email"]}</strong></span>
+                  <li className="flex items-start gap-3">
+                    <CheckCircle2 className="w-5 h-5 text-primary mt-0.5 flex-shrink-0" />
+                    <span><strong>Senior Boxers:</strong> Mon–Friday, 5:15–7:15pm.</span>
                   </li>
-                  <li className="flex items-start gap-2">
-                    <CheckCircle2 className="w-4 h-4 text-primary mt-0.5 flex-shrink-0" />
-                    <span>Once approved, {formValues["child_first_name"]} will be able to check in at our facility</span>
+                  <li className="flex items-start gap-3">
+                    <CheckCircle2 className="w-5 h-5 text-primary mt-0.5 flex-shrink-0" />
+                    <span><strong>Junior Boxers:</strong> Tuesdays, 5:15–6:00pm.</span>
                   </li>
-                  <li className="flex items-start gap-2">
-                    <CheckCircle2 className="w-4 h-4 text-primary mt-0.5 flex-shrink-0" />
-                    <span>If you have questions, contact us at <a href="mailto:info@nolimitsboxingacademy.org" className="text-primary hover:underline">info@nolimitsboxingacademy.org</a></span>
+                  <li className="flex items-start gap-3">
+                    <CheckCircle2 className="w-5 h-5 text-primary mt-0.5 flex-shrink-0" />
+                    <span>Extended hours are available for both programs.</span>
+                  </li>
+                  <li className="flex items-start gap-3">
+                    <CheckCircle2 className="w-5 h-5 text-primary mt-0.5 flex-shrink-0" />
+                    <span>
+                      Email{" "}
+                      <a 
+                        href="mailto:info@nolimitsboxingacademy.org" 
+                        className="text-primary font-medium hover:underline"
+                      >
+                        info@nolimitsboxingacademy.org
+                      </a>{" "}
+                      for more information about extended hours.
+                    </span>
                   </li>
                 </ul>
               </div>
