@@ -371,12 +371,11 @@ const getHeadshotUrl = (url: string | null): string | null => {
       insights.push(`${weakest.day} attendance tends to be lower than midweek attendance.`);
     }
 
-    // Program comparison this week
-    const weekJr = weekRecords.filter((a) => regMap[a.registration_id]?.child_boxing_program.includes("Junior")).length;
-    const weekSr = weekRecords.filter((a) => regMap[a.registration_id]?.child_boxing_program.includes("Senior")).length;
-    if (weekJr > 0 || weekSr > 0) {
-      if (weekSr > weekJr) insights.push("Senior Boxer attendance is higher than Junior Boxer attendance this week.");
-      else if (weekJr > weekSr) insights.push("Junior Boxer attendance is higher than Senior Boxer attendance this week.");
+    // Program unique youth this week
+    const weekJrIds = new Set(weekRecords.filter((a) => regMap[a.registration_id]?.child_boxing_program.includes("Junior")).map((a) => a.registration_id));
+    const weekSrIds = new Set(weekRecords.filter((a) => regMap[a.registration_id]?.child_boxing_program.includes("Senior")).map((a) => a.registration_id));
+    if (weekJrIds.size > 0 || weekSrIds.size > 0) {
+      insights.push(`${weekSrIds.size} Senior Boxers and ${weekJrIds.size} Junior Boxers attended this week (Junior Boxing meets once per week).`);
     }
 
     // Top district today
@@ -724,7 +723,8 @@ const getHeadshotUrl = (url: string | null): string | null => {
               ) : (
                 <div className="space-y-1.5 max-h-52 overflow-y-auto">
                   {districtBreakdown.map(([dist, count]) => {
-                    const barW = districtBreakdown[0][1] > 0 ? Math.round((count / districtBreakdown[0][1]) * 100) : 0;
+                    const distTotal = districtBreakdown.reduce((s, [, c]) => s + c, 0);
+                    const pctVal = distTotal > 0 ? Math.round((count / distTotal) * 100) : 0;
                     return (
                       <button
                         key={dist}
@@ -733,9 +733,9 @@ const getHeadshotUrl = (url: string | null): string | null => {
                       >
                         <span className="text-xs text-white/70 truncate flex-1 min-w-0">{dist}</span>
                         <div className="w-20 h-2 bg-white/5 rounded-full overflow-hidden flex-shrink-0">
-                          <div className="h-full bg-blue-500/60 rounded-full" style={{ width: `${barW}%` }} />
+                          <div className="h-full bg-blue-500/60 rounded-full" style={{ width: `${pctVal}%` }} />
                         </div>
-                        <span className="text-xs font-bold text-white/80 w-6 text-right flex-shrink-0">{count}</span>
+                        <span className="text-xs font-bold text-white/80 w-8 text-right flex-shrink-0">{pctVal}%</span>
                       </button>
                     );
                   })}
