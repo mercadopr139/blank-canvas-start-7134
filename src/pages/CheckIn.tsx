@@ -188,7 +188,7 @@ const CheckIn = () => {
                         e.stopPropagation();
                         handleCheckIn(y);
                       }}
-                      className="border-green-500 text-green-400 hover:bg-green-500/10 hover:text-green-300 font-semibold px-4"
+                      className="bg-black border-green-500 text-green-400 hover:bg-green-500/10 hover:text-green-300 font-semibold px-4"
                     >
                       SIGN IN
                     </Button>
