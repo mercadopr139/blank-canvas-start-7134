@@ -12,7 +12,7 @@ import { AlertDialog, AlertDialogCancel, AlertDialogContent, AlertDialogDescript
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Search, Eye, AlertTriangle, ExternalLink, Loader2, Pencil, Trash2, CheckCircle2, XCircle, ShieldCheck } from "lucide-react";
+import { Search, Eye, AlertTriangle, ExternalLink, Loader2, Pencil, Trash2, CheckCircle2, XCircle, ShieldCheck, Download } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { format, parseISO, differenceInYears, differenceInMonths } from "date-fns";
 import { toast } from "sonner";
@@ -152,6 +152,42 @@ const AdminRegistrations = () => {
   };
 
 
+  const exportFilteredCsv = () => {
+    const rows = filteredRegistrations || [];
+    if (rows.length === 0) {
+      toast.error("No records to export");
+      return;
+    }
+    const headers = ["Child Name", "Date of Birth", "Age", "Program", "District", "Parent Name", "Parent Email", "Parent Phone", "Medical Alert", "Registration Date", "Attendance Status"];
+    const csvRows = rows.map((r: any) => {
+      const age = calculateAge(r.child_date_of_birth);
+      const ageStr = typeof age === "string" ? age : age.tooltip.split("\n")[0];
+      const medical = hasMedicalAlerts(r) ? "Yes" : "No";
+      return [
+        `${r.child_first_name} ${r.child_last_name}`,
+        r.child_date_of_birth ? format(parseISO(r.child_date_of_birth), "MM/dd/yyyy") : "",
+        ageStr,
+        r.child_boxing_program || "",
+        r.child_school_district || "",
+        `${r.parent_first_name} ${r.parent_last_name}`,
+        r.parent_email || "",
+        r.parent_phone || "",
+        medical,
+        r.submission_date ? format(parseISO(r.submission_date), "MM/dd/yyyy") : "",
+        r.approved_for_attendance ? "Approved" : "Pending",
+      ].map(v => `"${String(v).replace(/"/g, '""')}"`).join(",");
+    });
+    const csv = [headers.join(","), ...csvRows].join("\n");
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `Youth_Registrations_Export_${format(new Date(), "yyyy-MM-dd")}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+    toast.success(`Export created successfully — ${rows.length} records`);
+  };
+
 
   const programs = [...new Set(registrations?.map((r) => r.child_boxing_program) || [])];
   const districts = [...new Set(registrations?.map((r) => r.child_school_district) || [])];
@@ -262,6 +298,10 @@ const AdminRegistrations = () => {
         <div>
           <h2 className="text-base font-semibold text-white">Youth Registrations</h2>
           <p className="text-xs text-white/50">{filteredRegistrations?.length || 0} registrations</p>
+        <div>
+          <Button size="sm" onClick={exportFilteredCsv} className="bg-white/10 hover:bg-white/15 text-white border border-white/20 gap-1.5">
+            <Download className="w-3.5 h-3.5" /> Export Filtered List
+          </Button>
         </div>
         </div>
 
