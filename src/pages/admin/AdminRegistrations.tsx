@@ -153,39 +153,49 @@ const AdminRegistrations = () => {
 
 
   const exportFilteredCsv = () => {
-    const rows = filteredRegistrations || [];
-    if (rows.length === 0) {
-      toast.error("No records to export");
-      return;
+    try {
+      const rows = filteredRegistrations || [];
+      if (rows.length === 0) {
+        toast.error("No records to export");
+        return;
+      }
+      const headers = ["Child Name", "Date of Birth", "Age", "Program", "District", "Parent Name", "Parent Email", "Parent Phone", "Medical Alert", "Registration Date", "Attendance Status"];
+      const csvRows = rows.map((r: any) => {
+        const age = calculateAge(r.child_date_of_birth);
+        const ageStr = typeof age === "string" ? age : age.tooltip.split("\n")[0];
+        const medical = hasMedicalAlerts(r) ? "Yes" : "No";
+        return [
+          `${r.child_first_name || ""} ${r.child_last_name || ""}`.trim(),
+          r.child_date_of_birth ? format(parseISO(r.child_date_of_birth), "MM/dd/yyyy") : "",
+          ageStr,
+          r.child_boxing_program || "",
+          r.child_school_district || "",
+          `${r.parent_first_name || ""} ${r.parent_last_name || ""}`.trim(),
+          r.parent_email || "",
+          r.parent_phone || "",
+          medical,
+          r.submission_date ? format(parseISO(r.submission_date), "MM/dd/yyyy") : "",
+          r.approved_for_attendance ? "Approved" : "Pending",
+        ].map(v => `"${String(v ?? "").replace(/"/g, '""')}"`).join(",");
+      });
+      const csv = "\uFEFF" + [headers.join(","), ...csvRows].join("\r\n");
+      const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `Youth_Registrations_Export_${format(new Date(), "yyyy-MM-dd")}.csv`;
+      a.style.display = "none";
+      document.body.appendChild(a);
+      a.click();
+      setTimeout(() => {
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+      }, 100);
+      toast.success(`Filtered list exported successfully — ${rows.length} records`);
+    } catch (err) {
+      console.error("Export failed:", err);
+      toast.error("Export failed. Please try again.");
     }
-    const headers = ["Child Name", "Date of Birth", "Age", "Program", "District", "Parent Name", "Parent Email", "Parent Phone", "Medical Alert", "Registration Date", "Attendance Status"];
-    const csvRows = rows.map((r: any) => {
-      const age = calculateAge(r.child_date_of_birth);
-      const ageStr = typeof age === "string" ? age : age.tooltip.split("\n")[0];
-      const medical = hasMedicalAlerts(r) ? "Yes" : "No";
-      return [
-        `${r.child_first_name} ${r.child_last_name}`,
-        r.child_date_of_birth ? format(parseISO(r.child_date_of_birth), "MM/dd/yyyy") : "",
-        ageStr,
-        r.child_boxing_program || "",
-        r.child_school_district || "",
-        `${r.parent_first_name} ${r.parent_last_name}`,
-        r.parent_email || "",
-        r.parent_phone || "",
-        medical,
-        r.submission_date ? format(parseISO(r.submission_date), "MM/dd/yyyy") : "",
-        r.approved_for_attendance ? "Approved" : "Pending",
-      ].map(v => `"${String(v).replace(/"/g, '""')}"`).join(",");
-    });
-    const csv = [headers.join(","), ...csvRows].join("\n");
-    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `Youth_Registrations_Export_${format(new Date(), "yyyy-MM-dd")}.csv`;
-    a.click();
-    URL.revokeObjectURL(url);
-    toast.success(`Export created successfully — ${rows.length} records`);
   };
 
 
