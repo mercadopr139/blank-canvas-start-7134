@@ -1,4 +1,4 @@
-import { Users, BarChart3, ClipboardList, LucideIcon, CalendarCheck, FileBarChart, Settings2 } from "lucide-react";
+import { Users, BarChart3, ClipboardList, LucideIcon, CalendarCheck, FileBarChart, Settings2, Star } from "lucide-react";
 import AdminSectionLayout, { SectionCard } from "@/components/admin/AdminSectionLayout";
 
 interface OperationsTile {
@@ -46,6 +46,12 @@ const baseTiles: OperationsTile[] = [
     description: "Edit the registration form fields",
     icon: Settings2,
     href: "/admin/operations/form-builder",
+  },
+  {
+    title: "Lil Champ's Corner",
+    description: "Attendance for Lil Champ's Corner",
+    icon: Star,
+    href: "/admin/operations/lil-champs-attendance",
   },
 ];
 

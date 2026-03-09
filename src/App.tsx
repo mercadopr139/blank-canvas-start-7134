@@ -32,6 +32,8 @@ import AdminAttendance from "./pages/admin/AdminAttendance";
 import AdminFormBuilder from "./pages/admin/AdminFormBuilder";
 import AdminAttendanceReports from "./pages/admin/AdminAttendanceReports";
 import CheckIn from "./pages/CheckIn";
+import LilChampsCheckIn from "./pages/LilChampsCheckIn";
+import AdminLilChampsAttendance from "./pages/admin/AdminLilChampsAttendance";
 import Register from "./pages/Register";
 import Supporters from "./pages/Supporters";
 import AdminDonations from "./pages/admin/AdminDonations";
@@ -76,6 +78,7 @@ const App = () => (
             <Route path="/register" element={<Register />} />
             <Route path="/supporters" element={<Supporters />} />
             <Route path="/check-in" element={<CheckIn />} />
+            <Route path="/check-in/lil-champs-corner" element={<LilChampsCheckIn />} />
             <Route path="/approvals/invoice/:token" element={<InvoiceApproval />} />
             
             {/* Admin Routes */}
@@ -104,6 +107,7 @@ const App = () => (
               <Route path="attendance" element={<AdminAttendance />} />
               <Route path="attendance-reports" element={<AdminAttendanceReports />} />
               <Route path="form-builder" element={<AdminFormBuilder />} />
+              <Route path="lil-champs-attendance" element={<AdminLilChampsAttendance />} />
             </Route>
 
             {/* Sales & Marketing section — sidebar layout wraps sub-pages */}
