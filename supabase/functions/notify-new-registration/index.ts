@@ -9,7 +9,8 @@ const corsHeaders = {
 };
 
 const LOGO_URL = "https://qnjpurehimuqppyrfxui.supabase.co/storage/v1/object/public/email-assets/nla-logo.png";
-const ADMIN_EMAIL = "joshmercado@nolimitsboxingacademy.org";
+const PRIMARY_EMAIL = "chrissycasiello@nolimitsboxingacademy.org";
+const CC_EMAIL = "joshmercado@nolimitsboxingacademy.org";
 const DASHBOARD_URL = "https://blank-canvas-start-7134.lovable.app/admin/operations/registrations";
 
 interface RegistrationData {
@@ -159,7 +160,8 @@ Deno.serve(async (req) => {
 
     const { error } = await resend.emails.send({
       from: "NLA Notifications <joshmercado@nolimitsboxingacademy.org>",
-      to: [ADMIN_EMAIL],
+      to: [PRIMARY_EMAIL],
+      cc: [CC_EMAIL],
       subject: `New Youth Registration – ${childName}`,
       html: renderEmailHtml(registration),
       text: `New youth registration submitted.\n\nChild: ${childName}\nProgram: ${registration.child_boxing_program}\nDistrict: ${registration.child_school_district}\nParent: ${registration.parent_first_name} ${registration.parent_last_name}\nPhone: ${registration.parent_phone}\nEmail: ${registration.parent_email}\nSubmitted: ${registration.submission_date}\n\nReview at: ${DASHBOARD_URL}`,
