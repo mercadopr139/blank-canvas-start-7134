@@ -108,7 +108,7 @@ const AdminRegistrations = () => {
           schema: "public",
           table: "youth_registrations",
         },
-        (payload) => {
+        () => {
           queryClient.invalidateQueries({ queryKey: ["youth-registrations"] });
         }
       )
