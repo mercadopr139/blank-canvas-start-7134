@@ -1136,12 +1136,8 @@ const getHeadshotUrl = (url: string | null): string | null => {
                       </TableCell>
                       <TableCell className="text-white font-medium">{r.child_first_name} {r.child_last_name}</TableCell>
                       <TableCell className="text-white/60 text-xs">{r.child_boxing_program}</TableCell>
-                      <TableCell>
-                        {stats.present ? (
-                          <Badge className="bg-green-500/20 text-green-400 border-green-500/30">Present</Badge>
-                        ) : (
-                          <span className="text-white/30 text-xs">—</span>
-                        )}
+                      <TableCell className="text-white/60 text-xs">
+                        {todayCheckInMap[r.id] ? format(parseISO(todayCheckInMap[r.id]), "h:mm a") : "—"}
                       </TableCell>
                       <TableCell className="text-white">{stats.weekCount}</TableCell>
                       <TableCell className="text-white">{stats.monthCount}</TableCell>
