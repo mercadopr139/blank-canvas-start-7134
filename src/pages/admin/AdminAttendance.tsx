@@ -1038,8 +1038,8 @@ const getHeadshotUrl = (url: string | null): string | null => {
                 {daySignIns.map((s) => (
                   <div key={s.id} className="flex items-center gap-3 p-2.5 rounded-lg bg-white/5 border border-white/5">
                     <div className="w-8 h-8 rounded-full bg-white/10 overflow-hidden flex-shrink-0">
-                      {s.reg.child_headshot_url ? (
-                        <img src={s.reg.child_headshot_url} alt="" className="w-full h-full object-cover" />
+                      {getHeadshotUrl(s.reg.child_headshot_url) ? (
+                        <img src={getHeadshotUrl(s.reg.child_headshot_url)!} alt="" className="w-full h-full object-cover" />
                       ) : (
                         <span className="flex items-center justify-center w-full h-full text-xs text-white/40">{s.reg.child_first_name[0]}</span>
                       )}
