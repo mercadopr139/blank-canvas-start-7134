@@ -383,6 +383,36 @@ const Register = () => {
           </div>
         );
       case "dropdown":
+        // Special handling for grade level dropdown
+        if (field.field_key === "child_grade_level") {
+          const gradeOptions = [
+            { value: "", label: "Not Applicable" },
+            { value: "1", label: "1st Grade" },
+            { value: "2", label: "2nd Grade" },
+            { value: "3", label: "3rd Grade" },
+            { value: "4", label: "4th Grade" },
+            { value: "5", label: "5th Grade" },
+            { value: "6", label: "6th Grade" },
+            { value: "7", label: "7th Grade" },
+            { value: "8", label: "8th Grade" },
+            { value: "9", label: "9th Grade" },
+            { value: "10", label: "10th Grade" },
+            { value: "11", label: "11th Grade" },
+            { value: "12", label: "12th Grade" },
+          ];
+          return (
+            <div key={field.id}>
+              <Label className="text-base font-medium">{field.label} {field.required && <span className="text-destructive">*</span>}</Label>
+              {field.help_text && <p className="text-sm text-muted-foreground">{field.help_text}</p>}
+              <Select value={val} onValueChange={v => handleInputChange(field.field_key, v)}>
+                <SelectTrigger className="mt-2"><SelectValue placeholder={field.placeholder || "Select grade level"} /></SelectTrigger>
+                <SelectContent>
+                  {gradeOptions.map(opt => <SelectItem key={opt.value || "na"} value={opt.value}>{opt.label}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+          );
+        }
         return (
           <div key={field.id}>
             <Label className="text-base font-medium">{field.label} {field.required && <span className="text-destructive">*</span>}</Label>
