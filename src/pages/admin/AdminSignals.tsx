@@ -229,11 +229,11 @@ const AdminSignals = () => {
         .order("today_sort_order" as any, { ascending: true, nullsFirst: false })
         .order("created_at", { ascending: true });
       if (error) throw error;
-      // Also include completed bonus signals from today
+      // Also include completed bonus signals assigned up to today
       const { data: completedToday, error: err2 } = await supabase
         .from("signals")
         .select("*")
-        .eq("date_assigned", today)
+        .lte("date_assigned", today)
         .eq("priority_layer", "Bonus" as any)
         .eq("status", "Complete" as any)
         .eq("is_archived", false as any)
