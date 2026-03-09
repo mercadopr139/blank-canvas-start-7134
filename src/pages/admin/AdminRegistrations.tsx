@@ -315,6 +315,7 @@ const AdminRegistrations = () => {
                     className={`w-5 h-5 ${reg.is_bald_eagle ? "fill-amber-400 text-amber-400" : "text-white/20 hover:text-white/40"}`}
                   />
                 </button>
+              </TableCell>
               <TableCell>
                 {reg.approved_for_attendance ? (
                   <Badge className="bg-green-500/15 text-green-500 border-green-500/30 text-xs">APPROVED</Badge>
