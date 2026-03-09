@@ -4,6 +4,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Settings, LogOut, Briefcase, TrendingUp, DollarSign, ArrowLeft, Signal } from "lucide-react";
+import UpcomingEventsWidget from "@/components/admin/UpcomingEventsWidget";
 
 const AdminDashboard = () => {
   const { user, signOut } = useAuth();
