@@ -32,6 +32,8 @@ import AdminAttendance from "./pages/admin/AdminAttendance";
 import AdminFormBuilder from "./pages/admin/AdminFormBuilder";
 import AdminAttendanceReports from "./pages/admin/AdminAttendanceReports";
 import CheckIn from "./pages/CheckIn";
+import LilChampsCheckIn from "./pages/LilChampsCheckIn";
+import AdminLilChampsAttendance from "./pages/admin/AdminLilChampsAttendance";
 import Register from "./pages/Register";
 import Supporters from "./pages/Supporters";
 import AdminDonations from "./pages/admin/AdminDonations";
