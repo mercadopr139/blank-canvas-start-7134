@@ -222,8 +222,8 @@ const CheckIn = () => {
         <img
           src={nlaLogo}
           alt="No Limits Academy"
-          className={`mx-auto mb-4 transition-all duration-500 ${
-            isIdle ? "h-28 md:h-40" : "h-16 md:h-20"
+          className={`mx-auto transition-all duration-500 ${
+            isIdle ? "h-28 md:h-40 mb-8 md:mb-10" : "h-16 md:h-20 mb-5 md:mb-6"
           }`}
         />
 
