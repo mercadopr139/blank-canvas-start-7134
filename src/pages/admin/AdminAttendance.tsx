@@ -60,6 +60,7 @@ const pct = (n: number, d: number) => (d === 0 ? "0%" : `${Math.round((n / d) * 
 
 /* ───────── Component ───────── */
 const AdminAttendance = () => {
+  const queryClient = useQueryClient();
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState<"all" | "bald-eagles">("all");
   const [selectedYouth, setSelectedYouth] = useState<Registration | null>(null);
@@ -68,7 +69,35 @@ const AdminAttendance = () => {
   const [calendarFilter, setCalendarFilter] = useState<"all" | "bald-eagles">("all");
   const [calendarProgramFilter, setCalendarProgramFilter] = useState<string>("all");
   const [drillDistrictFilter, setDrillDistrictFilter] = useState<string | null>(null);
-  
+  const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string; date: string } | null>(null);
+  const [clearTodayOpen, setClearTodayOpen] = useState(false);
+  const [clearTodayConfirm, setClearTodayConfirm] = useState("");
+
+  const invalidateAttendance = () => {
+    queryClient.invalidateQueries({ queryKey: ["attendance-records-current"] });
+    queryClient.invalidateQueries({ queryKey: ["calendar-attendance"] });
+    queryClient.invalidateQueries({ queryKey: ["all-attendance-for-profile"] });
+    queryClient.invalidateQueries({ queryKey: ["attendance-records-prev"] });
+  };
+
+  const handleDeleteSingle = async () => {
+    if (!deleteTarget) return;
+    const { error } = await supabase.from("attendance_records").delete().eq("id", deleteTarget.id);
+    if (error) { toast.error("Failed to delete check-in"); return; }
+    toast.success(`Removed check-in for ${deleteTarget.name}`);
+    setDeleteTarget(null);
+    invalidateAttendance();
+  };
+
+  const handleClearToday = async () => {
+    const todayDate = new Date().toISOString().split("T")[0];
+    const { error } = await supabase.from("attendance_records").delete().eq("check_in_date", todayDate);
+    if (error) { toast.error("Failed to clear today's attendance"); return; }
+    toast.success("Today's attendance cleared successfully");
+    setClearTodayOpen(false);
+    setClearTodayConfirm("");
+    invalidateAttendance();
+  };
 
   const calMonthStart = format(startOfMonth(calendarMonth), "yyyy-MM-dd");
   const calMonthEnd = format(endOfMonth(calendarMonth), "yyyy-MM-dd");
