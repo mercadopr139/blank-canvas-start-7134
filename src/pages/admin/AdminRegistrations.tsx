@@ -243,28 +243,42 @@ const AdminRegistrations = () => {
   const newSubmissions = filteredRegistrations?.filter((r) => !r.approved_for_attendance) || [];
   const approvedRegistrations = filteredRegistrations?.filter((r) => r.approved_for_attendance) || [];
 
+  const updateExtendedProgram = async (regId: string, value: string | null) => {
+    const { error } = await supabase
+      .from("youth_registrations")
+      .update({ extended_program: value } as any)
+      .eq("id", regId);
+    if (error) {
+      toast.error("Failed to update Extended Program");
+      return;
+    }
+    queryClient.invalidateQueries({ queryKey: ["youth-registrations"] });
+    toast.success("Extended Program updated");
+  };
+
   const renderTable = (rows: any[], emptyMessage: string) => (
-    <div className="overflow-x-auto">
+    <div className="overflow-auto max-h-[70vh]">
       <Table>
-        <TableHeader>
+        <TableHeader className="sticky top-0 z-10 bg-black shadow-[0_1px_0_0_rgba(255,255,255,0.1)]">
           <TableRow className="border-white/10 hover:bg-transparent">
-            <TableHead className="text-white/70 w-12">Photo</TableHead>
-            <TableHead className="text-white/70">Date</TableHead>
-            <TableHead className="text-white/70">Child</TableHead>
-            <TableHead className="text-white/70">Age</TableHead>
-            <TableHead className="text-white/70">Program</TableHead>
-            <TableHead className="text-white/70">District</TableHead>
-            <TableHead className="text-white/70">Parent</TableHead>
-            <TableHead className="text-white/70 w-10 text-center">🦅</TableHead>
-            <TableHead className="text-white/70">Attendance</TableHead>
-            <TableHead className="text-white/70">Alerts</TableHead>
-            <TableHead className="text-right text-white/70">Actions</TableHead>
+            <TableHead className="text-white/70 w-12 bg-black">Photo</TableHead>
+            <TableHead className="text-white/70 bg-black">Date</TableHead>
+            <TableHead className="text-white/70 bg-black">Child</TableHead>
+            <TableHead className="text-white/70 bg-black">Age</TableHead>
+            <TableHead className="text-white/70 bg-black">Program</TableHead>
+            <TableHead className="text-white/70 bg-black">Extended</TableHead>
+            <TableHead className="text-white/70 bg-black">District</TableHead>
+            <TableHead className="text-white/70 bg-black">Parent</TableHead>
+            <TableHead className="text-white/70 w-10 text-center bg-black">🦅</TableHead>
+            <TableHead className="text-white/70 bg-black">Attendance</TableHead>
+            <TableHead className="text-white/70 bg-black">Alerts</TableHead>
+            <TableHead className="text-right text-white/70 bg-black">Actions</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
           {rows.length === 0 ? (
             <TableRow className="border-white/10 hover:bg-transparent">
-              <TableCell colSpan={11} className="text-center py-8 text-white/40">{emptyMessage}</TableCell>
+              <TableCell colSpan={12} className="text-center py-8 text-white/40">{emptyMessage}</TableCell>
             </TableRow>
           ) : rows.map((reg) => (
             <TableRow key={reg.id} className="border-white/10 hover:bg-white/5">
@@ -300,11 +314,31 @@ const AdminRegistrations = () => {
                   <Badge variant="secondary" className="text-xs whitespace-nowrap bg-[#bf0f3e]/10 border-[#bf0f3e]/30" style={{ color: '#bf0f3e' }}>
                     Senior Boxer
                   </Badge>
+                ) : reg.child_boxing_program?.includes("Grit") ? (
+                  <Badge variant="secondary" className="text-xs whitespace-nowrap bg-purple-500/10 text-purple-400 border-purple-500/30">
+                    Grit & Grace
+                  </Badge>
                 ) : (
                   <Badge variant="secondary" className="text-xs whitespace-nowrap bg-blue-500/10 text-blue-500 border-blue-500/30">
                     Junior Boxer
                   </Badge>
                 )}
+              </TableCell>
+              <TableCell>
+                <Select
+                  value={reg.extended_program || "unassigned"}
+                  onValueChange={(v) => updateExtendedProgram(reg.id, v === "unassigned" ? null : v)}
+                >
+                  <SelectTrigger className="h-7 w-[140px] text-xs bg-white/5 border-white/10 text-white/70">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="unassigned"><span className="text-white/30">—</span></SelectItem>
+                    {EXTENDED_PROGRAMS.map((p) => (
+                      <SelectItem key={p} value={p}>{p}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </TableCell>
               <TableCell className="text-sm text-white/70">{reg.child_school_district}</TableCell>
               <TableCell className="text-white">
