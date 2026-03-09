@@ -984,6 +984,30 @@ export type Database = {
           },
         ]
       }
+      upcoming_events: {
+        Row: {
+          created_at: string
+          event_date: string
+          event_name: string
+          id: string
+          notes: string | null
+        }
+        Insert: {
+          created_at?: string
+          event_date: string
+          event_name: string
+          id?: string
+          notes?: string | null
+        }
+        Update: {
+          created_at?: string
+          event_date?: string
+          event_name?: string
+          id?: string
+          notes?: string | null
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           created_at: string

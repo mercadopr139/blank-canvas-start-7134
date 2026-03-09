@@ -4,6 +4,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Settings, LogOut, Briefcase, TrendingUp, DollarSign, ArrowLeft, Signal } from "lucide-react";
+import UpcomingEventsWidget from "@/components/admin/UpcomingEventsWidget";
 
 const AdminDashboard = () => {
   const { user, signOut } = useAuth();
@@ -67,9 +68,14 @@ const AdminDashboard = () => {
 
       {/* Main Content */}
       <main className="container mx-auto px-4 py-[30px]">
-        {/* NLA Logo */}
-        <div className="flex justify-center mb-16">
-          <img src={nlaLogoWhite} alt="No Limits Academy" className="h-56 w-auto" />
+        {/* Top row: Logo + Upcoming Events */}
+        <div className="flex flex-col lg:flex-row items-center lg:items-start gap-8 mb-16">
+          <div className="flex-1 flex justify-center">
+            <img src={nlaLogoWhite} alt="No Limits Academy" className="h-56 w-auto" />
+          </div>
+          <div className="w-full lg:w-80 shrink-0">
+            <UpcomingEventsWidget />
+          </div>
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
