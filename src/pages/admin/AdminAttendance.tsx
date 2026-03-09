@@ -1068,6 +1068,7 @@ const AdminAttendance = () => {
                     >
                       <Trash2 className="w-3.5 h-3.5" />
                     </button>
+                  </div>
                 ))}
                 {daySignIns.length === 0 && <p className="text-sm text-white/30 text-center py-4">No sign-ins for this day</p>}
               </div>
