@@ -233,16 +233,22 @@ const AdminRegistrations = () => {
                 {reg.child_last_name}, {reg.child_first_name}
               </TableCell>
               <TableCell className="text-white">
-                <TooltipProvider>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <span className="cursor-default">{calculateAge(reg.child_date_of_birth)}</span>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      <p>DOB: {reg.child_date_of_birth ? format(parseISO(reg.child_date_of_birth), "MMMM d, yyyy") : "Unknown"}</p>
-                    </TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
+                {(() => {
+                  const age = calculateAge(reg.child_date_of_birth);
+                  if (typeof age === "string") return age;
+                  return (
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <span className="cursor-default underline decoration-dotted underline-offset-4 decoration-white/30">{age.display}</span>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p className="whitespace-pre-line">{age.tooltip}</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  );
+                })()}
               </TableCell>
               <TableCell>
                 {reg.child_boxing_program?.includes("Senior") ? (
