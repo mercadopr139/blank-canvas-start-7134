@@ -51,6 +51,8 @@ import facilityHighWork from "@/assets/facility/facility-high-work.png";
 import facilityFinishedCourt from "@/assets/facility/facility-finished-court.png";
 import facilityFinishedGymNew from "@/assets/facility/facility-finished-gym-new.jpg";
 import facilityFinishedCourtNew from "@/assets/facility/facility-finished-court-new.jpg";
+import facilityFinishedLearningCenter from "@/assets/facility/facility-finished-learning-center.jpg";
+import facilityFinishedTeenCenter from "@/assets/facility/facility-finished-teen-center.jpg";
 
 type FacilityImg = {src: string;alt: string;};
 
