@@ -502,9 +502,19 @@ const AdminAttendance = () => {
 
       {/* ═══════════ ATTENDANCE INSIGHTS ═══════════ */}
       <div>
-        <h2 className="text-xl font-bold text-white flex items-center gap-2 mb-4">
-          <Activity className="w-5 h-5 text-red-400" /> Attendance Insights
-        </h2>
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-xl font-bold text-white flex items-center gap-2">
+            <Activity className="w-5 h-5 text-red-400" /> Attendance Insights
+          </h2>
+          <Button
+            variant="outline"
+            size="sm"
+            className="border-red-500/40 text-red-400 hover:bg-red-500/10 hover:text-red-300 gap-1.5"
+            onClick={() => setClearTodayOpen(true)}
+          >
+            <Trash2 className="w-3.5 h-3.5" /> Clear Today's Attendance
+          </Button>
+        </div>
 
         {/* Key Insight Cards */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
