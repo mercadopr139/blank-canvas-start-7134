@@ -72,14 +72,9 @@ const AdminDashboard = () => {
 
       {/* Main Content */}
       <main className="container mx-auto px-4 py-[30px]">
-        {/* Top row: Logo + Upcoming Events */}
-        <div className="flex flex-col lg:flex-row items-center lg:items-start gap-8 mb-16">
-          <div className="flex-1 flex justify-center">
-            <img src={nlaLogoWhite} alt="No Limits Academy" className="h-56 w-auto" />
-          </div>
-          <div className="w-full lg:w-80 shrink-0">
-            <UpcomingEventsWidget />
-          </div>
+        {/* Top: Logo centered */}
+        <div className="flex justify-center mb-16">
+          <img src={nlaLogoWhite} alt="No Limits Academy" className="h-56 w-auto" />
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
@@ -103,33 +98,39 @@ const AdminDashboard = () => {
           )}
         </div>
 
-        {/* Utility Cards */}
-        <div className="flex justify-center gap-4 mt-12">
-          <Card
-            className="opacity-60 w-48 bg-white/5 border border-white/20 text-white cursor-pointer hover:opacity-80 transition-opacity"
-            onClick={() => navigate("/admin/signals")}
-          >
-            <CardHeader className="p-4 pb-2">
-              <div className="w-8 h-8 rounded-md flex items-center justify-center bg-white/5 text-white/40 mb-1">
-                <Signal className="w-4 h-4" />
-              </div>
-              <CardTitle className="text-sm text-white">PD – Signals</CardTitle>
-              <CardDescription className="text-xs text-white/40">Executive Focus & Daily Signals</CardDescription>
-            </CardHeader>
-            <CardContent className="px-4 pb-3 pt-0">
-              <p className="text-xs font-medium text-white/40">Open →</p>
-            </CardContent>
-          </Card>
+        {/* Bottom utility section */}
+        <div className="flex flex-col items-center gap-6 mt-12">
+          <div className="flex justify-center gap-4">
+            <Card
+              className="opacity-60 w-48 bg-white/5 border border-white/20 text-white cursor-pointer hover:opacity-80 transition-opacity"
+              onClick={() => navigate("/admin/signals")}
+            >
+              <CardHeader className="p-4 pb-2">
+                <div className="w-8 h-8 rounded-md flex items-center justify-center bg-white/5 text-white/40 mb-1">
+                  <Signal className="w-4 h-4" />
+                </div>
+                <CardTitle className="text-sm text-white">PD – Signals</CardTitle>
+                <CardDescription className="text-xs text-white/40">Executive Focus & Daily Signals</CardDescription>
+              </CardHeader>
+              <CardContent className="px-4 pb-3 pt-0">
+                <p className="text-xs font-medium text-white/40">Open →</p>
+              </CardContent>
+            </Card>
 
-          <Card className="opacity-60 w-48 bg-white/5 border border-white/20 text-white">
-            <CardHeader className="p-4 pb-2">
-              <div className="w-8 h-8 rounded-md flex items-center justify-center bg-white/5 text-white/40 mb-1">
-                <Settings className="w-4 h-4" />
-              </div>
-              <CardTitle className="text-sm text-white">Settings</CardTitle>
-              <CardDescription className="text-xs text-white/40">Coming soon</CardDescription>
-            </CardHeader>
-          </Card>
+            <Card className="opacity-60 w-48 bg-white/5 border border-white/20 text-white">
+              <CardHeader className="p-4 pb-2">
+                <div className="w-8 h-8 rounded-md flex items-center justify-center bg-white/5 text-white/40 mb-1">
+                  <Settings className="w-4 h-4" />
+                </div>
+                <CardTitle className="text-sm text-white">Settings</CardTitle>
+                <CardDescription className="text-xs text-white/40">Coming soon</CardDescription>
+              </CardHeader>
+            </Card>
+          </div>
+
+          <div className="w-full max-w-sm">
+            <UpcomingEventsWidget />
+          </div>
         </div>
       </main>
     </div>);
