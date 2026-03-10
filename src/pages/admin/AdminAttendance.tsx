@@ -1096,6 +1096,23 @@ const getHeadshotUrl = (url: string | null): string | null => {
               <Users className="w-5 h-5" /> Daily Attendance
             </CardTitle>
             <div className="flex gap-2 w-full sm:w-auto">
+              <Button
+                variant="outline"
+                size="sm"
+                className="gap-1.5 text-foreground border-white/20 hover:bg-white/10"
+                onClick={() => {
+                  const printDate = format(now, "EEEE, MMMM d, yyyy");
+                  const rows = filtered.map((r, i) => {
+                    const time = todayCheckInMap[r.id] ? format(parseISO(todayCheckInMap[r.id]), "h:mm a") : "—";
+                    return `<tr><td style="padding:6px 10px;border-bottom:1px solid #ddd;text-align:center">${i + 1}</td><td style="padding:6px 10px;border-bottom:1px solid #ddd">${r.child_first_name} ${r.child_last_name}</td><td style="padding:6px 10px;border-bottom:1px solid #ddd">${r.child_boxing_program}</td><td style="padding:6px 10px;border-bottom:1px solid #ddd">${time}</td></tr>`;
+                  }).join("");
+                  const html = `<html><head><title>Daily Attendance - ${printDate}</title><style>body{font-family:Arial,sans-serif;padding:24px;color:#111}h1{font-size:18px;margin-bottom:4px}p{color:#555;margin-bottom:16px;font-size:13px}table{width:100%;border-collapse:collapse}th{background:#1f2937;color:#fff;padding:8px 10px;text-align:left;font-size:12px}td{font-size:13px}.summary{margin-top:16px;font-size:13px;color:#333}@media print{body{padding:12px}}</style></head><body><h1>No Limits Academy — Daily Attendance</h1><p>${printDate}</p><table><thead><tr><th style="width:40px">#</th><th>Name</th><th>Program</th><th>Time</th></tr></thead><tbody>${rows}</tbody></table><p class="summary"><strong>Total Present: ${filtered.length}</strong></p></body></html>`;
+                  const w = window.open("", "_blank");
+                  if (w) { w.document.write(html); w.document.close(); w.print(); }
+                }}
+              >
+                <Printer className="w-4 h-4" /> Print Report
+              </Button>
               <div className="relative flex-1 sm:w-56">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/40" />
                 <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search..." className="pl-9 bg-white/5 border-white/20 text-white placeholder:text-white/30 h-9" />
@@ -1115,6 +1132,7 @@ const getHeadshotUrl = (url: string | null): string | null => {
             <Table>
               <TableHeader>
                 <TableRow className="border-white/10">
+                  <TableHead className="text-white/60 w-10">#</TableHead>
                   <TableHead className="text-white/60 w-10"></TableHead>
                   <TableHead className="text-white/60">Name</TableHead>
                   <TableHead className="text-white/60">Program</TableHead>
@@ -1125,10 +1143,11 @@ const getHeadshotUrl = (url: string | null): string | null => {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filtered.map((r) => {
+                {filtered.map((r, index) => {
                   const stats = getStats(r.id);
                   return (
                     <TableRow key={r.id} className="border-white/10">
+                      <TableCell className="text-white/40 text-xs">{index + 1}</TableCell>
                       <TableCell>
                         <button onClick={() => toggleBaldEagle(r)} className="p-1 hover:scale-110 transition-transform" title={r.is_bald_eagle ? "Remove Bald Eagle" : "Mark as Bald Eagle"}>
                           <Star className={`w-4 h-4 ${r.is_bald_eagle ? "fill-amber-400 text-amber-400" : "text-white/20"}`} />
