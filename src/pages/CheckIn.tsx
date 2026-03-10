@@ -84,6 +84,15 @@ const CheckIn = () => {
 
   useEffect(() => {
     fetchCount();
+
+    // Re-fetch when tablet/device wakes from sleep or tab becomes visible
+    const handleVisibility = () => {
+      if (document.visibilityState === "visible") {
+        fetchCount();
+      }
+    };
+    document.addEventListener("visibilitychange", handleVisibility);
+    return () => document.removeEventListener("visibilitychange", handleVisibility);
   }, [fetchCount]);
 
   // Realtime: listen for new attendance inserts to update counter
