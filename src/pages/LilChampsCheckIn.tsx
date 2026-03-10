@@ -1,9 +1,10 @@
 import { useState, useEffect, useRef, useCallback } from "react";
+import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Search, CheckCircle2, Users } from "lucide-react";
+import { Search, CheckCircle2, Users, ArrowLeft } from "lucide-react";
 import nlaLogo from "@/assets/nla-logo-white.png";
 
 const getHeadshotUrl = (url: string | null): string | null => {
