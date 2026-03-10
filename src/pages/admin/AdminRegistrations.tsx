@@ -908,10 +908,12 @@ const RegistrationDetail = ({ registration: reg, onApprovalChange }: { registrat
               </p>
             </div>
           </div>
-          <Switch
-            checked={!!reg.approved_for_attendance}
-            onCheckedChange={onApprovalChange}
-          />
+          <div onPointerDown={(e) => e.stopPropagation()} onTouchEnd={(e) => e.stopPropagation()} className="shrink-0 p-2 -m-2">
+            <Switch
+              checked={!!reg.approved_for_attendance}
+              onCheckedChange={onApprovalChange}
+            />
+          </div>
         </CardContent>
       </Card>
 
