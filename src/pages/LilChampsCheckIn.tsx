@@ -1,9 +1,10 @@
 import { useState, useEffect, useRef, useCallback } from "react";
+import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Search, CheckCircle2, Users } from "lucide-react";
+import { Search, CheckCircle2, Users, ArrowLeft } from "lucide-react";
 import nlaLogo from "@/assets/nla-logo-white.png";
 
 const getHeadshotUrl = (url: string | null): string | null => {
@@ -68,6 +69,7 @@ const Confetti = () => {
 };
 
 const LilChampsCheckIn = () => {
+  const navigate = useNavigate();
   const [search, setSearch] = useState("");
   const [youth, setYouth] = useState<LilChampsYouth[]>([]);
   const [loading, setLoading] = useState(false);
@@ -181,6 +183,17 @@ const LilChampsCheckIn = () => {
           </div>
         </>
       )}
+
+      {/* Back button */}
+      <Button
+        variant="ghost"
+        size="sm"
+        className="absolute top-4 left-4 text-white/40 hover:text-white hover:bg-white/10 z-10"
+        onClick={() => navigate(-1)}
+      >
+        <ArrowLeft className="w-4 h-4 mr-1" />
+        Back
+      </Button>
 
       <div className={`flex-1 flex flex-col items-center px-4 md:px-8 transition-all duration-500 ${
         isIdle ? "justify-center" : "justify-start pt-8 md:pt-12"
