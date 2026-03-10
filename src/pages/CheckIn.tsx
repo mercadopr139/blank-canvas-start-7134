@@ -62,6 +62,7 @@ const Confetti = () => {
 };
 
 const CheckIn = () => {
+  const navigate = useNavigate();
   const [search, setSearch] = useState("");
   const [youth, setYouth] = useState<Youth[]>([]);
   const [loading, setLoading] = useState(false);
