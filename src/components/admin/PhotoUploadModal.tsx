@@ -69,7 +69,7 @@ export default function PhotoUploadModal({
     if (!capturedImage) return;
     setUploading(true);
     try {
-      const fileName = `youth-photos/${registrationId}/profile.jpg`;
+      const fileName = `${registrationId}/profile_${Date.now()}.jpg`;
 
       const { error: uploadError } = await supabase.storage
         .from("youth-photos")
@@ -78,7 +78,10 @@ export default function PhotoUploadModal({
           upsert: true,
         });
 
-      if (uploadError) throw uploadError;
+      if (uploadError) {
+        console.error("Storage upload error:", uploadError);
+        throw uploadError;
+      }
 
       const { data: publicUrlData } = supabase.storage
         .from("youth-photos")
@@ -86,19 +89,23 @@ export default function PhotoUploadModal({
 
       const publicUrl = publicUrlData.publicUrl;
 
-      const { error: updateError } = await supabase
-        .from("youth_registrations")
-        .update({ child_headshot_url: publicUrl })
-        .eq("id", registrationId);
+      // Use SECURITY DEFINER function to bypass any RLS/auth issues on the kiosk
+      const { error: rpcError } = await supabase.rpc("update_youth_headshot", {
+        _registration_id: registrationId,
+        _headshot_url: publicUrl,
+      });
 
-      if (updateError) throw updateError;
+      if (rpcError) {
+        console.error("RPC update error:", rpcError);
+        throw rpcError;
+      }
 
       toast.success("Profile picture updated successfully");
       onPhotoUpdated(publicUrl);
       handleClose();
-    } catch (error) {
+    } catch (error: any) {
       console.error("Upload error:", error);
-      toast.error("Failed to upload photo. Please try again.");
+      toast.error(`Failed to upload photo: ${error?.message || "Please try again."}`);
     } finally {
       setUploading(false);
     }
