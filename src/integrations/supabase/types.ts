@@ -1297,6 +1297,10 @@ export type Database = {
           id: string
         }[]
       }
+      update_youth_headshot: {
+        Args: { _headshot_url: string; _registration_id: string }
+        Returns: undefined
+      }
     }
     Enums: {
       app_role: "admin" | "moderator" | "user"
