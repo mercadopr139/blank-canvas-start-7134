@@ -1,5 +1,7 @@
-import { Users, BarChart3, ClipboardList, LucideIcon, CalendarCheck, FileBarChart, Settings2, Star } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { Users, BarChart3, ClipboardList, LucideIcon, CalendarCheck, FileBarChart, Settings2, Star, LogIn } from "lucide-react";
 import AdminSectionLayout, { SectionCard } from "@/components/admin/AdminSectionLayout";
+import { Button } from "@/components/ui/button";
 
 interface OperationsTile {
   title: string;
@@ -66,17 +68,43 @@ const sidebarCards: SectionCard[] = baseTiles.map((t) => ({
   external: t.external,
 }));
 
-const AdminOperations = () => (
-  <AdminSectionLayout
-    section="operations"
-    title="Operations"
-    subtitle="Boxing & Youth Development"
-    accent="red"
-    accentHex="#bf0f3e"
-    cards={sidebarCards}
-    backHref="/admin/dashboard"
-    storageKey="nla_ops_custom_cards"
-  />
-);
+const AdminOperations = () => {
+  const navigate = useNavigate();
+
+  const checkInActions = (
+    <div className="flex flex-col gap-2 w-full">
+      <Button
+        size="sm"
+        className="w-full bg-[#bf0f3e] hover:bg-[#bf0f3e]/80 text-white text-sm font-medium"
+        onClick={() => navigate("/check-in")}
+      >
+        <LogIn className="w-4 h-4 mr-1.5" />
+        NLA Check-In
+      </Button>
+      <Button
+        size="sm"
+        className="w-full bg-sky-500 hover:bg-sky-400 text-white text-sm font-medium"
+        onClick={() => navigate("/check-in/lil-champs-corner")}
+      >
+        <Star className="w-4 h-4 mr-1.5" />
+        Lil Champs Check-In
+      </Button>
+    </div>
+  );
+
+  return (
+    <AdminSectionLayout
+      section="operations"
+      title="Operations"
+      subtitle="Boxing & Youth Development"
+      accent="red"
+      accentHex="#bf0f3e"
+      cards={sidebarCards}
+      backHref="/admin/dashboard"
+      storageKey="nla_ops_custom_cards"
+      sidebarAction={checkInActions}
+    />
+  );
+};
 
 export default AdminOperations;
