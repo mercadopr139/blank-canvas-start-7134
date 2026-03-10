@@ -31,7 +31,7 @@ const calculateAge = (dob: string): number => {
   const today = new Date();
   let age = today.getFullYear() - birth.getFullYear();
   const m = today.getMonth() - birth.getMonth();
-  if (m < 0 || (m === 0 && today.getDate() < birth.getDate())) age--;
+  if (m < 0 || m === 0 && today.getDate() < birth.getDate()) age--;
   return age;
 };
 
@@ -43,29 +43,29 @@ const Confetti = () => {
     delay: Math.random() * 0.5,
     duration: 1 + Math.random() * 2,
     color: colors[Math.floor(Math.random() * colors.length)],
-    size: 10 + Math.random() * 10,
+    size: 10 + Math.random() * 10
   }));
 
   return (
     <div className="fixed inset-0 pointer-events-none overflow-hidden z-50">
-      {particles.map((p) => (
-        <div
-          key={p.id}
-          className="absolute animate-confetti"
-          style={{
-            left: `${p.left}%`,
-            top: '-20px',
-            width: p.size,
-            height: p.size,
-            backgroundColor: p.color,
-            borderRadius: Math.random() > 0.5 ? '50%' : '2px',
-            animationDelay: `${p.delay}s`,
-            animationDuration: `${p.duration}s`,
-          }}
-        />
-      ))}
-    </div>
-  );
+      {particles.map((p) =>
+      <div
+        key={p.id}
+        className="absolute animate-confetti"
+        style={{
+          left: `${p.left}%`,
+          top: '-20px',
+          width: p.size,
+          height: p.size,
+          backgroundColor: p.color,
+          borderRadius: Math.random() > 0.5 ? '50%' : '2px',
+          animationDelay: `${p.delay}s`,
+          animationDuration: `${p.duration}s`
+        }} />
+
+      )}
+    </div>);
+
 };
 
 const LilChampsCheckIn = () => {
@@ -87,20 +87,20 @@ const LilChampsCheckIn = () => {
     if (typeof data === "number") setTodayCount(data);
   }, []);
 
-  useEffect(() => { fetchCount(); }, [fetchCount]);
+  useEffect(() => {fetchCount();}, [fetchCount]);
 
   useEffect(() => {
-    const channel = supabase
-      .channel("lil_champs_counter")
-      .on("postgres_changes", { event: "INSERT", schema: "public", table: "attendance_records" }, () => fetchCount())
-      .subscribe();
-    return () => { supabase.removeChannel(channel); };
+    const channel = supabase.
+    channel("lil_champs_counter").
+    on("postgres_changes", { event: "INSERT", schema: "public", table: "attendance_records" }, () => fetchCount()).
+    subscribe();
+    return () => {supabase.removeChannel(channel);};
   }, [fetchCount]);
 
-  useEffect(() => { searchRef.current?.focus(); }, [showCelebration]);
+  useEffect(() => {searchRef.current?.focus();}, [showCelebration]);
 
   useEffect(() => {
-    if (search.length < 2) { setYouth([]); return; }
+    if (search.length < 2) {setYouth([]);return;}
     const timeout = setTimeout(async () => {
       setLoading(true);
       const { data, error } = await supabase.rpc("search_lil_champs_youth", { _search: search });
@@ -108,7 +108,7 @@ const LilChampsCheckIn = () => {
         console.error("Lil Champs search failed:", error);
         setYouth([]);
       } else {
-        setYouth((data as LilChampsYouth[]) || []);
+        setYouth(data as LilChampsYouth[] || []);
       }
       setLoading(false);
     }, 300);
@@ -127,9 +127,9 @@ const LilChampsCheckIn = () => {
     setAlreadyIn(null);
     setShowCelebration(false);
     const today = new Date().toLocaleDateString('en-CA', { timeZone: 'America/New_York' });
-    const { error: insertError } = await supabase
-      .from("attendance_records")
-      .insert({ registration_id: y.id, check_in_date: today, program_source: "Lil Champs Corner" });
+    const { error: insertError } = await supabase.
+    from("attendance_records").
+    insert({ registration_id: y.id, check_in_date: today, program_source: "Lil Champs Corner" });
 
     if (insertError) {
       if (insertError.message.includes("duplicate") || insertError.code === "23505") {
@@ -161,8 +161,8 @@ const LilChampsCheckIn = () => {
 
   return (
     <div className="min-h-screen bg-black text-white flex flex-col">
-      {showCelebration && (
-        <>
+      {showCelebration &&
+      <>
           <Confetti />
           <div className="fixed inset-0 bg-black/85 z-40 flex items-center justify-center animate-in fade-in duration-200">
             <div className="text-center animate-in zoom-in duration-500 px-6">
@@ -182,49 +182,49 @@ const LilChampsCheckIn = () => {
             </div>
           </div>
         </>
-      )}
+      }
 
       {/* Back button */}
       <Button
         variant="ghost"
         size="sm"
         className="absolute top-4 left-4 text-white/40 hover:text-white hover:bg-white/10 z-10"
-        onClick={() => navigate(-1)}
-      >
+        onClick={() => navigate(-1)}>
+        
         <ArrowLeft className="w-4 h-4 mr-1" />
         Back
       </Button>
 
       <div className={`flex-1 flex flex-col items-center px-4 md:px-8 transition-all duration-500 ${
-        isIdle ? "justify-center" : "justify-start pt-8 md:pt-12"
-      }`}>
+      isIdle ? "justify-center" : "justify-start pt-8 md:pt-12"}`
+      }>
         <img
           src={nlaLogo}
           alt="No Limits Academy"
           className={`mx-auto transition-all duration-500 ${
-            isIdle ? "h-24 md:h-32 mb-6 md:mb-8" : "h-14 md:h-18 mb-4 md:mb-5"
-          }`}
-        />
+          isIdle ? "h-24 md:h-32 mb-6 md:mb-8" : "h-14 md:h-18 mb-4 md:mb-5"}`
+          } />
+        
 
         <h1 className={`font-black tracking-tight text-center transition-all duration-500 ${
-          isIdle ? "text-3xl md:text-5xl mb-1" : "text-2xl md:text-3xl mb-1"
-        }`}>
-          <span style={{ color: '#38bdf8' }}>Lil' Champ Corner</span> Check-In
+        isIdle ? "text-3xl md:text-5xl mb-1" : "text-2xl md:text-3xl mb-1"}`
+        }>
+          <span style={{ color: '#38bdf8' }}>Lil' Champs Corner</span> Check-In
         </h1>
         <p className={`text-white/50 text-center transition-all duration-500 ${
-          isIdle ? "text-lg md:text-xl mb-4" : "text-sm md:text-base mb-3"
-        }`}>
+        isIdle ? "text-lg md:text-xl mb-4" : "text-sm md:text-base mb-3"}`
+        }>
           Search your name and tap to check in
         </p>
 
         <div className={`flex items-center gap-2.5 rounded-full border border-yellow-500/20 bg-yellow-500/[0.06] px-5 py-2 mb-6 transition-all duration-300 ${
-          counterPulse ? "scale-110 border-yellow-500/50 bg-yellow-500/10" : ""
-        }`}>
+        counterPulse ? "scale-110 border-yellow-500/50 bg-yellow-500/10" : ""}`
+        }>
           <Users className={`w-5 h-5 transition-colors ${counterPulse ? "text-yellow-400" : "text-white/40"}`} />
           <span className="text-white/50 text-sm md:text-base font-medium">Today's Check-Ins:</span>
           <span className={`font-black text-xl md:text-2xl tabular-nums transition-colors ${
-            counterPulse ? "text-yellow-400" : "text-white"
-          }`}>
+          counterPulse ? "text-yellow-400" : "text-white"}`
+          }>
             {todayCount}
           </span>
         </div>
@@ -232,8 +232,8 @@ const LilChampsCheckIn = () => {
         <div className="w-full max-w-2xl">
           <div className="relative mb-6">
             <Search className={`absolute left-4 md:left-5 top-1/2 -translate-y-1/2 text-white/40 transition-all duration-500 ${
-              isIdle ? "w-7 h-7 md:w-8 md:h-8" : "w-6 h-6"
-            }`} />
+            isIdle ? "w-7 h-7 md:w-8 md:h-8" : "w-6 h-6"}`
+            } />
             <Input
               ref={searchRef}
               value={search}
@@ -241,12 +241,12 @@ const LilChampsCheckIn = () => {
               onKeyDown={handleKeyDown}
               placeholder="Type your name to check in"
               className={`pl-12 md:pl-14 bg-white/5 border-2 border-yellow-500/20 text-white placeholder:text-white/30 focus:border-yellow-500/60 rounded-2xl transition-all duration-500 ${
-                isIdle
-                  ? "text-2xl md:text-3xl h-18 md:h-22"
-                  : "text-xl md:text-2xl h-16 md:h-18"
-              }`}
-              autoFocus
-            />
+              isIdle ?
+              "text-2xl md:text-3xl h-18 md:h-22" :
+              "text-xl md:text-2xl h-16 md:h-18"}`
+              }
+              autoFocus />
+            
           </div>
 
           {error && <p className="text-red-400 text-center mb-4 text-lg">{error}</p>}
@@ -254,23 +254,23 @@ const LilChampsCheckIn = () => {
           <div className="space-y-4">
             {loading && <p className="text-center text-white/40 text-lg py-8">Searching...</p>}
             {showEmpty && <p className="text-center text-white/40 text-lg py-8">No students found</p>}
-            {youth.map((y, index) => (
-              <Card
-                key={y.id}
-                className={`bg-white/[0.04] border-2 border-white/10 text-white transition-all duration-300 hover:bg-white/[0.07] animate-in slide-in-from-bottom-4 fade-in ${
-                  checkedIn === y.id ? "border-yellow-500 bg-yellow-500/10" : ""
-                } ${alreadyIn === y.id ? "border-orange-500 bg-orange-500/10" : ""}`}
-                style={{ animationDelay: `${index * 80}ms`, animationFillMode: 'both' }}
-              >
+            {youth.map((y, index) =>
+            <Card
+              key={y.id}
+              className={`bg-white/[0.04] border-2 border-white/10 text-white transition-all duration-300 hover:bg-white/[0.07] animate-in slide-in-from-bottom-4 fade-in ${
+              checkedIn === y.id ? "border-yellow-500 bg-yellow-500/10" : ""} ${
+              alreadyIn === y.id ? "border-orange-500 bg-orange-500/10" : ""}`}
+              style={{ animationDelay: `${index * 80}ms`, animationFillMode: 'both' }}>
+              
                 <CardContent className="flex items-center gap-5 md:gap-6 p-5 md:p-6">
                   <div className="w-16 h-16 md:w-20 md:h-20 rounded-full bg-white/10 flex items-center justify-center overflow-hidden flex-shrink-0 ring-2 ring-yellow-500/20">
-                    {getHeadshotUrl(y.child_headshot_url) ? (
-                      <img src={getHeadshotUrl(y.child_headshot_url)!} alt="" className="w-full h-full object-cover" />
-                    ) : (
-                      <span className="text-2xl md:text-3xl font-bold text-white/50">
+                    {getHeadshotUrl(y.child_headshot_url) ?
+                  <img src={getHeadshotUrl(y.child_headshot_url)!} alt="" className="w-full h-full object-cover" /> :
+
+                  <span className="text-2xl md:text-3xl font-bold text-white/50">
                         {y.child_first_name[0]}
                       </span>
-                    )}
+                  }
                   </div>
 
                   <div className="flex-1 min-w-0">
@@ -283,37 +283,37 @@ const LilChampsCheckIn = () => {
                   </div>
 
                   <div className="flex items-center flex-shrink-0">
-                    {checkedIn === y.id && (
-                      <div className="flex flex-col items-center text-yellow-400 animate-in fade-in zoom-in duration-300">
+                    {checkedIn === y.id &&
+                  <div className="flex flex-col items-center text-yellow-400 animate-in fade-in zoom-in duration-300">
                         <CheckCircle2 className="w-10 h-10 md:w-12 md:h-12 mb-1" />
                         <span className="font-bold text-base md:text-lg">CHECKED IN!</span>
                       </div>
-                    )}
-                    {alreadyIn === y.id && (
-                      <span className="text-orange-400 text-sm md:text-base font-semibold text-center">
+                  }
+                    {alreadyIn === y.id &&
+                  <span className="text-orange-400 text-sm md:text-base font-semibold text-center">
                         Already checked<br />in today ✓
                       </span>
-                    )}
-                    {!checkedIn && !alreadyIn && (
-                      <Button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleCheckIn(y);
-                        }}
-                        className="bg-yellow-600 hover:bg-yellow-500 text-black font-bold text-lg md:text-xl px-6 md:px-8 py-5 md:py-6 rounded-xl shadow-lg shadow-yellow-900/30 transition-all active:scale-95"
-                      >
+                  }
+                    {!checkedIn && !alreadyIn &&
+                  <Button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleCheckIn(y);
+                    }}
+                    className="bg-yellow-600 hover:bg-yellow-500 text-black font-bold text-lg md:text-xl px-6 md:px-8 py-5 md:py-6 rounded-xl shadow-lg shadow-yellow-900/30 transition-all active:scale-95">
+                    
                         SIGN IN
                       </Button>
-                    )}
+                  }
                   </div>
                 </CardContent>
               </Card>
-            ))}
+            )}
           </div>
         </div>
       </div>
-    </div>
-  );
+    </div>);
+
 };
 
 export default LilChampsCheckIn;
