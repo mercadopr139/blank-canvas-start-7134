@@ -201,7 +201,7 @@ const LilChampsRoster = ({ onCheckIn, onUndo, onClose, checkedInIds }: LilChamps
               return (
                 <button
                   key={y.id}
-                  onDoubleClick={() => handleDoubleTap(y)}
+                  onClick={() => handleTapOrClick(y)}
                   disabled={isLoading}
                   style={{ touchAction: 'manipulation', WebkitTapHighlightColor: 'transparent' }}
                   className={`relative flex flex-col items-center rounded-2xl p-3 sm:p-4 transition-all duration-200 border-2 text-left select-none
