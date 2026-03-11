@@ -630,6 +630,7 @@ const AdminAttendanceReports = () => {
                           {reg ? `${reg.child_first_name} ${reg.child_last_name}` : "Unknown"}
                         </TableCell>
                         <TableCell className="text-white/60 text-xs">{reg?.child_boxing_program || ""}</TableCell>
+                        <TableCell><span className={`text-xs px-1.5 py-0.5 rounded-full ${a.program_source === 'Lil Champs Corner' ? 'bg-sky-500/15 text-sky-400' : 'bg-green-500/15 text-green-400'}`}>{a.program_source || 'NLA'}</span></TableCell>
                         <TableCell className="text-white/60 text-xs">{reg?.child_school_district || ""}</TableCell>
                         <TableCell className="text-white/50 text-xs">{format(new Date(a.check_in_at), "h:mm a")}</TableCell>
                         <TableCell>
