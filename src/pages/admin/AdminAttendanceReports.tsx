@@ -614,7 +614,7 @@ const AdminAttendanceReports = () => {
               <TableBody>
                 {filteredAttendance.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={7} className="text-center text-white/30 py-8">
+                   <TableCell colSpan={8} className="text-center text-white/30 py-8">
                       {reportType === "individual" && !selectedYouthId ? "Search and select a youth above" : "No attendance records for this period"}
                     </TableCell>
                   </TableRow>
