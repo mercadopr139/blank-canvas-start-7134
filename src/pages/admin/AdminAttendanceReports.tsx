@@ -325,7 +325,7 @@ const AdminAttendanceReports = () => {
       summary.push(["Bald Eagle", selectedYouthReg.is_bald_eagle ? "Yes" : "No"]);
     }
 
-    const tableHeaders = ["#", "Date", "Name", "Program", "Sign-In Time"];
+    const tableHeaders = ["#", "Date", "Name", "Program", "Source", "Sign-In Time"];
     const tableData = filteredAttendance.map((a, i) => {
       const reg = regMap[a.registration_id];
       return [
@@ -333,6 +333,7 @@ const AdminAttendanceReports = () => {
         format(parseISO(a.check_in_date), "MMM d, yyyy"),
         reg ? `${reg.child_first_name} ${reg.child_last_name}` : "Unknown",
         reg?.child_boxing_program || "",
+        a.program_source || "NLA",
         format(new Date(a.check_in_at), "h:mm a"),
       ];
     });
