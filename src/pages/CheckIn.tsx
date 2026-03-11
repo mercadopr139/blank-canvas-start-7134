@@ -170,7 +170,7 @@ const CheckIn = () => {
     const today = new Date().toLocaleDateString('en-CA', { timeZone: 'America/New_York' });
     const { error: insertError } = await supabase
       .from("attendance_records")
-      .insert({ registration_id: y.id, check_in_date: today });
+      .insert({ registration_id: y.id, check_in_date: today, program_source: "NLA" });
 
     if (insertError) {
       if (insertError.message.includes("duplicate") || insertError.code === "23505") {
