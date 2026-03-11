@@ -600,11 +600,12 @@ const AdminAttendanceReports = () => {
           <div className="overflow-x-auto max-h-[400px] overflow-y-auto">
             <Table>
               <TableHeader>
-                <TableRow className="border-white/10">
+                 <TableRow className="border-white/10">
                   <TableHead className="text-white/60">#</TableHead>
                   <TableHead className="text-white/60">Date</TableHead>
                   <TableHead className="text-white/60">Name</TableHead>
                   <TableHead className="text-white/60">Program</TableHead>
+                  <TableHead className="text-white/60">Source</TableHead>
                   <TableHead className="text-white/60">District</TableHead>
                   <TableHead className="text-white/60">Time</TableHead>
                   <TableHead className="text-white/60 w-8"></TableHead>
