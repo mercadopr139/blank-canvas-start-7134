@@ -33,6 +33,7 @@ interface AttendanceRecord {
   registration_id: string;
   check_in_date: string;
   check_in_at: string;
+  program_source: string;
 }
 
 type ReportType = "daily" | "weekly" | "monthly" | "yearly" | "individual";
