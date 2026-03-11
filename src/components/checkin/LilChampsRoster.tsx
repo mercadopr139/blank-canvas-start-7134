@@ -253,7 +253,7 @@ const LilChampsRoster = ({ onCheckIn, onUndo, onClose, checkedInIds }: LilChamps
                       Double-tap to check in
                     </span>
                   )}
-                </button>
+                </div>
               );
             })}
           </div>
