@@ -182,7 +182,12 @@ const LilChampsRoster = ({ onCheckIn, onClose, checkedInIds }: LilChampsRosterPr
                 <button
                   key={y.id}
                   onClick={() => handleTapCheckIn(y)}
+                  onTouchEnd={(e) => {
+                    e.preventDefault();
+                    handleTapCheckIn(y);
+                  }}
                   disabled={isChecked || isLoading}
+                  style={{ touchAction: 'manipulation', WebkitTapHighlightColor: 'transparent' }}
                   className={`relative flex flex-col items-center rounded-2xl p-3 sm:p-4 transition-all duration-200 border-2 text-left
                     ${isChecked
                       ? "border-green-500/40 bg-green-500/10 opacity-70"
