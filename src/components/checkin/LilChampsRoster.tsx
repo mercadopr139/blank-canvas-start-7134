@@ -43,17 +43,18 @@ type FilterMode = "all" | "not-checked-in" | "checked-in";
 
 interface LilChampsRosterProps {
   onCheckIn: (y: RosterYouth) => Promise<void>;
+  onUndo: (y: RosterYouth) => Promise<void>;
   onClose: () => void;
   checkedInIds: Set<string>;
 }
 
-const LilChampsRoster = ({ onCheckIn, onClose, checkedInIds }: LilChampsRosterProps) => {
+const LilChampsRoster = ({ onCheckIn, onUndo, onClose, checkedInIds }: LilChampsRosterProps) => {
   const [roster, setRoster] = useState<RosterYouth[]>([]);
   const [loading, setLoading] = useState(true);
   const [filterText, setFilterText] = useState("");
   const [sortMode, setSortMode] = useState<SortMode>("alpha");
   const [filterMode, setFilterMode] = useState<FilterMode>("all");
-  const [checkingIn, setCheckingIn] = useState<string | null>(null);
+  const [processing, setProcessing] = useState<string | null>(null);
 
   const fetchRoster = useCallback(async () => {
     setLoading(true);
@@ -71,11 +72,15 @@ const LilChampsRoster = ({ onCheckIn, onClose, checkedInIds }: LilChampsRosterPr
 
   useEffect(() => { fetchRoster(); }, [fetchRoster]);
 
-  const handleTapCheckIn = async (y: RosterYouth) => {
-    if (checkedInIds.has(y.id) || checkingIn) return;
-    setCheckingIn(y.id);
-    await onCheckIn(y);
-    setCheckingIn(null);
+  const handleDoubleTap = async (y: RosterYouth) => {
+    if (processing) return;
+    setProcessing(y.id);
+    if (checkedInIds.has(y.id)) {
+      await onUndo(y);
+    } else {
+      await onCheckIn(y);
+    }
+    setProcessing(null);
   };
 
   let filtered = roster.filter((y) => {
