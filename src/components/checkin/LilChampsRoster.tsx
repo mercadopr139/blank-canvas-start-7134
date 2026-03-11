@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -10,9 +10,9 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 
-const getHeadshotUrl = (url: string | null): string | null => {
+const getHeadshotUrl = (url: string | null, cacheBust: string): string | null => {
   if (!url) return null;
-  const bustParam = `?v=${Date.now()}`;
+  const bustParam = `?v=${cacheBust}`;
   if (url.startsWith("http")) return url + bustParam;
   const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
   if (url.startsWith("youth-photos/")) {
@@ -48,7 +48,7 @@ interface LilChampsRosterProps {
   checkedInIds: Set<string>;
 }
 
-const DOUBLE_TAP_DELAY = 400; // ms
+const DOUBLE_TAP_DELAY = 400;
 
 const LilChampsRoster = ({ onCheckIn, onUndo, onClose, checkedInIds }: LilChampsRosterProps) => {
   const [roster, setRoster] = useState<RosterYouth[]>([]);
@@ -58,6 +58,10 @@ const LilChampsRoster = ({ onCheckIn, onUndo, onClose, checkedInIds }: LilChamps
   const [filterMode, setFilterMode] = useState<FilterMode>("all");
   const [processing, setProcessing] = useState<string | null>(null);
   const lastTapRef = useRef<{ id: string; time: number }>({ id: "", time: 0 });
+  const tapTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Stable cache-bust value so images don't flicker on re-render
+  const cacheBust = useMemo(() => String(Date.now()), []);
 
   const fetchRoster = useCallback(async () => {
     setLoading(true);
@@ -75,30 +79,56 @@ const LilChampsRoster = ({ onCheckIn, onUndo, onClose, checkedInIds }: LilChamps
 
   useEffect(() => { fetchRoster(); }, [fetchRoster]);
 
+  // Cleanup timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (tapTimeoutRef.current) clearTimeout(tapTimeoutRef.current);
+    };
+  }, []);
+
   const handleDoubleTap = async (y: RosterYouth) => {
     if (processing) return;
     setProcessing(y.id);
-    if (checkedInIds.has(y.id)) {
-      await onUndo(y);
-    } else {
-      await onCheckIn(y);
+    try {
+      if (checkedInIds.has(y.id)) {
+        await onUndo(y);
+      } else {
+        await onCheckIn(y);
+      }
+    } finally {
+      setProcessing(null);
     }
-    setProcessing(null);
   };
 
-  const handleTapOrClick = (e: React.PointerEvent, y: RosterYouth) => {
-    // Prevent ghost clicks / duplicate fires
-    e.preventDefault();
-    e.stopPropagation();
+  // Touch-based double-tap for mobile
+  const handleTouchEnd = (e: React.TouchEvent, y: RosterYouth) => {
+    if (processing) return;
+    // Don't preventDefault here — allow normal scroll behavior
     const now = Date.now();
     const last = lastTapRef.current;
+
     if (last.id === y.id && now - last.time < DOUBLE_TAP_DELAY) {
-      // Double tap detected
+      // Double tap detected — prevent any zoom/ghost click
+      e.preventDefault();
       lastTapRef.current = { id: "", time: 0 };
+      if (tapTimeoutRef.current) {
+        clearTimeout(tapTimeoutRef.current);
+        tapTimeoutRef.current = null;
+      }
       handleDoubleTap(y);
     } else {
       lastTapRef.current = { id: y.id, time: now };
+      // Clear after delay so stale first-taps don't linger
+      if (tapTimeoutRef.current) clearTimeout(tapTimeoutRef.current);
+      tapTimeoutRef.current = setTimeout(() => {
+        lastTapRef.current = { id: "", time: 0 };
+      }, DOUBLE_TAP_DELAY);
     }
+  };
+
+  // Desktop double-click fallback
+  const handleDoubleClick = (y: RosterYouth) => {
+    handleDoubleTap(y);
   };
 
   let filtered = roster.filter((y) => {
@@ -197,8 +227,8 @@ const LilChampsRoster = ({ onCheckIn, onUndo, onClose, checkedInIds }: LilChamps
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3 sm:gap-4">
             {filtered.map((y) => {
               const isChecked = checkedInIds.has(y.id);
-              const isLoading = processing === y.id;
-              const photo = getHeadshotUrl(y.child_headshot_url);
+              const isProcessing = processing === y.id;
+              const photo = getHeadshotUrl(y.child_headshot_url, cacheBust);
               const age = calculateAge(y.child_date_of_birth);
 
               return (
@@ -206,14 +236,15 @@ const LilChampsRoster = ({ onCheckIn, onUndo, onClose, checkedInIds }: LilChamps
                   key={y.id}
                   role="button"
                   tabIndex={0}
-                  onPointerDown={(e) => handleTapOrClick(e, y)}
-                  style={{ touchAction: 'manipulation', WebkitTapHighlightColor: 'transparent', cursor: 'pointer' }}
-                  className={`relative flex flex-col items-center rounded-2xl p-3 sm:p-4 transition-all duration-200 border-2 text-left select-none
+                  onTouchEnd={(e) => handleTouchEnd(e, y)}
+                  onDoubleClick={() => handleDoubleClick(y)}
+                  style={{ touchAction: 'manipulation', WebkitTapHighlightColor: 'transparent', cursor: 'pointer', userSelect: 'none' }}
+                  className={`relative flex flex-col items-center rounded-2xl p-3 sm:p-4 transition-all duration-200 border-2 select-none
                     ${isChecked
                       ? "border-green-500/40 bg-green-500/10"
                       : "border-white/10 bg-white/[0.04] hover:bg-white/[0.08] hover:border-sky-400/30"
                     }
-                    ${isLoading ? "animate-pulse" : ""}
+                    ${isProcessing ? "opacity-60 pointer-events-none" : ""}
                   `}
                 >
                   {/* Check badge */}
@@ -244,7 +275,11 @@ const LilChampsRoster = ({ onCheckIn, onUndo, onClose, checkedInIds }: LilChamps
                   <p className="text-white/30 text-[10px] sm:text-[11px] mt-0.5">Age {age}</p>
 
                   {/* Status label */}
-                  {isChecked ? (
+                  {isProcessing ? (
+                    <span className="mt-1.5 text-[10px] sm:text-xs font-medium text-yellow-400 animate-pulse">
+                      Processing...
+                    </span>
+                  ) : isChecked ? (
                     <span className="mt-1.5 text-[10px] sm:text-xs font-semibold text-green-400">
                       ✓ Checked In
                     </span>
