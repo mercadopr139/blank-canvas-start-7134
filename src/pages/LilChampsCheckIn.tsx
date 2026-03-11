@@ -81,6 +81,8 @@ const LilChampsCheckIn = () => {
   const [showCelebration, setShowCelebration] = useState(false);
   const [todayCount, setTodayCount] = useState(0);
   const [counterPulse, setCounterPulse] = useState(false);
+  const [showRoster, setShowRoster] = useState(false);
+  const [checkedInIds, setCheckedInIds] = useState<Set<string>>(new Set());
   const searchRef = useRef<HTMLInputElement>(null);
 
   const fetchCount = useCallback(async () => {
