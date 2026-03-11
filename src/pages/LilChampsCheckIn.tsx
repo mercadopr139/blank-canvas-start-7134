@@ -160,6 +160,7 @@ const LilChampsCheckIn = () => {
     setTodayCount((c) => c + 1);
     setCounterPulse(true);
     setTimeout(() => setCounterPulse(false), 1000);
+    setCheckedInIds((prev) => new Set(prev).add(y.id));
     setCheckedIn(y.id);
     setCheckedInName(`${y.child_first_name} ${y.child_last_name}`);
     setShowCelebration(true);
@@ -169,6 +170,24 @@ const LilChampsCheckIn = () => {
       setSearch("");
       setYouth([]);
     }, 3000);
+  };
+
+  const handleRosterCheckIn = async (y: { id: string; child_first_name: string; child_last_name: string; child_date_of_birth: string; child_headshot_url: string | null }) => {
+    const today = new Date().toLocaleDateString('en-CA', { timeZone: 'America/New_York' });
+    const { error: insertError } = await supabase
+      .from("attendance_records")
+      .insert({ registration_id: y.id, check_in_date: today, program_source: "Lil Champs Corner" });
+
+    if (insertError) {
+      if (insertError.message.includes("duplicate") || insertError.code === "23505") {
+        // already checked in — roster will show status
+      }
+      return;
+    }
+    setTodayCount((c) => c + 1);
+    setCounterPulse(true);
+    setTimeout(() => setCounterPulse(false), 1000);
+    setCheckedInIds((prev) => new Set(prev).add(y.id));
   };
 
   const hasResults = youth.length > 0;
