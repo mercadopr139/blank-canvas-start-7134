@@ -41,6 +41,7 @@ interface AttendanceRecord {
   registration_id: string;
   check_in_date: string;
   check_in_at: string;
+  program_source: string;
 }
 
 const POVERTY_INCOMES = ["Under $25,000", "Less than $25,000", "Less than $35,000"];
