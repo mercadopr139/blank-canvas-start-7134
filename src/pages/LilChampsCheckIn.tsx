@@ -264,6 +264,17 @@ const LilChampsCheckIn = () => {
           </span>
         </div>
 
+        {/* Browse by Photo button */}
+        {isIdle && (
+          <Button
+            onClick={() => setShowRoster(true)}
+            className="mb-6 bg-sky-600 hover:bg-sky-500 text-white font-bold text-base sm:text-lg px-6 py-4 rounded-xl shadow-lg transition-all active:scale-95"
+          >
+            <Eye className="w-5 h-5 mr-2" />
+            Browse by Photo
+          </Button>
+        )}
+
         <div className="w-full max-w-2xl">
           <div className="relative mb-6">
             <Search className={`absolute left-4 md:left-5 top-1/2 -translate-y-1/2 text-white/40 transition-all duration-500 ${
@@ -347,6 +358,15 @@ const LilChampsCheckIn = () => {
           </div>
         </div>
       </div>
+
+      {/* Photo Roster Overlay */}
+      {showRoster && (
+        <LilChampsRoster
+          onCheckIn={handleRosterCheckIn}
+          onClose={() => setShowRoster(false)}
+          checkedInIds={checkedInIds}
+        />
+      )}
     </div>);
 
 };
