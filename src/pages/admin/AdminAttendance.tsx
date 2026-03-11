@@ -48,7 +48,7 @@ const WEEKDAY_LABELS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 const WEEKDAY_NAMES = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 
 const now = new Date();
-const todayStr = now.toISOString().split("T")[0];
+const todayStr = now.toLocaleDateString('en-CA', { timeZone: 'America/New_York' });
 const weekStart = format(startOfWeek(now, { weekStartsOn: 1 }), "yyyy-MM-dd");
 const weekEnd = format(endOfWeek(now, { weekStartsOn: 1 }), "yyyy-MM-dd");
 const prevWeekStart = format(startOfWeek(subWeeks(now, 1), { weekStartsOn: 1 }), "yyyy-MM-dd");
