@@ -43,17 +43,18 @@ type FilterMode = "all" | "not-checked-in" | "checked-in";
 
 interface LilChampsRosterProps {
   onCheckIn: (y: RosterYouth) => Promise<void>;
+  onUndo: (y: RosterYouth) => Promise<void>;
   onClose: () => void;
   checkedInIds: Set<string>;
 }
 
-const LilChampsRoster = ({ onCheckIn, onClose, checkedInIds }: LilChampsRosterProps) => {
+const LilChampsRoster = ({ onCheckIn, onUndo, onClose, checkedInIds }: LilChampsRosterProps) => {
   const [roster, setRoster] = useState<RosterYouth[]>([]);
   const [loading, setLoading] = useState(true);
   const [filterText, setFilterText] = useState("");
   const [sortMode, setSortMode] = useState<SortMode>("alpha");
   const [filterMode, setFilterMode] = useState<FilterMode>("all");
-  const [checkingIn, setCheckingIn] = useState<string | null>(null);
+  const [processing, setProcessing] = useState<string | null>(null);
 
   const fetchRoster = useCallback(async () => {
     setLoading(true);
@@ -71,11 +72,15 @@ const LilChampsRoster = ({ onCheckIn, onClose, checkedInIds }: LilChampsRosterPr
 
   useEffect(() => { fetchRoster(); }, [fetchRoster]);
 
-  const handleTapCheckIn = async (y: RosterYouth) => {
-    if (checkedInIds.has(y.id) || checkingIn) return;
-    setCheckingIn(y.id);
-    await onCheckIn(y);
-    setCheckingIn(null);
+  const handleDoubleTap = async (y: RosterYouth) => {
+    if (processing) return;
+    setProcessing(y.id);
+    if (checkedInIds.has(y.id)) {
+      await onUndo(y);
+    } else {
+      await onCheckIn(y);
+    }
+    setProcessing(null);
   };
 
   let filtered = roster.filter((y) => {
@@ -174,24 +179,20 @@ const LilChampsRoster = ({ onCheckIn, onClose, checkedInIds }: LilChampsRosterPr
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3 sm:gap-4">
             {filtered.map((y) => {
               const isChecked = checkedInIds.has(y.id);
-              const isLoading = checkingIn === y.id;
+              const isLoading = processing === y.id;
               const photo = getHeadshotUrl(y.child_headshot_url);
               const age = calculateAge(y.child_date_of_birth);
 
               return (
                 <button
                   key={y.id}
-                  onClick={() => handleTapCheckIn(y)}
-                  onTouchEnd={(e) => {
-                    e.preventDefault();
-                    handleTapCheckIn(y);
-                  }}
-                  disabled={isChecked || isLoading}
+                  onDoubleClick={() => handleDoubleTap(y)}
+                  disabled={isLoading}
                   style={{ touchAction: 'manipulation', WebkitTapHighlightColor: 'transparent' }}
-                  className={`relative flex flex-col items-center rounded-2xl p-3 sm:p-4 transition-all duration-200 border-2 text-left
+                  className={`relative flex flex-col items-center rounded-2xl p-3 sm:p-4 transition-all duration-200 border-2 text-left select-none
                     ${isChecked
-                      ? "border-green-500/40 bg-green-500/10 opacity-70"
-                      : "border-white/10 bg-white/[0.04] hover:bg-white/[0.08] hover:border-sky-400/30 active:scale-[0.97]"
+                      ? "border-green-500/40 bg-green-500/10"
+                      : "border-white/10 bg-white/[0.04] hover:bg-white/[0.08] hover:border-sky-400/30"
                     }
                     ${isLoading ? "animate-pulse" : ""}
                   `}
@@ -206,7 +207,7 @@ const LilChampsRoster = ({ onCheckIn, onClose, checkedInIds }: LilChampsRosterPr
                   {/* Photo */}
                   <div className="w-16 h-16 sm:w-20 sm:h-20 md:w-24 md:h-24 rounded-full overflow-hidden bg-white/10 ring-2 ring-white/10 flex items-center justify-center mb-2 sm:mb-3 flex-shrink-0">
                     {photo ? (
-                      <img src={photo} alt="" className="w-full h-full object-cover" />
+                      <img src={photo} alt="" className="w-full h-full object-cover" draggable={false} />
                     ) : (
                       <span className="text-xl sm:text-2xl md:text-3xl font-bold text-white/40">
                         {y.child_first_name[0]}
@@ -230,7 +231,7 @@ const LilChampsRoster = ({ onCheckIn, onClose, checkedInIds }: LilChampsRosterPr
                     </span>
                   ) : (
                     <span className="mt-1.5 text-[10px] sm:text-xs font-medium text-sky-400/70">
-                      Tap to check in
+                      Double-tap to check in
                     </span>
                   )}
                 </button>
