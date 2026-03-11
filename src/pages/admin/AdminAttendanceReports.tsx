@@ -246,7 +246,6 @@ const AdminAttendanceReports = () => {
   const poverty = povertyCount(filteredAttendance, regMap);
   const programBreakdown = breakdownBy(filteredAttendance, regMap, "child_boxing_program");
   const sexBreakdown = breakdownBy(filteredAttendance, regMap, "child_sex");
-  const districtBreakdown = breakdownBy(filteredAttendance, regMap, "child_school_district");
 
   // Daily counts for charts
   const dailyChartData = useMemo(() => {
