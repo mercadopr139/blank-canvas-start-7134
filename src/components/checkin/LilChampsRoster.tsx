@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -48,6 +48,8 @@ interface LilChampsRosterProps {
   checkedInIds: Set<string>;
 }
 
+const DOUBLE_TAP_DELAY = 400; // ms
+
 const LilChampsRoster = ({ onCheckIn, onUndo, onClose, checkedInIds }: LilChampsRosterProps) => {
   const [roster, setRoster] = useState<RosterYouth[]>([]);
   const [loading, setLoading] = useState(true);
@@ -55,6 +57,7 @@ const LilChampsRoster = ({ onCheckIn, onUndo, onClose, checkedInIds }: LilChamps
   const [sortMode, setSortMode] = useState<SortMode>("alpha");
   const [filterMode, setFilterMode] = useState<FilterMode>("all");
   const [processing, setProcessing] = useState<string | null>(null);
+  const lastTapRef = useRef<{ id: string; time: number }>({ id: "", time: 0 });
 
   const fetchRoster = useCallback(async () => {
     setLoading(true);
@@ -81,6 +84,18 @@ const LilChampsRoster = ({ onCheckIn, onUndo, onClose, checkedInIds }: LilChamps
       await onCheckIn(y);
     }
     setProcessing(null);
+  };
+
+  const handleTapOrClick = (y: RosterYouth) => {
+    const now = Date.now();
+    const last = lastTapRef.current;
+    if (last.id === y.id && now - last.time < DOUBLE_TAP_DELAY) {
+      // Double tap detected
+      lastTapRef.current = { id: "", time: 0 };
+      handleDoubleTap(y);
+    } else {
+      lastTapRef.current = { id: y.id, time: now };
+    }
   };
 
   let filtered = roster.filter((y) => {
@@ -186,7 +201,7 @@ const LilChampsRoster = ({ onCheckIn, onUndo, onClose, checkedInIds }: LilChamps
               return (
                 <button
                   key={y.id}
-                  onDoubleClick={() => handleDoubleTap(y)}
+                  onClick={() => handleTapOrClick(y)}
                   disabled={isLoading}
                   style={{ touchAction: 'manipulation', WebkitTapHighlightColor: 'transparent' }}
                   className={`relative flex flex-col items-center rounded-2xl p-3 sm:p-4 transition-all duration-200 border-2 text-left select-none
