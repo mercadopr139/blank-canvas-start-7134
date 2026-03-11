@@ -4,8 +4,9 @@ import { supabase } from "@/integrations/supabase/client";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Search, CheckCircle2, Users, ArrowLeft } from "lucide-react";
+import { Search, CheckCircle2, Users, ArrowLeft, Eye } from "lucide-react";
 import nlaLogo from "@/assets/nla-logo-white.png";
+import LilChampsRoster from "@/components/checkin/LilChampsRoster";
 
 const getHeadshotUrl = (url: string | null): string | null => {
   if (!url) return null;
