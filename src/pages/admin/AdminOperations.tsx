@@ -32,14 +32,14 @@ const baseTiles: OperationsTile[] = [
     href: "/admin/operations/registration-analytics",
   },
   {
-    title: "Attendance",
-    description: "Daily attendance & Bald Eagles",
+    title: "Attendance Intelligence",
+    description: "Live dashboard, insights & calendar",
     icon: CalendarCheck,
     href: "/admin/operations/attendance",
   },
   {
-    title: "Attendance Reports",
-    description: "Run & export attendance reports",
+    title: "Run Reports",
+    description: "Query & export attendance by date",
     icon: FileBarChart,
     href: "/admin/operations/attendance-reports",
   },
