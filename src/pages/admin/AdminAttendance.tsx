@@ -1070,7 +1070,7 @@ const getHeadshotUrl = (url: string | null): string | null => {
                         <span className="font-medium text-sm text-white">{s.reg.child_first_name} {s.reg.child_last_name}</span>
                         {s.reg.is_bald_eagle && <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-400 flex-shrink-0" />}
                       </div>
-                      <p className="text-xs text-white/40">{s.reg.child_boxing_program}</p>
+                      <p className="text-xs text-white/40">{s.reg.child_boxing_program} · <span className={s.program_source === 'Lil Champs Corner' ? 'text-sky-400' : 'text-green-400'}>{s.program_source}</span></p>
                     </div>
                     <span className="text-xs text-white/50 flex-shrink-0">{format(new Date(s.check_in_at), "h:mm a")}</span>
                     <button
