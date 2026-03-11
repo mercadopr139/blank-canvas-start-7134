@@ -186,17 +186,13 @@ const LilChampsRoster = ({ onCheckIn, onUndo, onClose, checkedInIds }: LilChamps
               return (
                 <button
                   key={y.id}
-                  onClick={() => handleTapCheckIn(y)}
-                  onTouchEnd={(e) => {
-                    e.preventDefault();
-                    handleTapCheckIn(y);
-                  }}
-                  disabled={isChecked || isLoading}
+                  onDoubleClick={() => handleDoubleTap(y)}
+                  disabled={isLoading}
                   style={{ touchAction: 'manipulation', WebkitTapHighlightColor: 'transparent' }}
-                  className={`relative flex flex-col items-center rounded-2xl p-3 sm:p-4 transition-all duration-200 border-2 text-left
+                  className={`relative flex flex-col items-center rounded-2xl p-3 sm:p-4 transition-all duration-200 border-2 text-left select-none
                     ${isChecked
-                      ? "border-green-500/40 bg-green-500/10 opacity-70"
-                      : "border-white/10 bg-white/[0.04] hover:bg-white/[0.08] hover:border-sky-400/30 active:scale-[0.97]"
+                      ? "border-green-500/40 bg-green-500/10"
+                      : "border-white/10 bg-white/[0.04] hover:bg-white/[0.08] hover:border-sky-400/30"
                     }
                     ${isLoading ? "animate-pulse" : ""}
                   `}
@@ -211,7 +207,7 @@ const LilChampsRoster = ({ onCheckIn, onUndo, onClose, checkedInIds }: LilChamps
                   {/* Photo */}
                   <div className="w-16 h-16 sm:w-20 sm:h-20 md:w-24 md:h-24 rounded-full overflow-hidden bg-white/10 ring-2 ring-white/10 flex items-center justify-center mb-2 sm:mb-3 flex-shrink-0">
                     {photo ? (
-                      <img src={photo} alt="" className="w-full h-full object-cover" />
+                      <img src={photo} alt="" className="w-full h-full object-cover" draggable={false} />
                     ) : (
                       <span className="text-xl sm:text-2xl md:text-3xl font-bold text-white/40">
                         {y.child_first_name[0]}
@@ -235,7 +231,7 @@ const LilChampsRoster = ({ onCheckIn, onUndo, onClose, checkedInIds }: LilChamps
                     </span>
                   ) : (
                     <span className="mt-1.5 text-[10px] sm:text-xs font-medium text-sky-400/70">
-                      Tap to check in
+                      Double-tap to check in
                     </span>
                   )}
                 </button>
