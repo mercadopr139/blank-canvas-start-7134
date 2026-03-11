@@ -190,6 +190,29 @@ const LilChampsCheckIn = () => {
     setCheckedInIds((prev) => new Set(prev).add(y.id));
   };
 
+  const handleRosterUndo = async (y: { id: string; child_first_name: string; child_last_name: string; child_date_of_birth: string; child_headshot_url: string | null }) => {
+    const today = new Date().toLocaleDateString('en-CA', { timeZone: 'America/New_York' });
+    const { error: deleteError } = await supabase
+      .from("attendance_records")
+      .delete()
+      .eq("registration_id", y.id)
+      .eq("check_in_date", today)
+      .eq("program_source", "Lil Champs Corner");
+
+    if (deleteError) {
+      console.error("Undo check-in failed:", deleteError);
+      return;
+    }
+    setTodayCount((c) => Math.max(0, c - 1));
+    setCounterPulse(true);
+    setTimeout(() => setCounterPulse(false), 1000);
+    setCheckedInIds((prev) => {
+      const next = new Set(prev);
+      next.delete(y.id);
+      return next;
+    });
+  };
+
   const hasResults = youth.length > 0;
   const showEmpty = !loading && search.length >= 2 && youth.length === 0;
   const isIdle = !hasResults && !showEmpty;
