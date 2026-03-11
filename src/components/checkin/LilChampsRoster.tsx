@@ -86,7 +86,10 @@ const LilChampsRoster = ({ onCheckIn, onUndo, onClose, checkedInIds }: LilChamps
     setProcessing(null);
   };
 
-  const handleTapOrClick = (y: RosterYouth) => {
+  const handleTapOrClick = (e: React.PointerEvent, y: RosterYouth) => {
+    // Prevent ghost clicks / duplicate fires
+    e.preventDefault();
+    e.stopPropagation();
     const now = Date.now();
     const last = lastTapRef.current;
     if (last.id === y.id && now - last.time < DOUBLE_TAP_DELAY) {
