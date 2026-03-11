@@ -38,7 +38,7 @@ const baseTiles: OperationsTile[] = [
     href: "/admin/operations/attendance",
   },
   {
-    title: "Run Reports",
+    title: "Run Attendance Reports",
     description: "Query & export attendance by date",
     icon: FileBarChart,
     href: "/admin/operations/attendance-reports",
