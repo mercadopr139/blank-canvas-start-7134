@@ -356,7 +356,7 @@ const CheckIn = () => {
                     )}
                     {alreadyIn === y.id && (
                       <span className="text-yellow-400 text-sm md:text-base font-semibold text-center">
-                        Already checked<br />in today ✓
+                        Already checked in<br />for NLA today ✓
                       </span>
                     )}
                     {!checkedIn && !alreadyIn && (

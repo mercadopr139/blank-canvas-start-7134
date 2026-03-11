@@ -168,7 +168,7 @@ const getHeadshotUrl = (url: string | null): string | null => {
       if (!selectedYouth) return [];
       const { data, error } = await supabase
         .from("attendance_records")
-        .select("id, registration_id, check_in_date, check_in_at")
+        .select("id, registration_id, check_in_date, check_in_at, program_source")
         .eq("registration_id", selectedYouth.id)
         .order("check_in_date", { ascending: false });
       if (error) throw error;

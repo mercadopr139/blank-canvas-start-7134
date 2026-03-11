@@ -291,7 +291,7 @@ const LilChampsCheckIn = () => {
                   }
                     {alreadyIn === y.id &&
                   <span className="text-orange-400 text-sm md:text-base font-semibold text-center">
-                        Already checked<br />in today ✓
+                        Already checked in for<br />Lil' Champs Corner today ✓
                       </span>
                   }
                     {!checkedIn && !alreadyIn &&
