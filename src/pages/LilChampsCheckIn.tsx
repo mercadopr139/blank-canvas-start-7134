@@ -392,6 +392,7 @@ const LilChampsCheckIn = () => {
       {showRoster && (
         <LilChampsRoster
           onCheckIn={handleRosterCheckIn}
+          onUndo={handleRosterUndo}
           onClose={() => setShowRoster(false)}
           checkedInIds={checkedInIds}
         />

@@ -179,7 +179,7 @@ const LilChampsRoster = ({ onCheckIn, onUndo, onClose, checkedInIds }: LilChamps
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3 sm:gap-4">
             {filtered.map((y) => {
               const isChecked = checkedInIds.has(y.id);
-              const isLoading = checkingIn === y.id;
+              const isLoading = processing === y.id;
               const photo = getHeadshotUrl(y.child_headshot_url);
               const age = calculateAge(y.child_date_of_birth);
 
