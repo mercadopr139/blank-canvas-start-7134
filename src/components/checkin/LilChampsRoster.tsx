@@ -86,7 +86,10 @@ const LilChampsRoster = ({ onCheckIn, onUndo, onClose, checkedInIds }: LilChamps
     setProcessing(null);
   };
 
-  const handleTapOrClick = (y: RosterYouth) => {
+  const handleTapOrClick = (e: React.PointerEvent, y: RosterYouth) => {
+    // Prevent ghost clicks / duplicate fires
+    e.preventDefault();
+    e.stopPropagation();
     const now = Date.now();
     const last = lastTapRef.current;
     if (last.id === y.id && now - last.time < DOUBLE_TAP_DELAY) {
@@ -199,11 +202,12 @@ const LilChampsRoster = ({ onCheckIn, onUndo, onClose, checkedInIds }: LilChamps
               const age = calculateAge(y.child_date_of_birth);
 
               return (
-                <button
+                <div
                   key={y.id}
-                  onClick={() => handleTapOrClick(y)}
-                  disabled={isLoading}
-                  style={{ touchAction: 'manipulation', WebkitTapHighlightColor: 'transparent' }}
+                  role="button"
+                  tabIndex={0}
+                  onPointerDown={(e) => handleTapOrClick(e, y)}
+                  style={{ touchAction: 'manipulation', WebkitTapHighlightColor: 'transparent', cursor: 'pointer' }}
                   className={`relative flex flex-col items-center rounded-2xl p-3 sm:p-4 transition-all duration-200 border-2 text-left select-none
                     ${isChecked
                       ? "border-green-500/40 bg-green-500/10"
@@ -249,7 +253,7 @@ const LilChampsRoster = ({ onCheckIn, onUndo, onClose, checkedInIds }: LilChamps
                       Double-tap to check in
                     </span>
                   )}
-                </button>
+                </div>
               );
             })}
           </div>
