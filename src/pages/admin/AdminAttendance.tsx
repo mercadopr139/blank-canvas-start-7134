@@ -123,7 +123,7 @@ const getHeadshotUrl = (url: string | null): string | null => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("attendance_records")
-        .select("id, registration_id, check_in_date, check_in_at")
+        .select("id, registration_id, check_in_date, check_in_at, program_source")
         .gte("check_in_date", currentMonthStart)
         .lte("check_in_date", currentMonthEnd)
         .order("check_in_date", { ascending: false });
