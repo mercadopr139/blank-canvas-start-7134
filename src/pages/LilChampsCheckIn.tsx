@@ -90,7 +90,17 @@ const LilChampsCheckIn = () => {
     if (typeof data === "number") setTodayCount(data);
   }, []);
 
-  useEffect(() => {fetchCount();}, [fetchCount]);
+  const fetchCheckedInIds = useCallback(async () => {
+    const today = new Date().toLocaleDateString('en-CA', { timeZone: 'America/New_York' });
+    const { data } = await supabase
+      .from("attendance_records")
+      .select("registration_id")
+      .eq("check_in_date", today)
+      .eq("program_source", "Lil Champs Corner");
+    if (data) setCheckedInIds(new Set(data.map((r) => r.registration_id)));
+  }, []);
+
+  useEffect(() => { fetchCount(); fetchCheckedInIds(); }, [fetchCount, fetchCheckedInIds]);
 
   useEffect(() => {
     const channel = supabase.
