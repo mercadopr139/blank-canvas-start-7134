@@ -103,12 +103,15 @@ const LilChampsCheckIn = () => {
   useEffect(() => { fetchCount(); fetchCheckedInIds(); }, [fetchCount, fetchCheckedInIds]);
 
   useEffect(() => {
-    const channel = supabase.
-    channel("lil_champs_counter").
-    on("postgres_changes", { event: "INSERT", schema: "public", table: "attendance_records" }, () => fetchCount()).
-    subscribe();
-    return () => {supabase.removeChannel(channel);};
-  }, [fetchCount]);
+    const channel = supabase
+      .channel("lil_champs_counter")
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "attendance_records" }, () => {
+        fetchCount();
+        fetchCheckedInIds();
+      })
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [fetchCount, fetchCheckedInIds]);
 
   useEffect(() => {searchRef.current?.focus();}, [showCelebration]);
 
