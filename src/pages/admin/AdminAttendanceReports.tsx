@@ -33,6 +33,7 @@ interface AttendanceRecord {
   registration_id: string;
   check_in_date: string;
   check_in_at: string;
+  program_source: string;
 }
 
 type ReportType = "daily" | "weekly" | "monthly" | "yearly" | "individual";
@@ -207,7 +208,7 @@ const AdminAttendanceReports = () => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("attendance_records")
-        .select("id, registration_id, check_in_date, check_in_at")
+        .select("id, registration_id, check_in_date, check_in_at, program_source")
         .gte("check_in_date", dateRange.from)
         .lte("check_in_date", dateRange.to)
         .order("check_in_date")
@@ -324,7 +325,7 @@ const AdminAttendanceReports = () => {
       summary.push(["Bald Eagle", selectedYouthReg.is_bald_eagle ? "Yes" : "No"]);
     }
 
-    const tableHeaders = ["#", "Date", "Name", "Program", "Sign-In Time"];
+    const tableHeaders = ["#", "Date", "Name", "Program", "Source", "Sign-In Time"];
     const tableData = filteredAttendance.map((a, i) => {
       const reg = regMap[a.registration_id];
       return [
@@ -332,6 +333,7 @@ const AdminAttendanceReports = () => {
         format(parseISO(a.check_in_date), "MMM d, yyyy"),
         reg ? `${reg.child_first_name} ${reg.child_last_name}` : "Unknown",
         reg?.child_boxing_program || "",
+        a.program_source || "NLA",
         format(new Date(a.check_in_at), "h:mm a"),
       ];
     });
@@ -598,11 +600,12 @@ const AdminAttendanceReports = () => {
           <div className="overflow-x-auto max-h-[400px] overflow-y-auto">
             <Table>
               <TableHeader>
-                <TableRow className="border-white/10">
+                 <TableRow className="border-white/10">
                   <TableHead className="text-white/60">#</TableHead>
                   <TableHead className="text-white/60">Date</TableHead>
                   <TableHead className="text-white/60">Name</TableHead>
                   <TableHead className="text-white/60">Program</TableHead>
+                  <TableHead className="text-white/60">Source</TableHead>
                   <TableHead className="text-white/60">District</TableHead>
                   <TableHead className="text-white/60">Time</TableHead>
                   <TableHead className="text-white/60 w-8"></TableHead>
@@ -611,7 +614,7 @@ const AdminAttendanceReports = () => {
               <TableBody>
                 {filteredAttendance.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={7} className="text-center text-white/30 py-8">
+                   <TableCell colSpan={8} className="text-center text-white/30 py-8">
                       {reportType === "individual" && !selectedYouthId ? "Search and select a youth above" : "No attendance records for this period"}
                     </TableCell>
                   </TableRow>
@@ -627,6 +630,7 @@ const AdminAttendanceReports = () => {
                           {reg ? `${reg.child_first_name} ${reg.child_last_name}` : "Unknown"}
                         </TableCell>
                         <TableCell className="text-white/60 text-xs">{reg?.child_boxing_program || ""}</TableCell>
+                        <TableCell><span className={`text-xs px-1.5 py-0.5 rounded-full ${a.program_source === 'Lil Champs Corner' ? 'bg-sky-500/15 text-sky-400' : 'bg-green-500/15 text-green-400'}`}>{a.program_source || 'NLA'}</span></TableCell>
                         <TableCell className="text-white/60 text-xs">{reg?.child_school_district || ""}</TableCell>
                         <TableCell className="text-white/50 text-xs">{format(new Date(a.check_in_at), "h:mm a")}</TableCell>
                         <TableCell>

@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Search, Download, Calendar } from "lucide-react";
 import { format } from "date-fns";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 interface LilChampsRecord {
   id: string;
@@ -30,6 +31,7 @@ const AdminLilChampsAttendance = () => {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [dateFilter, setDateFilter] = useState("");
+  const isMobile = useIsMobile();
 
   useEffect(() => {
     fetchRecords();
@@ -86,10 +88,10 @@ const AdminLilChampsAttendance = () => {
   };
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between flex-wrap gap-4">
-        <h2 className="text-2xl font-bold text-white">Lil Champ's Corner Attendance</h2>
-        <div className="flex gap-2">
+    <div className="space-y-4 md:space-y-6">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+        <h2 className="text-xl md:text-2xl font-bold text-white">Lil Champ's Corner Attendance</h2>
+        <div className="flex gap-2 w-full sm:w-auto">
           <Button
             variant="outline"
             size="sm"
@@ -112,8 +114,8 @@ const AdminLilChampsAttendance = () => {
         </div>
       </div>
 
-      <div className="flex flex-wrap gap-3">
-        <div className="relative flex-1 min-w-[200px]">
+      <div className="flex flex-col sm:flex-row gap-3">
+        <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
           <Input
             placeholder="Search by name..."
@@ -128,7 +130,7 @@ const AdminLilChampsAttendance = () => {
             type="date"
             value={dateFilter}
             onChange={(e) => setDateFilter(e.target.value)}
-            className="pl-9 w-[180px] text-foreground"
+            className="pl-9 w-full sm:w-[180px] text-foreground"
           />
         </div>
       </div>
@@ -140,24 +142,42 @@ const AdminLilChampsAttendance = () => {
           </CardTitle>
         </CardHeader>
         <CardContent className="p-0">
-          <div className="max-h-[65vh] overflow-auto">
-            <Table>
-              <TableHeader className="sticky top-0 z-10 bg-black">
-                <TableRow>
-                  <TableHead className="text-white/70">Name</TableHead>
-                  <TableHead className="text-white/70">Age</TableHead>
-                  <TableHead className="text-white/70">Date</TableHead>
-                  <TableHead className="text-white/70">Time</TableHead>
-                  <TableHead className="text-white/70">Source</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {loading ? (
-                  <TableRow><TableCell colSpan={5} className="text-center py-8 text-white/40">Loading...</TableCell></TableRow>
-                ) : filtered.length === 0 ? (
-                  <TableRow><TableCell colSpan={5} className="text-center py-8 text-white/40">No records found</TableCell></TableRow>
-                ) : (
-                  filtered.map((r) => (
+          {loading ? (
+            <p className="text-center py-8 text-white/40">Loading...</p>
+          ) : filtered.length === 0 ? (
+            <p className="text-center py-8 text-white/40">No records found</p>
+          ) : isMobile ? (
+            /* Mobile card layout */
+            <div className="divide-y divide-white/10 px-4 pb-4">
+              {filtered.map((r) => (
+                <div key={r.id} className="py-3 space-y-1">
+                  <div className="flex items-center justify-between">
+                    <span className="font-medium text-white">{r.child_last_name}, {r.child_first_name}</span>
+                    <span className="text-xs px-2 py-0.5 rounded-full" style={{ backgroundColor: 'rgba(56,189,248,0.15)', color: '#38bdf8' }}>Lil Champs</span>
+                  </div>
+                  <div className="flex items-center gap-4 text-sm text-white/60">
+                    <span>Age {calculateAge(r.child_date_of_birth)}</span>
+                    <span>{r.check_in_date}</span>
+                    <span>{format(new Date(r.check_in_at), "h:mm a")}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            /* Desktop table layout */
+            <div className="max-h-[65vh] overflow-auto">
+              <Table>
+                <TableHeader className="sticky top-0 z-10 bg-black">
+                  <TableRow>
+                    <TableHead className="text-white/70">Name</TableHead>
+                    <TableHead className="text-white/70">Age</TableHead>
+                    <TableHead className="text-white/70">Date</TableHead>
+                    <TableHead className="text-white/70">Time</TableHead>
+                    <TableHead className="text-white/70">Source</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filtered.map((r) => (
                     <TableRow key={r.id}>
                       <TableCell className="font-medium text-white">{r.child_last_name}, {r.child_first_name}</TableCell>
                       <TableCell className="text-white/70">{calculateAge(r.child_date_of_birth)}</TableCell>
@@ -165,11 +185,11 @@ const AdminLilChampsAttendance = () => {
                       <TableCell className="text-white/70">{format(new Date(r.check_in_at), "h:mm a")}</TableCell>
                       <TableCell><span className="text-xs px-2 py-0.5 rounded-full" style={{ backgroundColor: 'rgba(56,189,248,0.15)', color: '#38bdf8' }}>Lil Champs Corner</span></TableCell>
                     </TableRow>
-                  ))
-                )}
-              </TableBody>
-            </Table>
-          </div>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>

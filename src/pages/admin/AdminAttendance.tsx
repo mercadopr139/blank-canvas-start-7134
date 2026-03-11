@@ -41,6 +41,7 @@ interface AttendanceRecord {
   registration_id: string;
   check_in_date: string;
   check_in_at: string;
+  program_source: string;
 }
 
 const POVERTY_INCOMES = ["Under $25,000", "Less than $25,000", "Less than $35,000"];
@@ -122,7 +123,7 @@ const getHeadshotUrl = (url: string | null): string | null => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("attendance_records")
-        .select("id, registration_id, check_in_date, check_in_at")
+        .select("id, registration_id, check_in_date, check_in_at, program_source")
         .gte("check_in_date", currentMonthStart)
         .lte("check_in_date", currentMonthEnd)
         .order("check_in_date", { ascending: false });
@@ -137,7 +138,7 @@ const getHeadshotUrl = (url: string | null): string | null => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("attendance_records")
-        .select("id, registration_id, check_in_date, check_in_at")
+        .select("id, registration_id, check_in_date, check_in_at, program_source")
         .gte("check_in_date", prevMonthStart)
         .lte("check_in_date", prevMonthEnd);
       if (error) throw error;
@@ -151,7 +152,7 @@ const getHeadshotUrl = (url: string | null): string | null => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("attendance_records")
-        .select("id, registration_id, check_in_date, check_in_at")
+        .select("id, registration_id, check_in_date, check_in_at, program_source")
         .gte("check_in_date", calMonthStart)
         .lte("check_in_date", calMonthEnd)
         .order("check_in_at", { ascending: true });
@@ -167,7 +168,7 @@ const getHeadshotUrl = (url: string | null): string | null => {
       if (!selectedYouth) return [];
       const { data, error } = await supabase
         .from("attendance_records")
-        .select("id, registration_id, check_in_date, check_in_at")
+        .select("id, registration_id, check_in_date, check_in_at, program_source")
         .eq("registration_id", selectedYouth.id)
         .order("check_in_date", { ascending: false });
       if (error) throw error;
@@ -1069,7 +1070,7 @@ const getHeadshotUrl = (url: string | null): string | null => {
                         <span className="font-medium text-sm text-white">{s.reg.child_first_name} {s.reg.child_last_name}</span>
                         {s.reg.is_bald_eagle && <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-400 flex-shrink-0" />}
                       </div>
-                      <p className="text-xs text-white/40">{s.reg.child_boxing_program}</p>
+                      <p className="text-xs text-white/40">{s.reg.child_boxing_program} · <span className={s.program_source === 'Lil Champs Corner' ? 'text-sky-400' : 'text-green-400'}>{s.program_source}</span></p>
                     </div>
                     <span className="text-xs text-white/50 flex-shrink-0">{format(new Date(s.check_in_at), "h:mm a")}</span>
                     <button
@@ -1236,7 +1237,10 @@ const getHeadshotUrl = (url: string | null): string | null => {
                     ) : (
                       allAttendance.map((a) => (
                         <div key={a.id} className="flex items-center justify-between p-2 rounded bg-white/5 text-sm">
-                          <span>{format(new Date(a.check_in_date), "EEEE, MMM d, yyyy")}</span>
+                          <div className="flex items-center gap-2">
+                            <span>{format(new Date(a.check_in_date), "EEEE, MMM d, yyyy")}</span>
+                            <span className={`text-xs px-1.5 py-0.5 rounded-full ${a.program_source === 'Lil Champs Corner' ? 'bg-sky-500/15 text-sky-400' : 'bg-green-500/15 text-green-400'}`}>{a.program_source}</span>
+                          </div>
                           <div className="flex items-center gap-2">
                             <span className="text-white/40">{format(new Date(a.check_in_at), "h:mm a")}</span>
                             <button
