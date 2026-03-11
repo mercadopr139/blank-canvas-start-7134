@@ -346,6 +346,12 @@ const LilChampsCheckIn = () => {
                       e.stopPropagation();
                       handleCheckIn(y);
                     }}
+                    onTouchEnd={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      handleCheckIn(y);
+                    }}
+                    style={{ touchAction: 'manipulation', WebkitTapHighlightColor: 'transparent' }}
                     className="bg-yellow-600 hover:bg-yellow-500 text-black font-bold text-lg md:text-xl px-6 md:px-8 py-5 md:py-6 rounded-xl shadow-lg shadow-yellow-900/30 transition-all active:scale-95">
                     
                         SIGN IN
