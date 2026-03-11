@@ -517,7 +517,7 @@ const AdminAttendanceReports = () => {
       {/* Report Header */}
       <div className="flex items-center gap-2 text-white">
         <FileText className="w-5 h-5 text-red-400" />
-        <h2 className="text-lg font-semibold">{reportType === "individual" && selectedYouthReg ? `${selectedYouthReg.child_first_name} ${selectedYouthReg.child_last_name}` : `${reportType.charAt(0).toUpperCase() + reportType.slice(1)} Attendance Report`}</h2>
+        <h2 className="text-lg font-semibold">{reportType === "individual" && selectedYouthReg ? `${selectedYouthReg.child_first_name} ${selectedYouthReg.child_last_name}` : `${reportType.charAt(0).toUpperCase() + reportType.slice(1)} Report`}</h2>
         <span className="text-sm text-white/40 ml-2">{dateRangeLabel}</span>
       </div>
 
@@ -547,162 +547,47 @@ const AdminAttendanceReports = () => {
         </Card>
       )}
 
-      {/* Summary Cards */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
-        <Card className="bg-white/5 border-white/10 text-white">
-          <CardContent className="pt-4 pb-3 text-center">
-            <p className="text-xs text-white/50">Total Sign-Ins</p>
-            <p className="text-2xl font-bold mt-1">{totalAttendance}</p>
-          </CardContent>
-        </Card>
-        <Card className="bg-white/5 border-white/10 text-white">
-          <CardContent className="pt-4 pb-3 text-center">
-            <p className="text-xs text-white/50">Unique Youth</p>
-            <p className="text-2xl font-bold mt-1">{uniqueCount}</p>
-          </CardContent>
-        </Card>
-        {reportType !== "daily" && (
-          <Card className="bg-white/5 border-white/10 text-white">
-            <CardContent className="pt-4 pb-3 text-center">
-              <p className="text-xs text-white/50">Avg Daily</p>
-              <p className="text-2xl font-bold mt-1">{avgAttendance}</p>
-            </CardContent>
-          </Card>
-        )}
-        <Card className="bg-white/5 border-white/10 text-white">
-          <CardContent className="pt-4 pb-3 text-center">
-            <p className="text-xs text-white/50">Below Poverty</p>
-            <p className="text-2xl font-bold mt-1">{pct(poverty.below, poverty.total)}</p>
-            <p className="text-[10px] text-white/30 mt-0.5">{poverty.below} of {poverty.total}</p>
-          </CardContent>
-        </Card>
-        <Card className="bg-amber-500/10 border-amber-500/30 text-white">
-          <CardContent className="pt-4 pb-3 text-center">
-            <p className="text-xs text-amber-400">🦅 Bald Eagles</p>
-            <p className="text-2xl font-bold text-amber-400 mt-1">{baldEagleRecords.length}</p>
-            <p className="text-[10px] text-white/30 mt-0.5">{baldEagleUniqueCount} unique</p>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Highest / Lowest days */}
-      {reportType !== "daily" && reportType !== "individual" && highestDay && lowestDay && (
-        <div className="grid grid-cols-2 gap-3">
-          <Card className="bg-green-500/10 border-green-500/30 text-white">
-            <CardContent className="pt-4 pb-3">
-              <p className="text-xs text-green-400">Highest Attendance Day</p>
-              <p className="text-xl font-bold text-green-400 mt-1">{highestDay.count}</p>
-              <p className="text-xs text-white/40">{highestDay.fullDate}</p>
-            </CardContent>
-          </Card>
-          <Card className="bg-red-500/10 border-red-500/30 text-white">
-            <CardContent className="pt-4 pb-3">
-              <p className="text-xs text-red-400">Lowest Attendance Day</p>
-              <p className="text-xl font-bold text-red-400 mt-1">{lowestDay.count}</p>
-              <p className="text-xs text-white/40">{lowestDay.fullDate}</p>
-            </CardContent>
-          </Card>
-        </div>
-      )}
-
-      {/* Chart */}
-      {dailyChartData.length > 1 && (
-        <Card className="bg-white/5 border-white/10 text-white">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-white/60 flex items-center gap-2">
-              <BarChart3 className="w-4 h-4" /> Attendance by Day
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="h-52">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={dailyChartData}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" />
-                  <XAxis dataKey="date" tick={{ fill: "rgba(255,255,255,0.4)", fontSize: 10 }} />
-                  <YAxis tick={{ fill: "rgba(255,255,255,0.4)", fontSize: 10 }} />
-                  <Tooltip
-                    contentStyle={{ backgroundColor: "#111", border: "1px solid rgba(255,255,255,0.15)", borderRadius: "8px", color: "#fff", fontSize: 12 }}
-                    labelStyle={{ color: "rgba(255,255,255,0.6)" }}
-                  />
-                  <Bar dataKey="count" radius={[4, 4, 0, 0]}>
-                    {dailyChartData.map((_, i) => (
-                      <Cell key={i} fill="hsl(142, 71%, 45%)" fillOpacity={0.7} />
-                    ))}
-                  </Bar>
-                </BarChart>
-              </ResponsiveContainer>
+      {/* Compact Summary Strip */}
+      <Card className="bg-white/5 border-white/10 text-white">
+        <CardContent className="pt-4 pb-3">
+          <div className="flex flex-wrap gap-x-8 gap-y-2 items-center">
+            <div className="text-center">
+              <p className="text-[10px] uppercase tracking-wider text-white/40">Sign-Ins</p>
+              <p className="text-xl font-bold">{totalAttendance}</p>
             </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Breakdown Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        {/* Program Breakdown */}
-        <Card className="bg-white/5 border-white/10 text-white">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-white/60">Program Breakdown</CardTitle>
-          </CardHeader>
-          <CardContent>
-            {programBreakdown.length === 0 ? (
-              <p className="text-sm text-white/30">No data</p>
-            ) : (
-              <div className="space-y-2">
-                {programBreakdown.map(([prog, count]) => (
-                  <div key={prog} className="flex justify-between items-center">
-                    <span className="text-sm text-white/80 truncate flex-1">{prog}</span>
-                    <Badge variant="outline" className="border-white/20 text-white/70 ml-2">{count}</Badge>
-                  </div>
-                ))}
+            <div className="text-center">
+              <p className="text-[10px] uppercase tracking-wider text-white/40">Unique Youth</p>
+              <p className="text-xl font-bold">{uniqueCount}</p>
+            </div>
+            {reportType !== "daily" && (
+              <div className="text-center">
+                <p className="text-[10px] uppercase tracking-wider text-white/40">Avg Daily</p>
+                <p className="text-xl font-bold">{avgAttendance}</p>
               </div>
             )}
-          </CardContent>
-        </Card>
-
-        {/* Sex Breakdown */}
-        <Card className="bg-white/5 border-white/10 text-white">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-white/60">Sex Breakdown</CardTitle>
-          </CardHeader>
-          <CardContent>
-            {sexBreakdown.length === 0 ? (
-              <p className="text-sm text-white/30">No data</p>
-            ) : (
-              <div className="space-y-2">
-                {sexBreakdown.map(([sex, count]) => (
-                  <div key={sex} className="flex justify-between items-center">
-                    <span className="text-sm text-white/80">{sex}</span>
-                    <Badge variant="outline" className="border-white/20 text-white/70">{count}</Badge>
-                  </div>
-                ))}
+            <div className="text-center">
+              <p className="text-[10px] uppercase tracking-wider text-white/40">Below Poverty</p>
+              <p className="text-xl font-bold">{pct(poverty.below, poverty.total)}</p>
+            </div>
+            <div className="text-center">
+              <p className="text-[10px] uppercase tracking-wider text-amber-400/60">🦅 Bald Eagles</p>
+              <p className="text-xl font-bold text-amber-400">{baldEagleRecords.length} <span className="text-xs text-white/30 font-normal">({baldEagleUniqueCount} unique)</span></p>
+            </div>
+            {reportType !== "daily" && reportType !== "individual" && highestDay && (
+              <div className="text-center">
+                <p className="text-[10px] uppercase tracking-wider text-green-400/60">Peak Day</p>
+                <p className="text-xl font-bold text-green-400">{highestDay.count} <span className="text-xs text-white/30 font-normal">{highestDay.fullDate}</span></p>
               </div>
             )}
-          </CardContent>
-        </Card>
-
-        {/* School District */}
-        <Card className="bg-white/5 border-white/10 text-white">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-white/60 flex items-center gap-1.5">
-              <School className="w-3.5 h-3.5" /> School District
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            {districtBreakdown.length === 0 ? (
-              <p className="text-sm text-white/30">No data</p>
-            ) : (
-              <div className="space-y-2 max-h-48 overflow-y-auto">
-                {districtBreakdown.map(([dist, count]) => (
-                  <div key={dist} className="flex justify-between items-center">
-                    <span className="text-xs text-white/80 truncate flex-1">{dist}</span>
-                    <Badge variant="outline" className="border-white/20 text-white/70 ml-2">{count}</Badge>
-                  </div>
-                ))}
+            {reportType !== "daily" && reportType !== "individual" && lowestDay && (
+              <div className="text-center">
+                <p className="text-[10px] uppercase tracking-wider text-red-400/60">Low Day</p>
+                <p className="text-xl font-bold text-red-400">{lowestDay.count} <span className="text-xs text-white/30 font-normal">{lowestDay.fullDate}</span></p>
               </div>
             )}
-          </CardContent>
-        </Card>
-      </div>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Detail Table */}
       <Card className="bg-white/5 border-white/10 text-white">

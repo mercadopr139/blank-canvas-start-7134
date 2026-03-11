@@ -522,7 +522,7 @@ const getHeadshotUrl = (url: string | null): string | null => {
       <div>
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-xl font-bold text-white flex items-center gap-2">
-            <Activity className="w-5 h-5 text-red-400" /> Attendance Insights
+            <Activity className="w-5 h-5 text-red-400" /> Attendance Intelligence
           </h2>
         </div>
 
