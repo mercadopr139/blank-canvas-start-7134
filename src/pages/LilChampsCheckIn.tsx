@@ -4,8 +4,9 @@ import { supabase } from "@/integrations/supabase/client";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Search, CheckCircle2, Users, ArrowLeft } from "lucide-react";
+import { Search, CheckCircle2, Users, ArrowLeft, Eye } from "lucide-react";
 import nlaLogo from "@/assets/nla-logo-white.png";
+import LilChampsRoster from "@/components/checkin/LilChampsRoster";
 
 const getHeadshotUrl = (url: string | null): string | null => {
   if (!url) return null;
@@ -80,6 +81,8 @@ const LilChampsCheckIn = () => {
   const [showCelebration, setShowCelebration] = useState(false);
   const [todayCount, setTodayCount] = useState(0);
   const [counterPulse, setCounterPulse] = useState(false);
+  const [showRoster, setShowRoster] = useState(false);
+  const [checkedInIds, setCheckedInIds] = useState<Set<string>>(new Set());
   const searchRef = useRef<HTMLInputElement>(null);
 
   const fetchCount = useCallback(async () => {
@@ -87,15 +90,28 @@ const LilChampsCheckIn = () => {
     if (typeof data === "number") setTodayCount(data);
   }, []);
 
-  useEffect(() => {fetchCount();}, [fetchCount]);
+  const fetchCheckedInIds = useCallback(async () => {
+    const today = new Date().toLocaleDateString('en-CA', { timeZone: 'America/New_York' });
+    const { data } = await supabase
+      .from("attendance_records")
+      .select("registration_id")
+      .eq("check_in_date", today)
+      .eq("program_source", "Lil Champs Corner");
+    if (data) setCheckedInIds(new Set(data.map((r) => r.registration_id)));
+  }, []);
+
+  useEffect(() => { fetchCount(); fetchCheckedInIds(); }, [fetchCount, fetchCheckedInIds]);
 
   useEffect(() => {
-    const channel = supabase.
-    channel("lil_champs_counter").
-    on("postgres_changes", { event: "INSERT", schema: "public", table: "attendance_records" }, () => fetchCount()).
-    subscribe();
-    return () => {supabase.removeChannel(channel);};
-  }, [fetchCount]);
+    const channel = supabase
+      .channel("lil_champs_counter")
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "attendance_records" }, () => {
+        fetchCount();
+        fetchCheckedInIds();
+      })
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [fetchCount, fetchCheckedInIds]);
 
   useEffect(() => {searchRef.current?.focus();}, [showCelebration]);
 
@@ -144,6 +160,7 @@ const LilChampsCheckIn = () => {
     setTodayCount((c) => c + 1);
     setCounterPulse(true);
     setTimeout(() => setCounterPulse(false), 1000);
+    setCheckedInIds((prev) => new Set(prev).add(y.id));
     setCheckedIn(y.id);
     setCheckedInName(`${y.child_first_name} ${y.child_last_name}`);
     setShowCelebration(true);
@@ -153,6 +170,24 @@ const LilChampsCheckIn = () => {
       setSearch("");
       setYouth([]);
     }, 3000);
+  };
+
+  const handleRosterCheckIn = async (y: { id: string; child_first_name: string; child_last_name: string; child_date_of_birth: string; child_headshot_url: string | null }) => {
+    const today = new Date().toLocaleDateString('en-CA', { timeZone: 'America/New_York' });
+    const { error: insertError } = await supabase
+      .from("attendance_records")
+      .insert({ registration_id: y.id, check_in_date: today, program_source: "Lil Champs Corner" });
+
+    if (insertError) {
+      if (insertError.message.includes("duplicate") || insertError.code === "23505") {
+        // already checked in — roster will show status
+      }
+      return;
+    }
+    setTodayCount((c) => c + 1);
+    setCounterPulse(true);
+    setTimeout(() => setCounterPulse(false), 1000);
+    setCheckedInIds((prev) => new Set(prev).add(y.id));
   };
 
   const hasResults = youth.length > 0;
@@ -228,6 +263,17 @@ const LilChampsCheckIn = () => {
             {todayCount}
           </span>
         </div>
+
+        {/* Browse by Photo button */}
+        {isIdle && (
+          <Button
+            onClick={() => setShowRoster(true)}
+            className="mb-6 bg-sky-600 hover:bg-sky-500 text-white font-bold text-base sm:text-lg px-6 py-4 rounded-xl shadow-lg transition-all active:scale-95"
+          >
+            <Eye className="w-5 h-5 mr-2" />
+            Browse by Photo
+          </Button>
+        )}
 
         <div className="w-full max-w-2xl">
           <div className="relative mb-6">
@@ -312,6 +358,15 @@ const LilChampsCheckIn = () => {
           </div>
         </div>
       </div>
+
+      {/* Photo Roster Overlay */}
+      {showRoster && (
+        <LilChampsRoster
+          onCheckIn={handleRosterCheckIn}
+          onClose={() => setShowRoster(false)}
+          checkedInIds={checkedInIds}
+        />
+      )}
     </div>);
 
 };
