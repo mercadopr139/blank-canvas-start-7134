@@ -1001,6 +1001,13 @@ const getHeadshotUrl = (url: string | null): string | null => {
                         </TableRow>
                       );
                     })}
+                    {baldEagles.length === 0 && (
+                      <TableRow>
+                        <TableCell colSpan={8} className="text-center py-6 text-white/30">
+                          No Bald Eagles yet. Click "Add Bald Eagle" to get started.
+                        </TableCell>
+                      </TableRow>
+                    )}
                   </TableBody>
                 </Table>
               </div>
