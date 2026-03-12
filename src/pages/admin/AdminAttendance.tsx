@@ -459,11 +459,14 @@ const getHeadshotUrl = (url: string | null): string | null => {
 
   const daySignIns = useMemo(() => {
     if (!selectedDay) return [];
-    return filteredCalendarAttendance
+    const all = filteredCalendarAttendance
       .filter((a) => a.check_in_date === selectedDay)
       .map((a) => ({ ...a, reg: regMap[a.registration_id] }))
       .filter((a) => a.reg);
-  }, [selectedDay, filteredCalendarAttendance, regMap]);
+    if (!daySearch.trim()) return all;
+    const q = daySearch.toLowerCase();
+    return all.filter((a) => `${a.reg.child_first_name} ${a.reg.child_last_name}`.toLowerCase().includes(q));
+  }, [selectedDay, filteredCalendarAttendance, regMap, daySearch]);
 
   const calendarDays = useMemo(() => {
     const monthStart = startOfMonth(calendarMonth);
