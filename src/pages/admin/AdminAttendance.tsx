@@ -976,6 +976,7 @@ const getHeadshotUrl = (url: string | null): string | null => {
                       <TableHead className="text-white/60">First Name</TableHead>
                       <TableHead className="text-white/60">Last Name</TableHead>
                       <TableHead className="text-white/60">Program</TableHead>
+                      <TableHead className="text-white/60">Status</TableHead>
                       <TableHead className="text-white/60">Last Attended</TableHead>
                       <TableHead className="text-white/60">This Week</TableHead>
                       <TableHead className="text-white/60">This Month</TableHead>
@@ -986,7 +987,7 @@ const getHeadshotUrl = (url: string | null): string | null => {
                     {baldEagles.map((r) => {
                       const stats = getStats(r.id);
                       return (
-                        <TableRow key={r.id} className="border-white/10 cursor-pointer hover:bg-white/5" onClick={() => setSelectedYouth(r)}>
+                        <TableRow key={r.id} className={`border-white/10 cursor-pointer hover:bg-white/5 ${!r.bald_eagle_active ? 'opacity-50' : ''}`} onClick={() => setSelectedYouth(r)}>
                           <TableCell>
                             <div className="w-8 h-8 rounded-full bg-white/10 overflow-hidden">
                               {getHeadshotUrl(r.child_headshot_url) ? (
@@ -999,6 +1000,22 @@ const getHeadshotUrl = (url: string | null): string | null => {
                           <TableCell className="text-white">{r.child_first_name}</TableCell>
                           <TableCell className="text-white">{r.child_last_name}</TableCell>
                           <TableCell className="text-white/60 text-xs">{r.child_boxing_program}</TableCell>
+                          <TableCell>
+                            <button
+                              onClick={(e) => { e.stopPropagation(); toggleEagleActive(r); }}
+                              title={r.bald_eagle_active ? "Set Inactive" : "Set Active"}
+                            >
+                              <Badge
+                                variant="outline"
+                                className={r.bald_eagle_active
+                                  ? "border-green-500/40 text-green-400 bg-green-500/10 hover:bg-green-500/20 cursor-pointer"
+                                  : "border-white/20 text-white/40 bg-white/5 hover:bg-white/10 cursor-pointer"
+                                }
+                              >
+                                {r.bald_eagle_active ? "Active" : "Inactive"}
+                              </Badge>
+                            </button>
+                          </TableCell>
                           <TableCell className="text-white/60">{stats.lastDate ? format(new Date(stats.lastDate), "MMM d") : "—"}</TableCell>
                           <TableCell className="text-white">{stats.weekCount}</TableCell>
                           <TableCell className="text-white">{stats.monthCount}</TableCell>
@@ -1016,7 +1033,7 @@ const getHeadshotUrl = (url: string | null): string | null => {
                     })}
                     {baldEagles.length === 0 && (
                       <TableRow>
-                        <TableCell colSpan={8} className="text-center py-6 text-white/30">
+                        <TableCell colSpan={9} className="text-center py-6 text-white/30">
                           No Bald Eagles yet. Click "Add Bald Eagle" to get started.
                         </TableCell>
                       </TableRow>
