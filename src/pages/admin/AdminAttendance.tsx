@@ -430,7 +430,7 @@ const getHeadshotUrl = (url: string | null): string | null => {
   const anyPrevWeekAttendance = (attendance || []).some((rec) => rec.check_in_date >= prevWeekStart && rec.check_in_date <= prevWeekEnd);
 
   const alerts = anyPrevWeekAttendance
-    ? (baldEagles
+    ? (activeBaldEagles
         .map((r) => {
           const records = attendanceByReg[r.id] || [];
           const prevWeekCount = records.filter((rec) => rec.check_in_date >= prevWeekStart && rec.check_in_date <= prevWeekEnd).length;
