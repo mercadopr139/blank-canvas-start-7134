@@ -516,7 +516,7 @@ const getHeadshotUrl = (url: string | null): string | null => {
       return;
     }
     toast.success(reg.is_bald_eagle ? "Bald Eagle removed" : "Marked as Bald Eagle");
-    queryClient.invalidateQueries({ queryKey: ["registrations"] });
+    queryClient.invalidateQueries({ queryKey: ["registrations-attendance-full"] });
   };
 
   // Non-bald-eagle youth for the add dialog
