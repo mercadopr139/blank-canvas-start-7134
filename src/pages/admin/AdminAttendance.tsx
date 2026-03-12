@@ -30,6 +30,7 @@ interface Registration {
   child_boxing_program: string;
   child_headshot_url: string | null;
   is_bald_eagle: boolean;
+  bald_eagle_active: boolean;
   child_sex: string;
   child_school_district: string;
   household_income_range: string;
