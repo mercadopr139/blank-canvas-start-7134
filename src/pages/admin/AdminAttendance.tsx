@@ -114,7 +114,7 @@ const getHeadshotUrl = (url: string | null): string | null => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("youth_registrations")
-        .select("id, child_first_name, child_last_name, child_boxing_program, child_headshot_url, is_bald_eagle, child_sex, child_school_district, household_income_range, free_or_reduced_lunch")
+        .select("id, child_first_name, child_last_name, child_boxing_program, child_headshot_url, is_bald_eagle, bald_eagle_active, child_sex, child_school_district, household_income_range, free_or_reduced_lunch")
         .order("child_last_name");
       if (error) throw error;
       return data as Registration[];
