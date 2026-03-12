@@ -74,6 +74,8 @@ const AdminAttendance = () => {
   const [drillDistrictFilter, setDrillDistrictFilter] = useState<string | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string; date: string } | null>(null);
   const [daySearch, setDaySearch] = useState("");
+  const [addEagleOpen, setAddEagleOpen] = useState(false);
+  const [eagleSearch, setEagleSearch] = useState("");
 
   const invalidateAttendance = () => {
     queryClient.invalidateQueries({ queryKey: ["attendance-records-current"] });
