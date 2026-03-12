@@ -1049,8 +1049,8 @@ const getHeadshotUrl = (url: string | null): string | null => {
       </Card>
 
       {/* Day Detail Modal */}
-      <Dialog open={!!selectedDay} onOpenChange={() => setSelectedDay(null)}>
-        <DialogContent className="bg-black border-white/10 text-white max-w-lg max-h-[80vh] overflow-y-auto">
+      <Dialog open={!!selectedDay} onOpenChange={() => { setSelectedDay(null); setDaySearch(""); }}>
+        <DialogContent className="bg-black border-white/10 text-white max-w-lg max-h-[80vh] flex flex-col">
           {selectedDay && (
             <>
               <DialogHeader>
@@ -1059,8 +1059,17 @@ const getHeadshotUrl = (url: string | null): string | null => {
                   {format(new Date(selectedDay + "T12:00:00"), "EEEE, MMMM d, yyyy")}
                 </DialogTitle>
               </DialogHeader>
-              <div className="mt-2 mb-4">
-                <Badge className="bg-green-500/15 text-green-400 border-green-500/30">{daySignIns.length} youth signed in</Badge>
+              <div className="mt-2 mb-2 flex items-center gap-3">
+                <Badge className="bg-green-500/15 text-green-400 border-green-500/30 flex-shrink-0">{daySignIns.length} youth signed in</Badge>
+              </div>
+              <div className="relative mb-3">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/40" />
+                <Input
+                  value={daySearch}
+                  onChange={(e) => setDaySearch(e.target.value)}
+                  placeholder="Search by name..."
+                  className="pl-9 bg-white/5 border-white/20 text-white placeholder:text-white/30 h-9"
+                />
               </div>
               <div className="space-y-1">
                 {daySignIns.map((s) => (
