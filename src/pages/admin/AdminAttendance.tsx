@@ -966,7 +966,7 @@ const getHeadshotUrl = (url: string | null): string | null => {
                       <TableHead className="text-white/60">Last Attended</TableHead>
                       <TableHead className="text-white/60">This Week</TableHead>
                       <TableHead className="text-white/60">This Month</TableHead>
-                    </TableRow>
+                      <TableHead className="text-white/60 w-10"></TableHead>
                   </TableHeader>
                   <TableBody>
                     {baldEagles.map((r) => {
