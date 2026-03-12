@@ -73,6 +73,7 @@ const AdminAttendance = () => {
   const [calendarProgramFilter, setCalendarProgramFilter] = useState<string>("all");
   const [drillDistrictFilter, setDrillDistrictFilter] = useState<string | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string; date: string } | null>(null);
+  const [daySearch, setDaySearch] = useState("");
 
   const invalidateAttendance = () => {
     queryClient.invalidateQueries({ queryKey: ["attendance-records-current"] });
@@ -458,11 +459,14 @@ const getHeadshotUrl = (url: string | null): string | null => {
 
   const daySignIns = useMemo(() => {
     if (!selectedDay) return [];
-    return filteredCalendarAttendance
+    const all = filteredCalendarAttendance
       .filter((a) => a.check_in_date === selectedDay)
       .map((a) => ({ ...a, reg: regMap[a.registration_id] }))
       .filter((a) => a.reg);
-  }, [selectedDay, filteredCalendarAttendance, regMap]);
+    if (!daySearch.trim()) return all;
+    const q = daySearch.toLowerCase();
+    return all.filter((a) => `${a.reg.child_first_name} ${a.reg.child_last_name}`.toLowerCase().includes(q));
+  }, [selectedDay, filteredCalendarAttendance, regMap, daySearch]);
 
   const calendarDays = useMemo(() => {
     const monthStart = startOfMonth(calendarMonth);
@@ -1045,8 +1049,8 @@ const getHeadshotUrl = (url: string | null): string | null => {
       </Card>
 
       {/* Day Detail Modal */}
-      <Dialog open={!!selectedDay} onOpenChange={() => setSelectedDay(null)}>
-        <DialogContent className="bg-black border-white/10 text-white max-w-lg max-h-[80vh] overflow-y-auto">
+      <Dialog open={!!selectedDay} onOpenChange={() => { setSelectedDay(null); setDaySearch(""); }}>
+        <DialogContent className="bg-black border-white/10 text-white max-w-lg max-h-[80vh] flex flex-col">
           {selectedDay && (
             <>
               <DialogHeader>
@@ -1055,10 +1059,19 @@ const getHeadshotUrl = (url: string | null): string | null => {
                   {format(new Date(selectedDay + "T12:00:00"), "EEEE, MMMM d, yyyy")}
                 </DialogTitle>
               </DialogHeader>
-              <div className="mt-2 mb-4">
-                <Badge className="bg-green-500/15 text-green-400 border-green-500/30">{daySignIns.length} youth signed in</Badge>
+              <div className="mt-2 mb-2 flex items-center gap-3">
+                <Badge className="bg-green-500/15 text-green-400 border-green-500/30 flex-shrink-0">{daySignIns.length} youth signed in</Badge>
               </div>
-              <div className="space-y-1">
+              <div className="relative mb-3">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/40" />
+                <Input
+                  value={daySearch}
+                  onChange={(e) => setDaySearch(e.target.value)}
+                  placeholder="Search by name..."
+                  className="pl-9 bg-white/5 border-white/20 text-white placeholder:text-white/30 h-9"
+                />
+              </div>
+              <div className="space-y-1 overflow-y-auto flex-1">
                 {daySignIns.map((s) => (
                   <div key={s.id} className="flex items-center gap-3 p-2.5 rounded-lg bg-white/5 border border-white/5">
                     <div className="w-8 h-8 rounded-full bg-white/10 overflow-hidden flex-shrink-0">
