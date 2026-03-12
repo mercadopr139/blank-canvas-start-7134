@@ -940,7 +940,7 @@ const getHeadshotUrl = (url: string | null): string | null => {
         {/* Bald Eagles Watch List with last attendance */}
           <Card className="bg-amber-500/5 border-amber-500/20 text-white">
             <CardHeader>
-              <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
                 <CardTitle className="text-lg flex items-center gap-2 text-amber-400">
                   <Star className="w-5 h-5 fill-amber-400" /> Bald Eagles Watch List
                 </CardTitle>
