@@ -409,9 +409,10 @@ const getHeadshotUrl = (url: string | null): string | null => {
 
   /* ───── BALD EAGLES ───── */
   const baldEagles = registrations.filter((r) => r.is_bald_eagle);
-  const baldEaglesPresent = baldEagles.filter((r) => getStats(r.id).present).length;
-  const baldEaglesWeek = baldEagles.reduce((sum, r) => sum + getStats(r.id).weekCount, 0);
-  const baldEaglesMonth = baldEagles.reduce((sum, r) => sum + getStats(r.id).monthCount, 0);
+  const activeBaldEagles = baldEagles.filter((r) => r.bald_eagle_active);
+  const baldEaglesPresent = activeBaldEagles.filter((r) => getStats(r.id).present).length;
+  const baldEaglesWeek = activeBaldEagles.reduce((sum, r) => sum + getStats(r.id).weekCount, 0);
+  const baldEaglesMonth = activeBaldEagles.reduce((sum, r) => sum + getStats(r.id).monthCount, 0);
 
   const baldEagleTrend = useMemo(() => {
     const counts: Record<string, number> = {};
