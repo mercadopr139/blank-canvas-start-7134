@@ -417,7 +417,7 @@ const getHeadshotUrl = (url: string | null): string | null => {
   const baldEagleTrend = useMemo(() => {
     const counts: Record<string, number> = {};
     attendance.forEach((a) => {
-      if (regMap[a.registration_id]?.is_bald_eagle) {
+      if (regMap[a.registration_id]?.is_bald_eagle && regMap[a.registration_id]?.bald_eagle_active) {
         counts[a.check_in_date] = (counts[a.check_in_date] || 0) + 1;
       }
     });
