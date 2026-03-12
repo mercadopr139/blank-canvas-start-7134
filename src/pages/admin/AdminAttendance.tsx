@@ -996,7 +996,58 @@ const getHeadshotUrl = (url: string | null): string | null => {
               </div>
             </CardContent>
           </Card>
-        )}
+
+      {/* Add Bald Eagle Dialog */}
+      <Dialog open={addEagleOpen} onOpenChange={() => { setAddEagleOpen(false); setEagleSearch(""); }}>
+        <DialogContent className="bg-black border-white/10 text-white max-w-md max-h-[80vh] flex flex-col">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-amber-400">
+              <Star className="w-5 h-5 fill-amber-400" /> Add Bald Eagle
+            </DialogTitle>
+          </DialogHeader>
+          <div className="relative mb-3">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/40" />
+            <Input
+              value={eagleSearch}
+              onChange={(e) => setEagleSearch(e.target.value)}
+              placeholder="Search registered youth..."
+              className="pl-9 bg-white/5 border-white/20 text-white placeholder:text-white/30 h-9"
+              autoFocus
+            />
+          </div>
+          <div className="space-y-1 overflow-y-auto flex-1">
+            {eagleSearch.trim().length < 2 ? (
+              <p className="text-sm text-white/30 text-center py-4">Type at least 2 characters to search</p>
+            ) : nonEagleYouth.length === 0 ? (
+              <p className="text-sm text-white/30 text-center py-4">No matching youth found</p>
+            ) : (
+              nonEagleYouth.slice(0, 30).map((r) => (
+                <div key={r.id} className="flex items-center gap-3 p-2.5 rounded-lg bg-white/5 border border-white/5 hover:bg-white/10 transition-colors">
+                  <div className="w-8 h-8 rounded-full bg-white/10 overflow-hidden flex-shrink-0">
+                    {getHeadshotUrl(r.child_headshot_url) ? (
+                      <img src={getHeadshotUrl(r.child_headshot_url)!} alt="" className="w-full h-full object-cover" />
+                    ) : (
+                      <span className="flex items-center justify-center w-full h-full text-xs text-white/40">{r.child_first_name[0]}</span>
+                    )}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <span className="font-medium text-sm text-white">{r.child_first_name} {r.child_last_name}</span>
+                    <p className="text-xs text-white/40">{r.child_boxing_program}</p>
+                  </div>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="border-amber-500/30 text-amber-400 hover:bg-amber-500/10 flex-shrink-0"
+                    onClick={() => addBaldEagle(r)}
+                  >
+                    <Star className="w-3.5 h-3.5 mr-1" /> Add
+                  </Button>
+                </div>
+              ))
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
       </div>
 
       {/* ═══════════ ATTENDANCE CALENDAR ═══════════ */}
