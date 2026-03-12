@@ -938,12 +938,21 @@ const getHeadshotUrl = (url: string | null): string | null => {
         )}
 
         {/* Bald Eagles Watch List with last attendance */}
-        {baldEagles.length > 0 && (
           <Card className="bg-amber-500/5 border-amber-500/20 text-white">
             <CardHeader>
-              <CardTitle className="text-lg flex items-center gap-2 text-amber-400">
-                <Star className="w-5 h-5 fill-amber-400" /> Bald Eagles Watch List
-              </CardTitle>
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-lg flex items-center gap-2 text-amber-400">
+                  <Star className="w-5 h-5 fill-amber-400" /> Bald Eagles Watch List
+                </CardTitle>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="gap-1.5 border-amber-500/30 text-amber-400 hover:bg-amber-500/10"
+                  onClick={() => { setAddEagleOpen(true); setEagleSearch(""); }}
+                >
+                  <Users className="w-4 h-4" /> Add Bald Eagle
+                </Button>
+              </div>
             </CardHeader>
             <CardContent>
               <div className="overflow-x-auto">
