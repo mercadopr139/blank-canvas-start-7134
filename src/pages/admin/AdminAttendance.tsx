@@ -514,7 +514,26 @@ const getHeadshotUrl = (url: string | null): string | null => {
       return;
     }
     toast.success(reg.is_bald_eagle ? "Bald Eagle removed" : "Marked as Bald Eagle");
-    window.location.reload();
+    queryClient.invalidateQueries({ queryKey: ["registrations"] });
+  };
+
+  // Non-bald-eagle youth for the add dialog
+  const nonEagleYouth = useMemo(() => {
+    if (!addEagleOpen) return [];
+    const q = eagleSearch.toLowerCase().trim();
+    return registrations
+      .filter((r) => !r.is_bald_eagle)
+      .filter((r) => !q || `${r.child_first_name} ${r.child_last_name}`.toLowerCase().includes(q));
+  }, [registrations, addEagleOpen, eagleSearch]);
+
+  const addBaldEagle = async (reg: Registration) => {
+    const { error } = await supabase
+      .from("youth_registrations")
+      .update({ is_bald_eagle: true })
+      .eq("id", reg.id);
+    if (error) { toast.error("Failed to add Bald Eagle"); return; }
+    toast.success(`${reg.child_first_name} ${reg.child_last_name} marked as Bald Eagle`);
+    queryClient.invalidateQueries({ queryKey: ["registrations"] });
   };
 
   const chartTooltipStyle = {
