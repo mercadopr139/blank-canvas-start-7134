@@ -535,7 +535,18 @@ const getHeadshotUrl = (url: string | null): string | null => {
       .eq("id", reg.id);
     if (error) { toast.error("Failed to add Bald Eagle"); return; }
     toast.success(`${reg.child_first_name} ${reg.child_last_name} marked as Bald Eagle`);
-    queryClient.invalidateQueries({ queryKey: ["registrations"] });
+    queryClient.invalidateQueries({ queryKey: ["registrations-attendance-full"] });
+  };
+
+  const toggleEagleActive = async (reg: Registration) => {
+    const newActive = !reg.bald_eagle_active;
+    const { error } = await supabase
+      .from("youth_registrations")
+      .update({ bald_eagle_active: newActive })
+      .eq("id", reg.id);
+    if (error) { toast.error("Failed to update status"); return; }
+    toast.success(`${reg.child_first_name} ${reg.child_last_name} set to ${newActive ? "Active" : "Inactive"}`);
+    queryClient.invalidateQueries({ queryKey: ["registrations-attendance-full"] });
   };
 
   const chartTooltipStyle = {
