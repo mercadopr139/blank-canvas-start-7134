@@ -74,6 +74,8 @@ const AdminAttendance = () => {
   const [drillDistrictFilter, setDrillDistrictFilter] = useState<string | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string; date: string } | null>(null);
   const [daySearch, setDaySearch] = useState("");
+  const [addEagleOpen, setAddEagleOpen] = useState(false);
+  const [eagleSearch, setEagleSearch] = useState("");
 
   const invalidateAttendance = () => {
     queryClient.invalidateQueries({ queryKey: ["attendance-records-current"] });
@@ -512,7 +514,26 @@ const getHeadshotUrl = (url: string | null): string | null => {
       return;
     }
     toast.success(reg.is_bald_eagle ? "Bald Eagle removed" : "Marked as Bald Eagle");
-    window.location.reload();
+    queryClient.invalidateQueries({ queryKey: ["registrations"] });
+  };
+
+  // Non-bald-eagle youth for the add dialog
+  const nonEagleYouth = useMemo(() => {
+    if (!addEagleOpen) return [];
+    const q = eagleSearch.toLowerCase().trim();
+    return registrations
+      .filter((r) => !r.is_bald_eagle)
+      .filter((r) => !q || `${r.child_first_name} ${r.child_last_name}`.toLowerCase().includes(q));
+  }, [registrations, addEagleOpen, eagleSearch]);
+
+  const addBaldEagle = async (reg: Registration) => {
+    const { error } = await supabase
+      .from("youth_registrations")
+      .update({ is_bald_eagle: true })
+      .eq("id", reg.id);
+    if (error) { toast.error("Failed to add Bald Eagle"); return; }
+    toast.success(`${reg.child_first_name} ${reg.child_last_name} marked as Bald Eagle`);
+    queryClient.invalidateQueries({ queryKey: ["registrations"] });
   };
 
   const chartTooltipStyle = {
@@ -917,12 +938,21 @@ const getHeadshotUrl = (url: string | null): string | null => {
         )}
 
         {/* Bald Eagles Watch List with last attendance */}
-        {baldEagles.length > 0 && (
           <Card className="bg-amber-500/5 border-amber-500/20 text-white">
             <CardHeader>
-              <CardTitle className="text-lg flex items-center gap-2 text-amber-400">
-                <Star className="w-5 h-5 fill-amber-400" /> Bald Eagles Watch List
-              </CardTitle>
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-lg flex items-center gap-2 text-amber-400">
+                  <Star className="w-5 h-5 fill-amber-400" /> Bald Eagles Watch List
+                </CardTitle>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="gap-1.5 border-amber-500/30 text-amber-400 hover:bg-amber-500/10"
+                  onClick={() => { setAddEagleOpen(true); setEagleSearch(""); }}
+                >
+                  <Users className="w-4 h-4" /> Add Bald Eagle
+                </Button>
+              </div>
             </CardHeader>
             <CardContent>
               <div className="overflow-x-auto">
@@ -936,6 +966,7 @@ const getHeadshotUrl = (url: string | null): string | null => {
                       <TableHead className="text-white/60">Last Attended</TableHead>
                       <TableHead className="text-white/60">This Week</TableHead>
                       <TableHead className="text-white/60">This Month</TableHead>
+                      <TableHead className="text-white/60 w-10"></TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -958,15 +989,82 @@ const getHeadshotUrl = (url: string | null): string | null => {
                           <TableCell className="text-white/60">{stats.lastDate ? format(new Date(stats.lastDate), "MMM d") : "—"}</TableCell>
                           <TableCell className="text-white">{stats.weekCount}</TableCell>
                           <TableCell className="text-white">{stats.monthCount}</TableCell>
+                          <TableCell>
+                            <button
+                              onClick={(e) => { e.stopPropagation(); toggleBaldEagle(r); }}
+                              className="p-1 rounded hover:bg-red-500/20 text-white/30 hover:text-red-400 transition-colors"
+                              title="Remove Bald Eagle"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          </TableCell>
                         </TableRow>
                       );
                     })}
+                    {baldEagles.length === 0 && (
+                      <TableRow>
+                        <TableCell colSpan={8} className="text-center py-6 text-white/30">
+                          No Bald Eagles yet. Click "Add Bald Eagle" to get started.
+                        </TableCell>
+                      </TableRow>
+                    )}
                   </TableBody>
                 </Table>
               </div>
             </CardContent>
           </Card>
-        )}
+
+      {/* Add Bald Eagle Dialog */}
+      <Dialog open={addEagleOpen} onOpenChange={() => { setAddEagleOpen(false); setEagleSearch(""); }}>
+        <DialogContent className="bg-black border-white/10 text-white max-w-md max-h-[80vh] flex flex-col">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-amber-400">
+              <Star className="w-5 h-5 fill-amber-400" /> Add Bald Eagle
+            </DialogTitle>
+          </DialogHeader>
+          <div className="relative mb-3">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/40" />
+            <Input
+              value={eagleSearch}
+              onChange={(e) => setEagleSearch(e.target.value)}
+              placeholder="Search registered youth..."
+              className="pl-9 bg-white/5 border-white/20 text-white placeholder:text-white/30 h-9"
+              autoFocus
+            />
+          </div>
+          <div className="space-y-1 overflow-y-auto flex-1">
+            {eagleSearch.trim().length < 2 ? (
+              <p className="text-sm text-white/30 text-center py-4">Type at least 2 characters to search</p>
+            ) : nonEagleYouth.length === 0 ? (
+              <p className="text-sm text-white/30 text-center py-4">No matching youth found</p>
+            ) : (
+              nonEagleYouth.slice(0, 30).map((r) => (
+                <div key={r.id} className="flex items-center gap-3 p-2.5 rounded-lg bg-white/5 border border-white/5 hover:bg-white/10 transition-colors">
+                  <div className="w-8 h-8 rounded-full bg-white/10 overflow-hidden flex-shrink-0">
+                    {getHeadshotUrl(r.child_headshot_url) ? (
+                      <img src={getHeadshotUrl(r.child_headshot_url)!} alt="" className="w-full h-full object-cover" />
+                    ) : (
+                      <span className="flex items-center justify-center w-full h-full text-xs text-white/40">{r.child_first_name[0]}</span>
+                    )}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <span className="font-medium text-sm text-white">{r.child_first_name} {r.child_last_name}</span>
+                    <p className="text-xs text-white/40">{r.child_boxing_program}</p>
+                  </div>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="border-amber-500/30 text-amber-400 hover:bg-amber-500/10 flex-shrink-0"
+                    onClick={() => addBaldEagle(r)}
+                  >
+                    <Star className="w-3.5 h-3.5 mr-1" /> Add
+                  </Button>
+                </div>
+              ))
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
       </div>
 
       {/* ═══════════ ATTENDANCE CALENDAR ═══════════ */}
