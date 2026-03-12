@@ -22,7 +22,7 @@ Deno.serve(async (req) => {
     }
 
     // Server-side password validation
-    const COACH_PASSWORD = "coach";
+    const COACH_PASSWORD = Deno.env.get("COACH_PASSWORD") || "coach";
 
     if (password !== COACH_PASSWORD) {
       return new Response(
