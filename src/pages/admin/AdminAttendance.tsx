@@ -1071,7 +1071,7 @@ const getHeadshotUrl = (url: string | null): string | null => {
                   className="pl-9 bg-white/5 border-white/20 text-white placeholder:text-white/30 h-9"
                 />
               </div>
-              <div className="space-y-1">
+              <div className="space-y-1 overflow-y-auto flex-1">
                 {daySignIns.map((s) => (
                   <div key={s.id} className="flex items-center gap-3 p-2.5 rounded-lg bg-white/5 border border-white/5">
                     <div className="w-8 h-8 rounded-full bg-white/10 overflow-hidden flex-shrink-0">
