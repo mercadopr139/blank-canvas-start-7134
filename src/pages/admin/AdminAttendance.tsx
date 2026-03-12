@@ -30,6 +30,7 @@ interface Registration {
   child_boxing_program: string;
   child_headshot_url: string | null;
   is_bald_eagle: boolean;
+  bald_eagle_active: boolean;
   child_sex: string;
   child_school_district: string;
   household_income_range: string;
@@ -113,7 +114,7 @@ const getHeadshotUrl = (url: string | null): string | null => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("youth_registrations")
-        .select("id, child_first_name, child_last_name, child_boxing_program, child_headshot_url, is_bald_eagle, child_sex, child_school_district, household_income_range, free_or_reduced_lunch")
+        .select("id, child_first_name, child_last_name, child_boxing_program, child_headshot_url, is_bald_eagle, bald_eagle_active, child_sex, child_school_district, household_income_range, free_or_reduced_lunch")
         .order("child_last_name");
       if (error) throw error;
       return data as Registration[];
@@ -408,14 +409,15 @@ const getHeadshotUrl = (url: string | null): string | null => {
 
   /* ───── BALD EAGLES ───── */
   const baldEagles = registrations.filter((r) => r.is_bald_eagle);
-  const baldEaglesPresent = baldEagles.filter((r) => getStats(r.id).present).length;
-  const baldEaglesWeek = baldEagles.reduce((sum, r) => sum + getStats(r.id).weekCount, 0);
-  const baldEaglesMonth = baldEagles.reduce((sum, r) => sum + getStats(r.id).monthCount, 0);
+  const activeBaldEagles = baldEagles.filter((r) => r.bald_eagle_active);
+  const baldEaglesPresent = activeBaldEagles.filter((r) => getStats(r.id).present).length;
+  const baldEaglesWeek = activeBaldEagles.reduce((sum, r) => sum + getStats(r.id).weekCount, 0);
+  const baldEaglesMonth = activeBaldEagles.reduce((sum, r) => sum + getStats(r.id).monthCount, 0);
 
   const baldEagleTrend = useMemo(() => {
     const counts: Record<string, number> = {};
     attendance.forEach((a) => {
-      if (regMap[a.registration_id]?.is_bald_eagle) {
+      if (regMap[a.registration_id]?.is_bald_eagle && regMap[a.registration_id]?.bald_eagle_active) {
         counts[a.check_in_date] = (counts[a.check_in_date] || 0) + 1;
       }
     });
@@ -428,7 +430,7 @@ const getHeadshotUrl = (url: string | null): string | null => {
   const anyPrevWeekAttendance = (attendance || []).some((rec) => rec.check_in_date >= prevWeekStart && rec.check_in_date <= prevWeekEnd);
 
   const alerts = anyPrevWeekAttendance
-    ? (baldEagles
+    ? (activeBaldEagles
         .map((r) => {
           const records = attendanceByReg[r.id] || [];
           const prevWeekCount = records.filter((rec) => rec.check_in_date >= prevWeekStart && rec.check_in_date <= prevWeekEnd).length;
@@ -514,7 +516,7 @@ const getHeadshotUrl = (url: string | null): string | null => {
       return;
     }
     toast.success(reg.is_bald_eagle ? "Bald Eagle removed" : "Marked as Bald Eagle");
-    queryClient.invalidateQueries({ queryKey: ["registrations"] });
+    queryClient.invalidateQueries({ queryKey: ["registrations-attendance-full"] });
   };
 
   // Non-bald-eagle youth for the add dialog
@@ -533,7 +535,18 @@ const getHeadshotUrl = (url: string | null): string | null => {
       .eq("id", reg.id);
     if (error) { toast.error("Failed to add Bald Eagle"); return; }
     toast.success(`${reg.child_first_name} ${reg.child_last_name} marked as Bald Eagle`);
-    queryClient.invalidateQueries({ queryKey: ["registrations"] });
+    queryClient.invalidateQueries({ queryKey: ["registrations-attendance-full"] });
+  };
+
+  const toggleEagleActive = async (reg: Registration) => {
+    const newActive = !reg.bald_eagle_active;
+    const { error } = await supabase
+      .from("youth_registrations")
+      .update({ bald_eagle_active: newActive })
+      .eq("id", reg.id);
+    if (error) { toast.error("Failed to update status"); return; }
+    toast.success(`${reg.child_first_name} ${reg.child_last_name} set to ${newActive ? "Active" : "Inactive"}`);
+    queryClient.invalidateQueries({ queryKey: ["registrations-attendance-full"] });
   };
 
   const chartTooltipStyle = {
@@ -963,6 +976,7 @@ const getHeadshotUrl = (url: string | null): string | null => {
                       <TableHead className="text-white/60">First Name</TableHead>
                       <TableHead className="text-white/60">Last Name</TableHead>
                       <TableHead className="text-white/60">Program</TableHead>
+                      <TableHead className="text-white/60">Status</TableHead>
                       <TableHead className="text-white/60">Last Attended</TableHead>
                       <TableHead className="text-white/60">This Week</TableHead>
                       <TableHead className="text-white/60">This Month</TableHead>
@@ -973,7 +987,7 @@ const getHeadshotUrl = (url: string | null): string | null => {
                     {baldEagles.map((r) => {
                       const stats = getStats(r.id);
                       return (
-                        <TableRow key={r.id} className="border-white/10 cursor-pointer hover:bg-white/5" onClick={() => setSelectedYouth(r)}>
+                        <TableRow key={r.id} className={`border-white/10 cursor-pointer hover:bg-white/5 ${!r.bald_eagle_active ? 'opacity-50' : ''}`} onClick={() => setSelectedYouth(r)}>
                           <TableCell>
                             <div className="w-8 h-8 rounded-full bg-white/10 overflow-hidden">
                               {getHeadshotUrl(r.child_headshot_url) ? (
@@ -986,6 +1000,22 @@ const getHeadshotUrl = (url: string | null): string | null => {
                           <TableCell className="text-white">{r.child_first_name}</TableCell>
                           <TableCell className="text-white">{r.child_last_name}</TableCell>
                           <TableCell className="text-white/60 text-xs">{r.child_boxing_program}</TableCell>
+                          <TableCell>
+                            <button
+                              onClick={(e) => { e.stopPropagation(); toggleEagleActive(r); }}
+                              title={r.bald_eagle_active ? "Set Inactive" : "Set Active"}
+                            >
+                              <Badge
+                                variant="outline"
+                                className={r.bald_eagle_active
+                                  ? "border-green-500/40 text-green-400 bg-green-500/10 hover:bg-green-500/20 cursor-pointer"
+                                  : "border-white/20 text-white/40 bg-white/5 hover:bg-white/10 cursor-pointer"
+                                }
+                              >
+                                {r.bald_eagle_active ? "Active" : "Inactive"}
+                              </Badge>
+                            </button>
+                          </TableCell>
                           <TableCell className="text-white/60">{stats.lastDate ? format(new Date(stats.lastDate), "MMM d") : "—"}</TableCell>
                           <TableCell className="text-white">{stats.weekCount}</TableCell>
                           <TableCell className="text-white">{stats.monthCount}</TableCell>
@@ -1003,7 +1033,7 @@ const getHeadshotUrl = (url: string | null): string | null => {
                     })}
                     {baldEagles.length === 0 && (
                       <TableRow>
-                        <TableCell colSpan={8} className="text-center py-6 text-white/30">
+                        <TableCell colSpan={9} className="text-center py-6 text-white/30">
                           No Bald Eagles yet. Click "Add Bald Eagle" to get started.
                         </TableCell>
                       </TableRow>
