@@ -1,4 +1,5 @@
 import { Resend } from "https://esm.sh/resend@2.0.0";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const resend = new Resend(Deno.env.get("RESEND_API_KEY"));
 
@@ -27,6 +28,15 @@ interface RegistrationData {
   child_headshot_url?: string | null;
 }
 
+function escapeHtml(s: string): string {
+  return s
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
 function calculateAge(dob: string): number {
   const birth = new Date(dob);
   const now = new Date();
@@ -47,14 +57,19 @@ function resolveHeadshotUrl(url: string | null | undefined): string | null {
 }
 
 function renderEmailHtml(reg: RegistrationData): string {
-  const childName = `${reg.child_first_name} ${reg.child_last_name}`;
-  const parentName = `${reg.parent_first_name} ${reg.parent_last_name}`;
+  const childName = escapeHtml(`${reg.child_first_name} ${reg.child_last_name}`);
+  const parentName = escapeHtml(`${reg.parent_first_name} ${reg.parent_last_name}`);
   const age = calculateAge(reg.child_date_of_birth);
+  const program = escapeHtml(reg.child_boxing_program);
+  const district = escapeHtml(reg.child_school_district);
+  const phone = escapeHtml(reg.parent_phone);
+  const email = escapeHtml(reg.parent_email);
+  const submissionDate = escapeHtml(reg.submission_date);
 
   const resolvedHeadshot = resolveHeadshotUrl(reg.child_headshot_url);
   const headshotBlock = resolvedHeadshot
     ? `<tr><td style="padding:0 0 24px 0;text-align:center;">
-        <img src="${resolvedHeadshot}" alt="${childName}" style="width:120px;height:120px;border-radius:50%;object-fit:cover;border:3px solid #e5e7eb;" />
+        <img src="${escapeHtml(resolvedHeadshot)}" alt="${childName}" style="width:120px;height:120px;border-radius:50%;object-fit:cover;border:3px solid #e5e7eb;" />
        </td></tr>`
     : "";
 
@@ -95,12 +110,12 @@ function renderEmailHtml(reg: RegistrationData): string {
                 <tr><td colspan="2" style="border-bottom:1px solid #f0f0f0;"></td></tr>
                 <tr>
                   <td style="padding:8px 0;color:#9ca3af;font-size:12px;text-transform:uppercase;letter-spacing:0.5px;vertical-align:top;">Program</td>
-                  <td style="padding:8px 0;color:#111;font-size:15px;font-weight:600;">${reg.child_boxing_program}</td>
+                  <td style="padding:8px 0;color:#111;font-size:15px;font-weight:600;">${program}</td>
                 </tr>
                 <tr><td colspan="2" style="border-bottom:1px solid #f0f0f0;"></td></tr>
                 <tr>
                   <td style="padding:8px 0;color:#9ca3af;font-size:12px;text-transform:uppercase;letter-spacing:0.5px;vertical-align:top;">District</td>
-                  <td style="padding:8px 0;color:#111;font-size:15px;font-weight:600;">${reg.child_school_district}</td>
+                  <td style="padding:8px 0;color:#111;font-size:15px;font-weight:600;">${district}</td>
                 </tr>
                 <tr><td colspan="2" style="border-bottom:1px solid #f0f0f0;"></td></tr>
                 <tr>
@@ -110,17 +125,17 @@ function renderEmailHtml(reg: RegistrationData): string {
                 <tr><td colspan="2" style="border-bottom:1px solid #f0f0f0;"></td></tr>
                 <tr>
                   <td style="padding:8px 0;color:#9ca3af;font-size:12px;text-transform:uppercase;letter-spacing:0.5px;vertical-align:top;">Phone</td>
-                  <td style="padding:8px 0;color:#111;font-size:15px;font-weight:600;">${reg.parent_phone}</td>
+                  <td style="padding:8px 0;color:#111;font-size:15px;font-weight:600;">${phone}</td>
                 </tr>
                 <tr><td colspan="2" style="border-bottom:1px solid #f0f0f0;"></td></tr>
                 <tr>
                   <td style="padding:8px 0;color:#9ca3af;font-size:12px;text-transform:uppercase;letter-spacing:0.5px;vertical-align:top;">Email</td>
-                  <td style="padding:8px 0;color:#111;font-size:15px;font-weight:600;"><a href="mailto:${reg.parent_email}" style="color:#111;text-decoration:underline;">${reg.parent_email}</a></td>
+                  <td style="padding:8px 0;color:#111;font-size:15px;font-weight:600;"><a href="mailto:${email}" style="color:#111;text-decoration:underline;">${email}</a></td>
                 </tr>
                 <tr><td colspan="2" style="border-bottom:1px solid #f0f0f0;"></td></tr>
                 <tr>
                   <td style="padding:8px 0;color:#9ca3af;font-size:12px;text-transform:uppercase;letter-spacing:0.5px;vertical-align:top;">Submitted</td>
-                  <td style="padding:8px 0;color:#111;font-size:15px;font-weight:600;">${reg.submission_date}</td>
+                  <td style="padding:8px 0;color:#111;font-size:15px;font-weight:600;">${submissionDate}</td>
                 </tr>
               </table>
             </td></tr>
@@ -154,7 +169,25 @@ Deno.serve(async (req) => {
   }
 
   try {
+    // Verify the request comes from our application by validating the apikey header
+    const apiKey = req.headers.get("apikey");
+    const expectedKey = Deno.env.get("SUPABASE_ANON_KEY");
+    if (!apiKey || apiKey !== expectedKey) {
+      return new Response(JSON.stringify({ error: "Unauthorized" }), {
+        status: 401,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     const registration: RegistrationData = await req.json();
+
+    // Basic input validation
+    if (!registration.child_first_name || !registration.child_last_name || !registration.parent_email) {
+      return new Response(JSON.stringify({ error: "Missing required fields" }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
 
     const childName = `${registration.child_first_name} ${registration.child_last_name}`;
 
@@ -169,7 +202,7 @@ Deno.serve(async (req) => {
 
     if (error) {
       console.error("Resend error:", error);
-      return new Response(JSON.stringify({ error: error.message }), {
+      return new Response(JSON.stringify({ error: "Failed to send notification" }), {
         status: 500,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
@@ -180,7 +213,7 @@ Deno.serve(async (req) => {
     });
   } catch (err) {
     console.error("Error:", err);
-    return new Response(JSON.stringify({ error: String(err) }), {
+    return new Response(JSON.stringify({ error: "Internal server error" }), {
       status: 500,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
