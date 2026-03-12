@@ -29,3 +29,6 @@ verify_jwt = false
 
 [functions.notify-new-registration]
 verify_jwt = false
+
+[functions.validate-orientation-bypass]
+verify_jwt = false

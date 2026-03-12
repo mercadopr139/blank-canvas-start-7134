@@ -9,9 +9,9 @@ import OrientationStep from "@/components/orientation/OrientationStep";
 import OrientationStepGated from "@/components/orientation/OrientationStepGated";
 import { Step1DoneBadge } from "@/components/orientation/Step1DoneBadge";
 import mascotEagle from "@/assets/mascot-eagle.png";
+import { supabase } from "@/integrations/supabase/client";
 const SESSION_KEY = "rookie_orientation_unlocked";
 const ADMIN_BYPASS_KEY = "orientation_admin_bypass";
-const ADMIN_PASSWORD = "COACH";
 const HOUSE_RULES_TEST_URL = "/house-rules-test";
 
 // Hardcoded YouTube video IDs - these will work on published site
@@ -37,14 +37,21 @@ const Step5WithBypass = ({ testUrl }: { testUrl: string }) => {
   const [bypassError, setBypassError] = useState("");
   const hasPassed = localStorage.getItem("house_rules_test_passed") === "true";
 
-  const handleBypassSubmit = (e: React.FormEvent) => {
+  const handleBypassSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (bypassCode.toUpperCase() === ADMIN_PASSWORD) {
-      sessionStorage.setItem(ADMIN_BYPASS_KEY, "true");
-      localStorage.setItem("house_rules_test_passed", "true");
-      window.location.reload();
-    } else {
-      setBypassError("Incorrect password.");
+    try {
+      const res = await supabase.functions.invoke("validate-orientation-bypass", {
+        body: { password: bypassCode },
+      });
+      if (res.data?.valid) {
+        sessionStorage.setItem(ADMIN_BYPASS_KEY, "true");
+        localStorage.setItem("house_rules_test_passed", "true");
+        window.location.reload();
+      } else {
+        setBypassError("Incorrect password.");
+      }
+    } catch {
+      setBypassError("Verification failed. Try again.");
     }
   };
 

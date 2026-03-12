@@ -406,8 +406,11 @@ Deno.serve(async (req) => {
     // Build email body
     const logoUrl = `${supabaseUrl}/storage/v1/object/public/email-assets/nla-logo.png`;
 
+    const escapeHtml = (s: string): string =>
+      s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+
     const personalHtml = personal_message
-      ? `<p style="margin:0 0 24px;color:#222;font-size:15px;line-height:1.7;">${personal_message.replace(/\n/g, "<br/>")}</p>`
+      ? `<p style="margin:0 0 24px;color:#222;font-size:15px;line-height:1.7;">${escapeHtml(personal_message).replace(/\n/g, "<br/>")}</p>`
       : "";
 
     const personalText = personal_message ? `${personal_message}\n\n` : "";
