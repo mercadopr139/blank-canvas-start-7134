@@ -947,7 +947,7 @@ const getHeadshotUrl = (url: string | null): string | null => {
                 <Button
                   variant="outline"
                   size="sm"
-                  className="gap-1.5 border-amber-500/30 text-amber-400 hover:bg-amber-500/10"
+                  className="gap-1.5 bg-black border-amber-500/30 text-amber-400 hover:bg-amber-500/10"
                   onClick={() => { setAddEagleOpen(true); setEagleSearch(""); }}
                 >
                   <Users className="w-4 h-4" /> Add Bald Eagle
