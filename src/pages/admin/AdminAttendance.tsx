@@ -73,6 +73,7 @@ const AdminAttendance = () => {
   const [calendarProgramFilter, setCalendarProgramFilter] = useState<string>("all");
   const [drillDistrictFilter, setDrillDistrictFilter] = useState<string | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string; date: string } | null>(null);
+  const [daySearch, setDaySearch] = useState("");
 
   const invalidateAttendance = () => {
     queryClient.invalidateQueries({ queryKey: ["attendance-records-current"] });
