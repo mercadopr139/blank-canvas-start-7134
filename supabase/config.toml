@@ -26,3 +26,6 @@ verify_jwt = false
 
 [functions.invite-admin]
 verify_jwt = false
+
+[functions.notify-new-registration]
+verify_jwt = false
