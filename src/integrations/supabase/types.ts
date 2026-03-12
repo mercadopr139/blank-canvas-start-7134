@@ -1125,6 +1125,7 @@ export type Database = {
           allergies: string | null
           approved_for_attendance: boolean
           asthma_inhaler_info: string | null
+          bald_eagle_active: boolean
           child_boxing_program: Database["public"]["Enums"]["boxing_program"]
           child_date_of_birth: string
           child_first_name: string
@@ -1172,6 +1173,7 @@ export type Database = {
           allergies?: string | null
           approved_for_attendance?: boolean
           asthma_inhaler_info?: string | null
+          bald_eagle_active?: boolean
           child_boxing_program: Database["public"]["Enums"]["boxing_program"]
           child_date_of_birth: string
           child_first_name: string
@@ -1219,6 +1221,7 @@ export type Database = {
           allergies?: string | null
           approved_for_attendance?: boolean
           asthma_inhaler_info?: string | null
+          bald_eagle_active?: boolean
           child_boxing_program?: Database["public"]["Enums"]["boxing_program"]
           child_date_of_birth?: string
           child_first_name?: string
