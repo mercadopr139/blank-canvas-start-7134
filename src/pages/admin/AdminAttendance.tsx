@@ -988,6 +988,15 @@ const getHeadshotUrl = (url: string | null): string | null => {
                           <TableCell className="text-white/60">{stats.lastDate ? format(new Date(stats.lastDate), "MMM d") : "—"}</TableCell>
                           <TableCell className="text-white">{stats.weekCount}</TableCell>
                           <TableCell className="text-white">{stats.monthCount}</TableCell>
+                          <TableCell>
+                            <button
+                              onClick={(e) => { e.stopPropagation(); toggleBaldEagle(r); }}
+                              className="p-1 rounded hover:bg-red-500/20 text-white/30 hover:text-red-400 transition-colors"
+                              title="Remove Bald Eagle"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          </TableCell>
                         </TableRow>
                       );
                     })}
