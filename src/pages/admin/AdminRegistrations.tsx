@@ -557,16 +557,13 @@ const AdminRegistrations = () => {
               <RegistrationDetail
                 registration={selectedRegistration}
                 onApprovalChange={async (approved: boolean) => {
-                  const accessToken = session?.access_token;
-
-                  if (!accessToken) {
+                  if (!session) {
                     throw new Error("Your session expired. Please sign in again.");
                   }
 
                   const updatedRegistration = await updateRegistrationApproval({
                     registrationId: selectedRegistration.id,
                     approved,
-                    accessToken,
                   });
 
                   toast.success(approved ? "Approved for attendance" : "Attendance approval removed");
