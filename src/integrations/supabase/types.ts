@@ -1271,6 +1271,63 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      admin_set_registration_approval: {
+        Args: { _approved: boolean; _registration_id: string }
+        Returns: {
+          adults_in_household: number
+          allergies: string | null
+          approved_for_attendance: boolean
+          asthma_inhaler_info: string | null
+          bald_eagle_active: boolean
+          child_boxing_program: Database["public"]["Enums"]["boxing_program"]
+          child_date_of_birth: string
+          child_first_name: string
+          child_grade_level: number | null
+          child_headshot_url: string | null
+          child_last_name: string
+          child_phone: string | null
+          child_primary_address: string
+          child_race_ethnicity: Database["public"]["Enums"]["child_race_ethnicity"]
+          child_school_district: Database["public"]["Enums"]["school_district"]
+          child_sex: Database["public"]["Enums"]["child_sex"]
+          counseling_services_name: string | null
+          counseling_services_signature_url: string | null
+          created_at: string
+          custom_fields_data: Json | null
+          extended_program: string | null
+          final_signature_name: string | null
+          free_or_reduced_lunch:
+            | Database["public"]["Enums"]["lunch_status"]
+            | null
+          household_income_range: Database["public"]["Enums"]["household_income"]
+          id: string
+          important_child_notes: string | null
+          is_bald_eagle: boolean
+          liability_waiver_name: string
+          liability_waiver_signature_url: string
+          media_consent_name: string
+          media_consent_signature_url: string
+          medical_consent_name: string
+          medical_consent_signature_url: string
+          parent_email: string
+          parent_first_name: string
+          parent_last_name: string
+          parent_phone: string
+          siblings_in_household: number
+          spiritual_development_policy_name: string
+          spiritual_development_policy_signature_url: string
+          submission_date: string
+          transportation_excursions_signature_url: string
+          transportation_excursions_waiver_name: string
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "youth_registrations"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       get_today_checkin_count: { Args: never; Returns: number }
       get_today_lil_champs_count: { Args: never; Returns: number }
       has_role: {
