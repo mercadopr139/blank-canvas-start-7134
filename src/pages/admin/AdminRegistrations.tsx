@@ -605,17 +605,34 @@ const AdminRegistrations = () => {
               <RegistrationDetail
                 registration={selectedRegistration}
                 onApprovalChange={async (approved: boolean) => {
-                  const { error } = await supabase
-                    .from("youth_registrations")
-                    .update({ approved_for_attendance: approved })
-                    .eq("id", selectedRegistration.id);
-                  if (error) {
-                    toast.error("Failed to update approval status");
-                  } else {
-                    toast.success(approved ? "Approved for attendance" : "Attendance approval removed");
-                    setSelectedRegistration({ ...selectedRegistration, approved_for_attendance: approved });
-                    queryClient.invalidateQueries({ queryKey: ["youth-registrations"] });
+                  const accessToken = session?.access_token ?? getStoredAccessToken();
+
+                  if (!accessToken) {
+                    throw new Error("Your session expired. Please sign in again.");
                   }
+
+                  const updatedRegistration = await updateRegistrationApproval({
+                    registrationId: selectedRegistration.id,
+                    approved,
+                    accessToken,
+                  });
+
+                  toast.success(approved ? "Approved for attendance" : "Attendance approval removed");
+                  setSelectedRegistration((current: any) => current ? {
+                    ...current,
+                    approved_for_attendance: updatedRegistration?.approved_for_attendance ?? approved,
+                  } : current);
+                  queryClient.setQueryData(["youth-registrations"], (current: any[] | undefined) =>
+                    current?.map((registration) =>
+                      registration.id === selectedRegistration.id
+                        ? {
+                            ...registration,
+                            approved_for_attendance: updatedRegistration?.approved_for_attendance ?? approved,
+                          }
+                        : registration
+                    )
+                  );
+                  queryClient.invalidateQueries({ queryKey: ["youth-registrations"] });
                 }}
               />
             )}
