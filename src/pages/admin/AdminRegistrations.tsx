@@ -913,19 +913,26 @@ const RegistrationDetail = ({ registration: reg, onApprovalChange }: { registrat
                 </p>
               </div>
             </button>
-            <div
-              className="shrink-0 touch-manipulation"
+            <button
+              type="button"
+              role="switch"
+              aria-checked={!!reg.approved_for_attendance}
+              aria-label="Toggle attendance approval"
+              onClick={(e) => {
+                e.stopPropagation();
+                onApprovalChange(!reg.approved_for_attendance);
+              }}
               onPointerDown={(e) => e.stopPropagation()}
-              onClick={(e) => e.stopPropagation()}
               onTouchStart={(e) => e.stopPropagation()}
-              onTouchEnd={(e) => e.stopPropagation()}
+              className="relative inline-flex h-8 w-14 shrink-0 items-center rounded-full border-2 border-transparent bg-input p-0.5 transition-colors touch-manipulation data-[state=checked]:bg-primary"
+              data-state={reg.approved_for_attendance ? "checked" : "unchecked"}
             >
-              <Switch
-                checked={!!reg.approved_for_attendance}
-                onCheckedChange={onApprovalChange}
-                className="scale-125 origin-right"
+              <span
+                aria-hidden="true"
+                className="pointer-events-none block h-6 w-6 rounded-full bg-background shadow-lg transition-transform data-[state=checked]:translate-x-6 data-[state=unchecked]:translate-x-0"
+                data-state={reg.approved_for_attendance ? "checked" : "unchecked"}
               />
-            </div>
+            </button>
           </div>
         </CardContent>
       </Card>
