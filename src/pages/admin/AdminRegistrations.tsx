@@ -71,28 +71,6 @@ const HeadshotThumbnail = ({ headshotPath, size = "sm" }: { headshotPath: string
 };
 
 const EXTENDED_PROGRAMS = ["Rams Program", "Hawk Squad", "Islanders", "Lil Champs Corner"] as const;
-const APPROVAL_REQUEST_TIMEOUT_MS = 8000;
-
-const getStoredAccessToken = () => {
-  if (typeof window === "undefined") return null;
-
-  for (const key of Object.keys(window.localStorage)) {
-    if (!key.startsWith("sb-") || !key.endsWith("-auth-token")) continue;
-
-    try {
-      const parsed = JSON.parse(window.localStorage.getItem(key) ?? "null");
-      const accessToken = parsed?.access_token ?? parsed?.currentSession?.access_token ?? parsed?.session?.access_token;
-
-      if (typeof accessToken === "string" && accessToken.length > 0) {
-        return accessToken;
-      }
-    } catch {
-      // Ignore malformed auth cache entries.
-    }
-  }
-
-  return null;
-};
 
 const getResponseErrorMessage = async (response: Response) => {
   try {
@@ -115,40 +93,27 @@ const updateRegistrationApproval = async ({
   approved: boolean;
   accessToken: string;
 }) => {
-  const controller = new AbortController();
-  const timeoutId = window.setTimeout(() => controller.abort(), APPROVAL_REQUEST_TIMEOUT_MS);
-
-  try {
-    const response = await fetch(
-      `${import.meta.env.VITE_SUPABASE_URL}/rest/v1/youth_registrations?id=eq.${encodeURIComponent(registrationId)}`,
-      {
-        method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-          apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
-          Authorization: `Bearer ${accessToken}`,
-          Prefer: "return=representation",
-        },
-        body: JSON.stringify({ approved_for_attendance: approved }),
-        signal: controller.signal,
-      }
-    );
-
-    if (!response.ok) {
-      throw new Error(await getResponseErrorMessage(response));
+  const response = await fetch(
+    `${import.meta.env.VITE_SUPABASE_URL}/rest/v1/rpc/admin_set_registration_approval`,
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+        Authorization: `Bearer ${accessToken}`,
+      },
+      body: JSON.stringify({
+        _registration_id: registrationId,
+        _approved: approved,
+      }),
     }
+  );
 
-    const [updatedRegistration] = await response.json();
-    return updatedRegistration;
-  } catch (error) {
-    if (error instanceof DOMException && error.name === "AbortError") {
-      throw new Error("Approval update timed out. Please try again.");
-    }
-
-    throw error;
-  } finally {
-    window.clearTimeout(timeoutId);
+  if (!response.ok) {
+    throw new Error(await getResponseErrorMessage(response));
   }
+
+  return await response.json();
 };
 
 const AdminRegistrations = () => {
