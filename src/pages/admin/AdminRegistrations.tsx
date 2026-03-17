@@ -570,7 +570,7 @@ const AdminRegistrations = () => {
               <RegistrationDetail
                 registration={selectedRegistration}
                 onApprovalChange={async (approved: boolean) => {
-                  const accessToken = session?.access_token ?? getStoredAccessToken();
+                  const accessToken = session?.access_token;
 
                   if (!accessToken) {
                     throw new Error("Your session expired. Please sign in again.");
