@@ -898,22 +898,26 @@ const RegistrationDetail = ({ registration: reg, onApprovalChange }: { registrat
     <div className="space-y-6">
       {/* Attendance Approval Toggle */}
       <Card className={`border ${reg.approved_for_attendance ? 'border-green-500/30 bg-green-500/5' : 'border-amber-500/30 bg-amber-500/5'}`}>
-        <CardContent className="flex items-center justify-between py-4 px-4">
-          <div className="flex items-center gap-3">
-            <ShieldCheck className={`w-5 h-5 ${reg.approved_for_attendance ? 'text-green-500' : 'text-amber-500'}`} />
-            <div>
+        <CardContent className="py-4 px-4">
+          <div className="flex items-center justify-between gap-4">
+            <div className="flex items-center gap-3 min-w-0">
+              <ShieldCheck className={`w-5 h-5 shrink-0 ${reg.approved_for_attendance ? 'text-green-500' : 'text-amber-500'}`} />
               <p className="font-medium text-sm">Approved for Attendance</p>
-              <p className="text-xs text-muted-foreground">
-                {reg.approved_for_attendance ? "This youth will appear in the kiosk check-in." : "This youth will NOT appear in the kiosk until approved."}
-              </p>
+            </div>
+            <div
+              onPointerDown={(e) => e.stopPropagation()}
+              onTouchEnd={(e) => e.stopPropagation()}
+              className="shrink-0 p-3 -m-3 touch-manipulation"
+            >
+              <Switch
+                checked={!!reg.approved_for_attendance}
+                onCheckedChange={onApprovalChange}
+              />
             </div>
           </div>
-          <div onPointerDown={(e) => e.stopPropagation()} onTouchEnd={(e) => e.stopPropagation()} className="shrink-0 p-2 -m-2">
-            <Switch
-              checked={!!reg.approved_for_attendance}
-              onCheckedChange={onApprovalChange}
-            />
-          </div>
+          <p className="text-xs text-muted-foreground mt-2 ml-8">
+            {reg.approved_for_attendance ? "✅ This youth will appear in the kiosk check-in." : "⚠️ This youth will NOT appear in the kiosk until approved."}
+          </p>
         </CardContent>
       </Card>
 
