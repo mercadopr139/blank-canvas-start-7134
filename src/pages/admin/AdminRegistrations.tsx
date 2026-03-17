@@ -856,6 +856,7 @@ const RegistrationDetail = ({ registration: reg, onApprovalChange }: { registrat
   const ageMonths = differenceInMonths(new Date(), parseISO(reg.child_date_of_birth)) - ageYears * 12;
   const [signedUrls, setSignedUrls] = useState<Record<string, string>>({});
   const [loadingUrls, setLoadingUrls] = useState(true);
+  const [isSavingApproval, setIsSavingApproval] = useState(false);
 
   useEffect(() => {
     const generateSignedUrls = async () => {
@@ -892,45 +893,55 @@ const RegistrationDetail = ({ registration: reg, onApprovalChange }: { registrat
     generateSignedUrls();
   }, [reg]);
 
+  const handleApprovalSelection = async (approved: boolean) => {
+    if (isSavingApproval || approved === !!reg.approved_for_attendance) return;
+
+    setIsSavingApproval(true);
+    try {
+      await onApprovalChange(approved);
+    } finally {
+      setIsSavingApproval(false);
+    }
+  };
+
   return (
     <div className="space-y-6">
       {/* Attendance Approval Toggle */}
       <Card className={`border ${reg.approved_for_attendance ? 'border-green-500/30 bg-green-500/5' : 'border-amber-500/30 bg-amber-500/5'}`}>
         <CardContent className="py-4 px-4">
-          <div className="flex items-center justify-between gap-4 select-none">
-            <button
-              type="button"
-              onClick={() => onApprovalChange(!reg.approved_for_attendance)}
-              className="flex min-w-0 flex-1 items-center gap-3 text-left touch-manipulation"
-            >
-              <ShieldCheck className={`w-5 h-5 shrink-0 ${reg.approved_for_attendance ? 'text-green-500' : 'text-amber-500'}`} />
+          <div className="space-y-4 select-none">
+            <div className="flex min-w-0 items-start gap-3">
+              <ShieldCheck className={`mt-0.5 w-5 h-5 shrink-0 ${reg.approved_for_attendance ? 'text-green-500' : 'text-amber-500'}`} />
               <div>
-                <p className="font-medium text-sm">Approved for Attendance</p>
+                <p className="font-medium text-sm">Attendance Approval</p>
                 <p className="mt-1 text-xs text-muted-foreground">
                   {reg.approved_for_attendance ? "✅ This youth will appear in the kiosk check-in." : "⚠️ This youth will NOT appear in the kiosk until approved."}
                 </p>
               </div>
-            </button>
-            <button
-              type="button"
-              role="switch"
-              aria-checked={!!reg.approved_for_attendance}
-              aria-label="Toggle attendance approval"
-              onClick={(e) => {
-                e.stopPropagation();
-                onApprovalChange(!reg.approved_for_attendance);
-              }}
-              onPointerDown={(e) => e.stopPropagation()}
-              onTouchStart={(e) => e.stopPropagation()}
-              className="relative inline-flex h-8 w-14 shrink-0 items-center rounded-full border-2 border-transparent bg-input p-0.5 transition-colors touch-manipulation data-[state=checked]:bg-primary"
-              data-state={reg.approved_for_attendance ? "checked" : "unchecked"}
-            >
-              <span
-                aria-hidden="true"
-                className="pointer-events-none block h-6 w-6 rounded-full bg-background shadow-lg transition-transform data-[state=checked]:translate-x-6 data-[state=unchecked]:translate-x-0"
-                data-state={reg.approved_for_attendance ? "checked" : "unchecked"}
-              />
-            </button>
+            </div>
+
+            <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+              <Button
+                type="button"
+                variant={reg.approved_for_attendance ? "default" : "outline"}
+                disabled={isSavingApproval}
+                onClick={() => handleApprovalSelection(true)}
+                className="min-h-12 justify-start text-left whitespace-normal"
+              >
+                {isSavingApproval && reg.approved_for_attendance ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />}
+                Approve for check-in
+              </Button>
+              <Button
+                type="button"
+                variant={!reg.approved_for_attendance ? "secondary" : "outline"}
+                disabled={isSavingApproval}
+                onClick={() => handleApprovalSelection(false)}
+                className="min-h-12 justify-start text-left whitespace-normal"
+              >
+                {isSavingApproval && !reg.approved_for_attendance ? <Loader2 className="w-4 h-4 animate-spin" /> : <XCircle className="w-4 h-4" />}
+                Keep unapproved
+              </Button>
+            </div>
           </div>
         </CardContent>
       </Card>
