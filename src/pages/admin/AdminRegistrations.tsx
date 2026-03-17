@@ -899,21 +899,26 @@ const RegistrationDetail = ({ registration: reg, onApprovalChange }: { registrat
       {/* Attendance Approval Toggle */}
       <Card className={`border ${reg.approved_for_attendance ? 'border-green-500/30 bg-green-500/5' : 'border-amber-500/30 bg-amber-500/5'}`}>
         <CardContent className="py-4 px-4">
-          <label className="flex items-center justify-between gap-4 cursor-pointer select-none touch-manipulation">
-            <div className="flex items-center gap-3 min-w-0">
+          <div className="flex items-center justify-between gap-4 select-none">
+            <button
+              type="button"
+              onClick={() => onApprovalChange(!reg.approved_for_attendance)}
+              className="flex min-w-0 flex-1 items-center gap-3 text-left touch-manipulation"
+            >
               <ShieldCheck className={`w-5 h-5 shrink-0 ${reg.approved_for_attendance ? 'text-green-500' : 'text-amber-500'}`} />
               <div>
                 <p className="font-medium text-sm">Approved for Attendance</p>
-                <p className="text-xs text-muted-foreground mt-1">
+                <p className="mt-1 text-xs text-muted-foreground">
                   {reg.approved_for_attendance ? "✅ This youth will appear in the kiosk check-in." : "⚠️ This youth will NOT appear in the kiosk until approved."}
                 </p>
               </div>
-            </div>
+            </button>
             <div
+              className="shrink-0 touch-manipulation"
               onPointerDown={(e) => e.stopPropagation()}
+              onClick={(e) => e.stopPropagation()}
               onTouchStart={(e) => e.stopPropagation()}
               onTouchEnd={(e) => e.stopPropagation()}
-              className="shrink-0"
             >
               <Switch
                 checked={!!reg.approved_for_attendance}
@@ -921,7 +926,7 @@ const RegistrationDetail = ({ registration: reg, onApprovalChange }: { registrat
                 className="scale-125 origin-right"
               />
             </div>
-          </label>
+          </div>
         </CardContent>
       </Card>
 
