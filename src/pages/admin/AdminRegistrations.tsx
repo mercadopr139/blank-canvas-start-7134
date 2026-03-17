@@ -72,48 +72,35 @@ const HeadshotThumbnail = ({ headshotPath, size = "sm" }: { headshotPath: string
 
 const EXTENDED_PROGRAMS = ["Rams Program", "Hawk Squad", "Islanders", "Lil Champs Corner"] as const;
 
-const getResponseErrorMessage = async (response: Response) => {
-  try {
-    const data = await response.json();
-    if (typeof data?.message === "string") return data.message;
-    if (typeof data?.error === "string") return data.error;
-  } catch {
-    // Ignore JSON parse failures.
+const getFunctionErrorMessage = (error: unknown) => {
+  if (typeof error === "object" && error !== null) {
+    const functionError = error as { message?: string; context?: { error?: string } };
+    if (typeof functionError.context?.error === "string") return functionError.context.error;
+    if (typeof functionError.message === "string") return functionError.message;
   }
 
-  return `Request failed (${response.status})`;
+  return "Failed to update approval status";
 };
 
 const updateRegistrationApproval = async ({
   registrationId,
   approved,
-  accessToken,
 }: {
   registrationId: string;
   approved: boolean;
-  accessToken: string;
 }) => {
-  const response = await fetch(
-    `${import.meta.env.VITE_SUPABASE_URL}/rest/v1/rpc/admin_set_registration_approval`,
-    {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
-        Authorization: `Bearer ${accessToken}`,
-      },
-      body: JSON.stringify({
-        _registration_id: registrationId,
-        _approved: approved,
-      }),
-    }
-  );
+  const { data, error } = await supabase.functions.invoke("set-registration-approval", {
+    body: {
+      registrationId,
+      approved,
+    },
+  });
 
-  if (!response.ok) {
-    throw new Error(await getResponseErrorMessage(response));
+  if (error) {
+    throw new Error(getFunctionErrorMessage(error));
   }
 
-  return await response.json();
+  return data?.registration;
 };
 
 const AdminRegistrations = () => {
