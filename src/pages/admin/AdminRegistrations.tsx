@@ -518,7 +518,7 @@ const AdminRegistrations = () => {
               {selectedRegistration?.child_first_name} {selectedRegistration?.child_last_name}
             </DialogTitle>
           </DialogHeader>
-          <ScrollArea className="flex-1 overflow-auto pr-4">
+          <div className="flex-1 overflow-y-auto overscroll-contain pr-4">
             {selectedRegistration && (
               <RegistrationDetail
                 registration={selectedRegistration}
@@ -537,7 +537,7 @@ const AdminRegistrations = () => {
                 }}
               />
             )}
-          </ScrollArea>
+          </div>
         </DialogContent>
       </Dialog>
 
@@ -547,7 +547,7 @@ const AdminRegistrations = () => {
           <DialogHeader>
             <DialogTitle>Edit Registration</DialogTitle>
           </DialogHeader>
-          <ScrollArea className="flex-1 overflow-auto pr-4">
+          <div className="flex-1 overflow-y-auto overscroll-contain pr-4">
             {editingRegistration && (
               <EditRegistrationForm
                 registration={editingRegistration}
@@ -581,7 +581,7 @@ const AdminRegistrations = () => {
                 }}
               />
             )}
-          </ScrollArea>
+          </div>
         </DialogContent>
       </Dialog>
 
