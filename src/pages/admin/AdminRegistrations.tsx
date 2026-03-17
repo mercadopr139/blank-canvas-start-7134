@@ -998,6 +998,8 @@ const RegistrationDetail = ({ registration: reg, onApprovalChange }: { registrat
     setIsSavingApproval(true);
     try {
       await onApprovalChange(approved);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to update approval status");
     } finally {
       setIsSavingApproval(false);
     }
