@@ -16,6 +16,7 @@ import { Switch } from "@/components/ui/switch";
 import { format, parseISO, differenceInYears, differenceInMonths } from "date-fns";
 import { toast } from "sonner";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { useAuth } from "@/contexts/AuthContext";
 
 const HeadshotThumbnail = ({ headshotPath, size = "sm" }: { headshotPath: string; size?: "sm" | "lg" }) => {
   const [url, setUrl] = useState<string | null>(null);
@@ -70,9 +71,89 @@ const HeadshotThumbnail = ({ headshotPath, size = "sm" }: { headshotPath: string
 };
 
 const EXTENDED_PROGRAMS = ["Rams Program", "Hawk Squad", "Islanders", "Lil Champs Corner"] as const;
+const APPROVAL_REQUEST_TIMEOUT_MS = 8000;
+
+const getStoredAccessToken = () => {
+  if (typeof window === "undefined") return null;
+
+  for (const key of Object.keys(window.localStorage)) {
+    if (!key.startsWith("sb-") || !key.endsWith("-auth-token")) continue;
+
+    try {
+      const parsed = JSON.parse(window.localStorage.getItem(key) ?? "null");
+      const accessToken = parsed?.access_token ?? parsed?.currentSession?.access_token ?? parsed?.session?.access_token;
+
+      if (typeof accessToken === "string" && accessToken.length > 0) {
+        return accessToken;
+      }
+    } catch {
+      // Ignore malformed auth cache entries.
+    }
+  }
+
+  return null;
+};
+
+const getResponseErrorMessage = async (response: Response) => {
+  try {
+    const data = await response.json();
+    if (typeof data?.message === "string") return data.message;
+    if (typeof data?.error === "string") return data.error;
+  } catch {
+    // Ignore JSON parse failures.
+  }
+
+  return `Request failed (${response.status})`;
+};
+
+const updateRegistrationApproval = async ({
+  registrationId,
+  approved,
+  accessToken,
+}: {
+  registrationId: string;
+  approved: boolean;
+  accessToken: string;
+}) => {
+  const controller = new AbortController();
+  const timeoutId = window.setTimeout(() => controller.abort(), APPROVAL_REQUEST_TIMEOUT_MS);
+
+  try {
+    const response = await fetch(
+      `${import.meta.env.VITE_SUPABASE_URL}/rest/v1/youth_registrations?id=eq.${encodeURIComponent(registrationId)}`,
+      {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+          Authorization: `Bearer ${accessToken}`,
+          Prefer: "return=representation",
+        },
+        body: JSON.stringify({ approved_for_attendance: approved }),
+        signal: controller.signal,
+      }
+    );
+
+    if (!response.ok) {
+      throw new Error(await getResponseErrorMessage(response));
+    }
+
+    const [updatedRegistration] = await response.json();
+    return updatedRegistration;
+  } catch (error) {
+    if (error instanceof DOMException && error.name === "AbortError") {
+      throw new Error("Approval update timed out. Please try again.");
+    }
+
+    throw error;
+  } finally {
+    window.clearTimeout(timeoutId);
+  }
+};
 
 const AdminRegistrations = () => {
   const queryClient = useQueryClient();
+  const { session } = useAuth();
   const [searchQuery, setSearchQuery] = useState("");
   const [programFilter, setProgramFilter] = useState<string>("all");
   const [districtFilter, setDistrictFilter] = useState<string>("all");
@@ -524,17 +605,34 @@ const AdminRegistrations = () => {
               <RegistrationDetail
                 registration={selectedRegistration}
                 onApprovalChange={async (approved: boolean) => {
-                  const { error } = await supabase
-                    .from("youth_registrations")
-                    .update({ approved_for_attendance: approved })
-                    .eq("id", selectedRegistration.id);
-                  if (error) {
-                    toast.error("Failed to update approval status");
-                  } else {
-                    toast.success(approved ? "Approved for attendance" : "Attendance approval removed");
-                    setSelectedRegistration({ ...selectedRegistration, approved_for_attendance: approved });
-                    queryClient.invalidateQueries({ queryKey: ["youth-registrations"] });
+                  const accessToken = session?.access_token ?? getStoredAccessToken();
+
+                  if (!accessToken) {
+                    throw new Error("Your session expired. Please sign in again.");
                   }
+
+                  const updatedRegistration = await updateRegistrationApproval({
+                    registrationId: selectedRegistration.id,
+                    approved,
+                    accessToken,
+                  });
+
+                  toast.success(approved ? "Approved for attendance" : "Attendance approval removed");
+                  setSelectedRegistration((current: any) => current ? {
+                    ...current,
+                    approved_for_attendance: updatedRegistration?.approved_for_attendance ?? approved,
+                  } : current);
+                  queryClient.setQueryData(["youth-registrations"], (current: any[] | undefined) =>
+                    current?.map((registration) =>
+                      registration.id === selectedRegistration.id
+                        ? {
+                            ...registration,
+                            approved_for_attendance: updatedRegistration?.approved_for_attendance ?? approved,
+                          }
+                        : registration
+                    )
+                  );
+                  queryClient.invalidateQueries({ queryKey: ["youth-registrations"] });
                 }}
               />
             )}
@@ -900,6 +998,8 @@ const RegistrationDetail = ({ registration: reg, onApprovalChange }: { registrat
     setIsSavingApproval(true);
     try {
       await onApprovalChange(approved);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to update approval status");
     } finally {
       setIsSavingApproval(false);
     }
