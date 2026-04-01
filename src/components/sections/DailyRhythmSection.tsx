@@ -81,14 +81,13 @@ const DailyRhythmSection = ({
 }: DailyRhythmSectionProps) => {
   const showSenior = programFilter === "all" || programFilter === "senior";
   const showJunior = programFilter === "all" || programFilter === "junior";
+  const sectionTitle = programFilter === "junior" ? "Tuesday Rhythm" : "Daily Rhythm";
   return <section className="py-20 md:py-28 bg-background">
       <div className="container">
         <div className="max-w-4xl mx-auto">
           {/* Section header */}
           <div className="text-left mb-12">
-            <h2 className="text-3xl md:text-4xl lg:text-5xl font-black text-foreground mb-4">Daily Rhythm
-
-          </h2>
+            <h2 className="text-3xl md:text-4xl lg:text-5xl font-black text-foreground mb-4">{sectionTitle}</h2>
           </div>
 
           {/* Senior Boxing Schedule */}
