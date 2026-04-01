@@ -86,7 +86,7 @@ const DailyRhythmSection = ({
         <div className="max-w-4xl mx-auto">
           {/* Section header */}
           <div className="text-left mb-12">
-            <h2 className="text-3xl md:text-4xl lg:text-5xl font-black text-foreground mb-4">Tuesday Rhythm
+            <h2 className="text-3xl md:text-4xl lg:text-5xl font-black text-foreground mb-4">Daily Rhythm
 
           </h2>
           </div>
