@@ -80,17 +80,27 @@ Deno.serve(async (req) => {
       });
     }
 
-    const { data: updatedRegistration, error: updateError } = await adminClient
-      .from("youth_registrations")
-      .update({ approved_for_attendance: approved, updated_at: new Date().toISOString() })
-      .eq("id", registrationId)
-      .select("id, approved_for_attendance")
-      .maybeSingle();
+    const { data: updatedRegistration, error: updateError } = await callerClient.rpc(
+      "admin_set_registration_approval",
+      {
+        _registration_id: registrationId,
+        _approved: approved,
+      },
+    );
 
     if (updateError) {
       console.error("Approval update failed:", updateError);
+
+      const status = updateError.message === "Registration not found"
+        ? 404
+        : updateError.message === "Not authenticated"
+          ? 401
+          : updateError.message === "Not authorized"
+            ? 403
+            : 500;
+
       return new Response(JSON.stringify({ error: "Failed to update approval" }), {
-        status: 500,
+        status,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
@@ -102,7 +112,12 @@ Deno.serve(async (req) => {
       });
     }
 
-    return new Response(JSON.stringify({ registration: updatedRegistration }), {
+    return new Response(JSON.stringify({
+      registration: {
+        id: updatedRegistration.id,
+        approved_for_attendance: updatedRegistration.approved_for_attendance,
+      },
+    }), {
       status: 200,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
