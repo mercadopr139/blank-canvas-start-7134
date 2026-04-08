@@ -51,6 +51,7 @@ import AdminSignals from "./pages/admin/AdminSignals";
 import AdminSignalsArchive from "./pages/admin/AdminSignalsArchive";
 import AdminSignalsTrash from "./pages/admin/AdminSignalsTrash";
 import InvoiceApproval from "./pages/InvoiceApproval";
+import TransportLogin from "./pages/TransportLogin";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -80,6 +81,7 @@ const App = () => (
             <Route path="/check-in" element={<CheckIn />} />
             <Route path="/check-in/lil-champs-corner" element={<LilChampsCheckIn />} />
             <Route path="/approvals/invoice/:token" element={<InvoiceApproval />} />
+            <Route path="/transport" element={<TransportLogin />} />
             
             {/* Admin Routes */}
             <Route path="/admin" element={<AdminIndex />} />
