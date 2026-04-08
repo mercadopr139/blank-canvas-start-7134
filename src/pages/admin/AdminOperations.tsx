@@ -59,8 +59,7 @@ const baseTiles: OperationsTile[] = [
     title: "Transportation",
     description: "Driver & Route Management",
     icon: Bus,
-    href: "/transport/admin/drivers",
-    external: true,
+    href: "/admin/operations/transportation",
   },
 ];
 
