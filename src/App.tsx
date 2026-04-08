@@ -51,6 +51,7 @@ import AdminSignals from "./pages/admin/AdminSignals";
 import AdminSignalsArchive from "./pages/admin/AdminSignalsArchive";
 import AdminSignalsTrash from "./pages/admin/AdminSignalsTrash";
 import InvoiceApproval from "./pages/InvoiceApproval";
+import TransportLogin from "./pages/TransportLogin";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();

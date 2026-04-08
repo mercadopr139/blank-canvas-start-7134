@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
-import { supabase } from "@/integrations/supabase/client";
+
 import { useToast } from "@/hooks/use-toast";
 import nlaLogo from "@/assets/nla-logo-white.png";
 import { Loader2, Bus, ChevronDown, AlertCircle, Delete } from "lucide-react";
