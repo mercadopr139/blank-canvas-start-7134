@@ -1,5 +1,5 @@
 import { useNavigate } from "react-router-dom";
-import { Users, BarChart3, ClipboardList, LucideIcon, CalendarCheck, FileBarChart, Settings2, Star, LogIn } from "lucide-react";
+import { Users, BarChart3, ClipboardList, LucideIcon, CalendarCheck, FileBarChart, Settings2, Star, LogIn, Bus } from "lucide-react";
 import AdminSectionLayout, { SectionCard } from "@/components/admin/AdminSectionLayout";
 import { Button } from "@/components/ui/button";
 
@@ -54,6 +54,13 @@ const baseTiles: OperationsTile[] = [
     description: "Attendance for Lil Champ's Corner",
     icon: Star,
     href: "/admin/operations/lil-champs-attendance",
+  },
+  {
+    title: "Transportation",
+    description: "Driver & Route Management",
+    icon: Bus,
+    href: "/transport/admin/drivers",
+    external: true,
   },
 ];
 
