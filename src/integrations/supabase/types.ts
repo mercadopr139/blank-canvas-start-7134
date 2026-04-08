@@ -1312,6 +1312,7 @@ export type Database = {
         Row: {
           address: string | null
           created_at: string
+          date_of_birth: string | null
           emergency_contact_name: string | null
           emergency_contact_phone: string | null
           first_name: string
@@ -1325,6 +1326,7 @@ export type Database = {
         Insert: {
           address?: string | null
           created_at?: string
+          date_of_birth?: string | null
           emergency_contact_name?: string | null
           emergency_contact_phone?: string | null
           first_name: string
@@ -1338,6 +1340,7 @@ export type Database = {
         Update: {
           address?: string | null
           created_at?: string
+          date_of_birth?: string | null
           emergency_contact_name?: string | null
           emergency_contact_phone?: string | null
           first_name?: string
