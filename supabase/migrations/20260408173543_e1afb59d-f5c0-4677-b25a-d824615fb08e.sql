@@ -1,0 +1,1 @@
+ALTER TABLE public.youth_profiles ADD COLUMN date_of_birth date;
