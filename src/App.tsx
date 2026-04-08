@@ -81,6 +81,7 @@ const App = () => (
             <Route path="/check-in" element={<CheckIn />} />
             <Route path="/check-in/lil-champs-corner" element={<LilChampsCheckIn />} />
             <Route path="/approvals/invoice/:token" element={<InvoiceApproval />} />
+            <Route path="/transport" element={<TransportLogin />} />
             
             {/* Admin Routes */}
             <Route path="/admin" element={<AdminIndex />} />
