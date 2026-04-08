@@ -342,6 +342,33 @@ export type Database = {
           },
         ]
       }
+      drivers: {
+        Row: {
+          created_at: string
+          id: string
+          name: string
+          phone: string | null
+          pin_hash: string
+          status: Database["public"]["Enums"]["driver_status"]
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          name: string
+          phone?: string | null
+          pin_hash: string
+          status?: Database["public"]["Enums"]["driver_status"]
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          name?: string
+          phone?: string | null
+          pin_hash?: string
+          status?: Database["public"]["Enums"]["driver_status"]
+        }
+        Relationships: []
+      }
       engagements: {
         Row: {
           created_at: string
@@ -388,6 +415,55 @@ export type Database = {
             columns: ["supporter_id"]
             isOneToOne: false
             referencedRelation: "supporters"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      incidents: {
+        Row: {
+          description: string
+          driver_id: string | null
+          id: string
+          recorded_at: string
+          run_id: string | null
+          youth_id: string | null
+        }
+        Insert: {
+          description: string
+          driver_id?: string | null
+          id?: string
+          recorded_at?: string
+          run_id?: string | null
+          youth_id?: string | null
+        }
+        Update: {
+          description?: string
+          driver_id?: string | null
+          id?: string
+          recorded_at?: string
+          run_id?: string | null
+          youth_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "incidents_driver_id_fkey"
+            columns: ["driver_id"]
+            isOneToOne: false
+            referencedRelation: "drivers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "incidents_run_id_fkey"
+            columns: ["run_id"]
+            isOneToOne: false
+            referencedRelation: "runs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "incidents_youth_id_fkey"
+            columns: ["youth_id"]
+            isOneToOne: false
+            referencedRelation: "youth_profiles"
             referencedColumns: ["id"]
           },
         ]
@@ -693,6 +769,80 @@ export type Database = {
             columns: ["supporter_id"]
             isOneToOne: false
             referencedRelation: "supporters"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      routes: {
+        Row: {
+          assigned_driver_id: string | null
+          created_at: string
+          id: string
+          name: Database["public"]["Enums"]["route_name"]
+        }
+        Insert: {
+          assigned_driver_id?: string | null
+          created_at?: string
+          id?: string
+          name: Database["public"]["Enums"]["route_name"]
+        }
+        Update: {
+          assigned_driver_id?: string | null
+          created_at?: string
+          id?: string
+          name?: Database["public"]["Enums"]["route_name"]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "routes_assigned_driver_id_fkey"
+            columns: ["assigned_driver_id"]
+            isOneToOne: false
+            referencedRelation: "drivers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      runs: {
+        Row: {
+          closed_at: string | null
+          driver_id: string
+          id: string
+          route_id: string
+          run_type: Database["public"]["Enums"]["run_type"]
+          started_at: string
+          status: Database["public"]["Enums"]["run_status"]
+        }
+        Insert: {
+          closed_at?: string | null
+          driver_id: string
+          id?: string
+          route_id: string
+          run_type: Database["public"]["Enums"]["run_type"]
+          started_at?: string
+          status?: Database["public"]["Enums"]["run_status"]
+        }
+        Update: {
+          closed_at?: string | null
+          driver_id?: string
+          id?: string
+          route_id?: string
+          run_type?: Database["public"]["Enums"]["run_type"]
+          started_at?: string
+          status?: Database["public"]["Enums"]["run_status"]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "runs_driver_id_fkey"
+            columns: ["driver_id"]
+            isOneToOne: false
+            referencedRelation: "drivers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "runs_route_id_fkey"
+            columns: ["route_id"]
+            isOneToOne: false
+            referencedRelation: "routes"
             referencedColumns: ["id"]
           },
         ]
@@ -1008,6 +1158,45 @@ export type Database = {
           },
         ]
       }
+      transport_attendance: {
+        Row: {
+          id: string
+          recorded_at: string
+          run_id: string
+          status: Database["public"]["Enums"]["transport_attendance_status"]
+          youth_id: string
+        }
+        Insert: {
+          id?: string
+          recorded_at?: string
+          run_id: string
+          status?: Database["public"]["Enums"]["transport_attendance_status"]
+          youth_id: string
+        }
+        Update: {
+          id?: string
+          recorded_at?: string
+          run_id?: string
+          status?: Database["public"]["Enums"]["transport_attendance_status"]
+          youth_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "transport_attendance_run_id_fkey"
+            columns: ["run_id"]
+            isOneToOne: false
+            referencedRelation: "runs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "transport_attendance_youth_id_fkey"
+            columns: ["youth_id"]
+            isOneToOne: false
+            referencedRelation: "youth_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       upcoming_events: {
         Row: {
           created_at: string
@@ -1116,6 +1305,48 @@ export type Database = {
           title?: string
           updated_at?: string
           user_id?: string
+        }
+        Relationships: []
+      }
+      youth_profiles: {
+        Row: {
+          address: string | null
+          created_at: string
+          emergency_contact_name: string | null
+          emergency_contact_phone: string | null
+          first_name: string
+          id: string
+          last_name: string
+          notes: string | null
+          photo_url: string | null
+          pickup_zone: Database["public"]["Enums"]["pickup_zone"]
+          status: Database["public"]["Enums"]["youth_transport_status"]
+        }
+        Insert: {
+          address?: string | null
+          created_at?: string
+          emergency_contact_name?: string | null
+          emergency_contact_phone?: string | null
+          first_name: string
+          id?: string
+          last_name: string
+          notes?: string | null
+          photo_url?: string | null
+          pickup_zone: Database["public"]["Enums"]["pickup_zone"]
+          status?: Database["public"]["Enums"]["youth_transport_status"]
+        }
+        Update: {
+          address?: string | null
+          created_at?: string
+          emergency_contact_name?: string | null
+          emergency_contact_phone?: string | null
+          first_name?: string
+          id?: string
+          last_name?: string
+          notes?: string | null
+          photo_url?: string | null
+          pickup_zone?: Database["public"]["Enums"]["pickup_zone"]
+          status?: Database["public"]["Enums"]["youth_transport_status"]
         }
         Relationships: []
       }
@@ -1386,6 +1617,7 @@ export type Database = {
         | "Other"
         | "Venmo"
         | "Square"
+      driver_status: "active" | "inactive"
       engagement_outcome: "Positive" | "Neutral" | "No Response"
       engagement_type:
         | "Call"
@@ -1411,6 +1643,7 @@ export type Database = {
         | "Greater than $80,001"
       invoice_status: "draft" | "sent" | "paid"
       lunch_status: "Yes" | "No" | "Not Applicable"
+      pickup_zone: "Woodbine" | "Wildwood"
       priority_layer: "Core" | "Bonus"
       rate_type:
         | "per_day"
@@ -1421,6 +1654,9 @@ export type Database = {
         | "other_service"
       receipt_status: "Pending" | "Sent" | "Not Needed"
       revenue_type: "Donation" | "Fundraising" | "Fee for Service" | "Re-Grant"
+      route_name: "Woodbine" | "Wildwood" | "Both"
+      run_status: "in_progress" | "completed"
+      run_type: "pickup" | "dropoff"
       school_district:
         | "Cape May City"
         | "Lower Cape May Regional"
@@ -1457,6 +1693,8 @@ export type Database = {
         | "Renewal"
         | "Report Deadline"
         | "Follow-Up"
+      transport_attendance_status: "present" | "no_show"
+      youth_transport_status: "active" | "inactive"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -1603,6 +1841,7 @@ export const Constants = {
       child_sex: ["Male", "Female"],
       deposit_status: ["Draft", "Deposited"],
       donation_method: ["Check", "PayPal", "Cash", "Other", "Venmo", "Square"],
+      driver_status: ["active", "inactive"],
       engagement_outcome: ["Positive", "Neutral", "No Response"],
       engagement_type: [
         "Call",
@@ -1630,6 +1869,7 @@ export const Constants = {
       ],
       invoice_status: ["draft", "sent", "paid"],
       lunch_status: ["Yes", "No", "Not Applicable"],
+      pickup_zone: ["Woodbine", "Wildwood"],
       priority_layer: ["Core", "Bonus"],
       rate_type: [
         "per_day",
@@ -1641,6 +1881,9 @@ export const Constants = {
       ],
       receipt_status: ["Pending", "Sent", "Not Needed"],
       revenue_type: ["Donation", "Fundraising", "Fee for Service", "Re-Grant"],
+      route_name: ["Woodbine", "Wildwood", "Both"],
+      run_status: ["in_progress", "completed"],
+      run_type: ["pickup", "dropoff"],
       school_district: [
         "Cape May City",
         "Lower Cape May Regional",
@@ -1680,6 +1923,8 @@ export const Constants = {
         "Report Deadline",
         "Follow-Up",
       ],
+      transport_attendance_status: ["present", "no_show"],
+      youth_transport_status: ["active", "inactive"],
     },
   },
 } as const
