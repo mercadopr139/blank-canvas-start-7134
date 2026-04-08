@@ -111,7 +111,8 @@ export default function TransportYouth() {
   const getPhotoUrl = (url: string | null) => {
     if (!url) return null;
     if (url.startsWith("http")) return url;
-    return `${import.meta.env.VITE_SUPABASE_URL}/storage/v1/object/public/youth-photos/${url}`;
+    // Photos may be in youth-photos or registration-signatures bucket
+    return `${import.meta.env.VITE_SUPABASE_URL}/storage/v1/object/public/registration-signatures/${url}`;
   };
 
   return (
