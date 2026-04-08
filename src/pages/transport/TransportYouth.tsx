@@ -23,6 +23,7 @@ interface YouthProfile {
   notes: string | null;
   status: string;
   created_at: string;
+  date_of_birth: string | null;
 }
 
 const emptyForm = {
@@ -145,7 +146,12 @@ export default function TransportYouth() {
                 )}
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-white font-medium truncate">{y.first_name} {y.last_name}</p>
+                <p className="text-white font-medium truncate">
+                  {y.first_name} {y.last_name}
+                  {y.date_of_birth && (
+                    <span className="text-white/40 text-sm ml-1">· {(() => { const b = new Date(y.date_of_birth); const t = new Date(); let a = t.getFullYear() - b.getFullYear(); if (t.getMonth() < b.getMonth() || (t.getMonth() === b.getMonth() && t.getDate() < b.getDate())) a--; return a; })()}y</span>
+                  )}
+                </p>
                 <p className="text-white/40 text-sm flex items-center gap-1 mt-0.5"><MapPin className="w-3 h-3" /> {y.pickup_zone}</p>
                 <div className="flex items-center gap-2 mt-1.5">
                   <Badge className={y.status === "active" ? "bg-green-500/20 text-green-400 border-green-500/30 text-[10px]" : "bg-red-500/20 text-red-400 border-red-500/30 text-[10px]"}>{y.status}</Badge>

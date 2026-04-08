@@ -15,6 +15,10 @@ interface RegistrationResult {
   child_last_name: string;
   child_headshot_url: string | null;
   child_primary_address: string;
+  child_date_of_birth: string;
+  parent_first_name: string;
+  parent_last_name: string;
+  parent_phone: string;
 }
 
 interface AddYouthDialogProps {
@@ -32,6 +36,7 @@ const emptyForm = {
   emergency_contact_phone: "",
   notes: "",
   status: "active",
+  date_of_birth: "",
 };
 
 export default function AddYouthDialog({ open, onOpenChange, onSaved }: AddYouthDialogProps) {
@@ -43,10 +48,10 @@ export default function AddYouthDialog({ open, onOpenChange, onSaved }: AddYouth
   const [photoFile, setPhotoFile] = useState<File | null>(null);
   const [prefillPhotoUrl, setPrefillPhotoUrl] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [fromRegistration, setFromRegistration] = useState(false);
   const { toast } = useToast();
   const debounceRef = useRef<ReturnType<typeof setTimeout>>();
 
-  // Reset state when dialog opens
   useEffect(() => {
     if (open) {
       setStep("search");
@@ -55,6 +60,7 @@ export default function AddYouthDialog({ open, onOpenChange, onSaved }: AddYouth
       setForm(emptyForm);
       setPhotoFile(null);
       setPrefillPhotoUrl(null);
+      setFromRegistration(false);
     }
   }, [open]);
 
@@ -69,7 +75,7 @@ export default function AddYouthDialog({ open, onOpenChange, onSaved }: AddYouth
     debounceRef.current = setTimeout(async () => {
       const { data } = await supabase
         .from("youth_registrations")
-        .select("id, child_first_name, child_last_name, child_headshot_url, child_primary_address")
+        .select("id, child_first_name, child_last_name, child_headshot_url, child_primary_address, child_date_of_birth, parent_first_name, parent_last_name, parent_phone")
         .or(`child_first_name.ilike.%${query.trim()}%,child_last_name.ilike.%${query.trim()}%`)
         .order("child_last_name")
         .limit(10);
@@ -78,20 +84,36 @@ export default function AddYouthDialog({ open, onOpenChange, onSaved }: AddYouth
     }, 300);
   };
 
+  const calcAge = (dob: string) => {
+    const birth = new Date(dob);
+    const today = new Date();
+    let age = today.getFullYear() - birth.getFullYear();
+    const m = today.getMonth() - birth.getMonth();
+    if (m < 0 || (m === 0 && today.getDate() < birth.getDate())) age--;
+    return age;
+  };
+
   const selectRegistration = (r: RegistrationResult) => {
     setForm({
-      ...emptyForm,
       first_name: r.child_first_name,
       last_name: r.child_last_name,
       address: r.child_primary_address || "",
+      pickup_zone: "Woodbine",
+      emergency_contact_name: `${r.parent_first_name} ${r.parent_last_name}`.trim(),
+      emergency_contact_phone: r.parent_phone || "",
+      notes: "",
+      status: "active",
+      date_of_birth: r.child_date_of_birth || "",
     });
     setPrefillPhotoUrl(r.child_headshot_url);
+    setFromRegistration(true);
     setStep("form");
   };
 
   const startManualEntry = () => {
     setForm(emptyForm);
     setPrefillPhotoUrl(null);
+    setFromRegistration(false);
     setStep("form");
   };
 
@@ -115,7 +137,7 @@ export default function AddYouthDialog({ open, onOpenChange, onSaved }: AddYouth
         photo_url = urlData.publicUrl;
       }
 
-      const record = {
+      const record: Record<string, unknown> = {
         first_name: form.first_name.trim(),
         last_name: form.last_name.trim(),
         address: form.address.trim() || null,
@@ -127,7 +149,11 @@ export default function AddYouthDialog({ open, onOpenChange, onSaved }: AddYouth
         photo_url,
       };
 
-      const { error } = await supabase.from("youth_profiles").insert(record);
+      if (form.date_of_birth) {
+        record.date_of_birth = form.date_of_birth;
+      }
+
+      const { error } = await supabase.from("youth_profiles").insert(record as any);
       if (error) throw error;
       toast({ title: "Profile added" });
       onOpenChange(false);
@@ -138,6 +164,9 @@ export default function AddYouthDialog({ open, onOpenChange, onSaved }: AddYouth
       setSaving(false);
     }
   };
+
+  const readOnlyClass = "bg-white/5 border-white/10 text-white/60 cursor-not-allowed";
+  const editableClass = "bg-white/5 border-white/10 text-white";
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -186,7 +215,12 @@ export default function AddYouthDialog({ open, onOpenChange, onSaved }: AddYouth
                       )}
                     </div>
                     <div className="min-w-0">
-                      <p className="text-white font-medium text-sm truncate">{r.child_first_name} {r.child_last_name}</p>
+                      <p className="text-white font-medium text-sm truncate">
+                        {r.child_first_name} {r.child_last_name}
+                        {r.child_date_of_birth && (
+                          <span className="text-white/40 ml-1">· Age {calcAge(r.child_date_of_birth)}</span>
+                        )}
+                      </p>
                       {r.child_primary_address && (
                         <p className="text-white/40 text-xs truncate">{r.child_primary_address}</p>
                       )}
@@ -210,35 +244,50 @@ export default function AddYouthDialog({ open, onOpenChange, onSaved }: AddYouth
           </div>
         ) : (
           <div className="space-y-4 mt-2">
+            {fromRegistration && (
+              <p className="text-white/40 text-xs bg-blue-500/10 border border-blue-500/20 rounded-lg px-3 py-2">
+                Fields pre-filled from registration. Only Pickup Zone needs to be selected.
+              </p>
+            )}
+
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-2">
                 <Label className="text-white/70">First Name *</Label>
-                <Input value={form.first_name} onChange={(e) => setForm({ ...form, first_name: e.target.value })} className="bg-white/5 border-white/10 text-white" />
+                <Input value={form.first_name} onChange={(e) => !fromRegistration && setForm({ ...form, first_name: e.target.value })} readOnly={fromRegistration} className={fromRegistration ? readOnlyClass : editableClass} />
               </div>
               <div className="space-y-2">
                 <Label className="text-white/70">Last Name *</Label>
-                <Input value={form.last_name} onChange={(e) => setForm({ ...form, last_name: e.target.value })} className="bg-white/5 border-white/10 text-white" />
+                <Input value={form.last_name} onChange={(e) => !fromRegistration && setForm({ ...form, last_name: e.target.value })} readOnly={fromRegistration} className={fromRegistration ? readOnlyClass : editableClass} />
               </div>
             </div>
+
+            {form.date_of_birth && (
+              <div className="space-y-2">
+                <Label className="text-white/70">Age</Label>
+                <Input value={`${calcAge(form.date_of_birth)} years old (DOB: ${form.date_of_birth})`} readOnly className={readOnlyClass} />
+              </div>
+            )}
 
             <div className="space-y-2">
               <Label className="text-white/70">Photo</Label>
               {prefillPhotoUrl && !photoFile && (
                 <div className="flex items-center gap-2 mb-1">
                   <img src={prefillPhotoUrl} alt="Current" className="w-10 h-10 rounded-lg object-cover" />
-                  <span className="text-white/40 text-xs">From registration (upload to replace)</span>
+                  <span className="text-white/40 text-xs">From registration</span>
                 </div>
               )}
-              <label className="flex items-center gap-2 bg-white/5 border border-white/10 rounded-lg px-3 py-2.5 cursor-pointer hover:bg-white/10 transition-colors">
-                <Upload className="w-4 h-4 text-white/40" />
-                <span className="text-white/50 text-sm truncate">{photoFile ? photoFile.name : "Choose photo..."}</span>
-                <input type="file" accept="image/*" className="hidden" onChange={(e) => setPhotoFile(e.target.files?.[0] || null)} />
-              </label>
+              {!fromRegistration && (
+                <label className="flex items-center gap-2 bg-white/5 border border-white/10 rounded-lg px-3 py-2.5 cursor-pointer hover:bg-white/10 transition-colors">
+                  <Upload className="w-4 h-4 text-white/40" />
+                  <span className="text-white/50 text-sm truncate">{photoFile ? photoFile.name : "Choose photo..."}</span>
+                  <input type="file" accept="image/*" className="hidden" onChange={(e) => setPhotoFile(e.target.files?.[0] || null)} />
+                </label>
+              )}
             </div>
 
             <div className="space-y-2">
               <Label className="text-white/70">Address</Label>
-              <Input value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} className="bg-white/5 border-white/10 text-white" placeholder="Street address" />
+              <Input value={form.address} onChange={(e) => !fromRegistration && setForm({ ...form, address: e.target.value })} readOnly={fromRegistration} className={fromRegistration ? readOnlyClass : editableClass} placeholder="Street address" />
             </div>
 
             <div className="space-y-2">
@@ -255,28 +304,17 @@ export default function AddYouthDialog({ open, onOpenChange, onSaved }: AddYouth
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-2">
                 <Label className="text-white/70">Emergency Contact</Label>
-                <Input value={form.emergency_contact_name} onChange={(e) => setForm({ ...form, emergency_contact_name: e.target.value })} className="bg-white/5 border-white/10 text-white" placeholder="Contact name" />
+                <Input value={form.emergency_contact_name} onChange={(e) => !fromRegistration && setForm({ ...form, emergency_contact_name: e.target.value })} readOnly={fromRegistration} className={fromRegistration ? readOnlyClass : editableClass} placeholder="Contact name" />
               </div>
               <div className="space-y-2">
                 <Label className="text-white/70">Contact Phone</Label>
-                <Input value={form.emergency_contact_phone} onChange={(e) => setForm({ ...form, emergency_contact_phone: e.target.value })} className="bg-white/5 border-white/10 text-white" placeholder="(555) 123-4567" />
+                <Input value={form.emergency_contact_phone} onChange={(e) => !fromRegistration && setForm({ ...form, emergency_contact_phone: e.target.value })} readOnly={fromRegistration} className={fromRegistration ? readOnlyClass : editableClass} placeholder="(555) 123-4567" />
               </div>
             </div>
 
             <div className="space-y-2">
               <Label className="text-white/70">Notes</Label>
               <Textarea value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} className="bg-white/5 border-white/10 text-white resize-none" rows={2} placeholder="Allergies, special needs, etc." />
-            </div>
-
-            <div className="space-y-2">
-              <Label className="text-white/70">Status</Label>
-              <Select value={form.status} onValueChange={(v) => setForm({ ...form, status: v })}>
-                <SelectTrigger className="bg-white/5 border-white/10 text-white"><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="active">Active</SelectItem>
-                  <SelectItem value="inactive">Inactive</SelectItem>
-                </SelectContent>
-              </Select>
             </div>
 
             <Button onClick={handleSave} disabled={saving} className="w-full bg-[#3B82F6] hover:bg-[#2563EB] text-white">
