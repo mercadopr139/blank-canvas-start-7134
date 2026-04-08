@@ -16,7 +16,7 @@ export default function TransportAdminLayout() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-[#0A1628]">
+      <div className="min-h-screen flex items-center justify-center bg-black">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white" />
       </div>
     );
@@ -32,7 +32,7 @@ export default function TransportAdminLayout() {
   }
 
   return (
-    <div className="min-h-screen bg-[#0A1628] flex flex-col md:flex-row">
+    <div className="min-h-screen bg-black flex flex-col md:flex-row">
       {/* Desktop Sidebar */}
       <aside className="hidden md:flex flex-col w-56 border-r border-white/10 p-4 gap-2 shrink-0">
         <div className="flex items-center gap-2 mb-6 px-2">
@@ -77,7 +77,7 @@ export default function TransportAdminLayout() {
       </main>
 
       {/* Mobile Bottom Nav */}
-      <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-[#0A1628] border-t border-white/10 flex z-50">
+      <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-black border-t border-white/10 flex z-50">
         {navItems.map((item) => {
           const isActive = location.pathname.startsWith(item.to);
           return (
