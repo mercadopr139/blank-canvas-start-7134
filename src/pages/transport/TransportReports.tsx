@@ -57,6 +57,28 @@ export default function TransportReports() {
   const [attendance, setAttendance] = useState<AttendanceRow[]>([]);
   const [incidents, setIncidents] = useState<IncidentRow[]>([]);
   const [loading, setLoading] = useState(true);
+  const [deleting, setDeleting] = useState<string | null>(null);
+  const { toast } = useToast();
+
+  const handleDeleteRun = async (id: string) => {
+    if (!confirm("Delete this run and its attendance records?")) return;
+    setDeleting(id);
+    await supabase.from("transport_attendance").delete().eq("run_id", id);
+    await supabase.from("incidents").delete().eq("run_id", id);
+    await supabase.from("runs").delete().eq("id", id);
+    toast({ title: "Run deleted" });
+    setDeleting(null);
+    fetchData();
+  };
+
+  const handleDeleteIncident = async (id: string) => {
+    if (!confirm("Delete this incident?")) return;
+    setDeleting(id);
+    await supabase.from("incidents").delete().eq("id", id);
+    toast({ title: "Incident deleted" });
+    setDeleting(null);
+    fetchData();
+  };
 
   const fetchData = async () => {
     setLoading(true);
