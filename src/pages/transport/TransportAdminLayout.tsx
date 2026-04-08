@@ -1,6 +1,6 @@
 import { Outlet, NavLink, useLocation, Navigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
-import { Users, Baby, Radio, FileBarChart, LogOut, Bus } from "lucide-react";
+import { Users, Baby, Radio, FileBarChart, LogOut } from "lucide-react";
 import nlaLogo from "@/assets/nla-logo-white.png";
 
 const navItems = [

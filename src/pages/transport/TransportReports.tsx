@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { FileBarChart, Download, Calendar, AlertTriangle } from "lucide-react";
-import { format, startOfWeek, endOfWeek, subDays } from "date-fns";
+import { format, subDays } from "date-fns";
 
 interface RunRow {
   id: string;
