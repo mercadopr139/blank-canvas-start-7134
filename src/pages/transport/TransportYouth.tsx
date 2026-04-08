@@ -10,7 +10,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useToast } from "@/hooks/use-toast";
 import { Plus, Pencil, Baby, MapPin, Search, Upload, Trash2 } from "lucide-react";
 import AddYouthDialog from "@/components/transport/AddYouthDialog";
-import AddYouthDialog from "@/components/transport/AddYouthDialog";
 
 interface YouthProfile {
   id: string;
