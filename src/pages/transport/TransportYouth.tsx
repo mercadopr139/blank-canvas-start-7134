@@ -8,7 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Pencil, Baby, MapPin, Search, Upload } from "lucide-react";
+import { Plus, Pencil, Baby, MapPin, Search, Upload, Trash2 } from "lucide-react";
 import AddYouthDialog from "@/components/transport/AddYouthDialog";
 
 interface YouthProfile {
@@ -47,6 +47,8 @@ export default function TransportYouth() {
   const [form, setForm] = useState(emptyForm);
   const [photoFile, setPhotoFile] = useState<File | null>(null);
   const [saving, setSaving] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<YouthProfile | null>(null);
+  const [deleting, setDeleting] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => { fetchYouth(); }, []);
@@ -157,9 +159,14 @@ export default function TransportYouth() {
                   <Badge className={y.status === "active" ? "bg-green-500/20 text-green-400 border-green-500/30 text-[10px]" : "bg-red-500/20 text-red-400 border-red-500/30 text-[10px]"}>{y.status}</Badge>
                 </div>
               </div>
-              <Button size="icon" variant="ghost" onClick={() => openEdit(y)} className="text-white/40 hover:text-white hover:bg-white/10 shrink-0">
-                <Pencil className="w-4 h-4" />
-              </Button>
+              <div className="flex flex-col gap-1 shrink-0">
+                <Button size="icon" variant="ghost" onClick={() => openEdit(y)} className="text-white/40 hover:text-white hover:bg-white/10 h-8 w-8">
+                  <Pencil className="w-4 h-4" />
+                </Button>
+                <Button size="icon" variant="ghost" onClick={() => setDeleteTarget(y)} className="text-white/40 hover:text-red-400 hover:bg-red-500/10 h-8 w-8">
+                  <Trash2 className="w-4 h-4" />
+                </Button>
+              </div>
             </div>
           ))}
         </div>
@@ -224,6 +231,42 @@ export default function TransportYouth() {
             </div>
             <Button onClick={handleEditSave} disabled={saving} className="w-full bg-[#3B82F6] hover:bg-[#2563EB] text-white">
               {saving ? "Saving..." : "Update Profile"}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={!!deleteTarget} onOpenChange={(open) => !open && setDeleteTarget(null)}>
+        <DialogContent className="bg-[#111827] border-white/10 text-white max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="text-red-400">Delete Youth Profile</DialogTitle>
+          </DialogHeader>
+          <p className="text-white/60 text-sm">
+            Are you sure you want to permanently delete <strong className="text-white">{deleteTarget?.first_name} {deleteTarget?.last_name}</strong>? This action cannot be undone.
+          </p>
+          <div className="flex gap-3 mt-2">
+            <Button variant="outline" onClick={() => setDeleteTarget(null)} className="flex-1 border-white/10 text-white/70 hover:bg-white/5">
+              Cancel
+            </Button>
+            <Button
+              onClick={async () => {
+                if (!deleteTarget) return;
+                setDeleting(true);
+                const { error } = await supabase.from("youth_profiles").delete().eq("id", deleteTarget.id);
+                setDeleting(false);
+                if (error) {
+                  toast({ title: "Failed to delete profile", variant: "destructive" });
+                } else {
+                  toast({ title: "Profile deleted" });
+                  setDeleteTarget(null);
+                  fetchYouth();
+                }
+              }}
+              disabled={deleting}
+              className="flex-1 bg-red-600 hover:bg-red-700 text-white"
+            >
+              {deleting ? "Deleting..." : "Delete"}
             </Button>
           </div>
         </DialogContent>
