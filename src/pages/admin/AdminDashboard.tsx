@@ -3,7 +3,7 @@ import nlaLogoWhite from "@/assets/nla-logo-white.png";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Settings, LogOut, Briefcase, TrendingUp, DollarSign, ArrowLeft, Signal, Bus } from "lucide-react";
+import { Settings, LogOut, Briefcase, TrendingUp, DollarSign, ArrowLeft, Signal } from "lucide-react";
 import UpcomingEventsWidget from "@/components/admin/UpcomingEventsWidget";
 import InviteAdminModal from "@/components/admin/InviteAdminModal";
 
@@ -43,15 +43,6 @@ const AdminDashboard = () => {
     borderColor: "border-sky-300",
     linkColor: "text-sky-300",
     href: "/admin/finance"
-  },
-  {
-    title: "Transportation",
-    description: "Driver & Route Management",
-    icon: Bus,
-    color: "bg-blue-500/10 text-blue-500",
-    borderColor: "border-blue-500",
-    linkColor: "text-blue-500",
-    href: "/transport/admin/drivers"
   }];
 
 
