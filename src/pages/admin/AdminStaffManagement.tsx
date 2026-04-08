@@ -82,38 +82,36 @@ export default function AdminStaffManagement() {
     }
     setSaving(true);
     try {
-      const tempPassword = crypto.randomUUID().slice(0, 12) + "Aa1!";
-      const session = await supabase.auth.getSession();
-      const token = session.data.session?.access_token;
-
-      const res = await supabase.functions.invoke("invite-admin", {
-        body: { email: form.email.toLowerCase().trim(), password: tempPassword },
+      const res = await supabase.functions.invoke("invite-staff-member", {
+        body: {
+          email: form.email.toLowerCase().trim(),
+          full_name: form.full_name.trim(),
+          job_title: form.job_title.trim(),
+        },
       });
 
-      if (res.error || res.data?.error) {
-        toast({ title: res.data?.error || "Failed to create account", variant: "destructive" });
+      if (res.error) {
+        toast({ title: "Failed to send invite", variant: "destructive" });
         setSaving(false);
         return;
       }
 
-      const userId = res.data.user_id;
+      if (res.data?.already_exists) {
+        toast({ title: "This email already has an account. You can manage their permissions directly." });
+        setAddOpen(false);
+        setForm({ full_name: "", email: "", job_title: "" });
+        fetchStaff();
+        setSaving(false);
+        return;
+      }
 
-      await supabase.from("staff_profiles").insert({
-        user_id: userId,
-        full_name: form.full_name.trim(),
-        email: form.email.toLowerCase().trim(),
-        job_title: form.job_title.trim(),
-      });
+      if (res.data?.error) {
+        toast({ title: res.data.error, variant: "destructive" });
+        setSaving(false);
+        return;
+      }
 
-      // Initialize permissions
-      const inserts = PERMISSION_KEYS.map((key) => ({
-        user_id: userId,
-        permission_key: key,
-        granted: false,
-      }));
-      await supabase.from("staff_permissions").insert(inserts);
-
-      toast({ title: "Staff member added successfully" });
+      toast({ title: res.data?.message || "Staff member added successfully" });
       setAddOpen(false);
       setForm({ full_name: "", email: "", job_title: "" });
       fetchStaff();
