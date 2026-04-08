@@ -309,12 +309,19 @@ export default function TransportRun() {
                 {/* Photo */}
                 <div className="w-full aspect-square rounded-xl bg-white/10 overflow-hidden mb-2 flex items-center justify-center">
                   {photoUrl ? (
-                    <img src={photoUrl} alt={`${y.first_name} ${y.last_name}`} className="w-full h-full object-cover" />
-                  ) : (
-                    <span className="text-2xl font-bold text-white/20">
-                      {y.first_name[0]}{y.last_name[0]}
-                    </span>
-                  )}
+                    <img
+                      src={photoUrl}
+                      alt={`${y.first_name} ${y.last_name}`}
+                      className="w-full h-full object-cover"
+                      onError={(e) => {
+                        e.currentTarget.style.display = "none";
+                        e.currentTarget.nextElementSibling?.classList.remove("hidden");
+                      }}
+                    />
+                  ) : null}
+                  <span className={`text-2xl font-bold text-white/20 ${photoUrl ? "hidden" : ""}`}>
+                    {y.first_name[0]}{y.last_name[0]}
+                  </span>
                 </div>
 
                 {/* Name */}
