@@ -243,6 +243,13 @@ export default function TransportReports() {
                       >
                         {r.status}
                       </Badge>
+                      <button
+                        onClick={() => handleDeleteRun(r.id)}
+                        className="p-1 rounded hover:bg-red-500/20 text-white/30 hover:text-red-400 transition-colors"
+                        title="Delete run"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
                     </div>
                   </div>
                 ))}
@@ -304,6 +311,15 @@ export default function TransportReports() {
                       )}
                     </div>
                     <p className="text-white text-sm">{i.description}</p>
+                    <div className="flex justify-end">
+                      <button
+                        onClick={() => handleDeleteIncident(i.id)}
+                        className="p-1 rounded hover:bg-red-500/20 text-white/30 hover:text-red-400 transition-colors"
+                        title="Delete incident"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
                   </div>
                 ))}
               </div>
