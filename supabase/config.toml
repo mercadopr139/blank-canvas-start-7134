@@ -32,3 +32,6 @@ verify_jwt = false
 
 [functions.validate-orientation-bypass]
 verify_jwt = false
+
+[functions.invite-staff-member]
+verify_jwt = false
