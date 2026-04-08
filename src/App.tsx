@@ -59,6 +59,7 @@ import TransportYouth from "./pages/transport/TransportYouth";
 import TransportLiveRuns from "./pages/transport/TransportLiveRuns";
 import TransportReports from "./pages/transport/TransportReports";
 import TransportDashboard from "./pages/transport/TransportDashboard";
+import TransportRun from "./pages/transport/TransportRun";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -90,6 +91,7 @@ const App = () => (
             <Route path="/approvals/invoice/:token" element={<InvoiceApproval />} />
             <Route path="/transport" element={<TransportLogin />} />
             <Route path="/transport/dashboard" element={<TransportDashboard />} />
+            <Route path="/transport/run" element={<TransportRun />} />
             <Route path="/transport/admin" element={<TransportAdminLogin />} />
             <Route element={<TransportAdminLayout />}>
               <Route path="/transport/admin/drivers" element={<TransportDrivers />} />

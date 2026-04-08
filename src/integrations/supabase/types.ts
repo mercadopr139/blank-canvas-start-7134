@@ -1693,7 +1693,11 @@ export type Database = {
         | "Renewal"
         | "Report Deadline"
         | "Follow-Up"
-      transport_attendance_status: "present" | "no_show"
+      transport_attendance_status:
+        | "present"
+        | "no_show"
+        | "picked_up"
+        | "dropped_off"
       youth_transport_status: "active" | "inactive"
     }
     CompositeTypes: {
@@ -1923,7 +1927,12 @@ export const Constants = {
         "Report Deadline",
         "Follow-Up",
       ],
-      transport_attendance_status: ["present", "no_show"],
+      transport_attendance_status: [
+        "present",
+        "no_show",
+        "picked_up",
+        "dropped_off",
+      ],
       youth_transport_status: ["active", "inactive"],
     },
   },
