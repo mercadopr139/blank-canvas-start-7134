@@ -55,6 +55,13 @@ const baseTiles: OperationsTile[] = [
     icon: Star,
     href: "/admin/operations/lil-champs-attendance",
   },
+  {
+    title: "Transportation",
+    description: "Driver & Route Management",
+    icon: Bus,
+    href: "/transport/admin/drivers",
+    external: true,
+  },
 ];
 
 // Blank index – main panel is empty until a sidebar item is selected
