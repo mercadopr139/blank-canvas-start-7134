@@ -77,7 +77,7 @@ const AdminDashboard = () => {
           <img src={nlaLogoWhite} alt="No Limits Academy" className="h-56 w-auto" />
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
           {folders.map((folder) =>
           <Card
             key={folder.title}
