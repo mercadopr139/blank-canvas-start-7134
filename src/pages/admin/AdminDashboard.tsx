@@ -43,6 +43,15 @@ const AdminDashboard = () => {
     borderColor: "border-sky-300",
     linkColor: "text-sky-300",
     href: "/admin/finance"
+  },
+  {
+    title: "Transportation",
+    description: "Driver & Route Management",
+    icon: Bus,
+    color: "bg-blue-500/10 text-blue-500",
+    borderColor: "border-blue-500",
+    linkColor: "text-blue-500",
+    href: "/transport/admin/drivers"
   }];
 
 
