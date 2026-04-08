@@ -59,14 +59,14 @@ export default function TransportAdminLogin() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-[#0A1628]">
+      <div className="min-h-screen flex items-center justify-center bg-black">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white" />
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center bg-[#0A1628] px-4">
+    <div className="min-h-screen flex flex-col items-center justify-center bg-black px-4">
       <img src={nlaLogo} alt="No Limits Academy" className="h-16 w-auto mb-4" />
       <div className="flex items-center gap-2 mb-6">
         <Bus className="w-5 h-5 text-[#DC2626]" />
