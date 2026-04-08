@@ -89,12 +89,11 @@ const App = () => (
             <Route path="/approvals/invoice/:token" element={<InvoiceApproval />} />
             <Route path="/transport" element={<TransportLogin />} />
             <Route path="/transport/admin" element={<TransportAdminLogin />} />
-            <Route path="/transport/admin" element={<TransportAdminLayout />}>
-              <Route path="drivers" element={<TransportDrivers />} />
-              <Route path="youth" element={<TransportYouth />} />
-              <Route path="live-runs" element={<TransportLiveRuns />} />
-              <Route path="reports" element={<TransportReports />} />
-              <Route path="dashboard" element={<TransportDrivers />} />
+            <Route element={<TransportAdminLayout />}>
+              <Route path="/transport/admin/drivers" element={<TransportDrivers />} />
+              <Route path="/transport/admin/youth" element={<TransportYouth />} />
+              <Route path="/transport/admin/live-runs" element={<TransportLiveRuns />} />
+              <Route path="/transport/admin/reports" element={<TransportReports />} />
             </Route>
             
             {/* Admin Routes */}
