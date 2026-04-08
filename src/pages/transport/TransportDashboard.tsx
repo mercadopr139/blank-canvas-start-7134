@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import nlaLogo from "@/assets/nla-logo-white.png";
 import { useToast } from "@/hooks/use-toast";
-import { MapPin, Loader2, ArrowUp, ArrowDown, Bus, LogOut } from "lucide-react";
+import { MapPin, Loader2, ArrowUp, ArrowDown, Bus, LogOut, ArrowLeft } from "lucide-react";
 
 interface Route {
   id: string;
@@ -161,7 +161,18 @@ export default function TransportDashboard() {
   }
 
   return (
-    <div className="min-h-screen bg-[#0A1628] flex flex-col items-center px-4 py-6 select-none">
+    <div className="min-h-screen bg-black flex flex-col items-center px-4 py-6 select-none">
+      {/* Back Button */}
+      <div className="w-full max-w-md mb-4">
+        <button
+          onClick={() => { sessionStorage.removeItem("transport_driver"); navigate("/transport"); }}
+          className="flex items-center gap-1.5 text-white/50 hover:text-white text-sm transition-colors touch-manipulation"
+        >
+          <ArrowLeft className="w-4 h-4" />
+          Back
+        </button>
+      </div>
+
       {/* Header */}
       <div className="w-full max-w-md flex items-center justify-between mb-6">
         <div>
