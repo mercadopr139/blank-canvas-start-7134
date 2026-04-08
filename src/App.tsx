@@ -52,6 +52,12 @@ import AdminSignalsArchive from "./pages/admin/AdminSignalsArchive";
 import AdminSignalsTrash from "./pages/admin/AdminSignalsTrash";
 import InvoiceApproval from "./pages/InvoiceApproval";
 import TransportLogin from "./pages/TransportLogin";
+import TransportAdminLogin from "./pages/transport/TransportAdminLogin";
+import TransportAdminLayout from "./pages/transport/TransportAdminLayout";
+import TransportDrivers from "./pages/transport/TransportDrivers";
+import TransportYouth from "./pages/transport/TransportYouth";
+import TransportLiveRuns from "./pages/transport/TransportLiveRuns";
+import TransportReports from "./pages/transport/TransportReports";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -82,6 +88,13 @@ const App = () => (
             <Route path="/check-in/lil-champs-corner" element={<LilChampsCheckIn />} />
             <Route path="/approvals/invoice/:token" element={<InvoiceApproval />} />
             <Route path="/transport" element={<TransportLogin />} />
+            <Route path="/transport/admin" element={<TransportAdminLogin />} />
+            <Route element={<TransportAdminLayout />}>
+              <Route path="/transport/admin/drivers" element={<TransportDrivers />} />
+              <Route path="/transport/admin/youth" element={<TransportYouth />} />
+              <Route path="/transport/admin/live-runs" element={<TransportLiveRuns />} />
+              <Route path="/transport/admin/reports" element={<TransportReports />} />
+            </Route>
             
             {/* Admin Routes */}
             <Route path="/admin" element={<AdminIndex />} />
