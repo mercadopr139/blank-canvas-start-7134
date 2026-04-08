@@ -154,7 +154,7 @@ export default function TransportDashboard() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#0A1628] flex items-center justify-center">
+      <div className="min-h-screen bg-black flex items-center justify-center">
         <Loader2 className="w-8 h-8 text-white/40 animate-spin" />
       </div>
     );
