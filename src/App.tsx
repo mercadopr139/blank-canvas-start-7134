@@ -123,7 +123,10 @@ const App = () => (
               <Route path="attendance-reports" element={<AdminAttendanceReports />} />
               <Route path="form-builder" element={<AdminFormBuilder />} />
               <Route path="lil-champs-attendance" element={<AdminLilChampsAttendance />} />
-              <Route path="transportation" element={<TransportYouth />} />
+              <Route path="transportation/drivers" element={<TransportDrivers />} />
+              <Route path="transportation/youth" element={<TransportYouth />} />
+              <Route path="transportation/live-runs" element={<TransportLiveRuns />} />
+              <Route path="transportation/reports" element={<TransportReports />} />
             </Route>
 
             {/* Sales & Marketing section — sidebar layout wraps sub-pages */}
