@@ -136,7 +136,7 @@ export default function TransportLogin() {
       {/* Back Button */}
       <div className="w-full max-w-sm mb-4">
         <button
-          onClick={() => navigate("/")}
+          onClick={() => navigate("/admin/dashboard")}
           className="flex items-center gap-1.5 text-white/50 hover:text-white text-sm transition-colors touch-manipulation"
         >
           <ArrowLeft className="w-4 h-4" />
