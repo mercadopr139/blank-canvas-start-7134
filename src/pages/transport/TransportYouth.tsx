@@ -8,7 +8,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Pencil, Baby, MapPin, Search, Upload } from "lucide-react";
+import { Plus, Pencil, Baby, MapPin, Search, Upload, Trash2 } from "lucide-react";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import AddYouthDialog from "@/components/transport/AddYouthDialog";
 
 interface YouthProfile {
@@ -47,6 +48,8 @@ export default function TransportYouth() {
   const [form, setForm] = useState(emptyForm);
   const [photoFile, setPhotoFile] = useState<File | null>(null);
   const [saving, setSaving] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<YouthProfile | null>(null);
+  const [deleting, setDeleting] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => { fetchYouth(); }, []);
@@ -157,9 +160,14 @@ export default function TransportYouth() {
                   <Badge className={y.status === "active" ? "bg-green-500/20 text-green-400 border-green-500/30 text-[10px]" : "bg-red-500/20 text-red-400 border-red-500/30 text-[10px]"}>{y.status}</Badge>
                 </div>
               </div>
-              <Button size="icon" variant="ghost" onClick={() => openEdit(y)} className="text-white/40 hover:text-white hover:bg-white/10 shrink-0">
-                <Pencil className="w-4 h-4" />
-              </Button>
+              <div className="flex flex-col gap-1 shrink-0">
+                <Button size="icon" variant="ghost" onClick={() => openEdit(y)} className="text-white/40 hover:text-white hover:bg-white/10 h-8 w-8">
+                  <Pencil className="w-4 h-4" />
+                </Button>
+                <Button size="icon" variant="ghost" onClick={() => setDeleteTarget(y)} className="text-white/40 hover:text-red-400 hover:bg-red-500/10 h-8 w-8">
+                  <Trash2 className="w-4 h-4" />
+                </Button>
+              </div>
             </div>
           ))}
         </div>
