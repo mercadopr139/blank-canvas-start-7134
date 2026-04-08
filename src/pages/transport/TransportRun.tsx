@@ -208,7 +208,7 @@ export default function TransportRun() {
   const getPhotoUrl = (url: string | null) => {
     if (!url) return null;
     if (url.startsWith("http")) return url;
-    return `${import.meta.env.VITE_SUPABASE_URL}/storage/v1/object/public/youth-photos/${url}`;
+    return `${import.meta.env.VITE_SUPABASE_URL}/storage/v1/object/public/registration-signatures/${url}`;
   };
 
   // Filter & sort
@@ -232,14 +232,14 @@ export default function TransportRun() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#0A1628] flex items-center justify-center">
+      <div className="min-h-screen bg-black flex items-center justify-center">
         <Loader2 className="w-8 h-8 text-white/40 animate-spin" />
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-[#0A1628] flex flex-col">
+    <div className="min-h-screen bg-black flex flex-col">
       {/* Header */}
       <header className="bg-[#0F1D32] border-b border-white/10 px-4 py-3 flex items-center justify-between sticky top-0 z-20">
         <div className="flex items-center gap-3 min-w-0">
