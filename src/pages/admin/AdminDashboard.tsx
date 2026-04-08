@@ -77,32 +77,32 @@ const AdminDashboard = () => {
       </header>
 
       {/* Main Content */}
-      <main className="container mx-auto px-4 py-[30px]">
+      <main className="w-full px-4 py-[30px] max-w-5xl mx-auto overflow-x-hidden">
         {/* Top: Logo centered */}
-        <div className="flex justify-center mb-16">
-          <img src={nlaLogoWhite} alt="No Limits Academy" className="h-56 w-auto" />
+        <div className="flex justify-center mb-10 sm:mb-16">
+          <img src={nlaLogoWhite} alt="No Limits Academy" className="h-32 sm:h-56 w-auto" />
         </div>
 
         {/* Main pillar tiles */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 mb-8">
           {folders.map((folder) => {
             const allowed = permLoading || hasPermission(folder.permKey);
             return (
               <Tooltip key={folder.title}>
                 <TooltipTrigger asChild>
                   <Card
-                    className={`min-h-[200px] bg-white/5 border-2 ${folder.borderColor} text-white transition-all ${
+                    className={`min-h-[160px] sm:min-h-[200px] bg-white/5 border-2 ${folder.borderColor} text-white transition-all ${
                       allowed ? "cursor-pointer hover:shadow-lg hover:scale-[1.02]" : "cursor-not-allowed opacity-50"
                     }`}
                     onClick={() => allowed && navigate(folder.href)}
                   >
-                    <CardHeader className="pb-4">
-                      <div className={`w-14 h-14 rounded-xl flex items-center justify-center ${folder.color} mb-3 relative`}>
-                        <folder.icon className="w-7 h-7" />
+                    <CardHeader className="pb-3 sm:pb-4">
+                      <div className={`w-12 h-12 sm:w-14 sm:h-14 rounded-xl flex items-center justify-center ${folder.color} mb-2 sm:mb-3 relative`}>
+                        <folder.icon className="w-6 h-6 sm:w-7 sm:h-7" />
                         {!allowed && <Lock className="w-4 h-4 absolute -top-1 -right-1 text-white/60" />}
                       </div>
-                      <CardTitle className="text-xl text-white">{folder.title}</CardTitle>
-                      <CardDescription className="text-base text-white/50">{folder.description}</CardDescription>
+                      <CardTitle className="text-lg sm:text-xl text-white">{folder.title}</CardTitle>
+                      <CardDescription className="text-sm sm:text-base text-white/50">{folder.description}</CardDescription>
                     </CardHeader>
                     <CardContent>
                       <p className={`text-sm font-medium ${allowed ? folder.linkColor : "text-white/30"}`}>
@@ -122,7 +122,7 @@ const AdminDashboard = () => {
         </div>
 
         {/* Bottom utility section */}
-        <div className="flex flex-col items-center gap-6 mt-12">
+        <div className="flex flex-col items-center gap-4 sm:gap-6 mt-8 sm:mt-12">
           {/* Driver Check-In card */}
           {(() => {
             const driverAllowed = permLoading || hasPermission("driver_checkin");
@@ -163,7 +163,7 @@ const AdminDashboard = () => {
             <UpcomingEventsWidget />
           </div>
 
-          <div className="flex justify-center gap-4">
+          <div className="grid grid-cols-2 gap-3 sm:gap-4 w-full max-w-sm">
             {/* PD Signals */}
             {(() => {
               const signalsAllowed = permLoading || hasPermission("pd_signals");
@@ -171,20 +171,20 @@ const AdminDashboard = () => {
                 <Tooltip>
                   <TooltipTrigger asChild>
                     <Card
-                      className={`w-48 bg-white/5 border border-white/20 text-white transition-opacity ${
+                      className={`bg-white/5 border border-white/20 text-white transition-opacity ${
                         signalsAllowed ? "opacity-60 cursor-pointer hover:opacity-80" : "opacity-30 cursor-not-allowed"
                       }`}
                       onClick={() => signalsAllowed && navigate("/admin/signals")}
                     >
-                      <CardHeader className="p-4 pb-2">
+                      <CardHeader className="p-3 sm:p-4 pb-2">
                         <div className="w-8 h-8 rounded-md flex items-center justify-center bg-white/5 text-white/40 mb-1 relative">
                           <Signal className="w-4 h-4" />
                           {!signalsAllowed && <Lock className="w-3 h-3 absolute -top-1 -right-1 text-white/60" />}
                         </div>
-                        <CardTitle className="text-sm text-white">PD – Signals</CardTitle>
-                        <CardDescription className="text-xs text-white/40">Executive Focus & Daily Signals</CardDescription>
+                        <CardTitle className="text-xs sm:text-sm text-white">PD – Signals</CardTitle>
+                        <CardDescription className="text-[10px] sm:text-xs text-white/40">Executive Focus & Daily Signals</CardDescription>
                       </CardHeader>
-                      <CardContent className="px-4 pb-3 pt-0">
+                      <CardContent className="px-3 sm:px-4 pb-3 pt-0">
                         <p className={`text-xs font-medium ${signalsAllowed ? "text-white/40" : "text-white/20"}`}>
                           {signalsAllowed ? "Open →" : "🔒 Locked"}
                         </p>
@@ -207,23 +207,23 @@ const AdminDashboard = () => {
                 <Tooltip>
                   <TooltipTrigger asChild>
                     <Card
-                      className={`w-48 bg-white/5 border border-white/20 text-white transition-opacity ${
+                      className={`bg-white/5 border border-white/20 text-white transition-opacity ${
                         settingsAllowed ? "opacity-60 cursor-pointer hover:opacity-80" : "opacity-30 cursor-not-allowed"
                       }`}
                       onClick={() => settingsAllowed && navigate("/admin/staff")}
                     >
-                      <CardHeader className="p-4 pb-2">
+                      <CardHeader className="p-3 sm:p-4 pb-2">
                         <div className="w-8 h-8 rounded-md flex items-center justify-center bg-white/5 text-white/40 mb-1 relative">
                           <Settings className="w-4 h-4" />
                           {!settingsAllowed && <Lock className="w-3 h-3 absolute -top-1 -right-1 text-white/60" />}
                         </div>
-                        <CardTitle className="text-sm text-white">Settings</CardTitle>
-                        <CardDescription className="text-xs text-white/40">
+                        <CardTitle className="text-xs sm:text-sm text-white">Settings</CardTitle>
+                        <CardDescription className="text-[10px] sm:text-xs text-white/40">
                           {settingsAllowed ? "Staff Management" : "Admin access required"}
                         </CardDescription>
                       </CardHeader>
                       {settingsAllowed && (
-                        <CardContent className="px-4 pb-3 pt-0">
+                        <CardContent className="px-3 sm:px-4 pb-3 pt-0">
                           <p className="text-xs font-medium text-white/40">Open →</p>
                         </CardContent>
                       )}
