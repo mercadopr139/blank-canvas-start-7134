@@ -4,7 +4,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { FileBarChart, Download, Calendar, AlertTriangle } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
+import { FileBarChart, Download, Calendar, AlertTriangle, Trash2 } from "lucide-react";
 import { format, subDays } from "date-fns";
 
 interface RunRow {
@@ -56,6 +57,28 @@ export default function TransportReports() {
   const [attendance, setAttendance] = useState<AttendanceRow[]>([]);
   const [incidents, setIncidents] = useState<IncidentRow[]>([]);
   const [loading, setLoading] = useState(true);
+  const [deleting, setDeleting] = useState<string | null>(null);
+  const { toast } = useToast();
+
+  const handleDeleteRun = async (id: string) => {
+    if (!confirm("Delete this run and its attendance records?")) return;
+    setDeleting(id);
+    await supabase.from("transport_attendance").delete().eq("run_id", id);
+    await supabase.from("incidents").delete().eq("run_id", id);
+    await supabase.from("runs").delete().eq("id", id);
+    toast({ title: "Run deleted" });
+    setDeleting(null);
+    fetchData();
+  };
+
+  const handleDeleteIncident = async (id: string) => {
+    if (!confirm("Delete this incident?")) return;
+    setDeleting(id);
+    await supabase.from("incidents").delete().eq("id", id);
+    toast({ title: "Incident deleted" });
+    setDeleting(null);
+    fetchData();
+  };
 
   const fetchData = async () => {
     setLoading(true);
@@ -220,6 +243,13 @@ export default function TransportReports() {
                       >
                         {r.status}
                       </Badge>
+                      <button
+                        onClick={() => handleDeleteRun(r.id)}
+                        className="p-1 rounded hover:bg-red-500/20 text-white/30 hover:text-red-400 transition-colors"
+                        title="Delete run"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
                     </div>
                   </div>
                 ))}
@@ -281,6 +311,15 @@ export default function TransportReports() {
                       )}
                     </div>
                     <p className="text-white text-sm">{i.description}</p>
+                    <div className="flex justify-end">
+                      <button
+                        onClick={() => handleDeleteIncident(i.id)}
+                        className="p-1 rounded hover:bg-red-500/20 text-white/30 hover:text-red-400 transition-colors"
+                        title="Delete incident"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
                   </div>
                 ))}
               </div>
