@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 
 import { useToast } from "@/hooks/use-toast";
 import nlaLogo from "@/assets/nla-logo-white.png";
-import { Loader2, Bus, ChevronDown, AlertCircle, Delete } from "lucide-react";
+import { Loader2, Bus, ChevronDown, AlertCircle, Delete, ArrowLeft } from "lucide-react";
 
 interface Driver {
   id: string;
@@ -132,7 +132,18 @@ export default function TransportLogin() {
   const keypadKeys = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "CLR", "0", "⌫"];
 
   return (
-    <div className="min-h-screen bg-[#0A1628] flex flex-col items-center px-4 py-6 select-none">
+    <div className="min-h-screen bg-black flex flex-col items-center px-4 py-6 select-none">
+      {/* Back Button */}
+      <div className="w-full max-w-sm mb-4">
+        <button
+          onClick={() => navigate("/")}
+          className="flex items-center gap-1.5 text-white/50 hover:text-white text-sm transition-colors touch-manipulation"
+        >
+          <ArrowLeft className="w-4 h-4" />
+          Back
+        </button>
+      </div>
+
       {/* Logo */}
       <img src={nlaLogo} alt="No Limits Academy" className="h-16 w-auto mb-2" />
       <div className="flex items-center gap-2 mb-8">
