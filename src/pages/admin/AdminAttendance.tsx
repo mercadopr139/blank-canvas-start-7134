@@ -1205,22 +1205,72 @@ const AdminAttendance = () => {
                         </div>
                       </div>
                     )}
-                    {/* Toggle day type button: cycles Practice → Non-Practice → Excursion */}
+                    {/* Toggle day type dot: click = Practice/Non-Practice, right-click/long-press = context menu */}
                     <button
-                      onClick={(e) => { e.stopPropagation(); cycleDayType(dateStr); }}
-                      className={`absolute bottom-0.5 left-1/2 -translate-x-1/2 w-3.5 h-3.5 rounded-full border-2 transition-all hover:scale-125 cursor-pointer z-10 ${
+                      onClick={(e) => { e.stopPropagation(); togglePracticeNonPractice(dateStr); }}
+                      onContextMenu={(e) => openDotContextMenu(e, dateStr)}
+                      onTouchStart={(e) => {
+                        longPressTimer.current = setTimeout(() => {
+                          e.preventDefault();
+                          const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+                          setContextMenuDay({ dateStr, x: rect.left, y: rect.bottom + 4 });
+                        }, 500);
+                      }}
+                      onTouchEnd={() => { if (longPressTimer.current) { clearTimeout(longPressTimer.current); longPressTimer.current = null; } }}
+                      onTouchMove={() => { if (longPressTimer.current) { clearTimeout(longPressTimer.current); longPressTimer.current = null; } }}
+                      className={`absolute bottom-0.5 left-1/2 -translate-x-1/2 w-3.5 h-3.5 rounded-full border-2 transition-all hover:scale-125 cursor-pointer z-10 touch-manipulation ${
                         isExc
                           ? "bg-purple-500 border-purple-300 shadow-[0_0_4px_rgba(124,58,237,0.5)]"
                           : isPrac
                             ? "bg-green-500 border-green-300 shadow-[0_0_4px_rgba(34,197,94,0.5)]"
                             : "bg-red-500 border-red-300 shadow-[0_0_4px_rgba(239,68,68,0.5)]"
                       }`}
-                      title={isExc ? "Excursion Day — click to mark as Practice" : isPrac ? "Practice Day — click to mark as Non-Practice" : "Non-Practice — click to mark as Excursion"}
+                      title={isExc ? "Excursion Day — right-click for options" : isPrac ? "Practice Day — click to toggle, right-click for more" : "Non-Practice — click to toggle, right-click for more"}
                     />
                   </div>
                 );
               })}
             </div>
+
+            {/* Context menu portal */}
+            {contextMenuDay && (
+              <div
+                className="fixed z-[100] bg-gray-900 border border-white/20 rounded-lg shadow-2xl py-1 min-w-[200px]"
+                style={{ left: contextMenuDay.x, top: contextMenuDay.y }}
+                onClick={(e) => e.stopPropagation()}
+              >
+                <button
+                  className={`w-full text-left px-3 py-2 text-sm flex items-center gap-2 hover:bg-white/10 transition-colors ${
+                    isPracticeDay(contextMenuDay.dateStr, calPracticeDayMap) && !isExcursionDay(contextMenuDay.dateStr) ? "text-green-400" : "text-white/70"
+                  }`}
+                  onClick={() => setDayType(contextMenuDay.dateStr, "practice")}
+                >
+                  <span className="w-3 h-3 rounded-full bg-green-500 inline-block" />
+                  Mark as Practice Day
+                  {isPracticeDay(contextMenuDay.dateStr, calPracticeDayMap) && !isExcursionDay(contextMenuDay.dateStr) && <span className="ml-auto text-green-400">✓</span>}
+                </button>
+                <button
+                  className={`w-full text-left px-3 py-2 text-sm flex items-center gap-2 hover:bg-white/10 transition-colors ${
+                    !isPracticeDay(contextMenuDay.dateStr, calPracticeDayMap) && !isExcursionDay(contextMenuDay.dateStr) ? "text-red-400" : "text-white/70"
+                  }`}
+                  onClick={() => setDayType(contextMenuDay.dateStr, "non-practice")}
+                >
+                  <span className="w-3 h-3 rounded-full bg-red-500 inline-block" />
+                  Mark as Non-Practice Day
+                  {!isPracticeDay(contextMenuDay.dateStr, calPracticeDayMap) && !isExcursionDay(contextMenuDay.dateStr) && <span className="ml-auto text-red-400">✓</span>}
+                </button>
+                <button
+                  className={`w-full text-left px-3 py-2 text-sm flex items-center gap-2 hover:bg-white/10 transition-colors ${
+                    isExcursionDay(contextMenuDay.dateStr) ? "text-purple-400" : "text-white/70"
+                  }`}
+                  onClick={() => setDayType(contextMenuDay.dateStr, "excursion")}
+                >
+                  <span className="w-3 h-3 rounded-full bg-purple-500 inline-block" />
+                  {isExcursionDay(contextMenuDay.dateStr) ? "Edit Excursion Day" : "Mark as Excursion Day"}
+                  {isExcursionDay(contextMenuDay.dateStr) && <span className="ml-auto text-purple-400">✓</span>}
+                </button>
+              </div>
+            )}
 
             {/* Legend */}
             <div className="flex items-center gap-4 mt-4 pt-3 border-t border-white/10 flex-wrap">
@@ -1236,7 +1286,7 @@ const AdminAttendance = () => {
                 <span className="w-3 h-3 rounded-full bg-purple-500" />
                 <span className="text-xs text-white/50">Excursion Day</span>
               </div>
-              <span className="text-[10px] text-white/30 ml-auto">Click dot to cycle</span>
+              <span className="text-[10px] text-white/30 ml-auto">Click dot to toggle • Right-click for more options</span>
             </div>
           </CardContent>
         </Card>
