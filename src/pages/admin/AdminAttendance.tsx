@@ -257,7 +257,7 @@ const AdminAttendance = () => {
       if (!selectedYouth) return [];
       const { data, error } = await supabase
         .from("attendance_records")
-        .select("id, registration_id, check_in_date, check_in_at, program_source")
+        .select("id, registration_id, check_in_date, check_in_at, program_source, is_manual")
         .eq("registration_id", selectedYouth.id)
         .order("check_in_date", { ascending: false });
       if (error) throw error;
