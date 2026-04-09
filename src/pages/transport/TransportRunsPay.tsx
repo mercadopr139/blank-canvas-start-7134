@@ -85,6 +85,7 @@ function HistoryCalendarTab() {
   // Pay period runs (for Box 4 and Driver Pay Panel)
   const currentPayPeriod = useMemo(() => getCurrentPayPeriod(), []);
   const [payPeriodRuns, setPayPeriodRuns] = useState<RunWithDetails[]>([]);
+  const [yearRuns, setYearRuns] = useState<RunWithDetails[]>([]);
   const [paidDrivers, setPaidDrivers] = useState<Set<string>>(new Set());
 
   // Driver history modal
@@ -104,18 +105,22 @@ function HistoryCalendarTab() {
     const to = format(monthEnd, "yyyy-MM-dd") + "T23:59:59";
     const ppFrom = currentPayPeriod.start + "T00:00:00";
     const ppTo = currentPayPeriod.end + "T23:59:59";
+    const yearStart = `${new Date().getFullYear()}-01-01T00:00:00`;
+    const yearEnd = `${new Date().getFullYear()}-12-31T23:59:59`;
 
-    const [runsRes, approvalsRes, attRes, routesRes, ppRunsRes] = await Promise.all([
+    const [runsRes, approvalsRes, attRes, routesRes, ppRunsRes, yearRunsRes] = await Promise.all([
       supabase.from("runs").select("id, run_type, status, started_at, closed_at, driver:drivers(id, name), route:routes(id, name)").eq("status", "completed").gte("started_at", from).lte("started_at", to).order("started_at", { ascending: false }),
       supabase.from("run_approvals").select("id, run_id, status, notes"),
       supabase.from("transport_attendance").select("run_id").gte("recorded_at", from).lte("recorded_at", to),
       supabase.from("routes").select("id, name"),
       supabase.from("runs").select("id, run_type, status, started_at, closed_at, driver:drivers(id, name), route:routes(id, name)").eq("status", "completed").gte("started_at", ppFrom).lte("started_at", ppTo),
+      supabase.from("runs").select("id, run_type, status, started_at, closed_at, driver:drivers(id, name), route:routes(id, name)").eq("status", "completed").gte("started_at", yearStart).lte("started_at", yearEnd),
     ]);
     if (runsRes.data) setRuns(runsRes.data as unknown as RunWithDetails[]);
     if (approvalsRes.data) setApprovals(approvalsRes.data as unknown as RunApproval[]);
     if (routesRes.data) setRoutes(routesRes.data as unknown as { id: string; name: string }[]);
     if (ppRunsRes.data) setPayPeriodRuns(ppRunsRes.data as unknown as RunWithDetails[]);
+    if (yearRunsRes.data) setYearRuns(yearRunsRes.data as unknown as RunWithDetails[]);
     const counts: Record<string, number> = {};
     (attRes.data || []).forEach((a: { run_id: string }) => { counts[a.run_id] = (counts[a.run_id] || 0) + 1; });
     setAttendanceCounts(counts);
@@ -164,25 +169,16 @@ function HistoryCalendarTab() {
 
   // Driver pay panel data
   const driverPayData = useMemo(() => {
-    const map = new Map<string, { name: string; payPeriodEarnings: number; monthEarnings: number; payPeriodTrips: number; monthTrips: number }>();
-    // Month earnings from current month runs
-    runs.forEach((r) => {
-      if (!r.driver) return;
-      if (!map.has(r.driver.id)) map.set(r.driver.id, { name: r.driver.name, payPeriodEarnings: 0, monthEarnings: 0, payPeriodTrips: 0, monthTrips: 0 });
-      const entry = map.get(r.driver.id)!;
-      entry.monthEarnings += getPayRate(r.route?.name);
-      entry.monthTrips++;
-    });
-    // Pay period earnings
-    payPeriodRuns.forEach((r) => {
-      if (!r.driver) return;
-      if (!map.has(r.driver.id)) map.set(r.driver.id, { name: r.driver.name, payPeriodEarnings: 0, monthEarnings: 0, payPeriodTrips: 0, monthTrips: 0 });
-      const entry = map.get(r.driver.id)!;
-      entry.payPeriodEarnings += getPayRate(r.route?.name);
-      entry.payPeriodTrips++;
-    });
+    const map = new Map<string, { name: string; payPeriodEarnings: number; monthEarnings: number; yearEarnings: number; payPeriodTrips: number; monthTrips: number; yearTrips: number }>();
+    const ensure = (id: string, name: string) => {
+      if (!map.has(id)) map.set(id, { name, payPeriodEarnings: 0, monthEarnings: 0, yearEarnings: 0, payPeriodTrips: 0, monthTrips: 0, yearTrips: 0 });
+      return map.get(id)!;
+    };
+    runs.forEach((r) => { if (!r.driver) return; const e = ensure(r.driver.id, r.driver.name); e.monthEarnings += getPayRate(r.route?.name); e.monthTrips++; });
+    payPeriodRuns.forEach((r) => { if (!r.driver) return; const e = ensure(r.driver.id, r.driver.name); e.payPeriodEarnings += getPayRate(r.route?.name); e.payPeriodTrips++; });
+    yearRuns.forEach((r) => { if (!r.driver) return; const e = ensure(r.driver.id, r.driver.name); e.yearEarnings += getPayRate(r.route?.name); e.yearTrips++; });
     return [...map.entries()].sort((a, b) => a[1].name.localeCompare(b[1].name));
-  }, [runs, payPeriodRuns]);
+  }, [runs, payPeriodRuns, yearRuns]);
 
   const calendarDays = useMemo(() => {
     const days = eachDayOfInterval({ start: monthStart, end: monthEnd });
@@ -275,12 +271,14 @@ function HistoryCalendarTab() {
   const driverHistoryByMonth = useMemo(() => {
     const approvalM = new Map<string, RunApproval>();
     allDriverApprovals.forEach((a) => approvalM.set(a.run_id, a));
-    const map = new Map<string, { trips: RunWithDetails[]; total: number; approved: number; pending: number }>();
+    const map = new Map<string, { trips: RunWithDetails[]; total: number; approved: number; pending: number; routeBreakdown: Record<string, number> }>();
     allDriverRuns.forEach((r) => {
       const monthKey = format(new Date(r.started_at), "yyyy-MM");
-      if (!map.has(monthKey)) map.set(monthKey, { trips: [], total: 0, approved: 0, pending: 0 });
+      if (!map.has(monthKey)) map.set(monthKey, { trips: [], total: 0, approved: 0, pending: 0, routeBreakdown: {} });
       const entry = map.get(monthKey)!;
       entry.trips.push(r);
+      const routeName = r.route?.name || "Unknown";
+      entry.routeBreakdown[routeName] = (entry.routeBreakdown[routeName] || 0) + 1;
       const pay = getPayRate(r.route?.name);
       entry.total += pay;
       const status = approvalM.get(r.id)?.status || "pending";
@@ -289,6 +287,24 @@ function HistoryCalendarTab() {
     });
     return [...map.entries()].sort((a, b) => b[0].localeCompare(a[0]));
   }, [allDriverRuns, allDriverApprovals]);
+
+  const driverYearTotal = useMemo(() => driverHistoryByMonth.reduce((sum, [, d]) => sum + d.total, 0), [driverHistoryByMonth]);
+
+  const exportDriverHistory = () => {
+    const approvalM = new Map<string, RunApproval>();
+    allDriverApprovals.forEach((a) => approvalM.set(a.run_id, a));
+    const csv = toCsv(
+      ["Date", "Route", "Type", "Pay", "Status"],
+      allDriverRuns.map((r) => [
+        format(new Date(r.started_at), "MM/dd/yyyy"),
+        r.route?.name || "",
+        r.run_type,
+        `$${getPayRate(r.route?.name)}`,
+        approvalM.get(r.id)?.status || "pending",
+      ])
+    );
+    downloadCsv(`${historyDriverName.replace(/\s+/g, "_")}_pay_history.csv`, csv);
+  };
 
   const panelRuns = useMemo(() => {
     if (!selectedDriver || !selectedDate) return [];
@@ -375,20 +391,22 @@ function HistoryCalendarTab() {
           <h3 className="text-white font-bold text-sm flex items-center gap-2"><DollarSign className="w-4 h-4 text-green-400" /> Driver Pay — {currentPayPeriod.label}</h3>
           <div className="border border-white/10 rounded-xl overflow-hidden">
             {/* Header */}
-            <div className="grid grid-cols-[1fr_auto_auto_auto_auto] gap-2 bg-white/5 px-3 py-2 text-[10px] text-white/40 uppercase tracking-wider font-medium">
+            <div className="grid grid-cols-[1fr_auto_auto_auto_auto_auto] gap-2 bg-white/5 px-3 py-2 text-[10px] text-white/40 uppercase tracking-wider font-medium">
               <span>Driver</span>
               <span className="text-right w-20">Period $</span>
               <span className="text-right w-20">Month $</span>
+              <span className="text-right w-20">Year $</span>
               <span className="text-center w-16">Status</span>
               <span className="w-20" />
             </div>
             {driverPayData.map(([driverId, d]) => (
-              <div key={driverId} className="grid grid-cols-[1fr_auto_auto_auto_auto] gap-2 items-center px-3 py-2.5 border-t border-white/5 hover:bg-white/[0.02]">
+              <div key={driverId} className="grid grid-cols-[1fr_auto_auto_auto_auto_auto] gap-2 items-center px-3 py-2.5 border-t border-white/5 hover:bg-white/[0.02]">
                 <button onClick={() => openDriverHistory(driverId, d.name)} className="text-left text-white font-medium text-sm hover:text-[#DC2626] transition-colors flex items-center gap-1.5">
                   <User className="w-3.5 h-3.5 text-white/30" />{d.name}
                 </button>
                 <span className="text-green-400 font-bold text-sm text-right w-20">${d.payPeriodEarnings}</span>
                 <span className="text-white/50 text-sm text-right w-20">${d.monthEarnings}</span>
+                <button onClick={() => openDriverHistory(driverId, d.name)} className="text-right w-20 text-blue-400 font-bold text-sm underline underline-offset-2 hover:text-blue-300 transition-colors cursor-pointer">${d.yearEarnings}</button>
                 <span className="text-center w-16">
                   <Badge className={paidDrivers.has(driverId) ? "bg-green-500/20 text-green-400 border-green-500/30 text-[10px]" : "bg-yellow-500/20 text-yellow-400 border-yellow-500/30 text-[10px]"}>
                     {paidDrivers.has(driverId) ? "Paid" : "Unpaid"}
@@ -548,9 +566,15 @@ function HistoryCalendarTab() {
       {/* Driver Pay History Modal */}
       <Dialog open={!!historyDriverId} onOpenChange={(open) => { if (!open) setHistoryDriverId(null); }}>
         <DialogContent className="bg-[#111827] border-white/10 text-white max-w-lg max-h-[85vh] overflow-y-auto">
-          <DialogHeader><DialogTitle className="text-white flex items-center gap-2"><User className="w-5 h-5" /> {historyDriverName} — Pay History</DialogTitle></DialogHeader>
+          <DialogHeader>
+            <DialogTitle className="text-white flex items-center gap-2"><User className="w-5 h-5" /> {historyDriverName} — Pay History</DialogTitle>
+          </DialogHeader>
           {historyLoading ? <div className="text-white/40 text-center py-8">Loading...</div> : (
-            <div className="space-y-2 mt-2">
+            <div className="space-y-3 mt-2">
+              <div className="flex justify-end">
+                <Button onClick={exportDriverHistory} variant="outline" size="sm" className="gap-2 border-white/10 text-white/60 hover:text-white bg-transparent"><Download className="w-4 h-4" /> Export CSV</Button>
+              </div>
+
               {driverHistoryByMonth.length === 0 ? <p className="text-white/40 text-center py-4">No trip history found.</p> : driverHistoryByMonth.map(([monthKey, data]) => {
                 const isExpanded = expandedMonths.has(monthKey);
                 const monthLabel = format(new Date(monthKey + "-01"), "MMMM yyyy");
@@ -567,7 +591,12 @@ function HistoryCalendarTab() {
                       </div>
                     </button>
                     {isExpanded && (
-                      <div className="px-4 py-2 space-y-1.5 bg-white/[0.02]">
+                      <div className="px-4 py-2 space-y-2 bg-white/[0.02]">
+                        <div className="flex gap-2 flex-wrap pb-1.5 border-b border-white/5">
+                          {Object.entries(data.routeBreakdown).map(([route, count]) => (
+                            <span key={route} className="bg-white/5 text-white/50 text-[10px] px-2 py-0.5 rounded">{route}: {count}</span>
+                          ))}
+                        </div>
                         {data.trips.map((r) => {
                           const approvalM = new Map<string, RunApproval>();
                           allDriverApprovals.forEach((a) => approvalM.set(a.run_id, a));
@@ -586,11 +615,22 @@ function HistoryCalendarTab() {
                             </div>
                           );
                         })}
+                        <div className="flex items-center justify-between pt-1.5 text-xs">
+                          <span className="text-white/40 font-medium">Month Subtotal</span>
+                          <span className="text-green-400 font-bold">${data.total}</span>
+                        </div>
                       </div>
                     )}
                   </div>
                 );
               })}
+
+              {driverHistoryByMonth.length > 0 && (
+                <div className="bg-[#DC2626]/10 border border-[#DC2626]/30 rounded-lg p-4 flex items-center justify-between">
+                  <span className="text-white font-bold text-sm">{new Date().getFullYear()} Year Total</span>
+                  <span className="text-white font-bold text-xl">${driverYearTotal}</span>
+                </div>
+              )}
             </div>
           )}
         </DialogContent>
