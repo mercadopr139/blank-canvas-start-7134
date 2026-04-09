@@ -388,27 +388,58 @@ const AdminAttendance = () => {
       .map(([date, count]) => ({ date: format(parseISO(date), "M/d"), count, fullDate: date }));
   }, [practiceAttendance]);
 
-  /* ───── ATTENDANCE BY DAY OF WEEK (practice days only) ───── */
-  const dowData = useMemo(() => {
-    const totals: number[] = [0, 0, 0, 0, 0, 0, 0];
-    const dayCounts: number[] = [0, 0, 0, 0, 0, 0, 0];
-    const datesByDow: Record<number, Set<string>> = {};
-    for (let i = 0; i < 7; i++) datesByDow[i] = new Set();
+  /* ───── AVERAGE ATTENDANCE BY WEEK (Mon–Fri weeks, practice days only) ───── */
+  const weeklyAvgData = useMemo(() => {
+    // Group practice attendance by date
+    const dailyCounts: Record<string, number> = {};
+    practiceAttendance.forEach((a) => { dailyCounts[a.check_in_date] = (dailyCounts[a.check_in_date] || 0) + 1; });
 
-    practiceAttendance.forEach((a) => {
-      const dow = getDay(parseISO(a.check_in_date));
-      totals[dow]++;
-      datesByDow[dow].add(a.check_in_date);
-    });
-    for (let i = 0; i < 7; i++) dayCounts[i] = datesByDow[i].size;
+    // Build weeks (Mon–Fri) for the viewed month
+    const mStart = startOfMonth(calendarMonth);
+    const mEnd = endOfMonth(calendarMonth);
+    const weeks: { label: string; dates: string[] }[] = [];
+    let current = mStart;
+    let weekNum = 1;
 
-    return [1, 2, 3, 4, 5].map((dow) => ({
-      day: WEEKDAY_NAMES[dow].slice(0, 3),
-      avg: dayCounts[dow] > 0 ? Math.round(totals[dow] / dayCounts[dow]) : 0,
-      total: totals[dow],
-      dow,
-    }));
-  }, [practiceAttendance]);
+    while (current <= mEnd) {
+      const dow = getDay(current);
+      // Find the Monday of this week (or month start if it's mid-week)
+      if (dow >= 1 && dow <= 5) {
+        // It's a weekday
+        const mondayOfWeek = new Date(current);
+        mondayOfWeek.setDate(mondayOfWeek.getDate() - (dow - 1));
+        const weekKey = format(mondayOfWeek, "yyyy-MM-dd");
+        
+        let existingWeek = weeks.find((w) => w.label === `Wk ${weekNum}` && w.dates.length > 0 && format(new Date(new Date(w.dates[0]).getTime() + (7 * 24 * 60 * 60 * 1000)), "yyyy-MM-dd") >= format(current, "yyyy-MM-dd"));
+        
+        if (!existingWeek) {
+          // Check if this date belongs to the current last week
+          const lastWeek = weeks[weeks.length - 1];
+          if (lastWeek) {
+            const lastDate = parseISO(lastWeek.dates[lastWeek.dates.length - 1]);
+            const daysDiff = (current.getTime() - lastDate.getTime()) / (1000 * 60 * 60 * 24);
+            if (daysDiff <= 3 && dow > getDay(lastDate)) {
+              lastWeek.dates.push(format(current, "yyyy-MM-dd"));
+              current = new Date(current.getTime() + 24 * 60 * 60 * 1000);
+              continue;
+            }
+          }
+          weeks.push({ label: `Wk ${weekNum}`, dates: [format(current, "yyyy-MM-dd")] });
+          weekNum++;
+        }
+      }
+      current = new Date(current.getTime() + 24 * 60 * 60 * 1000);
+    }
+
+    return weeks.map((w) => {
+      const practiceDates = w.dates.filter((d) => dailyCounts[d] !== undefined);
+      const total = practiceDates.reduce((sum, d) => sum + (dailyCounts[d] || 0), 0);
+      const avg = practiceDates.length > 0 ? Math.round(total / practiceDates.length) : 0;
+      const firstDate = w.dates[0] ? format(parseISO(w.dates[0]), "M/d") : "";
+      const lastDate = w.dates[w.dates.length - 1] ? format(parseISO(w.dates[w.dates.length - 1]), "M/d") : "";
+      return { week: w.label, avg, total, days: practiceDates.length, range: `${firstDate} – ${lastDate}` };
+    }).filter((w) => w.days > 0);
+  }, [practiceAttendance, calendarMonth]);
 
   /* ───── PROGRAM ATTENDANCE TREND (practice days only) ───── */
   const programTrend = useMemo(() => {
