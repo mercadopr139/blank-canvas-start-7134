@@ -566,9 +566,15 @@ function HistoryCalendarTab() {
       {/* Driver Pay History Modal */}
       <Dialog open={!!historyDriverId} onOpenChange={(open) => { if (!open) setHistoryDriverId(null); }}>
         <DialogContent className="bg-[#111827] border-white/10 text-white max-w-lg max-h-[85vh] overflow-y-auto">
-          <DialogHeader><DialogTitle className="text-white flex items-center gap-2"><User className="w-5 h-5" /> {historyDriverName} — Pay History</DialogTitle></DialogHeader>
+          <DialogHeader>
+            <DialogTitle className="text-white flex items-center gap-2"><User className="w-5 h-5" /> {historyDriverName} — Pay History</DialogTitle>
+          </DialogHeader>
           {historyLoading ? <div className="text-white/40 text-center py-8">Loading...</div> : (
-            <div className="space-y-2 mt-2">
+            <div className="space-y-3 mt-2">
+              <div className="flex justify-end">
+                <Button onClick={exportDriverHistory} variant="outline" size="sm" className="gap-2 border-white/10 text-white/60 hover:text-white bg-transparent"><Download className="w-4 h-4" /> Export CSV</Button>
+              </div>
+
               {driverHistoryByMonth.length === 0 ? <p className="text-white/40 text-center py-4">No trip history found.</p> : driverHistoryByMonth.map(([monthKey, data]) => {
                 const isExpanded = expandedMonths.has(monthKey);
                 const monthLabel = format(new Date(monthKey + "-01"), "MMMM yyyy");
@@ -585,7 +591,12 @@ function HistoryCalendarTab() {
                       </div>
                     </button>
                     {isExpanded && (
-                      <div className="px-4 py-2 space-y-1.5 bg-white/[0.02]">
+                      <div className="px-4 py-2 space-y-2 bg-white/[0.02]">
+                        <div className="flex gap-2 flex-wrap pb-1.5 border-b border-white/5">
+                          {Object.entries(data.routeBreakdown).map(([route, count]) => (
+                            <span key={route} className="bg-white/5 text-white/50 text-[10px] px-2 py-0.5 rounded">{route}: {count}</span>
+                          ))}
+                        </div>
                         {data.trips.map((r) => {
                           const approvalM = new Map<string, RunApproval>();
                           allDriverApprovals.forEach((a) => approvalM.set(a.run_id, a));
@@ -604,11 +615,22 @@ function HistoryCalendarTab() {
                             </div>
                           );
                         })}
+                        <div className="flex items-center justify-between pt-1.5 text-xs">
+                          <span className="text-white/40 font-medium">Month Subtotal</span>
+                          <span className="text-green-400 font-bold">${data.total}</span>
+                        </div>
                       </div>
                     )}
                   </div>
                 );
               })}
+
+              {driverHistoryByMonth.length > 0 && (
+                <div className="bg-[#DC2626]/10 border border-[#DC2626]/30 rounded-lg p-4 flex items-center justify-between">
+                  <span className="text-white font-bold text-sm">{new Date().getFullYear()} Year Total</span>
+                  <span className="text-white font-bold text-xl">${driverYearTotal}</span>
+                </div>
+              )}
             </div>
           )}
         </DialogContent>
