@@ -152,6 +152,8 @@ const AdminAttendance = () => {
   const [deleteExcursionTarget, setDeleteExcursionTarget] = useState<Excursion | null>(null);
   const [weatherTooltipDay, setWeatherTooltipDay] = useState<string | null>(null);
   const [contextMenuDay, setContextMenuDay] = useState<{ dateStr: string; x: number; y: number } | null>(null);
+  const [noShowAlertDismissed, setNoShowAlertDismissed] = useState(false);
+  const [noShowAlertOpen, setNoShowAlertOpen] = useState(false);
   const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Close context menu on outside click
