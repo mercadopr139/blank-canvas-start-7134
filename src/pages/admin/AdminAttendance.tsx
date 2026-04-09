@@ -301,6 +301,21 @@ const AdminAttendance = () => {
     },
   });
 
+  // Excursions for previous month (needed to exclude from prev month comparisons)
+  const { data: excursionsPrevMonth = [] } = useQuery({
+    queryKey: ["excursions-prev", prevOfViewedStart],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("excursions")
+        .select("*")
+        .gte("date", prevOfViewedStart)
+        .lte("date", prevOfViewedEnd)
+        .order("date");
+      if (error) throw error;
+      return (data || []) as Excursion[];
+    },
+  });
+
 
 
   /* ───── Weather Data (Open-Meteo + DB cache) ───── */
@@ -417,12 +432,18 @@ const AdminAttendance = () => {
     return isDefaultPracticeDay(dateStr);
   }, []);
 
-  /* ───── Excursion map ───── */
+  /* ───── Excursion maps ───── */
   const excursionDayMap = useMemo(() => {
     const m: Record<string, boolean> = {};
     excursionsCalMonth.forEach((e) => { m[e.date] = true; });
     return m;
   }, [excursionsCalMonth]);
+
+  const prevExcursionDayMap = useMemo(() => {
+    const m: Record<string, boolean> = {};
+    excursionsPrevMonth.forEach((e) => { m[e.date] = true; });
+    return m;
+  }, [excursionsPrevMonth]);
 
   const isExcursionDay = useCallback((dateStr: string): boolean => {
     return !!excursionDayMap[dateStr];
@@ -435,8 +456,8 @@ const AdminAttendance = () => {
   );
 
   const prevPracticeAttendance = useMemo(
-    () => prevMonthAttendance.filter((a) => isPracticeDay(a.check_in_date, prevPracticeDayMap)),
-    [prevMonthAttendance, prevPracticeDayMap, isPracticeDay]
+    () => prevMonthAttendance.filter((a) => isPracticeDay(a.check_in_date, prevPracticeDayMap) && !prevExcursionDayMap[a.check_in_date]),
+    [prevMonthAttendance, prevPracticeDayMap, isPracticeDay, prevExcursionDayMap]
   );
 
   /* ───── Quick Toggle: single click toggles Practice ↔ Non-Practice ───── */
