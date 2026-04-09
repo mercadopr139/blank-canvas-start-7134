@@ -487,13 +487,13 @@ const AdminAttendance = () => {
   const smartInsights = useMemo(() => {
     const insights: string[] = [];
 
-    const strongest = dowData.reduce((a, b) => (b.avg > a.avg ? b : a), dowData[0]);
-    const weakest = dowData.reduce((a, b) => (b.avg < a.avg ? b : a), dowData[0]);
+    const strongest = weeklyAvgData.reduce((a, b) => (b.avg > a.avg ? b : a), weeklyAvgData[0]);
+    const weakest = weeklyAvgData.reduce((a, b) => (b.avg < a.avg ? b : a), weeklyAvgData[0]);
     if (strongest && strongest.avg > 0) {
-      insights.push(`${WEEKDAY_NAMES[[1,2,3,4,5][dowData.indexOf(strongest)]]} has the strongest average attendance in ${viewedMonthShort} (${strongest.avg}/day).`);
+      insights.push(`${strongest.week} (${strongest.range}) has the strongest average attendance in ${viewedMonthShort} (${strongest.avg}/day).`);
     }
-    if (weakest && weakest.avg > 0 && weakest.day !== strongest.day) {
-      insights.push(`${weakest.day} attendance tends to be lower than midweek attendance.`);
+    if (weakest && weakest.avg > 0 && weakest.week !== strongest?.week) {
+      insights.push(`${weakest.week} (${weakest.range}) has lower average attendance (${weakest.avg}/day).`);
     }
 
     const monthRegIds = new Set(practiceAttendance.map((a) => a.registration_id));
