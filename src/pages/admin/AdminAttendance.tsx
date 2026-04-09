@@ -17,7 +17,7 @@ import {
   LineChart, Line,
 } from "recharts";
 import {
-  startOfWeek, startOfMonth, endOfMonth, format, differenceInCalendarDays,
+  startOfWeek, startOfMonth, endOfMonth, format,
   addMonths, subMonths, subWeeks, getDay, getDaysInMonth, isToday, parseISO, endOfWeek,
   isWeekend,
 } from "date-fns";
