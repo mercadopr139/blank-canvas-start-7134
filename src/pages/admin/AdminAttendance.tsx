@@ -53,6 +53,17 @@ interface PracticeDay {
   is_practice_day: boolean;
 }
 
+interface Excursion {
+  id: string;
+  date: string;
+  name: string;
+  youth_count: number;
+  notes: string | null;
+  created_at: string;
+}
+
+type DayType = "practice" | "non-practice" | "excursion";
+
 interface WeatherDay {
   date: string;
   temp_high: number | null;
