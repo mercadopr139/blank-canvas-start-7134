@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -49,11 +49,24 @@ const AdminLilChampsAttendance = () => {
   // Manual add state
   const [addOpen, setAddOpen] = useState(false);
   const [addSearch, setAddSearch] = useState("");
-  const [addResults, setAddResults] = useState<SearchResult[]>([]);
-  const [addSearching, setAddSearching] = useState(false);
   const [adding, setAdding] = useState(false);
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
-  const debounceRef = useRef<ReturnType<typeof setTimeout>>();
+  const [allLilChampsYouth, setAllLilChampsYouth] = useState<SearchResult[]>([]);
+
+  // Load all Lil Champs youth once for browse-all mode
+  useEffect(() => {
+    const fetchAll = async () => {
+      const { data } = await supabase
+        .from("youth_registrations")
+        .select("id, child_first_name, child_last_name, child_headshot_url, child_date_of_birth")
+        .or("child_boxing_program.eq.Junior Boxing (Ages 7-10),extended_program.eq.Lil Champs Corner")
+        .eq("approved_for_attendance", true)
+        .order("child_last_name")
+        .limit(200);
+      setAllLilChampsYouth(data || []);
+    };
+    fetchAll();
+  }, []);
 
   useEffect(() => {
     fetchRecords();
@@ -110,28 +123,20 @@ const AdminLilChampsAttendance = () => {
     URL.revokeObjectURL(url);
   };
 
-  // Search for youth to manually add
+  // Search for youth to manually add — filters the pre-loaded list client-side
   const handleAddSearch = (query: string) => {
     setAddSearch(query);
-    clearTimeout(debounceRef.current);
-    if (query.trim().length < 2) {
-      setAddResults([]);
-      return;
-    }
-    setAddSearching(true);
-    debounceRef.current = setTimeout(async () => {
-      const { data } = await supabase
-        .from("youth_registrations")
-        .select("id, child_first_name, child_last_name, child_headshot_url, child_date_of_birth")
-        .or(`child_boxing_program.eq.Junior Boxing (Ages 7-10),extended_program.eq.Lil Champs Corner`)
-        .or(`child_first_name.ilike.%${query.trim()}%,child_last_name.ilike.%${query.trim()}%`)
-        .eq("approved_for_attendance", true)
-        .order("child_last_name")
-        .limit(15);
-      setAddResults(data || []);
-      setAddSearching(false);
-    }, 300);
   };
+
+  // Compute displayed youth: if searching, filter; otherwise show all
+  const displayedAddYouth = (() => {
+    const q = addSearch.trim().toLowerCase();
+    if (!q) return allLilChampsYouth;
+    return allLilChampsYouth.filter((y) => {
+      const full = `${y.child_first_name} ${y.child_last_name}`.toLowerCase();
+      return full.includes(q);
+    });
+  })();
 
   const handleManualAdd = async (youth: SearchResult) => {
     const targetDate = dateFilter || format(new Date(), "yyyy-MM-dd");
@@ -164,7 +169,6 @@ const AdminLilChampsAttendance = () => {
       toast({ title: `${youth.child_first_name} ${youth.child_last_name} checked in` });
       setAddOpen(false);
       setAddSearch("");
-      setAddResults([]);
       await fetchRecords();
     }
     setAdding(false);
@@ -323,13 +327,13 @@ const AdminLilChampsAttendance = () => {
       </Card>
 
       {/* Manual Add Youth Modal */}
-      <Dialog open={addOpen} onOpenChange={(o) => { setAddOpen(o); if (!o) { setAddSearch(""); setAddResults([]); } }}>
+      <Dialog open={addOpen} onOpenChange={(o) => { setAddOpen(o); if (!o) { setAddSearch(""); } }}>
         <DialogContent className="bg-[#111827] border-white/10 text-white max-w-md">
           <DialogHeader>
             <DialogTitle>Add Youth Check-In</DialogTitle>
           </DialogHeader>
           <p className="text-white/50 text-sm">
-            Search for a Lil Champs youth to manually add a check-in
+            {addSearch.trim() ? "Select a youth to add a manual check-in" : "Browse all Lil Champs youth or search by name"}
             {dateFilter ? ` for ${dateFilter}` : " for today"}.
           </p>
           <div className="relative">
@@ -337,17 +341,15 @@ const AdminLilChampsAttendance = () => {
             <Input
               value={addSearch}
               onChange={(e) => handleAddSearch(e.target.value)}
-              placeholder="Type a name..."
+              placeholder="Search by name or browse below..."
               className="pl-9 bg-white/5 border-white/10 text-white placeholder:text-white/30"
               autoFocus
             />
           </div>
 
-          {addSearching && <p className="text-white/40 text-sm text-center py-2">Searching...</p>}
-
-          {addResults.length > 0 && (
+          {displayedAddYouth.length > 0 ? (
             <ul className="space-y-1 max-h-60 overflow-y-auto">
-              {addResults.map((y) => (
+              {displayedAddYouth.map((y) => (
                 <li
                   key={y.id}
                   onClick={() => !adding && handleManualAdd(y)}
@@ -373,9 +375,7 @@ const AdminLilChampsAttendance = () => {
                 </li>
               ))}
             </ul>
-          )}
-
-          {addSearch.trim().length >= 2 && !addSearching && addResults.length === 0 && (
+          ) : (
             <p className="text-white/40 text-sm text-center py-2">No matching youth found.</p>
           )}
         </DialogContent>
