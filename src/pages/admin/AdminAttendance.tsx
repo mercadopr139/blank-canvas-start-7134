@@ -1157,15 +1157,17 @@ const AdminAttendance = () => {
                         </div>
                       </div>
                     )}
-                    {/* Toggle practice day button */}
+                    {/* Toggle day type button: cycles Practice → Non-Practice → Excursion */}
                     <button
-                      onClick={(e) => { e.stopPropagation(); togglePracticeDay(dateStr); }}
+                      onClick={(e) => { e.stopPropagation(); cycleDayType(dateStr); }}
                       className={`absolute bottom-0.5 left-1/2 -translate-x-1/2 w-2.5 h-2.5 rounded-full border transition-all hover:scale-150 ${
-                        isPrac
-                          ? "bg-green-500 border-green-400/50"
-                          : "bg-red-500 border-red-400/50"
+                        isExc
+                          ? "bg-purple-500 border-purple-400/50"
+                          : isPrac
+                            ? "bg-green-500 border-green-400/50"
+                            : "bg-red-500 border-red-400/50"
                       }`}
-                      title={isPrac ? "Click to mark as non-practice day" : "Click to mark as practice day"}
+                      title={isExc ? "Excursion Day — click to mark as Practice" : isPrac ? "Practice Day — click to mark as Non-Practice" : "Non-Practice — click to mark as Excursion"}
                     />
                   </div>
                 );
@@ -1173,7 +1175,7 @@ const AdminAttendance = () => {
             </div>
 
             {/* Legend */}
-            <div className="flex items-center gap-6 mt-4 pt-3 border-t border-white/10">
+            <div className="flex items-center gap-4 mt-4 pt-3 border-t border-white/10 flex-wrap">
               <div className="flex items-center gap-1.5">
                 <span className="w-3 h-3 rounded-full bg-green-500" />
                 <span className="text-xs text-white/50">Practice Day</span>
@@ -1182,7 +1184,11 @@ const AdminAttendance = () => {
                 <span className="w-3 h-3 rounded-full bg-red-500" />
                 <span className="text-xs text-white/50">Non-Practice Day</span>
               </div>
-              <span className="text-[10px] text-white/30 ml-auto">Click dot to toggle</span>
+              <div className="flex items-center gap-1.5">
+                <span className="w-3 h-3 rounded-full bg-purple-500" />
+                <span className="text-xs text-white/50">Excursion Day</span>
+              </div>
+              <span className="text-[10px] text-white/30 ml-auto">Click dot to cycle</span>
             </div>
           </CardContent>
         </Card>
