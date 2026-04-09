@@ -632,9 +632,8 @@ const AdminAttendance = () => {
   const todayRegIds = useMemo(() => new Set(todayRecords.map((a) => a.registration_id)), [todayRecords]);
   const totalPresentToday = todayRegIds.size;
 
-  // Peak day for past months
-  const peakDay = useMemo(() => {
-    if (isCurrentMonth) return { count: totalPresentToday, date: todayStr };
+  // Attendance High & Low for practice days
+  const { attendanceHigh, attendanceLow } = useMemo(() => {
     const dayCounts: Record<string, Set<string>> = {};
     practiceAttendance.forEach((a) => {
       if (!dayCounts[a.check_in_date]) dayCounts[a.check_in_date] = new Set();
@@ -642,11 +641,18 @@ const AdminAttendance = () => {
     });
     let maxDate = "";
     let maxCount = 0;
+    let minDate = "";
+    let minCount = Infinity;
     Object.entries(dayCounts).forEach(([date, ids]) => {
       if (ids.size > maxCount) { maxCount = ids.size; maxDate = date; }
+      if (ids.size < minCount) { minCount = ids.size; minDate = date; }
     });
-    return { count: maxCount, date: maxDate };
-  }, [isCurrentMonth, totalPresentToday, practiceAttendance]);
+    if (minCount === Infinity) { minCount = 0; minDate = ""; }
+    return {
+      attendanceHigh: { count: maxCount, date: maxDate },
+      attendanceLow: { count: minCount, date: minDate },
+    };
+  }, [practiceAttendance]);
 
   /* ───── STAT BOX 2: Week Avg → avg per practice day this month ───── */
   const mtdAvg = useMemo(() => {
@@ -1135,20 +1141,26 @@ const AdminAttendance = () => {
         </div>
 
         {/* Key Insight Cards */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
+        <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 mb-6">
           <Card className="bg-white/5 border-white/10 text-white">
             <CardContent className="pt-4 pb-3 text-center">
-              <p className="text-[10px] uppercase tracking-wider text-white/40">{isCurrentMonth ? "Present Today" : "Peak Day"}</p>
-              <p className="text-3xl font-bold mt-1">{isCurrentMonth ? totalPresentToday : peakDay.count}</p>
-              {isCurrentMonth && !todayIsPractice && <p className="text-[10px] text-red-400">Non-practice day</p>}
-              {!isCurrentMonth && peakDay.date && <p className="text-[10px] text-white/30">{peakDay.date ? format(parseISO(peakDay.date), "M/d") : ""}</p>}
+              <p className="text-[10px] uppercase tracking-wider text-green-400/70">Attendance High</p>
+              <p className="text-3xl font-bold mt-1 text-green-400">{attendanceHigh.count}</p>
+              <p className="text-[10px] text-white/30">{attendanceHigh.date ? format(parseISO(attendanceHigh.date), "M/d") : "—"}</p>
             </CardContent>
           </Card>
           <Card className="bg-white/5 border-white/10 text-white">
             <CardContent className="pt-4 pb-3 text-center">
-              <p className="text-[10px] uppercase tracking-wider text-white/40">{isCurrentMonth ? "Week Avg" : "Daily Avg"}</p>
+              <p className="text-[10px] uppercase tracking-wider text-red-400/70">Attendance Low</p>
+              <p className="text-3xl font-bold mt-1 text-red-400">{attendanceLow.count}</p>
+              <p className="text-[10px] text-white/30">{attendanceLow.date ? format(parseISO(attendanceLow.date), "M/d") : "—"}</p>
+            </CardContent>
+          </Card>
+          <Card className="bg-white/5 border-white/10 text-white">
+            <CardContent className="pt-4 pb-3 text-center">
+              <p className="text-[10px] uppercase tracking-wider text-white/40">Daily Avg</p>
               <p className="text-3xl font-bold mt-1">{mtdAvg}</p>
-              <p className="text-[10px] text-white/30">per practice day{isCurrentMonth ? " this week" : ` in ${viewedMonthShort}`}</p>
+              <p className="text-[10px] text-white/30">per practice day</p>
             </CardContent>
           </Card>
           <Card className="bg-white/5 border-white/10 text-white">
@@ -1160,7 +1172,7 @@ const AdminAttendance = () => {
           </Card>
           <Card className="bg-white/5 border-white/10 text-white">
             <CardContent className="pt-4 pb-3 text-center">
-              <p className="text-[10px] uppercase tracking-wider text-white/40">{isCurrentMonth ? "Avg Arrival" : "Avg Arrival Time"}</p>
+              <p className="text-[10px] uppercase tracking-wider text-white/40">Avg Arrival Time</p>
               <p className="text-2xl font-bold mt-1 flex items-center justify-center gap-1">
                 <Clock className="w-4 h-4 text-white/40" />
                 {avgArrivalToday || "—"}
