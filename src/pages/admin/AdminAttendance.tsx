@@ -277,6 +277,28 @@ const AdminAttendance = () => {
     },
   });
 
+  // Excursions for calendar month
+  const { data: excursionsCalMonth = [] } = useQuery({
+    queryKey: ["excursions-cal", calMonthStart],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("excursions")
+        .select("*")
+        .gte("date", calMonthStart)
+        .lte("date", calMonthEnd)
+        .order("date");
+      if (error) throw error;
+      return (data || []) as Excursion[];
+    },
+  });
+        .select("id, date, is_practice_day")
+        .gte("date", prevOfViewedStart)
+        .lte("date", prevOfViewedEnd);
+      if (error) throw error;
+      return (data || []) as PracticeDay[];
+    },
+  });
+
   /* ───── Weather Data (Open-Meteo + DB cache) ───── */
   const { data: weatherMap = {}, isLoading: weatherLoading } = useQuery({
     queryKey: ["weather-data", calMonthStart],
