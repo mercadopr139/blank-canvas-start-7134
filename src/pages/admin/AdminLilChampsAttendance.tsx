@@ -56,13 +56,15 @@ const AdminLilChampsAttendance = () => {
   // Load all Lil Champs youth once for browse-all mode
   useEffect(() => {
     const fetchAll = async () => {
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from("youth_registrations")
         .select("id, child_first_name, child_last_name, child_headshot_url, child_date_of_birth")
         .or("child_boxing_program.eq.Junior Boxing (Ages 7-10),extended_program.eq.Lil Champs Corner")
         .eq("approved_for_attendance", true)
         .order("child_last_name")
         .limit(200);
+      if (error) console.error("Lil Champs youth fetch error:", error);
+      console.log("Lil Champs youth fetched:", data?.length ?? 0);
       setAllLilChampsYouth(data || []);
     };
     fetchAll();
