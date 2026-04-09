@@ -4,11 +4,12 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import {
   Star, Search, AlertTriangle, Users, Eye, ChevronLeft, ChevronRight, CalendarDays,
-  Clock, TrendingUp, School, Lightbulb, Activity, Trash2, X
+  Clock, TrendingUp, School, Lightbulb, Activity, Trash2, X, Pencil, MapPin
 } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
