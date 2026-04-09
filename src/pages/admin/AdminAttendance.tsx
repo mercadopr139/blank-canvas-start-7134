@@ -926,8 +926,6 @@ const AdminAttendance = () => {
                 const wInfo = weather ? getWeatherInfo(weather.condition_code) : null;
                 const rowIndex = Math.floor(idx / 7);
                 const totalRows = Math.ceil(calendarDays.length / 7);
-                const isBottomHalf = rowIndex >= totalRows / 2;
-
                 return (
                   <div
                     key={dateStr}
