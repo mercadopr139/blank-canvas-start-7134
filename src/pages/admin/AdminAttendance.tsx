@@ -821,6 +821,9 @@ const AdminAttendance = () => {
                   <p className="text-[10px] text-white/40">Girls</p>
                 </div>
               </div>
+              <div className="border-t border-white/10 mt-2 pt-1.5 text-center">
+                <p className="text-xs text-white/60"><span className="font-semibold text-white">{(sexSplitToday["Male"] || 0) + (sexSplitToday["Female"] || 0)}</span> Total Distinct Youth</p>
+              </div>
             </CardContent>
           </Card>
 
