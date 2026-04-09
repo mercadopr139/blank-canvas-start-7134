@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import {
-  Radio, AlertTriangle, CheckCircle, XCircle, Clock, User, MapPin,
+  AlertTriangle, CheckCircle, XCircle,
   Download, Calendar, Trash2, DollarSign,
 } from "lucide-react";
 import { format, endOfMonth, setDate } from "date-fns";
