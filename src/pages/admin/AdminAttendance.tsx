@@ -1107,7 +1107,7 @@ const AdminAttendance = () => {
                         ${isCurrentDay && !isSelected ? "border border-white/30" : ""}
                         ${!isSelected && !isCurrentDay ? "border border-white/[0.06]" : ""}
                         ${count > 0 ? "hover:bg-white/10 cursor-pointer" : "cursor-default"}
-                        ${!isPrac ? "bg-red-500/[0.06]" : "bg-white/[0.03]"}
+                        ${isExc ? "bg-purple-500/[0.08]" : !isPrac ? "bg-red-500/[0.06]" : "bg-white/[0.03]"}
                       `}
                     >
                       {/* Date number with weather emoji hint */}
