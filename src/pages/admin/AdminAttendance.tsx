@@ -640,23 +640,24 @@ const AdminAttendance = () => {
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
           <Card className="bg-white/5 border-white/10 text-white">
             <CardContent className="pt-4 pb-3 text-center">
-              <p className="text-[10px] uppercase tracking-wider text-white/40">Present Today</p>
-              <p className="text-3xl font-bold mt-1">{totalPresentToday}</p>
-              {!todayIsPractice && <p className="text-[10px] text-red-400">Non-practice day</p>}
+              <p className="text-[10px] uppercase tracking-wider text-white/40">{isCurrentMonth ? "Present Today" : "Peak Day"}</p>
+              <p className="text-3xl font-bold mt-1">{isCurrentMonth ? totalPresentToday : peakDay.count}</p>
+              {isCurrentMonth && !todayIsPractice && <p className="text-[10px] text-red-400">Non-practice day</p>}
+              {!isCurrentMonth && peakDay.date && <p className="text-[10px] text-white/30">{peakDay.date ? format(parseISO(peakDay.date), "M/d") : ""}</p>}
             </CardContent>
           </Card>
           <Card className="bg-white/5 border-white/10 text-white">
             <CardContent className="pt-4 pb-3 text-center">
-              <p className="text-[10px] uppercase tracking-wider text-white/40">Week Avg</p>
-              <p className="text-3xl font-bold mt-1">{wtdAvg}</p>
-              <p className="text-[10px] text-white/30">per practice day this week</p>
+              <p className="text-[10px] uppercase tracking-wider text-white/40">{isCurrentMonth ? "Week Avg" : "Daily Avg"}</p>
+              <p className="text-3xl font-bold mt-1">{mtdAvg}</p>
+              <p className="text-[10px] text-white/30">per practice day{isCurrentMonth ? " this week" : ` in ${viewedMonthShort}`}</p>
             </CardContent>
           </Card>
           <Card className="bg-white/5 border-white/10 text-white">
             <CardContent className="pt-4 pb-3 text-center">
               <p className="text-[10px] uppercase tracking-wider text-white/40">Month Avg</p>
               <p className="text-3xl font-bold mt-1">{mtdAvg}</p>
-              <p className="text-[10px] text-white/30">per practice day this month</p>
+              <p className="text-[10px] text-white/30">per practice day in {viewedMonthShort}</p>
             </CardContent>
           </Card>
           <Card className="bg-white/5 border-white/10 text-white">
