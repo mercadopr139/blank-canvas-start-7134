@@ -258,7 +258,7 @@ const AdminAttendance = () => {
   });
 
   /* ───── Weather Data (Open-Meteo + DB cache) ───── */
-  const { data: weatherMap = {} } = useQuery({
+  const { data: weatherMap = {}, isLoading: weatherLoading } = useQuery({
     queryKey: ["weather-data", calMonthStart],
     queryFn: async () => {
       // 1. Check DB cache first
@@ -282,32 +282,63 @@ const AdminAttendance = () => {
 
       if (missingDates.length === 0) return cachedMap;
 
-      // 2. Fetch from Open-Meteo
+      // 2. Fetch from Open-Meteo — split into historical and forecast ranges
       try {
-        const url = `https://api.open-meteo.com/v1/forecast?latitude=39.0018&longitude=-74.8774&daily=temperature_2m_max,temperature_2m_min,precipitation_sum,weather_code&temperature_unit=fahrenheit&precipitation_unit=inch&timezone=America/New_York&start_date=${calMonthStart}&end_date=${calMonthEnd}`;
-        const resp = await fetch(url);
-        if (!resp.ok) return cachedMap;
-        const json = await resp.json();
-        const daily = json.daily;
-        if (!daily?.time) return cachedMap;
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const todayStr = format(today, "yyyy-MM-dd");
+        const monthStart = new Date(calendarMonth.getFullYear(), calendarMonth.getMonth(), 1);
+        const monthEnd = new Date(calendarMonth.getFullYear(), calendarMonth.getMonth() + 1, 0);
 
+        const params = "daily=temperature_2m_max,temperature_2m_min,precipitation_sum,weather_code&temperature_unit=fahrenheit&precipitation_unit=inch&timezone=America/New_York&latitude=39.0018&longitude=-74.8774";
+
+        const fetches: Promise<any>[] = [];
+
+        // Historical: month start to min(yesterday, month end)
+        const yesterday = new Date(today);
+        yesterday.setDate(yesterday.getDate() - 1);
+        if (monthStart <= yesterday) {
+          const histEnd = monthEnd <= yesterday ? format(monthEnd, "yyyy-MM-dd") : format(yesterday, "yyyy-MM-dd");
+          const histStart = format(monthStart, "yyyy-MM-dd");
+          fetches.push(
+            fetch(`https://archive-api.open-meteo.com/v1/archive?${params}&start_date=${histStart}&end_date=${histEnd}`)
+              .then(r => r.ok ? r.json() : null).catch(() => null)
+          );
+        }
+
+        // Forecast: max(today, month start) to month end (if month end >= today)
+        if (monthEnd >= today) {
+          const fcastStart = monthStart >= today ? format(monthStart, "yyyy-MM-dd") : todayStr;
+          const fcastEnd = format(monthEnd, "yyyy-MM-dd");
+          fetches.push(
+            fetch(`https://api.open-meteo.com/v1/forecast?${params}&start_date=${fcastStart}&end_date=${fcastEnd}`)
+              .then(r => r.ok ? r.json() : null).catch(() => null)
+          );
+        }
+
+        const results = await Promise.all(fetches);
         const rows: any[] = [];
-        for (let i = 0; i < daily.time.length; i++) {
-          const dateStr = daily.time[i];
-          if (cachedMap[dateStr]) continue; // already cached
-          const code = daily.weather_code?.[i] ?? null;
-          const info = getWeatherInfo(code);
-          const row = {
-            date: dateStr,
-            location: "rio_grande_nj",
-            temp_high: daily.temperature_2m_max?.[i] ?? null,
-            temp_low: daily.temperature_2m_min?.[i] ?? null,
-            precipitation: daily.precipitation_sum?.[i] ?? null,
-            condition: info.label,
-            condition_code: code,
-          };
-          rows.push(row);
-          cachedMap[dateStr] = row as WeatherDay;
+
+        for (const json of results) {
+          if (!json?.daily?.time) continue;
+          const daily = json.daily;
+          for (let i = 0; i < daily.time.length; i++) {
+            const dateStr = daily.time[i];
+            if (cachedMap[dateStr]) continue;
+            const code = daily.weather_code?.[i] ?? null;
+            const info = getWeatherInfo(code);
+            const row = {
+              date: dateStr,
+              location: "rio_grande_nj",
+              temp_high: daily.temperature_2m_max?.[i] ?? null,
+              temp_low: daily.temperature_2m_min?.[i] ?? null,
+              precipitation: daily.precipitation_sum?.[i] ?? null,
+              condition: info.label,
+              condition_code: code,
+            };
+            rows.push(row);
+            cachedMap[dateStr] = row as WeatherDay;
+          }
         }
 
         // Save to DB (fire and forget)
@@ -957,7 +988,7 @@ const AdminAttendance = () => {
                         !isPrac ? "text-red-400 font-medium" :
                         isCurrentDay ? "text-blue-400 font-semibold" : "text-white/35"
                       }`}>
-                        {wInfo && <span className="text-[8px]">{wInfo.emoji}</span>}
+                        {wInfo ? <span className="text-[8px]">{wInfo.emoji}</span> : weatherLoading ? <span className="text-[8px] animate-pulse">·</span> : null}
                         <span className={wInfo ? "border-b border-dotted border-white/20" : ""}>{day}</span>
                       </span>
 
