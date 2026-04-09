@@ -419,10 +419,10 @@ const AdminAttendance = () => {
     return !!excursionDayMap[dateStr];
   }, [excursionDayMap]);
 
-  /* ───── Filter attendance to practice days only ───── */
+  /* ───── Filter attendance to practice days only (exclude excursion days) ───── */
   const practiceAttendance = useMemo(
-    () => calendarAttendance.filter((a) => isPracticeDay(a.check_in_date, calPracticeDayMap)),
-    [calendarAttendance, calPracticeDayMap, isPracticeDay]
+    () => calendarAttendance.filter((a) => isPracticeDay(a.check_in_date, calPracticeDayMap) && !isExcursionDay(a.check_in_date)),
+    [calendarAttendance, calPracticeDayMap, isPracticeDay, isExcursionDay]
   );
 
   const prevPracticeAttendance = useMemo(
@@ -430,21 +430,99 @@ const AdminAttendance = () => {
     [prevMonthAttendance, prevPracticeDayMap, isPracticeDay]
   );
 
-  /* ───── Toggle Practice Day ───── */
-  const togglePracticeDay = async (dateStr: string) => {
-    const currentValue = isPracticeDay(dateStr, calPracticeDayMap);
-    const newValue = !currentValue;
-    const existing = practiceDaysCalMonth.find((p) => p.date === dateStr);
+  /* ───── Toggle Day Type: Practice → Non-Practice → Excursion → Practice ───── */
+  const cycleDayType = async (dateStr: string) => {
+    const isPrac = isPracticeDay(dateStr, calPracticeDayMap);
+    const isExc = isExcursionDay(dateStr);
 
-    if (existing) {
-      await supabase.from("practice_days").update({ is_practice_day: newValue }).eq("id", existing.id);
+    if (isExc) {
+      // Excursion → Practice: remove excursion, set practice day
+      await supabase.from("excursions").delete().eq("date", dateStr);
+      const existing = practiceDaysCalMonth.find((p) => p.date === dateStr);
+      if (existing) {
+        await supabase.from("practice_days").update({ is_practice_day: true }).eq("id", existing.id);
+      } else {
+        await supabase.from("practice_days").insert({ date: dateStr, is_practice_day: true });
+      }
+      queryClient.invalidateQueries({ queryKey: ["practice-days-cal"] });
+      queryClient.invalidateQueries({ queryKey: ["excursions-cal"] });
+      toast.success("Marked as practice day");
+    } else if (isPrac) {
+      // Practice → Non-Practice
+      const existing = practiceDaysCalMonth.find((p) => p.date === dateStr);
+      if (existing) {
+        await supabase.from("practice_days").update({ is_practice_day: false }).eq("id", existing.id);
+      } else {
+        await supabase.from("practice_days").insert({ date: dateStr, is_practice_day: false });
+      }
+      queryClient.invalidateQueries({ queryKey: ["practice-days-cal"] });
+      toast.success("Marked as non-practice day");
     } else {
-      await supabase.from("practice_days").insert({ date: dateStr, is_practice_day: newValue });
+      // Non-Practice → Excursion: open modal to collect details
+      setExcursionDate(dateStr);
+      setExcursionName("");
+      setExcursionYouthCount("");
+      setExcursionNotes("");
+      setExcursionPrevState(false);
+      setExcursionModalOpen(true);
     }
+  };
 
+  const saveExcursion = async () => {
+    if (!excursionName.trim() || excursionYouthCount === "" || excursionYouthCount < 0) {
+      toast.error("Please fill in excursion name and youth count");
+      return;
+    }
+    const { error } = await supabase.from("excursions").insert({
+      date: excursionDate,
+      name: excursionName.trim(),
+      youth_count: Number(excursionYouthCount),
+      notes: excursionNotes.trim() || null,
+    });
+    if (error) { toast.error("Failed to save excursion"); return; }
+    // Also mark as non-practice (excursion days aren't practice)
+    const existing = practiceDaysCalMonth.find((p) => p.date === excursionDate);
+    if (existing) {
+      await supabase.from("practice_days").update({ is_practice_day: false }).eq("id", existing.id);
+    } else {
+      await supabase.from("practice_days").insert({ date: excursionDate, is_practice_day: false });
+    }
+    queryClient.invalidateQueries({ queryKey: ["excursions-cal"] });
     queryClient.invalidateQueries({ queryKey: ["practice-days-cal"] });
-    queryClient.invalidateQueries({ queryKey: ["practice-days-prev"] });
-    toast.success(newValue ? "Marked as practice day" : "Marked as non-practice day");
+    setExcursionModalOpen(false);
+    toast.success("Excursion saved");
+  };
+
+  const cancelExcursionModal = () => {
+    setExcursionModalOpen(false);
+  };
+
+  const handleDeleteExcursion = async () => {
+    if (!deleteExcursionTarget) return;
+    const { error } = await supabase.from("excursions").delete().eq("id", deleteExcursionTarget.id);
+    if (error) { toast.error("Failed to delete excursion"); return; }
+    // Revert to practice day
+    const existing = practiceDaysCalMonth.find((p) => p.date === deleteExcursionTarget.date);
+    if (existing) {
+      await supabase.from("practice_days").update({ is_practice_day: true }).eq("id", existing.id);
+    }
+    queryClient.invalidateQueries({ queryKey: ["excursions-cal"] });
+    queryClient.invalidateQueries({ queryKey: ["practice-days-cal"] });
+    setDeleteExcursionTarget(null);
+    toast.success("Excursion deleted");
+  };
+
+  const saveEditExcursion = async () => {
+    if (!editingExcursion) return;
+    const { error } = await supabase.from("excursions").update({
+      name: editingExcursion.name,
+      youth_count: editingExcursion.youth_count,
+      notes: editingExcursion.notes,
+    }).eq("id", editingExcursion.id);
+    if (error) { toast.error("Failed to update excursion"); return; }
+    queryClient.invalidateQueries({ queryKey: ["excursions-cal"] });
+    setEditingExcursion(null);
+    toast.success("Excursion updated");
   };
 
   /* ───── Derived Data ───── */
