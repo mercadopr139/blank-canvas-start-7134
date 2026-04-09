@@ -46,6 +46,7 @@ interface AttendanceRecord {
   check_in_date: string;
   check_in_at: string;
   program_source: string;
+  is_manual: boolean;
 }
 
 interface PracticeDay {
