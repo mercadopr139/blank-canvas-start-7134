@@ -298,17 +298,16 @@ export default function TransportRun() {
             const att = attendance[y.id] || { picked_up: false, dropped_off: false };
             const isStarred = starred.has(y.id);
             const photoUrl = getPhotoUrl(y.photo_url);
-            const hasBoth = att.picked_up && att.dropped_off;
-            const hasAny = att.picked_up || att.dropped_off;
+            const isMarked = runType === "pickup" ? att.picked_up : att.dropped_off;
 
             return (
               <div
                 key={y.id}
                 className={`relative rounded-2xl border-2 p-3 transition-all ${
-                  hasBoth
-                    ? "border-green-500/30 bg-green-500/5"
-                    : hasAny
-                    ? "border-blue-500/30 bg-blue-500/5"
+                  isMarked
+                    ? runType === "pickup"
+                      ? "border-red-500/30 bg-red-500/5"
+                      : "border-green-500/30 bg-green-500/5"
                     : "border-white/10 bg-white/5"
                 }`}
               >
