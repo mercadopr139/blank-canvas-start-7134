@@ -1900,16 +1900,113 @@ const AdminAttendance = () => {
       </div>
 
       {/* Day Detail Modal */}
-      <Dialog open={!!selectedDay} onOpenChange={() => { setSelectedDay(null); setDaySearch(""); }}>
+      <Dialog open={!!selectedDay} onOpenChange={() => { setSelectedDay(null); setDaySearch(""); setManualAddMode(false); setManualSearch(""); }}>
         <DialogContent className="bg-black border-white/10 text-white max-w-lg max-h-[80vh] flex flex-col">
           {selectedDay && (
             <>
               <DialogHeader>
-                <DialogTitle className="flex items-center gap-2">
-                  <CalendarDays className="w-5 h-5 text-blue-400" />
-                  {format(new Date(selectedDay + "T12:00:00"), "EEEE, MMMM d, yyyy")}
+                <DialogTitle className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <CalendarDays className="w-5 h-5 text-blue-400" />
+                    {format(new Date(selectedDay + "T12:00:00"), "EEEE, MMMM d, yyyy")}
+                  </div>
+                  {!manualAddMode && (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => setManualAddMode(true)}
+                      className="border-amber-500/30 text-amber-400 hover:bg-amber-500/10 hover:text-amber-300 h-8 text-xs"
+                    >
+                      <UserPlus className="w-3.5 h-3.5 mr-1" />
+                      Add Youth
+                    </Button>
+                  )}
                 </DialogTitle>
               </DialogHeader>
+
+              {/* Manual Add Youth Section */}
+              {manualAddMode && (
+                <div className="mb-3 p-3 rounded-lg bg-amber-500/10 border border-amber-500/20">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-sm font-medium text-amber-400">Add Manual Check-In</span>
+                    <button onClick={() => { setManualAddMode(false); setManualSearch(""); }} className="text-white/40 hover:text-white/60">
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
+                  <div className="relative">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/40" />
+                    <Input
+                      value={manualSearch}
+                      onChange={(e) => setManualSearch(e.target.value)}
+                      placeholder="Search youth by name..."
+                      className="pl-9 bg-white/5 border-white/20 text-white placeholder:text-white/30 h-9"
+                      autoFocus
+                    />
+                  </div>
+                  {manualSearch.length >= 2 && (
+                    <div className="mt-2 max-h-40 overflow-y-auto space-y-1">
+                      {registrations
+                        .filter((r) => {
+                          const fullName = `${r.child_first_name} ${r.child_last_name}`.toLowerCase();
+                          return fullName.includes(manualSearch.toLowerCase());
+                        })
+                        .slice(0, 10)
+                        .map((r) => {
+                          const alreadyCheckedIn = daySignIns.some((s) => s.registration_id === r.id);
+                          return (
+                            <button
+                              key={r.id}
+                              disabled={alreadyCheckedIn || manualAdding}
+                              onClick={async () => {
+                                if (alreadyCheckedIn) return;
+                                setManualAdding(true);
+                                // Create check-in at 5:15 PM on selected day
+                                const checkInTime = new Date(selectedDay + "T17:15:00");
+                                const { error } = await supabase.from("attendance_records").insert({
+                                  registration_id: r.id,
+                                  check_in_date: selectedDay,
+                                  check_in_at: checkInTime.toISOString(),
+                                  program_source: "NLA",
+                                  is_manual: true,
+                                  added_by_user_id: user?.id || null,
+                                });
+                                if (error) {
+                                  toast.error("Failed to add check-in");
+                                } else {
+                                  toast.success(`Manual check-in added for ${r.child_first_name} ${r.child_last_name}`);
+                                  invalidateAttendance();
+                                  setManualSearch("");
+                                  setManualAddMode(false);
+                                }
+                                setManualAdding(false);
+                              }}
+                              className={`w-full flex items-center gap-3 p-2 rounded-lg transition-colors ${
+                                alreadyCheckedIn ? "opacity-50 cursor-not-allowed bg-white/5" : "bg-white/5 hover:bg-white/10 cursor-pointer"
+                              }`}
+                            >
+                              <div className="w-7 h-7 rounded-full bg-white/10 overflow-hidden flex-shrink-0">
+                                {getHeadshotUrl(r.child_headshot_url) ? (
+                                  <img src={getHeadshotUrl(r.child_headshot_url)!} alt="" className="w-full h-full object-cover" />
+                                ) : (
+                                  <span className="flex items-center justify-center w-full h-full text-xs text-white/40">{r.child_first_name[0]}</span>
+                                )}
+                              </div>
+                              <div className="flex-1 min-w-0 text-left">
+                                <span className="text-sm font-medium text-white">{r.child_first_name} {r.child_last_name}</span>
+                                {alreadyCheckedIn && <span className="ml-2 text-xs text-amber-400">Already checked in</span>}
+                              </div>
+                              {r.is_bald_eagle && <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-400 flex-shrink-0" />}
+                            </button>
+                          );
+                        })}
+                      {registrations.filter((r) => `${r.child_first_name} ${r.child_last_name}`.toLowerCase().includes(manualSearch.toLowerCase())).length === 0 && (
+                        <p className="text-xs text-white/30 text-center py-2">No matching youth found</p>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
+
               <div className="mt-2 mb-2 flex items-center gap-3">
                 <Badge className="bg-green-500/15 text-green-400 border-green-500/30 flex-shrink-0">{daySignIns.length} youth signed in</Badge>
                 {!isPracticeDay(selectedDay, calPracticeDayMap) && (
@@ -1939,14 +2036,15 @@ const AdminAttendance = () => {
                       <div className="flex items-center gap-1.5">
                         <span className="font-medium text-sm text-white">{s.reg.child_first_name} {s.reg.child_last_name}</span>
                         {s.reg.is_bald_eagle && <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-400 flex-shrink-0" />}
+                        {s.is_manual && <Badge className="bg-amber-500/15 text-amber-400 border-amber-500/30 text-[10px] px-1.5 py-0">Manual</Badge>}
                       </div>
                       <p className="text-xs text-white/40">{s.reg.child_boxing_program} · <span className={s.program_source === 'Lil Champs Corner' ? 'text-sky-400' : 'text-green-400'}>{s.program_source}</span></p>
                     </div>
-                    <span className="text-xs text-white/50 flex-shrink-0">{format(new Date(s.check_in_at), "h:mm a")}</span>
+                    <span className={`text-xs flex-shrink-0 ${s.is_manual ? 'text-amber-400' : 'text-white/50'}`}>{format(new Date(s.check_in_at), "h:mm a")}</span>
                     <button
                       onClick={(e) => { e.stopPropagation(); setDeleteTarget({ id: s.id, name: `${s.reg.child_first_name} ${s.reg.child_last_name}`, date: s.check_in_date }); }}
                       className="p-1 rounded hover:bg-red-500/20 text-white/30 hover:text-red-400 transition-colors flex-shrink-0"
-                      title="Remove check-in"
+                      title={s.is_manual ? "Remove manual check-in" : "Remove check-in"}
                     >
                       <Trash2 className="w-3.5 h-3.5" />
                     </button>
