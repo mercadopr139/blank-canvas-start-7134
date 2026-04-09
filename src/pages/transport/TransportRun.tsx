@@ -48,6 +48,8 @@ export default function TransportRun() {
   const [submitConfirmOpen, setSubmitConfirmOpen] = useState(false);
   const [submittingTrip, setSubmittingTrip] = useState(false);
   const [addYouthOpen, setAddYouthOpen] = useState(false);
+  const [backConfirmOpen, setBackConfirmOpen] = useState(false);
+  const [cancellingRun, setCancellingRun] = useState(false);
 
   useEffect(() => {
     const runSession = sessionStorage.getItem("transport_run");
