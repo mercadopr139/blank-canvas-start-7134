@@ -7,9 +7,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { useToast } from "@/hooks/use-toast";
 import {
   AlertTriangle, CheckCircle, XCircle,
-  Download, ChevronLeft, ChevronRight, DollarSign, Trash2, Pencil, X,
+  Download, ChevronLeft, ChevronRight, DollarSign, Trash2, Pencil,
 } from "lucide-react";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   format, startOfMonth, endOfMonth, eachDayOfInterval, getDay,
   addMonths, subMonths, setDate,
