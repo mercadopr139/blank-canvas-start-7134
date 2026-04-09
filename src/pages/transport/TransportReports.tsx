@@ -64,6 +64,7 @@ export default function TransportReports() {
   const handleDeleteRun = async (id: string) => {
     if (!confirm("Delete this run and its attendance records?")) return;
     setDeleting(id);
+    await supabase.from("run_approvals").delete().eq("run_id", id);
     await supabase.from("transport_attendance").delete().eq("run_id", id);
     await supabase.from("incidents").delete().eq("run_id", id);
     await supabase.from("runs").delete().eq("id", id);
