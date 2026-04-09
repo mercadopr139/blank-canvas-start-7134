@@ -169,7 +169,6 @@ const AdminLilChampsAttendance = () => {
       toast({ title: `${youth.child_first_name} ${youth.child_last_name} checked in` });
       setAddOpen(false);
       setAddSearch("");
-      setAddResults([]);
       await fetchRecords();
     }
     setAdding(false);
