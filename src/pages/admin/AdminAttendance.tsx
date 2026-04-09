@@ -52,9 +52,57 @@ interface PracticeDay {
   is_practice_day: boolean;
 }
 
+interface WeatherDay {
+  date: string;
+  temp_high: number | null;
+  temp_low: number | null;
+  precipitation: number | null;
+  condition: string;
+  condition_code: number | null;
+}
+
 const POVERTY_INCOMES = ["Under $25,000", "Less than $25,000", "Less than $35,000"];
 const WEEKDAY_LABELS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
-const WEEKDAY_NAMES = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+
+/* ───── Weather helpers ───── */
+const WMO_MAP: Record<number, { label: string; emoji: string }> = {
+  0: { label: "Sunny", emoji: "☀️" },
+  1: { label: "Mostly Sunny", emoji: "🌤️" },
+  2: { label: "Partly Cloudy", emoji: "⛅" },
+  3: { label: "Cloudy", emoji: "☁️" },
+  45: { label: "Foggy", emoji: "🌫️" },
+  48: { label: "Foggy", emoji: "🌫️" },
+  51: { label: "Light Drizzle", emoji: "🌦️" },
+  53: { label: "Drizzle", emoji: "🌦️" },
+  55: { label: "Heavy Drizzle", emoji: "🌧️" },
+  61: { label: "Light Rain", emoji: "🌧️" },
+  63: { label: "Rainy", emoji: "🌧️" },
+  65: { label: "Heavy Rain", emoji: "🌧️" },
+  66: { label: "Freezing Rain", emoji: "🌧️" },
+  67: { label: "Freezing Rain", emoji: "🌧️" },
+  71: { label: "Light Snow", emoji: "🌨️" },
+  73: { label: "Snowy", emoji: "❄️" },
+  75: { label: "Heavy Snow", emoji: "❄️" },
+  77: { label: "Snow Grains", emoji: "❄️" },
+  80: { label: "Rain Showers", emoji: "🌧️" },
+  81: { label: "Rain Showers", emoji: "🌧️" },
+  82: { label: "Heavy Showers", emoji: "🌧️" },
+  85: { label: "Snow Showers", emoji: "🌨️" },
+  86: { label: "Heavy Snow Showers", emoji: "❄️" },
+  95: { label: "Stormy", emoji: "🌩️" },
+  96: { label: "Stormy w/ Hail", emoji: "🌩️" },
+  99: { label: "Stormy w/ Hail", emoji: "🌩️" },
+};
+
+const getWeatherInfo = (code: number | null) => {
+  if (code === null) return { label: "Unknown", emoji: "❓" };
+  return WMO_MAP[code] || { label: "Unknown", emoji: "❓" };
+};
+
+
+
+const isRainyCode = (code: number | null) => code !== null && code >= 51;
+const isSunnyCode = (code: number | null) => code !== null && code <= 2;
 
 const now = new Date();
 const todayStr = now.toLocaleDateString('en-CA', { timeZone: 'America/New_York' });
@@ -208,7 +256,72 @@ const AdminAttendance = () => {
     },
   });
 
-  /* ───── Practice Day Helper ───── */
+  /* ───── Weather Data (Open-Meteo + DB cache) ───── */
+  const { data: weatherMap = {} } = useQuery({
+    queryKey: ["weather-data", calMonthStart],
+    queryFn: async () => {
+      // 1. Check DB cache first
+      const { data: cached } = await supabase
+        .from("weather_data")
+        .select("date, temp_high, temp_low, precipitation, condition, condition_code")
+        .eq("location", "rio_grande_nj")
+        .gte("date", calMonthStart)
+        .lte("date", calMonthEnd);
+
+      const cachedMap: Record<string, WeatherDay> = {};
+      (cached || []).forEach((w: any) => { cachedMap[w.date] = w; });
+
+      // Check if we have all days
+      const daysInMonth = getDaysInMonth(calendarMonth);
+      const missingDates: string[] = [];
+      for (let d = 1; d <= daysInMonth; d++) {
+        const ds = format(new Date(calendarMonth.getFullYear(), calendarMonth.getMonth(), d), "yyyy-MM-dd");
+        if (!cachedMap[ds]) missingDates.push(ds);
+      }
+
+      if (missingDates.length === 0) return cachedMap;
+
+      // 2. Fetch from Open-Meteo
+      try {
+        const url = `https://api.open-meteo.com/v1/forecast?latitude=39.0018&longitude=-74.8774&daily=temperature_2m_max,temperature_2m_min,precipitation_sum,weather_code&temperature_unit=fahrenheit&precipitation_unit=inch&timezone=America/New_York&start_date=${calMonthStart}&end_date=${calMonthEnd}`;
+        const resp = await fetch(url);
+        if (!resp.ok) return cachedMap;
+        const json = await resp.json();
+        const daily = json.daily;
+        if (!daily?.time) return cachedMap;
+
+        const rows: any[] = [];
+        for (let i = 0; i < daily.time.length; i++) {
+          const dateStr = daily.time[i];
+          if (cachedMap[dateStr]) continue; // already cached
+          const code = daily.weather_code?.[i] ?? null;
+          const info = getWeatherInfo(code);
+          const row = {
+            date: dateStr,
+            location: "rio_grande_nj",
+            temp_high: daily.temperature_2m_max?.[i] ?? null,
+            temp_low: daily.temperature_2m_min?.[i] ?? null,
+            precipitation: daily.precipitation_sum?.[i] ?? null,
+            condition: info.label,
+            condition_code: code,
+          };
+          rows.push(row);
+          cachedMap[dateStr] = row as WeatherDay;
+        }
+
+        // Save to DB (fire and forget)
+        if (rows.length > 0) {
+          supabase.from("weather_data").upsert(rows, { onConflict: "date,location" }).then();
+        }
+      } catch (e) {
+        console.warn("Weather fetch failed:", e);
+      }
+
+      return cachedMap;
+    },
+    staleTime: 1000 * 60 * 30, // 30 min cache
+  });
+
   const calPracticeDayMap = useMemo(() => {
     const m: Record<string, boolean> = {};
     practiceDaysCalMonth.forEach((p) => { m[p.date] = p.is_practice_day; });
@@ -519,8 +632,62 @@ const AdminAttendance = () => {
       else if (mtdAvg < prevAvg) insights.push(`${viewedMonthShort}'s average attendance is lower than ${prevMonthName}.`);
     }
 
+    /* ── Weather-based insights ── */
+    const weatherEntries = Object.values(weatherMap) as WeatherDay[];
+    const practiceDailyCountsMap: Record<string, number> = {};
+    practiceAttendance.forEach((a) => { practiceDailyCountsMap[a.check_in_date] = (practiceDailyCountsMap[a.check_in_date] || 0) + 1; });
+
+    if (weatherEntries.length >= 3) {
+      // Rainy vs sunny
+      const rainyDays = weatherEntries.filter((w) => isRainyCode(w.condition_code) && practiceDailyCountsMap[w.date] !== undefined);
+      const sunnyDays = weatherEntries.filter((w) => isSunnyCode(w.condition_code) && practiceDailyCountsMap[w.date] !== undefined);
+
+      if (rainyDays.length >= 2 && sunnyDays.length >= 2) {
+        const rainyAvg = Math.round(rainyDays.reduce((s, w) => s + (practiceDailyCountsMap[w.date] || 0), 0) / rainyDays.length);
+        const sunnyAvg = Math.round(sunnyDays.reduce((s, w) => s + (practiceDailyCountsMap[w.date] || 0), 0) / sunnyDays.length);
+        if (sunnyAvg > 0 && rainyAvg < sunnyAvg) {
+          const diff = Math.round(((sunnyAvg - rainyAvg) / sunnyAvg) * 100);
+          insights.push(`🌧️ Rainy days average ${diff}% lower attendance than sunny days this month.`);
+        }
+      }
+
+      // Cold vs warm
+      const withTemp = weatherEntries.filter((w) => w.temp_high !== null && practiceDailyCountsMap[w.date] !== undefined);
+      if (withTemp.length >= 4) {
+        const temps = withTemp.map((w) => w.temp_high!).sort((a, b) => a - b);
+        const coldThresh = temps[Math.floor(temps.length * 0.25)];
+        const coldDays = withTemp.filter((w) => w.temp_high! <= coldThresh);
+        const warmDays = withTemp.filter((w) => w.temp_high! > coldThresh);
+        if (coldDays.length >= 2 && warmDays.length >= 2) {
+          const coldAvg = Math.round(coldDays.reduce((s, w) => s + (practiceDailyCountsMap[w.date] || 0), 0) / coldDays.length);
+          const warmAvg = Math.round(warmDays.reduce((s, w) => s + (practiceDailyCountsMap[w.date] || 0), 0) / warmDays.length);
+          insights.push(`🌡️ Coldest days (below ${Math.round(coldThresh)}°F) had avg attendance of ${coldAvg} vs ${warmAvg} on warmer days.`);
+        }
+      }
+
+      // Best weather condition
+      const conditionGroups: Record<string, number[]> = {};
+      weatherEntries.forEach((w) => {
+        if (practiceDailyCountsMap[w.date] !== undefined && w.condition) {
+          if (!conditionGroups[w.condition]) conditionGroups[w.condition] = [];
+          conditionGroups[w.condition].push(practiceDailyCountsMap[w.date] || 0);
+        }
+      });
+      let bestCondition = "";
+      let bestAvg = 0;
+      Object.entries(conditionGroups).forEach(([cond, counts]) => {
+        if (counts.length >= 2) {
+          const avg = Math.round(counts.reduce((a, b) => a + b, 0) / counts.length);
+          if (avg > bestAvg) { bestAvg = avg; bestCondition = cond; }
+        }
+      });
+      if (bestCondition) {
+        insights.push(`☀️ Highest attendance this month occurred on ${bestCondition} days (avg ${bestAvg}).`);
+      }
+    }
+
     return insights;
-  }, [weeklyAvgData, practiceAttendance, regMap, topDistrictToday, totalPresentToday, avgArrivalToday, prevPracticeAttendance, mtdAvg, isCurrentMonth, viewedMonthShort, calendarMonth]);
+  }, [weeklyAvgData, practiceAttendance, regMap, topDistrictToday, totalPresentToday, avgArrivalToday, prevPracticeAttendance, mtdAvg, isCurrentMonth, viewedMonthShort, calendarMonth, weatherMap]);
 
   /* ───── BALD EAGLES ───── */
   const baldEagles = registrations.filter((r) => r.is_bald_eagle);
@@ -754,9 +921,11 @@ const AdminAttendance = () => {
                 const isCurrentDay = isToday(dateObj);
                 const isSelected = selectedDay === dateStr;
                 const isPrac = isPracticeDay(dateStr, calPracticeDayMap);
+                const weather = weatherMap[dateStr] as WeatherDay | undefined;
+                const wInfo = weather ? getWeatherInfo(weather.condition_code) : null;
 
                 return (
-                  <div key={dateStr} className="relative aspect-square">
+                  <div key={dateStr} className="relative aspect-square group/cell">
                     <button
                       onClick={() => count > 0 && setSelectedDay(dateStr)}
                       className={`
@@ -768,10 +937,34 @@ const AdminAttendance = () => {
                         ${!isPrac ? "bg-red-500/[0.06]" : "bg-white/[0.03]"}
                       `}
                     >
-                      <span className={`absolute top-1 right-1.5 text-[10px] leading-none ${
+                      {/* Date number with weather emoji hint */}
+                      <span className={`absolute top-1 right-1.5 text-[10px] leading-none flex items-center gap-0.5 ${
                         !isPrac ? "text-red-400 font-medium" :
                         isCurrentDay ? "text-blue-400 font-semibold" : "text-white/35"
-                      }`}>{day}</span>
+                      }`}>
+                        {wInfo && <span className="text-[8px]">{wInfo.emoji}</span>}
+                        <span className={wInfo ? "border-b border-dotted border-white/20" : ""}>{day}</span>
+                      </span>
+
+                      {/* Weather tooltip (appears on hover over the entire cell's date corner) */}
+                      {weather && (
+                        <div className="absolute top-6 right-0 z-50 hidden group-hover/cell:block pointer-events-none">
+                          <div className="bg-[#111] border border-white/15 rounded-lg px-3 py-2 text-left shadow-xl min-w-[140px]">
+                            <p className="text-xs font-semibold text-white flex items-center gap-1">
+                              {wInfo?.emoji} {weather.condition}
+                            </p>
+                            <p className="text-[11px] text-white/70 mt-0.5">
+                              {weather.temp_high !== null ? `${Math.round(weather.temp_high)}°F` : "—"} / {weather.temp_low !== null ? `${Math.round(weather.temp_low)}°F` : "—"}
+                            </p>
+                            {weather.precipitation !== null && weather.precipitation > 0 && (
+                              <p className="text-[10px] text-blue-300/70 mt-0.5">
+                                💧 {weather.precipitation.toFixed(2)} in
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                      )}
+
                       {count > 0 ? (
                         <span className={`w-8 h-8 sm:w-9 sm:h-9 rounded-full flex items-center justify-center text-sm sm:text-base font-bold ${
                           isPrac

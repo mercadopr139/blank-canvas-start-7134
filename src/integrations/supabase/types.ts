@@ -1471,6 +1471,42 @@ export type Database = {
         }
         Relationships: []
       }
+      weather_data: {
+        Row: {
+          condition: string | null
+          condition_code: number | null
+          date: string
+          fetched_at: string
+          id: string
+          location: string
+          precipitation: number | null
+          temp_high: number | null
+          temp_low: number | null
+        }
+        Insert: {
+          condition?: string | null
+          condition_code?: number | null
+          date: string
+          fetched_at?: string
+          id?: string
+          location?: string
+          precipitation?: number | null
+          temp_high?: number | null
+          temp_low?: number | null
+        }
+        Update: {
+          condition?: string | null
+          condition_code?: number | null
+          date?: string
+          fetched_at?: string
+          id?: string
+          location?: string
+          precipitation?: number | null
+          temp_high?: number | null
+          temp_low?: number | null
+        }
+        Relationships: []
+      }
       youth_profiles: {
         Row: {
           address: string | null
