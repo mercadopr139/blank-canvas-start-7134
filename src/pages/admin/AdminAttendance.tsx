@@ -4,11 +4,12 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import {
   Star, Search, AlertTriangle, Users, Eye, ChevronLeft, ChevronRight, CalendarDays,
-  Clock, TrendingUp, School, Lightbulb, Activity, Trash2, X
+  Clock, TrendingUp, School, Lightbulb, Activity, Trash2, X, Pencil, MapPin
 } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -51,6 +52,17 @@ interface PracticeDay {
   date: string;
   is_practice_day: boolean;
 }
+
+interface Excursion {
+  id: string;
+  date: string;
+  name: string;
+  youth_count: number;
+  notes: string | null;
+  created_at: string;
+}
+
+type DayType = "practice" | "non-practice" | "excursion";
 
 interface WeatherDay {
   date: string;
@@ -130,6 +142,14 @@ const AdminAttendance = () => {
   const [daySearch, setDaySearch] = useState("");
   const [addEagleOpen, setAddEagleOpen] = useState(false);
   const [eagleSearch, setEagleSearch] = useState("");
+  const [excursionModalOpen, setExcursionModalOpen] = useState(false);
+  const [excursionDate, setExcursionDate] = useState<string>("");
+  const [excursionName, setExcursionName] = useState("");
+  const [excursionYouthCount, setExcursionYouthCount] = useState<number | "">("");
+  const [excursionNotes, setExcursionNotes] = useState("");
+  const [excursionPrevState, setExcursionPrevState] = useState<boolean>(true);
+  const [editingExcursion, setEditingExcursion] = useState<Excursion | null>(null);
+  const [deleteExcursionTarget, setDeleteExcursionTarget] = useState<Excursion | null>(null);
   const [weatherTooltipDay, setWeatherTooltipDay] = useState<string | null>(null);
 
   const invalidateAttendance = () => {
@@ -257,6 +277,23 @@ const AdminAttendance = () => {
     },
   });
 
+  // Excursions for calendar month
+  const { data: excursionsCalMonth = [] } = useQuery({
+    queryKey: ["excursions-cal", calMonthStart],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("excursions")
+        .select("*")
+        .gte("date", calMonthStart)
+        .lte("date", calMonthEnd)
+        .order("date");
+      if (error) throw error;
+      return (data || []) as Excursion[];
+    },
+  });
+
+
+
   /* ───── Weather Data (Open-Meteo + DB cache) ───── */
   const { data: weatherMap = {}, isLoading: weatherLoading } = useQuery({
     queryKey: ["weather-data", calMonthStart],
@@ -371,10 +408,21 @@ const AdminAttendance = () => {
     return isDefaultPracticeDay(dateStr);
   }, []);
 
-  /* ───── Filter attendance to practice days only ───── */
+  /* ───── Excursion map ───── */
+  const excursionDayMap = useMemo(() => {
+    const m: Record<string, boolean> = {};
+    excursionsCalMonth.forEach((e) => { m[e.date] = true; });
+    return m;
+  }, [excursionsCalMonth]);
+
+  const isExcursionDay = useCallback((dateStr: string): boolean => {
+    return !!excursionDayMap[dateStr];
+  }, [excursionDayMap]);
+
+  /* ───── Filter attendance to practice days only (exclude excursion days) ───── */
   const practiceAttendance = useMemo(
-    () => calendarAttendance.filter((a) => isPracticeDay(a.check_in_date, calPracticeDayMap)),
-    [calendarAttendance, calPracticeDayMap, isPracticeDay]
+    () => calendarAttendance.filter((a) => isPracticeDay(a.check_in_date, calPracticeDayMap) && !isExcursionDay(a.check_in_date)),
+    [calendarAttendance, calPracticeDayMap, isPracticeDay, isExcursionDay]
   );
 
   const prevPracticeAttendance = useMemo(
@@ -382,21 +430,99 @@ const AdminAttendance = () => {
     [prevMonthAttendance, prevPracticeDayMap, isPracticeDay]
   );
 
-  /* ───── Toggle Practice Day ───── */
-  const togglePracticeDay = async (dateStr: string) => {
-    const currentValue = isPracticeDay(dateStr, calPracticeDayMap);
-    const newValue = !currentValue;
-    const existing = practiceDaysCalMonth.find((p) => p.date === dateStr);
+  /* ───── Toggle Day Type: Practice → Non-Practice → Excursion → Practice ───── */
+  const cycleDayType = async (dateStr: string) => {
+    const isPrac = isPracticeDay(dateStr, calPracticeDayMap);
+    const isExc = isExcursionDay(dateStr);
 
-    if (existing) {
-      await supabase.from("practice_days").update({ is_practice_day: newValue }).eq("id", existing.id);
+    if (isExc) {
+      // Excursion → Practice: remove excursion, set practice day
+      await supabase.from("excursions").delete().eq("date", dateStr);
+      const existing = practiceDaysCalMonth.find((p) => p.date === dateStr);
+      if (existing) {
+        await supabase.from("practice_days").update({ is_practice_day: true }).eq("id", existing.id);
+      } else {
+        await supabase.from("practice_days").insert({ date: dateStr, is_practice_day: true });
+      }
+      queryClient.invalidateQueries({ queryKey: ["practice-days-cal"] });
+      queryClient.invalidateQueries({ queryKey: ["excursions-cal"] });
+      toast.success("Marked as practice day");
+    } else if (isPrac) {
+      // Practice → Non-Practice
+      const existing = practiceDaysCalMonth.find((p) => p.date === dateStr);
+      if (existing) {
+        await supabase.from("practice_days").update({ is_practice_day: false }).eq("id", existing.id);
+      } else {
+        await supabase.from("practice_days").insert({ date: dateStr, is_practice_day: false });
+      }
+      queryClient.invalidateQueries({ queryKey: ["practice-days-cal"] });
+      toast.success("Marked as non-practice day");
     } else {
-      await supabase.from("practice_days").insert({ date: dateStr, is_practice_day: newValue });
+      // Non-Practice → Excursion: open modal to collect details
+      setExcursionDate(dateStr);
+      setExcursionName("");
+      setExcursionYouthCount("");
+      setExcursionNotes("");
+      setExcursionPrevState(false);
+      setExcursionModalOpen(true);
     }
+  };
 
+  const saveExcursion = async () => {
+    if (!excursionName.trim() || excursionYouthCount === "" || excursionYouthCount < 0) {
+      toast.error("Please fill in excursion name and youth count");
+      return;
+    }
+    const { error } = await supabase.from("excursions").insert({
+      date: excursionDate,
+      name: excursionName.trim(),
+      youth_count: Number(excursionYouthCount),
+      notes: excursionNotes.trim() || null,
+    });
+    if (error) { toast.error("Failed to save excursion"); return; }
+    // Also mark as non-practice (excursion days aren't practice)
+    const existing = practiceDaysCalMonth.find((p) => p.date === excursionDate);
+    if (existing) {
+      await supabase.from("practice_days").update({ is_practice_day: false }).eq("id", existing.id);
+    } else {
+      await supabase.from("practice_days").insert({ date: excursionDate, is_practice_day: false });
+    }
+    queryClient.invalidateQueries({ queryKey: ["excursions-cal"] });
     queryClient.invalidateQueries({ queryKey: ["practice-days-cal"] });
-    queryClient.invalidateQueries({ queryKey: ["practice-days-prev"] });
-    toast.success(newValue ? "Marked as practice day" : "Marked as non-practice day");
+    setExcursionModalOpen(false);
+    toast.success("Excursion saved");
+  };
+
+  const cancelExcursionModal = () => {
+    setExcursionModalOpen(false);
+  };
+
+  const handleDeleteExcursion = async () => {
+    if (!deleteExcursionTarget) return;
+    const { error } = await supabase.from("excursions").delete().eq("id", deleteExcursionTarget.id);
+    if (error) { toast.error("Failed to delete excursion"); return; }
+    // Revert to practice day
+    const existing = practiceDaysCalMonth.find((p) => p.date === deleteExcursionTarget.date);
+    if (existing) {
+      await supabase.from("practice_days").update({ is_practice_day: true }).eq("id", existing.id);
+    }
+    queryClient.invalidateQueries({ queryKey: ["excursions-cal"] });
+    queryClient.invalidateQueries({ queryKey: ["practice-days-cal"] });
+    setDeleteExcursionTarget(null);
+    toast.success("Excursion deleted");
+  };
+
+  const saveEditExcursion = async () => {
+    if (!editingExcursion) return;
+    const { error } = await supabase.from("excursions").update({
+      name: editingExcursion.name,
+      youth_count: editingExcursion.youth_count,
+      notes: editingExcursion.notes,
+    }).eq("id", editingExcursion.id);
+    if (error) { toast.error("Failed to update excursion"); return; }
+    queryClient.invalidateQueries({ queryKey: ["excursions-cal"] });
+    setEditingExcursion(null);
+    toast.success("Excursion updated");
   };
 
   /* ───── Derived Data ───── */
@@ -718,8 +844,14 @@ const AdminAttendance = () => {
       }
     }
 
+    /* ── Excursion insights ── */
+    if (excursionsCalMonth.length > 0) {
+      const totalYouthExc = excursionsCalMonth.reduce((s, e) => s + e.youth_count, 0);
+      insights.push(`🟣 ${excursionsCalMonth.length} excursion${excursionsCalMonth.length > 1 ? "s" : ""} this month reached ${totalYouthExc} youth total.`);
+    }
+
     return insights;
-  }, [weeklyAvgData, practiceAttendance, regMap, topDistrictToday, totalPresentToday, avgArrivalToday, prevPracticeAttendance, mtdAvg, isCurrentMonth, viewedMonthShort, calendarMonth, weatherMap]);
+  }, [weeklyAvgData, practiceAttendance, regMap, topDistrictToday, totalPresentToday, avgArrivalToday, prevPracticeAttendance, mtdAvg, isCurrentMonth, viewedMonthShort, calendarMonth, weatherMap, excursionsCalMonth]);
 
   /* ───── BALD EAGLES ───── */
   const baldEagles = registrations.filter((r) => r.is_bald_eagle);
@@ -953,6 +1085,7 @@ const AdminAttendance = () => {
                 const isCurrentDay = isToday(dateObj);
                 const isSelected = selectedDay === dateStr;
                 const isPrac = isPracticeDay(dateStr, calPracticeDayMap);
+                const isExc = isExcursionDay(dateStr);
                 const weather = weatherMap[dateStr] as WeatherDay | undefined;
                 const wInfo = weather ? getWeatherInfo(weather.condition_code) : null;
                 const rowIndex = Math.floor(idx / 7);
@@ -980,7 +1113,7 @@ const AdminAttendance = () => {
                         ${isCurrentDay && !isSelected ? "border border-white/30" : ""}
                         ${!isSelected && !isCurrentDay ? "border border-white/[0.06]" : ""}
                         ${count > 0 ? "hover:bg-white/10 cursor-pointer" : "cursor-default"}
-                        ${!isPrac ? "bg-red-500/[0.06]" : "bg-white/[0.03]"}
+                        ${isExc ? "bg-purple-500/[0.08]" : !isPrac ? "bg-red-500/[0.06]" : "bg-white/[0.03]"}
                       `}
                     >
                       {/* Date number with weather emoji hint */}
@@ -1030,15 +1163,17 @@ const AdminAttendance = () => {
                         </div>
                       </div>
                     )}
-                    {/* Toggle practice day button */}
+                    {/* Toggle day type button: cycles Practice → Non-Practice → Excursion */}
                     <button
-                      onClick={(e) => { e.stopPropagation(); togglePracticeDay(dateStr); }}
+                      onClick={(e) => { e.stopPropagation(); cycleDayType(dateStr); }}
                       className={`absolute bottom-0.5 left-1/2 -translate-x-1/2 w-2.5 h-2.5 rounded-full border transition-all hover:scale-150 ${
-                        isPrac
-                          ? "bg-green-500 border-green-400/50"
-                          : "bg-red-500 border-red-400/50"
+                        isExc
+                          ? "bg-purple-500 border-purple-400/50"
+                          : isPrac
+                            ? "bg-green-500 border-green-400/50"
+                            : "bg-red-500 border-red-400/50"
                       }`}
-                      title={isPrac ? "Click to mark as non-practice day" : "Click to mark as practice day"}
+                      title={isExc ? "Excursion Day — click to mark as Practice" : isPrac ? "Practice Day — click to mark as Non-Practice" : "Non-Practice — click to mark as Excursion"}
                     />
                   </div>
                 );
@@ -1046,7 +1181,7 @@ const AdminAttendance = () => {
             </div>
 
             {/* Legend */}
-            <div className="flex items-center gap-6 mt-4 pt-3 border-t border-white/10">
+            <div className="flex items-center gap-4 mt-4 pt-3 border-t border-white/10 flex-wrap">
               <div className="flex items-center gap-1.5">
                 <span className="w-3 h-3 rounded-full bg-green-500" />
                 <span className="text-xs text-white/50">Practice Day</span>
@@ -1055,7 +1190,11 @@ const AdminAttendance = () => {
                 <span className="w-3 h-3 rounded-full bg-red-500" />
                 <span className="text-xs text-white/50">Non-Practice Day</span>
               </div>
-              <span className="text-[10px] text-white/30 ml-auto">Click dot to toggle</span>
+              <div className="flex items-center gap-1.5">
+                <span className="w-3 h-3 rounded-full bg-purple-500" />
+                <span className="text-xs text-white/50">Excursion Day</span>
+              </div>
+              <span className="text-[10px] text-white/30 ml-auto">Click dot to cycle</span>
             </div>
           </CardContent>
         </Card>
@@ -1254,7 +1393,60 @@ const AdminAttendance = () => {
           </Card>
         )}
 
-        {/* ═══════════ BALD EAGLES MONITOR ═══════════ */}
+        {/* ═══════════ EXCURSION LOG ═══════════ */}
+        <Card className="bg-purple-500/5 border-purple-500/20 text-white mb-6">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-lg flex items-center gap-2 text-purple-400">
+              🟣 Excursion Log — {format(calendarMonth, "MMMM yyyy")}
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {excursionsCalMonth.length > 0 ? (
+              <>
+                <div className="grid grid-cols-3 gap-3 mb-4">
+                  <div className="text-center p-3 rounded-lg bg-white/5">
+                    <p className="text-[10px] uppercase tracking-wider text-white/40">Excursions</p>
+                    <p className="text-2xl font-bold mt-1 text-purple-400">{excursionsCalMonth.length}</p>
+                  </div>
+                  <div className="text-center p-3 rounded-lg bg-white/5">
+                    <p className="text-[10px] uppercase tracking-wider text-white/40">Total Youth</p>
+                    <p className="text-2xl font-bold mt-1 text-purple-400">{excursionsCalMonth.reduce((s, e) => s + e.youth_count, 0)}</p>
+                  </div>
+                  <div className="text-center p-3 rounded-lg bg-white/5">
+                    <p className="text-[10px] uppercase tracking-wider text-white/40">Avg Youth</p>
+                    <p className="text-2xl font-bold mt-1 text-purple-400">{Math.round(excursionsCalMonth.reduce((s, e) => s + e.youth_count, 0) / excursionsCalMonth.length)}</p>
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  {excursionsCalMonth.map((exc) => (
+                    <div key={exc.id} className="flex items-center gap-3 p-3 rounded-lg bg-white/5 border border-white/[0.06]">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm font-semibold text-white">{exc.name}</span>
+                          <Badge className="bg-purple-500/15 text-purple-400 border-purple-500/30 text-[10px]">{exc.youth_count} youth</Badge>
+                        </div>
+                        <p className="text-xs text-white/40 mt-0.5">{format(parseISO(exc.date), "EEEE, MMMM d, yyyy")}</p>
+                        {exc.notes && <p className="text-xs text-white/50 mt-1">{exc.notes}</p>}
+                      </div>
+                      <div className="flex gap-1 flex-shrink-0">
+                        <button onClick={() => setEditingExcursion({ ...exc })} className="p-1.5 rounded hover:bg-white/10 text-white/30 hover:text-white transition-colors" title="Edit">
+                          <Pencil className="w-3.5 h-3.5" />
+                        </button>
+                        <button onClick={() => setDeleteExcursionTarget(exc)} className="p-1.5 rounded hover:bg-red-500/20 text-white/30 hover:text-red-400 transition-colors" title="Delete">
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </>
+            ) : (
+              <p className="text-sm text-white/30 text-center py-4">No excursions recorded this month</p>
+            )}
+          </CardContent>
+        </Card>
+
+
         <Card className="bg-white/5 border-white/10 text-white mb-4">
           <CardHeader className="pb-2">
             <CardTitle className="text-lg flex items-center gap-2 text-amber-400">
@@ -1648,6 +1840,78 @@ const AdminAttendance = () => {
           <div className="flex gap-2 justify-end pt-2">
             <Button variant="outline" size="sm" className="border-white/20 text-white" onClick={() => setDeleteTarget(null)}>Cancel</Button>
             <Button variant="destructive" size="sm" onClick={handleDeleteSingle}>Remove Check-In</Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Excursion Details Modal */}
+      <Dialog open={excursionModalOpen} onOpenChange={(open) => { if (!open) cancelExcursionModal(); }}>
+        <DialogContent className="bg-black border-purple-500/20 text-white max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="text-purple-400 flex items-center gap-2">🟣 Add Excursion</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3">
+            <div>
+              <label className="text-xs text-white/50 mb-1 block">Excursion Name *</label>
+              <Input value={excursionName} onChange={(e) => setExcursionName(e.target.value)} placeholder="e.g. Beach Trip" className="bg-white/5 border-white/20 text-white" autoFocus />
+            </div>
+            <div>
+              <label className="text-xs text-white/50 mb-1 block">Number of Youth *</label>
+              <Input type="number" min={0} value={excursionYouthCount} onChange={(e) => setExcursionYouthCount(e.target.value === "" ? "" : Number(e.target.value))} placeholder="0" className="bg-white/5 border-white/20 text-white" />
+            </div>
+            <div>
+              <label className="text-xs text-white/50 mb-1 block">Notes (optional)</label>
+              <Input value={excursionNotes} onChange={(e) => setExcursionNotes(e.target.value)} placeholder="Optional notes..." className="bg-white/5 border-white/20 text-white" />
+            </div>
+          </div>
+          <div className="flex gap-2 justify-end pt-2">
+            <Button variant="outline" size="sm" className="border-white/20 text-white" onClick={cancelExcursionModal}>Cancel</Button>
+            <Button size="sm" className="bg-purple-600 hover:bg-purple-700 text-white" onClick={saveExcursion}>Save</Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Excursion Modal */}
+      <Dialog open={!!editingExcursion} onOpenChange={(open) => { if (!open) setEditingExcursion(null); }}>
+        <DialogContent className="bg-black border-purple-500/20 text-white max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="text-purple-400 flex items-center gap-2">🟣 Edit Excursion</DialogTitle>
+          </DialogHeader>
+          {editingExcursion && (
+            <div className="space-y-3">
+              <div>
+                <label className="text-xs text-white/50 mb-1 block">Excursion Name *</label>
+                <Input value={editingExcursion.name} onChange={(e) => setEditingExcursion({ ...editingExcursion, name: e.target.value })} className="bg-white/5 border-white/20 text-white" />
+              </div>
+              <div>
+                <label className="text-xs text-white/50 mb-1 block">Number of Youth *</label>
+                <Input type="number" min={0} value={editingExcursion.youth_count} onChange={(e) => setEditingExcursion({ ...editingExcursion, youth_count: Number(e.target.value) })} className="bg-white/5 border-white/20 text-white" />
+              </div>
+              <div>
+                <label className="text-xs text-white/50 mb-1 block">Notes</label>
+                <Input value={editingExcursion.notes || ""} onChange={(e) => setEditingExcursion({ ...editingExcursion, notes: e.target.value || null })} className="bg-white/5 border-white/20 text-white" />
+              </div>
+              <div className="flex gap-2 justify-end pt-2">
+                <Button variant="outline" size="sm" className="border-white/20 text-white" onClick={() => setEditingExcursion(null)}>Cancel</Button>
+                <Button size="sm" className="bg-purple-600 hover:bg-purple-700 text-white" onClick={saveEditExcursion}>Save</Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Excursion Confirmation */}
+      <Dialog open={!!deleteExcursionTarget} onOpenChange={(open) => { if (!open) setDeleteExcursionTarget(null); }}>
+        <DialogContent className="bg-zinc-900 border-white/10 text-white max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="text-white">Delete Excursion?</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-white/70">
+            This will delete the excursion "<span className="font-medium text-white">{deleteExcursionTarget?.name}</span>" and revert the day to a practice day.
+          </p>
+          <div className="flex gap-2 justify-end pt-2">
+            <Button variant="outline" size="sm" className="border-white/20 text-white" onClick={() => setDeleteExcursionTarget(null)}>Cancel</Button>
+            <Button variant="destructive" size="sm" onClick={handleDeleteExcursion}>Delete</Button>
           </div>
         </DialogContent>
       </Dialog>
