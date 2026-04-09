@@ -828,7 +828,7 @@ const AdminAttendance = () => {
           {/* Poverty % */}
           <Card className="bg-white/5 border-white/10 text-white">
             <CardContent className="pt-4 pb-3 text-center">
-              <p className="text-[10px] uppercase tracking-wider text-white/40">Below Poverty Today</p>
+              <p className="text-[10px] uppercase tracking-wider text-white/40">{isCurrentMonth ? "Below Poverty Today" : `Below Poverty — ${viewedMonthShort}`}</p>
               <p className="text-3xl font-bold mt-1">{pct(povertyToday.below, povertyToday.total)}</p>
               <p className="text-[10px] text-white/30">{povertyToday.below} of {povertyToday.total}</p>
             </CardContent>
