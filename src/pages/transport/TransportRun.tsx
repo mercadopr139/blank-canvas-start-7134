@@ -347,30 +347,33 @@ export default function TransportRun() {
                   {y.first_name} {y.last_name[0]}.
                 </p>
 
-                {/* Action Buttons */}
-                <div className="grid grid-cols-2 gap-1.5">
-                  <button
-                    onClick={() => toggleAttendance(y.id, "picked_up")}
-                    className={`py-2.5 rounded-lg text-[10px] font-bold flex items-center justify-center gap-1 transition-all active:scale-95 touch-manipulation ${
-                      att.picked_up
-                        ? "bg-[#DC2626] text-white"
-                        : "bg-white/10 text-white/50"
-                    }`}
-                  >
-                    <ArrowUp className="w-3 h-3" />
-                    Pick-Up
-                  </button>
-                  <button
-                    onClick={() => toggleAttendance(y.id, "dropped_off")}
-                    className={`py-2.5 rounded-lg text-[10px] font-bold flex items-center justify-center gap-1 transition-all active:scale-95 touch-manipulation ${
-                      att.dropped_off
-                        ? "bg-green-600 text-white"
-                        : "bg-white/10 text-white/50"
-                    }`}
-                  >
-                    <ArrowDown className="w-3 h-3" />
-                    Drop-Off
-                  </button>
+                {/* Action Button - single based on run type */}
+                <div>
+                  {runType === "pickup" ? (
+                    <button
+                      onClick={() => toggleAttendance(y.id, "picked_up")}
+                      className={`w-full py-2.5 rounded-lg text-[10px] font-bold flex items-center justify-center gap-1 transition-all active:scale-95 touch-manipulation ${
+                        att.picked_up
+                          ? "bg-[#DC2626] text-white"
+                          : "bg-white/10 text-white/50"
+                      }`}
+                    >
+                      <ArrowUp className="w-3 h-3" />
+                      Pick-Up
+                    </button>
+                  ) : (
+                    <button
+                      onClick={() => toggleAttendance(y.id, "dropped_off")}
+                      className={`w-full py-2.5 rounded-lg text-[10px] font-bold flex items-center justify-center gap-1 transition-all active:scale-95 touch-manipulation ${
+                        att.dropped_off
+                          ? "bg-green-600 text-white"
+                          : "bg-white/10 text-white/50"
+                      }`}
+                    >
+                      <ArrowDown className="w-3 h-3" />
+                      Drop-Off
+                    </button>
+                  )}
                 </div>
               </div>
             );
