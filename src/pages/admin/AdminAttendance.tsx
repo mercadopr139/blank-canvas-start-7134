@@ -1095,6 +1095,37 @@ const AdminAttendance = () => {
   return (
     <div className="space-y-8">
 
+      {/* ═══════════ BALD EAGLE NO-SHOW ALERT ═══════════ */}
+      {baldEagleNoShows.length > 0 && !noShowAlertDismissed && (
+        <div className="bg-red-500/10 border border-red-500/30 rounded-xl p-4">
+          <div className="flex items-center justify-between mb-2">
+            <h3 className="text-red-400 font-bold flex items-center gap-2 text-sm">
+              <AlertTriangle className="w-4 h-4" />
+              🦅 Bald Eagle No-Show Alert
+            </h3>
+            <Button
+              size="sm"
+              variant="ghost"
+              className="text-red-400/60 hover:text-red-400 h-6 px-2 text-xs"
+              onClick={() => setNoShowAlertDismissed(true)}
+            >
+              Dismiss
+            </Button>
+          </div>
+          <p className="text-white/60 text-xs mb-3">
+            The following Bald Eagles did not sign in and did not call out today:
+          </p>
+          <div className="flex flex-wrap gap-2">
+            {baldEagleNoShows.map((r) => (
+              <Badge key={r.id} className="bg-red-500/20 text-red-300 border-red-500/30 text-xs py-1 px-2.5">
+                <Star className="w-3 h-3 mr-1 text-amber-400" />
+                {r.child_first_name} {r.child_last_name}
+              </Badge>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* ═══════════ ATTENDANCE INSIGHTS ═══════════ */}
       <div>
         <div className="flex items-center justify-between mb-4">
