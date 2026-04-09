@@ -152,7 +152,15 @@ const AdminAttendance = () => {
   const [deleteExcursionTarget, setDeleteExcursionTarget] = useState<Excursion | null>(null);
   const [weatherTooltipDay, setWeatherTooltipDay] = useState<string | null>(null);
   const [contextMenuDay, setContextMenuDay] = useState<{ dateStr: string; x: number; y: number } | null>(null);
-  const longPressTimer = React.useRef<ReturnType<typeof setTimeout> | null>(null);
+  const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Close context menu on outside click
+  useEffect(() => {
+    if (!contextMenuDay) return;
+    const handler = () => setContextMenuDay(null);
+    window.addEventListener("click", handler);
+    return () => window.removeEventListener("click", handler);
+  }, [contextMenuDay]);
   const invalidateAttendance = () => {
     queryClient.invalidateQueries({ queryKey: ["calendar-attendance"] });
     queryClient.invalidateQueries({ queryKey: ["all-attendance-for-profile"] });
