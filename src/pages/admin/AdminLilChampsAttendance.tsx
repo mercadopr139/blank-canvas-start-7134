@@ -220,6 +220,14 @@ const AdminLilChampsAttendance = () => {
           <Button variant="outline" size="sm" onClick={exportCsv} className="gap-2 text-foreground">
             <Download className="w-4 h-4" /> Export CSV
           </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => generateLilChampsAttendancePdf(filtered, dateFilter)}
+            className="gap-2 text-white bg-red-700 hover:bg-red-800 border-red-700"
+          >
+            <FileText className="w-4 h-4" /> Export PDF
+          </Button>
         </div>
       </div>
 
