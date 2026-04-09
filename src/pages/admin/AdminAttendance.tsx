@@ -434,21 +434,53 @@ const AdminAttendance = () => {
   const cycleDayType = async (dateStr: string) => {
     const isPrac = isPracticeDay(dateStr, calPracticeDayMap);
     const isExc = isExcursionDay(dateStr);
+    const existingPracticeDay = practiceDaysCalMonth.find((p) => p.date === dateStr);
+    const existingExcursion = excursionsCalMonth.find((e) => e.date === dateStr);
 
-    if (isExc) {
-      // Excursion → Practice: remove excursion, set practice day
-      await supabase.from("excursions").delete().eq("date", dateStr);
-      const existing = practiceDaysCalMonth.find((p) => p.date === dateStr);
-      if (existing) {
-        await supabase.from("practice_days").update({ is_practice_day: true }).eq("id", existing.id);
-      } else {
-        await supabase.from("practice_days").insert({ date: dateStr, is_practice_day: true });
+    if (isExc && existingExcursion) {
+      const { error: deleteExcursionError } = await supabase
+        .from("excursions")
+        .delete()
+        .eq("id", existingExcursion.id);
+      if (deleteExcursionError) {
+        toast.error("Failed to switch day back to practice");
+        return;
       }
-      queryClient.invalidateQueries({ queryKey: ["practice-days-cal"] });
-      queryClient.invalidateQueries({ queryKey: ["excursions-cal"] });
+
+      if (existingPracticeDay) {
+        const { error: updatePracticeError } = await supabase
+          .from("practice_days")
+          .update({ is_practice_day: true })
+          .eq("id", existingPracticeDay.id);
+        if (updatePracticeError) {
+          toast.error("Failed to restore practice day");
+          return;
+        }
+      } else {
+        const { error: insertPracticeError } = await supabase
+          .from("practice_days")
+          .insert({ date: dateStr, is_practice_day: true });
+        if (insertPracticeError) {
+          toast.error("Failed to restore practice day");
+          return;
+        }
+      }
+
+      queryClient.setQueryData(["excursions-cal", calMonthStart], (current: Excursion[] = []) =>
+        current.filter((excursion) => excursion.id !== existingExcursion.id)
+      );
+      queryClient.setQueryData(["practice-days-cal", calMonthStart], (current: PracticeDay[] = []) => {
+        const hasExisting = current.some((day) => day.date === dateStr);
+        if (!hasExisting) {
+          return [...current, { id: existingPracticeDay?.id ?? `temp-${dateStr}`, date: dateStr, is_practice_day: true } as PracticeDay];
+        }
+        return current.map((day) => day.date === dateStr ? { ...day, is_practice_day: true } : day);
+      });
+
+      queryClient.invalidateQueries({ queryKey: ["practice-days-cal", calMonthStart] });
+      queryClient.invalidateQueries({ queryKey: ["excursions-cal", calMonthStart] });
       toast.success("Marked as practice day");
     } else if (isPrac) {
-      // Practice → Non-Practice
       const existing = practiceDaysCalMonth.find((p) => p.date === dateStr);
       if (existing) {
         await supabase.from("practice_days").update({ is_practice_day: false }).eq("id", existing.id);
@@ -458,7 +490,6 @@ const AdminAttendance = () => {
       queryClient.invalidateQueries({ queryKey: ["practice-days-cal"] });
       toast.success("Marked as non-practice day");
     } else {
-      // Non-Practice → Excursion: open modal to collect details
       setExcursionDate(dateStr);
       setExcursionName("");
       setExcursionYouthCount("");
