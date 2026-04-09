@@ -76,6 +76,10 @@ function HistoryCalendarTab() {
   const [selectedDriver, setSelectedDriver] = useState<{ id: string; name: string } | null>(null);
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [panelOpen, setPanelOpen] = useState(false);
+  const [editingRunId, setEditingRunId] = useState<string | null>(null);
+  const [editForm, setEditForm] = useState<{ route: string; runType: string; date: string; time: string }>({ route: "", runType: "", date: "", time: "" });
+  const [routes, setRoutes] = useState<{ id: string; name: string }[]>([]);
+  const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
 
   const monthStart = startOfMonth(currentMonth);
   const monthEnd = endOfMonth(currentMonth);
@@ -84,13 +88,15 @@ function HistoryCalendarTab() {
     setLoading(true);
     const from = format(monthStart, "yyyy-MM-dd") + "T00:00:00";
     const to = format(monthEnd, "yyyy-MM-dd") + "T23:59:59";
-    const [runsRes, approvalsRes, attRes] = await Promise.all([
+    const [runsRes, approvalsRes, attRes, routesRes] = await Promise.all([
       supabase.from("runs").select("id, run_type, status, started_at, closed_at, driver:drivers(id, name), route:routes(id, name)").eq("status", "completed").gte("started_at", from).lte("started_at", to).order("started_at", { ascending: false }),
       supabase.from("run_approvals").select("id, run_id, status, notes"),
       supabase.from("transport_attendance").select("run_id").eq("status", "present").gte("recorded_at", from).lte("recorded_at", to),
+      supabase.from("routes").select("id, name"),
     ]);
     if (runsRes.data) setRuns(runsRes.data as unknown as RunWithDetails[]);
     if (approvalsRes.data) setApprovals(approvalsRes.data as unknown as RunApproval[]);
+    if (routesRes.data) setRoutes(routesRes.data as unknown as { id: string; name: string }[]);
     const counts: Record<string, number> = {};
     (attRes.data || []).forEach((a: { run_id: string }) => { counts[a.run_id] = (counts[a.run_id] || 0) + 1; });
     setAttendanceCounts(counts);
@@ -152,12 +158,32 @@ function HistoryCalendarTab() {
     toast({ title: "Trip disputed", variant: "destructive" }); fetchData();
   };
   const handleDeleteRun = async (id: string) => {
-    if (!confirm("Delete this trip and its records?")) return;
     await supabase.from("run_approvals").delete().eq("run_id", id);
     await supabase.from("transport_attendance").delete().eq("run_id", id);
     await supabase.from("incidents").delete().eq("run_id", id);
     await supabase.from("runs").delete().eq("id", id);
+    setDeleteConfirmId(null);
     toast({ title: "Trip deleted" }); fetchData();
+  };
+  const startEdit = (r: RunWithDetails) => {
+    setEditingRunId(r.id);
+    setEditForm({
+      route: r.route?.id || "",
+      runType: r.run_type,
+      date: format(new Date(r.started_at), "yyyy-MM-dd"),
+      time: format(new Date(r.started_at), "HH:mm"),
+    });
+  };
+  const handleSaveEdit = async () => {
+    if (!editingRunId) return;
+    const newStartedAt = new Date(`${editForm.date}T${editForm.time}:00`).toISOString();
+    await supabase.from("runs").update({
+      route_id: editForm.route,
+      run_type: editForm.runType as "pickup" | "dropoff",
+      started_at: newStartedAt,
+    }).eq("id", editingRunId);
+    setEditingRunId(null);
+    toast({ title: "Trip updated" }); fetchData();
   };
   const exportMonth = () => {
     const csv = toCsv(["Date","Type","Driver","Route","Status","Pay","Youth Count","Approval"], runs.map((r) => [format(new Date(r.started_at), "MM/dd/yyyy"), r.run_type, r.driver?.name || "", r.route?.name || "", r.status, `$${getPayRate(r.route?.name)}`, String(attendanceCounts[r.id] || 0), approvalMap.get(r.id)?.status || "pending"]));
@@ -171,6 +197,10 @@ function HistoryCalendarTab() {
   const panelTotal = useMemo(() => panelRuns.reduce((sum, r) => sum + getPayRate(r.route?.name), 0), [panelRuns]);
 
   const statusDot = (s: string) => s === "approved" ? "bg-green-400" : s === "disputed" ? "bg-red-400" : "bg-yellow-400";
+  const getEditPayRate = (routeId: string) => {
+    const route = routes.find((rt) => rt.id === routeId);
+    return getPayRate(route?.name);
+  };
 
   return (
     <div className="space-y-4">
@@ -211,7 +241,7 @@ function HistoryCalendarTab() {
                   <p className={`text-[11px] font-medium mb-1 ${isToday ? "text-[#DC2626]" : "text-white/40"}`}>{format(nonBlank.date, "d")}</p>
                   {dayDrivers && <div className="space-y-0.5">
                     {[...dayDrivers.entries()].map(([driverId, entry]) => (
-                      <button key={driverId} onClick={() => { setSelectedDriver({ id: driverId, name: entry.driverName }); setSelectedDate(dateKey); setPanelOpen(true); }} className="w-full flex items-center gap-1 px-1 py-0.5 rounded hover:bg-white/10 transition-colors text-left group">
+                      <button key={driverId} onClick={() => { setSelectedDriver({ id: driverId, name: entry.driverName }); setSelectedDate(dateKey); setPanelOpen(true); setEditingRunId(null); setDeleteConfirmId(null); }} className="w-full flex items-center gap-1 px-1 py-0.5 rounded hover:bg-white/10 transition-colors text-left group">
                         <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${statusDot(entry.worstStatus)}`} />
                         <span className="text-[10px] text-white/70 group-hover:text-white truncate leading-tight">{entry.driverName.split(" ")[0]}</span>
                         <span className="text-[9px] text-white/30 ml-auto flex-shrink-0">{entry.runs.length}</span>
@@ -225,12 +255,65 @@ function HistoryCalendarTab() {
         </div>
       )}
 
-      <Dialog open={panelOpen} onOpenChange={setPanelOpen}>
+      <Dialog open={panelOpen} onOpenChange={(open) => { setPanelOpen(open); if (!open) { setEditingRunId(null); setDeleteConfirmId(null); } }}>
         <DialogContent className="bg-[#111827] border-white/10 text-white max-w-md max-h-[85vh] overflow-y-auto">
           <DialogHeader><DialogTitle className="text-white">{selectedDriver?.name} — {selectedDate ? format(new Date(selectedDate + "T12:00:00"), "MMM d, yyyy") : ""}</DialogTitle></DialogHeader>
           <div className="space-y-3 mt-2">
             {panelRuns.length === 0 ? <p className="text-white/40 text-sm text-center py-4">No trips found.</p> : panelRuns.map((r) => {
               const approval = approvalMap.get(r.id); const status = approval?.status || "pending"; const pay = getPayRate(r.route?.name); const youthCount = attendanceCounts[r.id] || 0;
+              const isEditing = editingRunId === r.id;
+              const isDeleting = deleteConfirmId === r.id;
+
+              if (isDeleting) {
+                return (
+                  <div key={r.id} className="bg-red-500/10 border border-red-500/30 rounded-lg p-4 space-y-3">
+                    <p className="text-white text-sm font-medium">Are you sure you want to delete this trip? This cannot be undone.</p>
+                    <div className="flex gap-2">
+                      <Button size="sm" variant="outline" onClick={() => setDeleteConfirmId(null)} className="text-xs border-white/20 text-white bg-transparent hover:bg-white/10">Cancel</Button>
+                      <Button size="sm" onClick={() => handleDeleteRun(r.id)} className="bg-red-600 hover:bg-red-700 text-white text-xs gap-1"><Trash2 className="w-3 h-3" /> Delete</Button>
+                    </div>
+                  </div>
+                );
+              }
+
+              if (isEditing) {
+                return (
+                  <div key={r.id} className="bg-white/5 border border-blue-500/30 rounded-lg p-3 space-y-3">
+                    <p className="text-white text-sm font-medium">Edit Trip</p>
+                    <div className="space-y-2">
+                      <div>
+                        <label className="text-white/40 text-[10px] uppercase">Route</label>
+                        <select value={editForm.route} onChange={(e) => setEditForm((f) => ({ ...f, route: e.target.value }))} className="w-full bg-white/5 border border-white/10 rounded px-2 py-1.5 text-sm text-white">
+                          {routes.map((rt) => <option key={rt.id} value={rt.id} className="bg-[#111827]">{rt.name}</option>)}
+                        </select>
+                      </div>
+                      <div>
+                        <label className="text-white/40 text-[10px] uppercase">Run Type</label>
+                        <select value={editForm.runType} onChange={(e) => setEditForm((f) => ({ ...f, runType: e.target.value }))} className="w-full bg-white/5 border border-white/10 rounded px-2 py-1.5 text-sm text-white">
+                          <option value="pickup" className="bg-[#111827]">Pickup</option>
+                          <option value="dropoff" className="bg-[#111827]">Dropoff</option>
+                        </select>
+                      </div>
+                      <div className="grid grid-cols-2 gap-2">
+                        <div>
+                          <label className="text-white/40 text-[10px] uppercase">Date</label>
+                          <input type="date" value={editForm.date} onChange={(e) => setEditForm((f) => ({ ...f, date: e.target.value }))} className="w-full bg-white/5 border border-white/10 rounded px-2 py-1.5 text-sm text-white" />
+                        </div>
+                        <div>
+                          <label className="text-white/40 text-[10px] uppercase">Time</label>
+                          <input type="time" value={editForm.time} onChange={(e) => setEditForm((f) => ({ ...f, time: e.target.value }))} className="w-full bg-white/5 border border-white/10 rounded px-2 py-1.5 text-sm text-white" />
+                        </div>
+                      </div>
+                      <p className="text-green-400 text-xs">Pay: ${getEditPayRate(editForm.route)}</p>
+                    </div>
+                    <div className="flex gap-2">
+                      <Button size="sm" variant="outline" onClick={() => setEditingRunId(null)} className="text-xs border-white/20 text-white bg-transparent hover:bg-white/10">Cancel</Button>
+                      <Button size="sm" onClick={handleSaveEdit} className="bg-blue-600 hover:bg-blue-700 text-white text-xs">Save</Button>
+                    </div>
+                  </div>
+                );
+              }
+
               return (
                 <div key={r.id} className="bg-white/5 border border-white/10 rounded-lg p-3 space-y-2">
                   <div className="flex items-center justify-between">
@@ -238,16 +321,21 @@ function HistoryCalendarTab() {
                       <div className="flex items-center gap-2 flex-wrap"><span className="text-white font-medium text-sm">{r.route?.name}</span><span className="text-white/30">•</span><span className="text-white/50 text-sm capitalize">{r.run_type}</span></div>
                       <div className="flex items-center gap-3 text-xs text-white/30"><span>{format(new Date(r.started_at), "h:mm a")}</span><span>{youthCount} youth</span><span className="text-green-400 font-medium">${pay}</span></div>
                     </div>
-                    <div className="flex items-center gap-1.5">
-                      <Badge className={status === "approved" ? "bg-green-500/20 text-green-400 border-green-500/30" : status === "disputed" ? "bg-red-500/20 text-red-400 border-red-500/30" : "bg-yellow-500/20 text-yellow-400 border-yellow-500/30"}>{status}</Badge>
-                      <button onClick={() => handleDeleteRun(r.id)} className="p-1 rounded hover:bg-red-500/20 text-white/30 hover:text-red-400 transition-colors"><Trash2 className="w-3.5 h-3.5" /></button>
-                    </div>
+                    <Badge className={status === "approved" ? "bg-green-500/20 text-green-400 border-green-500/30" : status === "disputed" ? "bg-red-500/20 text-red-400 border-red-500/30" : "bg-yellow-500/20 text-yellow-400 border-yellow-500/30"}>{status}</Badge>
                   </div>
                   {status === "disputed" && approval?.notes && <p className="text-red-400/70 text-xs italic">Note: {approval.notes}</p>}
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <Button size="sm" onClick={() => handleApprove(r.id)} className="bg-green-600 hover:bg-green-700 text-white text-xs gap-1" disabled={status === "approved"}><CheckCircle className="w-3 h-3" /> Approve</Button>
-                    <Button size="sm" variant="destructive" onClick={() => handleDispute(r.id)} className="text-xs gap-1" disabled={status === "disputed"}><XCircle className="w-3 h-3" /> Dispute</Button>
-                    {status !== "approved" && <input placeholder="Dispute note..." value={noteInputs[r.id] || ""} onChange={(e) => setNoteInputs((prev) => ({ ...prev, [r.id]: e.target.value }))} className="flex-1 min-w-[100px] bg-white/5 border border-white/10 rounded px-2 py-1 text-xs text-white placeholder:text-white/30" />}
+                  {status !== "approved" && (
+                    <input placeholder="Dispute note..." value={noteInputs[r.id] || ""} onChange={(e) => setNoteInputs((prev) => ({ ...prev, [r.id]: e.target.value }))} className="w-full bg-white/5 border border-white/10 rounded px-2 py-1 text-xs text-white placeholder:text-white/30" />
+                  )}
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-1.5">
+                      <Button size="sm" onClick={() => handleApprove(r.id)} className="bg-green-600 hover:bg-green-700 text-white text-xs gap-1 h-7 px-2" disabled={status === "approved"}><CheckCircle className="w-3 h-3" /> Approve</Button>
+                      <Button size="sm" variant="destructive" onClick={() => handleDispute(r.id)} className="text-xs gap-1 h-7 px-2" disabled={status === "disputed"}><XCircle className="w-3 h-3" /> Dispute</Button>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <button onClick={() => startEdit(r)} className="p-1.5 rounded hover:bg-blue-500/20 text-white/40 hover:text-blue-400 transition-colors" title="Edit"><Pencil className="w-3.5 h-3.5" /></button>
+                      <button onClick={() => setDeleteConfirmId(r.id)} className="p-1.5 rounded hover:bg-red-500/20 text-white/40 hover:text-red-400 transition-colors" title="Delete"><Trash2 className="w-3.5 h-3.5" /></button>
+                    </div>
                   </div>
                 </div>
               );
@@ -264,7 +352,6 @@ function HistoryCalendarTab() {
     </div>
   );
 }
-
 function PayTab() {
   const { toast } = useToast();
   const periods = useMemo(() => getPayPeriods(), []);
