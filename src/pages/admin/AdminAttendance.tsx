@@ -10,7 +10,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import {
   Star, Search, AlertTriangle, Users, Eye, ChevronLeft, ChevronRight, CalendarDays,
-  Clock, TrendingUp, School, Lightbulb, Activity, Trash2, X, Pencil, MapPin
+  Clock, TrendingUp, School, Lightbulb, Activity, Trash2, X, Pencil, UserPlus
 } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
