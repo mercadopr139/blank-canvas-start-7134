@@ -632,9 +632,8 @@ const AdminAttendance = () => {
   const todayRegIds = useMemo(() => new Set(todayRecords.map((a) => a.registration_id)), [todayRecords]);
   const totalPresentToday = todayRegIds.size;
 
-  // Peak day for past months
-  const peakDay = useMemo(() => {
-    if (isCurrentMonth) return { count: totalPresentToday, date: todayStr };
+  // Attendance High & Low for practice days
+  const { attendanceHigh, attendanceLow } = useMemo(() => {
     const dayCounts: Record<string, Set<string>> = {};
     practiceAttendance.forEach((a) => {
       if (!dayCounts[a.check_in_date]) dayCounts[a.check_in_date] = new Set();
@@ -642,11 +641,18 @@ const AdminAttendance = () => {
     });
     let maxDate = "";
     let maxCount = 0;
+    let minDate = "";
+    let minCount = Infinity;
     Object.entries(dayCounts).forEach(([date, ids]) => {
       if (ids.size > maxCount) { maxCount = ids.size; maxDate = date; }
+      if (ids.size < minCount) { minCount = ids.size; minDate = date; }
     });
-    return { count: maxCount, date: maxDate };
-  }, [isCurrentMonth, totalPresentToday, practiceAttendance]);
+    if (minCount === Infinity) { minCount = 0; minDate = ""; }
+    return {
+      attendanceHigh: { count: maxCount, date: maxDate },
+      attendanceLow: { count: minCount, date: minDate },
+    };
+  }, [practiceAttendance]);
 
   /* ───── STAT BOX 2: Week Avg → avg per practice day this month ───── */
   const mtdAvg = useMemo(() => {
