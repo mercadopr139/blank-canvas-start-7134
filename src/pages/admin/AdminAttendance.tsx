@@ -871,7 +871,7 @@ const AdminAttendance = () => {
                     <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" />
                     <XAxis dataKey="date" tick={{ fill: "rgba(255,255,255,0.4)", fontSize: 10 }} />
                     <YAxis tick={{ fill: "rgba(255,255,255,0.4)", fontSize: 10 }} />
-                    <Tooltip contentStyle={chartTooltipStyle} labelStyle={{ color: "rgba(255,255,255,0.6)" }} labelFormatter={(label, payload) => { const item = payload?.[0]?.payload; return item?.fullDate ? `${format(parseISO(item.fullDate), "MMMM d, yyyy")}` : label; }} />
+                    <Tooltip content={({ active, payload }) => { if (!active || !payload?.length) return null; const item = payload[0].payload; const dateLabel = item.fullDate ? format(parseISO(item.fullDate), "MMMM d, yyyy") : item.date; return (<div style={{ ...chartTooltipStyle, padding: "8px 12px" }}><p style={{ color: "rgba(255,255,255,0.6)", fontSize: 12, margin: 0 }}>{dateLabel}</p><p style={{ color: "#fff", fontSize: 14, fontWeight: 600, margin: "4px 0 0" }}>{item.count} Sign-Ins</p></div>); }} />
                     <Bar dataKey="count" name="Sign-Ins" radius={[3, 3, 0, 0]}>
                       <LabelList dataKey="count" position="top" style={{ fill: "rgba(255,255,255,0.6)", fontSize: 9, fontWeight: 600 }} />
                       {dailyTrend.map((_, i) => (
