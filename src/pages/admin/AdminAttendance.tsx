@@ -126,7 +126,7 @@ const AdminAttendance = () => {
 
   /* ───── Is viewing current month? ───── */
   const isCurrentMonth = isSameMonth(calendarMonth, now);
-  const viewedMonthLabel = format(calendarMonth, "MMMM yyyy");
+  
   const viewedMonthShort = format(calendarMonth, "MMMM");
 
   // Previous month relative to viewed month (for comparison insights)
