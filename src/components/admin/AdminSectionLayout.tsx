@@ -10,7 +10,7 @@ export interface SectionCard {
   href: string;
   icon: LucideIcon;
   external?: boolean;
-  children?: { title: string; href: string; icon: LucideIcon }[];
+  children?: { title: string; href: string; icon: LucideIcon; external?: boolean }[];
 }
 
 interface AdminSectionLayoutProps {
@@ -145,12 +145,13 @@ const AdminSectionLayout = ({
                             ${active ? `${ac.activeBg} ${ac.activeBorder}` : "hover:bg-white/5"}`}
                         >
                           <button
-                            onClick={() => { setSidebarOpen(false); navigate(child.href); }}
+                            onClick={() => { setSidebarOpen(false); child.external ? window.open(child.href, "_blank") : navigate(child.href); }}
                             className={`flex-1 text-left px-4 py-2 flex items-center gap-3 min-w-0
                               ${active ? `${ac.link} font-medium` : "text-white/60 hover:text-white"}`}
                           >
                             <child.icon className={`w-3.5 h-3.5 flex-shrink-0 ${active ? ac.icon : ""}`} />
                             <span className="text-xs leading-tight truncate">{child.title}</span>
+                            {child.external && <ExternalLink className="w-3 h-3 ml-auto flex-shrink-0 opacity-50" />}
                           </button>
                         </div>
                       );
