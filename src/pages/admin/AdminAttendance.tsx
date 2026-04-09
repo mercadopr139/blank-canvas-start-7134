@@ -1166,12 +1166,12 @@ const AdminAttendance = () => {
                     {/* Toggle day type button: cycles Practice → Non-Practice → Excursion */}
                     <button
                       onClick={(e) => { e.stopPropagation(); cycleDayType(dateStr); }}
-                      className={`absolute bottom-0.5 left-1/2 -translate-x-1/2 w-2.5 h-2.5 rounded-full border transition-all hover:scale-150 ${
+                      className={`absolute bottom-0.5 left-1/2 -translate-x-1/2 w-3.5 h-3.5 rounded-full border-2 transition-all hover:scale-125 cursor-pointer z-10 ${
                         isExc
-                          ? "bg-purple-500 border-purple-400/50"
+                          ? "bg-purple-500 border-purple-300 shadow-[0_0_4px_rgba(124,58,237,0.5)]"
                           : isPrac
-                            ? "bg-green-500 border-green-400/50"
-                            : "bg-red-500 border-red-400/50"
+                            ? "bg-green-500 border-green-300 shadow-[0_0_4px_rgba(34,197,94,0.5)]"
+                            : "bg-red-500 border-red-300 shadow-[0_0_4px_rgba(239,68,68,0.5)]"
                       }`}
                       title={isExc ? "Excursion Day — click to mark as Practice" : isPrac ? "Practice Day — click to mark as Non-Practice" : "Non-Practice — click to mark as Excursion"}
                     />
