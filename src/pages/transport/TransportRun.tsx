@@ -476,7 +476,7 @@ export default function TransportRun() {
               <Button
                 variant="outline"
                 onClick={() => setCloseConfirmOpen(false)}
-                className="flex-1 border-white/20 text-white hover:bg-white/10"
+                className="flex-1 border-white/20 text-white hover:bg-white/10 bg-transparent"
               >
                 Go Back
               </Button>
