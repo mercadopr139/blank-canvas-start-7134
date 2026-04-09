@@ -57,8 +57,7 @@ import TransportAdminLogin from "./pages/transport/TransportAdminLogin";
 import TransportAdminLayout from "./pages/transport/TransportAdminLayout";
 import TransportDrivers from "./pages/transport/TransportDrivers";
 import TransportYouth from "./pages/transport/TransportYouth";
-import TransportLiveRuns from "./pages/transport/TransportLiveRuns";
-import TransportReports from "./pages/transport/TransportReports";
+import TransportRunsPay from "./pages/transport/TransportRunsPay";
 import TransportDashboard from "./pages/transport/TransportDashboard";
 import TransportRun from "./pages/transport/TransportRun";
 import NotFound from "./pages/NotFound";
@@ -97,8 +96,7 @@ const App = () => (
             <Route element={<TransportAdminLayout />}>
               <Route path="/transport/admin/drivers" element={<TransportDrivers />} />
               <Route path="/transport/admin/youth" element={<TransportYouth />} />
-              <Route path="/transport/admin/live-runs" element={<TransportLiveRuns />} />
-              <Route path="/transport/admin/reports" element={<TransportReports />} />
+              <Route path="/transport/admin/runs" element={<TransportRunsPay />} />
             </Route>
             
             {/* Admin Routes */}
@@ -130,8 +128,7 @@ const App = () => (
               <Route path="lil-champs-attendance" element={<AdminLilChampsAttendance />} />
               <Route path="transportation/drivers" element={<TransportDrivers />} />
               <Route path="transportation/youth" element={<TransportYouth />} />
-              <Route path="transportation/live-runs" element={<TransportLiveRuns />} />
-              <Route path="transportation/reports" element={<TransportReports />} />
+              <Route path="transportation/runs" element={<TransportRunsPay />} />
             </Route>
 
             {/* Sales & Marketing section — sidebar layout wraps sub-pages */}

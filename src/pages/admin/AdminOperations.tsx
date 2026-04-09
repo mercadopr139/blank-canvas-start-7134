@@ -1,5 +1,5 @@
 import { useNavigate } from "react-router-dom";
-import { Users, BarChart3, ClipboardList, LucideIcon, CalendarCheck, FileBarChart, Settings2, Star, LogIn, Bus, UserCheck, Radio, FileText } from "lucide-react";
+import { Users, BarChart3, ClipboardList, LucideIcon, CalendarCheck, FileBarChart, Settings2, Star, LogIn, Bus, UserCheck, Radio } from "lucide-react";
 import AdminSectionLayout, { SectionCard } from "@/components/admin/AdminSectionLayout";
 import { Button } from "@/components/ui/button";
 
@@ -64,8 +64,7 @@ const baseTiles: OperationsTile[] = [
     children: [
       { title: "Drivers", href: "/admin/operations/transportation/drivers", icon: UserCheck },
       { title: "Youth Profiles", href: "/admin/operations/transportation/youth", icon: Users },
-      { title: "Live Runs", href: "/admin/operations/transportation/live-runs", icon: Radio },
-      { title: "Reports", href: "/admin/operations/transportation/reports", icon: FileText },
+      { title: "Runs & Pay", href: "/admin/operations/transportation/runs", icon: Radio },
     ],
   },
 ];
