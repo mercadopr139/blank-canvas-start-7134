@@ -142,6 +142,14 @@ const AdminAttendance = () => {
   const [daySearch, setDaySearch] = useState("");
   const [addEagleOpen, setAddEagleOpen] = useState(false);
   const [eagleSearch, setEagleSearch] = useState("");
+  const [excursionModalOpen, setExcursionModalOpen] = useState(false);
+  const [excursionDate, setExcursionDate] = useState<string>("");
+  const [excursionName, setExcursionName] = useState("");
+  const [excursionYouthCount, setExcursionYouthCount] = useState<number | "">("");
+  const [excursionNotes, setExcursionNotes] = useState("");
+  const [excursionPrevState, setExcursionPrevState] = useState<boolean>(true);
+  const [editingExcursion, setEditingExcursion] = useState<Excursion | null>(null);
+  const [deleteExcursionTarget, setDeleteExcursionTarget] = useState<Excursion | null>(null);
   const [weatherTooltipDay, setWeatherTooltipDay] = useState<string | null>(null);
 
   const invalidateAttendance = () => {
