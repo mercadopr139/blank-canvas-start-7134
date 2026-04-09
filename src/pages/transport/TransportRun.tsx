@@ -393,12 +393,8 @@ export default function TransportRun() {
         {/* Stats */}
         <div className="flex items-center justify-center gap-4 text-xs">
           <span className="flex items-center gap-1.5">
-            <span className="w-2 h-2 rounded-full bg-[#DC2626]" />
-            <span className="text-white/60">Pick-Ups: <strong className="text-white">{pickedUpCount}</strong></span>
-          </span>
-          <span className="flex items-center gap-1.5">
-            <span className="w-2 h-2 rounded-full bg-green-500" />
-            <span className="text-white/60">Drop-Offs: <strong className="text-white">{droppedOffCount}</strong></span>
+            <span className={`w-2 h-2 rounded-full ${runType === "pickup" ? "bg-[#DC2626]" : "bg-green-500"}`} />
+            <span className="text-white/60">{runType === "pickup" ? "Pick-Ups" : "Drop-Offs"}: <strong className="text-white">{markedCount}</strong></span>
           </span>
           <span className="flex items-center gap-1.5">
             <span className="w-2 h-2 rounded-full bg-white/30" />
@@ -416,8 +412,13 @@ export default function TransportRun() {
             Incident
           </button>
           <button
-            onClick={() => setSubmitConfirmOpen(true)}
-            className="flex-1 py-3 rounded-xl bg-[#1B3A5C] border border-[#2563EB]/40 text-white font-bold text-sm flex items-center justify-center gap-2 active:scale-[0.97] touch-manipulation"
+            onClick={() => canSubmit && setSubmitConfirmOpen(true)}
+            disabled={!canSubmit}
+            className={`flex-1 py-3 rounded-xl font-bold text-sm flex items-center justify-center gap-2 active:scale-[0.97] touch-manipulation ${
+              canSubmit
+                ? "bg-[#1B3A5C] border border-[#2563EB]/40 text-white"
+                : "bg-white/5 border border-white/10 text-white/30 cursor-not-allowed"
+            }`}
           >
             <Send className="w-4 h-4" />
             Submit Trip
