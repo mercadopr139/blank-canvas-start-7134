@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import { Input } from "@/components/ui/input";
@@ -7,7 +7,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
-  Search, Star, AlertTriangle, Loader2, ArrowUp, ArrowDown, X, Baby, Clock,
+  Search, Star, AlertTriangle, Loader2, ArrowUp, ArrowDown, Baby, Send, CheckCircle2,
 } from "lucide-react";
 
 interface YouthProfile {
@@ -30,7 +30,6 @@ export default function TransportRun() {
   const [runId, setRunId] = useState("");
   const [routeName, setRouteName] = useState("");
   const [runType, setRunType] = useState("");
-  const [startedAt, setStartedAt] = useState("");
   const [driverId, setDriverId] = useState("");
   const [driverName, setDriverName] = useState("");
 
@@ -39,18 +38,14 @@ export default function TransportRun() {
   const [starred, setStarred] = useState<Set<string>>(new Set());
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(true);
-  const [elapsed, setElapsed] = useState("0:00");
 
   const [incidentOpen, setIncidentOpen] = useState(false);
   const [incidentText, setIncidentText] = useState("");
   const [incidentYouth, setIncidentYouth] = useState("");
   const [submittingIncident, setSubmittingIncident] = useState(false);
 
-  const [closeConfirmOpen, setCloseConfirmOpen] = useState(false);
-  const [closingRun, setClosingRun] = useState(false);
-  const [undroppedCount, setUndroppedCount] = useState(0);
-
-  const timerRef = useRef<ReturnType<typeof setInterval>>();
+  const [submitConfirmOpen, setSubmitConfirmOpen] = useState(false);
+  const [submittingTrip, setSubmittingTrip] = useState(false);
 
   useEffect(() => {
     const runSession = sessionStorage.getItem("transport_run");
@@ -64,29 +59,12 @@ export default function TransportRun() {
     setRunId(run.run_id);
     setRouteName(run.route_name);
     setRunType(run.run_type);
-    setStartedAt(run.started_at);
     setDriverId(driver.id);
     setDriverName(driver.name);
 
     loadYouth(run.route_name);
     loadStarred();
-
-    return () => clearInterval(timerRef.current);
   }, []);
-
-  // Timer
-  useEffect(() => {
-    if (!startedAt) return;
-    const update = () => {
-      const diff = Math.floor((Date.now() - new Date(startedAt).getTime()) / 1000);
-      const m = Math.floor(diff / 60);
-      const s = diff % 60;
-      setElapsed(`${m}:${s.toString().padStart(2, "0")}`);
-    };
-    update();
-    timerRef.current = setInterval(update, 1000);
-    return () => clearInterval(timerRef.current);
-  }, [startedAt]);
 
   const loadStarred = () => {
     try {
@@ -139,7 +117,6 @@ export default function TransportRun() {
     const current = attendance[youthId] || { picked_up: false, dropped_off: false };
     const newVal = !current[status];
 
-    // Optimistic update
     setAttendance((prev) => ({
       ...prev,
       [youthId]: { ...current, [status]: newVal },
@@ -148,7 +125,6 @@ export default function TransportRun() {
     try {
       await apiCall("record-transport-attendance", { run_id: runId, youth_id: youthId, status });
     } catch {
-      // Revert on error
       setAttendance((prev) => ({
         ...prev,
         [youthId]: current,
@@ -180,28 +156,38 @@ export default function TransportRun() {
     }
   };
 
-  const handleCloseRun = () => {
-    const pickedUp = Object.entries(attendance).filter(([, a]) => a.picked_up);
-    const notDropped = pickedUp.filter(([, a]) => !a.dropped_off);
-    setUndroppedCount(notDropped.length);
-    setCloseConfirmOpen(true);
-  };
+  const tripSummary = useMemo(() => {
+    const pickUpOnly: YouthProfile[] = [];
+    const dropOffOnly: YouthProfile[] = [];
+    const both: YouthProfile[] = [];
+    const noStatus: YouthProfile[] = [];
 
-  const confirmCloseRun = async () => {
-    setClosingRun(true);
+    youth.forEach((y) => {
+      const att = attendance[y.id] || { picked_up: false, dropped_off: false };
+      if (att.picked_up && att.dropped_off) both.push(y);
+      else if (att.picked_up) pickUpOnly.push(y);
+      else if (att.dropped_off) dropOffOnly.push(y);
+      else noStatus.push(y);
+    });
+
+    return { pickUpOnly, dropOffOnly, both, noStatus };
+  }, [youth, attendance]);
+
+  const confirmSubmitTrip = async () => {
+    setSubmittingTrip(true);
     try {
       const res = await apiCall("close-transport-run", { run_id: runId });
       if (res.ok) {
         sessionStorage.removeItem("transport_run");
-        toast({ title: "Run closed successfully" });
+        toast({ title: "Trip submitted successfully" });
         navigate("/transport/dashboard", { replace: true });
       } else {
-        toast({ title: "Failed to close run", variant: "destructive" });
+        toast({ title: "Failed to submit trip", variant: "destructive" });
       }
     } catch {
       toast({ title: "Something went wrong", variant: "destructive" });
     } finally {
-      setClosingRun(false);
+      setSubmittingTrip(false);
     }
   };
 
@@ -211,7 +197,6 @@ export default function TransportRun() {
     return `${import.meta.env.VITE_SUPABASE_URL}/storage/v1/object/public/registration-signatures/${url}`;
   };
 
-  // Filter & sort
   const filtered = youth
     .filter((y) => {
       if (!search) return true;
@@ -225,10 +210,12 @@ export default function TransportRun() {
       return a.last_name.localeCompare(b.last_name);
     });
 
-  // Stats
   const pickedUpCount = Object.values(attendance).filter((a) => a.picked_up).length;
   const droppedOffCount = Object.values(attendance).filter((a) => a.dropped_off).length;
-  const pendingCount = youth.length - pickedUpCount;
+  const noStatusCount = youth.filter((y) => {
+    const att = attendance[y.id];
+    return !att || (!att.picked_up && !att.dropped_off);
+  }).length;
 
   if (loading) {
     return (
@@ -240,8 +227,8 @@ export default function TransportRun() {
 
   return (
     <div className="min-h-screen bg-black flex flex-col">
-      {/* Header */}
-      <header className="bg-[#0F1D32] border-b border-white/10 px-4 py-3 flex items-center justify-between sticky top-0 z-20">
+      {/* Header - no timer */}
+      <header className="bg-[#0F1D32] border-b border-white/10 px-4 py-3 flex items-center sticky top-0 z-20">
         <div className="flex items-center gap-3 min-w-0">
           <div className={`px-2.5 py-1 rounded-lg text-xs font-bold uppercase tracking-wider ${
             runType === "pickup"
@@ -254,10 +241,6 @@ export default function TransportRun() {
             <p className="text-white font-bold text-sm truncate">{routeName}</p>
             <p className="text-white/40 text-xs">{driverName}</p>
           </div>
-        </div>
-        <div className="flex items-center gap-1.5 text-white/50 text-sm">
-          <Clock className="w-3.5 h-3.5" />
-          <span className="font-mono">{elapsed}</span>
         </div>
       </header>
 
@@ -281,16 +264,17 @@ export default function TransportRun() {
             const att = attendance[y.id] || { picked_up: false, dropped_off: false };
             const isStarred = starred.has(y.id);
             const photoUrl = getPhotoUrl(y.photo_url);
-            const pickedNotDropped = att.picked_up && !att.dropped_off;
+            const hasBoth = att.picked_up && att.dropped_off;
+            const hasAny = att.picked_up || att.dropped_off;
 
             return (
               <div
                 key={y.id}
                 className={`relative rounded-2xl border-2 p-3 transition-all ${
-                  pickedNotDropped
-                    ? "border-amber-500/50 bg-amber-500/5"
-                    : att.picked_up && att.dropped_off
+                  hasBoth
                     ? "border-green-500/30 bg-green-500/5"
+                    : hasAny
+                    ? "border-blue-500/30 bg-blue-500/5"
                     : "border-white/10 bg-white/5"
                 }`}
               >
@@ -333,25 +317,25 @@ export default function TransportRun() {
                 <div className="grid grid-cols-2 gap-1.5">
                   <button
                     onClick={() => toggleAttendance(y.id, "picked_up")}
-                    className={`py-2 rounded-lg text-xs font-bold flex items-center justify-center gap-1 transition-all active:scale-95 touch-manipulation ${
+                    className={`py-2.5 rounded-lg text-[10px] font-bold flex items-center justify-center gap-1 transition-all active:scale-95 touch-manipulation ${
                       att.picked_up
-                        ? "bg-green-600 text-white"
+                        ? "bg-[#DC2626] text-white"
                         : "bg-white/10 text-white/50"
                     }`}
                   >
                     <ArrowUp className="w-3 h-3" />
-                    PU
+                    Pick-Up
                   </button>
                   <button
                     onClick={() => toggleAttendance(y.id, "dropped_off")}
-                    className={`py-2 rounded-lg text-xs font-bold flex items-center justify-center gap-1 transition-all active:scale-95 touch-manipulation ${
+                    className={`py-2.5 rounded-lg text-[10px] font-bold flex items-center justify-center gap-1 transition-all active:scale-95 touch-manipulation ${
                       att.dropped_off
-                        ? "bg-blue-600 text-white"
+                        ? "bg-green-600 text-white"
                         : "bg-white/10 text-white/50"
                     }`}
                   >
                     <ArrowDown className="w-3 h-3" />
-                    DO
+                    Drop-Off
                   </button>
                 </div>
               </div>
@@ -372,16 +356,16 @@ export default function TransportRun() {
         {/* Stats */}
         <div className="flex items-center justify-center gap-4 text-xs">
           <span className="flex items-center gap-1.5">
-            <span className="w-2 h-2 rounded-full bg-green-500" />
-            <span className="text-white/60">Picked up: <strong className="text-white">{pickedUpCount}</strong></span>
+            <span className="w-2 h-2 rounded-full bg-[#DC2626]" />
+            <span className="text-white/60">Pick-Ups: <strong className="text-white">{pickedUpCount}</strong></span>
           </span>
           <span className="flex items-center gap-1.5">
-            <span className="w-2 h-2 rounded-full bg-blue-500" />
-            <span className="text-white/60">Dropped off: <strong className="text-white">{droppedOffCount}</strong></span>
+            <span className="w-2 h-2 rounded-full bg-green-500" />
+            <span className="text-white/60">Drop-Offs: <strong className="text-white">{droppedOffCount}</strong></span>
           </span>
           <span className="flex items-center gap-1.5">
             <span className="w-2 h-2 rounded-full bg-white/30" />
-            <span className="text-white/60">Pending: <strong className="text-white">{pendingCount}</strong></span>
+            <span className="text-white/60">Pending: <strong className="text-white">{noStatusCount}</strong></span>
           </span>
         </div>
 
@@ -395,11 +379,11 @@ export default function TransportRun() {
             Incident
           </button>
           <button
-            onClick={handleCloseRun}
-            className="flex-1 py-3 rounded-xl bg-white/10 border border-white/20 text-white font-bold text-sm flex items-center justify-center gap-2 active:scale-[0.97] touch-manipulation"
+            onClick={() => setSubmitConfirmOpen(true)}
+            className="flex-1 py-3 rounded-xl bg-[#1B3A5C] border border-[#2563EB]/40 text-white font-bold text-sm flex items-center justify-center gap-2 active:scale-[0.97] touch-manipulation"
           >
-            <X className="w-4 h-4" />
-            Close Run
+            <Send className="w-4 h-4" />
+            Submit Trip
           </button>
         </div>
       </div>
@@ -451,41 +435,92 @@ export default function TransportRun() {
         </DialogContent>
       </Dialog>
 
-      {/* Close Run Confirm Modal */}
-      <Dialog open={closeConfirmOpen} onOpenChange={setCloseConfirmOpen}>
-        <DialogContent className="bg-[#111827] border-white/10 text-white max-w-sm">
+      {/* Submit Trip Confirmation Modal */}
+      <Dialog open={submitConfirmOpen} onOpenChange={setSubmitConfirmOpen}>
+        <DialogContent className="bg-[#111827] border-white/10 text-white max-w-md max-h-[85vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Close Run?</DialogTitle>
+            <DialogTitle className="flex items-center gap-2">
+              <CheckCircle2 className="w-5 h-5 text-green-400" />
+              Trip Summary
+            </DialogTitle>
           </DialogHeader>
           <div className="space-y-4 mt-2">
-            {undroppedCount > 0 && (
-              <div className="bg-amber-500/10 border border-amber-500/30 rounded-xl p-4 flex items-start gap-3">
-                <AlertTriangle className="w-5 h-5 text-amber-400 mt-0.5 flex-shrink-0" />
-                <div>
-                  <p className="text-amber-200 font-medium text-sm">
-                    {undroppedCount} youth picked up but not dropped off
-                  </p>
-                  <p className="text-amber-200/60 text-xs mt-1">Are you sure you want to close?</p>
+            <p className="text-white/50 text-sm">Review before submitting:</p>
+
+            {/* Pick-Up Only */}
+            {tripSummary.pickUpOnly.length > 0 && (
+              <div className="space-y-1.5">
+                <p className="text-[#DC2626] text-xs font-bold uppercase tracking-wider flex items-center gap-1.5">
+                  <ArrowUp className="w-3 h-3" />
+                  Pick-Up Only ({tripSummary.pickUpOnly.length})
+                </p>
+                <div className="bg-white/5 rounded-lg p-2.5 space-y-1">
+                  {tripSummary.pickUpOnly.map((y) => (
+                    <p key={y.id} className="text-white/80 text-sm">{y.first_name} {y.last_name}</p>
+                  ))}
                 </div>
               </div>
             )}
-            {undroppedCount === 0 && (
-              <p className="text-white/60 text-sm">All picked-up youth have been dropped off. Ready to close this run.</p>
+
+            {/* Drop-Off Only */}
+            {tripSummary.dropOffOnly.length > 0 && (
+              <div className="space-y-1.5">
+                <p className="text-green-400 text-xs font-bold uppercase tracking-wider flex items-center gap-1.5">
+                  <ArrowDown className="w-3 h-3" />
+                  Drop-Off Only ({tripSummary.dropOffOnly.length})
+                </p>
+                <div className="bg-white/5 rounded-lg p-2.5 space-y-1">
+                  {tripSummary.dropOffOnly.map((y) => (
+                    <p key={y.id} className="text-white/80 text-sm">{y.first_name} {y.last_name}</p>
+                  ))}
+                </div>
+              </div>
             )}
-            <div className="flex gap-3">
+
+            {/* Both */}
+            {tripSummary.both.length > 0 && (
+              <div className="space-y-1.5">
+                <p className="text-blue-400 text-xs font-bold uppercase tracking-wider flex items-center gap-1.5">
+                  <CheckCircle2 className="w-3 h-3" />
+                  Pick-Up & Drop-Off ({tripSummary.both.length})
+                </p>
+                <div className="bg-white/5 rounded-lg p-2.5 space-y-1">
+                  {tripSummary.both.map((y) => (
+                    <p key={y.id} className="text-white/80 text-sm">{y.first_name} {y.last_name}</p>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* No Status */}
+            {tripSummary.noStatus.length > 0 && (
+              <div className="space-y-1.5">
+                <p className="text-amber-400 text-xs font-bold uppercase tracking-wider flex items-center gap-1.5">
+                  <AlertTriangle className="w-3 h-3" />
+                  No Status ({tripSummary.noStatus.length})
+                </p>
+                <div className="bg-amber-500/5 border border-amber-500/20 rounded-lg p-2.5 space-y-1">
+                  {tripSummary.noStatus.map((y) => (
+                    <p key={y.id} className="text-white/60 text-sm">{y.first_name} {y.last_name}</p>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            <div className="flex gap-3 pt-2">
               <Button
                 variant="outline"
-                onClick={() => setCloseConfirmOpen(false)}
+                onClick={() => setSubmitConfirmOpen(false)}
                 className="flex-1 border-white/20 text-white hover:bg-white/10 bg-transparent"
               >
                 Go Back
               </Button>
               <Button
-                onClick={confirmCloseRun}
-                disabled={closingRun}
-                className="flex-1 bg-[#DC2626] hover:bg-[#B91C1C] text-white"
+                onClick={confirmSubmitTrip}
+                disabled={submittingTrip}
+                className="flex-1 bg-green-600 hover:bg-green-700 text-white"
               >
-                {closingRun ? "Closing..." : "Confirm Close"}
+                {submittingTrip ? "Submitting..." : "Confirm & Submit"}
               </Button>
             </div>
           </div>
