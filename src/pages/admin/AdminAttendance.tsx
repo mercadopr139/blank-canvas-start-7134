@@ -52,9 +52,58 @@ interface PracticeDay {
   is_practice_day: boolean;
 }
 
+interface WeatherDay {
+  date: string;
+  temp_high: number | null;
+  temp_low: number | null;
+  precipitation: number | null;
+  condition: string;
+  condition_code: number | null;
+}
+
 const POVERTY_INCOMES = ["Under $25,000", "Less than $25,000", "Less than $35,000"];
 const WEEKDAY_LABELS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
-const WEEKDAY_NAMES = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+
+/* ───── Weather helpers ───── */
+const WMO_MAP: Record<number, { label: string; emoji: string }> = {
+  0: { label: "Sunny", emoji: "☀️" },
+  1: { label: "Mostly Sunny", emoji: "🌤️" },
+  2: { label: "Partly Cloudy", emoji: "⛅" },
+  3: { label: "Cloudy", emoji: "☁️" },
+  45: { label: "Foggy", emoji: "🌫️" },
+  48: { label: "Foggy", emoji: "🌫️" },
+  51: { label: "Light Drizzle", emoji: "🌦️" },
+  53: { label: "Drizzle", emoji: "🌦️" },
+  55: { label: "Heavy Drizzle", emoji: "🌧️" },
+  61: { label: "Light Rain", emoji: "🌧️" },
+  63: { label: "Rainy", emoji: "🌧️" },
+  65: { label: "Heavy Rain", emoji: "🌧️" },
+  66: { label: "Freezing Rain", emoji: "🌧️" },
+  67: { label: "Freezing Rain", emoji: "🌧️" },
+  71: { label: "Light Snow", emoji: "🌨️" },
+  73: { label: "Snowy", emoji: "❄️" },
+  75: { label: "Heavy Snow", emoji: "❄️" },
+  77: { label: "Snow Grains", emoji: "❄️" },
+  80: { label: "Rain Showers", emoji: "🌧️" },
+  81: { label: "Rain Showers", emoji: "🌧️" },
+  82: { label: "Heavy Showers", emoji: "🌧️" },
+  85: { label: "Snow Showers", emoji: "🌨️" },
+  86: { label: "Heavy Snow Showers", emoji: "❄️" },
+  95: { label: "Stormy", emoji: "🌩️" },
+  96: { label: "Stormy w/ Hail", emoji: "🌩️" },
+  99: { label: "Stormy w/ Hail", emoji: "🌩️" },
+};
+
+const getWeatherInfo = (code: number | null) => {
+  if (code === null) return { label: "Unknown", emoji: "❓" };
+  return WMO_MAP[code] || { label: "Unknown", emoji: "❓" };
+};
+
+const celsiusToF = (c: number) => Math.round(c * 9 / 5 + 32);
+const mmToInches = (mm: number) => Math.round(mm / 25.4 * 100) / 100;
+
+const isRainyCode = (code: number | null) => code !== null && code >= 51;
+const isSunnyCode = (code: number | null) => code !== null && code <= 2;
 
 const now = new Date();
 const todayStr = now.toLocaleDateString('en-CA', { timeZone: 'America/New_York' });
