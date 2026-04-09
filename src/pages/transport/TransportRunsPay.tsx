@@ -105,18 +105,22 @@ function HistoryCalendarTab() {
     const to = format(monthEnd, "yyyy-MM-dd") + "T23:59:59";
     const ppFrom = currentPayPeriod.start + "T00:00:00";
     const ppTo = currentPayPeriod.end + "T23:59:59";
+    const yearStart = `${new Date().getFullYear()}-01-01T00:00:00`;
+    const yearEnd = `${new Date().getFullYear()}-12-31T23:59:59`;
 
-    const [runsRes, approvalsRes, attRes, routesRes, ppRunsRes] = await Promise.all([
+    const [runsRes, approvalsRes, attRes, routesRes, ppRunsRes, yearRunsRes] = await Promise.all([
       supabase.from("runs").select("id, run_type, status, started_at, closed_at, driver:drivers(id, name), route:routes(id, name)").eq("status", "completed").gte("started_at", from).lte("started_at", to).order("started_at", { ascending: false }),
       supabase.from("run_approvals").select("id, run_id, status, notes"),
       supabase.from("transport_attendance").select("run_id").gte("recorded_at", from).lte("recorded_at", to),
       supabase.from("routes").select("id, name"),
       supabase.from("runs").select("id, run_type, status, started_at, closed_at, driver:drivers(id, name), route:routes(id, name)").eq("status", "completed").gte("started_at", ppFrom).lte("started_at", ppTo),
+      supabase.from("runs").select("id, run_type, status, started_at, closed_at, driver:drivers(id, name), route:routes(id, name)").eq("status", "completed").gte("started_at", yearStart).lte("started_at", yearEnd),
     ]);
     if (runsRes.data) setRuns(runsRes.data as unknown as RunWithDetails[]);
     if (approvalsRes.data) setApprovals(approvalsRes.data as unknown as RunApproval[]);
     if (routesRes.data) setRoutes(routesRes.data as unknown as { id: string; name: string }[]);
     if (ppRunsRes.data) setPayPeriodRuns(ppRunsRes.data as unknown as RunWithDetails[]);
+    if (yearRunsRes.data) setYearRuns(yearRunsRes.data as unknown as RunWithDetails[]);
     const counts: Record<string, number> = {};
     (attRes.data || []).forEach((a: { run_id: string }) => { counts[a.run_id] = (counts[a.run_id] || 0) + 1; });
     setAttendanceCounts(counts);
