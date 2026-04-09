@@ -33,6 +33,7 @@ const baseTiles: OperationsTile[] = [
       { title: "Attendance Intelligence", href: "/admin/operations/attendance", icon: CalendarCheck },
       { title: "Attendance Reports", href: "/admin/operations/attendance-reports", icon: FileBarChart },
       { title: "Call-Outs", href: "/admin/operations/callouts", icon: PhoneOff },
+      { title: "Lil Champ's Corner", href: "/admin/operations/lil-champs-attendance", icon: Star },
     ],
   },
   {
@@ -40,12 +41,6 @@ const baseTiles: OperationsTile[] = [
     description: "Edit the registration form fields",
     icon: Settings2,
     href: "/admin/operations/form-builder",
-  },
-  {
-    title: "Lil Champ's Corner",
-    description: "Attendance for Lil Champ's Corner",
-    icon: Star,
-    href: "/admin/operations/lil-champs-attendance",
   },
   {
     title: "Transportation",
