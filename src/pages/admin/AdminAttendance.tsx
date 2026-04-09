@@ -1151,8 +1151,8 @@ const AdminAttendance = () => {
           </Card>
           <Card className="bg-white/5 border-white/10 text-white">
             <CardContent className="pt-4 pb-3 text-center">
-              <p className="text-[10px] uppercase tracking-wider text-red-400/70">Attendance Low</p>
-              <p className="text-3xl font-bold mt-1 text-red-400">{attendanceLow.count}</p>
+              <p className="text-[10px] uppercase tracking-wider text-amber-400/70">Attendance Low</p>
+              <p className="text-3xl font-bold mt-1 text-amber-400">{attendanceLow.count}</p>
               <p className="text-[10px] text-white/30">{attendanceLow.date ? format(parseISO(attendanceLow.date), "M/d") : "—"}</p>
             </CardContent>
           </Card>
