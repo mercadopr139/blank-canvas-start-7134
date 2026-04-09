@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useCallback } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -8,7 +8,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import {
   Star, Search, AlertTriangle, Users, Eye, ChevronLeft, ChevronRight, CalendarDays,
-  Clock, TrendingUp, School, Lightbulb, Activity, Trash2, Printer
+  Clock, TrendingUp, School, Lightbulb, Activity, Trash2, X
 } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -17,8 +17,9 @@ import {
   LineChart, Line,
 } from "recharts";
 import {
-  startOfWeek, startOfMonth, endOfMonth, format, differenceInCalendarDays,
+  startOfWeek, startOfMonth, endOfMonth, format,
   addMonths, subMonths, subWeeks, getDay, getDaysInMonth, isToday, parseISO, endOfWeek,
+  isWeekend,
 } from "date-fns";
 import { toast } from "sonner";
 
@@ -45,6 +46,12 @@ interface AttendanceRecord {
   program_source: string;
 }
 
+interface PracticeDay {
+  id: string;
+  date: string;
+  is_practice_day: boolean;
+}
+
 const POVERTY_INCOMES = ["Under $25,000", "Less than $25,000", "Less than $35,000"];
 const WEEKDAY_LABELS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 const WEEKDAY_NAMES = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
@@ -61,6 +68,12 @@ const prevMonthStart = format(startOfMonth(subMonths(now, 1)), "yyyy-MM-dd");
 const prevMonthEnd = format(endOfMonth(subMonths(now, 1)), "yyyy-MM-dd");
 
 const pct = (n: number, d: number) => (d === 0 ? "0%" : `${Math.round((n / d) * 100)}%`);
+
+/* ───── Helper: is a date a practice day by default (weekday)? ───── */
+const isDefaultPracticeDay = (dateStr: string): boolean => {
+  const d = parseISO(dateStr);
+  return !isWeekend(d);
+};
 
 /* ───────── Component ───────── */
 const AdminAttendance = () => {
@@ -94,16 +107,15 @@ const AdminAttendance = () => {
     invalidateAttendance();
   };
 
-const getHeadshotUrl = (url: string | null): string | null => {
-  if (!url) return null;
-  if (url.startsWith("http")) return url;
-  const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-  if (url.startsWith("youth-photos/")) {
-    return `${supabaseUrl}/storage/v1/object/public/youth-photos/${url}`;
-  }
-  return `${supabaseUrl}/storage/v1/object/public/registration-signatures/${url}`;
-};
-
+  const getHeadshotUrl = (url: string | null): string | null => {
+    if (!url) return null;
+    if (url.startsWith("http")) return url;
+    const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+    if (url.startsWith("youth-photos/")) {
+      return `${supabaseUrl}/storage/v1/object/public/youth-photos/${url}`;
+    }
+    return `${supabaseUrl}/storage/v1/object/public/registration-signatures/${url}`;
+  };
 
   const calMonthStart = format(startOfMonth(calendarMonth), "yyyy-MM-dd");
   const calMonthEnd = format(endOfMonth(calendarMonth), "yyyy-MM-dd");
@@ -184,6 +196,101 @@ const getHeadshotUrl = (url: string | null): string | null => {
     enabled: !!selectedYouth,
   });
 
+  // Practice days for current month
+  const { data: practiceDaysCurrentMonth = [] } = useQuery({
+    queryKey: ["practice-days", currentMonthStart],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("practice_days")
+        .select("id, date, is_practice_day")
+        .gte("date", currentMonthStart)
+        .lte("date", currentMonthEnd);
+      if (error) throw error;
+      return (data || []) as PracticeDay[];
+    },
+  });
+
+  // Practice days for calendar month (may differ from current month)
+  const { data: practiceDaysCalMonth = [] } = useQuery({
+    queryKey: ["practice-days-cal", calMonthStart],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("practice_days")
+        .select("id, date, is_practice_day")
+        .gte("date", calMonthStart)
+        .lte("date", calMonthEnd);
+      if (error) throw error;
+      return (data || []) as PracticeDay[];
+    },
+  });
+
+  // Practice days for previous month
+  const { data: practiceDaysPrevMonth = [] } = useQuery({
+    queryKey: ["practice-days-prev", prevMonthStart],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("practice_days")
+        .select("id, date, is_practice_day")
+        .gte("date", prevMonthStart)
+        .lte("date", prevMonthEnd);
+      if (error) throw error;
+      return (data || []) as PracticeDay[];
+    },
+  });
+
+  /* ───── Practice Day Helper ───── */
+  const practiceDayMap = useMemo(() => {
+    const m: Record<string, boolean> = {};
+    practiceDaysCurrentMonth.forEach((p) => { m[p.date] = p.is_practice_day; });
+    return m;
+  }, [practiceDaysCurrentMonth]);
+
+  const calPracticeDayMap = useMemo(() => {
+    const m: Record<string, boolean> = {};
+    practiceDaysCalMonth.forEach((p) => { m[p.date] = p.is_practice_day; });
+    return m;
+  }, [practiceDaysCalMonth]);
+
+  const prevPracticeDayMap = useMemo(() => {
+    const m: Record<string, boolean> = {};
+    practiceDaysPrevMonth.forEach((p) => { m[p.date] = p.is_practice_day; });
+    return m;
+  }, [practiceDaysPrevMonth]);
+
+  const isPracticeDay = useCallback((dateStr: string, map: Record<string, boolean>): boolean => {
+    if (dateStr in map) return map[dateStr];
+    return isDefaultPracticeDay(dateStr);
+  }, []);
+
+  /* ───── Filter attendance to practice days only ───── */
+  const practiceAttendance = useMemo(
+    () => attendance.filter((a) => isPracticeDay(a.check_in_date, practiceDayMap)),
+    [attendance, practiceDayMap, isPracticeDay]
+  );
+
+  const prevPracticeAttendance = useMemo(
+    () => prevMonthAttendance.filter((a) => isPracticeDay(a.check_in_date, prevPracticeDayMap)),
+    [prevMonthAttendance, prevPracticeDayMap, isPracticeDay]
+  );
+
+  /* ───── Toggle Practice Day ───── */
+  const togglePracticeDay = async (dateStr: string) => {
+    const currentValue = isPracticeDay(dateStr, calPracticeDayMap);
+    const newValue = !currentValue;
+    const existing = practiceDaysCalMonth.find((p) => p.date === dateStr);
+
+    if (existing) {
+      await supabase.from("practice_days").update({ is_practice_day: newValue }).eq("id", existing.id);
+    } else {
+      await supabase.from("practice_days").insert({ date: dateStr, is_practice_day: newValue });
+    }
+
+    queryClient.invalidateQueries({ queryKey: ["practice-days"] });
+    queryClient.invalidateQueries({ queryKey: ["practice-days-cal"] });
+    queryClient.invalidateQueries({ queryKey: ["practice-days-prev"] });
+    toast.success(newValue ? "Marked as practice day" : "Marked as non-practice day");
+  };
+
   /* ───── Derived Data ───── */
   const regMap = useMemo(() => {
     const m: Record<string, Registration> = {};
@@ -196,15 +303,15 @@ const getHeadshotUrl = (url: string | null): string | null => {
     return Array.from(set).sort();
   }, [registrations]);
 
-  // Attendance by registration
+  // Attendance by registration (practice days only)
   const attendanceByReg = useMemo(() => {
     const map: Record<string, AttendanceRecord[]> = {};
-    attendance.forEach((a) => {
+    practiceAttendance.forEach((a) => {
       if (!map[a.registration_id]) map[a.registration_id] = [];
       map[a.registration_id].push(a);
     });
     return map;
-  }, [attendance]);
+  }, [practiceAttendance]);
 
   const getStats = (regId: string) => {
     const records = attendanceByReg[regId] || [];
@@ -215,26 +322,30 @@ const getHeadshotUrl = (url: string | null): string | null => {
     return { present: todayCount > 0, weekCount, monthCount, lastDate };
   };
 
-  /* ───── TODAY'S RECORDS ───── */
-  const todayRecords = useMemo(() => attendance.filter((a) => a.check_in_date === todayStr), [attendance]);
+  /* ───── TODAY'S RECORDS (only if today is a practice day) ───── */
+  const todayIsPractice = isPracticeDay(todayStr, practiceDayMap);
+  const todayRecords = useMemo(
+    () => todayIsPractice ? practiceAttendance.filter((a) => a.check_in_date === todayStr) : [],
+    [practiceAttendance, todayIsPractice]
+  );
   const todayRegIds = useMemo(() => new Set(todayRecords.map((a) => a.registration_id)), [todayRecords]);
   const totalPresentToday = todayRegIds.size;
 
-  /* ───── WEEK-TO-DATE AVERAGE ───── */
+  /* ───── WEEK-TO-DATE AVERAGE (practice days only) ───── */
   const weekRecords = useMemo(
-    () => attendance.filter((a) => a.check_in_date >= weekStart && a.check_in_date <= weekEnd),
-    [attendance]
+    () => practiceAttendance.filter((a) => a.check_in_date >= weekStart && a.check_in_date <= weekEnd),
+    [practiceAttendance]
   );
   const wtdAvg = useMemo(() => {
     const days = new Set(weekRecords.map((a) => a.check_in_date));
     return days.size > 0 ? Math.round(weekRecords.length / days.size) : 0;
   }, [weekRecords]);
 
-  /* ───── MONTH-TO-DATE AVERAGE ───── */
+  /* ───── MONTH-TO-DATE AVERAGE (practice days only) ───── */
   const mtdAvg = useMemo(() => {
-    const days = new Set(attendance.map((a) => a.check_in_date));
-    return days.size > 0 ? Math.round(attendance.length / days.size) : 0;
-  }, [attendance]);
+    const days = new Set(practiceAttendance.map((a) => a.check_in_date));
+    return days.size > 0 ? Math.round(practiceAttendance.length / days.size) : 0;
+  }, [practiceAttendance]);
 
   /* ───── PROGRAM SPLIT TODAY ───── */
   const programSplitToday = useMemo(() => {
@@ -292,23 +403,23 @@ const getHeadshotUrl = (url: string | null): string | null => {
     return `${h12}:${m.toString().padStart(2, "0")} ${ampm}`;
   }, [todayRecords]);
 
-  /* ───── DAILY ATTENDANCE TREND (CURRENT MONTH) ───── */
+  /* ───── DAILY ATTENDANCE TREND (CURRENT MONTH, practice days only) ───── */
   const dailyTrend = useMemo(() => {
     const counts: Record<string, number> = {};
-    attendance.forEach((a) => { counts[a.check_in_date] = (counts[a.check_in_date] || 0) + 1; });
+    practiceAttendance.forEach((a) => { counts[a.check_in_date] = (counts[a.check_in_date] || 0) + 1; });
     return Object.entries(counts)
       .sort((a, b) => a[0].localeCompare(b[0]))
       .map(([date, count]) => ({ date: format(parseISO(date), "M/d"), count, fullDate: date }));
-  }, [attendance]);
+  }, [practiceAttendance]);
 
-  /* ───── ATTENDANCE BY DAY OF WEEK ───── */
+  /* ───── ATTENDANCE BY DAY OF WEEK (practice days only) ───── */
   const dowData = useMemo(() => {
     const totals: number[] = [0, 0, 0, 0, 0, 0, 0];
     const dayCounts: number[] = [0, 0, 0, 0, 0, 0, 0];
     const datesByDow: Record<number, Set<string>> = {};
     for (let i = 0; i < 7; i++) datesByDow[i] = new Set();
 
-    attendance.forEach((a) => {
+    practiceAttendance.forEach((a) => {
       const dow = getDay(parseISO(a.check_in_date));
       totals[dow]++;
       datesByDow[dow].add(a.check_in_date);
@@ -321,12 +432,12 @@ const getHeadshotUrl = (url: string | null): string | null => {
       total: totals[dow],
       dow,
     }));
-  }, [attendance]);
+  }, [practiceAttendance]);
 
-  /* ───── PROGRAM ATTENDANCE TREND ───── */
+  /* ───── PROGRAM ATTENDANCE TREND (practice days only) ───── */
   const programTrend = useMemo(() => {
     const map: Record<string, Record<string, number>> = {};
-    attendance.forEach((a) => {
+    practiceAttendance.forEach((a) => {
       const reg = regMap[a.registration_id];
       if (!reg) return;
       const prog = reg.child_boxing_program.includes("Junior") ? "Junior" : reg.child_boxing_program.includes("Senior") ? "Senior" : "Other";
@@ -341,35 +452,34 @@ const getHeadshotUrl = (url: string | null): string | null => {
         Senior: progs["Senior"] || 0,
         Other: progs["Other"] || 0,
       }));
-  }, [attendance, regMap]);
+  }, [practiceAttendance, regMap]);
 
-  /* ───── SCHOOL DISTRICT BREAKDOWN (MONTH) ───── */
+  /* ───── SCHOOL DISTRICT BREAKDOWN (MONTH, practice days only) ───── */
   const districtBreakdown = useMemo(() => {
     const counts: Record<string, number> = {};
-    const ids = new Set(attendance.map((a) => a.registration_id));
+    const ids = new Set(practiceAttendance.map((a) => a.registration_id));
     ids.forEach((id) => {
       const reg = regMap[id];
       if (reg) counts[reg.child_school_district] = (counts[reg.child_school_district] || 0) + 1;
     });
     return Object.entries(counts).sort((a, b) => b[1] - a[1]);
-  }, [attendance, regMap]);
+  }, [practiceAttendance, regMap]);
 
-  /* ───── POVERTY SUMMARY (MONTH) ───── */
+  /* ───── POVERTY SUMMARY (MONTH, practice days only) ───── */
   const povertyMonth = useMemo(() => {
-    const ids = new Set(attendance.map((a) => a.registration_id));
+    const ids = new Set(practiceAttendance.map((a) => a.registration_id));
     let below = 0;
     ids.forEach((id) => {
       const reg = regMap[id];
       if (reg && (POVERTY_INCOMES.includes(reg.household_income_range) || reg.free_or_reduced_lunch === "Yes")) below++;
     });
     return { below, total: ids.size };
-  }, [attendance, regMap]);
+  }, [practiceAttendance, regMap]);
 
-  /* ───── SMART INSIGHTS ───── */
+  /* ───── SMART INSIGHTS (practice days only) ───── */
   const smartInsights = useMemo(() => {
     const insights: string[] = [];
 
-    // Strongest day of week
     const strongest = dowData.reduce((a, b) => (b.avg > a.avg ? b : a), dowData[0]);
     const weakest = dowData.reduce((a, b) => (b.avg < a.avg ? b : a), dowData[0]);
     if (strongest && strongest.avg > 0) {
@@ -379,33 +489,29 @@ const getHeadshotUrl = (url: string | null): string | null => {
       insights.push(`${weakest.day} attendance tends to be lower than midweek attendance.`);
     }
 
-    // Program unique youth this week
     const weekJrIds = new Set(weekRecords.filter((a) => regMap[a.registration_id]?.child_boxing_program.includes("Junior")).map((a) => a.registration_id));
     const weekSrIds = new Set(weekRecords.filter((a) => regMap[a.registration_id]?.child_boxing_program.includes("Senior")).map((a) => a.registration_id));
     if (weekJrIds.size > 0 || weekSrIds.size > 0) {
       insights.push(`${weekSrIds.size} Senior Boxers and ${weekJrIds.size} Junior Boxers attended this week (Junior Boxing meets once per week).`);
     }
 
-    // Top district today
     if (topDistrictToday && totalPresentToday > 0) {
       insights.push(`Most youth attending today are from ${topDistrictToday[0]}.`);
     }
 
-    // Average arrival time comparison
     if (avgArrivalToday) {
       insights.push(`Average arrival time today is ${avgArrivalToday}.`);
     }
 
-    // Month-over-month comparison
-    const prevDays = new Set(prevMonthAttendance.map((a) => a.check_in_date));
-    const prevAvg = prevDays.size > 0 ? Math.round(prevMonthAttendance.length / prevDays.size) : 0;
+    const prevDays = new Set(prevPracticeAttendance.map((a) => a.check_in_date));
+    const prevAvg = prevDays.size > 0 ? Math.round(prevPracticeAttendance.length / prevDays.size) : 0;
     if (prevAvg > 0 && mtdAvg > 0) {
       if (mtdAvg > prevAvg) insights.push("This month's average attendance is higher than last month.");
       else if (mtdAvg < prevAvg) insights.push("This month's average attendance is lower than last month.");
     }
 
     return insights;
-  }, [dowData, weekRecords, regMap, topDistrictToday, totalPresentToday, avgArrivalToday, prevMonthAttendance, mtdAvg]);
+  }, [dowData, weekRecords, regMap, topDistrictToday, totalPresentToday, avgArrivalToday, prevPracticeAttendance, mtdAvg]);
 
   /* ───── BALD EAGLES ───── */
   const baldEagles = registrations.filter((r) => r.is_bald_eagle);
@@ -416,7 +522,7 @@ const getHeadshotUrl = (url: string | null): string | null => {
 
   const baldEagleTrend = useMemo(() => {
     const counts: Record<string, number> = {};
-    attendance.forEach((a) => {
+    practiceAttendance.forEach((a) => {
       if (regMap[a.registration_id]?.is_bald_eagle && regMap[a.registration_id]?.bald_eagle_active) {
         counts[a.check_in_date] = (counts[a.check_in_date] || 0) + 1;
       }
@@ -424,10 +530,9 @@ const getHeadshotUrl = (url: string | null): string | null => {
     return Object.entries(counts)
       .sort((a, b) => a[0].localeCompare(b[0]))
       .map(([date, count]) => ({ date: format(parseISO(date), "M/d"), count }));
-  }, [attendance, regMap]);
+  }, [practiceAttendance, regMap]);
 
-  // Check if any attendance was recorded during the previous week at all
-  const anyPrevWeekAttendance = (attendance || []).some((rec) => rec.check_in_date >= prevWeekStart && rec.check_in_date <= prevWeekEnd);
+  const anyPrevWeekAttendance = (practiceAttendance || []).some((rec) => rec.check_in_date >= prevWeekStart && rec.check_in_date <= prevWeekEnd);
 
   const alerts = anyPrevWeekAttendance
     ? (activeBaldEagles
@@ -484,7 +589,6 @@ const getHeadshotUrl = (url: string | null): string | null => {
   }, [calendarMonth]);
 
   /* ───── FILTERED TABLE ───── */
-  // Build a map of registration_id -> earliest check_in_at today for sorting & display
   const todayCheckInMap = useMemo(() => {
     const map: Record<string, string> = {};
     todayRecords.forEach((r) => {
@@ -519,7 +623,6 @@ const getHeadshotUrl = (url: string | null): string | null => {
     queryClient.invalidateQueries({ queryKey: ["registrations-attendance-full"] });
   };
 
-  // Non-bald-eagle youth for the add dialog
   const nonEagleYouth = useMemo(() => {
     if (!addEagleOpen) return [];
     const q = eagleSearch.toLowerCase().trim();
@@ -574,20 +677,21 @@ const getHeadshotUrl = (url: string | null): string | null => {
             <CardContent className="pt-4 pb-3 text-center">
               <p className="text-[10px] uppercase tracking-wider text-white/40">Present Today</p>
               <p className="text-3xl font-bold mt-1">{totalPresentToday}</p>
+              {!todayIsPractice && <p className="text-[10px] text-red-400">Non-practice day</p>}
             </CardContent>
           </Card>
           <Card className="bg-white/5 border-white/10 text-white">
             <CardContent className="pt-4 pb-3 text-center">
               <p className="text-[10px] uppercase tracking-wider text-white/40">Week Avg</p>
               <p className="text-3xl font-bold mt-1">{wtdAvg}</p>
-              <p className="text-[10px] text-white/30">per day this week</p>
+              <p className="text-[10px] text-white/30">per practice day this week</p>
             </CardContent>
           </Card>
           <Card className="bg-white/5 border-white/10 text-white">
             <CardContent className="pt-4 pb-3 text-center">
               <p className="text-[10px] uppercase tracking-wider text-white/40">Month Avg</p>
               <p className="text-3xl font-bold mt-1">{mtdAvg}</p>
-              <p className="text-[10px] text-white/30">per day this month</p>
+              <p className="text-[10px] text-white/30">per practice day this month</p>
             </CardContent>
           </Card>
           <Card className="bg-white/5 border-white/10 text-white">
@@ -601,6 +705,122 @@ const getHeadshotUrl = (url: string | null): string | null => {
           </Card>
         </div>
 
+        {/* ═══════════ ATTENDANCE CALENDAR (moved here after stats) ═══════════ */}
+        <Card className="bg-white/5 border-white/10 text-white mb-6">
+          <CardHeader>
+            <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center justify-between">
+              <CardTitle className="text-lg flex items-center gap-2">
+                <CalendarDays className="w-5 h-5" /> Attendance Calendar
+              </CardTitle>
+              <div className="flex gap-2 flex-wrap">
+                <Select value={calendarFilter} onValueChange={(v: "all" | "bald-eagles") => setCalendarFilter(v)}>
+                  <SelectTrigger className="w-36 bg-white/5 border-white/20 text-white h-9"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Youth</SelectItem>
+                    <SelectItem value="bald-eagles">🦅 Bald Eagles</SelectItem>
+                  </SelectContent>
+                </Select>
+                <Select value={calendarProgramFilter} onValueChange={setCalendarProgramFilter}>
+                  <SelectTrigger className="w-44 bg-white/5 border-white/20 text-white h-9"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Programs</SelectItem>
+                    {programs.map((p) => (
+                      <SelectItem key={p} value={p}>{p}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="flex items-center justify-between mb-4">
+              <Button variant="ghost" size="icon" className="text-white/60 hover:text-white hover:bg-white/10" onClick={() => setCalendarMonth((m) => subMonths(m, 1))}>
+                <ChevronLeft className="w-5 h-5" />
+              </Button>
+              <h3 className="text-lg font-semibold tracking-wide">{format(calendarMonth, "MMMM yyyy")}</h3>
+              <Button variant="ghost" size="icon" className="text-white/60 hover:text-white hover:bg-white/10" onClick={() => setCalendarMonth((m) => addMonths(m, 1))}>
+                <ChevronRight className="w-5 h-5" />
+              </Button>
+            </div>
+
+            <div className="grid grid-cols-7 gap-1 mb-1">
+              {WEEKDAY_LABELS.map((d) => (
+                <div key={d} className="text-center text-xs font-medium text-white/40 py-1">{d}</div>
+              ))}
+            </div>
+
+            <div className="grid grid-cols-7 gap-1.5">
+              {calendarDays.map((day, idx) => {
+                if (day === null) return <div key={`empty-${idx}`} className="aspect-square" />;
+                const dateStr = format(new Date(calendarMonth.getFullYear(), calendarMonth.getMonth(), day), "yyyy-MM-dd");
+                const count = dailyCounts[dateStr] || 0;
+                const dateObj = new Date(calendarMonth.getFullYear(), calendarMonth.getMonth(), day);
+                const isCurrentDay = isToday(dateObj);
+                const isSelected = selectedDay === dateStr;
+                const isPrac = isPracticeDay(dateStr, calPracticeDayMap);
+
+                return (
+                  <div key={dateStr} className="relative aspect-square">
+                    <button
+                      onClick={() => count > 0 && setSelectedDay(dateStr)}
+                      className={`
+                        w-full h-full rounded-lg p-1.5 flex flex-col items-center justify-center transition-all relative
+                        ${isSelected ? "bg-blue-500/25 border border-blue-400/50 ring-1 ring-blue-400/30" : ""}
+                        ${isCurrentDay && !isSelected ? "border border-white/30" : ""}
+                        ${!isSelected && !isCurrentDay ? "border border-white/[0.06]" : ""}
+                        ${count > 0 ? "hover:bg-white/10 cursor-pointer" : "cursor-default"}
+                        ${!isPrac ? "bg-red-500/[0.06]" : "bg-white/[0.03]"}
+                      `}
+                    >
+                      <span className={`absolute top-1 right-1.5 text-[10px] leading-none ${
+                        !isPrac ? "text-red-400 line-through font-medium" :
+                        isCurrentDay ? "text-blue-400 font-semibold" : "text-white/35"
+                      }`}>{day}</span>
+                      {count > 0 ? (
+                        <span className={`w-8 h-8 sm:w-9 sm:h-9 rounded-full flex items-center justify-center text-sm sm:text-base font-bold ${
+                          isPrac
+                            ? "bg-green-500/20 border border-green-500/40 text-green-400"
+                            : "bg-red-500/20 border border-red-500/40 text-red-400"
+                        }`}>{count}</span>
+                      ) : (
+                        <span className={`w-8 h-8 sm:w-9 sm:h-9 rounded-full flex items-center justify-center text-xs ${
+                          isPrac
+                            ? "bg-white/[0.03] border border-white/[0.06] text-white/15"
+                            : "bg-red-500/[0.03] border border-red-500/[0.08] text-red-400/30"
+                        }`}>{isPrac ? "0" : <X className="w-3 h-3" />}</span>
+                      )}
+                    </button>
+                    {/* Toggle practice day button */}
+                    <button
+                      onClick={(e) => { e.stopPropagation(); togglePracticeDay(dateStr); }}
+                      className={`absolute bottom-0.5 left-1/2 -translate-x-1/2 w-2.5 h-2.5 rounded-full border transition-all hover:scale-150 ${
+                        isPrac
+                          ? "bg-green-500 border-green-400/50"
+                          : "bg-red-500 border-red-400/50"
+                      }`}
+                      title={isPrac ? "Click to mark as non-practice day" : "Click to mark as practice day"}
+                    />
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Legend */}
+            <div className="flex items-center gap-6 mt-4 pt-3 border-t border-white/10">
+              <div className="flex items-center gap-1.5">
+                <span className="w-3 h-3 rounded-full bg-green-500" />
+                <span className="text-xs text-white/50">Practice Day</span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <span className="w-3 h-3 rounded-full bg-red-500" />
+                <span className="text-xs text-white/50">Non-Practice Day</span>
+              </div>
+              <span className="text-[10px] text-white/30 ml-auto">Click dot to toggle</span>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Second row of insight cards */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
           {/* Program Split */}
           <Card className="bg-white/5 border-white/10 text-white">
@@ -774,116 +994,74 @@ const getHeadshotUrl = (url: string | null): string | null => {
                         className={`w-full text-left flex items-center gap-2 p-1.5 rounded hover:bg-white/5 transition-colors ${drillDistrictFilter === dist ? "bg-white/10" : ""}`}
                       >
                         <span className="text-xs text-white/70 truncate flex-1 min-w-0">{dist}</span>
-                        <div className="w-20 h-2 bg-white/5 rounded-full overflow-hidden flex-shrink-0">
-                          <div className="h-full bg-blue-500/60 rounded-full" style={{ width: `${pctVal}%` }} />
-                        </div>
-                        <span className="text-xs font-bold text-white/80 w-8 text-right flex-shrink-0">{pctVal}%</span>
+                        <span className="text-xs text-white/50 tabular-nums">{pctVal}%</span>
+                        <span className="text-xs font-bold text-white tabular-nums w-6 text-right">{count}</span>
                       </button>
                     );
                   })}
                 </div>
               )}
-              {drillDistrictFilter && (
-                <Button variant="ghost" size="sm" className="mt-2 text-xs text-white/50 hover:text-white" onClick={() => setDrillDistrictFilter(null)}>
-                  Clear district filter
-                </Button>
-              )}
             </CardContent>
           </Card>
 
-          {/* Poverty Indicator Summary */}
+          {/* Poverty Summary */}
           <Card className="bg-white/5 border-white/10 text-white">
             <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-white/60">Poverty Indicator Summary (Month)</CardTitle>
+              <CardTitle className="text-sm font-medium text-white/60">Below Poverty Line (Month)</CardTitle>
             </CardHeader>
-            <CardContent>
-              <div className="flex items-center gap-6 mb-4">
-                <div className="text-center">
-                  <p className="text-3xl font-bold">{pct(povertyMonth.below, povertyMonth.total)}</p>
-                  <p className="text-[10px] text-white/40">below poverty line</p>
-                </div>
-                <div className="flex-1">
-                  <div className="w-full h-4 bg-white/5 rounded-full overflow-hidden">
-                    <div
-                      className="h-full bg-gradient-to-r from-amber-500 to-red-500 rounded-full transition-all"
-                      style={{ width: povertyMonth.total > 0 ? `${(povertyMonth.below / povertyMonth.total) * 100}%` : "0%" }}
-                    />
-                  </div>
-                  <div className="flex justify-between mt-1">
-                    <span className="text-[10px] text-white/30">{povertyMonth.below} below</span>
-                    <span className="text-[10px] text-white/30">{povertyMonth.total - povertyMonth.below} above</span>
-                  </div>
-                </div>
-              </div>
+            <CardContent className="flex flex-col items-center justify-center py-4">
+              <p className="text-5xl font-black text-white">{pct(povertyMonth.below, povertyMonth.total)}</p>
+              <p className="text-sm text-white/40 mt-1">{povertyMonth.below} of {povertyMonth.total} unique youth</p>
             </CardContent>
           </Card>
         </div>
 
-        {/* ═══════════ SMART INSIGHT CALLOUTS ═══════════ */}
+        {/* Smart Insights */}
         {smartInsights.length > 0 && (
-          <Card className="bg-blue-500/5 border-blue-500/20 text-white mb-6">
+          <Card className="bg-white/5 border-white/10 text-white mb-6">
             <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-blue-400 flex items-center gap-2">
-                <Lightbulb className="w-4 h-4" /> Smart Insights
+              <CardTitle className="text-sm font-medium text-white/60 flex items-center gap-2">
+                <Lightbulb className="w-4 h-4 text-yellow-400" /> Smart Insights
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="space-y-2">
+              <ul className="space-y-1.5">
                 {smartInsights.map((insight, i) => (
-                  <div key={i} className="flex items-start gap-2">
-                    <span className="text-blue-400/60 mt-0.5">•</span>
-                    <p className="text-sm text-white/80">{insight}</p>
-                  </div>
+                  <li key={i} className="text-sm text-white/70 flex items-start gap-2">
+                    <span className="text-yellow-400 mt-0.5">•</span>
+                    <span>{insight}</span>
+                  </li>
                 ))}
-              </div>
+              </ul>
             </CardContent>
           </Card>
         )}
-      </div>
 
-      {/* ═══════════ BALD EAGLES INSIGHT BLOCK ═══════════ */}
-      <div>
-        <h2 className="text-xl font-bold text-amber-400 flex items-center gap-2 mb-4">
-          <Star className="w-5 h-5 fill-amber-400" /> Bald Eagles Monitor
-        </h2>
+        {/* ═══════════ BALD EAGLES MONITOR ═══════════ */}
+        <Card className="bg-white/5 border-white/10 text-white mb-4">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-lg flex items-center gap-2 text-amber-400">
+              <Eye className="w-5 h-5" /> Bald Eagles Monitor
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-3 gap-3 mb-4">
+              <div className="text-center p-3 rounded-lg bg-white/5">
+                <p className="text-[10px] uppercase tracking-wider text-white/40">Present Today</p>
+                <p className="text-2xl font-bold mt-1">{baldEaglesPresent}</p>
+                <p className="text-[10px] text-white/30">of {activeBaldEagles.length} active</p>
+              </div>
+              <div className="text-center p-3 rounded-lg bg-white/5">
+                <p className="text-[10px] uppercase tracking-wider text-white/40">Week Total</p>
+                <p className="text-2xl font-bold mt-1">{baldEaglesWeek}</p>
+              </div>
+              <div className="text-center p-3 rounded-lg bg-white/5">
+                <p className="text-[10px] uppercase tracking-wider text-white/40">Month Total</p>
+                <p className="text-2xl font-bold mt-1">{baldEaglesMonth}</p>
+              </div>
+            </div>
 
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
-          <Card className="bg-amber-500/10 border-amber-500/30 text-white">
-            <CardContent className="pt-4 pb-3 text-center">
-              <p className="text-[10px] uppercase tracking-wider text-amber-400/60">Present Today</p>
-              <p className="text-3xl font-bold text-amber-400">{baldEaglesPresent}</p>
-              <p className="text-[10px] text-white/30">of {baldEagles.length} total</p>
-            </CardContent>
-          </Card>
-          <Card className="bg-amber-500/10 border-amber-500/30 text-white">
-            <CardContent className="pt-4 pb-3 text-center">
-              <p className="text-[10px] uppercase tracking-wider text-amber-400/60">This Week</p>
-              <p className="text-3xl font-bold text-amber-400">{baldEaglesWeek}</p>
-              <p className="text-[10px] text-white/30">sign-ins</p>
-            </CardContent>
-          </Card>
-          <Card className="bg-amber-500/10 border-amber-500/30 text-white">
-            <CardContent className="pt-4 pb-3 text-center">
-              <p className="text-[10px] uppercase tracking-wider text-amber-400/60">This Month</p>
-              <p className="text-3xl font-bold text-amber-400">{baldEaglesMonth}</p>
-              <p className="text-[10px] text-white/30">sign-ins</p>
-            </CardContent>
-          </Card>
-          <Card className="bg-amber-500/10 border-amber-500/30 text-white">
-            <CardContent className="pt-4 pb-3 text-center">
-              <p className="text-[10px] uppercase tracking-wider text-amber-400/60">Total Eagles</p>
-              <p className="text-3xl font-bold text-amber-400">{baldEagles.length}</p>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Bald Eagle Attendance Trend */}
-        {baldEagleTrend.length > 1 && (
-          <Card className="bg-amber-500/5 border-amber-500/20 text-white mb-4">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-amber-400/70">🦅 Attendance Trend</CardTitle>
-            </CardHeader>
-            <CardContent>
+            {baldEagleTrend.length > 1 && (
               <div className="h-36">
                 <ResponsiveContainer width="100%" height="100%">
                   <LineChart data={baldEagleTrend}>
@@ -891,13 +1069,13 @@ const getHeadshotUrl = (url: string | null): string | null => {
                     <XAxis dataKey="date" tick={{ fill: "rgba(255,255,255,0.4)", fontSize: 10 }} />
                     <YAxis tick={{ fill: "rgba(255,255,255,0.4)", fontSize: 10 }} />
                     <Tooltip contentStyle={chartTooltipStyle} />
-                    <Line type="monotone" dataKey="count" stroke="hsl(43, 96%, 56%)" strokeWidth={2} dot={false} />
+                    <Line type="monotone" dataKey="count" stroke="hsl(45, 93%, 47%)" strokeWidth={2} dot={false} name="Bald Eagles" />
                   </LineChart>
                 </ResponsiveContainer>
               </div>
-            </CardContent>
-          </Card>
-        )}
+            )}
+          </CardContent>
+        </Card>
 
         {/* Alerts */}
         {alerts.length > 0 && (
@@ -1097,85 +1275,6 @@ const getHeadshotUrl = (url: string | null): string | null => {
       </Dialog>
       </div>
 
-      {/* ═══════════ ATTENDANCE CALENDAR ═══════════ */}
-      <Card className="bg-white/5 border-white/10 text-white">
-        <CardHeader>
-          <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center justify-between">
-            <CardTitle className="text-lg flex items-center gap-2">
-              <CalendarDays className="w-5 h-5" /> Attendance Calendar
-            </CardTitle>
-            <div className="flex gap-2 flex-wrap">
-              <Select value={calendarFilter} onValueChange={(v: "all" | "bald-eagles") => setCalendarFilter(v)}>
-                <SelectTrigger className="w-36 bg-white/5 border-white/20 text-white h-9"><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Youth</SelectItem>
-                  <SelectItem value="bald-eagles">🦅 Bald Eagles</SelectItem>
-                </SelectContent>
-              </Select>
-              <Select value={calendarProgramFilter} onValueChange={setCalendarProgramFilter}>
-                <SelectTrigger className="w-44 bg-white/5 border-white/20 text-white h-9"><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Programs</SelectItem>
-                  {programs.map((p) => (
-                    <SelectItem key={p} value={p}>{p}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-        </CardHeader>
-        <CardContent>
-          <div className="flex items-center justify-between mb-4">
-            <Button variant="ghost" size="icon" className="text-white/60 hover:text-white hover:bg-white/10" onClick={() => setCalendarMonth((m) => subMonths(m, 1))}>
-              <ChevronLeft className="w-5 h-5" />
-            </Button>
-            <h3 className="text-lg font-semibold tracking-wide">{format(calendarMonth, "MMMM yyyy")}</h3>
-            <Button variant="ghost" size="icon" className="text-white/60 hover:text-white hover:bg-white/10" onClick={() => setCalendarMonth((m) => addMonths(m, 1))}>
-              <ChevronRight className="w-5 h-5" />
-            </Button>
-          </div>
-
-          <div className="grid grid-cols-7 gap-1 mb-1">
-            {WEEKDAY_LABELS.map((d) => (
-              <div key={d} className="text-center text-xs font-medium text-white/40 py-1">{d}</div>
-            ))}
-          </div>
-
-          <div className="grid grid-cols-7 gap-1.5">
-            {calendarDays.map((day, idx) => {
-              if (day === null) return <div key={`empty-${idx}`} className="aspect-square" />;
-              const dateStr = format(new Date(calendarMonth.getFullYear(), calendarMonth.getMonth(), day), "yyyy-MM-dd");
-              const count = dailyCounts[dateStr] || 0;
-              const dateObj = new Date(calendarMonth.getFullYear(), calendarMonth.getMonth(), day);
-              const isCurrentDay = isToday(dateObj);
-              const isSelected = selectedDay === dateStr;
-
-              return (
-                <button
-                  key={dateStr}
-                  onClick={() => count > 0 && setSelectedDay(dateStr)}
-                  className={`
-                    aspect-square rounded-lg p-1.5 flex flex-col items-center justify-center transition-all relative
-                    ${isSelected ? "bg-blue-500/25 border border-blue-400/50 ring-1 ring-blue-400/30" : ""}
-                    ${isCurrentDay && !isSelected ? "border border-white/30" : ""}
-                    ${!isSelected && !isCurrentDay ? "border border-white/[0.06]" : ""}
-                    ${count > 0 ? "hover:bg-white/10 cursor-pointer" : "cursor-default"}
-                    bg-white/[0.03]
-                  `}
-                >
-                  <span className={`absolute top-1 right-1.5 text-[10px] leading-none ${isCurrentDay ? "text-blue-400 font-semibold" : "text-white/35"}`}>{day}</span>
-                  {count > 0 ? (
-                    <span className="w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-green-500/20 border border-green-500/40 flex items-center justify-center text-sm sm:text-base font-bold text-green-400">{count}</span>
-                  ) : (
-                    <span className="w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-white/[0.03] border border-white/[0.06] flex items-center justify-center text-xs text-white/15">0</span>
-                  )}
-                </button>
-              );
-            })}
-          </div>
-        </CardContent>
-      </Card>
-
       {/* Day Detail Modal */}
       <Dialog open={!!selectedDay} onOpenChange={() => { setSelectedDay(null); setDaySearch(""); }}>
         <DialogContent className="bg-black border-white/10 text-white max-w-lg max-h-[80vh] flex flex-col">
@@ -1189,6 +1288,9 @@ const getHeadshotUrl = (url: string | null): string | null => {
               </DialogHeader>
               <div className="mt-2 mb-2 flex items-center gap-3">
                 <Badge className="bg-green-500/15 text-green-400 border-green-500/30 flex-shrink-0">{daySignIns.length} youth signed in</Badge>
+                {!isPracticeDay(selectedDay, calPracticeDayMap) && (
+                  <Badge className="bg-red-500/15 text-red-400 border-red-500/30 flex-shrink-0">Non-Practice Day</Badge>
+                )}
               </div>
               <div className="relative mb-3">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/40" />
