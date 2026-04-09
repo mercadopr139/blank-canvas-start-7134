@@ -85,6 +85,7 @@ function HistoryCalendarTab() {
   // Pay period runs (for Box 4 and Driver Pay Panel)
   const currentPayPeriod = useMemo(() => getCurrentPayPeriod(), []);
   const [payPeriodRuns, setPayPeriodRuns] = useState<RunWithDetails[]>([]);
+  const [yearRuns, setYearRuns] = useState<RunWithDetails[]>([]);
   const [paidDrivers, setPaidDrivers] = useState<Set<string>>(new Set());
 
   // Driver history modal
