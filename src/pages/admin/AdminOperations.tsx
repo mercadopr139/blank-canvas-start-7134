@@ -9,7 +9,7 @@ interface OperationsTile {
   icon: LucideIcon;
   href: string;
   external?: boolean;
-  children?: { title: string; href: string; icon: LucideIcon }[];
+  children?: { title: string; href: string; icon: LucideIcon; external?: boolean }[];
 }
 
 const baseTiles: OperationsTile[] = [

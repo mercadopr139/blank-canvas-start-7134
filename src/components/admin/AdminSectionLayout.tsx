@@ -10,7 +10,7 @@ export interface SectionCard {
   href: string;
   icon: LucideIcon;
   external?: boolean;
-  children?: { title: string; href: string; icon: LucideIcon }[];
+  children?: { title: string; href: string; icon: LucideIcon; external?: boolean }[];
 }
 
 interface AdminSectionLayoutProps {
