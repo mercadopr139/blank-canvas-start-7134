@@ -14,7 +14,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell,
-  LineChart, Line,
+  LineChart, Line, LabelList,
 } from "recharts";
 import {
   startOfMonth, endOfMonth, format,
@@ -873,6 +873,7 @@ const AdminAttendance = () => {
                     <YAxis tick={{ fill: "rgba(255,255,255,0.4)", fontSize: 10 }} />
                     <Tooltip contentStyle={chartTooltipStyle} labelStyle={{ color: "rgba(255,255,255,0.6)" }} />
                     <Bar dataKey="count" name="Sign-Ins" radius={[3, 3, 0, 0]}>
+                      <LabelList dataKey="count" position="top" style={{ fill: "rgba(255,255,255,0.6)", fontSize: 9, fontWeight: 600 }} />
                       {dailyTrend.map((_, i) => (
                         <Cell key={i} fill="hsl(142, 71%, 45%)" fillOpacity={0.7} />
                       ))}
