@@ -291,13 +291,8 @@ const AdminAttendance = () => {
       return (data || []) as Excursion[];
     },
   });
-        .select("id, date, is_practice_day")
-        .gte("date", prevOfViewedStart)
-        .lte("date", prevOfViewedEnd);
-      if (error) throw error;
-      return (data || []) as PracticeDay[];
-    },
-  });
+
+
 
   /* ───── Weather Data (Open-Meteo + DB cache) ───── */
   const { data: weatherMap = {}, isLoading: weatherLoading } = useQuery({
