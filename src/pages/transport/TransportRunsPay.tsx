@@ -169,25 +169,16 @@ function HistoryCalendarTab() {
 
   // Driver pay panel data
   const driverPayData = useMemo(() => {
-    const map = new Map<string, { name: string; payPeriodEarnings: number; monthEarnings: number; payPeriodTrips: number; monthTrips: number }>();
-    // Month earnings from current month runs
-    runs.forEach((r) => {
-      if (!r.driver) return;
-      if (!map.has(r.driver.id)) map.set(r.driver.id, { name: r.driver.name, payPeriodEarnings: 0, monthEarnings: 0, payPeriodTrips: 0, monthTrips: 0 });
-      const entry = map.get(r.driver.id)!;
-      entry.monthEarnings += getPayRate(r.route?.name);
-      entry.monthTrips++;
-    });
-    // Pay period earnings
-    payPeriodRuns.forEach((r) => {
-      if (!r.driver) return;
-      if (!map.has(r.driver.id)) map.set(r.driver.id, { name: r.driver.name, payPeriodEarnings: 0, monthEarnings: 0, payPeriodTrips: 0, monthTrips: 0 });
-      const entry = map.get(r.driver.id)!;
-      entry.payPeriodEarnings += getPayRate(r.route?.name);
-      entry.payPeriodTrips++;
-    });
+    const map = new Map<string, { name: string; payPeriodEarnings: number; monthEarnings: number; yearEarnings: number; payPeriodTrips: number; monthTrips: number; yearTrips: number }>();
+    const ensure = (id: string, name: string) => {
+      if (!map.has(id)) map.set(id, { name, payPeriodEarnings: 0, monthEarnings: 0, yearEarnings: 0, payPeriodTrips: 0, monthTrips: 0, yearTrips: 0 });
+      return map.get(id)!;
+    };
+    runs.forEach((r) => { if (!r.driver) return; const e = ensure(r.driver.id, r.driver.name); e.monthEarnings += getPayRate(r.route?.name); e.monthTrips++; });
+    payPeriodRuns.forEach((r) => { if (!r.driver) return; const e = ensure(r.driver.id, r.driver.name); e.payPeriodEarnings += getPayRate(r.route?.name); e.payPeriodTrips++; });
+    yearRuns.forEach((r) => { if (!r.driver) return; const e = ensure(r.driver.id, r.driver.name); e.yearEarnings += getPayRate(r.route?.name); e.yearTrips++; });
     return [...map.entries()].sort((a, b) => a[1].name.localeCompare(b[1].name));
-  }, [runs, payPeriodRuns]);
+  }, [runs, payPeriodRuns, yearRuns]);
 
   const calendarDays = useMemo(() => {
     const days = eachDayOfInterval({ start: monthStart, end: monthEnd });
