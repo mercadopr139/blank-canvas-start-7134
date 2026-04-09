@@ -1393,7 +1393,60 @@ const AdminAttendance = () => {
           </Card>
         )}
 
-        {/* ═══════════ BALD EAGLES MONITOR ═══════════ */}
+        {/* ═══════════ EXCURSION LOG ═══════════ */}
+        <Card className="bg-purple-500/5 border-purple-500/20 text-white mb-6">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-lg flex items-center gap-2 text-purple-400">
+              🟣 Excursion Log — {format(calendarMonth, "MMMM yyyy")}
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {excursionsCalMonth.length > 0 ? (
+              <>
+                <div className="grid grid-cols-3 gap-3 mb-4">
+                  <div className="text-center p-3 rounded-lg bg-white/5">
+                    <p className="text-[10px] uppercase tracking-wider text-white/40">Excursions</p>
+                    <p className="text-2xl font-bold mt-1 text-purple-400">{excursionsCalMonth.length}</p>
+                  </div>
+                  <div className="text-center p-3 rounded-lg bg-white/5">
+                    <p className="text-[10px] uppercase tracking-wider text-white/40">Total Youth</p>
+                    <p className="text-2xl font-bold mt-1 text-purple-400">{excursionsCalMonth.reduce((s, e) => s + e.youth_count, 0)}</p>
+                  </div>
+                  <div className="text-center p-3 rounded-lg bg-white/5">
+                    <p className="text-[10px] uppercase tracking-wider text-white/40">Avg Youth</p>
+                    <p className="text-2xl font-bold mt-1 text-purple-400">{Math.round(excursionsCalMonth.reduce((s, e) => s + e.youth_count, 0) / excursionsCalMonth.length)}</p>
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  {excursionsCalMonth.map((exc) => (
+                    <div key={exc.id} className="flex items-center gap-3 p-3 rounded-lg bg-white/5 border border-white/[0.06]">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm font-semibold text-white">{exc.name}</span>
+                          <Badge className="bg-purple-500/15 text-purple-400 border-purple-500/30 text-[10px]">{exc.youth_count} youth</Badge>
+                        </div>
+                        <p className="text-xs text-white/40 mt-0.5">{format(parseISO(exc.date), "EEEE, MMMM d, yyyy")}</p>
+                        {exc.notes && <p className="text-xs text-white/50 mt-1">{exc.notes}</p>}
+                      </div>
+                      <div className="flex gap-1 flex-shrink-0">
+                        <button onClick={() => setEditingExcursion({ ...exc })} className="p-1.5 rounded hover:bg-white/10 text-white/30 hover:text-white transition-colors" title="Edit">
+                          <Pencil className="w-3.5 h-3.5" />
+                        </button>
+                        <button onClick={() => setDeleteExcursionTarget(exc)} className="p-1.5 rounded hover:bg-red-500/20 text-white/30 hover:text-red-400 transition-colors" title="Delete">
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </>
+            ) : (
+              <p className="text-sm text-white/30 text-center py-4">No excursions recorded this month</p>
+            )}
+          </CardContent>
+        </Card>
+
+
         <Card className="bg-white/5 border-white/10 text-white mb-4">
           <CardHeader className="pb-2">
             <CardTitle className="text-lg flex items-center gap-2 text-amber-400">
