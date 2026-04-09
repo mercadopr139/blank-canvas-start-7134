@@ -520,7 +520,7 @@ const AdminAttendance = () => {
     }
 
     return insights;
-  }, [dowData, practiceAttendance, regMap, topDistrictToday, totalPresentToday, avgArrivalToday, prevPracticeAttendance, mtdAvg, isCurrentMonth, viewedMonthShort, calendarMonth]);
+  }, [weeklyAvgData, practiceAttendance, regMap, topDistrictToday, totalPresentToday, avgArrivalToday, prevPracticeAttendance, mtdAvg, isCurrentMonth, viewedMonthShort, calendarMonth]);
 
   /* ───── BALD EAGLES ───── */
   const baldEagles = registrations.filter((r) => r.is_bald_eagle);
@@ -917,23 +917,23 @@ const AdminAttendance = () => {
         )}
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-          {/* Day of Week */}
+          {/* Weekly Average */}
           <Card className="bg-white/5 border-white/10 text-white">
             <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-white/60">Attendance by Day of Week</CardTitle>
+              <CardTitle className="text-sm font-medium text-white/60">Avg Attendance by Week — {format(calendarMonth, "MMMM")}</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="h-44">
                 <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={dowData}>
+                  <BarChart data={weeklyAvgData}>
                     <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" />
-                    <XAxis dataKey="day" tick={{ fill: "rgba(255,255,255,0.4)", fontSize: 11 }} />
+                    <XAxis dataKey="week" tick={{ fill: "rgba(255,255,255,0.4)", fontSize: 11 }} />
                     <YAxis tick={{ fill: "rgba(255,255,255,0.4)", fontSize: 10 }} />
-                    <Tooltip content={({ active, payload }) => { if (!active || !payload?.length) return null; const item = payload[0].payload; return (<div style={{ ...chartTooltipStyle, padding: "8px 12px" }}><p style={{ color: "rgba(255,255,255,0.6)", fontSize: 12, margin: 0 }}>{item.day}</p><p style={{ color: "#fff", fontSize: 14, fontWeight: 600, margin: "4px 0 0" }}>{item.avg} Avg Sign-Ins</p></div>); }} />
+                    <Tooltip content={({ active, payload }) => { if (!active || !payload?.length) return null; const item = payload[0].payload; return (<div style={{ ...chartTooltipStyle, padding: "8px 12px" }}><p style={{ color: "rgba(255,255,255,0.6)", fontSize: 12, margin: 0 }}>{item.week} ({item.range})</p><p style={{ color: "#fff", fontSize: 14, fontWeight: 600, margin: "4px 0 0" }}>{item.avg} Avg/Day</p><p style={{ color: "rgba(255,255,255,0.4)", fontSize: 11, margin: "2px 0 0" }}>{item.total} total across {item.days} days</p></div>); }} />
                     <Bar dataKey="avg" name="Avg/Day" radius={[3, 3, 0, 0]}>
                       <LabelList dataKey="avg" position="top" style={{ fill: "rgba(255,255,255,0.6)", fontSize: 9, fontWeight: 600 }} />
-                      {dowData.map((d, i) => (
-                        <Cell key={i} fill={d.avg === Math.max(...dowData.map((x) => x.avg)) ? "hsl(142, 71%, 45%)" : "hsl(217, 91%, 60%)"} fillOpacity={0.7} />
+                      {weeklyAvgData.map((d, i) => (
+                        <Cell key={i} fill={d.avg === Math.max(...weeklyAvgData.map((x) => x.avg)) ? "hsl(142, 71%, 45%)" : "hsl(217, 91%, 60%)"} fillOpacity={0.7} />
                       ))}
                     </Bar>
                   </BarChart>
