@@ -565,6 +565,36 @@ export default function TransportRun() {
         </DialogContent>
       </Dialog>
 
+      {/* Back Confirm Modal */}
+      <Dialog open={backConfirmOpen} onOpenChange={setBackConfirmOpen}>
+        <DialogContent className="bg-[#111827] border-white/10 text-white max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <AlertTriangle className="w-5 h-5 text-amber-400" />
+              Cancel Trip?
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 mt-2">
+            <p className="text-white/60 text-sm">Are you sure? This will cancel the current trip and no data will be saved.</p>
+            <div className="flex gap-3">
+              <Button
+                onClick={() => setBackConfirmOpen(false)}
+                className="flex-1 border border-white/20 bg-white/5 text-white hover:bg-white/10"
+              >
+                Stay
+              </Button>
+              <Button
+                onClick={handleCancelRun}
+                disabled={cancellingRun}
+                className="flex-1 bg-[#DC2626] hover:bg-[#B91C1C] text-white"
+              >
+                {cancellingRun ? "Cancelling..." : "Go Back"}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
       {/* Add Youth Sheet */}
       <DriverAddYouthSheet
         open={addYouthOpen}
