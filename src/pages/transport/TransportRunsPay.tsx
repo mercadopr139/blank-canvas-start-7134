@@ -116,11 +116,8 @@ export default function TransportRunsPay() {
   return (
     <div className="p-4 md:p-6 space-y-4">
       <h1 className="text-xl font-bold text-white">Trips & Pay</h1>
-      <Tabs defaultValue="live" className="space-y-4">
+      <Tabs defaultValue="history" className="space-y-4">
         <TabsList className="bg-white/5 border border-white/10">
-          <TabsTrigger value="live" className="data-[state=active]:bg-green-600 data-[state=active]:text-white text-white/50">
-            Live
-          </TabsTrigger>
           <TabsTrigger value="history" className="data-[state=active]:bg-[#DC2626] data-[state=active]:text-white text-white/50">
             History
           </TabsTrigger>
@@ -129,7 +126,6 @@ export default function TransportRunsPay() {
           </TabsTrigger>
         </TabsList>
 
-        <TabsContent value="live"><LiveTab /></TabsContent>
         <TabsContent value="history"><HistoryTab /></TabsContent>
         <TabsContent value="pay"><PayTab /></TabsContent>
       </Tabs>
