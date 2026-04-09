@@ -21,7 +21,7 @@ Deno.serve(async (req) => {
       );
     }
 
-    if (typeof pin !== "string" || pin.length < 4 || pin.length > 6) {
+    if (typeof pin !== "string" || pin.length !== 4) {
       return new Response(
         JSON.stringify({ valid: false, error: "Invalid PIN format" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
