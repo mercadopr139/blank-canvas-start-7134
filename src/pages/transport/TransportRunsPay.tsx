@@ -230,6 +230,33 @@ function HistoryCalendarTab() {
 
   const handleMarkPaid = (driverId: string) => { setPaidDrivers((prev) => new Set([...prev, driverId])); toast({ title: "Marked as paid" }); };
 
+  const toggleRoster = async (runId: string) => {
+    setExpandedRosters((prev) => {
+      const next = new Set(prev);
+      if (next.has(runId)) { next.delete(runId); return next; }
+      next.add(runId);
+      return next;
+    });
+    if (rosterData[runId]) return;
+    const { data } = await supabase
+      .from("transport_attendance")
+      .select("youth_id, status, youth:youth_profiles(first_name, last_name, photo_url, pickup_zone)")
+      .eq("run_id", runId);
+    if (data) {
+      setRosterData((prev) => ({
+        ...prev,
+        [runId]: data.map((d: any) => ({
+          youth_id: d.youth_id,
+          status: d.status,
+          first_name: d.youth?.first_name || "Unknown",
+          last_name: d.youth?.last_name || "",
+          photo_url: d.youth?.photo_url || null,
+          pickup_zone: d.youth?.pickup_zone || "",
+        })),
+      }));
+    }
+  };
+
   // Driver history modal
   const openDriverHistory = async (driverId: string, driverName: string) => {
     setHistoryDriverId(driverId);
