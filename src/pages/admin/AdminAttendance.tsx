@@ -942,7 +942,7 @@ const AdminAttendance = () => {
           <Card className="bg-white/5 border-white/10 text-white">
             <CardHeader className="pb-2">
               <CardTitle className="text-sm font-medium text-white/60 flex items-center gap-1.5">
-                <School className="w-3.5 h-3.5" /> School District Breakdown (Month)
+                <School className="w-3.5 h-3.5" /> School District Breakdown ({viewedMonthShort})
               </CardTitle>
             </CardHeader>
             <CardContent>
