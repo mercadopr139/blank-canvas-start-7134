@@ -129,6 +129,8 @@ export default function TransportDashboard() {
         return "bg-[#2563EB]/20 border-[#2563EB] text-white";
       case "Both":
         return "bg-purple-600/20 border-purple-500 text-white";
+      case "Overflow":
+        return "bg-orange-600/20 border-orange-500 text-white";
       default:
         return "bg-white/10 border-white/40 text-white";
     }
@@ -139,6 +141,7 @@ export default function TransportDashboard() {
       case "Woodbine": return "text-[#DC2626]";
       case "Wildwood": return "text-[#2563EB]";
       case "Both": return "text-purple-400";
+      case "Overflow": return "text-orange-400";
       default: return "text-white/50";
     }
   };
