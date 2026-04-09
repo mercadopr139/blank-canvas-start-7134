@@ -217,7 +217,7 @@ const AdminLilChampsAttendance = () => {
           >
             <UserPlus className="w-4 h-4" /> Add Youth
           </Button>
-          <Button variant="outline" size="sm" onClick={exportCsv} className="gap-2 text-foreground">
+          <Button variant="outline" size="sm" onClick={exportCsv} className="gap-2 text-white border-white/30 hover:bg-white/10">
             <Download className="w-4 h-4" /> Export CSV
           </Button>
           <Button
