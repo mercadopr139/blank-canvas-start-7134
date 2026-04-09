@@ -54,6 +54,22 @@ const AdminLilChampsAttendance = () => {
   const [adding, setAdding] = useState(false);
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout>>();
+  const [allLilChampsYouth, setAllLilChampsYouth] = useState<SearchResult[]>([]);
+
+  // Load all Lil Champs youth once for browse-all mode
+  useEffect(() => {
+    const fetchAll = async () => {
+      const { data } = await supabase
+        .from("youth_registrations")
+        .select("id, child_first_name, child_last_name, child_headshot_url, child_date_of_birth")
+        .or("child_boxing_program.eq.Junior Boxing (Ages 7-10),extended_program.eq.Lil Champs Corner")
+        .eq("approved_for_attendance", true)
+        .order("child_last_name")
+        .limit(200);
+      setAllLilChampsYouth(data || []);
+    };
+    fetchAll();
+  }, []);
 
   useEffect(() => {
     fetchRecords();
@@ -110,28 +126,20 @@ const AdminLilChampsAttendance = () => {
     URL.revokeObjectURL(url);
   };
 
-  // Search for youth to manually add
+  // Search for youth to manually add — filters the pre-loaded list client-side
   const handleAddSearch = (query: string) => {
     setAddSearch(query);
-    clearTimeout(debounceRef.current);
-    if (query.trim().length < 2) {
-      setAddResults([]);
-      return;
-    }
-    setAddSearching(true);
-    debounceRef.current = setTimeout(async () => {
-      const { data } = await supabase
-        .from("youth_registrations")
-        .select("id, child_first_name, child_last_name, child_headshot_url, child_date_of_birth")
-        .or(`child_boxing_program.eq.Junior Boxing (Ages 7-10),extended_program.eq.Lil Champs Corner`)
-        .or(`child_first_name.ilike.%${query.trim()}%,child_last_name.ilike.%${query.trim()}%`)
-        .eq("approved_for_attendance", true)
-        .order("child_last_name")
-        .limit(15);
-      setAddResults(data || []);
-      setAddSearching(false);
-    }, 300);
   };
+
+  // Compute displayed youth: if searching, filter; otherwise show all
+  const displayedAddYouth = (() => {
+    const q = addSearch.trim().toLowerCase();
+    if (!q) return allLilChampsYouth;
+    return allLilChampsYouth.filter((y) => {
+      const full = `${y.child_first_name} ${y.child_last_name}`.toLowerCase();
+      return full.includes(q);
+    });
+  })();
 
   const handleManualAdd = async (youth: SearchResult) => {
     const targetDate = dateFilter || format(new Date(), "yyyy-MM-dd");
