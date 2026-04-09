@@ -477,10 +477,10 @@ const AdminAttendance = () => {
         setEditingExcursion(existingExcursion);
         return;
       }
-      // Open new excursion modal
+      // Open new excursion modal, pre-populate youth count from sign-ins
       setExcursionDate(dateStr);
       setExcursionName("");
-      setExcursionYouthCount("");
+      setExcursionYouthCount(dailyCounts[dateStr] || 0);
       setExcursionNotes("");
       setExcursionPrevState(isPracticeDay(dateStr, calPracticeDayMap));
       setExcursionModalOpen(true);
