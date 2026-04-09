@@ -202,6 +202,32 @@ const AdminAttendanceReports = () => {
     return { from: customStart || format(startOfMonth(new Date()), "yyyy-MM-dd"), to: customEnd || format(new Date(), "yyyy-MM-dd") };
   }, [reportType, selectedDate, selectedWeekStart, selectedMonth, selectedYear, individualRange, customStart, customEnd]);
 
+  // Fetch practice days for the date range
+  const { data: practiceDaysData = [] } = useQuery({
+    queryKey: ["report-practice-days", dateRange.from, dateRange.to],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("practice_days")
+        .select("date, is_practice_day")
+        .gte("date", dateRange.from)
+        .lte("date", dateRange.to);
+      if (error) throw error;
+      return data as { date: string; is_practice_day: boolean }[];
+    },
+  });
+
+  const practiceDayMap = useMemo(() => {
+    const m: Record<string, boolean> = {};
+    practiceDaysData.forEach((p) => (m[p.date] = p.is_practice_day));
+    return m;
+  }, [practiceDaysData]);
+
+  const isPracticeDay = useCallback((dateStr: string): boolean => {
+    if (dateStr in practiceDayMap) return practiceDayMap[dateStr];
+    const d = parseISO(dateStr);
+    return !isWeekend(d);
+  }, [practiceDayMap]);
+
   // Fetch attendance for range
   const { data: attendance = [], isLoading } = useQuery({
     queryKey: ["report-attendance", dateRange.from, dateRange.to],
@@ -218,6 +244,11 @@ const AdminAttendanceReports = () => {
     },
   });
 
+  // Filter attendance to only include practice days
+  const practiceFilteredAttendance = useMemo(() => {
+    return attendance.filter((a) => isPracticeDay(a.check_in_date));
+  }, [attendance, isPracticeDay]);
+
   const regMap = useMemo(() => {
     const m: Record<string, Registration> = {};
     registrations.forEach((r) => (m[r.id] = r));
@@ -227,9 +258,9 @@ const AdminAttendanceReports = () => {
   const programs = useMemo(() => Array.from(new Set(registrations.map((r) => r.child_boxing_program))).sort(), [registrations]);
   const districts = useMemo(() => Array.from(new Set(registrations.map((r) => r.child_school_district))).sort(), [registrations]);
 
-  // Apply filters to attendance
+  // Apply filters to attendance (now based on practice-filtered data)
   const filteredAttendance = useMemo(() => {
-    return attendance.filter((a) => {
+    return practiceFilteredAttendance.filter((a) => {
       const reg = regMap[a.registration_id];
       if (!reg) return false;
       if (baldEaglesOnly && !reg.is_bald_eagle) return false;
@@ -239,7 +270,7 @@ const AdminAttendanceReports = () => {
       if (reportType === "individual" && selectedYouthId && a.registration_id !== selectedYouthId) return false;
       return true;
     });
-  }, [attendance, regMap, baldEaglesOnly, programFilter, districtFilter, sexFilter, reportType, selectedYouthId]);
+  }, [practiceFilteredAttendance, regMap, baldEaglesOnly, programFilter, districtFilter, sexFilter, reportType, selectedYouthId]);
 
   // Computed stats
   const totalAttendance = filteredAttendance.length;
