@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -7,7 +7,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { useToast } from "@/hooks/use-toast";
 import {
   AlertTriangle, CheckCircle, XCircle,
-  Download, ChevronLeft, ChevronRight, DollarSign, Trash2, Pencil,
+  Download, ChevronLeft, ChevronRight, DollarSign, Trash2, Pencil, ChevronDown, ChevronUp, User,
 } from "lucide-react";
 import {
   format, startOfMonth, endOfMonth, eachDayOfInterval, getDay,
@@ -80,27 +80,45 @@ function HistoryCalendarTab() {
   const [routes, setRoutes] = useState<{ id: string; name: string }[]>([]);
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
 
+  // Pay period runs (for Box 4 and Driver Pay Panel)
+  const currentPayPeriod = useMemo(() => getCurrentPayPeriod(), []);
+  const [payPeriodRuns, setPayPeriodRuns] = useState<RunWithDetails[]>([]);
+  const [paidDrivers, setPaidDrivers] = useState<Set<string>>(new Set());
+
+  // Driver history modal
+  const [historyDriverId, setHistoryDriverId] = useState<string | null>(null);
+  const [historyDriverName, setHistoryDriverName] = useState("");
+  const [allDriverRuns, setAllDriverRuns] = useState<RunWithDetails[]>([]);
+  const [allDriverApprovals, setAllDriverApprovals] = useState<RunApproval[]>([]);
+  const [historyLoading, setHistoryLoading] = useState(false);
+  const [expandedMonths, setExpandedMonths] = useState<Set<string>>(new Set());
+
   const monthStart = startOfMonth(currentMonth);
   const monthEnd = endOfMonth(currentMonth);
 
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     setLoading(true);
     const from = format(monthStart, "yyyy-MM-dd") + "T00:00:00";
     const to = format(monthEnd, "yyyy-MM-dd") + "T23:59:59";
-    const [runsRes, approvalsRes, attRes, routesRes] = await Promise.all([
+    const ppFrom = currentPayPeriod.start + "T00:00:00";
+    const ppTo = currentPayPeriod.end + "T23:59:59";
+
+    const [runsRes, approvalsRes, attRes, routesRes, ppRunsRes] = await Promise.all([
       supabase.from("runs").select("id, run_type, status, started_at, closed_at, driver:drivers(id, name), route:routes(id, name)").eq("status", "completed").gte("started_at", from).lte("started_at", to).order("started_at", { ascending: false }),
       supabase.from("run_approvals").select("id, run_id, status, notes"),
       supabase.from("transport_attendance").select("run_id").eq("status", "present").gte("recorded_at", from).lte("recorded_at", to),
       supabase.from("routes").select("id, name"),
+      supabase.from("runs").select("id, run_type, status, started_at, closed_at, driver:drivers(id, name), route:routes(id, name)").eq("status", "completed").gte("started_at", ppFrom).lte("started_at", ppTo),
     ]);
     if (runsRes.data) setRuns(runsRes.data as unknown as RunWithDetails[]);
     if (approvalsRes.data) setApprovals(approvalsRes.data as unknown as RunApproval[]);
     if (routesRes.data) setRoutes(routesRes.data as unknown as { id: string; name: string }[]);
+    if (ppRunsRes.data) setPayPeriodRuns(ppRunsRes.data as unknown as RunWithDetails[]);
     const counts: Record<string, number> = {};
     (attRes.data || []).forEach((a: { run_id: string }) => { counts[a.run_id] = (counts[a.run_id] || 0) + 1; });
     setAttendanceCounts(counts);
     setLoading(false);
-  };
+  }, [currentMonth]);
 
   useEffect(() => {
     fetchData();
@@ -109,7 +127,7 @@ function HistoryCalendarTab() {
       .on("postgres_changes", { event: "*", schema: "public", table: "run_approvals" }, () => fetchData())
       .subscribe();
     return () => { supabase.removeChannel(channel); };
-  }, [currentMonth]);
+  }, [fetchData]);
 
   const approvalMap = useMemo(() => { const m = new Map<string, RunApproval>(); approvals.forEach((a) => m.set(a.run_id, a)); return m; }, [approvals]);
 
@@ -130,11 +148,39 @@ function HistoryCalendarTab() {
     return map;
   }, [runs, approvalMap]);
 
+  // Summary stats for month
   const monthStats = useMemo(() => {
-    let totalTrips = 0, approved = 0, pending = 0, totalPay = 0;
-    runs.forEach((r) => { totalTrips++; const s = approvalMap.get(r.id)?.status || "pending"; const pay = getPayRate(r.route?.name); if (s === "approved") { approved++; totalPay += pay; } else if (s === "pending") pending++; });
-    return { totalTrips, approved, pending, totalPay };
+    let totalTrips = 0, approved = 0, pending = 0;
+    runs.forEach((r) => { totalTrips++; const s = approvalMap.get(r.id)?.status || "pending"; if (s === "approved") approved++; else if (s === "pending") pending++; });
+    return { totalTrips, approved, pending };
   }, [runs, approvalMap]);
+
+  // Pay period owed (ALL submitted trips in current pay period)
+  const payPeriodOwed = useMemo(() => {
+    return payPeriodRuns.reduce((sum, r) => sum + getPayRate(r.route?.name), 0);
+  }, [payPeriodRuns]);
+
+  // Driver pay panel data
+  const driverPayData = useMemo(() => {
+    const map = new Map<string, { name: string; payPeriodEarnings: number; monthEarnings: number; payPeriodTrips: number; monthTrips: number }>();
+    // Month earnings from current month runs
+    runs.forEach((r) => {
+      if (!r.driver) return;
+      if (!map.has(r.driver.id)) map.set(r.driver.id, { name: r.driver.name, payPeriodEarnings: 0, monthEarnings: 0, payPeriodTrips: 0, monthTrips: 0 });
+      const entry = map.get(r.driver.id)!;
+      entry.monthEarnings += getPayRate(r.route?.name);
+      entry.monthTrips++;
+    });
+    // Pay period earnings
+    payPeriodRuns.forEach((r) => {
+      if (!r.driver) return;
+      if (!map.has(r.driver.id)) map.set(r.driver.id, { name: r.driver.name, payPeriodEarnings: 0, monthEarnings: 0, payPeriodTrips: 0, monthTrips: 0 });
+      const entry = map.get(r.driver.id)!;
+      entry.payPeriodEarnings += getPayRate(r.route?.name);
+      entry.payPeriodTrips++;
+    });
+    return [...map.entries()].sort((a, b) => a[1].name.localeCompare(b[1].name));
+  }, [runs, payPeriodRuns]);
 
   const calendarDays = useMemo(() => {
     const days = eachDayOfInterval({ start: monthStart, end: monthEnd });
@@ -166,21 +212,12 @@ function HistoryCalendarTab() {
   };
   const startEdit = (r: RunWithDetails) => {
     setEditingRunId(r.id);
-    setEditForm({
-      route: r.route?.id || "",
-      runType: r.run_type,
-      date: format(new Date(r.started_at), "yyyy-MM-dd"),
-      time: format(new Date(r.started_at), "HH:mm"),
-    });
+    setEditForm({ route: r.route?.id || "", runType: r.run_type, date: format(new Date(r.started_at), "yyyy-MM-dd"), time: format(new Date(r.started_at), "HH:mm") });
   };
   const handleSaveEdit = async () => {
     if (!editingRunId) return;
     const newStartedAt = new Date(`${editForm.date}T${editForm.time}:00`).toISOString();
-    await supabase.from("runs").update({
-      route_id: editForm.route,
-      run_type: editForm.runType as "pickup" | "dropoff",
-      started_at: newStartedAt,
-    }).eq("id", editingRunId);
+    await supabase.from("runs").update({ route_id: editForm.route, run_type: editForm.runType as "pickup" | "dropoff", started_at: newStartedAt }).eq("id", editingRunId);
     setEditingRunId(null);
     toast({ title: "Trip updated" }); fetchData();
   };
@@ -188,6 +225,41 @@ function HistoryCalendarTab() {
     const csv = toCsv(["Date","Type","Driver","Route","Status","Pay","Youth Count","Approval"], runs.map((r) => [format(new Date(r.started_at), "MM/dd/yyyy"), r.run_type, r.driver?.name || "", r.route?.name || "", r.status, `$${getPayRate(r.route?.name)}`, String(attendanceCounts[r.id] || 0), approvalMap.get(r.id)?.status || "pending"]));
     downloadCsv(`trips_${format(currentMonth, "yyyy-MM")}.csv`, csv);
   };
+
+  const handleMarkPaid = (driverId: string) => { setPaidDrivers((prev) => new Set([...prev, driverId])); toast({ title: "Marked as paid" }); };
+
+  // Driver history modal
+  const openDriverHistory = async (driverId: string, driverName: string) => {
+    setHistoryDriverId(driverId);
+    setHistoryDriverName(driverName);
+    setHistoryLoading(true);
+    setExpandedMonths(new Set());
+    const [runsRes, approvalsRes] = await Promise.all([
+      supabase.from("runs").select("id, run_type, status, started_at, closed_at, driver:drivers(id, name), route:routes(id, name)").eq("status", "completed").eq("driver_id", driverId).order("started_at", { ascending: false }).limit(500),
+      supabase.from("run_approvals").select("id, run_id, status, notes"),
+    ]);
+    if (runsRes.data) setAllDriverRuns(runsRes.data as unknown as RunWithDetails[]);
+    if (approvalsRes.data) setAllDriverApprovals(approvalsRes.data as unknown as RunApproval[]);
+    setHistoryLoading(false);
+  };
+
+  const driverHistoryByMonth = useMemo(() => {
+    const approvalM = new Map<string, RunApproval>();
+    allDriverApprovals.forEach((a) => approvalM.set(a.run_id, a));
+    const map = new Map<string, { trips: RunWithDetails[]; total: number; approved: number; pending: number }>();
+    allDriverRuns.forEach((r) => {
+      const monthKey = format(new Date(r.started_at), "yyyy-MM");
+      if (!map.has(monthKey)) map.set(monthKey, { trips: [], total: 0, approved: 0, pending: 0 });
+      const entry = map.get(monthKey)!;
+      entry.trips.push(r);
+      const pay = getPayRate(r.route?.name);
+      entry.total += pay;
+      const status = approvalM.get(r.id)?.status || "pending";
+      if (status === "approved") entry.approved++;
+      else entry.pending++;
+    });
+    return [...map.entries()].sort((a, b) => b[0].localeCompare(a[0]));
+  }, [allDriverRuns, allDriverApprovals]);
 
   const panelRuns = useMemo(() => {
     if (!selectedDriver || !selectedDate) return [];
@@ -203,6 +275,7 @@ function HistoryCalendarTab() {
 
   return (
     <div className="space-y-4">
+      {/* Month nav + export */}
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div className="flex items-center gap-3">
           <button onClick={() => setCurrentMonth(subMonths(currentMonth, 1))} className="p-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-white/60 hover:text-white transition-colors"><ChevronLeft className="w-5 h-5" /></button>
@@ -212,15 +285,28 @@ function HistoryCalendarTab() {
         <Button onClick={exportMonth} variant="outline" size="sm" className="gap-2 border-white/10 text-white/60 hover:text-white bg-transparent"><Download className="w-4 h-4" /> Export CSV</Button>
       </div>
 
+      {/* 4 Summary Boxes */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-        {[{ label: "Total Trips", value: monthStats.totalTrips, color: "text-white" }, { label: "Approved", value: monthStats.approved, color: "text-green-400" }, { label: "Pending", value: monthStats.pending, color: "text-yellow-400" }, { label: "Pay Owed", value: `$${monthStats.totalPay}`, color: "text-green-400" }].map((s) => (
-          <div key={s.label} className="bg-white/5 border border-white/10 rounded-lg p-3 text-center">
-            <p className={`text-lg font-bold ${s.color}`}>{s.value}</p>
-            <p className="text-white/40 text-[10px] uppercase tracking-wider">{s.label}</p>
-          </div>
-        ))}
+        <div className="bg-white/5 border border-white/10 rounded-lg p-3 text-center">
+          <p className="text-lg font-bold text-white">{monthStats.totalTrips}</p>
+          <p className="text-white/40 text-[10px] uppercase tracking-wider">Total Trips</p>
+        </div>
+        <div className="bg-white/5 border border-white/10 rounded-lg p-3 text-center">
+          <p className="text-lg font-bold text-green-400">{monthStats.approved}</p>
+          <p className="text-white/40 text-[10px] uppercase tracking-wider">Approved</p>
+        </div>
+        <div className="bg-white/5 border border-white/10 rounded-lg p-3 text-center">
+          <p className="text-lg font-bold text-yellow-400">{monthStats.pending}</p>
+          <p className="text-white/40 text-[10px] uppercase tracking-wider">Pending</p>
+        </div>
+        <div className="bg-white/5 border border-[#DC2626]/30 rounded-lg p-3 text-center">
+          <p className="text-lg font-bold text-[#DC2626]">${payPeriodOwed}</p>
+          <p className="text-white/40 text-[10px] uppercase tracking-wider">Pay Period Owed</p>
+          <p className="text-white/20 text-[8px] mt-0.5">{currentPayPeriod.label}</p>
+        </div>
       </div>
 
+      {/* Calendar */}
       {loading ? <div className="text-white/40 text-center py-12">Loading...</div> : (
         <div className="border border-white/10 rounded-xl overflow-hidden">
           <div className="grid grid-cols-7 bg-white/5">
@@ -254,6 +340,43 @@ function HistoryCalendarTab() {
         </div>
       )}
 
+      {/* Driver Pay Panel */}
+      {!loading && driverPayData.length > 0 && (
+        <div className="space-y-2">
+          <h3 className="text-white font-bold text-sm flex items-center gap-2"><DollarSign className="w-4 h-4 text-green-400" /> Driver Pay — {currentPayPeriod.label}</h3>
+          <div className="border border-white/10 rounded-xl overflow-hidden">
+            {/* Header */}
+            <div className="grid grid-cols-[1fr_auto_auto_auto_auto] gap-2 bg-white/5 px-3 py-2 text-[10px] text-white/40 uppercase tracking-wider font-medium">
+              <span>Driver</span>
+              <span className="text-right w-20">Period $</span>
+              <span className="text-right w-20">Month $</span>
+              <span className="text-center w-16">Status</span>
+              <span className="w-20" />
+            </div>
+            {driverPayData.map(([driverId, d]) => (
+              <div key={driverId} className="grid grid-cols-[1fr_auto_auto_auto_auto] gap-2 items-center px-3 py-2.5 border-t border-white/5 hover:bg-white/[0.02]">
+                <button onClick={() => openDriverHistory(driverId, d.name)} className="text-left text-white font-medium text-sm hover:text-[#DC2626] transition-colors flex items-center gap-1.5">
+                  <User className="w-3.5 h-3.5 text-white/30" />{d.name}
+                </button>
+                <span className="text-green-400 font-bold text-sm text-right w-20">${d.payPeriodEarnings}</span>
+                <span className="text-white/50 text-sm text-right w-20">${d.monthEarnings}</span>
+                <span className="text-center w-16">
+                  <Badge className={paidDrivers.has(driverId) ? "bg-green-500/20 text-green-400 border-green-500/30 text-[10px]" : "bg-yellow-500/20 text-yellow-400 border-yellow-500/30 text-[10px]"}>
+                    {paidDrivers.has(driverId) ? "Paid" : "Unpaid"}
+                  </Badge>
+                </span>
+                <span className="w-20 text-right">
+                  {!paidDrivers.has(driverId) && d.payPeriodEarnings > 0 && (
+                    <Button size="sm" onClick={() => handleMarkPaid(driverId)} className="bg-green-600 hover:bg-green-700 text-white text-[10px] h-6 px-2 gap-1"><DollarSign className="w-3 h-3" />Paid</Button>
+                  )}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Trip Detail Dialog (click driver on calendar date) */}
       <Dialog open={panelOpen} onOpenChange={(open) => { setPanelOpen(open); if (!open) { setEditingRunId(null); setDeleteConfirmId(null); } }}>
         <DialogContent className="bg-[#111827] border-white/10 text-white max-w-md max-h-[85vh] overflow-y-auto">
           <DialogHeader><DialogTitle className="text-white">{selectedDriver?.name} — {selectedDate ? format(new Date(selectedDate + "T12:00:00"), "MMM d, yyyy") : ""}</DialogTitle></DialogHeader>
@@ -348,9 +471,61 @@ function HistoryCalendarTab() {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Driver Pay History Modal */}
+      <Dialog open={!!historyDriverId} onOpenChange={(open) => { if (!open) setHistoryDriverId(null); }}>
+        <DialogContent className="bg-[#111827] border-white/10 text-white max-w-lg max-h-[85vh] overflow-y-auto">
+          <DialogHeader><DialogTitle className="text-white flex items-center gap-2"><User className="w-5 h-5" /> {historyDriverName} — Pay History</DialogTitle></DialogHeader>
+          {historyLoading ? <div className="text-white/40 text-center py-8">Loading...</div> : (
+            <div className="space-y-2 mt-2">
+              {driverHistoryByMonth.length === 0 ? <p className="text-white/40 text-center py-4">No trip history found.</p> : driverHistoryByMonth.map(([monthKey, data]) => {
+                const isExpanded = expandedMonths.has(monthKey);
+                const monthLabel = format(new Date(monthKey + "-01"), "MMMM yyyy");
+                return (
+                  <div key={monthKey} className="border border-white/10 rounded-lg overflow-hidden">
+                    <button onClick={() => setExpandedMonths((prev) => { const s = new Set(prev); if (s.has(monthKey)) s.delete(monthKey); else s.add(monthKey); return s; })} className="w-full flex items-center justify-between px-4 py-3 bg-white/5 hover:bg-white/10 transition-colors">
+                      <div className="flex items-center gap-3">
+                        <span className="text-white font-medium text-sm">{monthLabel}</span>
+                        <span className="text-white/30 text-xs">{data.trips.length} trips</span>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <span className="text-green-400 font-bold text-sm">${data.total}</span>
+                        {isExpanded ? <ChevronUp className="w-4 h-4 text-white/30" /> : <ChevronDown className="w-4 h-4 text-white/30" />}
+                      </div>
+                    </button>
+                    {isExpanded && (
+                      <div className="px-4 py-2 space-y-1.5 bg-white/[0.02]">
+                        {data.trips.map((r) => {
+                          const approvalM = new Map<string, RunApproval>();
+                          allDriverApprovals.forEach((a) => approvalM.set(a.run_id, a));
+                          const status = approvalM.get(r.id)?.status || "pending";
+                          return (
+                            <div key={r.id} className="flex items-center justify-between py-1.5 border-b border-white/5 last:border-0">
+                              <div className="flex items-center gap-2 text-xs">
+                                <span className="text-white/50">{format(new Date(r.started_at), "MMM d")}</span>
+                                <span className="text-white/70">{r.route?.name}</span>
+                                <span className="text-white/30 capitalize">{r.run_type}</span>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <span className="text-green-400 text-xs font-medium">${getPayRate(r.route?.name)}</span>
+                                <span className={`w-1.5 h-1.5 rounded-full ${status === "approved" ? "bg-green-400" : status === "disputed" ? "bg-red-400" : "bg-yellow-400"}`} />
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
+
 function PayTab() {
   const { toast } = useToast();
   const periods = useMemo(() => getPayPeriods(), []);
