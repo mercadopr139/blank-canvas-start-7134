@@ -810,7 +810,7 @@ const AdminAttendance = () => {
           {/* Boy / Girl Ratio */}
           <Card className="bg-white/5 border-white/10 text-white">
             <CardContent className="pt-4 pb-3">
-              <p className="text-[10px] uppercase tracking-wider text-white/40 mb-2">Boy / Girl Today</p>
+              <p className="text-[10px] uppercase tracking-wider text-white/40 mb-2">{isCurrentMonth ? "Boy / Girl Today" : `Boy / Girl — ${viewedMonthShort}`}</p>
               <div className="flex items-center gap-3">
                 <div className="text-center flex-1">
                   <p className="text-2xl font-bold text-blue-400">{sexSplitToday["Male"] || 0}</p>
