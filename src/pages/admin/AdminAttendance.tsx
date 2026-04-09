@@ -84,7 +84,6 @@ const AdminAttendance = () => {
   const [eagleSearch, setEagleSearch] = useState("");
 
   const invalidateAttendance = () => {
-    queryClient.invalidateQueries({ queryKey: ["attendance-records-current"] });
     queryClient.invalidateQueries({ queryKey: ["calendar-attendance"] });
     queryClient.invalidateQueries({ queryKey: ["all-attendance-for-profile"] });
     queryClient.invalidateQueries({ queryKey: ["attendance-records-prev"] });
