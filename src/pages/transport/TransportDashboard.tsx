@@ -307,7 +307,7 @@ export default function TransportDashboard() {
             Starting...
           </span>
         ) : (
-          "Start Run"
+          "Start Trip"
         )}
       </button>
 
