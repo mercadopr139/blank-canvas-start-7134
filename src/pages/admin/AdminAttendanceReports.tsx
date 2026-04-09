@@ -298,7 +298,7 @@ const AdminAttendanceReports = () => {
   const lowestDay = dailyChartData.length > 0 ? dailyChartData.reduce((a, b) => (b.count < a.count ? b : a)) : null;
 
   // Bald eagles stats
-  const baldEagleRecords = useMemo(() => attendance.filter((a) => regMap[a.registration_id]?.is_bald_eagle), [attendance, regMap]);
+  const baldEagleRecords = useMemo(() => practiceFilteredAttendance.filter((a) => regMap[a.registration_id]?.is_bald_eagle), [practiceFilteredAttendance, regMap]);
   const baldEagleUniqueCount = uniqueYouth(baldEagleRecords);
 
   // Individual youth data
