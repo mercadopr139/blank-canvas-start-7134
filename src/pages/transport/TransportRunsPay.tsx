@@ -371,20 +371,22 @@ function HistoryCalendarTab() {
           <h3 className="text-white font-bold text-sm flex items-center gap-2"><DollarSign className="w-4 h-4 text-green-400" /> Driver Pay — {currentPayPeriod.label}</h3>
           <div className="border border-white/10 rounded-xl overflow-hidden">
             {/* Header */}
-            <div className="grid grid-cols-[1fr_auto_auto_auto_auto] gap-2 bg-white/5 px-3 py-2 text-[10px] text-white/40 uppercase tracking-wider font-medium">
+            <div className="grid grid-cols-[1fr_auto_auto_auto_auto_auto] gap-2 bg-white/5 px-3 py-2 text-[10px] text-white/40 uppercase tracking-wider font-medium">
               <span>Driver</span>
               <span className="text-right w-20">Period $</span>
               <span className="text-right w-20">Month $</span>
+              <span className="text-right w-20">Year $</span>
               <span className="text-center w-16">Status</span>
               <span className="w-20" />
             </div>
             {driverPayData.map(([driverId, d]) => (
-              <div key={driverId} className="grid grid-cols-[1fr_auto_auto_auto_auto] gap-2 items-center px-3 py-2.5 border-t border-white/5 hover:bg-white/[0.02]">
+              <div key={driverId} className="grid grid-cols-[1fr_auto_auto_auto_auto_auto] gap-2 items-center px-3 py-2.5 border-t border-white/5 hover:bg-white/[0.02]">
                 <button onClick={() => openDriverHistory(driverId, d.name)} className="text-left text-white font-medium text-sm hover:text-[#DC2626] transition-colors flex items-center gap-1.5">
                   <User className="w-3.5 h-3.5 text-white/30" />{d.name}
                 </button>
                 <span className="text-green-400 font-bold text-sm text-right w-20">${d.payPeriodEarnings}</span>
                 <span className="text-white/50 text-sm text-right w-20">${d.monthEarnings}</span>
+                <button onClick={() => openDriverHistory(driverId, d.name)} className="text-right w-20 text-blue-400 font-bold text-sm underline underline-offset-2 hover:text-blue-300 transition-colors cursor-pointer">${d.yearEarnings}</button>
                 <span className="text-center w-16">
                   <Badge className={paidDrivers.has(driverId) ? "bg-green-500/20 text-green-400 border-green-500/30 text-[10px]" : "bg-yellow-500/20 text-yellow-400 border-yellow-500/30 text-[10px]"}>
                     {paidDrivers.has(driverId) ? "Paid" : "Unpaid"}
