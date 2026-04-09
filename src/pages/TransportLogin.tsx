@@ -265,7 +265,7 @@ export default function TransportLogin() {
             Verifying...
           </span>
         ) : (
-          "Start Run"
+          "Start Trip"
         )}
       </button>
 
