@@ -838,7 +838,7 @@ const AdminAttendance = () => {
           <Card className="bg-white/5 border-white/10 text-white">
             <CardContent className="pt-4 pb-3 text-center">
               <p className="text-[10px] uppercase tracking-wider text-white/40 flex items-center justify-center gap-1">
-                <School className="w-3 h-3" /> Top District Today
+                <School className="w-3 h-3" /> {isCurrentMonth ? "Top District Today" : `Top District — ${viewedMonthShort}`}
               </p>
               {topDistrictToday ? (
                 <>
