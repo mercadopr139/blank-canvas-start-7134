@@ -1018,8 +1018,8 @@ const AdminAttendance = () => {
                 <p className="text-[10px] text-white/30">of {activeBaldEagles.length} active</p>
               </div>
               <div className="text-center p-3 rounded-lg bg-white/5">
-                <p className="text-[10px] uppercase tracking-wider text-white/40">Week Total</p>
-                <p className="text-2xl font-bold mt-1">{baldEaglesWeek}</p>
+                <p className="text-[10px] uppercase tracking-wider text-white/40">{viewedMonthShort} Total</p>
+                <p className="text-2xl font-bold mt-1">{baldEaglesMonth}</p>
               </div>
               <div className="text-center p-3 rounded-lg bg-white/5">
                 <p className="text-[10px] uppercase tracking-wider text-white/40">Month Total</p>
