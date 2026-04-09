@@ -1155,34 +1155,6 @@ const AdminAttendance = () => {
             </CardContent>
           </Card>
 
-          {/* Program Trend */}
-          {programTrend.length > 1 && (
-            <Card className="bg-white/5 border-white/10 text-white">
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium text-white/60">Program Attendance Trend</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="h-44">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <LineChart data={programTrend}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" />
-                      <XAxis dataKey="date" tick={{ fill: "rgba(255,255,255,0.4)", fontSize: 10 }} />
-                      <YAxis tick={{ fill: "rgba(255,255,255,0.4)", fontSize: 10 }} />
-                      <Tooltip contentStyle={chartTooltipStyle} />
-                      <Line type="monotone" dataKey="Junior" stroke="hsl(217, 91%, 60%)" strokeWidth={2} dot={false} />
-                      <Line type="monotone" dataKey="Senior" stroke="hsl(0, 72%, 51%)" strokeWidth={2} dot={false} />
-                      <Line type="monotone" dataKey="Other" stroke="hsl(45, 93%, 47%)" strokeWidth={2} dot={false} />
-                    </LineChart>
-                  </ResponsiveContainer>
-                </div>
-                <div className="flex gap-4 mt-2 justify-center">
-                  <span className="flex items-center gap-1 text-xs"><span className="w-3 h-1 rounded bg-blue-500 inline-block" /> Junior</span>
-                  <span className="flex items-center gap-1 text-xs"><span className="w-3 h-1 rounded bg-red-500 inline-block" /> Senior</span>
-                  <span className="flex items-center gap-1 text-xs"><span className="w-3 h-1 rounded bg-amber-500 inline-block" /> Other</span>
-                </div>
-              </CardContent>
-            </Card>
-          )}
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
