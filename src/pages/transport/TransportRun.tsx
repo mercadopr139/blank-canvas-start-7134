@@ -195,6 +195,23 @@ export default function TransportRun() {
     }
   };
 
+  const handleCancelRun = async () => {
+    setCancellingRun(true);
+    try {
+      // Delete the in-progress run and its associated data
+      await apiCall("close-transport-run", { run_id: runId, cancel: true });
+      sessionStorage.removeItem("transport_run");
+      navigate("/transport/dashboard", { replace: true });
+    } catch {
+      toast({ title: "Failed to cancel trip", variant: "destructive" });
+    } finally {
+      setCancellingRun(false);
+    }
+  };
+
+  const markedCount = runType === "pickup" ? pickedUpCount : droppedOffCount;
+  const canSubmit = markedCount > 0;
+
   const getPhotoUrl = (url: string | null) => {
     if (!url) return null;
     if (url.startsWith("http")) return url;
