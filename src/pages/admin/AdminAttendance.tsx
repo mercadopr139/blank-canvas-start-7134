@@ -1261,7 +1261,7 @@ const AdminAttendance = () => {
                     }}
                   >
                     <button
-                      onClick={() => count > 0 && setSelectedDay(dateStr)}
+                      onClick={() => setSelectedDay(dateStr)}
                       className={`
                         w-full h-full rounded-lg p-1.5 flex flex-col items-center justify-center transition-all relative
                         ${isSelected ? "bg-blue-500/25 border border-blue-400/50 ring-1 ring-blue-400/30" : ""}
