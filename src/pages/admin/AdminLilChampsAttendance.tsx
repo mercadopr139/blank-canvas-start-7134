@@ -53,8 +53,9 @@ const AdminLilChampsAttendance = () => {
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
   const [allLilChampsYouth, setAllLilChampsYouth] = useState<SearchResult[]>([]);
 
-  // Load all Lil Champs youth once for browse-all mode
+  // Load all Lil Champs youth when modal opens
   useEffect(() => {
+    if (!addOpen) return;
     const fetchAll = async () => {
       const { data, error } = await supabase
         .from("youth_registrations")
@@ -64,11 +65,10 @@ const AdminLilChampsAttendance = () => {
         .order("child_last_name")
         .limit(200);
       if (error) console.error("Lil Champs youth fetch error:", error);
-      console.log("Lil Champs youth fetched:", data?.length ?? 0);
       setAllLilChampsYouth(data || []);
     };
     fetchAll();
-  }, []);
+  }, [addOpen]);
 
   useEffect(() => {
     fetchRecords();
