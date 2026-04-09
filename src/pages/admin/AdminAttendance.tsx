@@ -946,16 +946,16 @@ const AdminAttendance = () => {
         .from("callouts" as any)
         .select("first_name, last_name")
         .eq("date", todayStr);
-      return (data || []) as { first_name: string; last_name: string }[];
+      return (data || []) as unknown as { first_name: string; last_name: string }[];
     },
   });
 
   const todayIsPracticeForAlert = useMemo(() => {
-    const pdEntry = practiceDayMap[todayStr];
+    const pdEntry = calPracticeDayMap[todayStr];
     if (pdEntry !== undefined) return pdEntry;
     const d = new Date(todayStr + "T12:00:00");
     return !isWeekend(d);
-  }, [practiceDayMap, todayStr]);
+  }, [calPracticeDayMap, todayStr]);
 
   const todayIsExcursionForAlert = useMemo(() => !!excursionDayMap[todayStr], [excursionDayMap, todayStr]);
 
