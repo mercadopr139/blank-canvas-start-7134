@@ -258,7 +258,7 @@ const AdminAttendance = () => {
   });
 
   /* ───── Weather Data (Open-Meteo + DB cache) ───── */
-  const { data: weatherMap = {} } = useQuery({
+  const { data: weatherMap = {}, isLoading: weatherLoading } = useQuery({
     queryKey: ["weather-data", calMonthStart],
     queryFn: async () => {
       // 1. Check DB cache first
