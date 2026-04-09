@@ -33,6 +33,7 @@ export default function TransportRun() {
   const [runType, setRunType] = useState("");
   const [driverId, setDriverId] = useState("");
   const [driverName, setDriverName] = useState("");
+  const [activeZoneTab, setActiveZoneTab] = useState<"Woodbine" | "Wildwood">("Woodbine");
 
   const [youth, setYouth] = useState<YouthProfile[]>([]);
   const [attendance, setAttendance] = useState<Record<string, AttendanceState>>({});
@@ -50,6 +51,8 @@ export default function TransportRun() {
   const [addYouthOpen, setAddYouthOpen] = useState(false);
   const [backConfirmOpen, setBackConfirmOpen] = useState(false);
   const [cancellingRun, setCancellingRun] = useState(false);
+
+  const isBothZones = routeName === "Both";
 
   useEffect(() => {
     const runSession = sessionStorage.getItem("transport_run");
@@ -221,11 +224,16 @@ export default function TransportRun() {
       const q = search.toLowerCase();
       return y.first_name.toLowerCase().includes(q) || y.last_name.toLowerCase().includes(q);
     })
+    .filter((y) => {
+      // For "Both" route, filter by active zone tab
+      if (isBothZones) return y.pickup_zone === activeZoneTab;
+      return true;
+    })
     .sort((a, b) => {
       const aStarred = starred.has(a.id) ? 0 : 1;
       const bStarred = starred.has(b.id) ? 0 : 1;
       if (aStarred !== bStarred) return aStarred - bStarred;
-      return a.last_name.localeCompare(b.last_name);
+      return a.first_name.localeCompare(b.first_name);
     });
 
   const pickedUpCount = Object.values(attendance).filter((a) => a.picked_up).length;
@@ -290,6 +298,25 @@ export default function TransportRun() {
           />
         </div>
       </div>
+
+      {/* Zone Tabs for Both Zones route */}
+      {isBothZones && (
+        <div className="px-4 flex gap-2">
+          {(["Woodbine", "Wildwood"] as const).map((zone) => (
+            <button
+              key={zone}
+              onClick={() => setActiveZoneTab(zone)}
+              className={`flex-1 py-2.5 rounded-lg text-sm font-bold transition-all active:scale-95 touch-manipulation ${
+                activeZoneTab === zone
+                  ? "bg-[#3B82F6] text-white"
+                  : "bg-white/5 text-white/40 border border-white/10"
+              }`}
+            >
+              {zone}
+            </button>
+          ))}
+        </div>
+      )}
 
       {/* Youth Grid */}
       <div className="flex-1 px-4 pb-4 overflow-y-auto">

@@ -108,6 +108,16 @@ export default function TransportYouth() {
     return y.first_name.toLowerCase().includes(q) || y.last_name.toLowerCase().includes(q) || y.pickup_zone.toLowerCase().includes(q);
   });
 
+  const sortByFirstName = (a: YouthProfile, b: YouthProfile) => a.first_name.localeCompare(b.first_name);
+
+  const woodbineYouth = filtered
+    .filter((y) => y.pickup_zone === "Woodbine")
+    .sort(sortByFirstName);
+
+  const wildwoodYouth = filtered
+    .filter((y) => y.pickup_zone === "Wildwood")
+    .sort(sortByFirstName);
+
   const getPhotoUrl = (url: string | null) => {
     if (!url) return null;
     if (url.startsWith("http")) return url;
@@ -138,38 +148,85 @@ export default function TransportYouth() {
       ) : filtered.length === 0 ? (
         <div className="text-white/40 text-center py-12">No youth profiles found.</div>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-          {filtered.map((y) => (
-            <div key={y.id} className="bg-white/5 border border-white/10 rounded-xl p-4 flex gap-3 items-start">
-              <div className="w-14 h-14 rounded-lg bg-white/10 overflow-hidden shrink-0 flex items-center justify-center">
-                {y.photo_url ? (
-                  <img src={getPhotoUrl(y.photo_url) || ""} alt={`${y.first_name} ${y.last_name}`} className="w-full h-full object-cover" />
-                ) : (
-                  <Baby className="w-6 h-6 text-white/30" />
-                )}
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-white font-medium truncate">
-                  {y.first_name} {y.last_name}
-                  {y.date_of_birth && (
-                    <span className="text-white/40 text-sm ml-1">· {(() => { const b = new Date(y.date_of_birth); const t = new Date(); let a = t.getFullYear() - b.getFullYear(); if (t.getMonth() < b.getMonth() || (t.getMonth() === b.getMonth() && t.getDate() < b.getDate())) a--; return a; })()}y</span>
-                  )}
-                </p>
-                <p className="text-white/40 text-sm flex items-center gap-1 mt-0.5"><MapPin className="w-3 h-3" /> {y.pickup_zone}</p>
-                <div className="flex items-center gap-2 mt-1.5">
-                  <Badge className={y.status === "active" ? "bg-green-500/20 text-green-400 border-green-500/30 text-[10px]" : "bg-red-500/20 text-red-400 border-red-500/30 text-[10px]"}>{y.status}</Badge>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {/* Woodbine Column */}
+          <div>
+            <h2 className="text-white font-bold text-lg mb-3 tracking-wide">WOODBINE</h2>
+            <div className="space-y-3">
+              {woodbineYouth.length === 0 ? (
+                <p className="text-white/30 text-sm py-4 text-center">No Woodbine youth found.</p>
+              ) : woodbineYouth.map((y) => (
+                <div key={y.id} className="bg-white/5 border border-white/10 rounded-xl p-4 flex gap-3 items-start">
+                  <div className="w-14 h-14 rounded-lg bg-white/10 overflow-hidden shrink-0 flex items-center justify-center">
+                    {y.photo_url ? (
+                      <img src={getPhotoUrl(y.photo_url) || ""} alt={`${y.first_name} ${y.last_name}`} className="w-full h-full object-cover" />
+                    ) : (
+                      <Baby className="w-6 h-6 text-white/30" />
+                    )}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-white font-medium truncate">
+                      {y.first_name} {y.last_name}
+                      {y.date_of_birth && (
+                        <span className="text-white/40 text-sm ml-1">· {(() => { const b = new Date(y.date_of_birth); const t = new Date(); let a = t.getFullYear() - b.getFullYear(); if (t.getMonth() < b.getMonth() || (t.getMonth() === b.getMonth() && t.getDate() < b.getDate())) a--; return a; })()}y</span>
+                      )}
+                    </p>
+                    <p className="text-white/40 text-sm flex items-center gap-1 mt-0.5"><MapPin className="w-3 h-3" /> {y.pickup_zone}</p>
+                    <div className="flex items-center gap-2 mt-1.5">
+                      <Badge className={y.status === "active" ? "bg-green-500/20 text-green-400 border-green-500/30 text-[10px]" : "bg-red-500/20 text-red-400 border-red-500/30 text-[10px]"}>{y.status}</Badge>
+                    </div>
+                  </div>
+                  <div className="flex flex-col gap-1 shrink-0">
+                    <Button size="icon" variant="ghost" onClick={() => openEdit(y)} className="text-white/40 hover:text-white hover:bg-white/10 h-8 w-8">
+                      <Pencil className="w-4 h-4" />
+                    </Button>
+                    <Button size="icon" variant="ghost" onClick={() => setDeleteTarget(y)} className="text-white/40 hover:text-red-400 hover:bg-red-500/10 h-8 w-8">
+                      <Trash2 className="w-4 h-4" />
+                    </Button>
+                  </div>
                 </div>
-              </div>
-              <div className="flex flex-col gap-1 shrink-0">
-                <Button size="icon" variant="ghost" onClick={() => openEdit(y)} className="text-white/40 hover:text-white hover:bg-white/10 h-8 w-8">
-                  <Pencil className="w-4 h-4" />
-                </Button>
-                <Button size="icon" variant="ghost" onClick={() => setDeleteTarget(y)} className="text-white/40 hover:text-red-400 hover:bg-red-500/10 h-8 w-8">
-                  <Trash2 className="w-4 h-4" />
-                </Button>
-              </div>
+              ))}
             </div>
-          ))}
+          </div>
+          {/* Wildwood Column */}
+          <div>
+            <h2 className="text-white font-bold text-lg mb-3 tracking-wide">WILDWOOD</h2>
+            <div className="space-y-3">
+              {wildwoodYouth.length === 0 ? (
+                <p className="text-white/30 text-sm py-4 text-center">No Wildwood youth found.</p>
+              ) : wildwoodYouth.map((y) => (
+                <div key={y.id} className="bg-white/5 border border-white/10 rounded-xl p-4 flex gap-3 items-start">
+                  <div className="w-14 h-14 rounded-lg bg-white/10 overflow-hidden shrink-0 flex items-center justify-center">
+                    {y.photo_url ? (
+                      <img src={getPhotoUrl(y.photo_url) || ""} alt={`${y.first_name} ${y.last_name}`} className="w-full h-full object-cover" />
+                    ) : (
+                      <Baby className="w-6 h-6 text-white/30" />
+                    )}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-white font-medium truncate">
+                      {y.first_name} {y.last_name}
+                      {y.date_of_birth && (
+                        <span className="text-white/40 text-sm ml-1">· {(() => { const b = new Date(y.date_of_birth); const t = new Date(); let a = t.getFullYear() - b.getFullYear(); if (t.getMonth() < b.getMonth() || (t.getMonth() === b.getMonth() && t.getDate() < b.getDate())) a--; return a; })()}y</span>
+                      )}
+                    </p>
+                    <p className="text-white/40 text-sm flex items-center gap-1 mt-0.5"><MapPin className="w-3 h-3" /> {y.pickup_zone}</p>
+                    <div className="flex items-center gap-2 mt-1.5">
+                      <Badge className={y.status === "active" ? "bg-green-500/20 text-green-400 border-green-500/30 text-[10px]" : "bg-red-500/20 text-red-400 border-red-500/30 text-[10px]"}>{y.status}</Badge>
+                    </div>
+                  </div>
+                  <div className="flex flex-col gap-1 shrink-0">
+                    <Button size="icon" variant="ghost" onClick={() => openEdit(y)} className="text-white/40 hover:text-white hover:bg-white/10 h-8 w-8">
+                      <Pencil className="w-4 h-4" />
+                    </Button>
+                    <Button size="icon" variant="ghost" onClick={() => setDeleteTarget(y)} className="text-white/40 hover:text-red-400 hover:bg-red-500/10 h-8 w-8">
+                      <Trash2 className="w-4 h-4" />
+                    </Button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
         </div>
       )}
 
