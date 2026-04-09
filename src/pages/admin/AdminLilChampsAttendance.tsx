@@ -196,22 +196,6 @@ const AdminLilChampsAttendance = () => {
           <Button
             variant="outline"
             size="sm"
-            onClick={async () => {
-              if (!confirm("Delete ALL Lil Champs Corner attendance records? This cannot be undone.")) return;
-              const { error } = await supabase
-                .from("attendance_records")
-                .delete()
-                .eq("program_source", "Lil Champs Corner");
-              if (error) { alert("Failed to clear: " + error.message); return; }
-              setRecords([]);
-            }}
-            className="gap-2 text-red-400 border-red-500/30 hover:bg-red-500/10"
-          >
-            Clear All
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
             onClick={() => setAddOpen(true)}
             className="gap-2 text-amber-400 border-amber-500/30 hover:bg-amber-500/10"
           >
