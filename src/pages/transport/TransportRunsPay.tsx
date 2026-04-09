@@ -79,6 +79,8 @@ function HistoryCalendarTab() {
   const [editForm, setEditForm] = useState<{ route: string; runType: string; date: string; time: string }>({ route: "", runType: "", date: "", time: "" });
   const [routes, setRoutes] = useState<{ id: string; name: string }[]>([]);
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
+  const [expandedRosters, setExpandedRosters] = useState<Set<string>>(new Set());
+  const [rosterData, setRosterData] = useState<Record<string, { youth_id: string; status: string; first_name: string; last_name: string; photo_url: string | null; pickup_zone: string }[]>>({});
 
   // Pay period runs (for Box 4 and Driver Pay Panel)
   const currentPayPeriod = useMemo(() => getCurrentPayPeriod(), []);
