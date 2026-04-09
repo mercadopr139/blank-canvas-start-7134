@@ -342,6 +342,47 @@ export type Database = {
           },
         ]
       }
+      driver_pay_periods: {
+        Row: {
+          created_at: string
+          driver_id: string
+          id: string
+          period_end: string
+          period_start: string
+          status: Database["public"]["Enums"]["pay_period_status"]
+          total_amount: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          driver_id: string
+          id?: string
+          period_end: string
+          period_start: string
+          status?: Database["public"]["Enums"]["pay_period_status"]
+          total_amount?: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          driver_id?: string
+          id?: string
+          period_end?: string
+          period_start?: string
+          status?: Database["public"]["Enums"]["pay_period_status"]
+          total_amount?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "driver_pay_periods_driver_id_fkey"
+            columns: ["driver_id"]
+            isOneToOne: false
+            referencedRelation: "drivers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       drivers: {
         Row: {
           created_at: string
@@ -798,6 +839,47 @@ export type Database = {
             columns: ["assigned_driver_id"]
             isOneToOne: false
             referencedRelation: "drivers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      run_approvals: {
+        Row: {
+          created_at: string
+          id: string
+          notes: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          run_id: string
+          status: Database["public"]["Enums"]["run_approval_status"]
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          notes?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          run_id: string
+          status?: Database["public"]["Enums"]["run_approval_status"]
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          notes?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          run_id?: string
+          status?: Database["public"]["Enums"]["run_approval_status"]
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "run_approvals_run_id_fkey"
+            columns: ["run_id"]
+            isOneToOne: true
+            referencedRelation: "runs"
             referencedColumns: ["id"]
           },
         ]
@@ -1703,6 +1785,7 @@ export type Database = {
         | "Greater than $80,001"
       invoice_status: "draft" | "sent" | "paid"
       lunch_status: "Yes" | "No" | "Not Applicable"
+      pay_period_status: "pending" | "approved" | "paid"
       pickup_zone: "Woodbine" | "Wildwood"
       priority_layer: "Core" | "Bonus"
       rate_type:
@@ -1715,6 +1798,7 @@ export type Database = {
       receipt_status: "Pending" | "Sent" | "Not Needed"
       revenue_type: "Donation" | "Fundraising" | "Fee for Service" | "Re-Grant"
       route_name: "Woodbine" | "Wildwood" | "Both" | "Overflow"
+      run_approval_status: "pending" | "approved" | "disputed"
       run_status: "in_progress" | "completed"
       run_type: "pickup" | "dropoff"
       school_district:
@@ -1933,6 +2017,7 @@ export const Constants = {
       ],
       invoice_status: ["draft", "sent", "paid"],
       lunch_status: ["Yes", "No", "Not Applicable"],
+      pay_period_status: ["pending", "approved", "paid"],
       pickup_zone: ["Woodbine", "Wildwood"],
       priority_layer: ["Core", "Bonus"],
       rate_type: [
@@ -1946,6 +2031,7 @@ export const Constants = {
       receipt_status: ["Pending", "Sent", "Not Needed"],
       revenue_type: ["Donation", "Fundraising", "Fee for Service", "Re-Grant"],
       route_name: ["Woodbine", "Wildwood", "Both", "Overflow"],
+      run_approval_status: ["pending", "approved", "disputed"],
       run_status: ["in_progress", "completed"],
       run_type: ["pickup", "dropoff"],
       school_district: [
