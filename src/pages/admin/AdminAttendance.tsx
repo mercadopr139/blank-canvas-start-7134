@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback } from "react";
+import { useState, useMemo, useCallback, useRef, useEffect } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -151,7 +151,16 @@ const AdminAttendance = () => {
   const [editingExcursion, setEditingExcursion] = useState<Excursion | null>(null);
   const [deleteExcursionTarget, setDeleteExcursionTarget] = useState<Excursion | null>(null);
   const [weatherTooltipDay, setWeatherTooltipDay] = useState<string | null>(null);
+  const [contextMenuDay, setContextMenuDay] = useState<{ dateStr: string; x: number; y: number } | null>(null);
+  const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  // Close context menu on outside click
+  useEffect(() => {
+    if (!contextMenuDay) return;
+    const handler = () => setContextMenuDay(null);
+    window.addEventListener("click", handler);
+    return () => window.removeEventListener("click", handler);
+  }, [contextMenuDay]);
   const invalidateAttendance = () => {
     queryClient.invalidateQueries({ queryKey: ["calendar-attendance"] });
     queryClient.invalidateQueries({ queryKey: ["all-attendance-for-profile"] });
@@ -430,58 +439,13 @@ const AdminAttendance = () => {
     [prevMonthAttendance, prevPracticeDayMap, isPracticeDay]
   );
 
-  /* ───── Toggle Day Type: Practice → Non-Practice → Excursion → Practice ───── */
-  const cycleDayType = async (dateStr: string) => {
-    const isPrac = isPracticeDay(dateStr, calPracticeDayMap);
+  /* ───── Quick Toggle: single click toggles Practice ↔ Non-Practice ───── */
+  const togglePracticeNonPractice = async (dateStr: string) => {
     const isExc = isExcursionDay(dateStr);
-    const existingPracticeDay = practiceDaysCalMonth.find((p) => p.date === dateStr);
-    const existingExcursion = excursionsCalMonth.find((e) => e.date === dateStr);
-
-    if (isExc && existingExcursion) {
-      const { error: deleteExcursionError } = await supabase
-        .from("excursions")
-        .delete()
-        .eq("id", existingExcursion.id);
-      if (deleteExcursionError) {
-        toast.error("Failed to switch day back to practice");
-        return;
-      }
-
-      if (existingPracticeDay) {
-        const { error: updatePracticeError } = await supabase
-          .from("practice_days")
-          .update({ is_practice_day: true })
-          .eq("id", existingPracticeDay.id);
-        if (updatePracticeError) {
-          toast.error("Failed to restore practice day");
-          return;
-        }
-      } else {
-        const { error: insertPracticeError } = await supabase
-          .from("practice_days")
-          .insert({ date: dateStr, is_practice_day: true });
-        if (insertPracticeError) {
-          toast.error("Failed to restore practice day");
-          return;
-        }
-      }
-
-      queryClient.setQueryData(["excursions-cal", calMonthStart], (current: Excursion[] = []) =>
-        current.filter((excursion) => excursion.id !== existingExcursion.id)
-      );
-      queryClient.setQueryData(["practice-days-cal", calMonthStart], (current: PracticeDay[] = []) => {
-        const hasExisting = current.some((day) => day.date === dateStr);
-        if (!hasExisting) {
-          return [...current, { id: existingPracticeDay?.id ?? `temp-${dateStr}`, date: dateStr, is_practice_day: true } as PracticeDay];
-        }
-        return current.map((day) => day.date === dateStr ? { ...day, is_practice_day: true } : day);
-      });
-
-      queryClient.invalidateQueries({ queryKey: ["practice-days-cal", calMonthStart] });
-      queryClient.invalidateQueries({ queryKey: ["excursions-cal", calMonthStart] });
-      toast.success("Marked as practice day");
-    } else if (isPrac) {
-      const existing = practiceDaysCalMonth.find((p) => p.date === dateStr);
+    if (isExc) return; // Don't quick-toggle excursion days, use context menu
+    const isPrac = isPracticeDay(dateStr, calPracticeDayMap);
+    const existing = practiceDaysCalMonth.find((p) => p.date === dateStr);
+    if (isPrac) {
       if (existing) {
         await supabase.from("practice_days").update({ is_practice_day: false }).eq("id", existing.id);
       } else {
@@ -490,13 +454,60 @@ const AdminAttendance = () => {
       queryClient.invalidateQueries({ queryKey: ["practice-days-cal"] });
       toast.success("Marked as non-practice day");
     } else {
+      if (existing) {
+        await supabase.from("practice_days").update({ is_practice_day: true }).eq("id", existing.id);
+      } else {
+        await supabase.from("practice_days").insert({ date: dateStr, is_practice_day: true });
+      }
+      queryClient.invalidateQueries({ queryKey: ["practice-days-cal"] });
+      toast.success("Marked as practice day");
+    }
+  };
+
+  /* ───── Context menu: set day type explicitly ───── */
+  const setDayType = async (dateStr: string, type: "practice" | "non-practice" | "excursion") => {
+    setContextMenuDay(null);
+    const existingPracticeDay = practiceDaysCalMonth.find((p) => p.date === dateStr);
+    const existingExcursion = excursionsCalMonth.find((e) => e.date === dateStr);
+    const isExc = isExcursionDay(dateStr);
+
+    if (type === "excursion") {
+      // If already excursion, open edit modal with existing data
+      if (isExc && existingExcursion) {
+        setEditingExcursion(existingExcursion);
+        return;
+      }
+      // Open new excursion modal
       setExcursionDate(dateStr);
       setExcursionName("");
       setExcursionYouthCount("");
       setExcursionNotes("");
-      setExcursionPrevState(false);
+      setExcursionPrevState(isPracticeDay(dateStr, calPracticeDayMap));
       setExcursionModalOpen(true);
+      return;
     }
+
+    // If currently an excursion, remove it first
+    if (isExc && existingExcursion) {
+      await supabase.from("excursions").delete().eq("id", existingExcursion.id);
+      queryClient.invalidateQueries({ queryKey: ["excursions-cal"] });
+    }
+
+    const isPracTarget = type === "practice";
+    if (existingPracticeDay) {
+      await supabase.from("practice_days").update({ is_practice_day: isPracTarget }).eq("id", existingPracticeDay.id);
+    } else {
+      await supabase.from("practice_days").insert({ date: dateStr, is_practice_day: isPracTarget });
+    }
+    queryClient.invalidateQueries({ queryKey: ["practice-days-cal"] });
+    toast.success(isPracTarget ? "Marked as practice day" : "Marked as non-practice day");
+  };
+
+  const openDotContextMenu = (e: React.MouseEvent | React.TouchEvent, dateStr: string) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+    setContextMenuDay({ dateStr, x: rect.left, y: rect.bottom + 4 });
   };
 
   const saveExcursion = async () => {
@@ -1194,22 +1205,72 @@ const AdminAttendance = () => {
                         </div>
                       </div>
                     )}
-                    {/* Toggle day type button: cycles Practice → Non-Practice → Excursion */}
+                    {/* Toggle day type dot: click = Practice/Non-Practice, right-click/long-press = context menu */}
                     <button
-                      onClick={(e) => { e.stopPropagation(); cycleDayType(dateStr); }}
-                      className={`absolute bottom-0.5 left-1/2 -translate-x-1/2 w-3.5 h-3.5 rounded-full border-2 transition-all hover:scale-125 cursor-pointer z-10 ${
+                      onClick={(e) => { e.stopPropagation(); togglePracticeNonPractice(dateStr); }}
+                      onContextMenu={(e) => openDotContextMenu(e, dateStr)}
+                      onTouchStart={(e) => {
+                        longPressTimer.current = setTimeout(() => {
+                          e.preventDefault();
+                          const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+                          setContextMenuDay({ dateStr, x: rect.left, y: rect.bottom + 4 });
+                        }, 500);
+                      }}
+                      onTouchEnd={() => { if (longPressTimer.current) { clearTimeout(longPressTimer.current); longPressTimer.current = null; } }}
+                      onTouchMove={() => { if (longPressTimer.current) { clearTimeout(longPressTimer.current); longPressTimer.current = null; } }}
+                      className={`absolute bottom-0.5 left-1/2 -translate-x-1/2 w-3.5 h-3.5 rounded-full border-2 transition-all hover:scale-125 cursor-pointer z-10 touch-manipulation ${
                         isExc
                           ? "bg-purple-500 border-purple-300 shadow-[0_0_4px_rgba(124,58,237,0.5)]"
                           : isPrac
                             ? "bg-green-500 border-green-300 shadow-[0_0_4px_rgba(34,197,94,0.5)]"
                             : "bg-red-500 border-red-300 shadow-[0_0_4px_rgba(239,68,68,0.5)]"
                       }`}
-                      title={isExc ? "Excursion Day — click to mark as Practice" : isPrac ? "Practice Day — click to mark as Non-Practice" : "Non-Practice — click to mark as Excursion"}
+                      title={isExc ? "Excursion Day — right-click for options" : isPrac ? "Practice Day — click to toggle, right-click for more" : "Non-Practice — click to toggle, right-click for more"}
                     />
                   </div>
                 );
               })}
             </div>
+
+            {/* Context menu portal */}
+            {contextMenuDay && (
+              <div
+                className="fixed z-[100] bg-gray-900 border border-white/20 rounded-lg shadow-2xl py-1 min-w-[200px]"
+                style={{ left: contextMenuDay.x, top: contextMenuDay.y }}
+                onClick={(e) => e.stopPropagation()}
+              >
+                <button
+                  className={`w-full text-left px-3 py-2 text-sm flex items-center gap-2 hover:bg-white/10 transition-colors ${
+                    isPracticeDay(contextMenuDay.dateStr, calPracticeDayMap) && !isExcursionDay(contextMenuDay.dateStr) ? "text-green-400" : "text-white/70"
+                  }`}
+                  onClick={() => setDayType(contextMenuDay.dateStr, "practice")}
+                >
+                  <span className="w-3 h-3 rounded-full bg-green-500 inline-block" />
+                  Mark as Practice Day
+                  {isPracticeDay(contextMenuDay.dateStr, calPracticeDayMap) && !isExcursionDay(contextMenuDay.dateStr) && <span className="ml-auto text-green-400">✓</span>}
+                </button>
+                <button
+                  className={`w-full text-left px-3 py-2 text-sm flex items-center gap-2 hover:bg-white/10 transition-colors ${
+                    !isPracticeDay(contextMenuDay.dateStr, calPracticeDayMap) && !isExcursionDay(contextMenuDay.dateStr) ? "text-red-400" : "text-white/70"
+                  }`}
+                  onClick={() => setDayType(contextMenuDay.dateStr, "non-practice")}
+                >
+                  <span className="w-3 h-3 rounded-full bg-red-500 inline-block" />
+                  Mark as Non-Practice Day
+                  {!isPracticeDay(contextMenuDay.dateStr, calPracticeDayMap) && !isExcursionDay(contextMenuDay.dateStr) && <span className="ml-auto text-red-400">✓</span>}
+                </button>
+                <button
+                  className={`w-full text-left px-3 py-2 text-sm flex items-center gap-2 hover:bg-white/10 transition-colors ${
+                    isExcursionDay(contextMenuDay.dateStr) ? "text-purple-400" : "text-white/70"
+                  }`}
+                  onClick={() => setDayType(contextMenuDay.dateStr, "excursion")}
+                >
+                  <span className="w-3 h-3 rounded-full bg-purple-500 inline-block" />
+                  {isExcursionDay(contextMenuDay.dateStr) ? "Edit Excursion Day" : "Mark as Excursion Day"}
+                  {isExcursionDay(contextMenuDay.dateStr) && <span className="ml-auto text-purple-400">✓</span>}
+                </button>
+              </div>
+            )}
 
             {/* Legend */}
             <div className="flex items-center gap-4 mt-4 pt-3 border-t border-white/10 flex-wrap">
@@ -1225,7 +1286,7 @@ const AdminAttendance = () => {
                 <span className="w-3 h-3 rounded-full bg-purple-500" />
                 <span className="text-xs text-white/50">Excursion Day</span>
               </div>
-              <span className="text-[10px] text-white/30 ml-auto">Click dot to cycle</span>
+              <span className="text-[10px] text-white/30 ml-auto">Click dot to toggle • Right-click for more options</span>
             </div>
           </CardContent>
         </Card>
