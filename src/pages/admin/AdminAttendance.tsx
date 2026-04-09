@@ -1079,6 +1079,7 @@ const AdminAttendance = () => {
                 const isCurrentDay = isToday(dateObj);
                 const isSelected = selectedDay === dateStr;
                 const isPrac = isPracticeDay(dateStr, calPracticeDayMap);
+                const isExc = isExcursionDay(dateStr);
                 const weather = weatherMap[dateStr] as WeatherDay | undefined;
                 const wInfo = weather ? getWeatherInfo(weather.condition_code) : null;
                 const rowIndex = Math.floor(idx / 7);
