@@ -37,26 +37,32 @@ export type Database = {
       }
       attendance_records: {
         Row: {
+          added_by_user_id: string | null
           check_in_at: string
           check_in_date: string
           created_at: string
           id: string
+          is_manual: boolean
           program_source: string
           registration_id: string
         }
         Insert: {
+          added_by_user_id?: string | null
           check_in_at?: string
           check_in_date?: string
           created_at?: string
           id?: string
+          is_manual?: boolean
           program_source?: string
           registration_id: string
         }
         Update: {
+          added_by_user_id?: string | null
           check_in_at?: string
           check_in_date?: string
           created_at?: string
           id?: string
+          is_manual?: boolean
           program_source?: string
           registration_id?: string
         }
