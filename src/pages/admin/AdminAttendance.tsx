@@ -17,9 +17,9 @@ import {
   LineChart, Line,
 } from "recharts";
 import {
-  startOfWeek, startOfMonth, endOfMonth, format,
-  addMonths, subMonths, subWeeks, getDay, getDaysInMonth, isToday, parseISO, endOfWeek,
-  isWeekend,
+  startOfMonth, endOfMonth, format,
+  addMonths, subMonths, getDay, getDaysInMonth, isToday, parseISO,
+  isWeekend, isSameMonth,
 } from "date-fns";
 import { toast } from "sonner";
 
@@ -58,14 +58,6 @@ const WEEKDAY_NAMES = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "
 
 const now = new Date();
 const todayStr = now.toLocaleDateString('en-CA', { timeZone: 'America/New_York' });
-const weekStart = format(startOfWeek(now, { weekStartsOn: 1 }), "yyyy-MM-dd");
-const weekEnd = format(endOfWeek(now, { weekStartsOn: 1 }), "yyyy-MM-dd");
-const prevWeekStart = format(startOfWeek(subWeeks(now, 1), { weekStartsOn: 1 }), "yyyy-MM-dd");
-const prevWeekEnd = format(endOfWeek(subWeeks(now, 1), { weekStartsOn: 1 }), "yyyy-MM-dd");
-const currentMonthStart = format(startOfMonth(now), "yyyy-MM-dd");
-const currentMonthEnd = format(endOfMonth(now), "yyyy-MM-dd");
-const prevMonthStart = format(startOfMonth(subMonths(now, 1)), "yyyy-MM-dd");
-const prevMonthEnd = format(endOfMonth(subMonths(now, 1)), "yyyy-MM-dd");
 
 const pct = (n: number, d: number) => (d === 0 ? "0%" : `${Math.round((n / d) * 100)}%`);
 
@@ -92,7 +84,6 @@ const AdminAttendance = () => {
   const [eagleSearch, setEagleSearch] = useState("");
 
   const invalidateAttendance = () => {
-    queryClient.invalidateQueries({ queryKey: ["attendance-records-current"] });
     queryClient.invalidateQueries({ queryKey: ["calendar-attendance"] });
     queryClient.invalidateQueries({ queryKey: ["all-attendance-for-profile"] });
     queryClient.invalidateQueries({ queryKey: ["attendance-records-prev"] });
@@ -133,38 +124,16 @@ const AdminAttendance = () => {
     },
   });
 
-  // Current month attendance
-  const { data: attendance = [] } = useQuery({
-    queryKey: ["attendance-records-current"],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("attendance_records")
-        .select("id, registration_id, check_in_date, check_in_at, program_source")
-        .eq("program_source", "NLA")
-        .gte("check_in_date", currentMonthStart)
-        .lte("check_in_date", currentMonthEnd)
-        .order("check_in_date", { ascending: false });
-      if (error) throw error;
-      return data as AttendanceRecord[];
-    },
-  });
+  /* ───── Is viewing current month? ───── */
+  const isCurrentMonth = isSameMonth(calendarMonth, now);
+  
+  const viewedMonthShort = format(calendarMonth, "MMMM");
 
-  // Previous month attendance (for comparison insights)
-  const { data: prevMonthAttendance = [] } = useQuery({
-    queryKey: ["attendance-records-prev"],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("attendance_records")
-        .select("id, registration_id, check_in_date, check_in_at, program_source")
-        .eq("program_source", "NLA")
-        .gte("check_in_date", prevMonthStart)
-        .lte("check_in_date", prevMonthEnd);
-      if (error) throw error;
-      return data as AttendanceRecord[];
-    },
-  });
+  // Previous month relative to viewed month (for comparison insights)
+  const prevOfViewedStart = format(startOfMonth(subMonths(calendarMonth, 1)), "yyyy-MM-dd");
+  const prevOfViewedEnd = format(endOfMonth(subMonths(calendarMonth, 1)), "yyyy-MM-dd");
 
-  // Calendar month attendance
+  // Calendar month attendance (primary data source for everything)
   const { data: calendarAttendance = [] } = useQuery({
     queryKey: ["calendar-attendance", calMonthStart],
     queryFn: async () => {
@@ -175,6 +144,21 @@ const AdminAttendance = () => {
         .gte("check_in_date", calMonthStart)
         .lte("check_in_date", calMonthEnd)
         .order("check_in_at", { ascending: true });
+      if (error) throw error;
+      return data as AttendanceRecord[];
+    },
+  });
+
+  // Previous month attendance (for comparison insights)
+  const { data: prevMonthAttendance = [] } = useQuery({
+    queryKey: ["attendance-records-prev", prevOfViewedStart],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("attendance_records")
+        .select("id, registration_id, check_in_date, check_in_at, program_source")
+        .eq("program_source", "NLA")
+        .gte("check_in_date", prevOfViewedStart)
+        .lte("check_in_date", prevOfViewedEnd);
       if (error) throw error;
       return data as AttendanceRecord[];
     },
@@ -196,21 +180,7 @@ const AdminAttendance = () => {
     enabled: !!selectedYouth,
   });
 
-  // Practice days for current month
-  const { data: practiceDaysCurrentMonth = [] } = useQuery({
-    queryKey: ["practice-days", currentMonthStart],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("practice_days")
-        .select("id, date, is_practice_day")
-        .gte("date", currentMonthStart)
-        .lte("date", currentMonthEnd);
-      if (error) throw error;
-      return (data || []) as PracticeDay[];
-    },
-  });
-
-  // Practice days for calendar month (may differ from current month)
+  // Practice days for calendar month
   const { data: practiceDaysCalMonth = [] } = useQuery({
     queryKey: ["practice-days-cal", calMonthStart],
     queryFn: async () => {
@@ -226,25 +196,19 @@ const AdminAttendance = () => {
 
   // Practice days for previous month
   const { data: practiceDaysPrevMonth = [] } = useQuery({
-    queryKey: ["practice-days-prev", prevMonthStart],
+    queryKey: ["practice-days-prev", prevOfViewedStart],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("practice_days")
         .select("id, date, is_practice_day")
-        .gte("date", prevMonthStart)
-        .lte("date", prevMonthEnd);
+        .gte("date", prevOfViewedStart)
+        .lte("date", prevOfViewedEnd);
       if (error) throw error;
       return (data || []) as PracticeDay[];
     },
   });
 
   /* ───── Practice Day Helper ───── */
-  const practiceDayMap = useMemo(() => {
-    const m: Record<string, boolean> = {};
-    practiceDaysCurrentMonth.forEach((p) => { m[p.date] = p.is_practice_day; });
-    return m;
-  }, [practiceDaysCurrentMonth]);
-
   const calPracticeDayMap = useMemo(() => {
     const m: Record<string, boolean> = {};
     practiceDaysCalMonth.forEach((p) => { m[p.date] = p.is_practice_day; });
@@ -264,8 +228,8 @@ const AdminAttendance = () => {
 
   /* ───── Filter attendance to practice days only ───── */
   const practiceAttendance = useMemo(
-    () => attendance.filter((a) => isPracticeDay(a.check_in_date, practiceDayMap)),
-    [attendance, practiceDayMap, isPracticeDay]
+    () => calendarAttendance.filter((a) => isPracticeDay(a.check_in_date, calPracticeDayMap)),
+    [calendarAttendance, calPracticeDayMap, isPracticeDay]
   );
 
   const prevPracticeAttendance = useMemo(
@@ -285,7 +249,6 @@ const AdminAttendance = () => {
       await supabase.from("practice_days").insert({ date: dateStr, is_practice_day: newValue });
     }
 
-    queryClient.invalidateQueries({ queryKey: ["practice-days"] });
     queryClient.invalidateQueries({ queryKey: ["practice-days-cal"] });
     queryClient.invalidateQueries({ queryKey: ["practice-days-prev"] });
     toast.success(newValue ? "Marked as practice day" : "Marked as non-practice day");
@@ -303,7 +266,7 @@ const AdminAttendance = () => {
     return Array.from(set).sort();
   }, [registrations]);
 
-  // Attendance by registration (practice days only)
+  // Attendance by registration (viewed month, practice days only)
   const attendanceByReg = useMemo(() => {
     const map: Record<string, AttendanceRecord[]> = {};
     practiceAttendance.forEach((a) => {
@@ -316,94 +279,107 @@ const AdminAttendance = () => {
   const getStats = (regId: string) => {
     const records = attendanceByReg[regId] || [];
     const todayCount = records.filter((r) => r.check_in_date === todayStr).length;
-    const weekCount = records.filter((r) => r.check_in_date >= weekStart && r.check_in_date <= weekEnd).length;
     const monthCount = records.length;
-    const lastDate = records.length > 0 ? records[0].check_in_date : null;
-    return { present: todayCount > 0, weekCount, monthCount, lastDate };
+    const lastDate = records.length > 0 ? records[records.length - 1].check_in_date : null;
+    return { present: todayCount > 0, weekCount: 0, monthCount, lastDate };
   };
 
-  /* ───── TODAY'S RECORDS (only if today is a practice day) ───── */
-  const todayIsPractice = isPracticeDay(todayStr, practiceDayMap);
+  /* ───── STAT BOX 1: Present Today / Peak Day ───── */
+  const todayIsPractice = isPracticeDay(todayStr, calPracticeDayMap);
+
   const todayRecords = useMemo(
-    () => todayIsPractice ? practiceAttendance.filter((a) => a.check_in_date === todayStr) : [],
-    [practiceAttendance, todayIsPractice]
+    () => isCurrentMonth && todayIsPractice
+      ? practiceAttendance.filter((a) => a.check_in_date === todayStr)
+      : [],
+    [practiceAttendance, todayIsPractice, isCurrentMonth]
   );
   const todayRegIds = useMemo(() => new Set(todayRecords.map((a) => a.registration_id)), [todayRecords]);
   const totalPresentToday = todayRegIds.size;
 
-  /* ───── WEEK-TO-DATE AVERAGE (practice days only) ───── */
-  const weekRecords = useMemo(
-    () => practiceAttendance.filter((a) => a.check_in_date >= weekStart && a.check_in_date <= weekEnd),
-    [practiceAttendance]
-  );
-  const wtdAvg = useMemo(() => {
-    const days = new Set(weekRecords.map((a) => a.check_in_date));
-    return days.size > 0 ? Math.round(weekRecords.length / days.size) : 0;
-  }, [weekRecords]);
+  // Peak day for past months
+  const peakDay = useMemo(() => {
+    if (isCurrentMonth) return { count: totalPresentToday, date: todayStr };
+    const dayCounts: Record<string, Set<string>> = {};
+    practiceAttendance.forEach((a) => {
+      if (!dayCounts[a.check_in_date]) dayCounts[a.check_in_date] = new Set();
+      dayCounts[a.check_in_date].add(a.registration_id);
+    });
+    let maxDate = "";
+    let maxCount = 0;
+    Object.entries(dayCounts).forEach(([date, ids]) => {
+      if (ids.size > maxCount) { maxCount = ids.size; maxDate = date; }
+    });
+    return { count: maxCount, date: maxDate };
+  }, [isCurrentMonth, totalPresentToday, practiceAttendance]);
 
-  /* ───── MONTH-TO-DATE AVERAGE (practice days only) ───── */
+  /* ───── STAT BOX 2: Week Avg → avg per practice day this month ───── */
   const mtdAvg = useMemo(() => {
     const days = new Set(practiceAttendance.map((a) => a.check_in_date));
     return days.size > 0 ? Math.round(practiceAttendance.length / days.size) : 0;
   }, [practiceAttendance]);
 
-  /* ───── PROGRAM SPLIT TODAY ───── */
+  /* ───── PROGRAM SPLIT (viewed month) ───── */
   const programSplitToday = useMemo(() => {
+    const regIds = isCurrentMonth ? todayRegIds : new Set(practiceAttendance.map((a) => a.registration_id));
     const counts: Record<string, number> = {};
-    todayRegIds.forEach((id) => {
+    regIds.forEach((id) => {
       const reg = regMap[id];
       if (reg) counts[reg.child_boxing_program] = (counts[reg.child_boxing_program] || 0) + 1;
     });
     return Object.entries(counts).sort((a, b) => b[1] - a[1]);
-  }, [todayRegIds, regMap]);
+  }, [isCurrentMonth, todayRegIds, practiceAttendance, regMap]);
 
-  /* ───── BOY / GIRL RATIO TODAY ───── */
+  /* ───── BOY / GIRL RATIO ───── */
   const sexSplitToday = useMemo(() => {
+    const regIds = isCurrentMonth ? todayRegIds : new Set(practiceAttendance.map((a) => a.registration_id));
     const counts: Record<string, number> = {};
-    todayRegIds.forEach((id) => {
+    regIds.forEach((id) => {
       const reg = regMap[id];
       if (reg) counts[reg.child_sex] = (counts[reg.child_sex] || 0) + 1;
     });
     return counts;
-  }, [todayRegIds, regMap]);
+  }, [isCurrentMonth, todayRegIds, practiceAttendance, regMap]);
 
-  /* ───── POVERTY % TODAY ───── */
+  /* ───── POVERTY % ───── */
   const povertyToday = useMemo(() => {
+    const regIds = isCurrentMonth ? todayRegIds : new Set(practiceAttendance.map((a) => a.registration_id));
     let below = 0;
-    todayRegIds.forEach((id) => {
+    regIds.forEach((id) => {
       const reg = regMap[id];
       if (reg && (POVERTY_INCOMES.includes(reg.household_income_range) || reg.free_or_reduced_lunch === "Yes")) below++;
     });
-    return { below, total: todayRegIds.size };
-  }, [todayRegIds, regMap]);
+    return { below, total: regIds.size };
+  }, [isCurrentMonth, todayRegIds, practiceAttendance, regMap]);
 
-  /* ───── TOP SCHOOL DISTRICT TODAY ───── */
+  /* ───── TOP SCHOOL DISTRICT ───── */
   const topDistrictToday = useMemo(() => {
+    const regIds = isCurrentMonth ? todayRegIds : new Set(practiceAttendance.map((a) => a.registration_id));
     const counts: Record<string, number> = {};
-    todayRegIds.forEach((id) => {
+    regIds.forEach((id) => {
       const reg = regMap[id];
       if (reg) counts[reg.child_school_district] = (counts[reg.child_school_district] || 0) + 1;
     });
     const sorted = Object.entries(counts).sort((a, b) => b[1] - a[1]);
     return sorted.length > 0 ? sorted[0] : null;
-  }, [todayRegIds, regMap]);
+  }, [isCurrentMonth, todayRegIds, practiceAttendance, regMap]);
 
-  /* ───── AVG ARRIVAL TIME TODAY ───── */
+  /* ───── AVG ARRIVAL TIME ───── */
   const avgArrivalToday = useMemo(() => {
-    if (todayRecords.length === 0) return null;
-    const totalMs = todayRecords.reduce((sum, a) => {
+    const records = isCurrentMonth ? todayRecords : practiceAttendance;
+    if (records.length === 0) return null;
+    const totalMs = records.reduce((sum, a) => {
       const d = new Date(a.check_in_at);
       return sum + (d.getHours() * 60 + d.getMinutes());
     }, 0);
-    const avgMin = Math.round(totalMs / todayRecords.length);
+    const avgMin = Math.round(totalMs / records.length);
     const h = Math.floor(avgMin / 60);
     const m = avgMin % 60;
     const ampm = h >= 12 ? "PM" : "AM";
     const h12 = h > 12 ? h - 12 : h === 0 ? 12 : h;
     return `${h12}:${m.toString().padStart(2, "0")} ${ampm}`;
-  }, [todayRecords]);
+  }, [isCurrentMonth, todayRecords, practiceAttendance]);
 
-  /* ───── DAILY ATTENDANCE TREND (CURRENT MONTH, practice days only) ───── */
+  /* ───── DAILY ATTENDANCE TREND (viewed month, practice days only) ───── */
   const dailyTrend = useMemo(() => {
     const counts: Record<string, number> = {};
     practiceAttendance.forEach((a) => { counts[a.check_in_date] = (counts[a.check_in_date] || 0) + 1; });
@@ -454,7 +430,7 @@ const AdminAttendance = () => {
       }));
   }, [practiceAttendance, regMap]);
 
-  /* ───── SCHOOL DISTRICT BREAKDOWN (MONTH, practice days only) ───── */
+  /* ───── SCHOOL DISTRICT BREAKDOWN (viewed month, practice days only) ───── */
   const districtBreakdown = useMemo(() => {
     const counts: Record<string, number> = {};
     const ids = new Set(practiceAttendance.map((a) => a.registration_id));
@@ -465,7 +441,7 @@ const AdminAttendance = () => {
     return Object.entries(counts).sort((a, b) => b[1] - a[1]);
   }, [practiceAttendance, regMap]);
 
-  /* ───── POVERTY SUMMARY (MONTH, practice days only) ───── */
+  /* ───── POVERTY SUMMARY (viewed month, practice days only) ───── */
   const povertyMonth = useMemo(() => {
     const ids = new Set(practiceAttendance.map((a) => a.registration_id));
     let below = 0;
@@ -483,41 +459,42 @@ const AdminAttendance = () => {
     const strongest = dowData.reduce((a, b) => (b.avg > a.avg ? b : a), dowData[0]);
     const weakest = dowData.reduce((a, b) => (b.avg < a.avg ? b : a), dowData[0]);
     if (strongest && strongest.avg > 0) {
-      insights.push(`${WEEKDAY_NAMES[[1,2,3,4,5][dowData.indexOf(strongest)]]} has the strongest average attendance this month (${strongest.avg}/day).`);
+      insights.push(`${WEEKDAY_NAMES[[1,2,3,4,5][dowData.indexOf(strongest)]]} has the strongest average attendance in ${viewedMonthShort} (${strongest.avg}/day).`);
     }
     if (weakest && weakest.avg > 0 && weakest.day !== strongest.day) {
       insights.push(`${weakest.day} attendance tends to be lower than midweek attendance.`);
     }
 
-    const weekJrIds = new Set(weekRecords.filter((a) => regMap[a.registration_id]?.child_boxing_program.includes("Junior")).map((a) => a.registration_id));
-    const weekSrIds = new Set(weekRecords.filter((a) => regMap[a.registration_id]?.child_boxing_program.includes("Senior")).map((a) => a.registration_id));
-    if (weekJrIds.size > 0 || weekSrIds.size > 0) {
-      insights.push(`${weekSrIds.size} Senior Boxers and ${weekJrIds.size} Junior Boxers attended this week (Junior Boxing meets once per week).`);
+    const monthRegIds = new Set(practiceAttendance.map((a) => a.registration_id));
+    const jrIds = new Set(practiceAttendance.filter((a) => regMap[a.registration_id]?.child_boxing_program.includes("Junior")).map((a) => a.registration_id));
+    const srIds = new Set(practiceAttendance.filter((a) => regMap[a.registration_id]?.child_boxing_program.includes("Senior")).map((a) => a.registration_id));
+    if (jrIds.size > 0 || srIds.size > 0) {
+      insights.push(`${srIds.size} Senior Boxers and ${jrIds.size} Junior Boxers attended in ${viewedMonthShort} (Junior Boxing meets once per week).`);
     }
 
-    if (topDistrictToday && totalPresentToday > 0) {
+    if (isCurrentMonth && topDistrictToday && totalPresentToday > 0) {
       insights.push(`Most youth attending today are from ${topDistrictToday[0]}.`);
     }
 
-    if (avgArrivalToday) {
+    if (isCurrentMonth && avgArrivalToday) {
       insights.push(`Average arrival time today is ${avgArrivalToday}.`);
     }
 
     const prevDays = new Set(prevPracticeAttendance.map((a) => a.check_in_date));
     const prevAvg = prevDays.size > 0 ? Math.round(prevPracticeAttendance.length / prevDays.size) : 0;
     if (prevAvg > 0 && mtdAvg > 0) {
-      if (mtdAvg > prevAvg) insights.push("This month's average attendance is higher than last month.");
-      else if (mtdAvg < prevAvg) insights.push("This month's average attendance is lower than last month.");
+      const prevMonthName = format(subMonths(calendarMonth, 1), "MMMM");
+      if (mtdAvg > prevAvg) insights.push(`${viewedMonthShort}'s average attendance is higher than ${prevMonthName}.`);
+      else if (mtdAvg < prevAvg) insights.push(`${viewedMonthShort}'s average attendance is lower than ${prevMonthName}.`);
     }
 
     return insights;
-  }, [dowData, weekRecords, regMap, topDistrictToday, totalPresentToday, avgArrivalToday, prevPracticeAttendance, mtdAvg]);
+  }, [dowData, practiceAttendance, regMap, topDistrictToday, totalPresentToday, avgArrivalToday, prevPracticeAttendance, mtdAvg, isCurrentMonth, viewedMonthShort, calendarMonth]);
 
   /* ───── BALD EAGLES ───── */
   const baldEagles = registrations.filter((r) => r.is_bald_eagle);
   const activeBaldEagles = baldEagles.filter((r) => r.bald_eagle_active);
-  const baldEaglesPresent = activeBaldEagles.filter((r) => getStats(r.id).present).length;
-  const baldEaglesWeek = activeBaldEagles.reduce((sum, r) => sum + getStats(r.id).weekCount, 0);
+  const baldEaglesPresent = isCurrentMonth ? activeBaldEagles.filter((r) => getStats(r.id).present).length : 0;
   const baldEaglesMonth = activeBaldEagles.reduce((sum, r) => sum + getStats(r.id).monthCount, 0);
 
   const baldEagleTrend = useMemo(() => {
@@ -532,20 +509,7 @@ const AdminAttendance = () => {
       .map(([date, count]) => ({ date: format(parseISO(date), "M/d"), count }));
   }, [practiceAttendance, regMap]);
 
-  const anyPrevWeekAttendance = (practiceAttendance || []).some((rec) => rec.check_in_date >= prevWeekStart && rec.check_in_date <= prevWeekEnd);
-
-  const alerts = anyPrevWeekAttendance
-    ? (activeBaldEagles
-        .map((r) => {
-          const records = attendanceByReg[r.id] || [];
-          const prevWeekCount = records.filter((rec) => rec.check_in_date >= prevWeekStart && rec.check_in_date <= prevWeekEnd).length;
-          if (prevWeekCount > 2) return null;
-          const lastDate = records.length > 0 ? records[0].check_in_date : null;
-          return { ...r, prevWeekCount, lastDate: lastDate || "Never" };
-        })
-        .filter(Boolean)
-        .sort((a, b) => (a?.prevWeekCount || 0) - (b?.prevWeekCount || 0)) as (Registration & { prevWeekCount: number; lastDate: string })[])
-    : [];
+  const alerts: (Registration & { prevWeekCount: number; lastDate: string })[] = [];
 
   /* ───── CALENDAR ───── */
   const calendarRegIds = useMemo(() => {
@@ -675,28 +639,29 @@ const AdminAttendance = () => {
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
           <Card className="bg-white/5 border-white/10 text-white">
             <CardContent className="pt-4 pb-3 text-center">
-              <p className="text-[10px] uppercase tracking-wider text-white/40">Present Today</p>
-              <p className="text-3xl font-bold mt-1">{totalPresentToday}</p>
-              {!todayIsPractice && <p className="text-[10px] text-red-400">Non-practice day</p>}
+              <p className="text-[10px] uppercase tracking-wider text-white/40">{isCurrentMonth ? "Present Today" : "Peak Day"}</p>
+              <p className="text-3xl font-bold mt-1">{isCurrentMonth ? totalPresentToday : peakDay.count}</p>
+              {isCurrentMonth && !todayIsPractice && <p className="text-[10px] text-red-400">Non-practice day</p>}
+              {!isCurrentMonth && peakDay.date && <p className="text-[10px] text-white/30">{peakDay.date ? format(parseISO(peakDay.date), "M/d") : ""}</p>}
             </CardContent>
           </Card>
           <Card className="bg-white/5 border-white/10 text-white">
             <CardContent className="pt-4 pb-3 text-center">
-              <p className="text-[10px] uppercase tracking-wider text-white/40">Week Avg</p>
-              <p className="text-3xl font-bold mt-1">{wtdAvg}</p>
-              <p className="text-[10px] text-white/30">per practice day this week</p>
+              <p className="text-[10px] uppercase tracking-wider text-white/40">{isCurrentMonth ? "Week Avg" : "Daily Avg"}</p>
+              <p className="text-3xl font-bold mt-1">{mtdAvg}</p>
+              <p className="text-[10px] text-white/30">per practice day{isCurrentMonth ? " this week" : ` in ${viewedMonthShort}`}</p>
             </CardContent>
           </Card>
           <Card className="bg-white/5 border-white/10 text-white">
             <CardContent className="pt-4 pb-3 text-center">
               <p className="text-[10px] uppercase tracking-wider text-white/40">Month Avg</p>
               <p className="text-3xl font-bold mt-1">{mtdAvg}</p>
-              <p className="text-[10px] text-white/30">per practice day this month</p>
+              <p className="text-[10px] text-white/30">per practice day in {viewedMonthShort}</p>
             </CardContent>
           </Card>
           <Card className="bg-white/5 border-white/10 text-white">
             <CardContent className="pt-4 pb-3 text-center">
-              <p className="text-[10px] uppercase tracking-wider text-white/40">Avg Arrival</p>
+              <p className="text-[10px] uppercase tracking-wider text-white/40">{isCurrentMonth ? "Avg Arrival" : "Avg Arrival Time"}</p>
               <p className="text-2xl font-bold mt-1 flex items-center justify-center gap-1">
                 <Clock className="w-4 h-4 text-white/40" />
                 {avgArrivalToday || "—"}
@@ -825,7 +790,7 @@ const AdminAttendance = () => {
           {/* Program Split */}
           <Card className="bg-white/5 border-white/10 text-white">
             <CardContent className="pt-4 pb-3">
-              <p className="text-[10px] uppercase tracking-wider text-white/40 mb-2">Program Split Today</p>
+              <p className="text-[10px] uppercase tracking-wider text-white/40 mb-2">{isCurrentMonth ? "Program Split Today" : `Program Split — ${viewedMonthShort}`}</p>
               {programSplitToday.length === 0 ? (
                 <p className="text-white/30 text-sm">—</p>
               ) : (
@@ -844,7 +809,7 @@ const AdminAttendance = () => {
           {/* Boy / Girl Ratio */}
           <Card className="bg-white/5 border-white/10 text-white">
             <CardContent className="pt-4 pb-3">
-              <p className="text-[10px] uppercase tracking-wider text-white/40 mb-2">Boy / Girl Today</p>
+              <p className="text-[10px] uppercase tracking-wider text-white/40 mb-2">{isCurrentMonth ? "Boy / Girl Today" : `Boy / Girl — ${viewedMonthShort}`}</p>
               <div className="flex items-center gap-3">
                 <div className="text-center flex-1">
                   <p className="text-2xl font-bold text-blue-400">{sexSplitToday["Male"] || 0}</p>
@@ -862,7 +827,7 @@ const AdminAttendance = () => {
           {/* Poverty % */}
           <Card className="bg-white/5 border-white/10 text-white">
             <CardContent className="pt-4 pb-3 text-center">
-              <p className="text-[10px] uppercase tracking-wider text-white/40">Below Poverty Today</p>
+              <p className="text-[10px] uppercase tracking-wider text-white/40">{isCurrentMonth ? "Below Poverty Today" : `Below Poverty — ${viewedMonthShort}`}</p>
               <p className="text-3xl font-bold mt-1">{pct(povertyToday.below, povertyToday.total)}</p>
               <p className="text-[10px] text-white/30">{povertyToday.below} of {povertyToday.total}</p>
             </CardContent>
@@ -872,7 +837,7 @@ const AdminAttendance = () => {
           <Card className="bg-white/5 border-white/10 text-white">
             <CardContent className="pt-4 pb-3 text-center">
               <p className="text-[10px] uppercase tracking-wider text-white/40 flex items-center justify-center gap-1">
-                <School className="w-3 h-3" /> Top District Today
+                <School className="w-3 h-3" /> {isCurrentMonth ? "Top District Today" : `Top District — ${viewedMonthShort}`}
               </p>
               {topDistrictToday ? (
                 <>
@@ -893,7 +858,7 @@ const AdminAttendance = () => {
           <Card className="bg-white/5 border-white/10 text-white mb-4">
             <CardHeader className="pb-2">
               <CardTitle className="text-sm font-medium text-white/60 flex items-center gap-2">
-                <TrendingUp className="w-4 h-4" /> Daily Attendance Trend — {format(now, "MMMM yyyy")}
+                <TrendingUp className="w-4 h-4" /> Daily Attendance Trend — {format(calendarMonth, "MMMM yyyy")}
               </CardTitle>
             </CardHeader>
             <CardContent>
@@ -976,7 +941,7 @@ const AdminAttendance = () => {
           <Card className="bg-white/5 border-white/10 text-white">
             <CardHeader className="pb-2">
               <CardTitle className="text-sm font-medium text-white/60 flex items-center gap-1.5">
-                <School className="w-3.5 h-3.5" /> School District Breakdown (Month)
+                <School className="w-3.5 h-3.5" /> School District Breakdown ({viewedMonthShort})
               </CardTitle>
             </CardHeader>
             <CardContent>
@@ -1007,7 +972,7 @@ const AdminAttendance = () => {
           {/* Poverty Summary */}
           <Card className="bg-white/5 border-white/10 text-white">
             <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-white/60">Below Poverty Line (Month)</CardTitle>
+              <CardTitle className="text-sm font-medium text-white/60">Below Poverty Line ({viewedMonthShort})</CardTitle>
             </CardHeader>
             <CardContent className="flex flex-col items-center justify-center py-4">
               <p className="text-5xl font-black text-white">{pct(povertyMonth.below, povertyMonth.total)}</p>
@@ -1047,13 +1012,13 @@ const AdminAttendance = () => {
           <CardContent>
             <div className="grid grid-cols-3 gap-3 mb-4">
               <div className="text-center p-3 rounded-lg bg-white/5">
-                <p className="text-[10px] uppercase tracking-wider text-white/40">Present Today</p>
+                <p className="text-[10px] uppercase tracking-wider text-white/40">{isCurrentMonth ? "Present Today" : `${viewedMonthShort} Attendance`}</p>
                 <p className="text-2xl font-bold mt-1">{baldEaglesPresent}</p>
                 <p className="text-[10px] text-white/30">of {activeBaldEagles.length} active</p>
               </div>
               <div className="text-center p-3 rounded-lg bg-white/5">
-                <p className="text-[10px] uppercase tracking-wider text-white/40">Week Total</p>
-                <p className="text-2xl font-bold mt-1">{baldEaglesWeek}</p>
+                <p className="text-[10px] uppercase tracking-wider text-white/40">{viewedMonthShort} Total</p>
+                <p className="text-2xl font-bold mt-1">{baldEaglesMonth}</p>
               </div>
               <div className="text-center p-3 rounded-lg bg-white/5">
                 <p className="text-[10px] uppercase tracking-wider text-white/40">Month Total</p>
