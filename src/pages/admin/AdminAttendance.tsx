@@ -130,6 +130,7 @@ const AdminAttendance = () => {
   const [daySearch, setDaySearch] = useState("");
   const [addEagleOpen, setAddEagleOpen] = useState(false);
   const [eagleSearch, setEagleSearch] = useState("");
+  const [weatherTooltipDay, setWeatherTooltipDay] = useState<string | null>(null);
 
   const invalidateAttendance = () => {
     queryClient.invalidateQueries({ queryKey: ["calendar-attendance"] });
