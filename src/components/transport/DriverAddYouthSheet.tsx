@@ -14,6 +14,22 @@ interface YouthProfile {
   pickup_zone: string;
 }
 
+interface RegistrationResult {
+  id: string;
+  child_first_name: string;
+  child_last_name: string;
+  child_headshot_url: string | null;
+  child_primary_address: string | null;
+  child_date_of_birth: string | null;
+  parent_first_name: string;
+  parent_last_name: string;
+  parent_phone: string;
+}
+
+type SearchResult =
+  | { source: "profile"; data: YouthProfile }
+  | { source: "registration"; data: RegistrationResult };
+
 interface DriverAddYouthSheetProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -24,7 +40,7 @@ interface DriverAddYouthSheetProps {
 export default function DriverAddYouthSheet({ open, onOpenChange, routeName, onYouthAdded }: DriverAddYouthSheetProps) {
   const [step, setStep] = useState<"search" | "form">("search");
   const [searchQuery, setSearchQuery] = useState("");
-  const [results, setResults] = useState<YouthProfile[]>([]);
+  const [results, setResults] = useState<SearchResult[]>([]);
   const [searching, setSearching] = useState(false);
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
@@ -38,7 +54,7 @@ export default function DriverAddYouthSheet({ open, onOpenChange, routeName, onY
 
   const resolveZone = (): string => {
     if (routeName === "Woodbine" || routeName === "Wildwood") return routeName;
-    return "Woodbine"; // default for Both/Overflow
+    return "Woodbine";
   };
 
   const reset = () => {
@@ -55,6 +71,12 @@ export default function DriverAddYouthSheet({ open, onOpenChange, routeName, onY
     onOpenChange(v);
   };
 
+  const getPhotoUrl = (url: string | null) => {
+    if (!url) return null;
+    if (url.startsWith("http")) return url;
+    return `${supabaseUrl}/storage/v1/object/public/registration-signatures/${url}`;
+  };
+
   const handleSearch = (query: string) => {
     setSearchQuery(query);
     clearTimeout(debounceRef.current);
@@ -62,28 +84,65 @@ export default function DriverAddYouthSheet({ open, onOpenChange, routeName, onY
     setSearching(true);
     debounceRef.current = setTimeout(async () => {
       try {
-        const res = await fetch(`${supabaseUrl}/functions/v1/get-run-youth`, {
+        const res = await fetch(`${supabaseUrl}/functions/v1/search-transport-youth`, {
           method: "POST",
           headers: { "Content-Type": "application/json", apikey: anonKey, Authorization: `Bearer ${anonKey}` },
-          body: JSON.stringify({ route_name: "Both" }),
+          body: JSON.stringify({ query: query.trim() }),
         });
         if (res.ok) {
           const data = await res.json();
-          const q = query.trim().toLowerCase();
-          const filtered = (data.youth || []).filter((y: YouthProfile) =>
-            y.first_name.toLowerCase().includes(q) || y.last_name.toLowerCase().includes(q)
-          );
-          setResults(filtered.slice(0, 10));
+          const combined: SearchResult[] = [
+            ...(data.profiles || []).map((p: YouthProfile) => ({ source: "profile" as const, data: p })),
+            ...(data.registrations || []).map((r: RegistrationResult) => ({ source: "registration" as const, data: r })),
+          ];
+          setResults(combined.slice(0, 15));
         }
       } catch { /* ignore */ }
       setSearching(false);
     }, 300);
   };
 
-  const selectExisting = (y: YouthProfile) => {
+  const selectProfile = (y: YouthProfile) => {
     onYouthAdded(y);
     toast({ title: `${y.first_name} ${y.last_name} added` });
     handleOpenChange(false);
+  };
+
+  const selectRegistration = async (r: RegistrationResult) => {
+    setSaving(true);
+    try {
+      const zone = resolveZone();
+      const res = await fetch(`${supabaseUrl}/functions/v1/add-transport-youth`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", apikey: anonKey, Authorization: `Bearer ${anonKey}` },
+        body: JSON.stringify({
+          first_name: r.child_first_name,
+          last_name: r.child_last_name,
+          pickup_zone: zone,
+          photo_url: r.child_headshot_url || null,
+          address: r.child_primary_address || null,
+          emergency_contact_name: `${r.parent_first_name} ${r.parent_last_name}`.trim(),
+          emergency_contact_phone: r.parent_phone || null,
+          date_of_birth: r.child_date_of_birth || null,
+        }),
+      });
+      if (!res.ok) throw new Error("Failed");
+      const data = await res.json();
+      const newYouth: YouthProfile = {
+        id: data.id,
+        first_name: r.child_first_name,
+        last_name: r.child_last_name,
+        photo_url: r.child_headshot_url,
+        pickup_zone: zone,
+      };
+      onYouthAdded(newYouth);
+      toast({ title: `${newYouth.first_name} ${newYouth.last_name} added from registration` });
+      handleOpenChange(false);
+    } catch {
+      toast({ title: "Failed to add youth", variant: "destructive" });
+    } finally {
+      setSaving(false);
+    }
   };
 
   const handleSaveNew = async () => {
@@ -94,7 +153,6 @@ export default function DriverAddYouthSheet({ open, onOpenChange, routeName, onY
     setSaving(true);
     try {
       let photo_url: string | null = null;
-
       if (photoFile) {
         const { createClient } = await import("@supabase/supabase-js");
         const supabase = createClient(supabaseUrl, anonKey);
@@ -106,32 +164,15 @@ export default function DriverAddYouthSheet({ open, onOpenChange, routeName, onY
           photo_url = urlData.publicUrl;
         }
       }
-
       const zone = resolveZone();
-
-      // Use edge function to insert (anon can't insert directly due to RLS)
       const res = await fetch(`${supabaseUrl}/functions/v1/add-transport-youth`, {
         method: "POST",
         headers: { "Content-Type": "application/json", apikey: anonKey, Authorization: `Bearer ${anonKey}` },
-        body: JSON.stringify({
-          first_name: firstName.trim(),
-          last_name: lastName.trim(),
-          pickup_zone: zone,
-          photo_url,
-        }),
+        body: JSON.stringify({ first_name: firstName.trim(), last_name: lastName.trim(), pickup_zone: zone, photo_url }),
       });
-
       if (!res.ok) throw new Error("Failed to save");
       const data = await res.json();
-
-      const newYouth: YouthProfile = {
-        id: data.id,
-        first_name: firstName.trim(),
-        last_name: lastName.trim(),
-        photo_url,
-        pickup_zone: zone,
-      };
-
+      const newYouth: YouthProfile = { id: data.id, first_name: firstName.trim(), last_name: lastName.trim(), photo_url, pickup_zone: zone };
       onYouthAdded(newYouth);
       toast({ title: `${newYouth.first_name} ${newYouth.last_name} added` });
       handleOpenChange(false);
@@ -141,6 +182,15 @@ export default function DriverAddYouthSheet({ open, onOpenChange, routeName, onY
       setSaving(false);
     }
   };
+
+  const getResultName = (r: SearchResult) =>
+    r.source === "profile" ? `${r.data.first_name} ${r.data.last_name}` : `${(r.data as RegistrationResult).child_first_name} ${(r.data as RegistrationResult).child_last_name}`;
+
+  const getResultInitials = (r: SearchResult) =>
+    r.source === "profile" ? `${r.data.first_name[0]}${r.data.last_name[0]}` : `${(r.data as RegistrationResult).child_first_name[0]}${(r.data as RegistrationResult).child_last_name[0]}`;
+
+  const getResultPhoto = (r: SearchResult) =>
+    r.source === "profile" ? getPhotoUrl((r.data as YouthProfile).photo_url) : getPhotoUrl((r.data as RegistrationResult).child_headshot_url);
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
@@ -172,22 +222,37 @@ export default function DriverAddYouthSheet({ open, onOpenChange, routeName, onY
 
             {results.length > 0 && (
               <ul className="space-y-1 max-h-52 overflow-y-auto">
-                {results.map((r) => (
-                  <li
-                    key={r.id}
-                    onClick={() => selectExisting(r)}
-                    className="flex items-center gap-3 p-2.5 rounded-lg bg-white/5 hover:bg-white/10 cursor-pointer transition-colors"
-                  >
-                    <div className="w-8 h-8 rounded-full bg-white/10 overflow-hidden shrink-0 flex items-center justify-center">
-                      {r.photo_url ? (
-                        <img src={r.photo_url.startsWith("http") ? r.photo_url : `${supabaseUrl}/storage/v1/object/public/registration-signatures/${r.photo_url}`} alt="" className="w-full h-full object-cover" onError={(e) => { e.currentTarget.style.display = "none"; }} />
-                      ) : (
-                        <span className="text-white/30 text-xs font-bold">{r.first_name[0]}{r.last_name[0]}</span>
-                      )}
-                    </div>
-                    <p className="text-white text-sm font-medium truncate">{r.first_name} {r.last_name}</p>
-                  </li>
-                ))}
+                {results.map((r, idx) => {
+                  const name = getResultName(r);
+                  const photo = getResultPhoto(r);
+                  const initials = getResultInitials(r);
+                  const isReg = r.source === "registration";
+
+                  return (
+                    <li
+                      key={`${r.source}-${r.data.id}-${idx}`}
+                      onClick={() => {
+                        if (r.source === "profile") selectProfile(r.data as YouthProfile);
+                        else selectRegistration(r.data as RegistrationResult);
+                      }}
+                      className="flex items-center gap-3 p-2.5 rounded-lg bg-white/5 hover:bg-white/10 cursor-pointer transition-colors"
+                    >
+                      <div className="w-8 h-8 rounded-full bg-white/10 overflow-hidden shrink-0 flex items-center justify-center">
+                        {photo ? (
+                          <img src={photo} alt="" className="w-full h-full object-cover" onError={(e) => { e.currentTarget.style.display = "none"; }} />
+                        ) : (
+                          <span className="text-white/30 text-xs font-bold">{initials}</span>
+                        )}
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-white text-sm font-medium truncate">{name}</p>
+                        {isReg && (
+                          <p className="text-white/30 text-[10px]">From registration</p>
+                        )}
+                      </div>
+                    </li>
+                  );
+                })}
               </ul>
             )}
 
@@ -198,7 +263,7 @@ export default function DriverAddYouthSheet({ open, onOpenChange, routeName, onY
             <Button
               variant="outline"
               onClick={() => setStep("form")}
-              className="w-full border-white/10 text-white/70 hover:text-white hover:bg-white/5 gap-2"
+              className="w-full border-white/20 bg-transparent text-white/70 hover:text-white hover:bg-white/10 gap-2"
             >
               <UserPlus className="w-4 h-4" /> Add New Youth
             </Button>

@@ -11,7 +11,8 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const { first_name, last_name, pickup_zone, photo_url } = await req.json();
+    const body = await req.json();
+    const { first_name, last_name, pickup_zone, photo_url, address, emergency_contact_name, emergency_contact_phone, date_of_birth } = body;
 
     if (!first_name || !last_name || !pickup_zone) {
       return new Response(JSON.stringify({ error: "Missing required fields" }), {
@@ -33,15 +34,22 @@ Deno.serve(async (req) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
     );
 
+    const record: Record<string, unknown> = {
+      first_name: first_name.trim(),
+      last_name: last_name.trim(),
+      pickup_zone,
+      photo_url: photo_url || null,
+      status: "active",
+    };
+
+    if (address) record.address = address;
+    if (emergency_contact_name) record.emergency_contact_name = emergency_contact_name;
+    if (emergency_contact_phone) record.emergency_contact_phone = emergency_contact_phone;
+    if (date_of_birth) record.date_of_birth = date_of_birth;
+
     const { data, error } = await supabase
       .from("youth_profiles")
-      .insert({
-        first_name: first_name.trim(),
-        last_name: last_name.trim(),
-        pickup_zone,
-        photo_url: photo_url || null,
-        status: "active",
-      })
+      .insert(record)
       .select("id")
       .single();
 
@@ -51,7 +59,7 @@ Deno.serve(async (req) => {
       status: 200,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
-  } catch (e) {
+  } catch {
     return new Response(JSON.stringify({ error: "Failed to add youth" }), {
       status: 500,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
