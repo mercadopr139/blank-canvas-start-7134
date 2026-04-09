@@ -633,8 +633,62 @@ const AdminAttendance = () => {
       else if (mtdAvg < prevAvg) insights.push(`${viewedMonthShort}'s average attendance is lower than ${prevMonthName}.`);
     }
 
+    /* ── Weather-based insights ── */
+    const weatherEntries = Object.values(weatherMap) as WeatherDay[];
+    const practiceDailyCountsMap: Record<string, number> = {};
+    practiceAttendance.forEach((a) => { practiceDailyCountsMap[a.check_in_date] = (practiceDailyCountsMap[a.check_in_date] || 0) + 1; });
+
+    if (weatherEntries.length >= 3) {
+      // Rainy vs sunny
+      const rainyDays = weatherEntries.filter((w) => isRainyCode(w.condition_code) && practiceDailyCountsMap[w.date] !== undefined);
+      const sunnyDays = weatherEntries.filter((w) => isSunnyCode(w.condition_code) && practiceDailyCountsMap[w.date] !== undefined);
+
+      if (rainyDays.length >= 2 && sunnyDays.length >= 2) {
+        const rainyAvg = Math.round(rainyDays.reduce((s, w) => s + (practiceDailyCountsMap[w.date] || 0), 0) / rainyDays.length);
+        const sunnyAvg = Math.round(sunnyDays.reduce((s, w) => s + (practiceDailyCountsMap[w.date] || 0), 0) / sunnyDays.length);
+        if (sunnyAvg > 0 && rainyAvg < sunnyAvg) {
+          const diff = Math.round(((sunnyAvg - rainyAvg) / sunnyAvg) * 100);
+          insights.push(`🌧️ Rainy days average ${diff}% lower attendance than sunny days this month.`);
+        }
+      }
+
+      // Cold vs warm
+      const withTemp = weatherEntries.filter((w) => w.temp_high !== null && practiceDailyCountsMap[w.date] !== undefined);
+      if (withTemp.length >= 4) {
+        const temps = withTemp.map((w) => w.temp_high!).sort((a, b) => a - b);
+        const coldThresh = temps[Math.floor(temps.length * 0.25)];
+        const coldDays = withTemp.filter((w) => w.temp_high! <= coldThresh);
+        const warmDays = withTemp.filter((w) => w.temp_high! > coldThresh);
+        if (coldDays.length >= 2 && warmDays.length >= 2) {
+          const coldAvg = Math.round(coldDays.reduce((s, w) => s + (practiceDailyCountsMap[w.date] || 0), 0) / coldDays.length);
+          const warmAvg = Math.round(warmDays.reduce((s, w) => s + (practiceDailyCountsMap[w.date] || 0), 0) / warmDays.length);
+          insights.push(`🌡️ Coldest days (below ${Math.round(coldThresh)}°F) had avg attendance of ${coldAvg} vs ${warmAvg} on warmer days.`);
+        }
+      }
+
+      // Best weather condition
+      const conditionGroups: Record<string, number[]> = {};
+      weatherEntries.forEach((w) => {
+        if (practiceDailyCountsMap[w.date] !== undefined && w.condition) {
+          if (!conditionGroups[w.condition]) conditionGroups[w.condition] = [];
+          conditionGroups[w.condition].push(practiceDailyCountsMap[w.date] || 0);
+        }
+      });
+      let bestCondition = "";
+      let bestAvg = 0;
+      Object.entries(conditionGroups).forEach(([cond, counts]) => {
+        if (counts.length >= 2) {
+          const avg = Math.round(counts.reduce((a, b) => a + b, 0) / counts.length);
+          if (avg > bestAvg) { bestAvg = avg; bestCondition = cond; }
+        }
+      });
+      if (bestCondition) {
+        insights.push(`☀️ Highest attendance this month occurred on ${bestCondition} days (avg ${bestAvg}).`);
+      }
+    }
+
     return insights;
-  }, [weeklyAvgData, practiceAttendance, regMap, topDistrictToday, totalPresentToday, avgArrivalToday, prevPracticeAttendance, mtdAvg, isCurrentMonth, viewedMonthShort, calendarMonth]);
+  }, [weeklyAvgData, practiceAttendance, regMap, topDistrictToday, totalPresentToday, avgArrivalToday, prevPracticeAttendance, mtdAvg, isCurrentMonth, viewedMonthShort, calendarMonth, weatherMap]);
 
   /* ───── BALD EAGLES ───── */
   const baldEagles = registrations.filter((r) => r.is_bald_eagle);
