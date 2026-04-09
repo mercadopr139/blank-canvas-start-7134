@@ -129,6 +129,8 @@ export default function TransportDashboard() {
         return "bg-[#2563EB]/20 border-[#2563EB] text-white";
       case "Both":
         return "bg-purple-600/20 border-purple-500 text-white";
+      case "Overflow":
+        return "bg-orange-600/20 border-orange-500 text-white";
       default:
         return "bg-white/10 border-white/40 text-white";
     }
@@ -139,6 +141,7 @@ export default function TransportDashboard() {
       case "Woodbine": return "text-[#DC2626]";
       case "Wildwood": return "text-[#2563EB]";
       case "Both": return "text-purple-400";
+      case "Overflow": return "text-orange-400";
       default: return "text-white/50";
     }
   };
@@ -233,6 +236,25 @@ export default function TransportDashboard() {
             <span className="text-base font-bold">Both Zones</span>
             <span className={`text-xs font-medium ${selectedRoute?.name === "Both" ? "text-white/70" : "text-white/40"}`}>
               {getYouthCount("Both")} youth
+            </span>
+          </button>
+        )}
+        {/* Overflow option */}
+        {routes.find((r) => r.name === "Overflow") && (
+          <button
+            onClick={() => {
+              const overflow = routes.find((r) => r.name === "Overflow")!;
+              setSelectedRoute(selectedRoute?.id === overflow.id ? null : overflow);
+            }}
+            className={`w-full mt-2 p-3 rounded-xl border transition-all active:scale-[0.97] touch-manipulation flex items-center justify-center gap-3 text-sm ${getZoneColor(
+              "Overflow",
+              selectedRoute?.name === "Overflow"
+            )}`}
+          >
+            <MapPin className={`w-5 h-5 ${selectedRoute?.name === "Overflow" ? "text-orange-400" : "text-white/40"}`} />
+            <span className="font-bold">Overflow</span>
+            <span className={`text-xs ${selectedRoute?.name === "Overflow" ? "text-white/70" : "text-white/40"}`}>
+              $25/run
             </span>
           </button>
         )}
