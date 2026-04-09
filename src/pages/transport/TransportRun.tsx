@@ -534,7 +534,18 @@ export default function TransportRun() {
             </div>
           </div>
         </DialogContent>
-      </Dialog>
+      {/* Add Youth Sheet */}
+      <DriverAddYouthSheet
+        open={addYouthOpen}
+        onOpenChange={setAddYouthOpen}
+        routeName={routeName}
+        onYouthAdded={(newYouth) => {
+          setYouth((prev) => {
+            if (prev.some((y) => y.id === newYouth.id)) return prev;
+            return [...prev, newYouth];
+          });
+        }}
+      />
     </div>
   );
 }
