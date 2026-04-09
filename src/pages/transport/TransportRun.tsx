@@ -209,9 +209,6 @@ export default function TransportRun() {
     }
   };
 
-  const markedCount = runType === "pickup" ? pickedUpCount : droppedOffCount;
-  const canSubmit = markedCount > 0;
-
   const getPhotoUrl = (url: string | null) => {
     if (!url) return null;
     if (url.startsWith("http")) return url;
