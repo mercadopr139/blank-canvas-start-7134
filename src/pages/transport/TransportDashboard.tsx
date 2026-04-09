@@ -220,6 +220,7 @@ export default function TransportDashboard() {
               </button>
             );
           })}
+        </div>
       </div>
 
       {/* Run Type Toggle */}
