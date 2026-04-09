@@ -470,10 +470,54 @@ function HistoryCalendarTab() {
                   <div className="flex items-center justify-between">
                     <div className="space-y-0.5">
                       <div className="flex items-center gap-2 flex-wrap"><span className="text-white font-medium text-sm">{r.route?.name}</span><span className="text-white/30">•</span><span className="text-white/50 text-sm capitalize">{r.run_type}</span></div>
-                      <div className="flex items-center gap-3 text-xs text-white/30"><span>{format(new Date(r.started_at), "h:mm a")}</span><span>{youthCount} youth</span><span className="text-green-400 font-medium">${pay}</span></div>
+                      <div className="flex items-center gap-3 text-xs text-white/30">
+                        <span>{format(new Date(r.started_at), "h:mm a")}</span>
+                        <button
+                          onClick={() => toggleRoster(r.id)}
+                          className="flex items-center gap-1 text-blue-400 hover:text-blue-300 transition-colors font-medium"
+                        >
+                          <Users className="w-3 h-3" />
+                          {youthCount} youth
+                          {expandedRosters.has(r.id) ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+                        </button>
+                        <span className="text-green-400 font-medium">${pay}</span>
+                      </div>
                     </div>
                     <Badge className={status === "approved" ? "bg-green-500/20 text-green-400 border-green-500/30" : status === "disputed" ? "bg-red-500/20 text-red-400 border-red-500/30" : "bg-yellow-500/20 text-yellow-400 border-yellow-500/30"}>{status}</Badge>
                   </div>
+
+                  {/* Youth Roster */}
+                  {expandedRosters.has(r.id) && (
+                    <div className="bg-black/20 border border-white/5 rounded-lg p-2 space-y-1.5">
+                      {!rosterData[r.id] ? (
+                        <p className="text-white/30 text-xs text-center py-2">Loading...</p>
+                      ) : rosterData[r.id].length === 0 ? (
+                        <p className="text-white/30 text-xs text-center py-2">No youth recorded for this trip</p>
+                      ) : (
+                        rosterData[r.id].map((y) => {
+                          const photoUrl = y.photo_url ? (y.photo_url.startsWith("http") ? y.photo_url : `${import.meta.env.VITE_SUPABASE_URL}/storage/v1/object/public/registration-signatures/${y.photo_url}`) : null;
+                          const statusLabel = y.status === "picked_up" ? "Pick-Up" : y.status === "dropped_off" ? "Drop-Off" : y.status === "both" ? "Both" : y.status;
+                          const statusColor = y.status === "picked_up" ? "text-red-400" : y.status === "dropped_off" ? "text-green-400" : y.status === "both" ? "text-blue-400" : "text-white/40";
+                          return (
+                            <div key={y.youth_id} className="flex items-center gap-2.5 py-1">
+                              <div className="w-7 h-7 rounded-full bg-white/10 overflow-hidden shrink-0 flex items-center justify-center">
+                                {photoUrl ? (
+                                  <img src={photoUrl} alt="" className="w-full h-full object-cover" onError={(e) => { e.currentTarget.style.display = "none"; }} />
+                                ) : (
+                                  <span className="text-white/30 text-[9px] font-bold">{y.first_name[0]}{y.last_name[0]}</span>
+                                )}
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <p className="text-white text-xs font-medium truncate">{y.first_name} {y.last_name}</p>
+                                <p className="text-white/30 text-[10px]">{y.pickup_zone}</p>
+                              </div>
+                              <span className={`text-[10px] font-semibold ${statusColor}`}>{statusLabel}</span>
+                            </div>
+                          );
+                        })
+                      )}
+                    </div>
+                  )}
                   {status === "disputed" && approval?.notes && <p className="text-red-400/70 text-xs italic">Note: {approval.notes}</p>}
                   {status !== "approved" && (
                     <input placeholder="Dispute note..." value={noteInputs[r.id] || ""} onChange={(e) => setNoteInputs((prev) => ({ ...prev, [r.id]: e.target.value }))} className="w-full bg-white/5 border border-white/10 rounded px-2 py-1 text-xs text-white placeholder:text-white/30" />
