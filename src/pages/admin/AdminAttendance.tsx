@@ -918,7 +918,7 @@ const AdminAttendance = () => {
     /* ── Excursion insights ── */
     if (excursionsCalMonth.length > 0) {
       const totalYouthExc = excursionsCalMonth.reduce((s, e) => s + e.youth_count, 0);
-      insights.push(`🟣 ${excursionsCalMonth.length} excursion${excursionsCalMonth.length > 1 ? "s" : ""} this month reached ${totalYouthExc} youth total.`);
+      insights.push(`🟣 ${excursionsCalMonth.length} Excursion${excursionsCalMonth.length > 1 ? "s" : ""} this month reached ${totalYouthExc} youth total.`);
     }
 
     return insights;
