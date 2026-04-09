@@ -1714,7 +1714,7 @@ export type Database = {
         | "other_service"
       receipt_status: "Pending" | "Sent" | "Not Needed"
       revenue_type: "Donation" | "Fundraising" | "Fee for Service" | "Re-Grant"
-      route_name: "Woodbine" | "Wildwood" | "Both"
+      route_name: "Woodbine" | "Wildwood" | "Both" | "Overflow"
       run_status: "in_progress" | "completed"
       run_type: "pickup" | "dropoff"
       school_district:
@@ -1945,7 +1945,7 @@ export const Constants = {
       ],
       receipt_status: ["Pending", "Sent", "Not Needed"],
       revenue_type: ["Donation", "Fundraising", "Fee for Service", "Re-Grant"],
-      route_name: ["Woodbine", "Wildwood", "Both"],
+      route_name: ["Woodbine", "Wildwood", "Both", "Overflow"],
       run_status: ["in_progress", "completed"],
       run_type: ["pickup", "dropoff"],
       school_district: [
