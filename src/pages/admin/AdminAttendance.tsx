@@ -859,7 +859,7 @@ const AdminAttendance = () => {
           <Card className="bg-white/5 border-white/10 text-white mb-4">
             <CardHeader className="pb-2">
               <CardTitle className="text-sm font-medium text-white/60 flex items-center gap-2">
-                <TrendingUp className="w-4 h-4" /> Daily Attendance Trend — {format(now, "MMMM yyyy")}
+                <TrendingUp className="w-4 h-4" /> Daily Attendance Trend — {format(calendarMonth, "MMMM yyyy")}
               </CardTitle>
             </CardHeader>
             <CardContent>
