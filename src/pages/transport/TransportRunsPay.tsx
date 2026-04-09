@@ -7,7 +7,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { useToast } from "@/hooks/use-toast";
 import {
   AlertTriangle, CheckCircle, XCircle,
-  Download, ChevronLeft, ChevronRight, DollarSign, Trash2, Pencil, ChevronDown, ChevronUp, User,
+  Download, ChevronLeft, ChevronRight, DollarSign, Trash2, Pencil, ChevronDown, ChevronUp, User, Users,
 } from "lucide-react";
 import {
   format, startOfMonth, endOfMonth, eachDayOfInterval, getDay,
@@ -79,6 +79,8 @@ function HistoryCalendarTab() {
   const [editForm, setEditForm] = useState<{ route: string; runType: string; date: string; time: string }>({ route: "", runType: "", date: "", time: "" });
   const [routes, setRoutes] = useState<{ id: string; name: string }[]>([]);
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
+  const [expandedRosters, setExpandedRosters] = useState<Set<string>>(new Set());
+  const [rosterData, setRosterData] = useState<Record<string, { youth_id: string; status: string; first_name: string; last_name: string; photo_url: string | null; pickup_zone: string }[]>>({});
 
   // Pay period runs (for Box 4 and Driver Pay Panel)
   const currentPayPeriod = useMemo(() => getCurrentPayPeriod(), []);
@@ -227,6 +229,33 @@ function HistoryCalendarTab() {
   };
 
   const handleMarkPaid = (driverId: string) => { setPaidDrivers((prev) => new Set([...prev, driverId])); toast({ title: "Marked as paid" }); };
+
+  const toggleRoster = async (runId: string) => {
+    setExpandedRosters((prev) => {
+      const next = new Set(prev);
+      if (next.has(runId)) { next.delete(runId); return next; }
+      next.add(runId);
+      return next;
+    });
+    if (rosterData[runId]) return;
+    const { data } = await supabase
+      .from("transport_attendance")
+      .select("youth_id, status, youth:youth_profiles(first_name, last_name, photo_url, pickup_zone)")
+      .eq("run_id", runId);
+    if (data) {
+      setRosterData((prev) => ({
+        ...prev,
+        [runId]: data.map((d: any) => ({
+          youth_id: d.youth_id,
+          status: d.status,
+          first_name: d.youth?.first_name || "Unknown",
+          last_name: d.youth?.last_name || "",
+          photo_url: d.youth?.photo_url || null,
+          pickup_zone: d.youth?.pickup_zone || "",
+        })),
+      }));
+    }
+  };
 
   // Driver history modal
   const openDriverHistory = async (driverId: string, driverName: string) => {
@@ -377,7 +406,7 @@ function HistoryCalendarTab() {
       )}
 
       {/* Trip Detail Dialog (click driver on calendar date) */}
-      <Dialog open={panelOpen} onOpenChange={(open) => { setPanelOpen(open); if (!open) { setEditingRunId(null); setDeleteConfirmId(null); } }}>
+      <Dialog open={panelOpen} onOpenChange={(open) => { setPanelOpen(open); if (!open) { setEditingRunId(null); setDeleteConfirmId(null); setExpandedRosters(new Set()); } }}>
         <DialogContent className="bg-[#111827] border-white/10 text-white max-w-md max-h-[85vh] overflow-y-auto">
           <DialogHeader><DialogTitle className="text-white">{selectedDriver?.name} — {selectedDate ? format(new Date(selectedDate + "T12:00:00"), "MMM d, yyyy") : ""}</DialogTitle></DialogHeader>
           <div className="space-y-3 mt-2">
@@ -441,10 +470,54 @@ function HistoryCalendarTab() {
                   <div className="flex items-center justify-between">
                     <div className="space-y-0.5">
                       <div className="flex items-center gap-2 flex-wrap"><span className="text-white font-medium text-sm">{r.route?.name}</span><span className="text-white/30">•</span><span className="text-white/50 text-sm capitalize">{r.run_type}</span></div>
-                      <div className="flex items-center gap-3 text-xs text-white/30"><span>{format(new Date(r.started_at), "h:mm a")}</span><span>{youthCount} youth</span><span className="text-green-400 font-medium">${pay}</span></div>
+                      <div className="flex items-center gap-3 text-xs text-white/30">
+                        <span>{format(new Date(r.started_at), "h:mm a")}</span>
+                        <button
+                          onClick={() => toggleRoster(r.id)}
+                          className="flex items-center gap-1 text-blue-400 hover:text-blue-300 transition-colors font-medium"
+                        >
+                          <Users className="w-3 h-3" />
+                          {youthCount} youth
+                          {expandedRosters.has(r.id) ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+                        </button>
+                        <span className="text-green-400 font-medium">${pay}</span>
+                      </div>
                     </div>
                     <Badge className={status === "approved" ? "bg-green-500/20 text-green-400 border-green-500/30" : status === "disputed" ? "bg-red-500/20 text-red-400 border-red-500/30" : "bg-yellow-500/20 text-yellow-400 border-yellow-500/30"}>{status}</Badge>
                   </div>
+
+                  {/* Youth Roster */}
+                  {expandedRosters.has(r.id) && (
+                    <div className="bg-black/20 border border-white/5 rounded-lg p-2 space-y-1.5">
+                      {!rosterData[r.id] ? (
+                        <p className="text-white/30 text-xs text-center py-2">Loading...</p>
+                      ) : rosterData[r.id].length === 0 ? (
+                        <p className="text-white/30 text-xs text-center py-2">No youth recorded for this trip</p>
+                      ) : (
+                        rosterData[r.id].map((y) => {
+                          const photoUrl = y.photo_url ? (y.photo_url.startsWith("http") ? y.photo_url : `${import.meta.env.VITE_SUPABASE_URL}/storage/v1/object/public/registration-signatures/${y.photo_url}`) : null;
+                          const statusLabel = y.status === "picked_up" ? "Pick-Up" : y.status === "dropped_off" ? "Drop-Off" : y.status === "both" ? "Both" : y.status;
+                          const statusColor = y.status === "picked_up" ? "text-red-400" : y.status === "dropped_off" ? "text-green-400" : y.status === "both" ? "text-blue-400" : "text-white/40";
+                          return (
+                            <div key={y.youth_id} className="flex items-center gap-2.5 py-1">
+                              <div className="w-7 h-7 rounded-full bg-white/10 overflow-hidden shrink-0 flex items-center justify-center">
+                                {photoUrl ? (
+                                  <img src={photoUrl} alt="" className="w-full h-full object-cover" onError={(e) => { e.currentTarget.style.display = "none"; }} />
+                                ) : (
+                                  <span className="text-white/30 text-[9px] font-bold">{y.first_name[0]}{y.last_name[0]}</span>
+                                )}
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <p className="text-white text-xs font-medium truncate">{y.first_name} {y.last_name}</p>
+                                <p className="text-white/30 text-[10px]">{y.pickup_zone}</p>
+                              </div>
+                              <span className={`text-[10px] font-semibold ${statusColor}`}>{statusLabel}</span>
+                            </div>
+                          );
+                        })
+                      )}
+                    </div>
+                  )}
                   {status === "disputed" && approval?.notes && <p className="text-red-400/70 text-xs italic">Note: {approval.notes}</p>}
                   {status !== "approved" && (
                     <input placeholder="Dispute note..." value={noteInputs[r.id] || ""} onChange={(e) => setNoteInputs((prev) => ({ ...prev, [r.id]: e.target.value }))} className="w-full bg-white/5 border border-white/10 rounded px-2 py-1 text-xs text-white placeholder:text-white/30" />
