@@ -214,11 +214,7 @@ const RookieOrientation = () => {
               <p className="text-lg md:text-xl font-bold text-white mb-8">
                 100% Communication is Required!
               </p>
-              <a
-              href="https://forms.monday.com/forms/583578aa7eb854fe388d49e84780eee4?r=use1"
-              target="_blank"
-              rel="noopener noreferrer">
-
+              <a href="/call-out">
                 <Button
                 className="text-white font-bold px-8 py-3 text-lg"
                 style={{ backgroundColor: "#bf0f3e" }}>

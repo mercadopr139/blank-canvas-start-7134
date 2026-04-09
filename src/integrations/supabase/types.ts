@@ -106,6 +106,39 @@ export type Database = {
         }
         Relationships: []
       }
+      callouts: {
+        Row: {
+          created_at: string
+          date: string
+          first_name: string
+          id: string
+          is_acceptable: boolean | null
+          is_bald_eagle: boolean
+          last_name: string
+          reason: string
+        }
+        Insert: {
+          created_at?: string
+          date?: string
+          first_name: string
+          id?: string
+          is_acceptable?: boolean | null
+          is_bald_eagle?: boolean
+          last_name: string
+          reason: string
+        }
+        Update: {
+          created_at?: string
+          date?: string
+          first_name?: string
+          id?: string
+          is_acceptable?: boolean | null
+          is_bald_eagle?: boolean
+          last_name?: string
+          reason?: string
+        }
+        Relationships: []
+      }
       client_services: {
         Row: {
           client_id: string

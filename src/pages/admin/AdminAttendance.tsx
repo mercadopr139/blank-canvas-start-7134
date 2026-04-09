@@ -152,6 +152,8 @@ const AdminAttendance = () => {
   const [deleteExcursionTarget, setDeleteExcursionTarget] = useState<Excursion | null>(null);
   const [weatherTooltipDay, setWeatherTooltipDay] = useState<string | null>(null);
   const [contextMenuDay, setContextMenuDay] = useState<{ dateStr: string; x: number; y: number } | null>(null);
+  const [noShowAlertDismissed, setNoShowAlertDismissed] = useState(false);
+  const _noShowAlertOpen = false; // reserved for future expansion
   const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Close context menu on outside click
@@ -936,6 +938,47 @@ const AdminAttendance = () => {
 
   const alerts: (Registration & { prevWeekCount: number; lastDate: string })[] = [];
 
+  /* ───── BALD EAGLE NO-SHOW ALERT ───── */
+  const { data: todayCallouts = [] } = useQuery({
+    queryKey: ["today-callouts", todayStr],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("callouts" as any)
+        .select("first_name, last_name")
+        .eq("date", todayStr);
+      return (data || []) as unknown as { first_name: string; last_name: string }[];
+    },
+  });
+
+  const todayIsPracticeForAlert = useMemo(() => {
+    const pdEntry = calPracticeDayMap[todayStr];
+    if (pdEntry !== undefined) return pdEntry;
+    const d = new Date(todayStr + "T12:00:00");
+    return !isWeekend(d);
+  }, [calPracticeDayMap, todayStr]);
+
+  const todayIsExcursionForAlert = useMemo(() => !!excursionDayMap[todayStr], [excursionDayMap, todayStr]);
+
+  const baldEagleNoShows = useMemo(() => {
+    if (!todayIsPracticeForAlert || todayIsExcursionForAlert) return [];
+    const estNow = new Date();
+    const estHour = parseInt(estNow.toLocaleString("en-US", { timeZone: "America/New_York", hour: "numeric", hour12: false }));
+    if (estHour < 20) return [];
+
+    const todayCheckedInIds = new Set(
+      calendarAttendance.filter((a) => a.check_in_date === todayStr).map((a) => a.registration_id)
+    );
+    const calledOutNames = new Set(
+      todayCallouts.map((c) => `${c.first_name.toLowerCase()}|${c.last_name.toLowerCase()}`)
+    );
+
+    return activeBaldEagles.filter((r) => {
+      if (todayCheckedInIds.has(r.id)) return false;
+      if (calledOutNames.has(`${r.child_first_name.toLowerCase()}|${r.child_last_name.toLowerCase()}`)) return false;
+      return true;
+    });
+  }, [activeBaldEagles, calendarAttendance, todayCallouts, todayStr, todayIsPracticeForAlert, todayIsExcursionForAlert]);
+
   /* ───── CALENDAR ───── */
   const calendarRegIds = useMemo(() => {
     let filtered = registrations;
@@ -1051,6 +1094,37 @@ const AdminAttendance = () => {
 
   return (
     <div className="space-y-8">
+
+      {/* ═══════════ BALD EAGLE NO-SHOW ALERT ═══════════ */}
+      {baldEagleNoShows.length > 0 && !noShowAlertDismissed && (
+        <div className="bg-red-500/10 border border-red-500/30 rounded-xl p-4">
+          <div className="flex items-center justify-between mb-2">
+            <h3 className="text-red-400 font-bold flex items-center gap-2 text-sm">
+              <AlertTriangle className="w-4 h-4" />
+              🦅 Bald Eagle No-Show Alert
+            </h3>
+            <Button
+              size="sm"
+              variant="ghost"
+              className="text-red-400/60 hover:text-red-400 h-6 px-2 text-xs"
+              onClick={() => setNoShowAlertDismissed(true)}
+            >
+              Dismiss
+            </Button>
+          </div>
+          <p className="text-white/60 text-xs mb-3">
+            The following Bald Eagles did not sign in and did not call out today:
+          </p>
+          <div className="flex flex-wrap gap-2">
+            {baldEagleNoShows.map((r) => (
+              <Badge key={r.id} className="bg-red-500/20 text-red-300 border-red-500/30 text-xs py-1 px-2.5">
+                <Star className="w-3 h-3 mr-1 text-amber-400" />
+                {r.child_first_name} {r.child_last_name}
+              </Badge>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* ═══════════ ATTENDANCE INSIGHTS ═══════════ */}
       <div>

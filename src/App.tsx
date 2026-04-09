@@ -34,6 +34,7 @@ import AdminAttendanceReports from "./pages/admin/AdminAttendanceReports";
 import CheckIn from "./pages/CheckIn";
 import LilChampsCheckIn from "./pages/LilChampsCheckIn";
 import AdminLilChampsAttendance from "./pages/admin/AdminLilChampsAttendance";
+import AdminCallOuts from "./pages/admin/AdminCallOuts";
 import Register from "./pages/Register";
 import Supporters from "./pages/Supporters";
 import AdminDonations from "./pages/admin/AdminDonations";
@@ -54,6 +55,7 @@ import AdminStaffManagement from "./pages/admin/AdminStaffManagement";
 import InvoiceApproval from "./pages/InvoiceApproval";
 import TransportLogin from "./pages/TransportLogin";
 import TransportAdminLogin from "./pages/transport/TransportAdminLogin";
+import CallOut from "./pages/CallOut";
 import TransportAdminLayout from "./pages/transport/TransportAdminLayout";
 import TransportDrivers from "./pages/transport/TransportDrivers";
 import TransportYouth from "./pages/transport/TransportYouth";
@@ -88,6 +90,7 @@ const App = () => (
             <Route path="/supporters" element={<Supporters />} />
             <Route path="/check-in" element={<CheckIn />} />
             <Route path="/check-in/lil-champs-corner" element={<LilChampsCheckIn />} />
+            <Route path="/call-out" element={<CallOut />} />
             <Route path="/approvals/invoice/:token" element={<InvoiceApproval />} />
             <Route path="/transport" element={<TransportLogin />} />
             <Route path="/transport/dashboard" element={<TransportDashboard />} />
@@ -126,6 +129,7 @@ const App = () => (
               <Route path="attendance-reports" element={<AdminAttendanceReports />} />
               <Route path="form-builder" element={<AdminFormBuilder />} />
               <Route path="lil-champs-attendance" element={<AdminLilChampsAttendance />} />
+              <Route path="callouts" element={<AdminCallOuts />} />
               <Route path="transportation/drivers" element={<TransportDrivers />} />
               <Route path="transportation/youth" element={<TransportYouth />} />
               <Route path="transportation/runs" element={<TransportRunsPay />} />
