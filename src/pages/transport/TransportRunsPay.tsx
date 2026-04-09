@@ -106,7 +106,7 @@ function HistoryCalendarTab() {
     const [runsRes, approvalsRes, attRes, routesRes, ppRunsRes] = await Promise.all([
       supabase.from("runs").select("id, run_type, status, started_at, closed_at, driver:drivers(id, name), route:routes(id, name)").eq("status", "completed").gte("started_at", from).lte("started_at", to).order("started_at", { ascending: false }),
       supabase.from("run_approvals").select("id, run_id, status, notes"),
-      supabase.from("transport_attendance").select("run_id").eq("status", "present").gte("recorded_at", from).lte("recorded_at", to),
+      supabase.from("transport_attendance").select("run_id").gte("recorded_at", from).lte("recorded_at", to),
       supabase.from("routes").select("id, name"),
       supabase.from("runs").select("id, run_type, status, started_at, closed_at, driver:drivers(id, name), route:routes(id, name)").eq("status", "completed").gte("started_at", ppFrom).lte("started_at", ppTo),
     ]);
