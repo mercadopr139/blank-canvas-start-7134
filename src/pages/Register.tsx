@@ -295,6 +295,7 @@ const Register = () => {
         child_school_district: formValues["child_school_district"] as any,
         child_grade_level: formValues["child_grade_level"] && formValues["child_grade_level"] !== "not_applicable" ? parseInt(formValues["child_grade_level"]) : null,
         child_boxing_program: formValues["child_boxing_program"] as any,
+        extended_program: formValues["child_boxing_program"] === "Junior Boxing (Ages 7-10)" ? "Lil Champs Corner" : null,
         adults_in_household: adultsNum,
         siblings_in_household: siblingsNum,
         household_income_range: formValues["household_income_range"] as any,

@@ -357,20 +357,24 @@ const AdminRegistrations = () => {
                 )}
               </TableCell>
               <TableCell>
-                <Select
-                  value={reg.extended_program || "unassigned"}
-                  onValueChange={(v) => updateExtendedProgram(reg.id, v === "unassigned" ? null : v)}
-                >
-                  <SelectTrigger className="h-7 w-[140px] text-xs bg-white/5 border-white/10 text-white/70">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="unassigned"><span className="text-white/30">—</span></SelectItem>
-                    {EXTENDED_PROGRAMS.map((p) => (
-                      <SelectItem key={p} value={p}>{p}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                {reg.child_boxing_program === "Junior Boxing (Ages 7-10)" ? (
+                  <span className="text-xs text-purple-400 font-medium">Lil Champs Corner</span>
+                ) : (
+                  <Select
+                    value={reg.extended_program || "unassigned"}
+                    onValueChange={(v) => updateExtendedProgram(reg.id, v === "unassigned" ? null : v)}
+                  >
+                    <SelectTrigger className="h-7 w-[140px] text-xs bg-white/5 border-white/10 text-white/70">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="unassigned"><span className="text-white/30">—</span></SelectItem>
+                      {EXTENDED_PROGRAMS.map((p) => (
+                        <SelectItem key={p} value={p}>{p}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
               </TableCell>
               <TableCell className="text-sm text-white/70">{reg.child_school_district}</TableCell>
               <TableCell className="text-white">
@@ -752,12 +756,19 @@ const EditRegistrationForm = ({
       </Section>
 
       <Section title="Status & Flags">
-        <SelectField
-          label="Extended Program"
-          value={form.extended_program || "Unassigned"}
-          onChange={(v) => set("extended_program", v === "Unassigned" ? null : v)}
-          options={["Unassigned", ...EXTENDED_PROGRAMS]}
-        />
+        {form.child_boxing_program === "Junior Boxing (Ages 7-10)" ? (
+          <div className="space-y-1">
+            <Label className="text-sm text-white/60">Extended Program</Label>
+            <p className="text-sm text-purple-400 font-medium py-1">Lil Champs Corner (auto-assigned)</p>
+          </div>
+        ) : (
+          <SelectField
+            label="Extended Program"
+            value={form.extended_program || "Unassigned"}
+            onChange={(v) => set("extended_program", v === "Unassigned" ? null : v)}
+            options={["Unassigned", ...EXTENDED_PROGRAMS]}
+          />
+        )}
         <div className="flex items-center justify-between py-2">
           <Label className="text-sm">Bald Eagle</Label>
           <Switch checked={!!form.is_bald_eagle} onCheckedChange={(v) => set("is_bald_eagle", v)} />
