@@ -301,6 +301,21 @@ const AdminAttendance = () => {
     },
   });
 
+  // Excursions for previous month (needed to exclude from prev month comparisons)
+  const { data: excursionsPrevMonth = [] } = useQuery({
+    queryKey: ["excursions-prev", prevOfViewedStart],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("excursions")
+        .select("*")
+        .gte("date", prevOfViewedStart)
+        .lte("date", prevOfViewedEnd)
+        .order("date");
+      if (error) throw error;
+      return (data || []) as Excursion[];
+    },
+  });
+
 
 
   /* ───── Weather Data (Open-Meteo + DB cache) ───── */
