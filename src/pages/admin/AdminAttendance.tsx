@@ -17,9 +17,9 @@ import {
   LineChart, Line,
 } from "recharts";
 import {
-  startOfWeek, startOfMonth, endOfMonth, format,
-  addMonths, subMonths, subWeeks, getDay, getDaysInMonth, isToday, parseISO, endOfWeek,
-  isWeekend,
+  startOfMonth, endOfMonth, format,
+  addMonths, subMonths, getDay, getDaysInMonth, isToday, parseISO,
+  isWeekend, isSameMonth,
 } from "date-fns";
 import { toast } from "sonner";
 
