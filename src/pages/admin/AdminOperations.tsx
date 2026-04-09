@@ -64,7 +64,7 @@ const baseTiles: OperationsTile[] = [
     children: [
       { title: "Drivers", href: "/admin/operations/transportation/drivers", icon: UserCheck },
       { title: "Youth Profiles", href: "/admin/operations/transportation/youth", icon: Users },
-      { title: "Runs & Pay", href: "/admin/operations/transportation/runs", icon: Radio },
+      { title: "Trips & Pay", href: "/admin/operations/transportation/runs", icon: Radio },
     ],
   },
 ];

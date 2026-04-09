@@ -6,7 +6,7 @@ import nlaLogo from "@/assets/nla-logo-white.png";
 const navItems = [
   { to: "/transport/admin/drivers", label: "Drivers", icon: Users },
   { to: "/transport/admin/youth", label: "Youth", icon: Baby },
-  { to: "/transport/admin/runs", label: "Runs & Pay", icon: Radio },
+  { to: "/transport/admin/runs", label: "Trips & Pay", icon: Radio },
 ];
 
 export default function TransportAdminLayout() {
