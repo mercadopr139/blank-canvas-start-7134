@@ -2,7 +2,6 @@ import { useState, useEffect, useMemo, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import {
@@ -27,16 +26,6 @@ function downloadCsv(filename: string, csv: string) {
 function getPayRate(routeName: string | undefined): number { return routeName === "Overflow" ? 25 : 50; }
 
 type PayPeriod = { label: string; start: string; end: string };
-function getPayPeriods(): PayPeriod[] {
-  const now = new Date(); const periods: PayPeriod[] = [];
-  for (let offset = 0; offset < 3; offset++) {
-    const month = new Date(now.getFullYear(), now.getMonth() - offset, 1);
-    const mid = setDate(month, 15); const last = endOfMonth(month);
-    periods.push({ label: `${format(month, "MMM yyyy")} 16th–${format(last, "do")}`, start: format(setDate(month, 16), "yyyy-MM-dd"), end: format(last, "yyyy-MM-dd") });
-    periods.push({ label: `${format(month, "MMM yyyy")} 1st–15th`, start: format(month, "yyyy-MM-dd"), end: format(mid, "yyyy-MM-dd") });
-  }
-  return periods;
-}
 function getCurrentPayPeriod(): PayPeriod {
   const now = new Date(); const day = now.getDate();
   const month = new Date(now.getFullYear(), now.getMonth(), 1);
@@ -49,22 +38,6 @@ interface RunWithDetails { id: string; run_type: string; status: string; started
 interface RunApproval { id: string; run_id: string; status: string; notes: string | null; }
 
 export default function TransportRunsPay() {
-  return (
-    <div className="p-4 md:p-6 space-y-4">
-      <h1 className="text-xl font-bold text-white">Trips & Pay</h1>
-      <Tabs defaultValue="history" className="space-y-4">
-        <TabsList className="bg-white/5 border border-white/10">
-          <TabsTrigger value="history" className="data-[state=active]:bg-[#DC2626] data-[state=active]:text-white text-white/50">History</TabsTrigger>
-          <TabsTrigger value="pay" className="data-[state=active]:bg-[#3B82F6] data-[state=active]:text-white text-white/50">Pay</TabsTrigger>
-        </TabsList>
-        <TabsContent value="history"><HistoryCalendarTab /></TabsContent>
-        <TabsContent value="pay"><PayTab /></TabsContent>
-      </Tabs>
-    </div>
-  );
-}
-
-function HistoryCalendarTab() {
   const { toast } = useToast();
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [runs, setRuns] = useState<RunWithDetails[]>([]);
@@ -82,7 +55,6 @@ function HistoryCalendarTab() {
   const [expandedRosters, setExpandedRosters] = useState<Set<string>>(new Set());
   const [rosterData, setRosterData] = useState<Record<string, { youth_id: string; status: string; first_name: string; last_name: string; photo_url: string | null; pickup_zone: string }[]>>({});
 
-  // Pay period runs (for Box 4 and Driver Pay Panel)
   const currentPayPeriod = useMemo(() => getCurrentPayPeriod(), []);
   const [payPeriodRuns, setPayPeriodRuns] = useState<RunWithDetails[]>([]);
   const [yearRuns, setYearRuns] = useState<RunWithDetails[]>([]);
@@ -98,6 +70,20 @@ function HistoryCalendarTab() {
 
   const monthStart = startOfMonth(currentMonth);
   const monthEnd = endOfMonth(currentMonth);
+
+  // Load paid status from driver_pay_periods
+  const loadPaidStatus = useCallback(async () => {
+    const { data } = await supabase
+      .from("driver_pay_periods")
+      .select("driver_id, status")
+      .eq("period_start", currentPayPeriod.start)
+      .eq("period_end", currentPayPeriod.end);
+    if (data) {
+      const paid = new Set<string>();
+      data.forEach((d) => { if (d.status === "paid") paid.add(d.driver_id); });
+      setPaidDrivers(paid);
+    }
+  }, [currentPayPeriod]);
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -129,12 +115,14 @@ function HistoryCalendarTab() {
 
   useEffect(() => {
     fetchData();
-    const channel = supabase.channel("history-calendar")
+    loadPaidStatus();
+    const channel = supabase.channel("trips-pay-unified")
       .on("postgres_changes", { event: "*", schema: "public", table: "runs" }, () => fetchData())
       .on("postgres_changes", { event: "*", schema: "public", table: "run_approvals" }, () => fetchData())
+      .on("postgres_changes", { event: "*", schema: "public", table: "driver_pay_periods" }, () => loadPaidStatus())
       .subscribe();
     return () => { supabase.removeChannel(channel); };
-  }, [fetchData]);
+  }, [fetchData, loadPaidStatus]);
 
   const approvalMap = useMemo(() => { const m = new Map<string, RunApproval>(); approvals.forEach((a) => m.set(a.run_id, a)); return m; }, [approvals]);
 
@@ -155,19 +143,16 @@ function HistoryCalendarTab() {
     return map;
   }, [runs, approvalMap]);
 
-  // Summary stats for month
   const monthStats = useMemo(() => {
     let totalTrips = 0, approved = 0, pending = 0;
     runs.forEach((r) => { totalTrips++; const s = approvalMap.get(r.id)?.status || "pending"; if (s === "approved") approved++; else if (s === "pending") pending++; });
     return { totalTrips, approved, pending };
   }, [runs, approvalMap]);
 
-  // Pay period owed (ALL submitted trips in current pay period)
   const payPeriodOwed = useMemo(() => {
     return payPeriodRuns.reduce((sum, r) => sum + getPayRate(r.route?.name), 0);
   }, [payPeriodRuns]);
 
-  // Driver pay panel data
   const driverPayData = useMemo(() => {
     const map = new Map<string, { name: string; payPeriodEarnings: number; monthEarnings: number; yearEarnings: number; payPeriodTrips: number; monthTrips: number; yearTrips: number }>();
     const ensure = (id: string, name: string) => {
@@ -220,11 +205,50 @@ function HistoryCalendarTab() {
     toast({ title: "Trip updated" }); fetchData();
   };
   const exportMonth = () => {
-    const csv = toCsv(["Date","Type","Driver","Route","Status","Pay","Youth Count","Approval"], runs.map((r) => [format(new Date(r.started_at), "MM/dd/yyyy"), r.run_type, r.driver?.name || "", r.route?.name || "", r.status, `$${getPayRate(r.route?.name)}`, String(attendanceCounts[r.id] || 0), approvalMap.get(r.id)?.status || "pending"]));
-    downloadCsv(`trips_${format(currentMonth, "yyyy-MM")}.csv`, csv);
+    const allMonthRuns = runs;
+    const driverPayRows = driverPayData.map(([driverId, d]) => [
+      d.name, String(d.monthTrips), `$${d.monthEarnings}`, `$${d.payPeriodEarnings}`, `$${d.yearEarnings}`, paidDrivers.has(driverId) ? "Paid" : "Unpaid"
+    ]);
+    const tripRows = allMonthRuns.map((r) => [
+      format(new Date(r.started_at), "MM/dd/yyyy"), r.run_type, r.driver?.name || "", r.route?.name || "", r.status, `$${getPayRate(r.route?.name)}`, String(attendanceCounts[r.id] || 0), approvalMap.get(r.id)?.status || "pending"
+    ]);
+    const csv = toCsv(
+      ["Date","Type","Driver","Route","Status","Pay","Youth Count","Approval"],
+      tripRows
+    ) + "\n\n" + toCsv(
+      ["Driver","Month Trips","Month $","Period $","Year $","Pay Status"],
+      driverPayRows
+    );
+    downloadCsv(`trips_pay_${format(currentMonth, "yyyy-MM")}.csv`, csv);
   };
 
-  const handleMarkPaid = (driverId: string) => { setPaidDrivers((prev) => new Set([...prev, driverId])); toast({ title: "Marked as paid" }); };
+  const handleMarkPaid = async (driverId: string) => {
+    // Check if a record already exists
+    const { data: existing } = await supabase
+      .from("driver_pay_periods")
+      .select("id")
+      .eq("driver_id", driverId)
+      .eq("period_start", currentPayPeriod.start)
+      .eq("period_end", currentPayPeriod.end)
+      .maybeSingle();
+
+    const driverData = driverPayData.find(([id]) => id === driverId);
+    const totalAmount = driverData ? driverData[1].payPeriodEarnings : 0;
+
+    if (existing) {
+      await supabase.from("driver_pay_periods").update({ status: "paid", total_amount: totalAmount, updated_at: new Date().toISOString() }).eq("id", existing.id);
+    } else {
+      await supabase.from("driver_pay_periods").insert({
+        driver_id: driverId,
+        period_start: currentPayPeriod.start,
+        period_end: currentPayPeriod.end,
+        status: "paid",
+        total_amount: totalAmount,
+      });
+    }
+    setPaidDrivers((prev) => new Set([...prev, driverId]));
+    toast({ title: "Marked as paid — saved to database" });
+  };
 
   const toggleRoster = async (runId: string) => {
     setExpandedRosters((prev) => {
@@ -319,18 +343,14 @@ function HistoryCalendarTab() {
   };
 
   return (
-    <div className="space-y-4">
-      {/* Month nav + export */}
+    <div className="p-4 md:p-6 space-y-6">
+      {/* Page header + export */}
       <div className="flex items-center justify-between flex-wrap gap-3">
-        <div className="flex items-center gap-3">
-          <button onClick={() => setCurrentMonth(subMonths(currentMonth, 1))} className="p-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-white/60 hover:text-white transition-colors"><ChevronLeft className="w-5 h-5" /></button>
-          <h2 className="text-white font-bold text-lg min-w-[160px] text-center">{format(currentMonth, "MMMM yyyy")}</h2>
-          <button onClick={() => setCurrentMonth(addMonths(currentMonth, 1))} className="p-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-white/60 hover:text-white transition-colors"><ChevronRight className="w-5 h-5" /></button>
-        </div>
+        <h1 className="text-xl font-bold text-white">Trips & Pay</h1>
         <Button onClick={exportMonth} variant="outline" size="sm" className="gap-2 border-white/10 text-white/60 hover:text-white bg-transparent"><Download className="w-4 h-4" /> Export CSV</Button>
       </div>
 
-      {/* 4 Summary Boxes */}
+      {/* Section 1 — Summary Boxes */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
         <div className="bg-white/5 border border-white/10 rounded-lg p-3 text-center">
           <p className="text-lg font-bold text-white">{monthStats.totalTrips}</p>
@@ -351,46 +371,53 @@ function HistoryCalendarTab() {
         </div>
       </div>
 
-      {/* Calendar */}
-      {loading ? <div className="text-white/40 text-center py-12">Loading...</div> : (
-        <div className="border border-white/10 rounded-xl overflow-hidden">
-          <div className="grid grid-cols-7 bg-white/5">
-            {["Sun","Mon","Tue","Wed","Thu","Fri","Sat"].map((d) => (
-              <div key={d} className="text-center text-white/40 text-[10px] uppercase tracking-wider py-2 font-medium">{d}</div>
-            ))}
-          </div>
-          <div className="grid grid-cols-7">
-            {calendarDays.map((cell) => {
-              if (cell.blank) return <div key={cell.key} className="min-h-[80px] border-t border-r border-white/5 bg-white/[0.01]" />;
-              const nonBlank = cell as { blank: false; date: Date; key: string };
-              const dateKey = nonBlank.key;
-              const dayDrivers = runsByDateDriver.get(dateKey);
-              const isToday = format(new Date(), "yyyy-MM-dd") === dateKey;
-              return (
-                <div key={nonBlank.key} className={`min-h-[80px] border-t border-r border-white/5 p-1.5 ${isToday ? "bg-[#DC2626]/5 border-t-2 border-t-[#DC2626]/40" : ""}`}>
-                  <p className={`text-[11px] font-medium mb-1 ${isToday ? "text-[#DC2626]" : "text-white/40"}`}>{format(nonBlank.date, "d")}</p>
-                  {dayDrivers && <div className="space-y-0.5">
-                    {[...dayDrivers.entries()].map(([driverId, entry]) => (
-                      <button key={driverId} onClick={() => { setSelectedDriver({ id: driverId, name: entry.driverName }); setSelectedDate(dateKey); setPanelOpen(true); setEditingRunId(null); setDeleteConfirmId(null); }} className="w-full flex items-center gap-1 px-1 py-0.5 rounded hover:bg-white/10 transition-colors text-left group">
-                        <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${statusDot(entry.worstStatus)}`} />
-                        <span className="text-[10px] text-white/70 group-hover:text-white truncate leading-tight">{entry.driverName.split(" ")[0]}</span>
-                        <span className="text-[9px] text-white/30 ml-auto flex-shrink-0">{entry.runs.length}</span>
-                      </button>
-                    ))}
-                  </div>}
-                </div>
-              );
-            })}
-          </div>
+      {/* Section 2 — Calendar */}
+      <div className="space-y-3">
+        <div className="flex items-center gap-3 justify-center">
+          <button onClick={() => setCurrentMonth(subMonths(currentMonth, 1))} className="p-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-white/60 hover:text-white transition-colors"><ChevronLeft className="w-5 h-5" /></button>
+          <h2 className="text-white font-bold text-lg min-w-[160px] text-center">{format(currentMonth, "MMMM yyyy")}</h2>
+          <button onClick={() => setCurrentMonth(addMonths(currentMonth, 1))} className="p-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-white/60 hover:text-white transition-colors"><ChevronRight className="w-5 h-5" /></button>
         </div>
-      )}
 
-      {/* Driver Pay Panel */}
+        {loading ? <div className="text-white/40 text-center py-12">Loading...</div> : (
+          <div className="border border-white/10 rounded-xl overflow-hidden">
+            <div className="grid grid-cols-7 bg-white/5">
+              {["Sun","Mon","Tue","Wed","Thu","Fri","Sat"].map((d) => (
+                <div key={d} className="text-center text-white/40 text-[10px] uppercase tracking-wider py-2 font-medium">{d}</div>
+              ))}
+            </div>
+            <div className="grid grid-cols-7">
+              {calendarDays.map((cell) => {
+                if (cell.blank) return <div key={cell.key} className="min-h-[80px] border-t border-r border-white/5 bg-white/[0.01]" />;
+                const nonBlank = cell as { blank: false; date: Date; key: string };
+                const dateKey = nonBlank.key;
+                const dayDrivers = runsByDateDriver.get(dateKey);
+                const isToday = format(new Date(), "yyyy-MM-dd") === dateKey;
+                return (
+                  <div key={nonBlank.key} className={`min-h-[80px] border-t border-r border-white/5 p-1.5 ${isToday ? "bg-[#DC2626]/5 border-t-2 border-t-[#DC2626]/40" : ""}`}>
+                    <p className={`text-[11px] font-medium mb-1 ${isToday ? "text-[#DC2626]" : "text-white/40"}`}>{format(nonBlank.date, "d")}</p>
+                    {dayDrivers && <div className="space-y-0.5">
+                      {[...dayDrivers.entries()].map(([driverId, entry]) => (
+                        <button key={driverId} onClick={() => { setSelectedDriver({ id: driverId, name: entry.driverName }); setSelectedDate(dateKey); setPanelOpen(true); setEditingRunId(null); setDeleteConfirmId(null); }} className="w-full flex items-center gap-1 px-1 py-0.5 rounded hover:bg-white/10 transition-colors text-left group">
+                          <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${statusDot(entry.worstStatus)}`} />
+                          <span className="text-[10px] text-white/70 group-hover:text-white truncate leading-tight">{entry.driverName.split(" ")[0]}</span>
+                          <span className="text-[9px] text-white/30 ml-auto flex-shrink-0">{entry.runs.length}</span>
+                        </button>
+                      ))}
+                    </div>}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Section 3 — Driver Pay Summary */}
       {!loading && driverPayData.length > 0 && (
         <div className="space-y-2">
           <h3 className="text-white font-bold text-sm flex items-center gap-2"><DollarSign className="w-4 h-4 text-green-400" /> Driver Pay — {currentPayPeriod.label}</h3>
           <div className="border border-white/10 rounded-xl overflow-hidden">
-            {/* Header */}
             <div className="grid grid-cols-[1fr_auto_auto_auto_auto_auto] gap-2 bg-white/5 px-3 py-2 text-[10px] text-white/40 uppercase tracking-wider font-medium">
               <span>Driver</span>
               <span className="text-right w-20">Period $</span>
@@ -423,7 +450,7 @@ function HistoryCalendarTab() {
         </div>
       )}
 
-      {/* Trip Detail Dialog (click driver on calendar date) */}
+      {/* Trip Detail Dialog */}
       <Dialog open={panelOpen} onOpenChange={(open) => { setPanelOpen(open); if (!open) { setEditingRunId(null); setDeleteConfirmId(null); setExpandedRosters(new Set()); } }}>
         <DialogContent className="bg-[#111827] border-white/10 text-white max-w-md max-h-[85vh] overflow-y-auto">
           <DialogHeader><DialogTitle className="text-white">{selectedDriver?.name} — {selectedDate ? format(new Date(selectedDate + "T12:00:00"), "MMM d, yyyy") : ""}</DialogTitle></DialogHeader>
@@ -490,10 +517,7 @@ function HistoryCalendarTab() {
                       <div className="flex items-center gap-2 flex-wrap"><span className="text-white font-medium text-sm">{r.route?.name}</span><span className="text-white/30">•</span><span className="text-white/50 text-sm capitalize">{r.run_type}</span></div>
                       <div className="flex items-center gap-3 text-xs text-white/30">
                         <span>{format(new Date(r.started_at), "h:mm a")}</span>
-                        <button
-                          onClick={() => toggleRoster(r.id)}
-                          className="flex items-center gap-1 text-blue-400 hover:text-blue-300 transition-colors font-medium"
-                        >
+                        <button onClick={() => toggleRoster(r.id)} className="flex items-center gap-1 text-blue-400 hover:text-blue-300 transition-colors font-medium">
                           <Users className="w-3 h-3" />
                           {youthCount} youth
                           {expandedRosters.has(r.id) ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
@@ -635,91 +659,6 @@ function HistoryCalendarTab() {
           )}
         </DialogContent>
       </Dialog>
-    </div>
-  );
-}
-
-function PayTab() {
-  const { toast } = useToast();
-  const periods = useMemo(() => getPayPeriods(), []);
-  const [selectedPeriod, setSelectedPeriod] = useState(getCurrentPayPeriod());
-  const [runs, setRuns] = useState<RunWithDetails[]>([]);
-  const [approvals, setApprovals] = useState<RunApproval[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [paidDrivers, setPaidDrivers] = useState<Set<string>>(new Set());
-
-  const fetchData = async () => {
-    setLoading(true);
-    const from = selectedPeriod.start + "T00:00:00"; const to = selectedPeriod.end + "T23:59:59";
-    const [runsRes, approvalsRes] = await Promise.all([
-      supabase.from("runs").select("id, run_type, status, started_at, closed_at, driver:drivers(id, name), route:routes(id, name)").eq("status", "completed").gte("started_at", from).lte("started_at", to),
-      supabase.from("run_approvals").select("id, run_id, status, notes"),
-    ]);
-    if (runsRes.data) setRuns(runsRes.data as unknown as RunWithDetails[]);
-    if (approvalsRes.data) setApprovals(approvalsRes.data as unknown as RunApproval[]);
-    setLoading(false);
-  };
-  useEffect(() => { fetchData(); }, [selectedPeriod]);
-
-  const approvalMap = useMemo(() => { const m = new Map<string, RunApproval>(); approvals.forEach((a) => m.set(a.run_id, a)); return m; }, [approvals]);
-  const driverSummaries = useMemo(() => {
-    const map = new Map<string, { name: string; approved: number; approvedPay: number; disputed: number; pending: number; total: number; routeBreakdown: Record<string, number> }>();
-    runs.forEach((r) => {
-      if (!r.driver) return;
-      const entry = map.get(r.driver.id) || { name: r.driver.name, approved: 0, approvedPay: 0, disputed: 0, pending: 0, total: 0, routeBreakdown: {} };
-      const routeName = r.route?.name || "Unknown";
-      entry.routeBreakdown[routeName] = (entry.routeBreakdown[routeName] || 0) + 1;
-      const pay = getPayRate(r.route?.name); const approval = approvalMap.get(r.id); const status = approval?.status || "pending";
-      if (status === "approved") { entry.approved++; entry.approvedPay += pay; } else if (status === "disputed") entry.disputed++; else entry.pending++;
-      entry.total++; map.set(r.driver.id, entry);
-    });
-    return [...map.entries()].sort((a, b) => a[1].name.localeCompare(b[1].name));
-  }, [runs, approvalMap]);
-
-  const handleMarkPaid = (driverId: string) => { setPaidDrivers((prev) => new Set([...prev, driverId])); toast({ title: "Marked as paid" }); };
-  const exportPaySummary = () => {
-    const csv = toCsv(["Driver","Approved Runs","Amount Owed","Disputed","Pending","Status"], driverSummaries.map(([id, s]) => [s.name, String(s.approved), `$${s.approvedPay}`, String(s.disputed), String(s.pending), paidDrivers.has(id) ? "Paid" : "Unpaid"]));
-    downloadCsv(`pay_summary_${selectedPeriod.start}_${selectedPeriod.end}.csv`, csv);
-  };
-
-  return (
-    <div className="space-y-4">
-      <div className="flex gap-2 flex-wrap">
-        {periods.slice(0, 4).map((p) => (
-          <button key={p.start} onClick={() => setSelectedPeriod(p)} className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${selectedPeriod.start === p.start ? "bg-[#DC2626] text-white" : "bg-white/5 text-white/50 hover:text-white border border-white/10"}`}>{p.label}</button>
-        ))}
-      </div>
-      {loading ? <div className="text-white/40 text-center py-12">Loading...</div> : (
-        <>
-          <div className="flex justify-end">
-            <Button onClick={exportPaySummary} variant="outline" size="sm" className="gap-2 border-white/10 text-white/60 hover:text-white bg-transparent"><Download className="w-4 h-4" /> Export CSV</Button>
-          </div>
-          {driverSummaries.length === 0 ? <p className="text-white/40 text-center py-8">No runs in this pay period.</p> : (
-            <div className="space-y-3">
-              {driverSummaries.map(([driverId, s]) => (
-                <div key={driverId} className="bg-white/5 border border-white/10 rounded-lg p-4 space-y-3">
-                  <div className="flex items-center justify-between">
-                    <h3 className="text-white font-bold">{s.name}</h3>
-                    <Badge className={paidDrivers.has(driverId) ? "bg-green-500/20 text-green-400 border-green-500/30" : "bg-yellow-500/20 text-yellow-400 border-yellow-500/30"}>{paidDrivers.has(driverId) ? "Paid" : "Unpaid"}</Badge>
-                  </div>
-                  <div className="grid grid-cols-3 gap-2 text-center">
-                    <div className="bg-white/5 rounded p-2"><p className="text-green-400 text-lg font-bold">{s.approved}</p><p className="text-white/30 text-[10px]">Approved</p></div>
-                    <div className="bg-white/5 rounded p-2"><p className="text-green-400 text-lg font-bold">${s.approvedPay}</p><p className="text-white/30 text-[10px]">Amount Owed</p></div>
-                    <div className="bg-white/5 rounded p-2"><p className="text-white text-lg font-bold">{s.total}</p><p className="text-white/30 text-[10px]">Total Runs</p></div>
-                  </div>
-                  <div className="flex gap-2 flex-wrap">
-                    {Object.entries(s.routeBreakdown).map(([route, count]) => (<span key={route} className="bg-white/5 text-white/50 text-[10px] px-2 py-1 rounded">{route}: {count}</span>))}
-                  </div>
-                  {s.disputed > 0 && <div className="flex items-center gap-1 text-red-400 text-xs"><AlertTriangle className="w-3 h-3" /> {s.disputed} disputed run{s.disputed > 1 ? "s" : ""}</div>}
-                  {!paidDrivers.has(driverId) && s.approvedPay > 0 && (
-                    <Button size="sm" onClick={() => handleMarkPaid(driverId)} className="bg-green-600 hover:bg-green-700 text-white text-xs gap-1 w-full"><DollarSign className="w-3 h-3" /> Mark as Paid</Button>
-                  )}
-                </div>
-              ))}
-            </div>
-          )}
-        </>
-      )}
     </div>
   );
 }
