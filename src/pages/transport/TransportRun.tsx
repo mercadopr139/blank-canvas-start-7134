@@ -534,6 +534,8 @@ export default function TransportRun() {
             </div>
           </div>
         </DialogContent>
+      </Dialog>
+
       {/* Add Youth Sheet */}
       <DriverAddYouthSheet
         open={addYouthOpen}
