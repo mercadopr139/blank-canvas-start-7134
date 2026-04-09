@@ -148,7 +148,7 @@ const CallOut = () => {
                 />
                 <div className="mt-3 space-y-2 text-xs">
                   <p className="text-green-400 font-medium">
-                    ✅ Acceptable: School event, doctor appointment, family emergency, illness, religious obligation
+                    ✅ Acceptable: School event, doctor appointment, family event or emergency, illness
                   </p>
                   <p className="text-red-400 font-medium">
                     ❌ Unacceptable: "I don't feel like it", no reason given, repeated vague excuses
