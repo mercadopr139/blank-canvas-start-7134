@@ -251,6 +251,12 @@ export default function TransportRun() {
       {/* Header - no timer */}
       <header className="bg-[#0F1D32] border-b border-white/10 px-4 py-3 flex items-center justify-between sticky top-0 z-20">
         <div className="flex items-center gap-3 min-w-0">
+          <button
+            onClick={() => setBackConfirmOpen(true)}
+            className="p-1.5 rounded-lg bg-white/10 hover:bg-white/15 text-white/70 hover:text-white transition-colors active:scale-95 touch-manipulation"
+          >
+            <ArrowLeft className="w-4 h-4" />
+          </button>
           <div className={`px-2.5 py-1 rounded-lg text-xs font-bold uppercase tracking-wider ${
             runType === "pickup"
               ? "bg-green-600/20 text-green-400 border border-green-500/30"
