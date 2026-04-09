@@ -460,6 +460,33 @@ export type Database = {
           },
         ]
       }
+      excursions: {
+        Row: {
+          created_at: string
+          date: string
+          id: string
+          name: string
+          notes: string | null
+          youth_count: number
+        }
+        Insert: {
+          created_at?: string
+          date: string
+          id?: string
+          name: string
+          notes?: string | null
+          youth_count?: number
+        }
+        Update: {
+          created_at?: string
+          date?: string
+          id?: string
+          name?: string
+          notes?: string | null
+          youth_count?: number
+        }
+        Relationships: []
+      }
       incidents: {
         Row: {
           description: string
