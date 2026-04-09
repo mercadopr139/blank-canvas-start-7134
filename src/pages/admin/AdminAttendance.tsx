@@ -1844,6 +1844,78 @@ const AdminAttendance = () => {
         </DialogContent>
       </Dialog>
 
+      {/* Excursion Details Modal */}
+      <Dialog open={excursionModalOpen} onOpenChange={(open) => { if (!open) cancelExcursionModal(); }}>
+        <DialogContent className="bg-black border-purple-500/20 text-white max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="text-purple-400 flex items-center gap-2">🟣 Add Excursion</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3">
+            <div>
+              <label className="text-xs text-white/50 mb-1 block">Excursion Name *</label>
+              <Input value={excursionName} onChange={(e) => setExcursionName(e.target.value)} placeholder="e.g. Beach Trip" className="bg-white/5 border-white/20 text-white" autoFocus />
+            </div>
+            <div>
+              <label className="text-xs text-white/50 mb-1 block">Number of Youth *</label>
+              <Input type="number" min={0} value={excursionYouthCount} onChange={(e) => setExcursionYouthCount(e.target.value === "" ? "" : Number(e.target.value))} placeholder="0" className="bg-white/5 border-white/20 text-white" />
+            </div>
+            <div>
+              <label className="text-xs text-white/50 mb-1 block">Notes (optional)</label>
+              <Input value={excursionNotes} onChange={(e) => setExcursionNotes(e.target.value)} placeholder="Optional notes..." className="bg-white/5 border-white/20 text-white" />
+            </div>
+          </div>
+          <div className="flex gap-2 justify-end pt-2">
+            <Button variant="outline" size="sm" className="border-white/20 text-white" onClick={cancelExcursionModal}>Cancel</Button>
+            <Button size="sm" className="bg-purple-600 hover:bg-purple-700 text-white" onClick={saveExcursion}>Save</Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Excursion Modal */}
+      <Dialog open={!!editingExcursion} onOpenChange={(open) => { if (!open) setEditingExcursion(null); }}>
+        <DialogContent className="bg-black border-purple-500/20 text-white max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="text-purple-400 flex items-center gap-2">🟣 Edit Excursion</DialogTitle>
+          </DialogHeader>
+          {editingExcursion && (
+            <div className="space-y-3">
+              <div>
+                <label className="text-xs text-white/50 mb-1 block">Excursion Name *</label>
+                <Input value={editingExcursion.name} onChange={(e) => setEditingExcursion({ ...editingExcursion, name: e.target.value })} className="bg-white/5 border-white/20 text-white" />
+              </div>
+              <div>
+                <label className="text-xs text-white/50 mb-1 block">Number of Youth *</label>
+                <Input type="number" min={0} value={editingExcursion.youth_count} onChange={(e) => setEditingExcursion({ ...editingExcursion, youth_count: Number(e.target.value) })} className="bg-white/5 border-white/20 text-white" />
+              </div>
+              <div>
+                <label className="text-xs text-white/50 mb-1 block">Notes</label>
+                <Input value={editingExcursion.notes || ""} onChange={(e) => setEditingExcursion({ ...editingExcursion, notes: e.target.value || null })} className="bg-white/5 border-white/20 text-white" />
+              </div>
+              <div className="flex gap-2 justify-end pt-2">
+                <Button variant="outline" size="sm" className="border-white/20 text-white" onClick={() => setEditingExcursion(null)}>Cancel</Button>
+                <Button size="sm" className="bg-purple-600 hover:bg-purple-700 text-white" onClick={saveEditExcursion}>Save</Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Excursion Confirmation */}
+      <Dialog open={!!deleteExcursionTarget} onOpenChange={(open) => { if (!open) setDeleteExcursionTarget(null); }}>
+        <DialogContent className="bg-zinc-900 border-white/10 text-white max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="text-white">Delete Excursion?</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-white/70">
+            This will delete the excursion "<span className="font-medium text-white">{deleteExcursionTarget?.name}</span>" and revert the day to a practice day.
+          </p>
+          <div className="flex gap-2 justify-end pt-2">
+            <Button variant="outline" size="sm" className="border-white/20 text-white" onClick={() => setDeleteExcursionTarget(null)}>Cancel</Button>
+            <Button variant="destructive" size="sm" onClick={handleDeleteExcursion}>Delete</Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
     </div>
   );
 };
