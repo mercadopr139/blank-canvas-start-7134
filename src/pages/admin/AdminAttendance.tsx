@@ -155,8 +155,12 @@ const AdminAttendance = () => {
   const [weatherTooltipDay, setWeatherTooltipDay] = useState<string | null>(null);
   const [contextMenuDay, setContextMenuDay] = useState<{ dateStr: string; x: number; y: number } | null>(null);
   const [noShowAlertDismissed, setNoShowAlertDismissed] = useState(false);
+  const [manualAddMode, setManualAddMode] = useState(false);
+  const [manualSearch, setManualSearch] = useState("");
+  const [manualAdding, setManualAdding] = useState(false);
   const _noShowAlertOpen = false; // reserved for future expansion
   const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const { user } = useAuth();
 
   // Close context menu on outside click
   useEffect(() => {
