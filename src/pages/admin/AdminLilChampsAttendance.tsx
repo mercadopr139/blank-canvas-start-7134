@@ -196,22 +196,6 @@ const AdminLilChampsAttendance = () => {
           <Button
             variant="outline"
             size="sm"
-            onClick={async () => {
-              if (!confirm("Delete ALL Lil Champs Corner attendance records? This cannot be undone.")) return;
-              const { error } = await supabase
-                .from("attendance_records")
-                .delete()
-                .eq("program_source", "Lil Champs Corner");
-              if (error) { alert("Failed to clear: " + error.message); return; }
-              setRecords([]);
-            }}
-            className="gap-2 text-red-400 border-red-500/30 hover:bg-red-500/10"
-          >
-            Clear All
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
             onClick={() => setAddOpen(true)}
             className="gap-2 text-amber-400 border-amber-500/30 hover:bg-amber-500/10"
           >
@@ -276,11 +260,9 @@ const AdminLilChampsAttendance = () => {
                     </div>
                     <div className="flex items-center gap-2">
                       <span className="text-xs px-2 py-0.5 rounded-full" style={{ backgroundColor: 'rgba(56,189,248,0.15)', color: '#38bdf8' }}>Lil Champs</span>
-                      {r.is_manual && (
-                        <button onClick={() => setDeleteConfirmId(r.id)} className="text-white/30 hover:text-red-400 transition-colors">
+                      <button onClick={() => setDeleteConfirmId(r.id)} className="text-white/30 hover:text-red-400 transition-colors">
                           <Trash2 className="w-3.5 h-3.5" />
                         </button>
-                      )}
                     </div>
                   </div>
                   <div className="flex items-center gap-4 text-sm text-white/60">
@@ -322,11 +304,9 @@ const AdminLilChampsAttendance = () => {
                         <span className="text-xs px-2 py-0.5 rounded-full" style={{ backgroundColor: 'rgba(56,189,248,0.15)', color: '#38bdf8' }}>Lil Champs Corner</span>
                       </TableCell>
                       <TableCell>
-                        {r.is_manual && (
-                          <button onClick={() => setDeleteConfirmId(r.id)} className="text-white/30 hover:text-red-400 transition-colors">
-                            <Trash2 className="w-4 h-4" />
-                          </button>
-                        )}
+                        <button onClick={() => setDeleteConfirmId(r.id)} className="text-white/30 hover:text-red-400 transition-colors">
+                          <Trash2 className="w-4 h-4" />
+                        </button>
                       </TableCell>
                     </TableRow>
                   ))}
