@@ -477,10 +477,10 @@ const AdminAttendance = () => {
         setEditingExcursion(existingExcursion);
         return;
       }
-      // Open new excursion modal
+      // Open new excursion modal, pre-populate youth count from sign-ins
       setExcursionDate(dateStr);
       setExcursionName("");
-      setExcursionYouthCount("");
+      setExcursionYouthCount(dailyCounts[dateStr] || 0);
       setExcursionNotes("");
       setExcursionPrevState(isPracticeDay(dateStr, calPracticeDayMap));
       setExcursionModalOpen(true);
@@ -1950,6 +1950,7 @@ const AdminAttendance = () => {
             <div>
               <label className="text-xs text-white/50 mb-1 block">Number of Youth *</label>
               <Input type="number" min={0} value={excursionYouthCount} onChange={(e) => setExcursionYouthCount(e.target.value === "" ? "" : Number(e.target.value))} placeholder="0" className="bg-white/5 border-white/20 text-white" />
+              <p className="text-[10px] text-white/30 mt-1">Auto-filled from sign-ins — edit if needed</p>
             </div>
             <div>
               <label className="text-xs text-white/50 mb-1 block">Notes (optional)</label>
