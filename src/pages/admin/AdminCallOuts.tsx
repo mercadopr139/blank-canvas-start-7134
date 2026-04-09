@@ -5,15 +5,18 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
 import {
-  Star, Search, CheckCircle2, XCircle, Clock, Users, TrendingUp, ChevronLeft, ChevronRight, Eye,
+  Star, Search, CheckCircle2, XCircle, Clock, Users, ChevronLeft, ChevronRight, Eye, Pencil, Trash2,
 } from "lucide-react";
 import { format, startOfMonth, endOfMonth, subMonths, addMonths, parseISO } from "date-fns";
+import { toast } from "sonner";
 
 interface Callout {
   id: string;
@@ -34,10 +37,22 @@ const AdminCallOuts = () => {
   const [historyYouth, setHistoryYouth] = useState<{ first: string; last: string } | null>(null);
   const [search, setSearch] = useState("");
 
+  // Edit state
+  const [editCallout, setEditCallout] = useState<Callout | null>(null);
+  const [editFirstName, setEditFirstName] = useState("");
+  const [editLastName, setEditLastName] = useState("");
+  const [editDate, setEditDate] = useState("");
+  const [editReason, setEditReason] = useState("");
+  const [editAcceptable, setEditAcceptable] = useState<string>("null");
+  const [editSaving, setEditSaving] = useState(false);
+
+  // Delete state
+  const [deleteCallout, setDeleteCallout] = useState<Callout | null>(null);
+  const [deleting, setDeleting] = useState(false);
+
   const monthStart = format(startOfMonth(viewMonth), "yyyy-MM-dd");
   const monthEnd = format(endOfMonth(viewMonth), "yyyy-MM-dd");
 
-  // Fetch callouts for the month
   const { data: callouts = [] } = useQuery({
     queryKey: ["callouts", monthStart, monthEnd],
     queryFn: async () => {
@@ -51,7 +66,6 @@ const AdminCallOuts = () => {
     },
   });
 
-  // Fetch youth history if viewing
   const { data: youthHistory = [] } = useQuery({
     queryKey: ["callout-history", historyYouth?.first, historyYouth?.last],
     enabled: !!historyYouth,
@@ -67,7 +81,6 @@ const AdminCallOuts = () => {
     },
   });
 
-  // Fetch registrations for photos
   const { data: registrations = [] } = useQuery({
     queryKey: ["callout-registrations"],
     queryFn: async () => {
@@ -101,7 +114,6 @@ const AdminCallOuts = () => {
   const baldEagleCallouts = filtered.filter((c) => c.is_bald_eagle);
   const regularCallouts = filtered.filter((c) => !c.is_bald_eagle);
 
-  // Monthly summary
   const totalMonth = callouts.length;
   const acceptable = callouts.filter((c) => c.is_acceptable === true).length;
   const unacceptable = callouts.filter((c) => c.is_acceptable === false).length;
@@ -113,7 +125,56 @@ const AdminCallOuts = () => {
     qc.invalidateQueries({ queryKey: ["callouts"] });
   };
 
-  // Youth history stats
+  const openEdit = (c: Callout) => {
+    setEditCallout(c);
+    setEditFirstName(c.first_name);
+    setEditLastName(c.last_name);
+    setEditDate(c.date);
+    setEditReason(c.reason);
+    setEditAcceptable(c.is_acceptable === true ? "true" : c.is_acceptable === false ? "false" : "null");
+  };
+
+  const handleSaveEdit = async () => {
+    if (!editCallout) return;
+    setEditSaving(true);
+    const acceptableVal = editAcceptable === "true" ? true : editAcceptable === "false" ? false : null;
+    const { error } = await supabase
+      .from("callouts" as any)
+      .update({
+        first_name: editFirstName.trim(),
+        last_name: editLastName.trim(),
+        date: editDate,
+        reason: editReason.trim(),
+        is_acceptable: acceptableVal,
+      } as any)
+      .eq("id", editCallout.id);
+    setEditSaving(false);
+    if (error) {
+      toast.error("Failed to update call-out");
+    } else {
+      toast.success("Call-out updated");
+      setEditCallout(null);
+      qc.invalidateQueries({ queryKey: ["callouts"] });
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!deleteCallout) return;
+    setDeleting(true);
+    const { error } = await supabase
+      .from("callouts" as any)
+      .delete()
+      .eq("id", deleteCallout.id);
+    setDeleting(false);
+    if (error) {
+      toast.error("Failed to delete call-out");
+    } else {
+      toast.success("Call-out deleted");
+      setDeleteCallout(null);
+      qc.invalidateQueries({ queryKey: ["callouts"] });
+    }
+  };
+
   const youthHistoryStats = useMemo(() => {
     if (!youthHistory.length) return null;
     const thisMonth = youthHistory.filter((c) => c.date >= monthStart && c.date <= monthEnd);
@@ -172,9 +233,31 @@ const AdminCallOuts = () => {
             )}
           </button>
         </TableCell>
+        <TableCell>
+          <div className="flex items-center gap-1">
+            <Button size="icon" variant="ghost" className="h-7 w-7 text-neutral-400 hover:text-white" onClick={() => openEdit(c)}>
+              <Pencil className="w-3.5 h-3.5" />
+            </Button>
+            <Button size="icon" variant="ghost" className="h-7 w-7 text-neutral-400 hover:text-red-400" onClick={() => setDeleteCallout(c)}>
+              <Trash2 className="w-3.5 h-3.5" />
+            </Button>
+          </div>
+        </TableCell>
       </TableRow>
     );
   };
+
+  const tableHeaders = (
+    <TableHeader>
+      <TableRow className="border-neutral-800">
+        <TableHead className="text-neutral-400">Youth</TableHead>
+        <TableHead className="text-neutral-400">Reason</TableHead>
+        <TableHead className="text-neutral-400">Time</TableHead>
+        <TableHead className="text-neutral-400">Status</TableHead>
+        <TableHead className="text-neutral-400 w-[80px]">Actions</TableHead>
+      </TableRow>
+    </TableHeader>
+  );
 
   return (
     <div className="space-y-6">
@@ -265,14 +348,7 @@ const AdminCallOuts = () => {
           </CardHeader>
           <CardContent>
             <Table>
-              <TableHeader>
-                <TableRow className="border-neutral-800">
-                  <TableHead className="text-neutral-400">Youth</TableHead>
-                  <TableHead className="text-neutral-400">Reason</TableHead>
-                  <TableHead className="text-neutral-400">Time</TableHead>
-                  <TableHead className="text-neutral-400">Status</TableHead>
-                </TableRow>
-              </TableHeader>
+              {tableHeaders}
               <TableBody>
                 {baldEagleCallouts.map((c) => <CalloutRow key={c.id} c={c} />)}
               </TableBody>
@@ -297,14 +373,7 @@ const AdminCallOuts = () => {
             <p className="text-neutral-500 text-sm text-center py-8">No call-outs recorded</p>
           ) : (
             <Table>
-              <TableHeader>
-                <TableRow className="border-neutral-800">
-                  <TableHead className="text-neutral-400">Youth</TableHead>
-                  <TableHead className="text-neutral-400">Reason</TableHead>
-                  <TableHead className="text-neutral-400">Time</TableHead>
-                  <TableHead className="text-neutral-400">Status</TableHead>
-                </TableRow>
-              </TableHeader>
+              {tableHeaders}
               <TableBody>
                 {regularCallouts.map((c) => <CalloutRow key={c.id} c={c} />)}
               </TableBody>
@@ -352,6 +421,74 @@ const AdminCallOuts = () => {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Edit Call-Out Dialog */}
+      <Dialog open={!!editCallout} onOpenChange={(open) => !open && setEditCallout(null)}>
+        <DialogContent className="bg-neutral-900 border-neutral-700 text-white max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Pencil className="w-4 h-4" /> Edit Call-Out
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="text-xs text-neutral-400 mb-1 block">First Name</label>
+                <Input value={editFirstName} onChange={(e) => setEditFirstName(e.target.value)} className="bg-neutral-800 border-neutral-700 text-white" />
+              </div>
+              <div>
+                <label className="text-xs text-neutral-400 mb-1 block">Last Name</label>
+                <Input value={editLastName} onChange={(e) => setEditLastName(e.target.value)} className="bg-neutral-800 border-neutral-700 text-white" />
+              </div>
+            </div>
+            <div>
+              <label className="text-xs text-neutral-400 mb-1 block">Date</label>
+              <Input type="date" value={editDate} onChange={(e) => setEditDate(e.target.value)} className="bg-neutral-800 border-neutral-700 text-white" />
+            </div>
+            <div>
+              <label className="text-xs text-neutral-400 mb-1 block">Reason</label>
+              <Textarea value={editReason} onChange={(e) => setEditReason(e.target.value)} className="bg-neutral-800 border-neutral-700 text-white min-h-[80px]" />
+            </div>
+            <div>
+              <label className="text-xs text-neutral-400 mb-1 block">Status</label>
+              <Select value={editAcceptable} onValueChange={setEditAcceptable}>
+                <SelectTrigger className="bg-neutral-800 border-neutral-700 text-white">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="null">Needs Review</SelectItem>
+                  <SelectItem value="true">Acceptable</SelectItem>
+                  <SelectItem value="false">Unacceptable</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <DialogFooter className="gap-2 mt-4">
+            <Button variant="ghost" onClick={() => setEditCallout(null)} className="text-neutral-400">Cancel</Button>
+            <Button onClick={handleSaveEdit} disabled={editSaving || !editFirstName.trim() || !editLastName.trim() || !editReason.trim()} className="bg-[#bf0f3e] hover:bg-[#a00d35] text-white">
+              {editSaving ? "Saving..." : "Save"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Confirmation */}
+      <AlertDialog open={!!deleteCallout} onOpenChange={(open) => !open && setDeleteCallout(null)}>
+        <AlertDialogContent className="bg-neutral-900 border-neutral-700 text-white">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Call-Out</AlertDialogTitle>
+            <AlertDialogDescription className="text-neutral-400">
+              Are you sure you want to delete this call-out? This cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel className="bg-neutral-800 border-neutral-700 text-white hover:bg-neutral-700">Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDelete} disabled={deleting} className="bg-red-600 hover:bg-red-700 text-white">
+              {deleting ? "Deleting..." : "Delete"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
