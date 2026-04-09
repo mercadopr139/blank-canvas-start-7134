@@ -1543,23 +1543,28 @@ const AdminAttendance = () => {
               {districtBreakdown.length === 0 ? (
                 <p className="text-sm text-white/30">No data</p>
               ) : (
-                <div className="space-y-1.5 max-h-52 overflow-y-auto">
-                  {districtBreakdown.map(([dist, count]) => {
-                    const distTotal = districtBreakdown.reduce((s, [, c]) => s + c, 0);
-                    const pctVal = distTotal > 0 ? Math.round((count / distTotal) * 100) : 0;
-                    return (
-                      <button
-                        key={dist}
-                        onClick={() => setDrillDistrictFilter(drillDistrictFilter === dist ? null : dist)}
-                        className={`w-full text-left flex items-center gap-2 p-1.5 rounded hover:bg-white/5 transition-colors ${drillDistrictFilter === dist ? "bg-white/10" : ""}`}
-                      >
-                        <span className="text-xs text-white/70 truncate flex-1 min-w-0">{dist}</span>
-                        <span className="text-xs text-white/50 tabular-nums">{pctVal}%</span>
-                        <span className="text-xs font-bold text-white tabular-nums w-6 text-right">{count}</span>
-                      </button>
-                    );
-                  })}
-                </div>
+                <>
+                  <div className="space-y-1.5 max-h-52 overflow-y-auto">
+                    {districtBreakdown.map(([dist, count]) => {
+                      const distTotal = districtBreakdown.reduce((s, [, c]) => s + c, 0);
+                      const pctVal = distTotal > 0 ? Math.round((count / distTotal) * 100) : 0;
+                      return (
+                        <button
+                          key={dist}
+                          onClick={() => setDrillDistrictFilter(drillDistrictFilter === dist ? null : dist)}
+                          className={`w-full text-left flex items-center gap-2 p-1.5 rounded hover:bg-white/5 transition-colors ${drillDistrictFilter === dist ? "bg-white/10" : ""}`}
+                        >
+                          <span className="text-xs text-white/70 truncate flex-1 min-w-0">{dist}</span>
+                          <span className="text-xs text-white/50 tabular-nums">{pctVal}%</span>
+                          <span className="text-xs font-bold text-white tabular-nums w-6 text-right">{count}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                  <p className="text-[10px] text-white/30 mt-2 text-right">
+                    {districtBreakdown.reduce((s, [, c]) => s + c, 0)} total youth
+                  </p>
+                </>
               )}
             </CardContent>
           </Card>
