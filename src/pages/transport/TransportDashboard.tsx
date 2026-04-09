@@ -199,65 +199,28 @@ export default function TransportDashboard() {
           Select Route
         </p>
         <div className="grid grid-cols-2 gap-3">
-          {routes
-            .filter((r) => r.name !== "Both")
-            .map((route) => {
-              const Icon = getZoneIcon(route.name);
-              const isSelected = selectedRoute?.id === route.id;
-              const count = getYouthCount(route.name);
-              return (
-                <button
-                  key={route.id}
-                  onClick={() => setSelectedRoute(isSelected ? null : route)}
-                  className={`relative p-5 rounded-2xl border-2 transition-all active:scale-[0.97] touch-manipulation flex flex-col items-center gap-2 ${getZoneColor(route.name, isSelected)}`}
-                >
-                  <Icon className={`w-8 h-8 ${isSelected ? getZoneAccent(route.name) : "text-white/40"}`} />
-                  <span className="text-lg font-bold">{route.name}</span>
-                  <span className={`text-xs font-medium ${isSelected ? "text-white/70" : "text-white/40"}`}>
-                    {count} youth
-                  </span>
-                </button>
-              );
-            })}
+          {["Woodbine", "Wildwood", "Overflow", "Both"].map((routeName) => {
+            const route = routes.find((r) => r.name === routeName);
+            if (!route) return null;
+            const Icon = getZoneIcon(route.name);
+            const isSelected = selectedRoute?.id === route.id;
+            const count = getYouthCount(route.name);
+            const displayName = route.name === "Both" ? "Both Zones" : route.name;
+            return (
+              <button
+                key={route.id}
+                onClick={() => setSelectedRoute(isSelected ? null : route)}
+                className={`relative p-5 rounded-2xl border-2 transition-all active:scale-[0.97] touch-manipulation flex flex-col items-center gap-2 ${getZoneColor(route.name, isSelected)}`}
+              >
+                <Icon className={`w-8 h-8 ${isSelected ? getZoneAccent(route.name) : "text-white/40"}`} />
+                <span className="text-lg font-bold">{displayName}</span>
+                <span className={`text-xs font-medium ${isSelected ? "text-white/70" : "text-white/40"}`}>
+                  {count} youth
+                </span>
+              </button>
+            );
+          })}
         </div>
-        {/* Both zones option */}
-        {routes.find((r) => r.name === "Both") && (
-          <button
-            onClick={() => {
-              const both = routes.find((r) => r.name === "Both")!;
-              setSelectedRoute(selectedRoute?.id === both.id ? null : both);
-            }}
-            className={`w-full mt-3 p-4 rounded-2xl border-2 transition-all active:scale-[0.97] touch-manipulation flex items-center justify-center gap-3 ${getZoneColor(
-              "Both",
-              selectedRoute?.name === "Both"
-            )}`}
-          >
-            <Bus className={`w-6 h-6 ${selectedRoute?.name === "Both" ? "text-purple-400" : "text-white/40"}`} />
-            <span className="text-base font-bold">Both Zones</span>
-            <span className={`text-xs font-medium ${selectedRoute?.name === "Both" ? "text-white/70" : "text-white/40"}`}>
-              {getYouthCount("Both")} youth
-            </span>
-          </button>
-        )}
-        {/* Overflow option */}
-        {routes.find((r) => r.name === "Overflow") && (
-          <button
-            onClick={() => {
-              const overflow = routes.find((r) => r.name === "Overflow")!;
-              setSelectedRoute(selectedRoute?.id === overflow.id ? null : overflow);
-            }}
-            className={`w-full mt-2 p-3 rounded-xl border transition-all active:scale-[0.97] touch-manipulation flex items-center justify-center gap-3 text-sm ${getZoneColor(
-              "Overflow",
-              selectedRoute?.name === "Overflow"
-            )}`}
-          >
-            <MapPin className={`w-5 h-5 ${selectedRoute?.name === "Overflow" ? "text-orange-400" : "text-white/40"}`} />
-            <span className="font-bold">Overflow</span>
-            <span className={`text-xs ${selectedRoute?.name === "Overflow" ? "text-white/70" : "text-white/40"}`}>
-              $25/run
-            </span>
-          </button>
-        )}
       </div>
 
       {/* Run Type Toggle */}
@@ -307,7 +270,7 @@ export default function TransportDashboard() {
             Starting...
           </span>
         ) : (
-          "Start Run"
+          "Start Trip"
         )}
       </button>
 
