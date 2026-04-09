@@ -388,27 +388,58 @@ const AdminAttendance = () => {
       .map(([date, count]) => ({ date: format(parseISO(date), "M/d"), count, fullDate: date }));
   }, [practiceAttendance]);
 
-  /* ───── ATTENDANCE BY DAY OF WEEK (practice days only) ───── */
-  const dowData = useMemo(() => {
-    const totals: number[] = [0, 0, 0, 0, 0, 0, 0];
-    const dayCounts: number[] = [0, 0, 0, 0, 0, 0, 0];
-    const datesByDow: Record<number, Set<string>> = {};
-    for (let i = 0; i < 7; i++) datesByDow[i] = new Set();
+  /* ───── AVERAGE ATTENDANCE BY WEEK (Mon–Fri weeks, practice days only) ───── */
+  const weeklyAvgData = useMemo(() => {
+    // Group practice attendance by date
+    const dailyCounts: Record<string, number> = {};
+    practiceAttendance.forEach((a) => { dailyCounts[a.check_in_date] = (dailyCounts[a.check_in_date] || 0) + 1; });
 
-    practiceAttendance.forEach((a) => {
-      const dow = getDay(parseISO(a.check_in_date));
-      totals[dow]++;
-      datesByDow[dow].add(a.check_in_date);
-    });
-    for (let i = 0; i < 7; i++) dayCounts[i] = datesByDow[i].size;
+    // Build weeks (Mon–Fri) for the viewed month
+    const mStart = startOfMonth(calendarMonth);
+    const mEnd = endOfMonth(calendarMonth);
+    const weeks: { label: string; dates: string[] }[] = [];
+    let current = mStart;
+    let weekNum = 1;
 
-    return [1, 2, 3, 4, 5].map((dow) => ({
-      day: WEEKDAY_NAMES[dow].slice(0, 3),
-      avg: dayCounts[dow] > 0 ? Math.round(totals[dow] / dayCounts[dow]) : 0,
-      total: totals[dow],
-      dow,
-    }));
-  }, [practiceAttendance]);
+    while (current <= mEnd) {
+      const dow = getDay(current);
+      // Find the Monday of this week (or month start if it's mid-week)
+      if (dow >= 1 && dow <= 5) {
+        // It's a weekday
+        const mondayOfWeek = new Date(current);
+        mondayOfWeek.setDate(mondayOfWeek.getDate() - (dow - 1));
+        const weekKey = format(mondayOfWeek, "yyyy-MM-dd");
+        
+        let existingWeek = weeks.find((w) => w.label === `Wk ${weekNum}` && w.dates.length > 0 && format(new Date(new Date(w.dates[0]).getTime() + (7 * 24 * 60 * 60 * 1000)), "yyyy-MM-dd") >= format(current, "yyyy-MM-dd"));
+        
+        if (!existingWeek) {
+          // Check if this date belongs to the current last week
+          const lastWeek = weeks[weeks.length - 1];
+          if (lastWeek) {
+            const lastDate = parseISO(lastWeek.dates[lastWeek.dates.length - 1]);
+            const daysDiff = (current.getTime() - lastDate.getTime()) / (1000 * 60 * 60 * 24);
+            if (daysDiff <= 3 && dow > getDay(lastDate)) {
+              lastWeek.dates.push(format(current, "yyyy-MM-dd"));
+              current = new Date(current.getTime() + 24 * 60 * 60 * 1000);
+              continue;
+            }
+          }
+          weeks.push({ label: `Wk ${weekNum}`, dates: [format(current, "yyyy-MM-dd")] });
+          weekNum++;
+        }
+      }
+      current = new Date(current.getTime() + 24 * 60 * 60 * 1000);
+    }
+
+    return weeks.map((w) => {
+      const practiceDates = w.dates.filter((d) => dailyCounts[d] !== undefined);
+      const total = practiceDates.reduce((sum, d) => sum + (dailyCounts[d] || 0), 0);
+      const avg = practiceDates.length > 0 ? Math.round(total / practiceDates.length) : 0;
+      const firstDate = w.dates[0] ? format(parseISO(w.dates[0]), "M/d") : "";
+      const lastDate = w.dates[w.dates.length - 1] ? format(parseISO(w.dates[w.dates.length - 1]), "M/d") : "";
+      return { week: w.label, avg, total, days: practiceDates.length, range: `${firstDate} – ${lastDate}` };
+    }).filter((w) => w.days > 0);
+  }, [practiceAttendance, calendarMonth]);
 
   /* ───── PROGRAM ATTENDANCE TREND (practice days only) ───── */
   const programTrend = useMemo(() => {
@@ -456,13 +487,13 @@ const AdminAttendance = () => {
   const smartInsights = useMemo(() => {
     const insights: string[] = [];
 
-    const strongest = dowData.reduce((a, b) => (b.avg > a.avg ? b : a), dowData[0]);
-    const weakest = dowData.reduce((a, b) => (b.avg < a.avg ? b : a), dowData[0]);
+    const strongest = weeklyAvgData.reduce((a, b) => (b.avg > a.avg ? b : a), weeklyAvgData[0]);
+    const weakest = weeklyAvgData.reduce((a, b) => (b.avg < a.avg ? b : a), weeklyAvgData[0]);
     if (strongest && strongest.avg > 0) {
-      insights.push(`${WEEKDAY_NAMES[[1,2,3,4,5][dowData.indexOf(strongest)]]} has the strongest average attendance in ${viewedMonthShort} (${strongest.avg}/day).`);
+      insights.push(`${strongest.week} (${strongest.range}) has the strongest average attendance in ${viewedMonthShort} (${strongest.avg}/day).`);
     }
-    if (weakest && weakest.avg > 0 && weakest.day !== strongest.day) {
-      insights.push(`${weakest.day} attendance tends to be lower than midweek attendance.`);
+    if (weakest && weakest.avg > 0 && weakest.week !== strongest?.week) {
+      insights.push(`${weakest.week} (${weakest.range}) has lower average attendance (${weakest.avg}/day).`);
     }
 
     const monthRegIds = new Set(practiceAttendance.map((a) => a.registration_id));
@@ -489,7 +520,7 @@ const AdminAttendance = () => {
     }
 
     return insights;
-  }, [dowData, practiceAttendance, regMap, topDistrictToday, totalPresentToday, avgArrivalToday, prevPracticeAttendance, mtdAvg, isCurrentMonth, viewedMonthShort, calendarMonth]);
+  }, [weeklyAvgData, practiceAttendance, regMap, topDistrictToday, totalPresentToday, avgArrivalToday, prevPracticeAttendance, mtdAvg, isCurrentMonth, viewedMonthShort, calendarMonth]);
 
   /* ───── BALD EAGLES ───── */
   const baldEagles = registrations.filter((r) => r.is_bald_eagle);
@@ -886,23 +917,23 @@ const AdminAttendance = () => {
         )}
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-          {/* Day of Week */}
+          {/* Weekly Average */}
           <Card className="bg-white/5 border-white/10 text-white">
             <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-white/60">Attendance by Day of Week</CardTitle>
+              <CardTitle className="text-sm font-medium text-white/60">Avg Attendance by Week — {format(calendarMonth, "MMMM")}</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="h-44">
                 <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={dowData}>
+                  <BarChart data={weeklyAvgData}>
                     <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" />
-                    <XAxis dataKey="day" tick={{ fill: "rgba(255,255,255,0.4)", fontSize: 11 }} />
+                    <XAxis dataKey="week" tick={{ fill: "rgba(255,255,255,0.4)", fontSize: 11 }} />
                     <YAxis tick={{ fill: "rgba(255,255,255,0.4)", fontSize: 10 }} />
-                    <Tooltip content={({ active, payload }) => { if (!active || !payload?.length) return null; const item = payload[0].payload; return (<div style={{ ...chartTooltipStyle, padding: "8px 12px" }}><p style={{ color: "rgba(255,255,255,0.6)", fontSize: 12, margin: 0 }}>{item.day}</p><p style={{ color: "#fff", fontSize: 14, fontWeight: 600, margin: "4px 0 0" }}>{item.avg} Avg Sign-Ins</p></div>); }} />
+                    <Tooltip content={({ active, payload }) => { if (!active || !payload?.length) return null; const item = payload[0].payload; return (<div style={{ ...chartTooltipStyle, padding: "8px 12px" }}><p style={{ color: "rgba(255,255,255,0.6)", fontSize: 12, margin: 0 }}>{item.week} ({item.range})</p><p style={{ color: "#fff", fontSize: 14, fontWeight: 600, margin: "4px 0 0" }}>{item.avg} Avg/Day</p><p style={{ color: "rgba(255,255,255,0.4)", fontSize: 11, margin: "2px 0 0" }}>{item.total} total across {item.days} days</p></div>); }} />
                     <Bar dataKey="avg" name="Avg/Day" radius={[3, 3, 0, 0]}>
                       <LabelList dataKey="avg" position="top" style={{ fill: "rgba(255,255,255,0.6)", fontSize: 9, fontWeight: 600 }} />
-                      {dowData.map((d, i) => (
-                        <Cell key={i} fill={d.avg === Math.max(...dowData.map((x) => x.avg)) ? "hsl(142, 71%, 45%)" : "hsl(217, 91%, 60%)"} fillOpacity={0.7} />
+                      {weeklyAvgData.map((d, i) => (
+                        <Cell key={i} fill={d.avg === Math.max(...weeklyAvgData.map((x) => x.avg)) ? "hsl(142, 71%, 45%)" : "hsl(217, 91%, 60%)"} fillOpacity={0.7} />
                       ))}
                     </Bar>
                   </BarChart>
