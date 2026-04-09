@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -49,11 +49,8 @@ const AdminLilChampsAttendance = () => {
   // Manual add state
   const [addOpen, setAddOpen] = useState(false);
   const [addSearch, setAddSearch] = useState("");
-  const [addResults, setAddResults] = useState<SearchResult[]>([]);
-  const [addSearching, setAddSearching] = useState(false);
   const [adding, setAdding] = useState(false);
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
-  const debounceRef = useRef<ReturnType<typeof setTimeout>>();
   const [allLilChampsYouth, setAllLilChampsYouth] = useState<SearchResult[]>([]);
 
   // Load all Lil Champs youth once for browse-all mode
@@ -331,13 +328,13 @@ const AdminLilChampsAttendance = () => {
       </Card>
 
       {/* Manual Add Youth Modal */}
-      <Dialog open={addOpen} onOpenChange={(o) => { setAddOpen(o); if (!o) { setAddSearch(""); setAddResults([]); } }}>
+      <Dialog open={addOpen} onOpenChange={(o) => { setAddOpen(o); if (!o) { setAddSearch(""); } }}>
         <DialogContent className="bg-[#111827] border-white/10 text-white max-w-md">
           <DialogHeader>
             <DialogTitle>Add Youth Check-In</DialogTitle>
           </DialogHeader>
           <p className="text-white/50 text-sm">
-            Search for a Lil Champs youth to manually add a check-in
+            {addSearch.trim() ? "Select a youth to add a manual check-in" : "Browse all Lil Champs youth or search by name"}
             {dateFilter ? ` for ${dateFilter}` : " for today"}.
           </p>
           <div className="relative">
@@ -345,17 +342,15 @@ const AdminLilChampsAttendance = () => {
             <Input
               value={addSearch}
               onChange={(e) => handleAddSearch(e.target.value)}
-              placeholder="Type a name..."
+              placeholder="Search by name or browse below..."
               className="pl-9 bg-white/5 border-white/10 text-white placeholder:text-white/30"
               autoFocus
             />
           </div>
 
-          {addSearching && <p className="text-white/40 text-sm text-center py-2">Searching...</p>}
-
-          {addResults.length > 0 && (
+          {displayedAddYouth.length > 0 ? (
             <ul className="space-y-1 max-h-60 overflow-y-auto">
-              {addResults.map((y) => (
+              {displayedAddYouth.map((y) => (
                 <li
                   key={y.id}
                   onClick={() => !adding && handleManualAdd(y)}
@@ -381,9 +376,7 @@ const AdminLilChampsAttendance = () => {
                 </li>
               ))}
             </ul>
-          )}
-
-          {addSearch.trim().length >= 2 && !addSearching && addResults.length === 0 && (
+          ) : (
             <p className="text-white/40 text-sm text-center py-2">No matching youth found.</p>
           )}
         </DialogContent>
