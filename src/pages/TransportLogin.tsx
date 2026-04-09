@@ -52,7 +52,7 @@ export default function TransportLogin() {
 
   const handleKeyPress = useCallback(
     (digit: string) => {
-      if (pin.length >= 6) return;
+      if (pin.length >= 4) return;
       setPin((prev) => prev + digit);
       setError("");
     },
@@ -127,7 +127,7 @@ export default function TransportLogin() {
     }
   };
 
-  const pinDots = Array.from({ length: 6 }, (_, i) => i < pin.length);
+  const pinDots = Array.from({ length: 4 }, (_, i) => i < pin.length);
 
   const keypadKeys = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "CLR", "0", "⌫"];
 
