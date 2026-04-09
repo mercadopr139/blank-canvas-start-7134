@@ -408,6 +408,17 @@ const AdminAttendance = () => {
     return isDefaultPracticeDay(dateStr);
   }, []);
 
+  /* ───── Excursion map ───── */
+  const excursionDayMap = useMemo(() => {
+    const m: Record<string, boolean> = {};
+    excursionsCalMonth.forEach((e) => { m[e.date] = true; });
+    return m;
+  }, [excursionsCalMonth]);
+
+  const isExcursionDay = useCallback((dateStr: string): boolean => {
+    return !!excursionDayMap[dateStr];
+  }, [excursionDayMap]);
+
   /* ───── Filter attendance to practice days only ───── */
   const practiceAttendance = useMemo(
     () => calendarAttendance.filter((a) => isPracticeDay(a.check_in_date, calPracticeDayMap)),
