@@ -355,6 +355,8 @@ export default function TransportReports() {
           </TabsContent>
         </Tabs>
       )}
+      </>
+      )}
     </div>
   );
 }
