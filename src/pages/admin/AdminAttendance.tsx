@@ -99,8 +99,7 @@ const getWeatherInfo = (code: number | null) => {
   return WMO_MAP[code] || { label: "Unknown", emoji: "❓" };
 };
 
-const celsiusToF = (c: number) => Math.round(c * 9 / 5 + 32);
-const mmToInches = (mm: number) => Math.round(mm / 25.4 * 100) / 100;
+
 
 const isRainyCode = (code: number | null) => code !== null && code >= 51;
 const isSunnyCode = (code: number | null) => code !== null && code <= 2;
