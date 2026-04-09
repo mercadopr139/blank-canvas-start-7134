@@ -1013,7 +1013,7 @@ const AdminAttendance = () => {
           <CardContent>
             <div className="grid grid-cols-3 gap-3 mb-4">
               <div className="text-center p-3 rounded-lg bg-white/5">
-                <p className="text-[10px] uppercase tracking-wider text-white/40">Present Today</p>
+                <p className="text-[10px] uppercase tracking-wider text-white/40">{isCurrentMonth ? "Present Today" : `${viewedMonthShort} Attendance`}</p>
                 <p className="text-2xl font-bold mt-1">{baldEaglesPresent}</p>
                 <p className="text-[10px] text-white/30">of {activeBaldEagles.length} active</p>
               </div>
