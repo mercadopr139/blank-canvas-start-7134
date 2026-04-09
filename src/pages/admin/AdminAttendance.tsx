@@ -973,7 +973,7 @@ const AdminAttendance = () => {
           {/* Poverty Summary */}
           <Card className="bg-white/5 border-white/10 text-white">
             <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-white/60">Below Poverty Line (Month)</CardTitle>
+              <CardTitle className="text-sm font-medium text-white/60">Below Poverty Line ({viewedMonthShort})</CardTitle>
             </CardHeader>
             <CardContent className="flex flex-col items-center justify-center py-4">
               <p className="text-5xl font-black text-white">{pct(povertyMonth.below, povertyMonth.total)}</p>
