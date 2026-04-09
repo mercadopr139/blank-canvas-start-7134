@@ -938,6 +938,47 @@ const AdminAttendance = () => {
 
   const alerts: (Registration & { prevWeekCount: number; lastDate: string })[] = [];
 
+  /* ───── BALD EAGLE NO-SHOW ALERT ───── */
+  const { data: todayCallouts = [] } = useQuery({
+    queryKey: ["today-callouts", todayStr],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("callouts" as any)
+        .select("first_name, last_name")
+        .eq("date", todayStr);
+      return (data || []) as { first_name: string; last_name: string }[];
+    },
+  });
+
+  const todayIsPracticeForAlert = useMemo(() => {
+    const pdEntry = practiceDayMap[todayStr];
+    if (pdEntry !== undefined) return pdEntry;
+    const d = new Date(todayStr + "T12:00:00");
+    return !isWeekend(d);
+  }, [practiceDayMap, todayStr]);
+
+  const todayIsExcursionForAlert = useMemo(() => !!excursionDayMap[todayStr], [excursionDayMap, todayStr]);
+
+  const baldEagleNoShows = useMemo(() => {
+    if (!todayIsPracticeForAlert || todayIsExcursionForAlert) return [];
+    const estNow = new Date();
+    const estHour = parseInt(estNow.toLocaleString("en-US", { timeZone: "America/New_York", hour: "numeric", hour12: false }));
+    if (estHour < 20) return [];
+
+    const todayCheckedInIds = new Set(
+      calendarAttendance.filter((a) => a.check_in_date === todayStr).map((a) => a.registration_id)
+    );
+    const calledOutNames = new Set(
+      todayCallouts.map((c) => `${c.first_name.toLowerCase()}|${c.last_name.toLowerCase()}`)
+    );
+
+    return activeBaldEagles.filter((r) => {
+      if (todayCheckedInIds.has(r.id)) return false;
+      if (calledOutNames.has(`${r.child_first_name.toLowerCase()}|${r.child_last_name.toLowerCase()}`)) return false;
+      return true;
+    });
+  }, [activeBaldEagles, calendarAttendance, todayCallouts, todayStr, todayIsPracticeForAlert, todayIsExcursionForAlert]);
+
   /* ───── CALENDAR ───── */
   const calendarRegIds = useMemo(() => {
     let filtered = registrations;
