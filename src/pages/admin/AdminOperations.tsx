@@ -14,35 +14,25 @@ interface OperationsTile {
 
 const baseTiles: OperationsTile[] = [
   {
-    title: "Registration Form",
-    description: "Public youth registration form",
+    title: "Registration",
+    description: "Youth registration management",
     icon: ClipboardList,
-    href: "/register",
-    external: true,
+    href: "/admin/operations/registration",
+    children: [
+      { title: "Registration Form", href: "/register", icon: ClipboardList },
+      { title: "Registrations", href: "/admin/operations/registrations", icon: Users },
+      { title: "Registration Analytics", href: "/admin/operations/registration-analytics", icon: BarChart3 },
+    ],
   },
   {
-    title: "Registrations",
-    description: "View and manage youth registrations",
-    icon: Users,
-    href: "/admin/operations/registrations",
-  },
-  {
-    title: "Registration Analytics",
-    description: "Charts and insights from registrations",
-    icon: BarChart3,
-    href: "/admin/operations/registration-analytics",
-  },
-  {
-    title: "Attendance Intelligence",
-    description: "Live dashboard, insights & calendar",
+    title: "Attendance",
+    description: "Attendance tracking & reports",
     icon: CalendarCheck,
-    href: "/admin/operations/attendance",
-  },
-  {
-    title: "Attendance Reports",
-    description: "Query & export attendance by date",
-    icon: FileBarChart,
-    href: "/admin/operations/attendance-reports",
+    href: "/admin/operations/attendance-group",
+    children: [
+      { title: "Attendance Intelligence", href: "/admin/operations/attendance", icon: CalendarCheck },
+      { title: "Attendance Reports", href: "/admin/operations/attendance-reports", icon: FileBarChart },
+    ],
   },
   {
     title: "Form Builder",
