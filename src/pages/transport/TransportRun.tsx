@@ -7,7 +7,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
-  Search, Star, AlertTriangle, Loader2, ArrowUp, ArrowDown, Baby, Send, CheckCircle2, UserPlus,
+  Search, Star, AlertTriangle, Loader2, ArrowUp, ArrowDown, Baby, Send, CheckCircle2, UserPlus, ArrowLeft,
 } from "lucide-react";
 import DriverAddYouthSheet from "@/components/transport/DriverAddYouthSheet";
 
@@ -48,6 +48,8 @@ export default function TransportRun() {
   const [submitConfirmOpen, setSubmitConfirmOpen] = useState(false);
   const [submittingTrip, setSubmittingTrip] = useState(false);
   const [addYouthOpen, setAddYouthOpen] = useState(false);
+  const [backConfirmOpen, setBackConfirmOpen] = useState(false);
+  const [cancellingRun, setCancellingRun] = useState(false);
 
   useEffect(() => {
     const runSession = sessionStorage.getItem("transport_run");
@@ -193,6 +195,20 @@ export default function TransportRun() {
     }
   };
 
+  const handleCancelRun = async () => {
+    setCancellingRun(true);
+    try {
+      // Delete the in-progress run and its associated data
+      await apiCall("close-transport-run", { run_id: runId, cancel: true });
+      sessionStorage.removeItem("transport_run");
+      navigate("/transport/dashboard", { replace: true });
+    } catch {
+      toast({ title: "Failed to cancel trip", variant: "destructive" });
+    } finally {
+      setCancellingRun(false);
+    }
+  };
+
   const getPhotoUrl = (url: string | null) => {
     if (!url) return null;
     if (url.startsWith("http")) return url;
@@ -219,6 +235,9 @@ export default function TransportRun() {
     return !att || (!att.picked_up && !att.dropped_off);
   }).length;
 
+  const markedCount = runType === "pickup" ? pickedUpCount : droppedOffCount;
+  const canSubmit = markedCount > 0;
+
   if (loading) {
     return (
       <div className="min-h-screen bg-black flex items-center justify-center">
@@ -232,6 +251,12 @@ export default function TransportRun() {
       {/* Header - no timer */}
       <header className="bg-[#0F1D32] border-b border-white/10 px-4 py-3 flex items-center justify-between sticky top-0 z-20">
         <div className="flex items-center gap-3 min-w-0">
+          <button
+            onClick={() => setBackConfirmOpen(true)}
+            className="p-1.5 rounded-lg bg-white/10 hover:bg-white/15 text-white/70 hover:text-white transition-colors active:scale-95 touch-manipulation"
+          >
+            <ArrowLeft className="w-4 h-4" />
+          </button>
           <div className={`px-2.5 py-1 rounded-lg text-xs font-bold uppercase tracking-wider ${
             runType === "pickup"
               ? "bg-green-600/20 text-green-400 border border-green-500/30"
@@ -273,17 +298,16 @@ export default function TransportRun() {
             const att = attendance[y.id] || { picked_up: false, dropped_off: false };
             const isStarred = starred.has(y.id);
             const photoUrl = getPhotoUrl(y.photo_url);
-            const hasBoth = att.picked_up && att.dropped_off;
-            const hasAny = att.picked_up || att.dropped_off;
+            const isMarked = runType === "pickup" ? att.picked_up : att.dropped_off;
 
             return (
               <div
                 key={y.id}
                 className={`relative rounded-2xl border-2 p-3 transition-all ${
-                  hasBoth
-                    ? "border-green-500/30 bg-green-500/5"
-                    : hasAny
-                    ? "border-blue-500/30 bg-blue-500/5"
+                  isMarked
+                    ? runType === "pickup"
+                      ? "border-red-500/30 bg-red-500/5"
+                      : "border-green-500/30 bg-green-500/5"
                     : "border-white/10 bg-white/5"
                 }`}
               >
@@ -322,30 +346,33 @@ export default function TransportRun() {
                   {y.first_name} {y.last_name[0]}.
                 </p>
 
-                {/* Action Buttons */}
-                <div className="grid grid-cols-2 gap-1.5">
-                  <button
-                    onClick={() => toggleAttendance(y.id, "picked_up")}
-                    className={`py-2.5 rounded-lg text-[10px] font-bold flex items-center justify-center gap-1 transition-all active:scale-95 touch-manipulation ${
-                      att.picked_up
-                        ? "bg-[#DC2626] text-white"
-                        : "bg-white/10 text-white/50"
-                    }`}
-                  >
-                    <ArrowUp className="w-3 h-3" />
-                    Pick-Up
-                  </button>
-                  <button
-                    onClick={() => toggleAttendance(y.id, "dropped_off")}
-                    className={`py-2.5 rounded-lg text-[10px] font-bold flex items-center justify-center gap-1 transition-all active:scale-95 touch-manipulation ${
-                      att.dropped_off
-                        ? "bg-green-600 text-white"
-                        : "bg-white/10 text-white/50"
-                    }`}
-                  >
-                    <ArrowDown className="w-3 h-3" />
-                    Drop-Off
-                  </button>
+                {/* Action Button - single based on run type */}
+                <div>
+                  {runType === "pickup" ? (
+                    <button
+                      onClick={() => toggleAttendance(y.id, "picked_up")}
+                      className={`w-full py-2.5 rounded-lg text-[10px] font-bold flex items-center justify-center gap-1 transition-all active:scale-95 touch-manipulation ${
+                        att.picked_up
+                          ? "bg-[#DC2626] text-white"
+                          : "bg-white/10 text-white/50"
+                      }`}
+                    >
+                      <ArrowUp className="w-3 h-3" />
+                      Pick-Up
+                    </button>
+                  ) : (
+                    <button
+                      onClick={() => toggleAttendance(y.id, "dropped_off")}
+                      className={`w-full py-2.5 rounded-lg text-[10px] font-bold flex items-center justify-center gap-1 transition-all active:scale-95 touch-manipulation ${
+                        att.dropped_off
+                          ? "bg-green-600 text-white"
+                          : "bg-white/10 text-white/50"
+                      }`}
+                    >
+                      <ArrowDown className="w-3 h-3" />
+                      Drop-Off
+                    </button>
+                  )}
                 </div>
               </div>
             );
@@ -365,12 +392,8 @@ export default function TransportRun() {
         {/* Stats */}
         <div className="flex items-center justify-center gap-4 text-xs">
           <span className="flex items-center gap-1.5">
-            <span className="w-2 h-2 rounded-full bg-[#DC2626]" />
-            <span className="text-white/60">Pick-Ups: <strong className="text-white">{pickedUpCount}</strong></span>
-          </span>
-          <span className="flex items-center gap-1.5">
-            <span className="w-2 h-2 rounded-full bg-green-500" />
-            <span className="text-white/60">Drop-Offs: <strong className="text-white">{droppedOffCount}</strong></span>
+            <span className={`w-2 h-2 rounded-full ${runType === "pickup" ? "bg-[#DC2626]" : "bg-green-500"}`} />
+            <span className="text-white/60">{runType === "pickup" ? "Pick-Ups" : "Drop-Offs"}: <strong className="text-white">{markedCount}</strong></span>
           </span>
           <span className="flex items-center gap-1.5">
             <span className="w-2 h-2 rounded-full bg-white/30" />
@@ -388,8 +411,13 @@ export default function TransportRun() {
             Incident
           </button>
           <button
-            onClick={() => setSubmitConfirmOpen(true)}
-            className="flex-1 py-3 rounded-xl bg-[#1B3A5C] border border-[#2563EB]/40 text-white font-bold text-sm flex items-center justify-center gap-2 active:scale-[0.97] touch-manipulation"
+            onClick={() => canSubmit && setSubmitConfirmOpen(true)}
+            disabled={!canSubmit}
+            className={`flex-1 py-3 rounded-xl font-bold text-sm flex items-center justify-center gap-2 active:scale-[0.97] touch-manipulation ${
+              canSubmit
+                ? "bg-[#1B3A5C] border border-[#2563EB]/40 text-white"
+                : "bg-white/5 border border-white/10 text-white/30 cursor-not-allowed"
+            }`}
           >
             <Send className="w-4 h-4" />
             Submit Trip
@@ -530,6 +558,36 @@ export default function TransportRun() {
                 className="flex-1 bg-green-600 hover:bg-green-700 text-white"
               >
                 {submittingTrip ? "Submitting..." : "Confirm & Submit"}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Back Confirm Modal */}
+      <Dialog open={backConfirmOpen} onOpenChange={setBackConfirmOpen}>
+        <DialogContent className="bg-[#111827] border-white/10 text-white max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <AlertTriangle className="w-5 h-5 text-amber-400" />
+              Cancel Trip?
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 mt-2">
+            <p className="text-white/60 text-sm">Are you sure? This will cancel the current trip and no data will be saved.</p>
+            <div className="flex gap-3">
+              <Button
+                onClick={() => setBackConfirmOpen(false)}
+                className="flex-1 border border-white/20 bg-white/5 text-white hover:bg-white/10"
+              >
+                Stay
+              </Button>
+              <Button
+                onClick={handleCancelRun}
+                disabled={cancellingRun}
+                className="flex-1 bg-[#DC2626] hover:bg-[#B91C1C] text-white"
+              >
+                {cancellingRun ? "Cancelling..." : "Go Back"}
               </Button>
             </div>
           </div>

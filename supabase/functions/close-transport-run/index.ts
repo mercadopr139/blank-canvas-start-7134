@@ -11,7 +11,7 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const { run_id } = await req.json();
+    const { run_id, cancel } = await req.json();
     if (!run_id) {
       return new Response(JSON.stringify({ error: "Missing run_id" }), {
         status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -23,12 +23,20 @@ Deno.serve(async (req) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
     );
 
-    const { error } = await supabase
-      .from("runs")
-      .update({ status: "completed", closed_at: new Date().toISOString() })
-      .eq("id", run_id);
-
-    if (error) throw error;
+    if (cancel) {
+      // Delete associated data then the run itself
+      await supabase.from("transport_attendance").delete().eq("run_id", run_id);
+      await supabase.from("incidents").delete().eq("run_id", run_id);
+      await supabase.from("run_approvals").delete().eq("run_id", run_id);
+      const { error } = await supabase.from("runs").delete().eq("id", run_id);
+      if (error) throw error;
+    } else {
+      const { error } = await supabase
+        .from("runs")
+        .update({ status: "completed", closed_at: new Date().toISOString() })
+        .eq("id", run_id);
+      if (error) throw error;
+    }
 
     return new Response(JSON.stringify({ success: true }), {
       status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" },
