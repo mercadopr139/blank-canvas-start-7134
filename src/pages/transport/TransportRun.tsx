@@ -299,6 +299,25 @@ export default function TransportRun() {
         </div>
       </div>
 
+      {/* Zone Tabs for Both Zones route */}
+      {isBothZones && (
+        <div className="px-4 flex gap-2">
+          {(["Woodbine", "Wildwood"] as const).map((zone) => (
+            <button
+              key={zone}
+              onClick={() => setActiveZoneTab(zone)}
+              className={`flex-1 py-2.5 rounded-lg text-sm font-bold transition-all active:scale-95 touch-manipulation ${
+                activeZoneTab === zone
+                  ? "bg-[#3B82F6] text-white"
+                  : "bg-white/5 text-white/40 border border-white/10"
+              }`}
+            >
+              {zone}
+            </button>
+          ))}
+        </div>
+      )}
+
       {/* Youth Grid */}
       <div className="flex-1 px-4 pb-4 overflow-y-auto">
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
