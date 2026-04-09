@@ -33,6 +33,7 @@ export default function TransportRun() {
   const [runType, setRunType] = useState("");
   const [driverId, setDriverId] = useState("");
   const [driverName, setDriverName] = useState("");
+  const [activeZoneTab, setActiveZoneTab] = useState<"Woodbine" | "Wildwood">("Woodbine");
 
   const [youth, setYouth] = useState<YouthProfile[]>([]);
   const [attendance, setAttendance] = useState<Record<string, AttendanceState>>({});
@@ -50,6 +51,8 @@ export default function TransportRun() {
   const [addYouthOpen, setAddYouthOpen] = useState(false);
   const [backConfirmOpen, setBackConfirmOpen] = useState(false);
   const [cancellingRun, setCancellingRun] = useState(false);
+
+  const isBothZones = routeName === "Both";
 
   useEffect(() => {
     const runSession = sessionStorage.getItem("transport_run");
