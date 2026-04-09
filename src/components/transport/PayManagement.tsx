@@ -5,7 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { Download, CheckCircle, XCircle, DollarSign, AlertTriangle } from "lucide-react";
-import { format, startOfMonth, endOfMonth, setDate } from "date-fns";
+import { format, endOfMonth, setDate } from "date-fns";
 
 interface RunWithDetails {
   id: string;
