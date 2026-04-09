@@ -6,7 +6,8 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Search, Download, Calendar, UserPlus, Trash2 } from "lucide-react";
+import { Search, Download, Calendar, UserPlus, Trash2, FileText } from "lucide-react";
+import { generateLilChampsAttendancePdf } from "@/lib/generateLilChampsAttendancePdf";
 import { format } from "date-fns";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useToast } from "@/hooks/use-toast";
@@ -218,6 +219,14 @@ const AdminLilChampsAttendance = () => {
           </Button>
           <Button variant="outline" size="sm" onClick={exportCsv} className="gap-2 text-foreground">
             <Download className="w-4 h-4" /> Export CSV
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => generateLilChampsAttendancePdf(filtered, dateFilter)}
+            className="gap-2 text-white bg-red-700 hover:bg-red-800 border-red-700"
+          >
+            <FileText className="w-4 h-4" /> Export PDF
           </Button>
         </div>
       </div>
