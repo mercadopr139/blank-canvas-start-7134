@@ -239,6 +239,25 @@ export default function TransportDashboard() {
             </span>
           </button>
         )}
+        {/* Overflow option */}
+        {routes.find((r) => r.name === "Overflow") && (
+          <button
+            onClick={() => {
+              const overflow = routes.find((r) => r.name === "Overflow")!;
+              setSelectedRoute(selectedRoute?.id === overflow.id ? null : overflow);
+            }}
+            className={`w-full mt-2 p-3 rounded-xl border transition-all active:scale-[0.97] touch-manipulation flex items-center justify-center gap-3 text-sm ${getZoneColor(
+              "Overflow",
+              selectedRoute?.name === "Overflow"
+            )}`}
+          >
+            <MapPin className={`w-5 h-5 ${selectedRoute?.name === "Overflow" ? "text-orange-400" : "text-white/40"}`} />
+            <span className="font-bold">Overflow</span>
+            <span className={`text-xs ${selectedRoute?.name === "Overflow" ? "text-white/70" : "text-white/40"}`}>
+              $25/run
+            </span>
+          </button>
+        )}
       </div>
 
       {/* Run Type Toggle */}
