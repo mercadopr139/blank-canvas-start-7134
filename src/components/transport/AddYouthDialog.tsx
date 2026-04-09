@@ -235,9 +235,8 @@ export default function AddYouthDialog({ open, onOpenChange, onSaved }: AddYouth
             )}
 
             <Button
-              variant="outline"
               onClick={startManualEntry}
-              className="w-full border-white/10 text-white/70 hover:text-white hover:bg-white/5 gap-2"
+              className="w-full border border-white/20 bg-white/5 text-white/70 hover:text-white hover:bg-white/10 gap-2"
             >
               <UserPlus className="w-4 h-4" /> Add Manually
             </Button>
