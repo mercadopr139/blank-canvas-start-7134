@@ -257,7 +257,72 @@ const AdminAttendance = () => {
     },
   });
 
-  /* ───── Practice Day Helper ───── */
+  /* ───── Weather Data (Open-Meteo + DB cache) ───── */
+  const { data: weatherMap = {} } = useQuery({
+    queryKey: ["weather-data", calMonthStart],
+    queryFn: async () => {
+      // 1. Check DB cache first
+      const { data: cached } = await supabase
+        .from("weather_data")
+        .select("date, temp_high, temp_low, precipitation, condition, condition_code")
+        .eq("location", "rio_grande_nj")
+        .gte("date", calMonthStart)
+        .lte("date", calMonthEnd);
+
+      const cachedMap: Record<string, WeatherDay> = {};
+      (cached || []).forEach((w: any) => { cachedMap[w.date] = w; });
+
+      // Check if we have all days
+      const daysInMonth = getDaysInMonth(calendarMonth);
+      const missingDates: string[] = [];
+      for (let d = 1; d <= daysInMonth; d++) {
+        const ds = format(new Date(calendarMonth.getFullYear(), calendarMonth.getMonth(), d), "yyyy-MM-dd");
+        if (!cachedMap[ds]) missingDates.push(ds);
+      }
+
+      if (missingDates.length === 0) return cachedMap;
+
+      // 2. Fetch from Open-Meteo
+      try {
+        const url = `https://api.open-meteo.com/v1/forecast?latitude=39.0018&longitude=-74.8774&daily=temperature_2m_max,temperature_2m_min,precipitation_sum,weather_code&temperature_unit=fahrenheit&precipitation_unit=inch&timezone=America/New_York&start_date=${calMonthStart}&end_date=${calMonthEnd}`;
+        const resp = await fetch(url);
+        if (!resp.ok) return cachedMap;
+        const json = await resp.json();
+        const daily = json.daily;
+        if (!daily?.time) return cachedMap;
+
+        const rows: any[] = [];
+        for (let i = 0; i < daily.time.length; i++) {
+          const dateStr = daily.time[i];
+          if (cachedMap[dateStr]) continue; // already cached
+          const code = daily.weather_code?.[i] ?? null;
+          const info = getWeatherInfo(code);
+          const row = {
+            date: dateStr,
+            location: "rio_grande_nj",
+            temp_high: daily.temperature_2m_max?.[i] ?? null,
+            temp_low: daily.temperature_2m_min?.[i] ?? null,
+            precipitation: daily.precipitation_sum?.[i] ?? null,
+            condition: info.label,
+            condition_code: code,
+          };
+          rows.push(row);
+          cachedMap[dateStr] = row as WeatherDay;
+        }
+
+        // Save to DB (fire and forget)
+        if (rows.length > 0) {
+          supabase.from("weather_data").upsert(rows, { onConflict: "date,location" }).then();
+        }
+      } catch (e) {
+        console.warn("Weather fetch failed:", e);
+      }
+
+      return cachedMap;
+    },
+    staleTime: 1000 * 60 * 30, // 30 min cache
+  });
+
   const calPracticeDayMap = useMemo(() => {
     const m: Record<string, boolean> = {};
     practiceDaysCalMonth.forEach((p) => { m[p.date] = p.is_practice_day; });
