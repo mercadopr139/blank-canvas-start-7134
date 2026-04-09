@@ -151,7 +151,8 @@ const AdminAttendance = () => {
   const [editingExcursion, setEditingExcursion] = useState<Excursion | null>(null);
   const [deleteExcursionTarget, setDeleteExcursionTarget] = useState<Excursion | null>(null);
   const [weatherTooltipDay, setWeatherTooltipDay] = useState<string | null>(null);
-
+  const [contextMenuDay, setContextMenuDay] = useState<{ dateStr: string; x: number; y: number } | null>(null);
+  const longPressTimer = React.useRef<ReturnType<typeof setTimeout> | null>(null);
   const invalidateAttendance = () => {
     queryClient.invalidateQueries({ queryKey: ["calendar-attendance"] });
     queryClient.invalidateQueries({ queryKey: ["all-attendance-for-profile"] });
