@@ -1160,6 +1160,7 @@ const AdminAttendance = () => {
                     >
                       {/* Date number with weather emoji hint */}
                       <span className={`absolute top-1 right-1.5 text-[10px] leading-none flex items-center gap-0.5 ${
+                        isExc ? "text-purple-400 font-medium" :
                         !isPrac ? "text-red-400 font-medium" :
                         isCurrentDay ? "text-blue-400 font-semibold" : "text-white/35"
                       }`}>
@@ -1169,16 +1170,20 @@ const AdminAttendance = () => {
 
                       {count > 0 ? (
                         <span className={`w-8 h-8 sm:w-9 sm:h-9 rounded-full flex items-center justify-center text-sm sm:text-base font-bold ${
-                          isPrac
-                            ? "bg-green-500/20 border border-green-500/40 text-green-400"
-                            : "bg-red-500/20 border border-red-500/40 text-red-400"
+                          isExc
+                            ? "bg-purple-500/20 border border-purple-500/40 text-purple-400"
+                            : isPrac
+                              ? "bg-green-500/20 border border-green-500/40 text-green-400"
+                              : "bg-red-500/20 border border-red-500/40 text-red-400"
                         }`}>{count}</span>
                       ) : (
                         <span className={`w-8 h-8 sm:w-9 sm:h-9 rounded-full flex items-center justify-center text-xs ${
-                          isPrac
-                            ? "bg-white/[0.03] border border-white/[0.06] text-white/15"
-                            : "bg-red-500/[0.03] border border-red-500/[0.08] text-red-400/30"
-                        }`}>{isPrac ? "0" : <X className="w-3 h-3" />}</span>
+                          isExc
+                            ? "bg-purple-500/[0.03] border border-purple-500/[0.08] text-purple-400/30"
+                            : isPrac
+                              ? "bg-white/[0.03] border border-white/[0.06] text-white/15"
+                              : "bg-red-500/[0.03] border border-red-500/[0.08] text-red-400/30"
+                        }`}>{isExc ? "0" : isPrac ? "0" : <X className="w-3 h-3" />}</span>
                       )}
                     </button>
                     {/* Weather tooltip - positioned outside cell */}
