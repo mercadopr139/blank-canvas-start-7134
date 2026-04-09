@@ -260,11 +260,9 @@ const AdminLilChampsAttendance = () => {
                     </div>
                     <div className="flex items-center gap-2">
                       <span className="text-xs px-2 py-0.5 rounded-full" style={{ backgroundColor: 'rgba(56,189,248,0.15)', color: '#38bdf8' }}>Lil Champs</span>
-                      {r.is_manual && (
-                        <button onClick={() => setDeleteConfirmId(r.id)} className="text-white/30 hover:text-red-400 transition-colors">
+                      <button onClick={() => setDeleteConfirmId(r.id)} className="text-white/30 hover:text-red-400 transition-colors">
                           <Trash2 className="w-3.5 h-3.5" />
                         </button>
-                      )}
                     </div>
                   </div>
                   <div className="flex items-center gap-4 text-sm text-white/60">
