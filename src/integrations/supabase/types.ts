@@ -707,6 +707,30 @@ export type Database = {
           },
         ]
       }
+      practice_days: {
+        Row: {
+          created_at: string
+          date: string
+          id: string
+          is_practice_day: boolean
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          date: string
+          id?: string
+          is_practice_day?: boolean
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          date?: string
+          id?: string
+          is_practice_day?: boolean
+          updated_at?: string
+        }
+        Relationships: []
+      }
       registration_form_fields: {
         Row: {
           created_at: string
