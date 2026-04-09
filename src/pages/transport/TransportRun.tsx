@@ -224,11 +224,16 @@ export default function TransportRun() {
       const q = search.toLowerCase();
       return y.first_name.toLowerCase().includes(q) || y.last_name.toLowerCase().includes(q);
     })
+    .filter((y) => {
+      // For "Both" route, filter by active zone tab
+      if (isBothZones) return y.pickup_zone === activeZoneTab;
+      return true;
+    })
     .sort((a, b) => {
       const aStarred = starred.has(a.id) ? 0 : 1;
       const bStarred = starred.has(b.id) ? 0 : 1;
       if (aStarred !== bStarred) return aStarred - bStarred;
-      return a.last_name.localeCompare(b.last_name);
+      return a.first_name.localeCompare(b.first_name);
     });
 
   const pickedUpCount = Object.values(attendance).filter((a) => a.picked_up).length;
