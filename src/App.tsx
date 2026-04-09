@@ -96,8 +96,7 @@ const App = () => (
             <Route element={<TransportAdminLayout />}>
               <Route path="/transport/admin/drivers" element={<TransportDrivers />} />
               <Route path="/transport/admin/youth" element={<TransportYouth />} />
-              <Route path="/transport/admin/live-runs" element={<TransportLiveRuns />} />
-              <Route path="/transport/admin/reports" element={<TransportReports />} />
+              <Route path="/transport/admin/runs" element={<TransportRunsPay />} />
             </Route>
             
             {/* Admin Routes */}
@@ -129,8 +128,7 @@ const App = () => (
               <Route path="lil-champs-attendance" element={<AdminLilChampsAttendance />} />
               <Route path="transportation/drivers" element={<TransportDrivers />} />
               <Route path="transportation/youth" element={<TransportYouth />} />
-              <Route path="transportation/live-runs" element={<TransportLiveRuns />} />
-              <Route path="transportation/reports" element={<TransportReports />} />
+              <Route path="transportation/runs" element={<TransportRunsPay />} />
             </Route>
 
             {/* Sales & Marketing section — sidebar layout wraps sub-pages */}
