@@ -271,12 +271,14 @@ function HistoryCalendarTab() {
   const driverHistoryByMonth = useMemo(() => {
     const approvalM = new Map<string, RunApproval>();
     allDriverApprovals.forEach((a) => approvalM.set(a.run_id, a));
-    const map = new Map<string, { trips: RunWithDetails[]; total: number; approved: number; pending: number }>();
+    const map = new Map<string, { trips: RunWithDetails[]; total: number; approved: number; pending: number; routeBreakdown: Record<string, number> }>();
     allDriverRuns.forEach((r) => {
       const monthKey = format(new Date(r.started_at), "yyyy-MM");
-      if (!map.has(monthKey)) map.set(monthKey, { trips: [], total: 0, approved: 0, pending: 0 });
+      if (!map.has(monthKey)) map.set(monthKey, { trips: [], total: 0, approved: 0, pending: 0, routeBreakdown: {} });
       const entry = map.get(monthKey)!;
       entry.trips.push(r);
+      const routeName = r.route?.name || "Unknown";
+      entry.routeBreakdown[routeName] = (entry.routeBreakdown[routeName] || 0) + 1;
       const pay = getPayRate(r.route?.name);
       entry.total += pay;
       const status = approvalM.get(r.id)?.status || "pending";
@@ -285,6 +287,24 @@ function HistoryCalendarTab() {
     });
     return [...map.entries()].sort((a, b) => b[0].localeCompare(a[0]));
   }, [allDriverRuns, allDriverApprovals]);
+
+  const driverYearTotal = useMemo(() => driverHistoryByMonth.reduce((sum, [, d]) => sum + d.total, 0), [driverHistoryByMonth]);
+
+  const exportDriverHistory = () => {
+    const approvalM = new Map<string, RunApproval>();
+    allDriverApprovals.forEach((a) => approvalM.set(a.run_id, a));
+    const csv = toCsv(
+      ["Date", "Route", "Type", "Pay", "Status"],
+      allDriverRuns.map((r) => [
+        format(new Date(r.started_at), "MM/dd/yyyy"),
+        r.route?.name || "",
+        r.run_type,
+        `$${getPayRate(r.route?.name)}`,
+        approvalM.get(r.id)?.status || "pending",
+      ])
+    );
+    downloadCsv(`${historyDriverName.replace(/\s+/g, "_")}_pay_history.csv`, csv);
+  };
 
   const panelRuns = useMemo(() => {
     if (!selectedDriver || !selectedDate) return [];
