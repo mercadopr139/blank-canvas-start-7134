@@ -235,6 +235,9 @@ export default function TransportRun() {
     return !att || (!att.picked_up && !att.dropped_off);
   }).length;
 
+  const markedCount = runType === "pickup" ? pickedUpCount : droppedOffCount;
+  const canSubmit = markedCount > 0;
+
   if (loading) {
     return (
       <div className="min-h-screen bg-black flex items-center justify-center">
