@@ -7,8 +7,9 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
-  Search, Star, AlertTriangle, Loader2, ArrowUp, ArrowDown, Baby, Send, CheckCircle2,
+  Search, Star, AlertTriangle, Loader2, ArrowUp, ArrowDown, Baby, Send, CheckCircle2, UserPlus,
 } from "lucide-react";
+import DriverAddYouthSheet from "@/components/transport/DriverAddYouthSheet";
 
 interface YouthProfile {
   id: string;
@@ -46,6 +47,7 @@ export default function TransportRun() {
 
   const [submitConfirmOpen, setSubmitConfirmOpen] = useState(false);
   const [submittingTrip, setSubmittingTrip] = useState(false);
+  const [addYouthOpen, setAddYouthOpen] = useState(false);
 
   useEffect(() => {
     const runSession = sessionStorage.getItem("transport_run");
@@ -228,7 +230,7 @@ export default function TransportRun() {
   return (
     <div className="min-h-screen bg-black flex flex-col">
       {/* Header - no timer */}
-      <header className="bg-[#0F1D32] border-b border-white/10 px-4 py-3 flex items-center sticky top-0 z-20">
+      <header className="bg-[#0F1D32] border-b border-white/10 px-4 py-3 flex items-center justify-between sticky top-0 z-20">
         <div className="flex items-center gap-3 min-w-0">
           <div className={`px-2.5 py-1 rounded-lg text-xs font-bold uppercase tracking-wider ${
             runType === "pickup"
@@ -242,6 +244,13 @@ export default function TransportRun() {
             <p className="text-white/40 text-xs">{driverName}</p>
           </div>
         </div>
+        <button
+          onClick={() => setAddYouthOpen(true)}
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/10 hover:bg-white/15 border border-white/10 text-white text-xs font-medium transition-colors active:scale-95 touch-manipulation shrink-0"
+        >
+          <UserPlus className="w-3.5 h-3.5" />
+          Add Youth
+        </button>
       </header>
 
       {/* Search */}
@@ -526,6 +535,19 @@ export default function TransportRun() {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Add Youth Sheet */}
+      <DriverAddYouthSheet
+        open={addYouthOpen}
+        onOpenChange={setAddYouthOpen}
+        routeName={routeName}
+        onYouthAdded={(newYouth) => {
+          setYouth((prev) => {
+            if (prev.some((y) => y.id === newYouth.id)) return prev;
+            return [...prev, newYouth];
+          });
+        }}
+      />
     </div>
   );
 }
