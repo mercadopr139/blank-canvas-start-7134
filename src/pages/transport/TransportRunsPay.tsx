@@ -59,6 +59,7 @@ export default function TransportRunsPay() {
   const [payPeriodRuns, setPayPeriodRuns] = useState<RunWithDetails[]>([]);
   const [yearRuns, setYearRuns] = useState<RunWithDetails[]>([]);
   const [paidDrivers, setPaidDrivers] = useState<Set<string>>(new Set());
+  const [undoConfirmDriverId, setUndoConfirmDriverId] = useState<string | null>(null);
 
   // Driver history modal
   const [historyDriverId, setHistoryDriverId] = useState<string | null>(null);
@@ -250,6 +251,23 @@ export default function TransportRunsPay() {
     toast({ title: "Marked as paid — saved to database" });
   };
 
+  const handleMarkUnpaid = async (driverId: string) => {
+    const { data: existing } = await supabase
+      .from("driver_pay_periods")
+      .select("id")
+      .eq("driver_id", driverId)
+      .eq("period_start", currentPayPeriod.start)
+      .eq("period_end", currentPayPeriod.end)
+      .maybeSingle();
+
+    if (existing) {
+      await supabase.from("driver_pay_periods").update({ status: "pending", updated_at: new Date().toISOString() }).eq("id", existing.id);
+    }
+    setPaidDrivers((prev) => { const s = new Set(prev); s.delete(driverId); return s; });
+    setUndoConfirmDriverId(null);
+    toast({ title: "Payment status reverted to unpaid" });
+  };
+
   const toggleRoster = async (runId: string) => {
     setExpandedRosters((prev) => {
       const next = new Set(prev);
@@ -439,10 +457,19 @@ export default function TransportRunsPay() {
                     {paidDrivers.has(driverId) ? "Paid" : "Unpaid"}
                   </Badge>
                 </span>
-                <span className="w-20 text-right">
-                  {!paidDrivers.has(driverId) && d.payPeriodEarnings > 0 && (
+                <span className="w-24 text-right">
+                  {paidDrivers.has(driverId) ? (
+                    undoConfirmDriverId === driverId ? (
+                      <div className="flex items-center gap-1">
+                        <Button size="sm" onClick={() => setUndoConfirmDriverId(null)} variant="outline" className="text-[9px] h-5 px-1.5 border-white/20 text-white/50 bg-transparent hover:bg-white/10">Cancel</Button>
+                        <Button size="sm" onClick={() => handleMarkUnpaid(driverId)} className="bg-red-600 hover:bg-red-700 text-white text-[9px] h-5 px-1.5">Confirm</Button>
+                      </div>
+                    ) : (
+                      <Button size="sm" onClick={() => setUndoConfirmDriverId(driverId)} variant="outline" className="text-[10px] h-6 px-2 gap-1 border-white/20 text-white/40 bg-transparent hover:bg-white/10 hover:text-white">Undo</Button>
+                    )
+                  ) : d.payPeriodEarnings > 0 ? (
                     <Button size="sm" onClick={() => handleMarkPaid(driverId)} className="bg-green-600 hover:bg-green-700 text-white text-[10px] h-6 px-2 gap-1"><DollarSign className="w-3 h-3" />Paid</Button>
-                  )}
+                  ) : null}
                 </span>
               </div>
             ))}
