@@ -773,7 +773,7 @@ const AdminAttendance = () => {
                       `}
                     >
                       <span className={`absolute top-1 right-1.5 text-[10px] leading-none ${
-                        !isPrac ? "text-red-400 line-through font-medium" :
+                        !isPrac ? "text-red-400 font-medium" :
                         isCurrentDay ? "text-blue-400 font-semibold" : "text-white/35"
                       }`}>{day}</span>
                       {count > 0 ? (
