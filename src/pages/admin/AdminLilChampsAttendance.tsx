@@ -53,20 +53,22 @@ const AdminLilChampsAttendance = () => {
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
   const [allLilChampsYouth, setAllLilChampsYouth] = useState<SearchResult[]>([]);
 
-  // Load all Lil Champs youth once for browse-all mode
+  // Load all Lil Champs youth when modal opens
   useEffect(() => {
+    if (!addOpen) return;
     const fetchAll = async () => {
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from("youth_registrations")
         .select("id, child_first_name, child_last_name, child_headshot_url, child_date_of_birth")
         .or("child_boxing_program.eq.Junior Boxing (Ages 7-10),extended_program.eq.Lil Champs Corner")
         .eq("approved_for_attendance", true)
         .order("child_last_name")
         .limit(200);
+      if (error) console.error("Lil Champs youth fetch error:", error);
       setAllLilChampsYouth(data || []);
     };
     fetchAll();
-  }, []);
+  }, [addOpen]);
 
   useEffect(() => {
     fetchRecords();
