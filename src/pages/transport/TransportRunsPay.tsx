@@ -201,12 +201,13 @@ function HistoryCalendarTab() {
           <div className="grid grid-cols-7">
             {calendarDays.map((cell) => {
               if (cell.blank) return <div key={cell.key} className="min-h-[80px] border-t border-r border-white/5 bg-white/[0.01]" />;
-              const dateKey = cell.key;
+              const nonBlank = cell as { blank: false; date: Date; key: string };
+              const dateKey = nonBlank.key;
               const dayDrivers = runsByDateDriver.get(dateKey);
               const isToday = format(new Date(), "yyyy-MM-dd") === dateKey;
               return (
-                <div key={cell.key} className={`min-h-[80px] border-t border-r border-white/5 p-1.5 ${isToday ? "bg-[#DC2626]/5 border-t-2 border-t-[#DC2626]/40" : ""}`}>
-                  <p className={`text-[11px] font-medium mb-1 ${isToday ? "text-[#DC2626]" : "text-white/40"}`}>{format(cell.date as Date, "d")}</p>
+                <div key={nonBlank.key} className={`min-h-[80px] border-t border-r border-white/5 p-1.5 ${isToday ? "bg-[#DC2626]/5 border-t-2 border-t-[#DC2626]/40" : ""}`}>
+                  <p className={`text-[11px] font-medium mb-1 ${isToday ? "text-[#DC2626]" : "text-white/40"}`}>{format(nonBlank.date, "d")}</p>
                   {dayDrivers && <div className="space-y-0.5">
                     {[...dayDrivers.entries()].map(([driverId, entry]) => (
                       <button key={driverId} onClick={() => { setSelectedDriver({ id: driverId, name: entry.driverName }); setSelectedDate(dateKey); setPanelOpen(true); }} className="w-full flex items-center gap-1 px-1 py-0.5 rounded hover:bg-white/10 transition-colors text-left group">
