@@ -58,14 +58,6 @@ const WEEKDAY_NAMES = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "
 
 const now = new Date();
 const todayStr = now.toLocaleDateString('en-CA', { timeZone: 'America/New_York' });
-const weekStart = format(startOfWeek(now, { weekStartsOn: 1 }), "yyyy-MM-dd");
-const weekEnd = format(endOfWeek(now, { weekStartsOn: 1 }), "yyyy-MM-dd");
-const prevWeekStart = format(startOfWeek(subWeeks(now, 1), { weekStartsOn: 1 }), "yyyy-MM-dd");
-const prevWeekEnd = format(endOfWeek(subWeeks(now, 1), { weekStartsOn: 1 }), "yyyy-MM-dd");
-const currentMonthStart = format(startOfMonth(now), "yyyy-MM-dd");
-const currentMonthEnd = format(endOfMonth(now), "yyyy-MM-dd");
-const prevMonthStart = format(startOfMonth(subMonths(now, 1)), "yyyy-MM-dd");
-const prevMonthEnd = format(endOfMonth(subMonths(now, 1)), "yyyy-MM-dd");
 
 const pct = (n: number, d: number) => (d === 0 ? "0%" : `${Math.round((n / d) * 100)}%`);
 
