@@ -844,8 +844,14 @@ const AdminAttendance = () => {
       }
     }
 
+    /* ── Excursion insights ── */
+    if (excursionsCalMonth.length > 0) {
+      const totalYouthExc = excursionsCalMonth.reduce((s, e) => s + e.youth_count, 0);
+      insights.push(`🟣 ${excursionsCalMonth.length} excursion${excursionsCalMonth.length > 1 ? "s" : ""} this month reached ${totalYouthExc} youth total.`);
+    }
+
     return insights;
-  }, [weeklyAvgData, practiceAttendance, regMap, topDistrictToday, totalPresentToday, avgArrivalToday, prevPracticeAttendance, mtdAvg, isCurrentMonth, viewedMonthShort, calendarMonth, weatherMap]);
+  }, [weeklyAvgData, practiceAttendance, regMap, topDistrictToday, totalPresentToday, avgArrivalToday, prevPracticeAttendance, mtdAvg, isCurrentMonth, viewedMonthShort, calendarMonth, weatherMap, excursionsCalMonth]);
 
   /* ───── BALD EAGLES ───── */
   const baldEagles = registrations.filter((r) => r.is_bald_eagle);
