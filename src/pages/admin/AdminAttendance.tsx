@@ -923,9 +923,25 @@ const AdminAttendance = () => {
                 const isPrac = isPracticeDay(dateStr, calPracticeDayMap);
                 const weather = weatherMap[dateStr] as WeatherDay | undefined;
                 const wInfo = weather ? getWeatherInfo(weather.condition_code) : null;
+                const rowIndex = Math.floor(idx / 7);
+                const totalRows = Math.ceil(calendarDays.length / 7);
+                const isBottomHalf = rowIndex >= totalRows / 2;
 
                 return (
-                  <div key={dateStr} className="relative aspect-square group/cell">
+                  <div
+                    key={dateStr}
+                    className="relative aspect-square"
+                    onMouseEnter={() => {
+                      if (weather) {
+                        const timer = window.setTimeout(() => setWeatherTooltipDay(dateStr), 400);
+                        (window as any).__weatherTimer = timer;
+                      }
+                    }}
+                    onMouseLeave={() => {
+                      clearTimeout((window as any).__weatherTimer);
+                      setWeatherTooltipDay(null);
+                    }}
+                  >
                     <button
                       onClick={() => count > 0 && setSelectedDay(dateStr)}
                       className={`
@@ -945,25 +961,6 @@ const AdminAttendance = () => {
                         {wInfo && <span className="text-[8px]">{wInfo.emoji}</span>}
                         <span className={wInfo ? "border-b border-dotted border-white/20" : ""}>{day}</span>
                       </span>
-
-                      {/* Weather tooltip (appears on hover over the entire cell's date corner) */}
-                      {weather && (
-                        <div className="absolute top-6 right-0 z-50 hidden group-hover/cell:block pointer-events-none">
-                          <div className="bg-[#111] border border-white/15 rounded-lg px-3 py-2 text-left shadow-xl min-w-[140px]">
-                            <p className="text-xs font-semibold text-white flex items-center gap-1">
-                              {wInfo?.emoji} {weather.condition}
-                            </p>
-                            <p className="text-[11px] text-white/70 mt-0.5">
-                              {weather.temp_high !== null ? `${Math.round(weather.temp_high)}°F` : "—"} / {weather.temp_low !== null ? `${Math.round(weather.temp_low)}°F` : "—"}
-                            </p>
-                            {weather.precipitation !== null && weather.precipitation > 0 && (
-                              <p className="text-[10px] text-blue-300/70 mt-0.5">
-                                💧 {weather.precipitation.toFixed(2)} in
-                              </p>
-                            )}
-                          </div>
-                        </div>
-                      )}
 
                       {count > 0 ? (
                         <span className={`w-8 h-8 sm:w-9 sm:h-9 rounded-full flex items-center justify-center text-sm sm:text-base font-bold ${
