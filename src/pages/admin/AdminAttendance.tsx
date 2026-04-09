@@ -988,7 +988,7 @@ const AdminAttendance = () => {
                         !isPrac ? "text-red-400 font-medium" :
                         isCurrentDay ? "text-blue-400 font-semibold" : "text-white/35"
                       }`}>
-                        {wInfo && <span className="text-[8px]">{wInfo.emoji}</span>}
+                        {wInfo ? <span className="text-[8px]">{wInfo.emoji}</span> : weatherLoading ? <span className="text-[8px] animate-pulse">·</span> : null}
                         <span className={wInfo ? "border-b border-dotted border-white/20" : ""}>{day}</span>
                       </span>
 
