@@ -1,17 +1,20 @@
 import { Outlet, NavLink, useLocation, Navigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
-import { Users, Baby, Radio, LogOut } from "lucide-react";
+import { Users, Baby, Radio, LogOut, AlertTriangle } from "lucide-react";
+import { useIncidentCount } from "./TransportIncidents";
 import nlaLogo from "@/assets/nla-logo-white.png";
 
 const navItems = [
   { to: "/transport/admin/drivers", label: "Drivers", icon: Users },
   { to: "/transport/admin/youth", label: "Youth", icon: Baby },
   { to: "/transport/admin/runs", label: "Trips & Pay", icon: Radio },
+  { to: "/transport/admin/incidents", label: "Incidents", icon: AlertTriangle },
 ];
 
 export default function TransportAdminLayout() {
   const { user, isAdmin, loading, signOut } = useAuth();
   const location = useLocation();
+  const newIncidentCount = useIncidentCount();
 
   if (loading) {
     return (
@@ -57,6 +60,11 @@ export default function TransportAdminLayout() {
             >
               <item.icon className="w-4 h-4" />
               {item.label}
+              {item.label === "Incidents" && newIncidentCount > 0 && (
+                <span className="ml-auto bg-red-500 text-white text-[10px] font-bold rounded-full w-5 h-5 flex items-center justify-center">
+                  {newIncidentCount}
+                </span>
+              )}
             </NavLink>
           ))}
         </nav>
@@ -83,11 +91,18 @@ export default function TransportAdminLayout() {
             <NavLink
               key={item.to}
               to={item.to}
-              className={`flex-1 flex flex-col items-center py-2.5 gap-0.5 text-[10px] font-medium transition-colors touch-manipulation ${
+              className={`flex-1 flex flex-col items-center py-2.5 gap-0.5 text-[10px] font-medium transition-colors touch-manipulation relative ${
                 isActive ? "text-[#DC2626]" : "text-white/40"
               }`}
             >
-              <item.icon className="w-5 h-5" />
+              <div className="relative">
+                <item.icon className="w-5 h-5" />
+                {item.label === "Incidents" && newIncidentCount > 0 && (
+                  <span className="absolute -top-1.5 -right-2.5 bg-red-500 text-white text-[8px] font-bold rounded-full w-4 h-4 flex items-center justify-center">
+                    {newIncidentCount}
+                  </span>
+                )}
+              </div>
               {item.label}
             </NavLink>
           );

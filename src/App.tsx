@@ -62,6 +62,7 @@ import TransportYouth from "./pages/transport/TransportYouth";
 import TransportRunsPay from "./pages/transport/TransportRunsPay";
 import TransportDashboard from "./pages/transport/TransportDashboard";
 import TransportRun from "./pages/transport/TransportRun";
+import TransportIncidents from "./pages/transport/TransportIncidents";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -100,6 +101,7 @@ const App = () => (
               <Route path="/transport/admin/drivers" element={<TransportDrivers />} />
               <Route path="/transport/admin/youth" element={<TransportYouth />} />
               <Route path="/transport/admin/runs" element={<TransportRunsPay />} />
+              <Route path="/transport/admin/incidents" element={<TransportIncidents />} />
             </Route>
             
             {/* Admin Routes */}
