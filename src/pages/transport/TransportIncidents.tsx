@@ -82,6 +82,18 @@ export default function TransportIncidents() {
     setUpdating(false);
   };
 
+  const handleDelete = async (id: string) => {
+    const { error } = await supabase.from("incidents").delete().eq("id", id);
+    if (error) {
+      toast({ title: "Failed to delete incident", variant: "destructive" });
+    } else {
+      toast({ title: "Incident deleted" });
+      setIncidents((prev) => prev.filter((i) => i.id !== id));
+      if (selected?.id === id) setSelected(null);
+    }
+    setDeleteConfirmId(null);
+  };
+
   const newCount = incidents.filter((i) => i.status === "new").length;
 
   return (
