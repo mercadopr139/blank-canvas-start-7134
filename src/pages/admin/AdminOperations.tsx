@@ -22,6 +22,7 @@ const baseTiles: OperationsTile[] = [
       { title: "Registration Form", href: "/register", icon: ClipboardList, external: true },
       { title: "Registrations", href: "/admin/operations/registrations", icon: Users },
       { title: "Registration Analytics", href: "/admin/operations/registration-analytics", icon: BarChart3 },
+      { title: "Form Builder", href: "/admin/operations/form-builder", icon: Settings2 },
     ],
   },
   {
