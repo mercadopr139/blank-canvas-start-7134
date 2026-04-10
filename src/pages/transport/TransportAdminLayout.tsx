@@ -60,6 +60,11 @@ export default function TransportAdminLayout() {
             >
               <item.icon className="w-4 h-4" />
               {item.label}
+              {item.label === "Incidents" && newIncidentCount > 0 && (
+                <span className="ml-auto bg-red-500 text-white text-[10px] font-bold rounded-full w-5 h-5 flex items-center justify-center">
+                  {newIncidentCount}
+                </span>
+              )}
             </NavLink>
           ))}
         </nav>
