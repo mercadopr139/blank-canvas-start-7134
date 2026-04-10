@@ -19,7 +19,7 @@ const DOC_TYPES = [
 ];
 
 const AdminCSBGDashboard = () => {
-  const qc = useQueryClient();
+  const _qc = useQueryClient();
   const now = new Date();
   const [month, setMonth] = useState(now.getMonth() + 1);
   const [year, setYear] = useState(now.getFullYear());
