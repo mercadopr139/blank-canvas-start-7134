@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Progress } from "@/components/ui/progress";
 import { toast } from "sonner";
-import { CheckCircle2, XCircle, Clock } from "lucide-react";
+import { CheckCircle2, XCircle } from "lucide-react";
 
 const FULL_MONTHS = ["January","February","March","April","May","June","July","August","September","October","November","December"];
 
