@@ -22,6 +22,7 @@ const baseTiles: OperationsTile[] = [
       { title: "Registration Form", href: "/register", icon: ClipboardList, external: true },
       { title: "Registrations", href: "/admin/operations/registrations", icon: Users },
       { title: "Registration Analytics", href: "/admin/operations/registration-analytics", icon: BarChart3 },
+      { title: "Form Builder", href: "/admin/operations/form-builder", icon: Settings2 },
     ],
   },
   {
@@ -35,12 +36,6 @@ const baseTiles: OperationsTile[] = [
       { title: "Call-Outs", href: "/admin/operations/callouts", icon: PhoneOff },
       { title: "Lil Champ's Corner", href: "/admin/operations/lil-champs-attendance", icon: Star },
     ],
-  },
-  {
-    title: "Form Builder",
-    description: "Edit the registration form fields",
-    icon: Settings2,
-    href: "/admin/operations/form-builder",
   },
   {
     title: "Transportation",
