@@ -69,7 +69,18 @@ const AdminCSBGInvoice = () => {
     onError: (e: any) => toast.error(e.message),
   });
 
-  const generatePdf = (inv: any) => {
+  const deleteMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from("csbg_invoices").delete().eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["csbg-invoices"] });
+      toast.success("Invoice deleted");
+    },
+    onError: (e: any) => toast.error(e.message),
+  });
+
     const doc = new jsPDF();
     doc.setFontSize(18);
     doc.text("INVOICE", 105, 20, { align: "center" });
