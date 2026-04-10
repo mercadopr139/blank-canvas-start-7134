@@ -31,6 +31,7 @@ export default function TransportIncidents() {
   const [loading, setLoading] = useState(true);
   const [selected, setSelected] = useState<Incident | null>(null);
   const [updating, setUpdating] = useState(false);
+  const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
   const { toast } = useToast();
 
   const fetchIncidents = async () => {
