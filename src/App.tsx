@@ -27,6 +27,11 @@ import AdminServiceCalendar from "./pages/admin/AdminServiceCalendar";
 import AdminInvoices from "./pages/admin/AdminInvoices";
  import AdminRegistrations from "./pages/admin/AdminRegistrations";
  import AdminBilling from "./pages/admin/AdminBilling";
+import AdminCSBGInvoice from "./pages/admin/AdminCSBGInvoice";
+import AdminCSBGBudget from "./pages/admin/AdminCSBGBudget";
+import AdminCSBGChecklist from "./pages/admin/AdminCSBGChecklist";
+import AdminCSBGDashboard from "./pages/admin/AdminCSBGDashboard";
+import AdminCSBGSubmissions from "./pages/admin/AdminCSBGSubmissions";
 import AdminRegistrationAnalytics from "./pages/admin/AdminRegistrationAnalytics";
 import AdminAttendance from "./pages/admin/AdminAttendance";
 import AdminFormBuilder from "./pages/admin/AdminFormBuilder";
@@ -168,6 +173,11 @@ const App = () => (
             >
               <Route index element={<AdminFinanceIndex />} />
               <Route path="billing" element={<AdminBilling />} />
+              <Route path="csbg/invoice" element={<AdminCSBGInvoice />} />
+              <Route path="csbg/budget" element={<AdminCSBGBudget />} />
+              <Route path="csbg/checklist" element={<AdminCSBGChecklist />} />
+              <Route path="csbg/dashboard" element={<AdminCSBGDashboard />} />
+              <Route path="csbg/submissions" element={<AdminCSBGSubmissions />} />
               <Route path="invoices" element={<AdminInvoices />} />
               <Route path="clients" element={<AdminClients />} />
               <Route path="service-calendar" element={<AdminServiceCalendar />} />
