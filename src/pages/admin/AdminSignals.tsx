@@ -662,7 +662,7 @@ const AdminSignals = () => {
     : null;
 
   return (
-    <div className="min-h-screen bg-black text-white">
+    <div className="min-h-screen bg-black text-white overflow-x-hidden max-w-full">
       {/* Header */}
       <header className="relative overflow-hidden border-b border-white/[0.06]">
         <div className="absolute inset-0 bg-gradient-to-r from-rose-950/20 via-black to-amber-950/10" />
@@ -688,7 +688,7 @@ const AdminSignals = () => {
         </div>
       </header>
 
-      <main className="container mx-auto px-4 py-6 max-w-4xl">
+      <main className="mx-auto px-3 sm:px-4 py-6 max-w-4xl w-full">
 
         {/* ═══ Reflection / Awareness Section ═══ */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
@@ -723,7 +723,7 @@ const AdminSignals = () => {
           </div>
         )}
 
-        <div className="flex items-center gap-6 mb-10 py-4 px-5 rounded-xl bg-white/[0.02] border border-white/[0.06]">
+        <div className="flex flex-wrap items-center gap-4 sm:gap-6 mb-10 py-4 px-3 sm:px-5 rounded-xl bg-white/[0.02] border border-white/[0.06] max-w-full">
           {/* Progress Ring */}
           <div className="relative shrink-0">
             <svg width="96" height="96" viewBox="0 0 96 96" className="-rotate-90">
