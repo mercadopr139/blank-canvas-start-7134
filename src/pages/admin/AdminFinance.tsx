@@ -1,4 +1,4 @@
-import { Receipt, ShieldCheck, LucideIcon } from "lucide-react";
+import { Receipt, ShieldCheck, LucideIcon, FileText, BarChart3, ClipboardCheck, LayoutDashboard, ScrollText } from "lucide-react";
 import AdminSectionLayout, { SectionCard } from "@/components/admin/AdminSectionLayout";
 
 interface FinanceTile {
@@ -6,6 +6,7 @@ interface FinanceTile {
   description: string;
   icon: LucideIcon;
   href: string;
+  children?: { title: string; href: string; icon: LucideIcon }[];
 }
 
 const baseTiles: FinanceTile[] = [
@@ -14,6 +15,19 @@ const baseTiles: FinanceTile[] = [
     description: "Invoices & payment tracking",
     icon: Receipt,
     href: "/admin/finance/billing",
+  },
+  {
+    title: "CSBG Grant",
+    description: "O.C.E.A.N. Inc. reimbursements",
+    icon: ScrollText,
+    href: "/admin/finance/csbg",
+    children: [
+      { title: "Invoice Generator", href: "/admin/finance/csbg/invoice", icon: FileText },
+      { title: "Budget vs. Actual", href: "/admin/finance/csbg/budget", icon: BarChart3 },
+      { title: "Document Checklist", href: "/admin/finance/csbg/checklist", icon: ClipboardCheck },
+      { title: "Status Dashboard", href: "/admin/finance/csbg/dashboard", icon: LayoutDashboard },
+      { title: "Submission Log", href: "/admin/finance/csbg/submissions", icon: ScrollText },
+    ],
   },
   {
     title: "Insurance",
@@ -31,6 +45,7 @@ const sidebarCards: SectionCard[] = baseTiles.map((t) => ({
   description: t.description,
   href: t.href,
   icon: t.icon,
+  children: t.children?.map((c) => ({ title: c.title, href: c.href, icon: c.icon })),
 }));
 
 const AdminFinance = () => (
