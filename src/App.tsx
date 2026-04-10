@@ -135,6 +135,7 @@ const App = () => (
               <Route path="transportation/drivers" element={<TransportDrivers />} />
               <Route path="transportation/youth" element={<TransportYouth />} />
               <Route path="transportation/runs" element={<TransportRunsPay />} />
+              <Route path="transportation/incidents" element={<TransportIncidents />} />
             </Route>
 
             {/* Sales & Marketing section — sidebar layout wraps sub-pages */}
