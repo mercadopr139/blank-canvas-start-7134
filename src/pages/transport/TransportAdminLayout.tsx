@@ -1,12 +1,14 @@
 import { Outlet, NavLink, useLocation, Navigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
-import { Users, Baby, Radio, LogOut } from "lucide-react";
+import { Users, Baby, Radio, LogOut, AlertTriangle } from "lucide-react";
+import { useIncidentCount } from "./TransportIncidents";
 import nlaLogo from "@/assets/nla-logo-white.png";
 
 const navItems = [
   { to: "/transport/admin/drivers", label: "Drivers", icon: Users },
   { to: "/transport/admin/youth", label: "Youth", icon: Baby },
   { to: "/transport/admin/runs", label: "Trips & Pay", icon: Radio },
+  { to: "/transport/admin/incidents", label: "Incidents", icon: AlertTriangle },
 ];
 
 export default function TransportAdminLayout() {
