@@ -246,6 +246,153 @@ export type Database = {
         }
         Relationships: []
       }
+      csbg_budget_actuals: {
+        Row: {
+          actual_amount: number
+          budgeted_amount: number
+          created_at: string
+          id: string
+          line_item_name: string
+          month: number
+          notes: string | null
+          updated_at: string
+          year: number
+        }
+        Insert: {
+          actual_amount?: number
+          budgeted_amount?: number
+          created_at?: string
+          id?: string
+          line_item_name: string
+          month: number
+          notes?: string | null
+          updated_at?: string
+          year: number
+        }
+        Update: {
+          actual_amount?: number
+          budgeted_amount?: number
+          created_at?: string
+          id?: string
+          line_item_name?: string
+          month?: number
+          notes?: string | null
+          updated_at?: string
+          year?: number
+        }
+        Relationships: []
+      }
+      csbg_invoices: {
+        Row: {
+          certified: boolean
+          created_at: string
+          id: string
+          invoice_number: string
+          notes: string | null
+          pdf_base64: string | null
+          reimbursement_total: number
+          service_month: number
+          service_year: number
+          updated_at: string
+        }
+        Insert: {
+          certified?: boolean
+          created_at?: string
+          id?: string
+          invoice_number: string
+          notes?: string | null
+          pdf_base64?: string | null
+          reimbursement_total?: number
+          service_month: number
+          service_year: number
+          updated_at?: string
+        }
+        Update: {
+          certified?: boolean
+          created_at?: string
+          id?: string
+          invoice_number?: string
+          notes?: string | null
+          pdf_base64?: string | null
+          reimbursement_total?: number
+          service_month?: number
+          service_year?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      csbg_monthly_checklists: {
+        Row: {
+          created_at: string
+          document_type: string
+          id: string
+          is_collected: boolean
+          month: number
+          notes: string | null
+          updated_at: string
+          year: number
+        }
+        Insert: {
+          created_at?: string
+          document_type: string
+          id?: string
+          is_collected?: boolean
+          month: number
+          notes?: string | null
+          updated_at?: string
+          year: number
+        }
+        Update: {
+          created_at?: string
+          document_type?: string
+          id?: string
+          is_collected?: boolean
+          month?: number
+          notes?: string | null
+          updated_at?: string
+          year?: number
+        }
+        Relationships: []
+      }
+      csbg_submissions: {
+        Row: {
+          created_at: string
+          id: string
+          invoice_number: string
+          method: string
+          notes: string | null
+          service_month: number
+          service_year: number
+          submission_date: string
+          total_amount: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          invoice_number: string
+          method?: string
+          notes?: string | null
+          service_month: number
+          service_year: number
+          submission_date?: string
+          total_amount?: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          invoice_number?: string
+          method?: string
+          notes?: string | null
+          service_month?: number
+          service_year?: number
+          submission_date?: string
+          total_amount?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       deposit_batches: {
         Row: {
           bank_account: Database["public"]["Enums"]["bank_account"]
