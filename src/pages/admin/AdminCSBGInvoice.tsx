@@ -185,9 +185,14 @@ const AdminCSBGInvoice = () => {
                   <p className="text-sm font-medium text-white">{inv.invoice_number}</p>
                   <p className="text-xs text-white/50">{MONTHS[inv.service_month - 1]} {inv.service_year} · ${Number(inv.reimbursement_total).toLocaleString("en-US", { minimumFractionDigits: 2 })}</p>
                 </div>
-                <Button size="sm" variant="outline" onClick={() => generatePdf(inv)} className="border-sky-300/50 text-sky-300 hover:bg-sky-300/10">
-                  <Download className="w-3.5 h-3.5 mr-1" /> PDF
-                </Button>
+                <div className="flex items-center gap-2">
+                  <Button size="sm" variant="outline" onClick={() => generatePdf(inv)} className="border-sky-300/50 text-sky-300 hover:bg-sky-300/10">
+                    <Download className="w-3.5 h-3.5 mr-1" /> PDF
+                  </Button>
+                  <Button size="sm" variant="outline" onClick={() => { if (confirm(`Delete ${inv.invoice_number}?`)) deleteMutation.mutate(inv.id); }} className="border-red-400/50 text-red-400 hover:bg-red-400/10">
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </Button>
+                </div>
               </div>
             ))}
           </div>
