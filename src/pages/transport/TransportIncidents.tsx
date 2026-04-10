@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { AlertTriangle, Eye } from "lucide-react";
+import { AlertTriangle, Eye, Trash2 } from "lucide-react";
 import { format } from "date-fns";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -31,6 +31,7 @@ export default function TransportIncidents() {
   const [loading, setLoading] = useState(true);
   const [selected, setSelected] = useState<Incident | null>(null);
   const [updating, setUpdating] = useState(false);
+  const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
   const { toast } = useToast();
 
   const fetchIncidents = async () => {
@@ -79,6 +80,18 @@ export default function TransportIncidents() {
       if (selected?.id === id) setSelected((s) => (s ? { ...s, status: newStatus } : null));
     }
     setUpdating(false);
+  };
+
+  const handleDelete = async (id: string) => {
+    const { error } = await supabase.from("incidents").delete().eq("id", id);
+    if (error) {
+      toast({ title: "Failed to delete incident", variant: "destructive" });
+    } else {
+      toast({ title: "Incident deleted" });
+      setIncidents((prev) => prev.filter((i) => i.id !== id));
+      if (selected?.id === id) setSelected(null);
+    }
+    setDeleteConfirmId(null);
   };
 
   const newCount = incidents.filter((i) => i.status === "new").length;
@@ -166,14 +179,22 @@ export default function TransportIncidents() {
                       </Badge>
                     </td>
                     <td className="py-3 px-3">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => setSelected(inc)}
-                        className="text-white/50 hover:text-white gap-1.5"
-                      >
-                        <Eye className="w-4 h-4" /> View
-                      </Button>
+                      <div className="flex items-center gap-1">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => setSelected(inc)}
+                          className="text-white/50 hover:text-white gap-1.5"
+                        >
+                          <Eye className="w-4 h-4" /> View
+                        </Button>
+                        <button
+                          onClick={() => setDeleteConfirmId(inc.id)}
+                          className="text-white/20 hover:text-red-400 transition-colors p-1.5"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -237,8 +258,37 @@ export default function TransportIncidents() {
                   </SelectContent>
                 </Select>
               </div>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setDeleteConfirmId(selected.id)}
+                className="w-full text-red-400 hover:text-red-300 hover:bg-red-500/10 gap-2 mt-2"
+              >
+                <Trash2 className="w-4 h-4" /> Delete Incident
+              </Button>
             </div>
           )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete confirmation */}
+      <Dialog open={!!deleteConfirmId} onOpenChange={(open) => !open && setDeleteConfirmId(null)}>
+        <DialogContent className="bg-[#111827] border-white/10 text-white max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Delete Incident?</DialogTitle>
+          </DialogHeader>
+          <p className="text-white/60 text-sm">This action cannot be undone.</p>
+          <div className="flex gap-3 mt-4">
+            <Button variant="ghost" className="flex-1 text-white/60" onClick={() => setDeleteConfirmId(null)}>
+              Cancel
+            </Button>
+            <Button
+              className="flex-1 bg-red-600 hover:bg-red-700 text-white"
+              onClick={() => deleteConfirmId && handleDelete(deleteConfirmId)}
+            >
+              Delete
+            </Button>
+          </div>
         </DialogContent>
       </Dialog>
     </div>
