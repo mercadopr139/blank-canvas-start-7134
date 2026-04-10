@@ -81,6 +81,7 @@ const AdminCSBGInvoice = () => {
     onError: (e: any) => toast.error(e.message),
   });
 
+  const generatePdf = (inv: any) => {
     const doc = new jsPDF();
     doc.setFontSize(18);
     doc.text("INVOICE", 105, 20, { align: "center" });
