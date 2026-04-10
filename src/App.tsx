@@ -173,6 +173,11 @@ const App = () => (
             >
               <Route index element={<AdminFinanceIndex />} />
               <Route path="billing" element={<AdminBilling />} />
+              <Route path="csbg/invoice" element={<AdminCSBGInvoice />} />
+              <Route path="csbg/budget" element={<AdminCSBGBudget />} />
+              <Route path="csbg/checklist" element={<AdminCSBGChecklist />} />
+              <Route path="csbg/dashboard" element={<AdminCSBGDashboard />} />
+              <Route path="csbg/submissions" element={<AdminCSBGSubmissions />} />
               <Route path="invoices" element={<AdminInvoices />} />
               <Route path="clients" element={<AdminClients />} />
               <Route path="service-calendar" element={<AdminServiceCalendar />} />
