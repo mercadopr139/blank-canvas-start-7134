@@ -91,11 +91,18 @@ export default function TransportAdminLayout() {
             <NavLink
               key={item.to}
               to={item.to}
-              className={`flex-1 flex flex-col items-center py-2.5 gap-0.5 text-[10px] font-medium transition-colors touch-manipulation ${
+              className={`flex-1 flex flex-col items-center py-2.5 gap-0.5 text-[10px] font-medium transition-colors touch-manipulation relative ${
                 isActive ? "text-[#DC2626]" : "text-white/40"
               }`}
             >
-              <item.icon className="w-5 h-5" />
+              <div className="relative">
+                <item.icon className="w-5 h-5" />
+                {item.label === "Incidents" && newIncidentCount > 0 && (
+                  <span className="absolute -top-1.5 -right-2.5 bg-red-500 text-white text-[8px] font-bold rounded-full w-4 h-4 flex items-center justify-center">
+                    {newIncidentCount}
+                  </span>
+                )}
+              </div>
               {item.label}
             </NavLink>
           );
