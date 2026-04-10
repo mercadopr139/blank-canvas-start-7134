@@ -324,6 +324,7 @@ export type Database = {
       csbg_monthly_checklists: {
         Row: {
           created_at: string
+          document_link: string | null
           document_type: string
           id: string
           is_collected: boolean
@@ -334,6 +335,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          document_link?: string | null
           document_type: string
           id?: string
           is_collected?: boolean
@@ -344,6 +346,7 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          document_link?: string | null
           document_type?: string
           id?: string
           is_collected?: boolean

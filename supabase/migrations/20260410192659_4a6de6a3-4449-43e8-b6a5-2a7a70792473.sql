@@ -1,0 +1,1 @@
+ALTER TABLE public.csbg_monthly_checklists ADD COLUMN document_link text;
