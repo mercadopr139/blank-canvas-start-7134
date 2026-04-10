@@ -38,12 +38,6 @@ const baseTiles: OperationsTile[] = [
     ],
   },
   {
-    title: "Form Builder",
-    description: "Edit the registration form fields",
-    icon: Settings2,
-    href: "/admin/operations/form-builder",
-  },
-  {
     title: "Transportation",
     description: "Driver & Route Management",
     icon: Bus,
