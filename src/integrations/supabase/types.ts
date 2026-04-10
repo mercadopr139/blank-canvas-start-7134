@@ -531,24 +531,30 @@ export type Database = {
           description: string
           driver_id: string | null
           id: string
+          incident_type: string
           recorded_at: string
           run_id: string | null
+          status: string
           youth_id: string | null
         }
         Insert: {
           description: string
           driver_id?: string | null
           id?: string
+          incident_type?: string
           recorded_at?: string
           run_id?: string | null
+          status?: string
           youth_id?: string | null
         }
         Update: {
           description?: string
           driver_id?: string | null
           id?: string
+          incident_type?: string
           recorded_at?: string
           run_id?: string | null
+          status?: string
           youth_id?: string | null
         }
         Relationships: [
