@@ -14,6 +14,7 @@ const navItems = [
 export default function TransportAdminLayout() {
   const { user, isAdmin, loading, signOut } = useAuth();
   const location = useLocation();
+  const newIncidentCount = useIncidentCount();
 
   if (loading) {
     return (
