@@ -6,9 +6,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+
 import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
-import { FileText, Download } from "lucide-react";
+import { FileText, Download, Trash2 } from "lucide-react";
 import jsPDF from "jspdf";
 
 const MONTHS = ["January","February","March","April","May","June","July","August","September","October","November","December"];
@@ -64,6 +65,18 @@ const AdminCSBGInvoice = () => {
       toast.success("Invoice created");
       setAmount("");
       setCertified(false);
+    },
+    onError: (e: any) => toast.error(e.message),
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from("csbg_invoices").delete().eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["csbg-invoices"] });
+      toast.success("Invoice deleted");
     },
     onError: (e: any) => toast.error(e.message),
   });
@@ -172,9 +185,14 @@ const AdminCSBGInvoice = () => {
                   <p className="text-sm font-medium text-white">{inv.invoice_number}</p>
                   <p className="text-xs text-white/50">{MONTHS[inv.service_month - 1]} {inv.service_year} · ${Number(inv.reimbursement_total).toLocaleString("en-US", { minimumFractionDigits: 2 })}</p>
                 </div>
-                <Button size="sm" variant="outline" onClick={() => generatePdf(inv)} className="border-sky-300/50 text-sky-300 hover:bg-sky-300/10">
-                  <Download className="w-3.5 h-3.5 mr-1" /> PDF
-                </Button>
+                <div className="flex items-center gap-2">
+                  <Button size="sm" variant="outline" onClick={() => generatePdf(inv)} className="border-sky-300/50 text-sky-300 hover:bg-sky-300/10">
+                    <Download className="w-3.5 h-3.5 mr-1" /> PDF
+                  </Button>
+                  <Button size="sm" variant="outline" onClick={() => { if (confirm(`Delete ${inv.invoice_number}?`)) deleteMutation.mutate(inv.id); }} className="border-red-400/50 text-red-400 hover:bg-red-400/10">
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </Button>
+                </div>
               </div>
             ))}
           </div>
