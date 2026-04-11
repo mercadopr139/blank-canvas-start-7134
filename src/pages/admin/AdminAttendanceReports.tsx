@@ -373,6 +373,7 @@ const AdminAttendanceReports = () => {
     summary.push(["Practice Days in Range", String(totalPracticeDays)]);
     summary.push(["Non-Practice Days Excluded", String(totalNonPracticeDays)]);
     summary.push(["Total Calendar Days", String(totalCalendarDays)]);
+    summary.push(["Excursions", `${excursionCount} (${excursionTotalYouth} total youth)`]);
 
     if (reportType !== "daily") {
       summary.push(["Average Daily Attendance", String(avgAttendance)]);
