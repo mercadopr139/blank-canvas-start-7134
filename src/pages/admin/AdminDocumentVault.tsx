@@ -18,11 +18,11 @@ import {
 } from "@/components/ui/dropdown-menu";
 import {
   Search, Plus, ExternalLink, ArrowLeft, MoreVertical, Pencil, Trash2,
-  ArrowUpDown, FolderOpen, AlertTriangle, XCircle,
+  ArrowUpDown, FolderOpen,
   Scale, ShieldCheck, Users, Landmark, FileText, Building2, Handshake, BadgeCheck,
   Settings, Folder, BookOpen, Heart, Star, Globe, Archive, Briefcase, Key, Clock,
 } from "lucide-react";
-import { format, differenceInDays, isPast } from "date-fns";
+import { format } from "date-fns";
 
 /* ── Icon registry ── */
 const ICON_MAP: Record<string, React.ComponentType<any>> = {
@@ -40,7 +40,7 @@ interface VaultCategory {
 }
 interface VaultDocument {
   id: string; category_id: string; name: string; description: string | null;
-  drive_link: string; added_by: string | null; expiration_date: string | null;
+  drive_link: string; added_by: string | null;
   sort_order: number; created_at: string; updated_at: string;
 }
 
@@ -62,8 +62,6 @@ const AdminDocumentVault = () => {
   const [docName, setDocName] = useState("");
   const [docDesc, setDocDesc] = useState("");
   const [docLink, setDocLink] = useState("");
-  const [docAddedBy, setDocAddedBy] = useState("");
-  const [docExpDate, setDocExpDate] = useState("");
   const [docMoveCatId, setDocMoveCatId] = useState("");
 
   /* ── Queries ── */
@@ -140,7 +138,6 @@ const AdminDocumentVault = () => {
       const catId = docMoveCatId || selectedCatId!;
       const payload: any = {
         name: docName, description: docDesc || null, drive_link: docLink,
-        added_by: docAddedBy || null, expiration_date: docExpDate || null,
         category_id: catId,
       };
       if (editingDoc) {
@@ -198,8 +195,6 @@ const AdminDocumentVault = () => {
     setDocName(doc?.name || "");
     setDocDesc(doc?.description || "");
     setDocLink(doc?.drive_link || "");
-    setDocAddedBy(doc?.added_by || "");
-    setDocExpDate(doc?.expiration_date || "");
     setDocMoveCatId(doc?.category_id || "");
     setDocModal(true);
   };
