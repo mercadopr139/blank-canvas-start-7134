@@ -212,14 +212,6 @@ const AdminDocumentVault = () => {
       )
     : null;
 
-  const getExpirationBadge = (exp: string | null) => {
-    if (!exp) return null;
-    const d = new Date(exp + "T00:00:00");
-    if (isPast(d)) return <Badge className="bg-red-500/20 text-red-400 border-red-500/30 text-xs"><XCircle className="w-3 h-3 mr-1" />Expired</Badge>;
-    if (differenceInDays(d, new Date()) <= 30) return <Badge className="bg-yellow-500/20 text-yellow-400 border-yellow-500/30 text-xs"><AlertTriangle className="w-3 h-3 mr-1" />Expiring Soon</Badge>;
-    return null;
-  };
-
   const getCatName = (catId: string) => categories.find(c => c.id === catId)?.name || "—";
 
   /* ──────── RENDER ──────── */
@@ -279,7 +271,6 @@ const AdminDocumentVault = () => {
                       <p className="text-white font-medium truncate">{doc.name}</p>
                       <p className="text-xs text-zinc-500">{getCatName(doc.category_id)}</p>
                     </div>
-                    {getExpirationBadge(doc.expiration_date)}
                   </div>
                   <a href={doc.drive_link} target="_blank" rel="noopener noreferrer">
                     <Button size="sm" variant="outline" className="border-sky-500/40 text-sky-400 hover:bg-sky-500/10">
@@ -358,13 +349,11 @@ const AdminDocumentVault = () => {
                   <div className="min-w-0 flex-1 space-y-1">
                     <div className="flex items-center gap-2 flex-wrap">
                       <p className="text-white font-medium">{doc.name}</p>
-                      {getExpirationBadge(doc.expiration_date)}
                     </div>
                     {doc.description && <p className="text-sm text-zinc-400">{doc.description}</p>}
                     <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-zinc-500">
                       <span>Added {format(new Date(doc.created_at), "MMM d, yyyy")}</span>
                       {doc.added_by && <span>by {doc.added_by}</span>}
-                      {doc.expiration_date && <span>Expires {format(new Date(doc.expiration_date + "T00:00:00"), "MMM d, yyyy")}</span>}
                     </div>
                   </div>
                   <div className="flex items-center gap-1 shrink-0">
@@ -462,16 +451,6 @@ const AdminDocumentVault = () => {
             <div>
               <label className="text-sm text-zinc-400">Google Drive Link *</label>
               <Input value={docLink} onChange={e => setDocLink(e.target.value)} placeholder="https://drive.google.com/…" className="bg-zinc-800 border-zinc-700 text-white" />
-            </div>
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="text-sm text-zinc-400">Added By</label>
-                <Input value={docAddedBy} onChange={e => setDocAddedBy(e.target.value)} placeholder="e.g. Melissa" className="bg-zinc-800 border-zinc-700 text-white" />
-              </div>
-              <div>
-                <label className="text-sm text-zinc-400">Expiration / Renewal Date</label>
-                <Input type="date" value={docExpDate} onChange={e => setDocExpDate(e.target.value)} className="bg-zinc-800 border-zinc-700 text-white" />
-              </div>
             </div>
             {editingDoc && (
               <div>
