@@ -64,6 +64,7 @@ export default function AdminTransportImpactReports() {
   const [step, setStep] = useState(1);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [editFinalReport, setEditFinalReport] = useState<Report | null>(null);
   const [reportName, setReportName] = useState("");
   const [dateStart, setDateStart] = useState<Date | undefined>();
   const [dateEnd, setDateEnd] = useState<Date | undefined>();
