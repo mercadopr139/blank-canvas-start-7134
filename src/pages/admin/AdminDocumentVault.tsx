@@ -229,7 +229,7 @@ const AdminDocumentVault = () => {
               {selectedCat ? selectedCat.name : "Document Vault"}
             </h2>
             <p className="text-sm text-zinc-400">
-              {selectedCat ? `${filteredDocs.length} document(s)` : "Centralized Google Drive document hub"}
+              {selectedCat ? `${filteredDocs.length} document(s)` : "Centralized document hub"}
             </p>
           </div>
         </div>
