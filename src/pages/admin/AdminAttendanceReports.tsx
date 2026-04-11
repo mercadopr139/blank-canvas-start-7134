@@ -220,6 +220,23 @@ const AdminAttendanceReports = () => {
     },
   });
 
+  // Fetch excursions for the date range
+  const { data: excursionsData = [] } = useQuery({
+    queryKey: ["report-excursions", dateRange.from, dateRange.to],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("excursions")
+        .select("id, date, name, youth_count")
+        .gte("date", dateRange.from)
+        .lte("date", dateRange.to);
+      if (error) throw error;
+      return data as { id: string; date: string; name: string; youth_count: number }[];
+    },
+  });
+
+  const excursionCount = excursionsData.length;
+  const excursionTotalYouth = excursionsData.reduce((sum, e) => sum + e.youth_count, 0);
+
   const practiceDayMap = useMemo(() => {
     const m: Record<string, boolean> = {};
     practiceDaysData.forEach((p) => (m[p.date] = p.is_practice_day));
