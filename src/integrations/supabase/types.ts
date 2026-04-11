@@ -1582,6 +1582,45 @@ export type Database = {
           },
         ]
       }
+      transport_impact_reports: {
+        Row: {
+          config: Json
+          created_at: string
+          created_by: string | null
+          date_range_end: string
+          date_range_start: string
+          id: string
+          report_data: Json | null
+          report_name: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          config?: Json
+          created_at?: string
+          created_by?: string | null
+          date_range_end: string
+          date_range_start: string
+          id?: string
+          report_data?: Json | null
+          report_name: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          config?: Json
+          created_at?: string
+          created_by?: string | null
+          date_range_end?: string
+          date_range_start?: string
+          id?: string
+          report_data?: Json | null
+          report_name?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       upcoming_events: {
         Row: {
           created_at: string
