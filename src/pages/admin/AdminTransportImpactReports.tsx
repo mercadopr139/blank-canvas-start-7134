@@ -11,7 +11,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
-import { CalendarIcon, Plus, FileText, Trash2, Eye, Download, ArrowLeft, ArrowRight, RotateCcw, CheckCircle2, BarChart3, Users, Bus, DollarSign, PieChart } from "lucide-react";
+import { CalendarIcon, Plus, FileText, Trash2, Eye, Download, ArrowLeft, ArrowRight, RotateCcw, CheckCircle2, BarChart3, Users, Bus, DollarSign, PieChart, Pencil } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart as RechartsPie, Pie, Cell, LineChart, Line, Legend } from "recharts";
 import { Document, Packer, Paragraph, TextRun, Table, TableRow, TableCell, Header, Footer, AlignmentType, WidthType, ShadingType, BorderStyle, PageBreak, ImageRun, PageNumber } from "docx";
@@ -64,6 +64,7 @@ export default function AdminTransportImpactReports() {
   const [step, setStep] = useState(1);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [editFinalReport, setEditFinalReport] = useState<Report | null>(null);
   const [reportName, setReportName] = useState("");
   const [dateStart, setDateStart] = useState<Date | undefined>();
   const [dateEnd, setDateEnd] = useState<Date | undefined>();
@@ -342,6 +343,7 @@ export default function AdminTransportImpactReports() {
     setView("list");
     setStep(1);
     setEditingId(null);
+    setEditFinalReport(null);
     setReportName("");
     setDateStart(undefined);
     setDateEnd(undefined);
@@ -363,6 +365,20 @@ export default function AdminTransportImpactReports() {
     setPreviewData(r.report_data);
     setView("builder");
     setStep(3);
+  };
+
+  const handleEditClick = (r: Report) => {
+    if (r.status === "Final") {
+      setEditFinalReport(r);
+    } else {
+      editReport(r);
+    }
+  };
+
+  const confirmEditFinal = () => {
+    if (!editFinalReport) return;
+    editReport(editFinalReport);
+    setEditFinalReport(null);
   };
 
   const previewReport = (r: Report) => {
@@ -683,11 +699,9 @@ export default function AdminTransportImpactReports() {
                     <Button size="sm" variant="ghost" className="text-white/60 hover:text-white" onClick={() => previewReport(r)}>
                       <Eye className="w-4 h-4" />
                     </Button>
-                    {r.status === "Draft" && (
-                      <Button size="sm" variant="ghost" className="text-white/60 hover:text-white" onClick={() => editReport(r)}>
-                        <FileText className="w-4 h-4" />
-                      </Button>
-                    )}
+                    <Button size="sm" variant="ghost" className="text-white/60 hover:text-white" onClick={() => handleEditClick(r)}>
+                      <Pencil className="w-4 h-4" />
+                    </Button>
                     <Button size="sm" variant="ghost" className="text-red-400 hover:text-red-300" onClick={() => setDeleteId(r.id)}>
                       <Trash2 className="w-4 h-4" />
                     </Button>
@@ -698,6 +712,18 @@ export default function AdminTransportImpactReports() {
           </div>
         )}
         {deleteDialog}
+        <Dialog open={!!editFinalReport} onOpenChange={() => setEditFinalReport(null)}>
+          <DialogContent className="bg-zinc-900 border-white/10 text-white">
+            <DialogHeader>
+              <DialogTitle>Edit Finalized Report</DialogTitle>
+              <DialogDescription className="text-white/60">This report is marked as Final. Editing will move it back to Draft status. Do you want to continue?</DialogDescription>
+            </DialogHeader>
+            <DialogFooter className="gap-2">
+              <Button variant="ghost" onClick={() => setEditFinalReport(null)} className="text-white/60">Cancel</Button>
+              <Button onClick={confirmEditFinal} className="bg-[#002868] hover:bg-[#002868]/80 text-white">Continue</Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
     );
   }
