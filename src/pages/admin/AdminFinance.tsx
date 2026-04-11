@@ -30,6 +30,12 @@ const baseTiles: FinanceTile[] = [
     ],
   },
   {
+    title: "Document Vault",
+    description: "Centralized document hub",
+    icon: Archive,
+    href: "/admin/finance/vault",
+  },
+  {
     title: "Insurance",
     description: "Policies & coverage",
     icon: ShieldCheck,
