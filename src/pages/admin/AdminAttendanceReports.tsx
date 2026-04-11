@@ -675,7 +675,7 @@ const AdminAttendanceReports = () => {
         <span>{totalNonPracticeDays} non-practice day{totalNonPracticeDays !== 1 ? "s" : ""} excluded</span>
         <span className="text-white/20">|</span>
         <span>{totalCalendarDays} total calendar day{totalCalendarDays !== 1 ? "s" : ""}</span>
-        {reportType !== "daily" && <><span className="text-white/20">|</span><span>Avg calculated over {totalPracticeDays} practice days only</span></>}
+        {excursionCount > 0 && <><span className="text-white/20">|</span><span>{excursionCount} excursion{excursionCount !== 1 ? "s" : ""} ({excursionTotalYouth} youth)</span></>}
       </div>
 
 
