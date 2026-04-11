@@ -179,8 +179,8 @@ export default function AdminTransportImpactReports() {
       const { data: payPeriods } = await supabase
         .from("driver_pay_periods")
         .select("*, drivers(name)")
-        .gte("period_start", ds)
-        .lte("period_end", de);
+        .lte("period_start", de)
+        .gte("period_end", ds);
 
       // Fetch run approvals
       let runApprovals: any[] = [];
