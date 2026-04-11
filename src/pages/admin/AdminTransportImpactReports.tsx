@@ -386,69 +386,79 @@ export default function AdminTransportImpactReports() {
     }
   };
 
-  /* ── PDF Generation ── */
-  const generatePdf = useCallback(async () => {
+  /* ── DOCX Generation ── */
+  const generateDocx = useCallback(async () => {
     if (!previewData) return;
-    const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
-    const w = doc.internal.pageSize.getWidth();
-    const h = doc.internal.pageSize.getHeight();
-    const red = "#CC0000";
-    const navy = "#002868";
-
-    const addFooter = (pg: number) => {
-      doc.setFontSize(8);
-      doc.setTextColor(128);
-      doc.text("No Limits Academy — Boxing & Youth Development | Confidential", w / 2, h - 8, { align: "center" });
-      doc.text(`Page ${pg}`, w - 15, h - 8);
-    };
-
-    // Cover page
-    doc.setFillColor(navy);
-    doc.rect(0, 0, w, h, "F");
-    doc.setFillColor(red);
-    doc.rect(0, h * 0.45, w, 4, "F");
-
-    doc.setTextColor(255);
-    doc.setFontSize(32);
-    doc.text("TRANSPORTATION", w / 2, h * 0.30, { align: "center" });
-    doc.text("IMPACT REPORT", w / 2, h * 0.30 + 14, { align: "center" });
-
-    doc.setFontSize(14);
-    doc.text(reportName, w / 2, h * 0.52, { align: "center" });
-
-    doc.setFontSize(11);
-    const rangeStr = dateStart && dateEnd ? `${format(dateStart, "MMMM d, yyyy")} — ${format(dateEnd, "MMMM d, yyyy")}` : "";
-    doc.text(rangeStr, w / 2, h * 0.58, { align: "center" });
-
-    doc.setFontSize(9);
-    doc.text(`Generated: ${format(new Date(), "MMMM d, yyyy")}`, w / 2, h * 0.64, { align: "center" });
-    doc.text("No Limits Academy", w / 2, h * 0.70, { align: "center" });
-
-    addFooter(1);
-    let pageNum = 1;
-
-    const addSectionPage = (title: string) => {
-      doc.addPage();
-      pageNum++;
-      doc.setFillColor(navy);
-      doc.rect(0, 0, w, 18, "F");
-      doc.setTextColor(255);
-      doc.setFontSize(16);
-      doc.text(title, 14, 12);
-      doc.setDrawColor(red);
-      doc.setLineWidth(1);
-      doc.line(14, 20, w - 14, 20);
-      addFooter(pageNum);
-      return 28;
-    };
-
     const s = selectedSections;
+    const rangeStr = dateStart && dateEnd ? `${format(dateStart, "MMMM d, yyyy")} — ${format(dateEnd, "MMMM d, yyyy")}` : "";
+    const generatedDate = format(new Date(), "MMMM d, yyyy");
 
+    // Load logo
+    let logoData: ArrayBuffer | null = null;
+    try {
+      const resp = await fetch(nlaLogo);
+      logoData = await resp.arrayBuffer();
+    } catch { /* skip logo */ }
+
+    const navy = "002868";
+    const red = "CC0000";
+    const cellBorder = { style: BorderStyle.SINGLE, size: 1, color: "CCCCCC" };
+    const cellBorders = { top: cellBorder, bottom: cellBorder, left: cellBorder, right: cellBorder };
+    const headerShading = { fill: navy, type: ShadingType.CLEAR, color: "auto" };
+    const altShading = { fill: "F5F5F5", type: ShadingType.CLEAR, color: "auto" };
+    const cellMargins = { top: 60, bottom: 60, left: 100, right: 100 };
+
+    const makeHeaderRow = (cols: string[]) =>
+      new TableRow({
+        children: cols.map(c =>
+          new TableCell({
+            borders: cellBorders, shading: headerShading, margins: cellMargins,
+            children: [new Paragraph({ children: [new TextRun({ text: c, bold: true, color: "FFFFFF", font: "Arial", size: 20 })] })],
+          })
+        ),
+      });
+
+    const makeRow = (cols: string[], alt = false) =>
+      new TableRow({
+        children: cols.map(c =>
+          new TableCell({
+            borders: cellBorders, margins: cellMargins,
+            ...(alt ? { shading: altShading } : {}),
+            children: [new Paragraph({ children: [new TextRun({ text: c, font: "Arial", size: 20 })] })],
+          })
+        ),
+      });
+
+    const sectionTitle = (text: string) => new Paragraph({
+      spacing: { before: 400, after: 200 },
+      children: [new TextRun({ text, bold: true, font: "Arial", size: 28, color: navy })],
+      border: { bottom: { style: BorderStyle.SINGLE, size: 3, color: red, space: 4 } },
+    });
+
+    // Build content sections
+    const children: any[] = [];
+
+    // ── Cover page ──
+    children.push(new Paragraph({ spacing: { before: 2400 }, children: [] }));
+    if (logoData) {
+      children.push(new Paragraph({
+        alignment: AlignmentType.CENTER,
+        children: [new ImageRun({ type: "png", data: logoData, transformation: { width: 120, height: 120 }, altText: { title: "NLA Logo", description: "No Limits Academy Logo", name: "nla-logo" } })],
+      }));
+    }
+    children.push(new Paragraph({ spacing: { before: 600 }, alignment: AlignmentType.CENTER, children: [new TextRun({ text: "TRANSPORTATION", bold: true, font: "Arial", size: 56, color: navy })] }));
+    children.push(new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: "IMPACT REPORT", bold: true, font: "Arial", size: 56, color: navy })] }));
+    children.push(new Paragraph({ spacing: { before: 200 }, alignment: AlignmentType.CENTER, children: [new TextRun({ text: "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━", color: red, font: "Arial", size: 20 })] }));
+    children.push(new Paragraph({ spacing: { before: 400 }, alignment: AlignmentType.CENTER, children: [new TextRun({ text: reportName, bold: true, font: "Arial", size: 28 })] }));
+    children.push(new Paragraph({ spacing: { before: 200 }, alignment: AlignmentType.CENTER, children: [new TextRun({ text: rangeStr, font: "Arial", size: 22 })] }));
+    children.push(new Paragraph({ spacing: { before: 200 }, alignment: AlignmentType.CENTER, children: [new TextRun({ text: `Generated: ${generatedDate}`, font: "Arial", size: 20, color: "666666" })] }));
+    children.push(new Paragraph({ spacing: { before: 100 }, alignment: AlignmentType.CENTER, children: [new TextRun({ text: "No Limits Academy — Boxing & Youth Development", font: "Arial", size: 20, color: "666666" })] }));
+    children.push(new Paragraph({ children: [new PageBreak()] }));
+
+    // ── Youth Transportation Summary ──
     if (s.includes("youth_summary")) {
-      let y = addSectionPage("Youth Transportation Summary");
-      doc.setTextColor(0);
-      doc.setFontSize(11);
-      const summaryRows = [
+      children.push(sectionTitle("Youth Transportation Summary"));
+      const rows = [
         ["Total Unique Youth Transported", String(previewData.uniqueYouth)],
         ["Total Trips Completed", String(previewData.totalTrips)],
         ["Average Youth per Trip", String(previewData.avgYouthPerTrip)],
@@ -456,161 +466,157 @@ export default function AdminTransportImpactReports() {
         ["Total Dropoffs", String(previewData.dropoffs)],
         ["Total Rides Provided", String(previewData.totalAttendanceRecords)],
       ];
-      autoTable(doc, {
-        startY: y,
-        head: [["Metric", "Value"]],
-        body: summaryRows,
-        theme: "grid",
-        headStyles: { fillColor: [0, 40, 104], textColor: 255 },
-        styles: { fontSize: 10 },
-        margin: { left: 14, right: 14 },
-      });
+      children.push(new Table({
+        width: { size: 9360, type: WidthType.DXA },
+        columnWidths: [6000, 3360],
+        rows: [makeHeaderRow(["Metric", "Value"]), ...rows.map((r, i) => makeRow(r, i % 2 === 1))],
+      }));
+      children.push(new Paragraph({ children: [new PageBreak()] }));
     }
 
+    // ── Demographics ──
     if (s.includes("demographics")) {
-      let y = addSectionPage("Demographics Breakdown");
-      doc.setTextColor(0);
-      doc.setFontSize(11);
+      children.push(sectionTitle("Demographics Breakdown"));
       if (previewData.genderData?.length) {
-        doc.text("Gender Breakdown", 14, y);
-        y += 4;
-        autoTable(doc, {
-          startY: y,
-          head: [["Gender", "Count", "Percentage"]],
-          body: previewData.genderData.map((g: any) => [g.name, String(g.value), `${((g.value / previewData.uniqueYouth) * 100).toFixed(1)}%`]),
-          theme: "grid",
-          headStyles: { fillColor: [0, 40, 104], textColor: 255 },
-          styles: { fontSize: 10 },
-          margin: { left: 14, right: 14 },
-        });
-        y = (doc as any).lastAutoTable?.finalY + 10 || y + 30;
+        children.push(new Paragraph({ spacing: { before: 200, after: 100 }, children: [new TextRun({ text: "Gender Breakdown", bold: true, font: "Arial", size: 22 })] }));
+        children.push(new Table({
+          width: { size: 9360, type: WidthType.DXA },
+          columnWidths: [4000, 2680, 2680],
+          rows: [makeHeaderRow(["Gender", "Count", "Percentage"]),
+            ...previewData.genderData.map((g: any, i: number) => makeRow([g.name, String(g.value), `${((g.value / previewData.uniqueYouth) * 100).toFixed(1)}%`], i % 2 === 1))],
+        }));
       }
       if (previewData.raceData?.length) {
-        doc.text("Race / Ethnicity Breakdown", 14, y);
-        y += 4;
-        autoTable(doc, {
-          startY: y,
-          head: [["Race / Ethnicity", "Count", "Percentage"]],
-          body: previewData.raceData.map((r: any) => [r.name, String(r.value), `${((r.value / previewData.uniqueYouth) * 100).toFixed(1)}%`]),
-          theme: "grid",
-          headStyles: { fillColor: [0, 40, 104], textColor: 255 },
-          styles: { fontSize: 10 },
-          margin: { left: 14, right: 14 },
-        });
-        y = (doc as any).lastAutoTable?.finalY + 10 || y + 30;
+        children.push(new Paragraph({ spacing: { before: 300, after: 100 }, children: [new TextRun({ text: "Race / Ethnicity Breakdown", bold: true, font: "Arial", size: 22 })] }));
+        children.push(new Table({
+          width: { size: 9360, type: WidthType.DXA },
+          columnWidths: [4000, 2680, 2680],
+          rows: [makeHeaderRow(["Race / Ethnicity", "Count", "Percentage"]),
+            ...previewData.raceData.map((r: any, i: number) => makeRow([r.name, String(r.value), `${((r.value / previewData.uniqueYouth) * 100).toFixed(1)}%`], i % 2 === 1))],
+        }));
       }
       if (previewData.ageData?.length) {
-        doc.text("Age Breakdown", 14, y);
-        y += 4;
-        autoTable(doc, {
-          startY: y,
-          head: [["Age", "Count"]],
-          body: previewData.ageData.map((a: any) => [a.age, String(a.count)]),
-          theme: "grid",
-          headStyles: { fillColor: [0, 40, 104], textColor: 255 },
-          styles: { fontSize: 10 },
-          margin: { left: 14, right: 14 },
-        });
+        children.push(new Paragraph({ spacing: { before: 300, after: 100 }, children: [new TextRun({ text: "Age Breakdown", bold: true, font: "Arial", size: 22 })] }));
+        children.push(new Table({
+          width: { size: 9360, type: WidthType.DXA },
+          columnWidths: [4680, 4680],
+          rows: [makeHeaderRow(["Age", "Count"]),
+            ...previewData.ageData.map((a: any, i: number) => makeRow([a.age, String(a.count)], i % 2 === 1))],
+        }));
       }
+      children.push(new Paragraph({ children: [new PageBreak()] }));
     }
 
+    // ── Poverty ──
     if (s.includes("poverty")) {
-      let y = addSectionPage("Federal Poverty Line Analysis");
-      doc.setTextColor(0);
-      doc.setFontSize(11);
-      autoTable(doc, {
-        startY: y,
-        head: [["Metric", "Value"]],
-        body: [
-          ["Youth at/below Poverty Line", String(previewData.povertyCount)],
-          ["Percentage of Total Youth Served", `${previewData.povertyPct}%`],
-        ],
-        theme: "grid",
-        headStyles: { fillColor: [0, 40, 104], textColor: 255 },
-        styles: { fontSize: 10 },
-        margin: { left: 14, right: 14 },
-      });
-      const iy = (doc as any).lastAutoTable?.finalY + 10 || y + 30;
+      children.push(sectionTitle("Federal Poverty Line Analysis"));
+      children.push(new Table({
+        width: { size: 9360, type: WidthType.DXA },
+        columnWidths: [6000, 3360],
+        rows: [makeHeaderRow(["Metric", "Value"]),
+          makeRow(["Youth at/below Poverty Line", String(previewData.povertyCount)]),
+          makeRow(["Percentage of Total Youth Served", `${previewData.povertyPct}%`], true)],
+      }));
       if (previewData.incomeData?.length) {
-        doc.text("Household Income Distribution", 14, iy);
-        autoTable(doc, {
-          startY: iy + 4,
-          head: [["Income Bracket", "Count", "Percentage"]],
-          body: previewData.incomeData.map((i: any) => [i.name, String(i.value), `${((i.value / previewData.uniqueYouth) * 100).toFixed(1)}%`]),
-          theme: "grid",
-          headStyles: { fillColor: [0, 40, 104], textColor: 255 },
-          styles: { fontSize: 10 },
-          margin: { left: 14, right: 14 },
-        });
+        children.push(new Paragraph({ spacing: { before: 300, after: 100 }, children: [new TextRun({ text: "Household Income Distribution", bold: true, font: "Arial", size: 22 })] }));
+        children.push(new Table({
+          width: { size: 9360, type: WidthType.DXA },
+          columnWidths: [4000, 2680, 2680],
+          rows: [makeHeaderRow(["Income Bracket", "Count", "Percentage"]),
+            ...previewData.incomeData.map((inc: any, i: number) => makeRow([inc.name, String(inc.value), `${((inc.value / previewData.uniqueYouth) * 100).toFixed(1)}%`], i % 2 === 1))],
+        }));
       }
+      children.push(new Paragraph({ children: [new PageBreak()] }));
     }
 
+    // ── Routes ──
     if (s.includes("routes")) {
-      let y = addSectionPage("Route & Zone Breakdown");
-      doc.setTextColor(0);
-      autoTable(doc, {
-        startY: y,
-        head: [["Route / Zone", "Trips", "Unique Youth"]],
-        body: previewData.routeData.map((r: any) => [r.name, String(r.trips), String(r.youth)]),
-        theme: "grid",
-        headStyles: { fillColor: [0, 40, 104], textColor: 255 },
-        styles: { fontSize: 10 },
-        margin: { left: 14, right: 14 },
-      });
+      children.push(sectionTitle("Route & Zone Breakdown"));
+      children.push(new Table({
+        width: { size: 9360, type: WidthType.DXA },
+        columnWidths: [4000, 2680, 2680],
+        rows: [makeHeaderRow(["Route / Zone", "Trips", "Unique Youth"]),
+          ...previewData.routeData.map((r: any, i: number) => makeRow([r.name, String(r.trips), String(r.youth)], i % 2 === 1))],
+      }));
+      children.push(new Paragraph({ children: [new PageBreak()] }));
     }
 
+    // ── Trip Frequency ──
     if (s.includes("trip_frequency")) {
-      let y = addSectionPage("Trip Frequency");
-      doc.setTextColor(0);
-      autoTable(doc, {
-        startY: y,
-        head: [["Month", "Trips"]],
-        body: previewData.monthlyData.map((m: any) => [m.month, String(m.trips)]),
-        theme: "grid",
-        headStyles: { fillColor: [0, 40, 104], textColor: 255 },
-        styles: { fontSize: 10 },
-        margin: { left: 14, right: 14 },
-      });
+      children.push(sectionTitle("Trip Frequency"));
+      children.push(new Table({
+        width: { size: 9360, type: WidthType.DXA },
+        columnWidths: [4680, 4680],
+        rows: [makeHeaderRow(["Month", "Trips"]),
+          ...previewData.monthlyData.map((m: any, i: number) => makeRow([m.month, String(m.trips)], i % 2 === 1))],
+      }));
+      children.push(new Paragraph({ children: [new PageBreak()] }));
     }
 
+    // ── Driver Pay ──
     if (s.includes("driver_pay")) {
-      let y = addSectionPage("Driver Activity & Pay Summary");
-      doc.setTextColor(0);
-      autoTable(doc, {
-        startY: y,
-        head: [["Driver", "Trips", "Approved", "Pending", "Total Pay"]],
-        body: previewData.driverData.map((d: any) => [d.name, String(d.trips), String(d.approved), String(d.pending), `$${d.totalPay.toFixed(2)}`]),
-        theme: "grid",
-        headStyles: { fillColor: [0, 40, 104], textColor: 255 },
-        styles: { fontSize: 10 },
-        margin: { left: 14, right: 14 },
-      });
-      const py = (doc as any).lastAutoTable?.finalY + 8 || y + 30;
-      doc.setFontSize(12);
-      doc.setTextColor(red);
-      doc.text(`Total Program Transportation Cost: $${previewData.totalProgramCost.toFixed(2)}`, 14, py);
+      children.push(sectionTitle("Driver Activity & Pay Summary"));
+      children.push(new Table({
+        width: { size: 9360, type: WidthType.DXA },
+        columnWidths: [2400, 1500, 1600, 1600, 2260],
+        rows: [makeHeaderRow(["Driver", "Trips", "Approved", "Pending", "Total Pay"]),
+          ...previewData.driverData.map((d: any, i: number) => makeRow([d.name, String(d.trips), String(d.approved), String(d.pending), `$${d.totalPay.toFixed(2)}`], i % 2 === 1))],
+      }));
+      children.push(new Paragraph({ spacing: { before: 200 }, children: [new TextRun({ text: `Total Program Transportation Cost: $${previewData.totalProgramCost.toFixed(2)}`, bold: true, font: "Arial", size: 24, color: red })] }));
+      children.push(new Paragraph({ children: [new PageBreak()] }));
     }
 
+    // ── YTD ──
     if (s.includes("ytd")) {
-      let y = addSectionPage("Year-to-Date Totals");
-      doc.setTextColor(0);
-      autoTable(doc, {
-        startY: y,
-        head: [["Metric", "YTD Value"]],
-        body: [
-          ["Total Trips", String(previewData.ytd.trips)],
-          ["Unique Youth Served", String(previewData.ytd.uniqueYouth)],
-          ["Total Driver Pay", `$${previewData.ytd.totalPay.toFixed(2)}`],
-        ],
-        theme: "grid",
-        headStyles: { fillColor: [0, 40, 104], textColor: 255 },
-        styles: { fontSize: 10 },
-        margin: { left: 14, right: 14 },
-      });
+      children.push(sectionTitle("Year-to-Date Totals"));
+      children.push(new Table({
+        width: { size: 9360, type: WidthType.DXA },
+        columnWidths: [6000, 3360],
+        rows: [makeHeaderRow(["Metric", "YTD Value"]),
+          makeRow(["Total Trips", String(previewData.ytd.trips)]),
+          makeRow(["Unique Youth Served", String(previewData.ytd.uniqueYouth)], true),
+          makeRow(["Total Driver Pay", `$${previewData.ytd.totalPay.toFixed(2)}`])],
+      }));
     }
 
-    doc.save(`${reportName.replace(/\s+/g, "_")}_${format(new Date(), "yyyyMMdd")}.pdf`);
-    toast.success("PDF downloaded");
+    // Build document
+    const doc = new Document({
+      styles: {
+        default: { document: { run: { font: "Arial", size: 24 } } },
+      },
+      sections: [{
+        properties: {
+          page: {
+            size: { width: 12240, height: 15840 },
+            margin: { top: 1440, right: 1440, bottom: 1440, left: 1440 },
+          },
+        },
+        headers: {
+          default: new Header({
+            children: [new Paragraph({
+              alignment: AlignmentType.CENTER,
+              children: [new TextRun({ text: "No Limits Academy — Transportation Impact Report", font: "Arial", size: 16, color: "999999", italics: true })],
+            })],
+          }),
+        },
+        footers: {
+          default: new Footer({
+            children: [new Paragraph({
+              alignment: AlignmentType.CENTER,
+              children: [
+                new TextRun({ text: "No Limits Academy — Boxing & Youth Development | Confidential  •  Page ", font: "Arial", size: 16, color: "999999" }),
+                new TextRun({ children: [PageNumber.CURRENT], font: "Arial", size: 16, color: "999999" }),
+              ],
+            })],
+          }),
+        },
+        children,
+      }],
+    });
+
+    const blob = await Packer.toBlob(doc);
+    saveAs(blob, `${reportName.replace(/\s+/g, "_")}_${format(new Date(), "yyyyMMdd")}.docx`);
+    toast.success("Word document downloaded");
   }, [previewData, reportName, dateStart, dateEnd, selectedSections]);
 
   /* ────────────── RENDER ────────────── */
