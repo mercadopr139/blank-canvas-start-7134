@@ -1,4 +1,4 @@
-import { Receipt, ShieldCheck, LucideIcon, FileText, BarChart3, ClipboardCheck, LayoutDashboard, ScrollText } from "lucide-react";
+import { Receipt, ShieldCheck, LucideIcon, FileText, BarChart3, ClipboardCheck, LayoutDashboard, ScrollText, Archive } from "lucide-react";
 import AdminSectionLayout, { SectionCard } from "@/components/admin/AdminSectionLayout";
 
 interface FinanceTile {
