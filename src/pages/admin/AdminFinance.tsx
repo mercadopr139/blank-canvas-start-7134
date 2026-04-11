@@ -1,4 +1,4 @@
-import { Receipt, ShieldCheck, LucideIcon, FileText, BarChart3, ClipboardCheck, LayoutDashboard, ScrollText } from "lucide-react";
+import { Receipt, ShieldCheck, LucideIcon, FileText, BarChart3, ClipboardCheck, LayoutDashboard, ScrollText, Archive } from "lucide-react";
 import AdminSectionLayout, { SectionCard } from "@/components/admin/AdminSectionLayout";
 
 interface FinanceTile {
@@ -28,6 +28,12 @@ const baseTiles: FinanceTile[] = [
       { title: "Status Dashboard", href: "/admin/finance/csbg/dashboard", icon: LayoutDashboard },
       { title: "Submission Log", href: "/admin/finance/csbg/submissions", icon: ScrollText },
     ],
+  },
+  {
+    title: "Document Vault",
+    description: "Centralized document hub",
+    icon: Archive,
+    href: "/admin/finance/vault",
   },
   {
     title: "Insurance",

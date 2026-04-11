@@ -28,6 +28,7 @@ import AdminInvoices from "./pages/admin/AdminInvoices";
  import AdminRegistrations from "./pages/admin/AdminRegistrations";
  import AdminBilling from "./pages/admin/AdminBilling";
 import AdminCSBGInvoice from "./pages/admin/AdminCSBGInvoice";
+import AdminDocumentVault from "./pages/admin/AdminDocumentVault";
 import AdminCSBGBudget from "./pages/admin/AdminCSBGBudget";
 import AdminCSBGChecklist from "./pages/admin/AdminCSBGChecklist";
 import AdminCSBGDashboard from "./pages/admin/AdminCSBGDashboard";
@@ -178,6 +179,7 @@ const App = () => (
               <Route path="csbg/checklist" element={<AdminCSBGChecklist />} />
               <Route path="csbg/dashboard" element={<AdminCSBGDashboard />} />
               <Route path="csbg/submissions" element={<AdminCSBGSubmissions />} />
+              <Route path="vault" element={<AdminDocumentVault />} />
               <Route path="invoices" element={<AdminInvoices />} />
               <Route path="clients" element={<AdminClients />} />
               <Route path="service-calendar" element={<AdminServiceCalendar />} />
