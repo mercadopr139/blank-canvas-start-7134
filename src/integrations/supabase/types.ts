@@ -1662,6 +1662,7 @@ export type Database = {
           description: string | null
           drive_link: string
           expiration_date: string | null
+          folder_id: string | null
           id: string
           name: string
           sort_order: number
@@ -1674,6 +1675,7 @@ export type Database = {
           description?: string | null
           drive_link: string
           expiration_date?: string | null
+          folder_id?: string | null
           id?: string
           name: string
           sort_order?: number
@@ -1686,6 +1688,7 @@ export type Database = {
           description?: string | null
           drive_link?: string
           expiration_date?: string | null
+          folder_id?: string | null
           id?: string
           name?: string
           sort_order?: number
@@ -1697,6 +1700,61 @@ export type Database = {
             columns: ["category_id"]
             isOneToOne: false
             referencedRelation: "vault_categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "vault_documents_folder_id_fkey"
+            columns: ["folder_id"]
+            isOneToOne: false
+            referencedRelation: "vault_folders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      vault_folders: {
+        Row: {
+          category_id: string
+          created_at: string
+          created_by: string | null
+          id: string
+          name: string
+          parent_folder_id: string | null
+          sort_order: number
+          updated_at: string
+        }
+        Insert: {
+          category_id: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          name: string
+          parent_folder_id?: string | null
+          sort_order?: number
+          updated_at?: string
+        }
+        Update: {
+          category_id?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          name?: string
+          parent_folder_id?: string | null
+          sort_order?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vault_folders_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "vault_categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "vault_folders_parent_folder_id_fkey"
+            columns: ["parent_folder_id"]
+            isOneToOne: false
+            referencedRelation: "vault_folders"
             referencedColumns: ["id"]
           },
         ]
