@@ -448,8 +448,8 @@ const AdminDocumentVault = () => {
               <Textarea value={docDesc} onChange={e => setDocDesc(e.target.value)} className="bg-zinc-800 border-zinc-700 text-white" rows={2} />
             </div>
             <div>
-              <label className="text-sm text-zinc-400">Google Drive Link *</label>
-              <Input value={docLink} onChange={e => setDocLink(e.target.value)} placeholder="https://drive.google.com/…" className="bg-zinc-800 border-zinc-700 text-white" />
+              <label className="text-sm text-zinc-400">Document Link *</label>
+              <Input value={docLink} onChange={e => setDocLink(e.target.value)} placeholder="Paste any document link here..." className="bg-zinc-800 border-zinc-700 text-white" />
             </div>
             {editingDoc && (
               <div>
