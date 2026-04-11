@@ -11,7 +11,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
-import { CalendarIcon, Plus, FileText, Trash2, Eye, Download, ArrowLeft, ArrowRight, RotateCcw, CheckCircle2, BarChart3, Users, Bus, DollarSign, PieChart } from "lucide-react";
+import { CalendarIcon, Plus, FileText, Trash2, Eye, Download, ArrowLeft, ArrowRight, RotateCcw, CheckCircle2, BarChart3, Users, Bus, DollarSign, PieChart, Pencil } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart as RechartsPie, Pie, Cell, LineChart, Line, Legend } from "recharts";
 import { Document, Packer, Paragraph, TextRun, Table, TableRow, TableCell, Header, Footer, AlignmentType, WidthType, ShadingType, BorderStyle, PageBreak, ImageRun, PageNumber } from "docx";
