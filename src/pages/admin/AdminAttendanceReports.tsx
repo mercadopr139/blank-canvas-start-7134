@@ -645,6 +645,12 @@ const AdminAttendanceReports = () => {
               <p className="text-[10px] uppercase tracking-wider text-amber-400/60">🦅 Bald Eagles</p>
               <p className="text-xl font-bold text-amber-400">{baldEagleRecords.length} <span className="text-xs text-white/30 font-normal">({baldEagleUniqueCount} unique)</span></p>
             </div>
+            {excursionCount > 0 && (
+              <div className="text-center">
+                <p className="text-[10px] uppercase tracking-wider text-purple-400/60">Excursions</p>
+                <p className="text-xl font-bold text-purple-400">{excursionCount} <span className="text-xs text-white/30 font-normal">({excursionTotalYouth} youth)</span></p>
+              </div>
+            )}
             {reportType !== "daily" && reportType !== "individual" && highestDay && (
               <div className="text-center">
                 <p className="text-[10px] uppercase tracking-wider text-green-400/60">Peak Day</p>
