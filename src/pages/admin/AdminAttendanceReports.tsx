@@ -348,8 +348,12 @@ const AdminAttendanceReports = () => {
       ["Unique Youth", String(uniqueCount)],
     ];
 
+    summary.push(["Practice Days in Range", String(totalPracticeDays)]);
+    summary.push(["Non-Practice Days Excluded", String(totalNonPracticeDays)]);
+    summary.push(["Total Calendar Days", String(totalCalendarDays)]);
+
     if (reportType !== "daily") {
-      summary.push(["Average Daily Attendance", String(avgAttendance)]);
+      summary.push(["Average Daily Attendance", `${avgAttendance} (over ${totalPracticeDays} practice days)`]);
     }
     if (highestDay && reportType !== "daily") {
       summary.push(["Highest Attendance Day", `${highestDay.count} (${highestDay.fullDate})`]);
