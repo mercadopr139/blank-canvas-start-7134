@@ -43,16 +43,8 @@ const POVERTY_INCOMES = ["Under $25,000", "Less than $25,000", "Less than $35,00
 /* ───────── Helpers ───────── */
 const pct = (n: number, d: number) => (d === 0 ? "0%" : `${Math.round((n / d) * 100)}%`);
 
-const breakdownBy = (records: AttendanceRecord[], regMap: Record<string, Registration>, field: keyof Registration) => {
-  const counts: Record<string, number> = {};
-  records.forEach((r) => {
-    const reg = regMap[r.registration_id];
-    if (!reg) return;
-    const val = String(reg[field] || "Unknown");
-    counts[val] = (counts[val] || 0) + 1;
-  });
-  return Object.entries(counts).sort((a, b) => b[1] - a[1]);
-};
+const uniqueBreakdownBy2 = uniqueBreakdownBy; // keep reference
+
 
 const uniqueBreakdownBy = (records: AttendanceRecord[], regMap: Record<string, Registration>, field: keyof Registration) => {
   const groups: Record<string, Set<string>> = {};
