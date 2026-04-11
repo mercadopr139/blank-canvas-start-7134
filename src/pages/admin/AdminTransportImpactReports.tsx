@@ -712,6 +712,18 @@ export default function AdminTransportImpactReports() {
           </div>
         )}
         {deleteDialog}
+        <Dialog open={!!editFinalReport} onOpenChange={() => setEditFinalReport(null)}>
+          <DialogContent className="bg-zinc-900 border-white/10 text-white">
+            <DialogHeader>
+              <DialogTitle>Edit Finalized Report</DialogTitle>
+              <DialogDescription className="text-white/60">This report is marked as Final. Editing will move it back to Draft status. Do you want to continue?</DialogDescription>
+            </DialogHeader>
+            <DialogFooter className="gap-2">
+              <Button variant="ghost" onClick={() => setEditFinalReport(null)} className="text-white/60">Cancel</Button>
+              <Button onClick={confirmEditFinal} className="bg-[#002868] hover:bg-[#002868]/80 text-white">Continue</Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
     );
   }
