@@ -6,7 +6,6 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Badge } from "@/components/ui/badge";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
 } from "@/components/ui/dialog";
@@ -18,11 +17,11 @@ import {
 } from "@/components/ui/dropdown-menu";
 import {
   Search, Plus, ExternalLink, ArrowLeft, MoreVertical, Pencil, Trash2,
-  ArrowUpDown, FolderOpen, AlertTriangle, XCircle,
+  ArrowUpDown, FolderOpen,
   Scale, ShieldCheck, Users, Landmark, FileText, Building2, Handshake, BadgeCheck,
   Settings, Folder, BookOpen, Heart, Star, Globe, Archive, Briefcase, Key, Clock,
 } from "lucide-react";
-import { format, differenceInDays, isPast } from "date-fns";
+import { format } from "date-fns";
 
 /* ── Icon registry ── */
 const ICON_MAP: Record<string, React.ComponentType<any>> = {
@@ -40,7 +39,7 @@ interface VaultCategory {
 }
 interface VaultDocument {
   id: string; category_id: string; name: string; description: string | null;
-  drive_link: string; added_by: string | null; expiration_date: string | null;
+  drive_link: string; added_by: string | null;
   sort_order: number; created_at: string; updated_at: string;
 }
 
@@ -62,8 +61,6 @@ const AdminDocumentVault = () => {
   const [docName, setDocName] = useState("");
   const [docDesc, setDocDesc] = useState("");
   const [docLink, setDocLink] = useState("");
-  const [docAddedBy, setDocAddedBy] = useState("");
-  const [docExpDate, setDocExpDate] = useState("");
   const [docMoveCatId, setDocMoveCatId] = useState("");
 
   /* ── Queries ── */
@@ -140,7 +137,6 @@ const AdminDocumentVault = () => {
       const catId = docMoveCatId || selectedCatId!;
       const payload: any = {
         name: docName, description: docDesc || null, drive_link: docLink,
-        added_by: docAddedBy || null, expiration_date: docExpDate || null,
         category_id: catId,
       };
       if (editingDoc) {
@@ -198,8 +194,6 @@ const AdminDocumentVault = () => {
     setDocName(doc?.name || "");
     setDocDesc(doc?.description || "");
     setDocLink(doc?.drive_link || "");
-    setDocAddedBy(doc?.added_by || "");
-    setDocExpDate(doc?.expiration_date || "");
     setDocMoveCatId(doc?.category_id || "");
     setDocModal(true);
   };
@@ -216,14 +210,6 @@ const AdminDocumentVault = () => {
         (d.description || "").toLowerCase().includes(globalSearch.toLowerCase())
       )
     : null;
-
-  const getExpirationBadge = (exp: string | null) => {
-    if (!exp) return null;
-    const d = new Date(exp + "T00:00:00");
-    if (isPast(d)) return <Badge className="bg-red-500/20 text-red-400 border-red-500/30 text-xs"><XCircle className="w-3 h-3 mr-1" />Expired</Badge>;
-    if (differenceInDays(d, new Date()) <= 30) return <Badge className="bg-yellow-500/20 text-yellow-400 border-yellow-500/30 text-xs"><AlertTriangle className="w-3 h-3 mr-1" />Expiring Soon</Badge>;
-    return null;
-  };
 
   const getCatName = (catId: string) => categories.find(c => c.id === catId)?.name || "—";
 
@@ -284,7 +270,6 @@ const AdminDocumentVault = () => {
                       <p className="text-white font-medium truncate">{doc.name}</p>
                       <p className="text-xs text-zinc-500">{getCatName(doc.category_id)}</p>
                     </div>
-                    {getExpirationBadge(doc.expiration_date)}
                   </div>
                   <a href={doc.drive_link} target="_blank" rel="noopener noreferrer">
                     <Button size="sm" variant="outline" className="border-sky-500/40 text-sky-400 hover:bg-sky-500/10">
@@ -363,13 +348,11 @@ const AdminDocumentVault = () => {
                   <div className="min-w-0 flex-1 space-y-1">
                     <div className="flex items-center gap-2 flex-wrap">
                       <p className="text-white font-medium">{doc.name}</p>
-                      {getExpirationBadge(doc.expiration_date)}
                     </div>
                     {doc.description && <p className="text-sm text-zinc-400">{doc.description}</p>}
                     <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-zinc-500">
                       <span>Added {format(new Date(doc.created_at), "MMM d, yyyy")}</span>
                       {doc.added_by && <span>by {doc.added_by}</span>}
-                      {doc.expiration_date && <span>Expires {format(new Date(doc.expiration_date + "T00:00:00"), "MMM d, yyyy")}</span>}
                     </div>
                   </div>
                   <div className="flex items-center gap-1 shrink-0">
@@ -467,16 +450,6 @@ const AdminDocumentVault = () => {
             <div>
               <label className="text-sm text-zinc-400">Google Drive Link *</label>
               <Input value={docLink} onChange={e => setDocLink(e.target.value)} placeholder="https://drive.google.com/…" className="bg-zinc-800 border-zinc-700 text-white" />
-            </div>
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="text-sm text-zinc-400">Added By</label>
-                <Input value={docAddedBy} onChange={e => setDocAddedBy(e.target.value)} placeholder="e.g. Melissa" className="bg-zinc-800 border-zinc-700 text-white" />
-              </div>
-              <div>
-                <label className="text-sm text-zinc-400">Expiration / Renewal Date</label>
-                <Input type="date" value={docExpDate} onChange={e => setDocExpDate(e.target.value)} className="bg-zinc-800 border-zinc-700 text-white" />
-              </div>
             </div>
             {editingDoc && (
               <div>
