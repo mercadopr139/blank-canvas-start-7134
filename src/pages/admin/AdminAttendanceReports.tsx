@@ -9,7 +9,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { FileText, Download, Star, Search, Trash2 } from "lucide-react";
-import { format, startOfWeek, endOfWeek, startOfMonth, endOfMonth, startOfYear, endOfYear, parseISO, isWeekend } from "date-fns";
+import { format, startOfWeek, endOfWeek, startOfMonth, endOfMonth, startOfYear, endOfYear, parseISO, isWeekend, eachDayOfInterval } from "date-fns";
 import { toast } from "sonner";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
@@ -279,6 +279,19 @@ const AdminAttendanceReports = () => {
   const programBreakdown = breakdownBy(filteredAttendance, regMap, "child_boxing_program");
   const sexBreakdown = breakdownBy(filteredAttendance, regMap, "child_sex");
 
+  // Compute total practice days and non-practice days in the date range
+  const { totalPracticeDays, totalNonPracticeDays, totalCalendarDays } = useMemo(() => {
+    const allDays = eachDayOfInterval({ start: parseISO(dateRange.from), end: parseISO(dateRange.to) });
+    let practice = 0;
+    let nonPractice = 0;
+    allDays.forEach((d) => {
+      const ds = format(d, "yyyy-MM-dd");
+      if (isPracticeDay(ds)) practice++;
+      else nonPractice++;
+    });
+    return { totalPracticeDays: practice, totalNonPracticeDays: nonPractice, totalCalendarDays: allDays.length };
+  }, [dateRange.from, dateRange.to, isPracticeDay]);
+
   // Daily counts for charts
   const dailyChartData = useMemo(() => {
     const counts: Record<string, number> = {};
@@ -293,7 +306,8 @@ const AdminAttendanceReports = () => {
     }));
   }, [filteredAttendance, reportType]);
 
-  const avgAttendance = dailyChartData.length > 0 ? Math.round(totalAttendance / dailyChartData.length) : 0;
+  // Average uses total practice days (not just days with sign-ins)
+  const avgAttendance = totalPracticeDays > 0 ? Math.round(totalAttendance / totalPracticeDays) : 0;
   const highestDay = dailyChartData.length > 0 ? dailyChartData.reduce((a, b) => (b.count > a.count ? b : a)) : null;
   const lowestDay = dailyChartData.length > 0 ? dailyChartData.reduce((a, b) => (b.count < a.count ? b : a)) : null;
 
@@ -334,8 +348,12 @@ const AdminAttendanceReports = () => {
       ["Unique Youth", String(uniqueCount)],
     ];
 
+    summary.push(["Practice Days in Range", String(totalPracticeDays)]);
+    summary.push(["Non-Practice Days Excluded", String(totalNonPracticeDays)]);
+    summary.push(["Total Calendar Days", String(totalCalendarDays)]);
+
     if (reportType !== "daily") {
-      summary.push(["Average Daily Attendance", String(avgAttendance)]);
+      summary.push(["Average Daily Attendance", `${avgAttendance} (over ${totalPracticeDays} practice days)`]);
     }
     if (highestDay && reportType !== "daily") {
       summary.push(["Highest Attendance Day", `${highestDay.count} (${highestDay.fullDate})`]);
@@ -620,7 +638,18 @@ const AdminAttendanceReports = () => {
         </CardContent>
       </Card>
 
-      {/* Detail Table */}
+      {/* Practice Day Validation Note */}
+      <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-blue-500/10 border border-blue-500/20 text-xs text-blue-300">
+        <span className="font-medium">📅 Date Range Breakdown:</span>
+        <span>{totalPracticeDays} practice day{totalPracticeDays !== 1 ? "s" : ""}</span>
+        <span className="text-white/20">|</span>
+        <span>{totalNonPracticeDays} non-practice day{totalNonPracticeDays !== 1 ? "s" : ""} excluded</span>
+        <span className="text-white/20">|</span>
+        <span>{totalCalendarDays} total calendar day{totalCalendarDays !== 1 ? "s" : ""}</span>
+        {reportType !== "daily" && <><span className="text-white/20">|</span><span>Avg calculated over {totalPracticeDays} practice days only</span></>}
+      </div>
+
+
       <Card className="bg-white/5 border-white/10 text-white">
         <CardHeader className="pb-2">
           <CardTitle className="text-sm font-medium text-white/60">
