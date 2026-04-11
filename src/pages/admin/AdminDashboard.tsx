@@ -3,7 +3,7 @@ import nlaLogoWhite from "@/assets/nla-logo-white.png";
 import { useAuth } from "@/contexts/AuthContext";
 import { useStaffPermissions } from "@/hooks/useStaffPermissions";
 import { Button } from "@/components/ui/button";
-import { LogOut, Briefcase, TrendingUp, DollarSign, ArrowLeft, Signal, Lock, Bus, Settings } from "lucide-react";
+import { LogOut, Hammer, BadgeDollarSign, Lightbulb, ArrowLeft, Signal, Lock, Bus, Settings } from "lucide-react";
 import UpcomingEventsWidget from "@/components/admin/UpcomingEventsWidget";
 import InviteAdminModal from "@/components/admin/InviteAdminModal";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
@@ -13,7 +13,7 @@ const pillars = [
   {
     title: "Operations",
     subtitle: "Boxing & Youth Development",
-    icon: Briefcase,
+    icon: Hammer,
     href: "/admin/operations",
     permKey: "operations" as const,
     accent: "#bf0f3e",
@@ -23,7 +23,7 @@ const pillars = [
   {
     title: "Sales & Marketing",
     subtitle: "Outreach & Retention",
-    icon: TrendingUp,
+    icon: BadgeDollarSign,
     href: "/admin/sales-marketing",
     permKey: "sales_marketing" as const,
     accent: "#22c55e",
@@ -33,7 +33,7 @@ const pillars = [
   {
     title: "Finance",
     subtitle: "Financial Systems & Personnel",
-    icon: DollarSign,
+    icon: Lightbulb,
     href: "/admin/finance",
     permKey: "finance" as const,
     accent: "#38bdf8",
