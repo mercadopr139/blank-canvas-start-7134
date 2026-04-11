@@ -385,7 +385,7 @@ const AdminAttendanceReports = () => {
       summary.push(["Lowest Attendance Day", `${lowestDay.count} (${lowestDay.fullDate})`]);
     }
 
-    programBreakdown.forEach(([prog, count]) => summary.push([`Program: ${prog}`, String(count)]));
+    programBreakdown.forEach(([prog, count]) => summary.push([`Program: ${prog}`, `${count} of ${uniqueCount} (${pct(count, uniqueCount)})`]));
     sexBreakdown.forEach(([sex, count]) => summary.push([`Sex: ${sex}`, `${count} of ${uniqueCount} (${pct(count, uniqueCount)})`]));
     summary.push(["Below Federal Poverty Line", `${poverty.below} of ${poverty.total} (${pct(poverty.below, poverty.total)})`]);
     summary.push(["Bald Eagles Sign-Ins", String(baldEagleRecords.length)]);
