@@ -43,7 +43,7 @@ const POVERTY_INCOMES = ["Under $25,000", "Less than $25,000", "Less than $35,00
 /* ───────── Helpers ───────── */
 const pct = (n: number, d: number) => (d === 0 ? "0%" : `${Math.round((n / d) * 100)}%`);
 
-const uniqueBreakdownBy2 = uniqueBreakdownBy; // keep reference
+
 
 
 const uniqueBreakdownBy = (records: AttendanceRecord[], regMap: Record<string, Registration>, field: keyof Registration) => {
