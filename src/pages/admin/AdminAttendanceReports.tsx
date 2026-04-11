@@ -279,6 +279,19 @@ const AdminAttendanceReports = () => {
   const programBreakdown = breakdownBy(filteredAttendance, regMap, "child_boxing_program");
   const sexBreakdown = breakdownBy(filteredAttendance, regMap, "child_sex");
 
+  // Compute total practice days and non-practice days in the date range
+  const { totalPracticeDays, totalNonPracticeDays, totalCalendarDays } = useMemo(() => {
+    const allDays = eachDayOfInterval({ start: parseISO(dateRange.from), end: parseISO(dateRange.to) });
+    let practice = 0;
+    let nonPractice = 0;
+    allDays.forEach((d) => {
+      const ds = format(d, "yyyy-MM-dd");
+      if (isPracticeDay(ds)) practice++;
+      else nonPractice++;
+    });
+    return { totalPracticeDays: practice, totalNonPracticeDays: nonPractice, totalCalendarDays: allDays.length };
+  }, [dateRange.from, dateRange.to, isPracticeDay]);
+
   // Daily counts for charts
   const dailyChartData = useMemo(() => {
     const counts: Record<string, number> = {};
@@ -293,7 +306,8 @@ const AdminAttendanceReports = () => {
     }));
   }, [filteredAttendance, reportType]);
 
-  const avgAttendance = dailyChartData.length > 0 ? Math.round(totalAttendance / dailyChartData.length) : 0;
+  // Average uses total practice days (not just days with sign-ins)
+  const avgAttendance = totalPracticeDays > 0 ? Math.round(totalAttendance / totalPracticeDays) : 0;
   const highestDay = dailyChartData.length > 0 ? dailyChartData.reduce((a, b) => (b.count > a.count ? b : a)) : null;
   const lowestDay = dailyChartData.length > 0 ? dailyChartData.reduce((a, b) => (b.count < a.count ? b : a)) : null;
 
