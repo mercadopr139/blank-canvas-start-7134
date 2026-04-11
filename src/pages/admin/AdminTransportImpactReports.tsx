@@ -14,8 +14,9 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogD
 import { CalendarIcon, Plus, FileText, Trash2, Eye, Download, ArrowLeft, ArrowRight, RotateCcw, CheckCircle2, BarChart3, Users, Bus, DollarSign, PieChart } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart as RechartsPie, Pie, Cell, LineChart, Line, Legend } from "recharts";
-import jsPDF from "jspdf";
-import autoTable from "jspdf-autotable";
+import { Document, Packer, Paragraph, TextRun, Table, TableRow, TableCell, Header, Footer, AlignmentType, WidthType, ShadingType, BorderStyle, PageBreak, HeadingLevel, ImageRun, PageNumber } from "docx";
+import { saveAs } from "file-saver";
+import nlaLogo from "@/assets/nla-logo.png";
 
 /* ───────── types ───────── */
 type Report = {
