@@ -1627,6 +1627,80 @@ export type Database = {
         }
         Relationships: []
       }
+      vault_categories: {
+        Row: {
+          created_at: string
+          icon: string
+          id: string
+          name: string
+          sort_order: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          icon?: string
+          id?: string
+          name: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          icon?: string
+          id?: string
+          name?: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      vault_documents: {
+        Row: {
+          added_by: string | null
+          category_id: string
+          created_at: string
+          description: string | null
+          drive_link: string
+          expiration_date: string | null
+          id: string
+          name: string
+          sort_order: number
+          updated_at: string
+        }
+        Insert: {
+          added_by?: string | null
+          category_id: string
+          created_at?: string
+          description?: string | null
+          drive_link: string
+          expiration_date?: string | null
+          id?: string
+          name: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Update: {
+          added_by?: string | null
+          category_id?: string
+          created_at?: string
+          description?: string | null
+          drive_link?: string
+          expiration_date?: string | null
+          id?: string
+          name?: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vault_documents_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "vault_categories"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       verse_library: {
         Row: {
           created_at: string
