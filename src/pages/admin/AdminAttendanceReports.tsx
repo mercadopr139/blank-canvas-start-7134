@@ -43,15 +43,19 @@ const POVERTY_INCOMES = ["Under $25,000", "Less than $25,000", "Less than $35,00
 /* ───────── Helpers ───────── */
 const pct = (n: number, d: number) => (d === 0 ? "0%" : `${Math.round((n / d) * 100)}%`);
 
-const breakdownBy = (records: AttendanceRecord[], regMap: Record<string, Registration>, field: keyof Registration) => {
-  const counts: Record<string, number> = {};
+
+
+
+const uniqueBreakdownBy = (records: AttendanceRecord[], regMap: Record<string, Registration>, field: keyof Registration) => {
+  const groups: Record<string, Set<string>> = {};
   records.forEach((r) => {
     const reg = regMap[r.registration_id];
     if (!reg) return;
     const val = String(reg[field] || "Unknown");
-    counts[val] = (counts[val] || 0) + 1;
+    if (!groups[val]) groups[val] = new Set();
+    groups[val].add(r.registration_id);
   });
-  return Object.entries(counts).sort((a, b) => b[1] - a[1]);
+  return Object.entries(groups).map(([k, s]) => [k, s.size] as [string, number]).sort((a, b) => b[1] - a[1]);
 };
 
 const uniqueYouth = (records: AttendanceRecord[]) => new Set(records.map((r) => r.registration_id)).size;
@@ -216,6 +220,23 @@ const AdminAttendanceReports = () => {
     },
   });
 
+  // Fetch excursions for the date range
+  const { data: excursionsData = [] } = useQuery({
+    queryKey: ["report-excursions", dateRange.from, dateRange.to],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("excursions")
+        .select("id, date, name, youth_count")
+        .gte("date", dateRange.from)
+        .lte("date", dateRange.to);
+      if (error) throw error;
+      return data as { id: string; date: string; name: string; youth_count: number }[];
+    },
+  });
+
+  const excursionCount = excursionsData.length;
+  const excursionTotalYouth = excursionsData.reduce((sum, e) => sum + e.youth_count, 0);
+
   const practiceDayMap = useMemo(() => {
     const m: Record<string, boolean> = {};
     practiceDaysData.forEach((p) => (m[p.date] = p.is_practice_day));
@@ -277,8 +298,8 @@ const AdminAttendanceReports = () => {
   const totalAttendance = filteredAttendance.length;
   const uniqueCount = uniqueYouth(filteredAttendance);
   const poverty = povertyCount(filteredAttendance, regMap);
-  const programBreakdown = breakdownBy(filteredAttendance, regMap, "child_boxing_program");
-  const sexBreakdown = breakdownBy(filteredAttendance, regMap, "child_sex");
+  const programBreakdown = uniqueBreakdownBy(filteredAttendance, regMap, "child_boxing_program");
+  const sexBreakdown = uniqueBreakdownBy(filteredAttendance, regMap, "child_sex");
 
   // Compute total practice days and non-practice days in the date range
   const { totalPracticeDays, totalNonPracticeDays, totalCalendarDays } = useMemo(() => {
@@ -352,9 +373,10 @@ const AdminAttendanceReports = () => {
     summary.push(["Practice Days in Range", String(totalPracticeDays)]);
     summary.push(["Non-Practice Days Excluded", String(totalNonPracticeDays)]);
     summary.push(["Total Calendar Days", String(totalCalendarDays)]);
+    summary.push(["Excursions", `${excursionCount} (${excursionTotalYouth} total youth)`]);
 
     if (reportType !== "daily") {
-      summary.push(["Average Daily Attendance", `${avgAttendance} (over ${totalPracticeDays} practice days)`]);
+      summary.push(["Average Daily Attendance", String(avgAttendance)]);
     }
     if (highestDay && reportType !== "daily") {
       summary.push(["Highest Attendance Day", `${highestDay.count} (${highestDay.fullDate})`]);
@@ -623,6 +645,12 @@ const AdminAttendanceReports = () => {
               <p className="text-[10px] uppercase tracking-wider text-amber-400/60">🦅 Bald Eagles</p>
               <p className="text-xl font-bold text-amber-400">{baldEagleRecords.length} <span className="text-xs text-white/30 font-normal">({baldEagleUniqueCount} unique)</span></p>
             </div>
+            {excursionCount > 0 && (
+              <div className="text-center">
+                <p className="text-[10px] uppercase tracking-wider text-purple-400/60">Excursions</p>
+                <p className="text-xl font-bold text-purple-400">{excursionCount} <span className="text-xs text-white/30 font-normal">({excursionTotalYouth} youth)</span></p>
+              </div>
+            )}
             {reportType !== "daily" && reportType !== "individual" && highestDay && (
               <div className="text-center">
                 <p className="text-[10px] uppercase tracking-wider text-green-400/60">Peak Day</p>
@@ -647,7 +675,7 @@ const AdminAttendanceReports = () => {
         <span>{totalNonPracticeDays} non-practice day{totalNonPracticeDays !== 1 ? "s" : ""} excluded</span>
         <span className="text-white/20">|</span>
         <span>{totalCalendarDays} total calendar day{totalCalendarDays !== 1 ? "s" : ""}</span>
-        {reportType !== "daily" && <><span className="text-white/20">|</span><span>Avg calculated over {totalPracticeDays} practice days only</span></>}
+        {excursionCount > 0 && <><span className="text-white/20">|</span><span>{excursionCount} excursion{excursionCount !== 1 ? "s" : ""} ({excursionTotalYouth} youth)</span></>}
       </div>
 
 
