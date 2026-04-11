@@ -14,7 +14,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogD
 import { CalendarIcon, Plus, FileText, Trash2, Eye, Download, ArrowLeft, ArrowRight, RotateCcw, CheckCircle2, BarChart3, Users, Bus, DollarSign, PieChart } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart as RechartsPie, Pie, Cell, LineChart, Line, Legend } from "recharts";
-import { Document, Packer, Paragraph, TextRun, Table, TableRow, TableCell, Header, Footer, AlignmentType, WidthType, ShadingType, BorderStyle, PageBreak, HeadingLevel, ImageRun, PageNumber } from "docx";
+import { Document, Packer, Paragraph, TextRun, Table, TableRow, TableCell, Header, Footer, AlignmentType, WidthType, ShadingType, BorderStyle, PageBreak, ImageRun, PageNumber } from "docx";
 import { saveAs } from "file-saver";
 import nlaLogo from "@/assets/nla-logo.png";
 
@@ -715,8 +715,8 @@ export default function AdminTransportImpactReports() {
           <Button variant="ghost" className="text-white/60 hover:text-white" onClick={resetBuilder}>
             <ArrowLeft className="w-4 h-4 mr-2" /> Back to Reports
           </Button>
-          <Button onClick={generatePdf} className="bg-[#002868] hover:bg-[#002868]/80 text-white">
-            <Download className="w-4 h-4 mr-2" /> Download PDF
+          <Button onClick={generateDocx} className="bg-[#002868] hover:bg-[#002868]/80 text-white">
+            <Download className="w-4 h-4 mr-2" /> Download Word Doc
           </Button>
         </div>
         <ReportPreviewContent data={previewData} sections={selectedSections} reportName={reportName} dateStart={dateStart} dateEnd={dateEnd} />
@@ -856,8 +856,8 @@ export default function AdminTransportImpactReports() {
               <Button onClick={() => saveMut.mutate({ id: editingId || undefined, status: "Final" })} className="bg-green-600 hover:bg-green-700 text-white" disabled={saveMut.isPending}>
                 <CheckCircle2 className="w-4 h-4 mr-2" /> Finalize Report
               </Button>
-              <Button onClick={generatePdf} className="bg-[#002868] hover:bg-[#002868]/80 text-white">
-                <Download className="w-4 h-4 mr-2" /> PDF
+              <Button onClick={generateDocx} className="bg-[#002868] hover:bg-[#002868]/80 text-white">
+                <Download className="w-4 h-4 mr-2" /> Word Doc
               </Button>
             </div>
           </div>
