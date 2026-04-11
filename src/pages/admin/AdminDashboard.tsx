@@ -3,7 +3,7 @@ import nlaLogoWhite from "@/assets/nla-logo-white.png";
 import { useAuth } from "@/contexts/AuthContext";
 import { useStaffPermissions } from "@/hooks/useStaffPermissions";
 import { Button } from "@/components/ui/button";
-import { LogOut, Briefcase, TrendingUp, DollarSign, ArrowLeft, Signal, Lock, Bus, Settings, Calendar } from "lucide-react";
+import { LogOut, Briefcase, TrendingUp, DollarSign, ArrowLeft, Signal, Lock, Bus, Settings } from "lucide-react";
 import UpcomingEventsWidget from "@/components/admin/UpcomingEventsWidget";
 import InviteAdminModal from "@/components/admin/InviteAdminModal";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
