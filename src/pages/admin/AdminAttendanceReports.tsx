@@ -54,6 +54,18 @@ const breakdownBy = (records: AttendanceRecord[], regMap: Record<string, Registr
   return Object.entries(counts).sort((a, b) => b[1] - a[1]);
 };
 
+const uniqueBreakdownBy = (records: AttendanceRecord[], regMap: Record<string, Registration>, field: keyof Registration) => {
+  const groups: Record<string, Set<string>> = {};
+  records.forEach((r) => {
+    const reg = regMap[r.registration_id];
+    if (!reg) return;
+    const val = String(reg[field] || "Unknown");
+    if (!groups[val]) groups[val] = new Set();
+    groups[val].add(r.registration_id);
+  });
+  return Object.entries(groups).map(([k, s]) => [k, s.size] as [string, number]).sort((a, b) => b[1] - a[1]);
+};
+
 const uniqueYouth = (records: AttendanceRecord[]) => new Set(records.map((r) => r.registration_id)).size;
 
 const povertyCount = (records: AttendanceRecord[], regMap: Record<string, Registration>) => {
@@ -277,8 +289,8 @@ const AdminAttendanceReports = () => {
   const totalAttendance = filteredAttendance.length;
   const uniqueCount = uniqueYouth(filteredAttendance);
   const poverty = povertyCount(filteredAttendance, regMap);
-  const programBreakdown = breakdownBy(filteredAttendance, regMap, "child_boxing_program");
-  const sexBreakdown = breakdownBy(filteredAttendance, regMap, "child_sex");
+  const programBreakdown = uniqueBreakdownBy(filteredAttendance, regMap, "child_boxing_program");
+  const sexBreakdown = uniqueBreakdownBy(filteredAttendance, regMap, "child_sex");
 
   // Compute total practice days and non-practice days in the date range
   const { totalPracticeDays, totalNonPracticeDays, totalCalendarDays } = useMemo(() => {
@@ -354,7 +366,7 @@ const AdminAttendanceReports = () => {
     summary.push(["Total Calendar Days", String(totalCalendarDays)]);
 
     if (reportType !== "daily") {
-      summary.push(["Average Daily Attendance", `${avgAttendance} (over ${totalPracticeDays} practice days)`]);
+      summary.push(["Average Daily Attendance", String(avgAttendance)]);
     }
     if (highestDay && reportType !== "daily") {
       summary.push(["Highest Attendance Day", `${highestDay.count} (${highestDay.fullDate})`]);
