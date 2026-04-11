@@ -235,6 +235,7 @@ const AdminAttendanceReports = () => {
       const { data, error } = await supabase
         .from("attendance_records")
         .select("id, registration_id, check_in_date, check_in_at, program_source")
+        .eq("program_source", "NLA")
         .gte("check_in_date", dateRange.from)
         .lte("check_in_date", dateRange.to)
         .order("check_in_date")
