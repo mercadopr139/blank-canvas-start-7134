@@ -18,6 +18,7 @@ import { Document, Packer, Paragraph, TextRun, Table, TableRow, TableCell, Heade
 import { saveAs } from "file-saver";
 import nlaLogo from "@/assets/nla-logo.png";
 
+
 /* ───────── types ───────── */
 type Report = {
   id: string;
