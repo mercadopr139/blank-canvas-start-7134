@@ -453,7 +453,7 @@ export default function AdminTransportImpactReports() {
         ["Average Youth per Trip", String(previewData.avgYouthPerTrip)],
         ["Total Pickups", String(previewData.pickups)],
         ["Total Dropoffs", String(previewData.dropoffs)],
-        ["Total Attendance Records", String(previewData.totalAttendanceRecords)],
+        ["Total Rides Provided", String(previewData.totalAttendanceRecords)],
       ];
       autoTable(doc, {
         startY: y,
@@ -899,7 +899,7 @@ function ReportPreviewContent({ data, sections, reportName, dateStart, dateEnd }
                 { label: "Avg Youth/Trip", value: data.avgYouthPerTrip },
                 { label: "Pickups", value: data.pickups },
                 { label: "Dropoffs", value: data.dropoffs },
-                { label: "Attendance Records", value: data.totalAttendanceRecords },
+                { label: "Total Rides Provided", value: data.totalAttendanceRecords },
               ].map(m => (
                 <div key={m.label} className="bg-white/5 rounded-lg p-3 text-center">
                   <p className="text-2xl font-bold text-white">{m.value}</p>
