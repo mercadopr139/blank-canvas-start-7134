@@ -35,12 +35,6 @@ const baseTiles: FinanceTile[] = [
     icon: Archive,
     href: "/admin/finance/vault",
   },
-  {
-    title: "Insurance",
-    description: "Policies & coverage",
-    icon: ShieldCheck,
-    href: "/admin/finance/insurance",
-  },
 ];
 
 // Blank index – main panel is empty until a sidebar item is selected
