@@ -343,6 +343,7 @@ export default function AdminTransportImpactReports() {
     setView("list");
     setStep(1);
     setEditingId(null);
+    setEditFinalReport(null);
     setReportName("");
     setDateStart(undefined);
     setDateEnd(undefined);
@@ -364,6 +365,20 @@ export default function AdminTransportImpactReports() {
     setPreviewData(r.report_data);
     setView("builder");
     setStep(3);
+  };
+
+  const handleEditClick = (r: Report) => {
+    if (r.status === "Final") {
+      setEditFinalReport(r);
+    } else {
+      editReport(r);
+    }
+  };
+
+  const confirmEditFinal = () => {
+    if (!editFinalReport) return;
+    editReport(editFinalReport);
+    setEditFinalReport(null);
   };
 
   const previewReport = (r: Report) => {
@@ -684,11 +699,9 @@ export default function AdminTransportImpactReports() {
                     <Button size="sm" variant="ghost" className="text-white/60 hover:text-white" onClick={() => previewReport(r)}>
                       <Eye className="w-4 h-4" />
                     </Button>
-                    {r.status === "Draft" && (
-                      <Button size="sm" variant="ghost" className="text-white/60 hover:text-white" onClick={() => editReport(r)}>
-                        <FileText className="w-4 h-4" />
-                      </Button>
-                    )}
+                    <Button size="sm" variant="ghost" className="text-white/60 hover:text-white" onClick={() => handleEditClick(r)}>
+                      <Pencil className="w-4 h-4" />
+                    </Button>
                     <Button size="sm" variant="ghost" className="text-red-400 hover:text-red-300" onClick={() => setDeleteId(r.id)}>
                       <Trash2 className="w-4 h-4" />
                     </Button>
