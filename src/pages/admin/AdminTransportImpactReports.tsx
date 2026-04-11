@@ -431,7 +431,7 @@ export default function AdminTransportImpactReports() {
       });
 
     const sectionTitle = (text: string) => new Paragraph({
-      spacing: { before: 400, after: 200 },
+      spacing: { before: 300, after: 120 },
       children: [new TextRun({ text, bold: true, font: "Arial", size: 28, color: navy })],
       border: { bottom: { style: BorderStyle.SINGLE, size: 3, color: red, space: 4 } },
     });
@@ -472,7 +472,6 @@ export default function AdminTransportImpactReports() {
         columnWidths: [6000, 3360],
         rows: [makeHeaderRow(["Metric", "Value"]), ...rows.map((r, i) => makeRow(r, i % 2 === 1))],
       }));
-      children.push(new Paragraph({ children: [new PageBreak()] }));
     }
 
     // ── Demographics ──
@@ -505,7 +504,6 @@ export default function AdminTransportImpactReports() {
             ...previewData.ageData.map((a: any, i: number) => makeRow([a.age, String(a.count)], i % 2 === 1))],
         }));
       }
-      children.push(new Paragraph({ children: [new PageBreak()] }));
     }
 
     // ── Poverty ──
@@ -527,7 +525,6 @@ export default function AdminTransportImpactReports() {
             ...previewData.incomeData.map((inc: any, i: number) => makeRow([inc.name, String(inc.value), `${((inc.value / previewData.uniqueYouth) * 100).toFixed(1)}%`], i % 2 === 1))],
         }));
       }
-      children.push(new Paragraph({ children: [new PageBreak()] }));
     }
 
     // ── Routes ──
@@ -539,7 +536,6 @@ export default function AdminTransportImpactReports() {
         rows: [makeHeaderRow(["Route / Zone", "Trips", "Unique Youth"]),
           ...previewData.routeData.map((r: any, i: number) => makeRow([r.name, String(r.trips), String(r.youth)], i % 2 === 1))],
       }));
-      children.push(new Paragraph({ children: [new PageBreak()] }));
     }
 
     // ── Trip Frequency ──
@@ -551,7 +547,6 @@ export default function AdminTransportImpactReports() {
         rows: [makeHeaderRow(["Month", "Trips"]),
           ...previewData.monthlyData.map((m: any, i: number) => makeRow([m.month, String(m.trips)], i % 2 === 1))],
       }));
-      children.push(new Paragraph({ children: [new PageBreak()] }));
     }
 
     // ── Driver Pay ──
@@ -564,7 +559,6 @@ export default function AdminTransportImpactReports() {
           ...previewData.driverData.map((d: any, i: number) => makeRow([d.name, String(d.trips), String(d.approved), String(d.pending), `$${d.totalPay.toFixed(2)}`], i % 2 === 1))],
       }));
       children.push(new Paragraph({ spacing: { before: 200 }, children: [new TextRun({ text: `Total Program Transportation Cost: $${previewData.totalProgramCost.toFixed(2)}`, bold: true, font: "Arial", size: 24, color: red })] }));
-      children.push(new Paragraph({ children: [new PageBreak()] }));
     }
 
     // ── YTD ──
