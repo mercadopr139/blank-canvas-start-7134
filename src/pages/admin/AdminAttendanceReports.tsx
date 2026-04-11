@@ -638,7 +638,18 @@ const AdminAttendanceReports = () => {
         </CardContent>
       </Card>
 
-      {/* Detail Table */}
+      {/* Practice Day Validation Note */}
+      <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-blue-500/10 border border-blue-500/20 text-xs text-blue-300">
+        <span className="font-medium">📅 Date Range Breakdown:</span>
+        <span>{totalPracticeDays} practice day{totalPracticeDays !== 1 ? "s" : ""}</span>
+        <span className="text-white/20">|</span>
+        <span>{totalNonPracticeDays} non-practice day{totalNonPracticeDays !== 1 ? "s" : ""} excluded</span>
+        <span className="text-white/20">|</span>
+        <span>{totalCalendarDays} total calendar day{totalCalendarDays !== 1 ? "s" : ""}</span>
+        {reportType !== "daily" && <><span className="text-white/20">|</span><span>Avg calculated over {totalPracticeDays} practice days only</span></>}
+      </div>
+
+
       <Card className="bg-white/5 border-white/10 text-white">
         <CardHeader className="pb-2">
           <CardTitle className="text-sm font-medium text-white/60">
