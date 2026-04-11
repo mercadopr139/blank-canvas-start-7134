@@ -3,11 +3,72 @@ import nlaLogoWhite from "@/assets/nla-logo-white.png";
 import { useAuth } from "@/contexts/AuthContext";
 import { useStaffPermissions } from "@/hooks/useStaffPermissions";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Settings, LogOut, Briefcase, TrendingUp, DollarSign, ArrowLeft, Signal, Lock, Bus } from "lucide-react";
+import { LogOut, Briefcase, TrendingUp, DollarSign, ArrowLeft, Signal, Lock, Bus, Settings, Calendar } from "lucide-react";
 import UpcomingEventsWidget from "@/components/admin/UpcomingEventsWidget";
 import InviteAdminModal from "@/components/admin/InviteAdminModal";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+
+/* ─── Pillar card config ─── */
+const pillars = [
+  {
+    title: "Operations",
+    subtitle: "Boxing & Youth Development",
+    icon: Briefcase,
+    href: "/admin/operations",
+    permKey: "operations" as const,
+    accent: "#bf0f3e",
+    glow: "rgba(191,15,62,0.35)",
+    gradient: "linear-gradient(145deg, rgba(191,15,62,0.12) 0%, rgba(191,15,62,0.03) 100%)",
+  },
+  {
+    title: "Sales & Marketing",
+    subtitle: "Outreach & Retention",
+    icon: TrendingUp,
+    href: "/admin/sales-marketing",
+    permKey: "sales_marketing" as const,
+    accent: "#22c55e",
+    glow: "rgba(34,197,94,0.30)",
+    gradient: "linear-gradient(145deg, rgba(34,197,94,0.10) 0%, rgba(34,197,94,0.02) 100%)",
+  },
+  {
+    title: "Finance",
+    subtitle: "Financial Systems & Personnel",
+    icon: DollarSign,
+    href: "/admin/finance",
+    permKey: "finance" as const,
+    accent: "#38bdf8",
+    glow: "rgba(56,189,248,0.30)",
+    gradient: "linear-gradient(145deg, rgba(56,189,248,0.10) 0%, rgba(56,189,248,0.02) 100%)",
+  },
+];
+
+/* ─── Secondary tile config ─── */
+const secondaryTiles = [
+  {
+    title: "Driver Check-In",
+    subtitle: "Transportation PIN login",
+    icon: Bus,
+    href: "/transport",
+    permKey: "driver_checkin" as const,
+    accent: "#60a5fa",
+  },
+  {
+    title: "PD – Signals",
+    subtitle: "Executive Focus & Daily Signals",
+    icon: Signal,
+    href: "/admin/signals",
+    permKey: "pd_signals" as const,
+    accent: "#a1a1aa",
+  },
+  {
+    title: "Settings",
+    subtitle: "Staff Management",
+    icon: Settings,
+    href: "/admin/staff",
+    permKey: "settings" as const,
+    accent: "#a1a1aa",
+  },
+];
 
 const AdminDashboard = () => {
   const { user, signOut } = useAuth();
@@ -19,100 +80,117 @@ const AdminDashboard = () => {
     navigate("/admin/login", { replace: true });
   };
 
-  const folders = [
-    {
-      title: "Operations",
-      description: "Boxing & Youth Development",
-      icon: Briefcase,
-      color: "bg-[#bf0f3e]/10 text-[#bf0f3e]",
-      borderColor: "border-[#bf0f3e]",
-      linkColor: "text-[#bf0f3e]",
-      href: "/admin/operations",
-      permKey: "operations" as const,
-    },
-    {
-      title: "Sales & Marketing",
-      description: "Outreach & Retention",
-      icon: TrendingUp,
-      color: "bg-green-500/10 text-green-500",
-      borderColor: "border-green-500",
-      linkColor: "text-green-500",
-      href: "/admin/sales-marketing",
-      permKey: "sales_marketing" as const,
-    },
-    {
-      title: "Finance",
-      description: "Financial Systems & Personnel",
-      icon: DollarSign,
-      color: "bg-sky-300/10 text-sky-300",
-      borderColor: "border-sky-300",
-      linkColor: "text-sky-300",
-      href: "/admin/finance",
-      permKey: "finance" as const,
-    },
-  ];
-
   return (
-    <div className="min-h-screen bg-black text-white overflow-x-hidden">
-      {/* Header */}
-      <header className="bg-black border-b border-white/10">
-        <div className="container mx-auto px-4 py-4 flex items-center justify-between">
+    <div className="min-h-screen bg-[#09090b] text-white overflow-x-hidden">
+      {/* ── Header ── */}
+      <header className="border-b border-white/[0.06] bg-[#09090b]/80 backdrop-blur-md sticky top-0 z-30">
+        <div className="max-w-6xl mx-auto px-6 py-3 flex items-center justify-between">
           <div className="flex items-center gap-4">
-            <Button variant="ghost" size="icon" onClick={() => navigate("/")} aria-label="Back to site">
+            <Button variant="ghost" size="icon" onClick={() => navigate("/")} aria-label="Back to site" className="text-zinc-400 hover:text-white hover:bg-white/5">
               <ArrowLeft className="w-5 h-5" />
             </Button>
             <div>
-              <h1 className="text-xl font-bold text-white">Command Center</h1>
-              <p className="text-sm text-white/50">{user?.email}</p>
+              <h1 className="text-lg font-bold tracking-tight text-white">Command Center</h1>
+              <p className="text-xs text-zinc-500 font-medium">{user?.email}</p>
             </div>
           </div>
           <div className="flex items-center gap-2">
             <InviteAdminModal />
-            <Button variant="outline" onClick={handleLogout} className="border-white/20 text-white bg-black hover:bg-black hover:text-white">
-              <LogOut className="w-4 h-4 mr-2" />
+            <Button variant="outline" onClick={handleLogout} className="border-white/10 text-zinc-300 bg-transparent hover:bg-white/5 hover:text-white text-xs h-9">
+              <LogOut className="w-3.5 h-3.5 mr-1.5" />
               Log out
             </Button>
           </div>
         </div>
       </header>
 
-      {/* Main Content */}
-      <main className="w-full px-4 py-[30px] max-w-5xl mx-auto overflow-x-hidden">
-        {/* Top: Logo centered */}
-        <div className="flex justify-center mb-10 sm:mb-16">
-          <img src={nlaLogoWhite} alt="No Limits Academy" className="h-32 sm:h-56 w-auto" />
+      {/* ── Main ── */}
+      <main className="max-w-6xl mx-auto px-6 py-10 sm:py-14">
+        {/* Logo */}
+        <div className="flex justify-center mb-14 sm:mb-20">
+          <img
+            src={nlaLogoWhite}
+            alt="No Limits Academy"
+            className="h-36 sm:h-52 w-auto drop-shadow-[0_0_60px_rgba(191,15,62,0.15)]"
+          />
         </div>
 
-        {/* Main pillar tiles */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 mb-8">
-          {folders.map((folder) => {
-            const allowed = permLoading || hasPermission(folder.permKey);
+        {/* ── Hero pillar cards ── */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 lg:gap-8 mb-16 sm:mb-20">
+          {pillars.map((p) => {
+            const allowed = permLoading || hasPermission(p.permKey);
             return (
-              <Tooltip key={folder.title}>
+              <Tooltip key={p.title}>
                 <TooltipTrigger asChild>
-                  <Card
-                    className={`min-h-[160px] sm:min-h-[200px] bg-white/5 border-2 ${folder.borderColor} text-white transition-all ${
-                      allowed ? "cursor-pointer hover:shadow-lg hover:scale-[1.02]" : "cursor-not-allowed opacity-50"
-                    }`}
-                    onClick={() => allowed && navigate(folder.href)}
+                  <button
+                    onClick={() => allowed && navigate(p.href)}
+                    disabled={!allowed}
+                    className="group relative text-left rounded-2xl transition-all duration-300 ease-out focus:outline-none focus-visible:ring-2 focus-visible:ring-white/20"
+                    style={{ cursor: allowed ? "pointer" : "not-allowed" }}
                   >
-                    <CardHeader className="pb-3 sm:pb-4">
-                      <div className={`w-12 h-12 sm:w-14 sm:h-14 rounded-xl flex items-center justify-center ${folder.color} mb-2 sm:mb-3 relative`}>
-                        <folder.icon className="w-6 h-6 sm:w-7 sm:h-7" />
-                        {!allowed && <Lock className="w-4 h-4 absolute -top-1 -right-1 text-white/60" />}
+                    {/* Glow layer */}
+                    <div
+                      className="absolute -inset-px rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-500 blur-sm"
+                      style={{ background: p.glow }}
+                    />
+
+                    {/* Card body */}
+                    <div
+                      className={`relative rounded-2xl border-2 p-8 sm:p-10 min-h-[280px] sm:min-h-[320px] flex flex-col justify-between transition-all duration-300 ${
+                        allowed
+                          ? "group-hover:-translate-y-1 group-hover:shadow-2xl"
+                          : "opacity-40"
+                      }`}
+                      style={{
+                        borderColor: allowed ? p.accent : "rgba(255,255,255,0.08)",
+                        background: allowed ? p.gradient : "rgba(255,255,255,0.02)",
+                      }}
+                    >
+                      {/* Icon */}
+                      <div
+                        className="w-16 h-16 rounded-xl flex items-center justify-center mb-6"
+                        style={{
+                          background: `${p.accent}18`,
+                          color: p.accent,
+                        }}
+                      >
+                        <p.icon className="w-8 h-8" strokeWidth={1.8} />
+                        {!allowed && (
+                          <Lock className="w-4 h-4 absolute top-6 right-6 text-zinc-500" />
+                        )}
                       </div>
-                      <CardTitle className="text-lg sm:text-xl text-white">{folder.title}</CardTitle>
-                      <CardDescription className="text-sm sm:text-base text-white/50">{folder.description}</CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                      <p className={`text-sm font-medium ${allowed ? folder.linkColor : "text-white/30"}`}>
-                        {allowed ? "Open →" : "🔒 Locked"}
-                      </p>
-                    </CardContent>
-                  </Card>
+
+                      {/* Text */}
+                      <div className="flex-1 flex flex-col justify-end">
+                        <h2 className="text-2xl sm:text-[1.65rem] font-extrabold tracking-tight text-white mb-1.5">
+                          {p.title}
+                        </h2>
+                        <p className="text-sm text-zinc-500 font-medium mb-6">
+                          {p.subtitle}
+                        </p>
+
+                        {/* Open button */}
+                        <div
+                          className={`inline-flex items-center gap-2 text-sm font-semibold tracking-wide transition-colors duration-200 ${
+                            allowed ? "group-hover:brightness-125" : ""
+                          }`}
+                          style={{ color: allowed ? p.accent : "rgba(255,255,255,0.2)" }}
+                        >
+                          {allowed ? (
+                            <>
+                              <span>Open</span>
+                              <span className="text-lg leading-none transition-transform duration-200 group-hover:translate-x-1">→</span>
+                            </>
+                          ) : (
+                            <span>🔒 Locked</span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  </button>
                 </TooltipTrigger>
                 {!allowed && (
-                  <TooltipContent className="bg-black border-white/20 text-white">
+                  <TooltipContent className="bg-zinc-900 border-zinc-800 text-zinc-300 text-xs">
                     Admin access required
                   </TooltipContent>
                 )}
@@ -121,123 +199,54 @@ const AdminDashboard = () => {
           })}
         </div>
 
-        {/* Bottom utility section */}
-        <div className="flex flex-col items-center gap-4 sm:gap-6 mt-8 sm:mt-12">
-          {/* Driver Check-In card */}
-          {(() => {
-            const driverAllowed = permLoading || hasPermission("driver_checkin");
+        {/* ── Divider ── */}
+        <div className="border-t border-white/[0.04] mb-10" />
+
+        {/* ── Secondary tier ── */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 max-w-4xl mx-auto">
+          {/* Upcoming Events gets its own slot */}
+          <div className="sm:col-span-1">
+            <UpcomingEventsWidget />
+          </div>
+
+          {secondaryTiles.map((t) => {
+            const allowed = permLoading || hasPermission(t.permKey);
             return (
-              <Tooltip>
+              <Tooltip key={t.title}>
                 <TooltipTrigger asChild>
-                  <Card
-                    className={`w-full max-w-sm bg-white/5 border border-blue-500/40 text-white transition-all ${
-                      driverAllowed ? "cursor-pointer hover:opacity-90" : "cursor-not-allowed opacity-50"
+                  <button
+                    onClick={() => allowed && navigate(t.href)}
+                    disabled={!allowed}
+                    className={`group relative text-left rounded-xl border border-white/[0.06] bg-white/[0.02] p-5 transition-all duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/20 ${
+                      allowed
+                        ? "hover:bg-white/[0.04] hover:border-white/[0.12] cursor-pointer"
+                        : "opacity-30 cursor-not-allowed"
                     }`}
-                    onClick={() => driverAllowed && navigate("/transport")}
                   >
-                    <CardHeader className="p-4 pb-2">
-                      <div className="w-10 h-10 rounded-md flex items-center justify-center bg-blue-500/10 text-blue-400 mb-1 relative">
-                        <Bus className="w-5 h-5" />
-                        {!driverAllowed && <Lock className="w-3 h-3 absolute -top-1 -right-1 text-white/60" />}
-                      </div>
-                      <CardTitle className="text-sm text-white">Driver Check-In</CardTitle>
-                      <CardDescription className="text-xs text-white/40">Transportation PIN login</CardDescription>
-                    </CardHeader>
-                    <CardContent className="px-4 pb-3 pt-0">
-                      <p className={`text-xs font-medium ${driverAllowed ? "text-blue-400" : "text-white/30"}`}>
-                        {driverAllowed ? "Open →" : "🔒 Locked"}
-                      </p>
-                    </CardContent>
-                  </Card>
+                    <div
+                      className="w-9 h-9 rounded-lg flex items-center justify-center mb-3"
+                      style={{
+                        background: `${t.accent}12`,
+                        color: t.accent,
+                      }}
+                    >
+                      <t.icon className="w-4.5 h-4.5" strokeWidth={1.8} />
+                      {!allowed && (
+                        <Lock className="w-3 h-3 absolute top-4 right-4 text-zinc-600" />
+                      )}
+                    </div>
+                    <h3 className="text-sm font-semibold text-zinc-200 mb-0.5">{t.title}</h3>
+                    <p className="text-[11px] text-zinc-600">{t.subtitle}</p>
+                  </button>
                 </TooltipTrigger>
-                {!driverAllowed && (
-                  <TooltipContent className="bg-black border-white/20 text-white">
+                {!allowed && (
+                  <TooltipContent className="bg-zinc-900 border-zinc-800 text-zinc-300 text-xs">
                     Admin access required
                   </TooltipContent>
                 )}
               </Tooltip>
             );
-          })()}
-
-          <div className="w-full max-w-sm">
-            <UpcomingEventsWidget />
-          </div>
-
-          <div className="grid grid-cols-2 gap-3 sm:gap-4 w-full max-w-sm">
-            {/* PD Signals */}
-            {(() => {
-              const signalsAllowed = permLoading || hasPermission("pd_signals");
-              return (
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Card
-                      className={`bg-white/5 border border-white/20 text-white transition-opacity ${
-                        signalsAllowed ? "opacity-60 cursor-pointer hover:opacity-80" : "opacity-30 cursor-not-allowed"
-                      }`}
-                      onClick={() => signalsAllowed && navigate("/admin/signals")}
-                    >
-                      <CardHeader className="p-3 sm:p-4 pb-2">
-                        <div className="w-8 h-8 rounded-md flex items-center justify-center bg-white/5 text-white/40 mb-1 relative">
-                          <Signal className="w-4 h-4" />
-                          {!signalsAllowed && <Lock className="w-3 h-3 absolute -top-1 -right-1 text-white/60" />}
-                        </div>
-                        <CardTitle className="text-xs sm:text-sm text-white">PD – Signals</CardTitle>
-                        <CardDescription className="text-[10px] sm:text-xs text-white/40">Executive Focus & Daily Signals</CardDescription>
-                      </CardHeader>
-                      <CardContent className="px-3 sm:px-4 pb-3 pt-0">
-                        <p className={`text-xs font-medium ${signalsAllowed ? "text-white/40" : "text-white/20"}`}>
-                          {signalsAllowed ? "Open →" : "🔒 Locked"}
-                        </p>
-                      </CardContent>
-                    </Card>
-                  </TooltipTrigger>
-                  {!signalsAllowed && (
-                    <TooltipContent className="bg-black border-white/20 text-white">
-                      Admin access required
-                    </TooltipContent>
-                  )}
-                </Tooltip>
-              );
-            })()}
-
-            {/* Settings */}
-            {(() => {
-              const settingsAllowed = permLoading || hasPermission("settings");
-              return (
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Card
-                      className={`bg-white/5 border border-white/20 text-white transition-opacity ${
-                        settingsAllowed ? "opacity-60 cursor-pointer hover:opacity-80" : "opacity-30 cursor-not-allowed"
-                      }`}
-                      onClick={() => settingsAllowed && navigate("/admin/staff")}
-                    >
-                      <CardHeader className="p-3 sm:p-4 pb-2">
-                        <div className="w-8 h-8 rounded-md flex items-center justify-center bg-white/5 text-white/40 mb-1 relative">
-                          <Settings className="w-4 h-4" />
-                          {!settingsAllowed && <Lock className="w-3 h-3 absolute -top-1 -right-1 text-white/60" />}
-                        </div>
-                        <CardTitle className="text-xs sm:text-sm text-white">Settings</CardTitle>
-                        <CardDescription className="text-[10px] sm:text-xs text-white/40">
-                          {settingsAllowed ? "Staff Management" : "Admin access required"}
-                        </CardDescription>
-                      </CardHeader>
-                      {settingsAllowed && (
-                        <CardContent className="px-3 sm:px-4 pb-3 pt-0">
-                          <p className="text-xs font-medium text-white/40">Open →</p>
-                        </CardContent>
-                      )}
-                    </Card>
-                  </TooltipTrigger>
-                  {!settingsAllowed && (
-                    <TooltipContent className="bg-black border-white/20 text-white">
-                      Admin access required
-                    </TooltipContent>
-                  )}
-                </Tooltip>
-              );
-            })()}
-          </div>
+          })}
         </div>
       </main>
     </div>
