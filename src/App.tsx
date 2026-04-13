@@ -69,6 +69,7 @@ import TransportDrivers from "./pages/transport/TransportDrivers";
 import TransportYouth from "./pages/transport/TransportYouth";
 import TransportRunsPay from "./pages/transport/TransportRunsPay";
 import TransportDashboard from "./pages/transport/TransportDashboard";
+import TransportTripDetails from "./pages/transport/TransportTripDetails";
 import TransportRun from "./pages/transport/TransportRun";
 import TransportIncidents from "./pages/transport/TransportIncidents";
 import AdminTransportImpactReports from "./pages/admin/AdminTransportImpactReports";
@@ -104,6 +105,7 @@ const App = () => (
             <Route path="/approvals/invoice/:token" element={<InvoiceApproval />} />
             <Route path="/transport" element={<TransportLogin />} />
             <Route path="/transport/dashboard" element={<TransportDashboard />} />
+            <Route path="/transport/trip-details" element={<TransportTripDetails />} />
             <Route path="/transport/run" element={<TransportRun />} />
             <Route path="/transport/admin" element={<TransportAdminLogin />} />
             <Route element={<TransportAdminLayout />}>
