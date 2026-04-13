@@ -8,6 +8,7 @@ import { CSS } from "@dnd-kit/utilities";
 import nlaLogo from "@/assets/nla-logo-white.png";
 import usaBoxingLogo from "@/assets/usa-boxing-logo.png";
 import fcusaLogo from "@/assets/FightingChanceUSA.png";
+import quikhitLogo from "@/assets/quikhit-logo.png";
 import DailyVerse from "@/components/admin/DailyVerse";
 import { useNavigate, useParams } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -898,6 +899,12 @@ const AdminSignals = () => {
           {focusArea === "fcusa" && (
             <div className="flex justify-center my-8">
               <img src={fcusaLogo} alt="Fighting Chance USA" className="w-[400px] h-auto" />
+            </div>
+          )}
+          {/* QUIKHIT logo — only for quikhit focus area */}
+          {focusArea === "quikhit" && (
+            <div className="flex justify-center my-8">
+              <img src={quikhitLogo} alt="QUIKHIT" className="w-[200px] h-auto" />
             </div>
           )}
 
