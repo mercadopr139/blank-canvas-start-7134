@@ -57,13 +57,14 @@ const AdminSignalsTrash = () => {
   const [permanentDeleteTarget, setPermanentDeleteTarget] = useState<string | null>(null);
 
   const { data: trashedSignals = [], isLoading } = useQuery({
-    queryKey: ["signals", "trashed"],
+    queryKey: ["signals", focusArea, "trashed"],
     queryFn: async () => {
-      const { data, error } = await supabase
+      let q = supabase
         .from("signals")
         .select("*")
-        .eq("is_trashed", true as any)
-        .order("trashed_at", { ascending: false });
+        .eq("is_trashed", true as any);
+      q = applySourceFilter(q);
+      const { data, error } = await q.order("trashed_at", { ascending: false });
       if (error) throw error;
       return data as unknown as Signal[];
     },
