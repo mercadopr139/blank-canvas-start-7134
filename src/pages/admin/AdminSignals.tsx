@@ -556,9 +556,9 @@ const AdminSignals = () => {
   }, [todayCoreSignals, todayBonusSignals, onDeckSignals]);
 
   const getQueryKeyForBucket = (bucket: BucketId) => {
-    if (bucket === "core") return ["signals", "today-core"];
-    if (bucket === "bonus") return ["signals", "today-bonus"];
-    return ["signals", "on-deck"];
+    if (bucket === "core") return ["signals", focusArea, "today-core"];
+    if (bucket === "bonus") return ["signals", focusArea, "today-bonus"];
+    return ["signals", focusArea, "on-deck"];
   };
 
   const handleDragStart = (event: DragStartEvent) => {
