@@ -904,7 +904,7 @@ const AdminSignals = () => {
           {/* QUIKHIT logo — only for quikhit focus area */}
           {focusArea === "quikhit" && (
             <div className="flex justify-center my-8">
-              <img src={quikhitLogo} alt="QUIKHIT" className="w-[200px] h-auto" />
+              <img src={quikhitLogo} alt="QUIKHIT" className="w-[400px] h-auto" />
             </div>
           )}
 
