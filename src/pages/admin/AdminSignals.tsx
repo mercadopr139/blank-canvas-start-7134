@@ -897,7 +897,7 @@ const AdminSignals = () => {
           {/* FCUSA logo — only for fcusa focus area */}
           {focusArea === "fcusa" && (
             <div className="flex justify-center my-8">
-              <img src={fcusaLogo} alt="Fighting Chance USA" className="w-[200px] h-auto" />
+              <img src={fcusaLogo} alt="Fighting Chance USA" className="w-[400px] h-auto" />
             </div>
           )}
 
