@@ -182,7 +182,7 @@ const AdminPDTaskManager = () => {
   };
 
   const handleSaved = () => {
-    queryClient.invalidateQueries({ queryKey: ["focus-areas"] });
+    queryClient.invalidateQueries({ queryKey: ["focus-areas", "PD"] });
     setEditingArea(null);
   };
 
@@ -209,7 +209,7 @@ const AdminPDTaskManager = () => {
             .eq("id", area.id)
         )
       );
-      queryClient.invalidateQueries({ queryKey: ["focus-areas"] });
+      queryClient.invalidateQueries({ queryKey: ["focus-areas", "PD"] });
     } catch {
       toast.error("Failed to reorder");
     }
