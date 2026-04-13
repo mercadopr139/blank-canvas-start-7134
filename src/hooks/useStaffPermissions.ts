@@ -57,21 +57,7 @@ export function useStaffPermissions() {
       return;
     }
 
-    // Chrissy gets PD + PC signals access by default
-    if (email === CHRISSY_EMAIL) {
-      const chrissyPerms: Record<PermissionKey, boolean> = {
-        driver_checkin: false,
-        operations: false,
-        sales_marketing: false,
-        finance: false,
-        pd_signals: true,
-        pc_signals: true,
-        settings: false,
-      };
-      setPermissions(chrissyPerms);
-      setLoading(false);
-      return;
-    }
+    // Chrissy's permissions now come from the database (staff_permissions table)
 
     const fetchPerms = async () => {
       const { data } = await supabase
