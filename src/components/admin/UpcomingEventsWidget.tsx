@@ -128,12 +128,12 @@ const UpcomingEventsWidget = ({ focusArea = "nla" }: { focusArea?: string }) => 
   return (
     <>
       <Card className="bg-white/5 border border-white/10 text-white">
-        <CardHeader className="pb-3 flex flex-row items-center justify-between space-y-0">
+        <CardHeader className="pb-3 space-y-2">
           <div className="flex items-center gap-2">
             <CalendarDays className="w-4 h-4 text-amber-400" />
             <CardTitle className="text-sm font-semibold text-white">Upcoming Events</CardTitle>
           </div>
-          <Button variant="ghost" size="sm" onClick={openAdd} className="h-7 px-2 text-xs text-white/60 hover:text-white hover:bg-white/10">
+          <Button variant="ghost" size="sm" onClick={openAdd} className="h-7 px-2 text-xs text-white/60 hover:text-white hover:bg-white/10 w-fit">
             <Plus className="w-3.5 h-3.5 mr-1" />
             Add Event
           </Button>
