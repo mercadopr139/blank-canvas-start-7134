@@ -78,7 +78,7 @@ const AdminSignalsTrash = () => {
     }
     if (pillarFilter) results = results.filter((s) => s.pillar === pillarFilter);
     if (kindFilter) results = results.filter((s) => s.signal_kind === kindFilter);
-    if (bucketFilter) results = results.filter((s) => s.priority_layer === bucketFilter);
+    if (bucketFilter) results = results.filter((s) => bucketFilter === "__null__" ? s.priority_layer == null : s.priority_layer === bucketFilter);
     return results;
   }, [trashedSignals, search, pillarFilter, kindFilter, bucketFilter]);
 
