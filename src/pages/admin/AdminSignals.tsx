@@ -950,8 +950,26 @@ const AdminSignals = ({ managerType = "PD" }: { managerType?: string }) => {
           )}
           {/* Dynamic image from DB (for new/edited focus areas with uploaded images) */}
           {dynamicImageUrl && (
-            <div className="flex justify-center my-8">
+            <div className="flex justify-center my-8 relative group/img w-fit mx-auto">
               <img src={dynamicImageUrl} alt={areaLabel} className="w-[400px] h-auto rounded-xl" />
+              {!viewOnly && (
+                <button
+                  onClick={async () => {
+                    if (!focusAreaConfig?.id) return;
+                    const { error } = await supabase
+                      .from("focus_areas")
+                      .update({ image_url: null, updated_at: new Date().toISOString() })
+                      .eq("id", focusAreaConfig.id);
+                    if (error) { toast.error("Failed to remove image"); return; }
+                    queryClient.invalidateQueries({ queryKey: ["focus-area-config", focusArea, managerType] });
+                    toast.success("Image removed");
+                  }}
+                  className="absolute top-2 right-2 p-1.5 rounded-full bg-black/70 text-white/60 hover:text-white hover:bg-red-600/80 opacity-0 group-hover/img:opacity-100 transition-all"
+                  title="Remove image"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              )}
             </div>
           )}
 
