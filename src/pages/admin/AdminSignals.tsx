@@ -886,6 +886,13 @@ const AdminSignals = () => {
           onDragEnd={handleDragEnd}
           onDragCancel={() => { setDraggingId(null); setDraggingBucket(null); }}
         >
+          {/* USA Boxing logo — only for usa-boxing focus area */}
+          {focusArea === "usa-boxing" && (
+            <div className="flex justify-center my-8">
+              <img src={usaBoxingLogo} alt="USA Boxing" className="w-[200px] h-auto" />
+            </div>
+          )}
+
           {/* Today's Signals */}
           <div className="mb-6">
             <h2 className="text-sm font-semibold uppercase tracking-wider text-white/40 mb-4">Today's Signals</h2>
