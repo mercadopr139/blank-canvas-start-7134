@@ -105,6 +105,7 @@ const App = () => (
             <Route path="/approvals/invoice/:token" element={<InvoiceApproval />} />
             <Route path="/transport" element={<TransportLogin />} />
             <Route path="/transport/dashboard" element={<TransportDashboard />} />
+            <Route path="/transport/trip-details" element={<TransportTripDetails />} />
             <Route path="/transport/run" element={<TransportRun />} />
             <Route path="/transport/admin" element={<TransportAdminLogin />} />
             <Route element={<TransportAdminLayout />}>
