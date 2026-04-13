@@ -216,6 +216,7 @@ const AdminSignals = () => {
   const todayDisplay = format(new Date(), "EEEE, MMMM d");
   const areaLabel = FOCUS_AREA_LABELS[focusArea] || focusArea;
   const isNla = focusArea === "nla";
+  const ac = FOCUS_AREA_COLORS[focusArea] || FOCUS_AREA_COLORS.nla;
 
   // Helper: apply source filter to a supabase query builder
   const applySourceFilter = (query: any) => {
