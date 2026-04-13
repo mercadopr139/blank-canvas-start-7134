@@ -12,7 +12,7 @@ import UpcomingEventsWidget from "@/components/admin/UpcomingEventsWidget";
 import InviteAdminModal from "@/components/admin/InviteAdminModal";
 import DashboardTileModal, { type DashboardTile } from "@/components/admin/DashboardTileModal";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import { toast } from "sonner";
+
 import {
   DndContext,
   closestCenter,
