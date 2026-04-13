@@ -197,11 +197,13 @@ const SortableSignalRow = ({
   );
 };
 
-const AdminSignals = () => {
+const AdminSignals = ({ managerType = "PD" }: { managerType?: string }) => {
   const navigate = useNavigate();
   const { focusArea = "nla" } = useParams<{ focusArea: string }>();
   const { user, signOut } = useAuth();
   const queryClient = useQueryClient();
+  const isPC = managerType === "PC";
+  const sourcePrefix = isPC ? "PC:" : "";
   const [showAdd, setShowAdd] = useState(false);
   const [selectedForArchive, setSelectedForArchive] = useState<Set<string>>(new Set());
   const [form, setForm] = useState({
