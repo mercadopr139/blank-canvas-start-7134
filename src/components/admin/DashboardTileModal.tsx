@@ -66,13 +66,14 @@ const DashboardTileModal = ({ open, onClose, onSaved, editingTile, userId }: Pro
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deleting, setDeleting] = useState(false);
 
-  useState(() => {
+  useEffect(() => {
     setTitle(editingTile?.title ?? "");
     setSubtitle(editingTile?.subtitle ?? "");
     setIconName(editingTile?.icon_name ?? "square");
     setAccentColor(editingTile?.accent_color ?? "#a1a1aa");
     setHref(editingTile?.href ?? AVAILABLE_ROUTES[0].href);
-  });
+    setIconSearch("");
+  }, [editingTile]);
 
   const filteredIcons = useMemo(() => {
     const search = iconSearch.toLowerCase().trim();
