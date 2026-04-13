@@ -38,14 +38,19 @@ const FOCUS_AREA_LABELS: Record<string, string> = {
   nla: "NLA", "usa-boxing": "USA Boxing", quikhit: "QUIKHIT", fcusa: "FCUSA", personal: "Personal",
 };
 
-const AdminSignalsTrash = () => {
+const AdminSignalsTrash = ({ managerType = "PD" }: { managerType?: string }) => {
   const navigate = useNavigate();
   const { focusArea = "nla" } = useParams<{ focusArea: string }>();
   const { user, signOut } = useAuth();
   const queryClient = useQueryClient();
+  const isPC = managerType === "PC";
+  const signalsBasePath = isPC ? "/admin/pc-signals" : "/admin/signals";
   const isNla = focusArea === "nla";
   const areaLabel = FOCUS_AREA_LABELS[focusArea] || focusArea;
   const applySourceFilter = (query: any) => {
+    if (isPC) {
+      return query.eq("source", `PC:${isNla ? "NLA" : areaLabel}`);
+    }
     if (isNla) return query.or("source.is.null,source.eq.NLA");
     return query.eq("source", areaLabel);
   };

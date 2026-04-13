@@ -73,16 +73,21 @@ const FOCUS_AREA_LABELS: Record<string, string> = {
   nla: "NLA", "usa-boxing": "USA Boxing", quikhit: "QUIKHIT", fcusa: "FCUSA", personal: "Personal",
 };
 
-const AdminSignalsArchive = () => {
+const AdminSignalsArchive = ({ managerType = "PD" }: { managerType?: string }) => {
   const navigate = useNavigate();
   const { focusArea = "nla" } = useParams<{ focusArea: string }>();
   const { user, signOut } = useAuth();
   const [selectedFilter, setSelectedFilter] = useState(FILTER_OPTIONS[0].value);
   const [activePillar, setActivePillar] = useState<string | null>(null);
   const queryClient = useQueryClient();
+  const isPC = managerType === "PC";
+  const signalsBasePath = isPC ? "/admin/pc-signals" : "/admin/signals";
   const isNla = focusArea === "nla";
   const areaLabel = FOCUS_AREA_LABELS[focusArea] || focusArea;
   const applySourceFilter = (query: any) => {
+    if (isPC) {
+      return query.eq("source", `PC:${isNla ? "NLA" : areaLabel}`);
+    }
     if (isNla) return query.or("source.is.null,source.eq.NLA");
     return query.eq("source", areaLabel);
   };
