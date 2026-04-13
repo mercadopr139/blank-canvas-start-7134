@@ -952,7 +952,7 @@ const AdminSignals = ({ managerType = "PD" }: { managerType?: string }) => {
           {dynamicImageUrl && (
             <div className="flex justify-center my-8 relative group/img w-fit mx-auto">
               <img src={dynamicImageUrl} alt={areaLabel} className="w-[400px] h-auto rounded-xl" />
-              {!viewOnly && (
+              {(
                 <button
                   onClick={async () => {
                     if (!focusAreaConfig?.id) return;
