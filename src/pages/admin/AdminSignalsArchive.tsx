@@ -416,14 +416,14 @@ const AdminSignalsArchive = () => {
               />
             );
           })}
-          {(["Core", "Bonus"] as const).map((layer) => {
+          {([{ value: "Core", label: "Core" }, { value: "Bonus", label: "On-Deck" }] as const).map(({ value: layer, label: layerLabel }) => {
             const layerCount = filtered.filter((s) => s.priority_layer === layer).length;
             const layerPct = total > 0 ? Math.round((layerCount / total) * 100) : 0;
             return (
               <MetricCard
                 key={layer}
                 value={layerCount}
-                label={layer}
+                label={layerLabel}
                 subLabel={`${layerPct}%`}
                 className={layer === "Core" ? "border-rose-500/40" : "border-white/10"}
                 onClick={() => openDrilldown(layer, (s) => s.priority_layer === layer)}
