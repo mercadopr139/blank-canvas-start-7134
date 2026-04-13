@@ -172,8 +172,8 @@ const AdminSignalsTrash = () => {
             <FilterChip key={k} label={k} active={kindFilter === k} onClick={() => setKindFilter(kindFilter === k ? null : k)} />
           ))}
           <span className="w-px h-5 bg-white/10 mx-1 self-center" />
-          {(["Core", "Bonus"] as const).map((b) => (
-            <FilterChip key={b} label={b} active={bucketFilter === b} onClick={() => setBucketFilter(bucketFilter === b ? null : b)} />
+          {([{ value: "Core", label: "Core" }, { value: "Bonus", label: "On-Deck" }] as const).map((b) => (
+            <FilterChip key={b.value} label={b.label} active={bucketFilter === b.value} onClick={() => setBucketFilter(bucketFilter === b.value ? null : b.value)} />
           ))}
         </div>
 

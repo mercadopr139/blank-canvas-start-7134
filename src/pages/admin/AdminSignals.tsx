@@ -677,7 +677,7 @@ const AdminSignals = () => {
         newOnDeckList,
       });
 
-      const label = targetBucket === "core" ? "Core 3" : targetBucket === "bonus" ? "Bonus" : "On Deck";
+      const label = targetBucket === "core" ? "Core 3" : targetBucket === "bonus" ? "On-Deck" : "On Deck";
       toast.success(`Moved to ${label}`);
     }
   };
@@ -891,7 +891,7 @@ const AdminSignals = () => {
                           Move to Core 3
                         </DropdownMenuItem>
                         <DropdownMenuItem onClick={() => scheduleMutation.mutate({ id: signal.id, priority: "Bonus" })} className="text-white/60 focus:text-white focus:bg-white/5">
-                          Move to Bonus
+                          Move to On-Deck
                         </DropdownMenuItem>
                         <DropdownMenuItem onClick={() => moveToOnDeckMutation.mutate(signal.id)} className="text-white/40 focus:text-white/60 focus:bg-white/5">
                           Move to On Deck
@@ -985,12 +985,12 @@ const AdminSignals = () => {
                 </div>
               </DroppableColumn>
 
-              {/* Bonus */}
+              {/* On-Deck */}
               <DroppableColumn id="bonus">
                 <div className="rounded-xl border border-white/[0.08] bg-gradient-to-b from-white/[0.03] to-transparent overflow-hidden">
                   <div className="px-4 pt-4 pb-2 flex items-center gap-2">
                     <Zap className="w-4 h-4 text-white/30" />
-                    <h3 className="text-sm font-bold text-white/40 uppercase tracking-wider">Bonus</h3>
+                    <h3 className="text-sm font-bold text-white/40 uppercase tracking-wider">On-Deck</h3>
                   </div>
                   <SortableContext items={[...todayBonusSignals].sort((a, b) => (b.status === "Complete" ? 1 : 0) - (a.status === "Complete" ? 1 : 0)).map(s => s.id)} strategy={verticalListSortingStrategy}>
                     <div className="px-3 pb-3 space-y-1 min-h-[80px]">
@@ -1108,7 +1108,7 @@ const AdminSignals = () => {
                                 onClick={(e) => { e.stopPropagation(); scheduleMutation.mutate({ id: signal.id, priority: "Bonus" }); }}
                                 disabled={scheduleMutation.isPending}
                               >
-                                Bonus <ArrowRight className="w-3 h-3 ml-1" />
+                                On-Deck <ArrowRight className="w-3 h-3 ml-1" />
                               </Button>
                               <button
                                 className="shrink-0 p-1 rounded hover:bg-red-500/10 text-white/15 hover:text-red-400 transition-colors"
@@ -1183,7 +1183,7 @@ const AdminSignals = () => {
                 <SelectContent className="bg-zinc-900 border-white/10 z-[200]">
                   <SelectItem value="ondeck" className="text-white hover:bg-white/10 focus:bg-white/10 focus:text-white">On Deck</SelectItem>
                   <SelectItem value="core" className="text-white hover:bg-white/10 focus:bg-white/10 focus:text-white">Core 3 (Today)</SelectItem>
-                  <SelectItem value="bonus" className="text-white hover:bg-white/10 focus:bg-white/10 focus:text-white">Bonus (Today)</SelectItem>
+                  <SelectItem value="bonus" className="text-white hover:bg-white/10 focus:bg-white/10 focus:text-white">On-Deck (Today)</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -1292,7 +1292,7 @@ const AdminSignals = () => {
                   <SelectContent className="bg-zinc-900 border-white/10 z-[200]">
                     <SelectItem value="ondeck" className="text-white hover:bg-white/10 focus:bg-white/10 focus:text-white">On Deck</SelectItem>
                     <SelectItem value="core" className="text-white hover:bg-white/10 focus:bg-white/10 focus:text-white">Core</SelectItem>
-                    <SelectItem value="bonus" className="text-white hover:bg-white/10 focus:bg-white/10 focus:text-white">Bonus</SelectItem>
+                    <SelectItem value="bonus" className="text-white hover:bg-white/10 focus:bg-white/10 focus:text-white">On-Deck</SelectItem>
                   </SelectContent>
                 </Select>
               </div>

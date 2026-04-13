@@ -400,7 +400,7 @@ const AdminSignalsArchive = () => {
           ))}
         </div>
 
-        {/* Outcomes vs Actions | Core vs Bonus */}
+        {/* Outcomes vs Actions | Core vs On-Deck */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
           {(["Outcome", "Action"] as const).map((kind) => {
             const kindCount = filtered.filter((s) => s.signal_kind === kind).length;
