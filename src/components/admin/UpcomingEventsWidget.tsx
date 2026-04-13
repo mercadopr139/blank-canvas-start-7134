@@ -18,7 +18,11 @@ interface UpcomingEvent {
   created_at: string;
 }
 
-const UpcomingEventsWidget = () => {
+const FOCUS_AREA_LABELS: Record<string, string> = {
+  nla: "NLA", "usa-boxing": "USA Boxing", quikhit: "QUIKHIT", fcusa: "FCUSA", personal: "Personal",
+};
+
+const UpcomingEventsWidget = ({ focusArea = "nla" }: { focusArea?: string }) => {
   const queryClient = useQueryClient();
   const [modalOpen, setModalOpen] = useState(false);
   const [editingEvent, setEditingEvent] = useState<UpcomingEvent | null>(null);
@@ -27,15 +31,23 @@ const UpcomingEventsWidget = () => {
   const [formDate, setFormDate] = useState("");
   const [formNotes, setFormNotes] = useState("");
 
+  const areaLabel = FOCUS_AREA_LABELS[focusArea] || focusArea;
+  const isNla = focusArea === "nla";
+
   const { data: events = [], isLoading } = useQuery({
-    queryKey: ["upcoming-events"],
+    queryKey: ["upcoming-events", focusArea],
     queryFn: async () => {
       const today = new Date().toISOString().split("T")[0];
-      const { data, error } = await supabase
+      let q = supabase
         .from("upcoming_events" as any)
         .select("*")
-        .gte("event_date", today)
-        .order("event_date", { ascending: true });
+        .gte("event_date", today);
+      if (isNla) {
+        q = q.or("source.is.null,source.eq.NLA");
+      } else {
+        q = q.eq("source", areaLabel);
+      }
+      const { data, error } = await q.order("event_date", { ascending: true });
       if (error) throw error;
       return (data || []) as unknown as UpcomingEvent[];
     },
@@ -52,12 +64,12 @@ const UpcomingEventsWidget = () => {
       } else {
         const { error } = await supabase
           .from("upcoming_events" as any)
-          .insert({ event_name: formName, event_date: formDate, notes: formNotes || null } as any);
+          .insert({ event_name: formName, event_date: formDate, notes: formNotes || null, source: areaLabel } as any);
         if (error) throw error;
       }
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["upcoming-events"] });
+      queryClient.invalidateQueries({ queryKey: ["upcoming-events", focusArea] });
       toast.success(editingEvent ? "Event updated" : "Event added");
       closeModal();
     },
@@ -70,7 +82,7 @@ const UpcomingEventsWidget = () => {
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["upcoming-events"] });
+      queryClient.invalidateQueries({ queryKey: ["upcoming-events", focusArea] });
       toast.success("Event deleted");
       setDeleteTarget(null);
     },

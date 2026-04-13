@@ -122,7 +122,7 @@ function DragOverlayRow({ item }: { item: VisionItem }) {
 }
 
 /* ── Main Component ── */
-export default function VisionCloud() {
+export default function VisionCloud({ focusArea = "nla" }: { focusArea?: string }) {
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const [showModal, setShowModal] = useState(false);
@@ -130,18 +130,30 @@ export default function VisionCloud() {
   const [form, setForm] = useState({ title: "", description: "", pillar: "Vision" });
   const [activeId, setActiveId] = useState<string | null>(null);
 
+  const FOCUS_AREA_LABELS: Record<string, string> = {
+    nla: "NLA", "usa-boxing": "USA Boxing", quikhit: "QUIKHIT", fcusa: "FCUSA", personal: "Personal",
+  };
+  const areaLabel = FOCUS_AREA_LABELS[focusArea] || focusArea;
+  const isNla = focusArea === "nla";
+
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
   );
 
   const { data: items = [] } = useQuery({
-    queryKey: ["vision-cloud-items"],
+    queryKey: ["vision-cloud-items", focusArea],
     queryFn: async () => {
-      const { data, error } = await supabase
+      let q = supabase
         .from("vision_cloud_items" as any)
         .select("*")
-        .eq("active", true)
+        .eq("active", true);
+      if (isNla) {
+        q = q.or("source.is.null,source.eq.NLA");
+      } else {
+        q = q.eq("source", areaLabel);
+      }
+      const { data, error } = await q
         .order("sort_order", { ascending: true })
         .order("created_at", { ascending: true });
       if (error) throw error;
@@ -163,12 +175,12 @@ export default function VisionCloud() {
         const maxOrder = items.length > 0 ? Math.max(...items.map((i) => i.sort_order)) : 0;
         const { error } = await supabase
           .from("vision_cloud_items" as any)
-          .insert({ title: form.title, description: form.description || null, pillar: form.pillar, user_id: user!.id, active: true, sort_order: maxOrder + 10 } as any);
+          .insert({ title: form.title, description: form.description || null, pillar: form.pillar, user_id: user!.id, active: true, sort_order: maxOrder + 10, source: areaLabel } as any);
         if (error) throw error;
       }
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["vision-cloud-items"] });
+      queryClient.invalidateQueries({ queryKey: ["vision-cloud-items", focusArea] });
       closeModal();
       toast.success(editingItem ? "Updated" : "Added to Vision Cloud");
     },
@@ -184,7 +196,7 @@ export default function VisionCloud() {
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["vision-cloud-items"] });
+      queryClient.invalidateQueries({ queryKey: ["vision-cloud-items", focusArea] });
       toast.success("Archived");
     },
     onError: (e: any) => toast.error(e.message),
@@ -206,7 +218,7 @@ export default function VisionCloud() {
       }
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["vision-cloud-items"] });
+      queryClient.invalidateQueries({ queryKey: ["vision-cloud-items", focusArea] });
       toast.success("Order updated");
     },
     onError: (e: any) => toast.error(e.message),
@@ -225,7 +237,7 @@ export default function VisionCloud() {
 
     const reordered = arrayMove(items, oldIndex, newIndex);
     // Optimistic update
-    queryClient.setQueryData(["vision-cloud-items"], reordered);
+    queryClient.setQueryData(["vision-cloud-items", focusArea], reordered);
     reorderMutation.mutate(reordered);
   };
 

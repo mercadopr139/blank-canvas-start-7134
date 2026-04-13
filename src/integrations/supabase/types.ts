@@ -1628,6 +1628,7 @@ export type Database = {
           event_name: string
           id: string
           notes: string | null
+          source: string | null
         }
         Insert: {
           created_at?: string
@@ -1635,6 +1636,7 @@ export type Database = {
           event_name: string
           id?: string
           notes?: string | null
+          source?: string | null
         }
         Update: {
           created_at?: string
@@ -1642,6 +1644,7 @@ export type Database = {
           event_name?: string
           id?: string
           notes?: string | null
+          source?: string | null
         }
         Relationships: []
       }
@@ -1836,6 +1839,7 @@ export type Database = {
           id: string
           pillar: string
           sort_order: number
+          source: string | null
           title: string
           updated_at: string
           user_id: string
@@ -1847,6 +1851,7 @@ export type Database = {
           id?: string
           pillar: string
           sort_order?: number
+          source?: string | null
           title: string
           updated_at?: string
           user_id: string
@@ -1858,6 +1863,7 @@ export type Database = {
           id?: string
           pillar?: string
           sort_order?: number
+          source?: string | null
           title?: string
           updated_at?: string
           user_id?: string
