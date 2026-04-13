@@ -83,12 +83,7 @@ const FocusAreaModal = ({ open, onClose, onSaved, editingArea }: Props) => {
   const filteredIcons = useMemo(() => {
     const search = iconSearch.toLowerCase().trim();
     if (!search) return COMMON_ICONS;
-    const allKeys = Object.keys(icons).map((k) =>
-      k.replace(/([A-Z])/g, "-$1").toLowerCase().replace(/^-/, "")
-    );
-    // Deduplicate - icons keys are PascalCase, we want kebab-case
     const kebabKeys = Object.keys(icons).map((k) => {
-      // Convert PascalCase to kebab-case
       return k.replace(/([a-z0-9])([A-Z])/g, '$1-$2').toLowerCase();
     });
     return kebabKeys.filter((k) => k.includes(search)).slice(0, 60);
