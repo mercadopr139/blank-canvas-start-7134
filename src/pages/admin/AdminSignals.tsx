@@ -705,7 +705,7 @@ const AdminSignals = () => {
               className="h-10 w-auto opacity-[0.92] hover:opacity-100 hover:drop-shadow-[0_0_6px_rgba(255,255,255,0.15)] transition-all duration-300 hidden sm:block"
             />
             <div>
-              <p className="text-xs uppercase tracking-[0.2em] text-white/30 mb-0.5">{todayDisplay}</p>
+              <p className="text-xs uppercase tracking-[0.2em] text-white/30 mb-0.5">{todayDisplay} · {areaLabel}</p>
               <h1 className="text-lg font-semibold text-white">{getGreeting()}, Josh</h1>
             </div>
           </div>
