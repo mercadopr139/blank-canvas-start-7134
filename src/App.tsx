@@ -237,7 +237,7 @@ const App = () => (
                   <AdminSignalsTrash managerType="PC" />
                 </ProtectedRoute>
               }
-
+            />
             {/* Signals — per focus area */}
             <Route
               path="/admin/signals/:focusArea"
