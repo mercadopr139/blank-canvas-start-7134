@@ -181,9 +181,10 @@ const FocusAreaModal = ({ open, onClose, onSaved, editingArea, managerType = "PD
     if (!editingArea) return;
     setDeleting(true);
     try {
-      // Delete all signals for this area
+      // Delete all signals for this area (with correct PC: prefix)
       const label = editingArea.title;
-      await supabase.from("signals").delete().eq("source", label);
+      const sourceValue = managerType === "PC" ? `PC:${label}` : label;
+      await supabase.from("signals").delete().eq("source", sourceValue);
       // Delete the focus area
       const { error } = await supabase
         .from("focus_areas")
