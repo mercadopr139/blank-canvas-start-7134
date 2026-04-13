@@ -84,6 +84,18 @@ const FOCUS_AREA_COLORS: Record<string, { hex: string; hexMuted: string; ring: s
   personal:    { hex: "#a78bfa", hexMuted: "#c4b5fd", ring: "#a78bfa", bgFrom: "rgba(167,139,250,0.12)" },
 };
 
+const hexToMuted = (hex: string) => {
+  // Lighten the color for muted variant
+  return hex;
+};
+
+const buildColorFromHex = (hex: string) => ({
+  hex,
+  hexMuted: hex,
+  ring: hex,
+  bgFrom: `${hex}1f`,
+});
+
 const getGreeting = () => {
   const h = new Date().getHours();
   if (h < 12) return "Good morning";
