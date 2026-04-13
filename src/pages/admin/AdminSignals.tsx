@@ -740,13 +740,7 @@ const AdminSignals = () => {
             <UpcomingEventsWidget focusArea={focusArea} />
           </div>
 
-          {/* Logo + Daily Verse */}
-          <div className="flex flex-col items-center justify-center text-center py-4 gap-4">
-            <a href="/admin/dashboard" className="cursor-pointer opacity-70 hover:opacity-90 transition-opacity">
-              <img src={nlaLogo} alt="No Limits Academy" className="h-14 w-auto" />
-            </a>
-            <DailyVerse />
-          </div>
+          <DailyVerse />
         </div>
 
         {/* ═══ Divider ═══ */}
@@ -819,6 +813,13 @@ const AdminSignals = () => {
             <Plus className="w-4 h-4 mr-1.5" />
             Add Signal
           </Button>
+        </div>
+
+        {/* Centered Logo */}
+        <div className="flex justify-center py-6">
+          <a href="/admin/pd-task-manager" className="cursor-pointer opacity-70 hover:opacity-90 transition-opacity">
+            <img src={nlaLogo} alt="No Limits Academy" className="h-16 w-auto" />
+          </a>
         </div>
 
         {/* Carryover */}
