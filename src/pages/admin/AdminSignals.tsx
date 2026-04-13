@@ -737,7 +737,7 @@ const AdminSignals = () => {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
           {/* Upcoming Events – dimmed supporting widget */}
           <div className="opacity-50 hover:opacity-70 transition-opacity">
-            <UpcomingEventsWidget />
+            <UpcomingEventsWidget focusArea={focusArea} />
           </div>
 
           {/* Logo + Daily Verse */}
@@ -1002,7 +1002,7 @@ const AdminSignals = () => {
 
           {/* Vision Cloud */}
           <div className="mb-8">
-            <VisionCloud />
+            <VisionCloud focusArea={focusArea} />
           </div>
 
           {/* Thin divider */}
