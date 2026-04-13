@@ -53,10 +53,10 @@ const secondaryTiles = [
     accent: "#60a5fa",
   },
   {
-    title: "PD – Signals",
+    title: "PD Task Manager",
     subtitle: "Executive Focus & Daily Signals",
     icon: Signal,
-    href: "/admin/signals",
+    href: "/admin/pd-task-manager",
     permKey: "pd_signals" as const,
     accent: "#a1a1aa",
   },
