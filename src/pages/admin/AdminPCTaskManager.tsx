@@ -160,10 +160,10 @@ const AdminPCTaskManager = () => {
   const { data: focusAreas = [], isLoading } = useQuery({
     queryKey: ["focus-areas", "PC"],
     queryFn: async () => {
-      const { data, error } = await supabase
+      const { data, error } = await (supabase
         .from("focus_areas")
-        .select("*")
-        .eq("manager_type" as any, "PC")
+        .select("*") as any)
+        .eq("manager_type", "PC")
         .order("sort_order", { ascending: true });
       if (error) throw error;
       return data as FocusArea[];
