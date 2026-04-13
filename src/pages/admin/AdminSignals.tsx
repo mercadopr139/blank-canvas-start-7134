@@ -27,7 +27,7 @@ import { Badge } from "@/components/ui/badge";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { toast } from "sonner";
 import { format } from "date-fns";
-import { ArrowLeft, Plus, CheckCircle2, Circle, LogOut, Archive, ArrowRight, Trash2, MoreVertical, Flame, Target, Zap, GripVertical, Radar } from "lucide-react";
+import { ArrowLeft, Plus, CheckCircle2, Circle, LogOut, Archive, ArrowRight, Trash2, MoreVertical, Flame, Target, Zap, GripVertical, Radar, X } from "lucide-react";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import VisionCloud from "@/components/admin/VisionCloud";
 import UpcomingEventsWidget from "@/components/admin/UpcomingEventsWidget";
@@ -232,16 +232,17 @@ const AdminSignals = ({ managerType = "PD" }: { managerType?: string }) => {
   const today = format(new Date(), "yyyy-MM-dd");
   const todayDisplay = format(new Date(), "EEEE, MMMM d");
 
-  // Fetch dynamic focus area config from DB
+  // Fetch dynamic focus area config from DB — scoped by manager_type
   const { data: focusAreaConfig } = useQuery({
-    queryKey: ["focus-area-config", focusArea],
+    queryKey: ["focus-area-config", focusArea, managerType],
     queryFn: async () => {
-      const { data } = await supabase
+      const { data } = await (supabase
         .from("focus_areas")
-        .select("*")
+        .select("*") as any)
         .eq("key", focusArea)
+        .eq("manager_type", managerType)
         .maybeSingle();
-      return data as { title: string; accent_color: string; image_url: string | null } | null;
+      return data as { id: string; title: string; accent_color: string; image_url: string | null } | null;
     },
   });
 
@@ -949,8 +950,26 @@ const AdminSignals = ({ managerType = "PD" }: { managerType?: string }) => {
           )}
           {/* Dynamic image from DB (for new/edited focus areas with uploaded images) */}
           {dynamicImageUrl && (
-            <div className="flex justify-center my-8">
+            <div className="flex justify-center my-8 relative group/img w-fit mx-auto">
               <img src={dynamicImageUrl} alt={areaLabel} className="w-[400px] h-auto rounded-xl" />
+              {(
+                <button
+                  onClick={async () => {
+                    if (!focusAreaConfig?.id) return;
+                    const { error } = await supabase
+                      .from("focus_areas")
+                      .update({ image_url: null, updated_at: new Date().toISOString() })
+                      .eq("id", focusAreaConfig.id);
+                    if (error) { toast.error("Failed to remove image"); return; }
+                    queryClient.invalidateQueries({ queryKey: ["focus-area-config", focusArea, managerType] });
+                    toast.success("Image removed");
+                  }}
+                  className="absolute top-2 right-2 p-1.5 rounded-full bg-black/70 text-white/60 hover:text-white hover:bg-red-600/80 opacity-0 group-hover/img:opacity-100 transition-all"
+                  title="Remove image"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              )}
             </div>
           )}
 
