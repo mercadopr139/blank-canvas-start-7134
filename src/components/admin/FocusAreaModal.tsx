@@ -115,7 +115,7 @@ const FocusAreaModal = ({ open, onClose, onSaved, editingArea, managerType = "PD
       // Upload new image
       if (imageFile) {
         const ext = imageFile.name.split(".").pop();
-        const path = `${editingArea?.key ?? slugify(title)}-${Date.now()}.${ext}`;
+        const path = `${managerType}/${editingArea?.key ?? slugify(title)}-${Date.now()}.${ext}`;
         const { error: uploadErr } = await supabase.storage
           .from("focus-area-images")
           .upload(path, imageFile, { upsert: true });
@@ -144,10 +144,11 @@ const FocusAreaModal = ({ open, onClose, onSaved, editingArea, managerType = "PD
         toast.success("Focus area updated");
       } else {
         const key = slugify(title);
-        // Get max sort_order
-        const { data: maxRow } = await supabase
+        // Get max sort_order scoped to this manager_type
+        const { data: maxRow } = await (supabase
           .from("focus_areas")
-          .select("sort_order")
+          .select("sort_order") as any)
+          .eq("manager_type", managerType)
           .order("sort_order", { ascending: false })
           .limit(1)
           .single();
