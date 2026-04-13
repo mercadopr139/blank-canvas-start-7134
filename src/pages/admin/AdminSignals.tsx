@@ -943,7 +943,7 @@ const AdminSignals = ({ managerType = "PD" }: { managerType?: string }) => {
               <img src={quikhitLogo} alt="QUIKHIT" className="w-[400px] h-auto" />
             </div>
           )}
-          {focusArea === "personal" && !dynamicImageUrl && (
+          {focusArea === "personal" && !dynamicImageUrl && managerType === "PD" && (
             <div className="flex justify-center my-8">
               <img src={personalFamily} alt="Family" className="w-[400px] h-auto rounded-xl" />
             </div>
