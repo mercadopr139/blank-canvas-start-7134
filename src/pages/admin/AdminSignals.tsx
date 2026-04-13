@@ -233,9 +233,24 @@ const AdminSignals = () => {
 
   const today = format(new Date(), "yyyy-MM-dd");
   const todayDisplay = format(new Date(), "EEEE, MMMM d");
-  const areaLabel = FOCUS_AREA_LABELS[focusArea] || focusArea;
+
+  // Fetch dynamic focus area config from DB
+  const { data: focusAreaConfig } = useQuery({
+    queryKey: ["focus-area-config", focusArea],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("focus_areas")
+        .select("*")
+        .eq("key", focusArea)
+        .maybeSingle();
+      return data as { title: string; accent_color: string; image_url: string | null } | null;
+    },
+  });
+
+  const areaLabel = focusAreaConfig?.title ?? FOCUS_AREA_LABELS[focusArea] ?? focusArea;
   const isNla = focusArea === "nla";
-  const ac = FOCUS_AREA_COLORS[focusArea] || FOCUS_AREA_COLORS.nla;
+  const ac = FOCUS_AREA_COLORS[focusArea] || (focusAreaConfig ? buildColorFromHex(focusAreaConfig.accent_color) : FOCUS_AREA_COLORS.nla);
+  const dynamicImageUrl = focusAreaConfig?.image_url ?? null;
 
   // Helper: apply source filter to a supabase query builder
   const applySourceFilter = (query: any) => {
