@@ -3,6 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 
 const SUPER_ADMIN_EMAIL = "joshmercado@nolimitsboxingacademy.org";
+const CHRISSY_EMAIL = "chrissycasiello@nolimitsboxingacademy.org";
 
 export const PERMISSION_KEYS = [
   "driver_checkin",
@@ -52,6 +53,22 @@ export function useStaffPermissions() {
       const all: Record<PermissionKey, boolean> = {} as any;
       PERMISSION_KEYS.forEach((k) => (all[k] = true));
       setPermissions(all);
+      setLoading(false);
+      return;
+    }
+
+    // Chrissy gets PD + PC signals access by default
+    if (email === CHRISSY_EMAIL) {
+      const chrissyPerms: Record<PermissionKey, boolean> = {
+        driver_checkin: false,
+        operations: false,
+        sales_marketing: false,
+        finance: false,
+        pd_signals: true,
+        pc_signals: true,
+        settings: false,
+      };
+      setPermissions(chrissyPerms);
       setLoading(false);
       return;
     }
