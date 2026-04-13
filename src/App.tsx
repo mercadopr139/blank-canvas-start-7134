@@ -59,6 +59,7 @@ import AdminSignalsArchive from "./pages/admin/AdminSignalsArchive";
 import AdminSignalsTrash from "./pages/admin/AdminSignalsTrash";
 import AdminStaffManagement from "./pages/admin/AdminStaffManagement";
 import AdminPDTaskManager from "./pages/admin/AdminPDTaskManager";
+import AdminPCTaskManager from "./pages/admin/AdminPCTaskManager";
 import InvoiceApproval from "./pages/InvoiceApproval";
 import TransportLogin from "./pages/TransportLogin";
 import TransportAdminLogin from "./pages/transport/TransportAdminLogin";
@@ -202,6 +203,41 @@ const App = () => (
               }
             />
 
+            {/* PC Task Manager — Focus Area selection */}
+            <Route
+              path="/admin/pc-task-manager"
+              element={
+                <ProtectedRoute requireAdmin>
+                  <AdminPCTaskManager />
+                </ProtectedRoute>
+              }
+            />
+
+            {/* PC Signals — per focus area */}
+            <Route
+              path="/admin/pc-signals/:focusArea"
+              element={
+                <ProtectedRoute requireAdmin>
+                  <AdminSignals managerType="PC" />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin/pc-signals/:focusArea/archive"
+              element={
+                <ProtectedRoute requireAdmin>
+                  <AdminSignalsArchive managerType="PC" />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin/pc-signals/:focusArea/trash"
+              element={
+                <ProtectedRoute requireAdmin>
+                  <AdminSignalsTrash managerType="PC" />
+                </ProtectedRoute>
+              }
+            />
             {/* Signals — per focus area */}
             <Route
               path="/admin/signals/:focusArea"

@@ -36,12 +36,13 @@ interface Props {
   onClose: () => void;
   onSaved: () => void;
   editingArea?: FocusArea | null;
+  managerType?: string;
 }
 
 const slugify = (s: string) =>
   s.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
 
-const FocusAreaModal = ({ open, onClose, onSaved, editingArea }: Props) => {
+const FocusAreaModal = ({ open, onClose, onSaved, editingArea, managerType = "PD" }: Props) => {
   const isEditing = !!editingArea;
 
   const [title, setTitle] = useState(editingArea?.title ?? "");
@@ -161,7 +162,8 @@ const FocusAreaModal = ({ open, onClose, onSaved, editingArea }: Props) => {
           image_url: imageUrl,
           sort_order: nextOrder,
           is_default: false,
-        });
+          manager_type: managerType,
+        } as any);
         if (error) throw error;
         toast.success("Focus area created");
       }

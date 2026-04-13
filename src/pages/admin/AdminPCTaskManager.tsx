@@ -4,14 +4,11 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, LogOut, Plus, Pencil, GripVertical, Lock } from "lucide-react";
+import { ArrowLeft, LogOut, Plus, Pencil, GripVertical } from "lucide-react";
 import { icons } from "lucide-react";
 import { toast } from "sonner";
 import nlaLogo from "@/assets/nla-logo-white.png";
 import FocusAreaModal from "@/components/admin/FocusAreaModal";
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-
-const CHRISSY_EMAIL = "chrissycasiello@nolimitsboxingacademy.org";
 import {
   DndContext,
   closestCenter,
@@ -39,7 +36,7 @@ type FocusArea = {
   image_url: string | null;
 };
 
-const getGlow = (hex: string) => `${hex}59`; // ~35% alpha
+const getGlow = (hex: string) => `${hex}59`;
 const getGradient = (hex: string) =>
   `linear-gradient(145deg, ${hex}1f 0%, ${hex}08 100%)`;
 
@@ -81,7 +78,6 @@ const SortableCard = ({
 
   return (
     <div ref={setNodeRef} style={style} className="relative group">
-      {/* Drag handle */}
       <button
         {...attributes}
         {...listeners}
@@ -91,7 +87,6 @@ const SortableCard = ({
         <GripVertical className="w-4 h-4" />
       </button>
 
-      {/* Edit button */}
       <button
         onClick={(e) => {
           e.stopPropagation();
@@ -151,25 +146,24 @@ const SortableCard = ({
 };
 
 /* ── Main Page ── */
-const AdminPDTaskManager = () => {
+const AdminPCTaskManager = () => {
   const navigate = useNavigate();
-  const { user, signOut } = useAuth();
+  const { signOut } = useAuth();
   const queryClient = useQueryClient();
   const [modalOpen, setModalOpen] = useState(false);
   const [editingArea, setEditingArea] = useState<FocusArea | null>(null);
-  const isChrissy = user?.email?.toLowerCase() === CHRISSY_EMAIL;
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } })
   );
 
   const { data: focusAreas = [], isLoading } = useQuery({
-    queryKey: ["focus-areas", "PD"],
+    queryKey: ["focus-areas", "PC"],
     queryFn: async () => {
       const { data, error } = await (supabase
         .from("focus_areas")
         .select("*") as any)
-        .eq("manager_type", "PD")
+        .eq("manager_type", "PC")
         .order("sort_order", { ascending: true });
       if (error) throw error;
       return data as FocusArea[];
@@ -182,7 +176,7 @@ const AdminPDTaskManager = () => {
   };
 
   const handleSaved = () => {
-    queryClient.invalidateQueries({ queryKey: ["focus-areas", "PD"] });
+    queryClient.invalidateQueries({ queryKey: ["focus-areas", "PC"] });
     setEditingArea(null);
   };
 
@@ -194,12 +188,10 @@ const AdminPDTaskManager = () => {
     const newIndex = focusAreas.findIndex((a) => a.id === over.id);
     if (oldIndex === -1 || newIndex === -1) return;
 
-    // Optimistic reorder
     const reordered = [...focusAreas];
     const [moved] = reordered.splice(oldIndex, 1);
     reordered.splice(newIndex, 0, moved);
 
-    // Update sort_order in DB
     try {
       await Promise.all(
         reordered.map((area, idx) =>
@@ -209,7 +201,7 @@ const AdminPDTaskManager = () => {
             .eq("id", area.id)
         )
       );
-      queryClient.invalidateQueries({ queryKey: ["focus-areas", "PD"] });
+      queryClient.invalidateQueries({ queryKey: ["focus-areas", "PC"] });
     } catch {
       toast.error("Failed to reorder");
     }
@@ -241,7 +233,7 @@ const AdminPDTaskManager = () => {
             </Button>
             <div>
               <h1 className="text-lg font-bold tracking-tight text-white">
-                PD Task Manager
+                PC Task Manager
               </h1>
               <p className="text-xs text-zinc-500 font-medium">
                 Select a Focus Area
@@ -271,7 +263,6 @@ const AdminPDTaskManager = () => {
         {isLoading ? (
           <div className="text-center text-zinc-500 py-20">Loading…</div>
         ) : focusAreas.length === 0 ? (
-          /* Empty state */
           <div className="text-center py-20">
             <p className="text-zinc-400 mb-4">
               No focus areas yet. Create your first one to get started.
@@ -295,70 +286,32 @@ const AdminPDTaskManager = () => {
               strategy={rectSortingStrategy}
             >
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 max-w-4xl mx-auto">
-                {focusAreas.map((area) => {
-                  const locked = isChrissy && area.key !== "nla";
-                  if (locked) {
-                    const IconComp = getIconComponent(area.icon_name);
-                    return (
-                      <Tooltip key={area.id}>
-                        <TooltipTrigger asChild>
-                          <div
-                            className="relative rounded-2xl border-2 p-7 min-h-[200px] flex flex-col justify-between opacity-30 cursor-not-allowed"
-                            style={{
-                              borderColor: `${area.accent_color}40`,
-                              background: getGradient(area.accent_color),
-                            }}
-                          >
-                            <Lock className="absolute top-3 right-3 w-4 h-4 text-white/30" />
-                            <div
-                              className="w-14 h-14 rounded-xl flex items-center justify-center mb-5"
-                              style={{ background: `${area.accent_color}18`, color: area.accent_color }}
-                            >
-                              {IconComp && <IconComp className="w-7 h-7" strokeWidth={1.8} />}
-                            </div>
-                            <div>
-                              <h2 className="text-xl font-extrabold tracking-tight text-white mb-1">{area.title}</h2>
-                              <p className="text-xs text-zinc-500 font-medium mb-4">{area.subtitle || ""}</p>
-                              <span className="text-sm font-semibold text-white/20">🔒 Locked</span>
-                            </div>
-                          </div>
-                        </TooltipTrigger>
-                        <TooltipContent className="bg-zinc-900 border-zinc-800 text-zinc-300 text-xs">
-                          PD access only
-                        </TooltipContent>
-                      </Tooltip>
-                    );
-                  }
-                  return (
-                    <SortableCard
-                      key={area.id}
-                      area={area}
-                      onOpen={() => navigate(`/admin/signals/${area.key}${isChrissy ? "?mode=view" : ""}`)}
-                      onEdit={() => openEdit(area)}
-                    />
-                  );
-                })}
+                {focusAreas.map((area) => (
+                  <SortableCard
+                    key={area.id}
+                    area={area}
+                    onOpen={() => navigate(`/admin/pc-signals/${area.key}`)}
+                    onEdit={() => openEdit(area)}
+                  />
+                ))}
 
-                {!isChrissy && (
-                  <button
-                    onClick={openCreate}
-                    className="group rounded-2xl border-2 border-dashed border-white/10 hover:border-white/25 min-h-[200px] flex flex-col items-center justify-center gap-3 transition-all duration-300 hover:bg-white/[0.02] cursor-pointer"
-                  >
-                    <div className="w-14 h-14 rounded-xl bg-white/5 flex items-center justify-center group-hover:bg-white/10 transition-colors">
-                      <Plus className="w-7 h-7 text-white/30 group-hover:text-white/60" />
-                    </div>
-                    <span className="text-sm font-semibold text-white/30 group-hover:text-white/60 transition-colors">
-                      Add Focus Area
-                    </span>
-                  </button>
-                )}
+                <button
+                  onClick={openCreate}
+                  className="group rounded-2xl border-2 border-dashed border-white/10 hover:border-white/25 min-h-[200px] flex flex-col items-center justify-center gap-3 transition-all duration-300 hover:bg-white/[0.02] cursor-pointer"
+                >
+                  <div className="w-14 h-14 rounded-xl bg-white/5 flex items-center justify-center group-hover:bg-white/10 transition-colors">
+                    <Plus className="w-7 h-7 text-white/30 group-hover:text-white/60" />
+                  </div>
+                  <span className="text-sm font-semibold text-white/30 group-hover:text-white/60 transition-colors">
+                    Add Focus Area
+                  </span>
+                </button>
               </div>
             </SortableContext>
           </DndContext>
         )}
       </main>
 
-      {/* Create / Edit Modal */}
       {modalOpen && (
         <FocusAreaModal
           open={modalOpen}
@@ -368,10 +321,11 @@ const AdminPDTaskManager = () => {
           }}
           onSaved={handleSaved}
           editingArea={editingArea}
+          managerType="PC"
         />
       )}
     </div>
   );
 };
 
-export default AdminPDTaskManager;
+export default AdminPCTaskManager;

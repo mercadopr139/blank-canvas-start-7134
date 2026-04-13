@@ -3,6 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 
 const SUPER_ADMIN_EMAIL = "joshmercado@nolimitsboxingacademy.org";
+const CHRISSY_EMAIL = "chrissycasiello@nolimitsboxingacademy.org";
 
 export const PERMISSION_KEYS = [
   "driver_checkin",
@@ -10,6 +11,7 @@ export const PERMISSION_KEYS = [
   "sales_marketing",
   "finance",
   "pd_signals",
+  "pc_signals",
   "settings",
 ] as const;
 
@@ -21,6 +23,7 @@ export const PERMISSION_LABELS: Record<PermissionKey, string> = {
   sales_marketing: "Sales & Marketing",
   finance: "Finance",
   pd_signals: "PD Signals",
+  pc_signals: "PC Signals",
   settings: "Settings",
 };
 
@@ -32,6 +35,7 @@ export function useStaffPermissions() {
     sales_marketing: false,
     finance: false,
     pd_signals: false,
+    pc_signals: false,
     settings: false,
   });
   const [loading, setLoading] = useState(true);
@@ -53,6 +57,22 @@ export function useStaffPermissions() {
       return;
     }
 
+    // Chrissy gets PD + PC signals access by default
+    if (email === CHRISSY_EMAIL) {
+      const chrissyPerms: Record<PermissionKey, boolean> = {
+        driver_checkin: false,
+        operations: false,
+        sales_marketing: false,
+        finance: false,
+        pd_signals: true,
+        pc_signals: true,
+        settings: false,
+      };
+      setPermissions(chrissyPerms);
+      setLoading(false);
+      return;
+    }
+
     const fetchPerms = async () => {
       const { data } = await supabase
         .from("staff_permissions")
@@ -65,6 +85,7 @@ export function useStaffPermissions() {
         sales_marketing: false,
         finance: false,
         pd_signals: false,
+        pc_signals: false,
         settings: false,
       };
 

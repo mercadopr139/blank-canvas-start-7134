@@ -38,14 +38,19 @@ const FOCUS_AREA_LABELS: Record<string, string> = {
   nla: "NLA", "usa-boxing": "USA Boxing", quikhit: "QUIKHIT", fcusa: "FCUSA", personal: "Personal",
 };
 
-const AdminSignalsTrash = () => {
+const AdminSignalsTrash = ({ managerType = "PD" }: { managerType?: string }) => {
   const navigate = useNavigate();
   const { focusArea = "nla" } = useParams<{ focusArea: string }>();
   const { user, signOut } = useAuth();
   const queryClient = useQueryClient();
+  const isPC = managerType === "PC";
+  const signalsBasePath = isPC ? "/admin/pc-signals" : "/admin/signals";
   const isNla = focusArea === "nla";
   const areaLabel = FOCUS_AREA_LABELS[focusArea] || focusArea;
   const applySourceFilter = (query: any) => {
+    if (isPC) {
+      return query.eq("source", `PC:${isNla ? "NLA" : areaLabel}`);
+    }
     if (isNla) return query.or("source.is.null,source.eq.NLA");
     return query.eq("source", areaLabel);
   };
@@ -135,7 +140,7 @@ const AdminSignalsTrash = () => {
       <header className="bg-black border-b border-white/10">
         <div className="container mx-auto px-4 py-4 flex items-center justify-between">
           <div className="flex items-center gap-4">
-            <Button variant="ghost" size="icon" onClick={() => navigate(`/admin/signals/${focusArea}`)} aria-label="Back">
+            <Button variant="ghost" size="icon" onClick={() => navigate(`${signalsBasePath}/${focusArea}`)} aria-label="Back">
               <ArrowLeft className="w-5 h-5" />
             </Button>
             <div>
