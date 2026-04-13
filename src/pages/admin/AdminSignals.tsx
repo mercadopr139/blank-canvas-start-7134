@@ -742,7 +742,7 @@ const AdminSignals = ({ managerType = "PD" }: { managerType?: string }) => {
         <div className="absolute inset-0" style={{ background: `linear-gradient(to right, ${ac.bgFrom}, black, rgba(245,158,11,0.04))` }} />
         <div className="relative mx-auto px-3 sm:px-4 py-5 flex items-center justify-between max-w-4xl w-full">
           <div className="flex items-center gap-4">
-            <Button variant="ghost" size="icon" onClick={() => navigate("/admin/pd-task-manager")} aria-label="Back" className="text-white/40 hover:text-white hover:bg-white/5">
+            <Button variant="ghost" size="icon" onClick={() => navigate(backPath)} aria-label="Back" className="text-white/40 hover:text-white hover:bg-white/5">
               <ArrowLeft className="w-5 h-5" />
             </Button>
             {isNla && (
@@ -756,7 +756,7 @@ const AdminSignals = ({ managerType = "PD" }: { managerType?: string }) => {
               <p className="text-xs uppercase tracking-[0.2em] text-white/30 mb-0.5">
                 {todayDisplay} · <span style={{ color: ac.hex }}>{areaLabel}</span>
               </p>
-              <h1 className="text-lg font-semibold text-white">{getGreeting()}, Josh</h1>
+              <h1 className="text-lg font-semibold text-white">{getGreeting()}, {isPC ? "Chrissy" : "Josh"}</h1>
             </div>
           </div>
           <Button variant="ghost" onClick={handleLogout} className="text-white/30 hover:text-white/60 hover:bg-white/5 text-xs">
@@ -1052,7 +1052,7 @@ const AdminSignals = ({ managerType = "PD" }: { managerType?: string }) => {
             <Button
               variant="ghost"
               size="sm"
-              onClick={() => navigate(`/admin/signals/${focusArea}/archive`)}
+              onClick={() => navigate(`${signalsBasePath}/${focusArea}/archive`)}
               className="text-white/25 hover:text-white/50 text-xs h-8"
             >
               View Archive →
@@ -1060,7 +1060,7 @@ const AdminSignals = ({ managerType = "PD" }: { managerType?: string }) => {
             <Button
               variant="ghost"
               size="sm"
-              onClick={() => navigate(`/admin/signals/${focusArea}/trash`)}
+              onClick={() => navigate(`${signalsBasePath}/${focusArea}/trash`)}
               className="text-white/25 hover:text-white/50 text-xs h-8"
             >
               <Trash2 className="w-3.5 h-3.5 mr-1" />
