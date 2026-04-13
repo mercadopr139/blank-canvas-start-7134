@@ -344,7 +344,7 @@ const AdminSignalsArchive = ({ managerType = "PD" }: { managerType?: string }) =
       <header className="bg-black border-b border-white/10">
         <div className="container mx-auto px-4 py-4 flex items-center justify-between">
           <div className="flex items-center gap-4">
-            <Button variant="ghost" size="icon" onClick={() => navigate(`/admin/signals/${focusArea}`)} aria-label="Back">
+            <Button variant="ghost" size="icon" onClick={() => navigate(`${signalsBasePath}/${focusArea}`)} aria-label="Back">
               <ArrowLeft className="w-5 h-5" />
             </Button>
             <div>
