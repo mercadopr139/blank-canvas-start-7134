@@ -59,6 +59,7 @@ import AdminSignalsArchive from "./pages/admin/AdminSignalsArchive";
 import AdminSignalsTrash from "./pages/admin/AdminSignalsTrash";
 import AdminStaffManagement from "./pages/admin/AdminStaffManagement";
 import AdminPDTaskManager from "./pages/admin/AdminPDTaskManager";
+import AdminPCTaskManager from "./pages/admin/AdminPCTaskManager";
 import InvoiceApproval from "./pages/InvoiceApproval";
 import TransportLogin from "./pages/TransportLogin";
 import TransportAdminLogin from "./pages/transport/TransportAdminLogin";

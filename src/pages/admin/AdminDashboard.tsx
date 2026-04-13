@@ -61,6 +61,14 @@ const secondaryTiles = [
     accent: "#a1a1aa",
   },
   {
+    title: "PC Task Manager",
+    subtitle: "Executive Focus & Daily Signals",
+    icon: Signal,
+    href: "/admin/pc-task-manager",
+    permKey: "pc_signals" as const,
+    accent: "#a1a1aa",
+  },
+  {
     title: "Settings",
     subtitle: "Staff Management",
     icon: Settings,
@@ -203,7 +211,7 @@ const AdminDashboard = () => {
         <div className="border-t border-white/[0.04] mb-10" />
 
         {/* ── Secondary tier ── */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 max-w-4xl mx-auto">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 max-w-5xl mx-auto">
           {/* Upcoming Events gets its own slot */}
           <div className="sm:col-span-1">
             <UpcomingEventsWidget />
