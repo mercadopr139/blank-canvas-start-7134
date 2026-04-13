@@ -69,6 +69,7 @@ import TransportDrivers from "./pages/transport/TransportDrivers";
 import TransportYouth from "./pages/transport/TransportYouth";
 import TransportRunsPay from "./pages/transport/TransportRunsPay";
 import TransportDashboard from "./pages/transport/TransportDashboard";
+import TransportTripDetails from "./pages/transport/TransportTripDetails";
 import TransportRun from "./pages/transport/TransportRun";
 import TransportIncidents from "./pages/transport/TransportIncidents";
 import AdminTransportImpactReports from "./pages/admin/AdminTransportImpactReports";
