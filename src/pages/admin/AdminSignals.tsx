@@ -916,6 +916,7 @@ const AdminSignals = () => {
                             bucket="core"
                             onEdit={() => openEditSignal(signal, "core")}
                             onToggleStatus={() => toggleStatus.mutate({ id: signal.id, current: signal.status })}
+                            accentColor={ac.hex}
                           />
                         ))
                       )}
@@ -946,6 +947,7 @@ const AdminSignals = () => {
                             bucket="bonus"
                             onEdit={() => openEditSignal(signal, "bonus")}
                             onToggleStatus={() => toggleStatus.mutate({ id: signal.id, current: signal.status })}
+                            accentColor={ac.hex}
                           />
                         ))
                       )}
@@ -1026,6 +1028,7 @@ const AdminSignals = () => {
                           bucket="ondeck"
                           onEdit={() => openEditSignal(signal, "ondeck")}
                           onToggleStatus={() => toggleStatus.mutate({ id: signal.id, current: signal.status })}
+                          accentColor={ac.hex}
                           extraActions={
                             <>
                               <Button
