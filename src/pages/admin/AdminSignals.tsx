@@ -71,6 +71,14 @@ const FOCUS_AREA_LABELS: Record<string, string> = {
   personal: "Personal",
 };
 
+const FOCUS_AREA_COLORS: Record<string, { hex: string; hexMuted: string; ring: string; bgFrom: string }> = {
+  nla:         { hex: "#ef4444", hexMuted: "#f87171", ring: "#ef4444", bgFrom: "rgba(239,68,68,0.12)" },
+  "usa-boxing":{ hex: "#3b82f6", hexMuted: "#60a5fa", ring: "#3b82f6", bgFrom: "rgba(59,130,246,0.12)" },
+  quikhit:     { hex: "#e4e4e7", hexMuted: "#a1a1aa", ring: "#e4e4e7", bgFrom: "rgba(228,228,231,0.10)" },
+  fcusa:       { hex: "#71717a", hexMuted: "#a1a1aa", ring: "#71717a", bgFrom: "rgba(113,113,122,0.10)" },
+  personal:    { hex: "#a78bfa", hexMuted: "#c4b5fd", ring: "#a78bfa", bgFrom: "rgba(167,139,250,0.12)" },
+};
+
 const getGreeting = () => {
   const h = new Date().getHours();
   if (h < 12) return "Good morning";
