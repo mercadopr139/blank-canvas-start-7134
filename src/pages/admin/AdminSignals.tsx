@@ -163,7 +163,7 @@ const SortableSignalRow = ({
         {isComplete ? (
           <CheckCircle2 className="w-4 h-4 text-green-400" />
         ) : (
-          <Circle className={`w-4 h-4 ${bucket === "core" ? "opacity-50 hover:opacity-80" : "text-white/25 hover:text-white/50"} transition-colors`} style={bucket === "core" ? { color: ac.hex } : undefined} />
+          <Circle className={`w-4 h-4 ${bucket === "core" ? "opacity-50 hover:opacity-80" : "text-white/25 hover:text-white/50"} transition-colors`} style={bucket === "core" && accentColor ? { color: accentColor } : undefined} />
         )}
       </button>
 
@@ -1031,8 +1031,8 @@ const AdminSignals = () => {
                               <Button
                                 size="sm"
                                 variant="ghost"
-                                className="h-6 text-[10px] px-2 shrink-0 hover:bg-opacity-10"
-                                style={{ color: `${ac.hexMuted}99`, ...(undefined) }}
+                                className="h-6 text-[10px] px-2 shrink-0"
+                                style={{ color: `${ac.hexMuted}99` }}
                                 onClick={(e) => { e.stopPropagation(); scheduleMutation.mutate({ id: signal.id, priority: "Core" }); }}
                                 disabled={scheduleMutation.isPending}
                               >
