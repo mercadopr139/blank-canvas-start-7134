@@ -63,6 +63,14 @@ const PILLAR_COLORS: Record<string, string> = {
   Personal: "bg-purple-400/20 text-purple-400 border-purple-400/40",
 };
 
+const FOCUS_AREA_LABELS: Record<string, string> = {
+  nla: "NLA",
+  "usa-boxing": "USA Boxing",
+  quikhit: "QUIKHIT",
+  fcusa: "FCUSA",
+  personal: "Personal",
+};
+
 const getGreeting = () => {
   const h = new Date().getHours();
   if (h < 12) return "Good morning";
