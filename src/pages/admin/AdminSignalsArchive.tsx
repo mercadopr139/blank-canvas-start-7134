@@ -416,7 +416,7 @@ const AdminSignalsArchive = () => {
               />
             );
           })}
-          {([{ value: "Core", label: "Core" }, { value: "Bonus", label: "On-Deck" }] as const).map(({ value: layer, label: layerLabel }) => {
+          {([{ value: "Core", label: "Core" }, { value: "Bonus", label: "On-Deck" }, { value: null as any, label: "On Radar" }] as const).map(({ value: layer, label: layerLabel }) => {
             const layerCount = filtered.filter((s) => s.priority_layer === layer).length;
             const layerPct = total > 0 ? Math.round((layerCount / total) * 100) : 0;
             return (
@@ -562,7 +562,7 @@ const AdminSignalsArchive = () => {
                   </div>
                   {signal.priority_layer && (
                     <Badge variant="outline" className="text-[10px] border-white/20 text-white/40 shrink-0">
-                      {signal.priority_layer === "Bonus" ? "On-Deck" : signal.priority_layer}
+                      {signal.priority_layer === "Bonus" ? "On-Deck" : signal.priority_layer == null ? "On Radar" : signal.priority_layer}
                     </Badge>
                   )}
                   <span className="text-[10px] text-white/30 shrink-0">
@@ -621,7 +621,7 @@ const AdminSignalsArchive = () => {
                 const pillarColor = signal.pillar ? PILLAR_CHART_COLORS[signal.pillar] || "rgba(255,255,255,0.3)" : "rgba(255,255,255,0.1)";
                 const metaParts: string[] = [];
                 if (signal.signal_kind) metaParts.push(signal.signal_kind);
-                if (signal.priority_layer) metaParts.push(signal.priority_layer === "Bonus" ? "On-Deck" : signal.priority_layer);
+                metaParts.push(signal.priority_layer === "Bonus" ? "On-Deck" : signal.priority_layer == null ? "On Radar" : signal.priority_layer);
                 return (
                   <div
                     key={signal.id}

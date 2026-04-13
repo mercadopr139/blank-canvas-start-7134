@@ -375,7 +375,7 @@ const AdminSignals = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["signals"] });
-      toast.success("Moved to On Deck");
+      toast.success("Moved to On Radar");
     },
     onError: (e: any) => toast.error(e.message),
   });
@@ -677,7 +677,7 @@ const AdminSignals = () => {
         newOnDeckList,
       });
 
-      const label = targetBucket === "core" ? "Core 3" : targetBucket === "bonus" ? "On-Deck" : "On Deck";
+      const label = targetBucket === "core" ? "Core 3" : targetBucket === "bonus" ? "On-Deck" : "On Radar";
       toast.success(`Moved to ${label}`);
     }
   };
@@ -894,7 +894,7 @@ const AdminSignals = () => {
                           Move to On-Deck
                         </DropdownMenuItem>
                         <DropdownMenuItem onClick={() => moveToOnDeckMutation.mutate(signal.id)} className="text-white/40 focus:text-white/60 focus:bg-white/5">
-                          Move to On Deck
+                          Move to On Radar
                         </DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
@@ -905,7 +905,7 @@ const AdminSignals = () => {
           </div>
         )}
 
-        {/* ─── Unified DnD Context for Core 3 / On-Deck / On Deck ─── */}
+        {/* ─── Unified DnD Context for Core 3 / On-Deck / On Radar ─── */}
         <DndContext
           sensors={sensors}
           collisionDetection={rectIntersection}
@@ -1070,11 +1070,11 @@ const AdminSignals = () => {
             <div className="w-16 h-px bg-gradient-to-r from-transparent via-white/10 to-transparent" />
           </div>
 
-          {/* On Deck */}
+          {/* On Radar */}
           {onDeckSignals.length > 0 && (
             <div className="mb-6">
               <div className="flex items-center gap-2 mb-3">
-                <h2 className="text-sm font-semibold uppercase tracking-wider text-white/25">On Deck</h2>
+                <h2 className="text-sm font-semibold uppercase tracking-wider text-white/25">On Radar</h2>
                 <span className="text-xs text-white/15">({onDeckSignals.length})</span>
               </div>
               <DroppableColumn id="ondeck">
@@ -1181,9 +1181,9 @@ const AdminSignals = () => {
                   <SelectValue placeholder="Select bucket" />
                 </SelectTrigger>
                 <SelectContent className="bg-zinc-900 border-white/10 z-[200]">
-                  <SelectItem value="ondeck" className="text-white hover:bg-white/10 focus:bg-white/10 focus:text-white">On Deck</SelectItem>
-                  <SelectItem value="core" className="text-white hover:bg-white/10 focus:bg-white/10 focus:text-white">Core 3 (Today)</SelectItem>
-                  <SelectItem value="bonus" className="text-white hover:bg-white/10 focus:bg-white/10 focus:text-white">On-Deck (Today)</SelectItem>
+                  <SelectItem value="core" className="text-white hover:bg-white/10 focus:bg-white/10 focus:text-white">Core 3</SelectItem>
+                  <SelectItem value="bonus" className="text-white hover:bg-white/10 focus:bg-white/10 focus:text-white">On-Deck</SelectItem>
+                  <SelectItem value="ondeck" className="text-white hover:bg-white/10 focus:bg-white/10 focus:text-white">On Radar</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -1241,7 +1241,7 @@ const AdminSignals = () => {
         <DialogContent className="bg-zinc-900 border-white/10 text-white" onPointerDownOutside={(e) => e.preventDefault()}>
           <DialogHeader>
             <p className="text-[10px] uppercase tracking-[0.15em] text-white/30 mb-1">
-              Editing {editForm.bucket === "core" ? "Core" : editForm.bucket === "bonus" ? "On-Deck" : "On Deck"} Signal
+              Editing {editForm.bucket === "core" ? "Core" : editForm.bucket === "bonus" ? "On-Deck" : "On Radar"} Signal
             </p>
             <DialogTitle>Edit Signal</DialogTitle>
           </DialogHeader>
@@ -1290,9 +1290,9 @@ const AdminSignals = () => {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent className="bg-zinc-900 border-white/10 z-[200]">
-                    <SelectItem value="ondeck" className="text-white hover:bg-white/10 focus:bg-white/10 focus:text-white">On Deck</SelectItem>
-                    <SelectItem value="core" className="text-white hover:bg-white/10 focus:bg-white/10 focus:text-white">Core</SelectItem>
+                    <SelectItem value="core" className="text-white hover:bg-white/10 focus:bg-white/10 focus:text-white">Core 3</SelectItem>
                     <SelectItem value="bonus" className="text-white hover:bg-white/10 focus:bg-white/10 focus:text-white">On-Deck</SelectItem>
+                    <SelectItem value="ondeck" className="text-white hover:bg-white/10 focus:bg-white/10 focus:text-white">On Radar</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -1342,7 +1342,7 @@ const AdminSignals = () => {
         </DialogContent>
       </Dialog>
 
-      {/* On Deck Trash Confirm */}
+      {/* On Radar Trash Confirm */}
       <AlertDialog open={!!trashConfirmId} onOpenChange={(open) => { if (!open) setTrashConfirmId(null); }}>
         <AlertDialogContent className="bg-zinc-900 border-white/20 text-white">
           <AlertDialogHeader>
