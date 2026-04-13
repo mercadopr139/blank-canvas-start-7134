@@ -6,6 +6,7 @@ import {
 import { SortableContext, verticalListSortingStrategy, useSortable, arrayMove } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import nlaLogo from "@/assets/nla-logo-white.png";
+import usaBoxingLogo from "@/assets/usa-boxing-logo.png";
 import DailyVerse from "@/components/admin/DailyVerse";
 import { useNavigate, useParams } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -886,6 +887,13 @@ const AdminSignals = () => {
           onDragEnd={handleDragEnd}
           onDragCancel={() => { setDraggingId(null); setDraggingBucket(null); }}
         >
+          {/* USA Boxing logo — only for usa-boxing focus area */}
+          {focusArea === "usa-boxing" && (
+            <div className="flex justify-center my-8">
+              <img src={usaBoxingLogo} alt="USA Boxing" className="w-[200px] h-auto" />
+            </div>
+          )}
+
           {/* Today's Signals */}
           <div className="mb-6">
             <h2 className="text-sm font-semibold uppercase tracking-wider text-white/40 mb-4">Today's Signals</h2>
