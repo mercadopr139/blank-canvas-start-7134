@@ -34,6 +34,7 @@ export function useStaffPermissions() {
     sales_marketing: false,
     finance: false,
     pd_signals: false,
+    pc_signals: false,
     settings: false,
   });
   const [loading, setLoading] = useState(true);
@@ -67,6 +68,7 @@ export function useStaffPermissions() {
         sales_marketing: false,
         finance: false,
         pd_signals: false,
+        pc_signals: false,
         settings: false,
       };
 
