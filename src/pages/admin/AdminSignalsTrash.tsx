@@ -206,7 +206,7 @@ const AdminSignalsTrash = () => {
                     )}
                     {signal.priority_layer && (
                       <Badge variant="outline" className={`text-[10px] ${signal.priority_layer === "Core" ? "border-rose-500/40 text-rose-400" : "border-white/20 text-white/40"}`}>
-                        {signal.priority_layer}
+                        {signal.priority_layer === "Bonus" ? "On-Deck" : signal.priority_layer}
                       </Badge>
                     )}
                   </div>
