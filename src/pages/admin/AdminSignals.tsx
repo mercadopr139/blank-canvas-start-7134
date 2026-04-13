@@ -918,7 +918,7 @@ const AdminSignals = () => {
           {/* Personal family photo — only for personal focus area */}
           {focusArea === "personal" && (
             <div className="flex justify-center my-8">
-              <img src={personalFamily} alt="Family" className="w-[200px] h-auto rounded-xl" />
+              <img src={personalFamily} alt="Family" className="w-[400px] h-auto rounded-xl" />
             </div>
           )}
 
