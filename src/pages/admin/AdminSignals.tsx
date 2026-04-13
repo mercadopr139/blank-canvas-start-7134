@@ -177,6 +177,7 @@ const SortableSignalRow = ({
 
 const AdminSignals = () => {
   const navigate = useNavigate();
+  const { focusArea = "nla" } = useParams<{ focusArea: string }>();
   const { user, signOut } = useAuth();
   const queryClient = useQueryClient();
   const [showAdd, setShowAdd] = useState(false);
