@@ -8,19 +8,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { icons } from "lucide-react";
 import { Trash2, Upload, X } from "lucide-react";
-
-/* ── Curated color palette ── */
-const COLOR_OPTIONS = [
-  { label: "Red", hex: "#ef4444" },
-  { label: "Blue", hex: "#3b82f6" },
-  { label: "Orange", hex: "#f97316" },
-  { label: "Green", hex: "#22c55e" },
-  { label: "Purple", hex: "#a78bfa" },
-  { label: "Yellow", hex: "#eab308" },
-  { label: "Teal", hex: "#14b8a6" },
-  { label: "Pink", hex: "#ec4899" },
-  { label: "White", hex: "#e4e4e7" },
-];
+import FullColorPicker from "@/components/admin/FullColorPicker";
 
 /* ── Common icon names for quick access ── */
 const COMMON_ICONS = [
