@@ -244,25 +244,7 @@ const FocusAreaModal = ({ open, onClose, onSaved, editingArea }: Props) => {
             </div>
 
             {/* Color Picker */}
-            <div className="space-y-1.5">
-              <Label className="text-white/70 text-xs">Brand Color</Label>
-              <div className="flex flex-wrap gap-2">
-                {COLOR_OPTIONS.map((c) => (
-                  <button
-                    key={c.hex}
-                    type="button"
-                    onClick={() => setAccentColor(c.hex)}
-                    className={`w-9 h-9 rounded-lg border-2 transition-all ${
-                      accentColor === c.hex
-                        ? "border-white scale-110 shadow-lg"
-                        : "border-transparent hover:border-white/30"
-                    }`}
-                    style={{ backgroundColor: c.hex }}
-                    title={c.label}
-                  />
-                ))}
-              </div>
-            </div>
+            <FullColorPicker value={accentColor} onChange={setAccentColor} />
 
             {/* Icon Picker */}
             <div className="space-y-1.5">
