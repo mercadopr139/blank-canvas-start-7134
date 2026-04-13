@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -69,12 +69,23 @@ const buildOptions = () => {
 
 const FILTER_OPTIONS = buildOptions();
 
+const FOCUS_AREA_LABELS: Record<string, string> = {
+  nla: "NLA", "usa-boxing": "USA Boxing", quikhit: "QUIKHIT", fcusa: "FCUSA", personal: "Personal",
+};
+
 const AdminSignalsArchive = () => {
   const navigate = useNavigate();
+  const { focusArea = "nla" } = useParams<{ focusArea: string }>();
   const { user, signOut } = useAuth();
   const [selectedFilter, setSelectedFilter] = useState(FILTER_OPTIONS[0].value);
   const [activePillar, setActivePillar] = useState<string | null>(null);
   const queryClient = useQueryClient();
+  const isNla = focusArea === "nla";
+  const areaLabel = FOCUS_AREA_LABELS[focusArea] || focusArea;
+  const applySourceFilter = (query: any) => {
+    if (isNla) return query.or("source.is.null,source.eq.NLA");
+    return query.eq("source", areaLabel);
+  };
 
   // Drilldown state
   const [drilldown, setDrilldown] = useState<DrilldownFilter>(null);
