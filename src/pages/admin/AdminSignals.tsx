@@ -6,6 +6,7 @@ import {
 import { SortableContext, verticalListSortingStrategy, useSortable, arrayMove } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import nlaLogo from "@/assets/nla-logo-white.png";
+import usaBoxingLogo from "@/assets/usa-boxing-logo.png";
 import DailyVerse from "@/components/admin/DailyVerse";
 import { useNavigate, useParams } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
