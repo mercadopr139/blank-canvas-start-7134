@@ -696,7 +696,7 @@ const AdminSignals = () => {
         <div className="absolute inset-0 bg-gradient-to-r from-rose-950/20 via-black to-amber-950/10" />
         <div className="relative mx-auto px-3 sm:px-4 py-5 flex items-center justify-between max-w-4xl w-full">
           <div className="flex items-center gap-4">
-            <Button variant="ghost" size="icon" onClick={() => navigate("/admin/dashboard")} aria-label="Back" className="text-white/40 hover:text-white hover:bg-white/5">
+            <Button variant="ghost" size="icon" onClick={() => navigate("/admin/pd-task-manager")} aria-label="Back" className="text-white/40 hover:text-white hover:bg-white/5">
               <ArrowLeft className="w-5 h-5" />
             </Button>
             <img
