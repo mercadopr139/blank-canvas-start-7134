@@ -396,6 +396,48 @@ export type Database = {
         }
         Relationships: []
       }
+      dashboard_tiles: {
+        Row: {
+          accent_color: string
+          created_at: string
+          href: string
+          icon_name: string
+          id: string
+          is_default: boolean
+          sort_order: number
+          subtitle: string | null
+          title: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          accent_color?: string
+          created_at?: string
+          href: string
+          icon_name?: string
+          id?: string
+          is_default?: boolean
+          sort_order?: number
+          subtitle?: string | null
+          title: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          accent_color?: string
+          created_at?: string
+          href?: string
+          icon_name?: string
+          id?: string
+          is_default?: boolean
+          sort_order?: number
+          subtitle?: string | null
+          title?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       deposit_batches: {
         Row: {
           bank_account: Database["public"]["Enums"]["bank_account"]
