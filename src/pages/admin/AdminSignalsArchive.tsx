@@ -562,7 +562,7 @@ const AdminSignalsArchive = () => {
                   </div>
                   {signal.priority_layer && (
                     <Badge variant="outline" className="text-[10px] border-white/20 text-white/40 shrink-0">
-                      {signal.priority_layer}
+                      {signal.priority_layer === "Bonus" ? "On-Deck" : signal.priority_layer}
                     </Badge>
                   )}
                   <span className="text-[10px] text-white/30 shrink-0">
@@ -621,7 +621,7 @@ const AdminSignalsArchive = () => {
                 const pillarColor = signal.pillar ? PILLAR_CHART_COLORS[signal.pillar] || "rgba(255,255,255,0.3)" : "rgba(255,255,255,0.1)";
                 const metaParts: string[] = [];
                 if (signal.signal_kind) metaParts.push(signal.signal_kind);
-                if (signal.priority_layer) metaParts.push(signal.priority_layer);
+                if (signal.priority_layer) metaParts.push(signal.priority_layer === "Bonus" ? "On-Deck" : signal.priority_layer);
                 return (
                   <div
                     key={signal.id}
