@@ -78,7 +78,7 @@ const AdminSignalsTrash = () => {
     }
     if (pillarFilter) results = results.filter((s) => s.pillar === pillarFilter);
     if (kindFilter) results = results.filter((s) => s.signal_kind === kindFilter);
-    if (bucketFilter) results = results.filter((s) => s.priority_layer === bucketFilter);
+    if (bucketFilter) results = results.filter((s) => bucketFilter === "__null__" ? s.priority_layer == null : s.priority_layer === bucketFilter);
     return results;
   }, [trashedSignals, search, pillarFilter, kindFilter, bucketFilter]);
 
@@ -172,7 +172,7 @@ const AdminSignalsTrash = () => {
             <FilterChip key={k} label={k} active={kindFilter === k} onClick={() => setKindFilter(kindFilter === k ? null : k)} />
           ))}
           <span className="w-px h-5 bg-white/10 mx-1 self-center" />
-          {([{ value: "Core", label: "Core" }, { value: "Bonus", label: "On-Deck" }] as const).map((b) => (
+          {([{ value: "Core", label: "Core" }, { value: "Bonus", label: "On-Deck" }, { value: "__null__", label: "On Radar" }] as const).map((b) => (
             <FilterChip key={b.value} label={b.label} active={bucketFilter === b.value} onClick={() => setBucketFilter(bucketFilter === b.value ? null : b.value)} />
           ))}
         </div>
@@ -206,7 +206,7 @@ const AdminSignalsTrash = () => {
                     )}
                     {signal.priority_layer && (
                       <Badge variant="outline" className={`text-[10px] ${signal.priority_layer === "Core" ? "border-rose-500/40 text-rose-400" : "border-white/20 text-white/40"}`}>
-                        {signal.priority_layer === "Bonus" ? "On-Deck" : signal.priority_layer}
+                        {signal.priority_layer === "Bonus" ? "On-Deck" : signal.priority_layer == null ? "On Radar" : signal.priority_layer}
                       </Badge>
                     )}
                   </div>
