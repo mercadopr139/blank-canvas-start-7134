@@ -27,7 +27,7 @@ import { Badge } from "@/components/ui/badge";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { toast } from "sonner";
 import { format } from "date-fns";
-import { ArrowLeft, Plus, CheckCircle2, Circle, LogOut, Archive, ArrowRight, Trash2, MoreVertical, Flame, Target, Zap, GripVertical } from "lucide-react";
+import { ArrowLeft, Plus, CheckCircle2, Circle, LogOut, Archive, ArrowRight, Trash2, MoreVertical, Flame, Target, Zap, GripVertical, Radar } from "lucide-react";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import VisionCloud from "@/components/admin/VisionCloud";
 import UpcomingEventsWidget from "@/components/admin/UpcomingEventsWidget";
@@ -1070,18 +1070,24 @@ const AdminSignals = () => {
             <div className="w-16 h-px bg-gradient-to-r from-transparent via-white/10 to-transparent" />
           </div>
 
-          {/* On Radar */}
-          {onDeckSignals.length > 0 && (
-            <div className="mb-6">
-              <div className="flex items-center gap-2 mb-3">
-                <h2 className="text-sm font-semibold uppercase tracking-wider text-white/25">On Radar</h2>
-                <span className="text-xs text-white/15">({onDeckSignals.length})</span>
-              </div>
-              <DroppableColumn id="ondeck">
+          {/* On Radar — always visible */}
+          <div className="mb-6">
+            <DroppableColumn id="ondeck">
+              <div className="rounded-xl border border-white/[0.08] bg-gradient-to-b from-white/[0.03] to-transparent overflow-hidden">
+                <div className="px-4 pt-4 pb-2 flex items-center gap-2">
+                  <Radar className="w-4 h-4 text-white/30" />
+                  <h3 className="text-sm font-bold text-white/40 uppercase tracking-wider">On Radar</h3>
+                  {onDeckSignals.length > 0 && <span className="text-xs text-white/15">({onDeckSignals.length})</span>}
+                </div>
                 <SortableContext items={onDeckSignals.map(s => s.id)} strategy={verticalListSortingStrategy}>
-                  <div className="rounded-xl border border-white/[0.06] overflow-hidden">
-                    <div className="divide-y divide-white/[0.04]">
-                      {onDeckSignals.map((signal) => (
+                  <div className="px-3 pb-3 space-y-1 min-h-[80px]">
+                    {onDeckSignals.length === 0 ? (
+                      <div className="flex items-center gap-3 px-3 py-2.5 rounded-lg bg-white/[0.02] border border-white/[0.04]">
+                        <Circle className="w-4 h-4 text-white/10 shrink-0" />
+                        <span className="text-white/15 text-sm italic">Empty slot</span>
+                      </div>
+                    ) : (
+                      onDeckSignals.map((signal) => (
                         <SortableSignalRow
                           key={signal.id}
                           signal={signal}
@@ -1120,13 +1126,13 @@ const AdminSignals = () => {
                             </>
                           }
                         />
-                      ))}
-                    </div>
+                      ))
+                    )}
                   </div>
                 </SortableContext>
-              </DroppableColumn>
-            </div>
-          )}
+              </div>
+            </DroppableColumn>
+          </div>
 
           {/* Global Drag Overlay */}
           <DragOverlay>
