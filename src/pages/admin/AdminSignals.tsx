@@ -84,6 +84,13 @@ const FOCUS_AREA_COLORS: Record<string, { hex: string; hexMuted: string; ring: s
   personal:    { hex: "#a78bfa", hexMuted: "#c4b5fd", ring: "#a78bfa", bgFrom: "rgba(167,139,250,0.12)" },
 };
 
+const buildColorFromHex = (hex: string) => ({
+  hex,
+  hexMuted: hex,
+  ring: hex,
+  bgFrom: `${hex}1f`,
+});
+
 const getGreeting = () => {
   const h = new Date().getHours();
   if (h < 12) return "Good morning";
@@ -221,9 +228,24 @@ const AdminSignals = () => {
 
   const today = format(new Date(), "yyyy-MM-dd");
   const todayDisplay = format(new Date(), "EEEE, MMMM d");
-  const areaLabel = FOCUS_AREA_LABELS[focusArea] || focusArea;
+
+  // Fetch dynamic focus area config from DB
+  const { data: focusAreaConfig } = useQuery({
+    queryKey: ["focus-area-config", focusArea],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("focus_areas")
+        .select("*")
+        .eq("key", focusArea)
+        .maybeSingle();
+      return data as { title: string; accent_color: string; image_url: string | null } | null;
+    },
+  });
+
+  const areaLabel = focusAreaConfig?.title ?? FOCUS_AREA_LABELS[focusArea] ?? focusArea;
   const isNla = focusArea === "nla";
-  const ac = FOCUS_AREA_COLORS[focusArea] || FOCUS_AREA_COLORS.nla;
+  const ac = FOCUS_AREA_COLORS[focusArea] || (focusAreaConfig ? buildColorFromHex(focusAreaConfig.accent_color) : FOCUS_AREA_COLORS.nla);
+  const dynamicImageUrl = focusAreaConfig?.image_url ?? null;
 
   // Helper: apply source filter to a supabase query builder
   const applySourceFilter = (query: any) => {
@@ -891,34 +913,36 @@ const AdminSignals = () => {
           onDragEnd={handleDragEnd}
           onDragCancel={() => { setDraggingId(null); setDraggingBucket(null); }}
         >
-          {/* NLA mascot — only for nla focus area */}
-          {focusArea === "nla" && (
+          {/* Focus area branding image — hardcoded defaults + dynamic from DB */}
+          {focusArea === "nla" && !dynamicImageUrl && (
             <div className="flex justify-center my-8">
               <img src={nlaMascot} alt="NLA Mascot" className="w-[200px] h-auto" />
             </div>
           )}
-          {/* USA Boxing logo — only for usa-boxing focus area */}
-          {focusArea === "usa-boxing" && (
+          {focusArea === "usa-boxing" && !dynamicImageUrl && (
             <div className="flex justify-center my-8">
               <img src={usaBoxingLogo} alt="USA Boxing" className="w-[200px] h-auto" />
             </div>
           )}
-          {/* FCUSA logo — only for fcusa focus area */}
-          {focusArea === "fcusa" && (
+          {focusArea === "fcusa" && !dynamicImageUrl && (
             <div className="flex justify-center my-8">
               <img src={fcusaLogo} alt="Fighting Chance USA" className="w-[400px] h-auto" />
             </div>
           )}
-          {/* QUIKHIT logo — only for quikhit focus area */}
-          {focusArea === "quikhit" && (
+          {focusArea === "quikhit" && !dynamicImageUrl && (
             <div className="flex justify-center my-8">
               <img src={quikhitLogo} alt="QUIKHIT" className="w-[400px] h-auto" />
             </div>
           )}
-          {/* Personal family photo — only for personal focus area */}
-          {focusArea === "personal" && (
+          {focusArea === "personal" && !dynamicImageUrl && (
             <div className="flex justify-center my-8">
               <img src={personalFamily} alt="Family" className="w-[400px] h-auto rounded-xl" />
+            </div>
+          )}
+          {/* Dynamic image from DB (for new/edited focus areas with uploaded images) */}
+          {dynamicImageUrl && (
+            <div className="flex justify-center my-8">
+              <img src={dynamicImageUrl} alt={areaLabel} className="w-[400px] h-auto rounded-xl" />
             </div>
           )}
 

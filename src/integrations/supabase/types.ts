@@ -676,6 +676,48 @@ export type Database = {
         }
         Relationships: []
       }
+      focus_areas: {
+        Row: {
+          accent_color: string
+          created_at: string
+          icon_name: string
+          id: string
+          image_url: string | null
+          is_default: boolean
+          key: string
+          sort_order: number
+          subtitle: string | null
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          accent_color?: string
+          created_at?: string
+          icon_name?: string
+          id?: string
+          image_url?: string | null
+          is_default?: boolean
+          key: string
+          sort_order?: number
+          subtitle?: string | null
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          accent_color?: string
+          created_at?: string
+          icon_name?: string
+          id?: string
+          image_url?: string | null
+          is_default?: boolean
+          key?: string
+          sort_order?: number
+          subtitle?: string | null
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       incidents: {
         Row: {
           description: string
