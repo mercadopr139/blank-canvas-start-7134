@@ -107,12 +107,14 @@ const SortableSignalRow = ({
   onEdit,
   onToggleStatus,
   extraActions,
+  accentColor,
 }: {
   signal: Signal;
   bucket: BucketId;
   onEdit: () => void;
   onToggleStatus: () => void;
   extraActions?: React.ReactNode;
+  accentColor?: string;
 }) => {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: signal.id,
