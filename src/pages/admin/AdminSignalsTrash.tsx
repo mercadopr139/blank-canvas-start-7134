@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -34,10 +34,21 @@ type Signal = {
   trashed_at: string | null;
 };
 
+const FOCUS_AREA_LABELS: Record<string, string> = {
+  nla: "NLA", "usa-boxing": "USA Boxing", quikhit: "QUIKHIT", fcusa: "FCUSA", personal: "Personal",
+};
+
 const AdminSignalsTrash = () => {
   const navigate = useNavigate();
+  const { focusArea = "nla" } = useParams<{ focusArea: string }>();
   const { user, signOut } = useAuth();
   const queryClient = useQueryClient();
+  const isNla = focusArea === "nla";
+  const areaLabel = FOCUS_AREA_LABELS[focusArea] || focusArea;
+  const applySourceFilter = (query: any) => {
+    if (isNla) return query.or("source.is.null,source.eq.NLA");
+    return query.eq("source", areaLabel);
+  };
 
   const [search, setSearch] = useState("");
   const [pillarFilter, setPillarFilter] = useState<string | null>(null);
@@ -46,13 +57,14 @@ const AdminSignalsTrash = () => {
   const [permanentDeleteTarget, setPermanentDeleteTarget] = useState<string | null>(null);
 
   const { data: trashedSignals = [], isLoading } = useQuery({
-    queryKey: ["signals", "trashed"],
+    queryKey: ["signals", focusArea, "trashed"],
     queryFn: async () => {
-      const { data, error } = await supabase
+      let q = supabase
         .from("signals")
         .select("*")
-        .eq("is_trashed", true as any)
-        .order("trashed_at", { ascending: false });
+        .eq("is_trashed", true as any);
+      q = applySourceFilter(q);
+      const { data, error } = await q.order("trashed_at", { ascending: false });
       if (error) throw error;
       return data as unknown as Signal[];
     },
@@ -123,7 +135,7 @@ const AdminSignalsTrash = () => {
       <header className="bg-black border-b border-white/10">
         <div className="container mx-auto px-4 py-4 flex items-center justify-between">
           <div className="flex items-center gap-4">
-            <Button variant="ghost" size="icon" onClick={() => navigate("/admin/signals")} aria-label="Back">
+            <Button variant="ghost" size="icon" onClick={() => navigate(`/admin/signals/${focusArea}`)} aria-label="Back">
               <ArrowLeft className="w-5 h-5" />
             </Button>
             <div>

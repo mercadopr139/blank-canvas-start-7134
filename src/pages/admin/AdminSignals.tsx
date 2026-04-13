@@ -7,7 +7,7 @@ import { SortableContext, verticalListSortingStrategy, useSortable, arrayMove } 
 import { CSS } from "@dnd-kit/utilities";
 import nlaLogo from "@/assets/nla-logo-white.png";
 import DailyVerse from "@/components/admin/DailyVerse";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -61,6 +61,14 @@ const PILLAR_COLORS: Record<string, string> = {
   Finance: "bg-sky-300/20 text-sky-300 border-sky-300/40",
   Vision: "bg-amber-400/20 text-amber-400 border-amber-400/40",
   Personal: "bg-purple-400/20 text-purple-400 border-purple-400/40",
+};
+
+const FOCUS_AREA_LABELS: Record<string, string> = {
+  nla: "NLA",
+  "usa-boxing": "USA Boxing",
+  quikhit: "QUIKHIT",
+  fcusa: "FCUSA",
+  personal: "Personal",
 };
 
 const getGreeting = () => {
@@ -169,6 +177,7 @@ const SortableSignalRow = ({
 
 const AdminSignals = () => {
   const navigate = useNavigate();
+  const { focusArea = "nla" } = useParams<{ focusArea: string }>();
   const { user, signOut } = useAuth();
   const queryClient = useQueryClient();
   const [showAdd, setShowAdd] = useState(false);
@@ -197,17 +206,27 @@ const AdminSignals = () => {
 
   const today = format(new Date(), "yyyy-MM-dd");
   const todayDisplay = format(new Date(), "EEEE, MMMM d");
+  const areaLabel = FOCUS_AREA_LABELS[focusArea] || focusArea;
+  const isNla = focusArea === "nla";
+
+  // Helper: apply source filter to a supabase query builder
+  const applySourceFilter = (query: any) => {
+    if (isNla) return query.or("source.is.null,source.eq.NLA");
+    return query.eq("source", areaLabel);
+  };
 
   const { data: todayCoreSignals = [] } = useQuery({
-    queryKey: ["signals", "today-core"],
+    queryKey: ["signals", focusArea, "today-core"],
     queryFn: async () => {
-      const { data, error } = await supabase
+      let q = supabase
         .from("signals")
         .select("*")
         .eq("date_assigned", today)
         .eq("priority_layer", "Core" as any)
         .eq("is_archived", false as any)
-        .eq("is_trashed", false as any)
+        .eq("is_trashed", false as any);
+      q = applySourceFilter(q);
+      const { data, error } = await q
         .order("today_sort_order" as any, { ascending: true, nullsFirst: false })
         .order("created_at", { ascending: true });
       if (error) throw error;
@@ -216,28 +235,32 @@ const AdminSignals = () => {
   });
 
   const { data: todayBonusSignals = [] } = useQuery({
-    queryKey: ["signals", "today-bonus"],
+    queryKey: ["signals", focusArea, "today-bonus"],
     queryFn: async () => {
-      const { data, error } = await supabase
+      let q = supabase
         .from("signals")
         .select("*")
         .lte("date_assigned", today)
         .eq("priority_layer", "Bonus" as any)
         .eq("status", "Pending" as any)
         .eq("is_archived", false as any)
-        .eq("is_trashed", false as any)
+        .eq("is_trashed", false as any);
+      q = applySourceFilter(q);
+      const { data, error } = await q
         .order("today_sort_order" as any, { ascending: true, nullsFirst: false })
         .order("created_at", { ascending: true });
       if (error) throw error;
       // Also include completed bonus signals assigned up to today
-      const { data: completedToday, error: err2 } = await supabase
+      let q2 = supabase
         .from("signals")
         .select("*")
         .lte("date_assigned", today)
         .eq("priority_layer", "Bonus" as any)
         .eq("status", "Complete" as any)
         .eq("is_archived", false as any)
-        .eq("is_trashed", false as any)
+        .eq("is_trashed", false as any);
+      q2 = applySourceFilter(q2);
+      const { data: completedToday, error: err2 } = await q2
         .order("today_sort_order" as any, { ascending: true, nullsFirst: false });
       if (err2) throw err2;
       return [...(data || []), ...(completedToday || [])] as Signal[];
@@ -245,9 +268,9 @@ const AdminSignals = () => {
   });
 
   const { data: carryoverSignals = [] } = useQuery({
-    queryKey: ["signals", "carryover"],
+    queryKey: ["signals", focusArea, "carryover"],
     queryFn: async () => {
-      const { data, error } = await supabase
+      let q = supabase
         .from("signals")
         .select("*")
         .not("date_assigned", "is", null)
@@ -255,7 +278,9 @@ const AdminSignals = () => {
         .eq("status", "Pending" as any)
         .eq("priority_layer", "Core" as any)
         .eq("is_archived", false as any)
-        .eq("is_trashed", false as any)
+        .eq("is_trashed", false as any);
+      q = applySourceFilter(q);
+      const { data, error } = await q
         .order("date_assigned", { ascending: true });
       if (error) throw error;
       return data as Signal[];
@@ -263,15 +288,17 @@ const AdminSignals = () => {
   });
 
   const { data: onDeckSignals = [] } = useQuery({
-    queryKey: ["signals", "on-deck"],
+    queryKey: ["signals", focusArea, "on-deck"],
     queryFn: async () => {
-      const { data, error } = await supabase
+      let q = supabase
         .from("signals")
         .select("*")
         .is("date_assigned", null)
         .eq("status", "Pending" as any)
         .eq("is_archived", false as any)
-        .eq("is_trashed", false as any)
+        .eq("is_trashed", false as any);
+      q = applySourceFilter(q);
+      const { data, error } = await q
         .order("deck_sort_order" as any, { ascending: true, nullsFirst: false })
         .order("created_at", { ascending: true });
       if (error) throw error;
@@ -329,6 +356,7 @@ const AdminSignals = () => {
         status: "Pending",
         is_archived: false,
         date_assigned: dateAssigned,
+        source: isNla ? null : areaLabel,
       } as any);
       if (error) throw error;
     },
@@ -528,9 +556,9 @@ const AdminSignals = () => {
   }, [todayCoreSignals, todayBonusSignals, onDeckSignals]);
 
   const getQueryKeyForBucket = (bucket: BucketId) => {
-    if (bucket === "core") return ["signals", "today-core"];
-    if (bucket === "bonus") return ["signals", "today-bonus"];
-    return ["signals", "on-deck"];
+    if (bucket === "core") return ["signals", focusArea, "today-core"];
+    if (bucket === "bonus") return ["signals", focusArea, "today-bonus"];
+    return ["signals", focusArea, "on-deck"];
   };
 
   const handleDragStart = (event: DragStartEvent) => {
@@ -668,7 +696,7 @@ const AdminSignals = () => {
         <div className="absolute inset-0 bg-gradient-to-r from-rose-950/20 via-black to-amber-950/10" />
         <div className="relative mx-auto px-3 sm:px-4 py-5 flex items-center justify-between max-w-4xl w-full">
           <div className="flex items-center gap-4">
-            <Button variant="ghost" size="icon" onClick={() => navigate("/admin/dashboard")} aria-label="Back" className="text-white/40 hover:text-white hover:bg-white/5">
+            <Button variant="ghost" size="icon" onClick={() => navigate("/admin/pd-task-manager")} aria-label="Back" className="text-white/40 hover:text-white hover:bg-white/5">
               <ArrowLeft className="w-5 h-5" />
             </Button>
             <img
@@ -677,7 +705,7 @@ const AdminSignals = () => {
               className="h-10 w-auto opacity-[0.92] hover:opacity-100 hover:drop-shadow-[0_0_6px_rgba(255,255,255,0.15)] transition-all duration-300 hidden sm:block"
             />
             <div>
-              <p className="text-xs uppercase tracking-[0.2em] text-white/30 mb-0.5">{todayDisplay}</p>
+              <p className="text-xs uppercase tracking-[0.2em] text-white/30 mb-0.5">{todayDisplay} · {areaLabel}</p>
               <h1 className="text-lg font-semibold text-white">{getGreeting()}, Josh</h1>
             </div>
           </div>
@@ -939,7 +967,7 @@ const AdminSignals = () => {
             <Button
               variant="ghost"
               size="sm"
-              onClick={() => navigate("/admin/signals/archive")}
+              onClick={() => navigate(`/admin/signals/${focusArea}/archive`)}
               className="text-white/25 hover:text-white/50 text-xs h-8"
             >
               View Archive →
@@ -947,7 +975,7 @@ const AdminSignals = () => {
             <Button
               variant="ghost"
               size="sm"
-              onClick={() => navigate("/admin/signals/trash")}
+              onClick={() => navigate(`/admin/signals/${focusArea}/trash`)}
               className="text-white/25 hover:text-white/50 text-xs h-8"
             >
               <Trash2 className="w-3.5 h-3.5 mr-1" />
