@@ -967,7 +967,7 @@ const AdminSignals = () => {
             <Button
               variant="ghost"
               size="sm"
-              onClick={() => navigate("/admin/signals/archive")}
+              onClick={() => navigate(`/admin/signals/${focusArea}/archive`)}
               className="text-white/25 hover:text-white/50 text-xs h-8"
             >
               View Archive →
@@ -975,7 +975,7 @@ const AdminSignals = () => {
             <Button
               variant="ghost"
               size="sm"
-              onClick={() => navigate("/admin/signals/trash")}
+              onClick={() => navigate(`/admin/signals/${focusArea}/trash`)}
               className="text-white/25 hover:text-white/50 text-xs h-8"
             >
               <Trash2 className="w-3.5 h-3.5 mr-1" />
