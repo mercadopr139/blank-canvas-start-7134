@@ -216,15 +216,17 @@ const AdminSignals = () => {
   };
 
   const { data: todayCoreSignals = [] } = useQuery({
-    queryKey: ["signals", "today-core"],
+    queryKey: ["signals", focusArea, "today-core"],
     queryFn: async () => {
-      const { data, error } = await supabase
+      let q = supabase
         .from("signals")
         .select("*")
         .eq("date_assigned", today)
         .eq("priority_layer", "Core" as any)
         .eq("is_archived", false as any)
-        .eq("is_trashed", false as any)
+        .eq("is_trashed", false as any);
+      q = applySourceFilter(q);
+      const { data, error } = await q
         .order("today_sort_order" as any, { ascending: true, nullsFirst: false })
         .order("created_at", { ascending: true });
       if (error) throw error;
@@ -233,28 +235,32 @@ const AdminSignals = () => {
   });
 
   const { data: todayBonusSignals = [] } = useQuery({
-    queryKey: ["signals", "today-bonus"],
+    queryKey: ["signals", focusArea, "today-bonus"],
     queryFn: async () => {
-      const { data, error } = await supabase
+      let q = supabase
         .from("signals")
         .select("*")
         .lte("date_assigned", today)
         .eq("priority_layer", "Bonus" as any)
         .eq("status", "Pending" as any)
         .eq("is_archived", false as any)
-        .eq("is_trashed", false as any)
+        .eq("is_trashed", false as any);
+      q = applySourceFilter(q);
+      const { data, error } = await q
         .order("today_sort_order" as any, { ascending: true, nullsFirst: false })
         .order("created_at", { ascending: true });
       if (error) throw error;
       // Also include completed bonus signals assigned up to today
-      const { data: completedToday, error: err2 } = await supabase
+      let q2 = supabase
         .from("signals")
         .select("*")
         .lte("date_assigned", today)
         .eq("priority_layer", "Bonus" as any)
         .eq("status", "Complete" as any)
         .eq("is_archived", false as any)
-        .eq("is_trashed", false as any)
+        .eq("is_trashed", false as any);
+      q2 = applySourceFilter(q2);
+      const { data: completedToday, error: err2 } = await q2
         .order("today_sort_order" as any, { ascending: true, nullsFirst: false });
       if (err2) throw err2;
       return [...(data || []), ...(completedToday || [])] as Signal[];
@@ -262,9 +268,9 @@ const AdminSignals = () => {
   });
 
   const { data: carryoverSignals = [] } = useQuery({
-    queryKey: ["signals", "carryover"],
+    queryKey: ["signals", focusArea, "carryover"],
     queryFn: async () => {
-      const { data, error } = await supabase
+      let q = supabase
         .from("signals")
         .select("*")
         .not("date_assigned", "is", null)
@@ -272,7 +278,9 @@ const AdminSignals = () => {
         .eq("status", "Pending" as any)
         .eq("priority_layer", "Core" as any)
         .eq("is_archived", false as any)
-        .eq("is_trashed", false as any)
+        .eq("is_trashed", false as any);
+      q = applySourceFilter(q);
+      const { data, error } = await q
         .order("date_assigned", { ascending: true });
       if (error) throw error;
       return data as Signal[];
@@ -280,15 +288,17 @@ const AdminSignals = () => {
   });
 
   const { data: onDeckSignals = [] } = useQuery({
-    queryKey: ["signals", "on-deck"],
+    queryKey: ["signals", focusArea, "on-deck"],
     queryFn: async () => {
-      const { data, error } = await supabase
+      let q = supabase
         .from("signals")
         .select("*")
         .is("date_assigned", null)
         .eq("status", "Pending" as any)
         .eq("is_archived", false as any)
-        .eq("is_trashed", false as any)
+        .eq("is_trashed", false as any);
+      q = applySourceFilter(q);
+      const { data, error } = await q
         .order("deck_sort_order" as any, { ascending: true, nullsFirst: false })
         .order("created_at", { ascending: true });
       if (error) throw error;
