@@ -9,6 +9,7 @@ import nlaLogo from "@/assets/nla-logo-white.png";
 import usaBoxingLogo from "@/assets/usa-boxing-logo.png";
 import fcusaLogo from "@/assets/FightingChanceUSA.png";
 import quikhitLogo from "@/assets/quikhit-logo.png";
+import nlaMascot from "@/assets/nla-mascot.png";
 import DailyVerse from "@/components/admin/DailyVerse";
 import { useNavigate, useParams } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -889,6 +890,12 @@ const AdminSignals = () => {
           onDragEnd={handleDragEnd}
           onDragCancel={() => { setDraggingId(null); setDraggingBucket(null); }}
         >
+          {/* NLA mascot — only for nla focus area */}
+          {focusArea === "nla" && (
+            <div className="flex justify-center my-8">
+              <img src={nlaMascot} alt="NLA Mascot" className="w-[200px] h-auto" />
+            </div>
+          )}
           {/* USA Boxing logo — only for usa-boxing focus area */}
           {focusArea === "usa-boxing" && (
             <div className="flex justify-center my-8">
