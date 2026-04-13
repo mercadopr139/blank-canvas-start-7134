@@ -203,6 +203,41 @@ const App = () => (
               }
             />
 
+            {/* PC Task Manager — Focus Area selection */}
+            <Route
+              path="/admin/pc-task-manager"
+              element={
+                <ProtectedRoute requireAdmin>
+                  <AdminPCTaskManager />
+                </ProtectedRoute>
+              }
+            />
+
+            {/* PC Signals — per focus area */}
+            <Route
+              path="/admin/pc-signals/:focusArea"
+              element={
+                <ProtectedRoute requireAdmin>
+                  <AdminSignals managerType="PC" />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin/pc-signals/:focusArea/archive"
+              element={
+                <ProtectedRoute requireAdmin>
+                  <AdminSignalsArchive managerType="PC" />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin/pc-signals/:focusArea/trash"
+              element={
+                <ProtectedRoute requireAdmin>
+                  <AdminSignalsTrash managerType="PC" />
+                </ProtectedRoute>
+              }
+
             {/* Signals — per focus area */}
             <Route
               path="/admin/signals/:focusArea"
