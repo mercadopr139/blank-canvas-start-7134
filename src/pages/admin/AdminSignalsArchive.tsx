@@ -149,28 +149,30 @@ const AdminSignalsArchive = () => {
   });
 
   const { data: allArchived = [], isLoading } = useQuery({
-    queryKey: ["signals", "archived"],
+    queryKey: ["signals", focusArea, "archived"],
     queryFn: async () => {
-      const { data, error } = await supabase
+      let q = supabase
         .from("signals")
         .select("*")
         .eq("is_archived", true as any)
-        .eq("is_trashed", false as any)
-        .order("archived_at", { ascending: false });
+        .eq("is_trashed", false as any);
+      q = applySourceFilter(q);
+      const { data, error } = await q.order("archived_at", { ascending: false });
       if (error) throw error;
       return data as unknown as Signal[];
     },
   });
 
   const { data: allReopened = [] } = useQuery({
-    queryKey: ["signals", "reopened"],
+    queryKey: ["signals", focusArea, "reopened"],
     queryFn: async () => {
-      const { data, error } = await supabase
+      let q = supabase
         .from("signals")
         .select("*")
         .gt("reopen_count", 0 as any)
-        .eq("is_trashed", false as any)
-        .order("reopened_at", { ascending: false });
+        .eq("is_trashed", false as any);
+      q = applySourceFilter(q);
+      const { data, error } = await q.order("reopened_at", { ascending: false });
       if (error) throw error;
       return data as unknown as Signal[];
     },
