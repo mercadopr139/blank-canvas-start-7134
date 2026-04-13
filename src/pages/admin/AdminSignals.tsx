@@ -918,34 +918,36 @@ const AdminSignals = () => {
           onDragEnd={handleDragEnd}
           onDragCancel={() => { setDraggingId(null); setDraggingBucket(null); }}
         >
-          {/* NLA mascot — only for nla focus area */}
-          {focusArea === "nla" && (
+          {/* Focus area branding image — hardcoded defaults + dynamic from DB */}
+          {focusArea === "nla" && !dynamicImageUrl && (
             <div className="flex justify-center my-8">
               <img src={nlaMascot} alt="NLA Mascot" className="w-[200px] h-auto" />
             </div>
           )}
-          {/* USA Boxing logo — only for usa-boxing focus area */}
-          {focusArea === "usa-boxing" && (
+          {focusArea === "usa-boxing" && !dynamicImageUrl && (
             <div className="flex justify-center my-8">
               <img src={usaBoxingLogo} alt="USA Boxing" className="w-[200px] h-auto" />
             </div>
           )}
-          {/* FCUSA logo — only for fcusa focus area */}
-          {focusArea === "fcusa" && (
+          {focusArea === "fcusa" && !dynamicImageUrl && (
             <div className="flex justify-center my-8">
               <img src={fcusaLogo} alt="Fighting Chance USA" className="w-[400px] h-auto" />
             </div>
           )}
-          {/* QUIKHIT logo — only for quikhit focus area */}
-          {focusArea === "quikhit" && (
+          {focusArea === "quikhit" && !dynamicImageUrl && (
             <div className="flex justify-center my-8">
               <img src={quikhitLogo} alt="QUIKHIT" className="w-[400px] h-auto" />
             </div>
           )}
-          {/* Personal family photo — only for personal focus area */}
-          {focusArea === "personal" && (
+          {focusArea === "personal" && !dynamicImageUrl && (
             <div className="flex justify-center my-8">
               <img src={personalFamily} alt="Family" className="w-[400px] h-auto rounded-xl" />
+            </div>
+          )}
+          {/* Dynamic image from DB (for new/edited focus areas with uploaded images) */}
+          {dynamicImageUrl && (
+            <div className="flex justify-center my-8">
+              <img src={dynamicImageUrl} alt={areaLabel} className="w-[400px] h-auto rounded-xl" />
             </div>
           )}
 
