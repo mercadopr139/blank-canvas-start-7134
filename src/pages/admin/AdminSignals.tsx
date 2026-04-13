@@ -10,6 +10,7 @@ import usaBoxingLogo from "@/assets/usa-boxing-logo.png";
 import fcusaLogo from "@/assets/FightingChanceUSA.png";
 import quikhitLogo from "@/assets/quikhit-logo.png";
 import nlaMascot from "@/assets/nla-mascot.png";
+import personalFamily from "@/assets/personal-family.png";
 import DailyVerse from "@/components/admin/DailyVerse";
 import { useNavigate, useParams } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -912,6 +913,12 @@ const AdminSignals = () => {
           {focusArea === "quikhit" && (
             <div className="flex justify-center my-8">
               <img src={quikhitLogo} alt="QUIKHIT" className="w-[400px] h-auto" />
+            </div>
+          )}
+          {/* Personal family photo — only for personal focus area */}
+          {focusArea === "personal" && (
+            <div className="flex justify-center my-8">
+              <img src={personalFamily} alt="Family" className="w-[200px] h-auto rounded-xl" />
             </div>
           )}
 
