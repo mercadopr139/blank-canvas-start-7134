@@ -905,7 +905,7 @@ const AdminSignals = () => {
           </div>
         )}
 
-        {/* ─── Unified DnD Context for Core 3 / Bonus / On Deck ─── */}
+        {/* ─── Unified DnD Context for Core 3 / On-Deck / On Deck ─── */}
         <DndContext
           sensors={sensors}
           collisionDetection={rectIntersection}
@@ -1241,7 +1241,7 @@ const AdminSignals = () => {
         <DialogContent className="bg-zinc-900 border-white/10 text-white" onPointerDownOutside={(e) => e.preventDefault()}>
           <DialogHeader>
             <p className="text-[10px] uppercase tracking-[0.15em] text-white/30 mb-1">
-              Editing {editForm.bucket === "core" ? "Core" : editForm.bucket === "bonus" ? "Bonus" : "On Deck"} Signal
+              Editing {editForm.bucket === "core" ? "Core" : editForm.bucket === "bonus" ? "On-Deck" : "On Deck"} Signal
             </p>
             <DialogTitle>Edit Signal</DialogTitle>
           </DialogHeader>
