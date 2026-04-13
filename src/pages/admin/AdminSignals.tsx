@@ -251,6 +251,11 @@ const AdminSignals = ({ managerType = "PD" }: { managerType?: string }) => {
 
   // Helper: apply source filter to a supabase query builder
   const applySourceFilter = (query: any) => {
+    if (isPC) {
+      // PC namespace: source = "PC:NLA" or "PC:{areaLabel}"
+      const pcSource = `PC:${isNla ? "NLA" : areaLabel}`;
+      return query.eq("source", pcSource);
+    }
     if (isNla) return query.or("source.is.null,source.eq.NLA");
     return query.eq("source", areaLabel);
   };
@@ -396,7 +401,7 @@ const AdminSignals = ({ managerType = "PD" }: { managerType?: string }) => {
         status: "Pending",
         is_archived: false,
         date_assigned: dateAssigned,
-        source: isNla ? null : areaLabel,
+        source: isPC ? `PC:${isNla ? "NLA" : areaLabel}` : (isNla ? null : areaLabel),
       } as any);
       if (error) throw error;
     },
