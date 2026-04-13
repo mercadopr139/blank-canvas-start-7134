@@ -161,7 +161,7 @@ const SortableSignalRow = ({
         {isComplete ? (
           <CheckCircle2 className="w-4 h-4 text-green-400" />
         ) : (
-          <Circle className={`w-4 h-4 ${bucket === "core" ? "text-rose-500/50 hover:text-rose-400" : "text-white/25 hover:text-white/50"} transition-colors`} />
+          <Circle className={`w-4 h-4 ${bucket === "core" ? "opacity-50 hover:opacity-80" : "text-white/25 hover:text-white/50"} transition-colors`} style={bucket === "core" ? { color: ac.hex } : undefined} />
         )}
       </button>
 
@@ -702,19 +702,23 @@ const AdminSignals = () => {
     <div className="min-h-screen bg-black text-white overflow-x-hidden max-w-full">
       {/* Header */}
       <header className="relative overflow-hidden border-b border-white/[0.06]">
-        <div className="absolute inset-0 bg-gradient-to-r from-rose-950/20 via-black to-amber-950/10" />
+        <div className="absolute inset-0" style={{ background: `linear-gradient(to right, ${ac.bgFrom}, black, rgba(245,158,11,0.04))` }} />
         <div className="relative mx-auto px-3 sm:px-4 py-5 flex items-center justify-between max-w-4xl w-full">
           <div className="flex items-center gap-4">
             <Button variant="ghost" size="icon" onClick={() => navigate("/admin/pd-task-manager")} aria-label="Back" className="text-white/40 hover:text-white hover:bg-white/5">
               <ArrowLeft className="w-5 h-5" />
             </Button>
-            <img
-              src={nlaLogo}
-              alt="NLA"
-              className="h-10 w-auto opacity-[0.92] hover:opacity-100 hover:drop-shadow-[0_0_6px_rgba(255,255,255,0.15)] transition-all duration-300 hidden sm:block"
-            />
+            {isNla && (
+              <img
+                src={nlaLogo}
+                alt="NLA"
+                className="h-10 w-auto opacity-[0.92] hover:opacity-100 hover:drop-shadow-[0_0_6px_rgba(255,255,255,0.15)] transition-all duration-300 hidden sm:block"
+              />
+            )}
             <div>
-              <p className="text-xs uppercase tracking-[0.2em] text-white/30 mb-0.5">{todayDisplay} · {areaLabel}</p>
+              <p className="text-xs uppercase tracking-[0.2em] text-white/30 mb-0.5">
+                {todayDisplay} · <span style={{ color: ac.hex }}>{areaLabel}</span>
+              </p>
               <h1 className="text-lg font-semibold text-white">{getGreeting()}, Josh</h1>
             </div>
           </div>
@@ -768,7 +772,7 @@ const AdminSignals = () => {
               <circle
                 cx="48" cy="48" r={ringR}
                 fill="none"
-                stroke={dayWon ? "#fbbf24" : progressPct > 0 ? "#4ade80" : "rgba(255,255,255,0.1)"}
+                stroke={dayWon ? "#fbbf24" : progressPct > 0 ? ac.ring : "rgba(255,255,255,0.1)"}
                 strokeWidth="5"
                 strokeLinecap="round"
                 strokeDasharray={ringC}
@@ -854,7 +858,7 @@ const AdminSignals = () => {
                         </button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end" className="bg-zinc-900 border-white/10 text-white">
-                        <DropdownMenuItem onClick={() => scheduleMutation.mutate({ id: signal.id, priority: "Core" })} className="text-rose-400 focus:text-rose-400 focus:bg-white/5">
+                        <DropdownMenuItem onClick={() => scheduleMutation.mutate({ id: signal.id, priority: "Core" })} className="focus:bg-white/5" style={{ color: ac.hexMuted }}>
                           Move to Core 3
                         </DropdownMenuItem>
                         <DropdownMenuItem onClick={() => scheduleMutation.mutate({ id: signal.id, priority: "Bonus" })} className="text-white/60 focus:text-white focus:bg-white/5">
@@ -886,10 +890,10 @@ const AdminSignals = () => {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               {/* Core 3 */}
               <DroppableColumn id="core">
-                <div className="rounded-xl border-2 border-rose-500/30 bg-gradient-to-b from-rose-950/30 to-black/0 overflow-hidden">
+                <div className="rounded-xl border-2 overflow-hidden" style={{ borderColor: `${ac.hex}4D`, background: `linear-gradient(to bottom, ${ac.bgFrom}, transparent)` }}>
                   <div className="px-4 pt-4 pb-2 flex items-center gap-2">
-                    <Target className="w-4 h-4 text-rose-500" />
-                    <h3 className="text-sm font-bold text-rose-500 uppercase tracking-wider">Core 3</h3>
+                    <Target className="w-4 h-4" style={{ color: ac.hex }} />
+                    <h3 className="text-sm font-bold uppercase tracking-wider" style={{ color: ac.hex }}>Core 3</h3>
                   </div>
                   <SortableContext items={[...todayCoreSignals].sort((a, b) => (b.status === "Complete" ? 1 : 0) - (a.status === "Complete" ? 1 : 0)).map(s => s.id)} strategy={verticalListSortingStrategy}>
                     <div className="px-3 pb-3 space-y-1 min-h-[80px]">
@@ -1025,7 +1029,8 @@ const AdminSignals = () => {
                               <Button
                                 size="sm"
                                 variant="ghost"
-                                className="h-6 text-[10px] text-rose-400/60 hover:text-rose-400 hover:bg-rose-500/10 px-2 shrink-0"
+                                className="h-6 text-[10px] px-2 shrink-0 hover:bg-opacity-10"
+                                style={{ color: `${ac.hexMuted}99`, ...(undefined) }}
                                 onClick={(e) => { e.stopPropagation(); scheduleMutation.mutate({ id: signal.id, priority: "Core" }); }}
                                 disabled={scheduleMutation.isPending}
                               >
