@@ -356,6 +356,7 @@ const AdminSignals = () => {
         status: "Pending",
         is_archived: false,
         date_assigned: dateAssigned,
+        source: isNla ? null : areaLabel,
       } as any);
       if (error) throw error;
     },
