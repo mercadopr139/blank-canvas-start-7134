@@ -685,6 +685,7 @@ export type Database = {
           image_url: string | null
           is_default: boolean
           key: string
+          manager_type: string
           sort_order: number
           subtitle: string | null
           title: string
@@ -698,6 +699,7 @@ export type Database = {
           image_url?: string | null
           is_default?: boolean
           key: string
+          manager_type?: string
           sort_order?: number
           subtitle?: string | null
           title: string
@@ -711,6 +713,7 @@ export type Database = {
           image_url?: string | null
           is_default?: boolean
           key?: string
+          manager_type?: string
           sort_order?: number
           subtitle?: string | null
           title?: string
