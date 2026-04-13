@@ -4,11 +4,14 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, LogOut, Plus, Pencil, GripVertical } from "lucide-react";
+import { ArrowLeft, LogOut, Plus, Pencil, GripVertical, Lock } from "lucide-react";
 import { icons } from "lucide-react";
 import { toast } from "sonner";
 import nlaLogo from "@/assets/nla-logo-white.png";
 import FocusAreaModal from "@/components/admin/FocusAreaModal";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+
+const CHRISSY_EMAIL = "chrissycasiello@nolimitsboxingacademy.org";
 import {
   DndContext,
   closestCenter,
@@ -150,21 +153,23 @@ const SortableCard = ({
 /* ── Main Page ── */
 const AdminPDTaskManager = () => {
   const navigate = useNavigate();
-  const { signOut } = useAuth();
+  const { user, signOut } = useAuth();
   const queryClient = useQueryClient();
   const [modalOpen, setModalOpen] = useState(false);
   const [editingArea, setEditingArea] = useState<FocusArea | null>(null);
+  const isChrissy = user?.email?.toLowerCase() === CHRISSY_EMAIL;
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } })
   );
 
   const { data: focusAreas = [], isLoading } = useQuery({
-    queryKey: ["focus-areas"],
+    queryKey: ["focus-areas", "PD"],
     queryFn: async () => {
-      const { data, error } = await supabase
+      const { data, error } = await (supabase
         .from("focus_areas")
-        .select("*")
+        .select("*") as any)
+        .eq("manager_type", "PD")
         .order("sort_order", { ascending: true });
       if (error) throw error;
       return data as FocusArea[];
