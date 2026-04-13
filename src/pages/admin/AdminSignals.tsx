@@ -206,6 +206,14 @@ const AdminSignals = () => {
 
   const today = format(new Date(), "yyyy-MM-dd");
   const todayDisplay = format(new Date(), "EEEE, MMMM d");
+  const areaLabel = FOCUS_AREA_LABELS[focusArea] || focusArea;
+  const isNla = focusArea === "nla";
+
+  // Helper: apply source filter to a supabase query builder
+  const applySourceFilter = (query: any) => {
+    if (isNla) return query.or("source.is.null,source.eq.NLA");
+    return query.eq("source", areaLabel);
+  };
 
   const { data: todayCoreSignals = [] } = useQuery({
     queryKey: ["signals", "today-core"],
