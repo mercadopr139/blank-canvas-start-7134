@@ -744,7 +744,7 @@ const AdminSignals = () => {
           {/* Logo + Daily Verse */}
           <div className="flex flex-col items-center justify-center text-center py-4 gap-4">
             <a href="/admin/dashboard" className="cursor-pointer opacity-70 hover:opacity-90 transition-opacity">
-              <img src={nlaLogo} alt="No Limits Academy" className="h-14 w-auto" />
+              <img src={focusArea === "usa-boxing" ? usaBoxingLogo : nlaLogo} alt={focusArea === "usa-boxing" ? "USA Boxing" : "No Limits Academy"} className="h-14 w-auto" />
             </a>
             <DailyVerse />
           </div>
