@@ -10,6 +10,7 @@ export const PERMISSION_KEYS = [
   "sales_marketing",
   "finance",
   "pd_signals",
+  "pc_signals",
   "settings",
 ] as const;
 
@@ -21,6 +22,7 @@ export const PERMISSION_LABELS: Record<PermissionKey, string> = {
   sales_marketing: "Sales & Marketing",
   finance: "Finance",
   pd_signals: "PD Signals",
+  pc_signals: "PC Signals",
   settings: "Settings",
 };
 
