@@ -4,10 +4,11 @@ import { format, subDays, startOfWeek, startOfMonth } from "date-fns";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { CalendarIcon, Download, Loader2, UtensilsCrossed, TrendingUp, AlertTriangle, ChevronDown, ChevronRight, Sparkles } from "lucide-react";
+import { CalendarIcon, Download, Loader2, UtensilsCrossed, TrendingUp, AlertTriangle, ChevronDown, ChevronRight, Sparkles, Trash2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { toast } from "sonner";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 
 interface ReportRow {
   event_id: string;
@@ -44,33 +45,36 @@ const AdminMealReports = () => {
   const [expandedRow, setExpandedRow] = useState<string | null>(null);
   const [expandedItems, setExpandedItems] = useState<MealItemRow[]>([]);
   const [loadingItems, setLoadingItems] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<ReportRow | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
-    (async () => {
-      const { data: all } = await supabase.from("meal_events").select("meal_count");
-      if (all) {
-        const total = all.reduce((s, r) => s + (r.meal_count || 0), 0);
-        setAllTimeCount(total);
-        setAvgPerNight(all.length > 0 ? Math.round(total / all.length) : 0);
-      }
-      const today = new Date();
-      const monthStart = format(startOfMonth(today), "yyyy-MM-dd");
-      const weekStart = format(startOfWeek(today), "yyyy-MM-dd");
-      const todayStr = format(today, "yyyy-MM-dd");
-
-      const { data: mData } = await supabase.from("meal_events").select("meal_count").gte("event_date", monthStart).lte("event_date", todayStr);
-      setMonthCount(mData ? mData.reduce((s, r) => s + (r.meal_count || 0), 0) : 0);
-
-      const { data: wData } = await supabase.from("meal_events").select("meal_count").gte("event_date", weekStart).lte("event_date", todayStr);
-      setWeekCount(wData ? wData.reduce((s, r) => s + (r.meal_count || 0), 0) : 0);
-    })();
+    loadSummary();
   }, []);
+
+  const loadSummary = async () => {
+    const { data: all } = await supabase.from("meal_events").select("meal_count");
+    if (all) {
+      const total = all.reduce((s, r) => s + (r.meal_count || 0), 0);
+      setAllTimeCount(total);
+      setAvgPerNight(all.length > 0 ? Math.round(total / all.length) : 0);
+    }
+    const today = new Date();
+    const monthStart = format(startOfMonth(today), "yyyy-MM-dd");
+    const weekStart = format(startOfWeek(today), "yyyy-MM-dd");
+    const todayStr = format(today, "yyyy-MM-dd");
+
+    const { data: mData } = await supabase.from("meal_events").select("meal_count").gte("event_date", monthStart).lte("event_date", todayStr);
+    setMonthCount(mData ? mData.reduce((s, r) => s + (r.meal_count || 0), 0) : 0);
+
+    const { data: wData } = await supabase.from("meal_events").select("meal_count").gte("event_date", weekStart).lte("event_date", todayStr);
+    setWeekCount(wData ? wData.reduce((s, r) => s + (r.meal_count || 0), 0) : 0);
+  };
 
   const runReport = async () => {
     setLoading(true);
     setEstimating(false);
 
-    // First get report data
     const { data, error } = await supabase.rpc("get_meal_report", {
       _start_date: format(startDate, "yyyy-MM-dd"),
       _end_date: format(endDate, "yyyy-MM-dd"),
@@ -82,7 +86,6 @@ const AdminMealReports = () => {
 
     const reportRows = data as ReportRow[];
 
-    // Check if any events have items missing nutrition data
     const eventIds = reportRows.filter(r => r.item_count > 0).map(r => r.event_id);
     const needsEstimation = reportRows.some(r => r.item_count > 0 && r.total_calories === 0);
 
@@ -97,7 +100,6 @@ const AdminMealReports = () => {
           console.error("Nutrition estimation error:", fnError);
           toast.error("Could not estimate nutritional values");
         } else if (result?.estimated > 0) {
-          // Re-fetch report data with updated nutrition
           const { data: refreshed } = await supabase.rpc("get_meal_report", {
             _start_date: format(startDate, "yyyy-MM-dd"),
             _end_date: format(endDate, "yyyy-MM-dd"),
@@ -129,6 +131,25 @@ const AdminMealReports = () => {
     const { data } = await supabase.from("meal_items").select("food_name, calories, protein_g, carbs_g, fat_g, serving_description").eq("meal_event_id", eventId).order("sort_order");
     setExpandedItems((data as MealItemRow[]) || []);
     setLoadingItems(false);
+  };
+
+  const handleDeleteEvent = async () => {
+    if (!deleteTarget) return;
+    setDeleting(true);
+    // Delete meal_checkins, meal_items, then meal_event (cascade should handle but be explicit)
+    await supabase.from("meal_checkins").delete().eq("meal_event_id", deleteTarget.event_id);
+    await supabase.from("meal_items").delete().eq("meal_event_id", deleteTarget.event_id);
+    const { error } = await supabase.from("meal_events").delete().eq("id", deleteTarget.event_id);
+    if (error) {
+      toast.error("Failed to delete meal event");
+    } else {
+      toast.success(`Deleted meal event for ${format(new Date(deleteTarget.event_date + "T12:00:00"), "MMM d, yyyy")}`);
+      setReportData((prev) => prev.filter((r) => r.event_id !== deleteTarget.event_id));
+      if (expandedRow === deleteTarget.event_id) setExpandedRow(null);
+      loadSummary();
+    }
+    setDeleteTarget(null);
+    setDeleting(false);
   };
 
   const exportCSV = () => {
@@ -215,26 +236,36 @@ const AdminMealReports = () => {
                 <TableHead className="text-right">Calories</TableHead>
                 <TableHead className="text-right">Protein</TableHead>
                 <TableHead className="text-right">Carbs</TableHead>
+                <TableHead className="w-10"></TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {reportData.map((row) => (
                 <>
-                  <TableRow key={row.event_id} className="cursor-pointer hover:bg-zinc-800/50" onClick={() => toggleExpand(row.event_id)}>
-                    <TableCell>
+                  <TableRow key={row.event_id} className="cursor-pointer hover:bg-zinc-800/50">
+                    <TableCell onClick={() => toggleExpand(row.event_id)}>
                       {expandedRow === row.event_id ? <ChevronDown className="w-4 h-4 text-zinc-500" /> : <ChevronRight className="w-4 h-4 text-zinc-500" />}
                     </TableCell>
-                    <TableCell className="text-white">{format(new Date(row.event_date + "T12:00:00"), "MMM d, yyyy")}</TableCell>
-                    <TableCell className="text-zinc-300">{row.donor_name || "—"}</TableCell>
-                    <TableCell className="text-right text-green-400 font-bold">{row.meal_count}</TableCell>
-                    <TableCell className="text-right text-zinc-400">{row.item_count}</TableCell>
-                    <TableCell className="text-right text-amber-400">{Math.round(row.total_calories)}</TableCell>
-                    <TableCell className="text-right text-blue-400">{Math.round(row.total_protein)}g</TableCell>
-                    <TableCell className="text-right text-green-400">{Math.round(row.total_carbs)}g</TableCell>
+                    <TableCell className="text-white" onClick={() => toggleExpand(row.event_id)}>{format(new Date(row.event_date + "T12:00:00"), "MMM d, yyyy")}</TableCell>
+                    <TableCell className="text-zinc-300" onClick={() => toggleExpand(row.event_id)}>{row.donor_name || "—"}</TableCell>
+                    <TableCell className="text-right text-green-400 font-bold" onClick={() => toggleExpand(row.event_id)}>{row.meal_count}</TableCell>
+                    <TableCell className="text-right text-zinc-400" onClick={() => toggleExpand(row.event_id)}>{row.item_count}</TableCell>
+                    <TableCell className="text-right text-amber-400" onClick={() => toggleExpand(row.event_id)}>{Math.round(row.total_calories)}</TableCell>
+                    <TableCell className="text-right text-blue-400" onClick={() => toggleExpand(row.event_id)}>{Math.round(row.total_protein)}g</TableCell>
+                    <TableCell className="text-right text-green-400" onClick={() => toggleExpand(row.event_id)}>{Math.round(row.total_carbs)}g</TableCell>
+                    <TableCell className="text-right">
+                      <button
+                        onClick={(e) => { e.stopPropagation(); setDeleteTarget(row); }}
+                        className="p-1.5 rounded-md text-zinc-600 hover:text-red-400 hover:bg-zinc-800 transition"
+                        title="Delete meal event"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </TableCell>
                   </TableRow>
                   {expandedRow === row.event_id && (
                     <TableRow key={`${row.event_id}-detail`}>
-                      <TableCell colSpan={8} className="bg-zinc-950 p-4">
+                      <TableCell colSpan={9} className="bg-zinc-950 p-4">
                         {loadingItems ? (
                           <Loader2 className="w-4 h-4 animate-spin text-zinc-500" />
                         ) : expandedItems.length === 0 ? (
@@ -259,7 +290,7 @@ const AdminMealReports = () => {
                 </>
               ))}
               {reportData.length === 0 && !loading && (
-                <TableRow><TableCell colSpan={8} className="text-center text-zinc-500 py-8">No meal events in this range.</TableCell></TableRow>
+                <TableRow><TableCell colSpan={9} className="text-center text-zinc-500 py-8">No meal events in this range.</TableCell></TableRow>
               )}
             </TableBody>
           </Table>
@@ -313,6 +344,32 @@ const AdminMealReports = () => {
           </div>
         </div>
       )}
+
+      {/* Delete confirmation dialog */}
+      <AlertDialog open={!!deleteTarget} onOpenChange={(open) => { if (!open) setDeleteTarget(null); }}>
+        <AlertDialogContent className="bg-zinc-900 border-zinc-700 text-white">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Meal Event</AlertDialogTitle>
+            <AlertDialogDescription className="text-zinc-400">
+              Are you sure you want to delete the meal event for{" "}
+              <span className="text-white font-medium">
+                {deleteTarget ? format(new Date(deleteTarget.event_date + "T12:00:00"), "MMM d, yyyy") : ""}
+              </span>
+              ? This will permanently remove the event, all food items, and all check-in records. This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel className="bg-zinc-800 border-zinc-700 text-white hover:bg-zinc-700">Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeleteEvent}
+              disabled={deleting}
+              className="bg-red-600 hover:bg-red-500 text-white"
+            >
+              {deleting ? "Deleting..." : "Delete"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
