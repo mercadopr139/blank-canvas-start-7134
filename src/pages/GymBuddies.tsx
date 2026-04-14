@@ -45,6 +45,7 @@ import nlaPoliceChiefsAssociation from "@/assets/gym-buddies/nla-police-chiefs-a
 import cmcFinest from "@/assets/gym-buddies/cmc-finest.png";
 import chiefDekonCapeMay from "@/assets/gym-buddies/chief-dekon-cape-may.jpg";
 import chiefDekonWeldonPowell from "@/assets/gym-buddies/chief-dekon-weldon-powell.jpg";
+import mtpdYouthCampCommittee from "@/assets/gym-buddies/mtpd-youth-camp-committee.jpg";
 const GymBuddies = () => {
   const location = useLocation();
   const fromPrograms = location.state?.fromPrograms === true;
