@@ -19,10 +19,10 @@ interface Route {
 
 type TripType = "regular" | "overflow" | "both_zones";
 
-const TRIP_OPTIONS: { value: TripType; label: string; price: string; icon: typeof Bus }[] = [
-  { value: "regular", label: "Regular Trip", price: "$50 per trip", icon: MapPin },
-  { value: "overflow", label: "Overflow", price: "$25 per trip", icon: Layers },
-  { value: "both_zones", label: "Both Zones", price: "$25 per trip", icon: Bus },
+const TRIP_OPTIONS: { value: TripType; label: string; icon: typeof Bus }[] = [
+  { value: "regular", label: "Regular Trip", icon: MapPin },
+  { value: "overflow", label: "Overflow", icon: Layers },
+  { value: "both_zones", label: "Both Zones", icon: Bus },
 ];
 
 export default function TransportTripDetails() {
@@ -218,16 +218,7 @@ export default function TransportTripDetails() {
                 <Icon
                   className={`w-7 h-7 ${isSelected ? zoneColor.text : "text-white/40"}`}
                 />
-                <div className="flex flex-col items-start">
-                  <span className="text-base font-bold">{opt.label}</span>
-                  <span
-                    className={`text-xs font-medium ${
-                      isSelected ? "text-white/70" : "text-white/40"
-                    }`}
-                  >
-                    {opt.price}
-                  </span>
-                </div>
+                <span className="text-base font-bold">{opt.label}</span>
               </button>
             );
           })}
