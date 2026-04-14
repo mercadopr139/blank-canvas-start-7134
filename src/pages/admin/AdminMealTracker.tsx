@@ -8,7 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { CalendarIcon, Search, Loader2, Trash2, GripVertical, UtensilsCrossed, Save } from "lucide-react";
+import { CalendarIcon, Loader2, Trash2, GripVertical, UtensilsCrossed, Save, Plus } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
   DndContext,
@@ -52,21 +52,6 @@ interface MealEvent {
   meal_count: number;
 }
 
-interface USDAFood {
-  fdcId: number;
-  description: string;
-  foodNutrients: { nutrientId: number; value: number }[];
-  servingSize?: number;
-  servingSizeUnit?: string;
-}
-
-const NUTRIENT_IDS = { calories: 1008, protein: 1003, carbs: 1005, fat: 1004, fiber: 1079, sodium: 1093, sugar: 2000 };
-
-function getNutrient(food: USDAFood, id: number): number | null {
-  const n = food.foodNutrients.find((fn) => fn.nutrientId === id);
-  return n ? Math.round(n.value * 10) / 10 : null;
-}
-
 function SortableItem({ item, onRemove }: { item: MealItem; onRemove: (id: string) => void }) {
   const { attributes, listeners, setNodeRef, transform, transition } = useSortable({ id: item.id });
   const style = { transform: CSS.Transform.toString(transform), transition };
@@ -82,13 +67,6 @@ function SortableItem({ item, onRemove }: { item: MealItem; onRemove: (id: strin
       </button>
       <div className="flex-1 min-w-0">
         <p className="text-white font-medium truncate">{item.food_name}</p>
-        {item.serving_description && <p className="text-zinc-500 text-xs">{item.serving_description}</p>}
-      </div>
-      <div className="flex gap-1.5 flex-wrap">
-        {item.calories != null && <span className="text-xs px-2 py-0.5 rounded-full bg-amber-900/50 text-amber-300">{item.calories} cal</span>}
-        {item.protein_g != null && <span className="text-xs px-2 py-0.5 rounded-full bg-blue-900/50 text-blue-300">{item.protein_g}g pro</span>}
-        {item.carbs_g != null && <span className="text-xs px-2 py-0.5 rounded-full bg-green-900/50 text-green-300">{item.carbs_g}g carb</span>}
-        {item.fat_g != null && <span className="text-xs px-2 py-0.5 rounded-full bg-orange-900/50 text-orange-300">{item.fat_g}g fat</span>}
       </div>
       <button onClick={() => onRemove(item.id)} className="text-red-500 hover:text-red-400 ml-1">
         <Trash2 className="w-4 h-4" />
@@ -103,14 +81,9 @@ const AdminMealTracker = () => {
   const [donorName, setDonorName] = useState("");
   const [notes, setNotes] = useState("");
   const [items, setItems] = useState<MealItem[]>([]);
-  const [searchTerm, setSearchTerm] = useState("");
-  const [searchResults, setSearchResults] = useState<USDAFood[]>([]);
-  const [searching, setSearching] = useState(false);
-  const [searchError, setSearchError] = useState<string | null>(null);
+  const [newFoodName, setNewFoodName] = useState("");
   const [saving, setSaving] = useState(false);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
-  const [showDropdown, setShowDropdown] = useState(false);
-  const debounceRef = useRef<ReturnType<typeof setTimeout>>();
   const undoRef = useRef<{ id: string; item: MealItem; timeout: ReturnType<typeof setTimeout> } | null>(null);
 
   const dateStr = format(selectedDate, "yyyy-MM-dd");
@@ -151,38 +124,6 @@ const AdminMealTracker = () => {
     return () => window.removeEventListener("beforeunload", handler);
   }, [hasUnsavedChanges]);
 
-  // USDA search
-  useEffect(() => {
-    if (debounceRef.current) clearTimeout(debounceRef.current);
-    if (searchTerm.trim().length < 2) { setSearchResults([]); setShowDropdown(false); setSearchError(null); return; }
-    debounceRef.current = setTimeout(async () => {
-      setSearching(true);
-      setShowDropdown(true);
-      setSearchError(null);
-      try {
-        const apiKey = import.meta.env.VITE_USDA_API_KEY || "ajjTsebzSSXXCDhIa0Mih36pEZ24fZqkUNGwEWNJ";
-        const url = `https://api.nal.usda.gov/fdc/v1/foods/search?query=${encodeURIComponent(searchTerm)}&api_key=${apiKey}&dataType=Foundation,SR%20Legacy,Survey%20(FNDDS)&pageSize=8`;
-        const res = await fetch(url);
-        const data = await res.json();
-        console.log("USDA API response:", data);
-        if (!res.ok) {
-          setSearchError("Could not load food data. Check your API key.");
-          setSearchResults([]);
-        } else {
-          setSearchResults(data.foods || []);
-          if (!data.foods || data.foods.length === 0) {
-            setSearchError(null);
-          }
-        }
-      } catch (err) {
-        console.error("USDA fetch error:", err);
-        setSearchError("Could not load food data. Check your API key.");
-        setSearchResults([]);
-      }
-      setSearching(false);
-    }, 300);
-  }, [searchTerm]);
-
   const createEvent = async () => {
     setSaving(true);
     const { data, error } = await supabase.from("meal_events").insert({ event_date: dateStr, donor_name: donorName || null, notes: notes || null }).select().single();
@@ -197,7 +138,6 @@ const AdminMealTracker = () => {
     if (!event) return;
     setSaving(true);
     await supabase.from("meal_events").update({ donor_name: donorName || null, notes: notes || null }).eq("id", event.id);
-    // Save item sort orders
     for (let i = 0; i < items.length; i++) {
       await supabase.from("meal_items").update({ sort_order: i }).eq("id", items[i].id);
     }
@@ -206,34 +146,30 @@ const AdminMealTracker = () => {
     setHasUnsavedChanges(false);
   };
 
-  const addFoodItem = async (food: USDAFood) => {
-    if (!event) return;
-    const newItem: Omit<MealItem, "id"> = {
+  const addFoodItem = async () => {
+    if (!event || !newFoodName.trim()) return;
+    const newItem = {
       meal_event_id: event.id,
-      food_name: food.description,
-      usda_fdc_id: String(food.fdcId),
-      calories: getNutrient(food, NUTRIENT_IDS.calories),
-      protein_g: getNutrient(food, NUTRIENT_IDS.protein),
-      carbs_g: getNutrient(food, NUTRIENT_IDS.carbs),
-      fat_g: getNutrient(food, NUTRIENT_IDS.fat),
-      fiber_g: getNutrient(food, NUTRIENT_IDS.fiber),
-      sodium_mg: getNutrient(food, NUTRIENT_IDS.sodium),
-      sugar_g: getNutrient(food, NUTRIENT_IDS.sugar),
-      serving_description: food.servingSize ? `${food.servingSize} ${food.servingSizeUnit || "g"}` : "1 serving",
+      food_name: newFoodName.trim(),
       sort_order: items.length,
     };
-    const { data, error } = await supabase.from("meal_items").insert([newItem as any]).select().single();
+    const { data, error } = await supabase.from("meal_items").insert([newItem]).select().single();
     if (error) { toast.error("Failed to add item"); return; }
     setItems((prev) => [...prev, data as MealItem]);
-    setSearchTerm("");
-    setShowDropdown(false);
+    setNewFoodName("");
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      addFoodItem();
+    }
   };
 
   const removeItem = (id: string) => {
     const item = items.find((i) => i.id === id);
     if (!item) return;
     setItems((prev) => prev.filter((i) => i.id !== id));
-    // Undo window
     if (undoRef.current) { clearTimeout(undoRef.current.timeout); supabase.from("meal_items").delete().eq("id", undoRef.current.id).then(() => {}); }
     const timeout = setTimeout(async () => {
       await supabase.from("meal_items").delete().eq("id", id);
@@ -266,16 +202,6 @@ const AdminMealTracker = () => {
     setHasUnsavedChanges(true);
   };
 
-  const totals = items.reduce(
-    (acc, i) => ({
-      calories: acc.calories + (i.calories || 0),
-      protein: acc.protein + (i.protein_g || 0),
-      carbs: acc.carbs + (i.carbs_g || 0),
-      fat: acc.fat + (i.fat_g || 0),
-    }),
-    { calories: 0, protein: 0, carbs: 0, fat: 0 }
-  );
-
   return (
     <div className="space-y-6">
       <Tabs defaultValue="today">
@@ -285,7 +211,6 @@ const AdminMealTracker = () => {
         </TabsList>
 
         <TabsContent value="today" className="space-y-4 mt-4">
-          {/* Date picker */}
           <Popover>
             <PopoverTrigger asChild>
               <Button variant="outline" className={cn("w-[240px] justify-start text-left font-normal border-zinc-700 bg-zinc-900 text-white")}>
@@ -313,7 +238,6 @@ const AdminMealTracker = () => {
             </div>
           ) : (
             <>
-              {/* Event info card */}
               <div className="bg-zinc-900 border border-zinc-800 rounded-lg p-4 space-y-3">
                 <Input placeholder="Donor / Volunteer Name" value={donorName} onChange={(e) => { setDonorName(e.target.value); setHasUnsavedChanges(true); }} className="bg-zinc-950 border-zinc-700 text-white" />
                 <Textarea placeholder="Notes" value={notes} onChange={(e) => { setNotes(e.target.value); setHasUnsavedChanges(true); }} className="bg-zinc-950 border-zinc-700 text-white" rows={2} />
@@ -323,45 +247,22 @@ const AdminMealTracker = () => {
                 </Button>
               </div>
 
-              {/* Food search */}
               <div className="space-y-2">
                 <h3 className="text-white font-semibold text-lg">Food Items</h3>
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500" />
+                <div className="flex gap-2">
                   <Input
-                    placeholder="Search food item..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    onFocus={() => searchResults.length > 0 && setShowDropdown(true)}
-                    onBlur={() => setTimeout(() => setShowDropdown(false), 200)}
-                    className="pl-10 bg-zinc-900 border-zinc-700 text-white"
+                    placeholder="Type a food item name..."
+                    value={newFoodName}
+                    onChange={(e) => setNewFoodName(e.target.value)}
+                    onKeyDown={handleKeyDown}
+                    className="bg-zinc-900 border-zinc-700 text-white flex-1"
                   />
-                  {searchError && (
-                    <p className="text-red-500 text-sm mt-1 font-medium">{searchError}</p>
-                  )}
-                  {showDropdown && (
-                    <div className="absolute z-50 w-full mt-1 bg-zinc-900 border border-zinc-700 rounded-lg shadow-xl max-h-72 overflow-y-auto">
-                      {searching && <div className="flex items-center gap-2 p-3 text-zinc-400"><Loader2 className="w-4 h-4 animate-spin" /> Searching...</div>}
-                      {!searching && searchResults.length === 0 && searchTerm.length >= 2 && (
-                        <p className="p-3 text-zinc-500 text-sm">No matches found — try a simpler term</p>
-                      )}
-                      {searchResults.map((food) => (
-                        <button
-                          key={food.fdcId}
-                          onMouseDown={(e) => e.preventDefault()}
-                          onClick={() => addFoodItem(food)}
-                          className="w-full text-left px-3 py-2 hover:bg-zinc-800 text-white text-sm border-b border-zinc-800 last:border-0"
-                        >
-                          <span className="font-medium">{food.description}</span>
-                          {food.servingSize && <span className="text-zinc-500 ml-2 text-xs">({food.servingSize} {food.servingSizeUnit || "g"})</span>}
-                        </button>
-                      ))}
-                    </div>
-                  )}
+                  <Button onClick={addFoodItem} disabled={!newFoodName.trim()} className="bg-[#bf0f3e] hover:bg-[#bf0f3e]/80 text-white">
+                    <Plus className="w-4 h-4 mr-1" /> Add
+                  </Button>
                 </div>
               </div>
 
-              {/* Items list */}
               <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
                 <SortableContext items={items.map((i) => i.id)} strategy={verticalListSortingStrategy}>
                   <div className="space-y-2">
@@ -373,32 +274,7 @@ const AdminMealTracker = () => {
               </DndContext>
 
               {items.length === 0 && (
-                <p className="text-zinc-500 text-center py-4">No food items added yet. Search above to add items.</p>
-              )}
-
-              {/* Totals bar */}
-              {items.length > 0 && (
-                <div className="bg-zinc-900 border border-zinc-800 rounded-lg p-4">
-                  <h4 className="text-zinc-400 text-sm mb-3 font-medium">Tonight's Totals</h4>
-                  <div className="grid grid-cols-4 gap-4">
-                    <div className="text-center">
-                      <p className="text-2xl font-bold text-amber-400">{Math.round(totals.calories)}</p>
-                      <p className="text-xs text-zinc-500">Calories</p>
-                    </div>
-                    <div className="text-center">
-                      <p className="text-2xl font-bold text-blue-400">{Math.round(totals.protein)}g</p>
-                      <p className="text-xs text-zinc-500">Protein</p>
-                    </div>
-                    <div className="text-center">
-                      <p className="text-2xl font-bold text-green-400">{Math.round(totals.carbs)}g</p>
-                      <p className="text-xs text-zinc-500">Carbs</p>
-                    </div>
-                    <div className="text-center">
-                      <p className="text-2xl font-bold text-orange-400">{Math.round(totals.fat)}g</p>
-                      <p className="text-xs text-zinc-500">Fat</p>
-                    </div>
-                  </div>
-                </div>
+                <p className="text-zinc-500 text-center py-4">No food items added yet. Type a food name above to add items.</p>
               )}
             </>
           )}

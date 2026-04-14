@@ -4,9 +4,10 @@ import { format, subDays, startOfWeek, startOfMonth } from "date-fns";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { CalendarIcon, Download, Loader2, UtensilsCrossed, TrendingUp, AlertTriangle, ChevronDown, ChevronRight } from "lucide-react";
+import { CalendarIcon, Download, Loader2, UtensilsCrossed, TrendingUp, AlertTriangle, ChevronDown, ChevronRight, Sparkles } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { toast } from "sonner";
 
 interface ReportRow {
   event_id: string;
@@ -39,11 +40,11 @@ const AdminMealReports = () => {
   const [endDate, setEndDate] = useState<Date>(new Date());
   const [reportData, setReportData] = useState<ReportRow[]>([]);
   const [loading, setLoading] = useState(false);
+  const [estimating, setEstimating] = useState(false);
   const [expandedRow, setExpandedRow] = useState<string | null>(null);
   const [expandedItems, setExpandedItems] = useState<MealItemRow[]>([]);
   const [loadingItems, setLoadingItems] = useState(false);
 
-  // Load summary stats
   useEffect(() => {
     (async () => {
       const { data: all } = await supabase.from("meal_events").select("meal_count");
@@ -67,11 +68,55 @@ const AdminMealReports = () => {
 
   const runReport = async () => {
     setLoading(true);
+    setEstimating(false);
+
+    // First get report data
     const { data, error } = await supabase.rpc("get_meal_report", {
       _start_date: format(startDate, "yyyy-MM-dd"),
       _end_date: format(endDate, "yyyy-MM-dd"),
     });
-    if (!error && data) setReportData(data as ReportRow[]);
+    if (error || !data) {
+      setLoading(false);
+      return;
+    }
+
+    const reportRows = data as ReportRow[];
+
+    // Check if any events have items missing nutrition data
+    const eventIds = reportRows.filter(r => r.item_count > 0).map(r => r.event_id);
+    const needsEstimation = reportRows.some(r => r.item_count > 0 && r.total_calories === 0);
+
+    if (needsEstimation && eventIds.length > 0) {
+      setEstimating(true);
+      try {
+        const { data: result, error: fnError } = await supabase.functions.invoke("estimate-meal-nutrition", {
+          body: { event_ids: eventIds },
+        });
+
+        if (fnError) {
+          console.error("Nutrition estimation error:", fnError);
+          toast.error("Could not estimate nutritional values");
+        } else if (result?.estimated > 0) {
+          // Re-fetch report data with updated nutrition
+          const { data: refreshed } = await supabase.rpc("get_meal_report", {
+            _start_date: format(startDate, "yyyy-MM-dd"),
+            _end_date: format(endDate, "yyyy-MM-dd"),
+          });
+          if (refreshed) {
+            setReportData(refreshed as ReportRow[]);
+            setEstimating(false);
+            setLoading(false);
+            return;
+          }
+        }
+      } catch (err) {
+        console.error("Estimation failed:", err);
+        toast.error("Nutrition estimation failed");
+      }
+      setEstimating(false);
+    }
+
+    setReportData(reportRows);
     setLoading(false);
   };
 
@@ -99,12 +144,10 @@ const AdminMealReports = () => {
     a.click();
   };
 
-  // Nutritional insights
   const totalEvents = reportData.length;
   const avgProtein = totalEvents > 0 ? reportData.reduce((s, r) => s + r.total_protein, 0) / totalEvents : 0;
   const lowProteinCount = reportData.filter((r) => r.total_protein < 10).length;
 
-  // Donor attribution
   const donorMap = new Map<string, { meals: number; dates: string[]; totalProtein: number; count: number }>();
   reportData.forEach((r) => {
     const name = r.donor_name || "Unknown";
@@ -138,14 +181,25 @@ const AdminMealReports = () => {
       <div className="flex flex-wrap items-center gap-3">
         <DatePicker label="Start" date={startDate} onSelect={setStartDate} />
         <DatePicker label="End" date={endDate} onSelect={setEndDate} />
-        <Button onClick={runReport} disabled={loading} className="bg-[#bf0f3e] hover:bg-[#bf0f3e]/80 text-white">
-          {loading ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
-          Run Report
+        <Button onClick={runReport} disabled={loading || estimating} className="bg-[#bf0f3e] hover:bg-[#bf0f3e]/80 text-white">
+          {(loading || estimating) ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
+          {estimating ? "Estimating Nutrition..." : "Run Report"}
         </Button>
         <Button variant="outline" onClick={exportCSV} className="border-zinc-700 text-zinc-300">
           <Download className="w-4 h-4 mr-2" /> Export CSV
         </Button>
       </div>
+
+      {/* AI estimation loading state */}
+      {estimating && (
+        <div className="bg-zinc-900 border border-zinc-800 rounded-lg p-4 flex items-center gap-3">
+          <Sparkles className="w-5 h-5 text-amber-400 animate-pulse" />
+          <div>
+            <p className="text-white font-medium">Generating nutritional estimates...</p>
+            <p className="text-zinc-500 text-sm">AI is analyzing food items to estimate calories, protein, carbs, and fat.</p>
+          </div>
+        </div>
+      )}
 
       {/* Results table */}
       <div className="rounded-lg border border-zinc-800 overflow-hidden">
@@ -193,6 +247,8 @@ const AdminMealReports = () => {
                                 {item.serving_description && <span className="text-zinc-600">({item.serving_description})</span>}
                                 <span className="text-amber-400">{item.calories ?? "—"} cal</span>
                                 <span className="text-blue-400">{item.protein_g ?? "—"}g pro</span>
+                                <span className="text-green-400">{item.carbs_g ?? "—"}g carb</span>
+                                <span className="text-orange-400">{item.fat_g ?? "—"}g fat</span>
                               </div>
                             ))}
                           </div>
@@ -202,13 +258,21 @@ const AdminMealReports = () => {
                   )}
                 </>
               ))}
-              {reportData.length === 0 && (
+              {reportData.length === 0 && !loading && (
                 <TableRow><TableCell colSpan={8} className="text-center text-zinc-500 py-8">No meal events in this range.</TableCell></TableRow>
               )}
             </TableBody>
           </Table>
         </div>
       </div>
+
+      {/* AI disclaimer */}
+      {reportData.length > 0 && (
+        <div className="flex items-center gap-2 text-zinc-500 text-xs">
+          <Sparkles className="w-3 h-3" />
+          <span>Nutritional values are AI-estimated based on typical serving sizes.</span>
+        </div>
+      )}
 
       {/* Nutritional insights */}
       {totalEvents > 0 && (
