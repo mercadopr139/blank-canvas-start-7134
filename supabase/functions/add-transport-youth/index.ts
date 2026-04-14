@@ -34,6 +34,23 @@ Deno.serve(async (req) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
     );
 
+    // Check for existing profile with same name and zone
+    const { data: existing } = await supabase
+      .from("youth_profiles")
+      .select("id")
+      .ilike("first_name", first_name.trim())
+      .ilike("last_name", last_name.trim())
+      .eq("pickup_zone", pickup_zone)
+      .limit(1)
+      .maybeSingle();
+
+    if (existing) {
+      return new Response(JSON.stringify({ id: existing.id, duplicate: true }), {
+        status: 200,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     const record: Record<string, unknown> = {
       first_name: first_name.trim(),
       last_name: last_name.trim(),
