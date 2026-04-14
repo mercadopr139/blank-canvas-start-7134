@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { CalendarDays, Plus, Pencil, Trash2 } from "lucide-react";
+import { CalendarDays, Plus, Pencil, Trash2, icons } from "lucide-react";
 import { toast } from "sonner";
 import { format, differenceInDays, parseISO, isToday } from "date-fns";
 
@@ -18,11 +18,36 @@ interface UpcomingEvent {
   created_at: string;
 }
 
+interface UpcomingEventsWidgetProps {
+  focusArea?: string;
+  title?: string;
+  accentColor?: string;
+  iconName?: string;
+  subtitle?: string | null;
+}
+
 const FOCUS_AREA_LABELS: Record<string, string> = {
   nla: "NLA", "usa-boxing": "USA Boxing", quikhit: "QUIKHIT", fcusa: "FCUSA", personal: "Personal",
 };
 
-const UpcomingEventsWidget = ({ focusArea = "nla" }: { focusArea?: string }) => {
+const getIconComponent = (name?: string) => {
+  if (!name) return CalendarDays;
+
+  const pascal = name
+    .split("-")
+    .map((s) => s.charAt(0).toUpperCase() + s.slice(1))
+    .join("");
+
+  return (icons as any)[pascal] || CalendarDays;
+};
+
+const UpcomingEventsWidget = ({
+  focusArea = "nla",
+  title = "Upcoming Events",
+  accentColor = "#f59e0b",
+  iconName = "calendar-days",
+  subtitle,
+}: UpcomingEventsWidgetProps) => {
   const queryClient = useQueryClient();
   const [modalOpen, setModalOpen] = useState(false);
   const [editingEvent, setEditingEvent] = useState<UpcomingEvent | null>(null);
@@ -33,6 +58,7 @@ const UpcomingEventsWidget = ({ focusArea = "nla" }: { focusArea?: string }) => 
 
   const areaLabel = FOCUS_AREA_LABELS[focusArea] || focusArea;
   const isNla = focusArea === "nla";
+  const HeaderIcon = getIconComponent(iconName);
 
   const { data: events = [], isLoading } = useQuery({
     queryKey: ["upcoming-events", focusArea],
@@ -127,16 +153,38 @@ const UpcomingEventsWidget = ({ focusArea = "nla" }: { focusArea?: string }) => 
 
   return (
     <>
-      <Card className="bg-white/5 border border-white/10 text-white">
+      <Card
+        className="bg-white/5 border text-white"
+        style={{
+          borderColor: `${accentColor}33`,
+          boxShadow: `0 0 0 1px ${accentColor}12 inset`,
+        }}
+      >
         <CardHeader className="pb-3 space-y-2">
-          <div className="flex items-center gap-2">
-            <CalendarDays className="w-4 h-4 text-amber-400" />
-            <CardTitle className="text-sm font-semibold text-white">Upcoming Events</CardTitle>
+          <div className="flex items-start justify-between gap-3">
+            <div className="flex items-start gap-2.5 min-w-0">
+              <div
+                className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg"
+                style={{ backgroundColor: `${accentColor}14`, color: accentColor }}
+              >
+                <HeaderIcon className="w-4 h-4" />
+              </div>
+              <div className="min-w-0">
+                <CardTitle className="text-sm font-semibold text-white truncate">{title}</CardTitle>
+                {subtitle ? <p className="text-xs text-white/40 mt-0.5 truncate">{subtitle}</p> : null}
+              </div>
+            </div>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={openAdd}
+              className="h-7 px-2 text-xs hover:bg-white/10 w-fit shrink-0"
+              style={{ color: accentColor }}
+            >
+              <Plus className="w-3.5 h-3.5 mr-1" />
+              Add Event
+            </Button>
           </div>
-          <Button variant="ghost" size="sm" onClick={openAdd} className="h-7 px-2 text-xs text-white/60 hover:text-white hover:bg-white/10 w-fit">
-            <Plus className="w-3.5 h-3.5 mr-1" />
-            Add Event
-          </Button>
         </CardHeader>
         <CardContent className="pt-0">
           {isLoading ? (
@@ -169,7 +217,6 @@ const UpcomingEventsWidget = ({ focusArea = "nla" }: { focusArea?: string }) => 
         </CardContent>
       </Card>
 
-      {/* Add/Edit Modal */}
       <Dialog open={modalOpen} onOpenChange={setModalOpen}>
         <DialogContent className="bg-black border border-white/20 text-white max-w-sm">
           <DialogHeader>
@@ -198,7 +245,6 @@ const UpcomingEventsWidget = ({ focusArea = "nla" }: { focusArea?: string }) => 
         </DialogContent>
       </Dialog>
 
-      {/* Delete Confirmation */}
       <Dialog open={!!deleteTarget} onOpenChange={() => setDeleteTarget(null)}>
         <DialogContent className="bg-black border border-white/20 text-white max-w-sm">
           <DialogHeader>
