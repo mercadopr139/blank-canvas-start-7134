@@ -206,12 +206,9 @@ const AdminMealReports = () => {
       <div className="flex flex-wrap items-center gap-3">
         <DatePicker label="Start" date={startDate} onSelect={setStartDate} />
         <DatePicker label="End" date={endDate} onSelect={setEndDate} />
-        <Button onClick={runReport} disabled={loading || estimating} className="bg-[#bf0f3e] hover:bg-[#bf0f3e]/80 text-white">
-          {(loading || estimating) ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
-          {estimating ? "Estimating Nutrition..." : "Run Report"}
-        </Button>
-        <Button onClick={() => downloadMealReportPdf({ reportData, startDate, endDate })} className="bg-[#bf0f3e] hover:bg-[#bf0f3e]/80 text-white">
-          <FileText className="w-4 h-4 mr-2" /> Print Report
+        <Button onClick={() => runReport(true)} disabled={loading || estimating} className="bg-[#bf0f3e] hover:bg-[#bf0f3e]/80 text-white">
+          {(loading || estimating) ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <FileText className="w-4 h-4 mr-2" />}
+          {estimating ? "Estimating Nutrition..." : "Print Report"}
         </Button>
         <Button variant="outline" onClick={exportCSV} className="border-zinc-700 text-zinc-300">
           <Download className="w-4 h-4 mr-2" /> Export CSV
