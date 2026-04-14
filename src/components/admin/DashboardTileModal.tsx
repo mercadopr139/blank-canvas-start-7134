@@ -101,7 +101,7 @@ const DashboardTileModal = ({ open, onClose, onSaved, editingTile, userId }: Pro
 
     try {
       if (isEditing && editingTile) {
-        const { error, data, count } = await (supabase.from("dashboard_tiles") as any)
+        const { error, data } = await (supabase.from("dashboard_tiles") as any)
           .update({
             title: title.trim(),
             subtitle: subtitle.trim() || null,
