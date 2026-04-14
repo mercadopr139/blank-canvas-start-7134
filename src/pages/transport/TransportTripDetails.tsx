@@ -218,16 +218,7 @@ export default function TransportTripDetails() {
                 <Icon
                   className={`w-7 h-7 ${isSelected ? zoneColor.text : "text-white/40"}`}
                 />
-                <div className="flex flex-col items-start">
-                  <span className="text-base font-bold">{opt.label}</span>
-                  <span
-                    className={`text-xs font-medium ${
-                      isSelected ? "text-white/70" : "text-white/40"
-                    }`}
-                  >
-                    {opt.price}
-                  </span>
-                </div>
+                <span className="text-base font-bold">{opt.label}</span>
               </button>
             );
           })}
