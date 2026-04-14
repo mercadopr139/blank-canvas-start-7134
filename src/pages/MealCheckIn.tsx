@@ -1,8 +1,9 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Undo2, AlertTriangle, Shield, Send } from "lucide-react";
+import { Undo2, AlertTriangle, Shield, Send, CheckCircle2, Plus } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { format } from "date-fns";
 
 import nlaLogo from "@/assets/nla-logo-white.png";
 
@@ -18,6 +19,7 @@ const MealCheckIn = () => {
   const undoTimer = useRef<ReturnType<typeof setTimeout>>();
   const [pulse, setPulse] = useState(false);
   const [isClosed, setIsClosed] = useState(false);
+  const [eventDate, setEventDate] = useState<string>("");
 
   // Submit flow state
   const [showConfirm, setShowConfirm] = useState(false);
@@ -28,13 +30,14 @@ const MealCheckIn = () => {
     const today = new Date().toISOString().split("T")[0];
     const { data } = await supabase
       .from("meal_events")
-      .select("id, meal_count, is_closed")
+      .select("id, meal_count, is_closed, event_date")
       .eq("event_date", today)
       .maybeSingle();
     if (data) {
       setEventId(data.id);
       setMealCount(data.meal_count);
       setIsClosed(data.is_closed ?? false);
+      setEventDate(data.event_date);
       setNoEvent(false);
       const { data: items } = await supabase
         .from("meal_items")
@@ -115,13 +118,67 @@ const MealCheckIn = () => {
     setIsClosed(true);
     setShowConfirm(false);
     setShowSuccess(true);
-    setTimeout(() => {
-      navigate("/admin/dashboard");
-    }, 3000);
+    setTimeout(() => setShowSuccess(false), 3000);
     setSubmitting(false);
   };
 
   const foodEmojis = ["🍗", "🧀", "🥦", "🍝", "🥗", "🍞", "🥩", "🌽"];
+
+  const formattedDate = eventDate
+    ? format(new Date(eventDate + "T12:00:00"), "MMMM d, yyyy")
+    : "";
+
+  // ─── Full-page closed state ───
+  if (isClosed && !showSuccess) {
+    return (
+      <div className="min-h-screen bg-black flex flex-col items-center justify-center p-4 relative">
+        {/* Admin link */}
+        <button
+          onClick={() => navigate("/admin/operations/meal-tracker")}
+          className="absolute top-4 right-4 text-white/20 text-xs hover:text-white/40 transition"
+        >
+          Admin Setup →
+        </button>
+
+        <img src={nlaLogo} alt="NLA" className="w-40 h-auto mb-8 opacity-80" />
+
+        <CheckCircle2 className="w-24 h-24 text-green-400 mb-6" />
+
+        <h1 className="text-4xl font-bold text-white mb-3">Meal Submitted!</h1>
+
+        <p className="text-green-400 text-lg mb-8">
+          {formattedDate}'s meal count has been officially closed.
+        </p>
+
+        <p className="text-7xl font-black text-white mb-2">{mealCount}</p>
+        <p className="text-zinc-400 text-lg mb-6">Meals Served</p>
+
+        {/* Food item pills */}
+        {foodItems.length > 0 && (
+          <div className="flex flex-wrap justify-center gap-2 mb-8 max-w-lg">
+            {foodItems.map((item, i) => (
+              <span key={i} className="bg-zinc-900 border border-zinc-800 text-white px-3 py-1.5 rounded-full text-sm">
+                {foodEmojis[i % foodEmojis.length]} {item.food_name}
+              </span>
+            ))}
+          </div>
+        )}
+
+        {/* Divider */}
+        <div className="w-full max-w-md border-t border-zinc-800 my-6" />
+
+        {/* Add past meal section */}
+        <p className="text-zinc-500 text-sm mb-4">Need to log a previous night?</p>
+        <button
+          onClick={() => navigate("/admin/operations/meal-tracker")}
+          className="flex items-center gap-2 px-5 py-2.5 rounded-lg border border-zinc-600 text-white text-sm hover:bg-zinc-800 transition"
+        >
+          <Plus className="w-4 h-4" />
+          Add Meal for Another Date
+        </button>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-black flex flex-col items-center justify-center p-4 relative">
@@ -171,54 +228,41 @@ const MealCheckIn = () => {
             </p>
           </div>
 
-          {isClosed ? (
-            /* Closed state */
-            <div className="w-full max-w-md text-center">
-              <div className="min-h-[120px] flex items-center justify-center bg-zinc-900 border border-green-500/30 rounded-2xl px-6">
-                <p className="text-green-400 text-xl font-semibold">
-                  Tonight's meal has been submitted ✓
-                </p>
-              </div>
-            </div>
-          ) : (
-            <>
-              {/* TAP button */}
-              <button
-                onClick={handleTap}
-                disabled={tapping}
-                className="w-full max-w-md min-h-[120px] bg-[#bf0f3e] hover:bg-[#bf0f3e]/90 active:scale-95 text-white text-2xl font-bold rounded-2xl transition-all shadow-[0_0_40px_rgba(191,15,62,0.4)] hover:shadow-[0_0_60px_rgba(191,15,62,0.6)] animate-pulse"
-                style={{ animationDuration: "3s" }}
-              >
-                TAP TO COUNT MEAL
-              </button>
+          {/* TAP button */}
+          <button
+            onClick={handleTap}
+            disabled={tapping}
+            className="w-full max-w-md min-h-[120px] bg-[#bf0f3e] hover:bg-[#bf0f3e]/90 active:scale-95 text-white text-2xl font-bold rounded-2xl transition-all shadow-[0_0_40px_rgba(191,15,62,0.4)] hover:shadow-[0_0_60px_rgba(191,15,62,0.6)] animate-pulse"
+            style={{ animationDuration: "3s" }}
+          >
+            TAP TO COUNT MEAL
+          </button>
 
-              {/* Undo */}
-              <div className="mt-6">
-                <button
-                  onClick={handleUndo}
-                  disabled={!canUndo}
-                  className={cn(
-                    "flex items-center gap-2 text-sm px-4 py-2 rounded-lg transition",
-                    canUndo ? "text-zinc-300 hover:text-white hover:bg-zinc-800" : "text-zinc-700 cursor-not-allowed"
-                  )}
-                >
-                  <Undo2 className="w-4 h-4" />
-                  Undo Last
-                </button>
-              </div>
+          {/* Undo */}
+          <div className="mt-6">
+            <button
+              onClick={handleUndo}
+              disabled={!canUndo}
+              className={cn(
+                "flex items-center gap-2 text-sm px-4 py-2 rounded-lg transition",
+                canUndo ? "text-zinc-300 hover:text-white hover:bg-zinc-800" : "text-zinc-700 cursor-not-allowed"
+              )}
+            >
+              <Undo2 className="w-4 h-4" />
+              Undo Last
+            </button>
+          </div>
 
-              {/* Submit Meal Count */}
-              <div className="mt-4">
-                <button
-                  onClick={() => setShowConfirm(true)}
-                  className="flex items-center gap-2 text-sm px-4 py-2 rounded-lg border border-zinc-700 text-zinc-400 hover:text-white hover:border-zinc-500 hover:bg-zinc-800/50 transition"
-                >
-                  <Send className="w-4 h-4" />
-                  Submit Meal Count
-                </button>
-              </div>
-            </>
-          )}
+          {/* Submit Meal Count */}
+          <div className="mt-4">
+            <button
+              onClick={() => setShowConfirm(true)}
+              className="flex items-center gap-2 text-sm px-4 py-2 rounded-lg border border-zinc-700 text-zinc-400 hover:text-white hover:border-zinc-500 hover:bg-zinc-800/50 transition"
+            >
+              <Send className="w-4 h-4" />
+              Submit Meal Count
+            </button>
+          </div>
         </>
       )}
 
@@ -250,7 +294,7 @@ const MealCheckIn = () => {
         </div>
       )}
 
-      {/* Success Overlay */}
+      {/* Success Overlay (brief celebration) */}
       {showSuccess && (
         <div className="fixed inset-0 z-[9999] bg-black flex flex-col items-center justify-center p-6">
           <p className="text-6xl mb-6">🎉</p>
