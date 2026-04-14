@@ -206,8 +206,8 @@ const AdminMealTracker = () => {
     <div className="space-y-6">
       <Tabs defaultValue="today">
         <TabsList className="bg-zinc-900 border border-zinc-800">
-          <TabsTrigger value="today">Today's Setup</TabsTrigger>
-          <TabsTrigger value="history">History</TabsTrigger>
+          <TabsTrigger value="today" className="text-zinc-400 data-[state=active]:text-white data-[state=active]:bg-zinc-700">Today's Setup</TabsTrigger>
+          <TabsTrigger value="history" className="text-zinc-400 data-[state=active]:text-white data-[state=active]:bg-zinc-700">History</TabsTrigger>
         </TabsList>
 
         <TabsContent value="today" className="space-y-4 mt-4">
