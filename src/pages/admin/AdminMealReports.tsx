@@ -4,7 +4,8 @@ import { format, subDays, startOfWeek, startOfMonth } from "date-fns";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { CalendarIcon, Download, Loader2, UtensilsCrossed, TrendingUp, AlertTriangle, ChevronDown, ChevronRight, Sparkles, Trash2 } from "lucide-react";
+import { CalendarIcon, Download, Loader2, UtensilsCrossed, TrendingUp, AlertTriangle, ChevronDown, ChevronRight, Sparkles, Trash2, FileText } from "lucide-react";
+import { downloadMealReportPdf } from "@/lib/generateMealReportPdf";
 import { cn } from "@/lib/utils";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { toast } from "sonner";
@@ -205,6 +206,9 @@ const AdminMealReports = () => {
         <Button onClick={runReport} disabled={loading || estimating} className="bg-[#bf0f3e] hover:bg-[#bf0f3e]/80 text-white">
           {(loading || estimating) ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
           {estimating ? "Estimating Nutrition..." : "Run Report"}
+        </Button>
+        <Button onClick={() => downloadMealReportPdf({ reportData, startDate, endDate })} className="bg-[#bf0f3e] hover:bg-[#bf0f3e]/80 text-white">
+          <FileText className="w-4 h-4 mr-2" /> Print Report
         </Button>
         <Button variant="outline" onClick={exportCSV} className="border-zinc-700 text-zinc-300">
           <Download className="w-4 h-4 mr-2" /> Export CSV

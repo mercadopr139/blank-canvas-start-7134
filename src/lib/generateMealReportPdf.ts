@@ -1,0 +1,376 @@
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
+import { format } from "date-fns";
+import nlaLogo from "@/assets/nla-logo.png";
+
+// ─── Colors (matching invoice style) ───
+const BRAND_DARK = [17, 24, 39] as const;
+const BRAND_GRAY = [107, 114, 128] as const;
+const LIGHT_BG = [249, 250, 251] as const;
+const ACCENT = [17, 24, 39] as const;
+const TABLE_HEAD = [31, 41, 55] as const;
+const BORDER = [229, 231, 235] as const;
+
+interface ReportRow {
+  event_id: string;
+  event_date: string;
+  donor_name: string | null;
+  meal_count: number;
+  notes: string | null;
+  total_calories: number;
+  total_protein: number;
+  total_carbs: number;
+  total_fat: number;
+  item_count: number;
+}
+
+export interface MealReportPdfData {
+  reportData: ReportRow[];
+  startDate: Date;
+  endDate: Date;
+  logoBase64?: string;
+}
+
+function formatNum(n: number): string {
+  return Math.round(n).toLocaleString("en-US");
+}
+
+function drawHR(doc: jsPDF, y: number, marginL: number, marginR: number) {
+  const pageWidth = doc.internal.pageSize.getWidth();
+  doc.setDrawColor(...BORDER);
+  doc.setLineWidth(0.3);
+  doc.line(marginL, y, pageWidth - marginR, y);
+}
+
+function generateMealReportPdf(data: MealReportPdfData): jsPDF {
+  const { reportData, startDate, endDate, logoBase64 } = data;
+
+  const doc = new jsPDF({ unit: "mm", format: "a4" });
+  const pageWidth = doc.internal.pageSize.getWidth();
+  const pageHeight = doc.internal.pageSize.getHeight();
+  const marginL = 14;
+  const marginR = 14;
+  const contentW = pageWidth - marginL - marginR;
+
+  const totalMeals = reportData.reduce((s, r) => s + r.meal_count, 0);
+  const totalEvents = reportData.length;
+  const avgMealsPerNight = totalEvents > 0 ? Math.round(totalMeals / totalEvents) : 0;
+  const avgProtein = totalEvents > 0 ? reportData.reduce((s, r) => s + r.total_protein, 0) / totalEvents : 0;
+
+  // ─── HEADER BAND ───
+  doc.setFillColor(...LIGHT_BG);
+  doc.rect(0, 0, pageWidth, 44, "F");
+
+  let logoRightEdge = marginL;
+  if (logoBase64) {
+    try {
+      doc.addImage(logoBase64, "PNG", marginL, 6, 24, 24);
+      logoRightEdge = marginL + 28;
+    } catch (e) {
+      console.error("Failed to add logo to PDF:", e);
+    }
+  }
+
+  doc.setTextColor(...BRAND_DARK);
+  doc.setFontSize(18);
+  doc.setFont("helvetica", "bold");
+  doc.text("MEAL SERVICE REPORT", logoRightEdge, 18);
+
+  doc.setFontSize(9);
+  doc.setFont("helvetica", "normal");
+  doc.setTextColor(...BRAND_GRAY);
+  doc.text("No Limits Academy", logoRightEdge, 24);
+
+  // Right-aligned meta
+  const metaX = pageWidth - marginR;
+  doc.setFontSize(8);
+  doc.setTextColor(...BRAND_GRAY);
+  doc.text("Report Period", metaX - 38, 12);
+  doc.text("Generated", metaX - 38, 18);
+  doc.text("Total Meals", metaX - 38, 24);
+
+  doc.setTextColor(...BRAND_DARK);
+  doc.setFont("helvetica", "bold");
+  doc.text(`${format(startDate, "MMM d")} – ${format(endDate, "MMM d, yyyy")}`, metaX, 12, { align: "right" });
+  doc.setFont("helvetica", "normal");
+  doc.text(format(new Date(), "MMM d, yyyy"), metaX, 18, { align: "right" });
+  doc.setFontSize(12);
+  doc.setFont("helvetica", "bold");
+  doc.text(String(totalMeals), metaX, 25, { align: "right" });
+
+  // Accent stripe
+  doc.setFillColor(...ACCENT);
+  doc.rect(0, 44, pageWidth, 0.8, "F");
+
+  // ─── SUMMARY STRIP ───
+  let y = 50;
+  const boxW = contentW / 4 - 2;
+  const summaryItems = [
+    { label: "Total Meals Served", value: String(totalMeals) },
+    { label: "Reporting Period", value: `${format(startDate, "M/d")} – ${format(endDate, "M/d/yy")}` },
+    { label: "Avg Meals Per Night", value: String(avgMealsPerNight) },
+    { label: "Avg Protein/Meal", value: `${Math.round(avgProtein)}g` },
+  ];
+
+  summaryItems.forEach((item, i) => {
+    const x = marginL + i * (boxW + 2.67);
+    doc.setFillColor(...LIGHT_BG);
+    doc.setDrawColor(...BORDER);
+    doc.roundedRect(x, y, boxW, 18, 2, 2, "FD");
+    doc.setFontSize(12);
+    doc.setFont("helvetica", "bold");
+
+    if (i === 3) {
+      // color-code protein
+      if (avgProtein >= 20) doc.setTextColor(22, 163, 74);
+      else if (avgProtein >= 10) doc.setTextColor(202, 138, 4);
+      else doc.setTextColor(220, 38, 38);
+    } else {
+      doc.setTextColor(...BRAND_DARK);
+    }
+    doc.text(item.value, x + boxW / 2, y + 9, { align: "center" });
+
+    doc.setFontSize(6);
+    doc.setFont("helvetica", "normal");
+    doc.setTextColor(...BRAND_GRAY);
+    doc.text(item.label, x + boxW / 2, y + 14, { align: "center" });
+  });
+
+  y += 22;
+
+  // ─── MEAL EVENTS TABLE ───
+  drawHR(doc, y, marginL, marginR);
+  y += 1;
+
+  const tableHead = [["Date", "Donor / Volunteer", "Meals", "Food Items", "Calories", "Protein", "Carbs", "Fat"]];
+  const tableBody = reportData
+    .sort((a, b) => new Date(a.event_date).getTime() - new Date(b.event_date).getTime())
+    .map((r) => [
+      format(new Date(r.event_date + "T12:00:00"), "MMM d, yyyy"),
+      r.donor_name || "—",
+      String(r.meal_count),
+      String(r.item_count),
+      formatNum(r.total_calories),
+      `${formatNum(r.total_protein)}g`,
+      `${formatNum(r.total_carbs)}g`,
+      `${formatNum(r.total_fat)}g`,
+    ]);
+
+  if (tableBody.length === 0) {
+    tableBody.push(["", "No meal events in this period", "", "", "", "", "", ""]);
+  }
+
+  autoTable(doc, {
+    startY: y,
+    head: tableHead,
+    body: tableBody,
+    theme: "striped",
+    headStyles: {
+      fillColor: [...TABLE_HEAD],
+      textColor: [255, 255, 255],
+      fontStyle: "bold",
+      fontSize: 7,
+      cellPadding: 2.5,
+    },
+    bodyStyles: {
+      fontSize: 7,
+      cellPadding: 2,
+      textColor: [...BRAND_DARK],
+    },
+    alternateRowStyles: { fillColor: [248, 249, 250] },
+    styles: { lineColor: [...BORDER], lineWidth: 0.2 },
+    columnStyles: {
+      0: { cellWidth: 24 },
+      1: { cellWidth: 36 },
+      2: { cellWidth: 16, halign: "center" as const },
+      3: { cellWidth: 18, halign: "center" as const },
+      4: { cellWidth: 20, halign: "right" as const },
+      5: { cellWidth: 18, halign: "right" as const },
+      6: { cellWidth: 18, halign: "right" as const },
+      7: { cellWidth: 18, halign: "right" as const },
+    },
+    margin: { left: marginL, right: marginR },
+  });
+
+  y = (doc as any).lastAutoTable.finalY + 4;
+
+  // ─── Check if we need a new page ───
+  const checkPage = (needed: number) => {
+    if (y + needed > pageHeight - 30) {
+      doc.addPage();
+      y = 14;
+    }
+  };
+
+  // ─── NUTRITIONAL INSIGHTS ───
+  if (totalEvents > 0) {
+    const lowProteinCount = reportData.filter((r) => r.total_protein < 10).length;
+
+    // Count food frequencies
+    const foodFreq = new Map<string, number>();
+    // We don't have individual items here, so we skip "most served foods" or note it's unavailable
+
+    const insightLines: string[] = [];
+    const proteinLabel = `Average protein per meal: ${Math.round(avgProtein)}g`;
+    insightLines.push(proteinLabel);
+
+    if (lowProteinCount > 0 && totalEvents >= 3) {
+      insightLines.push(`⚠ ${lowProteinCount} of ${totalEvents} meals were low in protein — consider encouraging volunteers to include a lean protein source.`);
+    }
+
+    const boxH = 8 + insightLines.length * 5 + 4;
+    checkPage(boxH + 4);
+
+    doc.setFillColor(...LIGHT_BG);
+    doc.setDrawColor(...BORDER);
+    doc.roundedRect(marginL, y, contentW, boxH, 3, 3, "FD");
+
+    doc.setFontSize(7);
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(...BRAND_GRAY);
+    doc.text("NUTRITIONAL INSIGHTS", marginL + 6, y + 7);
+
+    let insY = y + 12;
+    doc.setFontSize(8);
+
+    // Protein line with color
+    doc.setFont("helvetica", "normal");
+    if (avgProtein >= 20) doc.setTextColor(22, 163, 74);
+    else if (avgProtein >= 10) doc.setTextColor(202, 138, 4);
+    else doc.setTextColor(220, 38, 38);
+    doc.text(proteinLabel, marginL + 6, insY);
+    insY += 5;
+
+    if (lowProteinCount > 0 && totalEvents >= 3) {
+      doc.setTextColor(220, 38, 38);
+      doc.setFontSize(7);
+      const warnText = `⚠ ${lowProteinCount} of ${totalEvents} meals were low in protein — consider encouraging volunteers to include a lean protein source.`;
+      const warnLines = doc.splitTextToSize(warnText, contentW - 12);
+      doc.text(warnLines, marginL + 6, insY);
+      insY += warnLines.length * 3.5;
+    }
+
+    y += boxH + 4;
+  }
+
+  // ─── DONOR ATTRIBUTION TABLE ───
+  const donorMap = new Map<string, { meals: number; count: number; totalProtein: number }>();
+  reportData.forEach((r) => {
+    const name = r.donor_name || "Unknown";
+    const existing = donorMap.get(name) || { meals: 0, count: 0, totalProtein: 0 };
+    existing.meals += r.meal_count;
+    existing.count += 1;
+    existing.totalProtein += r.total_protein;
+    donorMap.set(name, existing);
+  });
+
+  if (donorMap.size > 0) {
+    checkPage(20);
+    drawHR(doc, y, marginL, marginR);
+    y += 4;
+
+    doc.setFontSize(7);
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(...BRAND_GRAY);
+    doc.text("DONOR ATTRIBUTION", marginL, y);
+    y += 2;
+
+    const donorHead = [["Donor Name", "Nights Served", "Total Meals", "Avg Protein"]];
+    const donorBody = Array.from(donorMap.entries())
+      .sort((a, b) => b[1].meals - a[1].meals)
+      .map(([name, info]) => [
+        name,
+        String(info.count),
+        String(info.meals),
+        `${Math.round(info.totalProtein / info.count)}g`,
+      ]);
+
+    autoTable(doc, {
+      startY: y,
+      head: donorHead,
+      body: donorBody,
+      theme: "striped",
+      headStyles: {
+        fillColor: [...TABLE_HEAD],
+        textColor: [255, 255, 255],
+        fontStyle: "bold",
+        fontSize: 7.5,
+        cellPadding: 2.5,
+      },
+      bodyStyles: { fontSize: 7.5, cellPadding: 2, textColor: [...BRAND_DARK] },
+      alternateRowStyles: { fillColor: [248, 249, 250] },
+      styles: { lineColor: [...BORDER], lineWidth: 0.2 },
+      columnStyles: {
+        1: { halign: "center" as const },
+        2: { halign: "center" as const },
+        3: { halign: "right" as const },
+      },
+      margin: { left: marginL, right: marginR },
+    });
+
+    y = (doc as any).lastAutoTable.finalY + 4;
+  }
+
+  // ─── THANK YOU SIGNATURE ───
+  checkPage(35);
+  drawHR(doc, y, marginL, marginR);
+  y += 5;
+
+  doc.setFontSize(9);
+  doc.setFont("helvetica", "bold");
+  doc.setTextColor(...BRAND_DARK);
+  doc.text("Thank you for your partnership!", marginL, y);
+  y += 5;
+
+  doc.setFontSize(8);
+  doc.setFont("helvetica", "normal");
+  doc.setTextColor(...BRAND_GRAY);
+  doc.text("We truly appreciate your support and look forward to continuing our work together.", marginL, y);
+  y += 6;
+
+  doc.setFont("helvetica", "bold");
+  doc.setTextColor(...BRAND_DARK);
+  doc.text("Josh Mercado", marginL, y);
+  y += 3.5;
+  doc.setFont("helvetica", "normal");
+  doc.setTextColor(...BRAND_GRAY);
+  doc.text("Program Director, No Limits Academy", marginL, y);
+  y += 3.5;
+  doc.text("joshmercado@nolimitsboxingacademy.org", marginL, y);
+
+  // Disclaimer bottom right
+  doc.setFontSize(6);
+  doc.setTextColor(180, 180, 180);
+  doc.text("Nutritional values are AI-estimated based on typical serving sizes.", pageWidth - marginR, pageHeight - 14, { align: "right" });
+
+  // ─── FOOTER ───
+  const footerY = pageHeight - 10;
+  doc.setFontSize(7);
+  doc.setTextColor(180, 180, 180);
+  doc.text("No Limits Academy  •  If you have questions, reply to joshmercado@nolimitsboxingacademy.org", pageWidth / 2, footerY, { align: "center" });
+
+  return doc;
+}
+
+async function loadLogoBase64(): Promise<string | undefined> {
+  try {
+    const response = await fetch(nlaLogo);
+    const blob = await response.blob();
+    return new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.onloadend = () => resolve(reader.result as string);
+      reader.readAsDataURL(blob);
+    });
+  } catch (e) {
+    console.error("Failed to load logo:", e);
+    return undefined;
+  }
+}
+
+export async function downloadMealReportPdf(data: Omit<MealReportPdfData, "logoBase64">): Promise<void> {
+  const logoBase64 = await loadLogoBase64();
+  const doc = generateMealReportPdf({ ...data, logoBase64 });
+  const startStr = format(data.startDate, "yyyy-MM-dd");
+  const endStr = format(data.endDate, "yyyy-MM-dd");
+  doc.save(`NLA_Meal_Report_${startStr}_to_${endStr}.pdf`);
+}
