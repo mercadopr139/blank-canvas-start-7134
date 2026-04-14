@@ -106,6 +106,7 @@ const AdminMealTracker = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [searchResults, setSearchResults] = useState<USDAFood[]>([]);
   const [searching, setSearching] = useState(false);
+  const [searchError, setSearchError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [showDropdown, setShowDropdown] = useState(false);
@@ -153,17 +154,29 @@ const AdminMealTracker = () => {
   // USDA search
   useEffect(() => {
     if (debounceRef.current) clearTimeout(debounceRef.current);
-    if (searchTerm.trim().length < 2) { setSearchResults([]); setShowDropdown(false); return; }
+    if (searchTerm.trim().length < 2) { setSearchResults([]); setShowDropdown(false); setSearchError(null); return; }
     debounceRef.current = setTimeout(async () => {
       setSearching(true);
       setShowDropdown(true);
+      setSearchError(null);
       try {
-        const res = await fetch(
-          `https://api.nal.usda.gov/fdc/v1/foods/search?query=${encodeURIComponent(searchTerm)}&api_key=DEMO_KEY&dataType=SR%20Legacy,Survey%20(FNDDS)&pageSize=8`
-        );
+        const apiKey = import.meta.env.VITE_USDA_API_KEY || "DEMO_KEY";
+        const url = `https://api.nal.usda.gov/fdc/v1/foods/search?query=${encodeURIComponent(searchTerm)}&api_key=${apiKey}&dataType=Foundation,SR%20Legacy,Survey%20(FNDDS)&pageSize=8`;
+        const res = await fetch(url);
         const data = await res.json();
-        setSearchResults(data.foods || []);
-      } catch {
+        console.log("USDA API response:", data);
+        if (!res.ok) {
+          setSearchError("Could not load food data. Check your API key.");
+          setSearchResults([]);
+        } else {
+          setSearchResults(data.foods || []);
+          if (!data.foods || data.foods.length === 0) {
+            setSearchError(null);
+          }
+        }
+      } catch (err) {
+        console.error("USDA fetch error:", err);
+        setSearchError("Could not load food data. Check your API key.");
         setSearchResults([]);
       }
       setSearching(false);
@@ -323,6 +336,9 @@ const AdminMealTracker = () => {
                     onBlur={() => setTimeout(() => setShowDropdown(false), 200)}
                     className="pl-10 bg-zinc-900 border-zinc-700 text-white"
                   />
+                  {searchError && (
+                    <p className="text-red-500 text-sm mt-1 font-medium">{searchError}</p>
+                  )}
                   {showDropdown && (
                     <div className="absolute z-50 w-full mt-1 bg-zinc-900 border border-zinc-700 rounded-lg shadow-xl max-h-72 overflow-y-auto">
                       {searching && <div className="flex items-center gap-2 p-3 text-zinc-400"><Loader2 className="w-4 h-4 animate-spin" /> Searching...</div>}
