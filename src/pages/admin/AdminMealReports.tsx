@@ -192,6 +192,23 @@ const AdminMealReports = () => {
     setDeleting(false);
   };
 
+  const saveMealCount = async (eventId: string) => {
+    const newCount = parseInt(editingMealValue, 10);
+    if (isNaN(newCount) || newCount < 0) {
+      toast.error("Enter a valid number");
+      return;
+    }
+    const { error } = await supabase.from("meal_events").update({ meal_count: newCount }).eq("id", eventId);
+    if (error) {
+      toast.error("Failed to update meal count");
+    } else {
+      setReportData((prev) => prev.map((r) => r.event_id === eventId ? { ...r, meal_count: newCount } : r));
+      loadSummary();
+      toast.success("Meal count updated");
+    }
+    setEditingMealId(null);
+  };
+
   const exportCSV = () => {
     const headers = "Date,Donor,Meals Served,Total Calories,Total Protein (g),Total Carbs (g),Total Fat (g),Items\n";
     const rows = reportData.map((r) =>
