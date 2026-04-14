@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Undo2, AlertTriangle, Shield, Send } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import mealPlateIcon from "@/assets/meal-plate-icon.png";
+
 import nlaLogo from "@/assets/nla-logo-white.png";
 
 const MealCheckIn = () => {
@@ -139,9 +139,6 @@ const MealCheckIn = () => {
       {/* NLA Logo */}
       <img src={nlaLogo} alt="NLA" className="w-48 h-auto mb-6 opacity-80" />
 
-      {/* Plate icon */}
-      <img src={mealPlateIcon} alt="Meal" className="w-80 h-80 mb-6 opacity-60" />
-
       <h1 className="text-4xl font-bold text-white mb-4">Meal Check-In</h1>
 
       {noEvent ? (
@@ -228,7 +225,7 @@ const MealCheckIn = () => {
       {/* Coach Confirmation Overlay */}
       {showConfirm && (
         <div className="fixed inset-0 z-[9999] bg-black/90 flex flex-col items-center justify-center p-6">
-          <img src={mealPlateIcon} alt="NLA" className="w-16 h-16 mb-6 opacity-80" />
+          <img src={nlaLogo} alt="NLA" className="w-16 h-16 mb-6 opacity-80" />
           <Shield className="w-16 h-16 text-[#bf0f3e] mb-4" />
           <h2 className="text-2xl font-bold text-white mb-3">NLA Coaches Only</h2>
           <p className="text-zinc-400 text-center max-w-sm mb-8 leading-relaxed">
