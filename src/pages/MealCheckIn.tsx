@@ -225,7 +225,7 @@ const MealCheckIn = () => {
       {/* Coach Confirmation Overlay */}
       {showConfirm && (
         <div className="fixed inset-0 z-[9999] bg-black/90 flex flex-col items-center justify-center p-6">
-          <img src={mealPlateIcon} alt="NLA" className="w-16 h-16 mb-6 opacity-80" />
+          <img src={nlaLogo} alt="NLA" className="w-16 h-16 mb-6 opacity-80" />
           <Shield className="w-16 h-16 text-[#bf0f3e] mb-4" />
           <h2 className="text-2xl font-bold text-white mb-3">NLA Coaches Only</h2>
           <p className="text-zinc-400 text-center max-w-sm mb-8 leading-relaxed">
