@@ -1047,28 +1047,34 @@ export type Database = {
       }
       meal_events: {
         Row: {
+          closed_at: string | null
           created_at: string
           donor_name: string | null
           event_date: string
           id: string
+          is_closed: boolean
           meal_count: number
           notes: string | null
           updated_at: string
         }
         Insert: {
+          closed_at?: string | null
           created_at?: string
           donor_name?: string | null
           event_date: string
           id?: string
+          is_closed?: boolean
           meal_count?: number
           notes?: string | null
           updated_at?: string
         }
         Update: {
+          closed_at?: string | null
           created_at?: string
           donor_name?: string | null
           event_date?: string
           id?: string
+          is_closed?: boolean
           meal_count?: number
           notes?: string | null
           updated_at?: string
