@@ -72,7 +72,7 @@ const AdminMealReports = () => {
     setWeekCount(wData ? wData.reduce((s, r) => s + (r.meal_count || 0), 0) : 0);
   };
 
-  const runReport = async () => {
+  const runReport = async (andPrint = false) => {
     setLoading(true);
     setEstimating(false);
 
@@ -85,7 +85,7 @@ const AdminMealReports = () => {
       return;
     }
 
-    const reportRows = data as ReportRow[];
+    let reportRows = data as ReportRow[];
 
     const eventIds = reportRows.filter(r => r.item_count > 0).map(r => r.event_id);
     const needsEstimation = reportRows.some(r => r.item_count > 0 && r.total_calories === 0);
@@ -106,9 +106,11 @@ const AdminMealReports = () => {
             _end_date: format(endDate, "yyyy-MM-dd"),
           });
           if (refreshed) {
-            setReportData(refreshed as ReportRow[]);
+            reportRows = refreshed as ReportRow[];
+            setReportData(reportRows);
             setEstimating(false);
             setLoading(false);
+            if (andPrint) await downloadMealReportPdf({ reportData: reportRows, startDate, endDate });
             return;
           }
         }
@@ -121,6 +123,7 @@ const AdminMealReports = () => {
 
     setReportData(reportRows);
     setLoading(false);
+    if (andPrint) await downloadMealReportPdf({ reportData: reportRows, startDate, endDate });
   };
 
   useEffect(() => { runReport(); }, []);
@@ -203,12 +206,9 @@ const AdminMealReports = () => {
       <div className="flex flex-wrap items-center gap-3">
         <DatePicker label="Start" date={startDate} onSelect={setStartDate} />
         <DatePicker label="End" date={endDate} onSelect={setEndDate} />
-        <Button onClick={runReport} disabled={loading || estimating} className="bg-[#bf0f3e] hover:bg-[#bf0f3e]/80 text-white">
-          {(loading || estimating) ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
-          {estimating ? "Estimating Nutrition..." : "Run Report"}
-        </Button>
-        <Button onClick={() => downloadMealReportPdf({ reportData, startDate, endDate })} className="bg-[#bf0f3e] hover:bg-[#bf0f3e]/80 text-white">
-          <FileText className="w-4 h-4 mr-2" /> Print Report
+        <Button onClick={() => runReport(true)} disabled={loading || estimating} className="bg-[#bf0f3e] hover:bg-[#bf0f3e]/80 text-white">
+          {(loading || estimating) ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <FileText className="w-4 h-4 mr-2" />}
+          {estimating ? "Estimating Nutrition..." : "Print Report"}
         </Button>
         <Button variant="outline" onClick={exportCSV} className="border-zinc-700 text-zinc-300">
           <Download className="w-4 h-4 mr-2" /> Export CSV
