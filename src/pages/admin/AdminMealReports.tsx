@@ -110,7 +110,12 @@ const AdminMealReports = () => {
             setReportData(reportRows);
             setEstimating(false);
             setLoading(false);
-            if (andPrint) await downloadMealReportPdf({ reportData: reportRows, startDate, endDate });
+            if (andPrint) {
+              const enriched = await enrichWithItems(reportRows);
+              await downloadMealReportPdf({ reportData: enriched, startDate, endDate });
+            }
+            return;
+          }
             return;
           }
         }
