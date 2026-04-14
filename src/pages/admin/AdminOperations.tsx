@@ -1,5 +1,5 @@
 import { useNavigate } from "react-router-dom";
-import { Users, BarChart3, ClipboardList, LucideIcon, CalendarCheck, FileBarChart, Settings2, Star, LogIn, Bus, UserCheck, Radio, PhoneOff, AlertTriangle, FileText } from "lucide-react";
+import { Users, BarChart3, ClipboardList, LucideIcon, CalendarCheck, FileBarChart, Settings2, Star, LogIn, Bus, UserCheck, Radio, PhoneOff, AlertTriangle, FileText, UtensilsCrossed } from "lucide-react";
 import AdminSectionLayout, { SectionCard } from "@/components/admin/AdminSectionLayout";
 import { Button } from "@/components/ui/button";
 
@@ -50,6 +50,16 @@ const baseTiles: OperationsTile[] = [
       { title: "Impact Reports", href: "/admin/operations/transportation/impact-reports", icon: FileText },
     ],
   },
+  {
+    title: "Meal Tracker",
+    description: "Meal counter, nutrition & reports",
+    icon: UtensilsCrossed,
+    href: "/admin/operations/meal-tracker",
+    children: [
+      { title: "Meal Setup", href: "/admin/operations/meal-tracker", icon: UtensilsCrossed },
+      { title: "Meal Reports", href: "/admin/operations/meal-reports", icon: BarChart3 },
+    ],
+  },
 ];
 
 // Blank index – main panel is empty until a sidebar item is selected
@@ -84,6 +94,14 @@ const AdminOperations = () => {
       >
         <Star className="w-4 h-4 mr-1.5" />
         Lil Champs Check-In
+      </Button>
+      <Button
+        size="sm"
+        className="w-full bg-amber-600 hover:bg-amber-500 text-white text-sm font-medium"
+        onClick={() => navigate("/meal-check-in")}
+      >
+        <UtensilsCrossed className="w-4 h-4 mr-1.5" />
+        Meal Check-In
       </Button>
     </div>
   );

@@ -73,6 +73,9 @@ import TransportTripDetails from "./pages/transport/TransportTripDetails";
 import TransportRun from "./pages/transport/TransportRun";
 import TransportIncidents from "./pages/transport/TransportIncidents";
 import AdminTransportImpactReports from "./pages/admin/AdminTransportImpactReports";
+import AdminMealTracker from "./pages/admin/AdminMealTracker";
+import AdminMealReports from "./pages/admin/AdminMealReports";
+import MealCheckIn from "./pages/MealCheckIn";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -102,6 +105,7 @@ const App = () => (
             <Route path="/check-in" element={<CheckIn />} />
             <Route path="/check-in/lil-champs-corner" element={<LilChampsCheckIn />} />
             <Route path="/call-out" element={<CallOut />} />
+            <Route path="/meal-check-in" element={<MealCheckIn />} />
             <Route path="/approvals/invoice/:token" element={<InvoiceApproval />} />
             <Route path="/transport" element={<TransportLogin />} />
             <Route path="/transport/dashboard" element={<TransportDashboard />} />
@@ -148,6 +152,8 @@ const App = () => (
               <Route path="transportation/runs" element={<TransportRunsPay />} />
               <Route path="transportation/incidents" element={<TransportIncidents />} />
               <Route path="transportation/impact-reports" element={<AdminTransportImpactReports />} />
+              <Route path="meal-tracker" element={<AdminMealTracker />} />
+              <Route path="meal-reports" element={<AdminMealReports />} />
             </Route>
 
             {/* Sales & Marketing section — sidebar layout wraps sub-pages */}
