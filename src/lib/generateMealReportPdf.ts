@@ -10,6 +10,15 @@ const LIGHT_BG = [249, 250, 251] as const;
 const ACCENT = [17, 24, 39] as const;
 const TABLE_HEAD = [31, 41, 55] as const;
 const BORDER = [229, 231, 235] as const;
+const SUB_ROW_BG = [248, 249, 250] as const;
+
+export interface MealItemDetail {
+  food_name: string;
+  calories: number | null;
+  protein_g: number | null;
+  carbs_g: number | null;
+  fat_g: number | null;
+}
 
 interface ReportRow {
   event_id: string;
@@ -22,6 +31,7 @@ interface ReportRow {
   total_carbs: number;
   total_fat: number;
   item_count: number;
+  items?: MealItemDetail[];
 }
 
 export interface MealReportPdfData {
@@ -81,7 +91,6 @@ function generateMealReportPdf(data: MealReportPdfData): jsPDF {
   doc.setTextColor(...BRAND_GRAY);
   doc.text("No Limits Academy", logoRightEdge, 24);
 
-  // Right-aligned meta
   const metaX = pageWidth - marginR;
   doc.setFontSize(8);
   doc.setTextColor(...BRAND_GRAY);
@@ -121,7 +130,6 @@ function generateMealReportPdf(data: MealReportPdfData): jsPDF {
     doc.setFont("helvetica", "bold");
 
     if (i === 3) {
-      // color-code protein
       if (avgProtein >= 20) doc.setTextColor(22, 163, 74);
       else if (avgProtein >= 10) doc.setTextColor(202, 138, 4);
       else doc.setTextColor(220, 38, 38);
@@ -138,14 +146,23 @@ function generateMealReportPdf(data: MealReportPdfData): jsPDF {
 
   y += 22;
 
-  // ─── MEAL EVENTS TABLE ───
+  // ─── MEAL EVENTS TABLE with food item sub-rows ───
   drawHR(doc, y, marginL, marginR);
   y += 1;
 
   const tableHead = [["Date", "Donor / Volunteer", "Meals", "Food Items", "Calories", "Protein", "Carbs", "Fat"]];
-  const tableBody = reportData
-    .sort((a, b) => new Date(a.event_date).getTime() - new Date(b.event_date).getTime())
-    .map((r) => [
+
+  // Build table body with interleaved sub-rows for food items
+  const sortedData = [...reportData].sort(
+    (a, b) => new Date(a.event_date).getTime() - new Date(b.event_date).getTime()
+  );
+
+  const tableBody: any[][] = [];
+  const subRowIndices = new Set<number>();
+
+  sortedData.forEach((r) => {
+    // Main event row
+    tableBody.push([
       format(new Date(r.event_date + "T12:00:00"), "MMM d, yyyy"),
       r.donor_name || "—",
       String(r.meal_count),
@@ -155,6 +172,18 @@ function generateMealReportPdf(data: MealReportPdfData): jsPDF {
       `${formatNum(r.total_carbs)}g`,
       `${formatNum(r.total_fat)}g`,
     ]);
+
+    // Food item sub-rows
+    if (r.items && r.items.length > 0) {
+      r.items.forEach((item) => {
+        const detail = `  • ${item.food_name} — ${item.calories ?? "—"} cal | ${item.protein_g ?? "—"}g protein | ${item.carbs_g ?? "—"}g carbs | ${item.fat_g ?? "—"}g fat`;
+        subRowIndices.add(tableBody.length);
+        tableBody.push([
+          { content: detail, colSpan: 8, styles: { fontSize: 6.5, textColor: [...BRAND_GRAY], fillColor: [...SUB_ROW_BG], cellPadding: { top: 1, bottom: 1, left: 8, right: 2 }, fontStyle: "normal" } },
+        ]);
+      });
+    }
+  });
 
   if (tableBody.length === 0) {
     tableBody.push(["", "No meal events in this period", "", "", "", "", "", ""]);
@@ -190,11 +219,17 @@ function generateMealReportPdf(data: MealReportPdfData): jsPDF {
       7: { cellWidth: 18, halign: "right" as const },
     },
     margin: { left: marginL, right: marginR },
+    didParseCell: (hookData) => {
+      // Force sub-row styling (the colSpan cell already has inline styles,
+      // but we also suppress alternating stripe for sub-rows)
+      if (hookData.section === "body" && subRowIndices.has(hookData.row.index)) {
+        hookData.cell.styles.fillColor = [...SUB_ROW_BG];
+      }
+    },
   });
 
   y = (doc as any).lastAutoTable.finalY + 4;
 
-  // ─── Check if we need a new page ───
   const checkPage = (needed: number) => {
     if (y + needed > pageHeight - 30) {
       doc.addPage();
@@ -206,19 +241,23 @@ function generateMealReportPdf(data: MealReportPdfData): jsPDF {
   if (totalEvents > 0) {
     const lowProteinCount = reportData.filter((r) => r.total_protein < 10).length;
 
-    // Count food frequencies
+    // Most frequently served foods
     const foodFreq = new Map<string, number>();
-    // We don't have individual items here, so we skip "most served foods" or note it's unavailable
+    reportData.forEach((r) => {
+      if (r.items) {
+        r.items.forEach((item) => {
+          foodFreq.set(item.food_name, (foodFreq.get(item.food_name) || 0) + 1);
+        });
+      }
+    });
+    const topFoods = Array.from(foodFreq.entries())
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 5);
 
-    const insightLines: string[] = [];
     const proteinLabel = `Average protein per meal: ${Math.round(avgProtein)}g`;
-    insightLines.push(proteinLabel);
-
-    if (lowProteinCount > 0 && totalEvents >= 3) {
-      insightLines.push(`⚠ ${lowProteinCount} of ${totalEvents} meals were low in protein — consider encouraging volunteers to include a lean protein source.`);
-    }
-
-    const boxH = 8 + insightLines.length * 5 + 4;
+    const extraLines = (topFoods.length > 0 ? 2 + topFoods.length : 0) +
+      (lowProteinCount > 0 && totalEvents >= 3 ? 2 : 0);
+    const boxH = 14 + extraLines * 3.5;
     checkPage(boxH + 4);
 
     doc.setFillColor(...LIGHT_BG);
@@ -232,14 +271,26 @@ function generateMealReportPdf(data: MealReportPdfData): jsPDF {
 
     let insY = y + 12;
     doc.setFontSize(8);
-
-    // Protein line with color
     doc.setFont("helvetica", "normal");
     if (avgProtein >= 20) doc.setTextColor(22, 163, 74);
     else if (avgProtein >= 10) doc.setTextColor(202, 138, 4);
     else doc.setTextColor(220, 38, 38);
     doc.text(proteinLabel, marginL + 6, insY);
     insY += 5;
+
+    if (topFoods.length > 0) {
+      doc.setFontSize(7);
+      doc.setFont("helvetica", "bold");
+      doc.setTextColor(...BRAND_GRAY);
+      doc.text("Most frequently served:", marginL + 6, insY);
+      insY += 3.5;
+      doc.setFont("helvetica", "normal");
+      doc.setTextColor(...BRAND_DARK);
+      topFoods.forEach(([name, count]) => {
+        doc.text(`• ${name} (${count}×)`, marginL + 10, insY);
+        insY += 3.5;
+      });
+    }
 
     if (lowProteinCount > 0 && totalEvents >= 3) {
       doc.setTextColor(220, 38, 38);
@@ -338,12 +389,10 @@ function generateMealReportPdf(data: MealReportPdfData): jsPDF {
   y += 3.5;
   doc.text("joshmercado@nolimitsboxingacademy.org", marginL, y);
 
-  // Disclaimer bottom right
   doc.setFontSize(6);
   doc.setTextColor(180, 180, 180);
   doc.text("Nutritional values are AI-estimated based on typical serving sizes.", pageWidth - marginR, pageHeight - 14, { align: "right" });
 
-  // ─── FOOTER ───
   const footerY = pageHeight - 10;
   doc.setFontSize(7);
   doc.setTextColor(180, 180, 180);
