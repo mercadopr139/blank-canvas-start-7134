@@ -134,7 +134,12 @@ const SortableTile = ({
         >
           <Pencil className="w-3 h-3" />
         </button>
-        <UpcomingEventsWidget />
+        <UpcomingEventsWidget
+          title={tile.title}
+          subtitle={tile.subtitle}
+          accentColor={tile.accent_color}
+          iconName={tile.icon_name}
+        />
       </div>
     );
   }
