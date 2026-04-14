@@ -137,7 +137,7 @@ const MealCheckIn = () => {
       {flash && <div className="fixed inset-0 bg-green-500/20 pointer-events-none z-50 animate-in fade-in duration-200" />}
 
       {/* NLA Logo */}
-      <img src={nlaLogo} alt="NLA" className="w-28 h-auto mb-4 opacity-80" />
+      <img src={nlaLogo} alt="NLA" className="w-48 h-auto mb-6 opacity-80" />
 
       {/* Plate icon */}
       <img src={mealPlateIcon} alt="Meal" className="w-80 h-80 mb-6 opacity-60" />
