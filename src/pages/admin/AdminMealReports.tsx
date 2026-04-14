@@ -49,6 +49,8 @@ const AdminMealReports = () => {
   const [loadingItems, setLoadingItems] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<ReportRow | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [editingMealId, setEditingMealId] = useState<string | null>(null);
+  const [editingMealValue, setEditingMealValue] = useState("");
 
   useEffect(() => {
     loadSummary();
