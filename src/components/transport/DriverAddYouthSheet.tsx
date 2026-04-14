@@ -104,6 +104,10 @@ export default function DriverAddYouthSheet({ open, onOpenChange, routeName, onY
   };
 
   const selectProfile = (y: YouthProfile) => {
+    if (currentRosterIds?.has(y.id)) {
+      toast({ title: "Youth already added", variant: "destructive" });
+      return;
+    }
     onYouthAdded(y);
     toast({ title: `${y.first_name} ${y.last_name} added` });
     handleOpenChange(false);
@@ -134,8 +138,17 @@ export default function DriverAddYouthSheet({ open, onOpenChange, routeName, onY
         first_name: r.child_first_name,
         last_name: r.child_last_name,
         photo_url: r.child_headshot_url,
+      const newYouth: YouthProfile = {
+        id: profileData.id,
+        first_name: profileData.first_name,
+        last_name: profileData.last_name,
+        photo_url: profileData.photo_url,
         pickup_zone: zone,
       };
+      if (currentRosterIds?.has(newYouth.id)) {
+        toast({ title: "Youth already added", variant: "destructive" });
+        return;
+      }
       onYouthAdded(newYouth);
       toast({ title: `${newYouth.first_name} ${newYouth.last_name} added from registration` });
       handleOpenChange(false);
