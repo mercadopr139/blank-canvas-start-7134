@@ -626,6 +626,7 @@ export default function TransportRun() {
         open={addYouthOpen}
         onOpenChange={setAddYouthOpen}
         routeName={routeName}
+        currentRosterIds={new Set(youth.map((y) => y.id))}
         onYouthAdded={(newYouth) => {
           setYouth((prev) => {
             if (prev.some((y) => y.id === newYouth.id)) return prev;

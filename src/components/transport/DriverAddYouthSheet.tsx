@@ -35,9 +35,10 @@ interface DriverAddYouthSheetProps {
   onOpenChange: (open: boolean) => void;
   routeName: string;
   onYouthAdded: (youth: YouthProfile) => void;
+  currentRosterIds?: Set<string>;
 }
 
-export default function DriverAddYouthSheet({ open, onOpenChange, routeName, onYouthAdded }: DriverAddYouthSheetProps) {
+export default function DriverAddYouthSheet({ open, onOpenChange, routeName, onYouthAdded, currentRosterIds }: DriverAddYouthSheetProps) {
   const [step, setStep] = useState<"search" | "form">("search");
   const [searchQuery, setSearchQuery] = useState("");
   const [results, setResults] = useState<SearchResult[]>([]);
@@ -103,6 +104,10 @@ export default function DriverAddYouthSheet({ open, onOpenChange, routeName, onY
   };
 
   const selectProfile = (y: YouthProfile) => {
+    if (currentRosterIds?.has(y.id)) {
+      toast({ title: "Youth already added", variant: "destructive" });
+      return;
+    }
     onYouthAdded(y);
     toast({ title: `${y.first_name} ${y.last_name} added` });
     handleOpenChange(false);
@@ -135,6 +140,10 @@ export default function DriverAddYouthSheet({ open, onOpenChange, routeName, onY
         photo_url: r.child_headshot_url,
         pickup_zone: zone,
       };
+      if (currentRosterIds?.has(newYouth.id)) {
+        toast({ title: "Youth already added", variant: "destructive" });
+        return;
+      }
       onYouthAdded(newYouth);
       toast({ title: `${newYouth.first_name} ${newYouth.last_name} added from registration` });
       handleOpenChange(false);
@@ -173,6 +182,10 @@ export default function DriverAddYouthSheet({ open, onOpenChange, routeName, onY
       if (!res.ok) throw new Error("Failed to save");
       const data = await res.json();
       const newYouth: YouthProfile = { id: data.id, first_name: firstName.trim(), last_name: lastName.trim(), photo_url, pickup_zone: zone };
+      if (currentRosterIds?.has(newYouth.id)) {
+        toast({ title: "Youth already added", variant: "destructive" });
+        return;
+      }
       onYouthAdded(newYouth);
       toast({ title: `${newYouth.first_name} ${newYouth.last_name} added` });
       handleOpenChange(false);
