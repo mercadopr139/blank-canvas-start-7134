@@ -265,7 +265,7 @@ const MealCheckIn = () => {
           Admin Setup →
         </button>
 
-        <img src={mealTrainLogo} alt="Meal Train" className="w-64 h-auto mb-6 opacity-90" />
+        
         <UtensilsCrossed className="w-16 h-16 mb-4" style={{ color: "#bf0f3e" }} />
         <h1 className="text-3xl font-bold text-white mb-2">Set Up Tonight's Meal</h1>
         <p className="text-zinc-400 mb-8">Add tonight's menu before service starts</p>
