@@ -50,8 +50,8 @@ export default function TransportDashboard() {
   };
 
   const zones = [
-    { name: "Woodbine", color: "bg-[#DC2626]/20", border: "border-[#DC2626]", accent: "text-[#DC2626]" },
-    { name: "Wildwood", color: "bg-[#2563EB]/20", border: "border-[#2563EB]", accent: "text-[#2563EB]" },
+    { name: "Woodbine", color: "bg-[#D4A017]/20", border: "border-[#D4A017]", accent: "text-[#D4A017]" },
+    { name: "Wildwood", color: "bg-[#800020]/20", border: "border-[#800020]", accent: "text-[#C8385A]" },
   ];
 
   if (loading) {

@@ -171,8 +171,8 @@ export default function TransportTripDetails() {
 
   const zoneColor =
     zone === "Woodbine"
-      ? { bg: "bg-[#DC2626]/20", border: "border-[#DC2626]", text: "text-[#DC2626]" }
-      : { bg: "bg-[#2563EB]/20", border: "border-[#2563EB]", text: "text-[#2563EB]" };
+      ? { bg: "bg-[#D4A017]/20", border: "border-[#D4A017]", text: "text-[#D4A017]" }
+      : { bg: "bg-[#800020]/20", border: "border-[#800020]", text: "text-[#C8385A]" };
 
   return (
     <div className="min-h-screen bg-black flex flex-col items-center px-4 py-6 select-none">
