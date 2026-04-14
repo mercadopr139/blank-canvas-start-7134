@@ -140,7 +140,7 @@ const MealCheckIn = () => {
       <img src={nlaLogo} alt="NLA" className="w-28 h-auto mb-4 opacity-80" />
 
       {/* Plate icon */}
-      <img src={mealPlateIcon} alt="Meal" className="w-20 h-20 mb-6 opacity-60" />
+      <img src={mealPlateIcon} alt="Meal" className="w-80 h-80 mb-6 opacity-60" />
 
       <h1 className="text-4xl font-bold text-white mb-4">Meal Check-In</h1>
 
