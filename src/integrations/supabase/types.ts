@@ -1016,6 +1016,124 @@ export type Database = {
           },
         ]
       }
+      meal_checkins: {
+        Row: {
+          id: string
+          meal_event_id: string
+          tapped_at: string
+          tapped_by: string | null
+        }
+        Insert: {
+          id?: string
+          meal_event_id: string
+          tapped_at?: string
+          tapped_by?: string | null
+        }
+        Update: {
+          id?: string
+          meal_event_id?: string
+          tapped_at?: string
+          tapped_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "meal_checkins_meal_event_id_fkey"
+            columns: ["meal_event_id"]
+            isOneToOne: false
+            referencedRelation: "meal_events"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      meal_events: {
+        Row: {
+          created_at: string
+          donor_name: string | null
+          event_date: string
+          id: string
+          meal_count: number
+          notes: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          donor_name?: string | null
+          event_date: string
+          id?: string
+          meal_count?: number
+          notes?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          donor_name?: string | null
+          event_date?: string
+          id?: string
+          meal_count?: number
+          notes?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      meal_items: {
+        Row: {
+          calories: number | null
+          carbs_g: number | null
+          created_at: string
+          fat_g: number | null
+          fiber_g: number | null
+          food_name: string
+          id: string
+          meal_event_id: string
+          protein_g: number | null
+          serving_description: string | null
+          sodium_mg: number | null
+          sort_order: number
+          sugar_g: number | null
+          usda_fdc_id: string | null
+        }
+        Insert: {
+          calories?: number | null
+          carbs_g?: number | null
+          created_at?: string
+          fat_g?: number | null
+          fiber_g?: number | null
+          food_name: string
+          id?: string
+          meal_event_id: string
+          protein_g?: number | null
+          serving_description?: string | null
+          sodium_mg?: number | null
+          sort_order?: number
+          sugar_g?: number | null
+          usda_fdc_id?: string | null
+        }
+        Update: {
+          calories?: number | null
+          carbs_g?: number | null
+          created_at?: string
+          fat_g?: number | null
+          fiber_g?: number | null
+          food_name?: string
+          id?: string
+          meal_event_id?: string
+          protein_g?: number | null
+          serving_description?: string | null
+          sodium_mg?: number | null
+          sort_order?: number
+          sugar_g?: number | null
+          usda_fdc_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "meal_items_meal_event_id_fkey"
+            columns: ["meal_event_id"]
+            isOneToOne: false
+            referencedRelation: "meal_events"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       practice_days: {
         Row: {
           created_at: string
@@ -2247,6 +2365,22 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      decrement_meal_count: { Args: { _event_id: string }; Returns: number }
+      get_meal_report: {
+        Args: { _end_date: string; _start_date: string }
+        Returns: {
+          donor_name: string
+          event_date: string
+          event_id: string
+          item_count: number
+          meal_count: number
+          notes: string
+          total_calories: number
+          total_carbs: number
+          total_fat: number
+          total_protein: number
+        }[]
+      }
       get_today_checkin_count: { Args: never; Returns: number }
       get_today_lil_champs_count: { Args: never; Returns: number }
       has_role: {
@@ -2256,6 +2390,7 @@ export type Database = {
         }
         Returns: boolean
       }
+      increment_meal_count: { Args: { _event_id: string }; Returns: number }
       search_kiosk_youth: {
         Args: { _search: string }
         Returns: {
