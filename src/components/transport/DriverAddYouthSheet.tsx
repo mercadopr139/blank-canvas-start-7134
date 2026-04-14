@@ -138,11 +138,6 @@ export default function DriverAddYouthSheet({ open, onOpenChange, routeName, onY
         first_name: r.child_first_name,
         last_name: r.child_last_name,
         photo_url: r.child_headshot_url,
-      const newYouth: YouthProfile = {
-        id: profileData.id,
-        first_name: profileData.first_name,
-        last_name: profileData.last_name,
-        photo_url: profileData.photo_url,
         pickup_zone: zone,
       };
       if (currentRosterIds?.has(newYouth.id)) {
