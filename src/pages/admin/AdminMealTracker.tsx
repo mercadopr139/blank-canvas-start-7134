@@ -209,7 +209,7 @@ const AdminMealTracker = () => {
       serving_description: food.servingSize ? `${food.servingSize} ${food.servingSizeUnit || "g"}` : "1 serving",
       sort_order: items.length,
     };
-    const { data, error } = await supabase.from("meal_items").insert(newItem).select().single();
+    const { data, error } = await supabase.from("meal_items").insert([newItem as any]).select().single();
     if (error) { toast.error("Failed to add item"); return; }
     setItems((prev) => [...prev, data as MealItem]);
     setSearchTerm("");

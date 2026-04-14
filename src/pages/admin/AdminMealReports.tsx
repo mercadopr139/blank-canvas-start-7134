@@ -253,7 +253,7 @@ const AdminMealReports = () => {
   );
 };
 
-function DatePicker({ label, date, onSelect }: { label: string; date: Date; onSelect: (d: Date) => void }) {
+function DatePicker({ date, onSelect }: { label?: string; date: Date; onSelect: (d: Date) => void }) {
   return (
     <Popover>
       <PopoverTrigger asChild>
