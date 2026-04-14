@@ -51,6 +51,10 @@ const GymBuddies = () => {
   const fromPrograms = location.state?.fromPrograms === true;
   const [isChatOpen, setIsChatOpen] = useState(false);
   const gymBuddiesImages = [{
+    src: mtpdYouthCampCommittee,
+    alt: "Middle Township PD Youth Camp Committee",
+    caption: "Middle Township PD Youth Camp Committee"
+  }, {
     src: chiefDekonCapeMay,
     alt: "Congrats Chief Dekon, Chief of Chiefs in CMC with Mayor Leusner and NLA Family",
     caption: "Congrats Chief Dekon, Chief of Chiefs in CMC! w/ Mayor Leusner & NLA Family!"
