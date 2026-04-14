@@ -8,6 +8,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sh
 import { Input } from "@/components/ui/input";
 
 import nlaLogo from "@/assets/nla-logo-white.png";
+import mealTrainLogo from "@/assets/meal-train-logo.png";
 
 interface FoodItem {
   id?: string;
