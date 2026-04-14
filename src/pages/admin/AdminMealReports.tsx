@@ -4,7 +4,8 @@ import { format, subDays, startOfWeek, startOfMonth } from "date-fns";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { CalendarIcon, Download, Loader2, UtensilsCrossed, TrendingUp, AlertTriangle, ChevronDown, ChevronRight, Sparkles, Trash2, FileText } from "lucide-react";
+import { CalendarIcon, Download, Loader2, UtensilsCrossed, TrendingUp, AlertTriangle, ChevronDown, ChevronRight, Sparkles, Trash2, FileText, Pencil } from "lucide-react";
+
 import { downloadMealReportPdf } from "@/lib/generateMealReportPdf";
 import { cn } from "@/lib/utils";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -48,6 +49,8 @@ const AdminMealReports = () => {
   const [loadingItems, setLoadingItems] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<ReportRow | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [editingMealId, setEditingMealId] = useState<string | null>(null);
+  const [editingMealValue, setEditingMealValue] = useState("");
 
   useEffect(() => {
     loadSummary();
@@ -189,6 +192,23 @@ const AdminMealReports = () => {
     setDeleting(false);
   };
 
+  const saveMealCount = async (eventId: string) => {
+    const newCount = parseInt(editingMealValue, 10);
+    if (isNaN(newCount) || newCount < 0) {
+      toast.error("Enter a valid number");
+      return;
+    }
+    const { error } = await supabase.from("meal_events").update({ meal_count: newCount }).eq("id", eventId);
+    if (error) {
+      toast.error("Failed to update meal count");
+    } else {
+      setReportData((prev) => prev.map((r) => r.event_id === eventId ? { ...r, meal_count: newCount } : r));
+      loadSummary();
+      toast.success("Meal count updated");
+    }
+    setEditingMealId(null);
+  };
+
   const exportCSV = () => {
     const headers = "Date,Donor,Meals Served,Total Calories,Total Protein (g),Total Carbs (g),Total Fat (g),Items\n";
     const rows = reportData.map((r) =>
@@ -285,7 +305,33 @@ const AdminMealReports = () => {
                     </TableCell>
                     <TableCell className="text-white" onClick={() => toggleExpand(row.event_id)}>{format(new Date(row.event_date + "T12:00:00"), "MMM d, yyyy")}</TableCell>
                     <TableCell className="text-zinc-300" onClick={() => toggleExpand(row.event_id)}>{row.donor_name || "—"}</TableCell>
-                    <TableCell className="text-right text-green-400 font-bold" onClick={() => toggleExpand(row.event_id)}>{row.meal_count}</TableCell>
+                    <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
+                      {editingMealId === row.event_id ? (
+                        <div className="flex items-center justify-end gap-1">
+                          <input
+                            type="number"
+                            min={0}
+                            value={editingMealValue}
+                            onChange={(e) => setEditingMealValue(e.target.value)}
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter") saveMealCount(row.event_id);
+                              if (e.key === "Escape") setEditingMealId(null);
+                            }}
+                            autoFocus
+                            className="w-20 h-7 bg-zinc-800 border border-zinc-600 rounded px-2 text-green-400 font-bold text-right text-sm focus:outline-none focus:border-green-500"
+                          />
+                          <button onClick={() => saveMealCount(row.event_id)} className="text-green-400 hover:text-green-300 p-0.5"><Pencil className="w-3.5 h-3.5" /></button>
+                        </div>
+                      ) : (
+                        <button
+                          onClick={() => { setEditingMealId(row.event_id); setEditingMealValue(String(row.meal_count)); }}
+                          className="text-green-400 font-bold hover:underline cursor-pointer"
+                          title="Click to edit meal count"
+                        >
+                          {row.meal_count}
+                        </button>
+                      )}
+                    </TableCell>
                     <TableCell className="text-right text-zinc-400" onClick={() => toggleExpand(row.event_id)}>{row.item_count}</TableCell>
                     <TableCell className="text-right text-amber-400" onClick={() => toggleExpand(row.event_id)}>{Math.round(row.total_calories)}</TableCell>
                     <TableCell className="text-right text-blue-400" onClick={() => toggleExpand(row.event_id)}>{Math.round(row.total_protein)}g</TableCell>
