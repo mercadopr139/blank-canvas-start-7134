@@ -116,8 +116,6 @@ const AdminMealReports = () => {
             }
             return;
           }
-            return;
-          }
         }
       } catch (err) {
         console.error("Estimation failed:", err);
