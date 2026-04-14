@@ -124,6 +124,22 @@ export default function AddYouthDialog({ open, onOpenChange, onSaved }: AddYouth
     }
     setSaving(true);
     try {
+      // Duplicate check
+      const { data: existing } = await supabase
+        .from("youth_profiles")
+        .select("id")
+        .ilike("first_name", form.first_name.trim())
+        .ilike("last_name", form.last_name.trim())
+        .eq("pickup_zone", form.pickup_zone as any)
+        .limit(1)
+        .maybeSingle();
+
+      if (existing) {
+        toast({ title: "Youth already added", description: "A profile with this name and zone already exists.", variant: "destructive" });
+        setSaving(false);
+        return;
+      }
+
       let photo_url: string | null = prefillPhotoUrl || null;
 
       if (photoFile) {
