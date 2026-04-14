@@ -23,7 +23,7 @@ function downloadCsv(filename: string, csv: string) {
   const a = document.createElement("a"); a.href = url; a.download = filename; a.click();
   URL.revokeObjectURL(url);
 }
-function getPayRate(routeName: string | undefined): number { return routeName === "Overflow" ? 25 : 50; }
+function getPayRate(routeName: string | undefined): number { return (routeName === "Overflow" || routeName === "Both") ? 25 : 50; }
 
 type PayPeriod = { label: string; start: string; end: string };
 function getCurrentPayPeriod(): PayPeriod {
