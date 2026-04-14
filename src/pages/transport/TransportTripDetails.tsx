@@ -19,10 +19,10 @@ interface Route {
 
 type TripType = "regular" | "overflow" | "both_zones";
 
-const TRIP_OPTIONS: { value: TripType; label: string; price: string; icon: typeof Bus }[] = [
-  { value: "regular", label: "Regular Trip", price: "$50 per trip", icon: MapPin },
-  { value: "overflow", label: "Overflow", price: "$25 per trip", icon: Layers },
-  { value: "both_zones", label: "Both Zones", price: "$25 per trip", icon: Bus },
+const TRIP_OPTIONS: { value: TripType; label: string; icon: typeof Bus }[] = [
+  { value: "regular", label: "Regular Trip", icon: MapPin },
+  { value: "overflow", label: "Overflow", icon: Layers },
+  { value: "both_zones", label: "Both Zones", icon: Bus },
 ];
 
 export default function TransportTripDetails() {
