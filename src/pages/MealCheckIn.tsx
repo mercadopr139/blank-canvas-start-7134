@@ -4,6 +4,7 @@ import { toast } from "sonner";
 import { Undo2, AlertTriangle, Shield, Send } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import mealPlateIcon from "@/assets/meal-plate-icon.png";
+import nlaLogo from "@/assets/nla-logo-white.png";
 
 const MealCheckIn = () => {
   const navigate = useNavigate();
