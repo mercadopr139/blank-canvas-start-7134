@@ -4,8 +4,11 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, LogOut, Plus, Pencil, GripVertical } from "lucide-react";
+import { ArrowLeft, LogOut, Plus, Pencil, GripVertical, Lock } from "lucide-react";
 import { icons } from "lucide-react";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+
+const JOSH_EMAIL = "joshmercado@nolimitsboxingacademy.org";
 import { toast } from "sonner";
 import nlaLogo from "@/assets/nla-logo-white.png";
 import FocusAreaModal from "@/components/admin/FocusAreaModal";
@@ -148,8 +151,9 @@ const SortableCard = ({
 /* ── Main Page ── */
 const AdminPCTaskManager = () => {
   const navigate = useNavigate();
-  const { signOut } = useAuth();
+  const { signOut, user } = useAuth();
   const queryClient = useQueryClient();
+  const isJosh = user?.email?.toLowerCase() === JOSH_EMAIL;
   const [modalOpen, setModalOpen] = useState(false);
   const [editingArea, setEditingArea] = useState<FocusArea | null>(null);
 
@@ -286,26 +290,63 @@ const AdminPCTaskManager = () => {
               strategy={rectSortingStrategy}
             >
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 max-w-4xl mx-auto">
-                {focusAreas.map((area) => (
-                  <SortableCard
-                    key={area.id}
-                    area={area}
-                    onOpen={() => navigate(`/admin/pc-signals/${area.key}`)}
-                    onEdit={() => openEdit(area)}
-                  />
-                ))}
+                {focusAreas.map((area) => {
+                  const locked = isJosh && area.key !== "nla";
+                  if (locked) {
+                    const IconComp = getIconComponent(area.icon_name);
+                    return (
+                      <Tooltip key={area.id}>
+                        <TooltipTrigger asChild>
+                          <div
+                            className="relative rounded-2xl border-2 p-7 min-h-[200px] flex flex-col justify-between opacity-30 cursor-not-allowed"
+                            style={{
+                              borderColor: `${area.accent_color}40`,
+                              background: getGradient(area.accent_color),
+                            }}
+                          >
+                            <Lock className="absolute top-3 right-3 w-4 h-4 text-white/30" />
+                            <div
+                              className="w-14 h-14 rounded-xl flex items-center justify-center mb-5"
+                              style={{ background: `${area.accent_color}18`, color: area.accent_color }}
+                            >
+                              {IconComp && <IconComp className="w-7 h-7" strokeWidth={1.8} />}
+                            </div>
+                            <div>
+                              <h2 className="text-xl font-extrabold tracking-tight text-white mb-1">{area.title}</h2>
+                              <p className="text-xs text-zinc-500 font-medium mb-4">{area.subtitle || ""}</p>
+                              <span className="text-sm font-semibold text-white/20">🔒 Locked</span>
+                            </div>
+                          </div>
+                        </TooltipTrigger>
+                        <TooltipContent className="bg-zinc-900 border-zinc-800 text-zinc-300 text-xs">
+                          PC access only
+                        </TooltipContent>
+                      </Tooltip>
+                    );
+                  }
+                  return (
+                    <SortableCard
+                      key={area.id}
+                      area={area}
+                      onOpen={() => navigate(`/admin/pc-signals/${area.key}${isJosh ? "?mode=view" : ""}`)}
+                      onEdit={() => openEdit(area)}
+                    />
+                  );
+                })}
 
-                <button
-                  onClick={openCreate}
-                  className="group rounded-2xl border-2 border-dashed border-white/10 hover:border-white/25 min-h-[200px] flex flex-col items-center justify-center gap-3 transition-all duration-300 hover:bg-white/[0.02] cursor-pointer"
-                >
-                  <div className="w-14 h-14 rounded-xl bg-white/5 flex items-center justify-center group-hover:bg-white/10 transition-colors">
-                    <Plus className="w-7 h-7 text-white/30 group-hover:text-white/60" />
-                  </div>
-                  <span className="text-sm font-semibold text-white/30 group-hover:text-white/60 transition-colors">
-                    Add Focus Area
-                  </span>
-                </button>
+                {!isJosh && (
+                  <button
+                    onClick={openCreate}
+                    className="group rounded-2xl border-2 border-dashed border-white/10 hover:border-white/25 min-h-[200px] flex flex-col items-center justify-center gap-3 transition-all duration-300 hover:bg-white/[0.02] cursor-pointer"
+                  >
+                    <div className="w-14 h-14 rounded-xl bg-white/5 flex items-center justify-center group-hover:bg-white/10 transition-colors">
+                      <Plus className="w-7 h-7 text-white/30 group-hover:text-white/60" />
+                    </div>
+                    <span className="text-sm font-semibold text-white/30 group-hover:text-white/60 transition-colors">
+                      Add Focus Area
+                    </span>
+                  </button>
+                )}
               </div>
             </SortableContext>
           </DndContext>
