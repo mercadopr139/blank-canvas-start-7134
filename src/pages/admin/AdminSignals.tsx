@@ -635,13 +635,6 @@ const AdminSignals = ({ managerType = "PD" }: { managerType?: string }) => {
       targetBucket = overBucket || sourceBucket;
     }
 
-    // Guardrail: Core 3 max limit
-    if (targetBucket === "core" && sourceBucket !== "core") {
-      if (todayCoreSignals.length >= 3) {
-        toast.error("Core 3 limit reached (3 max)");
-        return;
-      }
-    }
 
     if (sourceBucket === targetBucket) {
       // Same-column reorder
@@ -686,7 +679,7 @@ const AdminSignals = ({ managerType = "PD" }: { managerType?: string }) => {
         newOnDeckList,
       });
 
-      const label = targetBucket === "core" ? "Core 3" : targetBucket === "bonus" ? "On-Deck" : "On Radar";
+      const label = targetBucket === "core" ? "Core" : targetBucket === "bonus" ? "On-Deck" : "On Radar";
       toast.success(`Moved to ${label}`);
     }
   };
@@ -820,7 +813,7 @@ const AdminSignals = ({ managerType = "PD" }: { managerType?: string }) => {
             </svg>
             <div className="absolute inset-0 flex flex-col items-center justify-center">
               <span className="text-xl font-bold text-white">{progressPct}%</span>
-              <span className="text-[8px] uppercase tracking-wider text-white/25 mt-0.5">Core 3</span>
+              <span className="text-[8px] uppercase tracking-wider text-white/25 mt-0.5">Core</span>
             </div>
           </div>
 
@@ -897,7 +890,7 @@ const AdminSignals = ({ managerType = "PD" }: { managerType?: string }) => {
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end" className="bg-zinc-900 border-white/10 text-white">
                         <DropdownMenuItem onClick={() => scheduleMutation.mutate({ id: signal.id, priority: "Core" })} className="focus:bg-white/5" style={{ color: ac.hexMuted }}>
-                          Move to Core 3
+                          Move to Core
                         </DropdownMenuItem>
                         <DropdownMenuItem onClick={() => scheduleMutation.mutate({ id: signal.id, priority: "Bonus" })} className="text-white/60 focus:text-white focus:bg-white/5">
                           Move to On-Deck
@@ -982,19 +975,15 @@ const AdminSignals = ({ managerType = "PD" }: { managerType?: string }) => {
                 <div className="rounded-xl border-2 overflow-hidden" style={{ borderColor: `${ac.hex}4D`, background: `linear-gradient(to bottom, ${ac.bgFrom}, transparent)` }}>
                   <div className="px-4 pt-4 pb-2 flex items-center gap-2">
                     <Target className="w-4 h-4" style={{ color: ac.hex }} />
-                    <h3 className="text-sm font-bold uppercase tracking-wider" style={{ color: ac.hex }}>Core 3</h3>
+                    <h3 className="text-sm font-bold uppercase tracking-wider" style={{ color: ac.hex }}>Core</h3>
                   </div>
                   <SortableContext items={[...todayCoreSignals].sort((a, b) => (b.status === "Complete" ? 1 : 0) - (a.status === "Complete" ? 1 : 0)).map(s => s.id)} strategy={verticalListSortingStrategy}>
                     <div className="px-3 pb-3 space-y-1 min-h-[80px]">
                       {todayCoreSignals.length === 0 ? (
-                        <>
-                          {[1, 2, 3].map((i) => (
-                            <div key={i} className="flex items-center gap-3 px-3 py-2.5 rounded-lg bg-white/[0.02] border border-white/[0.04]">
-                              <Circle className="w-4 h-4 text-white/10 shrink-0" />
-                              <span className="text-white/15 text-sm italic">Empty slot</span>
-                            </div>
-                          ))}
-                        </>
+                        <div className="flex items-center gap-3 px-3 py-2.5 rounded-lg bg-white/[0.02] border border-white/[0.04]">
+                          <Circle className="w-4 h-4 text-white/10 shrink-0" />
+                          <span className="text-white/15 text-sm italic">Empty slot</span>
+                        </div>
                       ) : (
                         [...todayCoreSignals].sort((a, b) => (b.status === "Complete" ? 1 : 0) - (a.status === "Complete" ? 1 : 0)).map((signal) => (
                           <SortableSignalRow
@@ -1132,7 +1121,7 @@ const AdminSignals = ({ managerType = "PD" }: { managerType?: string }) => {
                                 onClick={(e) => { e.stopPropagation(); scheduleMutation.mutate({ id: signal.id, priority: "Core" }); }}
                                 disabled={scheduleMutation.isPending}
                               >
-                                Core 3 <ArrowRight className="w-3 h-3 ml-1" />
+                                Core <ArrowRight className="w-3 h-3 ml-1" />
                               </Button>
                               <Button
                                 size="sm"
@@ -1214,7 +1203,7 @@ const AdminSignals = ({ managerType = "PD" }: { managerType?: string }) => {
                   <SelectValue placeholder="Select bucket" />
                 </SelectTrigger>
                 <SelectContent className="bg-zinc-900 border-white/10 z-[200]">
-                  <SelectItem value="core" className="text-white hover:bg-white/10 focus:bg-white/10 focus:text-white">Core 3</SelectItem>
+                  <SelectItem value="core" className="text-white hover:bg-white/10 focus:bg-white/10 focus:text-white">Core</SelectItem>
                   <SelectItem value="bonus" className="text-white hover:bg-white/10 focus:bg-white/10 focus:text-white">On-Deck</SelectItem>
                   <SelectItem value="ondeck" className="text-white hover:bg-white/10 focus:bg-white/10 focus:text-white">On Radar</SelectItem>
                 </SelectContent>
@@ -1323,7 +1312,7 @@ const AdminSignals = ({ managerType = "PD" }: { managerType?: string }) => {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent className="bg-zinc-900 border-white/10 z-[200]">
-                    <SelectItem value="core" className="text-white hover:bg-white/10 focus:bg-white/10 focus:text-white">Core 3</SelectItem>
+                    <SelectItem value="core" className="text-white hover:bg-white/10 focus:bg-white/10 focus:text-white">Core</SelectItem>
                     <SelectItem value="bonus" className="text-white hover:bg-white/10 focus:bg-white/10 focus:text-white">On-Deck</SelectItem>
                     <SelectItem value="ondeck" className="text-white hover:bg-white/10 focus:bg-white/10 focus:text-white">On Radar</SelectItem>
                   </SelectContent>
