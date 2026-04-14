@@ -101,7 +101,7 @@ const MealCheckIn = () => {
       {flash && <div className="fixed inset-0 bg-green-500/20 pointer-events-none z-50 animate-in fade-in duration-200" />}
 
       {/* Logo */}
-      <img src="/placeholder.svg" alt="NLA" className="w-20 h-20 mb-6 opacity-60" />
+      <img src={mealPlateIcon} alt="Meal" className="w-20 h-20 mb-6 opacity-60" />
 
       <h1 className="text-4xl font-bold text-white mb-4">Meal Check-In</h1>
 
