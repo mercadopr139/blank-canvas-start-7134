@@ -92,7 +92,7 @@ function generateMealReportPdf(data: MealReportPdfData): jsPDF {
   doc.text("No Limits Academy", logoRightEdge, 24);
 
   const metaX = pageWidth - marginR;
-  const labelX = metaX - 52;
+  const labelX = metaX - 62;
   doc.setFontSize(8);
   doc.setTextColor(...BRAND_GRAY);
   doc.text("Report Period", labelX, 12);
