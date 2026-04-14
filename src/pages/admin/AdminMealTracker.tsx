@@ -336,6 +336,9 @@ const AdminMealTracker = () => {
                     onBlur={() => setTimeout(() => setShowDropdown(false), 200)}
                     className="pl-10 bg-zinc-900 border-zinc-700 text-white"
                   />
+                  {searchError && (
+                    <p className="text-red-500 text-sm mt-1 font-medium">{searchError}</p>
+                  )}
                   {showDropdown && (
                     <div className="absolute z-50 w-full mt-1 bg-zinc-900 border border-zinc-700 rounded-lg shadow-xl max-h-72 overflow-y-auto">
                       {searching && <div className="flex items-center gap-2 p-3 text-zinc-400"><Loader2 className="w-4 h-4 animate-spin" /> Searching...</div>}
