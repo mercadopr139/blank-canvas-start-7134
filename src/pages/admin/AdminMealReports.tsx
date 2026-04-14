@@ -72,6 +72,33 @@ const AdminMealReports = () => {
     setWeekCount(wData ? wData.reduce((s, r) => s + (r.meal_count || 0), 0) : 0);
   };
 
+  const enrichWithItems = async (rows: ReportRow[]) => {
+    const eventIds = rows.map(r => r.event_id);
+    if (eventIds.length === 0) return rows;
+    const { data: items } = await supabase
+      .from("meal_items")
+      .select("meal_event_id, food_name, calories, protein_g, carbs_g, fat_g")
+      .in("meal_event_id", eventIds)
+      .order("sort_order");
+    if (!items) return rows;
+    const itemMap = new Map<string, typeof items>();
+    items.forEach((item) => {
+      const arr = itemMap.get(item.meal_event_id) || [];
+      arr.push(item);
+      itemMap.set(item.meal_event_id, arr);
+    });
+    return rows.map(r => ({
+      ...r,
+      items: (itemMap.get(r.event_id) || []).map(i => ({
+        food_name: i.food_name,
+        calories: i.calories,
+        protein_g: i.protein_g,
+        carbs_g: i.carbs_g,
+        fat_g: i.fat_g,
+      })),
+    }));
+  };
+
   const runReport = async (andPrint = false) => {
     setLoading(true);
     setEstimating(false);
@@ -110,7 +137,10 @@ const AdminMealReports = () => {
             setReportData(reportRows);
             setEstimating(false);
             setLoading(false);
-            if (andPrint) await downloadMealReportPdf({ reportData: reportRows, startDate, endDate });
+            if (andPrint) {
+              const enriched = await enrichWithItems(reportRows);
+              await downloadMealReportPdf({ reportData: enriched, startDate, endDate });
+            }
             return;
           }
         }
@@ -123,7 +153,10 @@ const AdminMealReports = () => {
 
     setReportData(reportRows);
     setLoading(false);
-    if (andPrint) await downloadMealReportPdf({ reportData: reportRows, startDate, endDate });
+    if (andPrint) {
+      const enriched = await enrichWithItems(reportRows);
+      await downloadMealReportPdf({ reportData: enriched, startDate, endDate });
+    }
   };
 
   useEffect(() => { runReport(); }, []);
