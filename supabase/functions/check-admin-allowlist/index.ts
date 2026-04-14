@@ -15,9 +15,10 @@ Deno.serve(async (req) => {
     const { email } = await req.json();
 
     if (!email || typeof email !== "string") {
+      // Return same shape as success to prevent enumeration
       return new Response(JSON.stringify({ allowed: false }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
-        status: 400,
+        status: 200,
       });
     }
 
@@ -33,20 +34,23 @@ Deno.serve(async (req) => {
 
     if (error) {
       console.error("Allowlist check error:", error);
+      // Return generic false — don't reveal internal errors
       return new Response(JSON.stringify({ allowed: false }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
-        status: 500,
+        status: 200,
       });
     }
 
     return new Response(JSON.stringify({ allowed: !!data }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
+      status: 200,
     });
   } catch (err) {
     console.error("Error:", err);
+    // Always return 200 with allowed:false to prevent information leakage via status codes
     return new Response(JSON.stringify({ allowed: false }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
-      status: 500,
+      status: 200,
     });
   }
 });

@@ -6,6 +6,22 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
+// Simple in-memory rate limiter (per-isolate, resets on cold start)
+const attempts = new Map<string, { count: number; resetAt: number }>();
+const MAX_ATTEMPTS = 5;
+const WINDOW_MS = 15 * 60 * 1000; // 15 minutes
+
+function isRateLimited(key: string): boolean {
+  const now = Date.now();
+  const entry = attempts.get(key);
+  if (!entry || now > entry.resetAt) {
+    attempts.set(key, { count: 1, resetAt: now + WINDOW_MS });
+    return false;
+  }
+  entry.count++;
+  return entry.count > MAX_ATTEMPTS;
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -21,8 +37,23 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Server-side password validation
-    const COACH_PASSWORD = Deno.env.get("COACH_PASSWORD") || "coach";
+    // Rate limit by registration_id to prevent brute force
+    if (isRateLimited(registration_id)) {
+      return new Response(
+        JSON.stringify({ valid: false, error: "Too many attempts. Please try again later." }),
+        { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Server-side password validation — NO hardcoded fallback
+    const COACH_PASSWORD = Deno.env.get("COACH_PASSWORD");
+    if (!COACH_PASSWORD) {
+      console.error("COACH_PASSWORD secret is not configured");
+      return new Response(
+        JSON.stringify({ valid: false, error: "Service unavailable" }),
+        { status: 503, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
 
     if (password !== COACH_PASSWORD) {
       return new Response(
