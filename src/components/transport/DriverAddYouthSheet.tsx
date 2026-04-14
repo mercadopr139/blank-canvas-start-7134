@@ -182,6 +182,10 @@ export default function DriverAddYouthSheet({ open, onOpenChange, routeName, onY
       if (!res.ok) throw new Error("Failed to save");
       const data = await res.json();
       const newYouth: YouthProfile = { id: data.id, first_name: firstName.trim(), last_name: lastName.trim(), photo_url, pickup_zone: zone };
+      if (currentRosterIds?.has(newYouth.id)) {
+        toast({ title: "Youth already added", variant: "destructive" });
+        return;
+      }
       onYouthAdded(newYouth);
       toast({ title: `${newYouth.first_name} ${newYouth.last_name} added` });
       handleOpenChange(false);
