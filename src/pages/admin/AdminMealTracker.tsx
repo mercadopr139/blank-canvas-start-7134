@@ -160,7 +160,7 @@ const AdminMealTracker = () => {
       setShowDropdown(true);
       setSearchError(null);
       try {
-        const apiKey = import.meta.env.VITE_USDA_API_KEY || "DEMO_KEY";
+        const apiKey = import.meta.env.VITE_USDA_API_KEY || "ajjTsebzSSXXCDhIa0Mih36pEZ24fZqkUNGwEWNJ";
         const url = `https://api.nal.usda.gov/fdc/v1/foods/search?query=${encodeURIComponent(searchTerm)}&api_key=${apiKey}&dataType=Foundation,SR%20Legacy,Survey%20(FNDDS)&pageSize=8`;
         const res = await fetch(url);
         const data = await res.json();
