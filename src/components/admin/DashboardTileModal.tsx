@@ -101,7 +101,7 @@ const DashboardTileModal = ({ open, onClose, onSaved, editingTile, userId }: Pro
 
     try {
       if (isEditing && editingTile) {
-        const { error } = await (supabase.from("dashboard_tiles") as any)
+        const { error, data, count } = await (supabase.from("dashboard_tiles") as any)
           .update({
             title: title.trim(),
             subtitle: subtitle.trim() || null,
@@ -109,8 +109,12 @@ const DashboardTileModal = ({ open, onClose, onSaved, editingTile, userId }: Pro
             accent_color: accentColor,
             href,
           })
-          .eq("id", editingTile.id);
+          .eq("id", editingTile.id)
+          .select();
         if (error) throw error;
+        if (!data || data.length === 0) {
+          throw new Error("Update returned no rows – you may not have permission to edit this tile.");
+        }
         toast.success("Tile updated");
       } else {
         // Get max sort_order
