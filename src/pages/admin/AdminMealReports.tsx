@@ -305,7 +305,33 @@ const AdminMealReports = () => {
                     </TableCell>
                     <TableCell className="text-white" onClick={() => toggleExpand(row.event_id)}>{format(new Date(row.event_date + "T12:00:00"), "MMM d, yyyy")}</TableCell>
                     <TableCell className="text-zinc-300" onClick={() => toggleExpand(row.event_id)}>{row.donor_name || "—"}</TableCell>
-                    <TableCell className="text-right text-green-400 font-bold" onClick={() => toggleExpand(row.event_id)}>{row.meal_count}</TableCell>
+                    <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
+                      {editingMealId === row.event_id ? (
+                        <div className="flex items-center justify-end gap-1">
+                          <input
+                            type="number"
+                            min={0}
+                            value={editingMealValue}
+                            onChange={(e) => setEditingMealValue(e.target.value)}
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter") saveMealCount(row.event_id);
+                              if (e.key === "Escape") setEditingMealId(null);
+                            }}
+                            autoFocus
+                            className="w-20 h-7 bg-zinc-800 border border-zinc-600 rounded px-2 text-green-400 font-bold text-right text-sm focus:outline-none focus:border-green-500"
+                          />
+                          <button onClick={() => saveMealCount(row.event_id)} className="text-green-400 hover:text-green-300 p-0.5"><Pencil className="w-3.5 h-3.5" /></button>
+                        </div>
+                      ) : (
+                        <button
+                          onClick={() => { setEditingMealId(row.event_id); setEditingMealValue(String(row.meal_count)); }}
+                          className="text-green-400 font-bold hover:underline cursor-pointer"
+                          title="Click to edit meal count"
+                        >
+                          {row.meal_count}
+                        </button>
+                      )}
+                    </TableCell>
                     <TableCell className="text-right text-zinc-400" onClick={() => toggleExpand(row.event_id)}>{row.item_count}</TableCell>
                     <TableCell className="text-right text-amber-400" onClick={() => toggleExpand(row.event_id)}>{Math.round(row.total_calories)}</TableCell>
                     <TableCell className="text-right text-blue-400" onClick={() => toggleExpand(row.event_id)}>{Math.round(row.total_protein)}g</TableCell>
