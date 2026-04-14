@@ -72,7 +72,7 @@ const AdminMealReports = () => {
     setWeekCount(wData ? wData.reduce((s, r) => s + (r.meal_count || 0), 0) : 0);
   };
 
-  const runReport = async () => {
+  const runReport = async (andPrint = false) => {
     setLoading(true);
     setEstimating(false);
 
@@ -85,7 +85,7 @@ const AdminMealReports = () => {
       return;
     }
 
-    const reportRows = data as ReportRow[];
+    let reportRows = data as ReportRow[];
 
     const eventIds = reportRows.filter(r => r.item_count > 0).map(r => r.event_id);
     const needsEstimation = reportRows.some(r => r.item_count > 0 && r.total_calories === 0);
@@ -106,9 +106,11 @@ const AdminMealReports = () => {
             _end_date: format(endDate, "yyyy-MM-dd"),
           });
           if (refreshed) {
-            setReportData(refreshed as ReportRow[]);
+            reportRows = refreshed as ReportRow[];
+            setReportData(reportRows);
             setEstimating(false);
             setLoading(false);
+            if (andPrint) await downloadMealReportPdf({ reportData: reportRows, startDate, endDate });
             return;
           }
         }
@@ -121,6 +123,7 @@ const AdminMealReports = () => {
 
     setReportData(reportRows);
     setLoading(false);
+    if (andPrint) await downloadMealReportPdf({ reportData: reportRows, startDate, endDate });
   };
 
   useEffect(() => { runReport(); }, []);
