@@ -35,9 +35,10 @@ interface DriverAddYouthSheetProps {
   onOpenChange: (open: boolean) => void;
   routeName: string;
   onYouthAdded: (youth: YouthProfile) => void;
+  currentRosterIds?: Set<string>;
 }
 
-export default function DriverAddYouthSheet({ open, onOpenChange, routeName, onYouthAdded }: DriverAddYouthSheetProps) {
+export default function DriverAddYouthSheet({ open, onOpenChange, routeName, onYouthAdded, currentRosterIds }: DriverAddYouthSheetProps) {
   const [step, setStep] = useState<"search" | "form">("search");
   const [searchQuery, setSearchQuery] = useState("");
   const [results, setResults] = useState<SearchResult[]>([]);
