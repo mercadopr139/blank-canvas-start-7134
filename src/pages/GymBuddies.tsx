@@ -45,11 +45,16 @@ import nlaPoliceChiefsAssociation from "@/assets/gym-buddies/nla-police-chiefs-a
 import cmcFinest from "@/assets/gym-buddies/cmc-finest.png";
 import chiefDekonCapeMay from "@/assets/gym-buddies/chief-dekon-cape-may.jpg";
 import chiefDekonWeldonPowell from "@/assets/gym-buddies/chief-dekon-weldon-powell.jpg";
+import mtpdYouthCampCommittee from "@/assets/gym-buddies/mtpd-youth-camp-committee.jpg";
 const GymBuddies = () => {
   const location = useLocation();
   const fromPrograms = location.state?.fromPrograms === true;
   const [isChatOpen, setIsChatOpen] = useState(false);
   const gymBuddiesImages = [{
+    src: mtpdYouthCampCommittee,
+    alt: "Middle Township PD Youth Camp Committee",
+    caption: "Middle Township PD Youth Camp Committee"
+  }, {
     src: chiefDekonCapeMay,
     alt: "Congrats Chief Dekon, Chief of Chiefs in CMC with Mayor Leusner and NLA Family",
     caption: "Congrats Chief Dekon, Chief of Chiefs in CMC! w/ Mayor Leusner & NLA Family!"
