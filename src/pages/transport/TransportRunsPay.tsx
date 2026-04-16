@@ -88,12 +88,13 @@ export default function TransportRunsPay() {
 
   const fetchData = useCallback(async () => {
     setLoading(true);
-    const from = format(monthStart, "yyyy-MM-dd") + "T00:00:00";
-    const to = format(monthEnd, "yyyy-MM-dd") + "T23:59:59";
-    const ppFrom = currentPayPeriod.start + "T00:00:00";
-    const ppTo = currentPayPeriod.end + "T23:59:59";
-    const yearStart = `${new Date().getFullYear()}-01-01T00:00:00`;
-    const yearEnd = `${new Date().getFullYear()}-12-31T23:59:59`;
+    const from = new Date(format(monthStart, "yyyy-MM-dd") + "T00:00:00").toISOString();
+    const to = new Date(format(monthEnd, "yyyy-MM-dd") + "T23:59:59").toISOString();
+    // Use local-time boundaries (matches the calendar which renders started_at in local time)
+    const ppFrom = new Date(`${currentPayPeriod.start}T00:00:00`).toISOString();
+    const ppTo = new Date(`${currentPayPeriod.end}T23:59:59`).toISOString();
+    const yearStart = new Date(`${new Date().getFullYear()}-01-01T00:00:00`).toISOString();
+    const yearEnd = new Date(`${new Date().getFullYear()}-12-31T23:59:59`).toISOString();
 
     const [runsRes, approvalsRes, attRes, routesRes, ppRunsRes, yearRunsRes] = await Promise.all([
       supabase.from("runs").select("id, run_type, status, started_at, closed_at, driver:drivers(id, name), route:routes(id, name)").eq("status", "completed").gte("started_at", from).lte("started_at", to).order("started_at", { ascending: false }),
