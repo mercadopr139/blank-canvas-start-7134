@@ -269,6 +269,9 @@ const AdminMealReports = () => {
 
   const totalEvents = reportData.length;
   const avgProtein = totalEvents > 0 ? reportData.reduce((s, r) => s + r.total_protein, 0) / totalEvents : 0;
+  const avgCarbs = totalEvents > 0 ? reportData.reduce((s, r) => s + r.total_carbs, 0) / totalEvents : 0;
+  const avgFat = totalEvents > 0 ? reportData.reduce((s, r) => s + r.total_fat, 0) / totalEvents : 0;
+  const avgCalories = totalEvents > 0 ? reportData.reduce((s, r) => s + r.total_calories, 0) / totalEvents : 0;
   const lowProteinCount = reportData.filter((r) => r.total_protein < 10).length;
 
   const donorMap = new Map<string, { meals: number; dates: string[]; totalProtein: number; count: number }>();
