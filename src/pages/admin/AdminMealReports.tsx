@@ -144,6 +144,7 @@ const AdminMealReports = () => {
           if (refreshed) {
             reportRows = refreshed as ReportRow[];
             setReportData(reportRows);
+            await loadExtraStats(reportRows);
             setEstimating(false);
             setLoading(false);
             if (andPrint) {
