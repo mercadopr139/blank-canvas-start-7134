@@ -48,6 +48,12 @@ const AdminMealReports = () => {
   const [expandedItems, setExpandedItems] = useState<MealItemRow[]>([]);
   const [loadingItems, setLoadingItems] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<ReportRow | null>(null);
+  const [extraStats, setExtraStats] = useState<{
+    avgFiber: number;
+    avgSugar: number;
+    avgSodium: number;
+    topFoods: { name: string; count: number }[];
+  }>({ avgFiber: 0, avgSugar: 0, avgSodium: 0, topFoods: [] });
   const [deleting, setDeleting] = useState(false);
   const [editingMealId, setEditingMealId] = useState<string | null>(null);
   const [editingMealValue, setEditingMealValue] = useState("");
@@ -138,6 +144,7 @@ const AdminMealReports = () => {
           if (refreshed) {
             reportRows = refreshed as ReportRow[];
             setReportData(reportRows);
+            await loadExtraStats(reportRows);
             setEstimating(false);
             setLoading(false);
             if (andPrint) {
@@ -155,11 +162,49 @@ const AdminMealReports = () => {
     }
 
     setReportData(reportRows);
+    await loadExtraStats(reportRows);
     setLoading(false);
     if (andPrint) {
       const enriched = await enrichWithItems(reportRows);
       await downloadMealReportPdf({ reportData: enriched, startDate, endDate });
     }
+  };
+
+  const loadExtraStats = async (rows: ReportRow[]) => {
+    const eventIds = rows.map((r) => r.event_id);
+    if (eventIds.length === 0) {
+      setExtraStats({ avgFiber: 0, avgSugar: 0, avgSodium: 0, topFoods: [] });
+      return;
+    }
+    const { data: items } = await supabase
+      .from("meal_items")
+      .select("meal_event_id, food_name, fiber_g, sugar_g, sodium_mg")
+      .in("meal_event_id", eventIds);
+    if (!items) return;
+    const perEvent = new Map<string, { fiber: number; sugar: number; sodium: number }>();
+    const foodCounts = new Map<string, number>();
+    items.forEach((i: any) => {
+      const cur = perEvent.get(i.meal_event_id) || { fiber: 0, sugar: 0, sodium: 0 };
+      cur.fiber += Number(i.fiber_g || 0);
+      cur.sugar += Number(i.sugar_g || 0);
+      cur.sodium += Number(i.sodium_mg || 0);
+      perEvent.set(i.meal_event_id, cur);
+      const key = (i.food_name || "").trim();
+      if (key) foodCounts.set(key, (foodCounts.get(key) || 0) + 1);
+    });
+    const n = perEvent.size || 1;
+    let totFiber = 0, totSugar = 0, totSodium = 0;
+    perEvent.forEach((v) => { totFiber += v.fiber; totSugar += v.sugar; totSodium += v.sodium; });
+    const topFoods = Array.from(foodCounts.entries())
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 5)
+      .map(([name, count]) => ({ name, count }));
+    setExtraStats({
+      avgFiber: totFiber / n,
+      avgSugar: totSugar / n,
+      avgSodium: totSodium / n,
+      topFoods,
+    });
   };
 
   useEffect(() => { runReport(); }, []);
@@ -224,6 +269,9 @@ const AdminMealReports = () => {
 
   const totalEvents = reportData.length;
   const avgProtein = totalEvents > 0 ? reportData.reduce((s, r) => s + r.total_protein, 0) / totalEvents : 0;
+  const avgCarbs = totalEvents > 0 ? reportData.reduce((s, r) => s + r.total_carbs, 0) / totalEvents : 0;
+  const avgFat = totalEvents > 0 ? reportData.reduce((s, r) => s + r.total_fat, 0) / totalEvents : 0;
+  const avgCalories = totalEvents > 0 ? reportData.reduce((s, r) => s + r.total_calories, 0) / totalEvents : 0;
   const lowProteinCount = reportData.filter((r) => r.total_protein < 10).length;
 
   const donorMap = new Map<string, { meals: number; dates: string[]; totalProtein: number; count: number }>();
@@ -390,14 +438,31 @@ const AdminMealReports = () => {
 
       {/* Nutritional insights */}
       {totalEvents > 0 && (
-        <div className="bg-zinc-900 border border-zinc-800 rounded-lg p-4 space-y-3">
+        <div className="bg-zinc-900 border border-zinc-800 rounded-lg p-4 space-y-4">
           <h3 className="text-white font-semibold">Nutritional Insights</h3>
-          <div className="flex items-center gap-2">
-            <span className="text-zinc-400 text-sm">Avg protein per meal:</span>
-            <span className={cn("font-bold", avgProtein >= 20 ? "text-green-400" : avgProtein >= 10 ? "text-yellow-400" : "text-red-400")}>
-              {Math.round(avgProtein)}g
-            </span>
+
+          <div>
+            <p className="text-zinc-400 text-xs uppercase tracking-wide mb-2">Average per meal</p>
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-2">
+              {[
+                { label: "Calories", value: `${Math.round(avgCalories)}`, unit: "kcal", color: "text-orange-400" },
+                { label: "Protein", value: Math.round(avgProtein), unit: "g", color: avgProtein >= 20 ? "text-green-400" : avgProtein >= 10 ? "text-yellow-400" : "text-red-400" },
+                { label: "Carbs", value: Math.round(avgCarbs), unit: "g", color: "text-blue-400" },
+                { label: "Fat", value: Math.round(avgFat), unit: "g", color: "text-purple-400" },
+                { label: "Fiber", value: Math.round(extraStats.avgFiber), unit: "g", color: extraStats.avgFiber >= 5 ? "text-green-400" : "text-zinc-300" },
+                { label: "Sugar", value: Math.round(extraStats.avgSugar), unit: "g", color: extraStats.avgSugar > 25 ? "text-red-400" : extraStats.avgSugar > 15 ? "text-yellow-400" : "text-green-400" },
+              ].map((m) => (
+                <div key={m.label} className="bg-zinc-950 border border-zinc-800 rounded-lg p-3 text-center">
+                  <p className={cn("text-2xl font-bold", m.color)}>{m.value}<span className="text-sm font-normal ml-0.5">{m.unit}</span></p>
+                  <p className="text-zinc-500 text-xs mt-0.5">{m.label}</p>
+                </div>
+              ))}
+            </div>
+            {extraStats.avgSodium > 0 && (
+              <p className="text-zinc-500 text-xs mt-2">Avg sodium: {Math.round(extraStats.avgSodium)}mg per meal</p>
+            )}
           </div>
+
           {lowProteinCount > 0 && totalEvents >= 3 && (
             <div className="flex items-start gap-2 text-amber-400 text-sm">
               <AlertTriangle className="w-4 h-4 mt-0.5 flex-shrink-0" />
