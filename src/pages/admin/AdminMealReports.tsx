@@ -438,14 +438,31 @@ const AdminMealReports = () => {
 
       {/* Nutritional insights */}
       {totalEvents > 0 && (
-        <div className="bg-zinc-900 border border-zinc-800 rounded-lg p-4 space-y-3">
+        <div className="bg-zinc-900 border border-zinc-800 rounded-lg p-4 space-y-4">
           <h3 className="text-white font-semibold">Nutritional Insights</h3>
-          <div className="flex items-center gap-2">
-            <span className="text-zinc-400 text-sm">Avg protein per meal:</span>
-            <span className={cn("font-bold", avgProtein >= 20 ? "text-green-400" : avgProtein >= 10 ? "text-yellow-400" : "text-red-400")}>
-              {Math.round(avgProtein)}g
-            </span>
+
+          <div>
+            <p className="text-zinc-400 text-xs uppercase tracking-wide mb-2">Average per meal</p>
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-2">
+              {[
+                { label: "Calories", value: `${Math.round(avgCalories)}`, unit: "kcal", color: "text-orange-400" },
+                { label: "Protein", value: Math.round(avgProtein), unit: "g", color: avgProtein >= 20 ? "text-green-400" : avgProtein >= 10 ? "text-yellow-400" : "text-red-400" },
+                { label: "Carbs", value: Math.round(avgCarbs), unit: "g", color: "text-blue-400" },
+                { label: "Fat", value: Math.round(avgFat), unit: "g", color: "text-purple-400" },
+                { label: "Fiber", value: Math.round(extraStats.avgFiber), unit: "g", color: extraStats.avgFiber >= 5 ? "text-green-400" : "text-zinc-300" },
+                { label: "Sugar", value: Math.round(extraStats.avgSugar), unit: "g", color: extraStats.avgSugar > 25 ? "text-red-400" : extraStats.avgSugar > 15 ? "text-yellow-400" : "text-green-400" },
+              ].map((m) => (
+                <div key={m.label} className="bg-zinc-950 border border-zinc-800 rounded-lg p-3 text-center">
+                  <p className={cn("text-2xl font-bold", m.color)}>{m.value}<span className="text-sm font-normal ml-0.5">{m.unit}</span></p>
+                  <p className="text-zinc-500 text-xs mt-0.5">{m.label}</p>
+                </div>
+              ))}
+            </div>
+            {extraStats.avgSodium > 0 && (
+              <p className="text-zinc-500 text-xs mt-2">Avg sodium: {Math.round(extraStats.avgSodium)}mg per meal</p>
+            )}
           </div>
+
           {lowProteinCount > 0 && totalEvents >= 3 && (
             <div className="flex items-start gap-2 text-amber-400 text-sm">
               <AlertTriangle className="w-4 h-4 mt-0.5 flex-shrink-0" />
