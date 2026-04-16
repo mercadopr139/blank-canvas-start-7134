@@ -18,6 +18,9 @@ export interface MealItemDetail {
   protein_g: number | null;
   carbs_g: number | null;
   fat_g: number | null;
+  fiber_g?: number | null;
+  sugar_g?: number | null;
+  sodium_mg?: number | null;
 }
 
 interface ReportRow {
