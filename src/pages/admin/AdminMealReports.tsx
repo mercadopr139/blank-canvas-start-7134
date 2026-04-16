@@ -86,7 +86,7 @@ const AdminMealReports = () => {
     if (eventIds.length === 0) return rows;
     const { data: items } = await supabase
       .from("meal_items")
-      .select("meal_event_id, food_name, calories, protein_g, carbs_g, fat_g")
+      .select("meal_event_id, food_name, calories, protein_g, carbs_g, fat_g, fiber_g, sugar_g, sodium_mg")
       .in("meal_event_id", eventIds)
       .order("sort_order");
     if (!items) return rows;
@@ -104,6 +104,9 @@ const AdminMealReports = () => {
         protein_g: i.protein_g,
         carbs_g: i.carbs_g,
         fat_g: i.fat_g,
+        fiber_g: (i as any).fiber_g ?? null,
+        sugar_g: (i as any).sugar_g ?? null,
+        sodium_mg: (i as any).sodium_mg ?? null,
       })),
     }));
   };

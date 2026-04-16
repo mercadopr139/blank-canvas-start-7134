@@ -18,6 +18,9 @@ export interface MealItemDetail {
   protein_g: number | null;
   carbs_g: number | null;
   fat_g: number | null;
+  fiber_g?: number | null;
+  sugar_g?: number | null;
+  sodium_mg?: number | null;
 }
 
 interface ReportRow {
@@ -243,6 +246,29 @@ function generateMealReportPdf(data: MealReportPdfData): jsPDF {
   if (totalEvents > 0) {
     const lowProteinCount = reportData.filter((r) => r.total_protein < 10).length;
 
+    // Compute averages per night for all macros
+    const avgCalories = reportData.reduce((s, r) => s + r.total_calories, 0) / totalEvents;
+    const avgCarbs = reportData.reduce((s, r) => s + r.total_carbs, 0) / totalEvents;
+    const avgFat = reportData.reduce((s, r) => s + r.total_fat, 0) / totalEvents;
+
+    // Fiber/sugar/sodium come from item details
+    let totFiber = 0, totSugar = 0, totSodium = 0;
+    let eventsWithDetail = 0;
+    reportData.forEach((r) => {
+      if (r.items && r.items.length > 0) {
+        eventsWithDetail++;
+        r.items.forEach((it) => {
+          totFiber += Number(it.fiber_g || 0);
+          totSugar += Number(it.sugar_g || 0);
+          totSodium += Number(it.sodium_mg || 0);
+        });
+      }
+    });
+    const denom = eventsWithDetail || 1;
+    const avgFiber = totFiber / denom;
+    const avgSugar = totSugar / denom;
+    const avgSodium = totSodium / denom;
+
     // Most frequently served foods
     const foodFreq = new Map<string, number>();
     reportData.forEach((r) => {
@@ -256,10 +282,10 @@ function generateMealReportPdf(data: MealReportPdfData): jsPDF {
       .sort((a, b) => b[1] - a[1])
       .slice(0, 5);
 
-    const proteinLabel = `Average protein per meal: ${Math.round(avgProtein)}g`;
-    const extraLines = (topFoods.length > 0 ? 2 + topFoods.length : 0) +
-      (lowProteinCount > 0 && totalEvents >= 3 ? 2 : 0);
-    const boxH = 14 + extraLines * 3.5;
+    // Layout: header (7) + 6-card grid row (18) + sodium line (5) + top foods (variable) + warning (variable)
+    const topFoodsLines = topFoods.length > 0 ? 2 + topFoods.length : 0;
+    const warningLines = lowProteinCount > 0 && totalEvents >= 3 ? 2 : 0;
+    const boxH = 14 + 18 + 6 + topFoodsLines * 3.5 + warningLines * 3.5 + 4;
     checkPage(boxH + 4);
 
     doc.setFillColor(...LIGHT_BG);
@@ -269,16 +295,56 @@ function generateMealReportPdf(data: MealReportPdfData): jsPDF {
     doc.setFontSize(7);
     doc.setFont("helvetica", "bold");
     doc.setTextColor(...BRAND_GRAY);
-    doc.text("NUTRITIONAL INSIGHTS", marginL + 6, y + 7);
+    doc.text("NUTRITIONAL INSIGHTS — AVERAGE PER NIGHT", marginL + 6, y + 7);
 
-    let insY = y + 12;
-    doc.setFontSize(8);
-    doc.setFont("helvetica", "normal");
-    if (avgProtein >= 20) doc.setTextColor(22, 163, 74);
-    else if (avgProtein >= 10) doc.setTextColor(202, 138, 4);
-    else doc.setTextColor(220, 38, 38);
-    doc.text(proteinLabel, marginL + 6, insY);
-    insY += 5;
+    // ─── 6-CARD MACRO GRID ───
+    const gridY = y + 11;
+    const gridH = 16;
+    const gapX = 2;
+    const gridW = contentW - 12;
+    const cardW = (gridW - gapX * 5) / 6;
+
+    const proteinColor: readonly [number, number, number] =
+      avgProtein >= 20 ? [22, 163, 74] : avgProtein >= 10 ? [202, 138, 4] : [220, 38, 38];
+    const fiberColor: readonly [number, number, number] =
+      avgFiber >= 5 ? [22, 163, 74] : [80, 80, 80];
+    const sugarColor: readonly [number, number, number] =
+      avgSugar > 25 ? [220, 38, 38] : avgSugar > 15 ? [202, 138, 4] : [22, 163, 74];
+
+    const macros: { label: string; value: string; color: readonly [number, number, number] }[] = [
+      { label: "Calories", value: `${Math.round(avgCalories)} kcal`, color: [234, 88, 12] },
+      { label: "Protein", value: `${Math.round(avgProtein)}g`, color: proteinColor },
+      { label: "Carbs", value: `${Math.round(avgCarbs)}g`, color: [37, 99, 235] },
+      { label: "Fat", value: `${Math.round(avgFat)}g`, color: [147, 51, 234] },
+      { label: "Fiber", value: `${Math.round(avgFiber)}g`, color: fiberColor },
+      { label: "Sugar", value: `${Math.round(avgSugar)}g`, color: sugarColor },
+    ];
+
+    macros.forEach((m, i) => {
+      const cx = marginL + 6 + i * (cardW + gapX);
+      doc.setFillColor(255, 255, 255);
+      doc.setDrawColor(...BORDER);
+      doc.roundedRect(cx, gridY, cardW, gridH, 1.5, 1.5, "FD");
+      doc.setFontSize(9);
+      doc.setFont("helvetica", "bold");
+      doc.setTextColor(m.color[0], m.color[1], m.color[2]);
+      doc.text(m.value, cx + cardW / 2, gridY + 7, { align: "center" });
+      doc.setFontSize(6);
+      doc.setFont("helvetica", "normal");
+      doc.setTextColor(...BRAND_GRAY);
+      doc.text(m.label, cx + cardW / 2, gridY + 12, { align: "center" });
+    });
+
+    let insY = gridY + gridH + 5;
+
+    // Sodium line
+    if (avgSodium > 0) {
+      doc.setFontSize(7);
+      doc.setFont("helvetica", "normal");
+      doc.setTextColor(...BRAND_GRAY);
+      doc.text(`Avg sodium: ${Math.round(avgSodium)}mg per meal`, marginL + 6, insY);
+      insY += 4;
+    }
 
     if (topFoods.length > 0) {
       doc.setFontSize(7);
