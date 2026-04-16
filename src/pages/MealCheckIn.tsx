@@ -208,7 +208,72 @@ const MealCheckIn = () => {
     setDonorName(editDonor.trim());
   };
 
-  const foodEmojis = ["🍗", "🧀", "🥦", "🍝", "🥗", "🍞", "🥩", "🌽"];
+  const getFoodEmoji = (name: string): string => {
+    const n = (name || "").toLowerCase();
+    const rules: [RegExp, string][] = [
+      [/\b(taco|burrito|quesadilla|fajita|enchilada|nacho)/, "🌮"],
+      [/\b(pizza)/, "🍕"],
+      [/\b(burger|cheeseburger|hamburger)/, "🍔"],
+      [/\b(hot ?dog|frank)/, "🌭"],
+      [/\b(sandwich|sub|hoagie|wrap)/, "🥪"],
+      [/\b(fries|french fry)/, "🍟"],
+      [/\b(rice|pilaf|risotto)/, "🍚"],
+      [/\b(pasta|spaghetti|noodle|lasagna|ziti|penne|mac.?and.?cheese|macaroni)/, "🍝"],
+      [/\b(bread|roll|bun|biscuit|toast)/, "🍞"],
+      [/\b(bagel)/, "🥯"],
+      [/\b(pretzel)/, "🥨"],
+      [/\b(croissant)/, "🥐"],
+      [/\b(pancake|waffle)/, "🥞"],
+      [/\b(egg|omelet|omelette|frittata)/, "🥚"],
+      [/\b(bacon)/, "🥓"],
+      [/\b(steak|beef|brisket|meatloaf|meat ?ball)/, "🥩"],
+      [/\b(chicken|wing|nugget|tender|drumstick|poultry|turkey)/, "🍗"],
+      [/\b(pork|ham|sausage|pepperoni)/, "🥓"],
+      [/\b(fish|salmon|tuna|tilapia|cod|seafood)/, "🐟"],
+      [/\b(shrimp|prawn)/, "🍤"],
+      [/\b(sushi|roll)/, "🍣"],
+      [/\b(soup|stew|chili|broth|chowder)/, "🍲"],
+      [/\b(salad|lettuce|greens|kale|spinach|arugula)/, "🥗"],
+      [/\b(broccoli)/, "🥦"],
+      [/\b(corn|maize)/, "🌽"],
+      [/\b(carrot)/, "🥕"],
+      [/\b(potato|mashed|tater)/, "🥔"],
+      [/\b(sweet potato|yam)/, "🍠"],
+      [/\b(tomato|marinara|salsa)/, "🍅"],
+      [/\b(pepper|jalape)/, "🌶️"],
+      [/\b(onion)/, "🧅"],
+      [/\b(garlic)/, "🧄"],
+      [/\b(cucumber|pickle)/, "🥒"],
+      [/\b(bean|legume|lentil|chickpea|hummus)/, "🫘"],
+      [/\b(avocado|guac)/, "🥑"],
+      [/\b(cheese|cheddar|mozzarella|parmesan|queso)/, "🧀"],
+      [/\b(milk|yogurt)/, "🥛"],
+      [/\b(butter)/, "🧈"],
+      [/\b(apple)/, "🍎"],
+      [/\b(banana)/, "🍌"],
+      [/\b(orange|tangerine|clementine)/, "🍊"],
+      [/\b(grape)/, "🍇"],
+      [/\b(strawberry|berries|berry)/, "🍓"],
+      [/\b(watermelon|melon)/, "🍉"],
+      [/\b(pineapple)/, "🍍"],
+      [/\b(peach)/, "🍑"],
+      [/\b(cherry|cherries)/, "🍒"],
+      [/\b(lemon|lime)/, "🍋"],
+      [/\b(cake|cupcake|brownie|muffin)/, "🧁"],
+      [/\b(cookie)/, "🍪"],
+      [/\b(donut|doughnut)/, "🍩"],
+      [/\b(pie|tart)/, "🥧"],
+      [/\b(ice ?cream|sundae|gelato)/, "🍨"],
+      [/\b(chocolate|candy|sweet)/, "🍫"],
+      [/\b(popcorn)/, "🍿"],
+      [/\b(juice|smoothie|drink|punch|lemonade)/, "🥤"],
+      [/\b(water|bottle)/, "💧"],
+      [/\b(coffee)/, "☕"],
+      [/\b(tea)/, "🍵"],
+    ];
+    for (const [re, emoji] of rules) if (re.test(n)) return emoji;
+    return "🍽️";
+  };
 
   const formattedDate = eventDate
     ? format(new Date(eventDate + "T12:00:00"), "MMMM d, yyyy")
@@ -236,7 +301,7 @@ const MealCheckIn = () => {
           <div className="flex flex-wrap justify-center gap-2 mb-8 max-w-lg">
             {foodItems.map((item, i) => (
               <span key={i} className="bg-zinc-900 border border-zinc-800 text-white px-3 py-1.5 rounded-full text-sm">
-                {foodEmojis[i % foodEmojis.length]} {item.food_name}
+                {getFoodEmoji(item.food_name)} {item.food_name}
               </span>
             ))}
           </div>
@@ -308,7 +373,7 @@ const MealCheckIn = () => {
             <div className="flex flex-wrap gap-2">
               {setupFoodItems.map((name, i) => (
                 <span key={i} className="bg-zinc-900 border border-zinc-700 text-white px-3 py-1.5 rounded-full text-sm flex items-center gap-2">
-                  {foodEmojis[i % foodEmojis.length]} {name}
+                  {getFoodEmoji(name)} {name}
                   <button
                     onClick={() => setSetupFoodItems((prev) => prev.filter((_, idx) => idx !== i))}
                     className="text-red-400 hover:text-red-300"
@@ -361,7 +426,7 @@ const MealCheckIn = () => {
         <div className="flex flex-wrap justify-center gap-2 mb-4 max-w-lg">
           {foodItems.map((item, i) => (
             <span key={i} className="bg-zinc-900 border border-zinc-800 text-white px-3 py-1.5 rounded-full text-sm">
-              {foodEmojis[i % foodEmojis.length]} {item.food_name}
+              {getFoodEmoji(item.food_name)} {item.food_name}
             </span>
           ))}
         </div>
@@ -513,7 +578,7 @@ const MealCheckIn = () => {
               {foodItems.map((item, i) => (
                 <div key={item.id || i} className="flex items-center justify-between bg-zinc-900 border border-zinc-800 rounded-lg px-3 py-2">
                   <span className="text-white text-sm">
-                    {foodEmojis[i % foodEmojis.length]} {item.food_name}
+                    {getFoodEmoji(item.food_name)} {item.food_name}
                   </span>
                   {item.id && (
                     <button
