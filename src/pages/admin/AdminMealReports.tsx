@@ -48,6 +48,12 @@ const AdminMealReports = () => {
   const [expandedItems, setExpandedItems] = useState<MealItemRow[]>([]);
   const [loadingItems, setLoadingItems] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<ReportRow | null>(null);
+  const [extraStats, setExtraStats] = useState<{
+    avgFiber: number;
+    avgSugar: number;
+    avgSodium: number;
+    topFoods: { name: string; count: number }[];
+  }>({ avgFiber: 0, avgSugar: 0, avgSodium: 0, topFoods: [] });
   const [deleting, setDeleting] = useState(false);
   const [editingMealId, setEditingMealId] = useState<string | null>(null);
   const [editingMealValue, setEditingMealValue] = useState("");
