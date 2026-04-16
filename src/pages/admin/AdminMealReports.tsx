@@ -161,11 +161,49 @@ const AdminMealReports = () => {
     }
 
     setReportData(reportRows);
+    await loadExtraStats(reportRows);
     setLoading(false);
     if (andPrint) {
       const enriched = await enrichWithItems(reportRows);
       await downloadMealReportPdf({ reportData: enriched, startDate, endDate });
     }
+  };
+
+  const loadExtraStats = async (rows: ReportRow[]) => {
+    const eventIds = rows.map((r) => r.event_id);
+    if (eventIds.length === 0) {
+      setExtraStats({ avgFiber: 0, avgSugar: 0, avgSodium: 0, topFoods: [] });
+      return;
+    }
+    const { data: items } = await supabase
+      .from("meal_items")
+      .select("meal_event_id, food_name, fiber_g, sugar_g, sodium_mg")
+      .in("meal_event_id", eventIds);
+    if (!items) return;
+    const perEvent = new Map<string, { fiber: number; sugar: number; sodium: number }>();
+    const foodCounts = new Map<string, number>();
+    items.forEach((i: any) => {
+      const cur = perEvent.get(i.meal_event_id) || { fiber: 0, sugar: 0, sodium: 0 };
+      cur.fiber += Number(i.fiber_g || 0);
+      cur.sugar += Number(i.sugar_g || 0);
+      cur.sodium += Number(i.sodium_mg || 0);
+      perEvent.set(i.meal_event_id, cur);
+      const key = (i.food_name || "").trim();
+      if (key) foodCounts.set(key, (foodCounts.get(key) || 0) + 1);
+    });
+    const n = perEvent.size || 1;
+    let totFiber = 0, totSugar = 0, totSodium = 0;
+    perEvent.forEach((v) => { totFiber += v.fiber; totSugar += v.sugar; totSodium += v.sodium; });
+    const topFoods = Array.from(foodCounts.entries())
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 5)
+      .map(([name, count]) => ({ name, count }));
+    setExtraStats({
+      avgFiber: totFiber / n,
+      avgSugar: totSugar / n,
+      avgSodium: totSodium / n,
+      topFoods,
+    });
   };
 
   useEffect(() => { runReport(); }, []);
