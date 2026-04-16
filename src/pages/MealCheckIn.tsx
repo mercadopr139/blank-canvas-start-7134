@@ -301,7 +301,7 @@ const MealCheckIn = () => {
           <div className="flex flex-wrap justify-center gap-2 mb-8 max-w-lg">
             {foodItems.map((item, i) => (
               <span key={i} className="bg-zinc-900 border border-zinc-800 text-white px-3 py-1.5 rounded-full text-sm">
-                {getFoodEmoji(name)} {item.food_name}
+                {getFoodEmoji(item.food_name)} {item.food_name}
               </span>
             ))}
           </div>
@@ -426,7 +426,7 @@ const MealCheckIn = () => {
         <div className="flex flex-wrap justify-center gap-2 mb-4 max-w-lg">
           {foodItems.map((item, i) => (
             <span key={i} className="bg-zinc-900 border border-zinc-800 text-white px-3 py-1.5 rounded-full text-sm">
-              {getFoodEmoji(name)} {item.food_name}
+              {getFoodEmoji(item.food_name)} {item.food_name}
             </span>
           ))}
         </div>
@@ -578,7 +578,7 @@ const MealCheckIn = () => {
               {foodItems.map((item, i) => (
                 <div key={item.id || i} className="flex items-center justify-between bg-zinc-900 border border-zinc-800 rounded-lg px-3 py-2">
                   <span className="text-white text-sm">
-                    {getFoodEmoji(name)} {item.food_name}
+                    {getFoodEmoji(item.food_name)} {item.food_name}
                   </span>
                   {item.id && (
                     <button
