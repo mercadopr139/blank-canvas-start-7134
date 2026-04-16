@@ -587,7 +587,7 @@ export default function TransportRunsPay() {
                         <p className="text-white/30 text-xs text-center py-2">No youth recorded for this trip</p>
                       ) : (
                         rosterData[r.id].map((y) => {
-                          const photoUrl = y.photo_url ? (y.photo_url.startsWith("http") ? y.photo_url : `${import.meta.env.VITE_SUPABASE_URL}/storage/v1/object/public/registration-signatures/${y.photo_url}`) : null;
+                          const photoUrl = y.photo_url;
                           const statusLabel = y.status === "picked_up" ? "Pick-Up" : y.status === "dropped_off" ? "Drop-Off" : y.status === "both" ? "Both" : y.status;
                           const statusColor = y.status === "picked_up" ? "text-red-400" : y.status === "dropped_off" ? "text-green-400" : y.status === "both" ? "text-blue-400" : "text-white/40";
                           return (
