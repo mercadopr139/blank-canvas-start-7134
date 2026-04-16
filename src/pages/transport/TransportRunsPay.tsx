@@ -282,17 +282,39 @@ export default function TransportRunsPay() {
       .select("youth_id, status, youth:youth_profiles(first_name, last_name, photo_url, pickup_zone)")
       .eq("run_id", runId);
     if (data) {
-      setRosterData((prev) => ({
-        ...prev,
-        [runId]: data.map((d: any) => ({
-          youth_id: d.youth_id,
-          status: d.status,
-          first_name: d.youth?.first_name || "Unknown",
-          last_name: d.youth?.last_name || "",
-          photo_url: d.youth?.photo_url || null,
-          pickup_zone: d.youth?.pickup_zone || "",
-        })),
-      }));
+      // Resolve signed URLs in parallel for any non-http photo paths (private buckets)
+      const rows = await Promise.all(
+        data.map(async (d: any) => {
+          const raw: string | null = d.youth?.photo_url || null;
+          let resolved: string | null = null;
+          if (raw) {
+            if (raw.startsWith("http")) {
+              resolved = raw;
+            } else {
+              // Try youth-photos bucket first, fall back to registration-signatures
+              const buckets = ["youth-photos", "registration-signatures"];
+              for (const bucket of buckets) {
+                const { data: signed } = await supabase.storage
+                  .from(bucket)
+                  .createSignedUrl(raw, 3600);
+                if (signed?.signedUrl) {
+                  resolved = signed.signedUrl;
+                  break;
+                }
+              }
+            }
+          }
+          return {
+            youth_id: d.youth_id,
+            status: d.status,
+            first_name: d.youth?.first_name || "Unknown",
+            last_name: d.youth?.last_name || "",
+            photo_url: resolved,
+            pickup_zone: d.youth?.pickup_zone || "",
+          };
+        })
+      );
+      setRosterData((prev) => ({ ...prev, [runId]: rows }));
     }
   };
 
