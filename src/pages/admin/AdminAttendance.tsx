@@ -1450,7 +1450,7 @@ const AdminAttendance = () => {
           {/* Program Split */}
           <Card className="bg-white/5 border-white/10 text-white">
             <CardContent className="pt-4 pb-3">
-              <p className="text-[10px] uppercase tracking-wider text-white/40 mb-2">{isCurrentMonth ? "Program Split Today" : `Program Split — ${viewedMonthShort}`}</p>
+              <p className="text-[10px] uppercase tracking-wider text-white/40 mb-2">{isCurrentMonth ? `Program Split — ${effectiveLabel}` : `Program Split — ${viewedMonthShort}`}</p>
               {programSplitToday.length === 0 ? (
                 <p className="text-white/30 text-sm">—</p>
               ) : (
