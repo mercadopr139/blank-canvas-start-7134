@@ -638,6 +638,42 @@ const AdminAttendance = () => {
   const todayRegIds = useMemo(() => new Set(todayRecords.map((a) => a.registration_id)), [todayRecords]);
   const totalPresentToday = todayRegIds.size;
 
+  /* ───── EFFECTIVE "TODAY" for snapshot widgets ─────
+     If we're viewing the current month but today has no attendance yet
+     (non-practice day, before check-ins, etc.), fall back to the most
+     recent practice day this month that has check-ins so the cards stay
+     fresh and update daily. */
+  const { effectiveDate, effectiveRecords, effectiveRegIds, effectiveLabel } = useMemo(() => {
+    if (isCurrentMonth && todayRecords.length > 0) {
+      return {
+        effectiveDate: todayStr,
+        effectiveRecords: todayRecords,
+        effectiveRegIds: todayRegIds,
+        effectiveLabel: "Today",
+      };
+    }
+    if (isCurrentMonth) {
+      // Find most recent practice day this month <= today with attendance
+      const byDate: Record<string, typeof practiceAttendance> = {};
+      practiceAttendance.forEach((a) => {
+        if (a.check_in_date <= todayStr) {
+          (byDate[a.check_in_date] ||= []).push(a);
+        }
+      });
+      const dates = Object.keys(byDate).sort().reverse();
+      if (dates.length > 0) {
+        const d = dates[0];
+        const recs = byDate[d];
+        const ids = new Set(recs.map((a) => a.registration_id));
+        const label = format(parseISO(d), "MMM d");
+        return { effectiveDate: d, effectiveRecords: recs, effectiveRegIds: ids, effectiveLabel: `Last Practice — ${label}` };
+      }
+    }
+    // Viewing a past/future month → show all month aggregates (existing behavior)
+    const ids = new Set(practiceAttendance.map((a) => a.registration_id));
+    return { effectiveDate: null, effectiveRecords: practiceAttendance, effectiveRegIds: ids, effectiveLabel: viewedMonthShort };
+  }, [isCurrentMonth, todayRecords, todayRegIds, practiceAttendance, viewedMonthShort]);
+
   // Attendance High & Low for practice days
   const { attendanceHigh, attendanceLow } = useMemo(() => {
     const dayCounts: Record<string, Set<string>> = {};
