@@ -1558,9 +1558,8 @@ const AdminAttendance = () => {
           </Card>
         </div>
 
-        {/* TODAY (live, resets daily) + MONTH-TO-DATE rows — only when viewing current month */}
+        {/* MONTH-TO-DATE row — only when viewing current month (Today row is rendered above the Last Practice row) */}
         {isCurrentMonth && [
-          { label: "Today", snap: todaySnapshot, key: "today" },
           { label: mtdLabel, snap: mtdSnapshot, key: "mtd" },
         ].map(({ label, snap, key }) => (
           <div key={key} className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
