@@ -1469,7 +1469,7 @@ const AdminAttendance = () => {
           {/* Boy / Girl Ratio */}
           <Card className="bg-white/5 border-white/10 text-white">
             <CardContent className="pt-4 pb-3">
-              <p className="text-[10px] uppercase tracking-wider text-white/40 mb-2">{isCurrentMonth ? "Boy / Girl Today" : `Boy / Girl — ${viewedMonthShort}`}</p>
+              <p className="text-[10px] uppercase tracking-wider text-white/40 mb-2">{isCurrentMonth ? `Boy / Girl — ${effectiveLabel}` : `Boy / Girl — ${viewedMonthShort}`}</p>
               <div className="flex items-center gap-3">
                 <div className="text-center flex-1">
                   <p className="text-2xl font-bold text-blue-400">{sexSplitToday["Male"] || 0}</p>
@@ -1490,7 +1490,7 @@ const AdminAttendance = () => {
           {/* Poverty % */}
           <Card className="bg-white/5 border-white/10 text-white">
             <CardContent className="pt-4 pb-3 text-center">
-              <p className="text-[10px] uppercase tracking-wider text-white/40">{isCurrentMonth ? "Below Poverty Today" : `Below Poverty — ${viewedMonthShort}`}</p>
+              <p className="text-[10px] uppercase tracking-wider text-white/40">{isCurrentMonth ? `Below Poverty — ${effectiveLabel}` : `Below Poverty — ${viewedMonthShort}`}</p>
               <p className="text-3xl font-bold mt-1">{pct(povertyToday.below, povertyToday.total)}</p>
               <p className="text-[10px] text-white/30">{povertyToday.below} of {povertyToday.total}</p>
             </CardContent>
@@ -1500,7 +1500,7 @@ const AdminAttendance = () => {
           <Card className="bg-white/5 border-white/10 text-white">
             <CardContent className="pt-4 pb-3 text-center">
               <p className="text-[10px] uppercase tracking-wider text-white/40 flex items-center justify-center gap-1">
-                <School className="w-3 h-3" /> {isCurrentMonth ? "Top District Today" : `Top District — ${viewedMonthShort}`}
+                <School className="w-3 h-3" /> {isCurrentMonth ? `Top District — ${effectiveLabel}` : `Top District — ${viewedMonthShort}`}
               </p>
               {topDistrictToday ? (
                 <>
