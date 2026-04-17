@@ -704,40 +704,40 @@ const AdminAttendance = () => {
 
   /* ───── PROGRAM SPLIT (viewed month) ───── */
   const programSplitToday = useMemo(() => {
-    const regIds = isCurrentMonth ? todayRegIds : new Set(practiceAttendance.map((a) => a.registration_id));
+    const regIds = isCurrentMonth ? effectiveRegIds : new Set(practiceAttendance.map((a) => a.registration_id));
     const counts: Record<string, number> = {};
     regIds.forEach((id) => {
       const reg = regMap[id];
       if (reg) counts[reg.child_boxing_program] = (counts[reg.child_boxing_program] || 0) + 1;
     });
     return Object.entries(counts).sort((a, b) => b[1] - a[1]);
-  }, [isCurrentMonth, todayRegIds, practiceAttendance, regMap]);
+  }, [isCurrentMonth, effectiveRegIds, practiceAttendance, regMap]);
 
   /* ───── BOY / GIRL RATIO ───── */
   const sexSplitToday = useMemo(() => {
-    const regIds = isCurrentMonth ? todayRegIds : new Set(practiceAttendance.map((a) => a.registration_id));
+    const regIds = isCurrentMonth ? effectiveRegIds : new Set(practiceAttendance.map((a) => a.registration_id));
     const counts: Record<string, number> = {};
     regIds.forEach((id) => {
       const reg = regMap[id];
       if (reg) counts[reg.child_sex] = (counts[reg.child_sex] || 0) + 1;
     });
     return counts;
-  }, [isCurrentMonth, todayRegIds, practiceAttendance, regMap]);
+  }, [isCurrentMonth, effectiveRegIds, practiceAttendance, regMap]);
 
   /* ───── POVERTY % ───── */
   const povertyToday = useMemo(() => {
-    const regIds = isCurrentMonth ? todayRegIds : new Set(practiceAttendance.map((a) => a.registration_id));
+    const regIds = isCurrentMonth ? effectiveRegIds : new Set(practiceAttendance.map((a) => a.registration_id));
     let below = 0;
     regIds.forEach((id) => {
       const reg = regMap[id];
       if (reg && (POVERTY_INCOMES.includes(reg.household_income_range) || reg.free_or_reduced_lunch === "Yes")) below++;
     });
     return { below, total: regIds.size };
-  }, [isCurrentMonth, todayRegIds, practiceAttendance, regMap]);
+  }, [isCurrentMonth, effectiveRegIds, practiceAttendance, regMap]);
 
   /* ───── TOP SCHOOL DISTRICT ───── */
   const topDistrictToday = useMemo(() => {
-    const regIds = isCurrentMonth ? todayRegIds : new Set(practiceAttendance.map((a) => a.registration_id));
+    const regIds = isCurrentMonth ? effectiveRegIds : new Set(practiceAttendance.map((a) => a.registration_id));
     const counts: Record<string, number> = {};
     regIds.forEach((id) => {
       const reg = regMap[id];
@@ -745,11 +745,11 @@ const AdminAttendance = () => {
     });
     const sorted = Object.entries(counts).sort((a, b) => b[1] - a[1]);
     return sorted.length > 0 ? sorted[0] : null;
-  }, [isCurrentMonth, todayRegIds, practiceAttendance, regMap]);
+  }, [isCurrentMonth, effectiveRegIds, practiceAttendance, regMap]);
 
   /* ───── AVG ARRIVAL TIME ───── */
   const avgArrivalToday = useMemo(() => {
-    const records = isCurrentMonth ? todayRecords : practiceAttendance;
+    const records = isCurrentMonth ? effectiveRecords : practiceAttendance;
     if (records.length === 0) return null;
     const totalMs = records.reduce((sum, a) => {
       const d = new Date(a.check_in_at);
