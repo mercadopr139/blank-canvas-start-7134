@@ -1489,7 +1489,80 @@ const AdminAttendance = () => {
           </CardContent>
         </Card>
 
-        {/* Second row of insight cards */}
+        {/* TODAY row (live, resets daily) — only when viewing current month */}
+        {isCurrentMonth && [
+          { label: "Today", snap: todaySnapshot, key: "today" },
+        ].map(({ label, snap, key }) => (
+          <div key={key} className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
+            {/* Program Split */}
+            <Card className="bg-white/5 border-white/10 text-white">
+              <CardContent className="pt-4 pb-3">
+                <p className="text-[10px] uppercase tracking-wider text-white/40 mb-2">Program Split — {label}</p>
+                {snap.program.length === 0 ? (
+                  <p className="text-white/30 text-sm">—</p>
+                ) : (
+                  <div className="space-y-1">
+                    {snap.program.map(([prog, count]) => (
+                      <div key={prog} className="flex justify-between items-center">
+                        <span className="text-xs text-white/70 truncate">{prog.replace(/\s*\(.*\)/, "")}</span>
+                        <span className="text-sm font-bold">{count}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Boy / Girl Ratio */}
+            <Card className="bg-white/5 border-white/10 text-white">
+              <CardContent className="pt-4 pb-3">
+                <p className="text-[10px] uppercase tracking-wider text-white/40 mb-2">Boy / Girl — {label}</p>
+                <div className="flex items-center gap-3">
+                  <div className="text-center flex-1">
+                    <p className="text-2xl font-bold text-blue-400">{snap.sex["Male"] || 0}</p>
+                    <p className="text-[10px] text-white/40">Boys</p>
+                  </div>
+                  <div className="w-px h-8 bg-white/10" />
+                  <div className="text-center flex-1">
+                    <p className="text-2xl font-bold text-pink-400">{snap.sex["Female"] || 0}</p>
+                    <p className="text-[10px] text-white/40">Girls</p>
+                  </div>
+                </div>
+                <div className="border-t border-white/10 mt-2 pt-1.5 text-center">
+                  <p className="text-xs text-white/60"><span className="font-semibold text-white">{(snap.sex["Male"] || 0) + (snap.sex["Female"] || 0)}</span> Total Distinct Youth</p>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Poverty % */}
+            <Card className="bg-white/5 border-white/10 text-white">
+              <CardContent className="pt-4 pb-3 text-center">
+                <p className="text-[10px] uppercase tracking-wider text-white/40">Below Poverty — {label}</p>
+                <p className="text-3xl font-bold mt-1">{pct(snap.poverty.below, snap.poverty.total)}</p>
+                <p className="text-[10px] text-white/30">{snap.poverty.below} of {snap.poverty.total}</p>
+              </CardContent>
+            </Card>
+
+            {/* Top District */}
+            <Card className="bg-white/5 border-white/10 text-white">
+              <CardContent className="pt-4 pb-3 text-center">
+                <p className="text-[10px] uppercase tracking-wider text-white/40 flex items-center justify-center gap-1">
+                  <School className="w-3 h-3" /> Top District — {label}
+                </p>
+                {snap.topDistrict ? (
+                  <>
+                    <p className="text-sm font-bold mt-1.5 truncate">{snap.topDistrict[0]}</p>
+                    <p className="text-[10px] text-white/30">{snap.topDistrict[1]} youth</p>
+                  </>
+                ) : (
+                  <p className="text-white/30 text-sm mt-1">—</p>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+        ))}
+
+        {/* Second row of insight cards — Last Practice fallback */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
           {/* Program Split */}
           <Card className="bg-white/5 border-white/10 text-white">
