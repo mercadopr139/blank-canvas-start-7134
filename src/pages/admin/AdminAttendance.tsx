@@ -747,6 +747,50 @@ const AdminAttendance = () => {
     return sorted.length > 0 ? sorted[0] : null;
   }, [isCurrentMonth, effectiveRegIds, practiceAttendance, regMap]);
 
+  /* ───── TODAY-ONLY snapshot (resets daily, live) ───── */
+  const todayOnlyRegIds = useMemo(() => {
+    if (!isCurrentMonth) return new Set<string>();
+    return new Set(practiceAttendance.filter(a => a.check_in_date === todayStr).map(a => a.registration_id));
+  }, [isCurrentMonth, practiceAttendance]);
+
+  const buildSnapshot = useCallback((regIds: Set<string>) => {
+    const program: Record<string, number> = {};
+    const sex: Record<string, number> = {};
+    const district: Record<string, number> = {};
+    let belowPoverty = 0;
+    regIds.forEach((id) => {
+      const reg = regMap[id];
+      if (!reg) return;
+      program[reg.child_boxing_program] = (program[reg.child_boxing_program] || 0) + 1;
+      sex[reg.child_sex] = (sex[reg.child_sex] || 0) + 1;
+      district[reg.child_school_district] = (district[reg.child_school_district] || 0) + 1;
+      if (POVERTY_INCOMES.includes(reg.household_income_range) || reg.free_or_reduced_lunch === "Yes") belowPoverty++;
+    });
+    const programSorted = Object.entries(program).sort((a, b) => b[1] - a[1]);
+    const districtSorted = Object.entries(district).sort((a, b) => b[1] - a[1]);
+    return {
+      program: programSorted,
+      sex,
+      poverty: { below: belowPoverty, total: regIds.size },
+      topDistrict: districtSorted.length > 0 ? districtSorted[0] : null,
+      total: regIds.size,
+    };
+  }, [regMap]);
+
+  const todaySnapshot = useMemo(() => buildSnapshot(todayOnlyRegIds), [buildSnapshot, todayOnlyRegIds]);
+
+  const mtdRegIds = useMemo(() => {
+    const ids = new Set<string>();
+    practiceAttendance.forEach((a) => {
+      if (!isCurrentMonth || a.check_in_date <= todayStr) ids.add(a.registration_id);
+    });
+    return ids;
+  }, [practiceAttendance, isCurrentMonth]);
+
+  const mtdSnapshot = useMemo(() => buildSnapshot(mtdRegIds), [buildSnapshot, mtdRegIds]);
+
+  const mtdLabel = isCurrentMonth ? `Month-to-Date — ${viewedMonthShort}` : viewedMonthShort;
+
   /* ───── AVG ARRIVAL TIME ───── */
   const avgArrivalToday = useMemo(() => {
     const records = isCurrentMonth ? effectiveRecords : practiceAttendance;
@@ -1513,6 +1557,80 @@ const AdminAttendance = () => {
             </CardContent>
           </Card>
         </div>
+
+        {/* TODAY (live, resets daily) + MONTH-TO-DATE rows — only when viewing current month */}
+        {isCurrentMonth && [
+          { label: "Today", snap: todaySnapshot, key: "today" },
+          { label: mtdLabel, snap: mtdSnapshot, key: "mtd" },
+        ].map(({ label, snap, key }) => (
+          <div key={key} className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
+            {/* Program Split */}
+            <Card className="bg-white/5 border-white/10 text-white">
+              <CardContent className="pt-4 pb-3">
+                <p className="text-[10px] uppercase tracking-wider text-white/40 mb-2">Program Split — {label}</p>
+                {snap.program.length === 0 ? (
+                  <p className="text-white/30 text-sm">—</p>
+                ) : (
+                  <div className="space-y-1">
+                    {snap.program.map(([prog, count]) => (
+                      <div key={prog} className="flex justify-between items-center">
+                        <span className="text-xs text-white/70 truncate">{prog.replace(/\s*\(.*\)/, "")}</span>
+                        <span className="text-sm font-bold">{count}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Boy / Girl Ratio */}
+            <Card className="bg-white/5 border-white/10 text-white">
+              <CardContent className="pt-4 pb-3">
+                <p className="text-[10px] uppercase tracking-wider text-white/40 mb-2">Boy / Girl — {label}</p>
+                <div className="flex items-center gap-3">
+                  <div className="text-center flex-1">
+                    <p className="text-2xl font-bold text-blue-400">{snap.sex["Male"] || 0}</p>
+                    <p className="text-[10px] text-white/40">Boys</p>
+                  </div>
+                  <div className="w-px h-8 bg-white/10" />
+                  <div className="text-center flex-1">
+                    <p className="text-2xl font-bold text-pink-400">{snap.sex["Female"] || 0}</p>
+                    <p className="text-[10px] text-white/40">Girls</p>
+                  </div>
+                </div>
+                <div className="border-t border-white/10 mt-2 pt-1.5 text-center">
+                  <p className="text-xs text-white/60"><span className="font-semibold text-white">{(snap.sex["Male"] || 0) + (snap.sex["Female"] || 0)}</span> Total Distinct Youth</p>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Poverty % */}
+            <Card className="bg-white/5 border-white/10 text-white">
+              <CardContent className="pt-4 pb-3 text-center">
+                <p className="text-[10px] uppercase tracking-wider text-white/40">Below Poverty — {label}</p>
+                <p className="text-3xl font-bold mt-1">{pct(snap.poverty.below, snap.poverty.total)}</p>
+                <p className="text-[10px] text-white/30">{snap.poverty.below} of {snap.poverty.total}</p>
+              </CardContent>
+            </Card>
+
+            {/* Top District */}
+            <Card className="bg-white/5 border-white/10 text-white">
+              <CardContent className="pt-4 pb-3 text-center">
+                <p className="text-[10px] uppercase tracking-wider text-white/40 flex items-center justify-center gap-1">
+                  <School className="w-3 h-3" /> Top District — {label}
+                </p>
+                {snap.topDistrict ? (
+                  <>
+                    <p className="text-sm font-bold mt-1.5 truncate">{snap.topDistrict[0]}</p>
+                    <p className="text-[10px] text-white/30">{snap.topDistrict[1]} youth</p>
+                  </>
+                ) : (
+                  <p className="text-white/30 text-sm mt-1">—</p>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+        ))}
 
         {/* ═══════════ TREND CHARTS ═══════════ */}
 
