@@ -638,6 +638,42 @@ const AdminAttendance = () => {
   const todayRegIds = useMemo(() => new Set(todayRecords.map((a) => a.registration_id)), [todayRecords]);
   const totalPresentToday = todayRegIds.size;
 
+  /* ───── EFFECTIVE "TODAY" for snapshot widgets ─────
+     If we're viewing the current month but today has no attendance yet
+     (non-practice day, before check-ins, etc.), fall back to the most
+     recent practice day this month that has check-ins so the cards stay
+     fresh and update daily. */
+  const { effectiveDate, effectiveRecords, effectiveRegIds, effectiveLabel } = useMemo(() => {
+    if (isCurrentMonth && todayRecords.length > 0) {
+      return {
+        effectiveDate: todayStr,
+        effectiveRecords: todayRecords,
+        effectiveRegIds: todayRegIds,
+        effectiveLabel: "Today",
+      };
+    }
+    if (isCurrentMonth) {
+      // Find most recent practice day this month <= today with attendance
+      const byDate: Record<string, typeof practiceAttendance> = {};
+      practiceAttendance.forEach((a) => {
+        if (a.check_in_date <= todayStr) {
+          (byDate[a.check_in_date] ||= []).push(a);
+        }
+      });
+      const dates = Object.keys(byDate).sort().reverse();
+      if (dates.length > 0) {
+        const d = dates[0];
+        const recs = byDate[d];
+        const ids = new Set(recs.map((a) => a.registration_id));
+        const label = format(parseISO(d), "MMM d");
+        return { effectiveDate: d, effectiveRecords: recs, effectiveRegIds: ids, effectiveLabel: `Last Practice — ${label}` };
+      }
+    }
+    // Viewing a past/future month → show all month aggregates (existing behavior)
+    const ids = new Set(practiceAttendance.map((a) => a.registration_id));
+    return { effectiveDate: null, effectiveRecords: practiceAttendance, effectiveRegIds: ids, effectiveLabel: viewedMonthShort };
+  }, [isCurrentMonth, todayRecords, todayRegIds, practiceAttendance, viewedMonthShort]);
+
   // Attendance High & Low for practice days
   const { attendanceHigh, attendanceLow } = useMemo(() => {
     const dayCounts: Record<string, Set<string>> = {};
@@ -668,40 +704,40 @@ const AdminAttendance = () => {
 
   /* ───── PROGRAM SPLIT (viewed month) ───── */
   const programSplitToday = useMemo(() => {
-    const regIds = isCurrentMonth ? todayRegIds : new Set(practiceAttendance.map((a) => a.registration_id));
+    const regIds = isCurrentMonth ? effectiveRegIds : new Set(practiceAttendance.map((a) => a.registration_id));
     const counts: Record<string, number> = {};
     regIds.forEach((id) => {
       const reg = regMap[id];
       if (reg) counts[reg.child_boxing_program] = (counts[reg.child_boxing_program] || 0) + 1;
     });
     return Object.entries(counts).sort((a, b) => b[1] - a[1]);
-  }, [isCurrentMonth, todayRegIds, practiceAttendance, regMap]);
+  }, [isCurrentMonth, effectiveRegIds, practiceAttendance, regMap]);
 
   /* ───── BOY / GIRL RATIO ───── */
   const sexSplitToday = useMemo(() => {
-    const regIds = isCurrentMonth ? todayRegIds : new Set(practiceAttendance.map((a) => a.registration_id));
+    const regIds = isCurrentMonth ? effectiveRegIds : new Set(practiceAttendance.map((a) => a.registration_id));
     const counts: Record<string, number> = {};
     regIds.forEach((id) => {
       const reg = regMap[id];
       if (reg) counts[reg.child_sex] = (counts[reg.child_sex] || 0) + 1;
     });
     return counts;
-  }, [isCurrentMonth, todayRegIds, practiceAttendance, regMap]);
+  }, [isCurrentMonth, effectiveRegIds, practiceAttendance, regMap]);
 
   /* ───── POVERTY % ───── */
   const povertyToday = useMemo(() => {
-    const regIds = isCurrentMonth ? todayRegIds : new Set(practiceAttendance.map((a) => a.registration_id));
+    const regIds = isCurrentMonth ? effectiveRegIds : new Set(practiceAttendance.map((a) => a.registration_id));
     let below = 0;
     regIds.forEach((id) => {
       const reg = regMap[id];
       if (reg && (POVERTY_INCOMES.includes(reg.household_income_range) || reg.free_or_reduced_lunch === "Yes")) below++;
     });
     return { below, total: regIds.size };
-  }, [isCurrentMonth, todayRegIds, practiceAttendance, regMap]);
+  }, [isCurrentMonth, effectiveRegIds, practiceAttendance, regMap]);
 
   /* ───── TOP SCHOOL DISTRICT ───── */
   const topDistrictToday = useMemo(() => {
-    const regIds = isCurrentMonth ? todayRegIds : new Set(practiceAttendance.map((a) => a.registration_id));
+    const regIds = isCurrentMonth ? effectiveRegIds : new Set(practiceAttendance.map((a) => a.registration_id));
     const counts: Record<string, number> = {};
     regIds.forEach((id) => {
       const reg = regMap[id];
@@ -709,11 +745,11 @@ const AdminAttendance = () => {
     });
     const sorted = Object.entries(counts).sort((a, b) => b[1] - a[1]);
     return sorted.length > 0 ? sorted[0] : null;
-  }, [isCurrentMonth, todayRegIds, practiceAttendance, regMap]);
+  }, [isCurrentMonth, effectiveRegIds, practiceAttendance, regMap]);
 
   /* ───── AVG ARRIVAL TIME ───── */
   const avgArrivalToday = useMemo(() => {
-    const records = isCurrentMonth ? todayRecords : practiceAttendance;
+    const records = isCurrentMonth ? effectiveRecords : practiceAttendance;
     if (records.length === 0) return null;
     const totalMs = records.reduce((sum, a) => {
       const d = new Date(a.check_in_at);
@@ -1414,7 +1450,7 @@ const AdminAttendance = () => {
           {/* Program Split */}
           <Card className="bg-white/5 border-white/10 text-white">
             <CardContent className="pt-4 pb-3">
-              <p className="text-[10px] uppercase tracking-wider text-white/40 mb-2">{isCurrentMonth ? "Program Split Today" : `Program Split — ${viewedMonthShort}`}</p>
+              <p className="text-[10px] uppercase tracking-wider text-white/40 mb-2">{isCurrentMonth ? `Program Split — ${effectiveLabel}` : `Program Split — ${viewedMonthShort}`}</p>
               {programSplitToday.length === 0 ? (
                 <p className="text-white/30 text-sm">—</p>
               ) : (
@@ -1433,7 +1469,7 @@ const AdminAttendance = () => {
           {/* Boy / Girl Ratio */}
           <Card className="bg-white/5 border-white/10 text-white">
             <CardContent className="pt-4 pb-3">
-              <p className="text-[10px] uppercase tracking-wider text-white/40 mb-2">{isCurrentMonth ? "Boy / Girl Today" : `Boy / Girl — ${viewedMonthShort}`}</p>
+              <p className="text-[10px] uppercase tracking-wider text-white/40 mb-2">{isCurrentMonth ? `Boy / Girl — ${effectiveLabel}` : `Boy / Girl — ${viewedMonthShort}`}</p>
               <div className="flex items-center gap-3">
                 <div className="text-center flex-1">
                   <p className="text-2xl font-bold text-blue-400">{sexSplitToday["Male"] || 0}</p>
@@ -1454,7 +1490,7 @@ const AdminAttendance = () => {
           {/* Poverty % */}
           <Card className="bg-white/5 border-white/10 text-white">
             <CardContent className="pt-4 pb-3 text-center">
-              <p className="text-[10px] uppercase tracking-wider text-white/40">{isCurrentMonth ? "Below Poverty Today" : `Below Poverty — ${viewedMonthShort}`}</p>
+              <p className="text-[10px] uppercase tracking-wider text-white/40">{isCurrentMonth ? `Below Poverty — ${effectiveLabel}` : `Below Poverty — ${viewedMonthShort}`}</p>
               <p className="text-3xl font-bold mt-1">{pct(povertyToday.below, povertyToday.total)}</p>
               <p className="text-[10px] text-white/30">{povertyToday.below} of {povertyToday.total}</p>
             </CardContent>
@@ -1464,7 +1500,7 @@ const AdminAttendance = () => {
           <Card className="bg-white/5 border-white/10 text-white">
             <CardContent className="pt-4 pb-3 text-center">
               <p className="text-[10px] uppercase tracking-wider text-white/40 flex items-center justify-center gap-1">
-                <School className="w-3 h-3" /> {isCurrentMonth ? "Top District Today" : `Top District — ${viewedMonthShort}`}
+                <School className="w-3 h-3" /> {isCurrentMonth ? `Top District — ${effectiveLabel}` : `Top District — ${viewedMonthShort}`}
               </p>
               {topDistrictToday ? (
                 <>
