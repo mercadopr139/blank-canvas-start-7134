@@ -747,6 +747,50 @@ const AdminAttendance = () => {
     return sorted.length > 0 ? sorted[0] : null;
   }, [isCurrentMonth, effectiveRegIds, practiceAttendance, regMap]);
 
+  /* ───── TODAY-ONLY snapshot (resets daily, live) ───── */
+  const todayOnlyRegIds = useMemo(() => {
+    if (!isCurrentMonth) return new Set<string>();
+    return new Set(practiceAttendance.filter(a => a.check_in_date === todayStr).map(a => a.registration_id));
+  }, [isCurrentMonth, practiceAttendance]);
+
+  const buildSnapshot = useCallback((regIds: Set<string>) => {
+    const program: Record<string, number> = {};
+    const sex: Record<string, number> = {};
+    const district: Record<string, number> = {};
+    let belowPoverty = 0;
+    regIds.forEach((id) => {
+      const reg = regMap[id];
+      if (!reg) return;
+      program[reg.child_boxing_program] = (program[reg.child_boxing_program] || 0) + 1;
+      sex[reg.child_sex] = (sex[reg.child_sex] || 0) + 1;
+      district[reg.child_school_district] = (district[reg.child_school_district] || 0) + 1;
+      if (POVERTY_INCOMES.includes(reg.household_income_range) || reg.free_or_reduced_lunch === "Yes") belowPoverty++;
+    });
+    const programSorted = Object.entries(program).sort((a, b) => b[1] - a[1]);
+    const districtSorted = Object.entries(district).sort((a, b) => b[1] - a[1]);
+    return {
+      program: programSorted,
+      sex,
+      poverty: { below: belowPoverty, total: regIds.size },
+      topDistrict: districtSorted.length > 0 ? districtSorted[0] : null,
+      total: regIds.size,
+    };
+  }, [regMap]);
+
+  const todaySnapshot = useMemo(() => buildSnapshot(todayOnlyRegIds), [buildSnapshot, todayOnlyRegIds]);
+
+  const mtdRegIds = useMemo(() => {
+    const ids = new Set<string>();
+    practiceAttendance.forEach((a) => {
+      if (!isCurrentMonth || a.check_in_date <= todayStr) ids.add(a.registration_id);
+    });
+    return ids;
+  }, [practiceAttendance, isCurrentMonth]);
+
+  const mtdSnapshot = useMemo(() => buildSnapshot(mtdRegIds), [buildSnapshot, mtdRegIds]);
+
+  const mtdLabel = isCurrentMonth ? `Month-to-Date — ${viewedMonthShort}` : viewedMonthShort;
+
   /* ───── AVG ARRIVAL TIME ───── */
   const avgArrivalToday = useMemo(() => {
     const records = isCurrentMonth ? effectiveRecords : practiceAttendance;
