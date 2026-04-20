@@ -60,7 +60,7 @@ const Index = () => {
 
         {/* Rookie Orientation Section */}
         <section className="w-full bg-muted-foreground py-10 md:py-14 flex flex-col items-center text-center px-5">
-            <h2 className="text-xl md:text-2xl font-semibold mb-3 text-primary-foreground">Enrolled Boxers Only</h2>
+            <<h2 className="text-xl md:text-2xl font-semibold mb-3 text-primary-foreground">Enrolled Boxers Only ⭐
             <p className="mb-6 max-w-md text-primary-foreground">Access Rookie Orientation and more materials...
 
         </p>
