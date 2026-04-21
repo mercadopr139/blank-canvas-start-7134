@@ -1623,6 +1623,123 @@ export type Database = {
         }
         Relationships: []
       }
+      staff_task_comments: {
+        Row: {
+          author_id: string
+          body: string
+          created_at: string
+          id: string
+          task_id: string
+        }
+        Insert: {
+          author_id: string
+          body: string
+          created_at?: string
+          id?: string
+          task_id: string
+        }
+        Update: {
+          author_id?: string
+          body?: string
+          created_at?: string
+          id?: string
+          task_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "staff_task_comments_task_id_fkey"
+            columns: ["task_id"]
+            isOneToOne: false
+            referencedRelation: "staff_tasks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      staff_task_notifications: {
+        Row: {
+          created_at: string
+          id: string
+          read: boolean
+          task_id: string
+          type: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          read?: boolean
+          task_id: string
+          type: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          read?: boolean
+          task_id?: string
+          type?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "staff_task_notifications_task_id_fkey"
+            columns: ["task_id"]
+            isOneToOne: false
+            referencedRelation: "staff_tasks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      staff_tasks: {
+        Row: {
+          assigned_to: string | null
+          created_at: string
+          created_by: string
+          description: string | null
+          due_date: string | null
+          focus_area_id: string | null
+          id: string
+          priority: string | null
+          status: Database["public"]["Enums"]["staff_task_status"]
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          assigned_to?: string | null
+          created_at?: string
+          created_by: string
+          description?: string | null
+          due_date?: string | null
+          focus_area_id?: string | null
+          id?: string
+          priority?: string | null
+          status?: Database["public"]["Enums"]["staff_task_status"]
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          assigned_to?: string | null
+          created_at?: string
+          created_by?: string
+          description?: string | null
+          due_date?: string | null
+          focus_area_id?: string | null
+          id?: string
+          priority?: string | null
+          status?: Database["public"]["Enums"]["staff_task_status"]
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "staff_tasks_focus_area_id_fkey"
+            columns: ["focus_area_id"]
+            isOneToOne: false
+            referencedRelation: "focus_areas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       supporters: {
         Row: {
           address: string | null
@@ -2516,6 +2633,7 @@ export type Database = {
         | "Vision"
         | "Personal"
       signal_status: "Pending" | "Complete"
+      staff_task_status: "Open" | "In Progress" | "Completed" | "Blocked"
       task_status: "Open" | "Completed"
       task_type:
         | "Call"
@@ -2751,6 +2869,7 @@ export const Constants = {
         "Personal",
       ],
       signal_status: ["Pending", "Complete"],
+      staff_task_status: ["Open", "In Progress", "Completed", "Blocked"],
       task_status: ["Open", "Completed"],
       task_type: [
         "Call",
