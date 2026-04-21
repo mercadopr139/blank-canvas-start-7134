@@ -11,6 +11,8 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuTrigger,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
 
 export type Message = {
@@ -27,7 +29,7 @@ export type Message = {
 
 const TOPICS: ConversationTopic[] = ["General", "Operations", "Sales & Marketing", "Finance"];
 
-/* ── Action menu — DropdownMenu renders in a portal and handles clicks correctly ── */
+/* ── Action menu — uses DropdownMenuItem (onSelect) so clicks fire before menu closes ── */
 const MessageActionMenu = ({
   msgId,
   msgTopic,
@@ -48,41 +50,38 @@ const MessageActionMenu = ({
     <DropdownMenuContent
       side="top"
       align="end"
-      className="w-52 p-2 bg-neutral-900 border-white/[0.08] shadow-2xl rounded-xl"
-      onClick={(e) => e.stopPropagation()}
+      className="w-52 bg-neutral-900 border-white/[0.08] shadow-2xl"
     >
-      <p className="text-[10px] text-zinc-600 font-semibold uppercase tracking-wider px-2 py-1">
+      <p className="text-[10px] text-zinc-600 font-semibold uppercase tracking-wider px-2 py-1.5">
         Change Pillar
       </p>
-      <div className="flex flex-wrap gap-1.5 px-2 pb-2">
-        {(["General", "Operations", "Sales & Marketing", "Finance"] as ConversationTopic[]).map((t) => {
-          const color = TOPIC_COLORS[t];
-          const active = msgTopic === t;
-          return (
-            <button
-              key={t}
-              onPointerDown={(e) => { e.stopPropagation(); onChangeTopic(msgId, t); }}
-              className="px-2 py-1 rounded-md text-[11px] font-medium transition-all border"
-              style={{
-                background: active ? `${color}25` : "transparent",
-                borderColor: active ? color : "rgba(255,255,255,0.08)",
-                color: active ? color : "#71717a",
-              }}
-            >
-              {t}
-            </button>
-          );
-        })}
-      </div>
-      <div className="border-t border-white/[0.06] pt-1">
-        <button
-          onPointerDown={(e) => { e.stopPropagation(); onDelete(msgId); }}
-          className="w-full flex items-center gap-2 px-2 py-1.5 rounded-lg text-xs text-red-400 hover:bg-red-500/10 transition-colors"
-        >
-          <Trash2 className="w-3.5 h-3.5" />
-          Delete message
-        </button>
-      </div>
+      {(["General", "Operations", "Sales & Marketing", "Finance"] as ConversationTopic[]).map((t) => {
+        const color = TOPIC_COLORS[t];
+        const active = msgTopic === t;
+        return (
+          <DropdownMenuItem
+            key={t}
+            onSelect={() => onChangeTopic(msgId, t)}
+            className="cursor-pointer focus:bg-white/[0.06]"
+            style={{ color: active ? color : "#71717a" }}
+          >
+            <span
+              className="w-2 h-2 rounded-full flex-shrink-0 mr-2"
+              style={{ background: color }}
+            />
+            {t}
+            {active && <span className="ml-auto text-[10px]">✓</span>}
+          </DropdownMenuItem>
+        );
+      })}
+      <DropdownMenuSeparator className="bg-white/[0.06]" />
+      <DropdownMenuItem
+        onSelect={() => onDelete(msgId)}
+        className="cursor-pointer text-red-400 focus:text-red-400 focus:bg-red-500/10"
+      >
+        <Trash2 className="w-3.5 h-3.5 mr-2" />
+        Delete message
+      </DropdownMenuItem>
     </DropdownMenuContent>
   </DropdownMenu>
 );
@@ -177,7 +176,6 @@ const MessageThread = ({ conversation, currentUserId, onConversationUpdated }: P
   };
 
   const handleDeleteMessage = async (msgId: string) => {
-    setOpenMenuId(null);
     try {
       const { error } = await (supabase.from("mb_messages") as any)
         .delete()
@@ -191,7 +189,6 @@ const MessageThread = ({ conversation, currentUserId, onConversationUpdated }: P
   };
 
   const handleChangeMessageTopic = async (msgId: string, newTopic: ConversationTopic) => {
-    setOpenMenuId(null);
     try {
       const { error } = await (supabase.from("mb_messages") as any)
         .update({ topic: newTopic })
