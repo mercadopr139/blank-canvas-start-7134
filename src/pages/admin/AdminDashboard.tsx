@@ -230,21 +230,27 @@ const AdminDashboard = () => {
     enabled: !!user,
   });
 
-  /* Seed default tiles on first load */
+  /* Seed default tiles on first load, and add any missing default tiles for existing users */
   useEffect(() => {
     if (!user || tilesLoading || seeded) return;
-    if (tiles.length > 0) {
-      setSeeded(true);
-      return;
-    }
     const seedDefaults = async () => {
-      const rows = DEFAULT_TILES.map((t) => ({ ...t, user_id: user.id }));
-      const { error } = await (supabase.from("dashboard_tiles") as any).insert(rows);
-      if (error) {
-        console.error("Failed to seed default tiles:", error);
+      if (tiles.length === 0) {
+        // Brand new user — insert all defaults
+        const rows = DEFAULT_TILES.map((t) => ({ ...t, user_id: user.id }));
+        const { error } = await (supabase.from("dashboard_tiles") as any).insert(rows);
+        if (error) console.error("Failed to seed default tiles:", error);
       } else {
-        queryClient.invalidateQueries({ queryKey: ["dashboard-tiles", user.id] });
+        // Existing user — insert any default tiles that are missing
+        const existingHrefs = new Set(tiles.map((t: DashboardTile) => t.href));
+        const missing = DEFAULT_TILES.filter((t) => !existingHrefs.has(t.href));
+        if (missing.length > 0) {
+          const maxOrder = Math.max(...tiles.map((t: DashboardTile) => t.sort_order ?? 0));
+          const rows = missing.map((t, i) => ({ ...t, user_id: user.id, sort_order: maxOrder + i + 1 }));
+          const { error } = await (supabase.from("dashboard_tiles") as any).insert(rows);
+          if (error) console.error("Failed to add missing tiles:", error);
+        }
       }
+      queryClient.invalidateQueries({ queryKey: ["dashboard-tiles", user.id] });
       setSeeded(true);
     };
     seedDefaults();
