@@ -1116,6 +1116,7 @@ export type Database = {
           id: string
           message_type: string
           sender_id: string
+          task_id: string | null
         }
         Insert: {
           content: string
@@ -1124,6 +1125,7 @@ export type Database = {
           id?: string
           message_type?: string
           sender_id: string
+          task_id?: string | null
         }
         Update: {
           content?: string
@@ -1132,6 +1134,7 @@ export type Database = {
           id?: string
           message_type?: string
           sender_id?: string
+          task_id?: string | null
         }
         Relationships: [
           {
@@ -1139,6 +1142,13 @@ export type Database = {
             columns: ["conversation_id"]
             isOneToOne: false
             referencedRelation: "mb_conversations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "mb_messages_task_id_fkey"
+            columns: ["task_id"]
+            isOneToOne: false
+            referencedRelation: "mb_tasks"
             referencedColumns: ["id"]
           },
         ]

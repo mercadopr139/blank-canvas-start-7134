@@ -1,0 +1,1 @@
+ALTER TABLE public.mb_messages ADD COLUMN IF NOT EXISTS task_id UUID REFERENCES public.mb_tasks(id) ON DELETE SET NULL;
