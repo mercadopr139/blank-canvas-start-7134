@@ -46,11 +46,13 @@ const AdminMessageBoard = () => {
     queryKey: ["my-staff-profile", user?.id],
     queryFn: async () => {
       const { data, error } = await (supabase.from("staff_profiles") as any)
-        .select("id, user_id, full_name, role, task_manager_type")
+        .select("id, user_id, full_name, role")
         .eq("user_id", user!.id)
         .maybeSingle();
-      if (error) throw error;
-      return data as StaffProfile | null;
+      if (error) return null;
+      if (!data) return null;
+      // task_manager_type may not exist yet if migration is pending
+      return { ...data, task_manager_type: (data as any).task_manager_type ?? null } as StaffProfile;
     },
     enabled: !!user,
   });

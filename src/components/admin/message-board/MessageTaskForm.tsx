@@ -42,10 +42,10 @@ const MessageTaskForm = ({ open, onClose, conversationId, currentUserId, onCreat
     queryKey: ["staff-profiles-for-mb"],
     queryFn: async () => {
       const { data, error } = await (supabase.from("staff_profiles") as any)
-        .select("id, user_id, full_name, role, task_manager_type")
+        .select("id, user_id, full_name, role")
         .order("full_name", { ascending: true });
       if (error) throw error;
-      return data as StaffProfile[];
+      return (data || []).map((s: any) => ({ ...s, task_manager_type: null })) as StaffProfile[];
     },
     enabled: open,
   });
