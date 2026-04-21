@@ -292,7 +292,7 @@ const fetchBestPhotoForCandidate = async (
   return null;
 };
 
-const hasNonSignatureExistingPhoto = async (supabase: ReturnType<typeof createClient>, path: string) => {
+const hasNonSignatureExistingPhoto = async (supabase: any, path: string) => {
   try {
     const { data: existingFile, error } = await supabase.storage
       .from("registration-signatures")
