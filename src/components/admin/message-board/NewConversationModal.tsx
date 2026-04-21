@@ -214,7 +214,6 @@ const NewConversationModal = ({ open, onClose, currentUserId, onCreated }: Props
                 value={groupName}
                 onChange={(e) => setGroupName(e.target.value)}
                 className="bg-white/[0.04] border-white/[0.08] text-zinc-200 placeholder:text-zinc-600 text-sm"
-                style={{ focusRingColor: topicColor }}
               />
             </div>
           )}

@@ -1091,6 +1091,7 @@ export type Database = {
           id: string
           is_group: boolean
           name: string | null
+          topic: string | null
         }
         Insert: {
           created_at?: string
@@ -1098,6 +1099,7 @@ export type Database = {
           id?: string
           is_group?: boolean
           name?: string | null
+          topic?: string | null
         }
         Update: {
           created_at?: string
@@ -1105,6 +1107,7 @@ export type Database = {
           id?: string
           is_group?: boolean
           name?: string | null
+          topic?: string | null
         }
         Relationships: []
       }
@@ -1117,6 +1120,7 @@ export type Database = {
           message_type: string
           sender_id: string
           task_id: string | null
+          topic: string | null
         }
         Insert: {
           content: string
@@ -1126,6 +1130,7 @@ export type Database = {
           message_type?: string
           sender_id: string
           task_id?: string | null
+          topic?: string | null
         }
         Update: {
           content?: string
@@ -1135,6 +1140,7 @@ export type Database = {
           message_type?: string
           sender_id?: string
           task_id?: string | null
+          topic?: string | null
         }
         Relationships: [
           {
