@@ -1016,6 +1016,192 @@ export type Database = {
           },
         ]
       }
+      mb_calendar_events: {
+        Row: {
+          created_at: string
+          created_by: string
+          description: string | null
+          end_time: string | null
+          event_date: string
+          event_type: string
+          id: string
+          start_time: string | null
+          title: string
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          description?: string | null
+          end_time?: string | null
+          event_date: string
+          event_type?: string
+          id?: string
+          start_time?: string | null
+          title: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          description?: string | null
+          end_time?: string | null
+          event_date?: string
+          event_type?: string
+          id?: string
+          start_time?: string | null
+          title?: string
+        }
+        Relationships: []
+      }
+      mb_conversation_members: {
+        Row: {
+          conversation_id: string
+          id: string
+          joined_at: string
+          last_read_at: string | null
+          user_id: string
+        }
+        Insert: {
+          conversation_id: string
+          id?: string
+          joined_at?: string
+          last_read_at?: string | null
+          user_id: string
+        }
+        Update: {
+          conversation_id?: string
+          id?: string
+          joined_at?: string
+          last_read_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "mb_conversation_members_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "mb_conversations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      mb_conversations: {
+        Row: {
+          created_at: string
+          created_by: string
+          id: string
+          is_group: boolean
+          name: string | null
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          id?: string
+          is_group?: boolean
+          name?: string | null
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          id?: string
+          is_group?: boolean
+          name?: string | null
+        }
+        Relationships: []
+      }
+      mb_messages: {
+        Row: {
+          content: string
+          conversation_id: string
+          created_at: string
+          id: string
+          message_type: string
+          sender_id: string
+        }
+        Insert: {
+          content: string
+          conversation_id: string
+          created_at?: string
+          id?: string
+          message_type?: string
+          sender_id: string
+        }
+        Update: {
+          content?: string
+          conversation_id?: string
+          created_at?: string
+          id?: string
+          message_type?: string
+          sender_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "mb_messages_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "mb_conversations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      mb_tasks: {
+        Row: {
+          assigned_by: string
+          assigned_to: string | null
+          conversation_id: string | null
+          created_at: string
+          description: string | null
+          due_date: string | null
+          id: string
+          priority: string
+          sent_to_task_manager: boolean
+          status: string
+          task_manager_type: string | null
+          title: string
+          topic: string
+          updated_at: string
+        }
+        Insert: {
+          assigned_by: string
+          assigned_to?: string | null
+          conversation_id?: string | null
+          created_at?: string
+          description?: string | null
+          due_date?: string | null
+          id?: string
+          priority?: string
+          sent_to_task_manager?: boolean
+          status?: string
+          task_manager_type?: string | null
+          title: string
+          topic?: string
+          updated_at?: string
+        }
+        Update: {
+          assigned_by?: string
+          assigned_to?: string | null
+          conversation_id?: string | null
+          created_at?: string
+          description?: string | null
+          due_date?: string | null
+          id?: string
+          priority?: string
+          sent_to_task_manager?: boolean
+          status?: string
+          task_manager_type?: string | null
+          title?: string
+          topic?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "mb_tasks_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "mb_conversations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       meal_checkins: {
         Row: {
           id: string
@@ -1598,6 +1784,7 @@ export type Database = {
           id: string
           job_title: string
           status: string
+          task_manager_type: string | null
           updated_at: string
           user_id: string
         }
@@ -1608,6 +1795,7 @@ export type Database = {
           id?: string
           job_title?: string
           status?: string
+          task_manager_type?: string | null
           updated_at?: string
           user_id: string
         }
@@ -1618,6 +1806,7 @@ export type Database = {
           id?: string
           job_title?: string
           status?: string
+          task_manager_type?: string | null
           updated_at?: string
           user_id?: string
         }
