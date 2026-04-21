@@ -1,12 +1,13 @@
 import { useEffect, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { Users, User, MoreHorizontal, Trash2, Pencil, X, Check } from "lucide-react";
+import { Users, User, MoreHorizontal, Trash2, Pencil, X } from "lucide-react";
 import MessageInput from "./MessageInput";
 import MessageTaskCard from "./MessageTaskCard";
 import type { Conversation, ConversationTopic } from "@/pages/admin/AdminMessageBoard";
 import { TOPIC_COLORS } from "@/pages/admin/AdminMessageBoard";
 import { useToast } from "@/hooks/use-toast";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 
 export type Message = {
   id: string;
@@ -21,6 +22,65 @@ export type Message = {
 };
 
 const TOPICS: ConversationTopic[] = ["General", "Operations", "Sales & Marketing", "Finance"];
+
+/* ── Action menu rendered in a portal so overflow:auto doesn't clip it ── */
+const MessageActionMenu = ({
+  msgId,
+  msgTopic,
+  onChangeTopic,
+  onDelete,
+}: {
+  msgId: string;
+  msgTopic: ConversationTopic;
+  onChangeTopic: (id: string, t: ConversationTopic) => void;
+  onDelete: (id: string) => void;
+}) => (
+  <Popover>
+    <PopoverTrigger asChild>
+      <button className="p-1.5 rounded-lg text-zinc-600 hover:text-zinc-300 hover:bg-white/[0.08] transition-colors">
+        <MoreHorizontal className="w-3.5 h-3.5" />
+      </button>
+    </PopoverTrigger>
+    <PopoverContent
+      side="top"
+      align="end"
+      className="w-52 p-2 bg-neutral-900 border-white/[0.08] shadow-2xl"
+    >
+      <p className="text-[10px] text-zinc-600 font-semibold uppercase tracking-wider px-2 py-1">
+        Change Pillar
+      </p>
+      <div className="flex flex-wrap gap-1.5 px-2 pb-2">
+        {(["General", "Operations", "Sales & Marketing", "Finance"] as ConversationTopic[]).map((t) => {
+          const color = TOPIC_COLORS[t];
+          const active = msgTopic === t;
+          return (
+            <button
+              key={t}
+              onClick={() => onChangeTopic(msgId, t)}
+              className="px-2 py-1 rounded-md text-[11px] font-medium transition-all border"
+              style={{
+                background: active ? `${color}25` : "transparent",
+                borderColor: active ? color : "rgba(255,255,255,0.08)",
+                color: active ? color : "#71717a",
+              }}
+            >
+              {t}
+            </button>
+          );
+        })}
+      </div>
+      <div className="border-t border-white/[0.06] pt-1">
+        <button
+          onClick={() => onDelete(msgId)}
+          className="w-full flex items-center gap-2 px-2 py-1.5 rounded-lg text-xs text-red-400 hover:bg-red-500/10 transition-colors"
+        >
+          <Trash2 className="w-3.5 h-3.5" />
+          Delete message
+        </button>
+      </div>
+    </PopoverContent>
+  </Popover>
+);
 
 interface Props {
   conversation: Conversation;
@@ -52,7 +112,6 @@ const MessageThread = ({ conversation, currentUserId, onConversationUpdated }: P
   const bottomRef = useRef<HTMLDivElement>(null);
 
   const [hoveredMsgId, setHoveredMsgId] = useState<string | null>(null);
-  const [openMenuId, setOpenMenuId] = useState<string | null>(null);
   const [editingConv, setEditingConv] = useState(false);
   const [convName, setConvName] = useState(conversation.name || "");
   const [convTopic, setConvTopic] = useState<ConversationTopic>(conversation.topic || "General");
@@ -88,13 +147,6 @@ const MessageThread = ({ conversation, currentUserId, onConversationUpdated }: P
     },
     enabled: !!conversation.id,
   });
-
-  // Close menu when clicking outside
-  useEffect(() => {
-    const handler = () => setOpenMenuId(null);
-    if (openMenuId) document.addEventListener("click", handler);
-    return () => document.removeEventListener("click", handler);
-  }, [openMenuId]);
 
   useEffect(() => {
     if (!conversation.id || !currentUserId) return;
@@ -310,57 +362,17 @@ const MessageThread = ({ conversation, currentUserId, onConversationUpdated }: P
               <div
                 className={`flex ${isMe ? "justify-end" : "justify-start"} mb-1 group/msg`}
                 onMouseEnter={() => setHoveredMsgId(msg.id)}
-                onMouseLeave={() => { if (!isMenuOpen) setHoveredMsgId(null); }}
+                onMouseLeave={() => setHoveredMsgId(null)}
               >
-                {/* Action button — left of bubble for my messages, right for others */}
+                {/* Action button — left of bubble for my messages */}
                 {isMe && (
-                  <div className={`flex items-center mr-1 transition-opacity ${hoveredMsgId === msg.id || isMenuOpen ? "opacity-100" : "opacity-0"}`}>
-                    <div className="relative">
-                      <button
-                        onClick={(e) => { e.stopPropagation(); setOpenMenuId(isMenuOpen ? null : msg.id); }}
-                        className="p-1.5 rounded-lg text-zinc-600 hover:text-zinc-300 hover:bg-white/[0.08] transition-colors"
-                      >
-                        <MoreHorizontal className="w-3.5 h-3.5" />
-                      </button>
-
-                      {isMenuOpen && (
-                        <div
-                          className="absolute bottom-full right-0 mb-1 w-52 rounded-xl border border-white/[0.08] bg-neutral-900 shadow-2xl p-2 z-50"
-                          onClick={(e) => e.stopPropagation()}
-                        >
-                          <p className="text-[10px] text-zinc-600 font-semibold uppercase tracking-wider px-2 py-1">Change Pillar</p>
-                          <div className="flex flex-wrap gap-1.5 px-2 pb-2">
-                            {TOPICS.map((t) => {
-                              const color = TOPIC_COLORS[t];
-                              const active = msgTopic === t;
-                              return (
-                                <button
-                                  key={t}
-                                  onClick={() => handleChangeMessageTopic(msg.id, t)}
-                                  className="px-2 py-1 rounded-md text-[11px] font-medium transition-all border"
-                                  style={{
-                                    background: active ? `${color}25` : "transparent",
-                                    borderColor: active ? color : "rgba(255,255,255,0.08)",
-                                    color: active ? color : "#71717a",
-                                  }}
-                                >
-                                  {t}
-                                </button>
-                              );
-                            })}
-                          </div>
-                          <div className="border-t border-white/[0.06] mt-1 pt-1">
-                            <button
-                              onClick={() => handleDeleteMessage(msg.id)}
-                              className="w-full flex items-center gap-2 px-2 py-1.5 rounded-lg text-xs text-red-400 hover:bg-red-500/10 transition-colors"
-                            >
-                              <Trash2 className="w-3.5 h-3.5" />
-                              Delete message
-                            </button>
-                          </div>
-                        </div>
-                      )}
-                    </div>
+                  <div className={`flex items-center mr-1 transition-opacity ${hoveredMsgId === msg.id ? "opacity-100" : "opacity-0"}`}>
+                    <MessageActionMenu
+                      msgId={msg.id}
+                      msgTopic={msgTopic}
+                      onChangeTopic={handleChangeMessageTopic}
+                      onDelete={handleDeleteMessage}
+                    />
                   </div>
                 )}
 
@@ -400,55 +412,15 @@ const MessageThread = ({ conversation, currentUserId, onConversationUpdated }: P
                   )}
                 </div>
 
-                {/* Action button for received messages */}
+                {/* Action button — right of bubble for received messages */}
                 {!isMe && (
-                  <div className={`flex items-center ml-1 transition-opacity ${hoveredMsgId === msg.id || isMenuOpen ? "opacity-100" : "opacity-0"}`}>
-                    <div className="relative">
-                      <button
-                        onClick={(e) => { e.stopPropagation(); setOpenMenuId(isMenuOpen ? null : msg.id); }}
-                        className="p-1.5 rounded-lg text-zinc-600 hover:text-zinc-300 hover:bg-white/[0.08] transition-colors"
-                      >
-                        <MoreHorizontal className="w-3.5 h-3.5" />
-                      </button>
-
-                      {isMenuOpen && (
-                        <div
-                          className="absolute bottom-full left-0 mb-1 w-52 rounded-xl border border-white/[0.08] bg-neutral-900 shadow-2xl p-2 z-50"
-                          onClick={(e) => e.stopPropagation()}
-                        >
-                          <p className="text-[10px] text-zinc-600 font-semibold uppercase tracking-wider px-2 py-1">Change Pillar</p>
-                          <div className="flex flex-wrap gap-1.5 px-2 pb-2">
-                            {TOPICS.map((t) => {
-                              const color = TOPIC_COLORS[t];
-                              const active = msgTopic === t;
-                              return (
-                                <button
-                                  key={t}
-                                  onClick={() => handleChangeMessageTopic(msg.id, t)}
-                                  className="px-2 py-1 rounded-md text-[11px] font-medium transition-all border"
-                                  style={{
-                                    background: active ? `${color}25` : "transparent",
-                                    borderColor: active ? color : "rgba(255,255,255,0.08)",
-                                    color: active ? color : "#71717a",
-                                  }}
-                                >
-                                  {t}
-                                </button>
-                              );
-                            })}
-                          </div>
-                          <div className="border-t border-white/[0.06] mt-1 pt-1">
-                            <button
-                              onClick={() => handleDeleteMessage(msg.id)}
-                              className="w-full flex items-center gap-2 px-2 py-1.5 rounded-lg text-xs text-red-400 hover:bg-red-500/10 transition-colors"
-                            >
-                              <Trash2 className="w-3.5 h-3.5" />
-                              Delete message
-                            </button>
-                          </div>
-                        </div>
-                      )}
-                    </div>
+                  <div className={`flex items-center ml-1 transition-opacity ${hoveredMsgId === msg.id ? "opacity-100" : "opacity-0"}`}>
+                    <MessageActionMenu
+                      msgId={msg.id}
+                      msgTopic={msgTopic}
+                      onChangeTopic={handleChangeMessageTopic}
+                      onDelete={handleDeleteMessage}
+                    />
                   </div>
                 )}
               </div>
