@@ -48,13 +48,17 @@ const HREF_PERM_MAP: Record<string, PermissionKey> = {
   "/admin/finance": "finance",
 };
 
+/* Tiles that were removed — delete from DB if found */
+const DEPRECATED_TILE_HREFS = ["/admin/shared-task-board"];
+
 /* Default tiles to seed for new users */
 const DEFAULT_TILES = [
   { title: "Upcoming Events", subtitle: "Calendar reminders", icon_name: "calendar-days", accent_color: "#f59e0b", href: "__upcoming_events__", sort_order: 0, is_default: true },
   { title: "Driver Check-In", subtitle: "Transportation PIN login", icon_name: "bus", accent_color: "#60a5fa", href: "/transport", sort_order: 1, is_default: true },
   { title: "PD Task Manager", subtitle: "Executive Focus & Daily Signals", icon_name: "signal", accent_color: "#a1a1aa", href: "/admin/pd-task-manager", sort_order: 2, is_default: true },
   { title: "PC Task Manager", subtitle: "Executive Focus & Daily Signals", icon_name: "signal", accent_color: "#a1a1aa", href: "/admin/pc-task-manager", sort_order: 3, is_default: true },
-  { title: "Settings", subtitle: "Staff Management", icon_name: "settings", accent_color: "#a1a1aa", href: "/admin/staff", sort_order: 4, is_default: true },
+  { title: "Message Board", subtitle: "Team communication & tasks", icon_name: "message-square", accent_color: "#bf0f3e", href: "/admin/message-board", sort_order: 5, is_default: true },
+  { title: "Settings", subtitle: "Staff Management", icon_name: "settings", accent_color: "#a1a1aa", href: "/admin/staff", sort_order: 6, is_default: true },
 ];
 
 /* ─── Pillar card config (unchanged) ─── */
@@ -229,23 +233,42 @@ const AdminDashboard = () => {
     enabled: !!user,
   });
 
-  /* Seed default tiles on first load */
+  /* Seed default tiles on first load; also add any missing tiles for existing users */
   useEffect(() => {
     if (!user || tilesLoading || seeded) return;
-    if (tiles.length > 0) {
-      setSeeded(true);
-      return;
-    }
+
     const seedDefaults = async () => {
-      const rows = DEFAULT_TILES.map((t) => ({ ...t, user_id: user.id }));
-      const { error } = await (supabase.from("dashboard_tiles") as any).insert(rows);
-      if (error) {
-        console.error("Failed to seed default tiles:", error);
-      } else {
-        queryClient.invalidateQueries({ queryKey: ["dashboard-tiles", user.id] });
+      // Remove any deprecated tiles first
+      const deprecatedIds = tiles
+        .filter((t) => DEPRECATED_TILE_HREFS.includes(t.href))
+        .map((t) => t.id);
+      if (deprecatedIds.length > 0) {
+        await (supabase.from("dashboard_tiles") as any)
+          .delete()
+          .in("id", deprecatedIds);
       }
+
+      if (tiles.length === 0 || tiles.every((t) => DEPRECATED_TILE_HREFS.includes(t.href))) {
+        // Brand new user (or only had deprecated tiles) — insert all defaults
+        const rows = DEFAULT_TILES.map((t) => ({ ...t, user_id: user.id }));
+        const { error } = await (supabase.from("dashboard_tiles") as any).insert(rows);
+        if (error) console.error("Failed to seed default tiles:", error);
+      } else {
+        // Existing user — insert any default tiles they're missing (by href)
+        const existingHrefs = new Set(
+          tiles.filter((t) => !DEPRECATED_TILE_HREFS.includes(t.href)).map((t) => t.href)
+        );
+        const missing = DEFAULT_TILES.filter((t) => !existingHrefs.has(t.href));
+        if (missing.length > 0) {
+          const rows = missing.map((t) => ({ ...t, user_id: user.id }));
+          const { error } = await (supabase.from("dashboard_tiles") as any).insert(rows);
+          if (error) console.error("Failed to add missing tiles:", error);
+        }
+      }
+      queryClient.invalidateQueries({ queryKey: ["dashboard-tiles", user.id] });
       setSeeded(true);
     };
+
     seedDefaults();
   }, [user, tilesLoading, tiles.length, seeded, queryClient]);
 
