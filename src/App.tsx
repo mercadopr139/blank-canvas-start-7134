@@ -75,6 +75,7 @@ import TransportIncidents from "./pages/transport/TransportIncidents";
 import AdminTransportImpactReports from "./pages/admin/AdminTransportImpactReports";
 import AdminMealTracker from "./pages/admin/AdminMealTracker";
 import AdminMealReports from "./pages/admin/AdminMealReports";
+import AdminMessageBoard from "./pages/admin/AdminMessageBoard";
 import MealCheckIn from "./pages/MealCheckIn";
 import NotFound from "./pages/NotFound";
 
@@ -280,6 +281,16 @@ const App = () => (
               }
             />
             
+            {/* Message Board */}
+            <Route
+              path="/admin/message-board"
+              element={
+                <ProtectedRoute requireAdmin>
+                  <AdminMessageBoard />
+                </ProtectedRoute>
+              }
+            />
+
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>
