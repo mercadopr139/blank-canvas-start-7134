@@ -194,6 +194,19 @@ const MessageThread = ({ conversation, currentUserId, onConversationUpdated }: P
         .update({ topic: newTopic })
         .eq("id", msgId);
       if (error) throw error;
+
+      // If this is a task message, also update the task's topic so the card color updates
+      const msg = messages.find((m) => m.id === msgId);
+      if (msg?.message_type === "task") {
+        const taskId = (() => { try { return JSON.parse(msg.content)?.task_id || msg.task_id; } catch { return msg.task_id; } })();
+        if (taskId) {
+          await (supabase.from("mb_tasks") as any)
+            .update({ topic: newTopic })
+            .eq("id", taskId);
+          queryClient.invalidateQueries({ queryKey: ["mb-task", taskId] });
+        }
+      }
+
       queryClient.invalidateQueries({ queryKey: ["mb-messages", conversation.id] });
     } catch (err: any) {
       toast({ title: "Failed to update message", description: err.message, variant: "destructive" });
