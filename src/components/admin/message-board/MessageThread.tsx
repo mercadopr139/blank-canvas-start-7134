@@ -7,7 +7,11 @@ import MessageTaskCard from "./MessageTaskCard";
 import type { Conversation, ConversationTopic } from "@/pages/admin/AdminMessageBoard";
 import { TOPIC_COLORS } from "@/pages/admin/AdminMessageBoard";
 import { useToast } from "@/hooks/use-toast";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 export type Message = {
   id: string;
@@ -23,7 +27,7 @@ export type Message = {
 
 const TOPICS: ConversationTopic[] = ["General", "Operations", "Sales & Marketing", "Finance"];
 
-/* ── Action menu rendered in a portal so overflow:auto doesn't clip it ── */
+/* ── Action menu — DropdownMenu renders in a portal and handles clicks correctly ── */
 const MessageActionMenu = ({
   msgId,
   msgTopic,
@@ -35,16 +39,17 @@ const MessageActionMenu = ({
   onChangeTopic: (id: string, t: ConversationTopic) => void;
   onDelete: (id: string) => void;
 }) => (
-  <Popover>
-    <PopoverTrigger asChild>
-      <button className="p-1.5 rounded-lg text-zinc-600 hover:text-zinc-300 hover:bg-white/[0.08] transition-colors">
+  <DropdownMenu>
+    <DropdownMenuTrigger asChild>
+      <button className="p-1.5 rounded-lg text-zinc-600 hover:text-zinc-300 hover:bg-white/[0.08] transition-colors outline-none">
         <MoreHorizontal className="w-3.5 h-3.5" />
       </button>
-    </PopoverTrigger>
-    <PopoverContent
+    </DropdownMenuTrigger>
+    <DropdownMenuContent
       side="top"
       align="end"
-      className="w-52 p-2 bg-neutral-900 border-white/[0.08] shadow-2xl"
+      className="w-52 p-2 bg-neutral-900 border-white/[0.08] shadow-2xl rounded-xl"
+      onClick={(e) => e.stopPropagation()}
     >
       <p className="text-[10px] text-zinc-600 font-semibold uppercase tracking-wider px-2 py-1">
         Change Pillar
@@ -56,7 +61,7 @@ const MessageActionMenu = ({
           return (
             <button
               key={t}
-              onClick={() => onChangeTopic(msgId, t)}
+              onPointerDown={(e) => { e.stopPropagation(); onChangeTopic(msgId, t); }}
               className="px-2 py-1 rounded-md text-[11px] font-medium transition-all border"
               style={{
                 background: active ? `${color}25` : "transparent",
@@ -71,15 +76,15 @@ const MessageActionMenu = ({
       </div>
       <div className="border-t border-white/[0.06] pt-1">
         <button
-          onClick={() => onDelete(msgId)}
+          onPointerDown={(e) => { e.stopPropagation(); onDelete(msgId); }}
           className="w-full flex items-center gap-2 px-2 py-1.5 rounded-lg text-xs text-red-400 hover:bg-red-500/10 transition-colors"
         >
           <Trash2 className="w-3.5 h-3.5" />
           Delete message
         </button>
       </div>
-    </PopoverContent>
-  </Popover>
+    </DropdownMenuContent>
+  </DropdownMenu>
 );
 
 interface Props {
