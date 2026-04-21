@@ -26,7 +26,7 @@ export type StaffProfile = {
   id: string;
   user_id: string;
   full_name: string;
-  role: string | null;
+  job_title: string | null;
   task_manager_type: string | null;
 };
 
@@ -46,13 +46,12 @@ const AdminMessageBoard = () => {
     queryKey: ["my-staff-profile", user?.id],
     queryFn: async () => {
       const { data, error } = await (supabase.from("staff_profiles") as any)
-        .select("id, user_id, full_name, role")
+        .select("id, user_id, full_name, job_title, task_manager_type")
         .eq("user_id", user!.id)
         .maybeSingle();
       if (error) return null;
       if (!data) return null;
-      // task_manager_type may not exist yet if migration is pending
-      return { ...data, task_manager_type: (data as any).task_manager_type ?? null } as StaffProfile;
+      return data as StaffProfile;
     },
     enabled: !!user,
   });

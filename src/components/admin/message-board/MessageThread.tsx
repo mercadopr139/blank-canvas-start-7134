@@ -146,14 +146,14 @@ const MessageThread = ({ conversation, currentUserId }: Props) => {
                 </div>
               )}
 
-              {msg.message_type === "task" && msg.task_id ? (
+              {msg.message_type === "task" && (() => { try { return JSON.parse(msg.content)?.task_id; } catch { return msg.task_id; } })() ? (
                 <div className={`flex ${isMe ? "justify-end" : "justify-start"} mb-2`}>
                   <div className="max-w-sm w-full">
                     {showSender && (
                       <p className="text-[10px] text-zinc-500 mb-1 ml-1">{msg.sender_name}</p>
                     )}
                     <MessageTaskCard
-                      taskId={msg.task_id}
+                      taskId={(() => { try { return JSON.parse(msg.content)?.task_id || msg.task_id; } catch { return msg.task_id; } })()}
                       currentUserId={currentUserId}
                       isMe={isMe}
                     />

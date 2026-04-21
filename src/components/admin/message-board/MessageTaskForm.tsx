@@ -42,10 +42,10 @@ const MessageTaskForm = ({ open, onClose, conversationId, currentUserId, onCreat
     queryKey: ["staff-profiles-for-mb"],
     queryFn: async () => {
       const { data, error } = await (supabase.from("staff_profiles") as any)
-        .select("id, user_id, full_name, role")
+        .select("id, user_id, full_name, job_title, task_manager_type")
         .order("full_name", { ascending: true });
       if (error) throw error;
-      return (data || []).map((s: any) => ({ ...s, task_manager_type: null })) as StaffProfile[];
+      return (data || []) as StaffProfile[];
     },
     enabled: open,
   });
@@ -80,12 +80,12 @@ const MessageTaskForm = ({ open, onClose, conversationId, currentUserId, onCreat
       if (taskErr) throw taskErr;
 
       // Post a task message in the thread
+      // task_id is stored as JSON in content until the column migration runs
       const { error: msgErr } = await (supabase.from("mb_messages") as any).insert({
         conversation_id: conversationId,
         sender_id: currentUserId,
-        content: `Task: ${title.trim()}`,
+        content: JSON.stringify({ task_id: newTask.id, title: title.trim() }),
         message_type: "task",
-        task_id: newTask.id,
       });
       if (msgErr) throw msgErr;
 

@@ -27,13 +27,12 @@ const NewConversationModal = ({ open, onClose, currentUserId, onCreated }: Props
     queryKey: ["staff-profiles-for-mb"],
     queryFn: async () => {
       const { data, error } = await (supabase.from("staff_profiles") as any)
-        .select("id, user_id, full_name, role")
+        .select("id, user_id, full_name, job_title, task_manager_type")
         .order("full_name", { ascending: true });
       if (error) throw error;
       // Filter out current user in JS so null user_id rows are still included
       return (data || [])
-        .filter((s: any) => s.user_id !== currentUserId)
-        .map((s: any) => ({ ...s, task_manager_type: null })) as StaffProfile[];
+        .filter((s: any) => s.user_id !== currentUserId) as StaffProfile[];
     },
     enabled: open,
   });
@@ -157,7 +156,7 @@ const NewConversationModal = ({ open, onClose, currentUserId, onCreated }: Props
                     <div>
                       <p className="text-sm font-medium text-zinc-200">{staff.full_name}</p>
                       <p className="text-xs text-zinc-500">
-                        {staff.role || ""}
+                        {staff.job_title || ""}
                         {!hasAccount && <span className="ml-1 text-zinc-600">· hasn't logged in yet</span>}
                       </p>
                     </div>
