@@ -54,7 +54,8 @@ const DEFAULT_TILES = [
   { title: "Driver Check-In", subtitle: "Transportation PIN login", icon_name: "bus", accent_color: "#60a5fa", href: "/transport", sort_order: 1, is_default: true },
   { title: "PD Task Manager", subtitle: "Executive Focus & Daily Signals", icon_name: "signal", accent_color: "#a1a1aa", href: "/admin/pd-task-manager", sort_order: 2, is_default: true },
   { title: "PC Task Manager", subtitle: "Executive Focus & Daily Signals", icon_name: "signal", accent_color: "#a1a1aa", href: "/admin/pc-task-manager", sort_order: 3, is_default: true },
-  { title: "Settings", subtitle: "Staff Management", icon_name: "settings", accent_color: "#a1a1aa", href: "/admin/staff", sort_order: 4, is_default: true },
+  { title: "Shared Task Board", subtitle: "Assign & collaborate on tasks", icon_name: "list-checks", accent_color: "#bf0f3e", href: "/admin/shared-tasks", sort_order: 4, is_default: true },
+  { title: "Settings", subtitle: "Staff Management", icon_name: "settings", accent_color: "#a1a1aa", href: "/admin/staff", sort_order: 5, is_default: true },
 ];
 
 /* ─── Pillar card config (unchanged) ─── */
