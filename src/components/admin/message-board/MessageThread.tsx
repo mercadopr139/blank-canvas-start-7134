@@ -343,7 +343,6 @@ const MessageThread = ({ conversation, currentUserId, onConversationUpdated }: P
           const msgTopic = msg.topic || conversation.topic || "General";
           const msgColor = TOPIC_COLORS[msgTopic] || TOPIC_COLORS.General;
           const isGeneral = msgTopic === "General";
-          const isMenuOpen = openMenuId === msg.id;
           const isTask = msg.message_type === "task";
           const taskId = (() => { try { return JSON.parse(msg.content)?.task_id || msg.task_id; } catch { return msg.task_id; } })();
 
