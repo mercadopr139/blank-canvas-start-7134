@@ -228,6 +228,7 @@ const AdminMessageBoard = () => {
             <MessageThread
               conversation={activeConversation}
               currentUserId={user?.id || ""}
+              onConversationUpdated={() => queryClient.invalidateQueries({ queryKey: ["mb-conversations", user?.id] })}
             />
           ) : (
             <div className="flex-1 flex items-center justify-center">

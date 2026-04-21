@@ -1,11 +1,12 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { Users, User } from "lucide-react";
+import { Users, User, MoreHorizontal, Trash2, Pencil, X, Check } from "lucide-react";
 import MessageInput from "./MessageInput";
 import MessageTaskCard from "./MessageTaskCard";
 import type { Conversation, ConversationTopic } from "@/pages/admin/AdminMessageBoard";
 import { TOPIC_COLORS } from "@/pages/admin/AdminMessageBoard";
+import { useToast } from "@/hooks/use-toast";
 
 export type Message = {
   id: string;
@@ -19,9 +20,12 @@ export type Message = {
   task_id?: string;
 };
 
+const TOPICS: ConversationTopic[] = ["General", "Operations", "Sales & Marketing", "Finance"];
+
 interface Props {
   conversation: Conversation;
   currentUserId: string;
+  onConversationUpdated?: () => void;
 }
 
 const formatMessageTime = (iso: string) => {
@@ -42,15 +46,23 @@ const formatDateDivider = (iso: string) => {
 const isSameDay = (a: string, b: string) =>
   new Date(a).toDateString() === new Date(b).toDateString();
 
-const MessageThread = ({ conversation, currentUserId }: Props) => {
+const MessageThread = ({ conversation, currentUserId, onConversationUpdated }: Props) => {
+  const { toast } = useToast();
   const queryClient = useQueryClient();
   const bottomRef = useRef<HTMLDivElement>(null);
+
+  const [hoveredMsgId, setHoveredMsgId] = useState<string | null>(null);
+  const [openMenuId, setOpenMenuId] = useState<string | null>(null);
+  const [editingConv, setEditingConv] = useState(false);
+  const [convName, setConvName] = useState(conversation.name || "");
+  const [convTopic, setConvTopic] = useState<ConversationTopic>(conversation.topic || "General");
+  const [savingConv, setSavingConv] = useState(false);
 
   const convLabel = conversation.is_group && conversation.name
     ? conversation.name
     : (conversation.member_names?.join(", ") || "Conversation");
 
-  const convTopicColor = TOPIC_COLORS[conversation.topic] || TOPIC_COLORS.General;
+  const convTopicColor = TOPIC_COLORS[convTopic] || TOPIC_COLORS.General;
 
   const { data: messages = [], isLoading } = useQuery<Message[]>({
     queryKey: ["mb-messages", conversation.id],
@@ -77,6 +89,13 @@ const MessageThread = ({ conversation, currentUserId }: Props) => {
     enabled: !!conversation.id,
   });
 
+  // Close menu when clicking outside
+  useEffect(() => {
+    const handler = () => setOpenMenuId(null);
+    if (openMenuId) document.addEventListener("click", handler);
+    return () => document.removeEventListener("click", handler);
+  }, [openMenuId]);
+
   useEffect(() => {
     if (!conversation.id || !currentUserId) return;
     (supabase.from("mb_conversation_members") as any)
@@ -89,39 +108,169 @@ const MessageThread = ({ conversation, currentUserId }: Props) => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
+  // Sync local state when conversation prop changes
+  useEffect(() => {
+    setConvTopic(conversation.topic || "General");
+    setConvName(conversation.name || "");
+  }, [conversation.id, conversation.topic, conversation.name]);
+
   const handleMessageSent = () => {
     queryClient.invalidateQueries({ queryKey: ["mb-messages", conversation.id] });
     queryClient.invalidateQueries({ queryKey: ["mb-conversations"] });
   };
 
+  const handleDeleteMessage = async (msgId: string) => {
+    setOpenMenuId(null);
+    try {
+      const { error } = await (supabase.from("mb_messages") as any)
+        .delete()
+        .eq("id", msgId);
+      if (error) throw error;
+      queryClient.invalidateQueries({ queryKey: ["mb-messages", conversation.id] });
+      queryClient.invalidateQueries({ queryKey: ["mb-conversations"] });
+    } catch (err: any) {
+      toast({ title: "Failed to delete message", description: err.message, variant: "destructive" });
+    }
+  };
+
+  const handleChangeMessageTopic = async (msgId: string, newTopic: ConversationTopic) => {
+    setOpenMenuId(null);
+    try {
+      const { error } = await (supabase.from("mb_messages") as any)
+        .update({ topic: newTopic })
+        .eq("id", msgId);
+      if (error) throw error;
+      queryClient.invalidateQueries({ queryKey: ["mb-messages", conversation.id] });
+    } catch (err: any) {
+      toast({ title: "Failed to update message", description: err.message, variant: "destructive" });
+    }
+  };
+
+  const handleSaveConversation = async () => {
+    setSavingConv(true);
+    try {
+      const { error } = await (supabase.from("mb_conversations") as any)
+        .update({
+          topic: convTopic,
+          ...(conversation.is_group ? { name: convName.trim() || null } : {}),
+        })
+        .eq("id", conversation.id);
+      if (error) throw error;
+      queryClient.invalidateQueries({ queryKey: ["mb-conversations"] });
+      onConversationUpdated?.();
+      setEditingConv(false);
+      toast({ title: "Conversation updated" });
+    } catch (err: any) {
+      toast({ title: "Failed to update", description: err.message, variant: "destructive" });
+    } finally {
+      setSavingConv(false);
+    }
+  };
+
   return (
     <div className="flex flex-col h-full overflow-hidden">
-      {/* Thread header — colored by conversation topic */}
-      <div
-        className="px-4 py-3 border-b flex items-center gap-3"
-        style={{ borderColor: `${convTopicColor}30` }}
-      >
+      {/* Thread header */}
+      {editingConv ? (
         <div
-          className="w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0"
-          style={{ background: `${convTopicColor}18`, color: convTopicColor }}
+          className="px-4 py-3 border-b space-y-3"
+          style={{ borderColor: `${convTopicColor}30` }}
         >
-          {conversation.is_group ? <Users className="w-4 h-4" /> : <User className="w-4 h-4" />}
-        </div>
-        <div className="flex-1 min-w-0">
-          <p className="text-sm font-semibold text-zinc-200">{convLabel}</p>
-          {conversation.is_group && conversation.member_names && (
-            <p className="text-xs text-zinc-600 truncate">{conversation.member_names.join(", ")}</p>
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-semibold text-zinc-400 uppercase tracking-wider">Edit Conversation</span>
+            <button onClick={() => setEditingConv(false)} className="text-zinc-600 hover:text-zinc-400 p-1">
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+
+          {/* Topic selector */}
+          <div>
+            <p className="text-[11px] text-zinc-500 mb-1.5">Pillar</p>
+            <div className="flex gap-2 flex-wrap">
+              {TOPICS.map((t) => {
+                const color = TOPIC_COLORS[t];
+                const active = convTopic === t;
+                return (
+                  <button
+                    key={t}
+                    onClick={() => setConvTopic(t)}
+                    className="px-3 py-1.5 rounded-lg text-xs font-medium transition-all border"
+                    style={{
+                      background: active ? `${color}20` : "transparent",
+                      borderColor: active ? color : "rgba(255,255,255,0.08)",
+                      color: active ? color : "#71717a",
+                    }}
+                  >
+                    {t}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Group name (only for group convs) */}
+          {conversation.is_group && (
+            <div>
+              <p className="text-[11px] text-zinc-500 mb-1.5">Group Name</p>
+              <input
+                value={convName}
+                onChange={(e) => setConvName(e.target.value)}
+                className="w-full bg-white/[0.04] border border-white/[0.08] rounded-lg px-3 py-2 text-sm text-zinc-200 outline-none focus:border-white/20"
+                placeholder="Group name..."
+              />
+            </div>
           )}
+
+          <div className="flex gap-2">
+            <button
+              onClick={() => setEditingConv(false)}
+              className="flex-1 py-1.5 rounded-lg text-xs text-zinc-500 border border-white/[0.08] hover:bg-white/[0.04] transition-colors"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={handleSaveConversation}
+              disabled={savingConv}
+              className="flex-1 py-1.5 rounded-lg text-xs font-medium text-white transition-colors"
+              style={{ background: convTopicColor }}
+            >
+              {savingConv ? "Saving..." : "Save Changes"}
+            </button>
+          </div>
         </div>
-        {conversation.topic && conversation.topic !== "General" && (
-          <span
-            className="text-[10px] font-semibold px-2 py-1 rounded-full uppercase tracking-wide flex-shrink-0"
+      ) : (
+        <div
+          className="px-4 py-3 border-b flex items-center gap-3 group/header"
+          style={{ borderColor: `${convTopicColor}30` }}
+        >
+          <div
+            className="w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0"
             style={{ background: `${convTopicColor}18`, color: convTopicColor }}
           >
-            {conversation.topic}
-          </span>
-        )}
-      </div>
+            {conversation.is_group ? <Users className="w-4 h-4" /> : <User className="w-4 h-4" />}
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-semibold text-zinc-200">{convLabel}</p>
+            {conversation.is_group && conversation.member_names && (
+              <p className="text-xs text-zinc-600 truncate">{conversation.member_names.join(", ")}</p>
+            )}
+          </div>
+          {conversation.topic && conversation.topic !== "General" && (
+            <span
+              className="text-[10px] font-semibold px-2 py-1 rounded-full uppercase tracking-wide flex-shrink-0"
+              style={{ background: `${convTopicColor}18`, color: convTopicColor }}
+            >
+              {conversation.topic}
+            </span>
+          )}
+          <button
+            onClick={() => setEditingConv(true)}
+            className="opacity-0 group-hover/header:opacity-100 p-1.5 rounded-lg text-zinc-600 hover:text-zinc-300 hover:bg-white/[0.06] transition-all"
+            title="Edit conversation"
+          >
+            <Pencil className="w-3.5 h-3.5" />
+          </button>
+        </div>
+      )}
 
       {/* Messages area */}
       <div className="flex-1 overflow-y-auto px-4 py-4 space-y-1">
@@ -142,6 +291,9 @@ const MessageThread = ({ conversation, currentUserId }: Props) => {
           const msgTopic = msg.topic || conversation.topic || "General";
           const msgColor = TOPIC_COLORS[msgTopic] || TOPIC_COLORS.General;
           const isGeneral = msgTopic === "General";
+          const isMenuOpen = openMenuId === msg.id;
+          const isTask = msg.message_type === "task";
+          const taskId = (() => { try { return JSON.parse(msg.content)?.task_id || msg.task_id; } catch { return msg.task_id; } })();
 
           return (
             <div key={msg.id}>
@@ -155,51 +307,151 @@ const MessageThread = ({ conversation, currentUserId }: Props) => {
                 </div>
               )}
 
-              {msg.message_type === "task" && (() => { try { return JSON.parse(msg.content)?.task_id; } catch { return msg.task_id; } })() ? (
-                <div className={`flex ${isMe ? "justify-end" : "justify-start"} mb-2`}>
-                  <div className="max-w-sm w-full">
-                    {showSender && (
-                      <p className="text-[10px] text-zinc-500 mb-1 ml-1">{msg.sender_name}</p>
-                    )}
-                    <MessageTaskCard
-                      taskId={(() => { try { return JSON.parse(msg.content)?.task_id || msg.task_id; } catch { return msg.task_id; } })()}
-                      currentUserId={currentUserId}
-                      isMe={isMe}
-                    />
-                  </div>
-                </div>
-              ) : (
-                <div className={`flex ${isMe ? "justify-end" : "justify-start"} mb-1`}>
-                  <div className="max-w-[70%]">
-                    {showSender && (
-                      <p className="text-[10px] text-zinc-500 mb-1 ml-1">{msg.sender_name}</p>
-                    )}
-                    <div
-                      className="px-3.5 py-2.5 rounded-2xl text-sm leading-relaxed relative"
-                      style={
-                        isMe
-                          ? { background: msgColor, color: "white", borderBottomRightRadius: "4px" }
-                          : {
-                              background: isGeneral ? "rgba(255,255,255,0.06)" : `${msgColor}12`,
-                              color: "#e4e4e7",
-                              borderBottomLeftRadius: "4px",
-                              borderLeft: isGeneral ? undefined : `2px solid ${msgColor}60`,
-                            }
-                      }
-                    >
-                      {msg.content}
-                    </div>
-                    <p className={`text-[9px] text-zinc-700 mt-0.5 ${isMe ? "text-right" : "text-left ml-1"}`}>
-                      {formatMessageTime(msg.created_at)}
-                      {!isGeneral && (
-                        <span className="ml-1.5 font-medium" style={{ color: `${msgColor}80` }}>
-                          · {msgTopic}
-                        </span>
+              <div
+                className={`flex ${isMe ? "justify-end" : "justify-start"} mb-1 group/msg`}
+                onMouseEnter={() => setHoveredMsgId(msg.id)}
+                onMouseLeave={() => { if (!isMenuOpen) setHoveredMsgId(null); }}
+              >
+                {/* Action button — left of bubble for my messages, right for others */}
+                {isMe && (
+                  <div className={`flex items-center mr-1 transition-opacity ${hoveredMsgId === msg.id || isMenuOpen ? "opacity-100" : "opacity-0"}`}>
+                    <div className="relative">
+                      <button
+                        onClick={(e) => { e.stopPropagation(); setOpenMenuId(isMenuOpen ? null : msg.id); }}
+                        className="p-1.5 rounded-lg text-zinc-600 hover:text-zinc-300 hover:bg-white/[0.08] transition-colors"
+                      >
+                        <MoreHorizontal className="w-3.5 h-3.5" />
+                      </button>
+
+                      {isMenuOpen && (
+                        <div
+                          className="absolute bottom-full right-0 mb-1 w-52 rounded-xl border border-white/[0.08] bg-neutral-900 shadow-2xl p-2 z-50"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          <p className="text-[10px] text-zinc-600 font-semibold uppercase tracking-wider px-2 py-1">Change Pillar</p>
+                          <div className="flex flex-wrap gap-1.5 px-2 pb-2">
+                            {TOPICS.map((t) => {
+                              const color = TOPIC_COLORS[t];
+                              const active = msgTopic === t;
+                              return (
+                                <button
+                                  key={t}
+                                  onClick={() => handleChangeMessageTopic(msg.id, t)}
+                                  className="px-2 py-1 rounded-md text-[11px] font-medium transition-all border"
+                                  style={{
+                                    background: active ? `${color}25` : "transparent",
+                                    borderColor: active ? color : "rgba(255,255,255,0.08)",
+                                    color: active ? color : "#71717a",
+                                  }}
+                                >
+                                  {t}
+                                </button>
+                              );
+                            })}
+                          </div>
+                          <div className="border-t border-white/[0.06] mt-1 pt-1">
+                            <button
+                              onClick={() => handleDeleteMessage(msg.id)}
+                              className="w-full flex items-center gap-2 px-2 py-1.5 rounded-lg text-xs text-red-400 hover:bg-red-500/10 transition-colors"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                              Delete message
+                            </button>
+                          </div>
+                        </div>
                       )}
-                    </p>
+                    </div>
                   </div>
+                )}
+
+                <div className={`${isTask ? "max-w-sm w-full" : "max-w-[70%]"}`}>
+                  {showSender && (
+                    <p className="text-[10px] text-zinc-500 mb-1 ml-1">{msg.sender_name}</p>
+                  )}
+
+                  {isTask && taskId ? (
+                    <MessageTaskCard taskId={taskId} currentUserId={currentUserId} isMe={isMe} />
+                  ) : (
+                    <>
+                      <div
+                        className="px-3.5 py-2.5 rounded-2xl text-sm leading-relaxed"
+                        style={
+                          isMe
+                            ? { background: msgColor, color: "white", borderBottomRightRadius: "4px" }
+                            : {
+                                background: isGeneral ? "rgba(255,255,255,0.06)" : `${msgColor}12`,
+                                color: "#e4e4e7",
+                                borderBottomLeftRadius: "4px",
+                                borderLeft: isGeneral ? undefined : `2px solid ${msgColor}60`,
+                              }
+                        }
+                      >
+                        {msg.content}
+                      </div>
+                      <p className={`text-[9px] text-zinc-700 mt-0.5 ${isMe ? "text-right" : "text-left ml-1"}`}>
+                        {formatMessageTime(msg.created_at)}
+                        {!isGeneral && (
+                          <span className="ml-1.5 font-medium" style={{ color: `${msgColor}80` }}>
+                            · {msgTopic}
+                          </span>
+                        )}
+                      </p>
+                    </>
+                  )}
                 </div>
-              )}
+
+                {/* Action button for received messages */}
+                {!isMe && (
+                  <div className={`flex items-center ml-1 transition-opacity ${hoveredMsgId === msg.id || isMenuOpen ? "opacity-100" : "opacity-0"}`}>
+                    <div className="relative">
+                      <button
+                        onClick={(e) => { e.stopPropagation(); setOpenMenuId(isMenuOpen ? null : msg.id); }}
+                        className="p-1.5 rounded-lg text-zinc-600 hover:text-zinc-300 hover:bg-white/[0.08] transition-colors"
+                      >
+                        <MoreHorizontal className="w-3.5 h-3.5" />
+                      </button>
+
+                      {isMenuOpen && (
+                        <div
+                          className="absolute bottom-full left-0 mb-1 w-52 rounded-xl border border-white/[0.08] bg-neutral-900 shadow-2xl p-2 z-50"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          <p className="text-[10px] text-zinc-600 font-semibold uppercase tracking-wider px-2 py-1">Change Pillar</p>
+                          <div className="flex flex-wrap gap-1.5 px-2 pb-2">
+                            {TOPICS.map((t) => {
+                              const color = TOPIC_COLORS[t];
+                              const active = msgTopic === t;
+                              return (
+                                <button
+                                  key={t}
+                                  onClick={() => handleChangeMessageTopic(msg.id, t)}
+                                  className="px-2 py-1 rounded-md text-[11px] font-medium transition-all border"
+                                  style={{
+                                    background: active ? `${color}25` : "transparent",
+                                    borderColor: active ? color : "rgba(255,255,255,0.08)",
+                                    color: active ? color : "#71717a",
+                                  }}
+                                >
+                                  {t}
+                                </button>
+                              );
+                            })}
+                          </div>
+                          <div className="border-t border-white/[0.06] mt-1 pt-1">
+                            <button
+                              onClick={() => handleDeleteMessage(msg.id)}
+                              className="w-full flex items-center gap-2 px-2 py-1.5 rounded-lg text-xs text-red-400 hover:bg-red-500/10 transition-colors"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                              Delete message
+                            </button>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
           );
         })}
@@ -209,7 +461,7 @@ const MessageThread = ({ conversation, currentUserId }: Props) => {
       <MessageInput
         conversationId={conversation.id}
         currentUserId={currentUserId}
-        defaultTopic={conversation.topic || "General"}
+        defaultTopic={convTopic}
         onSent={handleMessageSent}
       />
     </div>
