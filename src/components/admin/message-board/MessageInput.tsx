@@ -2,22 +2,30 @@ import { useState, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { Send, CheckSquare, Calendar } from "lucide-react";
+import { Send, CheckSquare } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import MessageTaskForm from "./MessageTaskForm";
+import type { ConversationTopic } from "@/pages/admin/AdminMessageBoard";
+import { TOPIC_COLORS } from "@/pages/admin/AdminMessageBoard";
+
+const TOPICS: ConversationTopic[] = ["General", "Operations", "Sales & Marketing", "Finance"];
 
 interface Props {
   conversationId: string;
   currentUserId: string;
+  defaultTopic?: ConversationTopic;
   onSent: () => void;
 }
 
-const MessageInput = ({ conversationId, currentUserId, onSent }: Props) => {
+const MessageInput = ({ conversationId, currentUserId, defaultTopic = "General", onSent }: Props) => {
   const { toast } = useToast();
   const [text, setText] = useState("");
   const [sending, setSending] = useState(false);
+  const [topic, setTopic] = useState<ConversationTopic>(defaultTopic);
   const [taskFormOpen, setTaskFormOpen] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  const topicColor = TOPIC_COLORS[topic];
 
   const handleSend = async () => {
     const trimmed = text.trim();
@@ -29,6 +37,7 @@ const MessageInput = ({ conversationId, currentUserId, onSent }: Props) => {
         sender_id: currentUserId,
         content: trimmed,
         message_type: "text",
+        topic,
       });
       if (error) throw error;
       setText("");
@@ -48,28 +57,49 @@ const MessageInput = ({ conversationId, currentUserId, onSent }: Props) => {
     }
   };
 
-  const handleTaskCreated = (taskId: string) => {
-    setTaskFormOpen(false);
-    onSent();
-  };
-
   return (
     <>
-      <div className="px-4 py-3 border-t border-white/[0.06]">
+      <div className="px-4 py-3 border-t border-white/[0.06] space-y-2">
+        {/* Topic pill row */}
+        <div className="flex items-center gap-1.5">
+          {TOPICS.map((t) => {
+            const color = TOPIC_COLORS[t];
+            const active = topic === t;
+            return (
+              <button
+                key={t}
+                onClick={() => setTopic(t)}
+                className="px-2.5 py-1 rounded-full text-[11px] font-medium transition-all border"
+                style={{
+                  background: active ? `${color}20` : "transparent",
+                  borderColor: active ? color : "rgba(255,255,255,0.06)",
+                  color: active ? color : "#52525b",
+                }}
+              >
+                {t}
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Input row */}
         <div className="flex items-end gap-2">
           <div className="flex-1 relative">
+            <div
+              className="absolute left-0 top-0 bottom-0 w-0.5 rounded-r"
+              style={{ background: topic === "General" ? "transparent" : topicColor }}
+            />
             <Textarea
               ref={textareaRef}
               value={text}
               onChange={(e) => setText(e.target.value)}
               onKeyDown={handleKeyDown}
-              placeholder="Type a message... (Enter to send, Shift+Enter for new line)"
+              placeholder="Type a message... (Enter to send)"
               rows={1}
-              className="resize-none bg-white/[0.04] border-white/[0.08] text-zinc-200 placeholder:text-zinc-600 focus-visible:ring-1 focus-visible:ring-[#bf0f3e]/50 text-sm pr-2 min-h-[42px] max-h-32"
+              className="resize-none bg-white/[0.04] border-white/[0.08] text-zinc-200 placeholder:text-zinc-600 text-sm pr-2 min-h-[42px] max-h-32 pl-3"
             />
           </div>
 
-          {/* Action buttons */}
           <div className="flex items-center gap-1 pb-0.5">
             <Button
               size="icon"
@@ -84,7 +114,8 @@ const MessageInput = ({ conversationId, currentUserId, onSent }: Props) => {
               size="icon"
               onClick={handleSend}
               disabled={!text.trim() || sending}
-              className="h-9 w-9 bg-[#bf0f3e] hover:bg-[#a00d34] text-white disabled:opacity-30"
+              className="h-9 w-9 text-white disabled:opacity-30 border-0"
+              style={{ background: topicColor }}
             >
               <Send className="w-4 h-4" />
             </Button>
@@ -97,7 +128,8 @@ const MessageInput = ({ conversationId, currentUserId, onSent }: Props) => {
         onClose={() => setTaskFormOpen(false)}
         conversationId={conversationId}
         currentUserId={currentUserId}
-        onCreated={handleTaskCreated}
+        defaultTopic={topic}
+        onCreated={() => { setTaskFormOpen(false); onSent(); }}
       />
     </>
   );

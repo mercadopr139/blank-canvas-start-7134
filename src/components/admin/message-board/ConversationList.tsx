@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Plus, Search, Users, User, MessageSquare } from "lucide-react";
 import type { Conversation } from "@/pages/admin/AdminMessageBoard";
+import { TOPIC_COLORS } from "@/pages/admin/AdminMessageBoard";
 
 interface Props {
   conversations: Conversation[];
@@ -25,7 +26,7 @@ const formatTime = (iso: string | undefined) => {
   return d.toLocaleDateString([], { month: "short", day: "numeric" });
 };
 
-const getConvLabel = (conv: Conversation, currentUserId: string) => {
+const getConvLabel = (conv: Conversation) => {
   if (conv.is_group && conv.name) return conv.name;
   if (conv.member_names && conv.member_names.length > 0) return conv.member_names.join(", ");
   return "Conversation";
@@ -35,7 +36,7 @@ const ConversationList = ({ conversations, loading, activeId, currentUserId, onS
   const [search, setSearch] = useState("");
 
   const filtered = conversations.filter((c) => {
-    const label = getConvLabel(c, currentUserId).toLowerCase();
+    const label = getConvLabel(c).toLowerCase();
     return label.includes(search.toLowerCase());
   });
 
@@ -61,7 +62,7 @@ const ConversationList = ({ conversations, loading, activeId, currentUserId, onS
             placeholder="Search..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="pl-8 h-8 text-xs bg-white/[0.04] border-white/[0.08] text-zinc-200 placeholder:text-zinc-600 focus-visible:ring-1 focus-visible:ring-[#bf0f3e]/50"
+            className="pl-8 h-8 text-xs bg-white/[0.04] border-white/[0.08] text-zinc-200 placeholder:text-zinc-600 focus-visible:ring-1 focus-visible:ring-white/20"
           />
         </div>
       </div>
@@ -76,37 +77,36 @@ const ConversationList = ({ conversations, loading, activeId, currentUserId, onS
           <div className="p-4 text-center">
             <MessageSquare className="w-8 h-8 text-zinc-700 mx-auto mb-2" />
             <p className="text-zinc-600 text-xs">No conversations yet</p>
-            <button
-              onClick={onNew}
-              className="text-[#bf0f3e] text-xs mt-1 hover:underline"
-            >
+            <button onClick={onNew} className="text-[#bf0f3e] text-xs mt-1 hover:underline">
               Start one
             </button>
           </div>
         )}
 
         {filtered.map((conv) => {
-          const label = getConvLabel(conv, currentUserId);
+          const label = getConvLabel(conv);
           const isActive = conv.id === activeId;
           const hasUnread = (conv.unread_count || 0) > 0;
+          const topicColor = TOPIC_COLORS[conv.topic] || TOPIC_COLORS.General;
 
           return (
             <button
               key={conv.id}
               onClick={() => onSelect(conv.id)}
-              className={`w-full text-left px-3 py-3 flex items-start gap-3 border-b border-white/[0.03] transition-colors ${
-                isActive
-                  ? "bg-[#bf0f3e]/10 border-l-2 border-l-[#bf0f3e]"
-                  : "hover:bg-white/[0.03]"
+              className={`w-full text-left px-3 py-3 flex items-start gap-3 border-b border-white/[0.03] transition-colors relative ${
+                isActive ? "bg-white/[0.04]" : "hover:bg-white/[0.03]"
               }`}
             >
+              {/* Pillar color left border */}
+              <div
+                className="absolute left-0 top-0 bottom-0 w-[3px] rounded-r-full transition-all"
+                style={{ background: isActive ? topicColor : `${topicColor}60` }}
+              />
+
               {/* Avatar */}
               <div
                 className="w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5"
-                style={{
-                  background: conv.is_group ? "rgba(56,189,248,0.15)" : "rgba(191,15,62,0.15)",
-                  color: conv.is_group ? "#38bdf8" : "#bf0f3e",
-                }}
+                style={{ background: `${topicColor}18`, color: topicColor }}
               >
                 {conv.is_group ? <Users className="w-4 h-4" /> : <User className="w-4 h-4" />}
               </div>
@@ -123,16 +123,32 @@ const ConversationList = ({ conversations, loading, activeId, currentUserId, onS
                     </span>
                   )}
                 </div>
+
                 <div className="flex items-center justify-between">
                   <p className="text-xs text-zinc-600 truncate flex-1">
-                    {conv.last_message || "No messages yet"}
+                    {conv.last_message
+                      ? (conv.last_message.startsWith("{") ? "📋 Task created" : conv.last_message)
+                      : "No messages yet"}
                   </p>
                   {hasUnread && (
-                    <span className="ml-1 w-4 h-4 rounded-full bg-[#bf0f3e] text-[9px] font-bold flex items-center justify-center text-white flex-shrink-0">
+                    <span
+                      className="ml-1 w-4 h-4 rounded-full text-[9px] font-bold flex items-center justify-center text-white flex-shrink-0"
+                      style={{ background: topicColor }}
+                    >
                       {conv.unread_count}
                     </span>
                   )}
                 </div>
+
+                {/* Topic badge */}
+                {conv.topic && conv.topic !== "General" && (
+                  <span
+                    className="inline-block mt-1 text-[9px] font-semibold px-1.5 py-0.5 rounded uppercase tracking-wide"
+                    style={{ background: `${topicColor}18`, color: topicColor }}
+                  >
+                    {conv.topic}
+                  </span>
+                )}
               </div>
             </button>
           );

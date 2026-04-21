@@ -8,16 +8,10 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import type { StaffProfile } from "@/pages/admin/AdminMessageBoard";
+import type { StaffProfile, ConversationTopic } from "@/pages/admin/AdminMessageBoard";
+import { TOPIC_COLORS } from "@/pages/admin/AdminMessageBoard";
 
-const TOPIC_COLORS: Record<string, string> = {
-  Operations: "#bf0f3e",
-  "Sales & Marketing": "#22c55e",
-  Finance: "#38bdf8",
-  General: "#a1a1aa",
-};
-
-const TOPICS = ["General", "Operations", "Sales & Marketing", "Finance"] as const;
+const TOPICS: ConversationTopic[] = ["General", "Operations", "Sales & Marketing", "Finance"];
 const PRIORITIES = ["Low", "Medium", "High"] as const;
 
 interface Props {
@@ -25,17 +19,18 @@ interface Props {
   onClose: () => void;
   conversationId: string;
   currentUserId: string;
+  defaultTopic?: ConversationTopic;
   onCreated: (taskId: string) => void;
 }
 
-const MessageTaskForm = ({ open, onClose, conversationId, currentUserId, onCreated }: Props) => {
+const MessageTaskForm = ({ open, onClose, conversationId, currentUserId, defaultTopic = "General", onCreated }: Props) => {
   const { toast } = useToast();
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [assignedTo, setAssignedTo] = useState("unassigned");
   const [dueDate, setDueDate] = useState("");
   const [priority, setPriority] = useState<"Low" | "Medium" | "High">("Medium");
-  const [topic, setTopic] = useState<typeof TOPICS[number]>("General");
+  const [topic, setTopic] = useState<ConversationTopic>(defaultTopic);
   const [saving, setSaving] = useState(false);
 
   const { data: staffList = [] } = useQuery<StaffProfile[]>({

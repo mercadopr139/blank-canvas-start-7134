@@ -10,12 +10,22 @@ import MessageThread from "@/components/admin/message-board/MessageThread";
 import NewConversationModal from "@/components/admin/message-board/NewConversationModal";
 import MessageCalendarPanel from "@/components/admin/message-board/MessageCalendarPanel";
 
+export type ConversationTopic = "General" | "Operations" | "Sales & Marketing" | "Finance";
+
+export const TOPIC_COLORS: Record<ConversationTopic, string> = {
+  Operations: "#bf0f3e",
+  "Sales & Marketing": "#22c55e",
+  Finance: "#38bdf8",
+  General: "#a1a1aa",
+};
+
 export type Conversation = {
   id: string;
   name: string | null;
   is_group: boolean;
   created_by: string;
   created_at: string;
+  topic: ConversationTopic;
   last_message?: string;
   last_message_at?: string;
   unread_count?: number;
@@ -101,6 +111,7 @@ const AdminMessageBoard = () => {
 
           return {
             ...c,
+            topic: (c.topic as ConversationTopic) || "General",
             member_names,
             last_message: lastMsg?.content,
             last_message_at: lastMsg?.created_at,

@@ -4,7 +4,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { Users, User } from "lucide-react";
 import MessageInput from "./MessageInput";
 import MessageTaskCard from "./MessageTaskCard";
-import type { Conversation } from "@/pages/admin/AdminMessageBoard";
+import type { Conversation, ConversationTopic } from "@/pages/admin/AdminMessageBoard";
+import { TOPIC_COLORS } from "@/pages/admin/AdminMessageBoard";
 
 export type Message = {
   id: string;
@@ -12,6 +13,7 @@ export type Message = {
   sender_id: string;
   content: string;
   message_type: "text" | "task" | "event";
+  topic?: ConversationTopic;
   created_at: string;
   sender_name?: string;
   task_id?: string;
@@ -32,7 +34,6 @@ const formatDateDivider = (iso: string) => {
   const today = new Date();
   const yesterday = new Date(today);
   yesterday.setDate(today.getDate() - 1);
-
   if (d.toDateString() === today.toDateString()) return "Today";
   if (d.toDateString() === yesterday.toDateString()) return "Yesterday";
   return d.toLocaleDateString([], { weekday: "long", month: "long", day: "numeric" });
@@ -49,6 +50,8 @@ const MessageThread = ({ conversation, currentUserId }: Props) => {
     ? conversation.name
     : (conversation.member_names?.join(", ") || "Conversation");
 
+  const convTopicColor = TOPIC_COLORS[conversation.topic] || TOPIC_COLORS.General;
+
   const { data: messages = [], isLoading } = useQuery<Message[]>({
     queryKey: ["mb-messages", conversation.id],
     queryFn: async () => {
@@ -58,7 +61,6 @@ const MessageThread = ({ conversation, currentUserId }: Props) => {
         .order("created_at", { ascending: true });
       if (error) throw error;
 
-      // Enrich with sender names
       const senderIds = [...new Set((data || []).map((m: any) => m.sender_id))] as string[];
       const { data: profiles } = await (supabase.from("staff_profiles") as any)
         .select("user_id, full_name")
@@ -69,12 +71,12 @@ const MessageThread = ({ conversation, currentUserId }: Props) => {
       return (data || []).map((m: any) => ({
         ...m,
         sender_name: nameMap[m.sender_id] || "Unknown",
+        topic: (m.topic as ConversationTopic) || conversation.topic || "General",
       })) as Message[];
     },
     enabled: !!conversation.id,
   });
 
-  // Update last_read_at when opening a conversation
   useEffect(() => {
     if (!conversation.id || !currentUserId) return;
     (supabase.from("mb_conversation_members") as any)
@@ -83,7 +85,6 @@ const MessageThread = ({ conversation, currentUserId }: Props) => {
       .eq("user_id", currentUserId);
   }, [conversation.id, currentUserId]);
 
-  // Scroll to bottom when messages change
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
@@ -95,25 +96,31 @@ const MessageThread = ({ conversation, currentUserId }: Props) => {
 
   return (
     <div className="flex flex-col h-full overflow-hidden">
-      {/* Thread header */}
-      <div className="px-4 py-3 border-b border-white/[0.06] flex items-center gap-3">
+      {/* Thread header — colored by conversation topic */}
+      <div
+        className="px-4 py-3 border-b flex items-center gap-3"
+        style={{ borderColor: `${convTopicColor}30` }}
+      >
         <div
           className="w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0"
-          style={{
-            background: conversation.is_group ? "rgba(56,189,248,0.15)" : "rgba(191,15,62,0.15)",
-            color: conversation.is_group ? "#38bdf8" : "#bf0f3e",
-          }}
+          style={{ background: `${convTopicColor}18`, color: convTopicColor }}
         >
           {conversation.is_group ? <Users className="w-4 h-4" /> : <User className="w-4 h-4" />}
         </div>
-        <div>
+        <div className="flex-1 min-w-0">
           <p className="text-sm font-semibold text-zinc-200">{convLabel}</p>
           {conversation.is_group && conversation.member_names && (
-            <p className="text-xs text-zinc-600">
-              {conversation.member_names.join(", ")}
-            </p>
+            <p className="text-xs text-zinc-600 truncate">{conversation.member_names.join(", ")}</p>
           )}
         </div>
+        {conversation.topic && conversation.topic !== "General" && (
+          <span
+            className="text-[10px] font-semibold px-2 py-1 rounded-full uppercase tracking-wide flex-shrink-0"
+            style={{ background: `${convTopicColor}18`, color: convTopicColor }}
+          >
+            {conversation.topic}
+          </span>
+        )}
       </div>
 
       {/* Messages area */}
@@ -121,7 +128,6 @@ const MessageThread = ({ conversation, currentUserId }: Props) => {
         {isLoading && (
           <div className="text-center text-zinc-600 text-xs py-8">Loading messages...</div>
         )}
-
         {!isLoading && messages.length === 0 && (
           <div className="text-center py-12">
             <p className="text-zinc-600 text-sm">No messages yet.</p>
@@ -133,6 +139,9 @@ const MessageThread = ({ conversation, currentUserId }: Props) => {
           const isMe = msg.sender_id === currentUserId;
           const showDate = idx === 0 || !isSameDay(messages[idx - 1].created_at, msg.created_at);
           const showSender = !isMe && (idx === 0 || messages[idx - 1].sender_id !== msg.sender_id || showDate);
+          const msgTopic = msg.topic || conversation.topic || "General";
+          const msgColor = TOPIC_COLORS[msgTopic] || TOPIC_COLORS.General;
+          const isGeneral = msgTopic === "General";
 
           return (
             <div key={msg.id}>
@@ -161,21 +170,32 @@ const MessageThread = ({ conversation, currentUserId }: Props) => {
                 </div>
               ) : (
                 <div className={`flex ${isMe ? "justify-end" : "justify-start"} mb-1`}>
-                  <div className={`max-w-[70%] ${isMe ? "" : ""}`}>
+                  <div className="max-w-[70%]">
                     {showSender && (
                       <p className="text-[10px] text-zinc-500 mb-1 ml-1">{msg.sender_name}</p>
                     )}
                     <div
-                      className={`px-3.5 py-2.5 rounded-2xl text-sm leading-relaxed ${
+                      className="px-3.5 py-2.5 rounded-2xl text-sm leading-relaxed relative"
+                      style={
                         isMe
-                          ? "bg-[#bf0f3e] text-white rounded-br-sm"
-                          : "bg-white/[0.06] text-zinc-200 rounded-bl-sm"
-                      }`}
+                          ? { background: msgColor, color: "white", borderBottomRightRadius: "4px" }
+                          : {
+                              background: isGeneral ? "rgba(255,255,255,0.06)" : `${msgColor}12`,
+                              color: "#e4e4e7",
+                              borderBottomLeftRadius: "4px",
+                              borderLeft: isGeneral ? undefined : `2px solid ${msgColor}60`,
+                            }
+                      }
                     >
                       {msg.content}
                     </div>
                     <p className={`text-[9px] text-zinc-700 mt-0.5 ${isMe ? "text-right" : "text-left ml-1"}`}>
                       {formatMessageTime(msg.created_at)}
+                      {!isGeneral && (
+                        <span className="ml-1.5 font-medium" style={{ color: `${msgColor}80` }}>
+                          · {msgTopic}
+                        </span>
+                      )}
                     </p>
                   </div>
                 </div>
@@ -186,10 +206,10 @@ const MessageThread = ({ conversation, currentUserId }: Props) => {
         <div ref={bottomRef} />
       </div>
 
-      {/* Input */}
       <MessageInput
         conversationId={conversation.id}
         currentUserId={currentUserId}
+        defaultTopic={conversation.topic || "General"}
         onSent={handleMessageSent}
       />
     </div>

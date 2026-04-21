@@ -8,7 +8,10 @@ import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
 import { Users, User } from "lucide-react";
-import type { StaffProfile } from "@/pages/admin/AdminMessageBoard";
+import type { StaffProfile, ConversationTopic } from "@/pages/admin/AdminMessageBoard";
+import { TOPIC_COLORS } from "@/pages/admin/AdminMessageBoard";
+
+const TOPICS: ConversationTopic[] = ["General", "Operations", "Sales & Marketing", "Finance"];
 
 interface Props {
   open: boolean;
@@ -21,6 +24,7 @@ const NewConversationModal = ({ open, onClose, currentUserId, onCreated }: Props
   const { toast } = useToast();
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [groupName, setGroupName] = useState("");
+  const [topic, setTopic] = useState<ConversationTopic>("General");
   const [saving, setSaving] = useState(false);
 
   const { data: staffList = [] } = useQuery<StaffProfile[]>({
@@ -30,7 +34,6 @@ const NewConversationModal = ({ open, onClose, currentUserId, onCreated }: Props
         .select("id, user_id, full_name, job_title, task_manager_type")
         .order("full_name", { ascending: true });
       if (error) throw error;
-      // Filter out current user in JS so null user_id rows are still included
       return (data || [])
         .filter((s: any) => s.user_id !== currentUserId) as StaffProfile[];
     },
@@ -45,6 +48,7 @@ const NewConversationModal = ({ open, onClose, currentUserId, onCreated }: Props
   };
 
   const isGroup = selectedIds.length > 1;
+  const topicColor = TOPIC_COLORS[topic];
 
   const handleCreate = async () => {
     if (selectedIds.length === 0) {
@@ -58,7 +62,7 @@ const NewConversationModal = ({ open, onClose, currentUserId, onCreated }: Props
 
     setSaving(true);
     try {
-      // Check if a DM between these two users already exists
+      // For DMs, check if one already exists between these two
       if (!isGroup) {
         const otherId = selectedIds[0];
         const { data: existing } = await (supabase.from("mb_conversations") as any)
@@ -78,19 +82,19 @@ const NewConversationModal = ({ open, onClose, currentUserId, onCreated }: Props
         }
       }
 
-      // Create conversation
+      // Create conversation with topic
       const { data: newConv, error: convErr } = await (supabase.from("mb_conversations") as any)
         .insert({
           name: isGroup ? groupName.trim() : null,
           is_group: isGroup,
           created_by: currentUserId,
+          topic,
         })
         .select()
         .single();
 
       if (convErr) throw convErr;
 
-      // Add members (include current user)
       const allMembers = [currentUserId, ...selectedIds];
       const memberRows = allMembers.map((uid) => ({
         conversation_id: newConv.id,
@@ -112,6 +116,7 @@ const NewConversationModal = ({ open, onClose, currentUserId, onCreated }: Props
   const handleClose = () => {
     setSelectedIds([]);
     setGroupName("");
+    setTopic("General");
     onClose();
   };
 
@@ -119,14 +124,42 @@ const NewConversationModal = ({ open, onClose, currentUserId, onCreated }: Props
     <Dialog open={open} onOpenChange={handleClose}>
       <DialogContent className="bg-neutral-900 border-white/[0.08] text-white max-w-md">
         <DialogHeader>
-          <DialogTitle className="text-base font-semibold text-white">New Message</DialogTitle>
+          <DialogTitle className="text-base font-semibold text-white flex items-center gap-2">
+            <span className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ background: topicColor }} />
+            New Message
+          </DialogTitle>
         </DialogHeader>
 
         <div className="space-y-4 pt-1">
+          {/* Pillar / Topic selector */}
+          <div>
+            <Label className="text-xs text-zinc-400 mb-2 block">Pillar</Label>
+            <div className="flex gap-2 flex-wrap">
+              {TOPICS.map((t) => {
+                const color = TOPIC_COLORS[t];
+                const active = topic === t;
+                return (
+                  <button
+                    key={t}
+                    onClick={() => setTopic(t)}
+                    className="px-3 py-1.5 rounded-lg text-xs font-medium transition-all border"
+                    style={{
+                      background: active ? `${color}20` : "transparent",
+                      borderColor: active ? color : "rgba(255,255,255,0.08)",
+                      color: active ? color : "#71717a",
+                    }}
+                  >
+                    {t}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
           {/* Staff selector */}
           <div>
             <Label className="text-xs text-zinc-400 mb-2 block">To</Label>
-            <div className="space-y-1 max-h-52 overflow-y-auto pr-1">
+            <div className="space-y-1 max-h-44 overflow-y-auto pr-1">
               {staffList.length === 0 && (
                 <p className="text-xs text-zinc-600 py-2">No staff members found</p>
               )}
@@ -137,19 +170,25 @@ const NewConversationModal = ({ open, onClose, currentUserId, onCreated }: Props
                   <label
                     key={staff.id}
                     className={`flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors ${
-                      !hasAccount ? "opacity-40 cursor-not-allowed" : checked ? "bg-[#bf0f3e]/10 cursor-pointer" : "hover:bg-white/[0.04] cursor-pointer"
+                      !hasAccount
+                        ? "opacity-40 cursor-not-allowed"
+                        : checked
+                        ? "cursor-pointer"
+                        : "hover:bg-white/[0.04] cursor-pointer"
                     }`}
+                    style={checked ? { background: `${topicColor}15` } : undefined}
                     title={!hasAccount ? "This staff member hasn't logged in yet" : undefined}
                   >
                     <Checkbox
                       checked={checked}
                       disabled={!hasAccount}
                       onCheckedChange={() => hasAccount && toggle(staff.user_id)}
-                      className="border-white/20 data-[state=checked]:bg-[#bf0f3e] data-[state=checked]:border-[#bf0f3e]"
+                      className="border-white/20"
+                      style={checked ? { background: topicColor, borderColor: topicColor } : undefined}
                     />
                     <div
                       className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0"
-                      style={{ background: "rgba(191,15,62,0.15)", color: "#bf0f3e" }}
+                      style={{ background: `${topicColor}18`, color: topicColor }}
                     >
                       <User className="w-3.5 h-3.5" />
                     </div>
@@ -166,7 +205,7 @@ const NewConversationModal = ({ open, onClose, currentUserId, onCreated }: Props
             </div>
           </div>
 
-          {/* Group name (only if multiple selected) */}
+          {/* Group name */}
           {isGroup && (
             <div>
               <Label className="text-xs text-zinc-400 mb-1.5 block">Group Name</Label>
@@ -174,17 +213,16 @@ const NewConversationModal = ({ open, onClose, currentUserId, onCreated }: Props
                 placeholder="e.g. All Staff, Coaching Team..."
                 value={groupName}
                 onChange={(e) => setGroupName(e.target.value)}
-                className="bg-white/[0.04] border-white/[0.08] text-zinc-200 placeholder:text-zinc-600 focus-visible:ring-1 focus-visible:ring-[#bf0f3e]/50 text-sm"
+                className="bg-white/[0.04] border-white/[0.08] text-zinc-200 placeholder:text-zinc-600 text-sm"
+                style={{ focusRingColor: topicColor }}
               />
             </div>
           )}
 
           {selectedIds.length > 0 && (
-            <p className="text-xs text-zinc-500 flex items-center gap-1.5">
+            <p className="text-xs flex items-center gap-1.5" style={{ color: topicColor }}>
               {isGroup ? <Users className="w-3.5 h-3.5" /> : <User className="w-3.5 h-3.5" />}
-              {isGroup
-                ? `Group with ${selectedIds.length + 1} members`
-                : `Direct message`}
+              {isGroup ? `Group · ${topic}` : `Direct message · ${topic}`}
             </p>
           )}
 
@@ -201,7 +239,8 @@ const NewConversationModal = ({ open, onClose, currentUserId, onCreated }: Props
               size="sm"
               onClick={handleCreate}
               disabled={saving || selectedIds.length === 0}
-              className="flex-1 bg-[#bf0f3e] hover:bg-[#a00d34] text-white text-xs"
+              className="flex-1 text-white text-xs border-0"
+              style={{ background: topicColor }}
             >
               {saving ? "Creating..." : "Start Conversation"}
             </Button>
