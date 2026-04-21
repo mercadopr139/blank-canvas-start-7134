@@ -257,9 +257,9 @@ export default function StaffTaskModal({ open, onClose, editingTask }: Props) {
                           <SelectValue />
                         </SelectTrigger>
                       </FormControl>
-                      <SelectContent className="bg-neutral-800 border-white/10">
+                      <SelectContent className="">
                         {["Open", "In Progress", "Completed", "Blocked"].map((s) => (
-                          <SelectItem key={s} value={s} className="text-white hover:bg-white/10">{s}</SelectItem>
+                          <SelectItem key={s} value={s} className="">{s}</SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
@@ -279,9 +279,9 @@ export default function StaffTaskModal({ open, onClose, editingTask }: Props) {
                           <SelectValue />
                         </SelectTrigger>
                       </FormControl>
-                      <SelectContent className="bg-neutral-800 border-white/10">
+                      <SelectContent className="">
                         {["Low", "Medium", "High"].map((p) => (
-                          <SelectItem key={p} value={p} className="text-white hover:bg-white/10">{p}</SelectItem>
+                          <SelectItem key={p} value={p} className="">{p}</SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
@@ -320,10 +320,10 @@ export default function StaffTaskModal({ open, onClose, editingTask }: Props) {
                           <SelectValue placeholder="Unassigned" />
                         </SelectTrigger>
                       </FormControl>
-                      <SelectContent className="bg-neutral-800 border-white/10">
-                        <SelectItem value="none" className="text-zinc-400 hover:bg-white/10">Unassigned</SelectItem>
+                      <SelectContent className="">
+                        <SelectItem value="none" className="">Unassigned</SelectItem>
                         {staffOptions.map((s) => (
-                          <SelectItem key={s.user_id} value={s.user_id} className="text-white hover:bg-white/10">
+                          <SelectItem key={s.user_id} value={s.user_id} className="">
                             {s.full_name}
                           </SelectItem>
                         ))}
@@ -346,10 +346,10 @@ export default function StaffTaskModal({ open, onClose, editingTask }: Props) {
                         <SelectValue placeholder="None" />
                       </SelectTrigger>
                     </FormControl>
-                    <SelectContent className="bg-neutral-800 border-white/10">
-                      <SelectItem value="none" className="text-zinc-400 hover:bg-white/10">None</SelectItem>
+                    <SelectContent className="">
+                      <SelectItem value="none" className="">None</SelectItem>
                       {focusAreas.map((fa) => (
-                        <SelectItem key={fa.id} value={fa.id} className="text-white hover:bg-white/10">
+                        <SelectItem key={fa.id} value={fa.id} className="">
                           {fa.title} ({fa.manager_type})
                         </SelectItem>
                       ))}
