@@ -28,15 +28,18 @@ const NewConversationModal = ({ open, onClose, currentUserId, onCreated }: Props
     queryFn: async () => {
       const { data, error } = await (supabase.from("staff_profiles") as any)
         .select("id, user_id, full_name, role")
-        .neq("user_id", currentUserId)
         .order("full_name", { ascending: true });
       if (error) throw error;
-      return (data || []).map((s: any) => ({ ...s, task_manager_type: null })) as StaffProfile[];
+      // Filter out current user in JS so null user_id rows are still included
+      return (data || [])
+        .filter((s: any) => s.user_id !== currentUserId)
+        .map((s: any) => ({ ...s, task_manager_type: null })) as StaffProfile[];
     },
     enabled: open,
   });
 
-  const toggle = (userId: string) => {
+  const toggle = (userId: string | null) => {
+    if (!userId) return;
     setSelectedIds((prev) =>
       prev.includes(userId) ? prev.filter((id) => id !== userId) : [...prev, userId]
     );
@@ -129,17 +132,20 @@ const NewConversationModal = ({ open, onClose, currentUserId, onCreated }: Props
                 <p className="text-xs text-zinc-600 py-2">No staff members found</p>
               )}
               {staffList.map((staff) => {
-                const checked = selectedIds.includes(staff.user_id);
+                const hasAccount = !!staff.user_id;
+                const checked = hasAccount && selectedIds.includes(staff.user_id);
                 return (
                   <label
-                    key={staff.user_id}
-                    className={`flex items-center gap-3 px-3 py-2.5 rounded-lg cursor-pointer transition-colors ${
-                      checked ? "bg-[#bf0f3e]/10" : "hover:bg-white/[0.04]"
+                    key={staff.id}
+                    className={`flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors ${
+                      !hasAccount ? "opacity-40 cursor-not-allowed" : checked ? "bg-[#bf0f3e]/10 cursor-pointer" : "hover:bg-white/[0.04] cursor-pointer"
                     }`}
+                    title={!hasAccount ? "This staff member hasn't logged in yet" : undefined}
                   >
                     <Checkbox
                       checked={checked}
-                      onCheckedChange={() => toggle(staff.user_id)}
+                      disabled={!hasAccount}
+                      onCheckedChange={() => hasAccount && toggle(staff.user_id)}
                       className="border-white/20 data-[state=checked]:bg-[#bf0f3e] data-[state=checked]:border-[#bf0f3e]"
                     />
                     <div
@@ -150,7 +156,10 @@ const NewConversationModal = ({ open, onClose, currentUserId, onCreated }: Props
                     </div>
                     <div>
                       <p className="text-sm font-medium text-zinc-200">{staff.full_name}</p>
-                      {staff.role && <p className="text-xs text-zinc-500">{staff.role}</p>}
+                      <p className="text-xs text-zinc-500">
+                        {staff.role || ""}
+                        {!hasAccount && <span className="ml-1 text-zinc-600">· hasn't logged in yet</span>}
+                      </p>
                     </div>
                   </label>
                 );
