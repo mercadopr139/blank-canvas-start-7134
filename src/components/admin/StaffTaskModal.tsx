@@ -137,8 +137,8 @@ export default function StaffTaskModal({ open, onClose, editingTask }: Props) {
         status: values.status,
         priority: values.priority,
         due_date: values.due_date || null,
-        assigned_to: values.assigned_to || null,
-        focus_area_id: values.focus_area_id || null,
+        assigned_to: (values.assigned_to && values.assigned_to !== "none") ? values.assigned_to : null,
+        focus_area_id: (values.focus_area_id && values.focus_area_id !== "none") ? values.focus_area_id : null,
       };
 
       if (editingTask) {
@@ -321,7 +321,7 @@ export default function StaffTaskModal({ open, onClose, editingTask }: Props) {
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent className="bg-neutral-800 border-white/10">
-                        <SelectItem value="" className="text-zinc-400 hover:bg-white/10">Unassigned</SelectItem>
+                        <SelectItem value="none" className="text-zinc-400 hover:bg-white/10">Unassigned</SelectItem>
                         {staffOptions.map((s) => (
                           <SelectItem key={s.user_id} value={s.user_id} className="text-white hover:bg-white/10">
                             {s.full_name}
@@ -347,7 +347,7 @@ export default function StaffTaskModal({ open, onClose, editingTask }: Props) {
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent className="bg-neutral-800 border-white/10">
-                      <SelectItem value="" className="text-zinc-400 hover:bg-white/10">None</SelectItem>
+                      <SelectItem value="none" className="text-zinc-400 hover:bg-white/10">None</SelectItem>
                       {focusAreas.map((fa) => (
                         <SelectItem key={fa.id} value={fa.id} className="text-white hover:bg-white/10">
                           {fa.title} ({fa.manager_type})
