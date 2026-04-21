@@ -198,7 +198,7 @@ const AdminMessageBoard = () => {
       </header>
 
       {/* Three-panel layout */}
-      <div className="flex flex-1 overflow-hidden h-[calc(100vh-57px)]">
+      <div className="flex overflow-hidden" style={{ height: "calc(100vh - 57px)" }}>
         {/* Left: Conversation list */}
         <div className="w-72 min-w-[260px] border-r border-white/[0.06] flex flex-col">
           <ConversationList
