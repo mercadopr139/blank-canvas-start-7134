@@ -140,9 +140,9 @@ export default function MondayPhotoSyncModal({ open, onOpenChange }: Props) {
                     <SelectTrigger className="bg-white/5 border-white/10 text-white">
                       <SelectValue placeholder="Choose a board…" />
                     </SelectTrigger>
-                    <SelectContent className="bg-neutral-900 border-white/10 text-white max-h-60">
+                    <SelectContent className="bg-neutral-900 border-white/10 text-white max-h-60 [&_*]:text-white">
                       {boards.map(b => (
-                        <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>
+                        <SelectItem key={b.id} value={b.id} className="text-white focus:bg-white/10 focus:text-white">{b.name}</SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
@@ -164,9 +164,9 @@ export default function MondayPhotoSyncModal({ open, onOpenChange }: Props) {
                 <SelectTrigger className="bg-white/5 border-white/10 text-white">
                   <SelectValue placeholder="Choose a column…" />
                 </SelectTrigger>
-                <SelectContent className="bg-neutral-900 border-white/10 text-white max-h-60">
+                <SelectContent className="bg-neutral-900 border-white/10 text-white max-h-60 [&_*]:text-white">
                   {columns.map(c => (
-                    <SelectItem key={c.id} value={c.id}>{c.title}</SelectItem>
+                    <SelectItem key={c.id} value={c.id} className="text-white focus:bg-white/10 focus:text-white">{c.title}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
