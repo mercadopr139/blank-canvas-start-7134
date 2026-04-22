@@ -17,6 +17,7 @@ export default function MondayPhotoSyncModal({ open, onOpenChange }: Props) {
   const [step, setStep] = useState<Step>("select_board");
   const [boards, setBoards] = useState<{ id: string; name: string }[]>([]);
   const [columns, setColumns] = useState<{ id: string; title: string; type: string }[]>([]);
+  const [boardSearch, setBoardSearch] = useState("");
   const [selectedBoard, setSelectedBoard] = useState("");
   const [selectedColumn, setSelectedColumn] = useState("");
   const [loading, setLoading] = useState(false);
@@ -42,8 +43,11 @@ export default function MondayPhotoSyncModal({ open, onOpenChange }: Props) {
   const loadBoards = async () => {
     setLoading(true);
     try {
-      const data = await callSync("list_boards");
-      setBoards(data.boards || []);
+      const pages = await Promise.all([1,2,3].map(page => callSync("list_boards", { page })));
+      const all = pages.flatMap((d: { boards: { id: string; name: string }[] }) => d.boards || []);
+      const seen = new Set<string>();
+      const unique = all.filter(b => { if (seen.has(b.id)) return false; seen.add(b.id); return true; });
+      setBoards(unique);
       setStep("select_board");
     } catch (err) {
       toast.error("Failed to load Monday boards. Check your API token.");
@@ -135,15 +139,25 @@ export default function MondayPhotoSyncModal({ open, onOpenChange }: Props) {
               <>
                 <div className="space-y-2">
                   <Label className="text-white/70">Select your registration board</Label>
+                  <input
+                    type="text"
+                    placeholder="Search boards…"
+                    value={boardSearch}
+                    onChange={e => setBoardSearch(e.target.value)}
+                    className="w-full rounded-md border border-white/10 bg-neutral-800 text-white px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-white/20 mb-1"
+                  />
                   <select
                     value={selectedBoard}
                     onChange={e => setSelectedBoard(e.target.value)}
-                    className="w-full rounded-md border border-white/10 bg-neutral-800 text-white px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-white/20"
+                    size={6}
+                    className="w-full rounded-md border border-white/10 bg-neutral-800 text-white px-3 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-white/20"
                   >
-                    <option value="" className="bg-neutral-800 text-white">Choose a board…</option>
-                    {boards.map(b => (
-                      <option key={b.id} value={b.id} className="bg-neutral-800 text-white">{b.name}</option>
-                    ))}
+                    <option value="" className="bg-neutral-800 text-white">— choose —</option>
+                    {boards
+                      .filter(b => b.name.toLowerCase().includes(boardSearch.toLowerCase()))
+                      .map(b => (
+                        <option key={b.id} value={b.id} className="bg-neutral-800 text-white">{b.name}</option>
+                      ))}
                   </select>
                 </div>
                 <Button onClick={loadColumns} disabled={!selectedBoard || loading} className="w-full">
