@@ -2,10 +2,12 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, useParams } from "react-router-dom";
+import { BrowserRouter, Routes, Route, useParams, useNavigate } from "react-router-dom";
+import { useEffect } from "react";
 import ScrollToTop from "./components/ScrollToTop";
 import { AuthProvider } from "./contexts/AuthContext";
 import ProtectedRoute from "./components/admin/ProtectedRoute";
+import { supabase } from "./integrations/supabase/client";
 import Index from "./pages/Index";
 import Programs from "./pages/Programs";
 import GymBuddies from "./pages/GymBuddies";
@@ -58,6 +60,7 @@ import AdminSignals from "./pages/admin/AdminSignals";
 import AdminSignalsArchive from "./pages/admin/AdminSignalsArchive";
 import AdminSignalsTrash from "./pages/admin/AdminSignalsTrash";
 import AdminStaffManagement from "./pages/admin/AdminStaffManagement";
+import AdminResetPassword from "./pages/admin/AdminResetPassword";
 import AdminPDTaskManager from "./pages/admin/AdminPDTaskManager";
 import AdminPCTaskManager from "./pages/admin/AdminPCTaskManager";
 import AdminTaskManager from "./pages/admin/AdminTaskManager";
@@ -82,6 +85,20 @@ import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
 
+/* Listens for Supabase PASSWORD_RECOVERY event and redirects to the reset page */
+const PasswordRecoveryRedirect = () => {
+  const navigate = useNavigate();
+  useEffect(() => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
+      if (event === "PASSWORD_RECOVERY") {
+        navigate("/admin/reset-password", { replace: true });
+      }
+    });
+    return () => subscription.unsubscribe();
+  }, [navigate]);
+  return null;
+};
+
 /* Wrappers that forward managerType from URL params to signals pages */
 const AdminSignalsGeneric = () => {
   const { managerType = "PD" } = useParams<{ managerType: string }>();
@@ -104,6 +121,7 @@ const App = () => (
         <Sonner />
         <BrowserRouter>
           <ScrollToTop />
+          <PasswordRecoveryRedirect />
           <Routes>
             {/* Public Routes */}
             <Route path="/" element={<Index />} />
@@ -138,6 +156,7 @@ const App = () => (
             {/* Admin Routes */}
             <Route path="/admin" element={<AdminIndex />} />
             <Route path="/admin/login" element={<AdminLogin />} />
+            <Route path="/admin/reset-password" element={<AdminResetPassword />} />
             <Route
               path="/admin/dashboard"
               element={
