@@ -2,7 +2,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, useParams } from "react-router-dom";
 import ScrollToTop from "./components/ScrollToTop";
 import { AuthProvider } from "./contexts/AuthContext";
 import ProtectedRoute from "./components/admin/ProtectedRoute";
@@ -81,6 +81,20 @@ import MealCheckIn from "./pages/MealCheckIn";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
+
+/* Wrappers that forward managerType from URL params to signals pages */
+const AdminSignalsGeneric = () => {
+  const { managerType = "PD" } = useParams<{ managerType: string }>();
+  return <AdminSignals managerType={managerType} />;
+};
+const AdminSignalsArchiveGeneric = () => {
+  const { managerType = "PD" } = useParams<{ managerType: string }>();
+  return <AdminSignalsArchive managerType={managerType} />;
+};
+const AdminSignalsTrashGeneric = () => {
+  const { managerType = "PD" } = useParams<{ managerType: string }>();
+  return <AdminSignalsTrash managerType={managerType} />;
+};
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
@@ -203,12 +217,37 @@ const App = () => (
               <Route path="master-revenue-tracker" element={<AdminMasterRevenueTracker />} />
             </Route>
 
-            {/* Unified Task Manager */}
+            {/* Task Manager — isolated board per manager type */}
             <Route
-              path="/admin/task-manager"
+              path="/admin/task-manager/:managerType"
               element={
                 <ProtectedRoute requireAdmin>
                   <AdminTaskManager />
+                </ProtectedRoute>
+              }
+            />
+            {/* Generic signals routes for custom manager types (IT, Chef, etc.) */}
+            <Route
+              path="/admin/task-manager/:managerType/signals/:focusArea"
+              element={
+                <ProtectedRoute requireAdmin>
+                  <AdminSignalsGeneric />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin/task-manager/:managerType/signals/:focusArea/archive"
+              element={
+                <ProtectedRoute requireAdmin>
+                  <AdminSignalsArchiveGeneric />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin/task-manager/:managerType/signals/:focusArea/trash"
+              element={
+                <ProtectedRoute requireAdmin>
+                  <AdminSignalsTrashGeneric />
                 </ProtectedRoute>
               }
             />

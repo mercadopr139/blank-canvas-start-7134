@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -28,16 +28,10 @@ import { CSS } from "@dnd-kit/utilities";
 const JOSH_EMAIL = "joshmercado@nolimitsboxingacademy.org";
 const CHRISSY_EMAIL = "chrissycasiello@nolimitsboxingacademy.org";
 
-/* Where each manager type navigates when a focus area card is opened */
-const SIGNALS_BASE: Record<string, string> = {
-  PD: "/admin/signals",
-  PC: "/admin/pc-signals",
-};
-
-/* Tab display labels */
-const TAB_LABELS: Record<string, string> = {
-  PD: "PD",
-  PC: "PC",
+const getSignalsPath = (managerType: string, key: string) => {
+  if (managerType === "PD") return `/admin/signals/${key}`;
+  if (managerType === "PC") return `/admin/pc-signals/${key}`;
+  return `/admin/task-manager/${managerType}/signals/${key}`;
 };
 
 type FocusArea = {
@@ -65,7 +59,6 @@ const getIconComponent = (name: string) => {
   return (icons as any)[pascal] || null;
 };
 
-/* ── Sortable Card ── */
 const SortableCard = ({
   area,
   onOpen,
@@ -142,12 +135,11 @@ const SortableCard = ({
   );
 };
 
-/* ── Main Page ── */
 const AdminTaskManager = () => {
+  const { managerType = "PD" } = useParams<{ managerType: string }>();
   const navigate = useNavigate();
   const { user, signOut } = useAuth();
   const queryClient = useQueryClient();
-  const [activeTab, setActiveTab] = useState("PD");
   const [modalOpen, setModalOpen] = useState(false);
   const [editingArea, setEditingArea] = useState<FocusArea | null>(null);
 
@@ -158,38 +150,26 @@ const AdminTaskManager = () => {
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } })
   );
 
-  const { data: allAreas = [], isLoading } = useQuery({
-    queryKey: ["focus-areas-all"],
+  const { data: focusAreas = [], isLoading } = useQuery({
+    queryKey: ["focus-areas", managerType],
     queryFn: async () => {
       const { data, error } = await (supabase
         .from("focus_areas")
         .select("*") as any)
+        .eq("manager_type", managerType)
         .order("sort_order", { ascending: true });
       if (error) throw error;
       return data as FocusArea[];
     },
   });
 
-  /* Derive tabs dynamically from what's in the DB */
-  const tabs = Array.from(new Set(allAreas.map((a) => a.manager_type))).sort();
-  /* Default to first available tab if activeTab is no longer present */
-  const currentTab = tabs.includes(activeTab) ? activeTab : (tabs[0] ?? "PD");
-  const focusAreas = allAreas.filter((a) => a.manager_type === currentTab);
-
   const isLocked = (area: FocusArea) => {
-    if (currentTab === "PD") return isChrissy && area.key !== "nla";
-    if (currentTab === "PC") return isJosh && area.key !== "nla";
+    if (managerType === "PD") return isChrissy && area.key !== "nla";
+    if (managerType === "PC") return isJosh && area.key !== "nla";
     return false;
   };
 
-  const canEdit = (area: FocusArea) => !isLocked(area);
-  const canAdd = currentTab === "PD" ? !isChrissy : currentTab === "PC" ? !isJosh : true;
-
-  const getNavPath = (area: FocusArea) => {
-    const base = SIGNALS_BASE[currentTab] ?? "/admin/signals";
-    const viewMode = (currentTab === "PC" && isJosh) || (currentTab === "PD" && isChrissy);
-    return `${base}/${area.key}${viewMode ? "?mode=view" : ""}`;
-  };
+  const canAdd = managerType === "PD" ? !isChrissy : managerType === "PC" ? !isJosh : true;
 
   const handleLogout = async () => {
     await signOut();
@@ -197,7 +177,7 @@ const AdminTaskManager = () => {
   };
 
   const handleSaved = () => {
-    queryClient.invalidateQueries({ queryKey: ["focus-areas-all"] });
+    queryClient.invalidateQueries({ queryKey: ["focus-areas", managerType] });
     setEditingArea(null);
   };
 
@@ -219,7 +199,7 @@ const AdminTaskManager = () => {
           supabase.from("focus_areas").update({ sort_order: idx }).eq("id", area.id)
         )
       );
-      queryClient.invalidateQueries({ queryKey: ["focus-areas-all"] });
+      queryClient.invalidateQueries({ queryKey: ["focus-areas", managerType] });
     } catch {
       toast.error("Failed to reorder");
     }
@@ -240,7 +220,9 @@ const AdminTaskManager = () => {
               <ArrowLeft className="w-5 h-5" />
             </Button>
             <div>
-              <h1 className="text-lg font-bold tracking-tight text-white">Task Manager</h1>
+              <h1 className="text-lg font-bold tracking-tight text-white">
+                {managerType} Task Manager
+              </h1>
               <p className="text-xs text-zinc-500 font-medium">Select a Focus Area</p>
             </div>
           </div>
@@ -256,33 +238,13 @@ const AdminTaskManager = () => {
       </header>
 
       <main className="max-w-5xl mx-auto px-6 py-10 sm:py-14">
-        <div className="flex justify-center mb-10">
+        <div className="flex justify-center mb-14">
           <img
             src={nlaLogo}
             alt="No Limits Academy"
             className="h-24 sm:h-32 w-auto drop-shadow-[0_0_60px_rgba(191,15,62,0.15)]"
           />
         </div>
-
-        {/* Tabs */}
-        {tabs.length > 0 && (
-          <div className="flex gap-2 mb-8 border-b border-white/[0.06] pb-0">
-            {tabs.map((tab) => (
-              <button
-                key={tab}
-                type="button"
-                onClick={() => setActiveTab(tab)}
-                className={`px-5 py-2.5 text-sm font-semibold rounded-t-lg transition-colors border-b-2 -mb-px ${
-                  currentTab === tab
-                    ? "text-white border-[#bf0f3e]"
-                    : "text-zinc-500 border-transparent hover:text-zinc-300"
-                }`}
-              >
-                {TAB_LABELS[tab] ?? tab}
-              </button>
-            ))}
-          </div>
-        )}
 
         {isLoading ? (
           <div className="text-center text-zinc-500 py-20">Loading…</div>
@@ -330,7 +292,7 @@ const AdminTaskManager = () => {
                           </div>
                         </TooltipTrigger>
                         <TooltipContent className="bg-zinc-900 border-zinc-800 text-zinc-300 text-xs">
-                          {currentTab} access only
+                          {managerType} access only
                         </TooltipContent>
                       </Tooltip>
                     );
@@ -339,31 +301,33 @@ const AdminTaskManager = () => {
                     <SortableCard
                       key={area.id}
                       area={area}
-                      onOpen={() => navigate(getNavPath(area))}
-                      onEdit={() => canEdit(area) ? (setEditingArea(area), setModalOpen(true)) : undefined}
+                      onOpen={() => navigate(getSignalsPath(managerType, area.key))}
+                      onEdit={() => { setEditingArea(area); setModalOpen(true); }}
                     />
                   );
                 })}
-
-                {canAdd && (
-                  <div>
-                    <button
-                      type="button"
-                      onClick={() => { setEditingArea(null); setModalOpen(true); }}
-                      className="group w-full rounded-2xl border-2 border-dashed border-white/10 hover:border-white/25 min-h-[200px] flex flex-col items-center justify-center gap-3 transition-all duration-300 hover:bg-white/[0.02] cursor-pointer"
-                    >
-                      <div className="w-14 h-14 rounded-xl bg-white/5 flex items-center justify-center group-hover:bg-white/10 transition-colors">
-                        <Plus className="w-7 h-7 text-white/30 group-hover:text-white/60" />
-                      </div>
-                      <span className="text-sm font-semibold text-white/30 group-hover:text-white/60 transition-colors">
-                        Add Focus Area
-                      </span>
-                    </button>
-                  </div>
-                )}
               </div>
             </SortableContext>
           </DndContext>
+        )}
+
+        {canAdd && focusAreas.length > 0 && (
+          <div className="max-w-4xl mx-auto mt-5">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+              <button
+                type="button"
+                onClick={() => { setEditingArea(null); setModalOpen(true); }}
+                className="group rounded-2xl border-2 border-dashed border-white/10 hover:border-white/25 min-h-[200px] flex flex-col items-center justify-center gap-3 transition-all duration-300 hover:bg-white/[0.02] cursor-pointer"
+              >
+                <div className="w-14 h-14 rounded-xl bg-white/5 flex items-center justify-center group-hover:bg-white/10 transition-colors">
+                  <Plus className="w-7 h-7 text-white/30 group-hover:text-white/60" />
+                </div>
+                <span className="text-sm font-semibold text-white/30 group-hover:text-white/60 transition-colors">
+                  Add Focus Area
+                </span>
+              </button>
+            </div>
+          </div>
         )}
       </main>
 
@@ -373,7 +337,7 @@ const AdminTaskManager = () => {
           onClose={() => { setModalOpen(false); setEditingArea(null); }}
           onSaved={handleSaved}
           editingArea={editingArea}
-          managerType={currentTab}
+          managerType={managerType}
         />
       )}
     </div>

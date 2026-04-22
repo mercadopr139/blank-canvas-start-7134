@@ -42,7 +42,8 @@ const HREF_PERM_MAP: Record<string, PermissionKey> = {
   "/transport": "driver_checkin",
   "/admin/pd-task-manager": "pd_signals",
   "/admin/pc-task-manager": "pc_signals",
-  "/admin/task-manager": "pd_signals",
+  "/admin/task-manager/PD": "pd_signals",
+  "/admin/task-manager/PC": "pc_signals",
   "/admin/staff": "settings",
   "/admin/operations": "operations",
   "/admin/sales-marketing": "sales_marketing",
@@ -50,13 +51,14 @@ const HREF_PERM_MAP: Record<string, PermissionKey> = {
 };
 
 /* Tiles that were removed — delete from DB if found */
-const DEPRECATED_TILE_HREFS = ["/admin/shared-task-board", "/admin/pd-task-manager", "/admin/pc-task-manager"];
+const DEPRECATED_TILE_HREFS = ["/admin/shared-task-board", "/admin/pd-task-manager", "/admin/pc-task-manager", "/admin/task-manager"];
 
 /* Default tiles to seed for new users */
 const DEFAULT_TILES = [
   { title: "Upcoming Events", subtitle: "Calendar reminders", icon_name: "calendar-days", accent_color: "#f59e0b", href: "__upcoming_events__", sort_order: 0, is_default: true },
   { title: "Driver Check-In", subtitle: "Transportation PIN login", icon_name: "bus", accent_color: "#60a5fa", href: "/transport", sort_order: 1, is_default: true },
-  { title: "Task Manager", subtitle: "Focus Areas & Daily Signals", icon_name: "signal", accent_color: "#a1a1aa", href: "/admin/task-manager", sort_order: 2, is_default: true },
+  { title: "PD Task Manager", subtitle: "Focus Areas & Daily Signals", icon_name: "signal", accent_color: "#a1a1aa", href: "/admin/task-manager/PD", sort_order: 2, is_default: true },
+  { title: "PC Task Manager", subtitle: "Focus Areas & Daily Signals", icon_name: "signal", accent_color: "#a1a1aa", href: "/admin/task-manager/PC", sort_order: 3, is_default: true },
   { title: "Message Board", subtitle: "Team communication & tasks", icon_name: "message-square", accent_color: "#bf0f3e", href: "/admin/message-board", sort_order: 5, is_default: true },
   { title: "Settings", subtitle: "Staff Management", icon_name: "settings", accent_color: "#a1a1aa", href: "/admin/staff", sort_order: 6, is_default: true },
 ];
