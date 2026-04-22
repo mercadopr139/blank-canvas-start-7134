@@ -20,6 +20,8 @@ export default function MondayPhotoSyncModal({ open, onOpenChange }: Props) {
   const [boardSearch, setBoardSearch] = useState("");
   const [selectedBoard, setSelectedBoard] = useState("");
   const [selectedColumn, setSelectedColumn] = useState("");
+  const [firstNameColumn, setFirstNameColumn] = useState("");
+  const [lastNameColumn, setLastNameColumn] = useState("");
   const [loading, setLoading] = useState(false);
   const [cursor, setCursor] = useState<string | null>(null);
   const [hasMore, setHasMore] = useState(false);
@@ -80,6 +82,8 @@ export default function MondayPhotoSyncModal({ open, onOpenChange }: Props) {
       const data = await callSync("sync_photos", {
         boardId: selectedBoard,
         photoColumnId: selectedColumn,
+        firstNameColumnId: firstNameColumn,
+        lastNameColumnId: lastNameColumn,
         batchSize: 20,
         cursor: batchCursor,
         forceReplace: true,
@@ -113,6 +117,8 @@ export default function MondayPhotoSyncModal({ open, onOpenChange }: Props) {
     setColumns([]);
     setSelectedBoard("");
     setSelectedColumn("");
+    setFirstNameColumn("");
+    setLastNameColumn("");
     setCursor(null);
     setHasMore(false);
     setStats({ uploaded: 0, no_match: 0, no_photo: 0, errors: 0, total: 0 });
@@ -155,20 +161,28 @@ export default function MondayPhotoSyncModal({ open, onOpenChange }: Props) {
         {step === "select_column" && (
           <div className="space-y-4 mt-2">
             <div className="space-y-2">
-              <Label className="text-white/70">Select the headshot/photo column</Label>
-              <select
-                value={selectedColumn}
-                onChange={e => setSelectedColumn(e.target.value)}
-                className="w-full rounded-md border border-white/10 bg-neutral-800 text-white px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-white/20"
-              >
-                <option value="" className="bg-neutral-800 text-white">Choose a column…</option>
-                {columns.map(c => (
-                  <option key={c.id} value={c.id} className="bg-neutral-800 text-white">{c.title}</option>
-                ))}
+              <Label className="text-white/70">First Name column</Label>
+              <select value={firstNameColumn} onChange={e => setFirstNameColumn(e.target.value)} className="w-full rounded-md border border-white/10 bg-neutral-800 text-white px-3 py-2 text-sm focus:outline-none">
+                <option value="" className="bg-neutral-800">Choose…</option>
+                {columns.map(c => <option key={c.id} value={c.id} className="bg-neutral-800">{c.title}</option>)}
               </select>
             </div>
-            <p className="text-xs text-white/40">It will sync 20 photos at a time. You'll click "Next Batch" until all are done.</p>
-            <Button onClick={() => runBatch(null)} disabled={!selectedColumn || loading} className="w-full">
+            <div className="space-y-2">
+              <Label className="text-white/70">Last Name column</Label>
+              <select value={lastNameColumn} onChange={e => setLastNameColumn(e.target.value)} className="w-full rounded-md border border-white/10 bg-neutral-800 text-white px-3 py-2 text-sm focus:outline-none">
+                <option value="" className="bg-neutral-800">Choose…</option>
+                {columns.map(c => <option key={c.id} value={c.id} className="bg-neutral-800">{c.title}</option>)}
+              </select>
+            </div>
+            <div className="space-y-2">
+              <Label className="text-white/70">Headshot / Photo column</Label>
+              <select value={selectedColumn} onChange={e => setSelectedColumn(e.target.value)} className="w-full rounded-md border border-white/10 bg-neutral-800 text-white px-3 py-2 text-sm focus:outline-none">
+                <option value="" className="bg-neutral-800">Choose…</option>
+                {columns.map(c => <option key={c.id} value={c.id} className="bg-neutral-800">{c.title}</option>)}
+              </select>
+            </div>
+            <p className="text-xs text-white/40">Syncs 20 photos at a time. Click "Next Batch" to continue.</p>
+            <Button onClick={() => runBatch(null)} disabled={!selectedColumn || !firstNameColumn || !lastNameColumn || loading} className="w-full">
               {loading ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Starting…</> : "Start Sync"}
             </Button>
           </div>
