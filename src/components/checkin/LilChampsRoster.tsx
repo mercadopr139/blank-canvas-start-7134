@@ -18,7 +18,7 @@ const getHeadshotUrl = (url: string | null, cacheBust: string): string | null =>
   if (url.startsWith("youth-photos/")) {
     return `${supabaseUrl}/storage/v1/object/public/youth-photos/${url}${bustParam}`;
   }
-  return `${supabaseUrl}/storage/v1/object/public/registration-signatures/${url}${bustParam}`;
+  return `${supabaseUrl}/storage/v1/object/public/youth-photos/${url}${bustParam}`;
 };
 
 interface RosterYouth {
