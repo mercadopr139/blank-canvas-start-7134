@@ -23,7 +23,7 @@ interface SendInvoiceRequest {
   resendTo?: string;
 }
 
-const LOGO_URL = "https://qnjpurehimuqppyrfxui.supabase.co/storage/v1/object/public/email-assets/nla-logo.png";
+const LOGO_URL = "https://rkdkmzjontaufbyjbcku.supabase.co/storage/v1/object/public/email-assets/nla-logo.png";
 
 function renderInvoiceEmailHtml({
   mode,

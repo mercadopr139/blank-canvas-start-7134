@@ -136,7 +136,7 @@ const handler = async (req: Request): Promise<Response> => {
       </table>` : "";
 
     // Build approval page URL
-    const approvalPageUrl = `https://blank-canvas-start-7134.lovable.app/approvals/invoice/${approvalToken}`;
+    const approvalPageUrl = `https://www.nolimitsboxingacademy.org/approvals/invoice/${approvalToken}`;
 
     console.log(`Sending approval request for ${invoiceNumber} to chrissycasiello@nolimitsboxingacademy.org`);
 

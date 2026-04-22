@@ -9,10 +9,10 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-const LOGO_URL = "https://qnjpurehimuqppyrfxui.supabase.co/storage/v1/object/public/email-assets/nla-logo.png";
+const LOGO_URL = "https://rkdkmzjontaufbyjbcku.supabase.co/storage/v1/object/public/email-assets/nla-logo.png";
 const PRIMARY_EMAIL = "chrissycasiello@nolimitsboxingacademy.org";
 const CC_EMAIL = "joshmercado@nolimitsboxingacademy.org";
-const DASHBOARD_URL = "https://blank-canvas-start-7134.lovable.app/admin/operations/registrations";
+const DASHBOARD_URL = "https://www.nolimitsboxingacademy.org/admin/operations/registrations";
 
 interface RegistrationData {
   child_first_name: string;
