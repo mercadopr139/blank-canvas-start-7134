@@ -65,7 +65,12 @@ const LilChampsRoster = ({ onCheckIn, onUndo, onClose, checkedInIds }: LilChamps
 
   const fetchRoster = useCallback(async () => {
     setLoading(true);
-    const { data, error } = await supabase.rpc("get_lil_champs_roster");
+    // Cast through unknown — types.ts is auto-generated and may not yet include this RPC
+    const { data, error } = await (supabase.rpc as unknown as (
+      fn: string,
+    ) => Promise<{ data: RosterYouth[] | null; error: unknown }>)(
+      "get_lil_champs_roster",
+    );
     if (!error && data) setRoster(data);
     setLoading(false);
   }, []);
