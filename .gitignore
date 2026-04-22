@@ -3,6 +3,10 @@
 .env.local
 .env.*.local
 
+# Data export/import files — contain real user data, never commit
+scripts/*.json
+scripts/*.sql
+
 # Logs
 logs
 *.log
