@@ -23,7 +23,7 @@ export default function MondayPhotoSyncModal({ open, onOpenChange }: Props) {
   const [loading, setLoading] = useState(false);
   const [cursor, setCursor] = useState<string | null>(null);
   const [hasMore, setHasMore] = useState(false);
-  const [stats, setStats] = useState({ uploaded: 0, skipped: 0, errors: 0, total: 0 });
+  const [stats, setStats] = useState({ uploaded: 0, no_match: 0, no_photo: 0, errors: 0, total: 0 });
 
   const callSync = async (action: string, extra: Record<string, unknown> = {}) => {
     const { data: { session } } = await supabase.auth.getSession();
@@ -82,11 +82,12 @@ export default function MondayPhotoSyncModal({ open, onOpenChange }: Props) {
         photoColumnId: selectedColumn,
         batchSize: 20,
         cursor: batchCursor,
-        forceReplace: false,
+        forceReplace: true,
       });
       setStats(prev => ({
         uploaded: prev.uploaded + (data.uploaded || 0),
-        skipped: prev.skipped + (data.skipped_already_has_photo || 0) + (data.skipped_no_match || 0),
+        no_match: prev.no_match + (data.skipped_no_match || 0),
+        no_photo: prev.no_photo + (data.skipped_no_photo || 0),
         errors: prev.errors + (data.errors?.length || 0),
         total: prev.total + (data.total_monday_items || 0),
       }));
@@ -114,7 +115,7 @@ export default function MondayPhotoSyncModal({ open, onOpenChange }: Props) {
     setSelectedColumn("");
     setCursor(null);
     setHasMore(false);
-    setStats({ uploaded: 0, skipped: 0, errors: 0, total: 0 });
+    setStats({ uploaded: 0, no_match: 0, no_photo: 0, errors: 0, total: 0 });
     onOpenChange(false);
   };
 
@@ -184,9 +185,11 @@ export default function MondayPhotoSyncModal({ open, onOpenChange }: Props) {
             ) : (
               <>
                 <div className="bg-white/5 rounded-lg p-4 text-left space-y-1 text-sm">
-                  <p><span className="text-white/50">Uploaded so far:</span> <span className="text-green-400 font-semibold">{stats.uploaded}</span></p>
-                  <p><span className="text-white/50">Skipped (already have photo):</span> {stats.skipped}</p>
+                  <p><span className="text-white/50">Uploaded:</span> <span className="text-green-400 font-semibold">{stats.uploaded}</span></p>
+                  <p><span className="text-white/50">No name match:</span> {stats.no_match}</p>
+                  <p><span className="text-white/50">No photo in column:</span> {stats.no_photo}</p>
                   <p><span className="text-white/50">Errors:</span> {stats.errors}</p>
+                  <p><span className="text-white/50">Total processed:</span> {stats.total}</p>
                 </div>
                 {hasMore && (
                   <Button onClick={() => runBatch(cursor)} className="w-full">
@@ -207,7 +210,8 @@ export default function MondayPhotoSyncModal({ open, onOpenChange }: Props) {
             </div>
             <div className="bg-white/5 rounded-lg p-4 text-left space-y-1 text-sm">
               <p><span className="text-white/50">Photos uploaded:</span> <span className="text-green-400 font-semibold">{stats.uploaded}</span></p>
-              <p><span className="text-white/50">Already had photos:</span> {stats.skipped}</p>
+              <p><span className="text-white/50">No name match:</span> {stats.no_match}</p>
+              <p><span className="text-white/50">No photo in column:</span> {stats.no_photo}</p>
               <p><span className="text-white/50">Errors:</span> {stats.errors}</p>
             </div>
             <Button onClick={handleClose} className="w-full">Done</Button>
