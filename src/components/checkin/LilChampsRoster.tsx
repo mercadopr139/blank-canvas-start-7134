@@ -65,14 +65,7 @@ const LilChampsRoster = ({ onCheckIn, onUndo, onClose, checkedInIds }: LilChamps
 
   const fetchRoster = useCallback(async () => {
     setLoading(true);
-    const { data, error } = await supabase
-      .from("youth_registrations")
-      .select("id, child_first_name, child_last_name, child_date_of_birth, child_headshot_url")
-      .eq("approved_for_attendance", true)
-      .eq("extended_program", "Lil Champs Corner")
-      .order("child_last_name", { ascending: true })
-      .order("child_first_name", { ascending: true });
-
+    const { data, error } = await supabase.rpc("get_lil_champs_roster");
     if (!error && data) setRoster(data);
     setLoading(false);
   }, []);
