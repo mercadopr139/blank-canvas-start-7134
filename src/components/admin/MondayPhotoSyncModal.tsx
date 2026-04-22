@@ -128,43 +128,25 @@ export default function MondayPhotoSyncModal({ open, onOpenChange }: Props) {
           </DialogDescription>
         </DialogHeader>
 
-        {/* Step 1: Load & select board */}
+        {/* Step 1: Enter board ID */}
         {(step === "select_board") && (
           <div className="space-y-4 mt-2">
-            {boards.length === 0 ? (
-              <Button onClick={loadBoards} disabled={loading} className="w-full">
-                {loading ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Loading boards…</> : "Connect to Monday.com"}
-              </Button>
-            ) : (
-              <>
-                <div className="space-y-2">
-                  <Label className="text-white/70">Select your registration board</Label>
-                  <input
-                    type="text"
-                    placeholder="Search boards…"
-                    value={boardSearch}
-                    onChange={e => setBoardSearch(e.target.value)}
-                    className="w-full rounded-md border border-white/10 bg-neutral-800 text-white px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-white/20 mb-1"
-                  />
-                  <select
-                    value={selectedBoard}
-                    onChange={e => setSelectedBoard(e.target.value)}
-                    size={6}
-                    className="w-full rounded-md border border-white/10 bg-neutral-800 text-white px-3 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-white/20"
-                  >
-                    <option value="" className="bg-neutral-800 text-white">— choose —</option>
-                    {boards
-                      .filter(b => b.name.toLowerCase().includes(boardSearch.toLowerCase()))
-                      .map(b => (
-                        <option key={b.id} value={b.id} className="bg-neutral-800 text-white">{b.name}</option>
-                      ))}
-                  </select>
-                </div>
-                <Button onClick={loadColumns} disabled={!selectedBoard || loading} className="w-full">
-                  {loading ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Loading…</> : "Next →"}
-                </Button>
-              </>
-            )}
+            <div className="space-y-2">
+              <Label className="text-white/70">Board ID</Label>
+              <input
+                type="text"
+                placeholder="Paste your Monday board ID…"
+                value={selectedBoard}
+                onChange={e => setSelectedBoard(e.target.value.trim())}
+                className="w-full rounded-md border border-white/10 bg-neutral-800 text-white px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-white/20"
+              />
+              <p className="text-xs text-white/40">
+                Find it in your Monday.com URL — e.g. monday.com/boards/<strong className="text-white/60">7346136009</strong>
+              </p>
+            </div>
+            <Button onClick={loadColumns} disabled={!selectedBoard || loading} className="w-full">
+              {loading ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Loading…</> : "Next →"}
+            </Button>
           </div>
         )}
 
