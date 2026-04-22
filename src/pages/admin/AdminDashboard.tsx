@@ -6,7 +6,11 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useStaffPermissions, PermissionKey } from "@/hooks/useStaffPermissions";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { LogOut, Hammer, BadgeDollarSign, Lightbulb, ArrowLeft, Lock, Plus, Pencil, GripVertical } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { useToast } from "@/hooks/use-toast";
+import { LogOut, Hammer, BadgeDollarSign, Lightbulb, ArrowLeft, Lock, Plus, Pencil, GripVertical, KeyRound } from "lucide-react";
 import { icons } from "lucide-react";
 import UpcomingEventsWidget from "@/components/admin/UpcomingEventsWidget";
 import InviteAdminModal from "@/components/admin/InviteAdminModal";
@@ -215,6 +219,34 @@ const AdminDashboard = () => {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { hasPermission, loading: permLoading } = useStaffPermissions();
+  const { toast } = useToast();
+  const [showChangePassword, setShowChangePassword] = useState(false);
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [changingPassword, setChangingPassword] = useState(false);
+
+  const handleChangePassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (newPassword.length < 8) {
+      toast({ title: "Too short", description: "Password must be at least 8 characters.", variant: "destructive" });
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      toast({ title: "Mismatch", description: "Passwords do not match.", variant: "destructive" });
+      return;
+    }
+    setChangingPassword(true);
+    const { error } = await supabase.auth.updateUser({ password: newPassword });
+    setChangingPassword(false);
+    if (error) {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+      return;
+    }
+    toast({ title: "Password updated!", description: "Your new password is now active." });
+    setShowChangePassword(false);
+    setNewPassword("");
+    setConfirmPassword("");
+  };
   const [modalOpen, setModalOpen] = useState(false);
   const [editingTile, setEditingTile] = useState<DashboardTile | null>(null);
   const [seeded, setSeeded] = useState(false);
@@ -323,11 +355,36 @@ const AdminDashboard = () => {
           </div>
           <div className="flex items-center gap-2">
             <InviteAdminModal />
+            <Button variant="outline" onClick={() => setShowChangePassword(true)} className="border-white/10 text-zinc-300 bg-transparent hover:bg-white/5 hover:text-white text-xs h-9">
+              <KeyRound className="w-3.5 h-3.5 mr-1.5" />
+              Change Password
+            </Button>
             <Button variant="outline" onClick={handleLogout} className="border-white/10 text-zinc-300 bg-transparent hover:bg-white/5 hover:text-white text-xs h-9">
               <LogOut className="w-3.5 h-3.5 mr-1.5" />
               Log out
             </Button>
           </div>
+
+          <Dialog open={showChangePassword} onOpenChange={setShowChangePassword}>
+            <DialogContent className="bg-neutral-900 border-white/10 text-white">
+              <DialogHeader>
+                <DialogTitle>Change Password</DialogTitle>
+              </DialogHeader>
+              <form onSubmit={handleChangePassword} className="space-y-4 mt-2">
+                <div className="space-y-2">
+                  <Label className="text-white/70">New Password</Label>
+                  <Input type="password" placeholder="Min 8 characters" value={newPassword} onChange={e => setNewPassword(e.target.value)} required autoComplete="new-password" className="bg-white/5 border-white/10 text-white placeholder:text-white/30" />
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-white/70">Confirm Password</Label>
+                  <Input type="password" placeholder="Re-enter password" value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} required autoComplete="new-password" className="bg-white/5 border-white/10 text-white placeholder:text-white/30" />
+                </div>
+                <Button type="submit" className="w-full" disabled={changingPassword}>
+                  {changingPassword ? "Saving…" : "Update Password"}
+                </Button>
+              </form>
+            </DialogContent>
+          </Dialog>
         </div>
       </header>
 
