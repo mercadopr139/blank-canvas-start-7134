@@ -42,6 +42,7 @@ const HREF_PERM_MAP: Record<string, PermissionKey> = {
   "/transport": "driver_checkin",
   "/admin/pd-task-manager": "pd_signals",
   "/admin/pc-task-manager": "pc_signals",
+  "/admin/task-manager": "pd_signals",
   "/admin/staff": "settings",
   "/admin/operations": "operations",
   "/admin/sales-marketing": "sales_marketing",
@@ -49,14 +50,13 @@ const HREF_PERM_MAP: Record<string, PermissionKey> = {
 };
 
 /* Tiles that were removed — delete from DB if found */
-const DEPRECATED_TILE_HREFS = ["/admin/shared-task-board"];
+const DEPRECATED_TILE_HREFS = ["/admin/shared-task-board", "/admin/pd-task-manager", "/admin/pc-task-manager"];
 
 /* Default tiles to seed for new users */
 const DEFAULT_TILES = [
   { title: "Upcoming Events", subtitle: "Calendar reminders", icon_name: "calendar-days", accent_color: "#f59e0b", href: "__upcoming_events__", sort_order: 0, is_default: true },
   { title: "Driver Check-In", subtitle: "Transportation PIN login", icon_name: "bus", accent_color: "#60a5fa", href: "/transport", sort_order: 1, is_default: true },
-  { title: "PD Task Manager", subtitle: "Executive Focus & Daily Signals", icon_name: "signal", accent_color: "#a1a1aa", href: "/admin/pd-task-manager", sort_order: 2, is_default: true },
-  { title: "PC Task Manager", subtitle: "Executive Focus & Daily Signals", icon_name: "signal", accent_color: "#a1a1aa", href: "/admin/pc-task-manager", sort_order: 3, is_default: true },
+  { title: "Task Manager", subtitle: "Focus Areas & Daily Signals", icon_name: "signal", accent_color: "#a1a1aa", href: "/admin/task-manager", sort_order: 2, is_default: true },
   { title: "Message Board", subtitle: "Team communication & tasks", icon_name: "message-square", accent_color: "#bf0f3e", href: "/admin/message-board", sort_order: 5, is_default: true },
   { title: "Settings", subtitle: "Staff Management", icon_name: "settings", accent_color: "#a1a1aa", href: "/admin/staff", sort_order: 6, is_default: true },
 ];
@@ -421,30 +421,35 @@ const AdminDashboard = () => {
 
         {/* ── Secondary tier (database-driven, drag-and-drop) ── */}
         {!tilesLoading && tiles.length > 0 && (
-          <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-            <SortableContext items={tiles.map((t) => t.id)} strategy={rectSortingStrategy}>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 max-w-5xl mx-auto">
-                {tiles.map((tile) => (
-                  <SortableTile
-                    key={tile.id}
-                    tile={tile}
-                    allowed={isTileAllowed(tile)}
-                    onNavigate={() => navigate(tile.href)}
-                    onEdit={() => { setEditingTile(tile); setModalOpen(true); }}
-                  />
-                ))}
+          <div className="max-w-5xl mx-auto">
+            <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+              <SortableContext items={tiles.map((t) => t.id)} strategy={rectSortingStrategy}>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+                  {tiles.map((tile) => (
+                    <SortableTile
+                      key={tile.id}
+                      tile={tile}
+                      allowed={isTileAllowed(tile)}
+                      onNavigate={() => navigate(tile.href)}
+                      onEdit={() => { setEditingTile(tile); setModalOpen(true); }}
+                    />
+                  ))}
+                </div>
+              </SortableContext>
+            </DndContext>
 
-                {/* Add tile button */}
-                <button
-                  onClick={() => { setEditingTile(null); setModalOpen(true); }}
-                  className="rounded-xl border-2 border-dashed border-white/[0.08] bg-transparent p-5 flex flex-col items-center justify-center gap-2 text-zinc-600 hover:text-zinc-400 hover:border-white/[0.15] transition-colors min-h-[100px]"
-                >
-                  <Plus className="w-6 h-6" />
-                  <span className="text-xs font-medium">Add Tile</span>
-                </button>
-              </div>
-            </SortableContext>
-          </DndContext>
+            {/* Add tile button — outside DndContext so DnD sensors don't swallow the click */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 mt-4">
+              <button
+                type="button"
+                onClick={() => { setEditingTile(null); setModalOpen(true); }}
+                className="rounded-xl border-2 border-dashed border-white/[0.08] bg-transparent p-5 flex flex-col items-center justify-center gap-2 text-zinc-600 hover:text-zinc-400 hover:border-white/[0.15] transition-colors min-h-[100px]"
+              >
+                <Plus className="w-6 h-6" />
+                <span className="text-xs font-medium">Add Tile</span>
+              </button>
+            </div>
+          </div>
         )}
       </main>
 

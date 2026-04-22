@@ -20,8 +20,9 @@ const COMMON_ICONS = [
 
 const AVAILABLE_ROUTES = [
   { href: "/transport", label: "Driver Check-In" },
-  { href: "/admin/pd-task-manager", label: "PD Task Manager" },
-  { href: "/admin/pc-task-manager", label: "PC Task Manager" },
+  { href: "/admin/task-manager", label: "Task Manager" },
+  { href: "/admin/pd-task-manager", label: "PD Task Manager (legacy)" },
+  { href: "/admin/pc-task-manager", label: "PC Task Manager (legacy)" },
   { href: "/admin/staff", label: "Settings / Staff Management" },
   { href: "/admin/operations", label: "Operations" },
   { href: "/admin/sales-marketing", label: "Sales & Marketing" },

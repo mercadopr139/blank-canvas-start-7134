@@ -60,6 +60,7 @@ import AdminSignalsTrash from "./pages/admin/AdminSignalsTrash";
 import AdminStaffManagement from "./pages/admin/AdminStaffManagement";
 import AdminPDTaskManager from "./pages/admin/AdminPDTaskManager";
 import AdminPCTaskManager from "./pages/admin/AdminPCTaskManager";
+import AdminTaskManager from "./pages/admin/AdminTaskManager";
 import InvoiceApproval from "./pages/InvoiceApproval";
 import TransportLogin from "./pages/TransportLogin";
 import TransportAdminLogin from "./pages/transport/TransportAdminLogin";
@@ -201,6 +202,16 @@ const App = () => (
               <Route path="deposits/:id" element={<AdminDepositDetail />} />
               <Route path="master-revenue-tracker" element={<AdminMasterRevenueTracker />} />
             </Route>
+
+            {/* Unified Task Manager */}
+            <Route
+              path="/admin/task-manager"
+              element={
+                <ProtectedRoute requireAdmin>
+                  <AdminTaskManager />
+                </ProtectedRoute>
+              }
+            />
 
             {/* PD Task Manager — Focus Area selection */}
             <Route
