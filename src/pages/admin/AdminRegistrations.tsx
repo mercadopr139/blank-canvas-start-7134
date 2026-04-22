@@ -24,26 +24,11 @@ const HeadshotThumbnail = ({ headshotPath, size = "sm" }: { headshotPath: string
   const [fullscreen, setFullscreen] = useState(false);
   
   useEffect(() => {
-    // Check if this is a public youth-photos URL or a signed URL from registration-signatures
-    if (headshotPath.includes('youth-photos')) {
-      // Public URL - use directly
-      const publicUrl = headshotPath.startsWith("http")
-        ? headshotPath
-        : `${import.meta.env.VITE_SUPABASE_URL}/storage/v1/object/public/youth-photos/${headshotPath.replace('youth-photos/', '')}`;
-      setUrl(publicUrl);
+    if (headshotPath.startsWith("http")) {
+      setUrl(headshotPath);
     } else {
-      // Private signature URL - create signed URL
-      supabase.storage.from("registration-signatures").createSignedUrl(headshotPath, 300)
-        .then(({ data }) => {
-          const rawSignedUrl = (data as { signedUrl?: string; signedURL?: string } | null)?.signedUrl
-            ?? (data as { signedUrl?: string; signedURL?: string } | null)?.signedURL;
-          if (!rawSignedUrl) return;
-
-          const signedUrl = rawSignedUrl.startsWith("http")
-            ? rawSignedUrl
-            : `${import.meta.env.VITE_SUPABASE_URL}/storage/v1${rawSignedUrl}`;
-          setUrl(signedUrl);
-        });
+      const cleanPath = headshotPath.replace(/^youth-photos\//, "");
+      setUrl(`${import.meta.env.VITE_SUPABASE_URL}/storage/v1/object/public/youth-photos/${cleanPath}`);
     }
   }, [headshotPath]);
   const sizeClass = size === "lg" ? "w-28 h-28" : "w-10 h-10";
@@ -935,7 +920,6 @@ const RegistrationDetail = ({ registration: reg, onApprovalChange }: { registrat
         { key: 'media_consent_signature_url', value: reg.media_consent_signature_url },
         { key: 'spiritual_development_policy_signature_url', value: reg.spiritual_development_policy_signature_url },
         { key: 'counseling_services_signature_url', value: reg.counseling_services_signature_url },
-        { key: 'child_headshot_url', value: reg.child_headshot_url },
       ].filter(f => f.value);
 
       const urls: Record<string, string> = {};
@@ -1100,15 +1084,7 @@ const RegistrationDetail = ({ registration: reg, onApprovalChange }: { registrat
 
       {reg.child_headshot_url && (
         <Section title="Child Photo">
-          {loadingUrls ? (
-            <div className="flex items-center gap-2 text-muted-foreground">
-              <Loader2 className="w-4 h-4 animate-spin" /> Loading photo...
-            </div>
-          ) : signedUrls.child_headshot_url ? (
-            <HeadshotThumbnail headshotPath={reg.child_headshot_url} size="lg" />
-          ) : (
-            <p className="text-sm text-muted-foreground">Unable to load photo</p>
-          )}
+          <HeadshotThumbnail headshotPath={reg.child_headshot_url} size="lg" />
         </Section>
       )}
 
