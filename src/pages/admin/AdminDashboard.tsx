@@ -221,6 +221,7 @@ const AdminDashboard = () => {
   const { hasPermission, loading: permLoading } = useStaffPermissions();
   const { toast } = useToast();
   const [showChangePassword, setShowChangePassword] = useState(false);
+  const [oldPassword, setOldPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [changingPassword, setChangingPassword] = useState(false);
@@ -228,14 +229,21 @@ const AdminDashboard = () => {
   const handleChangePassword = async (e: React.FormEvent) => {
     e.preventDefault();
     if (newPassword.length < 8) {
-      toast({ title: "Too short", description: "Password must be at least 8 characters.", variant: "destructive" });
+      toast({ title: "Too short", description: "New password must be at least 8 characters.", variant: "destructive" });
       return;
     }
     if (newPassword !== confirmPassword) {
-      toast({ title: "Mismatch", description: "Passwords do not match.", variant: "destructive" });
+      toast({ title: "Mismatch", description: "New passwords do not match.", variant: "destructive" });
       return;
     }
     setChangingPassword(true);
+    // Verify old password first
+    const { error: signInError } = await supabase.auth.signInWithPassword({ email: user!.email!, password: oldPassword });
+    if (signInError) {
+      toast({ title: "Wrong password", description: "Your current password is incorrect.", variant: "destructive" });
+      setChangingPassword(false);
+      return;
+    }
     const { error } = await supabase.auth.updateUser({ password: newPassword });
     setChangingPassword(false);
     if (error) {
@@ -244,6 +252,7 @@ const AdminDashboard = () => {
     }
     toast({ title: "Password updated!", description: "Your new password is now active." });
     setShowChangePassword(false);
+    setOldPassword("");
     setNewPassword("");
     setConfirmPassword("");
   };
@@ -365,12 +374,16 @@ const AdminDashboard = () => {
             </Button>
           </div>
 
-          <Dialog open={showChangePassword} onOpenChange={setShowChangePassword}>
+          <Dialog open={showChangePassword} onOpenChange={(open) => { setShowChangePassword(open); if (!open) { setOldPassword(""); setNewPassword(""); setConfirmPassword(""); } }}>
             <DialogContent className="bg-neutral-900 border-white/10 text-white">
               <DialogHeader>
                 <DialogTitle>Change Password</DialogTitle>
               </DialogHeader>
               <form onSubmit={handleChangePassword} className="space-y-4 mt-2">
+                <div className="space-y-2">
+                  <Label className="text-white/70">Current Password</Label>
+                  <Input type="password" placeholder="Your current password" value={oldPassword} onChange={e => setOldPassword(e.target.value)} required autoComplete="current-password" className="bg-white/5 border-white/10 text-white placeholder:text-white/30" />
+                </div>
                 <div className="space-y-2">
                   <Label className="text-white/70">New Password</Label>
                   <Input type="password" placeholder="Min 8 characters" value={newPassword} onChange={e => setNewPassword(e.target.value)} required autoComplete="new-password" className="bg-white/5 border-white/10 text-white placeholder:text-white/30" />
