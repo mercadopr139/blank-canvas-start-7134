@@ -11,7 +11,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { AlertDialog, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Search, Eye, AlertTriangle, ExternalLink, Loader2, Pencil, Trash2, CheckCircle2, XCircle, ShieldCheck, Download, Star } from "lucide-react";
+import { Search, Eye, AlertTriangle, ExternalLink, Loader2, Pencil, Trash2, CheckCircle2, XCircle, ShieldCheck, Download, Star, ImagePlus } from "lucide-react";
+import BulkPhotoImportModal from "@/components/admin/BulkPhotoImportModal";
 import { Switch } from "@/components/ui/switch";
 import { format, parseISO, differenceInYears, differenceInMonths } from "date-fns";
 import { toast } from "sonner";
@@ -115,6 +116,7 @@ const AdminRegistrations = () => {
   const [editingRegistration, setEditingRegistration] = useState<any | null>(null);
   const [csvFallbackUrl, setCsvFallbackUrl] = useState<string | null>(null);
   const [csvExportCount, setCsvExportCount] = useState(0);
+  const [bulkPhotoOpen, setBulkPhotoOpen] = useState(false);
 
   const { data: registrations, isLoading } = useQuery({
     queryKey: ["youth-registrations"],
@@ -429,11 +431,20 @@ const AdminRegistrations = () => {
           <h2 className="text-base font-semibold text-white">Youth Registrations</h2>
           <p className="text-xs text-white/50">{filteredRegistrations?.length || 0} registrations</p>
         </div>
-        <div>
+        <div className="flex items-center gap-2">
+          <Button size="sm" onClick={() => setBulkPhotoOpen(true)} className="bg-white/10 hover:bg-white/15 text-white border border-white/20 gap-1.5">
+            <ImagePlus className="w-3.5 h-3.5" /> Sync Photos
+          </Button>
           <Button size="sm" onClick={exportFilteredCsv} className="bg-white/10 hover:bg-white/15 text-white border border-white/20 gap-1.5">
             <Download className="w-3.5 h-3.5" /> Export Filtered List
           </Button>
         </div>
+        <BulkPhotoImportModal
+          open={bulkPhotoOpen}
+          onOpenChange={setBulkPhotoOpen}
+          existingRegistrations={registrations || []}
+          onImportComplete={() => { setBulkPhotoOpen(false); }}
+        />
       </div>
 
       <div className="container mx-auto px-4 py-6 space-y-6">
