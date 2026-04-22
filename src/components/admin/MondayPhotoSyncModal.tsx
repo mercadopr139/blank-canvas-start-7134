@@ -2,7 +2,6 @@ import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { Loader2, CheckCircle2, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
@@ -136,16 +135,16 @@ export default function MondayPhotoSyncModal({ open, onOpenChange }: Props) {
               <>
                 <div className="space-y-2">
                   <Label className="text-white/70">Select your registration board</Label>
-                  <Select value={selectedBoard} onValueChange={setSelectedBoard}>
-                    <SelectTrigger className="bg-white/5 border-white/10 text-white">
-                      <SelectValue placeholder="Choose a board…" />
-                    </SelectTrigger>
-                    <SelectContent className="bg-neutral-900 border-white/10 text-white max-h-60 [&_*]:text-white">
-                      {boards.map(b => (
-                        <SelectItem key={b.id} value={b.id} className="text-white focus:bg-white/10 focus:text-white">{b.name}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <select
+                    value={selectedBoard}
+                    onChange={e => setSelectedBoard(e.target.value)}
+                    className="w-full rounded-md border border-white/10 bg-neutral-800 text-white px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-white/20"
+                  >
+                    <option value="" className="bg-neutral-800 text-white">Choose a board…</option>
+                    {boards.map(b => (
+                      <option key={b.id} value={b.id} className="bg-neutral-800 text-white">{b.name}</option>
+                    ))}
+                  </select>
                 </div>
                 <Button onClick={loadColumns} disabled={!selectedBoard || loading} className="w-full">
                   {loading ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Loading…</> : "Next →"}
@@ -160,16 +159,16 @@ export default function MondayPhotoSyncModal({ open, onOpenChange }: Props) {
           <div className="space-y-4 mt-2">
             <div className="space-y-2">
               <Label className="text-white/70">Select the headshot/photo column</Label>
-              <Select value={selectedColumn} onValueChange={setSelectedColumn}>
-                <SelectTrigger className="bg-white/5 border-white/10 text-white">
-                  <SelectValue placeholder="Choose a column…" />
-                </SelectTrigger>
-                <SelectContent className="bg-neutral-900 border-white/10 text-white max-h-60 [&_*]:text-white">
-                  {columns.map(c => (
-                    <SelectItem key={c.id} value={c.id} className="text-white focus:bg-white/10 focus:text-white">{c.title}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <select
+                value={selectedColumn}
+                onChange={e => setSelectedColumn(e.target.value)}
+                className="w-full rounded-md border border-white/10 bg-neutral-800 text-white px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-white/20"
+              >
+                <option value="" className="bg-neutral-800 text-white">Choose a column…</option>
+                {columns.map(c => (
+                  <option key={c.id} value={c.id} className="bg-neutral-800 text-white">{c.title}</option>
+                ))}
+              </select>
             </div>
             <p className="text-xs text-white/40">It will sync 20 photos at a time. You'll click "Next Batch" until all are done.</p>
             <Button onClick={() => runBatch(null)} disabled={!selectedColumn || loading} className="w-full">
