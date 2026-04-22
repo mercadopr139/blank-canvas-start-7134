@@ -295,7 +295,7 @@ const fetchBestPhotoForCandidate = async (
 const hasNonSignatureExistingPhoto = async (supabase: any, path: string) => {
   try {
     const { data: existingFile, error } = await supabase.storage
-      .from("registration-signatures")
+      .from("youth-photos")
       .download(path);
 
     if (error || !existingFile) return false;
@@ -661,7 +661,7 @@ Deno.serve(async (req) => {
             const ext = contentType.includes("png") ? "png" : contentType.includes("webp") ? "webp" : "jpg";
             const fileName = `monday_headshot_${match.id}_${Date.now()}.${ext}`;
             const { data: uploadData, error: uploadError } = await supabase.storage
-              .from("registration-signatures")
+              .from("youth-photos")
               .upload(fileName, imageData, { contentType, upsert: false });
 
             if (uploadError) {
