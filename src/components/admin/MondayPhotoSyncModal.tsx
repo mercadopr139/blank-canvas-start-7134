@@ -63,10 +63,7 @@ export default function MondayPhotoSyncModal({ open, onOpenChange }: Props) {
     setLoading(true);
     try {
       const data = await callSync("get_columns", { boardId: selectedBoard });
-      const fileCols = (data.columns || []).filter((c: { type: string }) =>
-        ["file", "doc"].includes(c.type)
-      );
-      setColumns(fileCols.length > 0 ? fileCols : data.columns || []);
+      setColumns(data.columns || []);
       setStep("select_column");
     } catch {
       toast.error("Failed to load board columns.");
