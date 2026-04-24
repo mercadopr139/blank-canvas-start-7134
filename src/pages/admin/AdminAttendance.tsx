@@ -1904,7 +1904,7 @@ const AdminAttendance = () => {
 
         {/* Race / Ethnicity — Month-to-Date */}
         {mtdRaceBreakdown.total > 0 && (
-          <Card className="bg-white/5 border-white/10 text-white mb-4">
+          <Card className="bg-white/5 border-white/10 text-white mb-4 max-w-2xl">
             <CardHeader className="pb-2">
               <CardTitle className="text-sm font-medium text-white/60 flex items-center gap-2">
                 <Users className="w-4 h-4" /> Race / Ethnicity — {mtdLabel}
@@ -1916,15 +1916,15 @@ const AdminAttendance = () => {
                   const pctVal = Math.round((count / mtdRaceBreakdown.total) * 100);
                   return (
                     <div key={race} className="flex items-center gap-3">
-                      <span className="text-xs text-white/70 w-48 flex-shrink-0 truncate">{race}</span>
-                      <div className="flex-1 h-2 bg-white/5 rounded-full overflow-hidden">
+                      <span className="text-xs text-white/70 w-52 flex-shrink-0 truncate" title={race}>{race}</span>
+                      <div className="flex-1 h-2 bg-white/5 rounded-full overflow-hidden min-w-0">
                         <div
                           className="h-full bg-[#bf0f3e] rounded-full"
                           style={{ width: `${pctVal}%` }}
                         />
                       </div>
-                      <span className="text-xs font-semibold text-white w-12 text-right tabular-nums">{pctVal}%</span>
-                      <span className="text-[10px] text-white/40 w-16 text-right tabular-nums">{count} youth</span>
+                      <span className="text-xs font-semibold text-white w-10 text-right tabular-nums">{pctVal}%</span>
+                      <span className="text-[10px] text-white/40 w-14 text-right tabular-nums">{count} youth</span>
                     </div>
                   );
                 })}
