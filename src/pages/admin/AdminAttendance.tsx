@@ -241,14 +241,25 @@ const AdminAttendance = () => {
   const { data: ytdAttendance = [] } = useQuery({
     queryKey: ["attendance-records-ytd", YTD_START],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("attendance_records")
-        .select("id, registration_id, check_in_date, check_in_at, program_source, is_manual")
-        .eq("program_source", "NLA")
-        .gte("check_in_date", YTD_START)
-        .limit(100000);
-      if (error) throw error;
-      return data as AttendanceRecord[];
+      const pageSize = 1000;
+      let from = 0;
+      const all: AttendanceRecord[] = [];
+      // Paginate because PostgREST caps responses at ~1000 rows regardless of .limit().
+      while (true) {
+        const { data, error } = await supabase
+          .from("attendance_records")
+          .select("id, registration_id, check_in_date, check_in_at, program_source, is_manual")
+          .eq("program_source", "NLA")
+          .gte("check_in_date", YTD_START)
+          .order("check_in_date", { ascending: true })
+          .range(from, from + pageSize - 1);
+        if (error) throw error;
+        const rows = (data || []) as AttendanceRecord[];
+        all.push(...rows);
+        if (rows.length < pageSize) break;
+        from += pageSize;
+      }
+      return all;
     },
   });
 
