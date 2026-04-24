@@ -236,11 +236,17 @@ const AdminAttendance = () => {
   });
 
   // Middle Township, NJ — site of No Limits Boxing Academy
+  // Forecast API covers the last 92 days (including today); archive API for anything older.
   const { data: monthWeather } = useQuery({
     queryKey: ["month-weather", calMonthStart, calMonthEnd],
     queryFn: async () => {
       try {
-        const url = `https://archive-api.open-meteo.com/v1/archive?latitude=39.1548&longitude=-74.7970&start_date=${calMonthStart}&end_date=${calMonthEnd}&daily=temperature_2m_max,precipitation_sum&temperature_unit=fahrenheit&precipitation_unit=inch&timezone=America/New_York`;
+        const ninetyDaysAgoStr = format(new Date(Date.now() - 90 * 24 * 60 * 60 * 1000), "yyyy-MM-dd");
+        const useForecast = calMonthStart >= ninetyDaysAgoStr;
+        const base = useForecast
+          ? "https://api.open-meteo.com/v1/forecast"
+          : "https://archive-api.open-meteo.com/v1/archive";
+        const url = `${base}?latitude=39.1548&longitude=-74.7970&start_date=${calMonthStart}&end_date=${calMonthEnd}&daily=temperature_2m_max,precipitation_sum&temperature_unit=fahrenheit&precipitation_unit=inch&timezone=America/New_York`;
         const res = await fetch(url);
         if (!res.ok) return null;
         const json = await res.json();
