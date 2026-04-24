@@ -16,7 +16,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell,
-  LineChart, Line, LabelList,
+  LineChart, Line, LabelList, ComposedChart,
 } from "recharts";
 import {
   startOfMonth, endOfMonth, format,
@@ -233,6 +233,32 @@ const AdminAttendance = () => {
       if (error) throw error;
       return data as AttendanceRecord[];
     },
+  });
+
+  // Middle Township, NJ — site of No Limits Boxing Academy
+  const { data: monthWeather } = useQuery({
+    queryKey: ["month-weather", calMonthStart, calMonthEnd],
+    queryFn: async () => {
+      try {
+        const url = `https://archive-api.open-meteo.com/v1/archive?latitude=39.1548&longitude=-74.7970&start_date=${calMonthStart}&end_date=${calMonthEnd}&daily=temperature_2m_max,precipitation_sum&temperature_unit=fahrenheit&precipitation_unit=inch&timezone=America/New_York`;
+        const res = await fetch(url);
+        if (!res.ok) return null;
+        const json = await res.json();
+        const daily = json?.daily;
+        if (!daily?.time) return null;
+        const map: Record<string, { tempMax: number | null; precip: number | null }> = {};
+        daily.time.forEach((d: string, i: number) => {
+          map[d] = {
+            tempMax: daily.temperature_2m_max?.[i] ?? null,
+            precip: daily.precipitation_sum?.[i] ?? null,
+          };
+        });
+        return map;
+      } catch {
+        return null;
+      }
+    },
+    staleTime: 60 * 60 * 1000,
   });
 
   // YTD attendance since the new check-in system launched (March 9, 2026)
@@ -914,8 +940,34 @@ const AdminAttendance = () => {
     practiceAttendance.forEach((a) => { counts[a.check_in_date] = (counts[a.check_in_date] || 0) + 1; });
     return Object.entries(counts)
       .sort((a, b) => a[0].localeCompare(b[0]))
-      .map(([date, count]) => ({ date: format(parseISO(date), "M/d"), count, fullDate: date }));
-  }, [practiceAttendance]);
+      .map(([date, count]) => {
+        const weather = monthWeather?.[date];
+        return {
+          date: format(parseISO(date), "M/d"),
+          count,
+          fullDate: date,
+          tempMax: weather?.tempMax ?? null,
+          precip: weather?.precip ?? null,
+        };
+      });
+  }, [practiceAttendance, monthWeather]);
+
+  /* ───── WEATHER vs ATTENDANCE CORRELATION ───── */
+  const weatherCorrelation = useMemo(() => {
+    const RAIN_THRESHOLD_IN = 0.1; // >= 0.1" counts as a rainy practice day
+    const withWeather = dailyTrend.filter((d) => d.precip !== null);
+    if (withWeather.length === 0) return null;
+    const rainy = withWeather.filter((d) => (d.precip ?? 0) >= RAIN_THRESHOLD_IN);
+    const dry = withWeather.filter((d) => (d.precip ?? 0) < RAIN_THRESHOLD_IN);
+    const avg = (rows: typeof withWeather) =>
+      rows.length === 0 ? 0 : Math.round(rows.reduce((s, r) => s + r.count, 0) / rows.length);
+    return {
+      rainyAvg: avg(rainy),
+      dryAvg: avg(dry),
+      rainyDays: rainy.length,
+      dryDays: dry.length,
+    };
+  }, [dailyTrend]);
 
   /* ───── AVERAGE ATTENDANCE BY WEEK (Mon–Fri weeks, practice days only) ───── */
   const weeklyAvgData = useMemo(() => {
@@ -1827,31 +1879,85 @@ const AdminAttendance = () => {
 
         {/* ═══════════ TREND CHARTS ═══════════ */}
 
-        {/* Daily Attendance Trend */}
+        {/* Attendance vs Weather */}
         {dailyTrend.length > 1 && (
           <Card className="bg-white/5 border-white/10 text-white mb-4">
             <CardHeader className="pb-2">
               <CardTitle className="text-sm font-medium text-white/60 flex items-center gap-2">
-                <TrendingUp className="w-4 h-4" /> Daily Attendance Trend — {format(calendarMonth, "MMMM yyyy")}
+                <TrendingUp className="w-4 h-4" /> Attendance vs Weather — {format(calendarMonth, "MMMM yyyy")}
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="h-48">
+              <div className="h-56">
                 <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={dailyTrend}>
+                  <ComposedChart data={dailyTrend}>
                     <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" />
                     <XAxis dataKey="date" tick={{ fill: "rgba(255,255,255,0.4)", fontSize: 10 }} />
-                    <YAxis tick={{ fill: "rgba(255,255,255,0.4)", fontSize: 10 }} />
-                    <Tooltip content={({ active, payload }) => { if (!active || !payload?.length) return null; const item = payload[0].payload; const dateLabel = item.fullDate ? format(parseISO(item.fullDate), "MMMM d, yyyy") : item.date; return (<div style={{ ...chartTooltipStyle, padding: "8px 12px" }}><p style={{ color: "rgba(255,255,255,0.6)", fontSize: 12, margin: 0 }}>{dateLabel}</p><p style={{ color: "#fff", fontSize: 14, fontWeight: 600, margin: "4px 0 0" }}>{item.count} Sign-Ins</p></div>); }} />
-                    <Bar dataKey="count" name="Sign-Ins" radius={[3, 3, 0, 0]}>
+                    <YAxis yAxisId="left" tick={{ fill: "rgba(255,255,255,0.4)", fontSize: 10 }} />
+                    <YAxis yAxisId="right" orientation="right" tick={{ fill: "rgba(96,165,250,0.7)", fontSize: 10 }} tickFormatter={(v) => `${v}"`} />
+                    <Tooltip
+                      content={({ active, payload }) => {
+                        if (!active || !payload?.length) return null;
+                        const item = payload[0].payload;
+                        const dateLabel = item.fullDate ? format(parseISO(item.fullDate), "MMMM d, yyyy") : item.date;
+                        return (
+                          <div style={{ ...chartTooltipStyle, padding: "8px 12px" }}>
+                            <p style={{ color: "rgba(255,255,255,0.6)", fontSize: 12, margin: 0 }}>{dateLabel}</p>
+                            <p style={{ color: "#fff", fontSize: 14, fontWeight: 600, margin: "4px 0 0" }}>{item.count} Sign-Ins</p>
+                            {item.tempMax !== null && (
+                              <p style={{ color: "rgba(251,191,36,0.9)", fontSize: 11, margin: "2px 0 0" }}>High: {Math.round(item.tempMax)}°F</p>
+                            )}
+                            {item.precip !== null && (
+                              <p style={{ color: "rgba(96,165,250,0.9)", fontSize: 11, margin: "2px 0 0" }}>Rain: {item.precip.toFixed(2)}"</p>
+                            )}
+                          </div>
+                        );
+                      }}
+                    />
+                    <Bar yAxisId="left" dataKey="count" name="Sign-Ins" radius={[3, 3, 0, 0]}>
                       <LabelList dataKey="count" position="top" style={{ fill: "rgba(255,255,255,0.6)", fontSize: 9, fontWeight: 600 }} />
                       {dailyTrend.map((_, i) => (
                         <Cell key={i} fill="hsl(142, 71%, 45%)" fillOpacity={0.7} />
                       ))}
                     </Bar>
-                  </BarChart>
+                    <Line
+                      yAxisId="right"
+                      type="monotone"
+                      dataKey="precip"
+                      name="Precipitation (in)"
+                      stroke="hsl(217, 91%, 70%)"
+                      strokeWidth={2}
+                      dot={{ r: 3, fill: "hsl(217, 91%, 70%)" }}
+                      connectNulls
+                    />
+                  </ComposedChart>
                 </ResponsiveContainer>
               </div>
+              {weatherCorrelation && weatherCorrelation.rainyDays > 0 && weatherCorrelation.dryDays > 0 && (
+                <div className="mt-3 grid grid-cols-2 gap-2 text-xs">
+                  <div className="bg-white/5 rounded-md p-2">
+                    <p className="text-white/50">Avg on dry days</p>
+                    <p className="text-white font-semibold text-base">
+                      {weatherCorrelation.dryAvg}
+                      <span className="text-white/40 text-xs font-normal ml-1">
+                        ({weatherCorrelation.dryDays} day{weatherCorrelation.dryDays === 1 ? "" : "s"})
+                      </span>
+                    </p>
+                  </div>
+                  <div className="bg-white/5 rounded-md p-2">
+                    <p className="text-white/50">Avg on rainy days</p>
+                    <p className="text-white font-semibold text-base">
+                      {weatherCorrelation.rainyAvg}
+                      <span className="text-white/40 text-xs font-normal ml-1">
+                        ({weatherCorrelation.rainyDays} day{weatherCorrelation.rainyDays === 1 ? "" : "s"})
+                      </span>
+                    </p>
+                  </div>
+                </div>
+              )}
+              {!monthWeather && (
+                <p className="mt-2 text-xs text-white/30">Loading weather data…</p>
+              )}
             </CardContent>
           </Card>
         )}
