@@ -50,10 +50,8 @@ function resolveHeadshotUrl(url: string | null | undefined): string | null {
   if (!url) return null;
   if (url.startsWith("http")) return url;
   const supabaseUrl = Deno.env.get("SUPABASE_URL") || "";
-  if (url.startsWith("youth-photos/")) {
-    return `${supabaseUrl}/storage/v1/object/public/youth-photos/${url}`;
-  }
-  return `${supabaseUrl}/storage/v1/object/public/registration-signatures/${url}`;
+  const cleanPath = url.replace(/^youth-photos\//, "");
+  return `${supabaseUrl}/storage/v1/object/public/youth-photos/${cleanPath}`;
 }
 
 function renderEmailHtml(reg: RegistrationData): string {
