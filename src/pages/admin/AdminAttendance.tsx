@@ -38,6 +38,7 @@ interface Registration {
   child_school_district: string;
   household_income_range: string;
   free_or_reduced_lunch: string | null;
+  child_race_ethnicity: string | null;
 }
 
 interface AttendanceRecord {
@@ -203,7 +204,7 @@ const AdminAttendance = () => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("youth_registrations")
-        .select("id, child_first_name, child_last_name, child_boxing_program, child_headshot_url, is_bald_eagle, bald_eagle_active, child_sex, child_school_district, household_income_range, free_or_reduced_lunch")
+        .select("id, child_first_name, child_last_name, child_boxing_program, child_headshot_url, is_bald_eagle, bald_eagle_active, child_sex, child_school_district, household_income_range, free_or_reduced_lunch, child_race_ethnicity")
         .order("child_last_name");
       if (error) throw error;
       return data as Registration[];
@@ -921,6 +922,19 @@ const AdminAttendance = () => {
   }, [practiceAttendance, isCurrentMonth]);
 
   const mtdSnapshot = useMemo(() => buildSnapshot(mtdRegIds), [buildSnapshot, mtdRegIds]);
+
+  const mtdRaceBreakdown = useMemo(() => {
+    const counts: Record<string, number> = {};
+    mtdRegIds.forEach((id) => {
+      const reg = regMap[id];
+      if (reg?.child_race_ethnicity) {
+        counts[reg.child_race_ethnicity] = (counts[reg.child_race_ethnicity] || 0) + 1;
+      }
+    });
+    const total = Object.values(counts).reduce((s, n) => s + n, 0);
+    const sorted = Object.entries(counts).sort((a, b) => b[1] - a[1]);
+    return { counts: sorted, total };
+  }, [mtdRegIds, regMap]);
 
   const mtdLabel = isCurrentMonth ? `Month-to-Date — ${viewedMonthShort}` : viewedMonthShort;
 
@@ -1887,6 +1901,40 @@ const AdminAttendance = () => {
             </Card>
           </div>
         ))}
+
+        {/* Race / Ethnicity — Month-to-Date */}
+        {mtdRaceBreakdown.total > 0 && (
+          <Card className="bg-white/5 border-white/10 text-white mb-4">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium text-white/60 flex items-center gap-2">
+                <Users className="w-4 h-4" /> Race / Ethnicity — {mtdLabel}
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-2">
+                {mtdRaceBreakdown.counts.map(([race, count]) => {
+                  const pctVal = Math.round((count / mtdRaceBreakdown.total) * 100);
+                  return (
+                    <div key={race} className="flex items-center gap-3">
+                      <span className="text-xs text-white/70 w-48 flex-shrink-0 truncate">{race}</span>
+                      <div className="flex-1 h-2 bg-white/5 rounded-full overflow-hidden">
+                        <div
+                          className="h-full bg-[#bf0f3e] rounded-full"
+                          style={{ width: `${pctVal}%` }}
+                        />
+                      </div>
+                      <span className="text-xs font-semibold text-white w-12 text-right tabular-nums">{pctVal}%</span>
+                      <span className="text-[10px] text-white/40 w-16 text-right tabular-nums">{count} youth</span>
+                    </div>
+                  );
+                })}
+              </div>
+              <p className="text-[10px] text-white/30 mt-3 text-right">
+                {mtdRaceBreakdown.total} distinct youth served {isCurrentMonth ? "this month" : `in ${viewedMonthShort}`}
+              </p>
+            </CardContent>
+          </Card>
+        )}
 
         {/* ═══════════ TREND CHARTS ═══════════ */}
 
