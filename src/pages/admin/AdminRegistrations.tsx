@@ -68,6 +68,8 @@ const getFunctionErrorMessage = (error: unknown) => {
   return "Failed to update approval status";
 };
 
+const APPROVAL_TIMEOUT_MS = 10_000;
+
 const updateRegistrationApproval = async ({
   registrationId,
   approved,
@@ -75,18 +77,22 @@ const updateRegistrationApproval = async ({
   registrationId: string;
   approved: boolean;
 }) => {
-  const { data, error } = await supabase.functions.invoke("set-registration-approval", {
-    body: {
-      registrationId,
-      approved,
-    },
+  const rpcCall = supabase.rpc("admin_set_registration_approval", {
+    _registration_id: registrationId,
+    _approved: approved,
   });
+
+  const timeoutPromise = new Promise<never>((_, reject) => {
+    setTimeout(() => reject(new Error("Network is too slow. Please try again.")), APPROVAL_TIMEOUT_MS);
+  });
+
+  const { data, error } = await Promise.race([rpcCall, timeoutPromise]);
 
   if (error) {
     throw new Error(getFunctionErrorMessage(error));
   }
 
-  return data?.registration;
+  return data;
 };
 
 const AdminRegistrations = () => {
