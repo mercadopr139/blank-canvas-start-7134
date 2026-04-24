@@ -3,7 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { ArrowLeft, Users, Calendar, School, Utensils } from "lucide-react";
+import { ArrowLeft, Users, Calendar, School, Utensils, TrendingDown, Home, Heart, DollarSign } from "lucide-react";
 import { differenceInYears, parseISO, subDays, isAfter } from "date-fns";
 import {
   ChartContainer,
@@ -20,6 +20,31 @@ const COLORS = [
   "#d4d4d4",
   "#8a8a8a",
 ];
+
+// 2025 HHS Federal Poverty Guidelines (valid through early 2026)
+const FPL_2025 = [15650, 21150, 26650, 32150, 37650, 43150, 48650, 54150];
+const getFPLForHouseholdSize = (size: number): number => {
+  if (size <= 0) return FPL_2025[0];
+  if (size <= 8) return FPL_2025[size - 1];
+  return FPL_2025[7] + (size - 8) * 5500;
+};
+
+// Upper bound of each household_income enum value — used to check if a household
+// is confidently below FPL (conservative approach for defensible donor reporting).
+const INCOME_UPPER_BOUND: Record<string, number> = {
+  "Under $25,000": 24999,
+  "Less than $25,000": 24999,
+  "Less than $35,000": 34999,
+  "Less than $45,000": 44999,
+  "$25,000 - $49,999": 49999,
+  "Less than $65,000": 64999,
+  "Less than $80,000": 79999,
+  "$50,000 - $74,999": 74999,
+  "$75,000 - $99,999": 99999,
+  "$100,000 - $149,999": 149999,
+  "$150,000 or more": Infinity,
+  "Greater than $80,001": Infinity,
+};
 
 const AdminRegistrationAnalytics = () => {
   const navigate = useNavigate();
@@ -89,6 +114,96 @@ const AdminRegistrationAnalytics = () => {
   const lunchTotal = Object.values(lunchCounts || {}).reduce((s, v) => s + v, 0);
   const lunchData = Object.entries(lunchCounts || {}).map(([name, value]) => ({ name, value }));
 
+  /* ───── RACE / ETHNICITY ───── */
+  const raceCounts = registrations?.reduce((acc, r) => {
+    const race = r.child_race_ethnicity;
+    if (race) acc[race] = (acc[race] || 0) + 1;
+    return acc;
+  }, {} as Record<string, number>) || {};
+  const raceTotal = Object.values(raceCounts).reduce((s, n) => s + n, 0);
+  const raceSorted = Object.entries(raceCounts).sort((a, b) => b[1] - a[1]);
+  const whiteCount = raceCounts["White"] || 0;
+  const minorityCount = raceTotal - whiteCount;
+  const minorityPct = raceTotal > 0 ? Math.round((minorityCount / raceTotal) * 100) : 0;
+
+  /* ───── BELOW FEDERAL POVERTY LINE ───── */
+  // A household counts as "below FPL" when the upper bound of its reported
+  // income range is at or below the FPL for its household size.
+  let belowFPL = 0;
+  let fplEligible = 0;
+  registrations?.forEach((r) => {
+    if (!r.household_income_range) return;
+    fplEligible++;
+    const upper = INCOME_UPPER_BOUND[r.household_income_range];
+    if (upper === undefined || upper === Infinity) return;
+    const householdSize = (r.adults_in_household || 0) + (r.siblings_in_household || 0) + 1;
+    if (upper <= getFPLForHouseholdSize(householdSize)) belowFPL++;
+  });
+  const belowFPLPct = fplEligible > 0 ? Math.round((belowFPL / fplEligible) * 100) : 0;
+
+  /* ───── GENDER ───── */
+  const sexCounts = registrations?.reduce((acc, r) => {
+    const s = r.child_sex;
+    if (s) acc[s] = (acc[s] || 0) + 1;
+    return acc;
+  }, {} as Record<string, number>) || {};
+  const sexTotal = (sexCounts["Male"] || 0) + (sexCounts["Female"] || 0);
+
+  /* ───── HOUSEHOLD INCOME BREAKDOWN ───── */
+  const incomeCounts = registrations?.reduce((acc, r) => {
+    const inc = r.household_income_range;
+    if (inc) acc[inc] = (acc[inc] || 0) + 1;
+    return acc;
+  }, {} as Record<string, number>) || {};
+  // Normalize duplicate "Under / Less than" brackets into a single set of ordered buckets
+  const incomeOrder = [
+    "Under $25,000",
+    "$25,000 - $49,999",
+    "$50,000 - $74,999",
+    "$75,000 - $99,999",
+    "$100,000 - $149,999",
+    "$150,000 or more",
+  ];
+  const mergedIncome: Record<string, number> = {};
+  incomeOrder.forEach((k) => { mergedIncome[k] = 0; });
+  Object.entries(incomeCounts).forEach(([k, v]) => {
+    if (mergedIncome[k] !== undefined) { mergedIncome[k] += v; return; }
+    // Map legacy "Less than" values into the merged buckets
+    if (k === "Less than $25,000") mergedIncome["Under $25,000"] += v;
+    else if (k === "Less than $35,000" || k === "Less than $45,000" || k === "$25,000 - $49,999") mergedIncome["$25,000 - $49,999"] += v;
+    else if (k === "Less than $65,000") mergedIncome["$50,000 - $74,999"] += v;
+    else if (k === "Less than $80,000") mergedIncome["$75,000 - $99,999"] += v;
+    else if (k === "Greater than $80,001") mergedIncome["$100,000 - $149,999"] += v;
+  });
+  const incomeData = incomeOrder
+    .map((name) => ({ name, count: mergedIncome[name] }))
+    .filter((d) => d.count > 0);
+  const incomeTotal = incomeData.reduce((s, d) => s + d.count, 0);
+
+  /* ───── FAMILY STRUCTURE ───── */
+  let singleParent = 0;
+  let twoParent = 0;
+  let siblingSum = 0;
+  let siblingCount = 0;
+  registrations?.forEach((r) => {
+    const adults = r.adults_in_household;
+    if (adults === 1) singleParent++;
+    else if (adults >= 2) twoParent++;
+    if (typeof r.siblings_in_household === "number") {
+      siblingSum += r.siblings_in_household;
+      siblingCount++;
+    }
+  });
+  const familyTotal = singleParent + twoParent;
+  const singleParentPct = familyTotal > 0 ? Math.round((singleParent / familyTotal) * 100) : 0;
+  const avgSiblings = siblingCount > 0 ? (siblingSum / siblingCount) : 0;
+
+  /* ───── TOP DISTRICT (for headline row) ───── */
+  const topDistrict = districtData[0];
+  const topDistrictPct = registrations && registrations.length > 0 && topDistrict
+    ? Math.round((topDistrict.count / registrations.length) * 100)
+    : 0;
+
   const chartConfig = {
     count: { label: "Count", color: "#bf0f3e" },
     value: { label: "Count", color: "#bf0f3e" },
@@ -133,6 +248,111 @@ const AdminRegistrationAnalytics = () => {
                 icon={<Calendar className="w-5 h-5" />}
               />
             </div>
+
+            {/* ═══════════ WHO WE SERVE (donor headline row) ═══════════ */}
+            <div>
+              <h3 className="text-sm font-semibold text-white/80 mb-3 tracking-wide uppercase">Who We Serve</h3>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <Card className="bg-white/5 border-white/10">
+                  <CardContent className="pt-4">
+                    <p className="text-[10px] uppercase tracking-wider text-white/40 mb-2">Distinct Youth</p>
+                    <p className="text-3xl font-bold text-white">{registrations?.length || 0}</p>
+                    <p className="text-xs text-white/40 mt-0.5">total registered</p>
+                  </CardContent>
+                </Card>
+
+                <Card className="bg-white/5 border-white/10">
+                  <CardContent className="pt-4">
+                    <p className="text-[10px] uppercase tracking-wider text-white/40 mb-2">Minority Youth</p>
+                    <p className="text-3xl font-bold text-[#bf0f3e]">{minorityPct}%</p>
+                    <p className="text-xs text-white/40 mt-0.5">{minorityCount} of {raceTotal} youth</p>
+                  </CardContent>
+                </Card>
+
+                <Card className="bg-white/5 border-white/10">
+                  <CardContent className="pt-4">
+                    <p className="text-[10px] uppercase tracking-wider text-white/40 mb-2 flex items-center gap-1">
+                      <TrendingDown className="w-3 h-3" /> Below Federal Poverty Line
+                    </p>
+                    <p className="text-3xl font-bold text-amber-400">{belowFPLPct}%</p>
+                    <p className="text-xs text-white/40 mt-0.5">{belowFPL} of {fplEligible} households</p>
+                  </CardContent>
+                </Card>
+
+                <Card className="bg-white/5 border-white/10">
+                  <CardContent className="pt-4">
+                    <p className="text-[10px] uppercase tracking-wider text-white/40 mb-2 flex items-center gap-1">
+                      <School className="w-3 h-3" /> Top District
+                    </p>
+                    {topDistrict ? (
+                      <>
+                        <p className="text-lg font-bold text-white truncate">{topDistrict.name}</p>
+                        <p className="text-xs text-white/40 mt-0.5">{topDistrictPct}% · {topDistrict.count} youth</p>
+                      </>
+                    ) : (
+                      <p className="text-white/30">—</p>
+                    )}
+                  </CardContent>
+                </Card>
+              </div>
+            </div>
+
+            {/* Race / Ethnicity + Minority summary */}
+            {raceTotal > 0 && (
+              <div className="flex flex-col lg:flex-row gap-4">
+                <Card className="bg-white/5 border-white/10 flex-1 max-w-2xl">
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-base text-white flex items-center gap-2">
+                      <Users className="w-4 h-4 text-[#bf0f3e]" /> Race / Ethnicity
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-2">
+                      {raceSorted.map(([race, count]) => {
+                        const pctVal = Math.round((count / raceTotal) * 100);
+                        return (
+                          <div key={race} className="flex items-center gap-3">
+                            <span className="text-xs text-white/70 w-52 flex-shrink-0 truncate" title={race}>{race}</span>
+                            <div className="flex-1 h-2 bg-white/5 rounded-full overflow-hidden min-w-0">
+                              <div className="h-full bg-[#bf0f3e] rounded-full" style={{ width: `${pctVal}%` }} />
+                            </div>
+                            <span className="text-xs font-semibold text-white w-10 text-right tabular-nums">{pctVal}%</span>
+                            <span className="text-[10px] text-white/40 w-14 text-right tabular-nums">{count} youth</span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                    <p className="text-[10px] text-white/30 mt-3 text-right">{raceTotal} total youth</p>
+                  </CardContent>
+                </Card>
+
+                <Card className="bg-white/5 border-white/10 w-full lg:w-64">
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-base text-white">Minority</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="flex items-center gap-3">
+                      <div className="text-center flex-1">
+                        <p className="text-3xl font-bold text-[#bf0f3e]">{minorityPct}%</p>
+                        <p className="text-[10px] text-white/60 mt-0.5">Minority</p>
+                        <p className="text-[10px] text-white/30">{minorityCount} youth</p>
+                      </div>
+                      <div className="w-px h-12 bg-white/10" />
+                      <div className="text-center flex-1">
+                        <p className="text-3xl font-bold text-white/70">{raceTotal > 0 ? Math.round((whiteCount / raceTotal) * 100) : 0}%</p>
+                        <p className="text-[10px] text-white/60 mt-0.5">White</p>
+                        <p className="text-[10px] text-white/30">{whiteCount} youth</p>
+                      </div>
+                    </div>
+                    <div className="border-t border-white/10 mt-3 pt-1.5 text-center">
+                      <p className="text-[10px] text-white/40">
+                        <span className="font-semibold text-white/70">{raceTotal}</span> total youth
+                      </p>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+            )}
 
             {/* Charts Row 1 */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -197,8 +417,34 @@ const AdminRegistrationAnalytics = () => {
               </CardContent>
             </Card>
 
-            {/* Lunch chart */}
+            {/* Household Income + Free/Reduced Lunch */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <Card className="bg-white/5 border-white/10">
+                <CardHeader>
+                  <CardTitle className="text-base flex items-center gap-2 text-white">
+                    <DollarSign className="w-4 h-4 text-[#bf0f3e]" /> Household Income
+                    <span className="text-xs text-white/40 font-normal ml-2">({incomeTotal} reported)</span>
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-2">
+                    {incomeData.map((d) => {
+                      const pctVal = incomeTotal > 0 ? Math.round((d.count / incomeTotal) * 100) : 0;
+                      return (
+                        <div key={d.name} className="flex items-center gap-3">
+                          <span className="text-xs text-white/70 w-40 flex-shrink-0 truncate">{d.name}</span>
+                          <div className="flex-1 h-2 bg-white/5 rounded-full overflow-hidden min-w-0">
+                            <div className="h-full bg-[#bf0f3e] rounded-full" style={{ width: `${pctVal}%` }} />
+                          </div>
+                          <span className="text-xs font-semibold text-white w-10 text-right tabular-nums">{pctVal}%</span>
+                          <span className="text-[10px] text-white/40 w-14 text-right tabular-nums">{d.count} hh</span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </CardContent>
+              </Card>
+
               <Card className="bg-white/5 border-white/10">
                 <CardHeader>
                   <CardTitle className="text-base flex items-center gap-2 text-white">
@@ -226,6 +472,74 @@ const AdminRegistrationAnalytics = () => {
                       <ChartTooltip content={<ChartTooltipContent />} />
                     </PieChart>
                   </ChartContainer>
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Gender + Family Structure + Avg Siblings */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <Card className="bg-white/5 border-white/10">
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-base text-white">Boy / Girl Ratio</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="flex items-center gap-3">
+                    <div className="text-center flex-1">
+                      <p className="text-3xl font-bold text-blue-400">{sexCounts["Male"] || 0}</p>
+                      <p className="text-[10px] text-white/60 mt-0.5">Boys</p>
+                      <p className="text-[10px] text-white/30">{sexTotal > 0 ? Math.round(((sexCounts["Male"] || 0) / sexTotal) * 100) : 0}%</p>
+                    </div>
+                    <div className="w-px h-12 bg-white/10" />
+                    <div className="text-center flex-1">
+                      <p className="text-3xl font-bold text-pink-400">{sexCounts["Female"] || 0}</p>
+                      <p className="text-[10px] text-white/60 mt-0.5">Girls</p>
+                      <p className="text-[10px] text-white/30">{sexTotal > 0 ? Math.round(((sexCounts["Female"] || 0) / sexTotal) * 100) : 0}%</p>
+                    </div>
+                  </div>
+                  <div className="border-t border-white/10 mt-3 pt-1.5 text-center">
+                    <p className="text-[10px] text-white/40">{sexTotal} total youth</p>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card className="bg-white/5 border-white/10">
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-base flex items-center gap-2 text-white">
+                    <Home className="w-4 h-4 text-[#bf0f3e]" /> Family Structure
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="flex items-center gap-3">
+                    <div className="text-center flex-1">
+                      <p className="text-3xl font-bold text-amber-400">{singleParentPct}%</p>
+                      <p className="text-[10px] text-white/60 mt-0.5">Single-Parent</p>
+                      <p className="text-[10px] text-white/30">{singleParent} households</p>
+                    </div>
+                    <div className="w-px h-12 bg-white/10" />
+                    <div className="text-center flex-1">
+                      <p className="text-3xl font-bold text-white/70">{familyTotal > 0 ? 100 - singleParentPct : 0}%</p>
+                      <p className="text-[10px] text-white/60 mt-0.5">Two+ Adults</p>
+                      <p className="text-[10px] text-white/30">{twoParent} households</p>
+                    </div>
+                  </div>
+                  <div className="border-t border-white/10 mt-3 pt-1.5 text-center">
+                    <p className="text-[10px] text-white/40">{familyTotal} total households</p>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card className="bg-white/5 border-white/10">
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-base flex items-center gap-2 text-white">
+                    <Heart className="w-4 h-4 text-[#bf0f3e]" /> Average Siblings
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-center">
+                    <p className="text-5xl font-bold text-white">{avgSiblings.toFixed(1)}</p>
+                    <p className="text-[11px] text-white/60 mt-2">siblings per household</p>
+                    <p className="text-[10px] text-white/30 mt-0.5">across {siblingCount} households</p>
+                  </div>
                 </CardContent>
               </Card>
             </div>
