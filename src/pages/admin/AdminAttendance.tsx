@@ -468,20 +468,23 @@ const AdminAttendance = () => {
     [prevMonthAttendance, prevPracticeDayMap, isPracticeDay, prevExcursionDayMap]
   );
 
-  /* ───── Quick Toggle: single click cycles Non-Practice → Practice → Excursion → … ───── */
+  /* ───── Quick Toggle: single click cycles Practice → Non-Practice → Excursion → Practice … ───── */
   const cycleDayType = async (dateStr: string) => {
     const isExc = isExcursionDay(dateStr);
     const isPrac = isPracticeDay(dateStr, calPracticeDayMap);
 
     if (isExc) {
-      await setDayType(dateStr, "non-practice");
+      // Purple → Green
+      await setDayType(dateStr, "practice");
       return;
     }
-    if (isPrac) {
+    if (!isPrac) {
+      // Red → open Excursion modal (cancel will revert to Green)
       await setDayType(dateStr, "excursion");
       return;
     }
-    await setDayType(dateStr, "practice");
+    // Green → Red
+    await setDayType(dateStr, "non-practice");
   };
 
   /* ───── Context menu: set day type explicitly ───── */
@@ -555,8 +558,19 @@ const AdminAttendance = () => {
     toast.success("Excursion saved");
   };
 
-  const cancelExcursionModal = () => {
+  const cancelExcursionModal = async () => {
+    const dateStr = excursionDate;
     setExcursionModalOpen(false);
+    if (!dateStr) return;
+    // Revert the day to Practice (green) so cancel always lands on Green,
+    // even if the user reached the modal from a Non-Practice (red) click.
+    const existing = practiceDaysCalMonth.find((p) => p.date === dateStr);
+    if (existing) {
+      await supabase.from("practice_days").update({ is_practice_day: true }).eq("id", existing.id);
+    } else {
+      await supabase.from("practice_days").insert({ date: dateStr, is_practice_day: true });
+    }
+    queryClient.invalidateQueries({ queryKey: ["practice-days-cal"] });
   };
 
   const handleDeleteExcursion = async () => {
@@ -1416,10 +1430,10 @@ const AdminAttendance = () => {
                       }`}
                       title={
                         isExc
-                          ? "Excursion — click to mark Non-Practice"
+                          ? "Excursion — left-click to remove and make practice"
                           : isPrac
-                            ? "Practice — click for Excursion"
-                            : "Non-Practice — click for Practice"
+                            ? "Practice — left-click to make non-practice day"
+                            : "Non-Practice — left-click to mark as excursion"
                       }
                     />
                   </div>
