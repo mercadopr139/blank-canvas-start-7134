@@ -21,30 +21,6 @@ const COLORS = [
   "#8a8a8a",
 ];
 
-// 2025 HHS Federal Poverty Guidelines (valid through early 2026)
-const FPL_2025 = [15650, 21150, 26650, 32150, 37650, 43150, 48650, 54150];
-const getFPLForHouseholdSize = (size: number): number => {
-  if (size <= 0) return FPL_2025[0];
-  if (size <= 8) return FPL_2025[size - 1];
-  return FPL_2025[7] + (size - 8) * 5500;
-};
-
-// Upper bound of each household_income enum value — used to check if a household
-// is confidently below FPL (conservative approach for defensible donor reporting).
-const INCOME_UPPER_BOUND: Record<string, number> = {
-  "Under $25,000": 24999,
-  "Less than $25,000": 24999,
-  "Less than $35,000": 34999,
-  "Less than $45,000": 44999,
-  "$25,000 - $49,999": 49999,
-  "Less than $65,000": 64999,
-  "Less than $80,000": 79999,
-  "$50,000 - $74,999": 74999,
-  "$75,000 - $99,999": 99999,
-  "$100,000 - $149,999": 149999,
-  "$150,000 or more": Infinity,
-  "Greater than $80,001": Infinity,
-};
 
 const AdminRegistrationAnalytics = () => {
   const navigate = useNavigate();
@@ -127,17 +103,16 @@ const AdminRegistrationAnalytics = () => {
   const minorityPct = raceTotal > 0 ? Math.round((minorityCount / raceTotal) * 100) : 0;
 
   /* ───── BELOW FEDERAL POVERTY LINE ───── */
-  // A household counts as "below FPL" when the upper bound of its reported
-  // income range is at or below the FPL for its household size.
+  // Derived from the Free/Reduced Lunch answer, since F/R lunch eligibility is
+  // federally defined around the poverty guidelines and is the metric schools,
+  // CSBG, and most federal youth grants actually use.
   let belowFPL = 0;
   let fplEligible = 0;
   registrations?.forEach((r) => {
-    if (!r.household_income_range) return;
+    const answer = r.free_or_reduced_lunch;
+    if (answer !== "Yes" && answer !== "No") return;
     fplEligible++;
-    const upper = INCOME_UPPER_BOUND[r.household_income_range];
-    if (upper === undefined || upper === Infinity) return;
-    const householdSize = (r.adults_in_household || 0) + (r.siblings_in_household || 0) + 1;
-    if (upper <= getFPLForHouseholdSize(householdSize)) belowFPL++;
+    if (answer === "Yes") belowFPL++;
   });
   const belowFPLPct = fplEligible > 0 ? Math.round((belowFPL / fplEligible) * 100) : 0;
 
@@ -275,7 +250,7 @@ const AdminRegistrationAnalytics = () => {
                       <TrendingDown className="w-3 h-3" /> Below Federal Poverty Line
                     </p>
                     <p className="text-3xl font-bold text-amber-400">{belowFPLPct}%</p>
-                    <p className="text-xs text-white/40 mt-0.5">{belowFPL} of {fplEligible} households</p>
+                    <p className="text-xs text-white/40 mt-0.5">{belowFPL} of {fplEligible} youth</p>
                   </CardContent>
                 </Card>
 
