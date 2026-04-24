@@ -10,7 +10,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import {
   Star, Search, AlertTriangle, Users, Eye, ChevronLeft, ChevronRight, CalendarDays,
-  Clock, TrendingUp, School, Lightbulb, Activity, Trash2, X, Pencil, UserPlus
+  Clock, TrendingUp, TrendingDown, School, Lightbulb, Activity, Trash2, X, Pencil, UserPlus
 } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -961,11 +961,16 @@ const AdminAttendance = () => {
     const dry = withWeather.filter((d) => (d.precip ?? 0) < RAIN_THRESHOLD_IN);
     const avg = (rows: typeof withWeather) =>
       rows.length === 0 ? 0 : Math.round(rows.reduce((s, r) => s + r.count, 0) / rows.length);
+    const rainyAvg = avg(rainy);
+    const dryAvg = avg(dry);
+    const dropPct = dryAvg > 0 ? Math.round(((dryAvg - rainyAvg) / dryAvg) * 100) : 0;
     return {
-      rainyAvg: avg(rainy),
-      dryAvg: avg(dry),
+      rainyAvg,
+      dryAvg,
       rainyDays: rainy.length,
       dryDays: dry.length,
+      dropPct,
+      dropCount: dryAvg - rainyAvg,
     };
   }, [dailyTrend]);
 
@@ -1934,26 +1939,41 @@ const AdminAttendance = () => {
                 </ResponsiveContainer>
               </div>
               {weatherCorrelation && weatherCorrelation.rainyDays > 0 && weatherCorrelation.dryDays > 0 && (
-                <div className="mt-3 grid grid-cols-2 gap-2 text-xs">
-                  <div className="bg-white/5 rounded-md p-2">
-                    <p className="text-white/50">Avg on dry days</p>
-                    <p className="text-white font-semibold text-base">
-                      {weatherCorrelation.dryAvg}
-                      <span className="text-white/40 text-xs font-normal ml-1">
-                        ({weatherCorrelation.dryDays} day{weatherCorrelation.dryDays === 1 ? "" : "s"})
-                      </span>
-                    </p>
+                <>
+                  <div className="mt-3 grid grid-cols-2 gap-2 text-xs">
+                    <div className="bg-white/5 rounded-md p-2">
+                      <p className="text-white/50">Avg on dry days</p>
+                      <p className="text-white font-semibold text-base">
+                        {weatherCorrelation.dryAvg}
+                        <span className="text-white/40 text-xs font-normal ml-1">
+                          ({weatherCorrelation.dryDays} day{weatherCorrelation.dryDays === 1 ? "" : "s"})
+                        </span>
+                      </p>
+                    </div>
+                    <div className="bg-white/5 rounded-md p-2">
+                      <p className="text-white/50">Avg on rainy days</p>
+                      <p className="text-white font-semibold text-base">
+                        {weatherCorrelation.rainyAvg}
+                        <span className="text-white/40 text-xs font-normal ml-1">
+                          ({weatherCorrelation.rainyDays} day{weatherCorrelation.rainyDays === 1 ? "" : "s"})
+                        </span>
+                      </p>
+                    </div>
                   </div>
-                  <div className="bg-white/5 rounded-md p-2">
-                    <p className="text-white/50">Avg on rainy days</p>
-                    <p className="text-white font-semibold text-base">
-                      {weatherCorrelation.rainyAvg}
-                      <span className="text-white/40 text-xs font-normal ml-1">
-                        ({weatherCorrelation.rainyDays} day{weatherCorrelation.rainyDays === 1 ? "" : "s"})
-                      </span>
-                    </p>
-                  </div>
-                </div>
+                  {weatherCorrelation.dropPct > 0 && (
+                    <div className="mt-2 bg-amber-500/10 border border-amber-500/20 rounded-md p-3 flex items-start gap-3">
+                      <TrendingDown className="w-5 h-5 text-amber-400 flex-shrink-0 mt-0.5" />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-amber-300 font-semibold text-sm">
+                          {weatherCorrelation.dropPct}% drop in attendance on rainy days
+                        </p>
+                        <p className="text-white/60 text-xs mt-0.5">
+                          Roughly {weatherCorrelation.dropCount} fewer youth per session when it rains — a funding opportunity for reliable transportation or weather-resistant outreach.
+                        </p>
+                      </div>
+                    </div>
+                  )}
+                </>
               )}
               {!monthWeather && (
                 <p className="mt-2 text-xs text-white/30">Loading weather data…</p>
