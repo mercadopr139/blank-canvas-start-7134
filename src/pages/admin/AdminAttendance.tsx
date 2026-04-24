@@ -245,7 +245,8 @@ const AdminAttendance = () => {
         .from("attendance_records")
         .select("id, registration_id, check_in_date, check_in_at, program_source, is_manual")
         .eq("program_source", "NLA")
-        .gte("check_in_date", YTD_START);
+        .gte("check_in_date", YTD_START)
+        .limit(100000);
       if (error) throw error;
       return data as AttendanceRecord[];
     },
@@ -257,7 +258,8 @@ const AdminAttendance = () => {
       const { data, error } = await supabase
         .from("practice_days")
         .select("id, date, is_practice_day")
-        .gte("date", YTD_START);
+        .gte("date", YTD_START)
+        .limit(10000);
       if (error) throw error;
       return (data || []) as PracticeDay[];
     },
@@ -269,7 +271,8 @@ const AdminAttendance = () => {
       const { data, error } = await supabase
         .from("excursions")
         .select("date")
-        .gte("date", YTD_START);
+        .gte("date", YTD_START)
+        .limit(10000);
       if (error) throw error;
       return data || [];
     },
