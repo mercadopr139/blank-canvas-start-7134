@@ -1345,12 +1345,12 @@ const AdminAttendance = () => {
           </Card>
           <Card className="bg-white/5 border-white/10 text-white">
             <CardContent className="pt-4 pb-3 text-center">
-              <p className="text-[10px] uppercase tracking-wider text-white/40">Avg Arrival (Year)</p>
+              <p className="text-[10px] uppercase tracking-wider text-white/40">Avg Arrival (Month)</p>
               <p className="text-2xl font-bold mt-1 flex items-center justify-center gap-1">
                 <Clock className="w-4 h-4 text-white/40" />
-                {avgArrivalYear || "—"}
+                {avgArrivalMonth || "—"}
               </p>
-              <p className="text-[10px] text-white/30">per practice day since 3/9</p>
+              <p className="text-[10px] text-white/30">per practice day in {viewedMonthShort}</p>
             </CardContent>
           </Card>
           <Card className="bg-white/5 border-white/10 text-white">
@@ -1362,19 +1362,19 @@ const AdminAttendance = () => {
           </Card>
           <Card className="bg-white/5 border-white/10 text-white">
             <CardContent className="pt-4 pb-3 text-center">
-              <p className="text-[10px] uppercase tracking-wider text-white/40">Year Avg</p>
-              <p className="text-3xl font-bold mt-1">{yearAvg}</p>
+              <p className="text-[10px] uppercase tracking-wider text-white/40">Avg Arrival (Year)</p>
+              <p className="text-2xl font-bold mt-1 flex items-center justify-center gap-1">
+                <Clock className="w-4 h-4 text-white/40" />
+                {avgArrivalYear || "—"}
+              </p>
               <p className="text-[10px] text-white/30">per practice day since 3/9</p>
             </CardContent>
           </Card>
           <Card className="bg-white/5 border-white/10 text-white">
             <CardContent className="pt-4 pb-3 text-center">
-              <p className="text-[10px] uppercase tracking-wider text-white/40">Avg Arrival Time</p>
-              <p className="text-2xl font-bold mt-1 flex items-center justify-center gap-1">
-                <Clock className="w-4 h-4 text-white/40" />
-                {avgArrivalMonth || "—"}
-              </p>
-              <p className="text-[10px] text-white/30">per practice day in {viewedMonthShort}</p>
+              <p className="text-[10px] uppercase tracking-wider text-white/40">Year Avg</p>
+              <p className="text-3xl font-bold mt-1">{yearAvg}</p>
+              <p className="text-[10px] text-white/30">per practice day since 3/9</p>
             </CardContent>
           </Card>
         </div>
