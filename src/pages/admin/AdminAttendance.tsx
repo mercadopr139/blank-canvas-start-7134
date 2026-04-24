@@ -235,6 +235,46 @@ const AdminAttendance = () => {
     },
   });
 
+  // YTD attendance since the new check-in system launched (March 9, 2026)
+  const YTD_START = "2026-03-09";
+
+  const { data: ytdAttendance = [] } = useQuery({
+    queryKey: ["attendance-records-ytd", YTD_START],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("attendance_records")
+        .select("id, registration_id, check_in_date, check_in_at, program_source, is_manual")
+        .eq("program_source", "NLA")
+        .gte("check_in_date", YTD_START);
+      if (error) throw error;
+      return data as AttendanceRecord[];
+    },
+  });
+
+  const { data: ytdPracticeDays = [] } = useQuery({
+    queryKey: ["practice-days-ytd", YTD_START],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("practice_days")
+        .select("id, date, is_practice_day")
+        .gte("date", YTD_START);
+      if (error) throw error;
+      return (data || []) as PracticeDay[];
+    },
+  });
+
+  const { data: ytdExcursions = [] } = useQuery({
+    queryKey: ["excursions-ytd", YTD_START],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("excursions")
+        .select("date")
+        .gte("date", YTD_START);
+      if (error) throw error;
+      return data || [];
+    },
+  });
+
   // Previous month attendance (for comparison insights)
   const { data: prevMonthAttendance = [] } = useQuery({
     queryKey: ["attendance-records-prev", prevOfViewedStart],
@@ -701,11 +741,56 @@ const AdminAttendance = () => {
     };
   }, [practiceAttendance]);
 
-  /* ───── STAT BOX 2: Week Avg → avg per practice day this month ───── */
+  /* ───── STAT BOX: Month Avg → avg per practice day in the viewed month ───── */
   const mtdAvg = useMemo(() => {
     const days = new Set(practiceAttendance.map((a) => a.check_in_date));
     return days.size > 0 ? Math.round(practiceAttendance.length / days.size) : 0;
   }, [practiceAttendance]);
+
+  /* ───── YTD practice attendance (green-only, excl. excursions), since 2026-03-09 ───── */
+  const ytdPracticeDayMap = useMemo(() => {
+    const m: Record<string, boolean> = {};
+    ytdPracticeDays.forEach((p) => { m[p.date] = p.is_practice_day; });
+    return m;
+  }, [ytdPracticeDays]);
+
+  const ytdExcursionSet = useMemo(() => {
+    const s = new Set<string>();
+    ytdExcursions.forEach((e: { date: string }) => { s.add(e.date); });
+    return s;
+  }, [ytdExcursions]);
+
+  const ytdPracticeAttendance = useMemo(
+    () => ytdAttendance.filter((a) =>
+      isPracticeDay(a.check_in_date, ytdPracticeDayMap) && !ytdExcursionSet.has(a.check_in_date)
+    ),
+    [ytdAttendance, ytdPracticeDayMap, ytdExcursionSet, isPracticeDay]
+  );
+
+  /* ───── STAT BOX: Week Avg → avg per Mon-Fri green-practice day THIS week ───── */
+  const weekAvg = useMemo(() => {
+    const today = new Date();
+    const dow = today.getDay(); // 0=Sun ... 6=Sat
+    const daysFromMonday = dow === 0 ? 6 : dow - 1;
+    const monday = new Date(today);
+    monday.setDate(today.getDate() - daysFromMonday);
+    monday.setHours(0, 0, 0, 0);
+    const friday = new Date(monday);
+    friday.setDate(monday.getDate() + 4);
+    const mondayStr = format(monday, "yyyy-MM-dd");
+    const fridayStr = format(friday, "yyyy-MM-dd");
+    const weekRecords = ytdPracticeAttendance.filter((a) =>
+      a.check_in_date >= mondayStr && a.check_in_date <= fridayStr
+    );
+    const days = new Set(weekRecords.map((a) => a.check_in_date));
+    return days.size > 0 ? Math.round(weekRecords.length / days.size) : 0;
+  }, [ytdPracticeAttendance]);
+
+  /* ───── STAT BOX: Year Avg → avg per green-practice day since 2026-03-09 ───── */
+  const yearAvg = useMemo(() => {
+    const days = new Set(ytdPracticeAttendance.map((a) => a.check_in_date));
+    return days.size > 0 ? Math.round(ytdPracticeAttendance.length / days.size) : 0;
+  }, [ytdPracticeAttendance]);
 
   /* ───── PROGRAM SPLIT (viewed month) ───── */
   const programSplitToday = useMemo(() => {
@@ -1232,7 +1317,7 @@ const AdminAttendance = () => {
         </div>
 
         {/* Key Insight Cards */}
-        <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 mb-6">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 mb-6">
           <Card className="bg-white/5 border-white/10 text-white">
             <CardContent className="pt-4 pb-3 text-center">
               <p className="text-[10px] uppercase tracking-wider text-green-400/70">Attendance High</p>
@@ -1249,9 +1334,9 @@ const AdminAttendance = () => {
           </Card>
           <Card className="bg-white/5 border-white/10 text-white">
             <CardContent className="pt-4 pb-3 text-center">
-              <p className="text-[10px] uppercase tracking-wider text-white/40">Daily Avg</p>
-              <p className="text-3xl font-bold mt-1">{mtdAvg}</p>
-              <p className="text-[10px] text-white/30">per practice day</p>
+              <p className="text-[10px] uppercase tracking-wider text-white/40">Week Avg</p>
+              <p className="text-3xl font-bold mt-1">{weekAvg}</p>
+              <p className="text-[10px] text-white/30">per Mon–Fri practice day this week</p>
             </CardContent>
           </Card>
           <Card className="bg-white/5 border-white/10 text-white">
@@ -1259,6 +1344,13 @@ const AdminAttendance = () => {
               <p className="text-[10px] uppercase tracking-wider text-white/40">Month Avg</p>
               <p className="text-3xl font-bold mt-1">{mtdAvg}</p>
               <p className="text-[10px] text-white/30">per practice day in {viewedMonthShort}</p>
+            </CardContent>
+          </Card>
+          <Card className="bg-white/5 border-white/10 text-white">
+            <CardContent className="pt-4 pb-3 text-center">
+              <p className="text-[10px] uppercase tracking-wider text-white/40">Year Avg</p>
+              <p className="text-3xl font-bold mt-1">{yearAvg}</p>
+              <p className="text-[10px] text-white/30">per practice day since 3/9</p>
             </CardContent>
           </Card>
           <Card className="bg-white/5 border-white/10 text-white">
