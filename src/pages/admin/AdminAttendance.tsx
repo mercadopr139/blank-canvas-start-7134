@@ -895,9 +895,9 @@ const AdminAttendance = () => {
 
   const mtdLabel = isCurrentMonth ? `Month-to-Date — ${viewedMonthShort}` : viewedMonthShort;
 
-  /* ───── AVG ARRIVAL TIME ───── */
-  const avgArrivalToday = useMemo(() => {
-    const records = isCurrentMonth ? effectiveRecords : practiceAttendance;
+  /* ───── AVG ARRIVAL TIME for the viewed month's practice days ───── */
+  const avgArrivalMonth = useMemo(() => {
+    const records = practiceAttendance;
     if (records.length === 0) return null;
     const totalMs = records.reduce((sum, a) => {
       const d = new Date(a.check_in_at);
@@ -909,7 +909,7 @@ const AdminAttendance = () => {
     const ampm = h >= 12 ? "PM" : "AM";
     const h12 = h > 12 ? h - 12 : h === 0 ? 12 : h;
     return `${h12}:${m.toString().padStart(2, "0")} ${ampm}`;
-  }, [isCurrentMonth, todayRecords, practiceAttendance]);
+  }, [practiceAttendance]);
 
   /* ───── DAILY ATTENDANCE TREND (viewed month, practice days only) ───── */
   const dailyTrend = useMemo(() => {
@@ -1039,8 +1039,8 @@ const AdminAttendance = () => {
       insights.push(`Most youth attending today are from ${topDistrictToday[0]}.`);
     }
 
-    if (isCurrentMonth && avgArrivalToday) {
-      insights.push(`Average arrival time today is ${avgArrivalToday}.`);
+    if (avgArrivalMonth) {
+      insights.push(`Average arrival time in ${viewedMonthShort} is ${avgArrivalMonth}.`);
     }
 
     const prevDays = new Set(prevPracticeAttendance.map((a) => a.check_in_date));
@@ -1112,7 +1112,7 @@ const AdminAttendance = () => {
     }
 
     return insights;
-  }, [weeklyAvgData, practiceAttendance, regMap, topDistrictToday, totalPresentToday, avgArrivalToday, prevPracticeAttendance, mtdAvg, isCurrentMonth, viewedMonthShort, calendarMonth, weatherMap, excursionsCalMonth]);
+  }, [weeklyAvgData, practiceAttendance, regMap, topDistrictToday, totalPresentToday, avgArrivalMonth, prevPracticeAttendance, mtdAvg, isCurrentMonth, viewedMonthShort, calendarMonth, weatherMap, excursionsCalMonth]);
 
   /* ───── BALD EAGLES ───── */
   const baldEagles = registrations.filter((r) => r.is_bald_eagle);
@@ -1372,8 +1372,9 @@ const AdminAttendance = () => {
               <p className="text-[10px] uppercase tracking-wider text-white/40">Avg Arrival Time</p>
               <p className="text-2xl font-bold mt-1 flex items-center justify-center gap-1">
                 <Clock className="w-4 h-4 text-white/40" />
-                {avgArrivalToday || "—"}
+                {avgArrivalMonth || "—"}
               </p>
+              <p className="text-[10px] text-white/30">per practice day in {viewedMonthShort}</p>
             </CardContent>
           </Card>
         </div>
