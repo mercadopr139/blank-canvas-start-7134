@@ -125,7 +125,7 @@ const Register = () => {
   const uploadHeadshot = async (file: File): Promise<string> => {
     const fileName = `headshot_${Date.now()}_${Math.random().toString(36).substring(7)}.${file.name.split('.').pop()}`;
     const { data, error } = await supabase.storage
-      .from("registration-signatures")
+      .from("youth-photos")
       .upload(fileName, file, { contentType: file.type });
     if (error) throw error;
     return data.path;
