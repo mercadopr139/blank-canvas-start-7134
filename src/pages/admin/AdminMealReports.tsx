@@ -4,13 +4,16 @@ import { format, subDays, startOfWeek, startOfMonth } from "date-fns";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { CalendarIcon, Download, Loader2, UtensilsCrossed, TrendingUp, AlertTriangle, ChevronDown, ChevronRight, Sparkles, Trash2, FileText, Pencil } from "lucide-react";
+import { CalendarIcon, Download, Loader2, UtensilsCrossed, TrendingUp, AlertTriangle, ChevronDown, ChevronRight, Sparkles, Trash2, FileText, Pencil, X, Plus } from "lucide-react";
 
 import { downloadMealReportPdf } from "@/lib/generateMealReportPdf";
 import { cn } from "@/lib/utils";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { toast } from "sonner";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 
 interface ReportRow {
   event_id: string;
@@ -57,6 +60,14 @@ const AdminMealReports = () => {
   const [deleting, setDeleting] = useState(false);
   const [editingMealId, setEditingMealId] = useState<string | null>(null);
   const [editingMealValue, setEditingMealValue] = useState("");
+  const [editTarget, setEditTarget] = useState<ReportRow | null>(null);
+  const [editDate, setEditDate] = useState<Date | null>(null);
+  const [editDonor, setEditDonor] = useState("");
+  const [editNotes, setEditNotes] = useState("");
+  const [editItems, setEditItems] = useState<{ id: string; food_name: string; sort_order: number; _originalName?: string; _new?: boolean; _deleted?: boolean }[]>([]);
+  const [newItemName, setNewItemName] = useState("");
+  const [loadingEdit, setLoadingEdit] = useState(false);
+  const [savingEdit, setSavingEdit] = useState(false);
 
   useEffect(() => {
     loadSummary();
@@ -257,6 +268,116 @@ const AdminMealReports = () => {
     setEditingMealId(null);
   };
 
+  const openEditDialog = async (row: ReportRow) => {
+    setEditTarget(row);
+    setEditDate(new Date(row.event_date + "T12:00:00"));
+    setEditDonor(row.donor_name || "");
+    setEditNotes(row.notes || "");
+    setEditItems([]);
+    setNewItemName("");
+    setLoadingEdit(true);
+    const { data } = await supabase
+      .from("meal_items")
+      .select("id, food_name, sort_order")
+      .eq("meal_event_id", row.event_id)
+      .order("sort_order");
+    setEditItems((data || []).map((i) => ({ id: i.id, food_name: i.food_name, sort_order: i.sort_order, _originalName: i.food_name })));
+    setLoadingEdit(false);
+  };
+
+  const renameEditItem = (id: string, food_name: string) => {
+    setEditItems((prev) => prev.map((i) => (i.id === id ? { ...i, food_name } : i)));
+  };
+
+  const removeEditItem = (id: string) => {
+    setEditItems((prev) =>
+      prev
+        .map((i) => (i.id === id ? { ...i, _deleted: true } : i))
+        .filter((i) => !(i._deleted && i._new))
+    );
+  };
+
+  const addEditItem = () => {
+    const name = newItemName.trim();
+    if (!name) return;
+    const existing = editItems.filter((i) => !i._deleted);
+    setEditItems((prev) => [
+      ...prev,
+      { id: `new-${Date.now()}-${Math.random()}`, food_name: name, sort_order: existing.length, _new: true },
+    ]);
+    setNewItemName("");
+  };
+
+  const saveEditDialog = async () => {
+    if (!editTarget || !editDate) return;
+    setSavingEdit(true);
+
+    const newDateStr = format(editDate, "yyyy-MM-dd");
+    const { error: evErr } = await supabase
+      .from("meal_events")
+      .update({
+        event_date: newDateStr,
+        donor_name: editDonor.trim() || null,
+        notes: editNotes.trim() || null,
+      })
+      .eq("id", editTarget.event_id);
+    if (evErr) {
+      toast.error(evErr.message.includes("duplicate") ? "Another meal event already exists on that date" : "Failed to update meal event");
+      setSavingEdit(false);
+      return;
+    }
+
+    const toDelete = editItems.filter((i) => i._deleted && !i._new).map((i) => i.id);
+    if (toDelete.length > 0) {
+      await supabase.from("meal_items").delete().in("id", toDelete);
+    }
+
+    const kept = editItems.filter((i) => !i._deleted);
+    const toInsert = kept.filter((i) => i._new);
+    if (toInsert.length > 0) {
+      await supabase.from("meal_items").insert(
+        toInsert.map((i) => ({
+          meal_event_id: editTarget.event_id,
+          food_name: i.food_name,
+          sort_order: kept.findIndex((x) => x.id === i.id),
+        }))
+      );
+    }
+
+    let anyRenamed = false;
+    for (const item of kept.filter((i) => !i._new)) {
+      const newOrder = kept.findIndex((x) => x.id === item.id);
+      const renamed = item._originalName !== undefined && item._originalName !== item.food_name;
+      if (renamed) anyRenamed = true;
+      await supabase
+        .from("meal_items")
+        .update({
+          food_name: item.food_name,
+          sort_order: newOrder,
+          ...(renamed
+            ? { calories: null, protein_g: null, carbs_g: null, fat_g: null, fiber_g: null, sugar_g: null, sodium_mg: null }
+            : {}),
+        })
+        .eq("id", item.id);
+    }
+
+    const needsEstimate = anyRenamed || toInsert.length > 0;
+
+    toast.success("Meal event updated");
+    setEditTarget(null);
+    setSavingEdit(false);
+    if (expandedRow === editTarget.event_id) setExpandedRow(null);
+    await runReport();
+    loadSummary();
+
+    if (needsEstimate) {
+      supabase.functions
+        .invoke("estimate-meal-nutrition", { body: { event_ids: [editTarget.event_id] } })
+        .then(() => { runReport(); loadSummary(); })
+        .catch((err) => console.error("Re-estimation failed:", err));
+    }
+  };
+
   const exportCSV = () => {
     const headers = "Date,Donor,Meals Served,Total Calories,Total Protein (g),Total Carbs (g),Total Fat (g),Items\n";
     const rows = reportData.map((r) =>
@@ -388,13 +509,22 @@ const AdminMealReports = () => {
                     <TableCell className="text-right text-blue-400" onClick={() => toggleExpand(row.event_id)}>{Math.round(row.total_protein)}g</TableCell>
                     <TableCell className="text-right text-green-400" onClick={() => toggleExpand(row.event_id)}>{Math.round(row.total_carbs)}g</TableCell>
                     <TableCell className="text-right">
-                      <button
-                        onClick={(e) => { e.stopPropagation(); setDeleteTarget(row); }}
-                        className="p-1.5 rounded-md text-zinc-600 hover:text-red-400 hover:bg-zinc-800 transition"
-                        title="Delete meal event"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
+                      <div className="flex items-center justify-end gap-1">
+                        <button
+                          onClick={(e) => { e.stopPropagation(); openEditDialog(row); }}
+                          className="p-1.5 rounded-md text-zinc-600 hover:text-blue-400 hover:bg-zinc-800 transition"
+                          title="Edit meal event"
+                        >
+                          <Pencil className="w-4 h-4" />
+                        </button>
+                        <button
+                          onClick={(e) => { e.stopPropagation(); setDeleteTarget(row); }}
+                          className="p-1.5 rounded-md text-zinc-600 hover:text-red-400 hover:bg-zinc-800 transition"
+                          title="Delete meal event"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
                     </TableCell>
                   </TableRow>
                   {expandedRow === row.event_id && (
@@ -495,6 +625,102 @@ const AdminMealReports = () => {
           </div>
         </div>
       )}
+
+      {/* Edit meal event dialog */}
+      <Dialog open={!!editTarget} onOpenChange={(open) => { if (!open) setEditTarget(null); }}>
+        <DialogContent className="bg-zinc-900 border-zinc-700 text-white max-w-lg max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Edit Meal Event</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <label className="text-zinc-400 text-xs uppercase tracking-wide">Date</label>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" className="w-full mt-1 justify-start text-left font-normal border-zinc-700 bg-zinc-950 text-white">
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {editDate ? format(editDate, "PPP") : "Pick a date"}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar mode="single" selected={editDate ?? undefined} onSelect={(d) => d && setEditDate(d)} initialFocus className="p-3 pointer-events-auto" />
+                </PopoverContent>
+              </Popover>
+            </div>
+
+            <div>
+              <label className="text-zinc-400 text-xs uppercase tracking-wide">Donor / Volunteer</label>
+              <Input
+                value={editDonor}
+                onChange={(e) => setEditDonor(e.target.value)}
+                placeholder="Donor name (optional)"
+                className="mt-1 bg-zinc-950 border-zinc-700 text-white"
+              />
+            </div>
+
+            <div>
+              <label className="text-zinc-400 text-xs uppercase tracking-wide">Notes</label>
+              <Textarea
+                value={editNotes}
+                onChange={(e) => setEditNotes(e.target.value)}
+                placeholder="Notes (optional)"
+                rows={2}
+                className="mt-1 bg-zinc-950 border-zinc-700 text-white"
+              />
+            </div>
+
+            <div>
+              <label className="text-zinc-400 text-xs uppercase tracking-wide">Food Items</label>
+              {loadingEdit ? (
+                <div className="flex justify-center py-4"><Loader2 className="w-4 h-4 animate-spin text-zinc-500" /></div>
+              ) : (
+                <div className="mt-1 space-y-2">
+                  {editItems.filter((i) => !i._deleted).map((item) => (
+                    <div key={item.id} className="flex items-center gap-2">
+                      <Input
+                        value={item.food_name}
+                        onChange={(e) => renameEditItem(item.id, e.target.value)}
+                        className="bg-zinc-950 border-zinc-700 text-white flex-1"
+                      />
+                      <button
+                        onClick={() => removeEditItem(item.id)}
+                        className="text-zinc-500 hover:text-red-400 p-1.5"
+                        title="Remove item"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    </div>
+                  ))}
+                  {editItems.filter((i) => !i._deleted).length === 0 && (
+                    <p className="text-zinc-500 text-sm">No food items.</p>
+                  )}
+                  <div className="flex gap-2 pt-1">
+                    <Input
+                      value={newItemName}
+                      onChange={(e) => setNewItemName(e.target.value)}
+                      onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addEditItem(); } }}
+                      placeholder="Add food item..."
+                      className="bg-zinc-950 border-zinc-700 text-white flex-1"
+                    />
+                    <Button onClick={addEditItem} disabled={!newItemName.trim()} size="sm" className="bg-[#bf0f3e] hover:bg-[#bf0f3e]/80 text-white">
+                      <Plus className="w-4 h-4" />
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditTarget(null)} className="bg-zinc-800 border-zinc-700 text-white hover:bg-zinc-700">
+              Cancel
+            </Button>
+            <Button onClick={saveEditDialog} disabled={savingEdit || loadingEdit} className="bg-[#bf0f3e] hover:bg-[#bf0f3e]/80 text-white">
+              {savingEdit ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
+              Save Changes
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Delete confirmation dialog */}
       <AlertDialog open={!!deleteTarget} onOpenChange={(open) => { if (!open) setDeleteTarget(null); }}>
