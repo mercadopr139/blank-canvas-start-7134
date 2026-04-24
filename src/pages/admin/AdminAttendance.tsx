@@ -1680,7 +1680,9 @@ const AdminAttendance = () => {
           </div>
         ))}
 
-        {/* Second row of insight cards — Last Practice fallback */}
+        {/* Second row of insight cards — only render when it wouldn't duplicate the TODAY row above.
+            On current month + today-has-check-ins, the TODAY row already covers this exact data. */}
+        {!(isCurrentMonth && effectiveLabel === "Today") && (
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
           {/* Program Split */}
           <Card className="bg-white/5 border-white/10 text-white">
@@ -1748,6 +1750,7 @@ const AdminAttendance = () => {
             </CardContent>
           </Card>
         </div>
+        )}
 
         {/* MONTH-TO-DATE row — only when viewing current month (Today row is rendered above the Last Practice row) */}
         {isCurrentMonth && [
