@@ -468,29 +468,20 @@ const AdminAttendance = () => {
     [prevMonthAttendance, prevPracticeDayMap, isPracticeDay, prevExcursionDayMap]
   );
 
-  /* ───── Quick Toggle: single click toggles Practice ↔ Non-Practice ───── */
-  const togglePracticeNonPractice = async (dateStr: string) => {
+  /* ───── Quick Toggle: single click cycles Non-Practice → Practice → Excursion → … ───── */
+  const cycleDayType = async (dateStr: string) => {
     const isExc = isExcursionDay(dateStr);
-    if (isExc) return; // Don't quick-toggle excursion days, use context menu
     const isPrac = isPracticeDay(dateStr, calPracticeDayMap);
-    const existing = practiceDaysCalMonth.find((p) => p.date === dateStr);
-    if (isPrac) {
-      if (existing) {
-        await supabase.from("practice_days").update({ is_practice_day: false }).eq("id", existing.id);
-      } else {
-        await supabase.from("practice_days").insert({ date: dateStr, is_practice_day: false });
-      }
-      queryClient.invalidateQueries({ queryKey: ["practice-days-cal"] });
-      toast.success("Marked as non-practice day");
-    } else {
-      if (existing) {
-        await supabase.from("practice_days").update({ is_practice_day: true }).eq("id", existing.id);
-      } else {
-        await supabase.from("practice_days").insert({ date: dateStr, is_practice_day: true });
-      }
-      queryClient.invalidateQueries({ queryKey: ["practice-days-cal"] });
-      toast.success("Marked as practice day");
+
+    if (isExc) {
+      await setDayType(dateStr, "non-practice");
+      return;
     }
+    if (isPrac) {
+      await setDayType(dateStr, "excursion");
+      return;
+    }
+    await setDayType(dateStr, "practice");
   };
 
   /* ───── Context menu: set day type explicitly ───── */
@@ -1403,9 +1394,9 @@ const AdminAttendance = () => {
                         </div>
                       </div>
                     )}
-                    {/* Toggle day type dot: click = Practice/Non-Practice, right-click/long-press = context menu */}
+                    {/* Toggle day type dot: click cycles Non-Practice → Practice → Excursion, right-click/long-press = context menu */}
                     <button
-                      onClick={(e) => { e.stopPropagation(); togglePracticeNonPractice(dateStr); }}
+                      onClick={(e) => { e.stopPropagation(); cycleDayType(dateStr); }}
                       onContextMenu={(e) => openDotContextMenu(e, dateStr)}
                       onTouchStart={(e) => {
                         longPressTimer.current = setTimeout(() => {
@@ -1423,7 +1414,13 @@ const AdminAttendance = () => {
                             ? "bg-green-500 border-green-300 shadow-[0_0_4px_rgba(34,197,94,0.5)]"
                             : "bg-red-500 border-red-300 shadow-[0_0_4px_rgba(239,68,68,0.5)]"
                       }`}
-                      title={isExc ? "Excursion Day — right-click for options" : isPrac ? "Practice Day — click to toggle, right-click for more" : "Non-Practice — click to toggle, right-click for more"}
+                      title={
+                        isExc
+                          ? "Excursion — click to mark Non-Practice"
+                          : isPrac
+                            ? "Practice — click for Excursion"
+                            : "Non-Practice — click for Practice"
+                      }
                     />
                   </div>
                 );
