@@ -781,29 +781,26 @@ const AdminAttendance = () => {
     [ytdAttendance, ytdPracticeDayMap, ytdExcursionSet, isPracticeDay]
   );
 
-  /* ───── STAT BOX: Week Avg → avg per Mon-Fri green-practice day THIS week ───── */
-  const weekAvg = useMemo(() => {
-    const today = new Date();
-    const dow = today.getDay(); // 0=Sun ... 6=Sat
-    const daysFromMonday = dow === 0 ? 6 : dow - 1;
-    const monday = new Date(today);
-    monday.setDate(today.getDate() - daysFromMonday);
-    monday.setHours(0, 0, 0, 0);
-    const friday = new Date(monday);
-    friday.setDate(monday.getDate() + 4);
-    const mondayStr = format(monday, "yyyy-MM-dd");
-    const fridayStr = format(friday, "yyyy-MM-dd");
-    const weekRecords = ytdPracticeAttendance.filter((a) =>
-      a.check_in_date >= mondayStr && a.check_in_date <= fridayStr
-    );
-    const days = new Set(weekRecords.map((a) => a.check_in_date));
-    return days.size > 0 ? Math.round(weekRecords.length / days.size) : 0;
-  }, [ytdPracticeAttendance]);
-
   /* ───── STAT BOX: Year Avg → avg per green-practice day since 2026-03-09 ───── */
   const yearAvg = useMemo(() => {
     const days = new Set(ytdPracticeAttendance.map((a) => a.check_in_date));
     return days.size > 0 ? Math.round(ytdPracticeAttendance.length / days.size) : 0;
+  }, [ytdPracticeAttendance]);
+
+  /* ───── STAT BOX: Avg Arrival Time (Year) → across all green-practice days since 2026-03-09 ───── */
+  const avgArrivalYear = useMemo(() => {
+    const records = ytdPracticeAttendance;
+    if (records.length === 0) return null;
+    const totalMs = records.reduce((sum, a) => {
+      const d = new Date(a.check_in_at);
+      return sum + (d.getHours() * 60 + d.getMinutes());
+    }, 0);
+    const avgMin = Math.round(totalMs / records.length);
+    const h = Math.floor(avgMin / 60);
+    const m = avgMin % 60;
+    const ampm = h >= 12 ? "PM" : "AM";
+    const h12 = h > 12 ? h - 12 : h === 0 ? 12 : h;
+    return `${h12}:${m.toString().padStart(2, "0")} ${ampm}`;
   }, [ytdPracticeAttendance]);
 
   /* ───── PROGRAM SPLIT (viewed month) ───── */
@@ -1348,9 +1345,12 @@ const AdminAttendance = () => {
           </Card>
           <Card className="bg-white/5 border-white/10 text-white">
             <CardContent className="pt-4 pb-3 text-center">
-              <p className="text-[10px] uppercase tracking-wider text-white/40">Week Avg</p>
-              <p className="text-3xl font-bold mt-1">{weekAvg}</p>
-              <p className="text-[10px] text-white/30">per Mon–Fri practice day this week</p>
+              <p className="text-[10px] uppercase tracking-wider text-white/40">Avg Arrival (Year)</p>
+              <p className="text-2xl font-bold mt-1 flex items-center justify-center gap-1">
+                <Clock className="w-4 h-4 text-white/40" />
+                {avgArrivalYear || "—"}
+              </p>
+              <p className="text-[10px] text-white/30">per practice day since 3/9</p>
             </CardContent>
           </Card>
           <Card className="bg-white/5 border-white/10 text-white">
