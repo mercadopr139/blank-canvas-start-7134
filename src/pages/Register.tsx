@@ -297,6 +297,7 @@ const Register = () => {
         child_boxing_program: formValues["child_boxing_program"] as any,
         extended_program: formValues["child_boxing_program"] === "Junior Boxing (Ages 7-10)" ? "Lil Champs Corner" : null,
         adults_in_household: adultsNum,
+        family_structure: adultsVal || null,
         siblings_in_household: siblingsNum,
         household_income_range: formValues["household_income_range"] as any,
         free_or_reduced_lunch: (formValues["free_or_reduced_lunch"] as any) || null,

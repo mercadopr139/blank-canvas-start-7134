@@ -156,21 +156,30 @@ const AdminRegistrationAnalytics = () => {
   const incomeTotal = incomeData.reduce((s, d) => s + d.count, 0);
 
   /* ───── FAMILY STRUCTURE ───── */
-  let singleParent = 0;
-  let twoParent = 0;
+  const familyStructureOrder = [
+    "Mom Only",
+    "Dad Only",
+    "Grandparent(s)",
+    "Dad and Mom",
+    "Mom + Partner",
+    "Dad + Partner",
+    "Other",
+  ];
+  const familyStructureCounts: Record<string, number> = {};
   let siblingSum = 0;
   let siblingCount = 0;
   registrations?.forEach((r) => {
-    const adults = r.adults_in_household;
-    if (adults === 1) singleParent++;
-    else if (adults >= 2) twoParent++;
+    const fs = (r as { family_structure?: string | null }).family_structure;
+    if (fs) familyStructureCounts[fs] = (familyStructureCounts[fs] || 0) + 1;
     if (typeof r.siblings_in_household === "number") {
       siblingSum += r.siblings_in_household;
       siblingCount++;
     }
   });
-  const familyTotal = singleParent + twoParent;
-  const singleParentPct = familyTotal > 0 ? Math.round((singleParent / familyTotal) * 100) : 0;
+  const familyStructureData = familyStructureOrder
+    .map((name) => ({ name, count: familyStructureCounts[name] || 0 }))
+    .filter((d) => d.count > 0);
+  const familyStructureTotal = familyStructureData.reduce((s, d) => s + d.count, 0);
   const avgSiblings = siblingCount > 0 ? (siblingSum / siblingCount) : 0;
 
   /* ───── TOP DISTRICT (for headline row) ───── */
@@ -484,22 +493,30 @@ const AdminRegistrationAnalytics = () => {
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="flex items-center gap-3">
-                    <div className="text-center flex-1">
-                      <p className="text-3xl font-bold text-amber-400">{singleParentPct}%</p>
-                      <p className="text-[10px] text-white/60 mt-0.5">Single-Parent</p>
-                      <p className="text-[10px] text-white/30">{singleParent} households</p>
-                    </div>
-                    <div className="w-px h-12 bg-white/10" />
-                    <div className="text-center flex-1">
-                      <p className="text-3xl font-bold text-white/70">{familyTotal > 0 ? 100 - singleParentPct : 0}%</p>
-                      <p className="text-[10px] text-white/60 mt-0.5">Two+ Adults</p>
-                      <p className="text-[10px] text-white/30">{twoParent} households</p>
-                    </div>
-                  </div>
-                  <div className="border-t border-white/10 mt-3 pt-1.5 text-center">
-                    <p className="text-[10px] text-white/40">{familyTotal} total households</p>
-                  </div>
+                  {familyStructureTotal === 0 ? (
+                    <p className="text-xs text-white/50">
+                      No family-structure answers captured yet. Going forward, each new registration will record the parent's answer (Mom Only, Dad Only, Grandparent, etc.) so this card fills in over time.
+                    </p>
+                  ) : (
+                    <>
+                      <div className="space-y-2">
+                        {familyStructureData.map((d) => {
+                          const pctVal = Math.round((d.count / familyStructureTotal) * 100);
+                          return (
+                            <div key={d.name} className="flex items-center gap-2">
+                              <span className="text-xs text-white/70 w-28 flex-shrink-0 truncate" title={d.name}>{d.name}</span>
+                              <div className="flex-1 h-2 bg-white/5 rounded-full overflow-hidden min-w-0">
+                                <div className="h-full bg-[#bf0f3e] rounded-full" style={{ width: `${pctVal}%` }} />
+                              </div>
+                              <span className="text-xs font-semibold text-white w-8 text-right tabular-nums">{pctVal}%</span>
+                              <span className="text-[10px] text-white/40 w-10 text-right tabular-nums">{d.count}</span>
+                            </div>
+                          );
+                        })}
+                      </div>
+                      <p className="text-[10px] text-white/30 mt-3 text-right">{familyStructureTotal} households reported</p>
+                    </>
+                  )}
                 </CardContent>
               </Card>
 
