@@ -581,27 +581,38 @@ const AdminRegistrations = () => {
                     throw new Error("Your session expired. Please sign in again.");
                   }
 
-                  const updatedRegistration = await updateRegistrationApproval({
-                    registrationId: selectedRegistration.id,
-                    approved,
-                  });
+                  const previousApproval = selectedRegistration.approved_for_attendance;
+                  const registrationId = selectedRegistration.id;
 
-                  toast.success(approved ? "Approved for attendance" : "Attendance approval removed");
                   setSelectedRegistration((current: any) => current ? {
                     ...current,
-                    approved_for_attendance: updatedRegistration?.approved_for_attendance ?? approved,
+                    approved_for_attendance: approved,
                   } : current);
                   queryClient.setQueryData(["youth-registrations"], (current: any[] | undefined) =>
                     current?.map((registration) =>
-                      registration.id === selectedRegistration.id
-                        ? {
-                            ...registration,
-                            approved_for_attendance: updatedRegistration?.approved_for_attendance ?? approved,
-                          }
+                      registration.id === registrationId
+                        ? { ...registration, approved_for_attendance: approved }
                         : registration
                     )
                   );
-                  queryClient.invalidateQueries({ queryKey: ["youth-registrations"] });
+
+                  try {
+                    await updateRegistrationApproval({ registrationId, approved });
+                    toast.success(approved ? "Approved for attendance" : "Attendance approval removed");
+                  } catch (error) {
+                    setSelectedRegistration((current: any) => current && current.id === registrationId ? {
+                      ...current,
+                      approved_for_attendance: previousApproval,
+                    } : current);
+                    queryClient.setQueryData(["youth-registrations"], (current: any[] | undefined) =>
+                      current?.map((registration) =>
+                        registration.id === registrationId
+                          ? { ...registration, approved_for_attendance: previousApproval }
+                          : registration
+                      )
+                    );
+                    throw error;
+                  }
                 }}
               />
             )}
