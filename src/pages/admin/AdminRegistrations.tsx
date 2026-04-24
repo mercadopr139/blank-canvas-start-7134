@@ -98,7 +98,7 @@ const AdminRegistrations = () => {
   const [baldEagleFilter, setBaldEagleFilter] = useState<string>("all");
   const [extendedProgramFilter, setExtendedProgramFilter] = useState<string>("all");
   const [selectedRegistration, setSelectedRegistration] = useState<any | null>(null);
-  const [editingRegistration, setEditingRegistration] = useState<any | null>(null);
+  const [detailMode, setDetailMode] = useState<"view" | "edit">("view");
   const [csvFallbackUrl, setCsvFallbackUrl] = useState<string | null>(null);
   const [csvExportCount, setCsvExportCount] = useState(0);
   const [bulkPhotoOpen, setBulkPhotoOpen] = useState(false);
@@ -394,11 +394,14 @@ const AdminRegistrations = () => {
               </TableCell>
               <TableCell className="text-right">
                 <div className="flex items-center justify-end gap-1">
-                  <Button size="sm" variant="ghost" onClick={() => setSelectedRegistration(reg)} className="text-blue-400 hover:text-blue-300 hover:bg-blue-500/10 h-8 w-8 p-0" title="View">
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => { setDetailMode("view"); setSelectedRegistration(reg); }}
+                    className="text-blue-400 hover:text-blue-300 hover:bg-blue-500/10 h-8 w-8 p-0"
+                    title="View / Edit"
+                  >
                     <Eye className="w-4 h-4" />
-                  </Button>
-                  <Button size="sm" variant="ghost" onClick={() => setEditingRegistration({ ...reg })} className="text-amber-400 hover:text-amber-300 hover:bg-amber-500/10 h-8 w-8 p-0" title="Edit">
-                    <Pencil className="w-4 h-4" />
                   </Button>
                 </div>
               </TableCell>
@@ -539,19 +542,38 @@ const AdminRegistrations = () => {
         </div>
       </div>
 
-      {/* View Detail Dialog */}
-      <Dialog open={!!selectedRegistration} onOpenChange={() => setSelectedRegistration(null)}>
+      {/* Combined View / Edit Dialog */}
+      <Dialog
+        open={!!selectedRegistration}
+        onOpenChange={(open) => {
+          if (!open) {
+            setSelectedRegistration(null);
+            setDetailMode("view");
+          }
+        }}
+      >
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-hidden flex flex-col">
           <DialogHeader className="flex flex-row items-center gap-4">
             {selectedRegistration?.child_headshot_url && (
               <HeadshotThumbnail headshotPath={selectedRegistration.child_headshot_url} size="lg" />
             )}
-            <DialogTitle>
+            <DialogTitle className="flex-1">
               {selectedRegistration?.child_first_name} {selectedRegistration?.child_last_name}
+              {detailMode === "edit" && <span className="ml-2 text-sm font-normal text-amber-400">(editing)</span>}
             </DialogTitle>
+            {detailMode === "view" && selectedRegistration && (
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => setDetailMode("edit")}
+                className="gap-1.5 mr-6"
+              >
+                <Pencil className="w-3.5 h-3.5" /> Edit
+              </Button>
+            )}
           </DialogHeader>
           <div className="flex-1 overflow-y-auto overscroll-contain pr-4">
-            {selectedRegistration && (
+            {selectedRegistration && detailMode === "view" && (
               <RegistrationDetail
                 registration={selectedRegistration}
                 onApprovalChange={async (approved: boolean) => {
@@ -583,20 +605,9 @@ const AdminRegistrations = () => {
                 }}
               />
             )}
-          </div>
-        </DialogContent>
-      </Dialog>
-
-      {/* Edit Dialog */}
-      <Dialog open={!!editingRegistration} onOpenChange={() => setEditingRegistration(null)}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-hidden flex flex-col">
-          <DialogHeader>
-            <DialogTitle>Edit Registration</DialogTitle>
-          </DialogHeader>
-          <div className="flex-1 overflow-y-auto overscroll-contain pr-4">
-            {editingRegistration && (
+            {selectedRegistration && detailMode === "edit" && (
               <EditRegistrationForm
-                registration={editingRegistration}
+                registration={selectedRegistration}
                 onSave={async (updated) => {
                   const { id, created_at: _ca, updated_at: _ua, submission_date: _sd, ...rest } = updated;
                   const { error } = await supabase
@@ -607,11 +618,12 @@ const AdminRegistrations = () => {
                     toast.error("Failed to save changes");
                   } else {
                     toast.success("Registration updated");
+                    setSelectedRegistration({ ...selectedRegistration, ...rest });
+                    setDetailMode("view");
                     queryClient.invalidateQueries({ queryKey: ["youth-registrations"] });
-                    setEditingRegistration(null);
                   }
                 }}
-                onCancel={() => setEditingRegistration(null)}
+                onCancel={() => setDetailMode("view")}
                 onDelete={async (id: string) => {
                   const { error } = await supabase
                     .from("youth_registrations")
@@ -622,7 +634,8 @@ const AdminRegistrations = () => {
                   } else {
                     toast.success("Registration permanently deleted");
                     queryClient.invalidateQueries({ queryKey: ["youth-registrations"] });
-                    setEditingRegistration(null);
+                    setSelectedRegistration(null);
+                    setDetailMode("view");
                   }
                 }}
               />
@@ -1020,19 +1033,19 @@ const RegistrationDetail = ({ registration: reg, onApprovalChange }: { registrat
         <InfoRow label="Date of Birth" value={format(parseISO(reg.child_date_of_birth), "MMMM d, yyyy")} />
         <InfoRow label="Sex" value={reg.child_sex} />
         <InfoRow label="Race/Ethnicity" value={reg.child_race_ethnicity} />
+        <InfoRow label="Child's Phone" value={reg.child_phone || "—"} />
       </Section>
 
       <Section title="Parent/Guardian">
         <InfoRow label="Name" value={`${reg.parent_first_name} ${reg.parent_last_name}`} />
         <InfoRow label="Phone" value={reg.parent_phone} />
         <InfoRow label="Email" value={reg.parent_email} />
-        {reg.child_phone && <InfoRow label="Child's Phone" value={reg.child_phone} />}
       </Section>
 
       <Section title="Address & School">
         <InfoRow label="Address" value={reg.child_primary_address} />
         <InfoRow label="School District" value={reg.child_school_district} />
-        {reg.child_grade_level && <InfoRow label="Grade Level" value={reg.child_grade_level} />}
+        <InfoRow label="Grade Level" value={reg.child_grade_level ?? "—"} />
       </Section>
 
       <Section title="Program & Household">
@@ -1044,14 +1057,19 @@ const RegistrationDetail = ({ registration: reg, onApprovalChange }: { registrat
 
       <Section title="Funding Information">
         <InfoRow label="Household Income" value={reg.household_income_range} />
-        {reg.free_or_reduced_lunch && <InfoRow label="Free/Reduced Lunch" value={reg.free_or_reduced_lunch} />}
+        <InfoRow label="Free/Reduced Lunch" value={reg.free_or_reduced_lunch || "Not Applicable"} />
       </Section>
 
-      {reg.important_child_notes && (
-        <Section title="Coach Notes">
-          <p className="text-sm">{reg.important_child_notes}</p>
-        </Section>
-      )}
+      <Section title="Medical & Notes">
+        <InfoRow label="Allergies" value={reg.allergies || "None reported"} />
+        <InfoRow label="Asthma / Inhaler" value={reg.asthma_inhaler_info || "None reported"} />
+        <InfoRow label="Important Notes" value={reg.important_child_notes || "None"} />
+      </Section>
+
+      <Section title="Status & Flags">
+        <InfoRow label="Approved for Attendance" value={reg.approved_for_attendance ? "Yes" : "No"} />
+        <InfoRow label="Bald Eagle" value={reg.is_bald_eagle ? "Yes" : "No"} />
+      </Section>
 
       <Section title="Waivers & Signatures">
         {loadingUrls ? (
