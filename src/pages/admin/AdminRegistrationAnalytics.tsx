@@ -21,6 +21,35 @@ const COLORS = [
   "#8a8a8a",
 ];
 
+type TooltipPayload = { value: number; payload?: { fullName?: string; name?: string } };
+const CountAndPctTooltip = ({
+  active,
+  payload,
+  label,
+  total,
+}: {
+  active?: boolean;
+  payload?: TooltipPayload[];
+  label?: string;
+  total: number;
+}) => {
+  if (!active || !payload?.length) return null;
+  const value = payload[0].value;
+  const pct = total > 0 ? Math.round((value / total) * 100) : 0;
+  const labelText = payload[0].payload?.fullName || label || payload[0].payload?.name || "";
+  return (
+    <div className="rounded-md border border-white/10 bg-neutral-900 px-3 py-2 shadow-md">
+      <div className="text-xs font-medium text-white">{labelText}</div>
+      <div className="text-xs text-white/70 mt-0.5">
+        <span className="font-semibold text-white">{value.toLocaleString()}</span> youth
+        <span className="text-white/40 mx-1">·</span>
+        <span className="font-semibold text-[#bf0f3e]">{pct}%</span>
+        <span className="text-white/40"> of {total.toLocaleString()}</span>
+      </div>
+    </div>
+  );
+};
+
 
 const AdminRegistrationAnalytics = () => {
   const navigate = useNavigate();
@@ -57,6 +86,7 @@ const AdminRegistrationAnalytics = () => {
     fullName: name,
     count,
   }));
+  const programTotal = programData.reduce((s, d) => s + d.count, 0);
 
   const ageBuckets = { "7-9": 0, "10-12": 0, "13-15": 0, "16-17": 0, "18-19": 0 };
   registrations?.forEach((r) => {
@@ -67,7 +97,8 @@ const AdminRegistrationAnalytics = () => {
     else if (age >= 16 && age <= 17) ageBuckets["16-17"]++;
     else if (age >= 18 && age <= 19) ageBuckets["18-19"]++;
   });
-  const ageData = Object.entries(ageBuckets).map(([age, count]) => ({ age, count }));
+  const ageData = Object.entries(ageBuckets).map(([age, count]) => ({ age, name: age, count }));
+  const ageTotal = ageData.reduce((s, d) => s + d.count, 0);
 
   const districtCounts = registrations?.reduce((acc, r) => {
     const district = r.child_school_district || "Unknown";
@@ -78,6 +109,7 @@ const AdminRegistrationAnalytics = () => {
   const districtData = Object.entries(districtCounts || {})
     .map(([name, count]) => ({ name, count }))
     .sort((a, b) => b.count - a.count);
+  const districtTotal = districtData.reduce((s, d) => s + d.count, 0);
 
   const lunchCounts = registrations?.reduce((acc, r) => {
     const status = r.free_or_reduced_lunch;
@@ -359,7 +391,7 @@ const AdminRegistrationAnalytics = () => {
                     <BarChart data={programData} layout="vertical">
                       <XAxis type="number" tick={{ fill: "rgba(255,255,255,0.5)" }} />
                       <YAxis dataKey="name" type="category" width={120} tick={{ fontSize: 11, fill: "rgba(255,255,255,0.7)" }} />
-                      <ChartTooltip content={<ChartTooltipContent />} />
+                      <ChartTooltip content={<CountAndPctTooltip total={programTotal} />} />
                       <Bar dataKey="count" fill="#bf0f3e" radius={4} />
                     </BarChart>
                   </ChartContainer>
@@ -375,7 +407,7 @@ const AdminRegistrationAnalytics = () => {
                     <BarChart data={ageData}>
                       <XAxis dataKey="age" tick={{ fill: "rgba(255,255,255,0.7)" }} />
                       <YAxis tick={{ fill: "rgba(255,255,255,0.5)" }} />
-                      <ChartTooltip content={<ChartTooltipContent />} />
+                      <ChartTooltip content={<CountAndPctTooltip total={ageTotal} />} />
                       <Bar dataKey="count" fill="#bf0f3e" radius={4} />
                     </BarChart>
                   </ChartContainer>
@@ -400,7 +432,7 @@ const AdminRegistrationAnalytics = () => {
                       width={200}
                       tick={{ fill: "rgba(255,255,255,0.7)", fontSize: 11 }}
                     />
-                    <ChartTooltip content={<ChartTooltipContent />} />
+                    <ChartTooltip content={<CountAndPctTooltip total={districtTotal} />} />
                     <Bar dataKey="count" fill="#bf0f3e" radius={4}>
                       {districtData.map((_, index) => (
                         <Cell key={`district-${index}`} fill={COLORS[index % COLORS.length]} />
