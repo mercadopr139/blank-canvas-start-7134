@@ -239,6 +239,55 @@ function normalizeFreeLunch(val: string): string | null {
   return match || null;
 }
 
+// Map a raw "Adult(s) in household" answer to {numeric count, canonical text}.
+// Accepts numeric inputs ("2") and family-structure labels ("Dad and Mom",
+// "Grandparent(s)", etc.) — historically the import only tried parseInt, so
+// every text answer fell through to a 1 default and corrupted the column.
+function normalizeAdults(val: string): { num: number; raw: string | null } | null {
+  if (!val) return null;
+  const trimmed = val.trim();
+  const asNum = parseInt(trimmed, 10);
+  if (!Number.isNaN(asNum) && trimmed.match(/^\d+$/)) return { num: asNum, raw: null };
+  const key = trimmed.toLowerCase().replace(/\s+/g, " ").replace(/\s*\+\s*/g, " + ");
+  const map: Record<string, { num: number; raw: string }> = {
+    "dad and mom": { num: 2, raw: "Dad and Mom" },
+    "mom and dad": { num: 2, raw: "Dad and Mom" },
+    "dad + partner": { num: 2, raw: "Dad + Partner" },
+    "mom + partner": { num: 2, raw: "Mom + Partner" },
+    "grandparent(s)": { num: 2, raw: "Grandparent(s)" },
+    "dad only": { num: 1, raw: "Dad Only" },
+    "mom only": { num: 1, raw: "Mom Only" },
+    other: { num: 1, raw: "Other" },
+  };
+  return map[key] ?? null;
+}
+
+// Map a raw "How many siblings" answer to {numeric count, canonical text}.
+function normalizeSiblings(val: string): { num: number; raw: string | null } | null {
+  if (!val) return null;
+  const trimmed = val.trim();
+  const asNum = parseInt(trimmed, 10);
+  if (!Number.isNaN(asNum) && trimmed.match(/^\d+$/)) return { num: asNum, raw: null };
+  const key = trimmed
+    .toLowerCase()
+    .replace(/silblings?|sibblings?/g, "siblings")
+    .replace(/\s+/g, " ")
+    .replace(/\s*\+\s*/g, " + ");
+  const map: Record<string, { num: number; raw: string }> = {
+    "only child": { num: 0, raw: "Only child" },
+    "child + 1 sibling": { num: 1, raw: "Child + 1 sibling" },
+    "child + 2 siblings": { num: 2, raw: "Child + 2 siblings" },
+    "child + 3 siblings": { num: 3, raw: "Child + 3 siblings" },
+    "child + 4 siblings": { num: 4, raw: "Child + 4 siblings" },
+    "child + 5 siblings": { num: 5, raw: "Child + 5 siblings" },
+    "child + 6 siblings": { num: 6, raw: "Child + 6 siblings" },
+    other: { num: 1, raw: "Other" },
+  };
+  if (map[key]) return map[key];
+  const digit = trimmed.match(/\d+/);
+  return digit ? { num: parseInt(digit[0], 10), raw: trimmed } : null;
+}
+
 function normalizePhone(val: string): string {
   const digits = val.replace(/\D/g, "");
   if (digits.length === 10) return `+1${digits}`;
@@ -496,8 +545,20 @@ const YouthImportModal = ({ open, onOpenChange, existingRegistrations, onImportC
     if (data.child_school_district) rec.child_school_district = normalizeSchoolDistrict(data.child_school_district) || null;
     if (data.child_grade_level) rec.child_grade_level = parseInt(data.child_grade_level) || null;
     if (data.child_boxing_program) rec.child_boxing_program = normalizeBoxingProgram(data.child_boxing_program) || null;
-    if (data.adults_in_household) rec.adults_in_household = parseInt(data.adults_in_household) || 1;
-    if (data.siblings_in_household) rec.siblings_in_household = parseInt(data.siblings_in_household) || 0;
+    if (data.adults_in_household) {
+      const adults = normalizeAdults(data.adults_in_household);
+      if (adults) {
+        rec.adults_in_household = adults.num;
+        if (adults.raw) rec.family_structure = adults.raw;
+      }
+    }
+    if (data.siblings_in_household) {
+      const siblings = normalizeSiblings(data.siblings_in_household);
+      if (siblings) {
+        rec.siblings_in_household = siblings.num;
+        if (siblings.raw) rec.siblings_breakdown = siblings.raw;
+      }
+    }
     if (data.household_income_range) rec.household_income_range = normalizeHouseholdIncome(data.household_income_range) || null;
     if (data.free_or_reduced_lunch) rec.free_or_reduced_lunch = normalizeFreeLunch(data.free_or_reduced_lunch) || null;
     if (data.allergies) rec.allergies = data.allergies;

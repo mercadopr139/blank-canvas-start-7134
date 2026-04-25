@@ -2390,6 +2390,7 @@ export type Database = {
           created_at: string
           custom_fields_data: Json | null
           extended_program: string | null
+          family_structure: string | null
           final_signature_name: string | null
           free_or_reduced_lunch:
             | Database["public"]["Enums"]["lunch_status"]
@@ -2408,6 +2409,7 @@ export type Database = {
           parent_first_name: string
           parent_last_name: string
           parent_phone: string
+          siblings_breakdown: string | null
           siblings_in_household: number
           spiritual_development_policy_name: string
           spiritual_development_policy_signature_url: string
@@ -2438,6 +2440,7 @@ export type Database = {
           created_at?: string
           custom_fields_data?: Json | null
           extended_program?: string | null
+          family_structure?: string | null
           final_signature_name?: string | null
           free_or_reduced_lunch?:
             | Database["public"]["Enums"]["lunch_status"]
@@ -2456,6 +2459,7 @@ export type Database = {
           parent_first_name: string
           parent_last_name: string
           parent_phone: string
+          siblings_breakdown?: string | null
           siblings_in_household: number
           spiritual_development_policy_name: string
           spiritual_development_policy_signature_url: string
@@ -2486,6 +2490,7 @@ export type Database = {
           created_at?: string
           custom_fields_data?: Json | null
           extended_program?: string | null
+          family_structure?: string | null
           final_signature_name?: string | null
           free_or_reduced_lunch?:
             | Database["public"]["Enums"]["lunch_status"]
@@ -2504,6 +2509,7 @@ export type Database = {
           parent_first_name?: string
           parent_last_name?: string
           parent_phone?: string
+          siblings_breakdown?: string | null
           siblings_in_household?: number
           spiritual_development_policy_name?: string
           spiritual_development_policy_signature_url?: string

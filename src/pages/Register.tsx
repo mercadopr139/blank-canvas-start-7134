@@ -255,19 +255,41 @@ const Register = () => {
       ]);
       const headshotUrl = await uploadHeadshot(childHeadshot!);
 
-      // Build core fields payload
-      const adultsVal = formValues["adults_in_household"] || "1";
-      const adultsNum = (() => {
-        if (adultsVal === "1" || adultsVal === "1_m" || adultsVal === "1_g" || adultsVal === "1_o" ||
-            adultsVal === "Dad Only" || adultsVal === "Mom Only" || adultsVal === "Grandparent(s)" || adultsVal === "Other") return 1;
-        return 2;
-      })();
+      // Build core fields payload.
+      // adults_in_household question is a dropdown of family-structure labels
+      // ("Dad and Mom", "Mom Only", "Grandparent(s)", etc.). We persist the
+      // raw answer in family_structure for donor-facing analytics and derive
+      // a conservative numeric count for the legacy adults_in_household column.
+      const adultsVal = (formValues["adults_in_household"] || "").trim();
+      const adultsKey = adultsVal.toLowerCase().replace(/\s+/g, " ").replace(/\s*\+\s*/g, " + ");
+      const ADULTS_TO_NUM: Record<string, number> = {
+        "dad and mom": 2,
+        "mom and dad": 2,
+        "dad + partner": 2,
+        "mom + partner": 2,
+        "grandparent(s)": 2,
+        "dad only": 1,
+        "mom only": 1,
+        other: 1,
+      };
+      const adultsNum = ADULTS_TO_NUM[adultsKey] ?? (parseInt(adultsVal) || 1);
 
-      const siblingsVal = formValues["siblings_in_household"] || "0";
+      const siblingsVal = (formValues["siblings_in_household"] || "").trim();
+      const siblingsKey = siblingsVal.toLowerCase().replace(/\s+/g, " ");
+      const SIBLINGS_TO_NUM: Record<string, number> = {
+        "only child": 0,
+        "child + 1 sibling": 1,
+        "child + 2 siblings": 2,
+        "child + 3 siblings": 3,
+        "child + 4 siblings": 4,
+        "child + 5 siblings": 5,
+        "child + 6 siblings": 6,
+        other: 1,
+      };
       const siblingsNum = (() => {
-        if (siblingsVal === "Only child") return 0;
+        if (SIBLINGS_TO_NUM[siblingsKey] !== undefined) return SIBLINGS_TO_NUM[siblingsKey];
         const match = siblingsVal.match(/\d+/);
-        return match ? parseInt(match[0]) : parseInt(siblingsVal) || 0;
+        return match ? parseInt(match[0]) : 0;
       })();
 
       // Collect custom fields (non-core)
@@ -299,6 +321,7 @@ const Register = () => {
         adults_in_household: adultsNum,
         family_structure: adultsVal || null,
         siblings_in_household: siblingsNum,
+        siblings_breakdown: siblingsVal || null,
         household_income_range: formValues["household_income_range"] as any,
         free_or_reduced_lunch: (formValues["free_or_reduced_lunch"] as any) || null,
         allergies: (formValues["allergies"] || "").trim() || null,

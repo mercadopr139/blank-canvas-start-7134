@@ -3,7 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { ArrowLeft, Users, Calendar, School, Utensils, TrendingDown, DollarSign } from "lucide-react";
+import { ArrowLeft, Users, Calendar, School, Utensils, TrendingDown, DollarSign, Home } from "lucide-react";
 import { differenceInYears, parseISO, subDays, isAfter } from "date-fns";
 import {
   ChartContainer,
@@ -115,6 +115,43 @@ const AdminRegistrationAnalytics = () => {
     if (answer === "Yes") belowFPL++;
   });
   const belowFPLPct = fplEligible > 0 ? Math.round((belowFPL / fplEligible) * 100) : 0;
+
+  /* ───── FAMILY STRUCTURE (donor-facing) ─────
+   * Reads the raw family_structure text answer (preserved from the parent's
+   * dropdown choice on the registration form). Older legacy registrations
+   * that pre-date the column will be NULL — we surface that as the "no
+   * detailed answer" denominator so a thin sample is visible at a glance.
+   */
+  const FAMILY_ORDER = [
+    "Dad and Mom",
+    "Mom + Partner",
+    "Dad + Partner",
+    "Mom Only",
+    "Dad Only",
+    "Grandparent(s)",
+    "Other",
+  ];
+  const SINGLE_PARENT_KEYS = new Set(["Mom Only", "Dad Only"]);
+  const TWO_PARENT_KEYS = new Set(["Dad and Mom", "Mom + Partner", "Dad + Partner"]);
+
+  const familyCounts: Record<string, number> = {};
+  registrations?.forEach((r) => {
+    const fs = (r as { family_structure?: string | null }).family_structure;
+    if (fs) familyCounts[fs] = (familyCounts[fs] || 0) + 1;
+  });
+  const familyTotal = Object.values(familyCounts).reduce((s, n) => s + n, 0);
+  const familyData = FAMILY_ORDER
+    .map((name) => ({ name, count: familyCounts[name] || 0 }))
+    .filter((d) => d.count > 0);
+
+  const singleParentCount = Array.from(SINGLE_PARENT_KEYS).reduce((s, k) => s + (familyCounts[k] || 0), 0);
+  const twoParentCount = Array.from(TWO_PARENT_KEYS).reduce((s, k) => s + (familyCounts[k] || 0), 0);
+  const grandparentCount = familyCounts["Grandparent(s)"] || 0;
+
+  const singleParentPct = familyTotal > 0 ? Math.round((singleParentCount / familyTotal) * 100) : 0;
+  const twoParentPct = familyTotal > 0 ? Math.round((twoParentCount / familyTotal) * 100) : 0;
+  const grandparentPct = familyTotal > 0 ? Math.round((grandparentCount / familyTotal) * 100) : 0;
+  const noAnswerCount = (registrations?.length || 0) - familyTotal;
 
   /* ───── GENDER ───── */
   const sexCounts = registrations?.reduce((acc, r) => {
@@ -433,30 +470,82 @@ const AdminRegistrationAnalytics = () => {
               </Card>
             </div>
 
-            {/* Gender */}
-            <Card className="bg-white/5 border-white/10 max-w-sm">
-              <CardHeader className="pb-2">
-                <CardTitle className="text-base text-white">Boy / Girl Ratio</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="flex items-center gap-3">
-                  <div className="text-center flex-1">
-                    <p className="text-3xl font-bold text-blue-400">{sexCounts["Male"] || 0}</p>
-                    <p className="text-[10px] text-white/60 mt-0.5">Boys</p>
-                    <p className="text-[10px] text-white/30">{sexTotal > 0 ? Math.round(((sexCounts["Male"] || 0) / sexTotal) * 100) : 0}%</p>
+            {/* Gender + Family Structure */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <Card className="bg-white/5 border-white/10">
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-base text-white">Boy / Girl Ratio</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="flex items-center gap-3">
+                    <div className="text-center flex-1">
+                      <p className="text-3xl font-bold text-blue-400">{sexCounts["Male"] || 0}</p>
+                      <p className="text-[10px] text-white/60 mt-0.5">Boys</p>
+                      <p className="text-[10px] text-white/30">{sexTotal > 0 ? Math.round(((sexCounts["Male"] || 0) / sexTotal) * 100) : 0}%</p>
+                    </div>
+                    <div className="w-px h-12 bg-white/10" />
+                    <div className="text-center flex-1">
+                      <p className="text-3xl font-bold text-pink-400">{sexCounts["Female"] || 0}</p>
+                      <p className="text-[10px] text-white/60 mt-0.5">Girls</p>
+                      <p className="text-[10px] text-white/30">{sexTotal > 0 ? Math.round(((sexCounts["Female"] || 0) / sexTotal) * 100) : 0}%</p>
+                    </div>
                   </div>
-                  <div className="w-px h-12 bg-white/10" />
-                  <div className="text-center flex-1">
-                    <p className="text-3xl font-bold text-pink-400">{sexCounts["Female"] || 0}</p>
-                    <p className="text-[10px] text-white/60 mt-0.5">Girls</p>
-                    <p className="text-[10px] text-white/30">{sexTotal > 0 ? Math.round(((sexCounts["Female"] || 0) / sexTotal) * 100) : 0}%</p>
+                  <div className="border-t border-white/10 mt-3 pt-1.5 text-center">
+                    <p className="text-[10px] text-white/40">{sexTotal} total youth</p>
                   </div>
-                </div>
-                <div className="border-t border-white/10 mt-3 pt-1.5 text-center">
-                  <p className="text-[10px] text-white/40">{sexTotal} total youth</p>
-                </div>
-              </CardContent>
-            </Card>
+                </CardContent>
+              </Card>
+
+              <Card className="bg-white/5 border-white/10">
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-base flex items-center gap-2 text-white">
+                    <Home className="w-4 h-4 text-[#bf0f3e]" /> Family Structure
+                    <span className="text-xs text-white/40 font-normal ml-2">
+                      ({familyTotal} of {registrations?.length || 0} youth)
+                    </span>
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-3 gap-3 mb-4">
+                    <div className="text-center">
+                      <p className="text-3xl font-bold text-amber-400">{singleParentPct}%</p>
+                      <p className="text-[10px] text-white/60 mt-0.5">Single-Parent</p>
+                      <p className="text-[10px] text-white/30">{singleParentCount} youth</p>
+                    </div>
+                    <div className="text-center border-x border-white/10">
+                      <p className="text-3xl font-bold text-white">{twoParentPct}%</p>
+                      <p className="text-[10px] text-white/60 mt-0.5">Two-Parent</p>
+                      <p className="text-[10px] text-white/30">{twoParentCount} youth</p>
+                    </div>
+                    <div className="text-center">
+                      <p className="text-3xl font-bold text-purple-300">{grandparentPct}%</p>
+                      <p className="text-[10px] text-white/60 mt-0.5">Grandparent-Led</p>
+                      <p className="text-[10px] text-white/30">{grandparentCount} youth</p>
+                    </div>
+                  </div>
+                  <div className="border-t border-white/10 pt-3 space-y-2">
+                    {familyData.map((d) => {
+                      const pctVal = familyTotal > 0 ? Math.round((d.count / familyTotal) * 100) : 0;
+                      return (
+                        <div key={d.name} className="flex items-center gap-3">
+                          <span className="text-xs text-white/70 w-32 flex-shrink-0 truncate" title={d.name}>{d.name}</span>
+                          <div className="flex-1 h-2 bg-white/5 rounded-full overflow-hidden min-w-0">
+                            <div className="h-full bg-[#bf0f3e] rounded-full" style={{ width: `${pctVal}%` }} />
+                          </div>
+                          <span className="text-xs font-semibold text-white w-10 text-right tabular-nums">{pctVal}%</span>
+                          <span className="text-[10px] text-white/40 w-14 text-right tabular-nums">{d.count} youth</span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                  {noAnswerCount > 0 && (
+                    <p className="text-[10px] text-white/30 mt-3 text-center">
+                      {noAnswerCount} registration{noAnswerCount === 1 ? "" : "s"} predate this question and aren't included in the breakdown.
+                    </p>
+                  )}
+                </CardContent>
+              </Card>
+            </div>
           </>
         )}
       </div>
