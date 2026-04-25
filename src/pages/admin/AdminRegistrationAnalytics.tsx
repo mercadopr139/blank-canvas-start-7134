@@ -3,8 +3,8 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { ArrowLeft, Users, Calendar, School, Utensils, TrendingDown, DollarSign, Home } from "lucide-react";
-import { differenceInYears, parseISO, subDays, isAfter } from "date-fns";
+import { ArrowLeft, Users, Calendar, School, Utensils, TrendingDown, DollarSign, Home, HeartPulse, CheckCircle2, TrendingUp, Users2 } from "lucide-react";
+import { differenceInYears, parseISO, subDays, isAfter, format, subMonths, startOfMonth } from "date-fns";
 import {
   ChartContainer,
   ChartTooltip,
@@ -185,6 +185,76 @@ const AdminRegistrationAnalytics = () => {
   const grandparentPct = familyTotal > 0 ? Math.round((grandparentCount / familyTotal) * 100) : 0;
   const noAnswerCount = (registrations?.length || 0) - familyTotal;
 
+  /* ───── REGISTRATIONS OVER TIME (last 18 months) ─────
+   * Buckets by submission_date month. NOTE: legacy Monday-imported rows
+   * may share a synthetic submission_date (the import date), which will
+   * show as a single tall bar rather than the original spread. We surface
+   * the largest bucket explicitly so it's clear when that's happening.
+   */
+  const trendMonths = 18;
+  const trendStart = startOfMonth(subMonths(now, trendMonths - 1));
+  const monthBuckets: Record<string, number> = {};
+  for (let i = 0; i < trendMonths; i++) {
+    const d = startOfMonth(subMonths(now, trendMonths - 1 - i));
+    monthBuckets[format(d, "yyyy-MM")] = 0;
+  }
+  registrations?.forEach((r) => {
+    const d = parseISO(r.submission_date);
+    if (isAfter(d, trendStart)) {
+      const key = format(d, "yyyy-MM");
+      if (key in monthBuckets) monthBuckets[key]++;
+    }
+  });
+  const trendData = Object.entries(monthBuckets).map(([key, count]) => ({
+    key,
+    name: format(parseISO(`${key}-01`), "MMM ''yy"),
+    count,
+  }));
+  const trendTotal = trendData.reduce((s, d) => s + d.count, 0);
+  const trendPeak = trendData.reduce((peak, d) => (d.count > peak.count ? d : peak), { key: "", name: "", count: 0 });
+  const trendPeakIsSuspicious = trendTotal > 0 && trendPeak.count / trendTotal > 0.5;
+
+  /* ───── HOUSEHOLDS SERVED ─────
+   * Group by lowercased parent_email. A household = one parent contact.
+   */
+  const householdSizes: Record<string, number> = {};
+  registrations?.forEach((r) => {
+    const email = (r.parent_email || "").trim().toLowerCase();
+    if (!email) return;
+    householdSizes[email] = (householdSizes[email] || 0) + 1;
+  });
+  const householdCount = Object.keys(householdSizes).length;
+  const householdYouthCount = Object.values(householdSizes).reduce((s, n) => s + n, 0);
+  const avgKidsPerFamily = householdCount > 0 ? (householdYouthCount / householdCount).toFixed(1) : "—";
+  const householdDistribution = { "1 child": 0, "2 children": 0, "3 children": 0, "4+ children": 0 };
+  Object.values(householdSizes).forEach((n) => {
+    if (n === 1) householdDistribution["1 child"]++;
+    else if (n === 2) householdDistribution["2 children"]++;
+    else if (n === 3) householdDistribution["3 children"]++;
+    else if (n >= 4) householdDistribution["4+ children"]++;
+  });
+  const multiKidHouseholds = householdCount - (householdDistribution["1 child"] || 0);
+
+  /* ───── HEALTH & SAFETY PROFILE ─────
+   * Filter out "none", "no", "n/a" style answers so we only count rows that
+   * actually flagged something operationally relevant.
+   */
+  const isMeaningfulAnswer = (raw: string | null | undefined): boolean => {
+    if (!raw) return false;
+    const v = raw.trim().toLowerCase();
+    if (!v) return false;
+    return !["none", "no", "n/a", "na", "no allergies", "no asthma", "nothing", "0", "-"].includes(v);
+  };
+  const allergiesCount = registrations?.filter((r) => isMeaningfulAnswer(r.allergies)).length || 0;
+  const asthmaCount = registrations?.filter((r) => isMeaningfulAnswer(r.asthma_inhaler_info)).length || 0;
+  const notesCount = registrations?.filter((r) => isMeaningfulAnswer(r.important_child_notes)).length || 0;
+  const totalRegs = registrations?.length || 0;
+
+  /* ───── APPROVAL STATUS ───── */
+  const approvedCount = registrations?.filter((r) => r.approved_for_attendance).length || 0;
+  const pendingCount = totalRegs - approvedCount;
+  const approvedPct = totalRegs > 0 ? Math.round((approvedCount / totalRegs) * 100) : 0;
+
   /* ───── GENDER ───── */
   const sexCounts = registrations?.reduce((acc, r) => {
     const s = r.child_sex;
@@ -274,6 +344,31 @@ const AdminRegistrationAnalytics = () => {
                 icon={<Calendar className="w-5 h-5" />}
               />
             </div>
+
+            {/* Registrations Over Time */}
+            <Card className="bg-white/5 border-white/10">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-base flex items-center gap-2 text-white">
+                  <TrendingUp className="w-4 h-4 text-[#bf0f3e]" /> Registrations Over Time
+                  <span className="text-xs text-white/40 font-normal ml-2">last {trendMonths} months</span>
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <ChartContainer config={chartConfig} className="h-[240px]">
+                  <BarChart data={trendData} margin={{ left: 8, right: 8 }}>
+                    <XAxis dataKey="name" tick={{ fill: "rgba(255,255,255,0.5)", fontSize: 10 }} interval={0} angle={-35} textAnchor="end" height={50} />
+                    <YAxis tick={{ fill: "rgba(255,255,255,0.5)", fontSize: 10 }} />
+                    <ChartTooltip content={<CountAndPctTooltip total={trendTotal} />} />
+                    <Bar dataKey="count" fill="#bf0f3e" radius={3} />
+                  </BarChart>
+                </ChartContainer>
+                {trendPeakIsSuspicious && (
+                  <p className="text-[10px] text-amber-400/70 mt-2">
+                    {trendPeak.count} registrations cluster in {trendPeak.name} — likely the legacy Monday import set their submission_date to the import date rather than the original. Going forward, new registrations will spread naturally across months.
+                  </p>
+                )}
+              </CardContent>
+            </Card>
 
             {/* ═══════════ WHO WE SERVE (donor headline row) ═══════════ */}
             <div>
@@ -578,6 +673,103 @@ const AdminRegistrationAnalytics = () => {
                 </CardContent>
               </Card>
             </div>
+
+            {/* ═══════════ HOUSEHOLDS & OPERATIONS ═══════════ */}
+            <div>
+              <h3 className="text-sm font-semibold text-white/80 mb-3 tracking-wide uppercase">Households &amp; Operations</h3>
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                {/* Households Served */}
+                <Card className="bg-white/5 border-white/10">
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-base flex items-center gap-2 text-white">
+                      <Users2 className="w-4 h-4 text-[#bf0f3e]" /> Households Served
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="grid grid-cols-2 gap-3 mb-4">
+                      <div className="text-center">
+                        <p className="text-3xl font-bold text-white">{householdCount}</p>
+                        <p className="text-[10px] text-white/60 mt-0.5">Unique Families</p>
+                        <p className="text-[10px] text-white/30">{householdYouthCount} total youth</p>
+                      </div>
+                      <div className="text-center border-l border-white/10">
+                        <p className="text-3xl font-bold text-[#bf0f3e]">{avgKidsPerFamily}</p>
+                        <p className="text-[10px] text-white/60 mt-0.5">Avg Kids / Family</p>
+                        <p className="text-[10px] text-white/30">{multiKidHouseholds} multi-kid</p>
+                      </div>
+                    </div>
+                    <div className="border-t border-white/10 pt-3 space-y-2">
+                      {Object.entries(householdDistribution)
+                        .filter(([, n]) => n > 0)
+                        .map(([label, n]) => {
+                          const pctVal = householdCount > 0 ? Math.round((n / householdCount) * 100) : 0;
+                          return (
+                            <div key={label} className="flex items-center gap-3">
+                              <span className="text-xs text-white/70 w-24 flex-shrink-0">{label}</span>
+                              <div className="flex-1 h-2 bg-white/5 rounded-full overflow-hidden min-w-0">
+                                <div className="h-full bg-[#bf0f3e] rounded-full" style={{ width: `${pctVal}%` }} />
+                              </div>
+                              <span className="text-xs font-semibold text-white w-10 text-right tabular-nums">{pctVal}%</span>
+                              <span className="text-[10px] text-white/40 w-14 text-right tabular-nums">{n} hh</span>
+                            </div>
+                          );
+                        })}
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Health & Safety */}
+                <Card className="bg-white/5 border-white/10">
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-base flex items-center gap-2 text-white">
+                      <HeartPulse className="w-4 h-4 text-[#bf0f3e]" /> Health &amp; Safety Profile
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-3">
+                      <HealthRow label="Allergies recorded" count={allergiesCount} total={totalRegs} />
+                      <HealthRow label="Asthma / inhaler info" count={asthmaCount} total={totalRegs} />
+                      <HealthRow label="Staff notes flagged" count={notesCount} total={totalRegs} />
+                    </div>
+                    <p className="text-[10px] text-white/30 mt-4 text-center">
+                      across {totalRegs} youth · &quot;none&quot; / blank answers excluded
+                    </p>
+                  </CardContent>
+                </Card>
+
+                {/* Approval Status */}
+                <Card className="bg-white/5 border-white/10">
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-base flex items-center gap-2 text-white">
+                      <CheckCircle2 className="w-4 h-4 text-[#bf0f3e]" /> Approval Status
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="grid grid-cols-2 gap-3 mb-4">
+                      <div className="text-center">
+                        <p className="text-3xl font-bold text-emerald-400">{approvedCount}</p>
+                        <p className="text-[10px] text-white/60 mt-0.5">Approved</p>
+                        <p className="text-[10px] text-white/30">{approvedPct}% of total</p>
+                      </div>
+                      <div className="text-center border-l border-white/10">
+                        <p className="text-3xl font-bold text-amber-400">{pendingCount}</p>
+                        <p className="text-[10px] text-white/60 mt-0.5">Pending Review</p>
+                        <p className="text-[10px] text-white/30">{totalRegs > 0 ? 100 - approvedPct : 0}% of total</p>
+                      </div>
+                    </div>
+                    <div className="border-t border-white/10 pt-3">
+                      <div className="h-2 bg-white/5 rounded-full overflow-hidden flex">
+                        <div className="h-full bg-emerald-400" style={{ width: `${approvedPct}%` }} />
+                        <div className="h-full bg-amber-400" style={{ width: `${100 - approvedPct}%` }} />
+                      </div>
+                      <p className="text-[10px] text-white/40 mt-2 text-center">
+                        Pending youth don&apos;t appear in the kiosk check-in until reviewed.
+                      </p>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+            </div>
           </>
         )}
       </div>
@@ -607,5 +799,16 @@ const StatCard = ({
     </CardContent>
   </Card>
 );
+
+const HealthRow = ({ label, count, total }: { label: string; count: number; total: number }) => {
+  const pct = total > 0 ? Math.round((count / total) * 100) : 0;
+  return (
+    <div className="flex items-center gap-3">
+      <span className="text-xs text-white/70 flex-1 truncate">{label}</span>
+      <span className="text-base font-semibold text-white tabular-nums">{count}</span>
+      <span className="text-[10px] text-white/40 w-10 text-right tabular-nums">{pct}%</span>
+    </div>
+  );
+};
 
 export default AdminRegistrationAnalytics;
