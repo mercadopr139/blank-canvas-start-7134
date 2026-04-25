@@ -295,10 +295,12 @@ const AdminRegistrationAnalytics = () => {
   const incomeTotal = incomeData.reduce((s, d) => s + d.count, 0);
 
   /* ───── TOP DISTRICT (for headline row) ───── */
-  const topDistrict = districtData[0];
-  const topDistrictPct = registrations && registrations.length > 0 && topDistrict
-    ? Math.round((topDistrict.count / registrations.length) * 100)
-    : 0;
+  const topDistricts = districtData.slice(0, 3).map((d) => ({
+    ...d,
+    pct: registrations && registrations.length > 0
+      ? Math.round((d.count / registrations.length) * 100)
+      : 0,
+  }));
 
   const chartConfig = {
     count: { label: "Count", color: "#bf0f3e" },
@@ -403,13 +405,19 @@ const AdminRegistrationAnalytics = () => {
                 <Card className="bg-white/5 border-white/10">
                   <CardContent className="pt-4">
                     <p className="text-[10px] uppercase tracking-wider text-white/40 mb-2 flex items-center gap-1">
-                      <School className="w-3 h-3" /> Top District
+                      <School className="w-3 h-3" /> Top Districts
                     </p>
-                    {topDistrict ? (
-                      <>
-                        <p className="text-lg font-bold text-white truncate">{topDistrict.name}</p>
-                        <p className="text-xs text-white/40 mt-0.5">{topDistrictPct}% · {topDistrict.count} youth</p>
-                      </>
+                    {topDistricts.length > 0 ? (
+                      <div className="space-y-1.5">
+                        {topDistricts.map((d, i) => (
+                          <div key={d.name} className="flex items-baseline gap-2">
+                            <span className="text-[10px] text-white/30 w-3 tabular-nums">{i + 1}.</span>
+                            <span className="text-xs font-semibold text-white truncate flex-1" title={d.name}>{d.name}</span>
+                            <span className="text-xs text-[#bf0f3e] tabular-nums">{d.pct}%</span>
+                            <span className="text-[10px] text-white/40 tabular-nums w-8 text-right">{d.count}</span>
+                          </div>
+                        ))}
+                      </div>
                     ) : (
                       <p className="text-white/30">—</p>
                     )}
