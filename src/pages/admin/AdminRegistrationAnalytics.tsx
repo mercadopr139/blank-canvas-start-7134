@@ -3,7 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { ArrowLeft, Users, Calendar, School, Utensils, TrendingDown, DollarSign } from "lucide-react";
+import { ArrowLeft, Users, Calendar, School, Utensils, TrendingDown, DollarSign, Home } from "lucide-react";
 import { differenceInYears, parseISO, subDays, isAfter } from "date-fns";
 import {
   ChartContainer,
@@ -115,6 +115,26 @@ const AdminRegistrationAnalytics = () => {
     if (answer === "Yes") belowFPL++;
   });
   const belowFPLPct = fplEligible > 0 ? Math.round((belowFPL / fplEligible) * 100) : 0;
+
+  /* ───── ADULTS IN HOUSEHOLD ───── */
+  const adultBuckets = ["1", "2", "3", "4+"];
+  const adultCounts: Record<string, number> = { "1": 0, "2": 0, "3": 0, "4+": 0 };
+  let adultSum = 0;
+  let adultRespondents = 0;
+  registrations?.forEach((r) => {
+    const n = r.adults_in_household;
+    if (typeof n !== "number" || n < 1) return;
+    adultRespondents++;
+    adultSum += n;
+    const bucket = n >= 4 ? "4+" : String(n);
+    adultCounts[bucket] = (adultCounts[bucket] || 0) + 1;
+  });
+  const adultData = adultBuckets
+    .map((name) => ({ name, count: adultCounts[name] }))
+    .filter((d) => d.count > 0);
+  const avgAdults = adultRespondents > 0 ? (adultSum / adultRespondents).toFixed(1) : "—";
+  const singleAdultCount = adultCounts["1"] || 0;
+  const singleAdultPct = adultRespondents > 0 ? Math.round((singleAdultCount / adultRespondents) * 100) : 0;
 
   /* ───── GENDER ───── */
   const sexCounts = registrations?.reduce((acc, r) => {
@@ -433,30 +453,71 @@ const AdminRegistrationAnalytics = () => {
               </Card>
             </div>
 
-            {/* Gender */}
-            <Card className="bg-white/5 border-white/10 max-w-sm">
-              <CardHeader className="pb-2">
-                <CardTitle className="text-base text-white">Boy / Girl Ratio</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="flex items-center gap-3">
-                  <div className="text-center flex-1">
-                    <p className="text-3xl font-bold text-blue-400">{sexCounts["Male"] || 0}</p>
-                    <p className="text-[10px] text-white/60 mt-0.5">Boys</p>
-                    <p className="text-[10px] text-white/30">{sexTotal > 0 ? Math.round(((sexCounts["Male"] || 0) / sexTotal) * 100) : 0}%</p>
+            {/* Gender + Adults in Household */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <Card className="bg-white/5 border-white/10">
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-base text-white">Boy / Girl Ratio</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="flex items-center gap-3">
+                    <div className="text-center flex-1">
+                      <p className="text-3xl font-bold text-blue-400">{sexCounts["Male"] || 0}</p>
+                      <p className="text-[10px] text-white/60 mt-0.5">Boys</p>
+                      <p className="text-[10px] text-white/30">{sexTotal > 0 ? Math.round(((sexCounts["Male"] || 0) / sexTotal) * 100) : 0}%</p>
+                    </div>
+                    <div className="w-px h-12 bg-white/10" />
+                    <div className="text-center flex-1">
+                      <p className="text-3xl font-bold text-pink-400">{sexCounts["Female"] || 0}</p>
+                      <p className="text-[10px] text-white/60 mt-0.5">Girls</p>
+                      <p className="text-[10px] text-white/30">{sexTotal > 0 ? Math.round(((sexCounts["Female"] || 0) / sexTotal) * 100) : 0}%</p>
+                    </div>
                   </div>
-                  <div className="w-px h-12 bg-white/10" />
-                  <div className="text-center flex-1">
-                    <p className="text-3xl font-bold text-pink-400">{sexCounts["Female"] || 0}</p>
-                    <p className="text-[10px] text-white/60 mt-0.5">Girls</p>
-                    <p className="text-[10px] text-white/30">{sexTotal > 0 ? Math.round(((sexCounts["Female"] || 0) / sexTotal) * 100) : 0}%</p>
+                  <div className="border-t border-white/10 mt-3 pt-1.5 text-center">
+                    <p className="text-[10px] text-white/40">{sexTotal} total youth</p>
                   </div>
-                </div>
-                <div className="border-t border-white/10 mt-3 pt-1.5 text-center">
-                  <p className="text-[10px] text-white/40">{sexTotal} total youth</p>
-                </div>
-              </CardContent>
-            </Card>
+                </CardContent>
+              </Card>
+
+              <Card className="bg-white/5 border-white/10">
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-base flex items-center gap-2 text-white">
+                    <Home className="w-4 h-4 text-[#bf0f3e]" /> Adults in Household
+                    <span className="text-xs text-white/40 font-normal ml-2">({adultRespondents} reported)</span>
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="flex items-center gap-3 mb-4">
+                    <div className="text-center flex-1">
+                      <p className="text-3xl font-bold text-amber-400">{singleAdultPct}%</p>
+                      <p className="text-[10px] text-white/60 mt-0.5">Single-Adult Home</p>
+                      <p className="text-[10px] text-white/30">{singleAdultCount} of {adultRespondents}</p>
+                    </div>
+                    <div className="w-px h-12 bg-white/10" />
+                    <div className="text-center flex-1">
+                      <p className="text-3xl font-bold text-white">{avgAdults}</p>
+                      <p className="text-[10px] text-white/60 mt-0.5">Avg Adults / Home</p>
+                      <p className="text-[10px] text-white/30">across {adultRespondents} homes</p>
+                    </div>
+                  </div>
+                  <div className="border-t border-white/10 pt-3 space-y-2">
+                    {adultData.map((d) => {
+                      const pctVal = adultRespondents > 0 ? Math.round((d.count / adultRespondents) * 100) : 0;
+                      return (
+                        <div key={d.name} className="flex items-center gap-3">
+                          <span className="text-xs text-white/70 w-16 flex-shrink-0">{d.name} {d.name === "1" ? "adult" : "adults"}</span>
+                          <div className="flex-1 h-2 bg-white/5 rounded-full overflow-hidden min-w-0">
+                            <div className="h-full bg-[#bf0f3e] rounded-full" style={{ width: `${pctVal}%` }} />
+                          </div>
+                          <span className="text-xs font-semibold text-white w-10 text-right tabular-nums">{pctVal}%</span>
+                          <span className="text-[10px] text-white/40 w-14 text-right tabular-nums">{d.count} hh</span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
           </>
         )}
       </div>
