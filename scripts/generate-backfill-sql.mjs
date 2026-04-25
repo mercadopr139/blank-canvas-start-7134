@@ -6,7 +6,7 @@
 //                                    shows match counts, no changes committed.
 //   scripts/backfill-APPLY.sql    — same logic but COMMITs at the end.
 //
-// Run with: node --env-file=.env scripts/generate-backfill-sql.mjs
+// Run with: node --env-file=.env.local scripts/generate-backfill-sql.mjs
 //
 // Then paste the dry-run file into Supabase SQL Editor first to verify,
 // and only run the apply file once the diff looks correct.

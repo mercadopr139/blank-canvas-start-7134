@@ -1,6 +1,6 @@
 // One-off probe: validates the Monday API token, confirms board access,
 // and prints the column structure + item count so we can plan the backfill.
-// Run with: node --env-file=.env scripts/probe-monday.mjs
+// Run with: node --env-file=.env.local scripts/probe-monday.mjs
 
 const TOKEN = process.env.MONDAY_API_TOKEN;
 const BOARD_ID = process.env.MONDAY_BOARD_ID;
