@@ -41,6 +41,7 @@ import AdminFormBuilder from "./pages/admin/AdminFormBuilder";
 import AdminAttendanceReports from "./pages/admin/AdminAttendanceReports";
 import CheckIn from "./pages/CheckIn";
 import LilChampsCheckIn from "./pages/LilChampsCheckIn";
+import ExcursionCheckIn from "./pages/ExcursionCheckIn";
 import AdminLilChampsAttendance from "./pages/admin/AdminLilChampsAttendance";
 import AdminCallOuts from "./pages/admin/AdminCallOuts";
 import Register from "./pages/Register";
@@ -138,6 +139,7 @@ const App = () => (
             <Route path="/supporters" element={<Supporters />} />
             <Route path="/check-in" element={<CheckIn />} />
             <Route path="/check-in/lil-champs-corner" element={<LilChampsCheckIn />} />
+            <Route path="/excursion-check-in" element={<ExcursionCheckIn />} />
             <Route path="/call-out" element={<CallOut />} />
             <Route path="/meal-check-in" element={<MealCheckIn />} />
             <Route path="/approvals/invoice/:token" element={<InvoiceApproval />} />

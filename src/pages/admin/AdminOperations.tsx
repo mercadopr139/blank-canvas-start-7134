@@ -1,5 +1,5 @@
 import { useNavigate } from "react-router-dom";
-import { Users, BarChart3, ClipboardList, LucideIcon, CalendarCheck, FileBarChart, Settings2, Star, LogIn, Bus, UserCheck, Radio, PhoneOff, AlertTriangle, FileText, UtensilsCrossed } from "lucide-react";
+import { Users, BarChart3, ClipboardList, LucideIcon, CalendarCheck, FileBarChart, Settings2, Star, LogIn, Bus, UserCheck, Radio, PhoneOff, AlertTriangle, FileText, UtensilsCrossed, MapPin } from "lucide-react";
 import AdminSectionLayout, { SectionCard } from "@/components/admin/AdminSectionLayout";
 import { Button } from "@/components/ui/button";
 
@@ -102,6 +102,14 @@ const AdminOperations = () => {
       >
         <UtensilsCrossed className="w-4 h-4 mr-1.5" />
         Meal Check-In
+      </Button>
+      <Button
+        size="sm"
+        className="w-full bg-purple-600 hover:bg-purple-500 text-white text-sm font-medium"
+        onClick={() => navigate("/excursion-check-in")}
+      >
+        <MapPin className="w-4 h-4 mr-1.5" />
+        Excursion Check-In
       </Button>
     </div>
   );
