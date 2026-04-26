@@ -50,9 +50,11 @@ const fmtDate = (iso: string) => {
 const ExcursionRow = ({
   excursion: e,
   onEdit,
+  actualCheckinCount,
 }: {
   excursion: Excursion;
   onEdit: (e: Excursion) => void;
+  actualCheckinCount: number;
 }) => {
   const isClosed = !!e.returned_at;
   return (
@@ -67,7 +69,7 @@ const ExcursionRow = ({
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <span className="text-xs text-white/50">{e.youth_count} youth</span>
+          <span className="text-xs text-white/50">{actualCheckinCount} youth</span>
           {isClosed && (
             <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-200 bg-emerald-500/15 border border-emerald-400/40 rounded-full px-2 py-0.5">
               Closed
@@ -169,6 +171,26 @@ export const ExcursionHistorySection = ({
     enabled: showHistory,
   });
 
+  // Real check-in counts per excursion_id — counts attendance_records,
+  // not the manually-entered youth_count field on the excursion row.
+  const { data: checkinCountByExcursion = {} } = useQuery({
+    queryKey: ["excursion-checkin-counts-all"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("attendance_records")
+        .select("excursion_id")
+        .eq("program_source", "Excursion")
+        .not("excursion_id", "is", null);
+      if (error) throw error;
+      const counts: Record<string, number> = {};
+      (data || []).forEach((r: { excursion_id: string | null }) => {
+        if (r.excursion_id) counts[r.excursion_id] = (counts[r.excursion_id] || 0) + 1;
+      });
+      return counts;
+    },
+  });
+  const countsMap = checkinCountByExcursion as Record<string, number>;
+
   const sortedMonth = useMemo(
     () => [...monthExcursions].sort((a, b) => b.date.localeCompare(a.date)),
     [monthExcursions]
@@ -192,7 +214,7 @@ export const ExcursionHistorySection = ({
           ) : (
             <div className="space-y-3">
               {sortedMonth.map((e) => (
-                <ExcursionRow key={e.id} excursion={e} onEdit={onEdit} />
+                <ExcursionRow key={e.id} excursion={e} onEdit={onEdit} actualCheckinCount={countsMap[e.id] || 0} />
               ))}
             </div>
           )}
@@ -223,7 +245,7 @@ export const ExcursionHistorySection = ({
             ) : (
               <div className="space-y-3">
                 {allExcursions.map((e) => (
-                  <ExcursionRow key={e.id} excursion={e} onEdit={onEdit} />
+                  <ExcursionRow key={e.id} excursion={e} onEdit={onEdit} actualCheckinCount={countsMap[e.id] || 0} />
                 ))}
               </div>
             )}

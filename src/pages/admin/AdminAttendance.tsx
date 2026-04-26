@@ -242,6 +242,27 @@ const AdminAttendance = () => {
     },
   });
 
+  // Excursion check-in counts for the calendar month, keyed by date.
+  // Used to show the real attendance number on Excursion days (the
+  // calendarAttendance query above is NLA-program-only).
+  const { data: excursionDailyCounts = {} } = useQuery({
+    queryKey: ["excursion-daily-counts", calMonthStart, calMonthEnd],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("attendance_records")
+        .select("check_in_date, excursion_id")
+        .eq("program_source", "Excursion")
+        .gte("check_in_date", calMonthStart)
+        .lte("check_in_date", calMonthEnd);
+      if (error) throw error;
+      const counts: Record<string, number> = {};
+      (data || []).forEach((r: { check_in_date: string }) => {
+        counts[r.check_in_date] = (counts[r.check_in_date] || 0) + 1;
+      });
+      return counts;
+    },
+  });
+
   // Middle Township, NJ — site of No Limits Boxing Academy
   // Forecast API covers the last 92 days (including today); archive API for anything older.
   const { data: monthWeather } = useQuery({
@@ -1531,12 +1552,16 @@ const AdminAttendance = () => {
               {calendarDays.map((day, idx) => {
                 if (day === null) return <div key={`empty-${idx}`} className="aspect-square" />;
                 const dateStr = format(new Date(calendarMonth.getFullYear(), calendarMonth.getMonth(), day), "yyyy-MM-dd");
-                const count = dailyCounts[dateStr] || 0;
                 const dateObj = new Date(calendarMonth.getFullYear(), calendarMonth.getMonth(), day);
                 const isCurrentDay = isToday(dateObj);
                 const isSelected = selectedDay === dateStr;
                 const isPrac = isPracticeDay(dateStr, calPracticeDayMap);
                 const isExc = isExcursionDay(dateStr);
+                // On Excursion days, show the count of Excursion check-ins
+                // (program_source = 'Excursion'), not the NLA practice count.
+                const count = isExc
+                  ? (excursionDailyCounts as Record<string, number>)[dateStr] || 0
+                  : dailyCounts[dateStr] || 0;
                 const weather = weatherMap[dateStr] as WeatherDay | undefined;
                 const wInfo = weather ? getWeatherInfo(weather.condition_code) : null;
                 const rowIndex = Math.floor(idx / 7);
