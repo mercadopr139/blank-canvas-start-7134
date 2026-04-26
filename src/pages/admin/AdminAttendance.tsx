@@ -24,6 +24,7 @@ import {
   isWeekend, isSameMonth,
 } from "date-fns";
 import { toast } from "sonner";
+import { ExcursionHistorySection } from "@/components/admin/ExcursionHistorySection";
 
 /* ───────── Types ───────── */
 interface Registration {
@@ -63,6 +64,11 @@ interface Excursion {
   youth_count: number;
   notes: string | null;
   created_at: string;
+  roster_locked_at: string | null;
+  arrived_at: string | null;
+  returned_at: string | null;
+  arrival_note: string | null;
+  return_note: string | null;
 }
 
 type DayType = "practice" | "non-practice" | "excursion";
@@ -681,11 +687,30 @@ const AdminAttendance = () => {
       name: editingExcursion.name,
       youth_count: editingExcursion.youth_count,
       notes: editingExcursion.notes,
+      arrived_at: editingExcursion.arrived_at,
+      returned_at: editingExcursion.returned_at,
+      arrival_note: editingExcursion.arrival_note,
+      return_note: editingExcursion.return_note,
     }).eq("id", editingExcursion.id);
     if (error) { toast.error("Failed to update excursion"); return; }
     queryClient.invalidateQueries({ queryKey: ["excursions-cal"] });
+    queryClient.invalidateQueries({ queryKey: ["excursions-ytd", YTD_START] });
     setEditingExcursion(null);
     toast.success("Excursion updated");
+  };
+
+  // Helpers for the datetime-local inputs in the Edit Excursion modal.
+  // datetime-local format is local time without offset (YYYY-MM-DDTHH:mm),
+  // so we convert to/from ISO at the boundary.
+  const isoToLocalInput = (iso: string | null): string => {
+    if (!iso) return "";
+    const d = new Date(iso);
+    const pad = (n: number) => String(n).padStart(2, "0");
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  };
+  const localInputToIso = (local: string): string | null => {
+    if (!local) return null;
+    return new Date(local).toISOString();
   };
 
   /* ───── Derived Data ───── */
@@ -1685,6 +1710,13 @@ const AdminAttendance = () => {
             </div>
           </CardContent>
         </Card>
+
+        {/* ═══════════ EXCURSIONS — month list + history ═══════════ */}
+        <ExcursionHistorySection
+          monthExcursions={excursionsCalMonth}
+          viewedMonthShort={viewedMonthShort}
+          onEdit={(exc) => setEditingExcursion(exc)}
+        />
 
         {/* TODAY row (live, resets daily) — only when viewing current month */}
         {isCurrentMonth && [
@@ -2765,9 +2797,87 @@ const AdminAttendance = () => {
                 <Input type="number" min={0} value={editingExcursion.youth_count} onChange={(e) => setEditingExcursion({ ...editingExcursion, youth_count: Number(e.target.value) })} className="bg-white/5 border-white/20 text-white" />
               </div>
               <div>
-                <label className="text-xs text-white/50 mb-1 block">Notes</label>
-                <Input value={editingExcursion.notes || ""} onChange={(e) => setEditingExcursion({ ...editingExcursion, notes: e.target.value || null })} className="bg-white/5 border-white/20 text-white" />
+                <label className="text-xs text-white/50 mb-1 block">Notes / Lessons for next year</label>
+                <Input
+                  value={editingExcursion.notes || ""}
+                  onChange={(e) => setEditingExcursion({ ...editingExcursion, notes: e.target.value || null })}
+                  placeholder="e.g. Stay 3 nights not 4 — book accordingly"
+                  className="bg-white/5 border-white/20 text-white"
+                />
+                <p className="text-[10px] text-white/30 mt-1">Saved on the trip — visible in Excursion History next year for planning.</p>
               </div>
+
+              {/* Trip timeline — read-only roster lock + editable arrival/return */}
+              <div className="pt-3 mt-2 border-t border-white/10">
+                <p className="text-xs font-bold uppercase tracking-wider text-white/50 mb-2">Trip Timeline</p>
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="text-white/60">Roster Locked</span>
+                    <span className="text-white/80 tabular-nums">
+                      {editingExcursion.roster_locked_at
+                        ? new Date(editingExcursion.roster_locked_at).toLocaleString("en-US", { timeZone: "America/New_York", month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })
+                        : "—"}
+                    </span>
+                  </div>
+                  <div>
+                    <label className="text-xs text-white/50 mb-1 block">Arrived at destination</label>
+                    <div className="flex gap-2">
+                      <Input
+                        type="datetime-local"
+                        value={isoToLocalInput(editingExcursion.arrived_at)}
+                        onChange={(e) => setEditingExcursion({ ...editingExcursion, arrived_at: localInputToIso(e.target.value) })}
+                        className="bg-white/5 border-white/20 text-white"
+                      />
+                      {editingExcursion.arrived_at && (
+                        <Button
+                          variant="outline" size="sm"
+                          className="border-white/20 text-white/60 hover:text-white shrink-0"
+                          onClick={() => setEditingExcursion({ ...editingExcursion, arrived_at: null, arrival_note: null })}
+                        >
+                          Clear
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                  {editingExcursion.arrived_at && (
+                    <Input
+                      placeholder="Arrival note (optional)"
+                      value={editingExcursion.arrival_note || ""}
+                      onChange={(e) => setEditingExcursion({ ...editingExcursion, arrival_note: e.target.value || null })}
+                      className="bg-white/5 border-white/20 text-white text-xs"
+                    />
+                  )}
+                  <div>
+                    <label className="text-xs text-white/50 mb-1 block">Returned & closed</label>
+                    <div className="flex gap-2">
+                      <Input
+                        type="datetime-local"
+                        value={isoToLocalInput(editingExcursion.returned_at)}
+                        onChange={(e) => setEditingExcursion({ ...editingExcursion, returned_at: localInputToIso(e.target.value) })}
+                        className="bg-white/5 border-white/20 text-white"
+                      />
+                      {editingExcursion.returned_at && (
+                        <Button
+                          variant="outline" size="sm"
+                          className="border-white/20 text-white/60 hover:text-white shrink-0"
+                          onClick={() => setEditingExcursion({ ...editingExcursion, returned_at: null, return_note: null })}
+                        >
+                          Clear
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                  {editingExcursion.returned_at && (
+                    <Input
+                      placeholder="Return note (optional)"
+                      value={editingExcursion.return_note || ""}
+                      onChange={(e) => setEditingExcursion({ ...editingExcursion, return_note: e.target.value || null })}
+                      className="bg-white/5 border-white/20 text-white text-xs"
+                    />
+                  )}
+                </div>
+              </div>
+
               <div className="flex gap-2 justify-end pt-2">
                 <Button variant="outline" size="sm" className="border-white/20 text-white" onClick={() => setEditingExcursion(null)}>Cancel</Button>
                 <Button size="sm" className="bg-purple-600 hover:bg-purple-700 text-white" onClick={saveEditExcursion}>Save</Button>

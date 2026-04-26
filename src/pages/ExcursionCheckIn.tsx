@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Search, CheckCircle2, Users, ArrowLeft, MapPin, CalendarX } from "lucide-react";
+import { Search, CheckCircle2, Users, ArrowLeft, MapPin, CalendarX, ClipboardCheck, Lock } from "lucide-react";
 import nlaLogo from "@/assets/nla-logo-white.png";
 
 const getHeadshotUrl = (url: string | null): string | null => {
@@ -29,6 +29,8 @@ interface TodaysExcursion {
   name: string;
   notes: string | null;
   youth_count: number;
+  transportation_required: boolean | null;
+  roster_locked_at: string | null;
 }
 
 const Confetti = () => {
@@ -214,6 +216,38 @@ const ExcursionCheckIn = () => {
     );
   }
 
+  // Roster locked — kiosk no longer accepts self check-ins.
+  // Late arrivals must be added by Coach Chrissy via Coach Mode.
+  if (excursion?.roster_locked_at) {
+    return (
+      <div className="min-h-screen bg-black text-white flex flex-col items-center justify-center px-6 relative">
+        <Button
+          variant="ghost"
+          size="sm"
+          className="absolute top-4 left-4 text-white/40 hover:text-white hover:bg-white/10 z-10"
+          onClick={() => navigate(-1)}
+        >
+          <ArrowLeft className="w-4 h-4 mr-1" /> Back
+        </Button>
+        <Button
+          size="sm"
+          className="absolute top-4 right-4 z-10 bg-purple-600/80 hover:bg-purple-500 text-white font-semibold border border-purple-400/40 shadow-lg shadow-purple-900/30"
+          onClick={() => navigate("/excursion-coach")}
+        >
+          <ClipboardCheck className="w-4 h-4 mr-1.5" /> Coach Mode
+        </Button>
+        <Lock className="w-24 h-24 text-purple-400/60 mb-6" />
+        <h1 className="text-3xl md:text-4xl font-black text-white text-center mb-3">Excursion Roster Submitted</h1>
+        <p className="text-white/60 text-center max-w-lg text-base md:text-lg mb-2">
+          Today's <span className="text-purple-300 font-semibold">{excursion.name}</span> roster has been finalized.
+        </p>
+        <p className="text-white/50 text-center max-w-lg text-base">
+          Late arrival? Find <span className="text-white font-semibold">Coach Chrissy</span> to be added to the trip.
+        </p>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-black text-white flex flex-col">
       {/* Celebration Overlay */}
@@ -241,6 +275,16 @@ const ExcursionCheckIn = () => {
       >
         <ArrowLeft className="w-4 h-4 mr-1" /> Back
       </Button>
+
+      {excursion && (
+        <Button
+          size="sm"
+          className="absolute top-4 right-4 z-10 bg-purple-600/80 hover:bg-purple-500 text-white font-semibold border border-purple-400/40 shadow-lg shadow-purple-900/30"
+          onClick={() => navigate("/excursion-coach")}
+        >
+          <ClipboardCheck className="w-4 h-4 mr-1.5" /> Finalize Roster
+        </Button>
+      )}
 
       <div className={`flex-1 flex flex-col items-center px-4 md:px-8 transition-all duration-500 ${
         isIdle ? "justify-center" : "justify-start pt-8 md:pt-12"

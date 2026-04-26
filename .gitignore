@@ -21,6 +21,9 @@ dist
 dist-ssr
 *.local
 
+# Supabase CLI scratch — machine-specific, regenerated per-link
+supabase/.temp/
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
