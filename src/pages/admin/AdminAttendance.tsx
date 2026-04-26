@@ -242,26 +242,31 @@ const AdminAttendance = () => {
     },
   });
 
-  // Excursion check-in counts for the calendar month, keyed by date.
-  // Used to show the real attendance number on Excursion days (the
-  // calendarAttendance query above is NLA-program-only).
-  const { data: excursionDailyCounts = {} } = useQuery({
-    queryKey: ["excursion-daily-counts", calMonthStart, calMonthEnd],
+  // Full Excursion attendance records for the calendar month. Used for
+  // both the per-date count on the calendar tile AND the day-detail
+  // modal's roster (the main calendarAttendance query is NLA-only).
+  const { data: excursionAttendanceMonth = [] } = useQuery({
+    queryKey: ["excursion-attendance-month", calMonthStart, calMonthEnd],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("attendance_records")
-        .select("check_in_date, excursion_id")
+        .select("id, registration_id, check_in_date, check_in_at, program_source, is_manual, excursion_id")
         .eq("program_source", "Excursion")
         .gte("check_in_date", calMonthStart)
-        .lte("check_in_date", calMonthEnd);
+        .lte("check_in_date", calMonthEnd)
+        .order("check_in_at", { ascending: true });
       if (error) throw error;
-      const counts: Record<string, number> = {};
-      (data || []).forEach((r: { check_in_date: string }) => {
-        counts[r.check_in_date] = (counts[r.check_in_date] || 0) + 1;
-      });
-      return counts;
+      return data as AttendanceRecord[];
     },
   });
+
+  const excursionDailyCounts = useMemo(() => {
+    const counts: Record<string, number> = {};
+    excursionAttendanceMonth.forEach((r) => {
+      counts[r.check_in_date] = (counts[r.check_in_date] || 0) + 1;
+    });
+    return counts;
+  }, [excursionAttendanceMonth]);
 
   // Middle Township, NJ — site of No Limits Boxing Academy
   // Forecast API covers the last 92 days (including today); archive API for anything older.
@@ -701,6 +706,57 @@ const AdminAttendance = () => {
     setDeleteExcursionTarget(null);
     toast.success("Excursion deleted");
   };
+
+  // Trip roster (vehicles + youth + personnel) for the Excursion currently
+  // being edited. Pulled via the same Coach-Mode RPCs so the read-only
+  // admin view stays in sync with whatever Chrissy set up on the kiosk.
+  const editingExcursionId = editingExcursion?.id ?? null;
+  const { data: editingRosterYouth = [] } = useQuery({
+    queryKey: ["admin-edit-excursion-roster-youth", editingExcursionId],
+    enabled: !!editingExcursionId,
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc("get_excursion_roster_youth", {
+        _excursion_id: editingExcursionId!,
+      });
+      if (error) throw error;
+      return data as Array<{
+        registration_id: string;
+        child_first_name: string;
+        child_last_name: string;
+        child_boxing_program: string;
+        child_headshot_url: string | null;
+        vehicle_id: string | null;
+      }>;
+    },
+  });
+  const { data: editingVehicles = [] } = useQuery({
+    queryKey: ["admin-edit-excursion-vehicles", editingExcursionId],
+    enabled: !!editingExcursionId,
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc("get_excursion_vehicles", {
+        _excursion_id: editingExcursionId!,
+      });
+      if (error) throw error;
+      return data as Array<{
+        id: string;
+        name: string;
+        seat_cap: number;
+        driver_name: string;
+        assigned_count: number;
+      }>;
+    },
+  });
+  const { data: editingPersonnel = [] } = useQuery({
+    queryKey: ["admin-edit-excursion-personnel", editingExcursionId],
+    enabled: !!editingExcursionId,
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc("get_excursion_personnel", {
+        _excursion_id: editingExcursionId!,
+      });
+      if (error) throw error;
+      return data as Array<{ id: string; name: string; created_at: string }>;
+    },
+  });
 
   const saveEditExcursion = async () => {
     if (!editingExcursion) return;
@@ -1318,14 +1374,20 @@ const AdminAttendance = () => {
 
   const daySignIns = useMemo(() => {
     if (!selectedDay) return [];
-    const all = filteredCalendarAttendance
-      .filter((a) => a.check_in_date === selectedDay)
+    // On Excursion days the kiosk records check-ins with program_source =
+    // 'Excursion', which the main NLA-only query excludes. Pull from the
+    // separate Excursion-attendance query for those days.
+    const isExc = isExcursionDay(selectedDay);
+    const source = isExc
+      ? excursionAttendanceMonth.filter((a) => a.check_in_date === selectedDay)
+      : filteredCalendarAttendance.filter((a) => a.check_in_date === selectedDay);
+    const all = source
       .map((a) => ({ ...a, reg: regMap[a.registration_id] }))
       .filter((a) => a.reg);
     if (!daySearch.trim()) return all;
     const q = daySearch.toLowerCase();
     return all.filter((a) => `${a.reg.child_first_name} ${a.reg.child_last_name}`.toLowerCase().includes(q));
-  }, [selectedDay, filteredCalendarAttendance, regMap, daySearch]);
+  }, [selectedDay, filteredCalendarAttendance, excursionAttendanceMonth, isExcursionDay, regMap, daySearch]);
 
   const calendarDays = useMemo(() => {
     const monthStart = startOfMonth(calendarMonth);
@@ -2627,11 +2689,15 @@ const AdminAttendance = () => {
                 </div>
               )}
 
-              <div className="mt-2 mb-2 flex items-center gap-3">
-                <Badge className="bg-green-500/15 text-green-400 border-green-500/30 flex-shrink-0">{daySignIns.length} youth signed in</Badge>
-                {!isPracticeDay(selectedDay, calPracticeDayMap) && (
+              <div className="mt-2 mb-2 flex items-center gap-3 flex-wrap">
+                <Badge className={`${isExcursionDay(selectedDay) ? "bg-purple-500/15 text-purple-300 border-purple-500/30" : "bg-green-500/15 text-green-400 border-green-500/30"} flex-shrink-0`}>
+                  {daySignIns.length} youth {isExcursionDay(selectedDay) ? "on Excursion" : "signed in"}
+                </Badge>
+                {isExcursionDay(selectedDay) ? (
+                  <Badge className="bg-purple-500/15 text-purple-300 border-purple-500/30 flex-shrink-0">Excursion Day</Badge>
+                ) : !isPracticeDay(selectedDay, calPracticeDayMap) ? (
                   <Badge className="bg-red-500/15 text-red-400 border-red-500/30 flex-shrink-0">Non-Practice Day</Badge>
-                )}
+                ) : null}
               </div>
               <div className="relative mb-3">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/40" />
@@ -2807,7 +2873,7 @@ const AdminAttendance = () => {
 
       {/* Edit Excursion Modal */}
       <Dialog open={!!editingExcursion} onOpenChange={(open) => { if (!open) setEditingExcursion(null); }}>
-        <DialogContent className="bg-black border-purple-500/20 text-white max-w-sm">
+        <DialogContent className="bg-black border-purple-500/20 text-white max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="text-purple-400 flex items-center gap-2">🟣 Edit Excursion</DialogTitle>
           </DialogHeader>
@@ -2817,9 +2883,20 @@ const AdminAttendance = () => {
                 <label className="text-xs text-white/50 mb-1 block">Excursion Name *</label>
                 <Input value={editingExcursion.name} onChange={(e) => setEditingExcursion({ ...editingExcursion, name: e.target.value })} className="bg-white/5 border-white/20 text-white" />
               </div>
-              <div>
-                <label className="text-xs text-white/50 mb-1 block">Number of Youth *</label>
-                <Input type="number" min={0} value={editingExcursion.youth_count} onChange={(e) => setEditingExcursion({ ...editingExcursion, youth_count: Number(e.target.value) })} className="bg-white/5 border-white/20 text-white" />
+              <div className="grid grid-cols-2 gap-3">
+                <div className="rounded-lg bg-white/[0.03] border border-white/10 px-3 py-2.5">
+                  <p className="text-[10px] uppercase tracking-wider text-white/50 font-semibold">
+                    Actual Youth Checked In
+                  </p>
+                  <p className="text-2xl font-black tabular-nums text-emerald-300">
+                    {editingRosterYouth.length}
+                  </p>
+                </div>
+                <div>
+                  <label className="text-xs text-white/50 mb-1 block">Planning estimate</label>
+                  <Input type="number" min={0} value={editingExcursion.youth_count} onChange={(e) => setEditingExcursion({ ...editingExcursion, youth_count: Number(e.target.value) })} className="bg-white/5 border-white/20 text-white" />
+                  <p className="text-[10px] text-white/30 mt-1">Pre-trip estimate; not the live count.</p>
+                </div>
               </div>
               <div>
                 <label className="text-xs text-white/50 mb-1 block">Notes / Lessons for next year</label>
@@ -2831,6 +2908,81 @@ const AdminAttendance = () => {
                 />
                 <p className="text-[10px] text-white/30 mt-1">Saved on the trip — visible in Excursion History next year for planning.</p>
               </div>
+
+              {/* TRIP ROSTER — read-only mirror of Coach Mode locked view */}
+              {(editingVehicles.length > 0 || editingRosterYouth.length > 0 || editingPersonnel.length > 0) && (
+                <div className="pt-3 mt-2 border-t border-white/10">
+                  <p className="text-xs font-bold uppercase tracking-wider text-white/50 mb-3">Trip Roster</p>
+
+                  {editingVehicles.length > 0 && (
+                    <div className="space-y-2 mb-3">
+                      {editingVehicles.map((v) => {
+                        const inThisVehicle = editingRosterYouth.filter((y) => y.vehicle_id === v.id);
+                        return (
+                          <div key={v.id} className="rounded-lg bg-white/[0.03] border border-white/10 p-3">
+                            <div className="flex items-center justify-between mb-1.5">
+                              <p className="text-sm font-bold text-purple-200">🚐 {v.name}</p>
+                              <span className="text-xs text-white/50 tabular-nums">
+                                {v.assigned_count}/{v.seat_cap} seats
+                              </span>
+                            </div>
+                            <p className="text-xs text-white/50 mb-2">
+                              Driver: <span className="text-white/80 font-semibold">{v.driver_name}</span>
+                            </p>
+                            {inThisVehicle.length > 0 ? (
+                              <ul className="text-xs text-white/70 space-y-0.5 pl-1">
+                                {inThisVehicle.map((y) => (
+                                  <li key={y.registration_id}>
+                                    • {y.child_first_name} {y.child_last_name}
+                                  </li>
+                                ))}
+                              </ul>
+                            ) : (
+                              <p className="text-xs text-white/30 italic">No youth assigned to this vehicle.</p>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+
+                  {(() => {
+                    const unassigned = editingRosterYouth.filter((y) => !y.vehicle_id);
+                    if (unassigned.length === 0) return null;
+                    return (
+                      <div className="rounded-lg bg-yellow-500/[0.05] border border-yellow-400/20 p-3 mb-3">
+                        <p className="text-xs font-bold text-yellow-200/80 mb-1.5">
+                          Youth not assigned to any vehicle ({unassigned.length})
+                        </p>
+                        <ul className="text-xs text-white/70 space-y-0.5 pl-1">
+                          {unassigned.map((y) => (
+                            <li key={y.registration_id}>
+                              • {y.child_first_name} {y.child_last_name}
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    );
+                  })()}
+
+                  {editingPersonnel.length > 0 && (
+                    <div className="rounded-lg bg-white/[0.03] border border-white/10 p-3">
+                      <p className="text-xs font-bold text-white/60 mb-1.5">
+                        Coaches & Volunteers riding along ({editingPersonnel.length})
+                      </p>
+                      <ul className="text-xs text-white/70 space-y-0.5 pl-1">
+                        {editingPersonnel.map((p) => (
+                          <li key={p.id}>• {p.name}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+
+                  <p className="text-[10px] text-white/30 mt-2">
+                    Read-only summary. To change vehicle assignments or personnel, use Coach Mode.
+                  </p>
+                </div>
+              )}
 
               {/* Trip timeline — read-only roster lock + editable arrival/return */}
               <div className="pt-3 mt-2 border-t border-white/10">
