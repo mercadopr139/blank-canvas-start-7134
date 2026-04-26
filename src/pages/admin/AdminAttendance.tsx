@@ -696,14 +696,22 @@ const AdminAttendance = () => {
     if (!deleteExcursionTarget) return;
     const { error } = await supabase.from("excursions").delete().eq("id", deleteExcursionTarget.id);
     if (error) { toast.error("Failed to delete excursion"); return; }
-    // Revert to practice day
+    // Revert to practice day (CASCADE deletes already wiped attendance,
+    // vehicles, assignments, and personnel rows).
     const existing = practiceDaysCalMonth.find((p) => p.date === deleteExcursionTarget.date);
     if (existing) {
       await supabase.from("practice_days").update({ is_practice_day: true }).eq("id", existing.id);
     }
     queryClient.invalidateQueries({ queryKey: ["excursions-cal"] });
+    queryClient.invalidateQueries({ queryKey: ["excursions-prev"] });
+    queryClient.invalidateQueries({ queryKey: ["excursions-ytd", YTD_START] });
+    queryClient.invalidateQueries({ queryKey: ["excursions-history-all"] });
+    queryClient.invalidateQueries({ queryKey: ["excursion-attendance-month", calMonthStart, calMonthEnd] });
+    queryClient.invalidateQueries({ queryKey: ["excursion-checkin-counts-all"] });
     queryClient.invalidateQueries({ queryKey: ["practice-days-cal"] });
+    queryClient.invalidateQueries({ queryKey: ["calendar-attendance", calMonthStart] });
     setDeleteExcursionTarget(null);
+    setEditingExcursion(null); // Close Edit modal too if delete was triggered from there
     toast.success("Excursion deleted");
   };
 
@@ -3055,9 +3063,19 @@ const AdminAttendance = () => {
                 </div>
               </div>
 
-              <div className="flex gap-2 justify-end pt-2">
-                <Button variant="outline" size="sm" className="border-white/20 text-white" onClick={() => setEditingExcursion(null)}>Cancel</Button>
-                <Button size="sm" className="bg-purple-600 hover:bg-purple-700 text-white" onClick={saveEditExcursion}>Save</Button>
+              <div className="flex gap-2 justify-between pt-3 mt-2 border-t border-white/10">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="border-red-500/40 bg-red-500/5 text-red-300 hover:bg-red-500/15 hover:text-red-200"
+                  onClick={() => setDeleteExcursionTarget(editingExcursion)}
+                >
+                  <Trash2 className="w-4 h-4 mr-1.5" /> Delete Excursion
+                </Button>
+                <div className="flex gap-2">
+                  <Button variant="outline" size="sm" className="border-white/20 text-white" onClick={() => setEditingExcursion(null)}>Cancel</Button>
+                  <Button size="sm" className="bg-purple-600 hover:bg-purple-700 text-white" onClick={saveEditExcursion}>Save</Button>
+                </div>
               </div>
             </div>
           )}
@@ -3066,16 +3084,44 @@ const AdminAttendance = () => {
 
       {/* Delete Excursion Confirmation */}
       <Dialog open={!!deleteExcursionTarget} onOpenChange={(open) => { if (!open) setDeleteExcursionTarget(null); }}>
-        <DialogContent className="bg-zinc-900 border-white/10 text-white max-w-sm">
+        <DialogContent className="bg-zinc-900 border-red-500/30 text-white max-w-md">
           <DialogHeader>
-            <DialogTitle className="text-white">Delete Excursion?</DialogTitle>
+            <DialogTitle className="text-red-300 flex items-center gap-2">
+              <AlertTriangle className="w-5 h-5" /> Delete Excursion?
+            </DialogTitle>
           </DialogHeader>
-          <p className="text-sm text-white/70">
-            This will delete the excursion "<span className="font-medium text-white">{deleteExcursionTarget?.name}</span>" and revert the day to a practice day.
-          </p>
-          <div className="flex gap-2 justify-end pt-2">
+          <div className="space-y-3">
+            <p className="text-sm text-white/80">
+              You're about to permanently delete{" "}
+              <span className="font-bold text-white">"{deleteExcursionTarget?.name}"</span>.
+            </p>
+            <div className="rounded-lg bg-red-500/[0.08] border border-red-500/30 px-3 py-2.5 text-xs text-white/70 space-y-1">
+              <p className="font-bold text-red-300 mb-1">This will also delete:</p>
+              {(() => {
+                const isCurrent = deleteExcursionTarget?.id === editingExcursion?.id;
+                const youthCount = isCurrent ? editingRosterYouth.length : null;
+                const vehicleCount = isCurrent ? editingVehicles.length : null;
+                const personnelCount = isCurrent ? editingPersonnel.length : null;
+                return (
+                  <ul className="space-y-0.5 pl-1">
+                    <li>• {youthCount !== null ? `${youthCount} youth check-in${youthCount === 1 ? "" : "s"}` : "All youth check-ins for the day"}</li>
+                    <li>• {vehicleCount !== null ? `${vehicleCount} vehicle${vehicleCount === 1 ? "" : "s"} + driver assignment${vehicleCount === 1 ? "" : "s"}` : "All vehicle + driver assignments"}</li>
+                    <li>• {personnelCount !== null ? `${personnelCount} coach${personnelCount === 1 ? "" : "es"}/volunteer${personnelCount === 1 ? "" : "s"} riding along` : "All coaches & volunteers riding along"}</li>
+                    <li>• Trip timeline (locked, arrived, returned)</li>
+                    <li>• Notes / lessons for next year</li>
+                  </ul>
+                );
+              })()}
+            </div>
+            <p className="text-xs text-yellow-200/80">
+              The day reverts to a regular practice day. This action <span className="font-bold">cannot be undone</span>.
+            </p>
+          </div>
+          <div className="flex gap-2 justify-end pt-3 mt-2 border-t border-white/10">
             <Button variant="outline" size="sm" className="border-white/20 text-white" onClick={() => setDeleteExcursionTarget(null)}>Cancel</Button>
-            <Button variant="destructive" size="sm" onClick={handleDeleteExcursion}>Delete</Button>
+            <Button variant="destructive" size="sm" onClick={handleDeleteExcursion}>
+              <Trash2 className="w-4 h-4 mr-1.5" /> Yes, Delete Permanently
+            </Button>
           </div>
         </DialogContent>
       </Dialog>
