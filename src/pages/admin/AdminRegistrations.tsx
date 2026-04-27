@@ -351,7 +351,7 @@ const AdminRegistrations = () => {
               </TableCell>
               <TableCell>
                 {reg.child_boxing_program === "Junior Boxing (Ages 7-10)" ? (
-                  <span className="text-xs text-purple-400 font-medium">Lil Champs Corner</span>
+                  <span className="text-xs text-sky-400 font-medium">Lil Champs Corner</span>
                 ) : (
                   <Select
                     value={reg.extended_program || "unassigned"}
@@ -783,7 +783,7 @@ const EditRegistrationForm = ({
         {form.child_boxing_program === "Junior Boxing (Ages 7-10)" ? (
           <div className="space-y-1">
             <Label className="text-sm text-white/60">Extended Program</Label>
-            <p className="text-sm text-purple-400 font-medium py-1">Lil Champs Corner (auto-assigned)</p>
+            <p className="text-sm text-sky-400 font-medium py-1">Lil Champs Corner (auto-assigned)</p>
           </div>
         ) : (
           <SelectField
