@@ -20,6 +20,7 @@ import { toast } from "sonner";
 // ─── Constants ───────────────────────────────────────────────────────────────
 
 const OUTREACH_TAG_OPTIONS = [
+  "VIP",
   "Meal Train",
   "Monthly Postcard",
   "Event Alerts",
