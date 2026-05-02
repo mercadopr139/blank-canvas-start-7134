@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Pencil, Phone, Users } from "lucide-react";
+import { Plus, Pencil, Phone, Users, ExternalLink } from "lucide-react";
 
 interface Driver {
   id: string;
@@ -163,6 +163,26 @@ export default function TransportDrivers() {
           ))}
         </div>
       )}
+
+      {/* Admin-only entry point into the driver app for review/testing.
+          Opens in a new tab so the admin session stays intact. */}
+      <div className="pt-4 mt-4 border-t border-white/10">
+        <a
+          href="/transport"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="flex items-center justify-between bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl px-4 py-3 transition-colors group"
+        >
+          <div className="flex items-center gap-3">
+            <ExternalLink className="w-4 h-4 text-white/40 group-hover:text-white/70 transition-colors" />
+            <div>
+              <p className="text-white text-sm font-medium">Open Driver App</p>
+              <p className="text-white/40 text-xs">Review the driver-facing experience (opens in a new tab)</p>
+            </div>
+          </div>
+          <span className="text-white/30 text-xs">/transport</span>
+        </a>
+      </div>
 
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent className="bg-[#111827] border-white/10 text-white max-w-sm">
