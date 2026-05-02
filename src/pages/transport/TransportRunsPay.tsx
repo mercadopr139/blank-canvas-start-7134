@@ -6,7 +6,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { useToast } from "@/hooks/use-toast";
 import {
   AlertTriangle, CheckCircle, XCircle,
-  Download, ChevronLeft, ChevronRight, DollarSign, Trash2, Pencil, ChevronDown, ChevronUp, User, Users,
+  Download, ChevronLeft, ChevronRight, DollarSign, Trash2, Pencil, ChevronDown, ChevronUp, User, Users, Plus, Search,
 } from "lucide-react";
 import {
   format, startOfMonth, endOfMonth, eachDayOfInterval, getDay,
@@ -54,6 +54,12 @@ export default function TransportRunsPay() {
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
   const [expandedRosters, setExpandedRosters] = useState<Set<string>>(new Set());
   const [rosterData, setRosterData] = useState<Record<string, { youth_id: string; status: string; first_name: string; last_name: string; photo_url: string | null; pickup_zone: string }[]>>({});
+
+  // Add-youth-to-existing-trip picker state. addingYouthToRun = the run id
+  // currently showing the inline picker (or null).
+  const [addingYouthToRun, setAddingYouthToRun] = useState<string | null>(null);
+  const [youthPickerSearch, setYouthPickerSearch] = useState("");
+  const [allYouth, setAllYouth] = useState<{ id: string; first_name: string; last_name: string; pickup_zone: string }[]>([]);
 
   const currentPayPeriod = useMemo(() => getCurrentPayPeriod(), []);
   const [payPeriodRuns, setPayPeriodRuns] = useState<RunWithDetails[]>([]);
@@ -269,6 +275,50 @@ export default function TransportRunsPay() {
     toast({ title: "Payment status reverted to unpaid" });
   };
 
+  // Fetch the current roster for a run and stash it in rosterData. Used both
+  // to lazy-load on roster expand and to refresh after an admin adds a youth
+  // to an existing trip.
+  const loadRoster = useCallback(async (runId: string) => {
+    const { data } = await supabase
+      .from("transport_attendance")
+      .select("youth_id, status, youth:youth_profiles(first_name, last_name, photo_url, pickup_zone)")
+      .eq("run_id", runId);
+    if (!data) return;
+    const rows = await Promise.all(
+      data.map(async (d: any) => {
+        const raw: string | null = d.youth?.photo_url || null;
+        let resolved: string | null = null;
+        if (raw) {
+          if (raw.startsWith("http")) {
+            resolved = raw;
+          } else {
+            // Try youth-photos bucket first, fall back to registration-signatures
+            const buckets = ["youth-photos", "registration-signatures"];
+            for (const bucket of buckets) {
+              const { data: signed } = await supabase.storage
+                .from(bucket)
+                .createSignedUrl(raw, 3600);
+              if (signed?.signedUrl) {
+                resolved = signed.signedUrl;
+                break;
+              }
+            }
+          }
+        }
+        return {
+          youth_id: d.youth_id,
+          status: d.status,
+          first_name: d.youth?.first_name || "Unknown",
+          last_name: d.youth?.last_name || "",
+          photo_url: resolved,
+          pickup_zone: d.youth?.pickup_zone || "",
+        };
+      })
+    );
+    setRosterData((prev) => ({ ...prev, [runId]: rows }));
+    setAttendanceCounts((prev) => ({ ...prev, [runId]: data.length }));
+  }, []);
+
   const toggleRoster = async (runId: string) => {
     setExpandedRosters((prev) => {
       const next = new Set(prev);
@@ -277,45 +327,40 @@ export default function TransportRunsPay() {
       return next;
     });
     if (rosterData[runId]) return;
-    const { data } = await supabase
-      .from("transport_attendance")
-      .select("youth_id, status, youth:youth_profiles(first_name, last_name, photo_url, pickup_zone)")
-      .eq("run_id", runId);
-    if (data) {
-      // Resolve signed URLs in parallel for any non-http photo paths (private buckets)
-      const rows = await Promise.all(
-        data.map(async (d: any) => {
-          const raw: string | null = d.youth?.photo_url || null;
-          let resolved: string | null = null;
-          if (raw) {
-            if (raw.startsWith("http")) {
-              resolved = raw;
-            } else {
-              // Try youth-photos bucket first, fall back to registration-signatures
-              const buckets = ["youth-photos", "registration-signatures"];
-              for (const bucket of buckets) {
-                const { data: signed } = await supabase.storage
-                  .from(bucket)
-                  .createSignedUrl(raw, 3600);
-                if (signed?.signedUrl) {
-                  resolved = signed.signedUrl;
-                  break;
-                }
-              }
-            }
-          }
-          return {
-            youth_id: d.youth_id,
-            status: d.status,
-            first_name: d.youth?.first_name || "Unknown",
-            last_name: d.youth?.last_name || "",
-            photo_url: resolved,
-            pickup_zone: d.youth?.pickup_zone || "",
-          };
-        })
-      );
-      setRosterData((prev) => ({ ...prev, [runId]: rows }));
+    await loadRoster(runId);
+  };
+
+  // Load the active-youth list once, used by the Add-Youth picker on each run.
+  useEffect(() => {
+    supabase
+      .from("youth_profiles")
+      .select("id, first_name, last_name, pickup_zone")
+      .eq("status", "active")
+      .order("last_name")
+      .then(({ data }) => {
+        if (data) setAllYouth(data as typeof allYouth);
+      });
+  }, []);
+
+  const handleAddYouthToRun = async (runId: string, youthId: string, runType: string) => {
+    // Map the run's run_type onto the per-youth attendance status. A run is
+    // either a pickup or a dropoff — the corresponding attendance column is
+    // the matching past-tense status.
+    const status = runType === "pickup" ? "picked_up" : "dropped_off";
+    const { error } = await supabase.from("transport_attendance").insert({
+      run_id: runId,
+      youth_id: youthId,
+      status,
+      recorded_at: new Date().toISOString(),
+    });
+    if (error) {
+      toast({ title: "Failed to add youth", description: error.message, variant: "destructive" });
+      return;
     }
+    setAddingYouthToRun(null);
+    setYouthPickerSearch("");
+    await loadRoster(runId);
+    toast({ title: "Youth added to trip" });
   };
 
   // Driver history modal
@@ -607,6 +652,60 @@ export default function TransportRunsPay() {
                             </div>
                           );
                         })
+                      )}
+
+                      {/* Add Youth picker — admin-side fix for when a driver
+                          submits a trip but missed (or accidentally dropped)
+                          a youth. */}
+                      {addingYouthToRun === r.id ? (
+                        <div className="pt-2 border-t border-white/10 space-y-1.5">
+                          <div className="relative">
+                            <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-3 h-3 text-white/30" />
+                            <input
+                              autoFocus
+                              placeholder="Search youth by name…"
+                              value={youthPickerSearch}
+                              onChange={(e) => setYouthPickerSearch(e.target.value)}
+                              className="w-full bg-white/5 border border-white/10 rounded pl-7 pr-2 py-1.5 text-xs text-white placeholder:text-white/30 focus:outline-none focus:border-blue-500/50"
+                            />
+                          </div>
+                          <div className="max-h-40 overflow-y-auto space-y-1">
+                            {(() => {
+                              const inRoster = new Set((rosterData[r.id] || []).map((rr) => rr.youth_id));
+                              const q = youthPickerSearch.trim().toLowerCase();
+                              const candidates = allYouth
+                                .filter((y) => !inRoster.has(y.id))
+                                .filter((y) => !q || y.first_name.toLowerCase().includes(q) || y.last_name.toLowerCase().includes(q))
+                                .slice(0, 12);
+                              if (candidates.length === 0) {
+                                return <p className="text-white/30 text-[11px] text-center py-2">No matching youth.</p>;
+                              }
+                              return candidates.map((y) => (
+                                <button
+                                  key={y.id}
+                                  onClick={() => handleAddYouthToRun(r.id, y.id, r.run_type)}
+                                  className="w-full flex items-center justify-between bg-white/5 hover:bg-white/10 rounded px-2 py-1.5 text-left transition-colors"
+                                >
+                                  <span className="text-white text-xs">{y.first_name} {y.last_name}</span>
+                                  <span className="text-white/40 text-[10px]">{y.pickup_zone}</span>
+                                </button>
+                              ));
+                            })()}
+                          </div>
+                          <button
+                            onClick={() => { setAddingYouthToRun(null); setYouthPickerSearch(""); }}
+                            className="w-full text-white/40 hover:text-white/70 text-[11px] py-1 transition-colors"
+                          >
+                            Cancel
+                          </button>
+                        </div>
+                      ) : (
+                        <button
+                          onClick={() => { setAddingYouthToRun(r.id); setYouthPickerSearch(""); }}
+                          className="w-full flex items-center justify-center gap-1 py-1.5 mt-1 border border-dashed border-white/15 hover:border-white/30 rounded text-[11px] text-white/40 hover:text-white/70 transition-colors"
+                        >
+                          <Plus className="w-3 h-3" /> Add youth to this trip
+                        </button>
                       )}
                     </div>
                   )}
