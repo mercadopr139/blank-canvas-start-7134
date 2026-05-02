@@ -75,7 +75,7 @@ export default function DriverAddYouthSheet({ open, onOpenChange, routeName, onY
   const getPhotoUrl = (url: string | null) => {
     if (!url) return null;
     if (url.startsWith("http")) return url;
-    return `${supabaseUrl}/storage/v1/object/public/registration-signatures/${url}`;
+    return `${supabaseUrl}/storage/v1/object/public/youth-photos/${url}`;
   };
 
   const handleSearch = (query: string) => {
