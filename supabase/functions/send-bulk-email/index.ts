@@ -14,6 +14,40 @@ interface BulkEmailRequest {
   logged_by: string;
 }
 
+// Mirrors src/lib/outreachTokens.ts on the frontend. Kept duplicated here on
+// purpose — Deno edge functions can't import from /src, and this helper is
+// small enough that a copy is safer than a shared-folder refactor right now.
+function extractFirstName(name: string): string {
+  const beforeSeparator = name.split(/[&,/]/)[0].trim();
+  const words = beforeSeparator.split(/\s+/).filter(Boolean);
+  if (words.length === 0) return name;
+  const TITLES = new Set(["dr", "dr.", "mr", "mr.", "mrs", "mrs.", "ms", "ms.", "mx", "mx.", "rev", "rev."]);
+  let firstWord = words[0];
+  if (TITLES.has(firstWord.toLowerCase()) && words.length > 1) {
+    firstWord = words[1];
+  }
+  return firstWord.length >= 2 ? firstWord : beforeSeparator;
+}
+
+function applyTokens(template: string, supporter: { name: string; greeting_name: string | null }): string {
+  const firstName = extractFirstName(supporter.name);
+  const greeting = supporter.greeting_name?.trim() || supporter.name;
+  return template
+    .replaceAll("{{name}}", supporter.name)
+    .replaceAll("{{greeting_name}}", greeting)
+    .replaceAll("{{first_name}}", firstName);
+}
+
+// Mirrors SENDER_PROFILES.displayName from src/lib/outreachTokens.ts. Drives
+// the From "Name <email>" header so each staff sender's name shows up in the
+// recipient's inbox instead of a generic org name.
+const SENDER_DISPLAY_NAMES: Record<string, string> = {
+  "joshmercado@nolimitsboxingacademy.org": "Josh Mercado",
+  "info@nolimitsboxingacademy.org": "No Limits Academy",
+  "alexandravalerio@nolimitsboxingacademy.org": "Alexandra Valerio",
+  "chrissycasiello@nolimitsboxingacademy.org": "Chrissy Casiello",
+};
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -81,7 +115,7 @@ Deno.serve(async (req) => {
     // Fetch supporters with email_opt_in = true
     const { data: supporters, error: suppErr } = await supabase
       .from("supporters")
-      .select("id, name, email, email_opt_in")
+      .select("id, name, greeting_name, email, email_opt_in")
       .in("id", supporter_ids)
       .eq("email_opt_in", true);
 
@@ -100,10 +134,18 @@ Deno.serve(async (req) => {
     const skippedOptOut = supporter_ids.length - (supporters || []).length;
     const today = new Date().toISOString().split("T")[0];
 
-    // Determine from name
-    const fromName = "No Limits Academy";
+    // Drive the From display name off the chosen sender address so the
+    // recipient sees a real person's name (e.g. "Josh Mercado") rather than
+    // a generic org name. Falls back to the bare email if unmapped.
+    const fromName = SENDER_DISPLAY_NAMES[from_address] ?? from_address;
 
     for (const s of eligible) {
+      // Apply personalization tokens per recipient. Tokens are evaluated
+      // against this supporter's name + greeting_name, so each Resend call
+      // gets a uniquely-personalized subject and body.
+      const personalizedSubject = applyTokens(subject, s);
+      const personalizedHtml = applyTokens(html_body, s);
+
       try {
         const res = await fetch("https://api.resend.com/emails", {
           method: "POST",
@@ -115,19 +157,20 @@ Deno.serve(async (req) => {
             from: `${fromName} <${from_address}>`,
             reply_to: from_address,
             to: [s.email],
-            subject,
-            html: html_body,
+            subject: personalizedSubject,
+            html: personalizedHtml,
           }),
         });
 
         if (res.ok) {
           sent++;
-          // Create engagement record
+          // Engagement record uses the resolved subject so the donor history
+          // shows what the supporter actually received in their inbox.
           await supabase.from("engagements").insert({
             supporter_id: s.id,
             date: today,
             engagement_type: "Email",
-            summary: `Bulk Email Sent: ${subject}`,
+            summary: `Bulk Email Sent: ${personalizedSubject}`,
             logged_by: logged_by || null,
           });
         } else {

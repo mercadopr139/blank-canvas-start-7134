@@ -1,5 +1,6 @@
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { OUTREACH_TOKENS, applyTokens, buildOutreachEmailHtml, getSenderProfile } from "@/lib/outreachTokens";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -30,6 +31,7 @@ const OUTREACH_TAG_OPTIONS = [
 ];
 
 const FROM_ADDRESSES = [
+  "joshmercado@nolimitsboxingacademy.org",
   "info@nolimitsboxingacademy.org",
   "alexandravalerio@nolimitsboxingacademy.org",
   "chrissycasiello@nolimitsboxingacademy.org",
@@ -44,6 +46,7 @@ const REVENUE_STREAMS = ["Donation", "Sponsorship", "Fee for Service", "Re-Grant
 interface Supporter {
   id: string;
   name: string;
+  greeting_name: string | null;
   email: string | null;
   status: string | null;
   supporter_category: string | null;
@@ -74,13 +77,42 @@ const AdminBulkOutreach = () => {
   const [loggedBy, setLoggedBy] = useState("");
   const [sending, setSending] = useState(false);
   const [previewOpen, setPreviewOpen] = useState(false);
+  const [previewRecipientId, setPreviewRecipientId] = useState<string | null>(null);
+  const bodyRef = useRef<HTMLTextAreaElement | null>(null);
+  const subjectRef = useRef<HTMLInputElement | null>(null);
+  // Track the last focused composer field so the Insert Token toolbar drops
+  // tokens into whichever field the admin was actually working in (subject vs body).
+  const [lastFocused, setLastFocused] = useState<"body" | "subject">("body");
+
+  // Insert a personalization token at the cursor position in the last-focused
+  // composer field (subject or body). Falls back to appending to the body if
+  // no field has been focused yet.
+  const insertToken = (token: string) => {
+    const target = lastFocused === "subject" ? subjectRef.current : bodyRef.current;
+    const currentValue = lastFocused === "subject" ? subject : body;
+    const setValue = lastFocused === "subject" ? setSubject : setBody;
+    if (!target) {
+      setValue(currentValue + token);
+      return;
+    }
+    const start = target.selectionStart ?? currentValue.length;
+    const end = target.selectionEnd ?? currentValue.length;
+    const next = currentValue.slice(0, start) + token + currentValue.slice(end);
+    setValue(next);
+    // Restore focus and put the cursor right after the inserted token.
+    requestAnimationFrame(() => {
+      target.focus();
+      const cursor = start + token.length;
+      target.setSelectionRange(cursor, cursor);
+    });
+  };
 
   // ── Fetch supporters
   const fetchSupporters = useCallback(async () => {
     setLoading(true);
     let query = supabase
       .from("supporters")
-      .select("id, name, email, status, supporter_category, primary_revenue_stream, outreach_tags, email_opt_in")
+      .select("id, name, greeting_name, email, status, supporter_category, primary_revenue_stream, outreach_tags, email_opt_in")
       .eq("email_opt_in", true)
       .order("name");
 
@@ -161,17 +193,7 @@ const AdminBulkOutreach = () => {
 
     setSending(true);
     try {
-      const htmlBody = `<!DOCTYPE html>
-<html><head><meta charset="utf-8"/></head>
-<body style="margin:0;padding:0;background:#f9f9f9;">
-<table width="100%" cellpadding="0" cellspacing="0" style="background:#f9f9f9;">
-<tr><td align="center" style="padding:24px 0;">
-<table width="600" cellpadding="0" cellspacing="0" style="background:#fff;border-radius:8px;padding:32px;font-family:Arial,sans-serif;color:#333;">
-<tr><td>
-  <h2 style="margin:0 0 16px;color:#1a1a1a;">No Limits Academy</h2>
-  ${body.split("\n").map((p) => `<p style="margin:0 0 12px;">${p}</p>`).join("")}
-</td></tr></table>
-</td></tr></table></body></html>`;
+      const htmlBody = buildOutreachEmailHtml({ body, fromAddress });
 
       const { data, error } = await supabase.functions.invoke("send-bulk-email", {
         body: {
@@ -404,19 +426,40 @@ const AdminBulkOutreach = () => {
           <div>
             <label className="text-xs text-white/50 mb-1 block">Subject</label>
             <Input
+              ref={subjectRef}
               placeholder="Email subject line…"
               value={subject}
               onChange={(e) => setSubject(e.target.value)}
+              onFocus={() => setLastFocused("subject")}
               className="bg-white/5 border-white/20 text-white placeholder:text-white/30 text-sm"
             />
           </div>
 
           <div>
             <label className="text-xs text-white/50 mb-1 block">Message Body</label>
+            <div className="flex flex-wrap items-center gap-1.5 mb-2">
+              <span className="text-[10px] text-white/40 uppercase tracking-wider">Insert token:</span>
+              {OUTREACH_TOKENS.map((t) => (
+                <button
+                  key={t.token}
+                  type="button"
+                  onClick={() => insertToken(t.token)}
+                  title={t.description}
+                  className="text-[11px] bg-white/5 hover:bg-white/10 text-white/70 hover:text-white border border-white/10 hover:border-white/30 rounded px-2 py-0.5 transition-colors"
+                >
+                  {t.label}
+                </button>
+              ))}
+              <span className="text-[10px] text-white/30 ml-1">
+                — these get swapped per recipient when sent
+              </span>
+            </div>
             <Textarea
-              placeholder="Write your message here… (use line breaks for paragraphs)"
+              ref={bodyRef}
+              placeholder="Write your message here… use Insert token buttons above to add per-recipient personalization, e.g. Hi {{first_name}}, …"
               value={body}
               onChange={(e) => setBody(e.target.value)}
+              onFocus={() => setLastFocused("body")}
               rows={8}
               className="bg-white/5 border-white/20 text-white placeholder:text-white/30 text-sm resize-y"
             />
@@ -454,22 +497,91 @@ const AdminBulkOutreach = () => {
       </div>
 
       {/* ── Preview Dialog ── */}
-      <Dialog open={previewOpen} onOpenChange={setPreviewOpen}>
-        <DialogContent className="bg-zinc-900 border-white/10 text-white max-w-2xl max-h-[80vh] overflow-auto">
+      <Dialog
+        open={previewOpen}
+        onOpenChange={(open) => {
+          setPreviewOpen(open);
+          // Default the preview recipient to the first selected supporter
+          // when the dialog opens, so there's always something useful to show.
+          if (open && !previewRecipientId) {
+            const firstSelected = filtered.find((s) => selected.has(s.id));
+            if (firstSelected) setPreviewRecipientId(firstSelected.id);
+          }
+        }}
+      >
+        <DialogContent className="bg-zinc-900 border-white/10 text-white max-w-2xl max-h-[85vh] overflow-auto">
           <DialogHeader>
             <DialogTitle className="text-white">Email Preview</DialogTitle>
           </DialogHeader>
-          <div className="space-y-3 text-sm">
-            <div><span className="text-white/50">From:</span> {fromAddress}</div>
-            <div><span className="text-white/50">Subject:</span> {subject || "(empty)"}</div>
-            <hr className="border-white/10" />
-            <div className="bg-white rounded p-6 text-black">
-              <h2 className="text-lg font-bold mb-3">No Limits Academy</h2>
-              {body.split("\n").map((p, i) => (
-                <p key={i} className="mb-2">{p || <br />}</p>
-              ))}
-            </div>
-          </div>
+          {(() => {
+            const selectedRecipients = filtered.filter((s) => selected.has(s.id) && s.email);
+            const previewSupporter =
+              selectedRecipients.find((s) => s.id === previewRecipientId) ||
+              selectedRecipients[0] ||
+              null;
+            const resolvedSubject = previewSupporter ? applyTokens(subject, previewSupporter) : subject;
+            const resolvedBody = previewSupporter ? applyTokens(body, previewSupporter) : body;
+            const senderProfile = getSenderProfile(fromAddress);
+            // Render the actual HTML the recipient will see, signature and all.
+            // Using an iframe so the email's styles don't bleed into the dashboard.
+            const previewHtml = buildOutreachEmailHtml({ body: resolvedBody, fromAddress });
+
+            return (
+              <div className="space-y-3 text-sm">
+                {selectedRecipients.length === 0 ? (
+                  <p className="text-amber-300 bg-amber-500/10 border border-amber-500/30 rounded px-3 py-2">
+                    Select at least one supporter with an email to preview a personalized message.
+                  </p>
+                ) : (
+                  <div className="flex items-center gap-2">
+                    <span className="text-white/60 text-xs whitespace-nowrap">Preview as:</span>
+                    <Select
+                      value={previewSupporter?.id ?? ""}
+                      onValueChange={(v) => setPreviewRecipientId(v)}
+                    >
+                      <SelectTrigger className="bg-white/5 border-white/20 text-white text-xs h-8">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {selectedRecipients.map((s) => (
+                          <SelectItem key={s.id} value={s.id}>
+                            {s.name} {s.email ? `· ${s.email}` : ""}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <span className="text-white/30 text-[11px] whitespace-nowrap">
+                      {selectedRecipients.length} selected
+                    </span>
+                  </div>
+                )}
+
+                <div>
+                  <span className="text-white/50">From:</span>{" "}
+                  {senderProfile.displayName} <span className="text-white/40">&lt;{fromAddress}&gt;</span>
+                </div>
+                <div>
+                  <span className="text-white/50">To:</span>{" "}
+                  {previewSupporter ? (
+                    <>
+                      {previewSupporter.name}{" "}
+                      <span className="text-white/40">&lt;{previewSupporter.email}&gt;</span>
+                    </>
+                  ) : (
+                    "(no recipient)"
+                  )}
+                </div>
+                <div><span className="text-white/50">Subject:</span> {resolvedSubject || "(empty)"}</div>
+                <hr className="border-white/10" />
+                <iframe
+                  title="Email preview"
+                  srcDoc={previewHtml}
+                  className="w-full bg-white rounded border border-white/10"
+                  style={{ height: 520 }}
+                />
+              </div>
+            );
+          })()}
         </DialogContent>
       </Dialog>
     </div>
