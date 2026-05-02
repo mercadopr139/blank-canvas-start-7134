@@ -26,12 +26,26 @@ function downloadCsv(filename: string, csv: string) {
 function getPayRate(routeName: string | undefined): number { return (routeName === "Overflow" || routeName === "Both") ? 25 : 50; }
 
 type PayPeriod = { label: string; start: string; end: string };
-function getCurrentPayPeriod(): PayPeriod {
-  const now = new Date(); const day = now.getDate();
-  const month = new Date(now.getFullYear(), now.getMonth(), 1);
-  if (day <= 15) return { label: `${format(month, "MMM yyyy")} 1st–15th`, start: format(month, "yyyy-MM-dd"), end: format(setDate(month, 15), "yyyy-MM-dd") };
-  const last = endOfMonth(month);
-  return { label: `${format(month, "MMM yyyy")} 16th–${format(last, "do")}`, start: format(setDate(month, 16), "yyyy-MM-dd"), end: format(last, "yyyy-MM-dd") };
+
+// Returns both half-month pay periods for a given calendar month. The Driver
+// Pay tables and the Mark-Paid status both follow the calendar above, so the
+// full month split lives in one helper rather than being today-anchored.
+function getMonthPayPeriods(month: Date): { first: PayPeriod; second: PayPeriod } {
+  const first = new Date(month.getFullYear(), month.getMonth(), 1);
+  const last = endOfMonth(first);
+  const monthLabel = format(first, "MMM yyyy");
+  return {
+    first: {
+      label: `${monthLabel} 1st–15th`,
+      start: format(first, "yyyy-MM-dd"),
+      end: format(setDate(first, 15), "yyyy-MM-dd"),
+    },
+    second: {
+      label: `${monthLabel} 16th–${format(last, "do")}`,
+      start: format(setDate(first, 16), "yyyy-MM-dd"),
+      end: format(last, "yyyy-MM-dd"),
+    },
+  };
 }
 
 interface RunWithDetails { id: string; run_type: string; status: string; started_at: string; closed_at: string | null; driver: { id: string; name: string } | null; route: { id: string; name: string } | null; }
@@ -61,11 +75,14 @@ export default function TransportRunsPay() {
   const [youthPickerSearch, setYouthPickerSearch] = useState("");
   const [allYouth, setAllYouth] = useState<{ id: string; first_name: string; last_name: string; pickup_zone: string }[]>([]);
 
-  const currentPayPeriod = useMemo(() => getCurrentPayPeriod(), []);
-  const [payPeriodRuns, setPayPeriodRuns] = useState<RunWithDetails[]>([]);
+  // Pay periods follow the calendar above — recomputed when the user navigates.
+  const periods = useMemo(() => getMonthPayPeriods(currentMonth), [currentMonth]);
   const [yearRuns, setYearRuns] = useState<RunWithDetails[]>([]);
-  const [paidDrivers, setPaidDrivers] = useState<Set<string>>(new Set());
-  const [undoConfirmDriverId, setUndoConfirmDriverId] = useState<string | null>(null);
+  // Paid status is per (driver, half-period) — kept as two sets so badge/button
+  // logic for each table is independent.
+  const [paidFirstHalf, setPaidFirstHalf] = useState<Set<string>>(new Set());
+  const [paidSecondHalf, setPaidSecondHalf] = useState<Set<string>>(new Set());
+  const [undoConfirm, setUndoConfirm] = useState<{ driverId: string; half: "first" | "second" } | null>(null);
 
   // Driver history modal
   const [historyDriverId, setHistoryDriverId] = useState<string | null>(null);
@@ -78,42 +95,41 @@ export default function TransportRunsPay() {
   const monthStart = startOfMonth(currentMonth);
   const monthEnd = endOfMonth(currentMonth);
 
-  // Load paid status from driver_pay_periods
+  // Load paid status for BOTH halves of the visible month from driver_pay_periods.
   const loadPaidStatus = useCallback(async () => {
-    const { data } = await supabase
-      .from("driver_pay_periods")
-      .select("driver_id, status")
-      .eq("period_start", currentPayPeriod.start)
-      .eq("period_end", currentPayPeriod.end);
-    if (data) {
-      const paid = new Set<string>();
-      data.forEach((d) => { if (d.status === "paid") paid.add(d.driver_id); });
-      setPaidDrivers(paid);
-    }
-  }, [currentPayPeriod]);
+    const [firstRes, secondRes] = await Promise.all([
+      supabase.from("driver_pay_periods").select("driver_id, status")
+        .eq("period_start", periods.first.start).eq("period_end", periods.first.end),
+      supabase.from("driver_pay_periods").select("driver_id, status")
+        .eq("period_start", periods.second.start).eq("period_end", periods.second.end),
+    ]);
+    const firstPaid = new Set<string>();
+    (firstRes.data || []).forEach((d) => { if (d.status === "paid") firstPaid.add(d.driver_id); });
+    setPaidFirstHalf(firstPaid);
+    const secondPaid = new Set<string>();
+    (secondRes.data || []).forEach((d) => { if (d.status === "paid") secondPaid.add(d.driver_id); });
+    setPaidSecondHalf(secondPaid);
+  }, [periods]);
 
   const fetchData = useCallback(async () => {
     setLoading(true);
     const from = new Date(format(monthStart, "yyyy-MM-dd") + "T00:00:00").toISOString();
     const to = new Date(format(monthEnd, "yyyy-MM-dd") + "T23:59:59").toISOString();
-    // Use local-time boundaries (matches the calendar which renders started_at in local time)
-    const ppFrom = new Date(`${currentPayPeriod.start}T00:00:00`).toISOString();
-    const ppTo = new Date(`${currentPayPeriod.end}T23:59:59`).toISOString();
     const yearStart = new Date(`${new Date().getFullYear()}-01-01T00:00:00`).toISOString();
     const yearEnd = new Date(`${new Date().getFullYear()}-12-31T23:59:59`).toISOString();
 
-    const [runsRes, approvalsRes, attRes, routesRes, ppRunsRes, yearRunsRes] = await Promise.all([
+    // Half-period totals are derived from the visible month's `runs` (split by
+    // day-of-month in driverPayData), so no separate pay-period fetch needed.
+    const [runsRes, approvalsRes, attRes, routesRes, yearRunsRes] = await Promise.all([
       supabase.from("runs").select("id, run_type, status, started_at, closed_at, driver:drivers(id, name), route:routes(id, name)").eq("status", "completed").gte("started_at", from).lte("started_at", to).order("started_at", { ascending: false }),
       supabase.from("run_approvals").select("id, run_id, status, notes"),
       supabase.from("transport_attendance").select("run_id").gte("recorded_at", from).lte("recorded_at", to),
       supabase.from("routes").select("id, name"),
-      supabase.from("runs").select("id, run_type, status, started_at, closed_at, driver:drivers(id, name), route:routes(id, name)").eq("status", "completed").gte("started_at", ppFrom).lte("started_at", ppTo),
       supabase.from("runs").select("id, run_type, status, started_at, closed_at, driver:drivers(id, name), route:routes(id, name)").eq("status", "completed").gte("started_at", yearStart).lte("started_at", yearEnd),
     ]);
     if (runsRes.data) setRuns(runsRes.data as unknown as RunWithDetails[]);
     if (approvalsRes.data) setApprovals(approvalsRes.data as unknown as RunApproval[]);
     if (routesRes.data) setRoutes(routesRes.data as unknown as { id: string; name: string }[]);
-    if (ppRunsRes.data) setPayPeriodRuns(ppRunsRes.data as unknown as RunWithDetails[]);
     if (yearRunsRes.data) setYearRuns(yearRunsRes.data as unknown as RunWithDetails[]);
     const counts: Record<string, number> = {};
     (attRes.data || []).forEach((a: { run_id: string }) => { counts[a.run_id] = (counts[a.run_id] || 0) + 1; });
@@ -157,21 +173,26 @@ export default function TransportRunsPay() {
     return { totalTrips, approved, pending };
   }, [runs, approvalMap]);
 
-  const payPeriodOwed = useMemo(() => {
-    return payPeriodRuns.reduce((sum, r) => sum + getPayRate(r.route?.name), 0);
-  }, [payPeriodRuns]);
-
   const driverPayData = useMemo(() => {
-    const map = new Map<string, { name: string; payPeriodEarnings: number; monthEarnings: number; yearEarnings: number; payPeriodTrips: number; monthTrips: number; yearTrips: number }>();
+    const map = new Map<string, { name: string; firstHalfEarnings: number; secondHalfEarnings: number; monthEarnings: number; yearEarnings: number; firstHalfTrips: number; secondHalfTrips: number; monthTrips: number; yearTrips: number }>();
     const ensure = (id: string, name: string) => {
-      if (!map.has(id)) map.set(id, { name, payPeriodEarnings: 0, monthEarnings: 0, yearEarnings: 0, payPeriodTrips: 0, monthTrips: 0, yearTrips: 0 });
+      if (!map.has(id)) map.set(id, { name, firstHalfEarnings: 0, secondHalfEarnings: 0, monthEarnings: 0, yearEarnings: 0, firstHalfTrips: 0, secondHalfTrips: 0, monthTrips: 0, yearTrips: 0 });
       return map.get(id)!;
     };
-    runs.forEach((r) => { if (!r.driver) return; const e = ensure(r.driver.id, r.driver.name); e.monthEarnings += getPayRate(r.route?.name); e.monthTrips++; });
-    payPeriodRuns.forEach((r) => { if (!r.driver) return; const e = ensure(r.driver.id, r.driver.name); e.payPeriodEarnings += getPayRate(r.route?.name); e.payPeriodTrips++; });
+    // Split month earnings into the two halves by day-of-month.
+    runs.forEach((r) => {
+      if (!r.driver) return;
+      const e = ensure(r.driver.id, r.driver.name);
+      const rate = getPayRate(r.route?.name);
+      e.monthEarnings += rate;
+      e.monthTrips++;
+      const day = new Date(r.started_at).getDate();
+      if (day <= 15) { e.firstHalfEarnings += rate; e.firstHalfTrips++; }
+      else { e.secondHalfEarnings += rate; e.secondHalfTrips++; }
+    });
     yearRuns.forEach((r) => { if (!r.driver) return; const e = ensure(r.driver.id, r.driver.name); e.yearEarnings += getPayRate(r.route?.name); e.yearTrips++; });
     return [...map.entries()].sort((a, b) => a[1].name.localeCompare(b[1].name));
-  }, [runs, payPeriodRuns, yearRuns]);
+  }, [runs, yearRuns]);
 
   const calendarDays = useMemo(() => {
     const days = eachDayOfInterval({ start: monthStart, end: monthEnd });
@@ -215,7 +236,14 @@ export default function TransportRunsPay() {
   const exportMonth = () => {
     const allMonthRuns = runs;
     const driverPayRows = driverPayData.map(([driverId, d]) => [
-      d.name, String(d.monthTrips), `$${d.monthEarnings}`, `$${d.payPeriodEarnings}`, `$${d.yearEarnings}`, paidDrivers.has(driverId) ? "Paid" : "Unpaid"
+      d.name,
+      String(d.monthTrips),
+      `$${d.monthEarnings}`,
+      `$${d.firstHalfEarnings}`,
+      paidFirstHalf.has(driverId) ? "Paid" : "Unpaid",
+      `$${d.secondHalfEarnings}`,
+      paidSecondHalf.has(driverId) ? "Paid" : "Unpaid",
+      `$${d.yearEarnings}`,
     ]);
     const tripRows = allMonthRuns.map((r) => [
       format(new Date(r.started_at), "MM/dd/yyyy"), r.run_type, r.driver?.name || "", r.route?.name || "", r.status, `$${getPayRate(r.route?.name)}`, String(attendanceCounts[r.id] || 0), approvalMap.get(r.id)?.status || "pending"
@@ -224,54 +252,59 @@ export default function TransportRunsPay() {
       ["Date","Type","Driver","Route","Status","Pay","Youth Count","Approval"],
       tripRows
     ) + "\n\n" + toCsv(
-      ["Driver","Month Trips","Month $","Period $","Year $","Pay Status"],
+      ["Driver","Month Trips","Month $","1st-15th $","1st-15th Status","16th-end $","16th-end Status","Year $"],
       driverPayRows
     );
     downloadCsv(`trips_pay_${format(currentMonth, "yyyy-MM")}.csv`, csv);
   };
 
-  const handleMarkPaid = async (driverId: string) => {
-    // Check if a record already exists
+  const handleMarkPaid = async (driverId: string, half: "first" | "second") => {
+    const period = half === "first" ? periods.first : periods.second;
     const { data: existing } = await supabase
       .from("driver_pay_periods")
       .select("id")
       .eq("driver_id", driverId)
-      .eq("period_start", currentPayPeriod.start)
-      .eq("period_end", currentPayPeriod.end)
+      .eq("period_start", period.start)
+      .eq("period_end", period.end)
       .maybeSingle();
 
     const driverData = driverPayData.find(([id]) => id === driverId);
-    const totalAmount = driverData ? driverData[1].payPeriodEarnings : 0;
+    const totalAmount = driverData
+      ? (half === "first" ? driverData[1].firstHalfEarnings : driverData[1].secondHalfEarnings)
+      : 0;
 
     if (existing) {
       await supabase.from("driver_pay_periods").update({ status: "paid", total_amount: totalAmount, updated_at: new Date().toISOString() }).eq("id", existing.id);
     } else {
       await supabase.from("driver_pay_periods").insert({
         driver_id: driverId,
-        period_start: currentPayPeriod.start,
-        period_end: currentPayPeriod.end,
+        period_start: period.start,
+        period_end: period.end,
         status: "paid",
         total_amount: totalAmount,
       });
     }
-    setPaidDrivers((prev) => new Set([...prev, driverId]));
+    if (half === "first") setPaidFirstHalf((prev) => new Set([...prev, driverId]));
+    else setPaidSecondHalf((prev) => new Set([...prev, driverId]));
     toast({ title: "Marked as paid — saved to database" });
   };
 
-  const handleMarkUnpaid = async (driverId: string) => {
+  const handleMarkUnpaid = async (driverId: string, half: "first" | "second") => {
+    const period = half === "first" ? periods.first : periods.second;
     const { data: existing } = await supabase
       .from("driver_pay_periods")
       .select("id")
       .eq("driver_id", driverId)
-      .eq("period_start", currentPayPeriod.start)
-      .eq("period_end", currentPayPeriod.end)
+      .eq("period_start", period.start)
+      .eq("period_end", period.end)
       .maybeSingle();
 
     if (existing) {
       await supabase.from("driver_pay_periods").update({ status: "pending", updated_at: new Date().toISOString() }).eq("id", existing.id);
     }
-    setPaidDrivers((prev) => { const s = new Set(prev); s.delete(driverId); return s; });
-    setUndoConfirmDriverId(null);
+    if (half === "first") setPaidFirstHalf((prev) => { const s = new Set(prev); s.delete(driverId); return s; });
+    else setPaidSecondHalf((prev) => { const s = new Set(prev); s.delete(driverId); return s; });
+    setUndoConfirm(null);
     toast({ title: "Payment status reverted to unpaid" });
   };
 
@@ -436,8 +469,9 @@ export default function TransportRunsPay() {
         <Button onClick={exportMonth} variant="outline" size="sm" className="gap-2 border-white/10 text-white/60 hover:text-white bg-transparent"><Download className="w-4 h-4" /> Export CSV</Button>
       </div>
 
-      {/* Section 1 — Summary Boxes */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+      {/* Section 1 — Summary Boxes (trip review workflow only; pay totals
+          live in the Driver Pay tables at the bottom). */}
+      <div className="grid grid-cols-3 gap-2">
         <div className="bg-white/5 border border-white/10 rounded-lg p-3 text-center">
           <p className="text-lg font-bold text-white">{monthStats.totalTrips}</p>
           <p className="text-white/40 text-[10px] uppercase tracking-wider">Total Trips</p>
@@ -449,11 +483,6 @@ export default function TransportRunsPay() {
         <div className="bg-white/5 border border-white/10 rounded-lg p-3 text-center">
           <p className="text-lg font-bold text-yellow-400">{monthStats.pending}</p>
           <p className="text-white/40 text-[10px] uppercase tracking-wider">Pending</p>
-        </div>
-        <div className="bg-white/5 border border-[#DC2626]/30 rounded-lg p-3 text-center">
-          <p className="text-lg font-bold text-[#DC2626]">${payPeriodOwed}</p>
-          <p className="text-white/40 text-[10px] uppercase tracking-wider">Pay Period Owed</p>
-          <p className="text-white/20 text-[8px] mt-0.5">{currentPayPeriod.label}</p>
         </div>
       </div>
 
@@ -479,8 +508,12 @@ export default function TransportRunsPay() {
                 const dateKey = nonBlank.key;
                 const dayDrivers = runsByDateDriver.get(dateKey);
                 const isToday = format(new Date(), "yyyy-MM-dd") === dateKey;
+                // Subtle background tint per half-period so the calendar
+                // visually mirrors the two Driver Pay tables below.
+                const isFirstHalf = nonBlank.date.getDate() <= 15;
+                const halfTint = isFirstHalf ? "bg-white/[0.03]" : "bg-white/[0.07]";
                 return (
-                  <div key={nonBlank.key} className={`min-h-[80px] border-t border-r border-white/5 p-1.5 ${isToday ? "bg-[#DC2626]/5 border-t-2 border-t-[#DC2626]/40" : ""}`}>
+                  <div key={nonBlank.key} className={`min-h-[80px] border-t border-r border-white/5 p-1.5 ${isToday ? "bg-[#DC2626]/5 border-t-2 border-t-[#DC2626]/40" : halfTint}`}>
                     <p className={`text-[11px] font-medium mb-1 ${isToday ? "text-[#DC2626]" : "text-white/40"}`}>{format(nonBlank.date, "d")}</p>
                     {dayDrivers && <div className="space-y-0.5">
                       {[...dayDrivers.entries()].map(([driverId, entry]) => (
@@ -499,49 +532,65 @@ export default function TransportRunsPay() {
         )}
       </div>
 
-      {/* Section 3 — Driver Pay Summary */}
+      {/* Section 3 — Driver Pay Summary, split into two half-period tables
+          that follow the calendar above. */}
       {!loading && driverPayData.length > 0 && (
-        <div className="space-y-2">
-          <h3 className="text-white font-bold text-sm flex items-center gap-2"><DollarSign className="w-4 h-4 text-green-400" /> Driver Pay — {currentPayPeriod.label}</h3>
-          <div className="border border-white/10 rounded-xl overflow-hidden">
-            <div className="grid grid-cols-[1fr_auto_auto_auto_auto_auto] gap-2 bg-white/5 px-3 py-2 text-[10px] text-white/40 uppercase tracking-wider font-medium">
-              <span>Driver</span>
-              <span className="text-right w-20">Period $</span>
-              <span className="text-right w-20">Month $</span>
-              <span className="text-right w-20">Year $</span>
-              <span className="text-center w-16">Status</span>
-              <span className="w-20" />
-            </div>
-            {driverPayData.map(([driverId, d]) => (
-              <div key={driverId} className="grid grid-cols-[1fr_auto_auto_auto_auto_auto] gap-2 items-center px-3 py-2.5 border-t border-white/5 hover:bg-white/[0.02]">
-                <button onClick={() => openDriverHistory(driverId, d.name)} className="text-left text-white font-medium text-sm hover:text-[#DC2626] transition-colors flex items-center gap-1.5">
-                  <User className="w-3.5 h-3.5 text-white/30" />{d.name}
-                </button>
-                <span className="text-green-400 font-bold text-sm text-right w-20">${d.payPeriodEarnings}</span>
-                <span className="text-white/50 text-sm text-right w-20">${d.monthEarnings}</span>
-                <button onClick={() => openDriverHistory(driverId, d.name)} className="text-right w-20 text-blue-400 font-bold text-sm underline underline-offset-2 hover:text-blue-300 transition-colors cursor-pointer">${d.yearEarnings}</button>
-                <span className="text-center w-16">
-                  <Badge className={paidDrivers.has(driverId) ? "bg-green-500/20 text-green-400 border-green-500/30 text-[10px]" : "bg-yellow-500/20 text-yellow-400 border-yellow-500/30 text-[10px]"}>
-                    {paidDrivers.has(driverId) ? "Paid" : "Unpaid"}
-                  </Badge>
-                </span>
-                <span className="w-24 text-right">
-                  {paidDrivers.has(driverId) ? (
-                    undoConfirmDriverId === driverId ? (
-                      <div className="flex items-center gap-1">
-                        <Button size="sm" onClick={() => setUndoConfirmDriverId(null)} variant="outline" className="text-[9px] h-5 px-1.5 border-white/20 text-white/50 bg-transparent hover:bg-white/10">Cancel</Button>
-                        <Button size="sm" onClick={() => handleMarkUnpaid(driverId)} className="bg-red-600 hover:bg-red-700 text-white text-[9px] h-5 px-1.5">Confirm</Button>
+        <div className="space-y-6">
+          {(["first", "second"] as const).map((half) => {
+            const period = half === "first" ? periods.first : periods.second;
+            const paidSet = half === "first" ? paidFirstHalf : paidSecondHalf;
+            return (
+              <div key={half} className="space-y-2">
+                <h3 className="text-white font-bold text-sm flex items-center gap-2">
+                  <DollarSign className="w-4 h-4 text-green-400" /> Driver Pay — {period.label}
+                </h3>
+                <div className="border border-white/10 rounded-xl overflow-hidden">
+                  <div className="grid grid-cols-[1fr_auto_auto_auto_auto_auto] gap-2 bg-white/5 px-3 py-2 text-[10px] text-white/40 uppercase tracking-wider font-medium">
+                    <span>Driver</span>
+                    <span className="text-right w-20">Period $</span>
+                    <span className="text-right w-20">Month $</span>
+                    <span className="text-center w-16">Status</span>
+                    <span className="text-right w-20">Year $</span>
+                    <span className="w-24" />
+                  </div>
+                  {driverPayData.map(([driverId, d]) => {
+                    const periodEarnings = half === "first" ? d.firstHalfEarnings : d.secondHalfEarnings;
+                    const isPaid = paidSet.has(driverId);
+                    const undoActive = undoConfirm?.driverId === driverId && undoConfirm?.half === half;
+                    return (
+                      <div key={driverId} className="grid grid-cols-[1fr_auto_auto_auto_auto_auto] gap-2 items-center px-3 py-2.5 border-t border-white/5 hover:bg-white/[0.02]">
+                        <button onClick={() => openDriverHistory(driverId, d.name)} className="text-left text-white font-medium text-sm hover:text-[#DC2626] transition-colors flex items-center gap-1.5">
+                          <User className="w-3.5 h-3.5 text-white/30" />{d.name}
+                        </button>
+                        <span className="text-green-400 font-bold text-sm text-right w-20">${periodEarnings}</span>
+                        <span className="text-white/50 text-sm text-right w-20">${d.monthEarnings}</span>
+                        <span className="text-center w-16">
+                          <Badge className={isPaid ? "bg-green-500/20 text-green-400 border-green-500/30 text-[10px]" : "bg-yellow-500/20 text-yellow-400 border-yellow-500/30 text-[10px]"}>
+                            {isPaid ? "Paid" : "Unpaid"}
+                          </Badge>
+                        </span>
+                        <button onClick={() => openDriverHistory(driverId, d.name)} className="text-right w-20 text-blue-400 font-bold text-sm underline underline-offset-2 hover:text-blue-300 transition-colors cursor-pointer">${d.yearEarnings}</button>
+                        <span className="w-24 text-right">
+                          {isPaid ? (
+                            undoActive ? (
+                              <div className="flex items-center gap-1 justify-end">
+                                <Button size="sm" onClick={() => setUndoConfirm(null)} variant="outline" className="text-[9px] h-5 px-1.5 border-white/20 text-white/50 bg-transparent hover:bg-white/10">Cancel</Button>
+                                <Button size="sm" onClick={() => handleMarkUnpaid(driverId, half)} className="bg-red-600 hover:bg-red-700 text-white text-[9px] h-5 px-1.5">Confirm</Button>
+                              </div>
+                            ) : (
+                              <Button size="sm" onClick={() => setUndoConfirm({ driverId, half })} variant="outline" className="text-[10px] h-6 px-2 gap-1 border-white/20 text-white/40 bg-transparent hover:bg-white/10 hover:text-white">Undo</Button>
+                            )
+                          ) : (
+                            <Button size="sm" onClick={() => handleMarkPaid(driverId, half)} className="bg-green-600 hover:bg-green-700 text-white text-[10px] h-6 px-2 gap-1"><DollarSign className="w-3 h-3" />Paid</Button>
+                          )}
+                        </span>
                       </div>
-                    ) : (
-                      <Button size="sm" onClick={() => setUndoConfirmDriverId(driverId)} variant="outline" className="text-[10px] h-6 px-2 gap-1 border-white/20 text-white/40 bg-transparent hover:bg-white/10 hover:text-white">Undo</Button>
-                    )
-                  ) : d.payPeriodEarnings > 0 ? (
-                    <Button size="sm" onClick={() => handleMarkPaid(driverId)} className="bg-green-600 hover:bg-green-700 text-white text-[10px] h-6 px-2 gap-1"><DollarSign className="w-3 h-3" />Paid</Button>
-                  ) : null}
-                </span>
+                    );
+                  })}
+                </div>
               </div>
-            ))}
-          </div>
+            );
+          })}
         </div>
       )}
 
