@@ -551,7 +551,11 @@ export default function TransportRunsPay() {
           <DialogHeader><DialogTitle className="text-white">{selectedDriver?.name} — {selectedDate ? format(new Date(selectedDate + "T12:00:00"), "MMM d, yyyy") : ""}</DialogTitle></DialogHeader>
           <div className="space-y-3 mt-2">
             {panelRuns.length === 0 ? <p className="text-white/40 text-sm text-center py-4">No trips found.</p> : panelRuns.map((r) => {
-              const approval = approvalMap.get(r.id); const status = approval?.status || "pending"; const pay = getPayRate(r.route?.name); const youthCount = attendanceCounts[r.id] || 0;
+              const approval = approvalMap.get(r.id); const status = approval?.status || "pending"; const pay = getPayRate(r.route?.name);
+              // Once the roster has been loaded for this run, treat its length
+              // as the source of truth — that way adding a youth refreshes the
+              // count without depending on a separate attendanceCounts entry.
+              const youthCount = rosterData[r.id]?.length ?? attendanceCounts[r.id] ?? 0;
               const isEditing = editingRunId === r.id;
               const isDeleting = deleteConfirmId === r.id;
 
