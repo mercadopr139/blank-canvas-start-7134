@@ -658,11 +658,18 @@ Deno.serve(async (req) => {
               continue;
             }
 
-            const ext = contentType.includes("png") ? "png" : contentType.includes("webp") ? "webp" : "jpg";
-            const fileName = `monday_headshot_${match.id}_${Date.now()}.${ext}`;
+            // Canonical, stable filename per youth (no Date.now() suffix and a
+            // fixed .jpg extension regardless of source content type — browsers
+            // honor the Content-Type metadata, not the extension). Combined
+            // with upsert: true this means every re-sync overwrites the same
+            // object, so every downstream copy of this filename in any table
+            // continues to resolve. This is what prevents the drift that
+            // stranded transport youth_profiles.photo_url values pointing at
+            // orphaned timestamped files.
+            const fileName = `monday_headshot_${match.id}.jpg`;
             const { data: uploadData, error: uploadError } = await supabase.storage
               .from("youth-photos")
-              .upload(fileName, imageData, { contentType, upsert: false });
+              .upload(fileName, imageData, { contentType, upsert: true });
 
             if (uploadError) {
               results.errors.push(`Upload failed for ${firstName} ${lastName}: ${uploadError.message}`);

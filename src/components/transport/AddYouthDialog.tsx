@@ -39,6 +39,17 @@ const emptyForm = {
   date_of_birth: "",
 };
 
+// Resolves a youth photo reference (bare filename or full URL) to a usable
+// http(s) URL. youth_registrations.child_headshot_url stores bare filenames
+// from the Monday sync (e.g. "monday_headshot_<uuid>.jpg") which are not
+// directly renderable as <img src>. Always run any value from that column
+// through this before storing in youth_profiles or rendering an <img>.
+function resolvePhotoUrl(url: string | null): string | null {
+  if (!url) return null;
+  if (url.startsWith("http")) return url;
+  return supabase.storage.from("youth-photos").getPublicUrl(url).data.publicUrl;
+}
+
 export default function AddYouthDialog({ open, onOpenChange, onSaved }: AddYouthDialogProps) {
   const [step, setStep] = useState<"search" | "form">("search");
   const [searchQuery, setSearchQuery] = useState("");
@@ -105,7 +116,10 @@ export default function AddYouthDialog({ open, onOpenChange, onSaved }: AddYouth
       status: "active",
       date_of_birth: r.child_date_of_birth || "",
     });
-    setPrefillPhotoUrl(r.child_headshot_url);
+    // Resolve the bare filename to a full http URL so what we eventually
+    // store in youth_profiles.photo_url is self-contained — independent of
+    // whatever the registration column does later.
+    setPrefillPhotoUrl(resolvePhotoUrl(r.child_headshot_url));
     setFromRegistration(true);
     setStep("form");
   };
@@ -222,8 +236,8 @@ export default function AddYouthDialog({ open, onOpenChange, onSaved }: AddYouth
                     className="flex items-center gap-3 p-3 rounded-lg bg-white/5 hover:bg-white/10 cursor-pointer transition-colors"
                   >
                     <div className="w-9 h-9 rounded-full bg-white/10 overflow-hidden shrink-0 flex items-center justify-center">
-                      {r.child_headshot_url ? (
-                        <img src={r.child_headshot_url} alt="" className="w-full h-full object-cover" />
+                      {resolvePhotoUrl(r.child_headshot_url) ? (
+                        <img src={resolvePhotoUrl(r.child_headshot_url)!} alt="" className="w-full h-full object-cover" />
                       ) : (
                         <span className="text-white/30 text-xs font-bold">
                           {r.child_first_name[0]}{r.child_last_name[0]}
