@@ -1,76 +1,10 @@
 import { useMemo } from "react";
 import { useNavigate } from "react-router-dom";
-import { Users, BarChart3, ClipboardList, LucideIcon, CalendarCheck, FileBarChart, Settings2, Star, LogIn, Bus, UserCheck, Radio, PhoneOff, AlertTriangle, FileText, UtensilsCrossed, MapPin } from "lucide-react";
+import { Star, LogIn, UtensilsCrossed, MapPin } from "lucide-react";
 import AdminSectionLayout, { SectionCard } from "@/components/admin/AdminSectionLayout";
 import { Button } from "@/components/ui/button";
 import { useStaffPermissions } from "@/hooks/useStaffPermissions";
-
-interface OperationsTile {
-  title: string;
-  description: string;
-  icon: LucideIcon;
-  href: string;
-  external?: boolean;
-  // Permission key gating this tile's visibility. Super-admin and any
-  // user granted this key in staff_permissions sees the tile; everyone
-  // else has it filtered out before render.
-  permKey?: string;
-  children?: { title: string; href: string; icon: LucideIcon; external?: boolean }[];
-}
-
-const baseTiles: OperationsTile[] = [
-  {
-    title: "Registration",
-    description: "Youth registration management",
-    icon: ClipboardList,
-    href: "/admin/operations/registration",
-    permKey: "operations_registration",
-    children: [
-      { title: "Registration Form", href: "/register", icon: ClipboardList, external: true },
-      { title: "Registrations", href: "/admin/operations/registrations", icon: Users },
-      { title: "Registration Analytics", href: "/admin/operations/registration-analytics", icon: BarChart3 },
-      { title: "Form Builder", href: "/admin/operations/form-builder", icon: Settings2 },
-    ],
-  },
-  {
-    title: "Attendance",
-    description: "Attendance tracking & reports",
-    icon: CalendarCheck,
-    href: "/admin/operations/attendance-group",
-    permKey: "operations_attendance",
-    children: [
-      { title: "Attendance Intelligence", href: "/admin/operations/attendance", icon: CalendarCheck },
-      { title: "Attendance Reports", href: "/admin/operations/attendance-reports", icon: FileBarChart },
-      { title: "Call-Outs", href: "/admin/operations/callouts", icon: PhoneOff },
-      { title: "Lil Champ's Corner", href: "/admin/operations/lil-champs-attendance", icon: Star },
-    ],
-  },
-  {
-    title: "Transportation",
-    description: "Driver & Route Management",
-    icon: Bus,
-    href: "/admin/operations/transportation",
-    permKey: "operations_transportation",
-    children: [
-      { title: "Drivers", href: "/admin/operations/transportation/drivers", icon: UserCheck },
-      { title: "Youth Profiles", href: "/admin/operations/transportation/youth", icon: Users },
-      { title: "Trips & Pay", href: "/admin/operations/transportation/runs", icon: Radio },
-      { title: "Incident Reports", href: "/admin/operations/transportation/incidents", icon: AlertTriangle },
-      { title: "Impact Reports", href: "/admin/operations/transportation/impact-reports", icon: FileText },
-    ],
-  },
-  {
-    title: "Meal Tracker",
-    description: "Meal counter, nutrition & reports",
-    icon: UtensilsCrossed,
-    href: "/admin/operations/meal-tracker",
-    permKey: "operations_meal_tracker",
-    children: [
-      { title: "Meal Setup", href: "/admin/operations/meal-tracker", icon: UtensilsCrossed },
-      { title: "Meal Reports", href: "/admin/operations/meal-reports", icon: BarChart3 },
-    ],
-  },
-];
+import { OPERATIONS_TILES } from "@/config/pillarTiles";
 
 // Blank index – main panel is empty until a sidebar item is selected
 export const AdminOperationsIndex = () => null;
@@ -84,7 +18,7 @@ const AdminOperations = () => {
   // empty UI; once loaded, the actual gate kicks in.
   const sidebarCards = useMemo<SectionCard[]>(
     () =>
-      baseTiles
+      OPERATIONS_TILES
         .filter((t) => permLoading || !t.permKey || hasPermission(t.permKey))
         .map((t) => ({
           title: t.title,

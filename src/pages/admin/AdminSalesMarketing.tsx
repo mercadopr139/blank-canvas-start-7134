@@ -1,54 +1,10 @@
 import { useMemo } from "react";
 import { useNavigate } from "react-router-dom";
-import { BarChart3, HandCoins, Database, MessageSquare, ClipboardList, Mail, Plus } from "lucide-react";
+import { Plus } from "lucide-react";
 import AdminSectionLayout, { SectionCard } from "@/components/admin/AdminSectionLayout";
 import { Button } from "@/components/ui/button";
 import { useStaffPermissions } from "@/hooks/useStaffPermissions";
-
-const baseTiles = [
-  {
-    title: "Revenue",
-    description: "Track all incoming revenue",
-    icon: HandCoins,
-    href: "/admin/sales-marketing/revenue",
-    permKey: "sales_marketing_revenue",
-  },
-  {
-    title: "Master Revenue Tracker",
-    description: "Monthly totals and year-to-date revenue",
-    icon: BarChart3,
-    href: "/admin/sales-marketing/master-revenue-tracker",
-    permKey: "sales_marketing_master_revenue",
-  },
-  {
-    title: "Supporters Database",
-    description: "Hall of Fame & supporter imports",
-    icon: Database,
-    href: "/admin/sales-marketing/supporters-database",
-    permKey: "sales_marketing_supporters",
-  },
-  {
-    title: "Engagements",
-    description: "Track supporter interactions & follow-ups",
-    icon: MessageSquare,
-    href: "/admin/sales-marketing/engagements",
-    permKey: "sales_marketing_engagements",
-  },
-  {
-    title: "Tasks",
-    description: "Manage supporter tasks & deadlines",
-    icon: ClipboardList,
-    href: "/admin/sales-marketing/tasks",
-    permKey: "sales_marketing_tasks",
-  },
-  {
-    title: "Bulk Outreach",
-    description: "Send targeted emails to supporters",
-    icon: Mail,
-    href: "/admin/sales-marketing/bulk-outreach",
-    permKey: "sales_marketing_bulk_outreach",
-  },
-];
+import { SALES_MARKETING_TILES } from "@/config/pillarTiles";
 
 // Blank index – main panel is empty until a sidebar item is selected
 export const AdminSalesMarketingIndex = () => null;
@@ -61,7 +17,7 @@ const AdminSalesMarketing = () => {
   // staff_permissions. While perms load, show everything to avoid flash.
   const sidebarCards = useMemo<SectionCard[]>(
     () =>
-      baseTiles
+      SALES_MARKETING_TILES
         .filter((t) => permLoading || !t.permKey || hasPermission(t.permKey))
         .map((t) => ({
           title: t.title,

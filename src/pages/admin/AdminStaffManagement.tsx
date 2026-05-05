@@ -4,13 +4,21 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useStaffPermissions } from "@/hooks/useStaffPermissions";
+import { taskManagerPermKey, type PillarSub } from "@/lib/permissions";
 import {
-  OPERATIONS_SUBS,
-  SALES_MARKETING_SUBS,
-  FINANCE_SUBS,
-  taskManagerPermKey,
-  type PillarSub,
-} from "@/lib/permissions";
+  OPERATIONS_TILES,
+  SALES_MARKETING_TILES,
+  FINANCE_TILES,
+  pillarSubsFromTiles,
+} from "@/config/pillarTiles";
+
+// Sub-permission groups for Operations / Sales / Finance — derived directly
+// from the same tile configs the pillar pages render. Adding a tile with a
+// permKey there automatically gives it a checkbox here. No registry to keep
+// in sync.
+const OPERATIONS_SUBS: PillarSub[] = pillarSubsFromTiles(OPERATIONS_TILES);
+const SALES_MARKETING_SUBS: PillarSub[] = pillarSubsFromTiles(SALES_MARKETING_TILES);
+const FINANCE_SUBS: PillarSub[] = pillarSubsFromTiles(FINANCE_TILES);
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";

@@ -1,47 +1,7 @@
 import { useMemo } from "react";
-import { Receipt, ShieldCheck, LucideIcon, FileText, BarChart3, ClipboardCheck, LayoutDashboard, ScrollText, Archive } from "lucide-react";
 import AdminSectionLayout, { SectionCard } from "@/components/admin/AdminSectionLayout";
 import { useStaffPermissions } from "@/hooks/useStaffPermissions";
-
-interface FinanceTile {
-  title: string;
-  description: string;
-  icon: LucideIcon;
-  href: string;
-  permKey?: string;
-  children?: { title: string; href: string; icon: LucideIcon }[];
-}
-
-const baseTiles: FinanceTile[] = [
-  {
-    title: "Billing",
-    description: "Invoices & payment tracking",
-    icon: Receipt,
-    href: "/admin/finance/billing",
-    permKey: "finance_billing",
-  },
-  {
-    title: "CSBG Grant",
-    description: "O.C.E.A.N. Inc. reimbursements",
-    icon: ScrollText,
-    href: "/admin/finance/csbg",
-    permKey: "finance_csbg",
-    children: [
-      { title: "Invoice Generator", href: "/admin/finance/csbg/invoice", icon: FileText },
-      { title: "Budget vs. Actual", href: "/admin/finance/csbg/budget", icon: BarChart3 },
-      { title: "Document Checklist", href: "/admin/finance/csbg/checklist", icon: ClipboardCheck },
-      { title: "Status Dashboard", href: "/admin/finance/csbg/dashboard", icon: LayoutDashboard },
-      { title: "Submission Log", href: "/admin/finance/csbg/submissions", icon: ScrollText },
-    ],
-  },
-  {
-    title: "Document Vault",
-    description: "Centralized document hub",
-    icon: Archive,
-    href: "/admin/finance/vault",
-    permKey: "finance_vault",
-  },
-];
+import { FINANCE_TILES } from "@/config/pillarTiles";
 
 // Blank index – main panel is empty until a sidebar item is selected
 export const AdminFinanceIndex = () => null;
@@ -54,7 +14,7 @@ const AdminFinance = () => {
   // arrive.
   const sidebarCards = useMemo<SectionCard[]>(
     () =>
-      baseTiles
+      FINANCE_TILES
         .filter((t) => permLoading || !t.permKey || hasPermission(t.permKey))
         .map((t) => ({
           title: t.title,
