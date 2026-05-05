@@ -1,12 +1,17 @@
-import { useState } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, LogOut, Plus, Pencil, GripVertical, Lock } from "lucide-react";
+import {
+  ArrowLeft, LogOut, Plus, Pencil, GripVertical, Lock,
+  Circle, CheckCircle2, ArrowRight, Trophy,
+} from "lucide-react";
 import { icons } from "lucide-react";
 import { toast } from "sonner";
+import { format } from "date-fns";
+import confetti from "canvas-confetti";
 import nlaLogo from "@/assets/nla-logo-white.png";
 import FocusAreaModal from "@/components/admin/FocusAreaModal";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
@@ -21,7 +26,9 @@ import {
 import {
   SortableContext,
   rectSortingStrategy,
+  verticalListSortingStrategy,
   useSortable,
+  arrayMove,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 
@@ -32,6 +39,36 @@ const getSignalsPath = (managerType: string, key: string) => {
   if (managerType === "PD") return `/admin/signals/${key}`;
   if (managerType === "PC") return `/admin/pc-signals/${key}`;
   return `/admin/task-manager/${managerType}/signals/${key}`;
+};
+
+// Mirrors the source-resolution rule in AdminSignals.tsx so a signal added
+// from the home tile lands in the same place as one added from the kanban.
+const signalSourceFor = (
+  managerType: string,
+  area: { key: string; title: string }
+): string | null => {
+  const isPC = managerType === "PC";
+  const isNla = area.key === "nla";
+  if (isPC) return `PC:${isNla ? "NLA" : area.title}`;
+  return isNla ? null : area.title;
+};
+
+// Inverse of signalSourceFor: maps a signal's stored `source` back to a
+// focus-area key so the home page can group signals by tile.
+const sourceToFocusAreaKey = (
+  source: string | null,
+  managerType: string,
+  focusAreas: FocusArea[]
+): string | null => {
+  const isPC = managerType === "PC";
+  if (isPC) {
+    if (!source || !source.startsWith("PC:")) return null;
+    const stripped = source.slice(3);
+    if (stripped === "NLA") return "nla";
+    return focusAreas.find((a) => a.title === stripped)?.key ?? null;
+  }
+  if (source === null || source === "NLA") return "nla";
+  return focusAreas.find((a) => a.title === source)?.key ?? null;
 };
 
 type FocusArea = {
@@ -47,6 +84,14 @@ type FocusArea = {
   manager_type: string;
 };
 
+type CoreSignal = {
+  id: string;
+  title: string | null;
+  status: string;
+  source: string | null;
+  today_sort_order: number | null;
+};
+
 const getGlow = (hex: string) => `${hex}59`;
 const getGradient = (hex: string) =>
   `linear-gradient(145deg, ${hex}1f 0%, ${hex}08 100%)`;
@@ -59,15 +104,82 @@ const getIconComponent = (name: string) => {
   return (icons as any)[pascal] || null;
 };
 
-const SortableCard = ({
+/* ───────── Sortable signal row inside a tile ───────── */
+const TileSignalRow = ({
+  signal,
+  accentColor,
+  onToggle,
+}: {
+  signal: CoreSignal;
+  accentColor: string;
+  onToggle: () => void;
+}) => {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
+    useSortable({ id: signal.id });
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.4 : 1,
+  };
+  const isComplete = signal.status === "Complete";
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      className="flex items-start gap-2 px-1 py-1 rounded-md hover:bg-white/[0.04] group/row"
+    >
+      <button
+        {...attributes}
+        {...listeners}
+        type="button"
+        className="text-white/15 hover:text-white/40 cursor-grab active:cursor-grabbing pt-1 opacity-0 group-hover/row:opacity-100 transition-opacity shrink-0"
+        title="Drag to reorder"
+      >
+        <GripVertical className="w-3 h-3" />
+      </button>
+      <button
+        type="button"
+        onClick={onToggle}
+        className="pt-0.5 shrink-0"
+        title={isComplete ? "Mark incomplete" : "Mark complete"}
+      >
+        {isComplete ? (
+          <CheckCircle2 className="w-4 h-4" style={{ color: accentColor }} />
+        ) : (
+          <Circle className="w-4 h-4 text-white/30 hover:text-white/60 transition-colors" />
+        )}
+      </button>
+      <span
+        className={`text-sm leading-snug flex-1 min-w-0 break-words ${
+          isComplete ? "line-through text-white/30" : "text-white/85"
+        }`}
+      >
+        {signal.title || "Untitled"}
+      </span>
+    </div>
+  );
+};
+
+/* ───────── Vertical-rectangle focus-area tile ───────── */
+const FocusAreaTile = ({
   area,
-  onOpen,
+  managerType,
+  signals,
   onEdit,
+  onAdd,
+  onToggle,
+  onReorder,
 }: {
   area: FocusArea;
-  onOpen: () => void;
+  managerType: string;
+  signals: CoreSignal[];
   onEdit: () => void;
+  onAdd: (title: string) => Promise<void>;
+  onToggle: (signal: CoreSignal) => void;
+  onReorder: (newOrder: CoreSignal[]) => void;
 }) => {
+  const navigate = useNavigate();
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
     useSortable({ id: area.id });
 
@@ -80,61 +192,200 @@ const SortableCard = ({
 
   const IconComp = getIconComponent(area.icon_name);
 
+  const [adding, setAdding] = useState(false);
+  const [draftTitle, setDraftTitle] = useState("");
+  const [savingAdd, setSavingAdd] = useState(false);
+
+  // Each tile owns its own DnD context so reordering signals within one tile
+  // doesn't bubble up to the page-level focus-area reorder.
+  const tileSensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 5 } })
+  );
+
+  const handleSubmitAdd = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const trimmed = draftTitle.trim();
+    if (!trimmed) return;
+    setSavingAdd(true);
+    try {
+      await onAdd(trimmed);
+      setDraftTitle("");
+      setAdding(false);
+    } finally {
+      setSavingAdd(false);
+    }
+  };
+
+  const handleSignalReorder = (event: DragEndEvent) => {
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+    const oldIndex = signals.findIndex((s) => s.id === active.id);
+    const newIndex = signals.findIndex((s) => s.id === over.id);
+    if (oldIndex === -1 || newIndex === -1) return;
+    onReorder(arrayMove(signals, oldIndex, newIndex));
+  };
+
+  const completedCount = signals.filter((s) => s.status === "Complete").length;
+  const allDone = signals.length > 0 && completedCount === signals.length;
+
   return (
     <div ref={setNodeRef} style={style} className="relative group">
       <button
         {...attributes}
         {...listeners}
-        className="absolute top-3 left-3 z-10 p-1 rounded text-white/20 hover:text-white/50 cursor-grab active:cursor-grabbing opacity-0 group-hover:opacity-100 transition-opacity"
-        title="Drag to reorder"
+        type="button"
+        className="absolute top-3 left-3 z-20 p-1 rounded text-white/20 hover:text-white/50 cursor-grab active:cursor-grabbing opacity-0 group-hover:opacity-100 transition-opacity"
+        title="Drag to reorder focus area"
       >
         <GripVertical className="w-4 h-4" />
       </button>
 
       <button
         type="button"
-        onClick={(e) => { e.stopPropagation(); onEdit(); }}
-        className="absolute top-3 right-3 z-10 p-1.5 rounded-lg text-white/20 hover:text-white/60 hover:bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity"
-        title="Edit"
+        onClick={onEdit}
+        className="absolute top-3 right-3 z-20 p-1.5 rounded-lg text-white/20 hover:text-white/60 hover:bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity"
+        title="Edit focus area"
       >
         <Pencil className="w-3.5 h-3.5" />
       </button>
 
-      <button
-        onClick={onOpen}
-        className="w-full text-left rounded-2xl transition-all duration-300 ease-out focus:outline-none focus-visible:ring-2 focus-visible:ring-white/20 cursor-pointer"
+      <div
+        className="absolute -inset-px rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-500 blur-sm pointer-events-none"
+        style={{ background: getGlow(area.accent_color) }}
+      />
+
+      <div
+        className="relative rounded-2xl border-2 p-5 min-h-[300px] flex flex-col transition-all duration-300 group-hover:-translate-y-0.5 group-hover:shadow-2xl"
+        style={{ borderColor: area.accent_color, background: getGradient(area.accent_color) }}
       >
-        <div
-          className="absolute -inset-px rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-500 blur-sm"
-          style={{ background: getGlow(area.accent_color) }}
-        />
-        <div
-          className="relative rounded-2xl border-2 p-7 min-h-[200px] flex flex-col justify-between transition-all duration-300 group-hover:-translate-y-1 group-hover:shadow-2xl"
-          style={{ borderColor: area.accent_color, background: getGradient(area.accent_color) }}
-        >
+        {/* Header: icon + title + add button */}
+        <div className="flex items-start gap-3 mb-3 pl-6 pr-6">
           <div
-            className="w-14 h-14 rounded-xl flex items-center justify-center mb-5"
+            className="w-11 h-11 rounded-xl flex items-center justify-center shrink-0"
             style={{ background: `${area.accent_color}18`, color: area.accent_color }}
           >
-            {IconComp && <IconComp className="w-7 h-7" strokeWidth={1.8} />}
+            {IconComp && <IconComp className="w-5 h-5" strokeWidth={1.8} />}
           </div>
-          <div>
-            <h2 className="text-xl font-extrabold tracking-tight text-white mb-1">{area.title}</h2>
-            <p className="text-xs text-zinc-500 font-medium mb-4">{area.subtitle || ""}</p>
-            <div
-              className="inline-flex items-center gap-2 text-sm font-semibold tracking-wide group-hover:brightness-125"
-              style={{ color: area.accent_color }}
-            >
-              <span>Open</span>
-              <span className="text-lg leading-none transition-transform duration-200 group-hover:translate-x-1">→</span>
-            </div>
+          <div className="flex-1 min-w-0 pt-0.5">
+            <h2 className="text-base font-extrabold tracking-tight text-white truncate">
+              {area.title}
+            </h2>
+            {area.subtitle && (
+              <p className="text-[11px] text-zinc-500 font-medium truncate">{area.subtitle}</p>
+            )}
           </div>
         </div>
-      </button>
+
+        {/* Add Signal trigger */}
+        {!adding && (
+          <button
+            type="button"
+            onClick={() => setAdding(true)}
+            className="mb-2 inline-flex items-center justify-center gap-1.5 w-full text-[11px] font-semibold px-2 py-1.5 rounded-md border border-white/10 hover:border-white/25 hover:bg-white/[0.04] text-white/50 hover:text-white/80 transition-colors"
+            title="Add today's signal"
+          >
+            <Plus className="w-3.5 h-3.5" />
+            Add Today's Signal
+          </button>
+        )}
+
+        {adding && (
+          <form onSubmit={handleSubmitAdd} className="mb-2 space-y-1.5">
+            <input
+              autoFocus
+              value={draftTitle}
+              onChange={(e) => setDraftTitle(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Escape") {
+                  setAdding(false);
+                  setDraftTitle("");
+                }
+              }}
+              placeholder="Today's signal…"
+              className="w-full bg-white/5 border border-white/10 focus:border-white/30 rounded px-2 py-1.5 text-xs text-white placeholder:text-white/30 focus:outline-none"
+              disabled={savingAdd}
+            />
+            <div className="flex items-center gap-1.5">
+              <button
+                type="submit"
+                disabled={!draftTitle.trim() || savingAdd}
+                className="text-[11px] font-semibold px-2.5 py-1 rounded bg-white/10 hover:bg-white/20 text-white disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+              >
+                {savingAdd ? "Saving…" : "Add"}
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setAdding(false);
+                  setDraftTitle("");
+                }}
+                className="text-[11px] text-white/40 hover:text-white/70 px-1.5 py-1"
+              >
+                Cancel
+              </button>
+            </div>
+          </form>
+        )}
+
+        {/* Signal list */}
+        <div className="flex-1 min-h-[60px]">
+          {signals.length === 0 ? (
+            <p className="text-[11px] text-white/25 italic text-center pt-6">
+              No signals for today
+            </p>
+          ) : (
+            <DndContext
+              sensors={tileSensors}
+              collisionDetection={closestCenter}
+              onDragEnd={handleSignalReorder}
+            >
+              <SortableContext
+                items={signals.map((s) => s.id)}
+                strategy={verticalListSortingStrategy}
+              >
+                <div className="space-y-0.5">
+                  {signals.map((s) => (
+                    <TileSignalRow
+                      key={s.id}
+                      signal={s}
+                      accentColor={area.accent_color}
+                      onToggle={() => onToggle(s)}
+                    />
+                  ))}
+                </div>
+              </SortableContext>
+            </DndContext>
+          )}
+        </div>
+
+        {/* Footer: tile progress + Open → */}
+        <div className="flex items-center justify-between pt-3 mt-2 border-t border-white/5">
+          {signals.length > 0 ? (
+            <span
+              className={`text-[10px] font-semibold ${allDone ? "text-green-400" : "text-white/35"}`}
+            >
+              {completedCount}/{signals.length}
+              {allDone && " ✓"}
+            </span>
+          ) : (
+            <span />
+          )}
+          <button
+            type="button"
+            onClick={() => navigate(getSignalsPath(managerType, area.key))}
+            className="inline-flex items-center gap-1 text-xs font-semibold transition-all hover:translate-x-0.5"
+            style={{ color: area.accent_color }}
+          >
+            <span>Open</span>
+            <ArrowRight className="w-3.5 h-3.5" />
+          </button>
+        </div>
+      </div>
     </div>
   );
 };
 
+/* ───────── Page component ───────── */
 const AdminTaskManager = () => {
   const { managerType = "PD" } = useParams<{ managerType: string }>();
   const navigate = useNavigate();
@@ -150,6 +401,8 @@ const AdminTaskManager = () => {
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } })
   );
 
+  const todayStr = format(new Date(), "yyyy-MM-dd");
+
   const { data: focusAreas = [], isLoading } = useQuery({
     queryKey: ["focus-areas", managerType],
     queryFn: async () => {
@@ -162,6 +415,65 @@ const AdminTaskManager = () => {
       return data as FocusArea[];
     },
   });
+
+  // Single fetch for all of today's Core signals across this manager type's
+  // focus areas. Source-prefix filter is applied client-side because the
+  // PostgREST "not.like" syntax with reserved chars in the value is fragile.
+  const { data: todaysCoreSignals = [] } = useQuery({
+    queryKey: ["task-manager-home-core", managerType, todayStr],
+    queryFn: async () => {
+      const { data, error } = await (supabase
+        .from("signals")
+        .select("id, title, status, source, today_sort_order") as any)
+        .eq("date_assigned", todayStr)
+        .eq("priority_layer", "Core")
+        .eq("is_archived", false)
+        .eq("is_trashed", false)
+        .order("today_sort_order", { ascending: true, nullsFirst: false })
+        .order("created_at", { ascending: true });
+      if (error) throw error;
+      const isPC = managerType === "PC";
+      return ((data || []) as CoreSignal[]).filter((s) =>
+        isPC ? !!s.source && s.source.startsWith("PC:") : !s.source?.startsWith("PC:")
+      );
+    },
+    enabled: focusAreas.length > 0,
+  });
+
+  // Group signals by focus-area key (preserves the per-tile sort order).
+  const signalsByArea = useMemo(() => {
+    const map = new Map<string, CoreSignal[]>();
+    for (const area of focusAreas) map.set(area.key, []);
+    for (const s of todaysCoreSignals) {
+      const key = sourceToFocusAreaKey(s.source, managerType, focusAreas);
+      if (key && map.has(key)) map.get(key)!.push(s);
+    }
+    return map;
+  }, [focusAreas, todaysCoreSignals, managerType]);
+
+  // Unified daily progress across all focus areas (Personal counts).
+  const totalCore = todaysCoreSignals.length;
+  const completedCore = todaysCoreSignals.filter((s) => s.status === "Complete").length;
+  const donePct = totalCore > 0 ? Math.round((completedCore / totalCore) * 100) : 0;
+  const dayWon = totalCore > 0 && completedCore === totalCore;
+
+  // Confetti fires once on the false → true transition into Day Won. If the
+  // user undoes a completion and re-completes, it fires again, which is what
+  // we want — every win deserves the celebration.
+  const dayWonRef = useRef(false);
+  useEffect(() => {
+    if (dayWon && !dayWonRef.current) {
+      dayWonRef.current = true;
+      const colors = ["#22c55e", "#16a34a", "#86efac", "#bbf7d0", "#facc15"];
+      confetti({ particleCount: 90, spread: 70, origin: { y: 0.3 }, colors });
+      setTimeout(
+        () => confetti({ particleCount: 60, spread: 100, origin: { y: 0.4 }, colors }),
+        250
+      );
+    } else if (!dayWon && dayWonRef.current) {
+      dayWonRef.current = false;
+    }
+  }, [dayWon]);
 
   const isLocked = (area: FocusArea) => {
     if (managerType === "PD") return isChrissy && area.key !== "nla";
@@ -181,18 +493,84 @@ const AdminTaskManager = () => {
     setEditingArea(null);
   };
 
-  const handleDragEnd = async (event: DragEndEvent) => {
+  // Mutations — payload shape matches AdminSignals.tsx so the home tile and
+  // the kanban share an identical write path. The home tile only writes Core
+  // signals; everything else is drill-in only.
+  const addSignalMutation = useMutation({
+    mutationFn: async ({ title, area }: { title: string; area: FocusArea }) => {
+      const source = signalSourceFor(managerType, area);
+      const { error } = await supabase.from("signals").insert({
+        title,
+        pillar: null,
+        priority_layer: "Core",
+        signal_kind: null,
+        signal_type: "Action",
+        status: "Pending",
+        is_archived: false,
+        date_assigned: todayStr,
+        source,
+      } as any);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["task-manager-home-core"] });
+      queryClient.invalidateQueries({ queryKey: ["signals"] });
+      toast.success("Signal added");
+    },
+    onError: (e: any) => toast.error(e.message),
+  });
+
+  const toggleStatusMutation = useMutation({
+    mutationFn: async ({ id, current }: { id: string; current: string }) => {
+      const newStatus = current === "Pending" ? "Complete" : "Pending";
+      const { error } = await supabase
+        .from("signals")
+        .update({
+          status: newStatus,
+          completed_at: newStatus === "Complete" ? new Date().toISOString() : null,
+        } as any)
+        .eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["task-manager-home-core"] });
+      queryClient.invalidateQueries({ queryKey: ["signals"] });
+    },
+    onError: (e: any) => toast.error(e.message),
+  });
+
+  const reorderSignalsMutation = useMutation({
+    mutationFn: async (newOrder: CoreSignal[]) => {
+      const updates = newOrder.map((s, i) =>
+        supabase
+          .from("signals")
+          .update({ today_sort_order: (i + 1) * 10 } as any)
+          .eq("id", s.id)
+      );
+      const results = await Promise.all(updates);
+      const failed = results.find((r) => r.error);
+      if (failed?.error) throw failed.error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["task-manager-home-core"] });
+      queryClient.invalidateQueries({ queryKey: ["signals"] });
+    },
+    onError: () => {
+      queryClient.invalidateQueries({ queryKey: ["task-manager-home-core"] });
+      queryClient.invalidateQueries({ queryKey: ["signals"] });
+      toast.error("Couldn't save order");
+    },
+  });
+
+  const handleFocusAreaDragEnd = async (event: DragEndEvent) => {
     const { active, over } = event;
     if (!over || active.id === over.id) return;
-
     const oldIndex = focusAreas.findIndex((a) => a.id === active.id);
     const newIndex = focusAreas.findIndex((a) => a.id === over.id);
     if (oldIndex === -1 || newIndex === -1) return;
-
     const reordered = [...focusAreas];
     const [moved] = reordered.splice(oldIndex, 1);
     reordered.splice(newIndex, 0, moved);
-
     try {
       await Promise.all(
         reordered.map((area, idx) =>
@@ -223,7 +601,7 @@ const AdminTaskManager = () => {
               <h1 className="text-lg font-bold tracking-tight text-white">
                 {managerType} Task Manager
               </h1>
-              <p className="text-xs text-zinc-500 font-medium">Select a Focus Area</p>
+              <p className="text-xs text-zinc-500 font-medium">Today's daily workbench</p>
             </div>
           </div>
           <Button
@@ -238,13 +616,37 @@ const AdminTaskManager = () => {
       </header>
 
       <main className="max-w-5xl mx-auto px-6 py-10 sm:py-14">
-        <div className="flex justify-center mb-14">
+        <div className="flex justify-center mb-6">
           <img
             src={nlaLogo}
             alt="No Limits Academy"
             className="h-24 sm:h-32 w-auto drop-shadow-[0_0_60px_rgba(191,15,62,0.15)]"
           />
         </div>
+
+        {/* Unified daily progress pill — hidden when there's nothing to track. */}
+        {totalCore > 0 && (
+          <div className="flex justify-center mb-10">
+            <div
+              className={`inline-flex items-center gap-2 px-4 py-1.5 rounded-full border text-xs font-semibold transition-all ${
+                dayWon
+                  ? "bg-green-500/15 border-green-500/40 text-green-300"
+                  : "bg-white/5 border-white/10 text-white/60"
+              }`}
+            >
+              {dayWon ? (
+                <>
+                  <Trophy className="w-3.5 h-3.5" />
+                  <span>Day Won! · {completedCore}/{totalCore}</span>
+                </>
+              ) : (
+                <span>
+                  {completedCore}/{totalCore} · {donePct}%
+                </span>
+              )}
+            </div>
+          </div>
+        )}
 
         {isLoading ? (
           <div className="text-center text-zinc-500 py-20">Loading…</div>
@@ -255,7 +657,10 @@ const AdminTaskManager = () => {
             </p>
             {canAdd && (
               <Button
-                onClick={() => { setEditingArea(null); setModalOpen(true); }}
+                onClick={() => {
+                  setEditingArea(null);
+                  setModalOpen(true);
+                }}
                 className="bg-white text-black hover:bg-white/90 gap-2"
               >
                 <Plus className="w-4 h-4" />
@@ -264,7 +669,11 @@ const AdminTaskManager = () => {
             )}
           </div>
         ) : (
-          <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+          <DndContext
+            sensors={sensors}
+            collisionDetection={closestCenter}
+            onDragEnd={handleFocusAreaDragEnd}
+          >
             <SortableContext items={focusAreas.map((a) => a.id)} strategy={rectSortingStrategy}>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 max-w-4xl mx-auto">
                 {focusAreas.map((area) => {
@@ -274,20 +683,32 @@ const AdminTaskManager = () => {
                       <Tooltip key={area.id}>
                         <TooltipTrigger asChild>
                           <div
-                            className="relative rounded-2xl border-2 p-7 min-h-[200px] flex flex-col justify-between opacity-30 cursor-not-allowed"
-                            style={{ borderColor: `${area.accent_color}40`, background: getGradient(area.accent_color) }}
+                            className="relative rounded-2xl border-2 p-5 min-h-[300px] flex flex-col justify-between opacity-30 cursor-not-allowed"
+                            style={{
+                              borderColor: `${area.accent_color}40`,
+                              background: getGradient(area.accent_color),
+                            }}
                           >
                             <Lock className="absolute top-3 right-3 w-4 h-4 text-white/30" />
                             <div
-                              className="w-14 h-14 rounded-xl flex items-center justify-center mb-5"
-                              style={{ background: `${area.accent_color}18`, color: area.accent_color }}
+                              className="w-11 h-11 rounded-xl flex items-center justify-center"
+                              style={{
+                                background: `${area.accent_color}18`,
+                                color: area.accent_color,
+                              }}
                             >
-                              {IconComp && <IconComp className="w-7 h-7" strokeWidth={1.8} />}
+                              {IconComp && <IconComp className="w-5 h-5" strokeWidth={1.8} />}
                             </div>
                             <div>
-                              <h2 className="text-xl font-extrabold tracking-tight text-white mb-1">{area.title}</h2>
-                              <p className="text-xs text-zinc-500 font-medium mb-4">{area.subtitle || ""}</p>
-                              <span className="text-sm font-semibold text-white/20">🔒 Locked</span>
+                              <h2 className="text-base font-extrabold tracking-tight text-white mb-1">
+                                {area.title}
+                              </h2>
+                              <p className="text-[11px] text-zinc-500 font-medium mb-3">
+                                {area.subtitle || ""}
+                              </p>
+                              <span className="text-xs font-semibold text-white/20">
+                                🔒 Locked
+                              </span>
                             </div>
                           </div>
                         </TooltipTrigger>
@@ -298,43 +719,55 @@ const AdminTaskManager = () => {
                     );
                   }
                   return (
-                    <SortableCard
+                    <FocusAreaTile
                       key={area.id}
                       area={area}
-                      onOpen={() => navigate(getSignalsPath(managerType, area.key))}
-                      onEdit={() => { setEditingArea(area); setModalOpen(true); }}
+                      managerType={managerType}
+                      signals={signalsByArea.get(area.key) || []}
+                      onEdit={() => {
+                        setEditingArea(area);
+                        setModalOpen(true);
+                      }}
+                      onAdd={(title) => addSignalMutation.mutateAsync({ title, area })}
+                      onToggle={(s) =>
+                        toggleStatusMutation.mutate({ id: s.id, current: s.status })
+                      }
+                      onReorder={(newOrder) => reorderSignalsMutation.mutate(newOrder)}
                     />
                   );
                 })}
+
+                {canAdd && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setEditingArea(null);
+                      setModalOpen(true);
+                    }}
+                    className="group/add rounded-2xl border border-dashed border-white/[0.07] hover:border-white/20 min-h-[300px] flex flex-col items-center justify-center gap-2 transition-all duration-300 hover:bg-white/[0.02] cursor-pointer"
+                    title="Add a focus area"
+                  >
+                    <div className="w-9 h-9 rounded-lg bg-white/[0.03] flex items-center justify-center group-hover/add:bg-white/10 transition-colors">
+                      <Plus className="w-4 h-4 text-white/20 group-hover/add:text-white/50" />
+                    </div>
+                    <span className="text-[11px] font-semibold text-white/20 group-hover/add:text-white/50 transition-colors">
+                      Add Focus Area
+                    </span>
+                  </button>
+                )}
               </div>
             </SortableContext>
           </DndContext>
-        )}
-
-        {canAdd && focusAreas.length > 0 && (
-          <div className="max-w-4xl mx-auto mt-5">
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-              <button
-                type="button"
-                onClick={() => { setEditingArea(null); setModalOpen(true); }}
-                className="group rounded-2xl border-2 border-dashed border-white/10 hover:border-white/25 min-h-[200px] flex flex-col items-center justify-center gap-3 transition-all duration-300 hover:bg-white/[0.02] cursor-pointer"
-              >
-                <div className="w-14 h-14 rounded-xl bg-white/5 flex items-center justify-center group-hover:bg-white/10 transition-colors">
-                  <Plus className="w-7 h-7 text-white/30 group-hover:text-white/60" />
-                </div>
-                <span className="text-sm font-semibold text-white/30 group-hover:text-white/60 transition-colors">
-                  Add Focus Area
-                </span>
-              </button>
-            </div>
-          </div>
         )}
       </main>
 
       {modalOpen && (
         <FocusAreaModal
           open={modalOpen}
-          onClose={() => { setModalOpen(false); setEditingArea(null); }}
+          onClose={() => {
+            setModalOpen(false);
+            setEditingArea(null);
+          }}
           onSaved={handleSaved}
           editingArea={editingArea}
           managerType={managerType}
