@@ -27,6 +27,7 @@ import { Badge } from "@/components/ui/badge";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { toast } from "sonner";
 import { format } from "date-fns";
+import { todayInET, todayDisplayInET } from "@/lib/easternTime";
 import { ArrowLeft, Plus, CheckCircle2, Circle, LogOut, Archive, ArrowRight, Trash2, MoreVertical, Flame, Target, Zap, GripVertical, Radar } from "lucide-react";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import UpcomingEventsWidget from "@/components/admin/UpcomingEventsWidget";
@@ -231,8 +232,11 @@ const AdminSignals = ({ managerType = "PD" }: { managerType?: string }) => {
   const [draggingId, setDraggingId] = useState<string | null>(null);
   const [, setDraggingBucket] = useState<BucketId | null>(null);
 
-  const today = format(new Date(), "yyyy-MM-dd");
-  const todayDisplay = format(new Date(), "EEEE, MMMM d");
+  // "Today" is pinned to the academy's local timezone (America/New_York)
+  // so date_assigned filtering and the date header don't drift if the
+  // viewer's browser is in a different zone or misconfigured.
+  const today = todayInET();
+  const todayDisplay = todayDisplayInET();
 
   // Load the task manager record so the greeting uses the actual owner's
   // first name instead of a hardcoded "Josh" / "Chrissy".
@@ -376,7 +380,7 @@ const AdminSignals = ({ managerType = "PD" }: { managerType?: string }) => {
       const { error } = await supabase
         .from("signals")
         .update({
-          date_assigned: format(new Date(), "yyyy-MM-dd"),
+          date_assigned: todayInET(),
           priority_layer: priority,
         } as any)
         .eq("id", id);
@@ -409,7 +413,7 @@ const AdminSignals = ({ managerType = "PD" }: { managerType?: string }) => {
 
   const addMutation = useMutation({
     mutationFn: async () => {
-      const todayStr = format(new Date(), "yyyy-MM-dd");
+      const todayStr = todayInET();
       const dateAssigned = form.bucket === "ondeck" ? null : todayStr;
       const priorityLayer = form.bucket === "core" ? "Core" : form.bucket === "bonus" ? "Bonus" : (form.priority_layer || null);
       const { error } = await supabase.from("signals").insert({
@@ -494,7 +498,7 @@ const AdminSignals = ({ managerType = "PD" }: { managerType?: string }) => {
   const editSignalMutation = useMutation({
     mutationFn: async () => {
       if (!editingSignal) return;
-      const todayStr = format(new Date(), "yyyy-MM-dd");
+      const todayStr = todayInET();
       const newStatus = editForm.status;
       const isOnDeck = editForm.bucket === "ondeck";
       const { error } = await supabase
@@ -575,7 +579,7 @@ const AdminSignals = ({ managerType = "PD" }: { managerType?: string }) => {
       newBonusList: Signal[];
       newOnDeckList: Signal[];
     }) => {
-      const todayStr = format(new Date(), "yyyy-MM-dd");
+      const todayStr = todayInET();
       // Update the moved signal's bucket
       const updateData: Record<string, any> = {};
       if (targetBucket === "ondeck") {

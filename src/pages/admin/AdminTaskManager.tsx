@@ -10,7 +10,7 @@ import {
 } from "lucide-react";
 import { icons } from "lucide-react";
 import { toast } from "sonner";
-import { format } from "date-fns";
+import { todayInET } from "@/lib/easternTime";
 import confetti from "canvas-confetti";
 import nlaLogo from "@/assets/nla-logo-white.png";
 import FocusAreaModal from "@/components/admin/FocusAreaModal";
@@ -477,7 +477,7 @@ const AdminTaskManager = () => {
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } })
   );
 
-  const todayStr = format(new Date(), "yyyy-MM-dd");
+  const todayStr = todayInET();
 
   // Load the task manager record so we know its owner (for lock logic and
   // future per-manager metadata). PD and PC are always present (seeded);
