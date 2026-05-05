@@ -92,7 +92,6 @@ type CoreSignal = {
   today_sort_order: number | null;
 };
 
-const getGlow = (hex: string) => `${hex}59`;
 const getGradient = (hex: string) =>
   `linear-gradient(145deg, ${hex}1f 0%, ${hex}08 100%)`;
 
@@ -250,12 +249,7 @@ const FocusAreaTile = ({
       </button>
 
       <div
-        className="absolute -inset-px rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-500 blur-sm pointer-events-none"
-        style={{ background: getGlow(area.accent_color) }}
-      />
-
-      <div
-        className="relative rounded-2xl border-2 p-5 min-h-[300px] flex flex-col transition-all duration-300 group-hover:-translate-y-0.5 group-hover:shadow-2xl"
+        className="relative rounded-2xl border-2 p-5 min-h-[300px] flex flex-col transition-transform duration-300 group-hover:-translate-y-0.5"
         style={{ borderColor: area.accent_color, background: getGradient(area.accent_color) }}
       >
         {/* Header: icon + title + add button */}
@@ -276,21 +270,50 @@ const FocusAreaTile = ({
           </div>
         </div>
 
-        {/* Add Signal trigger */}
-        {!adding && (
+        {/* Signal list */}
+        <div className="flex-1 min-h-[60px]">
+          {signals.length === 0 ? (
+            <p className="text-[11px] text-white/25 italic text-center pt-6">
+              No signals for today
+            </p>
+          ) : (
+            <DndContext
+              sensors={tileSensors}
+              collisionDetection={closestCenter}
+              onDragEnd={handleSignalReorder}
+            >
+              <SortableContext
+                items={signals.map((s) => s.id)}
+                strategy={verticalListSortingStrategy}
+              >
+                <div className="space-y-0.5">
+                  {signals.map((s) => (
+                    <TileSignalRow
+                      key={s.id}
+                      signal={s}
+                      accentColor={area.accent_color}
+                      onToggle={() => onToggle(s)}
+                    />
+                  ))}
+                </div>
+              </SortableContext>
+            </DndContext>
+          )}
+        </div>
+
+        {/* Add Signal trigger — sits at the bottom of the tile per design. */}
+        {!adding ? (
           <button
             type="button"
             onClick={() => setAdding(true)}
-            className="mb-2 inline-flex items-center justify-center gap-1.5 w-full text-[11px] font-semibold px-2 py-1.5 rounded-md border border-white/10 hover:border-white/25 hover:bg-white/[0.04] text-white/50 hover:text-white/80 transition-colors"
+            className="mt-2 inline-flex items-center justify-center gap-1.5 w-full text-[11px] font-semibold px-2 py-1.5 rounded-md border border-white/10 hover:border-white/25 hover:bg-white/[0.04] text-white/50 hover:text-white/80 transition-colors"
             title="Add today's signal"
           >
             <Plus className="w-3.5 h-3.5" />
             Add Today's Signal
           </button>
-        )}
-
-        {adding && (
-          <form onSubmit={handleSubmitAdd} className="mb-2 space-y-1.5">
+        ) : (
+          <form onSubmit={handleSubmitAdd} className="mt-2 space-y-1.5">
             <input
               autoFocus
               value={draftTitle}
@@ -326,37 +349,6 @@ const FocusAreaTile = ({
             </div>
           </form>
         )}
-
-        {/* Signal list */}
-        <div className="flex-1 min-h-[60px]">
-          {signals.length === 0 ? (
-            <p className="text-[11px] text-white/25 italic text-center pt-6">
-              No signals for today
-            </p>
-          ) : (
-            <DndContext
-              sensors={tileSensors}
-              collisionDetection={closestCenter}
-              onDragEnd={handleSignalReorder}
-            >
-              <SortableContext
-                items={signals.map((s) => s.id)}
-                strategy={verticalListSortingStrategy}
-              >
-                <div className="space-y-0.5">
-                  {signals.map((s) => (
-                    <TileSignalRow
-                      key={s.id}
-                      signal={s}
-                      accentColor={area.accent_color}
-                      onToggle={() => onToggle(s)}
-                    />
-                  ))}
-                </div>
-              </SortableContext>
-            </DndContext>
-          )}
-        </div>
 
         {/* Footer: tile progress + Open → */}
         <div className="flex items-center justify-between pt-3 mt-2 border-t border-white/5">

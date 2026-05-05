@@ -203,7 +203,7 @@ const AdminSignals = ({ managerType = "PD" }: { managerType?: string }) => {
   const { user, signOut } = useAuth();
   const queryClient = useQueryClient();
   const isPC = managerType === "PC";
-  const backPath = isPC ? "/admin/pc-task-manager" : "/admin/pd-task-manager";
+  const backPath = `/admin/task-manager/${isPC ? "PC" : "PD"}`;
   const signalsBasePath = isPC ? "/admin/pc-signals" : "/admin/signals";
   const [showAdd, setShowAdd] = useState(false);
   const [selectedForArchive, setSelectedForArchive] = useState<Set<string>>(new Set());
