@@ -754,29 +754,28 @@ const AdminSignals = ({ managerType = "PD" }: { managerType?: string }) => {
 
       <main className="mx-auto px-3 sm:px-4 py-6 max-w-4xl w-full">
 
-        {/* ═══ Top section — logos LEFT, daily verse RIGHT ═══ */}
+        {/* ═══ Top section — focus area logo LEFT, daily verse RIGHT.
+              Small NLA wordmark removed; the focus area's own branding is
+              the identity element here. ═══ */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-center mb-10 pt-2">
-          <div className="flex items-center gap-5 justify-center md:justify-end">
-            <a href="/admin/dashboard" className="opacity-80 hover:opacity-100 transition-opacity shrink-0">
-              <img src={nlaLogo} alt="No Limits Academy" className="h-12 w-auto" />
-            </a>
+          <div className="flex items-center justify-center md:justify-end">
             {focusArea === "nla" && !dynamicImageUrl && (
-              <img src={nlaMascot} alt="NLA Mascot" className="h-20 w-auto shrink-0" />
+              <img src={nlaMascot} alt="NLA Mascot" className="h-40 w-auto shrink-0" />
             )}
             {focusArea === "usa-boxing" && !dynamicImageUrl && (
-              <img src={usaBoxingLogo} alt="USA Boxing" className="h-20 w-auto shrink-0" />
+              <img src={usaBoxingLogo} alt="USA Boxing" className="h-40 w-auto shrink-0" />
             )}
             {focusArea === "fcusa" && !dynamicImageUrl && (
-              <img src={fcusaLogo} alt="Fighting Chance USA" className="h-20 w-auto shrink-0" />
+              <img src={fcusaLogo} alt="Fighting Chance USA" className="h-40 w-auto shrink-0" />
             )}
             {focusArea === "quikhit" && !dynamicImageUrl && (
-              <img src={quikhitLogo} alt="QUIKHIT" className="h-20 w-auto shrink-0" />
+              <img src={quikhitLogo} alt="QUIKHIT" className="h-40 w-auto shrink-0" />
             )}
             {focusArea === "personal" && !dynamicImageUrl && managerType === "PD" && (
-              <img src={personalFamily} alt="Family" className="h-20 w-auto rounded-lg shrink-0" />
+              <img src={personalFamily} alt="Family" className="h-40 w-auto rounded-lg shrink-0" />
             )}
             {dynamicImageUrl && (
-              <img src={dynamicImageUrl} alt={areaLabel} className="h-20 w-auto rounded-lg shrink-0" />
+              <img src={dynamicImageUrl} alt={areaLabel} className="h-40 w-auto rounded-lg shrink-0" />
             )}
           </div>
           <div className="flex items-center justify-center md:justify-start">
