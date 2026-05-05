@@ -39,8 +39,6 @@ const formatCreatedDate = (iso: string) => {
   return `${d.getMonth() + 1}/${d.getDate()}`;
 };
 
-const SIGNAL_KINDS = ["Outcome", "Action"] as const;
-
 type Signal = {
   id: string;
   title: string | null;
@@ -211,7 +209,6 @@ const AdminSignals = ({ managerType = "PD" }: { managerType?: string }) => {
     title: "",
     pillar: "" as string,
     priority_layer: "" as string,
-    signal_kind: "" as string,
     bucket: "core" as BucketId,
   });
 
@@ -219,7 +216,6 @@ const AdminSignals = ({ managerType = "PD" }: { managerType?: string }) => {
   const [editForm, setEditForm] = useState({
     title: "",
     pillar: "",
-    signal_kind: "",
     bucket: "core" as BucketId,
     status: "Pending" as string,
     description: "",
@@ -398,8 +394,8 @@ const AdminSignals = ({ managerType = "PD" }: { managerType?: string }) => {
         title: form.title,
         pillar: form.pillar || null,
         priority_layer: priorityLayer,
-        signal_kind: form.signal_kind || null,
-        signal_type: form.signal_kind || "Action",
+        signal_kind: null,
+        signal_type: "Action",
         status: "Pending",
         is_archived: false,
         date_assigned: dateAssigned,
@@ -410,7 +406,7 @@ const AdminSignals = ({ managerType = "PD" }: { managerType?: string }) => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["signals"] });
       setShowAdd(false);
-      setForm({ title: "", pillar: "", priority_layer: "", signal_kind: "", bucket: "core" });
+      setForm({ title: "", pillar: "", priority_layer: "", bucket: "core" });
       toast.success("Signal added");
     },
     onError: (e: any) => toast.error(e.message),
@@ -480,8 +476,6 @@ const AdminSignals = ({ managerType = "PD" }: { managerType?: string }) => {
         .update({
           title: editForm.title,
           pillar: editForm.pillar || null,
-          signal_kind: editForm.signal_kind || null,
-          signal_type: editForm.signal_kind || editingSignal.signal_type,
           priority_layer: isOnDeck ? null : (editForm.bucket === "core" ? "Core" : "Bonus"),
           status: newStatus,
           completed_at: newStatus === "Complete" ? (editingSignal.completed_at || new Date().toISOString()) : null,
@@ -689,7 +683,6 @@ const AdminSignals = ({ managerType = "PD" }: { managerType?: string }) => {
     setEditForm({
       title: signal.title || "",
       pillar: signal.pillar || "",
-      signal_kind: signal.signal_kind || "",
       bucket,
       status: signal.status,
       description: signal.description || "",
@@ -1231,19 +1224,6 @@ const AdminSignals = ({ managerType = "PD" }: { managerType?: string }) => {
                 </SelectContent>
               </Select>
             </div>
-            <div>
-              <Label className="text-white/60">Signal Kind</Label>
-              <Select value={form.signal_kind} onValueChange={(v) => setForm({ ...form, signal_kind: v })}>
-                <SelectTrigger className="bg-white/5 border-white/10 text-white mt-1">
-                  <SelectValue placeholder="Outcome or Action" />
-                </SelectTrigger>
-                <SelectContent className="bg-zinc-900 border-white/10 z-[200]">
-                  {SIGNAL_KINDS.map((k) => (
-                    <SelectItem key={k} value={k} className="text-white hover:bg-white/10 focus:bg-white/10 focus:text-white">{k}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
           </div>
           <DialogFooter>
             <Button variant="ghost" onClick={() => setShowAdd(false)} className="text-white/40 hover:text-white/60">Cancel</Button>
@@ -1276,33 +1256,18 @@ const AdminSignals = ({ managerType = "PD" }: { managerType?: string }) => {
                 className="bg-white/5 border-white/10 text-white mt-1"
               />
             </div>
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <Label className="text-white/60">Pillar</Label>
-                <Select value={editForm.pillar} onValueChange={(v) => setEditForm({ ...editForm, pillar: v })}>
-                  <SelectTrigger className="bg-white/5 border-white/10 text-white mt-1">
-                    <SelectValue placeholder="Select pillar" />
-                  </SelectTrigger>
-                  <SelectContent className="bg-zinc-900 border-white/10 z-[200]">
-                    {PILLARS.map((p) => (
-                      <SelectItem key={p} value={p} className="text-white hover:bg-white/10 focus:bg-white/10 focus:text-white">{p}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
-                <Label className="text-white/60">Type</Label>
-                <Select value={editForm.signal_kind} onValueChange={(v) => setEditForm({ ...editForm, signal_kind: v })}>
-                  <SelectTrigger className="bg-white/5 border-white/10 text-white mt-1">
-                    <SelectValue placeholder="Outcome / Action" />
-                  </SelectTrigger>
-                  <SelectContent className="bg-zinc-900 border-white/10 z-[200]">
-                    {SIGNAL_KINDS.map((k) => (
-                      <SelectItem key={k} value={k} className="text-white hover:bg-white/10 focus:bg-white/10 focus:text-white">{k}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+            <div>
+              <Label className="text-white/60">Pillar</Label>
+              <Select value={editForm.pillar} onValueChange={(v) => setEditForm({ ...editForm, pillar: v })}>
+                <SelectTrigger className="bg-white/5 border-white/10 text-white mt-1">
+                  <SelectValue placeholder="Select pillar" />
+                </SelectTrigger>
+                <SelectContent className="bg-zinc-900 border-white/10 z-[200]">
+                  {PILLARS.map((p) => (
+                    <SelectItem key={p} value={p} className="text-white hover:bg-white/10 focus:bg-white/10 focus:text-white">{p}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div>

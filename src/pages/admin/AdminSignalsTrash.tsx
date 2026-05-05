@@ -57,7 +57,6 @@ const AdminSignalsTrash = ({ managerType = "PD" }: { managerType?: string }) => 
 
   const [search, setSearch] = useState("");
   const [pillarFilter, setPillarFilter] = useState<string | null>(null);
-  const [kindFilter, setKindFilter] = useState<string | null>(null);
   const [bucketFilter, setBucketFilter] = useState<string | null>(null);
   const [permanentDeleteTarget, setPermanentDeleteTarget] = useState<string | null>(null);
 
@@ -82,10 +81,9 @@ const AdminSignalsTrash = ({ managerType = "PD" }: { managerType?: string }) => 
       results = results.filter((s) => (s.title || "").toLowerCase().includes(q));
     }
     if (pillarFilter) results = results.filter((s) => s.pillar === pillarFilter);
-    if (kindFilter) results = results.filter((s) => s.signal_kind === kindFilter);
     if (bucketFilter) results = results.filter((s) => bucketFilter === "__null__" ? s.priority_layer == null : s.priority_layer === bucketFilter);
     return results;
-  }, [trashedSignals, search, pillarFilter, kindFilter, bucketFilter]);
+  }, [trashedSignals, search, pillarFilter, bucketFilter]);
 
   const restoreMutation = useMutation({
     mutationFn: async (id: string) => {
@@ -173,10 +171,6 @@ const AdminSignalsTrash = ({ managerType = "PD" }: { managerType?: string }) => 
             <FilterChip key={p} label={p} active={pillarFilter === p} onClick={() => setPillarFilter(pillarFilter === p ? null : p)} />
           ))}
           <span className="w-px h-5 bg-white/10 mx-1 self-center" />
-          {(["Outcome", "Action"] as const).map((k) => (
-            <FilterChip key={k} label={k} active={kindFilter === k} onClick={() => setKindFilter(kindFilter === k ? null : k)} />
-          ))}
-          <span className="w-px h-5 bg-white/10 mx-1 self-center" />
           {([{ value: "Core", label: "Core" }, { value: "Bonus", label: "On-Deck" }, { value: "__null__", label: "On Radar" }] as const).map((b) => (
             <FilterChip key={b.value} label={b.label} active={bucketFilter === b.value} onClick={() => setBucketFilter(bucketFilter === b.value ? null : b.value)} />
           ))}
@@ -202,11 +196,6 @@ const AdminSignalsTrash = ({ managerType = "PD" }: { managerType?: string }) => 
                     {signal.pillar && (
                       <Badge variant="outline" className={`text-[10px] ${PILLAR_COLORS[signal.pillar] || "border-white/20 text-white/60"}`}>
                         {signal.pillar}
-                      </Badge>
-                    )}
-                    {signal.signal_kind && (
-                      <Badge variant="outline" className="text-[10px] border-white/20 text-white/40">
-                        {signal.signal_kind}
                       </Badge>
                     )}
                     {signal.priority_layer && (
