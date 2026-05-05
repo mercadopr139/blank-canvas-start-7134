@@ -945,7 +945,7 @@ const AdminSignals = ({ managerType = "PD" }: { managerType?: string }) => {
           onDragEnd={handleDragEnd}
           onDragCancel={() => { setDraggingId(null); setDraggingBucket(null); }}
         >
-          {/* 3-column kanban — Core | On Radar | On-Deck. All three live in
+          {/* 3-column kanban — Core | On-Deck | On Radar. All three live in
               the same parent DndContext so cross-column drags keep working. */}
           <div className="mb-8">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -970,6 +970,37 @@ const AdminSignals = ({ managerType = "PD" }: { managerType?: string }) => {
                             signal={signal}
                             bucket="core"
                             onEdit={() => openEditSignal(signal, "core")}
+                            onToggleStatus={() => toggleStatus.mutate({ id: signal.id, current: signal.status })}
+                            accentColor={ac.hex}
+                          />
+                        ))
+                      )}
+                    </div>
+                  </SortableContext>
+                </div>
+              </DroppableColumn>
+
+              {/* On-Deck — today's nice-to-haves (priority_layer="Bonus") */}
+              <DroppableColumn id="bonus">
+                <div className="rounded-xl border border-white/[0.08] bg-gradient-to-b from-white/[0.03] to-transparent overflow-hidden">
+                  <div className="px-4 pt-4 pb-2 flex items-center gap-2">
+                    <Zap className="w-4 h-4 text-white/30" />
+                    <h3 className="text-sm font-bold text-white/40 uppercase tracking-wider">On-Deck</h3>
+                  </div>
+                  <SortableContext items={[...todayBonusSignals].sort((a, b) => (b.status === "Complete" ? 1 : 0) - (a.status === "Complete" ? 1 : 0)).map(s => s.id)} strategy={verticalListSortingStrategy}>
+                    <div className="px-3 pb-3 space-y-1 min-h-[80px]">
+                      {todayBonusSignals.length === 0 ? (
+                        <div className="flex items-center gap-3 px-3 py-2.5 rounded-lg bg-white/[0.02] border border-white/[0.04]">
+                          <Circle className="w-4 h-4 text-white/10 shrink-0" />
+                          <span className="text-white/15 text-sm italic">Empty slot</span>
+                        </div>
+                      ) : (
+                        [...todayBonusSignals].sort((a, b) => (b.status === "Complete" ? 1 : 0) - (a.status === "Complete" ? 1 : 0)).map((signal) => (
+                          <SortableSignalRow
+                            key={signal.id}
+                            signal={signal}
+                            bucket="bonus"
+                            onEdit={() => openEditSignal(signal, "bonus")}
                             onToggleStatus={() => toggleStatus.mutate({ id: signal.id, current: signal.status })}
                             accentColor={ac.hex}
                           />
@@ -1036,37 +1067,6 @@ const AdminSignals = ({ managerType = "PD" }: { managerType?: string }) => {
                                 </button>
                               </>
                             }
-                          />
-                        ))
-                      )}
-                    </div>
-                  </SortableContext>
-                </div>
-              </DroppableColumn>
-
-              {/* On-Deck — today's nice-to-haves (priority_layer="Bonus") */}
-              <DroppableColumn id="bonus">
-                <div className="rounded-xl border border-white/[0.08] bg-gradient-to-b from-white/[0.03] to-transparent overflow-hidden">
-                  <div className="px-4 pt-4 pb-2 flex items-center gap-2">
-                    <Zap className="w-4 h-4 text-white/30" />
-                    <h3 className="text-sm font-bold text-white/40 uppercase tracking-wider">On-Deck</h3>
-                  </div>
-                  <SortableContext items={[...todayBonusSignals].sort((a, b) => (b.status === "Complete" ? 1 : 0) - (a.status === "Complete" ? 1 : 0)).map(s => s.id)} strategy={verticalListSortingStrategy}>
-                    <div className="px-3 pb-3 space-y-1 min-h-[80px]">
-                      {todayBonusSignals.length === 0 ? (
-                        <div className="flex items-center gap-3 px-3 py-2.5 rounded-lg bg-white/[0.02] border border-white/[0.04]">
-                          <Circle className="w-4 h-4 text-white/10 shrink-0" />
-                          <span className="text-white/15 text-sm italic">Empty slot</span>
-                        </div>
-                      ) : (
-                        [...todayBonusSignals].sort((a, b) => (b.status === "Complete" ? 1 : 0) - (a.status === "Complete" ? 1 : 0)).map((signal) => (
-                          <SortableSignalRow
-                            key={signal.id}
-                            signal={signal}
-                            bucket="bonus"
-                            onEdit={() => openEditSignal(signal, "bonus")}
-                            onToggleStatus={() => toggleStatus.mutate({ id: signal.id, current: signal.status })}
-                            accentColor={ac.hex}
                           />
                         ))
                       )}
