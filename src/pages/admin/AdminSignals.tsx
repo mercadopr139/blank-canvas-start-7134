@@ -27,9 +27,8 @@ import { Badge } from "@/components/ui/badge";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { toast } from "sonner";
 import { format } from "date-fns";
-import { ArrowLeft, Plus, CheckCircle2, Circle, LogOut, Archive, ArrowRight, Trash2, MoreVertical, Flame, Target, Zap, GripVertical, Radar, X } from "lucide-react";
+import { ArrowLeft, Plus, CheckCircle2, Circle, LogOut, Archive, ArrowRight, Trash2, MoreVertical, Flame, Target, Zap, GripVertical, Radar } from "lucide-react";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import VisionCloud from "@/components/admin/VisionCloud";
 import UpcomingEventsWidget from "@/components/admin/UpcomingEventsWidget";
 
 const PILLARS = ["Operations", "Sales & Marketing", "Finance", "Vision", "Personal"] as const;
@@ -755,30 +754,38 @@ const AdminSignals = ({ managerType = "PD" }: { managerType?: string }) => {
 
       <main className="mx-auto px-3 sm:px-4 py-6 max-w-4xl w-full">
 
-        {/* ═══ Reflection / Awareness Section ═══ */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
-          {/* Upcoming Events – dimmed supporting widget */}
-          <div className="opacity-50 hover:opacity-70 transition-opacity">
-            <UpcomingEventsWidget focusArea={focusArea} />
-          </div>
-
-          {/* Logo + Daily Verse */}
-          <div className="flex flex-col items-center justify-center text-center py-4 gap-4">
-            <a href="/admin/dashboard" className="cursor-pointer opacity-70 hover:opacity-90 transition-opacity">
-              <img src={nlaLogo} alt="No Limits Academy" className="h-14 w-auto" />
+        {/* ═══ Top section — logos LEFT, daily verse RIGHT ═══ */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-center mb-10 pt-2">
+          <div className="flex items-center gap-5 justify-center md:justify-end">
+            <a href="/admin/dashboard" className="opacity-80 hover:opacity-100 transition-opacity shrink-0">
+              <img src={nlaLogo} alt="No Limits Academy" className="h-12 w-auto" />
             </a>
+            {focusArea === "nla" && !dynamicImageUrl && (
+              <img src={nlaMascot} alt="NLA Mascot" className="h-20 w-auto shrink-0" />
+            )}
+            {focusArea === "usa-boxing" && !dynamicImageUrl && (
+              <img src={usaBoxingLogo} alt="USA Boxing" className="h-20 w-auto shrink-0" />
+            )}
+            {focusArea === "fcusa" && !dynamicImageUrl && (
+              <img src={fcusaLogo} alt="Fighting Chance USA" className="h-20 w-auto shrink-0" />
+            )}
+            {focusArea === "quikhit" && !dynamicImageUrl && (
+              <img src={quikhitLogo} alt="QUIKHIT" className="h-20 w-auto shrink-0" />
+            )}
+            {focusArea === "personal" && !dynamicImageUrl && managerType === "PD" && (
+              <img src={personalFamily} alt="Family" className="h-20 w-auto rounded-lg shrink-0" />
+            )}
+            {dynamicImageUrl && (
+              <img src={dynamicImageUrl} alt={areaLabel} className="h-20 w-auto rounded-lg shrink-0" />
+            )}
+          </div>
+          <div className="flex items-center justify-center md:justify-start">
             <DailyVerse />
           </div>
         </div>
 
-        {/* ═══ Divider ═══ */}
-        <div className="my-10 flex items-center gap-4">
-          <div className="flex-1 h-px bg-gradient-to-r from-transparent via-white/8 to-transparent" />
-          <div className="w-1 h-1 rounded-full bg-white/10" />
-          <div className="flex-1 h-px bg-gradient-to-r from-transparent via-white/8 to-transparent" />
-        </div>
-
-        {/* ═══ Action Bar ═══ */}
+        {/* ═══ Action Bar (Core % progress) — acts as the divider between
+              the top section and the kanban below. ═══ */}
         {dayWon && (
           <div className="text-center py-6 mb-6 rounded-2xl bg-gradient-to-r from-amber-500/10 via-amber-400/5 to-amber-500/10 border border-amber-400/20">
             <p className="text-3xl font-bold text-amber-400 tracking-wide" style={{ textShadow: "0 0 30px rgba(251,191,36,0.3)" }}>
@@ -908,62 +915,11 @@ const AdminSignals = ({ managerType = "PD" }: { managerType?: string }) => {
           onDragEnd={handleDragEnd}
           onDragCancel={() => { setDraggingId(null); setDraggingBucket(null); }}
         >
-          {/* Focus area branding image — hardcoded defaults + dynamic from DB */}
-          {focusArea === "nla" && !dynamicImageUrl && (
-            <div className="flex justify-center my-8">
-              <img src={nlaMascot} alt="NLA Mascot" className="w-[200px] h-auto" />
-            </div>
-          )}
-          {focusArea === "usa-boxing" && !dynamicImageUrl && (
-            <div className="flex justify-center my-8">
-              <img src={usaBoxingLogo} alt="USA Boxing" className="w-[200px] h-auto" />
-            </div>
-          )}
-          {focusArea === "fcusa" && !dynamicImageUrl && (
-            <div className="flex justify-center my-8">
-              <img src={fcusaLogo} alt="Fighting Chance USA" className="w-[400px] h-auto" />
-            </div>
-          )}
-          {focusArea === "quikhit" && !dynamicImageUrl && (
-            <div className="flex justify-center my-8">
-              <img src={quikhitLogo} alt="QUIKHIT" className="w-[400px] h-auto" />
-            </div>
-          )}
-          {focusArea === "personal" && !dynamicImageUrl && managerType === "PD" && (
-            <div className="flex justify-center my-8">
-              <img src={personalFamily} alt="Family" className="w-[400px] h-auto rounded-xl" />
-            </div>
-          )}
-          {/* Dynamic image from DB (for new/edited focus areas with uploaded images) */}
-          {dynamicImageUrl && (
-            <div className="flex justify-center my-8 relative group/img w-fit mx-auto">
-              <img src={dynamicImageUrl} alt={areaLabel} className="w-[400px] h-auto rounded-xl" />
-              {(
-                <button
-                  onClick={async () => {
-                    if (!focusAreaConfig?.id) return;
-                    const { error } = await supabase
-                      .from("focus_areas")
-                      .update({ image_url: null, updated_at: new Date().toISOString() })
-                      .eq("id", focusAreaConfig.id);
-                    if (error) { toast.error("Failed to remove image"); return; }
-                    queryClient.invalidateQueries({ queryKey: ["focus-area-config", focusArea, managerType] });
-                    toast.success("Image removed");
-                  }}
-                  className="absolute top-2 right-2 p-1.5 rounded-full bg-black/70 text-white/60 hover:text-white hover:bg-red-600/80 opacity-0 group-hover/img:opacity-100 transition-all"
-                  title="Remove image"
-                >
-                  <X className="w-4 h-4" />
-                </button>
-              )}
-            </div>
-          )}
-
-          {/* Today's Signals */}
-          <div className="mb-6">
-            <h2 className="text-sm font-semibold uppercase tracking-wider text-white/40 mb-4">Today's Signals</h2>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              {/* Core 3 */}
+          {/* 3-column kanban — Core | On Radar | On-Deck. All three live in
+              the same parent DndContext so cross-column drags keep working. */}
+          <div className="mb-8">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {/* Core — today's must-dos */}
               <DroppableColumn id="core">
                 <div className="rounded-xl border-2 overflow-hidden" style={{ borderColor: `${ac.hex}4D`, background: `linear-gradient(to bottom, ${ac.bgFrom}, transparent)` }}>
                   <div className="px-4 pt-4 pb-2 flex items-center gap-2">
@@ -994,7 +950,71 @@ const AdminSignals = ({ managerType = "PD" }: { managerType?: string }) => {
                 </div>
               </DroppableColumn>
 
-              {/* On-Deck */}
+              {/* On Radar — backlog/idea queue. Droppable id is "ondeck"
+                  because that's the historic mapping (priority_layer=null,
+                  date_assigned=null). The visible label is "On Radar". */}
+              <DroppableColumn id="ondeck">
+                <div className="rounded-xl border border-white/[0.08] bg-gradient-to-b from-white/[0.03] to-transparent overflow-hidden">
+                  <div className="px-4 pt-4 pb-2 flex items-center gap-2">
+                    <Radar className="w-4 h-4 text-white/30" />
+                    <h3 className="text-sm font-bold text-white/40 uppercase tracking-wider">On Radar</h3>
+                    {onDeckSignals.length > 0 && <span className="text-xs text-white/15">({onDeckSignals.length})</span>}
+                  </div>
+                  <SortableContext items={onDeckSignals.map(s => s.id)} strategy={verticalListSortingStrategy}>
+                    <div className="px-3 pb-3 space-y-1 min-h-[80px]">
+                      {onDeckSignals.length === 0 ? (
+                        <div className="flex items-center gap-3 px-3 py-2.5 rounded-lg bg-white/[0.02] border border-white/[0.04]">
+                          <Circle className="w-4 h-4 text-white/10 shrink-0" />
+                          <span className="text-white/15 text-sm italic">Empty slot</span>
+                        </div>
+                      ) : (
+                        onDeckSignals.map((signal) => (
+                          <SortableSignalRow
+                            key={signal.id}
+                            signal={signal}
+                            bucket="ondeck"
+                            onEdit={() => openEditSignal(signal, "ondeck")}
+                            onToggleStatus={() => toggleStatus.mutate({ id: signal.id, current: signal.status })}
+                            accentColor={ac.hex}
+                            extraActions={
+                              <>
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  className="h-6 text-[10px] px-2 shrink-0"
+                                  style={{ color: `${ac.hexMuted}99` }}
+                                  onClick={(e) => { e.stopPropagation(); scheduleMutation.mutate({ id: signal.id, priority: "Core" }); }}
+                                  disabled={scheduleMutation.isPending}
+                                >
+                                  Core <ArrowRight className="w-3 h-3 ml-1" />
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  className="h-6 text-[10px] text-white/30 hover:text-white/60 hover:bg-white/5 px-2 shrink-0"
+                                  onClick={(e) => { e.stopPropagation(); scheduleMutation.mutate({ id: signal.id, priority: "Bonus" }); }}
+                                  disabled={scheduleMutation.isPending}
+                                >
+                                  On-Deck <ArrowRight className="w-3 h-3 ml-1" />
+                                </Button>
+                                <button
+                                  className="shrink-0 p-1 rounded hover:bg-red-500/10 text-white/15 hover:text-red-400 transition-colors"
+                                  aria-label="Move to Trash"
+                                  onClick={(e) => { e.stopPropagation(); setTrashConfirmId(signal.id); }}
+                                >
+                                  <Trash2 className="w-3.5 h-3.5" />
+                                </button>
+                              </>
+                            }
+                          />
+                        ))
+                      )}
+                    </div>
+                  </SortableContext>
+                </div>
+              </DroppableColumn>
+
+              {/* On-Deck — today's nice-to-haves (priority_layer="Bonus") */}
               <DroppableColumn id="bonus">
                 <div className="rounded-xl border border-white/[0.08] bg-gradient-to-b from-white/[0.03] to-transparent overflow-hidden">
                   <div className="px-4 pt-4 pb-2 flex items-center gap-2">
@@ -1069,78 +1089,10 @@ const AdminSignals = ({ managerType = "PD" }: { managerType?: string }) => {
             </Button>
           </div>
 
-          {/* Vision Cloud */}
-          <div className="mb-8">
-            <VisionCloud focusArea={focusArea} />
-          </div>
-
-          {/* Thin divider */}
-          <div className="flex justify-center my-10">
-            <div className="w-16 h-px bg-gradient-to-r from-transparent via-white/10 to-transparent" />
-          </div>
-
-          {/* On Radar — always visible */}
-          <div className="mb-6">
-            <DroppableColumn id="ondeck">
-              <div className="rounded-xl border border-white/[0.08] bg-gradient-to-b from-white/[0.03] to-transparent overflow-hidden">
-                <div className="px-4 pt-4 pb-2 flex items-center gap-2">
-                  <Radar className="w-4 h-4 text-white/30" />
-                  <h3 className="text-sm font-bold text-white/40 uppercase tracking-wider">On Radar</h3>
-                  {onDeckSignals.length > 0 && <span className="text-xs text-white/15">({onDeckSignals.length})</span>}
-                </div>
-                <SortableContext items={onDeckSignals.map(s => s.id)} strategy={verticalListSortingStrategy}>
-                  <div className="px-3 pb-3 space-y-1 min-h-[80px]">
-                    {onDeckSignals.length === 0 ? (
-                      <div className="flex items-center gap-3 px-3 py-2.5 rounded-lg bg-white/[0.02] border border-white/[0.04]">
-                        <Circle className="w-4 h-4 text-white/10 shrink-0" />
-                        <span className="text-white/15 text-sm italic">Empty slot</span>
-                      </div>
-                    ) : (
-                      onDeckSignals.map((signal) => (
-                        <SortableSignalRow
-                          key={signal.id}
-                          signal={signal}
-                          bucket="ondeck"
-                          onEdit={() => openEditSignal(signal, "ondeck")}
-                          onToggleStatus={() => toggleStatus.mutate({ id: signal.id, current: signal.status })}
-                          accentColor={ac.hex}
-                          extraActions={
-                            <>
-                              <Button
-                                size="sm"
-                                variant="ghost"
-                                className="h-6 text-[10px] px-2 shrink-0"
-                                style={{ color: `${ac.hexMuted}99` }}
-                                onClick={(e) => { e.stopPropagation(); scheduleMutation.mutate({ id: signal.id, priority: "Core" }); }}
-                                disabled={scheduleMutation.isPending}
-                              >
-                                Core <ArrowRight className="w-3 h-3 ml-1" />
-                              </Button>
-                              <Button
-                                size="sm"
-                                variant="ghost"
-                                className="h-6 text-[10px] text-white/30 hover:text-white/60 hover:bg-white/5 px-2 shrink-0"
-                                onClick={(e) => { e.stopPropagation(); scheduleMutation.mutate({ id: signal.id, priority: "Bonus" }); }}
-                                disabled={scheduleMutation.isPending}
-                              >
-                                On-Deck <ArrowRight className="w-3 h-3 ml-1" />
-                              </Button>
-                              <button
-                                className="shrink-0 p-1 rounded hover:bg-red-500/10 text-white/15 hover:text-red-400 transition-colors"
-                                aria-label="Move to Trash"
-                                onClick={(e) => { e.stopPropagation(); setTrashConfirmId(signal.id); }}
-                              >
-                                <Trash2 className="w-3.5 h-3.5" />
-                              </button>
-                            </>
-                          }
-                        />
-                      ))
-                    )}
-                  </div>
-                </SortableContext>
-              </div>
-            </DroppableColumn>
+          {/* Upcoming events — bottom of the page, dimmed so it sits as
+              context rather than competing with the kanban above. */}
+          <div className="mt-12 opacity-60 hover:opacity-90 transition-opacity">
+            <UpcomingEventsWidget focusArea={focusArea} />
           </div>
 
           {/* Global Drag Overlay */}
