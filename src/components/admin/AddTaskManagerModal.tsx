@@ -140,6 +140,23 @@ export default function AddTaskManagerModal({ open, onClose, onCreated }: Props)
         manager_type: trimmedKey,
       });
       if (faErr) throw faErr;
+
+      // 3. Auto-grant the owner permission to their own task manager so
+      //    they can navigate to the tile immediately on next page load.
+      //    Other admins will need to be granted via Staff Management.
+      const { error: permErr } = await (supabase.from("staff_permissions") as any).upsert(
+        {
+          user_id: selectedOwner.user_id,
+          permission_key: `task_manager_${trimmedKey}`,
+          granted: true,
+        },
+        { onConflict: "user_id,permission_key" }
+      );
+      if (permErr) {
+        // Permission grant is a nice-to-have — the manager + focus area
+        // are already created. Log instead of failing the whole flow.
+        console.warn("Failed to auto-grant owner permission:", permErr);
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["task-managers"] });

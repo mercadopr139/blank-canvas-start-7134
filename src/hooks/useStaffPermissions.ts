@@ -3,41 +3,40 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 
 const SUPER_ADMIN_EMAIL = "joshmercado@nolimitsboxingacademy.org";
-const CHRISSY_EMAIL = "chrissycasiello@nolimitsboxingacademy.org";
 
-export const PERMISSION_KEYS = [
-  "driver_checkin",
+// Permission keys are now arbitrary strings. The full list is no longer
+// hardcoded — it comes from a combination of:
+//   1. Top-level pillar keys (operations / sales_marketing / finance /
+//      settings) defined in src/lib/permissions.ts
+//   2. Pillar sub-permission keys (operations_registration, etc.) — also
+//      in src/lib/permissions.ts
+//   3. Task manager keys (task_manager_<KEY>) derived from the
+//      public.task_managers table — see taskManagerPermKey() helper
+//
+// PermissionKey is kept as `string` instead of a strict union so callers
+// don't need to be updated whenever a new task manager is added.
+export type PermissionKey = string;
+
+// Backward-compat re-exports — older callers (HREF_PERM_MAP, etc.) still
+// import these names. Migrating them all in one shot would balloon this
+// change; future renames are fine.
+export const PERMISSION_KEYS: readonly string[] = [
   "operations",
   "sales_marketing",
   "finance",
-  "pd_signals",
-  "pc_signals",
   "settings",
-] as const;
+];
 
-export type PermissionKey = (typeof PERMISSION_KEYS)[number];
-
-export const PERMISSION_LABELS: Record<PermissionKey, string> = {
-  driver_checkin: "Driver Check-In",
+export const PERMISSION_LABELS: Record<string, string> = {
   operations: "Operations",
   sales_marketing: "Sales & Marketing",
   finance: "Finance",
-  pd_signals: "PD Signals",
-  pc_signals: "PC Signals",
   settings: "Settings",
 };
 
 export function useStaffPermissions() {
   const { user } = useAuth();
-  const [permissions, setPermissions] = useState<Record<PermissionKey, boolean>>({
-    driver_checkin: false,
-    operations: false,
-    sales_marketing: false,
-    finance: false,
-    pd_signals: false,
-    pc_signals: false,
-    settings: false,
-  });
+  const [permissions, setPermissions] = useState<Record<string, boolean>>({});
   const [loading, setLoading] = useState(true);
   const [isSuperAdmin, setIsSuperAdmin] = useState(false);
 
@@ -49,15 +48,13 @@ export function useStaffPermissions() {
 
     const email = user.email?.toLowerCase();
     if (email === SUPER_ADMIN_EMAIL) {
+      // Super admin bypasses every permission gate; we don't bother loading
+      // the staff_permissions row set, since hasPermission() short-circuits.
       setIsSuperAdmin(true);
-      const all: Record<PermissionKey, boolean> = {} as any;
-      PERMISSION_KEYS.forEach((k) => (all[k] = true));
-      setPermissions(all);
+      setPermissions({});
       setLoading(false);
       return;
     }
-
-    // Chrissy's permissions now come from the database (staff_permissions table)
 
     const fetchPerms = async () => {
       const { data } = await supabase
@@ -65,24 +62,10 @@ export function useStaffPermissions() {
         .select("permission_key, granted")
         .eq("user_id", user.id);
 
-      const perms: Record<PermissionKey, boolean> = {
-        driver_checkin: false,
-        operations: false,
-        sales_marketing: false,
-        finance: false,
-        pd_signals: false,
-        pc_signals: false,
-        settings: false,
-      };
-
-      if (data) {
-        data.forEach((row: any) => {
-          if (PERMISSION_KEYS.includes(row.permission_key)) {
-            perms[row.permission_key as PermissionKey] = row.granted;
-          }
-        });
-      }
-
+      const perms: Record<string, boolean> = {};
+      (data || []).forEach((row: any) => {
+        perms[row.permission_key] = row.granted;
+      });
       setPermissions(perms);
       setLoading(false);
     };
@@ -90,8 +73,8 @@ export function useStaffPermissions() {
     fetchPerms();
   }, [user]);
 
-  const hasPermission = (key: PermissionKey) => isSuperAdmin || permissions[key];
-  const canAccessSettings = () => isSuperAdmin || permissions.settings;
+  const hasPermission = (key: string) => isSuperAdmin || permissions[key] === true;
+  const canAccessSettings = () => isSuperAdmin || permissions["settings"] === true;
 
   return { permissions, loading, isSuperAdmin, hasPermission, canAccessSettings };
 }

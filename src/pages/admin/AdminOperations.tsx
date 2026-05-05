@@ -1,7 +1,9 @@
+import { useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { Users, BarChart3, ClipboardList, LucideIcon, CalendarCheck, FileBarChart, Settings2, Star, LogIn, Bus, UserCheck, Radio, PhoneOff, AlertTriangle, FileText, UtensilsCrossed, MapPin } from "lucide-react";
 import AdminSectionLayout, { SectionCard } from "@/components/admin/AdminSectionLayout";
 import { Button } from "@/components/ui/button";
+import { useStaffPermissions } from "@/hooks/useStaffPermissions";
 
 interface OperationsTile {
   title: string;
@@ -9,6 +11,10 @@ interface OperationsTile {
   icon: LucideIcon;
   href: string;
   external?: boolean;
+  // Permission key gating this tile's visibility. Super-admin and any
+  // user granted this key in staff_permissions sees the tile; everyone
+  // else has it filtered out before render.
+  permKey?: string;
   children?: { title: string; href: string; icon: LucideIcon; external?: boolean }[];
 }
 
@@ -18,6 +24,7 @@ const baseTiles: OperationsTile[] = [
     description: "Youth registration management",
     icon: ClipboardList,
     href: "/admin/operations/registration",
+    permKey: "operations_registration",
     children: [
       { title: "Registration Form", href: "/register", icon: ClipboardList, external: true },
       { title: "Registrations", href: "/admin/operations/registrations", icon: Users },
@@ -30,6 +37,7 @@ const baseTiles: OperationsTile[] = [
     description: "Attendance tracking & reports",
     icon: CalendarCheck,
     href: "/admin/operations/attendance-group",
+    permKey: "operations_attendance",
     children: [
       { title: "Attendance Intelligence", href: "/admin/operations/attendance", icon: CalendarCheck },
       { title: "Attendance Reports", href: "/admin/operations/attendance-reports", icon: FileBarChart },
@@ -42,6 +50,7 @@ const baseTiles: OperationsTile[] = [
     description: "Driver & Route Management",
     icon: Bus,
     href: "/admin/operations/transportation",
+    permKey: "operations_transportation",
     children: [
       { title: "Drivers", href: "/admin/operations/transportation/drivers", icon: UserCheck },
       { title: "Youth Profiles", href: "/admin/operations/transportation/youth", icon: Users },
@@ -55,6 +64,7 @@ const baseTiles: OperationsTile[] = [
     description: "Meal counter, nutrition & reports",
     icon: UtensilsCrossed,
     href: "/admin/operations/meal-tracker",
+    permKey: "operations_meal_tracker",
     children: [
       { title: "Meal Setup", href: "/admin/operations/meal-tracker", icon: UtensilsCrossed },
       { title: "Meal Reports", href: "/admin/operations/meal-reports", icon: BarChart3 },
@@ -65,17 +75,27 @@ const baseTiles: OperationsTile[] = [
 // Blank index – main panel is empty until a sidebar item is selected
 export const AdminOperationsIndex = () => null;
 
-const sidebarCards: SectionCard[] = baseTiles.map((t) => ({
-  title: t.title,
-  description: t.description,
-  href: t.href,
-  icon: t.icon,
-  external: t.external,
-  children: t.children,
-}));
-
 const AdminOperations = () => {
   const navigate = useNavigate();
+  const { hasPermission, loading: permLoading } = useStaffPermissions();
+
+  // Hide sidebar tiles whose permission key the user doesn't have. While
+  // permissions are loading, render everything so there's no flash of
+  // empty UI; once loaded, the actual gate kicks in.
+  const sidebarCards = useMemo<SectionCard[]>(
+    () =>
+      baseTiles
+        .filter((t) => permLoading || !t.permKey || hasPermission(t.permKey))
+        .map((t) => ({
+          title: t.title,
+          description: t.description,
+          href: t.href,
+          icon: t.icon,
+          external: t.external,
+          children: t.children,
+        })),
+    [permLoading, hasPermission]
+  );
 
   const checkInActions = (
     <div className="flex flex-col gap-2 w-full">

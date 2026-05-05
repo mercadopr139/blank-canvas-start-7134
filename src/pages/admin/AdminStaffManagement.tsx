@@ -1,17 +1,32 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
+import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
-import { useStaffPermissions, PERMISSION_KEYS, PERMISSION_LABELS, type PermissionKey } from "@/hooks/useStaffPermissions";
+import { useStaffPermissions } from "@/hooks/useStaffPermissions";
+import {
+  OPERATIONS_SUBS,
+  SALES_MARKETING_SUBS,
+  FINANCE_SUBS,
+  taskManagerPermKey,
+  type PillarSub,
+} from "@/lib/permissions";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import { ArrowLeft, Plus, Shield, UserCog, Pencil } from "lucide-react";
 
-const SUPER_ADMIN_EMAIL = "joshmercado@nolimitsboxingacademy.org";
+// ─────────────────────────────────────────────────────────────────────────
+// Types
 
 interface StaffMember {
   id: string;
@@ -22,12 +37,18 @@ interface StaffMember {
   status: string;
 }
 
-interface StaffPerms {
-  [key: string]: boolean;
-}
+type StaffPerms = Record<string, boolean>;
+
+type TaskManagerRow = {
+  key: string;
+  display_name: string;
+  sort_order: number;
+};
+
+// ─────────────────────────────────────────────────────────────────────────
+// Component
 
 export default function AdminStaffManagement() {
-  const { user } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
   const { canAccessSettings, isSuperAdmin, loading: permLoading } = useStaffPermissions();
@@ -40,17 +61,33 @@ export default function AdminStaffManagement() {
   const [form, setForm] = useState({ full_name: "", email: "", job_title: "" });
   const [saving, setSaving] = useState(false);
 
+  // Task managers come from the DB so the checkbox set updates automatically
+  // whenever a new task manager (HC, JS, etc.) is added.
+  const { data: taskManagers = [] } = useQuery({
+    queryKey: ["task-managers-for-staff-mgmt"],
+    queryFn: async () => {
+      const { data, error } = await (supabase
+        .from("task_managers")
+        .select("key, display_name, sort_order") as any)
+        .order("sort_order", { ascending: true });
+      if (error) throw error;
+      return (data || []) as TaskManagerRow[];
+    },
+  });
+
   useEffect(() => {
     if (!permLoading && !canAccessSettings()) {
       navigate("/admin/dashboard", { replace: true });
     }
-  }, [permLoading, canAccessSettings]);
+  }, [permLoading, canAccessSettings, navigate]);
 
   const fetchStaff = async () => {
-    const { data: profiles } = await supabase.from("staff_profiles").select("*").order("full_name");
+    const { data: profiles } = await supabase
+      .from("staff_profiles")
+      .select("*")
+      .order("full_name");
     if (profiles) {
       setStaff(profiles as StaffMember[]);
-      // Fetch permissions for all staff
       const userIds = profiles.map((p: any) => p.user_id);
       if (userIds.length > 0) {
         const { data: perms } = await supabase
@@ -60,7 +97,6 @@ export default function AdminStaffManagement() {
         const mapped: Record<string, StaffPerms> = {};
         profiles.forEach((p: any) => {
           mapped[p.user_id] = {};
-          PERMISSION_KEYS.forEach((k) => (mapped[p.user_id][k] = false));
         });
         perms?.forEach((row: any) => {
           if (mapped[row.user_id]) mapped[row.user_id][row.permission_key] = row.granted;
@@ -115,7 +151,7 @@ export default function AdminStaffManagement() {
       setAddOpen(false);
       setForm({ full_name: "", email: "", job_title: "" });
       fetchStaff();
-    } catch (err) {
+    } catch {
       toast({ title: "An error occurred", variant: "destructive" });
     }
     setSaving(false);
@@ -141,24 +177,126 @@ export default function AdminStaffManagement() {
     fetchStaff();
   };
 
-  const togglePermission = async (userId: string, key: string, current: boolean) => {
+  const setPermission = async (userId: string, key: string, value: boolean) => {
     if (key === "settings" && !isSuperAdmin) {
-      toast({ title: "Only the super admin can grant Settings permission", variant: "destructive" });
+      toast({
+        title: "Only the super admin can grant Settings permission",
+        variant: "destructive",
+      });
       return;
     }
-
-    const newVal = !current;
     const { error } = await supabase
       .from("staff_permissions")
-      .upsert({ user_id: userId, permission_key: key, granted: newVal }, { onConflict: "user_id,permission_key" });
-
+      .upsert(
+        { user_id: userId, permission_key: key, granted: value },
+        { onConflict: "user_id,permission_key" }
+      );
     if (!error) {
       setStaffPerms((prev) => ({
         ...prev,
-        [userId]: { ...prev[userId], [key]: newVal },
+        [userId]: { ...prev[userId], [key]: value },
       }));
     }
   };
+
+  // Toggle a parent pillar checkbox. When the parent is being unchecked,
+  // also revoke every sub-permission for that pillar so there's no
+  // orphaned "I'm checked but my parent isn't" state. Re-checking the
+  // parent leaves sub-permissions where they are (admin re-grants what
+  // they want).
+  const togglePillar = async (
+    userId: string,
+    parentKey: string,
+    subs: PillarSub[],
+    next: boolean
+  ) => {
+    await setPermission(userId, parentKey, next);
+    if (!next) {
+      await Promise.all(
+        subs.map((s) => {
+          if (staffPerms[userId]?.[s.key]) {
+            return setPermission(userId, s.key, false);
+          }
+          return Promise.resolve();
+        })
+      );
+    }
+  };
+
+  // Building blocks — render a single checkbox row
+  const Check = ({
+    userId,
+    permKey,
+    label,
+    indent = false,
+    disabled = false,
+  }: {
+    userId: string;
+    permKey: string;
+    label: string;
+    indent?: boolean;
+    disabled?: boolean;
+  }) => {
+    const checked = staffPerms[userId]?.[permKey] ?? false;
+    return (
+      <label
+        className={`flex items-center gap-2 text-sm ${
+          indent ? "ml-6" : ""
+        } ${disabled ? "opacity-40 cursor-not-allowed" : "cursor-pointer"}`}
+      >
+        <Checkbox
+          checked={checked}
+          onCheckedChange={(v) => setPermission(userId, permKey, !!v)}
+          disabled={disabled}
+        />
+        <span className={indent ? "text-white/70 text-[13px]" : ""}>{label}</span>
+      </label>
+    );
+  };
+
+  // Pillar block — parent checkbox + indented sub-checkboxes when parent
+  // is granted (or super-admin viewing).
+  const Pillar = ({
+    userId,
+    parentKey,
+    parentLabel,
+    subs,
+  }: {
+    userId: string;
+    parentKey: string;
+    parentLabel: string;
+    subs: PillarSub[];
+  }) => {
+    const parentOn = staffPerms[userId]?.[parentKey] ?? false;
+    return (
+      <div className="space-y-1.5">
+        <label className="flex items-center gap-2 text-sm cursor-pointer font-medium">
+          <Checkbox
+            checked={parentOn}
+            onCheckedChange={(v) => togglePillar(userId, parentKey, subs, !!v)}
+          />
+          {parentLabel}
+        </label>
+        {parentOn && (
+          <div className="space-y-1.5">
+            {subs.map((s) => (
+              <Check key={s.key} userId={userId} permKey={s.key} label={s.label} indent />
+            ))}
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  // Memo: the dynamic task manager checkbox descriptors.
+  const taskManagerChecks = useMemo(
+    () =>
+      taskManagers.map((tm) => ({
+        permKey: taskManagerPermKey(tm.key),
+        label: tm.display_name,
+      })),
+    [taskManagers]
+  );
 
   if (permLoading || loading) {
     return (
@@ -183,7 +321,13 @@ export default function AdminStaffManagement() {
               <p className="text-sm text-white/50">Manage team access and permissions</p>
             </div>
           </div>
-          <Button onClick={() => { setForm({ full_name: "", email: "", job_title: "" }); setAddOpen(true); }} className="bg-[#bf0f3e] hover:bg-[#a00d35]">
+          <Button
+            onClick={() => {
+              setForm({ full_name: "", email: "", job_title: "" });
+              setAddOpen(true);
+            }}
+            className="bg-[#bf0f3e] hover:bg-[#a00d35]"
+          >
             <Plus className="w-4 h-4 mr-2" /> Add Staff
           </Button>
         </div>
@@ -191,11 +335,18 @@ export default function AdminStaffManagement() {
 
       <main className="container mx-auto px-4 py-8">
         {staff.length === 0 ? (
-          <p className="text-center text-white/40 mt-12">No staff members yet. Click "Add Staff" to get started.</p>
+          <p className="text-center text-white/40 mt-12">
+            No staff members yet. Click "Add Staff" to get started.
+          </p>
         ) : (
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {staff.map((member) => (
-              <Card key={member.id} className={`bg-white/5 border-white/10 text-white ${member.status === "inactive" ? "opacity-50" : ""}`}>
+              <Card
+                key={member.id}
+                className={`bg-white/5 border-white/10 text-white ${
+                  member.status === "inactive" ? "opacity-50" : ""
+                }`}
+              >
                 <CardHeader className="pb-3">
                   <div className="flex items-start justify-between">
                     <div>
@@ -204,7 +355,13 @@ export default function AdminStaffManagement() {
                       <p className="text-xs text-white/30 mt-1">{member.email}</p>
                     </div>
                     <div className="flex items-center gap-2">
-                      <span className={`text-xs px-2 py-0.5 rounded-full ${member.status === "active" ? "bg-green-500/20 text-green-400" : "bg-red-500/20 text-red-400"}`}>
+                      <span
+                        className={`text-xs px-2 py-0.5 rounded-full ${
+                          member.status === "active"
+                            ? "bg-green-500/20 text-green-400"
+                            : "bg-red-500/20 text-red-400"
+                        }`}
+                      >
                         {member.status}
                       </span>
                       <Button
@@ -213,7 +370,11 @@ export default function AdminStaffManagement() {
                         className="h-8 w-8"
                         onClick={() => {
                           setEditTarget(member);
-                          setForm({ full_name: member.full_name, email: member.email, job_title: member.job_title });
+                          setForm({
+                            full_name: member.full_name,
+                            email: member.email,
+                            job_title: member.job_title,
+                          });
                         }}
                       >
                         <Pencil className="w-3.5 h-3.5" />
@@ -223,27 +384,52 @@ export default function AdminStaffManagement() {
                 </CardHeader>
                 <CardContent>
                   <div className="border-t border-white/10 pt-3">
-                    <p className="text-xs text-white/40 mb-2 flex items-center gap-1">
+                    <p className="text-xs text-white/40 mb-3 flex items-center gap-1">
                       <Shield className="w-3 h-3" /> Permissions
                     </p>
-                    <div className="grid grid-cols-2 gap-2">
-                      {PERMISSION_KEYS.map((key) => {
-                        const isSettingsPerm = key === "settings";
-                        const disabled = isSettingsPerm && !isSuperAdmin;
-                        return (
-                          <label
-                            key={key}
-                            className={`flex items-center gap-2 text-sm ${disabled ? "opacity-40 cursor-not-allowed" : "cursor-pointer"}`}
-                          >
-                            <Checkbox
-                              checked={staffPerms[member.user_id]?.[key] ?? false}
-                              onCheckedChange={() => togglePermission(member.user_id, key, staffPerms[member.user_id]?.[key] ?? false)}
-                              disabled={disabled}
+
+                    <div className="space-y-4">
+                      {/* Task managers — one row per task_managers entry */}
+                      {taskManagerChecks.length > 0 && (
+                        <div className="space-y-1.5">
+                          {taskManagerChecks.map((tm) => (
+                            <Check
+                              key={tm.permKey}
+                              userId={member.user_id}
+                              permKey={tm.permKey}
+                              label={tm.label}
                             />
-                            {PERMISSION_LABELS[key]}
-                          </label>
-                        );
-                      })}
+                          ))}
+                        </div>
+                      )}
+
+                      {/* Pillars with grouped sub-permissions */}
+                      <Pillar
+                        userId={member.user_id}
+                        parentKey="operations"
+                        parentLabel="Operations"
+                        subs={OPERATIONS_SUBS}
+                      />
+                      <Pillar
+                        userId={member.user_id}
+                        parentKey="sales_marketing"
+                        parentLabel="Sales & Marketing"
+                        subs={SALES_MARKETING_SUBS}
+                      />
+                      <Pillar
+                        userId={member.user_id}
+                        parentKey="finance"
+                        parentLabel="Finance"
+                        subs={FINANCE_SUBS}
+                      />
+
+                      {/* Settings — super-admin gated for granting */}
+                      <Check
+                        userId={member.user_id}
+                        permKey="settings"
+                        label="Settings"
+                        disabled={!isSuperAdmin}
+                      />
                     </div>
                   </div>
                   <div className="mt-3 flex justify-end">
@@ -272,20 +458,43 @@ export default function AdminStaffManagement() {
           <div className="space-y-4">
             <div>
               <label className="text-sm text-white/60">Full Name</label>
-              <Input value={form.full_name} onChange={(e) => setForm({ ...form, full_name: e.target.value })} className="bg-white/10 border-white/20 text-white" />
+              <Input
+                value={form.full_name}
+                onChange={(e) => setForm({ ...form, full_name: e.target.value })}
+                className="bg-white/10 border-white/20 text-white"
+              />
             </div>
             <div>
               <label className="text-sm text-white/60">NLA Email</label>
-              <Input value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} placeholder="name@nolimitsboxingacademy.org" className="bg-white/10 border-white/20 text-white" />
+              <Input
+                value={form.email}
+                onChange={(e) => setForm({ ...form, email: e.target.value })}
+                placeholder="name@nolimitsboxingacademy.org"
+                className="bg-white/10 border-white/20 text-white"
+              />
             </div>
             <div>
               <label className="text-sm text-white/60">Job Title</label>
-              <Input value={form.job_title} onChange={(e) => setForm({ ...form, job_title: e.target.value })} className="bg-white/10 border-white/20 text-white" />
+              <Input
+                value={form.job_title}
+                onChange={(e) => setForm({ ...form, job_title: e.target.value })}
+                className="bg-white/10 border-white/20 text-white"
+              />
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setAddOpen(false)} className="border-white/20 text-white bg-transparent">Cancel</Button>
-            <Button onClick={handleAdd} disabled={saving} className="bg-[#bf0f3e] hover:bg-[#a00d35]">
+            <Button
+              variant="outline"
+              onClick={() => setAddOpen(false)}
+              className="border-white/20 text-white bg-transparent"
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleAdd}
+              disabled={saving}
+              className="bg-[#bf0f3e] hover:bg-[#a00d35]"
+            >
               {saving ? "Inviting…" : "Add & Send Invite"}
             </Button>
           </DialogFooter>
@@ -301,20 +510,42 @@ export default function AdminStaffManagement() {
           <div className="space-y-4">
             <div>
               <label className="text-sm text-white/60">Full Name</label>
-              <Input value={form.full_name} onChange={(e) => setForm({ ...form, full_name: e.target.value })} className="bg-white/10 border-white/20 text-white" />
+              <Input
+                value={form.full_name}
+                onChange={(e) => setForm({ ...form, full_name: e.target.value })}
+                className="bg-white/10 border-white/20 text-white"
+              />
             </div>
             <div>
               <label className="text-sm text-white/60">Email</label>
-              <Input value={form.email} disabled className="bg-white/5 border-white/10 text-white/40" />
+              <Input
+                value={form.email}
+                disabled
+                className="bg-white/5 border-white/10 text-white/40"
+              />
             </div>
             <div>
               <label className="text-sm text-white/60">Job Title</label>
-              <Input value={form.job_title} onChange={(e) => setForm({ ...form, job_title: e.target.value })} className="bg-white/10 border-white/20 text-white" />
+              <Input
+                value={form.job_title}
+                onChange={(e) => setForm({ ...form, job_title: e.target.value })}
+                className="bg-white/10 border-white/20 text-white"
+              />
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setEditTarget(null)} className="border-white/20 text-white bg-transparent">Cancel</Button>
-            <Button onClick={handleEdit} disabled={saving} className="bg-[#bf0f3e] hover:bg-[#a00d35]">
+            <Button
+              variant="outline"
+              onClick={() => setEditTarget(null)}
+              className="border-white/20 text-white bg-transparent"
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleEdit}
+              disabled={saving}
+              className="bg-[#bf0f3e] hover:bg-[#a00d35]"
+            >
               {saving ? "Saving…" : "Save Changes"}
             </Button>
           </DialogFooter>

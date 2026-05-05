@@ -42,19 +42,28 @@ const getIconComponent = (name: string) => {
   return (icons as any)[pascal] || null;
 };
 
-/* Map href → permission key. Task manager tiles all share the same
-   "pd_signals" permission for now; per-manager permissions can be added
-   later if access needs to be locked down per task manager. */
+/* Map href → permission key. Task manager tiles use the dynamic
+   task_manager_<KEY> convention so any new task manager (HC, JS, etc.)
+   added via the AddTaskManagerModal automatically gets a permission gate
+   without code changes. */
 const HREF_PERM_MAP: Record<string, PermissionKey> = {
-  "/transport": "driver_checkin",
-  "/admin/pd-task-manager": "pd_signals",
-  "/admin/pc-task-manager": "pc_signals",
-  "/admin/task-manager/PD": "pd_signals",
-  "/admin/task-manager/PC": "pc_signals",
   "/admin/staff": "settings",
   "/admin/operations": "operations",
   "/admin/sales-marketing": "sales_marketing",
   "/admin/finance": "finance",
+};
+
+/** Resolve the permission key for a tile href. Static entries above plus
+ *  dynamic task manager hrefs of the shape /admin/task-manager/<KEY>. */
+const resolvePermKey = (href: string): PermissionKey | undefined => {
+  if (HREF_PERM_MAP[href]) return HREF_PERM_MAP[href];
+  // /admin/task-manager/PD → task_manager_PD
+  const tm = href.match(/^\/admin\/task-manager\/([^/]+)$/);
+  if (tm) return `task_manager_${tm[1]}`;
+  // Legacy paths for PD/PC kept for safety; redirect components also catch these.
+  if (href === "/admin/pd-task-manager") return "task_manager_PD";
+  if (href === "/admin/pc-task-manager") return "task_manager_PC";
+  return undefined;
 };
 
 /* Tiles that were removed — delete from DB if found. Listing a tile's href
@@ -394,7 +403,7 @@ const AdminDashboard = () => {
 
   const isTileAllowed = (tile: DashboardTile) => {
     if (tile.href === "__upcoming_events__") return true;
-    const permKey = HREF_PERM_MAP[tile.href];
+    const permKey = resolvePermKey(tile.href);
     if (!permKey) return true;
     return permLoading || hasPermission(permKey);
   };
