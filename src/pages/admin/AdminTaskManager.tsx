@@ -511,16 +511,18 @@ const AdminTaskManager = () => {
     },
   });
 
-  // Single fetch for all of today's Core signals across this manager type's
-  // focus areas. Source-prefix filter is applied client-side because the
-  // PostgREST "not.like" syntax with reserved chars in the value is fragile.
+  // Single fetch for ALL Core signals across this manager type's focus
+  // areas — pending and completed. The Core list is a rolling backlog,
+  // not a daily reset: items stick until archived. The "Day Won" pill at
+  // the top fires only when every item in the list is Complete.
+  // Source-prefix filter is applied client-side because the PostgREST
+  // "not.like" syntax with reserved chars in the value is fragile.
   const { data: todaysCoreSignals = [] } = useQuery({
-    queryKey: ["task-manager-home-core", managerType, todayStr],
+    queryKey: ["task-manager-home-core", managerType],
     queryFn: async () => {
       const { data, error } = await (supabase
         .from("signals")
         .select("id, title, status, source, today_sort_order, description, pillar") as any)
-        .eq("date_assigned", todayStr)
         .eq("priority_layer", "Core")
         .eq("is_archived", false)
         .eq("is_trashed", false)

@@ -28,7 +28,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { todayInET, todayDisplayInET } from "@/lib/easternTime";
-import { ArrowLeft, Plus, CheckCircle2, Circle, LogOut, Archive, ArrowRight, Trash2, MoreVertical, Flame, Target, Zap, GripVertical, Radar } from "lucide-react";
+import { ArrowLeft, Plus, CheckCircle2, Circle, LogOut, Archive, ArrowRight, Trash2, MoreVertical, Target, Zap, GripVertical, Radar } from "lucide-react";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import UpcomingEventsWidget from "@/components/admin/UpcomingEventsWidget";
 
@@ -284,13 +284,16 @@ const AdminSignals = ({ managerType = "PD" }: { managerType?: string }) => {
     return query.eq("source", `${managerType}:${isNla ? "NLA" : areaLabel}`);
   };
 
+  // Core signals stick around until archived — pending items carry over
+  // day after day so unfinished work is always visible. Completed items
+  // also stay (with strikethrough) until the user hits "Archive completed."
+  // No date filter means this is a single rolling list, not a daily reset.
   const { data: todayCoreSignals = [] } = useQuery({
     queryKey: ["signals", focusArea, "today-core"],
     queryFn: async () => {
       let q = supabase
         .from("signals")
         .select("*")
-        .eq("date_assigned", today)
         .eq("priority_layer", "Core" as any)
         .eq("is_archived", false as any)
         .eq("is_trashed", false as any);
@@ -336,25 +339,8 @@ const AdminSignals = ({ managerType = "PD" }: { managerType?: string }) => {
     },
   });
 
-  const { data: carryoverSignals = [] } = useQuery({
-    queryKey: ["signals", focusArea, "carryover"],
-    queryFn: async () => {
-      let q = supabase
-        .from("signals")
-        .select("*")
-        .not("date_assigned", "is", null)
-        .lt("date_assigned", today)
-        .eq("status", "Pending" as any)
-        .eq("priority_layer", "Core" as any)
-        .eq("is_archived", false as any)
-        .eq("is_trashed", false as any);
-      q = applySourceFilter(q);
-      const { data, error } = await q
-        .order("date_assigned", { ascending: true });
-      if (error) throw error;
-      return data as Signal[];
-    },
-  });
+  // (Carryover query removed — carryover items now appear in todayCoreSignals
+  // because the Core query no longer filters by date_assigned.)
 
   const { data: onDeckSignals = [] } = useQuery({
     queryKey: ["signals", focusArea, "on-deck"],
@@ -861,13 +847,6 @@ const AdminSignals = ({ managerType = "PD" }: { managerType?: string }) => {
                 <span className="text-xs text-green-400/60">done</span>
               </div>
             </div>
-            {carryoverSignals.length > 0 && (
-              <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-red-500/10 border border-red-500/20 w-fit">
-                <Flame className="w-3.5 h-3.5 text-red-400" />
-                <span className="text-sm font-semibold text-red-400">{carryoverSignals.length}</span>
-                <span className="text-xs text-red-400/60">carryover</span>
-              </div>
-            )}
           </div>
 
           {/* Add Signal */}
@@ -879,63 +858,6 @@ const AdminSignals = ({ managerType = "PD" }: { managerType?: string }) => {
             Add Signal
           </Button>
         </div>
-
-        {/* Carryover */}
-        {carryoverSignals.length > 0 && (
-          <div className="mb-6">
-            <div className="flex items-center gap-2 mb-3">
-              <Flame className="w-4 h-4 text-red-400" />
-              <h2 className="text-sm font-semibold uppercase tracking-wider text-red-400">Carryover</h2>
-              <span className="text-xs text-red-400/40">({carryoverSignals.length})</span>
-            </div>
-            <div className="rounded-xl border border-red-500/20 bg-gradient-to-b from-red-950/20 to-transparent overflow-hidden">
-              <div className="divide-y divide-white/[0.04]">
-                {carryoverSignals.map((signal) => (
-                  <div key={signal.id} className="flex items-center gap-3 px-4 py-3 hover:bg-white/[0.02] transition-colors">
-                    <button
-                      onClick={() => toggleStatus.mutate({ id: signal.id, current: signal.status })}
-                      className="shrink-0"
-                      aria-label="Toggle status"
-                    >
-                      {signal.status === "Complete" ? (
-                        <CheckCircle2 className="w-5 h-5 text-green-400" />
-                      ) : (
-                        <Circle className="w-5 h-5 text-red-400/40 hover:text-red-400 transition-colors" />
-                      )}
-                    </button>
-                    <span className={`text-sm flex-1 ${signal.status === "Complete" ? "line-through text-white/30" : "text-white/80"}`}>
-                      {signal.title || "(Untitled)"}
-                    </span>
-                    <span className="text-[10px] text-white/15 shrink-0 tabular-nums">{signal.date_assigned}</span>
-                    {signal.pillar && (
-                      <Badge variant="outline" className={`text-[10px] ${PILLAR_COLORS[signal.pillar] || "border-white/20 text-white/60"}`}>
-                        {signal.pillar}
-                      </Badge>
-                    )}
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <button className="shrink-0 p-1 rounded hover:bg-white/10 text-white/20 hover:text-white/50 transition-colors" aria-label="Move signal">
-                          <MoreVertical className="w-4 h-4" />
-                        </button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end" className="bg-zinc-900 border-white/10 text-white">
-                        <DropdownMenuItem onClick={() => scheduleMutation.mutate({ id: signal.id, priority: "Core" })} className="focus:bg-white/5" style={{ color: ac.hexMuted }}>
-                          Move to Core
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => scheduleMutation.mutate({ id: signal.id, priority: "Bonus" })} className="text-white/60 focus:text-white focus:bg-white/5">
-                          Move to On-Deck
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => moveToOnDeckMutation.mutate(signal.id)} className="text-white/40 focus:text-white/60 focus:bg-white/5">
-                          Move to On Radar
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-        )}
 
         {/* ─── Unified DnD Context for Core 3 / On-Deck / On Radar ─── */}
         <DndContext
