@@ -199,9 +199,15 @@ const AdminSignals = ({ managerType = "PD" }: { managerType?: string }) => {
   const { focusArea = "nla" } = useParams<{ focusArea: string }>();
   const { user, signOut } = useAuth();
   const queryClient = useQueryClient();
-  const isPC = managerType === "PC";
-  const backPath = `/admin/task-manager/${isPC ? "PC" : "PD"}`;
-  const signalsBasePath = isPC ? "/admin/pc-signals" : "/admin/signals";
+  const backPath = `/admin/task-manager/${managerType}`;
+  // Legacy routes only exist for PD and PC; new managers (HC, etc.) use
+  // the polymorphic /admin/task-manager/:managerType/signals/:focusArea path.
+  const signalsBasePath =
+    managerType === "PD"
+      ? "/admin/signals"
+      : managerType === "PC"
+      ? "/admin/pc-signals"
+      : `/admin/task-manager/${managerType}/signals`;
   const [showAdd, setShowAdd] = useState(false);
   const [selectedForArchive, setSelectedForArchive] = useState<Set<string>>(new Set());
   const [form, setForm] = useState({
@@ -227,6 +233,22 @@ const AdminSignals = ({ managerType = "PD" }: { managerType?: string }) => {
   const today = format(new Date(), "yyyy-MM-dd");
   const todayDisplay = format(new Date(), "EEEE, MMMM d");
 
+  // Load the task manager record so the greeting uses the actual owner's
+  // first name instead of a hardcoded "Josh" / "Chrissy".
+  const { data: taskManager } = useQuery({
+    queryKey: ["task-manager", managerType],
+    queryFn: async () => {
+      const { data, error } = await (supabase
+        .from("task_managers")
+        .select("key, owner_name") as any)
+        .eq("key", managerType)
+        .maybeSingle();
+      if (error) throw error;
+      return data as { key: string; owner_name: string | null } | null;
+    },
+  });
+  const ownerFirstName = (taskManager?.owner_name || "").trim().split(/\s+/)[0] || "there";
+
   // Fetch dynamic focus area config from DB — scoped by manager_type
   const { data: focusAreaConfig } = useQuery({
     queryKey: ["focus-area-config", focusArea, managerType],
@@ -246,15 +268,15 @@ const AdminSignals = ({ managerType = "PD" }: { managerType?: string }) => {
   const ac = FOCUS_AREA_COLORS[focusArea] || (focusAreaConfig ? buildColorFromHex(focusAreaConfig.accent_color) : FOCUS_AREA_COLORS.nla);
   const dynamicImageUrl = focusAreaConfig?.image_url ?? null;
 
-  // Helper: apply source filter to a supabase query builder
+  // Apply the manager-scoped source filter. PD uses the legacy convention
+  // (NULL or raw area title for backward compat); every other manager
+  // (PC, HC, JS, etc.) namespaces sources as "<KEY>:<area>".
   const applySourceFilter = (query: any) => {
-    if (isPC) {
-      // PC namespace: source = "PC:NLA" or "PC:{areaLabel}"
-      const pcSource = `PC:${isNla ? "NLA" : areaLabel}`;
-      return query.eq("source", pcSource);
+    if (managerType === "PD") {
+      if (isNla) return query.or("source.is.null,source.eq.NLA");
+      return query.eq("source", areaLabel);
     }
-    if (isNla) return query.or("source.is.null,source.eq.NLA");
-    return query.eq("source", areaLabel);
+    return query.eq("source", `${managerType}:${isNla ? "NLA" : areaLabel}`);
   };
 
   const { data: todayCoreSignals = [] } = useQuery({
@@ -398,7 +420,10 @@ const AdminSignals = ({ managerType = "PD" }: { managerType?: string }) => {
         status: "Pending",
         is_archived: false,
         date_assigned: dateAssigned,
-        source: isPC ? `PC:${isNla ? "NLA" : areaLabel}` : (isNla ? null : areaLabel),
+        source:
+          managerType === "PD"
+            ? (isNla ? null : areaLabel)
+            : `${managerType}:${isNla ? "NLA" : areaLabel}`,
       } as any);
       if (error) throw error;
     },
@@ -742,7 +767,7 @@ const AdminSignals = ({ managerType = "PD" }: { managerType?: string }) => {
               <p className="text-xs uppercase tracking-[0.2em] text-white/30 mb-0.5">
                 {todayDisplay} · <span style={{ color: ac.hex }}>{areaLabel}</span>
               </p>
-              <h1 className="text-lg font-semibold text-white">{getGreeting()}, {isPC ? "Chrissy" : "Josh"}</h1>
+              <h1 className="text-lg font-semibold text-white">{getGreeting()}, {ownerFirstName}</h1>
             </div>
           </div>
           <Button variant="ghost" onClick={handleLogout} className="text-white/30 hover:text-white/60 hover:bg-white/5 text-xs">

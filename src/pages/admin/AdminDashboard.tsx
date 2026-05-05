@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import nlaLogoWhite from "@/assets/nla-logo-white.png";
@@ -15,6 +15,7 @@ import { icons } from "lucide-react";
 import UpcomingEventsWidget from "@/components/admin/UpcomingEventsWidget";
 import InviteAdminModal from "@/components/admin/InviteAdminModal";
 import DashboardTileModal, { type DashboardTile } from "@/components/admin/DashboardTileModal";
+import AddTaskManagerModal from "@/components/admin/AddTaskManagerModal";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 
 import {
@@ -41,7 +42,9 @@ const getIconComponent = (name: string) => {
   return (icons as any)[pascal] || null;
 };
 
-/* Map href → permission key */
+/* Map href → permission key. Task manager tiles all share the same
+   "pd_signals" permission for now; per-manager permissions can be added
+   later if access needs to be locked down per task manager. */
 const HREF_PERM_MAP: Record<string, PermissionKey> = {
   "/transport": "driver_checkin",
   "/admin/pd-task-manager": "pd_signals",
@@ -57,15 +60,25 @@ const HREF_PERM_MAP: Record<string, PermissionKey> = {
 /* Tiles that were removed — delete from DB if found */
 const DEPRECATED_TILE_HREFS = ["/admin/shared-task-board", "/admin/pd-task-manager", "/admin/pc-task-manager", "/admin/task-manager"];
 
-/* Default tiles to seed for new users */
-const DEFAULT_TILES = [
+/* Default tiles to seed for new users. PD/PC tiles are no longer hardcoded
+   here — they (and any newly-added task managers like HC) come from the
+   `task_managers` table and are merged in below in `defaultTiles`. */
+const STATIC_DEFAULT_TILES = [
   { title: "Upcoming Events", subtitle: "Calendar reminders", icon_name: "calendar-days", accent_color: "#f59e0b", href: "__upcoming_events__", sort_order: 0, is_default: true },
   { title: "Driver Check-In", subtitle: "Transportation PIN login", icon_name: "bus", accent_color: "#60a5fa", href: "/transport", sort_order: 1, is_default: true },
-  { title: "PD Task Manager", subtitle: "Focus Areas & Daily Signals", icon_name: "signal", accent_color: "#a1a1aa", href: "/admin/task-manager/PD", sort_order: 2, is_default: true },
-  { title: "PC Task Manager", subtitle: "Focus Areas & Daily Signals", icon_name: "signal", accent_color: "#a1a1aa", href: "/admin/task-manager/PC", sort_order: 3, is_default: true },
-  { title: "Message Board", subtitle: "Team communication & tasks", icon_name: "message-square", accent_color: "#bf0f3e", href: "/admin/message-board", sort_order: 5, is_default: true },
-  { title: "Settings", subtitle: "Staff Management", icon_name: "settings", accent_color: "#a1a1aa", href: "/admin/staff", sort_order: 6, is_default: true },
+  { title: "Message Board", subtitle: "Team communication & tasks", icon_name: "message-square", accent_color: "#bf0f3e", href: "/admin/message-board", sort_order: 100, is_default: true },
+  { title: "Settings", subtitle: "Staff Management", icon_name: "settings", accent_color: "#a1a1aa", href: "/admin/staff", sort_order: 101, is_default: true },
 ];
+
+type TaskManagerRow = {
+  id: string;
+  key: string;
+  display_name: string;
+  subtitle: string | null;
+  accent_color: string | null;
+  icon_name: string | null;
+  sort_order: number;
+};
 
 /* ─── Pillar card config (unchanged) ─── */
 const pillars = [
@@ -258,11 +271,12 @@ const AdminDashboard = () => {
   };
   const [modalOpen, setModalOpen] = useState(false);
   const [editingTile, setEditingTile] = useState<DashboardTile | null>(null);
+  const [addTaskManagerOpen, setAddTaskManagerOpen] = useState(false);
   const [seeded, setSeeded] = useState(false);
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
 
-  /* Fetch tiles */
+  /* Fetch user's dashboard tiles */
   const { data: tiles = [], isLoading: tilesLoading } = useQuery({
     queryKey: ["dashboard-tiles", user?.id],
     queryFn: async () => {
@@ -276,9 +290,39 @@ const AdminDashboard = () => {
     enabled: !!user,
   });
 
-  /* Seed default tiles on first load; also add any missing tiles for existing users */
+  /* Fetch task managers — drives both the auto-seeded tiles below and the
+     "Add Task Manager" button. */
+  const { data: taskManagers = [], isLoading: tmLoading } = useQuery({
+    queryKey: ["task-managers"],
+    queryFn: async () => {
+      const { data, error } = await (supabase.from("task_managers") as any)
+        .select("id, key, display_name, subtitle, accent_color, icon_name, sort_order")
+        .order("sort_order", { ascending: true });
+      if (error) throw error;
+      return (data || []) as TaskManagerRow[];
+    },
+  });
+
+  /* The full default-tile set = static defaults + one tile per task manager.
+     This drives both the new-user seed and the missing-tile backfill below. */
+  const defaultTiles = useMemo(() => {
+    const tmTiles = taskManagers.map((tm) => ({
+      title: tm.display_name,
+      subtitle: tm.subtitle || "Focus Areas & Daily Signals",
+      icon_name: tm.icon_name || "signal",
+      accent_color: tm.accent_color || "#a1a1aa",
+      href: `/admin/task-manager/${tm.key}`,
+      sort_order: tm.sort_order + 1, // Leave 0 for Upcoming Events
+      is_default: true,
+    }));
+    return [...STATIC_DEFAULT_TILES, ...tmTiles];
+  }, [taskManagers]);
+
+  /* Seed default tiles on first load; also add any missing tiles for existing
+     users — this is what makes a newly-added task manager auto-appear on
+     every admin's dashboard the next time they visit. */
   useEffect(() => {
-    if (!user || tilesLoading || seeded) return;
+    if (!user || tilesLoading || tmLoading || seeded) return;
 
     const seedDefaults = async () => {
       // Remove any deprecated tiles first
@@ -292,16 +336,14 @@ const AdminDashboard = () => {
       }
 
       if (tiles.length === 0 || tiles.every((t) => DEPRECATED_TILE_HREFS.includes(t.href))) {
-        // Brand new user (or only had deprecated tiles) — insert all defaults
-        const rows = DEFAULT_TILES.map((t) => ({ ...t, user_id: user.id }));
+        const rows = defaultTiles.map((t) => ({ ...t, user_id: user.id }));
         const { error } = await (supabase.from("dashboard_tiles") as any).insert(rows);
         if (error) console.error("Failed to seed default tiles:", error);
       } else {
-        // Existing user — insert any default tiles they're missing (by href)
         const existingHrefs = new Set(
           tiles.filter((t) => !DEPRECATED_TILE_HREFS.includes(t.href)).map((t) => t.href)
         );
-        const missing = DEFAULT_TILES.filter((t) => !existingHrefs.has(t.href));
+        const missing = defaultTiles.filter((t) => !existingHrefs.has(t.href));
         if (missing.length > 0) {
           const rows = missing.map((t) => ({ ...t, user_id: user.id }));
           const { error } = await (supabase.from("dashboard_tiles") as any).insert(rows);
@@ -313,7 +355,15 @@ const AdminDashboard = () => {
     };
 
     seedDefaults();
-  }, [user, tilesLoading, tiles.length, seeded, queryClient]);
+  }, [user, tilesLoading, tmLoading, tiles.length, defaultTiles, seeded, queryClient]);
+
+  /* When a new task manager is created, immediately drop a tile onto the
+     current user's dashboard (the seed effect above only runs once per
+     mount, and other admins will get the tile next time they visit). */
+  const handleTaskManagerCreated = async () => {
+    queryClient.invalidateQueries({ queryKey: ["task-managers"] });
+    setSeeded(false); // Re-trigger the seed effect so the new tile gets inserted
+  };
 
   const handleLogout = async () => {
     await signOut();
@@ -510,22 +560,26 @@ const AdminDashboard = () => {
               </SortableContext>
             </DndContext>
 
-            {/* Add tile button — outside DndContext so DnD sensors don't swallow the click */}
+            {/* "Add Task Manager" — outside DndContext so DnD sensors don't
+                swallow the click. Replaces the previous generic "Add Tile"
+                button since adding a task manager is the only common reason
+                anyone needs to create a new tile. */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 mt-4">
               <button
                 type="button"
-                onClick={() => { setEditingTile(null); setModalOpen(true); }}
+                onClick={() => setAddTaskManagerOpen(true)}
                 className="rounded-xl border-2 border-dashed border-white/[0.08] bg-transparent p-5 flex flex-col items-center justify-center gap-2 text-zinc-600 hover:text-zinc-400 hover:border-white/[0.15] transition-colors min-h-[100px]"
               >
                 <Plus className="w-6 h-6" />
-                <span className="text-xs font-medium">Add Tile</span>
+                <span className="text-xs font-medium">Add Task Manager</span>
               </button>
             </div>
           </div>
         )}
       </main>
 
-      {/* Edit / Add modal */}
+      {/* Edit modal — still used when the user clicks the pencil on an
+          existing tile. New tiles all flow through AddTaskManagerModal now. */}
       {user && (
         <DashboardTileModal
           open={modalOpen}
@@ -535,6 +589,12 @@ const AdminDashboard = () => {
           userId={user.id}
         />
       )}
+
+      <AddTaskManagerModal
+        open={addTaskManagerOpen}
+        onClose={() => setAddTaskManagerOpen(false)}
+        onCreated={handleTaskManagerCreated}
+      />
     </div>
   );
 };

@@ -2078,6 +2078,48 @@ export type Database = {
         }
         Relationships: []
       }
+      task_managers: {
+        Row: {
+          accent_color: string | null
+          created_at: string | null
+          display_name: string
+          icon_name: string | null
+          id: string
+          key: string
+          owner_email: string | null
+          owner_name: string | null
+          sort_order: number
+          subtitle: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          accent_color?: string | null
+          created_at?: string | null
+          display_name: string
+          icon_name?: string | null
+          id?: string
+          key: string
+          owner_email?: string | null
+          owner_name?: string | null
+          sort_order?: number
+          subtitle?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          accent_color?: string | null
+          created_at?: string | null
+          display_name?: string
+          icon_name?: string | null
+          id?: string
+          key?: string
+          owner_email?: string | null
+          owner_name?: string | null
+          sort_order?: number
+          subtitle?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       tasks: {
         Row: {
           assigned_to: string | null

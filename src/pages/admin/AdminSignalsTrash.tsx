@@ -43,16 +43,39 @@ const AdminSignalsTrash = ({ managerType = "PD" }: { managerType?: string }) => 
   const { focusArea = "nla" } = useParams<{ focusArea: string }>();
   const { user, signOut } = useAuth();
   const queryClient = useQueryClient();
-  const isPC = managerType === "PC";
-  const signalsBasePath = isPC ? "/admin/pc-signals" : "/admin/signals";
+  // Legacy routes only exist for PD and PC; new managers use the
+  // polymorphic /admin/task-manager/:managerType/signals/:focusArea path.
+  const signalsBasePath =
+    managerType === "PD"
+      ? "/admin/signals"
+      : managerType === "PC"
+      ? "/admin/pc-signals"
+      : `/admin/task-manager/${managerType}/signals`;
   const isNla = focusArea === "nla";
-  const areaLabel = FOCUS_AREA_LABELS[focusArea] || focusArea;
+
+  // Resolve the focus area's actual title from the DB (so custom focus
+  // areas added by HC/JS/etc. work, not just the legacy hardcoded set).
+  const { data: focusAreaConfig } = useQuery({
+    queryKey: ["focus-area-config", focusArea, managerType],
+    queryFn: async () => {
+      const { data } = await (supabase
+        .from("focus_areas")
+        .select("title") as any)
+        .eq("key", focusArea)
+        .eq("manager_type", managerType)
+        .maybeSingle();
+      return data as { title: string } | null;
+    },
+  });
+  const areaLabel = focusAreaConfig?.title ?? FOCUS_AREA_LABELS[focusArea] ?? focusArea;
+  // Manager-scope filter — PD uses the legacy null/raw convention;
+  // every other manager uses the "<KEY>:<area>" prefix.
   const applySourceFilter = (query: any) => {
-    if (isPC) {
-      return query.eq("source", `PC:${isNla ? "NLA" : areaLabel}`);
+    if (managerType === "PD") {
+      if (isNla) return query.or("source.is.null,source.eq.NLA");
+      return query.eq("source", areaLabel);
     }
-    if (isNla) return query.or("source.is.null,source.eq.NLA");
-    return query.eq("source", areaLabel);
+    return query.eq("source", `${managerType}:${isNla ? "NLA" : areaLabel}`);
   };
 
   const [search, setSearch] = useState("");

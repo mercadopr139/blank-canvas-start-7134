@@ -33,43 +33,42 @@ import {
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 
-const JOSH_EMAIL = "joshmercado@nolimitsboxingacademy.org";
-const CHRISSY_EMAIL = "chrissycasiello@nolimitsboxingacademy.org";
-
 const getSignalsPath = (managerType: string, key: string) => {
   if (managerType === "PD") return `/admin/signals/${key}`;
   if (managerType === "PC") return `/admin/pc-signals/${key}`;
   return `/admin/task-manager/${managerType}/signals/${key}`;
 };
 
-// Mirrors the source-resolution rule in AdminSignals.tsx so a signal added
-// from the home tile lands in the same place as one added from the kanban.
+// Source resolution. PD uses the legacy convention (null for NLA, raw
+// area title for everything else) for backward compatibility. Every other
+// manager (PC, HC, JS, etc.) uses the prefixed form "<KEY>:<area>".
 const signalSourceFor = (
   managerType: string,
   area: { key: string; title: string }
 ): string | null => {
-  const isPC = managerType === "PC";
   const isNla = area.key === "nla";
-  if (isPC) return `PC:${isNla ? "NLA" : area.title}`;
-  return isNla ? null : area.title;
+  if (managerType === "PD") return isNla ? null : area.title;
+  return `${managerType}:${isNla ? "NLA" : area.title}`;
 };
 
-// Inverse of signalSourceFor: maps a signal's stored `source` back to a
-// focus-area key so the home page can group signals by tile.
+// Inverse: maps a signal's stored `source` back to a focus-area key so
+// the home page can group signals by tile. Manager types other than PD
+// recognize their own prefix; PD recognizes null/raw values.
 const sourceToFocusAreaKey = (
   source: string | null,
   managerType: string,
   focusAreas: FocusArea[]
 ): string | null => {
-  const isPC = managerType === "PC";
-  if (isPC) {
-    if (!source || !source.startsWith("PC:")) return null;
-    const stripped = source.slice(3);
-    if (stripped === "NLA") return "nla";
-    return focusAreas.find((a) => a.title === stripped)?.key ?? null;
+  if (managerType === "PD") {
+    if (source === null || source === "NLA") return "nla";
+    if (source.includes(":")) return null; // belongs to another manager
+    return focusAreas.find((a) => a.title === source)?.key ?? null;
   }
-  if (source === null || source === "NLA") return "nla";
-  return focusAreas.find((a) => a.title === source)?.key ?? null;
+  const prefix = `${managerType}:`;
+  if (!source?.startsWith(prefix)) return null;
+  const stripped = source.slice(prefix.length);
+  if (stripped === "NLA") return "nla";
+  return focusAreas.find((a) => a.title === stripped)?.key ?? null;
 };
 
 type FocusArea = {
@@ -387,14 +386,30 @@ const AdminTaskManager = () => {
   const [modalOpen, setModalOpen] = useState(false);
   const [editingArea, setEditingArea] = useState<FocusArea | null>(null);
 
-  const isJosh = user?.email?.toLowerCase() === JOSH_EMAIL;
-  const isChrissy = user?.email?.toLowerCase() === CHRISSY_EMAIL;
-
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } })
   );
 
   const todayStr = format(new Date(), "yyyy-MM-dd");
+
+  // Load the task manager record so we know its owner (for lock logic and
+  // future per-manager metadata). PD and PC are always present (seeded);
+  // any new managers (HC, etc.) live in the same table.
+  const { data: taskManager } = useQuery({
+    queryKey: ["task-manager", managerType],
+    queryFn: async () => {
+      const { data, error } = await (supabase
+        .from("task_managers")
+        .select("key, owner_email, owner_name, accent_color, display_name") as any)
+        .eq("key", managerType)
+        .maybeSingle();
+      if (error) throw error;
+      return data as { key: string; owner_email: string | null; owner_name: string | null; accent_color: string | null; display_name: string } | null;
+    },
+  });
+
+  const ownerEmail = taskManager?.owner_email?.toLowerCase() || null;
+  const isOwner = !!ownerEmail && user?.email?.toLowerCase() === ownerEmail;
 
   const { data: focusAreas = [], isLoading } = useQuery({
     queryKey: ["focus-areas", managerType],
@@ -425,10 +440,12 @@ const AdminTaskManager = () => {
         .order("today_sort_order", { ascending: true, nullsFirst: false })
         .order("created_at", { ascending: true });
       if (error) throw error;
-      const isPC = managerType === "PC";
-      return ((data || []) as CoreSignal[]).filter((s) =>
-        isPC ? !!s.source && s.source.startsWith("PC:") : !s.source?.startsWith("PC:")
-      );
+      // Manager-scope filter: PD owns null + raw-title sources (legacy);
+      // every other manager owns "<KEY>:..." sources.
+      return ((data || []) as CoreSignal[]).filter((s) => {
+        if (managerType === "PD") return !s.source || !s.source.includes(":");
+        return s.source?.startsWith(`${managerType}:`) ?? false;
+      });
     },
     enabled: focusAreas.length > 0,
   });
@@ -468,13 +485,18 @@ const AdminTaskManager = () => {
     }
   }, [dayWon]);
 
+  // Lock rule: NLA is shared across every task manager; everything else
+  // is editable only by the owner of this task manager. (If the manager
+  // record doesn't have an owner set yet, nothing is locked.)
   const isLocked = (area: FocusArea) => {
-    if (managerType === "PD") return isChrissy && area.key !== "nla";
-    if (managerType === "PC") return isJosh && area.key !== "nla";
-    return false;
+    if (area.key === "nla") return false;
+    if (!ownerEmail) return false;
+    return !isOwner;
   };
 
-  const canAdd = managerType === "PD" ? !isChrissy : managerType === "PC" ? !isJosh : true;
+  // Same rule for adding focus areas — only the owner can add to their
+  // own manager (or anyone if no owner is set).
+  const canAdd = !ownerEmail || isOwner;
 
   const handleLogout = async () => {
     await signOut();

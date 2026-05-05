@@ -57,16 +57,18 @@ type FocusArea = {
 
 type Bucket = "week" | "month" | "all";
 
-// Map a signal's stored `source` to a human focus-area label. Mirrors the
-// inverse of signalSourceFor in AdminTaskManager.tsx but flattens to a
-// single string for grouping/display.
-const sourceToFocusAreaTitle = (source: string | null, isPC: boolean): string => {
-  if (isPC) {
-    if (!source || !source.startsWith("PC:")) return "Unknown";
-    return source.slice(3); // "NLA", "USA Boxing", etc.
+// Map a signal's stored `source` to a human focus-area label. Generalized
+// over manager types: PD uses the legacy null/raw convention, every other
+// manager uses the "<KEY>:<area>" prefix.
+const sourceToFocusAreaTitle = (source: string | null, managerType: string): string => {
+  if (managerType === "PD") {
+    if (source === null || source === "NLA") return "NLA";
+    if (source.includes(":")) return "Unknown"; // belongs to another manager
+    return source;
   }
-  if (source === null || source === "NLA") return "NLA";
-  return source;
+  const prefix = `${managerType}:`;
+  if (!source?.startsWith(prefix)) return "Unknown";
+  return source.slice(prefix.length);
 };
 
 const AdminSignalsArchive = ({ managerType = "PD" }: { managerType?: string }) => {
@@ -76,8 +78,14 @@ const AdminSignalsArchive = ({ managerType = "PD" }: { managerType?: string }) =
   const { focusArea = "nla" } = useParams<{ focusArea: string }>();
   const { user, signOut } = useAuth();
   const queryClient = useQueryClient();
-  const isPC = managerType === "PC";
-  const signalsBasePath = isPC ? "/admin/pc-signals" : "/admin/signals";
+  // Legacy routes only exist for PD and PC; new managers use the
+  // polymorphic /admin/task-manager/:managerType/signals/:focusArea path.
+  const signalsBasePath =
+    managerType === "PD"
+      ? "/admin/signals"
+      : managerType === "PC"
+      ? "/admin/pc-signals"
+      : `/admin/task-manager/${managerType}/signals`;
 
   const [bucket, setBucket] = useState<Bucket>("week");
   const [drilldown, setDrilldown] = useState<
@@ -100,9 +108,12 @@ const AdminSignalsArchive = ({ managerType = "PD" }: { managerType?: string }) =
         .order("archived_at", { ascending: false });
       if (error) throw error;
       const result = (data || []) as Signal[];
-      return result.filter((s) =>
-        isPC ? !!s.source && s.source.startsWith("PC:") : !s.source?.startsWith("PC:")
-      );
+      // Manager-scope filter: PD owns null + raw-title sources (legacy);
+      // every other manager owns "<KEY>:..." sources.
+      return result.filter((s) => {
+        if (managerType === "PD") return !s.source || !s.source.includes(":");
+        return s.source?.startsWith(`${managerType}:`) ?? false;
+      });
     },
   });
 
@@ -133,7 +144,7 @@ const AdminSignalsArchive = ({ managerType = "PD" }: { managerType?: string }) =
   const byFocusArea = useMemo(() => {
     const counts: Record<string, number> = {};
     for (const s of filtered) {
-      const title = sourceToFocusAreaTitle(s.source, isPC);
+      const title = sourceToFocusAreaTitle(s.source, managerType);
       counts[title] = (counts[title] || 0) + 1;
     }
     return focusAreas
@@ -144,7 +155,7 @@ const AdminSignalsArchive = ({ managerType = "PD" }: { managerType?: string }) =
         count: counts[fa.title] || 0,
       }))
       .filter((f) => f.count > 0);
-  }, [filtered, focusAreas, isPC]);
+  }, [filtered, focusAreas, managerType]);
 
   // Group by pillar
   const byPillar = useMemo(() => {
@@ -164,7 +175,7 @@ const AdminSignalsArchive = ({ managerType = "PD" }: { managerType?: string }) =
     let results: Signal[];
     if (drilldown.kind === "focus") {
       results = filtered.filter(
-        (s) => sourceToFocusAreaTitle(s.source, isPC) === drilldown.key
+        (s) => sourceToFocusAreaTitle(s.source, managerType) === drilldown.key
       );
     } else {
       results = filtered.filter((s) => s.pillar === drilldown.key);
@@ -174,7 +185,7 @@ const AdminSignalsArchive = ({ managerType = "PD" }: { managerType?: string }) =
       results = results.filter((s) => (s.title || "").toLowerCase().includes(q));
     }
     return results;
-  }, [drilldown, filtered, drilldownSearch, isPC]);
+  }, [drilldown, filtered, drilldownSearch, managerType]);
 
   const totalForRange = filtered.length;
   const maxFocusCount = Math.max(...byFocusArea.map((f) => f.count), 1);
@@ -433,7 +444,7 @@ const AdminSignalsArchive = ({ managerType = "PD" }: { managerType?: string }) =
                         {s.pillar}
                       </span>
                     )}
-                    <span>{sourceToFocusAreaTitle(s.source, isPC)}</span>
+                    <span>{sourceToFocusAreaTitle(s.source, managerType)}</span>
                     {s.archived_at && (
                       <span>· {format(new Date(s.archived_at), "MMM d, yyyy")}</span>
                     )}
