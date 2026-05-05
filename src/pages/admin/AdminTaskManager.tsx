@@ -14,6 +14,7 @@ import { format } from "date-fns";
 import confetti from "canvas-confetti";
 import nlaLogo from "@/assets/nla-logo-white.png";
 import FocusAreaModal from "@/components/admin/FocusAreaModal";
+import DailyVerse from "@/components/admin/DailyVerse";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import {
   DndContext,
@@ -750,6 +751,14 @@ const AdminTaskManager = () => {
               </div>
             </SortableContext>
           </DndContext>
+        )}
+
+        {/* Daily verse — sits at the bottom of the workbench so the page Josh
+            spends most of his day on is also where he sees scripture. */}
+        {!isLoading && focusAreas.length > 0 && (
+          <div className="mt-16 pt-8 border-t border-white/5">
+            <DailyVerse />
+          </div>
         )}
       </main>
 
