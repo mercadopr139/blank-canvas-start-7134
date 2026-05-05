@@ -726,7 +726,7 @@ const AdminSignals = ({ managerType = "PD" }: { managerType?: string }) => {
       {/* Header */}
       <header className="relative overflow-hidden border-b border-white/[0.06]">
         <div className="absolute inset-0" style={{ background: `linear-gradient(to right, ${ac.bgFrom}, black, rgba(245,158,11,0.04))` }} />
-        <div className="relative mx-auto px-3 sm:px-4 py-5 flex items-center justify-between max-w-4xl w-full">
+        <div className="relative mx-auto px-3 sm:px-4 py-5 flex items-center justify-between max-w-6xl w-full">
           <div className="flex items-center gap-4">
             <Button variant="ghost" size="icon" onClick={() => navigate(backPath)} aria-label="Back" className="text-white/40 hover:text-white hover:bg-white/5">
               <ArrowLeft className="w-5 h-5" />
@@ -752,7 +752,7 @@ const AdminSignals = ({ managerType = "PD" }: { managerType?: string }) => {
         </div>
       </header>
 
-      <main className="mx-auto px-3 sm:px-4 py-6 max-w-4xl w-full">
+      <main className="mx-auto px-3 sm:px-4 py-6 max-w-6xl w-full">
 
         {/* ═══ Top section — focus area logo LEFT, daily verse RIGHT.
               Small NLA wordmark removed; the focus area's own branding is
