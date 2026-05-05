@@ -2,7 +2,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, useParams, useNavigate } from "react-router-dom";
+import { BrowserRouter, Routes, Route, useParams, useNavigate, Navigate } from "react-router-dom";
 import { useEffect } from "react";
 import ScrollToTop from "./components/ScrollToTop";
 import { AuthProvider } from "./contexts/AuthContext";
@@ -275,24 +275,17 @@ const App = () => (
               }
             />
 
-            {/* PD Task Manager — Focus Area selection */}
+            {/* Legacy PD/PC task manager URLs — redirect to the unified
+                workbench at /admin/task-manager/:managerType so old bookmarks
+                and any in-app links still working off the old paths land on
+                the new home. */}
             <Route
               path="/admin/pd-task-manager"
-              element={
-                <ProtectedRoute requireAdmin>
-                  <AdminPDTaskManager />
-                </ProtectedRoute>
-              }
+              element={<Navigate to="/admin/task-manager/PD" replace />}
             />
-
-            {/* PC Task Manager — Focus Area selection */}
             <Route
               path="/admin/pc-task-manager"
-              element={
-                <ProtectedRoute requireAdmin>
-                  <AdminPCTaskManager />
-                </ProtectedRoute>
-              }
+              element={<Navigate to="/admin/task-manager/PC" replace />}
             />
 
             {/* PC Signals — per focus area */}
