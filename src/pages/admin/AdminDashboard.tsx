@@ -57,15 +57,16 @@ const HREF_PERM_MAP: Record<string, PermissionKey> = {
   "/admin/finance": "finance",
 };
 
-/* Tiles that were removed — delete from DB if found */
-const DEPRECATED_TILE_HREFS = ["/admin/shared-task-board", "/admin/pd-task-manager", "/admin/pc-task-manager", "/admin/task-manager"];
+/* Tiles that were removed — delete from DB if found. Listing a tile's href
+   here makes the dashboard auto-clean it from every admin's tile row on
+   their next visit. */
+const DEPRECATED_TILE_HREFS = ["/admin/shared-task-board", "/admin/pd-task-manager", "/admin/pc-task-manager", "/admin/task-manager", "/transport"];
 
 /* Default tiles to seed for new users. PD/PC tiles are no longer hardcoded
    here — they (and any newly-added task managers like HC) come from the
    `task_managers` table and are merged in below in `defaultTiles`. */
 const STATIC_DEFAULT_TILES = [
   { title: "Upcoming Events", subtitle: "Calendar reminders", icon_name: "calendar-days", accent_color: "#f59e0b", href: "__upcoming_events__", sort_order: 0, is_default: true },
-  { title: "Driver Check-In", subtitle: "Transportation PIN login", icon_name: "bus", accent_color: "#60a5fa", href: "/transport", sort_order: 1, is_default: true },
   { title: "Message Board", subtitle: "Team communication & tasks", icon_name: "message-square", accent_color: "#bf0f3e", href: "/admin/message-board", sort_order: 100, is_default: true },
   { title: "Settings", subtitle: "Staff Management", icon_name: "settings", accent_color: "#a1a1aa", href: "/admin/staff", sort_order: 101, is_default: true },
 ];
