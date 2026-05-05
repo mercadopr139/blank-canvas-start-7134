@@ -214,6 +214,7 @@ const AdminSignals = ({ managerType = "PD" }: { managerType?: string }) => {
     title: "",
     pillar: "" as string,
     priority_layer: "" as string,
+    description: "",
     bucket: "core" as BucketId,
   });
 
@@ -420,6 +421,7 @@ const AdminSignals = ({ managerType = "PD" }: { managerType?: string }) => {
         status: "Pending",
         is_archived: false,
         date_assigned: dateAssigned,
+        description: form.description.trim() || null,
         source:
           managerType === "PD"
             ? (isNla ? null : areaLabel)
@@ -430,7 +432,7 @@ const AdminSignals = ({ managerType = "PD" }: { managerType?: string }) => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["signals"] });
       setShowAdd(false);
-      setForm({ title: "", pillar: "", priority_layer: "", bucket: "core" });
+      setForm({ title: "", pillar: "", priority_layer: "", description: "", bucket: "core" });
       toast.success("Signal added");
     },
     onError: (e: any) => toast.error(e.message),
@@ -1199,6 +1201,16 @@ const AdminSignals = ({ managerType = "PD" }: { managerType?: string }) => {
                   ))}
                 </SelectContent>
               </Select>
+            </div>
+            <div>
+              <Label className="text-white/60">Notes</Label>
+              <Textarea
+                value={form.description}
+                onChange={(e) => setForm({ ...form, description: e.target.value })}
+                className="bg-white/5 border-white/10 text-white mt-1 resize-none"
+                rows={3}
+                placeholder="Optional notes…"
+              />
             </div>
           </div>
           <DialogFooter>

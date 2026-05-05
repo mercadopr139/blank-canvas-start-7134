@@ -16,6 +16,7 @@ import nlaLogo from "@/assets/nla-logo-white.png";
 import FocusAreaModal from "@/components/admin/FocusAreaModal";
 import DailyVerse from "@/components/admin/DailyVerse";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import {
   DndContext,
   closestCenter,
@@ -90,6 +91,8 @@ type CoreSignal = {
   status: string;
   source: string | null;
   today_sort_order: number | null;
+  description: string | null;
+  pillar: string | null;
 };
 
 const getGradient = (hex: string) =>
@@ -108,10 +111,12 @@ const TileSignalRow = ({
   signal,
   accentColor,
   onToggle,
+  onOpenDetails,
 }: {
   signal: CoreSignal;
   accentColor: string;
   onToggle: () => void;
+  onOpenDetails: () => void;
 }) => {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
     useSortable({ id: signal.id });
@@ -121,6 +126,7 @@ const TileSignalRow = ({
     opacity: isDragging ? 0.4 : 1,
   };
   const isComplete = signal.status === "Complete";
+  const hasNotes = !!signal.description?.trim();
 
   return (
     <div
@@ -149,14 +155,89 @@ const TileSignalRow = ({
           <Circle className="w-4 h-4 text-white/30 hover:text-white/60 transition-colors" />
         )}
       </button>
-      <span
-        className={`text-sm leading-snug flex-1 min-w-0 break-words ${
+      {/* Title is its own button so clicking it opens the details modal —
+          separate from the toggle circle so the two actions don't conflict. */}
+      <button
+        type="button"
+        onClick={onOpenDetails}
+        className={`text-sm leading-snug flex-1 min-w-0 break-words text-left hover:text-white transition-colors ${
           isComplete ? "line-through text-white/30" : "text-white/85"
         }`}
+        title="View signal details"
       >
         {signal.title || "Untitled"}
-      </span>
+        {hasNotes && (
+          <span className="ml-1 text-[10px] text-white/30 align-middle" aria-label="has notes">
+            ·
+          </span>
+        )}
+      </button>
     </div>
+  );
+};
+
+/* ───────── Signal details modal — opened by clicking a tile's signal title.
+    Read-only view of pillar + notes, with a hint to drill into the kanban
+    for full edit. ───────── */
+const SignalDetailsModal = ({
+  signal,
+  accentColor,
+  open,
+  onClose,
+}: {
+  signal: CoreSignal | null;
+  accentColor: string;
+  open: boolean;
+  onClose: () => void;
+}) => {
+  if (!signal) return null;
+  return (
+    <Dialog open={open} onOpenChange={(o) => { if (!o) onClose(); }}>
+      <DialogContent className="bg-zinc-900 border-white/10 text-white max-w-md">
+        <DialogHeader>
+          <p className="text-[10px] uppercase tracking-[0.15em] text-white/30 mb-1">
+            Today's Core
+          </p>
+          <DialogTitle className="text-white text-base leading-snug">
+            {signal.title || "Untitled"}
+          </DialogTitle>
+        </DialogHeader>
+        <div className="space-y-3 mt-2">
+          <div className="flex items-center gap-2 text-xs text-white/50">
+            {signal.pillar && (
+              <span
+                className="px-2 py-0.5 rounded-full border text-[10px] font-semibold"
+                style={{ borderColor: `${accentColor}55`, color: accentColor }}
+              >
+                {signal.pillar}
+              </span>
+            )}
+            <span
+              className={`text-[10px] font-medium ${
+                signal.status === "Complete" ? "text-green-400" : "text-white/40"
+              }`}
+            >
+              {signal.status}
+            </span>
+          </div>
+          <div>
+            <p className="text-[10px] uppercase tracking-[0.15em] text-white/30 mb-1.5">
+              Notes
+            </p>
+            {signal.description?.trim() ? (
+              <p className="text-sm text-white/80 whitespace-pre-wrap leading-relaxed">
+                {signal.description}
+              </p>
+            ) : (
+              <p className="text-sm text-white/30 italic">No notes for this signal.</p>
+            )}
+          </div>
+          <p className="text-[10px] text-white/30 pt-2 border-t border-white/5">
+            To edit this signal, click <span className="text-white/50">Open →</span> on the focus area tile.
+          </p>
+        </div>
+      </DialogContent>
+    </Dialog>
   );
 };
 
@@ -169,6 +250,7 @@ const FocusAreaTile = ({
   onAdd,
   onToggle,
   onReorder,
+  onOpenSignalDetails,
 }: {
   area: FocusArea;
   managerType: string;
@@ -177,6 +259,7 @@ const FocusAreaTile = ({
   onAdd: (title: string) => Promise<void>;
   onToggle: (signal: CoreSignal) => void;
   onReorder: (newOrder: CoreSignal[]) => void;
+  onOpenSignalDetails: (signal: CoreSignal) => void;
 }) => {
   const navigate = useNavigate();
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
@@ -293,6 +376,7 @@ const FocusAreaTile = ({
                       signal={s}
                       accentColor={area.accent_color}
                       onToggle={() => onToggle(s)}
+                      onOpenDetails={() => onOpenSignalDetails(s)}
                     />
                   ))}
                 </div>
@@ -385,6 +469,9 @@ const AdminTaskManager = () => {
   const queryClient = useQueryClient();
   const [modalOpen, setModalOpen] = useState(false);
   const [editingArea, setEditingArea] = useState<FocusArea | null>(null);
+  // Read-only details modal opened by clicking a signal title in any tile.
+  const [detailsSignal, setDetailsSignal] = useState<CoreSignal | null>(null);
+  const [detailsAccent, setDetailsAccent] = useState<string>("#a1a1aa");
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } })
@@ -432,7 +519,7 @@ const AdminTaskManager = () => {
     queryFn: async () => {
       const { data, error } = await (supabase
         .from("signals")
-        .select("id, title, status, source, today_sort_order") as any)
+        .select("id, title, status, source, today_sort_order, description, pillar") as any)
         .eq("date_assigned", todayStr)
         .eq("priority_layer", "Core")
         .eq("is_archived", false)
@@ -748,6 +835,10 @@ const AdminTaskManager = () => {
                         toggleStatusMutation.mutate({ id: s.id, current: s.status })
                       }
                       onReorder={(newOrder) => reorderSignalsMutation.mutate(newOrder)}
+                      onOpenSignalDetails={(s) => {
+                        setDetailsSignal(s);
+                        setDetailsAccent(area.accent_color);
+                      }}
                     />
                   );
                 })}
@@ -796,6 +887,13 @@ const AdminTaskManager = () => {
           managerType={managerType}
         />
       )}
+
+      <SignalDetailsModal
+        signal={detailsSignal}
+        accentColor={detailsAccent}
+        open={!!detailsSignal}
+        onClose={() => setDetailsSignal(null)}
+      />
     </div>
   );
 };
