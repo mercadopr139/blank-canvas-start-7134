@@ -23,7 +23,9 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
-import { ArrowLeft, Plus, Shield, UserCog, Pencil } from "lucide-react";
+import { ArrowLeft, Plus, Shield, UserCog, Pencil, ShieldCheck } from "lucide-react";
+
+const SUPER_ADMIN_EMAIL = "joshmercado@nolimitsboxingacademy.org";
 
 // ─────────────────────────────────────────────────────────────────────────
 // Types
@@ -223,64 +225,81 @@ export default function AdminStaffManagement() {
     }
   };
 
-  // Building blocks — render a single checkbox row
+  // Building blocks — render a single checkbox row. When `superAdminMode`
+  // is on (the card belongs to the super-admin), every box renders checked
+  // and disabled so the UI matches reality (super-admin bypasses all gates
+  // at runtime regardless of staff_permissions rows).
   const Check = ({
     userId,
     permKey,
     label,
     indent = false,
     disabled = false,
+    superAdminMode = false,
   }: {
     userId: string;
     permKey: string;
     label: string;
     indent?: boolean;
     disabled?: boolean;
+    superAdminMode?: boolean;
   }) => {
-    const checked = staffPerms[userId]?.[permKey] ?? false;
+    const checked = superAdminMode ? true : (staffPerms[userId]?.[permKey] ?? false);
+    const isDisabled = disabled || superAdminMode;
     return (
       <label
         className={`flex items-center gap-2 text-sm ${
           indent ? "ml-6" : ""
-        } ${disabled ? "opacity-40 cursor-not-allowed" : "cursor-pointer"}`}
+        } ${isDisabled ? "opacity-40 cursor-not-allowed" : "cursor-pointer"}`}
       >
         <Checkbox
           checked={checked}
-          onCheckedChange={(v) => setPermission(userId, permKey, !!v)}
-          disabled={disabled}
+          onCheckedChange={(v) => !superAdminMode && setPermission(userId, permKey, !!v)}
+          disabled={isDisabled}
         />
         <span className={indent ? "text-white/70 text-[13px]" : ""}>{label}</span>
       </label>
     );
   };
 
-  // Pillar block — parent checkbox + indented sub-checkboxes when parent
-  // is granted (or super-admin viewing).
+  // Pillar block — parent checkbox + indented sub-checkboxes. Sub-checkboxes
+  // appear when the parent is granted, OR when this is the super-admin's
+  // card (where everything renders as on).
   const Pillar = ({
     userId,
     parentKey,
     parentLabel,
     subs,
+    superAdminMode = false,
   }: {
     userId: string;
     parentKey: string;
     parentLabel: string;
     subs: PillarSub[];
+    superAdminMode?: boolean;
   }) => {
-    const parentOn = staffPerms[userId]?.[parentKey] ?? false;
+    const parentOn = superAdminMode ? true : (staffPerms[userId]?.[parentKey] ?? false);
     return (
       <div className="space-y-1.5">
-        <label className="flex items-center gap-2 text-sm cursor-pointer font-medium">
+        <label className={`flex items-center gap-2 text-sm font-medium ${superAdminMode ? "opacity-40 cursor-not-allowed" : "cursor-pointer"}`}>
           <Checkbox
             checked={parentOn}
-            onCheckedChange={(v) => togglePillar(userId, parentKey, subs, !!v)}
+            onCheckedChange={(v) => !superAdminMode && togglePillar(userId, parentKey, subs, !!v)}
+            disabled={superAdminMode}
           />
           {parentLabel}
         </label>
         {parentOn && (
           <div className="space-y-1.5">
             {subs.map((s) => (
-              <Check key={s.key} userId={userId} permKey={s.key} label={s.label} indent />
+              <Check
+                key={s.key}
+                userId={userId}
+                permKey={s.key}
+                label={s.label}
+                indent
+                superAdminMode={superAdminMode}
+              />
             ))}
           </div>
         )}
@@ -340,7 +359,10 @@ export default function AdminStaffManagement() {
           </p>
         ) : (
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {staff.map((member) => (
+            {staff.map((member) => {
+              const isMemberSuperAdmin =
+                member.email?.toLowerCase() === SUPER_ADMIN_EMAIL;
+              return (
               <Card
                 key={member.id}
                 className={`bg-white/5 border-white/10 text-white ${
@@ -350,7 +372,15 @@ export default function AdminStaffManagement() {
                 <CardHeader className="pb-3">
                   <div className="flex items-start justify-between">
                     <div>
-                      <CardTitle className="text-lg text-white">{member.full_name}</CardTitle>
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <CardTitle className="text-lg text-white">{member.full_name}</CardTitle>
+                        {isMemberSuperAdmin && (
+                          <span className="inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full bg-amber-400/15 border border-amber-400/40 text-amber-300 font-semibold">
+                            <ShieldCheck className="w-3 h-3" />
+                            Super Admin
+                          </span>
+                        )}
+                      </div>
                       <p className="text-sm text-white/50">{member.job_title}</p>
                       <p className="text-xs text-white/30 mt-1">{member.email}</p>
                     </div>
@@ -388,6 +418,12 @@ export default function AdminStaffManagement() {
                       <Shield className="w-3 h-3" /> Permissions
                     </p>
 
+                    {isMemberSuperAdmin && (
+                      <p className="text-[11px] text-amber-300/70 bg-amber-400/[0.04] border border-amber-400/20 rounded-md px-2.5 py-1.5 mb-3">
+                        Super admin has full access to everything regardless of these checkboxes.
+                      </p>
+                    )}
+
                     <div className="space-y-4">
                       {/* Task managers — one row per task_managers entry */}
                       {taskManagerChecks.length > 0 && (
@@ -398,6 +434,7 @@ export default function AdminStaffManagement() {
                               userId={member.user_id}
                               permKey={tm.permKey}
                               label={tm.label}
+                              superAdminMode={isMemberSuperAdmin}
                             />
                           ))}
                         </div>
@@ -409,18 +446,21 @@ export default function AdminStaffManagement() {
                         parentKey="operations"
                         parentLabel="Operations"
                         subs={OPERATIONS_SUBS}
+                        superAdminMode={isMemberSuperAdmin}
                       />
                       <Pillar
                         userId={member.user_id}
                         parentKey="sales_marketing"
                         parentLabel="Sales & Marketing"
                         subs={SALES_MARKETING_SUBS}
+                        superAdminMode={isMemberSuperAdmin}
                       />
                       <Pillar
                         userId={member.user_id}
                         parentKey="finance"
                         parentLabel="Finance"
                         subs={FINANCE_SUBS}
+                        superAdminMode={isMemberSuperAdmin}
                       />
 
                       {/* Settings — super-admin gated for granting */}
@@ -429,6 +469,7 @@ export default function AdminStaffManagement() {
                         permKey="settings"
                         label="Settings"
                         disabled={!isSuperAdmin}
+                        superAdminMode={isMemberSuperAdmin}
                       />
                     </div>
                   </div>
@@ -444,7 +485,8 @@ export default function AdminStaffManagement() {
                   </div>
                 </CardContent>
               </Card>
-            ))}
+              );
+            })}
           </div>
         )}
       </main>
