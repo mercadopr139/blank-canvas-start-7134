@@ -67,7 +67,7 @@ export default function TransportRunsPay() {
   const [routes, setRoutes] = useState<{ id: string; name: string }[]>([]);
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
   const [expandedRosters, setExpandedRosters] = useState<Set<string>>(new Set());
-  const [rosterData, setRosterData] = useState<Record<string, { youth_id: string; status: string; first_name: string; last_name: string; photo_url: string | null; pickup_zone: string }[]>>({});
+  const [rosterData, setRosterData] = useState<Record<string, { id: string; youth_id: string; status: string; first_name: string; last_name: string; photo_url: string | null; pickup_zone: string }[]>>({});
 
   // Add-youth-to-existing-trip picker state. addingYouthToRun = the run id
   // currently showing the inline picker (or null).
@@ -314,7 +314,7 @@ export default function TransportRunsPay() {
   const loadRoster = useCallback(async (runId: string) => {
     const { data } = await supabase
       .from("transport_attendance")
-      .select("youth_id, status, youth:youth_profiles(first_name, last_name, photo_url, pickup_zone)")
+      .select("id, youth_id, status, youth:youth_profiles(first_name, last_name, photo_url, pickup_zone)")
       .eq("run_id", runId);
     if (!data) return;
     const rows = await Promise.all(
@@ -339,6 +339,7 @@ export default function TransportRunsPay() {
           }
         }
         return {
+          id: d.id,
           youth_id: d.youth_id,
           status: d.status,
           first_name: d.youth?.first_name || "Unknown",
@@ -394,6 +395,20 @@ export default function TransportRunsPay() {
     setYouthPickerSearch("");
     await loadRoster(runId);
     toast({ title: "Youth added to trip" });
+  };
+
+  // Delete a single attendance row from a trip — the inverse of
+  // handleAddYouthToRun. Targets a specific transport_attendance.id (not
+  // (run_id, youth_id)) so duplicates from accidental double-taps on the
+  // driver app can be cleaned up one at a time.
+  const handleRemoveAttendance = async (runId: string, attendanceId: string) => {
+    const { error } = await supabase.from("transport_attendance").delete().eq("id", attendanceId);
+    if (error) {
+      toast({ title: "Failed to remove youth", description: error.message, variant: "destructive" });
+      return;
+    }
+    await loadRoster(runId);
+    toast({ title: "Youth removed from trip" });
   };
 
   // Driver history modal
@@ -688,8 +703,10 @@ export default function TransportRunsPay() {
                           const photoUrl = y.photo_url;
                           const statusLabel = y.status === "picked_up" ? "Pick-Up" : y.status === "dropped_off" ? "Drop-Off" : y.status === "both" ? "Both" : y.status;
                           const statusColor = y.status === "picked_up" ? "text-red-400" : y.status === "dropped_off" ? "text-green-400" : y.status === "both" ? "text-blue-400" : "text-white/40";
+                          // Keyed on the attendance row id (not youth_id) so
+                          // duplicates from a driver double-tap stay distinct.
                           return (
-                            <div key={y.youth_id} className="flex items-center gap-2.5 py-1">
+                            <div key={y.id} className="flex items-center gap-2.5 py-1 group/row">
                               <div className="w-7 h-7 rounded-full bg-white/10 overflow-hidden shrink-0 flex items-center justify-center">
                                 {photoUrl ? (
                                   <img src={photoUrl} alt="" className="w-full h-full object-cover" onError={(e) => { e.currentTarget.style.display = "none"; }} />
@@ -702,6 +719,15 @@ export default function TransportRunsPay() {
                                 <p className="text-white/30 text-[10px]">{y.pickup_zone}</p>
                               </div>
                               <span className={`text-[10px] font-semibold ${statusColor}`}>{statusLabel}</span>
+                              <button
+                                type="button"
+                                onClick={() => handleRemoveAttendance(r.id, y.id)}
+                                className="shrink-0 p-1 rounded text-white/20 hover:text-red-400 hover:bg-red-500/10 opacity-0 group-hover/row:opacity-100 transition-opacity"
+                                title="Remove from trip"
+                                aria-label={`Remove ${y.first_name} ${y.last_name} from trip`}
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
                             </div>
                           );
                         })
