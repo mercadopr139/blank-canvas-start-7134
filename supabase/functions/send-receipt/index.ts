@@ -40,7 +40,6 @@ interface DonationRow {
   deposit_date: string;
   reference_id: string | null;
   amount: number;
-  notes: string | null;
 }
 
 async function generateReceiptPdf(
@@ -111,8 +110,7 @@ async function generateReceiptPdf(
   // ── Table column layout ──
   const COL_DATE_X = MARGIN_L;
   const COL_REF_X = MARGIN_L + 90;
-  const COL_AMT_X = MARGIN_L + 300;
-  const COL_NOTES_X = MARGIN_L + 390;
+  const COL_AMT_X = MARGIN_L + 360;
   const ROW_H = 18;
 
   const drawTableHeader = (page: ReturnType<typeof pdf.addPage>, y: number): number => {
@@ -121,7 +119,6 @@ async function generateReceiptPdf(
     page.drawText("Date", { x: COL_DATE_X + 4, y: headerY, font: fontBold, size: 9, color: black });
     page.drawText("Check # / Transaction ID", { x: COL_REF_X + 4, y: headerY, font: fontBold, size: 9, color: black });
     page.drawText("Amount", { x: COL_AMT_X + 4, y: headerY, font: fontBold, size: 9, color: black });
-    page.drawText("Notes", { x: COL_NOTES_X + 4, y: headerY, font: fontBold, size: 9, color: black });
     return y - ROW_H - 2;
   };
 
@@ -201,8 +198,6 @@ async function generateReceiptPdf(
     page.drawText(formatDate(d.deposit_date), { x: COL_DATE_X + 4, y, font, size: 9, color: black });
     page.drawText(d.reference_id || "—", { x: COL_REF_X + 4, y, font, size: 9, color: black });
     page.drawText(formatCurrency(d.amount), { x: COL_AMT_X + 4, y, font, size: 9, color: black });
-    const noteStr = (d.notes || "").substring(0, 30);
-    page.drawText(noteStr, { x: COL_NOTES_X + 4, y, font, size: 9, color: black });
 
     page.drawLine({ start: { x: MARGIN_L, y: y - 4 }, end: { x: PAGE_W - MARGIN_R, y: y - 4 }, thickness: 0.5, color: lineGray });
     y -= ROW_H;
@@ -340,7 +335,7 @@ Deno.serve(async (req) => {
     // Get qualifying donations for 2026
     const { data: donations, error: donErr } = await supabase
       .from("donations")
-      .select("deposit_date, reference_id, amount, notes, revenue_type, revenue_description, donor_name")
+      .select("deposit_date, reference_id, amount, revenue_type, revenue_description, donor_name")
       .eq("supporter_id", supporter_id)
       .gte("deposit_date", "2026-01-01")
       .lte("deposit_date", "2026-12-31")
