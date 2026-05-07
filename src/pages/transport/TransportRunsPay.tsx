@@ -23,7 +23,14 @@ function downloadCsv(filename: string, csv: string) {
   const a = document.createElement("a"); a.href = url; a.download = filename; a.click();
   URL.revokeObjectURL(url);
 }
-function getPayRate(routeName: string | undefined): number { return (routeName === "Overflow" || routeName === "Both") ? 25 : 50; }
+// $25 for the lower-pay routes: Overflow, the legacy "Both" name, and
+// the zone-aware Both variants (Both - Woodbine, Both - Wildwood). $50
+// for everything else (zone-only Regular routes).
+function getPayRate(routeName: string | undefined): number {
+  if (!routeName) return 50;
+  if (routeName === "Overflow" || routeName === "Both" || routeName.startsWith("Both -")) return 25;
+  return 50;
+}
 
 type PayPeriod = { label: string; start: string; end: string };
 

@@ -19,10 +19,14 @@ interface Route {
 
 type TripType = "regular" | "overflow" | "both_zones";
 
-const TRIP_OPTIONS: { value: TripType; label: string; icon: typeof Bus }[] = [
-  { value: "regular", label: "Regular Trip", icon: MapPin },
-  { value: "overflow", label: "Overflow", icon: Layers },
-  { value: "both_zones", label: "Both Zones", icon: Bus },
+// Trip option labels are static for "regular" and "overflow"; the
+// "both_zones" label is rendered dynamically below using the URL zone
+// (e.g. "Both Zones - Woodbine") so admins reviewing Trips & Pay can
+// tell which zone a Both run was based in without opening each trip.
+const TRIP_OPTIONS: { value: TripType; baseLabel: string; icon: typeof Bus }[] = [
+  { value: "regular", baseLabel: "Regular Trip", icon: MapPin },
+  { value: "overflow", baseLabel: "Overflow", icon: Layers },
+  { value: "both_zones", baseLabel: "Both Zones", icon: Bus },
 ];
 
 export default function TransportTripDetails() {
@@ -89,8 +93,9 @@ export default function TransportTripDetails() {
     if (tripType === "overflow") {
       return routes.find((r) => r.name === "Overflow")?.id ?? null;
     }
-    // both_zones
-    return routes.find((r) => r.name === "Both")?.id ?? null;
+    // both_zones — pick the zone-aware variant matching the URL zone so
+    // the trip record carries the home zone in its route name.
+    return routes.find((r) => r.name === `Both - ${zone}`)?.id ?? null;
   };
 
   const handleStartRun = async () => {
@@ -134,7 +139,7 @@ export default function TransportTripDetails() {
           ? zone
           : tripType === "overflow"
           ? "Overflow"
-          : "Both";
+          : `Both - ${zone}`;
 
       sessionStorage.setItem(
         "transport_run",
@@ -149,7 +154,7 @@ export default function TransportTripDetails() {
 
       toast({
         title: "Run started!",
-        description: `${zone} — ${tripType === "regular" ? "Regular" : tripType === "overflow" ? "Overflow" : "Both Zones"} — ${runType}`,
+        description: `${zone} — ${tripType === "regular" ? "Regular" : tripType === "overflow" ? "Overflow" : `Both Zones - ${zone}`} — ${runType}`,
       });
       navigate("/transport/run");
     } catch {
@@ -205,6 +210,10 @@ export default function TransportTripDetails() {
           {TRIP_OPTIONS.map((opt) => {
             const isSelected = tripType === opt.value;
             const Icon = opt.icon;
+            // The "both_zones" label takes the URL zone as a suffix so a
+            // Both trip run from Woodbine reads "Both Zones - Woodbine"
+            // and is recorded with a matching route name in the DB.
+            const label = opt.value === "both_zones" ? `${opt.baseLabel} - ${zone}` : opt.baseLabel;
             return (
               <button
                 key={opt.value}
@@ -218,7 +227,7 @@ export default function TransportTripDetails() {
                 <Icon
                   className={`w-7 h-7 ${isSelected ? zoneColor.text : "text-white/40"}`}
                 />
-                <span className="text-base font-bold">{opt.label}</span>
+                <span className="text-base font-bold">{label}</span>
               </button>
             );
           })}
