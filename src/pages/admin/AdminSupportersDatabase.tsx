@@ -772,11 +772,11 @@ const AdminSupportersDatabase = () => {
                         </button>
                       )}
                     </td>
-                    {/* Notes — double-click to edit */}
+                    {/* Notes — click to edit */}
                     <td
-                  className="p-4 align-middle text-white/50 text-xs min-w-[280px] whitespace-pre-wrap break-words align-top py-3 cursor-pointer select-none"
-                  onDoubleClick={() => setInlineEdit({ id: s.id, field: "story" })}
-                  title="Double-click to edit">
+                  className="p-4 align-middle text-white/50 text-xs min-w-[280px] whitespace-pre-wrap break-words align-top py-3 cursor-pointer select-none hover:bg-white/5"
+                  onClick={() => { if (inlineEdit?.id !== s.id || inlineEdit.field !== "story") setInlineEdit({ id: s.id, field: "story" }); }}
+                  title="Click to edit">
 
                       {inlineEdit?.id === s.id && inlineEdit.field === "story" ?
                   <textarea
