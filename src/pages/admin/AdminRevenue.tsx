@@ -28,7 +28,7 @@ import {
 // ─── Constants ────────────────────────────────────────────────────────────────
 
 const REVENUE_TYPES = ["Donation", "Sponsorship", "Fee for Service", "Re-Grant"] as const;
-const PAYMENT_METHODS = ["Cash", "Check", "Zelle", "Stripe", "ACH", "In-Kind"] as const;
+const PAYMENT_METHODS = ["Check", "Wire", "Cash", "PayPal", "Venmo", "Square", "Cashier Check", "Other"] as const;
 
 interface RevenueRow {
   id: string;
@@ -39,7 +39,6 @@ interface RevenueRow {
   revenue_type: string;
   payment_method: string | null;
   logged_by: string | null;
-  notes: string | null;
   receipt_2026_status: string | null;
 }
 
@@ -51,8 +50,7 @@ const emptyForm = {
   revenue_type: "Donation",
   payment_method: "",
   reference_id: "",
-  logged_by: "",
-  notes: ""
+  logged_by: ""
 };
 
 const SUPPORTER_CATEGORIES = ["Individual", "Organization"] as const;
@@ -90,7 +88,7 @@ const AdminRevenue = () => {
     setLoading(true);
     const { data } = await supabase.
     from("revenue").
-    select("id, supporter_id, date, amount, revenue_type, payment_method, reference_id, logged_by, notes").
+    select("id, supporter_id, date, amount, revenue_type, payment_method, reference_id, logged_by").
     order("date", { ascending: false });
 
     // Fetch supporter names for linked records
@@ -162,8 +160,7 @@ const AdminRevenue = () => {
       revenue_type: r.revenue_type,
       payment_method: r.payment_method || "",
       reference_id: (r as any).reference_id || "",
-      logged_by: r.logged_by || "",
-      notes: r.notes || ""
+      logged_by: r.logged_by || ""
     });
     // Load supporter details if linked
     if (r.supporter_id) {
@@ -269,8 +266,7 @@ const AdminRevenue = () => {
       revenue_type: form.revenue_type,
       payment_method: form.payment_method || null,
       reference_id: form.reference_id || null,
-      logged_by: form.logged_by || null,
-      notes: form.notes || null
+      logged_by: form.logged_by || null
     };
 
     if (editId) {
@@ -291,7 +287,6 @@ const AdminRevenue = () => {
       method: (payload.payment_method || "Other") as any,
       receipt_status: "Not Needed" as any,
       reference_id: form.reference_id || null,
-      notes: payload.notes,
       supporter_id: supporterId
     };
     if (form.revenue_type === "Sponsorship") {
@@ -755,16 +750,6 @@ const AdminRevenue = () => {
                 onChange={(e) => setForm({ ...form, logged_by: e.target.value })}
                 className="bg-white/5 border-white/10 text-white"
                 placeholder="Person's name…" />
-            </div>
-
-            {/* Notes */}
-            <div className="space-y-1.5">
-              <Label className="text-white/70">Notes</Label>
-              <textarea
-                rows={2}
-                value={form.notes}
-                onChange={(e) => setForm({ ...form, notes: e.target.value })}
-                className="w-full rounded-md bg-white/5 border border-white/10 text-white text-sm px-3 py-2 resize-none focus:outline-none focus:ring-1 focus:ring-green-500" />
             </div>
             </>}
           </div>

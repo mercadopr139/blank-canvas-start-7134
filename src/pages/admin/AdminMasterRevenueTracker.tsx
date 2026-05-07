@@ -32,7 +32,7 @@ const MONTHS = [
 ];
 
 const REVENUE_TYPES = ["All", "Donation", "Sponsorship", "Fee for Service", "Re-Grant"];
-const PAYMENT_METHODS = ["All", "Cash", "Check", "Zelle", "Stripe", "ACH", "In-Kind"];
+const PAYMENT_METHODS = ["All", "Check", "Wire", "Cash", "PayPal", "Venmo", "Square", "Cashier Check", "Other"];
 
 type DrillCategory = "Donations" | "Sponsorship" | "Fee for Service" | "Re-Grants";
 
