@@ -46,7 +46,8 @@ async function generateReceiptPdf(
   donorName: string,
   donations: DonationRow[],
   total: number,
-  dateIssued: string
+  dateIssued: string,
+  logoBytes?: Uint8Array
 ): Promise<Uint8Array> {
   const pdf = await PDFDocument.create();
   const font = await pdf.embedFont(StandardFonts.Helvetica);
@@ -63,42 +64,55 @@ async function generateReceiptPdf(
   const lineGray = rgb(0.78, 0.78, 0.78);
   const headerBg = rgb(0.96, 0.96, 0.96);
 
-  // ── Helper: draw text centred ──
-  const drawCentred = (
-    page: ReturnType<typeof pdf.addPage>,
-    text: string,
-    y: number,
-    f: typeof font,
-    size: number,
-    color = black
-  ) => {
-    const w = f.widthOfTextAtSize(text, size);
-    page.drawText(text, { x: (PAGE_W - w) / 2, y, font: f, size, color });
-  };
+  // Embed logo once if provided. Wrapped so a malformed asset never blocks receipt generation.
+  let logoImage: Awaited<ReturnType<typeof pdf.embedPng>> | null = null;
+  if (logoBytes && logoBytes.length > 0) {
+    try {
+      logoImage = await pdf.embedPng(logoBytes);
+    } catch (e) {
+      console.error("Logo embed failed:", e);
+    }
+  }
 
   // ── Helper: draw the header block (reused on continuation pages) ──
+  const LOGO_SIZE = 54;
+  const TEXT_X = MARGIN_L + LOGO_SIZE + 14;
+
   const drawHeader = (page: ReturnType<typeof pdf.addPage>): number => {
     let y = PAGE_H - 50;
 
-    // Org name
-    drawCentred(page, ORG_NAME, y, fontBold, 16);
-    y -= 18;
+    // Logo top-left, square-cropped to LOGO_SIZE
+    if (logoImage) {
+      const aspect = logoImage.width / logoImage.height;
+      const drawW = aspect >= 1 ? LOGO_SIZE : LOGO_SIZE * aspect;
+      const drawH = aspect >= 1 ? LOGO_SIZE / aspect : LOGO_SIZE;
+      page.drawImage(logoImage, {
+        x: MARGIN_L,
+        y: y + 10 - drawH,
+        width: drawW,
+        height: drawH,
+      });
+    }
 
-    // Gym location
-    drawCentred(page, ORG_GYM_ADDRESS_1, y, fontBold, 9, gray);
-    y -= 12;
-    drawCentred(page, ORG_GYM_ADDRESS_2, y, font, 9, gray);
-    y -= 12;
-    drawCentred(page, ORG_GYM_ADDRESS_3, y, font, 9, gray);
+    // Org name (left-aligned, right of logo)
+    page.drawText(ORG_NAME, { x: TEXT_X, y, font: fontBold, size: 14, color: black });
     y -= 16;
 
+    // Gym location
+    page.drawText(ORG_GYM_ADDRESS_1, { x: TEXT_X, y, font: fontBold, size: 9, color: gray });
+    y -= 11;
+    page.drawText(ORG_GYM_ADDRESS_2, { x: TEXT_X, y, font, size: 9, color: gray });
+    y -= 11;
+    page.drawText(ORG_GYM_ADDRESS_3, { x: TEXT_X, y, font, size: 9, color: gray });
+    y -= 14;
+
     // Mailing address
-    drawCentred(page, ORG_MAIL_ADDRESS_1, y, fontBold, 9, gray);
-    y -= 12;
-    drawCentred(page, ORG_MAIL_ADDRESS_2, y, font, 9, gray);
-    y -= 12;
-    drawCentred(page, ORG_MAIL_ADDRESS_3, y, font, 9, gray);
-    y -= 20;
+    page.drawText(ORG_MAIL_ADDRESS_1, { x: TEXT_X, y, font: fontBold, size: 9, color: gray });
+    y -= 11;
+    page.drawText(ORG_MAIL_ADDRESS_2, { x: TEXT_X, y, font, size: 9, color: gray });
+    y -= 11;
+    page.drawText(ORG_MAIL_ADDRESS_3, { x: TEXT_X, y, font, size: 9, color: gray });
+    y -= 18;
 
     // Horizontal rule
     page.drawLine({ start: { x: MARGIN_L, y }, end: { x: PAGE_W - MARGIN_R, y }, thickness: 1.5, color: black });
@@ -377,8 +391,20 @@ Deno.serve(async (req) => {
       supporter.name?.trim() ||
       "Supporter";
 
+    // Fetch the logo from public storage. Best-effort: if it fails, the PDF
+    // still generates without it.
+    let logoBytes: Uint8Array | undefined;
+    try {
+      const logoRes = await fetch(`${supabaseUrl}/storage/v1/object/public/email-assets/nla-logo.png`);
+      if (logoRes.ok) {
+        logoBytes = new Uint8Array(await logoRes.arrayBuffer());
+      }
+    } catch (e) {
+      console.error("Logo fetch failed:", e);
+    }
+
     // Generate PDF
-    const pdfBytes = await generateReceiptPdf(receiptName, qualifying, total, dateIssued);
+    const pdfBytes = await generateReceiptPdf(receiptName, qualifying, total, dateIssued, logoBytes);
     const pdfBase64 = btoa(String.fromCharCode(...pdfBytes));
     const pdfFilename = `2026-Donation-Receipt-${receiptName.replace(/\s+/g, "-")}.pdf`;
 
@@ -439,7 +465,7 @@ Deno.serve(async (req) => {
   <tr>
     <td style="padding:0 40px 32px;">
       <p style="margin:0 0 4px;color:#222;font-size:15px;">Sincerely,</p>
-      <p style="margin:0;color:#000;font-size:16px;font-weight:bold;">Alexandra Valerio-Mercado</p>
+      <p style="margin:0;color:#000;font-size:16px;font-weight:bold;">Alexandra Valerio Mercado</p>
       <p style="margin:0;color:#222;font-size:14px;">Assistant Program Coordinator</p>
       <p style="margin:0 0 16px;color:#222;font-size:14px;">No Limits Academy Inc.</p>
       <p style="margin:0 0 4px;color:#555;font-size:13px;">
@@ -479,7 +505,7 @@ ${personalText}Please find your 2026 Annual Donation Receipt attached to this em
 Thank you for your generous support. Your contribution helps us use the discipline of boxing to promote personal, professional, and spiritual development within our community.
 
 Sincerely,
-Alexandra Valerio-Mercado
+Alexandra Valerio Mercado
 Assistant Program Coordinator
 No Limits Academy Inc.
 

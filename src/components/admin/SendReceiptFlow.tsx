@@ -150,7 +150,7 @@ const SendReceiptFlow = ({ open, onOpenChange, supporterId, supporterName, onCom
                     Thank you for your generous support. Your contribution helps us use the discipline of boxing to promote personal, professional, and spiritual development within our community.
                   </p>
                   <p className="m-0">Sincerely,</p>
-                  <p className="m-0 font-bold text-black">Alexandra Valerio-Mercado</p>
+                  <p className="m-0 font-bold text-black">Alexandra Valerio Mercado</p>
                   <p className="m-0">Assistant Program Coordinator</p>
                   <p className="m-0">No Limits Academy Inc.</p>
                 </div>
