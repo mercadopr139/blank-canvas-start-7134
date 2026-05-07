@@ -187,15 +187,18 @@ const AdminRevenue = () => {
     setModalOpen(true);
   };
 
-  /** Find or create a supporter by name, with full details */
-  const findOrCreateSupporter = async (name: string, details: typeof emptySupporterDetails): Promise<string | null> => {
-    const insertData: Record<string, any> = {
+  /** Find or create a supporter by name, with full details. */
+  const findOrCreateSupporter = async (
+    name: string,
+    details: typeof emptySupporterDetails,
+    revenueType: string
+  ): Promise<string | null> => {
+    const baseFields: Record<string, any> = {
       name,
       email: details.email || null,
       phone: details.phone || null,
       address: details.address || null,
       supporter_category: details.supporter_category || null,
-      primary_revenue_stream: details.primary_revenue_stream || null,
       relationship_owner: details.relationship_owner || null,
       story: details.story || null
     };
@@ -206,13 +209,15 @@ const AdminRevenue = () => {
     eq("name", name).
     maybeSingle();
     if (existing) {
-      await supabase.from("supporters").update(insertData as any).eq("id", existing.id);
+      // Preserve any existing primary_revenue_stream — don't clobber the curatorial choice
+      await supabase.from("supporters").update(baseFields as any).eq("id", existing.id);
       return existing.id;
     }
 
+    // New supporter: seed primary_revenue_stream from the first revenue entry's type
     const { data: created, error } = await supabase.
     from("supporters").
-    insert(insertData as any).
+    insert({ ...baseFields, primary_revenue_stream: revenueType || null } as any).
     select("id").
     single();
     if (error) return null;
@@ -245,7 +250,7 @@ const AdminRevenue = () => {
     let supporterId = form.supporter_id || null;
     if (!supporterId && (supporterSearch.trim() || isNewSupporter)) {
       const name = supporterDetails.name || supporterSearch.trim();
-      supporterId = await findOrCreateSupporter(name, supporterDetails);
+      supporterId = await findOrCreateSupporter(name, supporterDetails, form.revenue_type);
       if (supporterId) {
         setForm((f) => ({ ...f, supporter_id: supporterId! }));
       }
