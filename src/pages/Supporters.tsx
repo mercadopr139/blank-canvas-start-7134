@@ -7,7 +7,7 @@ import supporterCheck2 from "@/assets/supporters/supporter-check-2.jpeg";
 import supporterCheck3 from "@/assets/supporters/supporter-check-3.png";
 import supporterCheck4 from "@/assets/supporters/supporter-check-4.png";
 import supporterCheck5 from "@/assets/supporters/supporter-check-5.jpg";
-import supporterCheck6 from "@/assets/supporters/supporter-check-6.png";
+import supporterCheck6 from "@/assets/supporters/supporter-check-6.jpg";
 import venmoLogo from "@/assets/venmo-logo.png";
 import squareLogo from "@/assets/square-logo.png";
 const supporterImages = [{
