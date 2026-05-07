@@ -28,6 +28,13 @@ import {
 // ─── Constants ────────────────────────────────────────────────────────────────
 
 const REVENUE_TYPES = ["Donation", "Sponsorship", "Fee for Service", "Re-Grant"] as const;
+
+const REVENUE_TYPE_TO_ROLE: Record<string, string> = {
+  "Donation": "Donor",
+  "Sponsorship": "Sponsor",
+  "Fee for Service": "Partner",
+  "Re-Grant": "Partner",
+};
 const PAYMENT_METHODS = ["Check", "Wire", "Cash", "PayPal", "Venmo", "Square", "Cashier Check", "Other"] as const;
 
 interface RevenueRow {
@@ -214,10 +221,14 @@ const AdminRevenue = () => {
       return existing.id;
     }
 
-    // New supporter: seed primary_revenue_stream from the first revenue entry's type
+    // New supporter: seed primary_revenue_stream + status (Role) from the first revenue entry's type
     const { data: created, error } = await supabase.
     from("supporters").
-    insert({ ...baseFields, primary_revenue_stream: revenueType || null } as any).
+    insert({
+      ...baseFields,
+      primary_revenue_stream: revenueType || null,
+      status: REVENUE_TYPE_TO_ROLE[revenueType] ?? null,
+    } as any).
     select("id").
     single();
     if (error) return null;

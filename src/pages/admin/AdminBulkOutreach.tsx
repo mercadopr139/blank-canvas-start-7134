@@ -37,7 +37,7 @@ const FROM_ADDRESSES = [
   "chrissycasiello@nolimitsboxingacademy.org",
 ];
 
-const STATUSES = ["Active", "Prospect", "Lapsed", "Past"];
+const STATUSES = ["Donor", "Sponsor", "Meal Train", "Partner", "Advocate"];
 const CATEGORIES = ["Individual", "Organization"];
 const REVENUE_STREAMS = ["Donation", "Sponsorship", "Fee for Service", "Re-Grant", "Mixed"];
 
@@ -59,7 +59,7 @@ interface Supporter {
 
 const AdminBulkOutreach = () => {
   // ── Filter state
-  const [statusFilter, setStatusFilter] = useState<string>("Active");
+  const [statusFilter, setStatusFilter] = useState<string>("all");
   const [tagFilters, setTagFilters] = useState<string[]>([]);
   const [categoryFilter, setCategoryFilter] = useState<string>("all");
   const [revenueFilter, setRevenueFilter] = useState<string>("all");
@@ -244,7 +244,7 @@ const AdminBulkOutreach = () => {
           {/* Filters row */}
           <div className="flex flex-wrap items-end gap-3">
             <div className="w-40">
-              <label className="text-xs text-white/50 mb-1 block">Status</label>
+              <label className="text-xs text-white/50 mb-1 block">Supporter Role</label>
               <Select value={statusFilter} onValueChange={setStatusFilter}>
                 <SelectTrigger className="bg-white/5 border-white/20 text-white text-sm">
                   <SelectValue />

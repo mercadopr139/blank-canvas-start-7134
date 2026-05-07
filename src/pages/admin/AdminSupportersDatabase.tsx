@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from "react";
+import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -40,7 +41,7 @@ const FIELD_LABELS: Record<MappableField, string> = {
 
 
 const PRIMARY_REVENUE_STREAMS = ["Donation", "Sponsorship", "Fee for Service", "Re-Grant"] as const;
-const SUPPORTER_STATUSES = ["Donor", "Sponsor", "Meal Train", "Partner", "Advocate", "Volunteer", "Coach"] as const;
+const SUPPORTER_ROLES = ["Donor", "Sponsor", "Meal Train", "Partner", "Advocate"] as const;
 const SUPPORTER_CATEGORIES = ["Individual", "Organization"] as const;
 
 interface SupporterRow {
@@ -133,6 +134,7 @@ function normalizeEmail(raw: string): string | null {
 // ─── Component ────────────────────────────────────────────────────────────────
 
 const AdminSupportersDatabase = () => {
+  const navigate = useNavigate();
   const fileRef = useRef<HTMLInputElement>(null);
 
   // ── Table state ───────────────────────────────────────────────────────────
@@ -266,6 +268,37 @@ const AdminSupportersDatabase = () => {
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
   const [bulkDeleting, setBulkDeleting] = useState(false);
+
+  // ── Support History modal state ────────────────────────────────────────────
+  const [historyFor, setHistoryFor] = useState<{ id: string; name: string } | null>(null);
+  const [historyRows, setHistoryRows] = useState<{ date: string; amount: number; revenue_type: string; payment_method: string | null; reference_id: string | null }[]>([]);
+  const [historyLoading, setHistoryLoading] = useState(false);
+
+  useEffect(() => {
+    if (!historyFor) return;
+    const fetchHistory = async () => {
+      setHistoryLoading(true);
+      const { data } = await supabase
+        .from("revenue")
+        .select("date, amount, revenue_type, payment_method, reference_id")
+        .eq("supporter_id", historyFor.id)
+        .order("date", { ascending: false });
+      setHistoryRows((data ?? []) as typeof historyRows);
+      setHistoryLoading(false);
+    };
+    fetchHistory();
+  }, [historyFor]);
+
+  const fmtUsd = (n: number) => n.toLocaleString("en-US", { style: "currency", currency: "USD", minimumFractionDigits: 2 });
+  const currentYear = new Date().getFullYear();
+  const REVENUE_TYPE_LIST = ["Donation", "Sponsorship", "Fee for Service", "Re-Grant"] as const;
+  const yearTotal = historyRows.filter((r) => r.date?.startsWith(String(currentYear))).reduce((sum, r) => sum + Number(r.amount), 0);
+  const allTimeTotal = historyRows.reduce((sum, r) => sum + Number(r.amount), 0);
+  const byType = REVENUE_TYPE_LIST.reduce<Record<string, number>>((acc, t) => {
+    acc[t] = historyRows.filter((r) => r.revenue_type === t).reduce((sum, r) => sum + Number(r.amount), 0);
+    return acc;
+  }, {});
+  const recent = historyRows.slice(0, 5);
 
   const allSelected = rows.length > 0 && selected.size === rows.length;
   const someSelected = selected.size > 0 && !allSelected;
@@ -486,8 +519,8 @@ const AdminSupportersDatabase = () => {
                 <th className="h-12 px-4 w-8 text-center align-middle font-medium text-white text-xs bg-green-600">HOF</th>
                 <th className="h-12 px-4 text-left align-middle font-medium text-white bg-green-600">Supporter Name</th>
                 <th className="h-12 px-4 text-left align-middle font-medium text-white bg-green-600">Supporter Category</th>
-                <th className="h-12 px-4 text-left align-middle font-medium text-white bg-green-600">Primary Revenue Stream</th>
-                <th className="h-12 px-4 text-left align-middle font-medium text-white bg-green-600">Supporter Status</th>
+                <th className="h-12 px-4 text-left align-middle font-medium text-white bg-green-600">Support History</th>
+                <th className="h-12 px-4 text-left align-middle font-medium text-white bg-green-600">Supporter Role</th>
                 <th className="h-12 px-4 text-left align-middle font-medium text-white bg-green-600">Relationship Owner</th>
                 <th className="h-12 px-4 text-left align-middle font-medium text-white bg-green-600">Primary Contact Email</th>
                 <th className="h-12 px-4 text-left align-middle font-medium text-white bg-green-600">Primary Contact Phone</th>
@@ -578,27 +611,14 @@ const AdminSupportersDatabase = () => {
                   s.supporter_category || "—"
                   }
                     </td>
-                    {/* Primary Revenue Stream — double-click to edit */}
-                    <td
-                  className="p-4 align-middle text-white/70 text-sm cursor-pointer select-none"
-                  onDoubleClick={() => setInlineEdit({ id: s.id, field: "primary_revenue_stream" })}
-                  title="Double-click to edit">
-
-                      {inlineEdit?.id === s.id && inlineEdit.field === "primary_revenue_stream" ?
-                  <select
-                    ref={(el) => {inlineInputRef.current = el;}}
-                    autoFocus
-                    defaultValue={s.primary_revenue_stream ?? ""}
-                    onChange={(e) => saveInlineEdit(s.id, "primary_revenue_stream", e.target.value)}
-                    onKeyDown={(e) => {if (e.key === "Escape") setInlineEdit(null);}}
-                    className="bg-white text-black text-xs rounded px-1.5 py-1 border border-white/20 cursor-pointer">
-
-                          <option value="">—</option>
-                          {PRIMARY_REVENUE_STREAMS.map((r) =>
-                    <option key={r} value={r}>{r}</option>
-                    )}
-                        </select> :
-                  s.primary_revenue_stream || "—"}
+                    {/* Support History — click to open breakdown modal */}
+                    <td className="p-4 align-middle text-sm">
+                      <button
+                        type="button"
+                        onClick={() => setHistoryFor({ id: s.id, name: s.name })}
+                        className="text-green-400 hover:text-green-300 underline underline-offset-2 transition-colors">
+                        View Support History
+                      </button>
                     </td>
                     {/* Status — double-click to edit (multi-select) */}
                     <td
@@ -611,7 +631,7 @@ const AdminSupportersDatabase = () => {
                     const currentVals = (s.status ?? "").split(",").map((v) => v.trim()).filter(Boolean);
                     return (
                       <div className="bg-white text-black text-xs rounded px-2 py-1.5 border border-white/20 space-y-1 min-w-[140px]">
-                              {SUPPORTER_STATUSES.map((st) =>
+                              {SUPPORTER_ROLES.map((st) =>
                         <label key={st} className="flex items-center gap-1.5 cursor-pointer hover:bg-gray-100 rounded px-1">
                                   <input
                             type="checkbox"
@@ -864,9 +884,9 @@ const AdminSupportersDatabase = () => {
                   </Select>
                 </div>
                 <div className="space-y-1.5">
-                  <Label className="text-white/70">Supporter ID</Label>
+                  <Label className="text-white/70">Supporter Role</Label>
                   <div className="grid grid-cols-2 gap-2 bg-white/5 border border-white/10 rounded-md p-3">
-                    {SUPPORTER_STATUSES.map((st) => {
+                    {SUPPORTER_ROLES.map((st) => {
                     const vals = (editRow.status ?? "").split(",").map((v) => v.trim()).filter(Boolean);
                     const checked = vals.includes(st);
                     return (
@@ -993,9 +1013,9 @@ const AdminSupportersDatabase = () => {
               </Select>
             </div>
             <div className="space-y-1.5">
-              <Label className="text-white/70">Supporter ID</Label>
+              <Label className="text-white/70">Supporter Role</Label>
               <div className="grid grid-cols-2 gap-2 bg-white/5 border border-white/10 rounded-md p-3">
-                {SUPPORTER_STATUSES.map((st) => {
+                {SUPPORTER_ROLES.map((st) => {
                   const vals = (newSupporter.status ?? "").split(",").map((v) => v.trim()).filter(Boolean);
                   const checked = vals.includes(st);
                   return (
@@ -1080,6 +1100,83 @@ const AdminSupportersDatabase = () => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* ── Support History Modal ─────────────────────────────────────────────── */}
+      <Dialog open={!!historyFor} onOpenChange={(o) => { if (!o) setHistoryFor(null); }}>
+        <DialogContent className="bg-zinc-900 border-white/10 text-white sm:max-w-2xl max-h-[85vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="text-green-400">
+              Support History — {historyFor?.name}
+            </DialogTitle>
+          </DialogHeader>
+
+          {historyLoading ? (
+            <p className="text-white/50 text-sm py-8 text-center">Loading…</p>
+          ) : historyRows.length === 0 ? (
+            <p className="text-white/50 text-sm py-8 text-center">No revenue entries yet.</p>
+          ) : (
+            <div className="space-y-5 mt-2">
+              {/* Headline totals */}
+              <div className="grid grid-cols-2 gap-3">
+                <div className="rounded-lg border border-white/10 bg-white/5 p-4">
+                  <p className="text-xs text-white/50 mb-1">{currentYear}</p>
+                  <p className="text-2xl font-bold text-white">{fmtUsd(yearTotal)}</p>
+                </div>
+                <div className="rounded-lg border border-white/10 bg-white/5 p-4">
+                  <p className="text-xs text-white/50 mb-1">All-Time</p>
+                  <p className="text-2xl font-bold text-green-400">{fmtUsd(allTimeTotal)}</p>
+                </div>
+              </div>
+
+              {/* Breakdown by type */}
+              <div className="rounded-lg border border-white/10 overflow-hidden">
+                <div className="bg-white/5 px-4 py-2 text-xs font-semibold text-white/70 uppercase tracking-wider">
+                  Breakdown by Type (All-Time)
+                </div>
+                <div className="divide-y divide-white/10">
+                  {REVENUE_TYPE_LIST.map((t) => (
+                    <div key={t} className="flex justify-between items-center px-4 py-2 text-sm">
+                      <span className="text-white/80">{t}</span>
+                      <span className="text-white font-medium">{fmtUsd(byType[t] ?? 0)}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Recent transactions */}
+              <div className="rounded-lg border border-white/10 overflow-hidden">
+                <div className="bg-white/5 px-4 py-2 text-xs font-semibold text-white/70 uppercase tracking-wider">
+                  Recent Transactions {historyRows.length > 5 ? `(latest 5 of ${historyRows.length})` : `(${historyRows.length})`}
+                </div>
+                <div className="divide-y divide-white/10 text-sm">
+                  {recent.map((r, i) => (
+                    <div key={i} className="grid grid-cols-[100px_1fr_auto_100px] gap-3 items-center px-4 py-2">
+                      <span className="text-white/70">{r.date}</span>
+                      <span className="text-white/80">{r.revenue_type}</span>
+                      <span className="text-green-400 font-medium">{fmtUsd(Number(r.amount))}</span>
+                      <span className="text-white/50 text-xs font-mono text-right">{r.reference_id ?? "—"}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="flex justify-end pt-2">
+                <Button
+                  variant="ghost"
+                  className="text-green-400 hover:text-green-300 hover:bg-green-500/10"
+                  onClick={() => {
+                    if (historyFor) {
+                      navigate(`/admin/sales-marketing/supporters/${historyFor.id}`);
+                      setHistoryFor(null);
+                    }
+                  }}>
+                  View full history →
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
 
       {/* ── Import Modal ──────────────────────────────────────────────────────── */}
       <Dialog open={importOpen} onOpenChange={(o) => {if (!o) resetImport();setImportOpen(o);}}>
