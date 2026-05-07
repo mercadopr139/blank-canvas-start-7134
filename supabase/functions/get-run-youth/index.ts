@@ -25,7 +25,12 @@ Deno.serve(async (req) => {
 
     let query = supabase.from("youth_profiles").select("*").eq("status", "active");
 
-    if (route_name !== "Both") {
+    // Single-zone routes filter to that zone's youth. Every other route
+    // (Both, Overflow, Both - Woodbine, Both - Wildwood, plus any future
+    // multi-zone variant) returns the full active roster so the driver
+    // can record attendance for any youth they pick up.
+    const isSingleZone = route_name === "Woodbine" || route_name === "Wildwood";
+    if (isSingleZone) {
       query = query.eq("pickup_zone", route_name);
     }
 

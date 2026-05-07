@@ -52,7 +52,11 @@ export default function TransportRun() {
   const [backConfirmOpen, setBackConfirmOpen] = useState(false);
   const [cancellingRun, setCancellingRun] = useState(false);
 
-  const isBothZones = routeName === "Both";
+  // Show zone tabs for any Both variant — the legacy "Both" route plus
+  // the zone-aware "Both - Woodbine" / "Both - Wildwood" routes that
+  // record which zone the driver was based in. Overflow runs don't get
+  // tabs (drivers find youth by search/scroll).
+  const isBothZones = routeName === "Both" || routeName.startsWith("Both -");
 
   useEffect(() => {
     const runSession = sessionStorage.getItem("transport_run");
@@ -68,6 +72,11 @@ export default function TransportRun() {
     setRunType(run.run_type);
     setDriverId(driver.id);
     setDriverName(driver.name);
+
+    // For zone-aware Both variants, default the active tab to the zone
+    // the driver picked on the trip-details screen so they don't have
+    // to flip the tab after launching the run.
+    if (run.route_name === "Both - Wildwood") setActiveZoneTab("Wildwood");
 
     loadYouth(run.route_name);
     loadStarred();
