@@ -50,7 +50,23 @@ const SendReceiptFlow = ({ open, onOpenChange, supporterId, supporterName, onCom
       });
 
       if (res.error) {
-        toast({ title: "Error", description: res.error.message, variant: "destructive" });
+        // supabase.functions.invoke() wraps non-2xx into res.error and hides the body.
+        // Read the body from the underlying Response so the toast shows the real reason.
+        let detail = res.error.message;
+        const ctx = (res.error as any)?.context;
+        if (ctx && typeof ctx.text === "function") {
+          try {
+            const text = await ctx.text();
+            try {
+              const parsed = JSON.parse(text);
+              if (parsed?.error) detail = parsed.error;
+              else if (text) detail = text;
+            } catch {
+              if (text) detail = text;
+            }
+          } catch {}
+        }
+        toast({ title: "Error", description: detail, variant: "destructive", duration: 10000 });
       } else if (res.data?.error) {
         toast({
           title: res.data.can_download ? "Sending failed" : "Error",
