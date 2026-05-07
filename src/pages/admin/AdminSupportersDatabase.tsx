@@ -617,7 +617,7 @@ const AdminSupportersDatabase = () => {
                         type="button"
                         onClick={() => setHistoryFor({ id: s.id, name: s.name })}
                         className="text-green-400 hover:text-green-300 underline underline-offset-2 transition-colors">
-                        View Support History
+                        Support History
                       </button>
                     </td>
                     {/* Status — double-click to edit (multi-select) */}
