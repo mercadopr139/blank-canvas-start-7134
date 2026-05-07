@@ -31,46 +31,26 @@ const MONTHS = [
   "July", "August", "September", "October", "November", "December",
 ];
 
-const REVENUE_TYPES = ["All", "Donation", "Fundraising", "Fee for Service", "Re-Grant"];
-const PAYMENT_METHODS = ["All", "Cash", "Check", "Venmo", "PayPal", "Square", "Other"];
+const REVENUE_TYPES = ["All", "Donation", "Sponsorship", "Fee for Service", "Re-Grant"];
+const PAYMENT_METHODS = ["All", "Cash", "Check", "Zelle", "Stripe", "ACH", "In-Kind"];
 
-type DrillCategory = "Donations" | "Fundraising" | "Fee for Service" | "Re-Grants";
+type DrillCategory = "Donations" | "Sponsorship" | "Fee for Service" | "Re-Grants";
 
 interface RevenueRow {
   id: string;
+  supporter_id: string | null;
   amount: number;
-  deposit_date: string | null;
+  date: string | null;
   revenue_type: string;
-  method: string;
-  donor_name: string | null;
-  source_name: string | null;
-  vendor_name: string | null;
-  partner_name: string | null;
-  event_name: string | null;
-  revenue_description: string | null;
+  payment_method: string | null;
   reference_id: string | null;
+  supporter_name?: string | null;
 }
-
-/** Resolve a human-readable "name" for modal display by category */
-const resolveName = (r: RevenueRow, category: DrillCategory): string => {
-  switch (category) {
-    case "Donations":
-      return r.donor_name || r.source_name || "—";
-    case "Fundraising":
-      return r.source_name || r.event_name || r.donor_name || "—";
-    case "Fee for Service":
-      return r.vendor_name || r.source_name || r.donor_name || "—";
-    case "Re-Grants":
-      return r.partner_name || r.source_name || r.donor_name || "—";
-    default:
-      return "—";
-  }
-};
 
 const revenueTypeForCategory = (cat: DrillCategory): string => {
   switch (cat) {
     case "Donations": return "Donation";
-    case "Fundraising": return "Fundraising";
+    case "Sponsorship": return "Sponsorship";
     case "Fee for Service": return "Fee for Service";
     case "Re-Grants": return "Re-Grant";
   }
@@ -96,9 +76,28 @@ const AdminMasterRevenueTracker = () => {
     const fetchRevenue = async () => {
       setLoading(true);
       const { data } = await supabase
-        .from("donations")
-        .select("id, amount, deposit_date, revenue_type, method, donor_name, source_name, vendor_name, partner_name, event_name, revenue_description, reference_id");
-      setRows((data as RevenueRow[]) ?? []);
+        .from("revenue")
+        .select("id, supporter_id, amount, date, revenue_type, payment_method, reference_id");
+
+      const rawRows = (data as RevenueRow[]) ?? [];
+
+      // Resolve supporter names so the drill-down can show a human name
+      const supporterIds = [...new Set(rawRows.map((r) => r.supporter_id).filter(Boolean))] as string[];
+      const nameMap: Record<string, string> = {};
+      if (supporterIds.length > 0) {
+        const { data: sData } = await supabase
+          .from("supporters")
+          .select("id, name")
+          .in("id", supporterIds);
+        (sData ?? []).forEach((s: { id: string; name: string | null }) => {
+          if (s.name) nameMap[s.id] = s.name;
+        });
+      }
+
+      setRows(rawRows.map((r) => ({
+        ...r,
+        supporter_name: r.supporter_id ? nameMap[r.supporter_id] ?? null : null,
+      })));
       setLoading(false);
     };
     fetchRevenue();
@@ -106,11 +105,11 @@ const AdminMasterRevenueTracker = () => {
 
   const filtered = useMemo(() => {
     return rows.filter((r) => {
-      if (!r.deposit_date) return false;
-      const rYear = r.deposit_date.substring(0, 4);
+      if (!r.date) return false;
+      const rYear = r.date.substring(0, 4);
       if (rYear !== year) return false;
       if (typeFilter !== "All" && r.revenue_type !== typeFilter) return false;
-      if (methodFilter !== "All" && r.method !== methodFilter) return false;
+      if (methodFilter !== "All" && r.payment_method !== methodFilter) return false;
       return true;
     });
   }, [rows, year, typeFilter, methodFilter]);
@@ -119,18 +118,18 @@ const AdminMasterRevenueTracker = () => {
     const buckets = Array.from({ length: 12 }, () => ({
       total: 0,
       donation: 0,
-      fundraising: 0,
+      sponsorship: 0,
       feeForService: 0,
       reGrant: 0,
     }));
 
     filtered.forEach((r) => {
-      const monthIdx = parseInt(r.deposit_date!.substring(5, 7), 10) - 1;
+      const monthIdx = parseInt(r.date!.substring(5, 7), 10) - 1;
       if (monthIdx < 0 || monthIdx > 11) return;
       buckets[monthIdx].total += r.amount;
       switch (r.revenue_type) {
         case "Donation": buckets[monthIdx].donation += r.amount; break;
-        case "Fundraising": buckets[monthIdx].fundraising += r.amount; break;
+        case "Sponsorship": buckets[monthIdx].sponsorship += r.amount; break;
         case "Fee for Service": buckets[monthIdx].feeForService += r.amount; break;
         case "Re-Grant": buckets[monthIdx].reGrant += r.amount; break;
       }
@@ -156,7 +155,7 @@ const AdminMasterRevenueTracker = () => {
     if (String(currentYear) !== year) return monthlyData[11]?.cumulative ?? 0;
     let sum = 0;
     filtered.forEach((r) => {
-      const d = r.deposit_date!;
+      const d = r.date!;
       const m = parseInt(d.substring(5, 7), 10) - 1;
       const day = parseInt(d.substring(8, 10), 10);
       if (m < currentMonthIdx || (m === currentMonthIdx && day <= currentDay)) {
@@ -170,7 +169,7 @@ const AdminMasterRevenueTracker = () => {
     const years = new Set<string>();
     years.add(String(currentYear));
     rows.forEach((r) => {
-      if (r.deposit_date) years.add(r.deposit_date.substring(0, 4));
+      if (r.date) years.add(r.date.substring(0, 4));
     });
     return Array.from(years).sort().reverse();
   }, [rows, currentYear]);
@@ -182,11 +181,11 @@ const AdminMasterRevenueTracker = () => {
     const revType = revenueTypeForCategory(drillCategory);
     return filtered
       .filter((r) => {
-        if (!r.deposit_date) return false;
-        const m = parseInt(r.deposit_date.substring(5, 7), 10) - 1;
+        if (!r.date) return false;
+        const m = parseInt(r.date.substring(5, 7), 10) - 1;
         return m === monthIdx && r.revenue_type === revType;
       })
-      .sort((a, b) => (b.deposit_date ?? "").localeCompare(a.deposit_date ?? ""));
+      .sort((a, b) => (b.date ?? "").localeCompare(a.date ?? ""));
   }, [filtered, drillMonth, drillCategory]);
 
   const drillTotal = useMemo(
@@ -287,7 +286,7 @@ const AdminMasterRevenueTracker = () => {
                 <TableHead className="text-white bg-green-600">Month</TableHead>
                 <TableHead className="text-white bg-green-600 text-right font-semibold">Total Revenue</TableHead>
                 <TableHead className="text-white bg-green-600 text-right">Donations</TableHead>
-                <TableHead className="text-white bg-green-600 text-right">Fundraising</TableHead>
+                <TableHead className="text-white bg-green-600 text-right">Sponsorship</TableHead>
                 <TableHead className="text-white bg-green-600 text-right">Fee for Service</TableHead>
                 <TableHead className="text-white bg-green-600 text-right">Re-Grants</TableHead>
                 <TableHead className="text-white bg-green-600 text-right">Cumulative YTD</TableHead>
@@ -306,7 +305,7 @@ const AdminMasterRevenueTracker = () => {
                     <TableCell className="text-white font-medium">{row.month}</TableCell>
                     <TableCell className="text-green-400 text-right font-bold bg-green-500/10">{formatUSD(row.total)}</TableCell>
                     <CategoryCell value={row.donation} month={row.month} category="Donations" />
-                    <CategoryCell value={row.fundraising} month={row.month} category="Fundraising" />
+                    <CategoryCell value={row.sponsorship} month={row.month} category="Sponsorship" />
                     <CategoryCell value={row.feeForService} month={row.month} category="Fee for Service" />
                     <CategoryCell value={row.reGrant} month={row.month} category="Re-Grants" />
                     <TableCell className="text-white text-right font-semibold">{formatUSD(row.cumulative)}</TableCell>
@@ -345,15 +344,15 @@ const AdminMasterRevenueTracker = () => {
                   {drillTransactions.map((r) => (
                     <TableRow key={r.id} className="border-white/10 hover:bg-white/5">
                       <TableCell className="text-white/80 text-sm">
-                        {r.deposit_date ?? "—"}
+                        {r.date ?? "—"}
                       </TableCell>
                       <TableCell className="text-white text-sm font-medium">
-                        {resolveName(r, drillCategory)}
+                        {r.supporter_name ?? "—"}
                       </TableCell>
                       <TableCell className="text-white text-right text-sm font-semibold">
                         {formatUSD(r.amount)}
                       </TableCell>
-                      <TableCell className="text-white/70 text-sm">{r.method}</TableCell>
+                      <TableCell className="text-white/70 text-sm">{r.payment_method ?? "—"}</TableCell>
                       <TableCell className="text-white/50 text-sm font-mono">
                         {r.reference_id ?? "—"}
                       </TableCell>
