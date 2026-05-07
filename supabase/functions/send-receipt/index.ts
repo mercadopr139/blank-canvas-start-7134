@@ -444,7 +444,9 @@ Deno.serve(async (req) => {
   <tr>
     <td style="padding:0 40px 32px;">
       <p style="margin:0 0 4px;color:#222;font-size:15px;">Sincerely,</p>
-      <p style="margin:0 0 16px;color:#000;font-size:16px;font-weight:bold;">No Limits Academy Inc.</p>
+      <p style="margin:0;color:#000;font-size:16px;font-weight:bold;">Alexandra Valerio-Mercado</p>
+      <p style="margin:0;color:#222;font-size:14px;">Assistant Program Coordinator</p>
+      <p style="margin:0 0 16px;color:#222;font-size:14px;">No Limits Academy Inc.</p>
       <p style="margin:0 0 4px;color:#555;font-size:13px;">
         <a href="https://www.nolimitsboxingacademy.org" style="color:#1a73e8;text-decoration:none;font-weight:bold;">www.nolimitsboxingacademy.org</a>
       </p>
@@ -482,6 +484,8 @@ ${personalText}Please find your 2026 Annual Donation Receipt attached to this em
 Thank you for your generous support. Your contribution helps us use the discipline of boxing to promote personal, professional, and spiritual development within our community.
 
 Sincerely,
+Alexandra Valerio-Mercado
+Assistant Program Coordinator
 No Limits Academy Inc.
 
 www.nolimitsboxingacademy.org

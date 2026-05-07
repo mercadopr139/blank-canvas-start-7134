@@ -83,7 +83,7 @@ const SendReceiptFlow = ({ open, onOpenChange, supporterId, supporterName, onCom
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="bg-black border-white/20 text-white max-w-md">
+      <DialogContent className="bg-black border-white/20 text-white max-w-2xl max-h-[90vh] overflow-y-auto">
         {step === "confirm" ? (
           <>
             <DialogHeader>
@@ -117,6 +117,32 @@ const SendReceiptFlow = ({ open, onOpenChange, supporterId, supporterName, onCom
                   className="bg-white/5 border-white/20 text-white placeholder:text-white/30"
                 />
               </div>
+
+              <div className="space-y-2">
+                <Label className="text-white/70">Email preview</Label>
+                <div className="bg-white text-neutral-900 rounded-md p-5 text-[14px] leading-relaxed font-serif border border-white/10">
+                  <p className="m-0 mb-4">Dear {supporterName || "Supporter"},</p>
+                  {personalMessage.trim() ? (
+                    <p className="m-0 mb-5 whitespace-pre-wrap">{personalMessage.trim()}</p>
+                  ) : (
+                    <p className="m-0 mb-5 italic text-neutral-400">[Your personal message will appear here]</p>
+                  )}
+                  <p className="m-0 mb-4">
+                    Please find your <strong>2026 Annual Donation Receipt</strong> attached to this email for your records.
+                  </p>
+                  <p className="m-0 mb-6">
+                    Thank you for your generous support. Your contribution helps us use the discipline of boxing to promote personal, professional, and spiritual development within our community.
+                  </p>
+                  <p className="m-0">Sincerely,</p>
+                  <p className="m-0 font-bold text-black">Alexandra Valerio-Mercado</p>
+                  <p className="m-0">Assistant Program Coordinator</p>
+                  <p className="m-0">No Limits Academy Inc.</p>
+                </div>
+                <p className="text-white/40 text-xs">
+                  Preview only — recipient name uses the donor name from the donation record when available.
+                </p>
+              </div>
+
               <Button
                 className="w-full bg-white text-black hover:bg-white/90"
                 onClick={handleSend}
