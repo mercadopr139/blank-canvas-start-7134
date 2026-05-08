@@ -12,11 +12,16 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Mail, Send, AlertCircle, Eye } from "lucide-react";
+import {
+  renderInvoiceEmailHtml,
+  buildInvoiceEmailSubject,
+  type InvoiceEmailMode,
+} from "@/lib/invoiceEmailTemplate";
 
 interface SendInvoiceModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onSend: (note: string, recipientEmail: string) => void;
+  onSend: (note: string, recipientEmail: string, html: string, subject: string) => void;
   clientName: string;
   billingEmail: string;
   invoiceNumber: string;
@@ -26,59 +31,10 @@ interface SendInvoiceModalProps {
   existingNote?: string | null;
   isSending: boolean;
   /** "initial" or "resend" */
-  mode?: "initial" | "resend";
+  mode?: InvoiceEmailMode;
 }
 
 const MAX_NOTE_LENGTH = 1000;
-
-const LOGO_URL = "https://rkdkmzjontaufbyjbcku.supabase.co/storage/v1/object/public/email-assets/nla-logo.png";
-
-function buildPreviewHtml({
-  mode,
-  invoiceNumber,
-  periodLabel,
-  total,
-  note,
-}: {
-  mode: "initial" | "resend";
-  invoiceNumber: string;
-  periodLabel: string;
-  total: string;
-  note?: string;
-}): string {
-  const titleLine = mode === "resend"
-    ? `Reminder: Invoice ${invoiceNumber}`
-    : `Invoice ${invoiceNumber}`;
-
-  const trimmedNote = note?.trim();
-  const noteHtml = trimmedNote
-    ? `<div style="background-color: #eff6ff; border-left: 4px solid #3b82f6; border-radius: 6px; padding: 16px 18px; margin-bottom: 24px;">
-        <p style="margin: 0; font-size: 14px; line-height: 1.6; color: #1e3a5f; white-space: pre-wrap;">${trimmedNote.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")}</p>
-      </div>`
-    : "";
-
-  return `<div style="background-color: #f3f4f6; padding: 24px 12px; font-family: Arial, Helvetica, sans-serif;">
-  <div style="max-width: 600px; margin: 0 auto; background: #fff; border-radius: 12px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
-    <div style="padding: 28px 28px 18px; border-bottom: 2px solid #e5e7eb; text-align: center;">
-      <img src="${LOGO_URL}" alt="No Limits Academy" style="max-height: 48px;" />
-      <p style="margin: 10px 0 0; font-size: 16px; font-weight: 700; color: #111827;">No Limits Academy</p>
-    </div>
-    <div style="padding: 28px;">
-      <h1 style="margin: 0 0 20px; font-size: 22px; font-weight: 700; color: #111827;">${titleLine}</h1>
-      ${noteHtml}
-      <div style="background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 10px; padding: 22px; text-align: center; margin-bottom: 20px;">
-        <p style="margin: 0 0 4px; font-size: 13px; color: #6b7280; text-transform: uppercase; letter-spacing: 1px;">Amount Due</p>
-        <p style="margin: 0 0 12px; font-size: 30px; font-weight: 800; color: #111827;">${total}</p>
-        <p style="margin: 0; font-size: 13px; color: #6b7280;">Payment Terms: Due within 30 days of invoice date</p>
-      </div>
-      <p style="margin: 0; font-size: 15px; line-height: 1.6; color: #374151;">Please find attached your invoice for services rendered during <strong>${periodLabel}</strong>.</p>
-    </div>
-    <div style="padding: 18px 28px; border-top: 1px solid #e5e7eb; background: #fafafa;">
-      <p style="margin: 0; font-size: 13px; color: #9ca3af;">If you have questions, reply to this email.</p>
-    </div>
-  </div>
-</div>`;
-}
 
 export default function SendInvoiceModal({
   open,
@@ -110,16 +66,23 @@ export default function SendInvoiceModal({
     }
   }, [open, existingNote, billingEmail]);
 
-  const handleSend = () => {
-    onSend(note.trim(), toEmail.trim());
-  };
-
-  const remainingChars = MAX_NOTE_LENGTH - note.length;
   const isResend = mode === "resend";
+  const remainingChars = MAX_NOTE_LENGTH - note.length;
 
-  const subject = isResend
-    ? `Friendly Reminder: Invoice ${invoiceNumber} – ${clientName} – ${periodLabel}`
-    : `Invoice ${invoiceNumber} – No Limits Academy`;
+  const subject = buildInvoiceEmailSubject({ mode, invoiceNumber, clientName, periodLabel });
+
+  const previewHtml = renderInvoiceEmailHtml({
+    mode,
+    invoiceNumber,
+    clientName,
+    periodLabel,
+    total: formattedTotal,
+    note,
+  });
+
+  const handleSend = () => {
+    onSend(note.trim(), toEmail.trim(), previewHtml, subject);
+  };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -203,17 +166,7 @@ export default function SendInvoiceModal({
 
           {showPreview && (
             <div className="border rounded-lg overflow-hidden max-h-[400px] overflow-y-auto">
-              <div
-                dangerouslySetInnerHTML={{
-                  __html: buildPreviewHtml({
-                    mode,
-                    invoiceNumber,
-                    periodLabel,
-                    total: formattedTotal,
-                    note,
-                  }),
-                }}
-              />
+              <div dangerouslySetInnerHTML={{ __html: previewHtml }} />
             </div>
           )}
         </div>

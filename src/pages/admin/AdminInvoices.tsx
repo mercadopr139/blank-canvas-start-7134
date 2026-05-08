@@ -488,7 +488,7 @@ export default function AdminInvoices() {
   };
 
   // Resend handler
-  const handleResendInvoice = async (note: string, recipientEmail: string) => {
+  const handleResendInvoice = async (note: string, recipientEmail: string, emailHtml: string, emailSubject: string) => {
     if (!resendInvoice) return;
     const inv = resendInvoice;
     const invoiceTotal = inv.total ? Number(inv.total) : 0;
@@ -514,6 +514,8 @@ export default function AdminInvoices() {
           isResend: true,
           resendTo: recipientEmail,
           emailNote: note || null,
+          emailHtml,
+          emailSubject,
         },
       });
 
