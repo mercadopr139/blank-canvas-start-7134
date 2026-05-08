@@ -95,8 +95,8 @@ function renderInvoiceEmailHtml({
             <td style="padding: 24px 32px; border-bottom: 1px solid #e5e7eb;">
               <table cellpadding="0" cellspacing="0" border="0">
                 <tr>
-                  <td style="vertical-align: middle; padding-right: 14px;">
-                    <img src="${LOGO_URL}" alt="" style="height: 44px; width: auto; display: block;" />
+                  <td style="vertical-align: middle; padding-right: 14px;" width="56">
+                    <img src="${LOGO_URL}" alt="" width="48" style="display: block; width: 48px; height: auto; max-width: 48px; border: 0; outline: none; -ms-interpolation-mode: bicubic;" />
                   </td>
                   <td style="vertical-align: middle;">
                     <p style="margin: 0; font-family: Georgia, 'Times New Roman', serif; font-size: 18px; font-weight: 700; color: #111827; letter-spacing: 0.3px;">No Limits Academy</p>
