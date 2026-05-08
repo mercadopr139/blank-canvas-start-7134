@@ -462,7 +462,7 @@ const AdminRevenue = () => {
                                 setReceiptSupporterName(r.supporter_name || "");
                                 setReceiptOpen(true);
                               }}
-                              className="text-[11px] text-green-400 hover:text-green-300 hover:underline transition-colors"
+                              className="text-[11px] text-yellow-400 hover:text-yellow-300 hover:underline transition-colors"
                               title={r.receipt_2026_status === "Sent" ? "Resend receipt to supporter" : "Send receipt to supporter"}
                             >
                               {r.receipt_2026_status === "Sent" ? "Resend" : "Send"}
