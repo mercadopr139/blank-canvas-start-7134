@@ -39,6 +39,13 @@ interface ServiceGroup {
   items: LineItem[];
   subtotal: number;
 }
+
+// Variant=outline buttons sit on this component's white card surface.
+// The default hover (bg-accent / text-accent-foreground) resolves to
+// near-white on near-white in the active theme, blanking out labels.
+// Pin both rest and hover to fixed neutrals so labels stay readable.
+const OUTLINE_ON_LIGHT = "bg-white text-neutral-900 border-neutral-300 hover:!bg-neutral-100 hover:!text-neutral-900";
+
 interface InvoicePreviewProps {
   client: Client;
   serviceLogs: ServiceLog[];
@@ -680,7 +687,7 @@ No Limits Academy`,
               <p className="text-sm font-medium">Waiting for approval from Chrissy</p>
               <p className="text-xs text-muted-foreground">Invoice cannot be sent to vendor until approved.</p>
             </div>
-            <Button variant="outline" size="sm" onClick={() => setShowApprovalModal(true)}>
+            <Button variant="outline" size="sm" onClick={() => setShowApprovalModal(true)} className={OUTLINE_ON_LIGHT}>
               View Status
             </Button>
           </div>
@@ -696,7 +703,7 @@ No Limits Academy`,
                 </p>
               )}
             </div>
-            <Button variant="outline" size="sm" onClick={handleSubmitForApproval} disabled={isSubmittingApproval}>
+            <Button variant="outline" size="sm" onClick={handleSubmitForApproval} disabled={isSubmittingApproval} className={OUTLINE_ON_LIGHT}>
               Re-submit for Approval
             </Button>
           </div>
@@ -719,11 +726,11 @@ No Limits Academy`,
         <div className="flex flex-wrap gap-3 justify-between items-center">
           {/* Left side: PDF actions */}
           <div className="flex gap-2">
-            <Button variant="outline" onClick={handleDownloadPdf} disabled={isLoading}>
+            <Button variant="outline" onClick={handleDownloadPdf} disabled={isLoading} className={OUTLINE_ON_LIGHT}>
               <Download className="w-4 h-4 mr-2" />
               Download PDF
             </Button>
-            <Button variant="outline" onClick={handleCopyEmailDraft}>
+            <Button variant="outline" onClick={handleCopyEmailDraft} className={OUTLINE_ON_LIGHT}>
               {copied ? <Check className="w-4 h-4 mr-2" /> : <Copy className="w-4 h-4 mr-2" />}
               {copied ? "Copied!" : "Copy Email Draft"}
             </Button>
@@ -742,7 +749,7 @@ No Limits Academy`,
                 variant="outline"
                 onClick={handleSaveDraftWithPdf}
                 disabled={isLoading || isSavingDraft}
-                className="bg-white text-neutral-900 border-neutral-300 hover:!bg-neutral-100 hover:!text-neutral-900"
+                className={OUTLINE_ON_LIGHT}
               >
                 {isSavingDraft ? "Generating PDF..." : hasPdf ? "Regenerate PDF" : "Generate & Lock PDF"}
               </Button>
@@ -763,7 +770,7 @@ No Limits Academy`,
                   variant="outline"
                   onClick={handleBypassApproval}
                   disabled={isLoading || isBypassingApproval}
-                  className="bg-white text-neutral-900 border-neutral-300 hover:!bg-neutral-100 hover:!text-neutral-900"
+                  className={OUTLINE_ON_LIGHT}
                 >
                   {isBypassingApproval ? "Approving..." : "Bypass Approval"}
                 </Button>
