@@ -754,10 +754,11 @@ No Limits Academy`,
                   <ShieldCheck className="w-4 h-4 mr-2" />
                   {isSubmittingApproval ? "Submitting..." : approvalStatus === "rejected" ? "Re-submit for Approval" : "Submit for Approval"}
                 </Button>
-                <Button 
-                  variant="outline" 
-                  onClick={handleBypassApproval} 
+                <Button
+                  variant="outline"
+                  onClick={handleBypassApproval}
                   disabled={isLoading || isBypassingApproval}
+                  className="hover:bg-neutral-100 hover:text-neutral-900"
                 >
                   {isBypassingApproval ? "Approving..." : "Bypass Approval"}
                 </Button>
