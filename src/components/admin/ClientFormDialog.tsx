@@ -22,6 +22,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
+import { Trash2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import type { Tables } from "@/integrations/supabase/types";
@@ -49,6 +50,8 @@ interface ClientFormDialogProps {
   onOpenChange: (open: boolean) => void;
   client?: Client | null;
   onSuccess: () => void;
+  /** Edit-mode-only: invoked when the user clicks "Delete Partner" at the bottom of the form. */
+  onDelete?: () => void;
 }
 
 const rateTypeOptions = [
@@ -63,6 +66,7 @@ export default function ClientFormDialog({
   onOpenChange,
   client,
   onSuccess,
+  onDelete,
 }: ClientFormDialogProps) {
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
@@ -339,13 +343,29 @@ export default function ClientFormDialog({
             />
           </div>
 
-          <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
-              Cancel
-            </Button>
-            <Button type="submit" disabled={isLoading}>
-              {isLoading ? "Saving..." : client ? "Update Partner" : "Add Partner"}
-            </Button>
+          <DialogFooter className="sm:justify-between gap-2">
+            {client && onDelete ? (
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={onDelete}
+                className="text-destructive hover:text-destructive hover:bg-destructive/10"
+              >
+                <Trash2 className="w-4 h-4 mr-2" />
+                Delete Partner
+              </Button>
+            ) : (
+              <span />
+            )}
+            <div className="flex gap-2">
+              <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+                Cancel
+              </Button>
+              <Button type="submit" disabled={isLoading}>
+                {isLoading ? "Saving..." : client ? "Update Partner" : "Add Partner"}
+              </Button>
+            </div>
           </DialogFooter>
         </form>
       </DialogContent>

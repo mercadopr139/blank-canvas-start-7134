@@ -606,18 +606,15 @@ export default function AdminInvoices() {
                 <Button variant="ghost" size="icon" onClick={() => setShowClientDialog(true)} className="shrink-0 text-white hover:bg-white/10 hover:text-white" title="Add new client">
                   <Plus className="w-4 h-4" />
                 </Button>
-                {selectedClientId && <>
-                    <Button variant="ghost" size="icon" onClick={() => {
-                  const client = clients.find(c => c.id === selectedClientId);
-                  setEditingClient(client || null);
-                  setShowClientDialog(true);
-                }} className="shrink-0 text-white hover:bg-white/10 hover:text-white" title="Edit client">
-                      <Pencil className="w-4 h-4" />
-                    </Button>
-                    <Button variant="ghost" size="icon" onClick={() => setDeleteClientId(selectedClientId)} className="shrink-0 text-destructive hover:text-destructive hover:bg-white/10" title="Delete client">
-                      <Trash2 className="w-4 h-4" />
-                    </Button>
-                  </>}
+                {selectedClientId && (
+                  <Button variant="ghost" size="icon" onClick={() => {
+                    const client = clients.find(c => c.id === selectedClientId);
+                    setEditingClient(client || null);
+                    setShowClientDialog(true);
+                  }} className="shrink-0 text-white hover:bg-white/10 hover:text-white" title="Edit client">
+                    <Pencil className="w-4 h-4" />
+                  </Button>
+                )}
               </div>
             </div>
             <div className="w-40">
@@ -842,10 +839,19 @@ export default function AdminInvoices() {
       )}
 
       {/* Add/Edit Client Modal */}
-      <ClientFormDialog open={showClientDialog} onOpenChange={open => {
-      setShowClientDialog(open);
-      if (!open) setEditingClient(null);
-    }} client={editingClient} onSuccess={fetchClients} />
+      <ClientFormDialog
+        open={showClientDialog}
+        onOpenChange={open => {
+          setShowClientDialog(open);
+          if (!open) setEditingClient(null);
+        }}
+        client={editingClient}
+        onSuccess={fetchClients}
+        onDelete={editingClient ? () => {
+          setDeleteClientId(editingClient.id);
+          setShowClientDialog(false);
+        } : undefined}
+      />
 
       {/* Delete Client Confirmation */}
       <AlertDialog open={!!deleteClientId} onOpenChange={open => !open && setDeleteClientId(null)}>
