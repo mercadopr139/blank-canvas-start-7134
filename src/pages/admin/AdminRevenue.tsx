@@ -447,13 +447,28 @@ const AdminRevenue = () => {
                     <td className="p-4 align-middle text-white/70 text-sm">{r.logged_by || "—"}</td>
                     <td className="p-4 align-middle text-center">
                       {(r.revenue_type === "Donation" || r.revenue_type === "Sponsorship") ? (
-                        <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${
-                          r.receipt_2026_status === "Sent"
-                            ? "bg-green-600/20 text-green-400"
-                            : "bg-yellow-600/20 text-yellow-400"
-                        }`}>
-                          {r.receipt_2026_status === "Sent" ? "Sent" : "Not Sent"}
-                        </span>
+                        <div className="flex flex-col items-center gap-1">
+                          <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${
+                            r.receipt_2026_status === "Sent"
+                              ? "bg-green-600/20 text-green-400"
+                              : "bg-yellow-600/20 text-yellow-400"
+                          }`}>
+                            {r.receipt_2026_status === "Sent" ? "Sent" : "Not Sent"}
+                          </span>
+                          {r.supporter_id && (
+                            <button
+                              onClick={() => {
+                                setReceiptSupporterId(r.supporter_id!);
+                                setReceiptSupporterName(r.supporter_name || "");
+                                setReceiptOpen(true);
+                              }}
+                              className="text-[11px] text-green-400 hover:text-green-300 hover:underline transition-colors"
+                              title={r.receipt_2026_status === "Sent" ? "Resend receipt to supporter" : "Send receipt to supporter"}
+                            >
+                              {r.receipt_2026_status === "Sent" ? "Resend" : "Send"}
+                            </button>
+                          )}
+                        </div>
                       ) : (
                         <span className="text-white/20 text-xs">—</span>
                       )}
