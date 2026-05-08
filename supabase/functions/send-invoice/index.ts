@@ -1,6 +1,13 @@
 import { Resend } from "https://esm.sh/resend@2.0.0";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
 
+// IMPORTANT: the email template below is a synced copy of
+// src/lib/invoiceEmailTemplate.ts in the frontend. If you change one,
+// change the other. The frontend is the source of truth at runtime —
+// when it passes emailHtml/emailSubject, those are used as-is. The
+// inline template here is a fallback for older frontends that don't
+// send those fields yet (e.g. during a Vercel deploy window).
+
 const resend = new Resend(Deno.env.get("RESEND_API_KEY"));
 
 const corsHeaders = {
@@ -19,10 +26,120 @@ interface SendInvoiceRequest {
   total: number;
   pdfBase64: string;
   emailNote?: string | null;
-  emailHtml: string;
-  emailSubject: string;
+  emailHtml?: string;
+  emailSubject?: string;
   isResend?: boolean;
   resendTo?: string;
+}
+
+const LOGO_URL = "https://rkdkmzjontaufbyjbcku.supabase.co/storage/v1/object/public/email-assets/nla-logo.png";
+
+const escapeHtml = (s: string) =>
+  s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+
+function buildInvoiceEmailSubject({
+  mode,
+  invoiceNumber,
+  clientName,
+  periodLabel,
+}: {
+  mode: "initial" | "resend";
+  invoiceNumber: string;
+  clientName: string;
+  periodLabel: string;
+}): string {
+  return mode === "resend"
+    ? `Friendly Reminder: Invoice ${invoiceNumber} – ${clientName} – ${periodLabel}`
+    : `Invoice ${invoiceNumber} – No Limits Academy`;
+}
+
+function renderInvoiceEmailHtml({
+  mode,
+  invoiceNumber,
+  clientName,
+  periodLabel,
+  total,
+  note,
+}: {
+  mode: "initial" | "resend";
+  invoiceNumber: string;
+  clientName: string;
+  periodLabel: string;
+  total: string;
+  note?: string | null;
+}): string {
+  const titleLine = mode === "resend" ? `Reminder: Invoice ${invoiceNumber}` : `Invoice ${invoiceNumber}`;
+
+  const greetingLine = mode === "resend"
+    ? `Hi <strong>${escapeHtml(clientName)}</strong> — a friendly reminder that your <strong>${escapeHtml(periodLabel)}</strong> invoice is still outstanding (attached below).`
+    : `Hi <strong>${escapeHtml(clientName)}</strong> — your <strong>${escapeHtml(periodLabel)}</strong> invoice is attached below.`;
+
+  const trimmedNote = note?.trim();
+  const noteHtml = trimmedNote
+    ? `<p style="margin: 0 0 24px 0; font-family: Georgia, 'Times New Roman', serif; font-size: 16px; line-height: 1.7; color: #374151; white-space: pre-wrap;">${escapeHtml(trimmedNote)}</p>`
+    : "";
+
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>${escapeHtml(titleLine)}</title>
+</head>
+<body style="margin: 0; padding: 0; background-color: #f3f4f6; font-family: Arial, Helvetica, sans-serif; -webkit-text-size-adjust: 100%;">
+  <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color: #f3f4f6; padding: 40px 16px;">
+    <tr>
+      <td align="center">
+        <table width="600" cellpadding="0" cellspacing="0" border="0" style="max-width: 600px; width: 100%; background-color: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.08);">
+          <tr>
+            <td style="padding: 24px 32px; border-bottom: 1px solid #e5e7eb;">
+              <table cellpadding="0" cellspacing="0" border="0">
+                <tr>
+                  <td style="vertical-align: middle; padding-right: 14px;">
+                    <img src="${LOGO_URL}" alt="" style="height: 44px; width: auto; display: block;" />
+                  </td>
+                  <td style="vertical-align: middle;">
+                    <p style="margin: 0; font-family: Georgia, 'Times New Roman', serif; font-size: 18px; font-weight: 700; color: #111827; letter-spacing: 0.3px;">No Limits Academy</p>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding: 32px;">
+              <table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin: 0 0 22px 0;">
+                <tr>
+                  <td style="vertical-align: middle;">
+                    <h1 style="margin: 0; font-family: Georgia, 'Times New Roman', serif; font-size: 22px; font-weight: 700; color: #111827;">${escapeHtml(titleLine)}</h1>
+                  </td>
+                  <td align="right" style="vertical-align: middle;">
+                    <span style="font-family: Arial, Helvetica, sans-serif; font-size: 13px; color: #6b7280;">${escapeHtml(periodLabel)}</span>
+                  </td>
+                </tr>
+              </table>
+              <p style="margin: 0 0 20px 0; font-family: Georgia, 'Times New Roman', serif; font-size: 16px; line-height: 1.7; color: #374151;">${greetingLine}</p>
+              ${noteHtml}
+              <table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin: 0 0 28px 0;">
+                <tr>
+                  <td style="background-color: #f9fafb; border: 1px solid #e5e7eb; border-radius: 10px; padding: 24px; text-align: center;">
+                    <p style="margin: 0 0 6px 0; font-family: Arial, Helvetica, sans-serif; font-size: 11px; color: #6b7280; text-transform: uppercase; letter-spacing: 1.5px; font-weight: 600;">Amount Due</p>
+                    <p style="margin: 0 0 10px 0; font-family: Georgia, 'Times New Roman', serif; font-size: 32px; font-weight: 800; color: #111827;">${escapeHtml(total)}</p>
+                    <p style="margin: 0; font-family: Arial, Helvetica, sans-serif; font-size: 12px; color: #6b7280;">Due within 30 days of invoice date</p>
+                  </td>
+                </tr>
+              </table>
+              <p style="margin: 0 0 12px 0; font-family: Georgia, 'Times New Roman', serif; font-size: 15px; color: #374151;">With Gratitude,</p>
+              <p style="margin: 0 0 2px 0; font-family: Georgia, 'Times New Roman', serif; font-size: 16px; font-weight: 700; color: #111827;">Josh Mercado</p>
+              <p style="margin: 0 0 2px 0; font-family: Arial, Helvetica, sans-serif; font-size: 13px; color: #6b7280;">Program Director, No Limits Academy</p>
+              <p style="margin: 0; font-family: Arial, Helvetica, sans-serif; font-size: 13px; color: #6b7280;">joshmercado@nolimitsboxingacademy.org</p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>`;
 }
 
 const handler = async (req: Request): Promise<Response> => {
@@ -68,12 +185,13 @@ const handler = async (req: Request): Promise<Response> => {
 
     const body: SendInvoiceRequest = await req.json();
     const {
-      invoiceId, invoiceNumber, billingEmail,
-      pdfBase64, emailNote, emailHtml, emailSubject,
+      invoiceId, invoiceNumber, clientName, billingEmail,
+      month, year, total, pdfBase64, emailNote,
+      emailHtml, emailSubject,
       isResend, resendTo,
     } = body;
 
-    if (!invoiceId || !invoiceNumber || !pdfBase64 || !emailHtml || !emailSubject) {
+    if (!invoiceId || !invoiceNumber || !pdfBase64) {
       throw new Error("Missing required fields");
     }
 
@@ -83,11 +201,36 @@ const handler = async (req: Request): Promise<Response> => {
     const sendType = isResend ? "resend" : "initial";
     console.log(`Sending invoice ${invoiceNumber} (${sendType}) to ${recipientEmail}`);
 
+    // Compute period + total locally so we can fall back if the frontend
+    // didn't pass pre-rendered html/subject (older bundle, deploy lag, etc.).
+    const monthName = new Date(year, month - 1).toLocaleString("default", { month: "long" });
+    const periodLabel = `${monthName} ${year}`;
+    const formattedTotal = new Intl.NumberFormat("en-US", {
+      style: "currency",
+      currency: "USD",
+    }).format(total);
+
+    const subject = emailSubject ?? buildInvoiceEmailSubject({
+      mode: sendType,
+      invoiceNumber,
+      clientName,
+      periodLabel,
+    });
+
+    const html = emailHtml ?? renderInvoiceEmailHtml({
+      mode: sendType,
+      invoiceNumber,
+      clientName,
+      periodLabel,
+      total: formattedTotal,
+      note: emailNote,
+    });
+
     const emailResponse = await resend.emails.send({
       from: "No Limits Academy <joshmercado@nolimitsboxingacademy.org>",
       to: [recipientEmail],
-      subject: emailSubject,
-      html: emailHtml,
+      subject,
+      html,
       attachments: [
         {
           filename: `NLA_Invoice_${invoiceNumber}.pdf`,
@@ -102,7 +245,7 @@ const handler = async (req: Request): Promise<Response> => {
       await supabase.from("invoice_sends").insert({
         invoice_id: invoiceId,
         sent_to: recipientEmail,
-        subject: emailSubject,
+        subject,
         message: emailNote || null,
         sent_by_user_id: user.id,
         type: sendType,
@@ -115,18 +258,16 @@ const handler = async (req: Request): Promise<Response> => {
 
     console.log("Email sent successfully, ID:", emailResponse.data?.id);
 
-    // Log successful send
     await supabase.from("invoice_sends").insert({
       invoice_id: invoiceId,
       sent_to: recipientEmail,
-      subject: emailSubject,
+      subject,
       message: emailNote || null,
       sent_by_user_id: user.id,
       type: sendType,
       status: "success",
     });
 
-    // Update invoice tracking
     const updateFields: Record<string, any> = {
       last_sent_at: new Date().toISOString(),
       vendor_email: recipientEmail,
@@ -169,7 +310,7 @@ const handler = async (req: Request): Promise<Response> => {
   } catch (error: any) {
     console.error("Error in send-invoice function:", error);
     return new Response(
-      JSON.stringify({ error: "Failed to send invoice. Please try again." }),
+      JSON.stringify({ error: error?.message || "Failed to send invoice. Please try again." }),
       {
         status: 500,
         headers: { "Content-Type": "application/json", ...corsHeaders },
