@@ -11,7 +11,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Mail, Send, AlertCircle, Eye } from "lucide-react";
+import { Mail, Send, AlertCircle } from "lucide-react";
 import {
   renderInvoiceEmailHtml,
   buildInvoiceEmailSubject,
@@ -52,7 +52,6 @@ export default function SendInvoiceModal({
 }: SendInvoiceModalProps) {
   const [note, setNote] = useState("");
   const [toEmail, setToEmail] = useState("");
-  const [showPreview, setShowPreview] = useState(false);
 
   const monthName = new Date(year, month - 1).toLocaleString("default", { month: "long" });
   const periodLabel = `${monthName} ${year}`;
@@ -62,7 +61,6 @@ export default function SendInvoiceModal({
     if (open) {
       setNote(existingNote || "");
       setToEmail(billingEmail);
-      setShowPreview(false);
     }
   }, [open, existingNote, billingEmail]);
 
@@ -135,7 +133,7 @@ export default function SendInvoiceModal({
                 {note.length > 0 && (
                   <span className="flex items-center gap-1">
                     <AlertCircle className="w-3 h-3" />
-                    This note will appear in a highlighted box in the email.
+                    This note will appear inline in the email body.
                   </span>
                 )}
               </span>
@@ -145,30 +143,23 @@ export default function SendInvoiceModal({
             </div>
           </div>
 
+          {/* Live email preview — mirrors the receipt modal's compose layout */}
+          <div className="space-y-2">
+            <Label>Email preview</Label>
+            <div className="border rounded-lg overflow-hidden max-h-[400px] overflow-y-auto">
+              <div dangerouslySetInnerHTML={{ __html: previewHtml }} />
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Preview only — this is exactly what <strong>{clientName}</strong> will receive in their inbox.
+            </p>
+          </div>
+
           {/* Amount (read-only) */}
           <div className="bg-muted/50 rounded-md p-3 text-sm flex items-center gap-2">
             <span className="text-muted-foreground">Amount:</span>
             <strong>{formattedTotal}</strong>
             <span className="text-muted-foreground text-xs">(from stored invoice)</span>
           </div>
-
-          {/* Preview toggle */}
-          <Button
-            variant="outline"
-            size="sm"
-            className="gap-2"
-            onClick={() => setShowPreview(!showPreview)}
-            type="button"
-          >
-            <Eye className="w-4 h-4" />
-            {showPreview ? "Hide Preview" : "Preview Email"}
-          </Button>
-
-          {showPreview && (
-            <div className="border rounded-lg overflow-hidden max-h-[400px] overflow-y-auto">
-              <div dangerouslySetInnerHTML={{ __html: previewHtml }} />
-            </div>
-          )}
         </div>
 
         <DialogFooter>
