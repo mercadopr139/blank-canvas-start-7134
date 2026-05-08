@@ -41,7 +41,7 @@ const FIELD_LABELS: Record<MappableField, string> = {
 
 
 const PRIMARY_REVENUE_STREAMS = ["Donation", "Sponsorship", "Fee for Service", "Re-Grant"] as const;
-const SUPPORTER_ROLES = ["Donor", "Sponsor", "Meal Train", "Partner", "Advocate"] as const;
+const SUPPORTER_ROLES = ["Donor", "Sponsor", "Meal Train", "Partner", "Advocate", "In-Kind Support"] as const;
 const SUPPORTER_CATEGORIES = ["Individual", "Organization"] as const;
 
 interface SupporterRow {

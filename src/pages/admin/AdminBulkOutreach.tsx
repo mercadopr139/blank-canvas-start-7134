@@ -37,7 +37,7 @@ const FROM_ADDRESSES = [
   "chrissycasiello@nolimitsboxingacademy.org",
 ];
 
-const STATUSES = ["Donor", "Sponsor", "Meal Train", "Partner", "Advocate"];
+const STATUSES = ["Donor", "Sponsor", "Meal Train", "Partner", "Advocate", "In-Kind Support"];
 const CATEGORIES = ["Individual", "Organization"];
 const REVENUE_STREAMS = ["Donation", "Sponsorship", "Fee for Service", "Re-Grant", "Mixed"];
 
