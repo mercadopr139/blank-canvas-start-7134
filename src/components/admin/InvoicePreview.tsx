@@ -738,7 +738,12 @@ No Limits Academy`,
               </Button>
             )}
             {existingInvoice && (
-              <Button variant="outline" onClick={handleSaveDraftWithPdf} disabled={isLoading || isSavingDraft}>
+              <Button
+                variant="outline"
+                onClick={handleSaveDraftWithPdf}
+                disabled={isLoading || isSavingDraft}
+                className="bg-white text-neutral-900 border-neutral-300 hover:!bg-neutral-100 hover:!text-neutral-900"
+              >
                 {isSavingDraft ? "Generating PDF..." : hasPdf ? "Regenerate PDF" : "Generate & Lock PDF"}
               </Button>
             )}
