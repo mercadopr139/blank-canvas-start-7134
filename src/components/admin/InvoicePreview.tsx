@@ -758,7 +758,7 @@ No Limits Academy`,
                   variant="outline"
                   onClick={handleBypassApproval}
                   disabled={isLoading || isBypassingApproval}
-                  className="hover:bg-neutral-100 hover:text-neutral-900"
+                  className="bg-white text-neutral-900 border-neutral-300 hover:!bg-neutral-100 hover:!text-neutral-900"
                 >
                   {isBypassingApproval ? "Approving..." : "Bypass Approval"}
                 </Button>
