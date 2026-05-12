@@ -121,9 +121,20 @@ const Vision = () => {
                   </div>
                 </div>
 
-                <p className="text-lg md:text-xl text-primary-foreground/80 leading-relaxed mb-8">
-                  The Launch Pad is what separates No Limits Academy from every other youth program. Starting at age 15, youth enter a classroom environment designed around an introspective process — one that helps them identify their <strong className="text-primary-foreground">God-given strengths</strong> and align those gifts with a real, viable future.
+                <p className="text-lg md:text-xl text-primary-foreground/80 leading-relaxed mb-6">
+                  The Launch Pad is what separates No Limits Academy from every other youth program. Starting at age 15, youth enter a classroom environment designed around an introspective process — one that helps them identify their <strong className="text-primary-foreground">strengths</strong> and align those gifts with a real, viable future.
                 </p>
+
+                {/* Scripture anchor — 1 Peter 4:10 frames the gifts-and-stewardship
+                    thread that runs through the introspective process. */}
+                <blockquote className="my-8 md:my-10 px-4 md:px-6 text-center">
+                  <p className="text-base md:text-lg italic text-primary-foreground/70 leading-relaxed mb-3">
+                    "Each of you should use whatever gift you have received to serve others, as faithful stewards of God's grace in its various forms."
+                  </p>
+                  <footer className="text-xs font-black tracking-[0.2em] uppercase text-nla">
+                    — 1 Peter 4:10
+                  </footer>
+                </blockquote>
 
                 {/* Workforce Standard callout */}
                 <div className="border-l-4 border-nla bg-primary-foreground/5 rounded-r-lg p-6 md:p-7">
