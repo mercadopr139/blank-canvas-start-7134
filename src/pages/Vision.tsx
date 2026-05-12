@@ -1,3 +1,4 @@
+import { Link } from "react-router-dom";
 import {
   Shield,
   GraduationCap,
@@ -5,6 +6,7 @@ import {
   Briefcase,
   Compass,
   ClipboardCheck,
+  Heart,
 } from "lucide-react";
 import Header from "@/components/layout/Header";
 import Footer from "@/components/layout/Footer";
@@ -299,26 +301,23 @@ const Vision = () => {
           </div>
         </section>
 
-        {/* Subtle divider so Why It Matters and the closer don't visually
-            blur into a single block, even though both are black. */}
-        <div className="bg-primary">
-          <div className="container">
-            <div className="max-w-3xl mx-auto">
-              <div className="h-px bg-nla/40" />
-            </div>
-          </div>
-        </div>
-
-        {/* Invest in a generation — closer / donor statement */}
-        <section className="bg-primary py-16 md:py-[80px]">
+        {/* Invest in a generation — closer / donor CTA */}
+        <section className="bg-background py-16 md:py-[80px]">
           <div className="container">
             <div className="max-w-3xl mx-auto text-center">
-              <h2 className="text-4xl md:text-5xl font-black text-primary-foreground leading-[1.05] tracking-tight mb-6">
+              <h2 className="text-4xl md:text-5xl font-black text-foreground leading-[1.05] tracking-tight mb-6">
                 Invest in a generation.
               </h2>
-              <p className="text-lg md:text-xl text-primary-foreground/75 leading-relaxed">
+              <p className="text-lg md:text-xl text-muted-foreground leading-relaxed mb-10">
                 Your support fuels every Pad, every coach, and every young person in the pipeline. Join us in building a model that doesn't just change individual lives — it changes the future of entire communities.
               </p>
+              <Link
+                to="/supporters"
+                className="inline-flex items-center justify-center gap-2 bg-nla text-nla-foreground hover:bg-nla/90 px-8 py-4 rounded-lg font-bold text-base md:text-lg transition-colors shadow-lg"
+              >
+                <Heart className="w-5 h-5" />
+                Donate Now
+              </Link>
             </div>
           </div>
         </section>
