@@ -1,4 +1,3 @@
-import { Link } from "react-router-dom";
 import {
   Shield,
   GraduationCap,
@@ -6,8 +5,6 @@ import {
   Briefcase,
   Compass,
   ClipboardCheck,
-  Heart,
-  Users,
 } from "lucide-react";
 import Header from "@/components/layout/Header";
 import Footer from "@/components/layout/Footer";
@@ -277,8 +274,8 @@ const Vision = () => {
           </div>
         </section>
 
-        {/* Why It Matters */}
-        <section className="py-16 bg-background md:py-[60px] border-t border-foreground/5">
+        {/* Why It Matters — black, opens the donor moment leading into the closer */}
+        <section className="py-16 bg-primary md:py-[60px]">
           <div className="container">
             <div className="max-w-3xl">
               <div className="flex items-start gap-4 mb-8">
@@ -287,47 +284,41 @@ const Vision = () => {
                   <span className="inline-block text-xs font-black tracking-[0.25em] uppercase text-nla mb-2">
                     Why It Matters
                   </span>
-                  <h2 className="text-3xl md:text-4xl font-black text-foreground leading-[1.1] tracking-tight">
+                  <h2 className="text-3xl md:text-4xl font-black text-primary-foreground leading-[1.1] tracking-tight">
                     Most youth programs end when the program ends.
                   </h2>
                 </div>
               </div>
-              <p className="text-lg md:text-xl text-muted-foreground leading-relaxed mb-6">
-                No Limits Academy is built differently. The Launch Pad is a <strong className="text-foreground">long-term model of development</strong> that produces lasting outcomes — young people who graduate high school with a clear plan, the discipline to execute it, and a network of mentors and partners ready to support them.
+              <p className="text-lg md:text-xl text-primary-foreground/75 leading-relaxed mb-6">
+                No Limits Academy is built differently. The Launch Pad is a <strong className="text-primary-foreground">long-term model of development</strong> that produces lasting outcomes — young people who graduate high school with a clear plan, the discipline to execute it, and a network of mentors and partners ready to support them.
               </p>
-              <p className="text-lg md:text-xl text-muted-foreground leading-relaxed">
-                For donors and funders, that means your investment doesn't just fund training. You're investing in a <strong className="text-foreground">system that changes life trajectories</strong> — and breaks generational cycles, one young person at a time.
+              <p className="text-lg md:text-xl text-primary-foreground/75 leading-relaxed">
+                For donors and funders, that means your investment doesn't just fund training. You're investing in a <strong className="text-primary-foreground">system that changes life trajectories</strong> — and breaks generational cycles, one young person at a time.
               </p>
             </div>
           </div>
         </section>
 
-        {/* Donor CTA */}
+        {/* Subtle divider so Why It Matters and the closer don't visually
+            blur into a single block, even though both are black. */}
+        <div className="bg-primary">
+          <div className="container">
+            <div className="max-w-3xl mx-auto">
+              <div className="h-px bg-nla/40" />
+            </div>
+          </div>
+        </div>
+
+        {/* Invest in a generation — closer / donor statement */}
         <section className="bg-primary py-16 md:py-[80px]">
           <div className="container">
             <div className="max-w-3xl mx-auto text-center">
               <h2 className="text-4xl md:text-5xl font-black text-primary-foreground leading-[1.05] tracking-tight mb-6">
                 Invest in a generation.
               </h2>
-              <p className="text-lg md:text-xl text-primary-foreground/75 leading-relaxed mb-10">
+              <p className="text-lg md:text-xl text-primary-foreground/75 leading-relaxed">
                 Your support fuels every Pad, every coach, and every young person in the pipeline. Join us in building a model that doesn't just change individual lives — it changes the future of entire communities.
               </p>
-              <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
-                <Link
-                  to="/supporters"
-                  className="inline-flex items-center justify-center gap-2 bg-nla text-nla-foreground hover:bg-nla/90 px-8 py-4 rounded-lg font-bold text-base md:text-lg transition-colors shadow-lg w-full sm:w-auto"
-                >
-                  <Heart className="w-5 h-5" />
-                  Donate Now
-                </Link>
-                <Link
-                  to="/our-story"
-                  className="inline-flex items-center justify-center gap-2 border-2 border-primary-foreground/30 text-primary-foreground hover:bg-primary-foreground/10 hover:border-primary-foreground/60 px-8 py-4 rounded-lg font-bold text-base md:text-lg transition-colors w-full sm:w-auto"
-                >
-                  <Users className="w-5 h-5" />
-                  Partner With Us
-                </Link>
-              </div>
             </div>
           </div>
         </section>
