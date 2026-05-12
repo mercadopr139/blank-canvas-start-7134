@@ -10,7 +10,6 @@ import {
 } from "lucide-react";
 import { icons } from "lucide-react";
 import { toast } from "sonner";
-import { todayInET } from "@/lib/easternTime";
 import confetti from "canvas-confetti";
 import nlaLogo from "@/assets/nla-logo-white.png";
 import FocusAreaModal from "@/components/admin/FocusAreaModal";
@@ -177,18 +176,25 @@ const TileSignalRow = ({
 };
 
 /* ───────── Signal details modal — opened by clicking a tile's signal title.
-    Read-only view of pillar + notes, with a hint to drill into the kanban
-    for full edit. ───────── */
+    Read-only view of pillar + notes, plus two rescheduling buttons so the
+    user can demote a Core task back to On-Deck or On Radar without
+    drilling into the kanban. To edit title / notes / pillar, still drill in. ───────── */
 const SignalDetailsModal = ({
   signal,
   accentColor,
   open,
   onClose,
+  onMoveToOnDeck,
+  onMoveToOnRadar,
+  isMoving,
 }: {
   signal: CoreSignal | null;
   accentColor: string;
   open: boolean;
   onClose: () => void;
+  onMoveToOnDeck: (id: string) => void;
+  onMoveToOnRadar: (id: string) => void;
+  isMoving: boolean;
 }) => {
   if (!signal) return null;
   return (
@@ -196,7 +202,7 @@ const SignalDetailsModal = ({
       <DialogContent className="bg-zinc-900 border-white/10 text-white max-w-md">
         <DialogHeader>
           <p className="text-[10px] uppercase tracking-[0.15em] text-white/30 mb-1">
-            Today's Core
+            Core
           </p>
           <DialogTitle className="text-white text-base leading-snug">
             {signal.title || "Untitled"}
@@ -232,9 +238,35 @@ const SignalDetailsModal = ({
               <p className="text-sm text-white/30 italic">No notes for this signal.</p>
             )}
           </div>
-          <p className="text-[10px] text-white/30 pt-2 border-t border-white/5">
-            To edit this signal, click <span className="text-white/50">Open →</span> on the focus area tile.
-          </p>
+
+          {/* Reschedule buttons — demote Core back to On-Deck or On Radar
+              without leaving the workbench. */}
+          <div className="pt-3 border-t border-white/5 space-y-2">
+            <p className="text-[10px] uppercase tracking-[0.15em] text-white/30">
+              Move to
+            </p>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={() => onMoveToOnDeck(signal.id)}
+                disabled={isMoving}
+                className="flex-1 inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-md border border-white/10 hover:border-white/25 hover:bg-white/[0.04] text-xs font-medium text-white/70 hover:text-white transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                On-Deck <ArrowRight className="w-3 h-3" />
+              </button>
+              <button
+                type="button"
+                onClick={() => onMoveToOnRadar(signal.id)}
+                disabled={isMoving}
+                className="flex-1 inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-md border border-white/10 hover:border-white/25 hover:bg-white/[0.04] text-xs font-medium text-white/70 hover:text-white transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                On Radar <ArrowRight className="w-3 h-3" />
+              </button>
+            </div>
+            <p className="text-[10px] text-white/25">
+              To edit the title, notes, or pillar, click <span className="text-white/40">Open →</span> on the focus area tile.
+            </p>
+          </div>
         </div>
       </DialogContent>
     </Dialog>
@@ -462,7 +494,7 @@ const FocusAreaTile = ({
 };
 
 /* ───────── Page component ───────── */
-const AdminTaskManager = () => {
+const AdminWorkbench = () => {
   const { managerType = "PD" } = useParams<{ managerType: string }>();
   const navigate = useNavigate();
   const { user, signOut } = useAuth();
@@ -476,8 +508,6 @@ const AdminTaskManager = () => {
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } })
   );
-
-  const todayStr = todayInET();
 
   // Load the task manager record so we know its owner (for lock logic and
   // future per-manager metadata). PD and PC are always present (seeded);
@@ -611,7 +641,6 @@ const AdminTaskManager = () => {
         signal_type: "Action",
         status: "Pending",
         is_archived: false,
-        date_assigned: todayStr,
         source,
       } as any);
       if (error) throw error;
@@ -620,6 +649,28 @@ const AdminTaskManager = () => {
       queryClient.invalidateQueries({ queryKey: ["task-manager-home-core"] });
       queryClient.invalidateQueries({ queryKey: ["signals"] });
       toast.success("Signal added");
+    },
+    onError: (e: any) => toast.error(e.message),
+  });
+
+  // Move a Core signal back to On-Deck (priority_layer="Bonus") or On Radar
+  // (priority_layer=null) from inside the SignalDetailsModal. No date stamp
+  // is involved: the bucket is determined by priority_layer alone now.
+  const moveSignalMutation = useMutation({
+    mutationFn: async ({ id, target }: { id: string; target: "on-deck" | "on-radar" }) => {
+      const newPriority = target === "on-deck" ? "Bonus" : null;
+      const { error } = await supabase
+        .from("signals")
+        .update({ priority_layer: newPriority } as any)
+        .eq("id", id);
+      if (error) throw error;
+      return target;
+    },
+    onSuccess: (target) => {
+      queryClient.invalidateQueries({ queryKey: ["task-manager-home-core"] });
+      queryClient.invalidateQueries({ queryKey: ["signals"] });
+      setDetailsSignal(null);
+      toast.success(target === "on-deck" ? "Moved to On-Deck" : "Moved to On Radar");
     },
     onError: (e: any) => toast.error(e.message),
   });
@@ -703,9 +754,9 @@ const AdminTaskManager = () => {
             </Button>
             <div>
               <h1 className="text-lg font-bold tracking-tight text-white">
-                {managerType} Task Manager
+                Workbench
               </h1>
-              <p className="text-xs text-zinc-500 font-medium">Today's daily workbench</p>
+              <p className="text-xs text-zinc-500 font-medium">{managerType}</p>
             </div>
           </div>
           <Button
@@ -895,9 +946,12 @@ const AdminTaskManager = () => {
         accentColor={detailsAccent}
         open={!!detailsSignal}
         onClose={() => setDetailsSignal(null)}
+        onMoveToOnDeck={(id) => moveSignalMutation.mutate({ id, target: "on-deck" })}
+        onMoveToOnRadar={(id) => moveSignalMutation.mutate({ id, target: "on-radar" })}
+        isMoving={moveSignalMutation.isPending}
       />
     </div>
   );
 };
 
-export default AdminTaskManager;
+export default AdminWorkbench;

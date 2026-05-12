@@ -233,8 +233,8 @@ const AdminSignals = ({ managerType = "PD" }: { managerType?: string }) => {
   const [, setDraggingBucket] = useState<BucketId | null>(null);
 
   // "Today" is pinned to the academy's local timezone (America/New_York)
-  // so date_assigned filtering and the date header don't drift if the
-  // viewer's browser is in a different zone or misconfigured.
+  // for the date header. Bucket placement is driven by priority_layer alone;
+  // signals don't carry a per-day date stamp.
   const today = todayInET();
   const todayDisplay = todayDisplayInET();
 
@@ -312,9 +312,7 @@ const AdminSignals = ({ managerType = "PD" }: { managerType?: string }) => {
       let q = supabase
         .from("signals")
         .select("*")
-        .lte("date_assigned", today)
         .eq("priority_layer", "Bonus" as any)
-        .eq("status", "Pending" as any)
         .eq("is_archived", false as any)
         .eq("is_trashed", false as any);
       q = applySourceFilter(q);
@@ -322,33 +320,20 @@ const AdminSignals = ({ managerType = "PD" }: { managerType?: string }) => {
         .order("today_sort_order" as any, { ascending: true, nullsFirst: false })
         .order("created_at", { ascending: true });
       if (error) throw error;
-      // Also include completed bonus signals assigned up to today
-      let q2 = supabase
-        .from("signals")
-        .select("*")
-        .lte("date_assigned", today)
-        .eq("priority_layer", "Bonus" as any)
-        .eq("status", "Complete" as any)
-        .eq("is_archived", false as any)
-        .eq("is_trashed", false as any);
-      q2 = applySourceFilter(q2);
-      const { data: completedToday, error: err2 } = await q2
-        .order("today_sort_order" as any, { ascending: true, nullsFirst: false });
-      if (err2) throw err2;
-      return [...(data || []), ...(completedToday || [])] as Signal[];
+      return data as Signal[];
     },
   });
 
-  // (Carryover query removed — carryover items now appear in todayCoreSignals
-  // because the Core query no longer filters by date_assigned.)
-
+  // On Radar = signals not yet scheduled into Core or On-Deck. With the
+  // date-less model, the bucket is determined by priority_layer alone, so
+  // On Radar means priority_layer IS NULL.
   const { data: onDeckSignals = [] } = useQuery({
     queryKey: ["signals", focusArea, "on-deck"],
     queryFn: async () => {
       let q = supabase
         .from("signals")
         .select("*")
-        .is("date_assigned", null)
+        .is("priority_layer", null)
         .eq("status", "Pending" as any)
         .eq("is_archived", false as any)
         .eq("is_trashed", false as any);
@@ -366,7 +351,6 @@ const AdminSignals = ({ managerType = "PD" }: { managerType?: string }) => {
       const { error } = await supabase
         .from("signals")
         .update({
-          date_assigned: todayInET(),
           priority_layer: priority,
         } as any)
         .eq("id", id);
@@ -374,7 +358,7 @@ const AdminSignals = ({ managerType = "PD" }: { managerType?: string }) => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["signals"] });
-      toast.success("Signal scheduled for today");
+      toast.success("Signal scheduled");
     },
     onError: (e: any) => toast.error(e.message),
   });
@@ -384,7 +368,6 @@ const AdminSignals = ({ managerType = "PD" }: { managerType?: string }) => {
       const { error } = await supabase
         .from("signals")
         .update({
-          date_assigned: null,
           priority_layer: null,
         } as any)
         .eq("id", id);
@@ -399,8 +382,6 @@ const AdminSignals = ({ managerType = "PD" }: { managerType?: string }) => {
 
   const addMutation = useMutation({
     mutationFn: async () => {
-      const todayStr = todayInET();
-      const dateAssigned = form.bucket === "ondeck" ? null : todayStr;
       const priorityLayer = form.bucket === "core" ? "Core" : form.bucket === "bonus" ? "Bonus" : (form.priority_layer || null);
       const { error } = await supabase.from("signals").insert({
         title: form.title,
@@ -410,7 +391,6 @@ const AdminSignals = ({ managerType = "PD" }: { managerType?: string }) => {
         signal_type: "Action",
         status: "Pending",
         is_archived: false,
-        date_assigned: dateAssigned,
         description: form.description.trim() || null,
         source:
           managerType === "PD"
@@ -496,7 +476,6 @@ const AdminSignals = ({ managerType = "PD" }: { managerType?: string }) => {
           status: newStatus,
           completed_at: newStatus === "Complete" ? (editingSignal.completed_at || new Date().toISOString()) : null,
           description: editForm.description || null,
-          date_assigned: isOnDeck ? null : todayStr,
         } as any)
         .eq("id", editingSignal.id);
       if (error) throw error;
@@ -565,14 +544,12 @@ const AdminSignals = ({ managerType = "PD" }: { managerType?: string }) => {
       newBonusList: Signal[];
       newOnDeckList: Signal[];
     }) => {
-      const todayStr = todayInET();
-      // Update the moved signal's bucket
+      // Update the moved signal's bucket. With the date-less model, the
+      // bucket is determined by priority_layer alone.
       const updateData: Record<string, any> = {};
       if (targetBucket === "ondeck") {
-        updateData.date_assigned = null;
         updateData.priority_layer = null;
       } else {
-        updateData.date_assigned = todayStr;
         updateData.priority_layer = targetBucket === "core" ? "Core" : "Bonus";
       }
       const { error } = await supabase.from("signals").update(updateData as any).eq("id", signalId);
@@ -934,8 +911,8 @@ const AdminSignals = ({ managerType = "PD" }: { managerType?: string }) => {
               </DroppableColumn>
 
               {/* On Radar — backlog/idea queue. Droppable id is "ondeck"
-                  because that's the historic mapping (priority_layer=null,
-                  date_assigned=null). The visible label is "On Radar". */}
+                  for historic reasons (priority_layer=null is the bucket
+                  key). The visible label is "On Radar". */}
               <DroppableColumn id="ondeck">
                 <div className="rounded-xl border border-white/[0.08] bg-gradient-to-b from-white/[0.03] to-transparent overflow-hidden">
                   <div className="px-4 pt-4 pb-2 flex items-center gap-2">

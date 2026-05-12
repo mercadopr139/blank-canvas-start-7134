@@ -63,9 +63,7 @@ import AdminSignalsArchive from "./pages/admin/AdminSignalsArchive";
 import AdminSignalsTrash from "./pages/admin/AdminSignalsTrash";
 import AdminStaffManagement from "./pages/admin/AdminStaffManagement";
 import AdminResetPassword from "./pages/admin/AdminResetPassword";
-import AdminPDTaskManager from "./pages/admin/AdminPDTaskManager";
-import AdminPCTaskManager from "./pages/admin/AdminPCTaskManager";
-import AdminTaskManager from "./pages/admin/AdminTaskManager";
+import AdminWorkbench from "./pages/admin/AdminWorkbench";
 import InvoiceApproval from "./pages/InvoiceApproval";
 import TransportLogin from "./pages/TransportLogin";
 import TransportAdminLogin from "./pages/transport/TransportAdminLogin";
@@ -245,7 +243,7 @@ const App = () => (
               path="/admin/task-manager/:managerType"
               element={
                 <ProtectedRoute requireAdmin>
-                  <AdminTaskManager />
+                  <AdminWorkbench />
                 </ProtectedRoute>
               }
             />

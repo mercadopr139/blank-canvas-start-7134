@@ -43,7 +43,7 @@ const ACCENT_COLORS = [
   { hex: "#a855f7", label: "Purple" },
 ];
 
-export default function AddTaskManagerModal({ open, onClose, onCreated }: Props) {
+export default function AddWorkbenchModal({ open, onClose, onCreated }: Props) {
   const queryClient = useQueryClient();
   const [name, setName] = useState("");
   const [key, setKey] = useState("");
@@ -113,7 +113,7 @@ export default function AddTaskManagerModal({ open, onClose, onCreated }: Props)
       const nextSortOrder = ((existing?.[0]?.sort_order as number) ?? 0) + 1;
 
       // 1. Insert the task manager row.
-      const displayName = `${trimmedName} Task Manager`;
+      const displayName = `${trimmedName} Workbench`;
       const { error: tmErr } = await (supabase.from("task_managers") as any).insert({
         key: trimmedKey,
         display_name: displayName,
@@ -161,11 +161,11 @@ export default function AddTaskManagerModal({ open, onClose, onCreated }: Props)
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["task-managers"] });
       queryClient.invalidateQueries({ queryKey: ["focus-areas"] });
-      toast.success("Task manager created");
+      toast.success("Workbench created");
       onCreated();
       onClose();
     },
-    onError: (e: any) => toast.error(e.message || "Couldn't create task manager"),
+    onError: (e: any) => toast.error(e.message || "Couldn't create workbench"),
   });
 
   const handleSave = async () => {
@@ -181,7 +181,7 @@ export default function AddTaskManagerModal({ open, onClose, onCreated }: Props)
     <Dialog open={open} onOpenChange={(o) => { if (!o) onClose(); }}>
       <DialogContent className="bg-zinc-900 border-white/10 text-white max-w-md">
         <DialogHeader>
-          <DialogTitle>Add Task Manager</DialogTitle>
+          <DialogTitle>Add Workbench</DialogTitle>
         </DialogHeader>
         <div className="space-y-4 mt-2">
           <div>
@@ -194,7 +194,7 @@ export default function AddTaskManagerModal({ open, onClose, onCreated }: Props)
               className="bg-white/5 border-white/10 text-white mt-1"
             />
             <p className="text-[11px] text-white/30 mt-1">
-              Tile will read "{name.trim() || "…"} Task Manager"
+              Tile will read "{name.trim() || "…"} Workbench"
             </p>
           </div>
 

@@ -15,7 +15,7 @@ import { icons } from "lucide-react";
 import UpcomingEventsWidget from "@/components/admin/UpcomingEventsWidget";
 import InviteAdminModal from "@/components/admin/InviteAdminModal";
 import DashboardTileModal, { type DashboardTile } from "@/components/admin/DashboardTileModal";
-import AddTaskManagerModal from "@/components/admin/AddTaskManagerModal";
+import AddWorkbenchModal from "@/components/admin/AddWorkbenchModal";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 
 import {
@@ -44,7 +44,7 @@ const getIconComponent = (name: string) => {
 
 /* Map href → permission key. Task manager tiles use the dynamic
    task_manager_<KEY> convention so any new task manager (HC, JS, etc.)
-   added via the AddTaskManagerModal automatically gets a permission gate
+   added via the AddWorkbenchModal automatically gets a permission gate
    without code changes. */
 const HREF_PERM_MAP: Record<string, PermissionKey> = {
   "/admin/staff": "settings",
@@ -570,9 +570,9 @@ const AdminDashboard = () => {
               </SortableContext>
             </DndContext>
 
-            {/* "Add Task Manager" — outside DndContext so DnD sensors don't
+            {/* "Add Workbench" — outside DndContext so DnD sensors don't
                 swallow the click. Replaces the previous generic "Add Tile"
-                button since adding a task manager is the only common reason
+                button since adding a workbench is the only common reason
                 anyone needs to create a new tile. */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 mt-4">
               <button
@@ -581,7 +581,7 @@ const AdminDashboard = () => {
                 className="rounded-xl border-2 border-dashed border-white/[0.08] bg-transparent p-5 flex flex-col items-center justify-center gap-2 text-zinc-600 hover:text-zinc-400 hover:border-white/[0.15] transition-colors min-h-[100px]"
               >
                 <Plus className="w-6 h-6" />
-                <span className="text-xs font-medium">Add Task Manager</span>
+                <span className="text-xs font-medium">Add Workbench</span>
               </button>
             </div>
           </div>
@@ -589,7 +589,7 @@ const AdminDashboard = () => {
       </main>
 
       {/* Edit modal — still used when the user clicks the pencil on an
-          existing tile. New tiles all flow through AddTaskManagerModal now. */}
+          existing tile. New tiles all flow through AddWorkbenchModal now. */}
       {user && (
         <DashboardTileModal
           open={modalOpen}
@@ -600,7 +600,7 @@ const AdminDashboard = () => {
         />
       )}
 
-      <AddTaskManagerModal
+      <AddWorkbenchModal
         open={addTaskManagerOpen}
         onClose={() => setAddTaskManagerOpen(false)}
         onCreated={handleTaskManagerCreated}
