@@ -588,15 +588,15 @@ const AdminDashboard = () => {
         )}
       </main>
 
-      {/* Edit modal — still used when the user clicks the pencil on an
-          existing tile. New tiles all flow through AddWorkbenchModal now. */}
+      {/* Edit-only modal: opens when the user clicks the pencil on an
+          existing tile. New tiles all flow through AddWorkbenchModal,
+          which creates the tile with its destination already locked in. */}
       {user && (
         <DashboardTileModal
           open={modalOpen}
           onClose={() => { setModalOpen(false); setEditingTile(null); }}
           onSaved={() => queryClient.invalidateQueries({ queryKey: ["dashboard-tiles", user.id] })}
           editingTile={editingTile}
-          userId={user.id}
         />
       )}
 
