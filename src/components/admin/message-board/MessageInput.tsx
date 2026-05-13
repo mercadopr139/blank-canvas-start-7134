@@ -199,10 +199,13 @@ const MessageInput = ({ conversationId, currentUserId, pillar, onSent }: Props) 
         </div>
       )}
 
-      <div className="flex items-end gap-2">
-        <div className="flex-1 relative">
+      <div className="flex items-end gap-2 w-full">
+        {/* min-w-0 lets the textarea shrink below its intrinsic content
+            width inside the flex row — without it, the send button gets
+            pushed offscreen on narrow mobile viewports. */}
+        <div className="flex-1 min-w-0 relative">
           <div
-            className="absolute left-0 top-0 bottom-0 w-0.5 rounded-r"
+            className="absolute left-0 top-0 bottom-0 w-0.5 rounded-r pointer-events-none"
             style={{ background: pillarColor }}
           />
           <Textarea
@@ -210,9 +213,9 @@ const MessageInput = ({ conversationId, currentUserId, pillar, onSent }: Props) 
             value={text}
             onChange={(e) => setText(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder={important ? "Type an important message — recipients will be emailed..." : "Type a message... (Enter to send)"}
+            placeholder={important ? "Important message — recipients will be emailed..." : "Type a message..."}
             rows={1}
-            className="resize-none bg-white/[0.04] border-white/[0.08] text-zinc-200 placeholder:text-zinc-600 text-sm pr-2 min-h-[42px] max-h-32 pl-3"
+            className="resize-none bg-white/[0.04] border-white/[0.08] text-zinc-200 placeholder:text-zinc-600 text-sm pr-2 min-h-[42px] max-h-32 pl-3 w-full"
           />
         </div>
 
@@ -229,7 +232,7 @@ const MessageInput = ({ conversationId, currentUserId, pillar, onSent }: Props) 
           variant="ghost"
           onClick={handlePickFiles}
           disabled={sending}
-          className="h-9 w-9 text-zinc-400 hover:text-zinc-200 hover:bg-white/[0.06] border-0"
+          className="h-9 w-9 shrink-0 text-zinc-400 hover:text-zinc-200 hover:bg-white/[0.06] border-0"
           title="Attach files (image, PDF, Word doc — up to 25MB each)"
         >
           <Paperclip className="w-4 h-4" />
@@ -239,7 +242,7 @@ const MessageInput = ({ conversationId, currentUserId, pillar, onSent }: Props) 
           size="icon"
           onClick={handleSend}
           disabled={!canSend}
-          className="h-9 w-9 text-white disabled:opacity-30 border-0 transition-colors"
+          className="h-9 w-9 shrink-0 text-white disabled:opacity-30 border-0 transition-colors"
           style={{ background: important ? "#f59e0b" : pillarColor }}
           title={important ? "Send + email recipients" : "Send"}
         >
@@ -265,8 +268,8 @@ const MessageInput = ({ conversationId, currentUserId, pillar, onSent }: Props) 
         <Flag
           className={`w-3 h-3 transition-colors ${important ? "text-amber-400" : "text-zinc-600"}`}
         />
-        <span className={`text-[11px] transition-colors ${important ? "text-amber-300" : "text-zinc-500"}`}>
-          Send as important {important && "· recipients will be emailed"}
+        <span className={`text-[11px] transition-colors ${important ? "text-amber-300" : "text-zinc-500"} truncate`}>
+          Send as important{important && <span className="hidden sm:inline"> · recipients will be emailed</span>}
         </span>
       </label>
     </div>

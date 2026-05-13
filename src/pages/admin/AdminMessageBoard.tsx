@@ -263,7 +263,7 @@ const AdminMessageBoard = () => {
   };
 
   return (
-    <div className="min-h-screen bg-[#09090b] text-white flex flex-col">
+    <div className="min-h-screen bg-[#09090b] text-white flex flex-col overflow-x-hidden">
       <header className="border-b border-white/[0.06] bg-[#09090b]/80 backdrop-blur-md sticky top-0 z-30">
         <div className="px-4 py-3 flex items-center justify-between gap-2">
           <div className="flex items-center gap-3 min-w-0">
