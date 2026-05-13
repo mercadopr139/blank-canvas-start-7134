@@ -143,17 +143,23 @@ const AdminMessageBoard = () => {
 
             const { data: lastMsgs } = await supabase
               .from("mb_messages")
-              .select("content, created_at")
+              .select("content, created_at, mb_attachments(filename, mime_type)")
               .eq("conversation_id", c.id)
               .order("created_at", { ascending: false })
               .limit(1);
             const lastMsg = lastMsgs?.[0];
+            const lastAttachments = ((lastMsg as { mb_attachments?: { filename: string; mime_type: string }[] } | undefined)?.mb_attachments) || [];
+            const lastMessagePreview = lastMsg?.content?.trim()
+              ? lastMsg.content
+              : lastAttachments.length > 0
+                ? `📎 ${lastAttachments[0].mime_type.startsWith("image/") ? "Image" : lastAttachments[0].filename}${lastAttachments.length > 1 ? ` +${lastAttachments.length - 1}` : ""}`
+                : undefined;
 
             return {
               ...c,
               pillar: c.pillar as Pillar,
               member_names,
-              last_message: lastMsg?.content,
+              last_message: lastMessagePreview,
               last_message_at: lastMsg?.created_at,
               unread_count: 0,
               is_member: isMember,

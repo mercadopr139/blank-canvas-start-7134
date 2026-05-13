@@ -1,8 +1,9 @@
-import { useEffect, useRef, useState } from "react";
+import { Fragment, useEffect, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { Users, User, MoreHorizontal, Trash2, Pencil, X, ArrowLeft, Eye, Flag } from "lucide-react";
+import { Users, User, MoreHorizontal, Trash2, Pencil, X, ArrowLeft, Eye, Flag, FileText, File as FileIcon, Download } from "lucide-react";
 import MessageInput from "./MessageInput";
+import { Dialog, DialogContent } from "@/components/ui/dialog";
 import type { Conversation } from "@/pages/admin/AdminMessageBoard";
 import { PILLAR_COLOR, PILLAR_LABEL } from "@/pages/admin/AdminMessageBoard";
 import { useToast } from "@/hooks/use-toast";
@@ -13,6 +14,139 @@ import {
   DropdownMenuItem,
 } from "@/components/ui/dropdown-menu";
 
+// Turn http(s) URLs into clickable anchors while preserving everything
+// else as plain text. Returns an array of strings + JSX elements that
+// React can render inline.
+const URL_REGEX = /\bhttps?:\/\/[^\s<>"'`)]+/gi;
+const linkify = (text: string): (string | JSX.Element)[] => {
+  const parts: (string | JSX.Element)[] = [];
+  let lastIndex = 0;
+  let match;
+  URL_REGEX.lastIndex = 0;
+  while ((match = URL_REGEX.exec(text)) !== null) {
+    if (match.index > lastIndex) parts.push(text.slice(lastIndex, match.index));
+    parts.push(
+      <a
+        key={`link-${match.index}`}
+        href={match[0]}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="underline decoration-current/40 hover:decoration-current break-all"
+      >
+        {match[0]}
+      </a>
+    );
+    lastIndex = match.index + match[0].length;
+  }
+  if (lastIndex < text.length) parts.push(text.slice(lastIndex));
+  return parts;
+};
+
+const formatBytes = (b: number) => {
+  if (b < 1024) return `${b} B`;
+  if (b < 1024 * 1024) return `${(b / 1024).toFixed(1)} KB`;
+  return `${(b / 1024 / 1024).toFixed(1)} MB`;
+};
+
+// Per-attachment renderer. Images load via short-lived signed URLs from
+// the private bucket; clicking expands to a lightbox. Non-image files
+// render as a download card and produce a signed URL on demand.
+const MessageAttachmentView = ({ attachment }: { attachment: Attachment }) => {
+  const isImage = attachment.mime_type.startsWith("image/");
+  const isPdf = attachment.mime_type === "application/pdf";
+  const [lightboxOpen, setLightboxOpen] = useState(false);
+
+  const { data: signedUrl } = useQuery<string | null>({
+    queryKey: ["mb-attachment-url", attachment.storage_path],
+    queryFn: async () => {
+      const { data, error } = await supabase.storage
+        .from("message-attachments")
+        .createSignedUrl(attachment.storage_path, 60 * 60);
+      if (error) return null;
+      return data?.signedUrl ?? null;
+    },
+    // Refresh well before the 1-hour expiry so long-open threads don't
+    // serve dead URLs.
+    staleTime: 50 * 60 * 1000,
+  });
+
+  const downloadHref = signedUrl ?? "#";
+
+  if (isImage) {
+    return (
+      <>
+        <button
+          type="button"
+          onClick={() => signedUrl && setLightboxOpen(true)}
+          className="block max-w-xs overflow-hidden rounded-lg border border-white/[0.08] bg-white/[0.04] hover:border-white/[0.16] transition-colors"
+          title={attachment.filename}
+        >
+          {signedUrl ? (
+            <img
+              src={signedUrl}
+              alt={attachment.filename}
+              className="block max-h-60 w-auto object-contain"
+            />
+          ) : (
+            <div className="w-48 h-32 flex items-center justify-center text-zinc-600 text-xs">
+              Loading…
+            </div>
+          )}
+        </button>
+        <Dialog open={lightboxOpen} onOpenChange={setLightboxOpen}>
+          <DialogContent className="bg-neutral-950 border-white/[0.08] text-white max-w-4xl w-[95vw] max-h-[90vh] p-2 flex flex-col">
+            {signedUrl && (
+              <img
+                src={signedUrl}
+                alt={attachment.filename}
+                className="max-h-[85vh] w-auto mx-auto object-contain"
+              />
+            )}
+            <div className="flex items-center justify-between px-2 pt-1 text-xs text-zinc-400">
+              <span className="truncate">{attachment.filename}</span>
+              <a
+                href={downloadHref}
+                download={attachment.filename}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-1 hover:text-white"
+              >
+                <Download className="w-3 h-3" /> Download
+              </a>
+            </div>
+          </DialogContent>
+        </Dialog>
+      </>
+    );
+  }
+
+  const Icon = isPdf ? FileText : FileIcon;
+  return (
+    <a
+      href={downloadHref}
+      target="_blank"
+      rel="noopener noreferrer"
+      download={attachment.filename}
+      className="inline-flex items-center gap-3 max-w-xs px-3 py-2 rounded-lg border border-white/[0.08] bg-white/[0.04] hover:bg-white/[0.06] transition-colors text-left"
+    >
+      <Icon className="w-5 h-5 text-zinc-400 shrink-0" />
+      <div className="min-w-0">
+        <p className="text-xs text-zinc-200 font-medium truncate">{attachment.filename}</p>
+        <p className="text-[10px] text-zinc-500">{formatBytes(attachment.size_bytes)}</p>
+      </div>
+      <Download className="w-3.5 h-3.5 text-zinc-500 shrink-0" />
+    </a>
+  );
+};
+
+export type Attachment = {
+  id: string;
+  storage_path: string;
+  filename: string;
+  mime_type: string;
+  size_bytes: number;
+};
+
 export type Message = {
   id: string;
   conversation_id: string;
@@ -21,6 +155,7 @@ export type Message = {
   is_important: boolean;
   created_at: string;
   sender_name?: string;
+  attachments?: Attachment[];
 };
 
 interface Props {
@@ -79,9 +214,14 @@ const MessageThread = ({ conversation, currentUserId, isSuperAdmin, canPost, scr
   const { data: messages = [], isLoading } = useQuery<Message[]>({
     queryKey: ["mb-messages", conversation.id],
     queryFn: async () => {
+      // Nested select pulls each message's attachments in one round-trip
+      // via the FK relationship on mb_attachments.message_id.
       const { data, error } = await supabase
         .from("mb_messages")
-        .select("id, conversation_id, sender_id, content, is_important, created_at")
+        .select(
+          "id, conversation_id, sender_id, content, is_important, created_at, " +
+          "mb_attachments(id, storage_path, filename, mime_type, size_bytes)"
+        )
         .eq("conversation_id", conversation.id)
         .order("created_at", { ascending: true });
       if (error) throw error;
@@ -97,6 +237,7 @@ const MessageThread = ({ conversation, currentUserId, isSuperAdmin, canPost, scr
       return (data || []).map((m) => ({
         ...m,
         sender_name: nameMap[m.sender_id] || "Unknown",
+        attachments: ((m as { mb_attachments?: Attachment[] }).mb_attachments || []) as Attachment[],
       })) as Message[];
     },
     enabled: !!conversation.id,
@@ -348,27 +489,40 @@ const MessageThread = ({ conversation, currentUserId, isSuperAdmin, canPost, scr
                       <span className="shrink-0 w-5" aria-hidden="true" />
                     )}
 
-                    <div className="min-w-0">
-                      <div
-                        className="px-3.5 py-2.5 rounded-2xl text-sm leading-relaxed"
-                        style={
-                          isMe
-                            ? {
-                                background: pillarColor,
-                                color: "#ffffff",
-                                borderBottomLeftRadius: "4px",
-                              }
-                            : {
-                                background: `${pillarColor}12`,
-                                color: "#e4e4e7",
-                                borderBottomLeftRadius: "4px",
-                                borderLeft: `2px solid ${pillarColor}60`,
-                              }
-                        }
-                      >
-                        {msg.content}
-                      </div>
-                      <p className="text-[9px] text-zinc-700 mt-0.5 ml-1">
+                    <div className="min-w-0 space-y-1.5">
+                      {msg.content.trim() && (
+                        <div
+                          className="px-3.5 py-2.5 rounded-2xl text-sm leading-relaxed whitespace-pre-wrap break-words"
+                          style={
+                            isMe
+                              ? {
+                                  background: pillarColor,
+                                  color: "#ffffff",
+                                  borderBottomLeftRadius: "4px",
+                                }
+                              : {
+                                  background: `${pillarColor}12`,
+                                  color: "#e4e4e7",
+                                  borderBottomLeftRadius: "4px",
+                                  borderLeft: `2px solid ${pillarColor}60`,
+                                }
+                          }
+                        >
+                          {linkify(msg.content).map((part, i) => (
+                            <Fragment key={i}>{part}</Fragment>
+                          ))}
+                        </div>
+                      )}
+
+                      {msg.attachments && msg.attachments.length > 0 && (
+                        <div className="flex flex-col gap-1.5">
+                          {msg.attachments.map((att) => (
+                            <MessageAttachmentView key={att.id} attachment={att} />
+                          ))}
+                        </div>
+                      )}
+
+                      <p className="text-[9px] text-zinc-700 ml-1">
                         {formatMessageTime(msg.created_at)}
                       </p>
                     </div>
