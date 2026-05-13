@@ -15,6 +15,7 @@ interface ReceiptSendRow {
   pdf_filename: string | null;
   personal_message: string | null;
   error: string | null;
+  is_regenerated: boolean;
 }
 
 interface Props {
@@ -39,8 +40,12 @@ const ReceiptViewerModal = ({ open, onOpenChange, supporterId, supporterName }: 
     setLoading(true);
     setSelectedId(null);
     (async () => {
-      const { data } = await (supabase.from("receipt_sends") as any)
-        .select("id, receipt_year, status, sent_at, sent_to, subject, email_html, pdf_base64, pdf_filename, personal_message, error")
+      // receipt_sends isn't in the auto-generated types.ts yet (table is
+      // new); cast supabase to any so the table-name check passes. The
+      // returned shape is hand-validated via the ReceiptSendRow interface.
+      const { data } = await (supabase as any)
+        .from("receipt_sends")
+        .select("id, receipt_year, status, sent_at, sent_to, subject, email_html, pdf_base64, pdf_filename, personal_message, error, is_regenerated")
         .eq("supporter_id", supporterId)
         .order("sent_at", { ascending: false });
       if (cancelled) return;
@@ -150,6 +155,17 @@ const ReceiptViewerModal = ({ open, onOpenChange, supporterId, supporterName }: 
                         <AlertCircle className="w-3.5 h-3.5 text-red-400 shrink-0 mt-0.5" />
                         <p className="text-[11px] text-red-300 leading-relaxed font-mono">
                           {selected.error}
+                        </p>
+                      </div>
+                    )}
+
+                    {selected.is_regenerated && (
+                      <div className="mt-3 flex items-start gap-2 bg-amber-500/10 border border-amber-500/20 rounded px-3 py-2">
+                        <AlertCircle className="w-3.5 h-3.5 text-amber-400 shrink-0 mt-0.5" />
+                        <p className="text-[11px] text-amber-200/80 leading-relaxed">
+                          Regenerated from current data — the original send predates audit logging.
+                          The personal message that was attached to the original send is not recoverable,
+                          and the PDF and email body reflect today's template and donation records.
                         </p>
                       </div>
                     )}
