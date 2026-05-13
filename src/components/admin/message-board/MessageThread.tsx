@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { Users, User, MoreHorizontal, Trash2, Pencil, X } from "lucide-react";
+import { Users, User, MoreHorizontal, Trash2, Pencil, X, ArrowLeft, Eye } from "lucide-react";
 import MessageInput from "./MessageInput";
 import type { Conversation } from "@/pages/admin/AdminMessageBoard";
 import { PILLAR_COLOR, PILLAR_LABEL } from "@/pages/admin/AdminMessageBoard";
@@ -27,7 +27,15 @@ interface Props {
   conversation: Conversation;
   currentUserId: string;
   isSuperAdmin: boolean;
+  /** False when super admin is auditing a conversation they're not a member of */
+  canPost: boolean;
+  /** When set, scroll that message into view once messages load (search jump) */
+  scrollToMessageId: string | null;
+  /** Mobile back-to-list action (hidden on lg+) */
+  onBackToList: () => void;
   onConversationUpdated?: () => void;
+  /** Fire after last_read_at is updated so the parent can refresh unread badges */
+  onMessageRead?: () => void;
 }
 
 const formatMessageTime = (iso: string) => {
@@ -48,7 +56,7 @@ const formatDateDivider = (iso: string) => {
 const isSameDay = (a: string, b: string) =>
   new Date(a).toDateString() === new Date(b).toDateString();
 
-const MessageThread = ({ conversation, currentUserId, isSuperAdmin, onConversationUpdated }: Props) => {
+const MessageThread = ({ conversation, currentUserId, isSuperAdmin, canPost, scrollToMessageId, onBackToList, onConversationUpdated, onMessageRead }: Props) => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const bottomRef = useRef<HTMLDivElement>(null);
@@ -95,20 +103,37 @@ const MessageThread = ({ conversation, currentUserId, isSuperAdmin, onConversati
   });
 
   // Mark this conversation as read for the current user whenever they
-  // switch to it. (Unread count surfacing comes in a later phase; the
-  // last_read_at column already exists and gets updated here.)
+  // switch to it. Skipped when super admin is auditing as non-member
+  // (RLS would reject the update anyway, but we save the round trip).
   useEffect(() => {
-    if (!conversation.id || !currentUserId) return;
-    supabase
-      .from("mb_conversation_members")
-      .update({ last_read_at: new Date().toISOString() })
-      .eq("conversation_id", conversation.id)
-      .eq("user_id", currentUserId);
-  }, [conversation.id, currentUserId]);
+    if (!conversation.id || !currentUserId || !canPost) return;
+    (async () => {
+      await supabase
+        .from("mb_conversation_members")
+        .update({ last_read_at: new Date().toISOString() })
+        .eq("conversation_id", conversation.id)
+        .eq("user_id", currentUserId);
+      onMessageRead?.();
+    })();
+  }, [conversation.id, currentUserId, canPost, onMessageRead]);
 
+  // Scroll behavior: if the parent passed a specific message id (from a
+  // search hit), jump there with a brief highlight. Otherwise, scroll to
+  // the bottom whenever new messages arrive.
   useEffect(() => {
+    if (scrollToMessageId && messages.length > 0) {
+      const el = document.getElementById(`message-${scrollToMessageId}`);
+      if (el) {
+        el.scrollIntoView({ behavior: "smooth", block: "center" });
+        el.classList.add("ring-2", "ring-amber-400/60", "rounded-2xl");
+        setTimeout(() => {
+          el.classList.remove("ring-2", "ring-amber-400/60", "rounded-2xl");
+        }, 2000);
+        return;
+      }
+    }
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages]);
+  }, [messages, scrollToMessageId]);
 
   useEffect(() => {
     setConvName(conversation.name || "");
@@ -218,6 +243,15 @@ const MessageThread = ({ conversation, currentUserId, isSuperAdmin, onConversati
           className="px-4 py-3 border-b flex items-center gap-3 group/header"
           style={{ borderColor: `${pillarColor}30` }}
         >
+          {/* Mobile-only back arrow returns to the conversation list */}
+          <button
+            onClick={onBackToList}
+            className="lg:hidden text-zinc-400 hover:text-white hover:bg-white/5 p-1.5 rounded-lg -ml-1"
+            aria-label="Back to conversations"
+          >
+            <ArrowLeft className="w-5 h-5" />
+          </button>
+
           <div
             className="w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0"
             style={{ background: `${pillarColor}18`, color: pillarColor }}
@@ -232,6 +266,15 @@ const MessageThread = ({ conversation, currentUserId, isSuperAdmin, onConversati
               </p>
             )}
           </div>
+          {!canPost && (
+            <span
+              className="text-[10px] font-semibold px-2 py-1 rounded-full uppercase tracking-wide flex-shrink-0 bg-amber-500/15 text-amber-300 flex items-center gap-1"
+              title="You are viewing as super admin; you are not a member of this conversation."
+            >
+              <Eye className="w-3 h-3" />
+              Auditing
+            </span>
+          )}
           <span
             className="text-[10px] font-semibold px-2 py-1 rounded-full uppercase tracking-wide flex-shrink-0"
             style={{ background: `${pillarColor}18`, color: pillarColor }}
@@ -357,12 +400,20 @@ const MessageThread = ({ conversation, currentUserId, isSuperAdmin, onConversati
         <div ref={bottomRef} />
       </div>
 
-      <MessageInput
-        conversationId={conversation.id}
-        currentUserId={currentUserId}
-        pillar={conversation.pillar}
-        onSent={handleMessageSent}
-      />
+      {canPost ? (
+        <MessageInput
+          conversationId={conversation.id}
+          currentUserId={currentUserId}
+          pillar={conversation.pillar}
+          onSent={handleMessageSent}
+        />
+      ) : (
+        <div className="px-4 py-3 border-t border-white/[0.06] bg-amber-500/[0.04] text-center">
+          <p className="text-xs text-amber-300/80">
+            You're viewing this conversation as super admin. You can't post here because you're not a member.
+          </p>
+        </div>
+      )}
     </div>
   );
 };

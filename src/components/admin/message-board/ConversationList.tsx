@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -17,13 +18,24 @@ interface Props {
   activeId: string | null;
   currentUserId: string;
   isSuperAdmin: boolean;
+  viewAll: boolean;
   listView: "active" | "archived";
   onListViewChange: (v: "active" | "archived") => void;
   onSelect: (id: string) => void;
+  onMessageSelect: (conversationId: string, messageId: string) => void;
   onNew: () => void;
   onConversationsChanged: () => void;
   onConversationDeleted: (id: string) => void;
 }
+
+type SearchMessageHit = {
+  message_id: string;
+  conversation_id: string;
+  conversation_name: string | null;
+  content: string;
+  sender_name: string | null;
+  created_at: string;
+};
 
 const formatTime = (iso: string | undefined) => {
   if (!iso) return "";
@@ -47,9 +59,11 @@ const ConversationList = ({
   activeId,
   currentUserId,
   isSuperAdmin,
+  viewAll,
   listView,
   onListViewChange,
   onSelect,
+  onMessageSelect,
   onNew,
   onConversationsChanged,
   onConversationDeleted,
@@ -65,9 +79,43 @@ const ConversationList = ({
     if (editingId) editInputRef.current?.focus();
   }, [editingId]);
 
-  const filtered = conversations.filter((c) => {
+  // Local title/recipient filter (cheap, in-memory).
+  const filteredConversations = conversations.filter((c) => {
     const haystack = `${getConvTitle(c)} ${getConvRecipients(c)}`.toLowerCase();
     return haystack.includes(search.toLowerCase());
+  });
+
+  // Sort: unread first (most recent unread at top), then by last_message_at desc.
+  // The spec calls this out explicitly. Skipped entirely in view-all (super
+  // admin auditing) since unread isn't meaningful there.
+  const sortedConversations = [...filteredConversations].sort((a, b) => {
+    if (!viewAll) {
+      const aUnread = (a.unread_count ?? 0) > 0 ? 1 : 0;
+      const bUnread = (b.unread_count ?? 0) > 0 ? 1 : 0;
+      if (aUnread !== bUnread) return bUnread - aUnread;
+    }
+    const aTs = a.last_message_at ?? a.created_at;
+    const bTs = b.last_message_at ?? b.created_at;
+    return new Date(bTs).getTime() - new Date(aTs).getTime();
+  });
+
+  // Full-text message search: hits live in a separate section below the
+  // conversation list whenever the user has typed something. Empty when
+  // viewAll is on (the RPC is membership-scoped and that's the right
+  // boundary even for super admin — they can browse all convs from the
+  // list section directly).
+  const trimmedSearch = search.trim();
+  const { data: messageHits = [] } = useQuery<SearchMessageHit[]>({
+    queryKey: ["mb-search", currentUserId, trimmedSearch],
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc("mb_search_messages", {
+        uid: currentUserId,
+        q: trimmedSearch,
+      });
+      if (error) throw error;
+      return (data as SearchMessageHit[]) || [];
+    },
+    enabled: trimmedSearch.length >= 2 && !viewAll,
   });
 
   const startEdit = (conv: Conversation) => {
@@ -144,43 +192,48 @@ const ConversationList = ({
     }
   };
 
+  const showSearchMessages = !viewAll && trimmedSearch.length >= 2 && messageHits.length > 0;
+
   return (
     <div className="flex flex-col h-full">
       <div className="p-3 border-b border-white/[0.06]">
         <div className="flex items-center justify-between mb-3">
           <span className="text-xs font-semibold text-zinc-400 uppercase tracking-wider">Messages</span>
-          <Button
-            size="icon"
-            variant="ghost"
-            onClick={onNew}
-            className="h-7 w-7 text-zinc-400 hover:text-white hover:bg-white/10"
-            title="New conversation"
-          >
-            <Plus className="w-4 h-4" />
-          </Button>
+          {!viewAll && (
+            <Button
+              size="icon"
+              variant="ghost"
+              onClick={onNew}
+              className="h-7 w-7 text-zinc-400 hover:text-white hover:bg-white/10"
+              title="New conversation"
+            >
+              <Plus className="w-4 h-4" />
+            </Button>
+          )}
         </div>
 
-        {/* Active | Archived tabs */}
-        <div className="flex gap-1 mb-3 bg-white/[0.04] rounded-md p-0.5">
-          {(["active", "archived"] as const).map((v) => (
-            <button
-              key={v}
-              onClick={() => onListViewChange(v)}
-              className={`flex-1 text-[11px] font-medium py-1 rounded transition-colors capitalize ${
-                listView === v
-                  ? "bg-white/[0.08] text-white"
-                  : "text-zinc-500 hover:text-zinc-300"
-              }`}
-            >
-              {v}
-            </button>
-          ))}
-        </div>
+        {!viewAll && (
+          <div className="flex gap-1 mb-3 bg-white/[0.04] rounded-md p-0.5">
+            {(["active", "archived"] as const).map((v) => (
+              <button
+                key={v}
+                onClick={() => onListViewChange(v)}
+                className={`flex-1 text-[11px] font-medium py-1 rounded transition-colors capitalize ${
+                  listView === v
+                    ? "bg-white/[0.08] text-white"
+                    : "text-zinc-500 hover:text-zinc-300"
+                }`}
+              >
+                {v}
+              </button>
+            ))}
+          </div>
+        )}
 
         <div className="relative">
           <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-zinc-600" />
           <Input
-            placeholder="Search..."
+            placeholder={viewAll ? "Search all conversations..." : "Search title or messages..."}
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="pl-8 h-8 text-xs bg-white/[0.04] border-white/[0.08] text-zinc-200 placeholder:text-zinc-600 focus-visible:ring-1 focus-visible:ring-white/20"
@@ -193,13 +246,13 @@ const ConversationList = ({
           <div className="p-4 text-center text-zinc-600 text-xs">Loading...</div>
         )}
 
-        {!loading && filtered.length === 0 && (
+        {!loading && sortedConversations.length === 0 && !showSearchMessages && (
           <div className="p-4 text-center">
             <MessageSquare className="w-8 h-8 text-zinc-700 mx-auto mb-2" />
             <p className="text-zinc-600 text-xs">
-              {listView === "archived" ? "No archived conversations" : "No conversations yet"}
+              {listView === "archived" && !viewAll ? "No archived conversations" : "No conversations yet"}
             </p>
-            {listView === "active" && (
+            {listView === "active" && !viewAll && (
               <button onClick={onNew} className="text-[#bf0f3e] text-xs mt-1 hover:underline">
                 Start one
               </button>
@@ -207,14 +260,17 @@ const ConversationList = ({
           </div>
         )}
 
-        {filtered.map((conv) => {
+        {sortedConversations.map((conv) => {
           const title = getConvTitle(conv);
           const recipients = getConvRecipients(conv);
           const isActive = conv.id === activeId;
           const isEditing = editingId === conv.id;
           const pillarColor = PILLAR_COLOR[conv.pillar];
-          const canEdit = conv.created_by === currentUserId || isSuperAdmin;
+          const isMember = conv.is_member ?? true;
+          const canEdit = (conv.created_by === currentUserId || isSuperAdmin) && isMember;
           const canDelete = isSuperAdmin;
+          const canArchive = isMember && !viewAll;
+          const unread = conv.unread_count ?? 0;
 
           return (
             <div
@@ -257,31 +313,33 @@ const ConversationList = ({
                         }}
                         className="h-6 text-sm bg-white/[0.06] border-white/[0.12] text-white px-1.5"
                       />
-                      <button
-                        onClick={saveEdit}
-                        className="p-1 rounded text-green-400 hover:bg-green-500/10"
-                        title="Save"
-                      >
+                      <button onClick={saveEdit} className="p-1 rounded text-green-400 hover:bg-green-500/10" title="Save">
                         <Check className="w-3.5 h-3.5" />
                       </button>
-                      <button
-                        onClick={cancelEdit}
-                        className="p-1 rounded text-zinc-500 hover:bg-white/[0.06] hover:text-zinc-300"
-                        title="Cancel"
-                      >
+                      <button onClick={cancelEdit} className="p-1 rounded text-zinc-500 hover:bg-white/[0.06] hover:text-zinc-300" title="Cancel">
                         <X className="w-3.5 h-3.5" />
                       </button>
                     </div>
                   ) : (
                     <>
-                      <span className="text-sm font-semibold text-white truncate">
+                      <span className={`text-sm truncate ${unread > 0 ? "font-bold text-white" : "font-semibold text-white"}`}>
                         {title}
                       </span>
-                      {conv.last_message_at && (
-                        <span className="text-[10px] text-zinc-600 ml-1 flex-shrink-0">
-                          {formatTime(conv.last_message_at)}
-                        </span>
-                      )}
+                      <div className="flex items-center gap-1.5 flex-shrink-0">
+                        {unread > 0 && (
+                          <span
+                            className="text-[9px] font-bold text-white rounded-full px-1.5 py-0.5 min-w-[16px] text-center leading-none"
+                            style={{ background: pillarColor }}
+                          >
+                            {unread > 99 ? "99+" : unread}
+                          </span>
+                        )}
+                        {conv.last_message_at && (
+                          <span className="text-[10px] text-zinc-600">
+                            {formatTime(conv.last_message_at)}
+                          </span>
+                        )}
+                      </div>
                     </>
                   )}
                 </div>
@@ -304,7 +362,6 @@ const ConversationList = ({
                     {PILLAR_LABEL[conv.pillar]}
                   </span>
 
-                  {/* Row actions — hover-revealed, pointer-events-auto so they're clickable above the overlay button */}
                   {!isEditing && (
                     <div className="opacity-0 group-hover/row:opacity-100 transition-opacity flex items-center gap-0.5 pointer-events-auto">
                       {canEdit && (
@@ -316,13 +373,15 @@ const ConversationList = ({
                           <Pencil className="w-3 h-3" />
                         </button>
                       )}
-                      <button
-                        onClick={(e) => { e.stopPropagation(); setArchived(conv, listView === "active"); }}
-                        className="p-1 rounded text-zinc-500 hover:bg-white/[0.08] hover:text-zinc-200"
-                        title={listView === "active" ? "Archive" : "Restore"}
-                      >
-                        {listView === "active" ? <Archive className="w-3 h-3" /> : <ArchiveRestore className="w-3 h-3" />}
-                      </button>
+                      {canArchive && (
+                        <button
+                          onClick={(e) => { e.stopPropagation(); setArchived(conv, listView === "active"); }}
+                          className="p-1 rounded text-zinc-500 hover:bg-white/[0.08] hover:text-zinc-200"
+                          title={listView === "active" ? "Archive" : "Restore"}
+                        >
+                          {listView === "active" ? <Archive className="w-3 h-3" /> : <ArchiveRestore className="w-3 h-3" />}
+                        </button>
+                      )}
                       {canDelete && (
                         <button
                           onClick={(e) => { e.stopPropagation(); setPendingDelete(conv); }}
@@ -339,9 +398,39 @@ const ConversationList = ({
             </div>
           );
         })}
+
+        {/* Full-text message search results */}
+        {showSearchMessages && (
+          <div>
+            <div className="px-3 pt-3 pb-1.5">
+              <span className="text-[10px] font-semibold text-zinc-500 uppercase tracking-wider">
+                Messages matching "{trimmedSearch}"
+              </span>
+            </div>
+            {messageHits.map((hit) => (
+              <button
+                key={hit.message_id}
+                onClick={() => onMessageSelect(hit.conversation_id, hit.message_id)}
+                className="w-full text-left px-3 py-2.5 border-b border-white/[0.03] hover:bg-white/[0.03] transition-colors"
+              >
+                <div className="flex items-center justify-between mb-0.5 gap-2">
+                  <span className="text-xs font-medium text-zinc-300 truncate">
+                    {hit.conversation_name?.trim() || "Untitled conversation"}
+                  </span>
+                  <span className="text-[10px] text-zinc-600 flex-shrink-0">
+                    {formatTime(hit.created_at)}
+                  </span>
+                </div>
+                <p className="text-xs text-zinc-500 line-clamp-2">
+                  <span className="text-zinc-400">{hit.sender_name || "Unknown"}:</span>{" "}
+                  {hit.content}
+                </p>
+              </button>
+            ))}
+          </div>
+        )}
       </div>
 
-      {/* Permanent delete confirmation (super admin only) */}
       <AlertDialog open={!!pendingDelete} onOpenChange={(o) => { if (!o) setPendingDelete(null); }}>
         <AlertDialogContent className="bg-neutral-900 border-white/[0.08] text-white">
           <AlertDialogHeader>
