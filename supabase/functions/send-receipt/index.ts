@@ -410,9 +410,17 @@ Deno.serve(async (req) => {
 
     // Try to send email
     if (!resendApiKey) {
+      // Dual-write: legacy year-specific column + new generic columns. The
+      // generic columns are the source of truth going forward; legacy
+      // columns stay populated during the transition so a rollback is safe.
       await supabase
         .from("supporters")
-        .update({ receipt_2026_status: "Failed" })
+        .update({
+          receipt_2026_status: "Failed",
+          latest_receipt_year: new Date().getFullYear(),
+          latest_receipt_status: "Failed",
+          latest_receipt_sent_at: new Date().toISOString(),
+        })
         .eq("id", supporter_id);
 
       return new Response(
@@ -546,7 +554,12 @@ EIN: 84-3998071 | 501(c)(3) Nonprofit`;
 
       await supabase
         .from("supporters")
-        .update({ receipt_2026_status: "Failed" })
+        .update({
+          receipt_2026_status: "Failed",
+          latest_receipt_year: new Date().getFullYear(),
+          latest_receipt_status: "Failed",
+          latest_receipt_sent_at: new Date().toISOString(),
+        })
         .eq("id", supporter_id);
 
       return new Response(
@@ -559,13 +572,20 @@ EIN: 84-3998071 | 501(c)(3) Nonprofit`;
       );
     }
 
-    // Update supporter record
+    // Update supporter record. Dual-write old + new columns during the
+    // transition; frontend reads from the new generic columns going forward.
+    const nowIso = new Date().toISOString();
+    const currentYear = new Date().getFullYear();
     await supabase
       .from("supporters")
       .update({
         receipt_2026_status: "Sent",
-        receipt_2026_sent_at: new Date().toISOString(),
+        receipt_2026_sent_at: nowIso,
         receipt_2026_last_sent_to: supporter.email,
+        latest_receipt_year: currentYear,
+        latest_receipt_status: "Sent",
+        latest_receipt_sent_at: nowIso,
+        latest_receipt_sent_to: supporter.email,
       })
       .eq("id", supporter_id);
 

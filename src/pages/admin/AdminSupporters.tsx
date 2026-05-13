@@ -16,10 +16,14 @@ interface SupporterRow {
   id: string;
   name: string;
   email: string | null;
-  receipt_2026_status: string;
-  receipt_2026_sent_at: string | null;
+  /** Status to display for the current year — "Sent" if a receipt was sent
+   *  this calendar year, "Not Sent" otherwise. */
+  current_year_status: "Sent" | "Failed" | "Not Sent";
+  current_year_sent_at: string | null;
   total_2026: number;
 }
+
+const CURRENT_YEAR = new Date().getFullYear();
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
@@ -32,9 +36,9 @@ const AdminSupporters = () => {
 
   const fetchData = useCallback(async () => {
     setLoading(true);
-    const { data: supporters } = await supabase
-      .from("supporters")
-      .select("id, name, email, receipt_2026_status, receipt_2026_sent_at")
+    const { data: supporters } = await (supabase
+      .from("supporters") as any)
+      .select("id, name, email, latest_receipt_year, latest_receipt_status, latest_receipt_sent_at")
       .order("name");
 
     if (!supporters) { setLoading(false); return; }
@@ -59,7 +63,21 @@ const AdminSupporters = () => {
 
     setRows(
       supporters
-        .map((s: any) => ({ ...s, total_2026: totals[s.id] || 0 }))
+        .map((s: any) => {
+          const isCurrentYear = s.latest_receipt_year === CURRENT_YEAR;
+          const status: "Sent" | "Failed" | "Not Sent" =
+            isCurrentYear && s.latest_receipt_status === "Sent" ? "Sent"
+            : isCurrentYear && s.latest_receipt_status === "Failed" ? "Failed"
+            : "Not Sent";
+          return {
+            id: s.id,
+            name: s.name,
+            email: s.email,
+            current_year_status: status,
+            current_year_sent_at: isCurrentYear ? s.latest_receipt_sent_at : null,
+            total_2026: totals[s.id] || 0,
+          };
+        })
         .filter((s) => s.total_2026 > 0)  // Only show supporters with qualifying donations
     );
     setLoading(false);
@@ -132,10 +150,10 @@ const AdminSupporters = () => {
                     <TableCell className="text-white font-medium">{s.name}</TableCell>
                     <TableCell className="text-white/70">{s.email || "—"}</TableCell>
                     <TableCell className="text-white">{formatUSD(s.total_2026)}</TableCell>
-                    <TableCell>{statusBadge(s.receipt_2026_status)}</TableCell>
+                    <TableCell>{statusBadge(s.current_year_status)}</TableCell>
                     <TableCell className="text-white/70">
-                      {s.receipt_2026_sent_at
-                        ? new Date(s.receipt_2026_sent_at).toLocaleDateString()
+                      {s.current_year_sent_at
+                        ? new Date(s.current_year_sent_at).toLocaleDateString()
                         : "—"}
                     </TableCell>
                     <TableCell>

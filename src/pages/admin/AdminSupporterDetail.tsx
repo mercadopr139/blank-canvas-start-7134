@@ -16,10 +16,13 @@ interface Supporter {
   id: string;
   name: string;
   email: string | null;
-  receipt_2026_status: string;
-  receipt_2026_sent_at: string | null;
-  receipt_2026_last_sent_to: string | null;
+  latest_receipt_year: number | null;
+  latest_receipt_status: string | null;
+  latest_receipt_sent_at: string | null;
+  latest_receipt_sent_to: string | null;
 }
+
+const CURRENT_YEAR = new Date().getFullYear();
 
 interface Donation {
   id: string;
@@ -114,7 +117,13 @@ const AdminSupporterDetail = () => {
           </div>
         </div>
         <div className="flex items-center gap-3">
-          {statusBadge(supporter.receipt_2026_status)}
+          {statusBadge(
+            supporter.latest_receipt_year === CURRENT_YEAR && supporter.latest_receipt_status === "Sent"
+              ? "Sent"
+              : supporter.latest_receipt_year === CURRENT_YEAR && supporter.latest_receipt_status === "Failed"
+                ? "Failed"
+                : "Not Sent"
+          )}
           <Button
             className="bg-white text-black hover:bg-white/90"
             onClick={() => {
@@ -168,10 +177,13 @@ const AdminSupporterDetail = () => {
           </Table>
         </div>
 
-        {supporter.receipt_2026_sent_at && (
+        {supporter.latest_receipt_sent_at && (
           <p className="text-sm text-white/40 mt-4">
-            Last sent to {supporter.receipt_2026_last_sent_to} on{" "}
-            {new Date(supporter.receipt_2026_sent_at).toLocaleString()}
+            Last sent to {supporter.latest_receipt_sent_to} on{" "}
+            {new Date(supporter.latest_receipt_sent_at).toLocaleString()}
+            {supporter.latest_receipt_year !== CURRENT_YEAR && (
+              <span className="text-white/30"> ({supporter.latest_receipt_year} receipt)</span>
+            )}
           </p>
         )}
       </div>

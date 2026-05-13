@@ -46,8 +46,12 @@ interface RevenueRow {
   revenue_type: string;
   payment_method: string | null;
   logged_by: string | null;
-  receipt_2026_status: string | null;
+  /** True when this supporter has a Sent receipt for the current calendar
+   *  year. Derived from supporters.latest_receipt_year + latest_receipt_status. */
+  receipt_sent_this_year: boolean;
 }
+
+const CURRENT_YEAR = new Date().getFullYear();
 
 const emptyForm = {
   supporter_id: "" as string,
@@ -103,19 +107,29 @@ const AdminRevenue = () => {
     select("id, supporter_id, date, amount, revenue_type, payment_method, reference_id, logged_by").
     order("date", { ascending: false });
 
-    // Fetch supporter names for linked records
+    // Fetch supporter names + latest-receipt state for linked records.
+    // receipt_sent_this_year is derived: latest_receipt_year matches the
+    // current calendar year AND latest_receipt_status === 'Sent'. Past-year
+    // sends correctly read as "Not Sent" for the current year.
     const revenueRows = (data ?? []) as any[];
     const supporterIds = [...new Set(revenueRows.map((r) => r.supporter_id).filter(Boolean))];
-    let supporterMap: Record<string, { name: string; receipt_2026_status: string }> = {};
+    let supporterMap: Record<string, { name: string; sentThisYear: boolean }> = {};
     if (supporterIds.length > 0) {
-      const { data: sData } = await supabase.from("supporters").select("id, name, receipt_2026_status").in("id", supporterIds);
-      (sData ?? []).forEach((s: any) => {supporterMap[s.id] = { name: s.name, receipt_2026_status: s.receipt_2026_status };});
+      const { data: sData } = await (supabase.from("supporters") as any)
+        .select("id, name, latest_receipt_year, latest_receipt_status")
+        .in("id", supporterIds);
+      (sData ?? []).forEach((s: any) => {
+        supporterMap[s.id] = {
+          name: s.name,
+          sentThisYear: s.latest_receipt_year === CURRENT_YEAR && s.latest_receipt_status === "Sent",
+        };
+      });
     }
 
     setRows(revenueRows.map((r) => ({
       ...r,
       supporter_name: r.supporter_id ? supporterMap[r.supporter_id]?.name || "Unknown" : null,
-      receipt_2026_status: r.supporter_id ? supporterMap[r.supporter_id]?.receipt_2026_status || null : null,
+      receipt_sent_this_year: r.supporter_id ? supporterMap[r.supporter_id]?.sentThisYear ?? false : false,
     })));
     setLoading(false);
   }, []);
@@ -587,11 +601,11 @@ const AdminRevenue = () => {
                       {(r.revenue_type === "Donation" || r.revenue_type === "Sponsorship") && r.supporter_id ? (
                         <div className="flex flex-col items-center gap-1">
                           <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${
-                            r.receipt_2026_status === "Sent"
+                            r.receipt_sent_this_year
                               ? "bg-green-600/20 text-green-400"
                               : "bg-yellow-600/20 text-yellow-400"
                           }`}>
-                            {r.receipt_2026_status === "Sent" ? "Sent" : "Not Sent"}
+                            {r.receipt_sent_this_year ? "Sent" : "Not Sent"}
                           </span>
                           {r.supporter_id && (
                             <button
@@ -601,9 +615,9 @@ const AdminRevenue = () => {
                                 setReceiptOpen(true);
                               }}
                               className="text-[11px] text-yellow-400 hover:text-yellow-300 hover:underline transition-colors"
-                              title={r.receipt_2026_status === "Sent" ? "Resend receipt to supporter" : "Send receipt to supporter"}
+                              title={r.receipt_sent_this_year ? "Resend receipt to supporter" : "Send receipt to supporter"}
                             >
-                              {r.receipt_2026_status === "Sent" ? "Resend" : "Send"}
+                              {r.receipt_sent_this_year ? "Resend" : "Send"}
                             </button>
                           )}
                         </div>

@@ -68,15 +68,23 @@ const AdminDonations = () => {
 
   const fetchRevenue = useCallback(async () => {
     setLoading(true);
-    const { data } = await supabase
-      .from("donations")
-      .select("id, revenue_type, source_name, donor_name, amount, method, deposit_date, date_received, reference_id, receipt_status, supporter_id, supporters(receipt_2026_status)")
+    const currentYear = new Date().getFullYear();
+    const { data } = await (supabase
+      .from("donations") as any)
+      .select("id, revenue_type, source_name, donor_name, amount, method, deposit_date, date_received, reference_id, receipt_status, supporter_id, supporters(latest_receipt_year, latest_receipt_status)")
       .order("created_at", { ascending: false });
 
-    const mapped = (data || []).map((d: any) => ({
-      ...d,
-      supporter_receipt_status: d.supporters?.receipt_2026_status || null,
-    }));
+    const mapped = (data || []).map((d: any) => {
+      const supp = d.supporters;
+      const currentYearStatus: string | null =
+        supp && supp.latest_receipt_year === currentYear
+          ? supp.latest_receipt_status
+          : null;
+      return {
+        ...d,
+        supporter_receipt_status: currentYearStatus,
+      };
+    });
     setRows(mapped as Revenue[]);
     setLoading(false);
   }, []);
