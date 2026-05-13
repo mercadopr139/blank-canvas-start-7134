@@ -780,11 +780,12 @@ const AdminRevenue = () => {
                       setForm((f) => ({ ...f, amount: num.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) }));
                     }
                   }}
-                  onFocus={() => {
-                    const num = parseFloat(form.amount.replace(/,/g, ""));
-                    if (!isNaN(num)) {
-                      setForm((f) => ({ ...f, amount: String(num) }));
-                    }
+                  onFocus={(e) => {
+                    // Select-all on focus is the standard currency-input pattern
+                    // and sidesteps the cursor-jump that came from re-formatting
+                    // the value on focus. parseFloat already strips commas at
+                    // save time so we never need the "unformat on focus" trick.
+                    e.currentTarget.select();
                   }}
                   className="bg-white/5 border-white/10 text-white pl-7"
                   placeholder="0.00" />
