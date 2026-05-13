@@ -141,6 +141,11 @@ const AdminRevenue = () => {
   const [supporterDetails, setSupporterDetails] = useState(emptySupporterDetails);
   const [supporterDetailsOpen, setSupporterDetailsOpen] = useState(false);
   const [isNewSupporter, setIsNewSupporter] = useState(false);
+  // Anonymous mode: the operator chose to log this revenue without attaching
+  // it to a supporter (e.g. cash drop, unattributed online gift). The whole
+  // supporter section collapses to a small banner and supporter_id stays null
+  // on both the revenue and donations rows.
+  const [isAnonymous, setIsAnonymous] = useState(false);
 
   const openNew = () => {
     setEditId(null);
@@ -149,6 +154,7 @@ const AdminRevenue = () => {
     setSupporterDetails(emptySupporterDetails);
     setSupporterDetailsOpen(false);
     setIsNewSupporter(false);
+    setIsAnonymous(false);
     setModalOpen(true);
   };
 
@@ -157,6 +163,7 @@ const AdminRevenue = () => {
     setSupporterSearch(r.supporter_name || "");
     setSupporterDetailsOpen(false);
     setIsNewSupporter(false);
+    setIsAnonymous(false);
     setForm({
       supporter_id: r.supporter_id || "",
       supporter_email: "",
@@ -257,9 +264,12 @@ const AdminRevenue = () => {
     if (!form.date || !form.amount) return;
     setSaving(true);
 
-    // If supporter not yet linked but we have a name typed, find/create
+    // Resolve supporter linkage. Three paths: anonymous (no supporter), find
+    // or create from a typed name, or save edits to an already-linked supporter.
     let supporterId = form.supporter_id || null;
-    if (!supporterId && (supporterSearch.trim() || isNewSupporter)) {
+    if (isAnonymous) {
+      supporterId = null;
+    } else if (!supporterId && (supporterSearch.trim() || isNewSupporter)) {
       const name = supporterDetails.name || supporterSearch.trim();
       supporterId = await findOrCreateSupporter(name, supporterDetails, form.revenue_type);
       if (supporterId) {
@@ -292,7 +302,7 @@ const AdminRevenue = () => {
 
     // Also sync to donations table (for the receipt PDF function, which still
     // reads from donations for fields not present on revenue).
-    const donorName = supporterSearch.trim() || "N/A";
+    const donorName = isAnonymous ? "Anonymous" : (supporterSearch.trim() || "N/A");
     const donationsPayload: Record<string, any> = {
       donor_name: donorName,
       source_name: donorName,
@@ -464,7 +474,7 @@ const AdminRevenue = () => {
                     <td className="p-4 align-middle text-white/60 text-sm">{(r as any).reference_id || "—"}</td>
                     <td className="p-4 align-middle text-white/70 text-sm">{r.logged_by || "—"}</td>
                     <td className="p-4 align-middle text-center">
-                      {(r.revenue_type === "Donation" || r.revenue_type === "Sponsorship") ? (
+                      {(r.revenue_type === "Donation" || r.revenue_type === "Sponsorship") && r.supporter_id ? (
                         <div className="flex flex-col items-center gap-1">
                           <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${
                             r.receipt_2026_status === "Sent"
@@ -543,9 +553,28 @@ const AdminRevenue = () => {
               </button>
             }
           </div>
-           <div className={`flex-1 px-6 pb-4 space-y-4 pt-2 ${(form.supporter_id || isNewSupporter || editId) ? 'overflow-y-auto' : 'overflow-visible'}`}>
-             {/* Supporter */}
-            <div className="space-y-1.5">
+           <div className={`flex-1 px-6 pb-4 space-y-4 pt-2 ${(form.supporter_id || isNewSupporter || editId || isAnonymous) ? 'overflow-y-auto' : 'overflow-visible'}`}>
+             {/* Supporter section — autocomplete + skip-to-anonymous link, OR
+                  a banner when anonymous mode is active. */}
+            {isAnonymous ? (
+              <div className="flex items-center justify-between gap-3 bg-white/[0.03] border border-white/10 rounded-md px-3 py-2.5">
+                <div className="flex flex-col">
+                  <span className="text-xs font-medium text-white/70">Anonymous entry</span>
+                  <span className="text-[11px] text-white/40">No supporter will be linked to this revenue.</span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsAnonymous(false);
+                    setSupporterSearch("");
+                  }}
+                  className="text-xs text-green-400 hover:text-green-300 hover:underline whitespace-nowrap"
+                >
+                  Add supporter instead
+                </button>
+              </div>
+            ) : (
+              <div className="space-y-1.5">
               <SupporterAutocomplete
                 label="Supporter"
                 value={supporterSearch}
@@ -584,7 +613,25 @@ const AdminRevenue = () => {
                 }}
                 placeholder="Type to search supporters…" />
 
-            </div>
+              {/* Escape hatch for revenue that has no supporter to attribute
+                  (cash drop, anonymous gift). Shown only while no supporter
+                  has been picked or created for a brand-new entry. */}
+              {!editId && !form.supporter_id && !isNewSupporter && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsAnonymous(true);
+                    setSupporterSearch("");
+                    setSupporterDetails(emptySupporterDetails);
+                    setForm((f) => ({ ...f, supporter_id: "", supporter_email: "" }));
+                  }}
+                  className="text-[11px] text-white/40 hover:text-white/70 hover:underline transition-colors"
+                >
+                  Skip — log without a supporter →
+                </button>
+              )}
+              </div>
+            )}
 
             {/* Collapsible Supporter Details */}
             {(form.supporter_id || isNewSupporter) && supporterDetailsOpen &&
@@ -678,8 +725,9 @@ const AdminRevenue = () => {
               </div>
             }
 
-            {/* Rest of form - only shown after supporter selected/created, or in edit mode */}
-            {(form.supporter_id || isNewSupporter || editId) && <>
+            {/* Rest of form - only shown after supporter selected/created,
+                anonymous mode chosen, or when editing an existing row */}
+            {(form.supporter_id || isNewSupporter || editId || isAnonymous) && <>
             {/* Supporter Email (shown when no details panel, for quick entry) */}
             {!supporterDetailsOpen && !isNewSupporter &&
             <div className="space-y-1.5">
