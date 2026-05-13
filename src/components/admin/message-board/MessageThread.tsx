@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { Users, User, MoreHorizontal, Trash2, Pencil, X, ArrowLeft, Eye } from "lucide-react";
+import { Users, User, MoreHorizontal, Trash2, Pencil, X, ArrowLeft, Eye, Flag } from "lucide-react";
 import MessageInput from "./MessageInput";
 import type { Conversation } from "@/pages/admin/AdminMessageBoard";
 import { PILLAR_COLOR, PILLAR_LABEL } from "@/pages/admin/AdminMessageBoard";
@@ -306,9 +306,11 @@ const MessageThread = ({ conversation, currentUserId, isSuperAdmin, canPost, scr
         )}
 
         {messages.map((msg, idx) => {
-          const isMe = msg.sender_id === currentUserId;
           const showDate = idx === 0 || !isSameDay(messages[idx - 1].created_at, msg.created_at);
-          const showSender = !isMe && (idx === 0 || messages[idx - 1].sender_id !== msg.sender_id || showDate);
+          // Now that every message is left-aligned, show the sender name
+          // above the first message in any streak — including the current
+          // user's own messages. Otherwise it can be unclear who said what.
+          const showSender = idx === 0 || messages[idx - 1].sender_id !== msg.sender_id || showDate;
 
           return (
             <div key={msg.id} id={`message-${msg.id}`}>
@@ -323,65 +325,56 @@ const MessageThread = ({ conversation, currentUserId, isSuperAdmin, canPost, scr
               )}
 
               <div
-                className={`flex ${isMe ? "justify-end" : "justify-start"} mb-1 group/msg`}
+                className="flex justify-start mb-1 group/msg"
                 onMouseEnter={() => setHoveredMsgId(msg.id)}
                 onMouseLeave={() => setHoveredMsgId(null)}
               >
-                {isMe && isSuperAdmin && (
-                  <div className={`flex items-center mr-1 transition-opacity ${hoveredMsgId === msg.id ? "opacity-100" : "opacity-0"}`}>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <button className="p-1.5 rounded-lg text-zinc-600 hover:text-zinc-300 hover:bg-white/[0.08] transition-colors outline-none">
-                          <MoreHorizontal className="w-3.5 h-3.5" />
-                        </button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent side="top" align="end" className="w-48 bg-neutral-900 border-white/[0.08] shadow-2xl">
-                        <DropdownMenuItem
-                          onSelect={() => handleDeleteMessage(msg.id)}
-                          className="cursor-pointer text-red-400 focus:text-red-400 focus:bg-red-500/10"
-                        >
-                          <Trash2 className="w-3.5 h-3.5 mr-2" />
-                          Delete message
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </div>
-                )}
-
-                <div className="max-w-[70%]">
+                <div className="max-w-[80%]">
                   {showSender && (
-                    <p className="text-[10px] text-zinc-500 mb-1 ml-1">{msg.sender_name}</p>
+                    <p className="text-[10px] text-zinc-500 mb-1 ml-7">{msg.sender_name}</p>
                   )}
 
-                  <div
-                    className="px-3.5 py-2.5 rounded-2xl text-sm leading-relaxed"
-                    style={
-                      isMe
-                        ? { background: pillarColor, color: "white", borderBottomRightRadius: "4px" }
-                        : {
-                            background: `${pillarColor}12`,
-                            color: "#e4e4e7",
-                            borderBottomLeftRadius: "4px",
-                            borderLeft: `2px solid ${pillarColor}60`,
-                          }
-                    }
-                  >
-                    {msg.content}
+                  <div className="flex items-start gap-2">
+                    {/* Important flag — visible to everyone, signals this message also fired email */}
+                    {msg.is_important ? (
+                      <span
+                        className="shrink-0 mt-2 flex items-center justify-center w-5 h-5 rounded-full bg-amber-500/15 text-amber-400"
+                        title="Marked important — recipients were emailed"
+                      >
+                        <Flag className="w-2.5 h-2.5" />
+                      </span>
+                    ) : (
+                      <span className="shrink-0 w-5" aria-hidden="true" />
+                    )}
+
+                    <div className="min-w-0">
+                      <div
+                        className="px-3.5 py-2.5 rounded-2xl text-sm leading-relaxed"
+                        style={{
+                          background: `${pillarColor}12`,
+                          color: "#e4e4e7",
+                          borderBottomLeftRadius: "4px",
+                          borderLeft: `2px solid ${pillarColor}60`,
+                        }}
+                      >
+                        {msg.content}
+                      </div>
+                      <p className="text-[9px] text-zinc-700 mt-0.5 ml-1">
+                        {formatMessageTime(msg.created_at)}
+                      </p>
+                    </div>
                   </div>
-                  <p className={`text-[9px] text-zinc-700 mt-0.5 ${isMe ? "text-right" : "text-left ml-1"}`}>
-                    {formatMessageTime(msg.created_at)}
-                  </p>
                 </div>
 
-                {!isMe && isSuperAdmin && (
-                  <div className={`flex items-center ml-1 transition-opacity ${hoveredMsgId === msg.id ? "opacity-100" : "opacity-0"}`}>
+                {isSuperAdmin && (
+                  <div className={`flex items-center ml-1 mt-2 transition-opacity ${hoveredMsgId === msg.id ? "opacity-100" : "opacity-0"}`}>
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
                         <button className="p-1.5 rounded-lg text-zinc-600 hover:text-zinc-300 hover:bg-white/[0.08] transition-colors outline-none">
                           <MoreHorizontal className="w-3.5 h-3.5" />
                         </button>
                       </DropdownMenuTrigger>
-                      <DropdownMenuContent side="top" align="end" className="w-48 bg-neutral-900 border-white/[0.08] shadow-2xl">
+                      <DropdownMenuContent side="top" align="start" className="w-48 bg-neutral-900 border-white/[0.08] shadow-2xl">
                         <DropdownMenuItem
                           onSelect={() => handleDeleteMessage(msg.id)}
                           className="cursor-pointer text-red-400 focus:text-red-400 focus:bg-red-500/10"
