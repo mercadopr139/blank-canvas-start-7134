@@ -1027,11 +1027,15 @@ const AdminRevenue = () => {
         }} />
 
       {/* ── Receipt Viewer (read-only audit of prior sends) ─────────────── */}
+      {/* View is only ever clicked on rows where receipt_sent_this_year is
+          true, so we always want the auto-regenerate fallback for pre-audit
+          sends here. */}
       <ReceiptViewerModal
         open={viewerOpen}
         onOpenChange={setViewerOpen}
         supporterId={viewerSupporterId}
         supporterName={viewerSupporterName}
+        autoRegenerateIfEmpty
       />
 
     </div>);

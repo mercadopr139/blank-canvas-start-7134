@@ -74,15 +74,18 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Optional input: a specific calendar year to backfill, defaults to 2026
-    // (the only year that's actually been sent so far). Future re-runs for
-    // a different year would pass { year: 2027 } once 2027 sends accumulate.
+    // Optional inputs:
+    //   year         — calendar year to backfill, defaults to 2026
+    //   supporter_id — if set, only regenerate for this one supporter
+    //                  (used by the viewer modal's lazy auto-regenerate)
     let receiptYear = 2026;
+    let onlySupporterId: string | null = null;
     try {
-      const body = (await req.json()) as { year?: number };
+      const body = (await req.json()) as { year?: number; supporter_id?: string };
       if (body?.year && Number.isInteger(body.year)) receiptYear = body.year;
+      if (body?.supporter_id) onlySupporterId = body.supporter_id;
     } catch {
-      // No body / not JSON — fine, use default.
+      // No body / not JSON — fine, use defaults.
     }
 
     const yearStart = `${receiptYear}-01-01`;
@@ -104,14 +107,20 @@ Deno.serve(async (req) => {
       console.error("Logo fetch failed:", e);
     }
 
-    // Find every supporter who has a current-year Sent status on the legacy
-    // year column. Includes anyone latest_receipt_status='Sent' too, since
-    // the dual-write has been in place from a recent deploy. Either signal
-    // is enough to mean "we marked them as sent at some point."
-    const { data: supporters, error: suppErr } = await supabase
+    // Build the supporter query. Two modes:
+    //   - Bulk: every supporter marked Sent on either the legacy column
+    //     or the new generic column (one-shot from the admin UI).
+    //   - Single: a specific supporter (auto-regenerate from the modal
+    //     when the user clicks View on someone who has no audit rows yet).
+    let supportersQuery: any = supabase
       .from("supporters")
-      .select("id, name, email, receipt_2026_status, latest_receipt_status, latest_receipt_year, latest_receipt_sent_at, latest_receipt_sent_to")
-      .or("receipt_2026_status.eq.Sent,latest_receipt_status.eq.Sent");
+      .select("id, name, email, receipt_2026_status, latest_receipt_status, latest_receipt_year, latest_receipt_sent_at, latest_receipt_sent_to");
+    if (onlySupporterId) {
+      supportersQuery = supportersQuery.eq("id", onlySupporterId);
+    } else {
+      supportersQuery = supportersQuery.or("receipt_2026_status.eq.Sent,latest_receipt_status.eq.Sent");
+    }
+    const { data: supporters, error: suppErr } = await supportersQuery;
 
     if (suppErr) {
       return new Response(JSON.stringify({ error: suppErr.message }), {

@@ -24,22 +24,30 @@ interface Props {
   /** Supporter whose receipt history to view. */
   supporterId: string;
   supporterName: string;
+  /** When true and no audit rows exist on open, the modal auto-invokes
+   *  the backfill function for this single supporter and refetches. The
+   *  caller should only set this when the supporter is known to have a
+   *  Sent status on a prior (pre-audit) send. */
+  autoRegenerateIfEmpty?: boolean;
 }
 
 // Pulls the full history for the supporter, latest first, so the operator
 // can see what was actually delivered and step back through prior sends
 // (resends, prior-year receipts, failed attempts) if needed.
-const ReceiptViewerModal = ({ open, onOpenChange, supporterId, supporterName }: Props) => {
+const ReceiptViewerModal = ({ open, onOpenChange, supporterId, supporterName, autoRegenerateIfEmpty }: Props) => {
   const [sends, setSends] = useState<ReceiptSendRow[]>([]);
   const [loading, setLoading] = useState(false);
+  const [regenerating, setRegenerating] = useState(false);
   const [selectedId, setSelectedId] = useState<string | null>(null);
 
   useEffect(() => {
     if (!open || !supporterId) return;
     let cancelled = false;
     setLoading(true);
+    setRegenerating(false);
     setSelectedId(null);
-    (async () => {
+
+    const fetchSends = async (): Promise<ReceiptSendRow[]> => {
       // receipt_sends isn't in the auto-generated types.ts yet (table is
       // new); cast supabase to any so the table-name check passes. The
       // returned shape is hand-validated via the ReceiptSendRow interface.
@@ -48,14 +56,37 @@ const ReceiptViewerModal = ({ open, onOpenChange, supporterId, supporterName }: 
         .select("id, receipt_year, status, sent_at, sent_to, subject, email_html, pdf_base64, pdf_filename, personal_message, error, is_regenerated")
         .eq("supporter_id", supporterId)
         .order("sent_at", { ascending: false });
+      return ((data || []) as ReceiptSendRow[]);
+    };
+
+    (async () => {
+      let rows = await fetchSends();
       if (cancelled) return;
-      const rows = (data || []) as ReceiptSendRow[];
+
+      // If the supporter has no audit rows but the caller indicated they
+      // were previously Sent (pre-audit), auto-regenerate inline so the
+      // operator sees the receipt without leaving the modal.
+      if (rows.length === 0 && autoRegenerateIfEmpty) {
+        setRegenerating(true);
+        try {
+          await supabase.functions.invoke("backfill-receipt-sends", {
+            body: { supporter_id: supporterId },
+          });
+          if (cancelled) return;
+          rows = await fetchSends();
+          if (cancelled) return;
+        } catch (e) {
+          console.error("Receipt regenerate failed:", e);
+        }
+        setRegenerating(false);
+      }
+
       setSends(rows);
       setSelectedId(rows[0]?.id ?? null);
       setLoading(false);
     })();
     return () => { cancelled = true; };
-  }, [open, supporterId]);
+  }, [open, supporterId, autoRegenerateIfEmpty]);
 
   const selected = sends.find((s) => s.id === selectedId) || null;
 
@@ -85,7 +116,9 @@ const ReceiptViewerModal = ({ open, onOpenChange, supporterId, supporterName }: 
 
         {loading ? (
           <div className="flex-1 flex items-center justify-center py-16 text-white/40 text-sm">
-            Loading…
+            {regenerating
+              ? "Regenerating preview from current data…"
+              : "Loading…"}
           </div>
         ) : sends.length === 0 ? (
           <div className="flex-1 flex items-center justify-center py-16 text-white/40 text-sm">
