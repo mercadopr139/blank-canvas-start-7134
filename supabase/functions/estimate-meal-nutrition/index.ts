@@ -44,7 +44,7 @@ Deno.serve(async (req) => {
 
     const { data: items, error: itemsError } = await serviceClient
       .from("meal_items")
-      .select("id, food_name, meal_event_id, calories")
+      .select("id, food_name, meal_event_id, calories, sugar_g")
       .in("meal_event_id", event_ids);
 
     if (itemsError) throw itemsError;
@@ -52,7 +52,15 @@ Deno.serve(async (req) => {
       return new Response(JSON.stringify({ estimated: 0 }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
-    const needsEstimate = items.filter((i: any) => i.calories === null || i.calories === 0);
+    // Estimate when calories are missing (null/0) OR sugar is missing
+    // (null only — explicit 0 is a valid result for plain water/meat/etc.
+    // and shouldn't retrigger on every refresh). Items that already have
+    // macros but lack sugar still get included so the sugar_g column
+    // backfills without disturbing existing calorie/protein/carb/fat.
+    const needsEstimate = items.filter((i: any) =>
+      i.calories === null || i.calories === 0 ||
+      i.sugar_g === null
+    );
     if (needsEstimate.length === 0) {
       return new Response(JSON.stringify({ estimated: 0 }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
@@ -67,7 +75,7 @@ Deno.serve(async (req) => {
       system: "You are a nutrition expert. Return only valid JSON arrays with no markdown formatting, no code fences, no extra text. You MUST return the food_name EXACTLY as the user provided it — same spelling, same case, same pluralization.",
       messages: [{
         role: "user",
-        content: `Give me estimated nutritional values per typical serving for the following food items served at a youth program dinner. Return one entry per food, and set food_name to the EXACT string I provided (case and pluralization preserved). Foods: ${uniqueFoods.map(f => `"${f}"`).join(", ")}. For each item return: calories, protein_g, carbs_g, fat_g, fiber_g. Respond only in JSON array format like: [{"food_name": "Fried Chicken", "calories": 320, "protein_g": 28, "carbs_g": 11, "fat_g": 19, "fiber_g": 0}]`,
+        content: `Give me estimated nutritional values per typical serving for the following food items served at a youth program dinner. Return one entry per food, and set food_name to the EXACT string I provided (case and pluralization preserved). Foods: ${uniqueFoods.map(f => `"${f}"`).join(", ")}. For each item return: calories, protein_g, carbs_g, fat_g, fiber_g, sugar_g. Respond only in JSON array format like: [{"food_name": "Fried Chicken", "calories": 320, "protein_g": 28, "carbs_g": 11, "fat_g": 19, "fiber_g": 0, "sugar_g": 1}]`,
       }],
     });
 
@@ -107,15 +115,25 @@ Deno.serve(async (req) => {
 
     let updated = 0;
     for (const item of needsEstimate) {
-      const nutrition = findMatch((item as any).food_name);
+      const it = item as any;
+      const nutrition = findMatch(it.food_name);
       if (nutrition) {
-        await serviceClient.from("meal_items").update({
-          calories: nutrition.calories ?? null,
-          protein_g: nutrition.protein_g ?? null,
-          carbs_g: nutrition.carbs_g ?? null,
-          fat_g: nutrition.fat_g ?? null,
-          fiber_g: nutrition.fiber_g ?? null,
-        }).eq("id", (item as any).id);
+        const hasMacros = it.calories !== null && it.calories !== 0;
+        const patch = hasMacros
+          // Existing item with macros — only patch the missing sugar so
+          // we don't disturb operator-verified or previously-estimated
+          // calorie/protein/carb/fat values.
+          ? { sugar_g: nutrition.sugar_g ?? null }
+          // New item — full nutrition write.
+          : {
+              calories: nutrition.calories ?? null,
+              protein_g: nutrition.protein_g ?? null,
+              carbs_g: nutrition.carbs_g ?? null,
+              fat_g: nutrition.fat_g ?? null,
+              fiber_g: nutrition.fiber_g ?? null,
+              sugar_g: nutrition.sugar_g ?? null,
+            };
+        await serviceClient.from("meal_items").update(patch).eq("id", it.id);
         updated++;
       }
     }

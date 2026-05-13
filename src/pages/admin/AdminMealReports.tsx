@@ -138,7 +138,22 @@ const AdminMealReports = () => {
     let reportRows = data as ReportRow[];
 
     const eventIds = reportRows.filter(r => r.item_count > 0).map(r => r.event_id);
-    const needsEstimation = reportRows.some(r => r.item_count > 0 && r.total_calories === 0);
+
+    // Estimation fires when either:
+    //   1. An event has items but zero calories (brand new event, never estimated), OR
+    //   2. Any item in the date range is missing sugar_g (sugar wasn't part
+    //      of the original prompt; this backfills it on next refresh).
+    let needsEstimation = reportRows.some(r => r.item_count > 0 && r.total_calories === 0);
+    if (!needsEstimation && eventIds.length > 0) {
+      // Only check NULL sugar — items with explicit sugar_g = 0 are valid
+      // (water, plain meat) and shouldn't keep retriggering estimation.
+      const { count: missingSugarCount } = await supabase
+        .from("meal_items")
+        .select("id", { count: "exact", head: true })
+        .in("meal_event_id", eventIds)
+        .is("sugar_g", null);
+      if ((missingSugarCount ?? 0) > 0) needsEstimation = true;
+    }
 
     if (needsEstimation && eventIds.length > 0) {
       setEstimating(true);
