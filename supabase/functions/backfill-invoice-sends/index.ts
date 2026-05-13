@@ -1,36 +1,21 @@
-import { Resend } from "https://esm.sh/resend@2.0.0";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
+// One-shot backfill: for every invoice that's been sent at least once
+// but has no invoice_sends audit row yet, synthesize one. The email body
+// is reconstructed from current invoice fields + the shared template;
+// the PDF comes straight from invoices.pdf_base64 (already stored).
+// Personal note isn't recoverable from before audit logging, so the
+// synthesized row has message=null and is_regenerated=true. The viewer
+// modal renders a disclaimer on regenerated rows.
+//
+// Safe to re-run: invoices with any existing invoice_sends row are
+// skipped, so subsequent invocations only process new gaps.
 
-// IMPORTANT: the email template below is a synced copy of
-// src/lib/invoiceEmailTemplate.ts in the frontend. If you change one,
-// change the other. The frontend is the source of truth at runtime —
-// when it passes emailHtml/emailSubject, those are used as-is. The
-// inline template here is a fallback for older frontends that don't
-// send those fields yet (e.g. during a Vercel deploy window).
-
-const resend = new Resend(Deno.env.get("RESEND_API_KEY"));
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers":
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
-
-interface SendInvoiceRequest {
-  invoiceId: string;
-  invoiceNumber: string;
-  clientName: string;
-  billingEmail: string;
-  month: number;
-  year: number;
-  total: number;
-  pdfBase64: string;
-  emailNote?: string | null;
-  emailHtml?: string;
-  emailSubject?: string;
-  isResend?: boolean;
-  resendTo?: string;
-}
 
 const LOGO_URL = "https://rkdkmzjontaufbyjbcku.supabase.co/storage/v1/object/public/email-assets/nla-logo.png";
 
@@ -69,7 +54,6 @@ function renderInvoiceEmailHtml({
   note?: string | null;
 }): string {
   const titleLine = mode === "resend" ? `Reminder: Invoice ${invoiceNumber}` : `Invoice ${invoiceNumber}`;
-
   const greetingLine = mode === "resend"
     ? `Hi <strong>${escapeHtml(clientName)}</strong> — a friendly reminder that your <strong>${escapeHtml(periodLabel)}</strong> invoice is still outstanding (attached below).`
     : `Hi <strong>${escapeHtml(clientName)}</strong> — your <strong>${escapeHtml(periodLabel)}</strong> invoice is attached below.`;
@@ -142,191 +126,174 @@ function renderInvoiceEmailHtml({
 </html>`;
 }
 
-const handler = async (req: Request): Promise<Response> => {
+interface BackfillSummary {
+  considered: number;
+  inserted: number;
+  skipped_existing: number;
+  skipped_no_pdf: number;
+  errors: { invoice_id: string; error: string }[];
+}
+
+Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
-    return new Response("ok", { headers: corsHeaders });
+    return new Response(null, { headers: corsHeaders });
   }
 
   try {
     const authHeader = req.headers.get("Authorization");
-    if (!authHeader) {
+    if (!authHeader?.startsWith("Bearer ")) {
       return new Response(JSON.stringify({ error: "Unauthorized" }), {
         status: 401,
-        headers: { "Content-Type": "application/json", ...corsHeaders },
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-    const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+    const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
 
+    const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+      global: { headers: { Authorization: authHeader } },
+    });
+
+    // Admin gate (same pattern as send-invoice).
     const token = authHeader.replace("Bearer ", "");
     const { data: { user }, error: authError } = await supabase.auth.getUser(token);
     if (authError || !user) {
       return new Response(JSON.stringify({ error: "Unauthorized" }), {
         status: 401,
-        headers: { "Content-Type": "application/json", ...corsHeaders },
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
-
-    const { data: roleData, error: roleError } = await supabase
+    const { data: roleData } = await supabase
       .from("user_roles")
       .select("role")
       .eq("user_id", user.id)
       .eq("role", "admin")
       .maybeSingle();
-
-    if (roleError || !roleData) {
-      return new Response(JSON.stringify({ error: "Admin access required" }), {
+    if (!roleData) {
+      return new Response(JSON.stringify({ error: "Forbidden" }), {
         status: 403,
-        headers: { "Content-Type": "application/json", ...corsHeaders },
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    const body: SendInvoiceRequest = await req.json();
-    const {
-      invoiceId, invoiceNumber, clientName, billingEmail,
-      month, year, total, pdfBase64, emailNote,
-      emailHtml, emailSubject,
-      isResend, resendTo,
-    } = body;
-
-    if (!invoiceId || !invoiceNumber || !pdfBase64) {
-      throw new Error("Missing required fields");
+    // Optional input: invoice_id — backfill only that one. Used by the
+    // viewer modal's lazy auto-regenerate when an operator opens an
+    // invoice that's marked Sent but has no audit row yet.
+    let onlyInvoiceId: string | null = null;
+    try {
+      const body = (await req.json()) as { invoice_id?: string };
+      if (body?.invoice_id) onlyInvoiceId = body.invoice_id;
+    } catch {
+      // No body / not JSON — fine, run full backfill.
     }
 
-    const recipientEmail = isResend && resendTo ? resendTo : billingEmail;
-    if (!recipientEmail) throw new Error("No recipient email");
+    // Pull invoices that have been sent or paid. We need pdf_base64 for
+    // the synthesized row's attachment; skip rows that don't have one.
+    let invoicesQuery: any = supabase
+      .from("invoices")
+      .select("id, invoice_number, invoice_month, invoice_year, total, pdf_base64, sent_to, sent_at, last_sent_at, vendor_email, client_id, clients(name)")
+      .in("status", ["sent", "paid"]);
+    if (onlyInvoiceId) {
+      invoicesQuery = invoicesQuery.eq("id", onlyInvoiceId);
+    }
+    const { data: invoices, error: invErr } = await invoicesQuery;
 
-    const sendType = isResend ? "resend" : "initial";
-    console.log(`Sending invoice ${invoiceNumber} (${sendType}) to ${recipientEmail}`);
-
-    // Compute period + total locally so we can fall back if the frontend
-    // didn't pass pre-rendered html/subject (older bundle, deploy lag, etc.).
-    const monthName = new Date(year, month - 1).toLocaleString("default", { month: "long" });
-    const periodLabel = `${monthName} ${year}`;
-    const formattedTotal = new Intl.NumberFormat("en-US", {
-      style: "currency",
-      currency: "USD",
-    }).format(total);
-
-    const subject = emailSubject ?? buildInvoiceEmailSubject({
-      mode: sendType,
-      invoiceNumber,
-      clientName,
-      periodLabel,
-    });
-
-    const html = emailHtml ?? renderInvoiceEmailHtml({
-      mode: sendType,
-      invoiceNumber,
-      clientName,
-      periodLabel,
-      total: formattedTotal,
-      note: emailNote,
-    });
-
-    const emailResponse = await resend.emails.send({
-      from: "No Limits Academy <joshmercado@nolimitsboxingacademy.org>",
-      to: [recipientEmail],
-      subject,
-      html,
-      attachments: [
-        {
-          filename: `NLA_Invoice_${invoiceNumber}.pdf`,
-          content: pdfBase64,
-        },
-      ],
-    });
-
-    // Audit fields captured on every send (success and failure) so the
-    // invoice viewer modal can later show exactly what went out.
-    const pdfFilename = `NLA_Invoice_${invoiceNumber}.pdf`;
-
-    if (emailResponse.error) {
-      console.error("Resend API error:", emailResponse.error);
-
-      await supabase.from("invoice_sends").insert({
-        invoice_id: invoiceId,
-        sent_to: recipientEmail,
-        subject,
-        message: emailNote || null,
-        sent_by_user_id: user.id,
-        type: sendType,
-        status: "failed",
-        error: emailResponse.error.message,
-        email_html: html,
-        pdf_base64: pdfBase64,
-        pdf_filename: pdfFilename,
+    if (invErr) {
+      return new Response(JSON.stringify({ error: invErr.message }), {
+        status: 500,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
-
-      throw new Error(`Email sending failed: ${emailResponse.error.message}`);
     }
 
-    console.log("Email sent successfully, ID:", emailResponse.data?.id);
-
-    await supabase.from("invoice_sends").insert({
-      invoice_id: invoiceId,
-      sent_to: recipientEmail,
-      subject,
-      message: emailNote || null,
-      sent_by_user_id: user.id,
-      type: sendType,
-      status: "success",
-      email_html: html,
-      pdf_base64: pdfBase64,
-      pdf_filename: pdfFilename,
-    });
-
-    const updateFields: Record<string, any> = {
-      last_sent_at: new Date().toISOString(),
-      vendor_email: recipientEmail,
+    const summary: BackfillSummary = {
+      considered: invoices?.length ?? 0,
+      inserted: 0,
+      skipped_existing: 0,
+      skipped_no_pdf: 0,
+      errors: [],
     };
 
-    if (!isResend) {
-      updateFields.status = "sent";
-      updateFields.sent_at = new Date().toISOString();
-      updateFields.sent_to = recipientEmail;
-      updateFields.email_note = emailNote || null;
-      updateFields.send_count = 1;
-    }
+    for (const inv of (invoices ?? [])) {
+      try {
+        // Skip if any invoice_sends row already exists for this invoice.
+        const { data: existing } = await supabase
+          .from("invoice_sends")
+          .select("id")
+          .eq("invoice_id", inv.id)
+          .limit(1);
 
-    if (isResend) {
-      const { data: currentInv } = await supabase
-        .from("invoices")
-        .select("send_count")
-        .eq("id", invoiceId)
-        .single();
+        if (existing && existing.length > 0) {
+          summary.skipped_existing++;
+          continue;
+        }
 
-      updateFields.send_count = ((currentInv as any)?.send_count || 0) + 1;
-    }
+        if (!inv.pdf_base64) {
+          summary.skipped_no_pdf++;
+          continue;
+        }
 
-    const { error: updateError } = await supabase
-      .from("invoices")
-      .update(updateFields)
-      .eq("id", invoiceId);
+        const clientName: string = (inv.clients as any)?.name || "Partner";
+        const monthName = new Date(inv.invoice_year, inv.invoice_month - 1)
+          .toLocaleString("default", { month: "long" });
+        const periodLabel = `${monthName} ${inv.invoice_year}`;
+        const formattedTotal = new Intl.NumberFormat("en-US", {
+          style: "currency",
+          currency: "USD",
+        }).format(Number(inv.total ?? 0));
 
-    if (updateError) {
-      console.error("Error updating invoice:", updateError);
-    }
+        const subject = buildInvoiceEmailSubject({
+          mode: "initial",
+          invoiceNumber: inv.invoice_number,
+          clientName,
+          periodLabel,
+        });
+        const emailHtml = renderInvoiceEmailHtml({
+          mode: "initial",
+          invoiceNumber: inv.invoice_number,
+          clientName,
+          periodLabel,
+          total: formattedTotal,
+          note: null, // pre-audit personal notes are not recoverable
+        });
+        const pdfFilename = `NLA_Invoice_${inv.invoice_number}.pdf`;
+        const sentAt = inv.last_sent_at || inv.sent_at || new Date().toISOString();
+        const sentTo = inv.sent_to || inv.vendor_email || "—";
 
-    return new Response(
-      JSON.stringify({ success: true, emailId: emailResponse.data?.id }),
-      {
-        status: 200,
-        headers: { "Content-Type": "application/json", ...corsHeaders },
+        const { error: insertErr } = await supabase.from("invoice_sends").insert({
+          invoice_id: inv.id,
+          sent_to: sentTo,
+          subject,
+          message: null,
+          sent_by_user_id: user.id,
+          type: "initial",
+          status: "success",
+          sent_at: sentAt,
+          email_html: emailHtml,
+          pdf_base64: inv.pdf_base64,
+          pdf_filename: pdfFilename,
+          is_regenerated: true,
+        });
+
+        if (insertErr) {
+          summary.errors.push({ invoice_id: inv.id, error: insertErr.message });
+        } else {
+          summary.inserted++;
+        }
+      } catch (e: any) {
+        summary.errors.push({ invoice_id: inv.id, error: String(e?.message || e) });
       }
-    );
-  } catch (error: any) {
-    console.error("Error in send-invoice function:", error);
-    return new Response(
-      JSON.stringify({ error: error?.message || "Failed to send invoice. Please try again." }),
-      {
-        status: 500,
-        headers: { "Content-Type": "application/json", ...corsHeaders },
-      }
-    );
+    }
+
+    return new Response(JSON.stringify({ success: true, summary }), {
+      status: 200,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+  } catch (e: any) {
+    console.error("backfill-invoice-sends fatal:", e);
+    return new Response(JSON.stringify({ error: String(e?.message || e) }), {
+      status: 500,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
   }
-};
-
-Deno.serve(handler);
+});

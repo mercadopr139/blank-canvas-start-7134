@@ -10,6 +10,7 @@ import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import InvoicePreview from "@/components/admin/InvoicePreview";
+import InvoiceViewerModal from "@/components/admin/InvoiceViewerModal";
 import ClientFormDialog from "@/components/admin/ClientFormDialog";
 import SentInvoicesTable from "@/components/admin/SentInvoicesTable";
 import SendInvoiceModal from "@/components/admin/SendInvoiceModal";
@@ -101,6 +102,7 @@ export default function AdminInvoices() {
   const [activeTab, setActiveTab] = useState<string>("all");
   const [resendInvoice, setResendInvoice] = useState<(Invoice & { client_name?: string }) | null>(null);
   const [isResending, setIsResending] = useState(false);
+  const [viewSendsFor, setViewSendsFor] = useState<{ id: string; invoiceNumber: string; clientName: string; autoRegenerate: boolean } | null>(null);
   const [sendHistory, setSendHistory] = useState<any[]>([]);
   const autoGenerateTriggered = useRef(false);
   const {
@@ -776,6 +778,22 @@ export default function AdminInvoices() {
                             <Button variant="ghost" size="sm" onClick={() => handleViewInvoice(invoice)} title="View invoice" className="text-white hover:bg-white/10 hover:text-white">
                               <Eye className="w-4 h-4" />
                             </Button>
+                            {(invoice.status === "sent" || invoice.status === "paid") && (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => setViewSendsFor({
+                                  id: invoice.id,
+                                  invoiceNumber: invoice.invoice_number,
+                                  clientName: (invoice as Invoice & { client_name?: string }).client_name || "Partner",
+                                  autoRegenerate: true,
+                                })}
+                                title="View sent email"
+                                className="text-amber-400 hover:bg-white/10 hover:text-amber-300"
+                              >
+                                <Mail className="w-4 h-4" />
+                              </Button>
+                            )}
                             {invoice.status === "sent" || invoice.status === "paid" ? (
                               <Button
                                 variant="ghost"
@@ -820,6 +838,18 @@ export default function AdminInvoices() {
           </TabsContent>
         </Tabs>
       </main>
+
+      {/* View Sent Email Modal */}
+      {viewSendsFor && (
+        <InvoiceViewerModal
+          open={!!viewSendsFor}
+          onOpenChange={(open) => { if (!open) setViewSendsFor(null); }}
+          invoiceId={viewSendsFor.id}
+          invoiceNumber={viewSendsFor.invoiceNumber}
+          clientName={viewSendsFor.clientName}
+          autoRegenerateIfEmpty={viewSendsFor.autoRegenerate}
+        />
+      )}
 
       {/* Resend Invoice Modal */}
       {resendInvoice && (

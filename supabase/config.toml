@@ -35,3 +35,6 @@ verify_jwt = false
 
 [functions.invite-staff-member]
 verify_jwt = false
+
+[functions.backfill-invoice-sends]
+verify_jwt = false
