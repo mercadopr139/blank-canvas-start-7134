@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/contexts/AuthContext";
 import { useStaffPermissions } from "@/hooks/useStaffPermissions";
@@ -55,12 +55,26 @@ const AdminMessageBoard = () => {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { isSuperAdmin } = useStaffPermissions();
+  const [searchParams, setSearchParams] = useSearchParams();
 
   const [activeConversationId, setActiveConversationId] = useState<string | null>(null);
   const [scrollToMessageId, setScrollToMessageId] = useState<string | null>(null);
   const [newConvOpen, setNewConvOpen] = useState(false);
   const [listView, setListView] = useState<"active" | "archived">("active");
   const [viewAll, setViewAll] = useState(false);
+
+  // Deep-link from an "important message" email: ?conv=<id> auto-opens
+  // that conversation on landing. Strip the param after consumption so a
+  // back/forward navigation doesn't keep re-opening it.
+  useEffect(() => {
+    const convParam = searchParams.get("conv");
+    if (convParam) {
+      setActiveConversationId(convParam);
+      const next = new URLSearchParams(searchParams);
+      next.delete("conv");
+      setSearchParams(next, { replace: true });
+    }
+  }, [searchParams, setSearchParams]);
 
   const { data: myProfile } = useQuery<StaffProfile | null>({
     queryKey: ["my-staff-profile", user?.id],

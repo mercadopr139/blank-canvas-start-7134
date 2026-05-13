@@ -38,3 +38,6 @@ verify_jwt = false
 
 [functions.backfill-invoice-sends]
 verify_jwt = false
+
+[functions.send-important-message]
+verify_jwt = false
