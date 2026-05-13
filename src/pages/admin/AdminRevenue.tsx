@@ -280,13 +280,18 @@ const AdminRevenue = () => {
       logged_by: form.logged_by || null
     };
 
+    // Find the original row BEFORE writing so we can locate its donations
+    // counterpart by the pre-edit (supporter_id, date, amount) heuristic.
+    const originalRow = editId ? rows.find((r) => r.id === editId) : null;
+
     if (editId) {
       await supabase.from("revenue").update(payload).eq("id", editId);
     } else {
       await supabase.from("revenue").insert(payload);
     }
 
-    // Also sync to donations table (for Master Revenue Tracker)
+    // Also sync to donations table (for the receipt PDF function, which still
+    // reads from donations for fields not present on revenue).
     const donorName = supporterSearch.trim() || "N/A";
     const donationsPayload: Record<string, any> = {
       donor_name: donorName,
@@ -305,6 +310,30 @@ const AdminRevenue = () => {
     }
 
     if (!editId) {
+      await supabase.from("donations").insert(donationsPayload as any);
+    } else if (originalRow?.supporter_id && originalRow.date && originalRow.amount != null) {
+      // Find the donations row that was created alongside this revenue row
+      // and update it so the receipt PDF reflects edits (amount changes,
+      // type changes, supporter relink, etc.). Match heuristic mirrors the
+      // delete branch: supporter_id + deposit_date + amount.
+      const { data: matchingDonations } = await supabase
+        .from("donations")
+        .select("id")
+        .eq("supporter_id", originalRow.supporter_id)
+        .eq("deposit_date", originalRow.date)
+        .eq("amount", originalRow.amount)
+        .limit(1);
+
+      if (matchingDonations && matchingDonations.length > 0) {
+        await supabase.from("donations").update(donationsPayload as any).eq("id", matchingDonations[0].id);
+      } else {
+        // No counterpart found (legacy revenue row that predates the
+        // dual-write). Backfill one so future receipts are accurate.
+        await supabase.from("donations").insert(donationsPayload as any);
+      }
+    } else if (supporterId) {
+      // Edit added a supporter where there was none before — insert a
+      // fresh donations row so receipts can be generated.
       await supabase.from("donations").insert(donationsPayload as any);
     }
 
@@ -353,26 +382,15 @@ const AdminRevenue = () => {
       }
     }
 
-    // If supporter has no remaining qualifying donations, clean up
-    if (supporterId) {
-      const { data: remaining } = await supabase.
-      from("donations").
-      select("id").
-      eq("supporter_id", supporterId);
-
-      const { data: remainingRevenue } = await supabase.
-      from("revenue").
-      select("id").
-      eq("supporter_id", supporterId);
-
-      if ((!remaining || remaining.length === 0) && (!remainingRevenue || remainingRevenue.length === 0)) {
-        await supabase.from("supporters").delete().eq("id", supporterId);
-      }
-    }
+    // Deliberately leave the supporter row in place even if this was their
+    // only revenue entry. Supporters can exist as contacts, advocates, or
+    // VIPs without any recorded revenue, and silently deleting the row
+    // here was destroying contact data, engagements, and role assignments
+    // when an operator was just cleaning up a mistyped revenue entry.
 
     setDeleting(false);
     setDeleteId(null);
-    toast({ title: "Revenue record deleted from all tables." });
+    toast({ title: "Revenue record deleted." });
     await fetchRows();
   };
 
