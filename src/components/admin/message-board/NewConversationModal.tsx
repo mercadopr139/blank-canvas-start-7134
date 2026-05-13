@@ -8,10 +8,8 @@ import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
 import { Users, User } from "lucide-react";
-import type { StaffProfile, ConversationTopic } from "@/pages/admin/AdminMessageBoard";
-import { TOPIC_COLORS } from "@/pages/admin/AdminMessageBoard";
-
-const TOPICS: ConversationTopic[] = ["General", "Operations", "Sales & Marketing", "Finance"];
+import type { StaffProfile, Pillar } from "@/pages/admin/AdminMessageBoard";
+import { PILLARS, PILLAR_COLOR, PILLAR_LABEL } from "@/pages/admin/AdminMessageBoard";
 
 interface Props {
   open: boolean;
@@ -24,18 +22,19 @@ const NewConversationModal = ({ open, onClose, currentUserId, onCreated }: Props
   const { toast } = useToast();
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [groupName, setGroupName] = useState("");
-  const [topic, setTopic] = useState<ConversationTopic>("General");
+  // Pillar starts unset — user must choose before "Start Conversation" is enabled
+  const [pillar, setPillar] = useState<Pillar | null>(null);
   const [saving, setSaving] = useState(false);
 
   const { data: staffList = [] } = useQuery<StaffProfile[]>({
     queryKey: ["staff-profiles-for-mb"],
     queryFn: async () => {
-      const { data, error } = await (supabase.from("staff_profiles") as any)
+      const { data, error } = await supabase
+        .from("staff_profiles")
         .select("id, user_id, full_name, job_title, task_manager_type")
         .order("full_name", { ascending: true });
       if (error) throw error;
-      return (data || [])
-        .filter((s: any) => s.user_id !== currentUserId) as StaffProfile[];
+      return ((data || []) as StaffProfile[]).filter((s) => s.user_id !== currentUserId);
     },
     enabled: open,
   });
@@ -48,9 +47,13 @@ const NewConversationModal = ({ open, onClose, currentUserId, onCreated }: Props
   };
 
   const isGroup = selectedIds.length > 1;
-  const topicColor = TOPIC_COLORS[topic];
+  const pillarColor = pillar ? PILLAR_COLOR[pillar] : "#52525b";
 
   const handleCreate = async () => {
+    if (!pillar) {
+      toast({ title: "Pick a pillar", variant: "destructive" });
+      return;
+    }
     if (selectedIds.length === 0) {
       toast({ title: "Select at least one person", variant: "destructive" });
       return;
@@ -62,16 +65,19 @@ const NewConversationModal = ({ open, onClose, currentUserId, onCreated }: Props
 
     setSaving(true);
     try {
-      // For DMs, check if one already exists between these two
+      // DM deduplication: if a 1-on-1 between these two users already
+      // exists, open it instead of creating a new one.
       if (!isGroup) {
         const otherId = selectedIds[0];
-        const { data: existing } = await (supabase.from("mb_conversations") as any)
+        const { data: existing } = await supabase
+          .from("mb_conversations")
           .select("id, mb_conversation_members(user_id)")
           .eq("is_group", false);
 
         if (existing) {
-          for (const conv of existing as any[]) {
-            const members = (conv.mb_conversation_members || []).map((m: any) => m.user_id);
+          for (const conv of existing) {
+            const members = ((conv as { mb_conversation_members?: { user_id: string }[] }).mb_conversation_members || [])
+              .map((m) => m.user_id);
             if (members.includes(currentUserId) && members.includes(otherId) && members.length === 2) {
               onCreated(conv.id);
               setSaving(false);
@@ -82,13 +88,13 @@ const NewConversationModal = ({ open, onClose, currentUserId, onCreated }: Props
         }
       }
 
-      // Create conversation with topic
-      const { data: newConv, error: convErr } = await (supabase.from("mb_conversations") as any)
+      const { data: newConv, error: convErr } = await supabase
+        .from("mb_conversations")
         .insert({
           name: isGroup ? groupName.trim() : null,
           is_group: isGroup,
           created_by: currentUserId,
-          topic,
+          pillar,
         })
         .select()
         .single();
@@ -100,14 +106,19 @@ const NewConversationModal = ({ open, onClose, currentUserId, onCreated }: Props
         conversation_id: newConv.id,
         user_id: uid,
       }));
-      const { error: memErr } = await (supabase.from("mb_conversation_members") as any)
+      const { error: memErr } = await supabase
+        .from("mb_conversation_members")
         .insert(memberRows);
       if (memErr) throw memErr;
 
       onCreated(newConv.id);
       handleClose();
-    } catch (err: any) {
-      toast({ title: "Failed to create conversation", description: err.message, variant: "destructive" });
+    } catch (err) {
+      toast({
+        title: "Failed to create conversation",
+        description: err instanceof Error ? err.message : "Unknown error",
+        variant: "destructive",
+      });
     } finally {
       setSaving(false);
     }
@@ -116,32 +127,36 @@ const NewConversationModal = ({ open, onClose, currentUserId, onCreated }: Props
   const handleClose = () => {
     setSelectedIds([]);
     setGroupName("");
-    setTopic("General");
+    setPillar(null);
     onClose();
   };
+
+  const canSubmit = !!pillar && selectedIds.length > 0 && (!isGroup || groupName.trim().length > 0);
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
       <DialogContent className="bg-neutral-900 border-white/[0.08] text-white max-w-md">
         <DialogHeader>
           <DialogTitle className="text-base font-semibold text-white flex items-center gap-2">
-            <span className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ background: topicColor }} />
+            <span className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ background: pillarColor }} />
             New Message
           </DialogTitle>
         </DialogHeader>
 
         <div className="space-y-4 pt-1">
-          {/* Pillar / Topic selector */}
+          {/* Pillar selector — required, no default */}
           <div>
-            <Label className="text-xs text-zinc-400 mb-2 block">Pillar</Label>
+            <Label className="text-xs text-zinc-400 mb-2 block">
+              Pillar <span className="text-red-400">*</span>
+            </Label>
             <div className="flex gap-2 flex-wrap">
-              {TOPICS.map((t) => {
-                const color = TOPIC_COLORS[t];
-                const active = topic === t;
+              {PILLARS.map((p) => {
+                const color = PILLAR_COLOR[p];
+                const active = pillar === p;
                 return (
                   <button
-                    key={t}
-                    onClick={() => setTopic(t)}
+                    key={p}
+                    onClick={() => setPillar(p)}
                     className="px-3 py-1.5 rounded-lg text-xs font-medium transition-all border"
                     style={{
                       background: active ? `${color}20` : "transparent",
@@ -149,11 +164,14 @@ const NewConversationModal = ({ open, onClose, currentUserId, onCreated }: Props
                       color: active ? color : "#71717a",
                     }}
                   >
-                    {t}
+                    {PILLAR_LABEL[p]}
                   </button>
                 );
               })}
             </div>
+            {!pillar && (
+              <p className="text-[11px] text-zinc-600 mt-1.5">Pick a pillar — this is locked once the conversation is created.</p>
+            )}
           </div>
 
           {/* Staff selector */}
@@ -176,7 +194,7 @@ const NewConversationModal = ({ open, onClose, currentUserId, onCreated }: Props
                         ? "cursor-pointer"
                         : "hover:bg-white/[0.04] cursor-pointer"
                     }`}
-                    style={checked ? { background: `${topicColor}15` } : undefined}
+                    style={checked && pillar ? { background: `${pillarColor}15` } : undefined}
                     title={!hasAccount ? "This staff member hasn't logged in yet" : undefined}
                   >
                     <Checkbox
@@ -184,11 +202,11 @@ const NewConversationModal = ({ open, onClose, currentUserId, onCreated }: Props
                       disabled={!hasAccount}
                       onCheckedChange={() => hasAccount && toggle(staff.user_id)}
                       className="border-white/20"
-                      style={checked ? { background: topicColor, borderColor: topicColor } : undefined}
+                      style={checked && pillar ? { background: pillarColor, borderColor: pillarColor } : undefined}
                     />
                     <div
                       className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0"
-                      style={{ background: `${topicColor}18`, color: topicColor }}
+                      style={{ background: `${pillarColor}18`, color: pillarColor }}
                     >
                       <User className="w-3.5 h-3.5" />
                     </div>
@@ -205,7 +223,6 @@ const NewConversationModal = ({ open, onClose, currentUserId, onCreated }: Props
             </div>
           </div>
 
-          {/* Group name */}
           {isGroup && (
             <div>
               <Label className="text-xs text-zinc-400 mb-1.5 block">Group Name</Label>
@@ -218,10 +235,10 @@ const NewConversationModal = ({ open, onClose, currentUserId, onCreated }: Props
             </div>
           )}
 
-          {selectedIds.length > 0 && (
-            <p className="text-xs flex items-center gap-1.5" style={{ color: topicColor }}>
+          {selectedIds.length > 0 && pillar && (
+            <p className="text-xs flex items-center gap-1.5" style={{ color: pillarColor }}>
               {isGroup ? <Users className="w-3.5 h-3.5" /> : <User className="w-3.5 h-3.5" />}
-              {isGroup ? `Group · ${topic}` : `Direct message · ${topic}`}
+              {isGroup ? `Group · ${PILLAR_LABEL[pillar]}` : `Direct message · ${PILLAR_LABEL[pillar]}`}
             </p>
           )}
 
@@ -237,9 +254,9 @@ const NewConversationModal = ({ open, onClose, currentUserId, onCreated }: Props
             <Button
               size="sm"
               onClick={handleCreate}
-              disabled={saving || selectedIds.length === 0}
-              className="flex-1 text-white text-xs border-0"
-              style={{ background: topicColor }}
+              disabled={saving || !canSubmit}
+              className="flex-1 text-white text-xs border-0 disabled:opacity-40"
+              style={{ background: pillar ? pillarColor : "#52525b" }}
             >
               {saving ? "Creating..." : "Start Conversation"}
             </Button>

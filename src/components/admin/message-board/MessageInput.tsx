@@ -2,49 +2,48 @@ import { useState, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { Send, CheckSquare } from "lucide-react";
+import { Send } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import MessageTaskForm from "./MessageTaskForm";
-import type { ConversationTopic } from "@/pages/admin/AdminMessageBoard";
-import { TOPIC_COLORS } from "@/pages/admin/AdminMessageBoard";
-
-const TOPICS: ConversationTopic[] = ["General", "Operations", "Sales & Marketing", "Finance"];
+import type { Pillar } from "@/pages/admin/AdminMessageBoard";
+import { PILLAR_COLOR } from "@/pages/admin/AdminMessageBoard";
 
 interface Props {
   conversationId: string;
   currentUserId: string;
-  defaultTopic?: ConversationTopic;
+  pillar: Pillar;
   onSent: () => void;
 }
 
-const MessageInput = ({ conversationId, currentUserId, defaultTopic = "General", onSent }: Props) => {
+const MessageInput = ({ conversationId, currentUserId, pillar, onSent }: Props) => {
   const { toast } = useToast();
   const [text, setText] = useState("");
   const [sending, setSending] = useState(false);
-  const [topic, setTopic] = useState<ConversationTopic>(defaultTopic);
-  const [taskFormOpen, setTaskFormOpen] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
-  const topicColor = TOPIC_COLORS[topic];
+  const pillarColor = PILLAR_COLOR[pillar];
 
   const handleSend = async () => {
     const trimmed = text.trim();
     if (!trimmed) return;
     setSending(true);
     try {
-      const { error } = await (supabase.from("mb_messages") as any).insert({
-        conversation_id: conversationId,
-        sender_id: currentUserId,
-        content: trimmed,
-        message_type: "text",
-        topic,
-      });
+      const { error } = await supabase
+        .from("mb_messages")
+        .insert({
+          conversation_id: conversationId,
+          sender_id: currentUserId,
+          content: trimmed,
+        });
       if (error) throw error;
       setText("");
       onSent();
       textareaRef.current?.focus();
-    } catch (err: any) {
-      toast({ title: "Failed to send message", description: err.message, variant: "destructive" });
+    } catch (err) {
+      toast({
+        title: "Failed to send message",
+        description: err instanceof Error ? err.message : "Unknown error",
+        variant: "destructive",
+      });
     } finally {
       setSending(false);
     }
@@ -58,80 +57,35 @@ const MessageInput = ({ conversationId, currentUserId, defaultTopic = "General",
   };
 
   return (
-    <>
-      <div className="px-4 py-3 border-t border-white/[0.06] space-y-2">
-        {/* Topic pill row */}
-        <div className="flex items-center gap-1.5">
-          {TOPICS.map((t) => {
-            const color = TOPIC_COLORS[t];
-            const active = topic === t;
-            return (
-              <button
-                key={t}
-                onClick={() => setTopic(t)}
-                className="px-2.5 py-1 rounded-full text-[11px] font-medium transition-all border"
-                style={{
-                  background: active ? `${color}20` : "transparent",
-                  borderColor: active ? color : "rgba(255,255,255,0.06)",
-                  color: active ? color : "#52525b",
-                }}
-              >
-                {t}
-              </button>
-            );
-          })}
+    <div className="px-4 py-3 border-t border-white/[0.06]">
+      <div className="flex items-end gap-2">
+        <div className="flex-1 relative">
+          <div
+            className="absolute left-0 top-0 bottom-0 w-0.5 rounded-r"
+            style={{ background: pillarColor }}
+          />
+          <Textarea
+            ref={textareaRef}
+            value={text}
+            onChange={(e) => setText(e.target.value)}
+            onKeyDown={handleKeyDown}
+            placeholder="Type a message... (Enter to send)"
+            rows={1}
+            className="resize-none bg-white/[0.04] border-white/[0.08] text-zinc-200 placeholder:text-zinc-600 text-sm pr-2 min-h-[42px] max-h-32 pl-3"
+          />
         </div>
 
-        {/* Input row */}
-        <div className="flex items-end gap-2">
-          <div className="flex-1 relative">
-            <div
-              className="absolute left-0 top-0 bottom-0 w-0.5 rounded-r"
-              style={{ background: topic === "General" ? "transparent" : topicColor }}
-            />
-            <Textarea
-              ref={textareaRef}
-              value={text}
-              onChange={(e) => setText(e.target.value)}
-              onKeyDown={handleKeyDown}
-              placeholder="Type a message... (Enter to send)"
-              rows={1}
-              className="resize-none bg-white/[0.04] border-white/[0.08] text-zinc-200 placeholder:text-zinc-600 text-sm pr-2 min-h-[42px] max-h-32 pl-3"
-            />
-          </div>
-
-          <div className="flex items-center gap-1 pb-0.5">
-            <Button
-              size="icon"
-              variant="ghost"
-              onClick={() => setTaskFormOpen(true)}
-              className="h-9 w-9 text-zinc-500 hover:text-zinc-300 hover:bg-white/[0.06]"
-              title="Create task"
-            >
-              <CheckSquare className="w-4 h-4" />
-            </Button>
-            <Button
-              size="icon"
-              onClick={handleSend}
-              disabled={!text.trim() || sending}
-              className="h-9 w-9 text-white disabled:opacity-30 border-0"
-              style={{ background: topicColor }}
-            >
-              <Send className="w-4 h-4" />
-            </Button>
-          </div>
-        </div>
+        <Button
+          size="icon"
+          onClick={handleSend}
+          disabled={!text.trim() || sending}
+          className="h-9 w-9 text-white disabled:opacity-30 border-0"
+          style={{ background: pillarColor }}
+        >
+          <Send className="w-4 h-4" />
+        </Button>
       </div>
-
-      <MessageTaskForm
-        open={taskFormOpen}
-        onClose={() => setTaskFormOpen(false)}
-        conversationId={conversationId}
-        currentUserId={currentUserId}
-        defaultTopic={topic}
-        onCreated={() => { setTaskFormOpen(false); onSent(); }}
-      />
-    </>
+    </div>
   );
 };
 

@@ -3,13 +3,12 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Plus, Search, Users, User, MessageSquare } from "lucide-react";
 import type { Conversation } from "@/pages/admin/AdminMessageBoard";
-import { TOPIC_COLORS } from "@/pages/admin/AdminMessageBoard";
+import { PILLAR_COLOR, PILLAR_LABEL } from "@/pages/admin/AdminMessageBoard";
 
 interface Props {
   conversations: Conversation[];
   loading: boolean;
   activeId: string | null;
-  currentUserId: string;
   onSelect: (id: string) => void;
   onNew: () => void;
 }
@@ -32,7 +31,7 @@ const getConvLabel = (conv: Conversation) => {
   return "Conversation";
 };
 
-const ConversationList = ({ conversations, loading, activeId, currentUserId, onSelect, onNew }: Props) => {
+const ConversationList = ({ conversations, loading, activeId, onSelect, onNew }: Props) => {
   const [search, setSearch] = useState("");
 
   const filtered = conversations.filter((c) => {
@@ -42,7 +41,6 @@ const ConversationList = ({ conversations, loading, activeId, currentUserId, onS
 
   return (
     <div className="flex flex-col h-full">
-      {/* Top bar */}
       <div className="p-3 border-b border-white/[0.06]">
         <div className="flex items-center justify-between mb-3">
           <span className="text-xs font-semibold text-zinc-400 uppercase tracking-wider">Messages</span>
@@ -67,7 +65,6 @@ const ConversationList = ({ conversations, loading, activeId, currentUserId, onS
         </div>
       </div>
 
-      {/* List */}
       <div className="flex-1 overflow-y-auto">
         {loading && (
           <div className="p-4 text-center text-zinc-600 text-xs">Loading...</div>
@@ -86,8 +83,7 @@ const ConversationList = ({ conversations, loading, activeId, currentUserId, onS
         {filtered.map((conv) => {
           const label = getConvLabel(conv);
           const isActive = conv.id === activeId;
-          const hasUnread = (conv.unread_count || 0) > 0;
-          const topicColor = TOPIC_COLORS[conv.topic] || TOPIC_COLORS.General;
+          const pillarColor = PILLAR_COLOR[conv.pillar];
 
           return (
             <button
@@ -97,24 +93,21 @@ const ConversationList = ({ conversations, loading, activeId, currentUserId, onS
                 isActive ? "bg-white/[0.04]" : "hover:bg-white/[0.03]"
               }`}
             >
-              {/* Pillar color left border */}
               <div
                 className="absolute left-0 top-0 bottom-0 w-[3px] rounded-r-full transition-all"
-                style={{ background: isActive ? topicColor : `${topicColor}60` }}
+                style={{ background: isActive ? pillarColor : `${pillarColor}60` }}
               />
 
-              {/* Avatar */}
               <div
                 className="w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5"
-                style={{ background: `${topicColor}18`, color: topicColor }}
+                style={{ background: `${pillarColor}18`, color: pillarColor }}
               >
                 {conv.is_group ? <Users className="w-4 h-4" /> : <User className="w-4 h-4" />}
               </div>
 
-              {/* Content */}
               <div className="flex-1 min-w-0">
                 <div className="flex items-center justify-between mb-0.5">
-                  <span className={`text-sm truncate ${hasUnread ? "font-semibold text-white" : "font-medium text-zinc-300"}`}>
+                  <span className="text-sm font-medium text-zinc-300 truncate">
                     {label}
                   </span>
                   {conv.last_message_at && (
@@ -124,31 +117,16 @@ const ConversationList = ({ conversations, loading, activeId, currentUserId, onS
                   )}
                 </div>
 
-                <div className="flex items-center justify-between">
-                  <p className="text-xs text-zinc-600 truncate flex-1">
-                    {conv.last_message
-                      ? (conv.last_message.startsWith("{") ? "📋 Task created" : conv.last_message)
-                      : "No messages yet"}
-                  </p>
-                  {hasUnread && (
-                    <span
-                      className="ml-1 w-4 h-4 rounded-full text-[9px] font-bold flex items-center justify-center text-white flex-shrink-0"
-                      style={{ background: topicColor }}
-                    >
-                      {conv.unread_count}
-                    </span>
-                  )}
-                </div>
+                <p className="text-xs text-zinc-600 truncate">
+                  {conv.last_message || "No messages yet"}
+                </p>
 
-                {/* Topic badge */}
-                {conv.topic && conv.topic !== "General" && (
-                  <span
-                    className="inline-block mt-1 text-[9px] font-semibold px-1.5 py-0.5 rounded uppercase tracking-wide"
-                    style={{ background: `${topicColor}18`, color: topicColor }}
-                  >
-                    {conv.topic}
-                  </span>
-                )}
+                <span
+                  className="inline-block mt-1 text-[9px] font-semibold px-1.5 py-0.5 rounded uppercase tracking-wide"
+                  style={{ background: `${pillarColor}18`, color: pillarColor }}
+                >
+                  {PILLAR_LABEL[conv.pillar]}
+                </span>
               </div>
             </button>
           );
