@@ -10,6 +10,7 @@ import ConversationList from "@/components/admin/message-board/ConversationList"
 import MessageThread from "@/components/admin/message-board/MessageThread";
 import NewConversationModal from "@/components/admin/message-board/NewConversationModal";
 import AddToWorkbenchModal from "@/components/admin/message-board/AddToWorkbenchModal";
+import MyWorkbenchOverlay from "@/components/admin/message-board/MyWorkbenchOverlay";
 
 // Three pillars — no General. Pillar is required at conversation creation
 // and is set once for the lifetime of the conversation.
@@ -72,6 +73,11 @@ const AdminMessageBoard = () => {
     sourceConversationId?: string;
     pillar?: Pillar;
   }>({ open: false });
+  // The floating + button opens the full Workbench overlay (mini view
+  // of the user's focus areas + Core signals). Distinct from the per-
+  // message "Add to my Workbench" modal above, which is a single-shot
+  // quick-add tied to a specific source message.
+  const [workbenchOverlayOpen, setWorkbenchOverlayOpen] = useState(false);
 
   // Deep-link from an "important message" email: ?conv=<id> auto-opens
   // that conversation on landing. Strip the param after consumption so a
@@ -433,18 +439,29 @@ const AdminMessageBoard = () => {
         }}
       />
 
-      {/* Floating "Add to Workbench" button — only on the message board
-          page, always visible across list and thread views even on
-          mobile so users can capture a task without losing place. */}
+      {/* Floating Workbench button — always visible on the message board
+          across list and thread views. Opens the user's own Workbench as
+          an overlay so they can review and add signals without leaving
+          the conversation. */}
       <button
-        onClick={() => setWorkbenchModal({ open: true })}
+        onClick={() => setWorkbenchOverlayOpen(true)}
         className="fixed bottom-5 right-5 z-40 h-12 w-12 rounded-full bg-emerald-500 hover:bg-emerald-400 text-black shadow-lg shadow-emerald-500/20 flex items-center justify-center transition-colors"
-        title="Add to my Workbench"
-        aria-label="Add to my Workbench"
+        title="Open my Workbench"
+        aria-label="Open my Workbench"
       >
         <Plus className="w-5 h-5" />
       </button>
 
+      <MyWorkbenchOverlay
+        open={workbenchOverlayOpen}
+        onClose={() => setWorkbenchOverlayOpen(false)}
+        currentUserId={user?.id || ""}
+      />
+
+      {/* AddToWorkbenchModal is still wired for the per-message back-ref
+          flow ("Add to my Workbench" on a specific message). It pre-fills
+          the description from the message and stores source_message_id +
+          source_conversation_id for the back-link. */}
       <AddToWorkbenchModal
         open={workbenchModal.open}
         onClose={() => setWorkbenchModal({ open: false })}
