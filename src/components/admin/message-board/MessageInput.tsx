@@ -172,7 +172,7 @@ const MessageInput = ({ conversationId, currentUserId, pillar, onSent }: Props) 
   const canSend = (text.trim().length > 0 || queue.length > 0) && !sending;
 
   return (
-    <div className="px-4 py-3 border-t border-white/[0.06] space-y-2">
+    <div className="px-4 py-3 border-t border-white/[0.06] space-y-2 w-full min-w-0">
       {/* Pending attachments queue */}
       {queue.length > 0 && (
         <div className="flex flex-wrap gap-1.5">
@@ -199,10 +199,12 @@ const MessageInput = ({ conversationId, currentUserId, pillar, onSent }: Props) 
         </div>
       )}
 
-      <div className="flex items-end gap-2 w-full">
-        {/* min-w-0 lets the textarea shrink below its intrinsic content
-            width inside the flex row — without it, the send button gets
-            pushed offscreen on narrow mobile viewports. */}
+      <div className="flex items-end gap-2 w-full min-w-0">
+        {/* min-w-0 on both the wrapper AND the textarea, plus cols={1},
+            lets the textarea actually shrink below its default 20-col
+            intrinsic width. Without this, iOS Safari pushes the
+            paperclip + send buttons past the viewport edge on narrow
+            screens. */}
         <div className="flex-1 min-w-0 relative">
           <div
             className="absolute left-0 top-0 bottom-0 w-0.5 rounded-r pointer-events-none"
@@ -215,7 +217,8 @@ const MessageInput = ({ conversationId, currentUserId, pillar, onSent }: Props) 
             onKeyDown={handleKeyDown}
             placeholder={important ? "Important message — recipients will be emailed..." : "Type a message..."}
             rows={1}
-            className="resize-none bg-white/[0.04] border-white/[0.08] text-zinc-200 placeholder:text-zinc-600 text-sm pr-2 min-h-[42px] max-h-32 pl-3 w-full"
+            cols={1}
+            className="resize-none bg-white/[0.04] border-white/[0.08] text-zinc-200 placeholder:text-zinc-600 text-sm pr-2 min-h-[42px] max-h-32 pl-3 w-full min-w-0"
           />
         </div>
 
