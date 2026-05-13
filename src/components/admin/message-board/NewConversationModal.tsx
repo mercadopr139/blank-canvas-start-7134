@@ -20,8 +20,8 @@ interface Props {
 
 const NewConversationModal = ({ open, onClose, currentUserId, onCreated }: Props) => {
   const { toast } = useToast();
+  const [title, setTitle] = useState("");
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
-  const [groupName, setGroupName] = useState("");
   // Pillar starts unset — user must choose before "Start Conversation" is enabled
   const [pillar, setPillar] = useState<Pillar | null>(null);
   const [saving, setSaving] = useState(false);
@@ -50,6 +50,10 @@ const NewConversationModal = ({ open, onClose, currentUserId, onCreated }: Props
   const pillarColor = pillar ? PILLAR_COLOR[pillar] : "#52525b";
 
   const handleCreate = async () => {
+    if (!title.trim()) {
+      toast({ title: "Give this conversation a title", variant: "destructive" });
+      return;
+    }
     if (!pillar) {
       toast({ title: "Pick a pillar", variant: "destructive" });
       return;
@@ -58,40 +62,15 @@ const NewConversationModal = ({ open, onClose, currentUserId, onCreated }: Props
       toast({ title: "Select at least one person", variant: "destructive" });
       return;
     }
-    if (isGroup && !groupName.trim()) {
-      toast({ title: "Give your group a name", variant: "destructive" });
-      return;
-    }
 
     setSaving(true);
     try {
-      // DM deduplication: if a 1-on-1 between these two users already
-      // exists, open it instead of creating a new one.
-      if (!isGroup) {
-        const otherId = selectedIds[0];
-        const { data: existing } = await supabase
-          .from("mb_conversations")
-          .select("id, mb_conversation_members(user_id)")
-          .eq("is_group", false);
-
-        if (existing) {
-          for (const conv of existing) {
-            const members = ((conv as { mb_conversation_members?: { user_id: string }[] }).mb_conversation_members || [])
-              .map((m) => m.user_id);
-            if (members.includes(currentUserId) && members.includes(otherId) && members.length === 2) {
-              onCreated(conv.id);
-              setSaving(false);
-              handleClose();
-              return;
-            }
-          }
-        }
-      }
-
+      // Title-based threads: multiple conversations per pair are allowed
+      // (one for each topic). No dedup — every Start spawns a fresh thread.
       const { data: newConv, error: convErr } = await supabase
         .from("mb_conversations")
         .insert({
-          name: isGroup ? groupName.trim() : null,
+          name: title.trim(),
           is_group: isGroup,
           created_by: currentUserId,
           pillar,
@@ -125,13 +104,13 @@ const NewConversationModal = ({ open, onClose, currentUserId, onCreated }: Props
   };
 
   const handleClose = () => {
+    setTitle("");
     setSelectedIds([]);
-    setGroupName("");
     setPillar(null);
     onClose();
   };
 
-  const canSubmit = !!pillar && selectedIds.length > 0 && (!isGroup || groupName.trim().length > 0);
+  const canSubmit = title.trim().length > 0 && !!pillar && selectedIds.length > 0;
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
@@ -144,6 +123,20 @@ const NewConversationModal = ({ open, onClose, currentUserId, onCreated }: Props
         </DialogHeader>
 
         <div className="space-y-4 pt-1">
+          {/* Title — required, drives the sidebar row label */}
+          <div>
+            <Label className="text-xs text-zinc-400 mb-1.5 block">
+              Title <span className="text-red-400">*</span>
+            </Label>
+            <Input
+              placeholder="e.g. Van Painting Plan, Sponsor Outreach Q3, Budget Review..."
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              className="bg-white/[0.04] border-white/[0.08] text-zinc-200 placeholder:text-zinc-600 text-sm"
+              autoFocus
+            />
+          </div>
+
           {/* Pillar selector — required, no default */}
           <div>
             <Label className="text-xs text-zinc-400 mb-2 block">
@@ -222,18 +215,6 @@ const NewConversationModal = ({ open, onClose, currentUserId, onCreated }: Props
               })}
             </div>
           </div>
-
-          {isGroup && (
-            <div>
-              <Label className="text-xs text-zinc-400 mb-1.5 block">Group Name</Label>
-              <Input
-                placeholder="e.g. All Staff, Coaching Team..."
-                value={groupName}
-                onChange={(e) => setGroupName(e.target.value)}
-                className="bg-white/[0.04] border-white/[0.08] text-zinc-200 placeholder:text-zinc-600 text-sm"
-              />
-            </div>
-          )}
 
           {selectedIds.length > 0 && pillar && (
             <p className="text-xs flex items-center gap-1.5" style={{ color: pillarColor }}>

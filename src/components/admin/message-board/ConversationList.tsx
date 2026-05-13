@@ -25,18 +25,16 @@ const formatTime = (iso: string | undefined) => {
   return d.toLocaleDateString([], { month: "short", day: "numeric" });
 };
 
-const getConvLabel = (conv: Conversation) => {
-  if (conv.is_group && conv.name) return conv.name;
-  if (conv.member_names && conv.member_names.length > 0) return conv.member_names.join(", ");
-  return "Conversation";
-};
+const getConvTitle = (conv: Conversation) => conv.name?.trim() || "Untitled conversation";
+const getConvRecipients = (conv: Conversation) =>
+  conv.member_names && conv.member_names.length > 0 ? conv.member_names.join(", ") : "";
 
 const ConversationList = ({ conversations, loading, activeId, onSelect, onNew }: Props) => {
   const [search, setSearch] = useState("");
 
   const filtered = conversations.filter((c) => {
-    const label = getConvLabel(c).toLowerCase();
-    return label.includes(search.toLowerCase());
+    const haystack = `${getConvTitle(c)} ${getConvRecipients(c)}`.toLowerCase();
+    return haystack.includes(search.toLowerCase());
   });
 
   return (
@@ -81,7 +79,8 @@ const ConversationList = ({ conversations, loading, activeId, onSelect, onNew }:
         )}
 
         {filtered.map((conv) => {
-          const label = getConvLabel(conv);
+          const title = getConvTitle(conv);
+          const recipients = getConvRecipients(conv);
           const isActive = conv.id === activeId;
           const pillarColor = PILLAR_COLOR[conv.pillar];
 
@@ -107,8 +106,8 @@ const ConversationList = ({ conversations, loading, activeId, onSelect, onNew }:
 
               <div className="flex-1 min-w-0">
                 <div className="flex items-center justify-between mb-0.5">
-                  <span className="text-sm font-medium text-zinc-300 truncate">
-                    {label}
+                  <span className="text-sm font-semibold text-white truncate">
+                    {title}
                   </span>
                   {conv.last_message_at && (
                     <span className="text-[10px] text-zinc-600 ml-1 flex-shrink-0">
@@ -117,7 +116,13 @@ const ConversationList = ({ conversations, loading, activeId, onSelect, onNew }:
                   )}
                 </div>
 
-                <p className="text-xs text-zinc-600 truncate">
+                {recipients && (
+                  <p className="text-[11px] text-zinc-500 truncate">
+                    with {recipients}
+                  </p>
+                )}
+
+                <p className="text-xs text-zinc-600 truncate mt-0.5">
                   {conv.last_message || "No messages yet"}
                 </p>
 

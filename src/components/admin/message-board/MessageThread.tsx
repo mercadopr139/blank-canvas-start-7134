@@ -58,16 +58,15 @@ const MessageThread = ({ conversation, currentUserId, isSuperAdmin, onConversati
   const [convName, setConvName] = useState(conversation.name || "");
   const [savingConv, setSavingConv] = useState(false);
 
-  const convLabel = conversation.is_group && conversation.name
-    ? conversation.name
-    : (conversation.member_names?.join(", ") || "Conversation");
+  const convTitle = conversation.name?.trim() || "Untitled conversation";
+  const recipients = conversation.member_names?.join(", ") || "";
 
   const pillarColor = PILLAR_COLOR[conversation.pillar];
   const pillarLabel = PILLAR_LABEL[conversation.pillar];
 
-  // Only the conversation creator or super admin can edit the group name.
-  // DMs never show the edit affordance — there's nothing to rename.
-  const canEditConv = conversation.is_group && (conversation.created_by === currentUserId || isSuperAdmin);
+  // All conversations have titles now — both DMs and groups. Rename is
+  // gated to the creator or super admin.
+  const canEditConv = conversation.created_by === currentUserId || isSuperAdmin;
 
   const { data: messages = [], isLoading } = useQuery<Message[]>({
     queryKey: ["mb-messages", conversation.id],
@@ -188,12 +187,12 @@ const MessageThread = ({ conversation, currentUserId, isSuperAdmin, onConversati
           </div>
 
           <div>
-            <p className="text-[11px] text-zinc-500 mb-1.5">Group Name</p>
+            <p className="text-[11px] text-zinc-500 mb-1.5">Title</p>
             <input
               value={convName}
               onChange={(e) => setConvName(e.target.value)}
               className="w-full bg-white/[0.04] border border-white/[0.08] rounded-lg px-3 py-2 text-sm text-zinc-200 outline-none focus:border-white/20"
-              placeholder="Group name..."
+              placeholder="Conversation title..."
             />
           </div>
 
@@ -226,9 +225,11 @@ const MessageThread = ({ conversation, currentUserId, isSuperAdmin, onConversati
             {conversation.is_group ? <Users className="w-4 h-4" /> : <User className="w-4 h-4" />}
           </div>
           <div className="flex-1 min-w-0">
-            <p className="text-sm font-semibold text-zinc-200">{convLabel}</p>
-            {conversation.is_group && conversation.member_names && (
-              <p className="text-xs text-zinc-600 truncate">{conversation.member_names.join(", ")}</p>
+            <p className="text-base font-semibold text-white truncate">{convTitle}</p>
+            {recipients && (
+              <p className="text-xs text-zinc-500 truncate">
+                with {recipients}
+              </p>
             )}
           </div>
           <span
