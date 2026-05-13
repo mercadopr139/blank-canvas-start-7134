@@ -25,6 +25,7 @@ interface ReportRow {
   total_protein: number;
   total_carbs: number;
   total_fat: number;
+  total_sugar: number;
   item_count: number;
 }
 
@@ -394,9 +395,9 @@ const AdminMealReports = () => {
   };
 
   const exportCSV = () => {
-    const headers = "Date,Donor,Meals Served,Total Calories,Total Protein (g),Total Carbs (g),Total Fat (g),Items\n";
+    const headers = "Date,Donor,Meals Served,Total Calories,Total Protein (g),Total Carbs (g),Total Fat (g),Total Sugar (g),Items\n";
     const rows = reportData.map((r) =>
-      `${r.event_date},"${r.donor_name || ""}",${r.meal_count},${r.total_calories},${r.total_protein},${r.total_carbs},${r.total_fat},${r.item_count}`
+      `${r.event_date},"${r.donor_name || ""}",${r.meal_count},${r.total_calories},${r.total_protein},${r.total_carbs},${r.total_fat},${r.total_sugar},${r.item_count}`
     ).join("\n");
     const blob = new Blob([headers + rows], { type: "text/csv" });
     const url = URL.createObjectURL(blob);
@@ -480,6 +481,7 @@ const AdminMealReports = () => {
                 <TableHead className="text-right">Calories</TableHead>
                 <TableHead className="text-right">Protein</TableHead>
                 <TableHead className="text-right">Carbs</TableHead>
+                <TableHead className="text-right">Sugar</TableHead>
                 <TableHead className="w-10"></TableHead>
               </TableRow>
             </TableHeader>
@@ -523,6 +525,7 @@ const AdminMealReports = () => {
                     <TableCell className="text-right text-amber-400" onClick={() => toggleExpand(row.event_id)}>{Math.round(row.total_calories)}</TableCell>
                     <TableCell className="text-right text-blue-400" onClick={() => toggleExpand(row.event_id)}>{Math.round(row.total_protein)}g</TableCell>
                     <TableCell className="text-right text-green-400" onClick={() => toggleExpand(row.event_id)}>{Math.round(row.total_carbs)}g</TableCell>
+                    <TableCell className="text-right text-pink-400" onClick={() => toggleExpand(row.event_id)}>{Math.round(row.total_sugar)}g</TableCell>
                     <TableCell className="text-right">
                       <div className="flex items-center justify-end gap-1">
                         <button
@@ -544,7 +547,7 @@ const AdminMealReports = () => {
                   </TableRow>
                   {expandedRow === row.event_id && (
                     <TableRow key={`${row.event_id}-detail`}>
-                      <TableCell colSpan={9} className="bg-zinc-950 p-4">
+                      <TableCell colSpan={10} className="bg-zinc-950 p-4">
                         {loadingItems ? (
                           <Loader2 className="w-4 h-4 animate-spin text-zinc-500" />
                         ) : expandedItems.length === 0 ? (
@@ -569,7 +572,7 @@ const AdminMealReports = () => {
                 </>
               ))}
               {reportData.length === 0 && !loading && (
-                <TableRow><TableCell colSpan={9} className="text-center text-zinc-500 py-8">No meal events in this range.</TableCell></TableRow>
+                <TableRow><TableCell colSpan={10} className="text-center text-zinc-500 py-8">No meal events in this range.</TableCell></TableRow>
               )}
             </TableBody>
           </Table>
