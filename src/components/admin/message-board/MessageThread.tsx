@@ -306,6 +306,7 @@ const MessageThread = ({ conversation, currentUserId, isSuperAdmin, canPost, scr
         )}
 
         {messages.map((msg, idx) => {
+          const isMe = msg.sender_id === currentUserId;
           const showDate = idx === 0 || !isSameDay(messages[idx - 1].created_at, msg.created_at);
           // Now that every message is left-aligned, show the sender name
           // above the first message in any streak — including the current
@@ -350,12 +351,20 @@ const MessageThread = ({ conversation, currentUserId, isSuperAdmin, canPost, scr
                     <div className="min-w-0">
                       <div
                         className="px-3.5 py-2.5 rounded-2xl text-sm leading-relaxed"
-                        style={{
-                          background: `${pillarColor}12`,
-                          color: "#e4e4e7",
-                          borderBottomLeftRadius: "4px",
-                          borderLeft: `2px solid ${pillarColor}60`,
-                        }}
+                        style={
+                          isMe
+                            ? {
+                                background: pillarColor,
+                                color: "#ffffff",
+                                borderBottomLeftRadius: "4px",
+                              }
+                            : {
+                                background: `${pillarColor}12`,
+                                color: "#e4e4e7",
+                                borderBottomLeftRadius: "4px",
+                                borderLeft: `2px solid ${pillarColor}60`,
+                              }
+                        }
                       >
                         {msg.content}
                       </div>
