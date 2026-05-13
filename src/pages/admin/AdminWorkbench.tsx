@@ -6,7 +6,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import {
   ArrowLeft, LogOut, Plus, Pencil, GripVertical, Lock,
-  Circle, CheckCircle2, ArrowRight, Trophy,
+  Circle, CheckCircle2, ArrowRight, Trophy, MessageSquare,
 } from "lucide-react";
 import { icons } from "lucide-react";
 import { toast } from "sonner";
@@ -917,6 +917,22 @@ const AdminWorkbench = () => {
               </div>
             </SortableContext>
           </DndContext>
+        )}
+
+        {/* Open Message Board — symmetric to the floating Workbench button
+            on the message board page. Single entry point, sits below the
+            tile grid so it doesn't compete with focus-area work. */}
+        {!isLoading && focusAreas.length > 0 && (
+          <div className="mt-10 flex justify-center">
+            <Button
+              variant="outline"
+              onClick={() => navigate("/admin/message-board")}
+              className="border-white/10 text-zinc-300 bg-transparent hover:bg-white/5 hover:text-white gap-2"
+            >
+              <MessageSquare className="w-4 h-4" />
+              Open Message Board
+            </Button>
+          </div>
         )}
 
         {/* Daily verse — sits at the bottom of the workbench so the page Josh
