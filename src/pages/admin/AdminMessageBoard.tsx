@@ -56,6 +56,7 @@ const AdminMessageBoard = () => {
 
   const [activeConversationId, setActiveConversationId] = useState<string | null>(null);
   const [newConvOpen, setNewConvOpen] = useState(false);
+  const [listView, setListView] = useState<"active" | "archived">("active");
 
   // Current user's staff profile drives the "My Task Manager" deep link.
   const { data: myProfile } = useQuery<StaffProfile | null>({
@@ -73,14 +74,19 @@ const AdminMessageBoard = () => {
   });
 
   // Conversations the current user is a member of, with last-message preview
-  // and other members' names for the list row label.
+  // and other members' names for the list row label. Filter by per-user
+  // archive state — active = archived_at IS NULL, archived = archived_at IS NOT NULL.
   const { data: conversations = [], isLoading: convsLoading } = useQuery<Conversation[]>({
-    queryKey: ["mb-conversations", user?.id],
+    queryKey: ["mb-conversations", user?.id, listView],
     queryFn: async () => {
-      const { data: memberships, error: memErr } = await supabase
+      let memQuery = supabase
         .from("mb_conversation_members")
         .select("conversation_id")
         .eq("user_id", user!.id);
+      memQuery = listView === "archived"
+        ? memQuery.not("archived_at", "is", null)
+        : memQuery.is("archived_at", null);
+      const { data: memberships, error: memErr } = await memQuery;
       if (memErr) throw memErr;
       if (!memberships || memberships.length === 0) return [];
 
@@ -209,8 +215,17 @@ const AdminMessageBoard = () => {
             conversations={conversations}
             loading={convsLoading}
             activeId={activeConversationId}
+            currentUserId={user?.id || ""}
+            isSuperAdmin={isSuperAdmin}
+            listView={listView}
+            onListViewChange={setListView}
             onSelect={setActiveConversationId}
             onNew={() => setNewConvOpen(true)}
+            onConversationsChanged={() => queryClient.invalidateQueries({ queryKey: ["mb-conversations", user?.id] })}
+            onConversationDeleted={(id) => {
+              if (activeConversationId === id) setActiveConversationId(null);
+              queryClient.invalidateQueries({ queryKey: ["mb-conversations", user?.id] });
+            }}
           />
         </div>
 
