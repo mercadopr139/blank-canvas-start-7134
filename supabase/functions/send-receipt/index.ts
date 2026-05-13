@@ -413,15 +413,28 @@ Deno.serve(async (req) => {
       // Dual-write: legacy year-specific column + new generic columns. The
       // generic columns are the source of truth going forward; legacy
       // columns stay populated during the transition so a rollback is safe.
+      const currentYearFailedNoKey = new Date().getFullYear();
+      const nowIsoFailedNoKey = new Date().toISOString();
       await supabase
         .from("supporters")
         .update({
           receipt_2026_status: "Failed",
-          latest_receipt_year: new Date().getFullYear(),
+          latest_receipt_year: currentYearFailedNoKey,
           latest_receipt_status: "Failed",
-          latest_receipt_sent_at: new Date().toISOString(),
+          latest_receipt_sent_at: nowIsoFailedNoKey,
         })
         .eq("id", supporter_id);
+
+      // Log the failed attempt to the audit table.
+      await supabase.from("receipt_sends").insert({
+        supporter_id,
+        receipt_year: currentYearFailedNoKey,
+        status: "Failed",
+        sent_at: nowIsoFailedNoKey,
+        sent_to: supporter.email,
+        personal_message: personal_message ?? null,
+        error: "RESEND_API_KEY missing — email never attempted",
+      });
 
       return new Response(
         JSON.stringify({
@@ -552,15 +565,36 @@ EIN: 84-3998071 | 501(c)(3) Nonprofit`;
       const errText = await resendRes.text();
       console.error("Resend error:", errText);
 
+      const currentYearResendFail = new Date().getFullYear();
+      const nowIsoResendFail = new Date().toISOString();
       await supabase
         .from("supporters")
         .update({
           receipt_2026_status: "Failed",
-          latest_receipt_year: new Date().getFullYear(),
+          latest_receipt_year: currentYearResendFail,
           latest_receipt_status: "Failed",
-          latest_receipt_sent_at: new Date().toISOString(),
+          latest_receipt_sent_at: nowIsoResendFail,
         })
         .eq("id", supporter_id);
+
+      // Log the failed Resend attempt. The HTML, PDF, and subject were all
+      // generated, so capture them — operator can still open the failed
+      // record to see what would have been sent, and reuse the PDF via
+      // the download fallback.
+      await supabase.from("receipt_sends").insert({
+        supporter_id,
+        receipt_year: currentYearResendFail,
+        status: "Failed",
+        sent_at: nowIsoResendFail,
+        sent_to: supporter.email,
+        subject: `Your 2026 Donation Receipt from No Limits Academy`,
+        email_html: emailBody,
+        email_text: textBody,
+        pdf_base64: pdfBase64,
+        pdf_filename: pdfFilename,
+        personal_message: personal_message ?? null,
+        error: errText.slice(0, 2000),
+      });
 
       return new Response(
         JSON.stringify({
@@ -588,6 +622,23 @@ EIN: 84-3998071 | 501(c)(3) Nonprofit`;
         latest_receipt_sent_to: supporter.email,
       })
       .eq("id", supporter_id);
+
+    // Capture the full audit row so the operator can later open this send
+    // and view exactly what arrived in the donor's inbox — HTML, PDF, and
+    // the personal message that was attached.
+    await supabase.from("receipt_sends").insert({
+      supporter_id,
+      receipt_year: currentYear,
+      status: "Sent",
+      sent_at: nowIso,
+      sent_to: supporter.email,
+      subject: `Your 2026 Donation Receipt from No Limits Academy`,
+      email_html: emailBody,
+      email_text: textBody,
+      pdf_base64: pdfBase64,
+      pdf_filename: pdfFilename,
+      personal_message: personal_message ?? null,
+    });
 
     // Auto-create Engagement record (deduplicate by checking for existing)
     const today = new Date().toISOString().split("T")[0];

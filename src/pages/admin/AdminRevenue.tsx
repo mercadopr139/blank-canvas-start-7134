@@ -9,6 +9,7 @@ import ValidatedAddressInput from "@/components/admin/ValidatedAddressInput";
 
 
 import SendReceiptFlow from "@/components/admin/SendReceiptFlow";
+import ReceiptViewerModal from "@/components/admin/ReceiptViewerModal";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -88,6 +89,9 @@ const AdminRevenue = () => {
   const [receiptOpen, setReceiptOpen] = useState(false);
   const [receiptSupporterId, setReceiptSupporterId] = useState("");
   const [receiptSupporterName, setReceiptSupporterName] = useState("");
+  const [viewerOpen, setViewerOpen] = useState(false);
+  const [viewerSupporterId, setViewerSupporterId] = useState("");
+  const [viewerSupporterName, setViewerSupporterName] = useState("");
 
   // ── Data state ──────────────────────────────────────────────────────────
   const [rows, setRows] = useState<RevenueRow[]>([]);
@@ -608,17 +612,32 @@ const AdminRevenue = () => {
                             {r.receipt_sent_this_year ? "Sent" : "Not Sent"}
                           </span>
                           {r.supporter_id && (
-                            <button
-                              onClick={() => {
-                                setReceiptSupporterId(r.supporter_id!);
-                                setReceiptSupporterName(r.supporter_name || "");
-                                setReceiptOpen(true);
-                              }}
-                              className="text-[11px] text-yellow-400 hover:text-yellow-300 hover:underline transition-colors"
-                              title={r.receipt_sent_this_year ? "Resend receipt to supporter" : "Send receipt to supporter"}
-                            >
-                              {r.receipt_sent_this_year ? "Resend" : "Send"}
-                            </button>
+                            <div className="flex items-center gap-2">
+                              {r.receipt_sent_this_year && (
+                                <button
+                                  onClick={() => {
+                                    setViewerSupporterId(r.supporter_id!);
+                                    setViewerSupporterName(r.supporter_name || "");
+                                    setViewerOpen(true);
+                                  }}
+                                  className="text-[11px] text-white/50 hover:text-white/80 hover:underline transition-colors"
+                                  title="View the receipt and email that was sent"
+                                >
+                                  View
+                                </button>
+                              )}
+                              <button
+                                onClick={() => {
+                                  setReceiptSupporterId(r.supporter_id!);
+                                  setReceiptSupporterName(r.supporter_name || "");
+                                  setReceiptOpen(true);
+                                }}
+                                className="text-[11px] text-yellow-400 hover:text-yellow-300 hover:underline transition-colors"
+                                title={r.receipt_sent_this_year ? "Resend receipt to supporter" : "Send receipt to supporter"}
+                              >
+                                {r.receipt_sent_this_year ? "Resend" : "Send"}
+                              </button>
+                            </div>
                           )}
                         </div>
                       ) : (
@@ -1006,6 +1025,14 @@ const AdminRevenue = () => {
           setReceiptOpen(false);
           fetchRows();
         }} />
+
+      {/* ── Receipt Viewer (read-only audit of prior sends) ─────────────── */}
+      <ReceiptViewerModal
+        open={viewerOpen}
+        onOpenChange={setViewerOpen}
+        supporterId={viewerSupporterId}
+        supporterName={viewerSupporterName}
+      />
 
     </div>);
 
