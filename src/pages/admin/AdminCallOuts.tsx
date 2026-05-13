@@ -91,11 +91,20 @@ const AdminCallOuts = () => {
     },
   });
 
+  // youth_registrations.child_headshot_url stores either a full http URL
+  // (legacy) or a bare filename like "monday_headshot_<uuid>.jpg" pointing
+  // into the public youth-photos bucket. Resolve to a real URL either way.
+  const resolveHeadshot = (url: string | null | undefined): string | null => {
+    if (!url) return null;
+    if (url.startsWith("http")) return url;
+    return `${import.meta.env.VITE_SUPABASE_URL}/storage/v1/object/public/youth-photos/${url}`;
+  };
+
   const getPhoto = (first: string, last: string) => {
     const r = registrations.find(
       (r) => r.child_first_name.toLowerCase() === first.toLowerCase() && r.child_last_name.toLowerCase() === last.toLowerCase()
     );
-    return r?.child_headshot_url || null;
+    return resolveHeadshot(r?.child_headshot_url);
   };
 
   const filtered = useMemo(() => {
