@@ -122,8 +122,41 @@ const getWeatherInfo = (code: number | null) => {
 
 
 
-const isRainyCode = (code: number | null) => code !== null && code >= 51;
-const isSunnyCode = (code: number | null) => code !== null && code <= 2;
+/* ── Weather-day classification ──
+ *  Single set of rules used by the chart correlation panel AND the
+ *  insights bullets so the two never disagree.
+ *
+ *  Rainy: actually measured precipitation ≥ 0.1". A "Drizzle" WMO code with
+ *         zero recorded precip should not count as a rainy day for our
+ *         purposes (kids walked to practice in fine weather).
+ *  Sunny: WMO code 0–1 AND no measured precip. Excludes partly-cloudy.
+ *  Cold:  absolute threshold (50°F). Bottom-quartile relative thresholds
+ *         produced misleading "Coldest days below 78°F" insights in summer.
+ */
+const RAIN_THRESHOLD_IN = 0.1;
+const COLD_THRESHOLD_F = 50;
+const MIN_DAYS_PER_BUCKET = 4; // insights need at least N days per side to surface
+
+const isRainyDay = (w: { precipitation: number | null }): boolean =>
+  (w.precipitation ?? 0) >= RAIN_THRESHOLD_IN;
+const isSunnyDay = (w: { precipitation: number | null; condition_code: number | null }): boolean =>
+  w.condition_code !== null && w.condition_code <= 1 && (w.precipitation ?? 0) < RAIN_THRESHOLD_IN;
+
+/* ── Condition buckets ──
+ *  Groups raw WMO codes into the categories users actually think in.
+ *  Prevents "Snowy" and "Snow Grains" from being treated as different
+ *  weather for the "best condition" insight.
+ */
+const getWeatherBucket = (code: number | null): string | null => {
+  if (code === null) return null;
+  if (code <= 1) return "Sunny";
+  if (code <= 3) return "Cloudy";
+  if (code === 45 || code === 48) return "Foggy";
+  if ((code >= 51 && code <= 67) || (code >= 80 && code <= 82)) return "Rainy";
+  if ((code >= 71 && code <= 77) || code === 85 || code === 86) return "Snowy";
+  if (code >= 95) return "Stormy";
+  return null;
+};
 
 const now = new Date();
 const todayStr = now.toLocaleDateString('en-CA', { timeZone: 'America/New_York' });
@@ -264,37 +297,9 @@ const AdminAttendance = () => {
     return counts;
   }, [excursionAttendanceMonth]);
 
-  // Middle Township, NJ — site of No Limits Boxing Academy
-  // Forecast API covers the last 92 days (including today); archive API for anything older.
-  const { data: monthWeather } = useQuery({
-    queryKey: ["month-weather", calMonthStart, calMonthEnd],
-    queryFn: async () => {
-      try {
-        const ninetyDaysAgoStr = format(new Date(Date.now() - 90 * 24 * 60 * 60 * 1000), "yyyy-MM-dd");
-        const useForecast = calMonthStart >= ninetyDaysAgoStr;
-        const base = useForecast
-          ? "https://api.open-meteo.com/v1/forecast"
-          : "https://archive-api.open-meteo.com/v1/archive";
-        const url = `${base}?latitude=39.1548&longitude=-74.7970&start_date=${calMonthStart}&end_date=${calMonthEnd}&daily=temperature_2m_max,precipitation_sum&temperature_unit=fahrenheit&precipitation_unit=inch&timezone=America/New_York`;
-        const res = await fetch(url);
-        if (!res.ok) return null;
-        const json = await res.json();
-        const daily = json?.daily;
-        if (!daily?.time) return null;
-        const map: Record<string, { tempMax: number | null; precip: number | null }> = {};
-        daily.time.forEach((d: string, i: number) => {
-          map[d] = {
-            tempMax: daily.temperature_2m_max?.[i] ?? null,
-            precip: daily.precipitation_sum?.[i] ?? null,
-          };
-        });
-        return map;
-      } catch {
-        return null;
-      }
-    },
-    staleTime: 60 * 60 * 1000,
-  });
+  // (Weather data is loaded once via `weatherMap` further down — both the
+  // calendar emojis and the chart correlation panel read from that single
+  // source so the calendar and chart never disagree on the day's weather.)
 
   // YTD attendance since the new check-in system launched (March 9, 2026)
   const YTD_START = "2026-03-09";
@@ -1069,36 +1074,42 @@ const AdminAttendance = () => {
     return Object.entries(counts)
       .sort((a, b) => a[0].localeCompare(b[0]))
       .map(([date, count]) => {
-        const weather = monthWeather?.[date];
+        const w = weatherMap[date] as WeatherDay | undefined;
         return {
           date: format(parseISO(date), "M/d"),
           count,
           fullDate: date,
-          tempMax: weather?.tempMax ?? null,
-          precip: weather?.precip ?? null,
+          // Chart tooltip reads these — keep the field names stable.
+          tempMax: w?.temp_high ?? null,
+          precip: w?.precipitation ?? null,
         };
       });
-  }, [practiceAttendance, monthWeather]);
+  }, [practiceAttendance, weatherMap]);
 
-  /* ───── WEATHER vs ATTENDANCE CORRELATION ───── */
+  /* ───── WEATHER vs ATTENDANCE CORRELATION ─────
+   *  Drives the chart-bottom panel. Sample-size guard: only surfaces when
+   *  there are at least MIN_DAYS_PER_BUCKET rainy AND dry practice days,
+   *  to avoid declaring patterns on 1-2 data points. */
   const weatherCorrelation = useMemo(() => {
-    const RAIN_THRESHOLD_IN = 0.1; // >= 0.1" counts as a rainy practice day
     const withWeather = dailyTrend.filter((d) => d.precip !== null);
     if (withWeather.length === 0) return null;
     const rainy = withWeather.filter((d) => (d.precip ?? 0) >= RAIN_THRESHOLD_IN);
     const dry = withWeather.filter((d) => (d.precip ?? 0) < RAIN_THRESHOLD_IN);
-    const avg = (rows: typeof withWeather) =>
-      rows.length === 0 ? 0 : Math.round(rows.reduce((s, r) => s + r.count, 0) / rows.length);
-    const rainyAvg = avg(rainy);
-    const dryAvg = avg(dry);
-    const dropPct = dryAvg > 0 ? Math.round(((dryAvg - rainyAvg) / dryAvg) * 100) : 0;
+    if (rainy.length < MIN_DAYS_PER_BUCKET || dry.length < MIN_DAYS_PER_BUCKET) return null;
+    // Round at the end so dropCount isn't a rounded-minus-rounded artifact.
+    const rainyTotal = rainy.reduce((s, r) => s + r.count, 0);
+    const dryTotal = dry.reduce((s, r) => s + r.count, 0);
+    const rainyAvg = Math.round(rainyTotal / rainy.length);
+    const dryAvg = Math.round(dryTotal / dry.length);
+    const rawDiff = (dryTotal / dry.length) - (rainyTotal / rainy.length);
+    const dropPct = dryAvg > 0 && rawDiff > 0 ? Math.round((rawDiff / (dryTotal / dry.length)) * 100) : 0;
     return {
       rainyAvg,
       dryAvg,
       rainyDays: rainy.length,
       dryDays: dry.length,
       dropPct,
-      dropCount: dryAvg - rainyAvg,
+      dropCount: Math.round(rawDiff),
     };
   }, [dailyTrend]);
 
@@ -1233,57 +1244,69 @@ const AdminAttendance = () => {
       else if (mtdAvg < prevAvg) insights.push(`${viewedMonthShort}'s average attendance is lower than ${prevMonthName}.`);
     }
 
-    /* ── Weather-based insights ── */
+    /* ── Weather-based insights ──
+     *  Honest copy: descriptive numbers, no causation language, no
+     *  funding-hook framing. Sample-size guard: every comparison
+     *  requires ≥ MIN_DAYS_PER_BUCKET days per side, so we never
+     *  declare "rainy days are X% worse" off of one rainy Tuesday. */
     const weatherEntries = Object.values(weatherMap) as WeatherDay[];
     const practiceDailyCountsMap: Record<string, number> = {};
     practiceAttendance.forEach((a) => { practiceDailyCountsMap[a.check_in_date] = (practiceDailyCountsMap[a.check_in_date] || 0) + 1; });
 
-    if (weatherEntries.length >= 3) {
-      // Rainy vs sunny
-      const rainyDays = weatherEntries.filter((w) => isRainyCode(w.condition_code) && practiceDailyCountsMap[w.date] !== undefined);
-      const sunnyDays = weatherEntries.filter((w) => isSunnyCode(w.condition_code) && practiceDailyCountsMap[w.date] !== undefined);
+    // Only consider days that were actually practice days with attendance.
+    const practiceWeatherEntries = weatherEntries.filter((w) => practiceDailyCountsMap[w.date] !== undefined);
+    const avgAttendance = (rows: WeatherDay[]) =>
+      rows.length === 0 ? 0 : Math.round(rows.reduce((s, w) => s + (practiceDailyCountsMap[w.date] || 0), 0) / rows.length);
 
-      if (rainyDays.length >= 2 && sunnyDays.length >= 2) {
-        const rainyAvg = Math.round(rainyDays.reduce((s, w) => s + (practiceDailyCountsMap[w.date] || 0), 0) / rainyDays.length);
-        const sunnyAvg = Math.round(sunnyDays.reduce((s, w) => s + (practiceDailyCountsMap[w.date] || 0), 0) / sunnyDays.length);
-        if (sunnyAvg > 0 && rainyAvg < sunnyAvg) {
-          const diff = Math.round(((sunnyAvg - rainyAvg) / sunnyAvg) * 100);
-          insights.push(`🌧️ Rainy days average ${diff}% lower attendance than sunny days this month.`);
-        }
+    if (practiceWeatherEntries.length >= MIN_DAYS_PER_BUCKET * 2) {
+      // Rainy vs sunny — uses the same precipitation-based definition as
+      // the chart correlation panel so the two never disagree.
+      const rainyDays = practiceWeatherEntries.filter((w) => isRainyDay(w));
+      const sunnyDays = practiceWeatherEntries.filter((w) => isSunnyDay(w));
+
+      if (rainyDays.length >= MIN_DAYS_PER_BUCKET && sunnyDays.length >= MIN_DAYS_PER_BUCKET) {
+        const rainyAvg = avgAttendance(rainyDays);
+        const sunnyAvg = avgAttendance(sunnyDays);
+        insights.push(
+          `🌧️ Average attendance was ${rainyAvg} on the ${rainyDays.length} rainy days this month vs ${sunnyAvg} on the ${sunnyDays.length} sunny days.`
+        );
       }
 
-      // Cold vs warm
-      const withTemp = weatherEntries.filter((w) => w.temp_high !== null && practiceDailyCountsMap[w.date] !== undefined);
-      if (withTemp.length >= 4) {
-        const temps = withTemp.map((w) => w.temp_high!).sort((a, b) => a - b);
-        const coldThresh = temps[Math.floor(temps.length * 0.25)];
-        const coldDays = withTemp.filter((w) => w.temp_high! <= coldThresh);
-        const warmDays = withTemp.filter((w) => w.temp_high! > coldThresh);
-        if (coldDays.length >= 2 && warmDays.length >= 2) {
-          const coldAvg = Math.round(coldDays.reduce((s, w) => s + (practiceDailyCountsMap[w.date] || 0), 0) / coldDays.length);
-          const warmAvg = Math.round(warmDays.reduce((s, w) => s + (practiceDailyCountsMap[w.date] || 0), 0) / warmDays.length);
-          insights.push(`🌡️ Coldest days (below ${Math.round(coldThresh)}°F) had avg attendance of ${coldAvg} vs ${warmAvg} on warmer days.`);
-        }
+      // Cold vs not-cold — absolute 50°F threshold so summer "coldest"
+      // never reads as "below 78°F". Skip entirely when there aren't
+      // enough cold days to compare.
+      const withTemp = practiceWeatherEntries.filter((w) => w.temp_high !== null);
+      const coldDays = withTemp.filter((w) => w.temp_high! < COLD_THRESHOLD_F);
+      const notColdDays = withTemp.filter((w) => w.temp_high! >= COLD_THRESHOLD_F);
+      if (coldDays.length >= MIN_DAYS_PER_BUCKET && notColdDays.length >= MIN_DAYS_PER_BUCKET) {
+        const coldAvg = avgAttendance(coldDays);
+        const notColdAvg = avgAttendance(notColdDays);
+        insights.push(
+          `🌡️ Average attendance was ${coldAvg} on the ${coldDays.length} cold days (below ${COLD_THRESHOLD_F}°F) vs ${notColdAvg} on the ${notColdDays.length} warmer days.`
+        );
       }
 
-      // Best weather condition
-      const conditionGroups: Record<string, number[]> = {};
-      weatherEntries.forEach((w) => {
-        if (practiceDailyCountsMap[w.date] !== undefined && w.condition) {
-          if (!conditionGroups[w.condition]) conditionGroups[w.condition] = [];
-          conditionGroups[w.condition].push(practiceDailyCountsMap[w.date] || 0);
-        }
+      // Best weather bucket — group by category (Sunny/Cloudy/Rainy/...)
+      // instead of by raw condition string, and require ≥ MIN_DAYS_PER_BUCKET
+      // days in the winning bucket to surface the insight at all.
+      const bucketGroups: Record<string, WeatherDay[]> = {};
+      practiceWeatherEntries.forEach((w) => {
+        const bucket = getWeatherBucket(w.condition_code);
+        if (!bucket) return;
+        if (!bucketGroups[bucket]) bucketGroups[bucket] = [];
+        bucketGroups[bucket].push(w);
       });
-      let bestCondition = "";
+      let bestBucket = "";
       let bestAvg = 0;
-      Object.entries(conditionGroups).forEach(([cond, counts]) => {
-        if (counts.length >= 2) {
-          const avg = Math.round(counts.reduce((a, b) => a + b, 0) / counts.length);
-          if (avg > bestAvg) { bestAvg = avg; bestCondition = cond; }
+      let bestCount = 0;
+      Object.entries(bucketGroups).forEach(([bucket, days]) => {
+        if (days.length >= MIN_DAYS_PER_BUCKET) {
+          const avg = avgAttendance(days);
+          if (avg > bestAvg) { bestAvg = avg; bestBucket = bucket; bestCount = days.length; }
         }
       });
-      if (bestCondition) {
-        insights.push(`☀️ Highest attendance this month occurred on ${bestCondition} days (avg ${bestAvg}).`);
+      if (bestBucket) {
+        insights.push(`☀️ ${bestBucket} days (${bestCount} this month) saw the highest average attendance: ${bestAvg}.`);
       }
     }
 
@@ -2149,7 +2172,7 @@ const AdminAttendance = () => {
                   </ComposedChart>
                 </ResponsiveContainer>
               </div>
-              {weatherCorrelation && weatherCorrelation.rainyDays > 0 && weatherCorrelation.dryDays > 0 && (
+              {weatherCorrelation ? (
                 <>
                   <div className="mt-3 grid grid-cols-2 gap-2 text-xs">
                     <div className="bg-white/5 rounded-md p-2">
@@ -2171,23 +2194,26 @@ const AdminAttendance = () => {
                       </p>
                     </div>
                   </div>
-                  {weatherCorrelation.dropPct > 0 && (
+                  {weatherCorrelation.dropPct >= 10 && weatherCorrelation.dropCount > 0 && (
                     <div className="mt-2 bg-amber-500/10 border border-amber-500/20 rounded-md p-3 flex items-start gap-3">
                       <TrendingDown className="w-5 h-5 text-amber-400 flex-shrink-0 mt-0.5" />
                       <div className="flex-1 min-w-0">
                         <p className="text-amber-300 font-semibold text-sm">
-                          {weatherCorrelation.dropPct}% drop in attendance on rainy days
+                          {weatherCorrelation.dropPct}% lower attendance on rainy days this month
                         </p>
                         <p className="text-white/60 text-xs mt-0.5">
-                          Roughly {weatherCorrelation.dropCount} fewer youth per session when it rains — a funding opportunity for reliable transportation or weather-resistant outreach.
+                          About {weatherCorrelation.dropCount} fewer youth per session on the {weatherCorrelation.rainyDays} rainy days vs the {weatherCorrelation.dryDays} dry days. Single-month observation — could shift next month.
                         </p>
                       </div>
                     </div>
                   )}
                 </>
-              )}
-              {!monthWeather && (
+              ) : weatherLoading ? (
                 <p className="mt-2 text-xs text-white/30">Loading weather data…</p>
+              ) : (
+                <p className="mt-2 text-xs text-white/30">
+                  Not enough rainy / dry practice days this month to compare.
+                </p>
               )}
             </CardContent>
           </Card>
