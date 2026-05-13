@@ -1,7 +1,7 @@
 import { Fragment, useEffect, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { Users, User, MoreHorizontal, Trash2, Pencil, X, ArrowLeft, Eye, Flag, FileText, File as FileIcon, Download } from "lucide-react";
+import { Users, User, MoreHorizontal, Trash2, Pencil, X, ArrowLeft, Eye, Flag, FileText, File as FileIcon, Download, Signal as SignalIcon } from "lucide-react";
 import MessageInput from "./MessageInput";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import type { Conversation } from "@/pages/admin/AdminMessageBoard";
@@ -171,6 +171,8 @@ interface Props {
   onConversationUpdated?: () => void;
   /** Fire after last_read_at is updated so the parent can refresh unread badges */
   onMessageRead?: () => void;
+  /** Opens the Add-to-Workbench modal pre-filled from this specific message */
+  onAddMessageToWorkbench: (messageId: string, content: string) => void;
 }
 
 const formatMessageTime = (iso: string) => {
@@ -191,7 +193,7 @@ const formatDateDivider = (iso: string) => {
 const isSameDay = (a: string, b: string) =>
   new Date(a).toDateString() === new Date(b).toDateString();
 
-const MessageThread = ({ conversation, currentUserId, isSuperAdmin, canPost, scrollToMessageId, onBackToList, onConversationUpdated, onMessageRead }: Props) => {
+const MessageThread = ({ conversation, currentUserId, isSuperAdmin, canPost, scrollToMessageId, onBackToList, onConversationUpdated, onMessageRead, onAddMessageToWorkbench }: Props) => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const bottomRef = useRef<HTMLDivElement>(null);
@@ -529,15 +531,22 @@ const MessageThread = ({ conversation, currentUserId, isSuperAdmin, canPost, scr
                   </div>
                 </div>
 
-                {isSuperAdmin && (
-                  <div className={`flex items-center ml-1 mt-2 transition-opacity ${hoveredMsgId === msg.id ? "opacity-100" : "opacity-0"}`}>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <button className="p-1.5 rounded-lg text-zinc-600 hover:text-zinc-300 hover:bg-white/[0.08] transition-colors outline-none">
-                          <MoreHorizontal className="w-3.5 h-3.5" />
-                        </button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent side="top" align="start" className="w-48 bg-neutral-900 border-white/[0.08] shadow-2xl">
+                <div className={`flex items-center ml-1 mt-2 transition-opacity ${hoveredMsgId === msg.id ? "opacity-100" : "opacity-0 group-hover/msg:opacity-100"}`}>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <button className="p-1.5 rounded-lg text-zinc-600 hover:text-zinc-300 hover:bg-white/[0.08] transition-colors outline-none">
+                        <MoreHorizontal className="w-3.5 h-3.5" />
+                      </button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent side="top" align="start" className="w-52 bg-neutral-900 border-white/[0.08] shadow-2xl">
+                      <DropdownMenuItem
+                        onSelect={() => onAddMessageToWorkbench(msg.id, msg.content)}
+                        className="cursor-pointer text-emerald-400 focus:text-emerald-300 focus:bg-emerald-500/10"
+                      >
+                        <SignalIcon className="w-3.5 h-3.5 mr-2" />
+                        Add to my Workbench
+                      </DropdownMenuItem>
+                      {isSuperAdmin && (
                         <DropdownMenuItem
                           onSelect={() => handleDeleteMessage(msg.id)}
                           className="cursor-pointer text-red-400 focus:text-red-400 focus:bg-red-500/10"
@@ -545,10 +554,10 @@ const MessageThread = ({ conversation, currentUserId, isSuperAdmin, canPost, scr
                           <Trash2 className="w-3.5 h-3.5 mr-2" />
                           Delete message
                         </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </div>
-                )}
+                      )}
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </div>
               </div>
             </div>
           );

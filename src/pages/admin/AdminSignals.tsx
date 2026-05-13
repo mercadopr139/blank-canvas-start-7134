@@ -54,6 +54,8 @@ type Signal = {
   description: string | null;
   metadata: Record<string, unknown> | null;
   updated_at: string;
+  source_message_id?: string | null;
+  source_conversation_id?: string | null;
 };
 
 type BucketId = "core" | "bonus" | "ondeck";
@@ -1197,6 +1199,18 @@ const AdminSignals = ({ managerType = "PD" }: { managerType?: string }) => {
                 rows={3}
               />
             </div>
+
+            {/* Back-reference: this signal came from a message-board message.
+                The deep-link opens that conversation and the thread auto-
+                scrolls to the originating message via the #message-{id} hash. */}
+            {editingSignal?.source_conversation_id && editingSignal?.source_message_id && (
+              <a
+                href={`/admin/message-board?conv=${editingSignal.source_conversation_id}#message-${editingSignal.source_message_id}`}
+                className="inline-flex items-center gap-1.5 text-xs text-emerald-400 hover:text-emerald-300 hover:underline"
+              >
+                ↗ View original message
+              </a>
+            )}
           </div>
           <DialogFooter className="flex-col sm:flex-row gap-2 sm:gap-0">
             <Button

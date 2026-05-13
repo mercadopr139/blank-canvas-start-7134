@@ -5,10 +5,11 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useStaffPermissions } from "@/hooks/useStaffPermissions";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, MessageSquare, Signal, Globe } from "lucide-react";
+import { ArrowLeft, MessageSquare, Signal, Globe, Plus } from "lucide-react";
 import ConversationList from "@/components/admin/message-board/ConversationList";
 import MessageThread from "@/components/admin/message-board/MessageThread";
 import NewConversationModal from "@/components/admin/message-board/NewConversationModal";
+import AddToWorkbenchModal from "@/components/admin/message-board/AddToWorkbenchModal";
 
 // Three pillars — no General. Pillar is required at conversation creation
 // and is set once for the lifetime of the conversation.
@@ -62,6 +63,15 @@ const AdminMessageBoard = () => {
   const [newConvOpen, setNewConvOpen] = useState(false);
   const [listView, setListView] = useState<"active" | "archived">("active");
   const [viewAll, setViewAll] = useState(false);
+  // "Add to my Workbench" modal — opened either from the floating button
+  // (empty pre-fill) or from a specific message (pre-fills text + back-ref).
+  const [workbenchModal, setWorkbenchModal] = useState<{
+    open: boolean;
+    description?: string;
+    sourceMessageId?: string;
+    sourceConversationId?: string;
+    pillar?: Pillar;
+  }>({ open: false });
 
   // Deep-link from an "important message" email: ?conv=<id> auto-opens
   // that conversation on landing. Strip the param after consumption so a
@@ -380,6 +390,13 @@ const AdminMessageBoard = () => {
               onBackToList={() => setActiveConversationId(null)}
               onConversationUpdated={() => queryClient.invalidateQueries({ queryKey: ["mb-conversations", user?.id] })}
               onMessageRead={() => queryClient.invalidateQueries({ queryKey: ["mb-unread", user?.id] })}
+              onAddMessageToWorkbench={(messageId, content) => setWorkbenchModal({
+                open: true,
+                description: content,
+                sourceMessageId: messageId,
+                sourceConversationId: activeConversation.id,
+                pillar: activeConversation.pillar,
+              })}
             />
           ) : (
             <div className="flex-1 flex items-center justify-center">
@@ -414,6 +431,28 @@ const AdminMessageBoard = () => {
           queryClient.invalidateQueries({ queryKey: ["mb-conversations", user?.id] });
           openConversation(id);
         }}
+      />
+
+      {/* Floating "Add to Workbench" button — only on the message board
+          page, always visible across list and thread views even on
+          mobile so users can capture a task without losing place. */}
+      <button
+        onClick={() => setWorkbenchModal({ open: true })}
+        className="fixed bottom-5 right-5 z-40 h-12 w-12 rounded-full bg-emerald-500 hover:bg-emerald-400 text-black shadow-lg shadow-emerald-500/20 flex items-center justify-center transition-colors"
+        title="Add to my Workbench"
+        aria-label="Add to my Workbench"
+      >
+        <Plus className="w-5 h-5" />
+      </button>
+
+      <AddToWorkbenchModal
+        open={workbenchModal.open}
+        onClose={() => setWorkbenchModal({ open: false })}
+        currentUserId={user?.id || ""}
+        prefilledDescription={workbenchModal.description}
+        sourceMessageId={workbenchModal.sourceMessageId}
+        sourceConversationId={workbenchModal.sourceConversationId}
+        conversationPillar={workbenchModal.pillar}
       />
     </div>
   );
