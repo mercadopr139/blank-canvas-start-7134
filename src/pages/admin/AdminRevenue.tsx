@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import SupporterAutocomplete from "@/components/admin/SupporterAutocomplete";
@@ -13,7 +13,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
-import { Plus, Pencil, Trash2 } from "lucide-react";
+import { Plus, Pencil, Trash2, Search, X } from "lucide-react";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle } from
 "@/components/ui/dialog";
@@ -88,6 +88,13 @@ const AdminRevenue = () => {
   // ── Data state ──────────────────────────────────────────────────────────
   const [rows, setRows] = useState<RevenueRow[]>([]);
   const [loading, setLoading] = useState(true);
+
+  // ── Filter state ────────────────────────────────────────────────────────
+  // All filtering is client-side because the dataset is small (hundreds of
+  // rows per year). When it crosses ~5k rows we'd push this server-side.
+  const [search, setSearch] = useState("");
+  const [typeFilter, setTypeFilter] = useState<string>("all");
+  const [yearFilter, setYearFilter] = useState<string>("all");
 
   const fetchRows = useCallback(async () => {
     setLoading(true);
@@ -425,6 +432,45 @@ const AdminRevenue = () => {
   };
 
 
+  // ── Derived: years present in the data, sorted descending so the most
+  //    recent year shows first in the dropdown.
+  const availableYears = useMemo(() => {
+    const years = new Set<string>();
+    for (const r of rows) {
+      const y = r.date?.slice(0, 4);
+      if (y) years.add(y);
+    }
+    return Array.from(years).sort((a, b) => b.localeCompare(a));
+  }, [rows]);
+
+  // ── Derived: rows that match the current filter set.
+  const filteredRows = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    return rows.filter((r) => {
+      if (typeFilter !== "all" && r.revenue_type !== typeFilter) return false;
+      if (yearFilter !== "all" && !r.date.startsWith(yearFilter)) return false;
+      if (q) {
+        const haystack = [
+          r.supporter_name || "",
+          r.revenue_type,
+          r.payment_method || "",
+          (r as any).reference_id || "",
+          r.logged_by || "",
+        ].join(" ").toLowerCase();
+        if (!haystack.includes(q)) return false;
+      }
+      return true;
+    });
+  }, [rows, search, typeFilter, yearFilter]);
+
+  const filtersActive = search.trim() !== "" || typeFilter !== "all" || yearFilter !== "all";
+
+  const clearFilters = () => {
+    setSearch("");
+    setTypeFilter("all");
+    setYearFilter("all");
+  };
+
   // ─── Render ─────────────────────────────────────────────────────────────
 
   return (
@@ -436,9 +482,58 @@ const AdminRevenue = () => {
       </div>
 
       <div className="flex flex-col flex-1 min-h-0 px-4 py-4">
-        {/* Toolbar */}
+        {/* Filter row */}
+        <div className="flex flex-wrap items-center gap-2 mb-3 flex-shrink-0">
+          <div className="relative flex-1 min-w-[200px] max-w-md">
+            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-white/30" />
+            <Input
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search supporter, ref #, logged by…"
+              className="bg-white/5 border-white/10 text-white pl-8 h-8 text-sm placeholder:text-white/30"
+            />
+          </div>
+          <Select value={typeFilter} onValueChange={setTypeFilter}>
+            <SelectTrigger className="bg-white/5 border-white/10 text-white h-8 text-sm w-[170px]">
+              <SelectValue placeholder="All types" />
+            </SelectTrigger>
+            <SelectContent className="bg-zinc-900 border-white/10 text-white">
+              <SelectItem value="all" className="text-white focus:bg-white/10 focus:text-white">All types</SelectItem>
+              {REVENUE_TYPES.map((t) => (
+                <SelectItem key={t} value={t} className="text-white focus:bg-white/10 focus:text-white">{t}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Select value={yearFilter} onValueChange={setYearFilter}>
+            <SelectTrigger className="bg-white/5 border-white/10 text-white h-8 text-sm w-[120px]">
+              <SelectValue placeholder="All years" />
+            </SelectTrigger>
+            <SelectContent className="bg-zinc-900 border-white/10 text-white">
+              <SelectItem value="all" className="text-white focus:bg-white/10 focus:text-white">All years</SelectItem>
+              {availableYears.map((y) => (
+                <SelectItem key={y} value={y} className="text-white focus:bg-white/10 focus:text-white">{y}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          {filtersActive && (
+            <button
+              type="button"
+              onClick={clearFilters}
+              className="inline-flex items-center gap-1 text-xs text-white/40 hover:text-white/70 hover:underline transition-colors px-1"
+            >
+              <X className="w-3 h-3" />
+              Clear
+            </button>
+          )}
+        </div>
+
+        {/* Count + Add */}
         <div className="flex items-center justify-between mb-4 flex-shrink-0">
-          <p className="text-sm text-white/50">{rows.length} record{rows.length !== 1 ? "s" : ""}</p>
+          <p className="text-sm text-white/50">
+            {filtersActive
+              ? `${filteredRows.length} of ${rows.length} record${rows.length !== 1 ? "s" : ""}`
+              : `${rows.length} record${rows.length !== 1 ? "s" : ""}`}
+          </p>
           <Button
             size="sm"
             className="bg-green-500 hover:bg-green-400 text-black gap-1.5"
@@ -474,8 +569,12 @@ const AdminRevenue = () => {
               <tr className="border-b border-white/10">
                   <td colSpan={9} className="p-4 text-center py-12 text-white/50 align-middle">No revenue records yet.</td>
                 </tr> :
+              filteredRows.length === 0 ?
+              <tr className="border-b border-white/10">
+                  <td colSpan={9} className="p-4 text-center py-12 text-white/50 align-middle">No records match the current filters.</td>
+                </tr> :
 
-              rows.map((r) =>
+              filteredRows.map((r) =>
               <tr key={r.id} className="border-b border-white/10 transition-colors hover:bg-white/5">
                     <td className="p-4 align-middle text-white/70 text-sm">{fmtDate(r.date)}</td>
                     <td className="p-4 align-middle text-white font-medium text-sm">{r.supporter_name || "—"}</td>
