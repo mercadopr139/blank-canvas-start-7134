@@ -1,6 +1,6 @@
 import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { FileText, Mail } from "lucide-react";
+import { FileText } from "lucide-react";
 
 const tiles = [
   {
@@ -8,12 +8,6 @@ const tiles = [
     description: "Track billing and payments",
     icon: FileText,
     href: "/admin/finance/invoices",
-  },
-  {
-    title: "Invoice Sent History",
-    description: "View emailed invoices",
-    icon: Mail,
-    href: "/admin/finance/invoices?tab=sent",
   },
 ];
 
