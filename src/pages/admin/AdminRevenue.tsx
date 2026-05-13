@@ -201,14 +201,21 @@ const AdminRevenue = () => {
     setModalOpen(true);
   };
 
-  /** Find or create a supporter by name, with full details. */
+  /** Find or create a supporter by name, with full details.
+   *  Matching is whitespace-tolerant and case-insensitive: "John Smith",
+   *  "john smith", and "John Smith " all resolve to the same record so we
+   *  don't accumulate near-duplicate supporters over time. The stored name
+   *  is always the trimmed version so future matches stay consistent. */
   const findOrCreateSupporter = async (
     name: string,
     details: typeof emptySupporterDetails,
     revenueType: string
   ): Promise<string | null> => {
+    const trimmedName = name.trim();
+    if (!trimmedName) return null;
+
     const baseFields: Record<string, any> = {
-      name,
+      name: trimmedName,
       email: details.email || null,
       phone: details.phone || null,
       address: details.address || null,
@@ -217,15 +224,18 @@ const AdminRevenue = () => {
       story: details.story || null
     };
 
-    const { data: existing } = await supabase.
-    from("supporters").
-    select("id").
-    eq("name", name).
-    maybeSingle();
-    if (existing) {
+    // ilike with no wildcards performs case-insensitive exact match. limit(1)
+    // avoids the maybeSingle() multi-row error if pre-existing duplicates
+    // happen to exist (we just attach to the first one found).
+    const { data: existing } = await supabase
+      .from("supporters")
+      .select("id")
+      .ilike("name", trimmedName)
+      .limit(1);
+    if (existing && existing.length > 0) {
       // Preserve any existing primary_revenue_stream — don't clobber the curatorial choice
-      await supabase.from("supporters").update(baseFields as any).eq("id", existing.id);
-      return existing.id;
+      await supabase.from("supporters").update(baseFields as any).eq("id", existing[0].id);
+      return existing[0].id;
     }
 
     // New supporter: seed primary_revenue_stream + status (Role) from the first revenue entry's type
@@ -242,10 +252,11 @@ const AdminRevenue = () => {
     return created.id;
   };
 
-  /** Save supporter details back to the supporters table */
+  /** Save supporter details back to the supporters table. Name is trimmed
+   *  on save so the database doesn't accumulate whitespace-padded variants. */
   const saveSupporterDetails = async (supporterId: string) => {
     const updateData: Record<string, any> = {
-      name: supporterDetails.name || supporterSearch.trim(),
+      name: (supporterDetails.name || supporterSearch).trim(),
       email: supporterDetails.email || null,
       phone: supporterDetails.phone || null,
       address: supporterDetails.address || null,
