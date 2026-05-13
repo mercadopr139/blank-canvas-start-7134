@@ -77,7 +77,13 @@ interface WeatherDay {
   date: string;
   temp_high: number | null;
   temp_low: number | null;
+  /** Full 24-hour precipitation total, in inches. Powers the calendar tooltip. */
   precipitation: number | null;
+  /** Sum of hourly precipitation between local 8:00 and 19:00 inclusive.
+   *  Powers the rainy-day classification used by the chart correlation panel
+   *  and the insights bullets. Overnight rain that cleared by morning is
+   *  excluded — a day with 0.4" overnight and 0" daytime reads as dry here. */
+  precipitation_8am_8pm: number | null;
   condition: string;
   condition_code: number | null;
 }
@@ -137,10 +143,17 @@ const RAIN_THRESHOLD_IN = 0.1;
 const COLD_THRESHOLD_F = 50;
 const MIN_DAYS_PER_BUCKET = 4; // insights need at least N days per side to surface
 
-const isRainyDay = (w: { precipitation: number | null }): boolean =>
-  (w.precipitation ?? 0) >= RAIN_THRESHOLD_IN;
-const isSunnyDay = (w: { precipitation: number | null; condition_code: number | null }): boolean =>
-  w.condition_code !== null && w.condition_code <= 1 && (w.precipitation ?? 0) < RAIN_THRESHOLD_IN;
+// Rainy / sunny classification reads the 8am-8pm window total, not the
+// full 24-hour total — so overnight rain that cleared by morning doesn't
+// count against attendance. Falls back to the full-day total only when
+// the windowed value is missing (legacy cached rows pre-migration).
+const dayPrecip = (w: { precipitation: number | null; precipitation_8am_8pm: number | null }): number =>
+  w.precipitation_8am_8pm ?? w.precipitation ?? 0;
+
+const isRainyDay = (w: { precipitation: number | null; precipitation_8am_8pm: number | null }): boolean =>
+  dayPrecip(w) >= RAIN_THRESHOLD_IN;
+const isSunnyDay = (w: { precipitation: number | null; precipitation_8am_8pm: number | null; condition_code: number | null }): boolean =>
+  w.condition_code !== null && w.condition_code <= 1 && dayPrecip(w) < RAIN_THRESHOLD_IN;
 
 /* ── Condition buckets ──
  *  Groups raw WMO codes into the categories users actually think in.
@@ -446,20 +459,35 @@ const AdminAttendance = () => {
 
 
 
-  /* ───── Weather Data (Open-Meteo + DB cache) ───── */
+  /* ───── Weather Data (Open-Meteo + DB cache) ─────
+   *  Single source of truth for both the calendar emojis/tooltips and the
+   *  attendance correlation analysis. Cached in weather_data to avoid
+   *  re-hitting Open-Meteo on every page load.
+   *
+   *  Each row stores two precipitation values: the 24-hour total (powers
+   *  the tooltip, reads like a normal weather widget) and the 8am-8pm
+   *  window total (powers the "rainy practice day" analysis — excludes
+   *  overnight rain that cleared by school time).
+   */
   const { data: weatherMap = {}, isLoading: weatherLoading } = useQuery({
     queryKey: ["weather-data", calMonthStart],
     queryFn: async () => {
-      // 1. Check DB cache first
-      const { data: cached } = await supabase
-        .from("weather_data")
-        .select("date, temp_high, temp_low, precipitation, condition, condition_code")
+      // 1. Check DB cache first. Any row missing the windowed value is
+      //    treated as stale and re-fetched (legacy daily-only rows
+      //    from before the schema migration).
+      const { data: cached } = await (supabase
+        .from("weather_data") as any)
+        .select("date, temp_high, temp_low, precipitation, precipitation_8am_8pm, condition, condition_code")
         .eq("location", "rio_grande_nj")
         .gte("date", calMonthStart)
         .lte("date", calMonthEnd);
 
       const cachedMap: Record<string, WeatherDay> = {};
-      (cached || []).forEach((w: any) => { cachedMap[w.date] = w; });
+      (cached || []).forEach((w: any) => {
+        if (w.precipitation_8am_8pm !== null) {
+          cachedMap[w.date] = w;
+        }
+      });
 
       // Check if we have all days
       const daysInMonth = getDaysInMonth(calendarMonth);
@@ -471,7 +499,10 @@ const AdminAttendance = () => {
 
       if (missingDates.length === 0) return cachedMap;
 
-      // 2. Fetch from Open-Meteo — split into historical and forecast ranges
+      // 2. Fetch from Open-Meteo — split into historical and forecast ranges.
+      //    Hourly precipitation comes back as an array keyed by hourly.time
+      //    (one ISO string per hour, in the requested timezone). We sum the
+      //    hours where hour-of-day is 8..19 inclusive for each date.
       try {
         const today = new Date();
         today.setHours(0, 0, 0, 0);
@@ -479,7 +510,7 @@ const AdminAttendance = () => {
         const monthStart = new Date(calendarMonth.getFullYear(), calendarMonth.getMonth(), 1);
         const monthEnd = new Date(calendarMonth.getFullYear(), calendarMonth.getMonth() + 1, 0);
 
-        const params = "daily=temperature_2m_max,temperature_2m_min,precipitation_sum,weather_code&temperature_unit=fahrenheit&precipitation_unit=inch&timezone=America/New_York&latitude=39.0018&longitude=-74.8774";
+        const params = "daily=temperature_2m_max,temperature_2m_min,precipitation_sum,weather_code&hourly=precipitation&temperature_unit=fahrenheit&precipitation_unit=inch&timezone=America/New_York&latitude=39.0018&longitude=-74.8774";
 
         const fetches: Promise<any>[] = [];
 
@@ -511,17 +542,42 @@ const AdminAttendance = () => {
         for (const json of results) {
           if (!json?.daily?.time) continue;
           const daily = json.daily;
+
+          // Build a date → 8am-8pm precipitation sum from the hourly array.
+          // Hourly times are local strings like "2026-03-09T08:00" because
+          // we passed timezone=America/New_York to Open-Meteo.
+          const windowedByDate: Record<string, number> = {};
+          if (json.hourly?.time && Array.isArray(json.hourly.precipitation)) {
+            for (let i = 0; i < json.hourly.time.length; i++) {
+              const t: string = json.hourly.time[i];
+              if (!t || t.length < 13) continue;
+              const datePart = t.slice(0, 10);
+              const hour = parseInt(t.slice(11, 13), 10);
+              if (hour >= 8 && hour <= 19) {
+                const p = json.hourly.precipitation[i];
+                if (p !== null && p !== undefined) {
+                  windowedByDate[datePart] = (windowedByDate[datePart] || 0) + Number(p);
+                }
+              }
+            }
+          }
+
           for (let i = 0; i < daily.time.length; i++) {
             const dateStr = daily.time[i];
             if (cachedMap[dateStr]) continue;
             const code = daily.weather_code?.[i] ?? null;
             const info = getWeatherInfo(code);
+            // Round to 2 decimals so the stored value matches what
+            // the tooltip displays.
+            const windowedRaw = windowedByDate[dateStr];
+            const windowed = windowedRaw !== undefined ? Math.round(windowedRaw * 100) / 100 : 0;
             const row = {
               date: dateStr,
               location: "rio_grande_nj",
               temp_high: daily.temperature_2m_max?.[i] ?? null,
               temp_low: daily.temperature_2m_min?.[i] ?? null,
               precipitation: daily.precipitation_sum?.[i] ?? null,
+              precipitation_8am_8pm: windowed,
               condition: info.label,
               condition_code: code,
             };
@@ -532,7 +588,7 @@ const AdminAttendance = () => {
 
         // Save to DB (fire and forget)
         if (rows.length > 0) {
-          supabase.from("weather_data").upsert(rows, { onConflict: "date,location" }).then();
+          (supabase.from("weather_data") as any).upsert(rows, { onConflict: "date,location" }).then();
         }
       } catch (e) {
         console.warn("Weather fetch failed:", e);
@@ -1081,7 +1137,11 @@ const AdminAttendance = () => {
           fullDate: date,
           // Chart tooltip reads these — keep the field names stable.
           tempMax: w?.temp_high ?? null,
-          precip: w?.precipitation ?? null,
+          // `precip` drives the chart's blue precipitation line AND the
+          // chart-bottom rainy/dry correlation panel, so it needs to be
+          // the 8am-8pm window total (with fallback to 24-hour for
+          // legacy cached rows pre-migration).
+          precip: w ? dayPrecip(w) : null,
         };
       });
   }, [practiceAttendance, weatherMap]);
