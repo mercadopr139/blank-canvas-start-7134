@@ -5,7 +5,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useStaffPermissions } from "@/hooks/useStaffPermissions";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, MessageSquare, Signal, Globe, Plus } from "lucide-react";
+import { ArrowLeft, MessageSquare, Signal, Globe } from "lucide-react";
 import ConversationList from "@/components/admin/message-board/ConversationList";
 import MessageThread from "@/components/admin/message-board/MessageThread";
 import NewConversationModal from "@/components/admin/message-board/NewConversationModal";
@@ -369,6 +369,7 @@ const AdminMessageBoard = () => {
             onSelect={(id) => openConversation(id)}
             onMessageSelect={(convId, msgId) => openConversation(convId, msgId)}
             onNew={() => setNewConvOpen(true)}
+            onOpenWorkbench={() => setWorkbenchOverlayOpen(true)}
             onConversationsChanged={() => {
               queryClient.invalidateQueries({ queryKey: ["mb-conversations", user?.id] });
               queryClient.invalidateQueries({ queryKey: ["mb-unread", user?.id] });
@@ -438,19 +439,6 @@ const AdminMessageBoard = () => {
           openConversation(id);
         }}
       />
-
-      {/* Floating Workbench button — always visible on the message board
-          across list and thread views. Opens the user's own Workbench as
-          an overlay so they can review and add signals without leaving
-          the conversation. */}
-      <button
-        onClick={() => setWorkbenchOverlayOpen(true)}
-        className="fixed bottom-5 right-5 z-40 h-12 w-12 rounded-full bg-emerald-500 hover:bg-emerald-400 text-black shadow-lg shadow-emerald-500/20 flex items-center justify-center transition-colors"
-        title="Open my Workbench"
-        aria-label="Open my Workbench"
-      >
-        <Plus className="w-5 h-5" />
-      </button>
 
       <MyWorkbenchOverlay
         open={workbenchOverlayOpen}
