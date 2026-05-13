@@ -75,13 +75,22 @@ const AdminMealReports = () => {
   }, []);
 
   const loadSummary = async () => {
-    const { data: all } = await supabase.from("meal_events").select("meal_count");
-    if (all) {
-      const total = all.reduce((s, r) => s + (r.meal_count || 0), 0);
-      setAllTimeCount(total);
-      setAvgPerNight(all.length > 0 ? Math.round(total / all.length) : 0);
-    }
     const today = new Date();
+    // Year-to-date scope for the leftmost tile + avg-per-night.
+    // Rolls over automatically on Jan 1: new year, fresh count.
+    const currentYear = today.getFullYear();
+    const yearStart = `${currentYear}-01-01`;
+    const yearEnd = `${currentYear}-12-31`;
+    const { data: yearData } = await supabase
+      .from("meal_events")
+      .select("meal_count")
+      .gte("event_date", yearStart)
+      .lte("event_date", yearEnd);
+    if (yearData) {
+      const total = yearData.reduce((s, r) => s + (r.meal_count || 0), 0);
+      setAllTimeCount(total);
+      setAvgPerNight(yearData.length > 0 ? Math.round(total / yearData.length) : 0);
+    }
     const monthStart = format(startOfMonth(today), "yyyy-MM-dd");
     const weekStart = format(startOfWeek(today), "yyyy-MM-dd");
     const todayStr = format(today, "yyyy-MM-dd");
@@ -430,7 +439,7 @@ const AdminMealReports = () => {
       {/* Summary strip */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         {[
-          { label: "All Time", value: allTimeCount, color: "text-green-400", icon: UtensilsCrossed },
+          { label: String(new Date().getFullYear()), value: allTimeCount, color: "text-green-400", icon: UtensilsCrossed },
           { label: "This Month", value: monthCount, color: "text-blue-400", icon: TrendingUp },
           { label: "This Week", value: weekCount, color: "text-amber-400", icon: TrendingUp },
           { label: "Avg/Night", value: avgPerNight, color: "text-purple-400", icon: TrendingUp },
