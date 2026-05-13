@@ -106,7 +106,7 @@ const ReceiptViewerModal = ({ open, onOpenChange, supporterId, supporterName, au
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="bg-zinc-900 border-white/10 text-white max-w-3xl max-h-[90vh] flex flex-col p-0 gap-0">
+      <DialogContent className="bg-zinc-900 border-white/10 text-white max-w-5xl w-[95vw] max-h-[90vh] flex flex-col p-0 gap-0">
         <DialogHeader className="px-6 pt-5 pb-3 border-b border-white/10 shrink-0">
           <DialogTitle className="text-white flex items-center gap-2 text-base">
             <Mail className="w-4 h-4 text-green-400" />
@@ -217,16 +217,18 @@ const ReceiptViewerModal = ({ open, onOpenChange, supporterId, supporterName, au
                     )}
                   </div>
 
-                  {/* Rendered email body */}
+                  {/* Rendered email body. The email template is a fixed 600px-
+                      wide table (standard for email HTML), so the outer
+                      container allows horizontal scroll on the rare case a
+                      browser window is narrow enough to still clip. */}
                   {selected.email_html ? (
                     <div className="p-4 bg-white/[0.02]">
                       <p className="text-[10px] uppercase tracking-[0.15em] text-white/30 mb-2">
                         Email body (as delivered)
                       </p>
-                      <div
-                        className="bg-white rounded-md overflow-hidden border border-white/5"
-                        dangerouslySetInnerHTML={{ __html: selected.email_html }}
-                      />
+                      <div className="bg-white rounded-md border border-white/5 overflow-auto">
+                        <div dangerouslySetInnerHTML={{ __html: selected.email_html }} />
+                      </div>
                     </div>
                   ) : (
                     <div className="p-6 text-sm text-white/40 italic">
