@@ -515,11 +515,11 @@ export default function TransportRunsPay() {
       } else if (res.data?.sent === false && res.data?.reason === "all clean") {
         toast({ title: "All trips closed cleanly", description: `${reportDate} — no email sent.` });
       } else if (res.data?.sent) {
-        const p = res.data.picked_up_no_dropoff ?? 0;
-        const d = res.data.dropoff_no_pickup ?? 0;
+        const md = res.data.routes_missing_dropoff ?? 0;
+        const mp = res.data.routes_missing_pickup ?? 0;
         toast({
           title: "Report emailed",
-          description: `${p} picked-up-no-dropoff, ${d} dropped-off-no-pickup`,
+          description: `${md} route(s) missing dropoff, ${mp} route(s) missing pickup`,
         });
       }
     } catch (err) {

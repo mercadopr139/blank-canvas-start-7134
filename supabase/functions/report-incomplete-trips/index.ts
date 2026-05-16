@@ -29,19 +29,12 @@ const RECIPIENTS = [
 
 const FROM_ADDRESS = "No Limits Academy <joshmercado@nolimitsboxingacademy.org>";
 
-type YouthRow = { id: string; first_name: string; last_name: string };
 type RunRow = {
   id: string;
   run_type: string;
   started_at: string;
   drivers: { id: string; name: string } | null;
   routes: { id: string; name: string } | null;
-};
-type AttendanceRow = {
-  run_id: string;
-  youth_id: string;
-  status: string;
-  youth_profiles: YouthRow | null;
 };
 
 const formatEasternDate = (d: Date): string =>
@@ -183,140 +176,79 @@ Deno.serve(async (req) => {
     }
 
     const runIds = todayRuns.map((r) => r.id);
-    const runById = new Map<string, RunRow>(todayRuns.map((r) => [r.id, r]));
 
-    // Attendance across both completed and in-progress runs. Drivers
-    // tap pickup/dropoff live; the attendance row is written even if
-    // the run is never formally submitted, so we want to count those
-    // taps too — otherwise an "I forgot to submit but I did tap them"
-    // case would over-flag.
-    const { data: attendanceRaw, error: attErr } = await supabase
-      .from("transport_attendance")
-      .select("run_id, youth_id, status, youth_profiles:youth_profiles(id, first_name, last_name)")
-      .in("run_id", runIds);
-    if (attErr) throw attErr;
-
-    const attendance = (attendanceRaw || []) as unknown as AttendanceRow[];
-
-    type YouthStatus = {
-      youth: YouthRow;
-      pickedUp: { run: RunRow }[];
-      droppedOff: { run: RunRow }[];
+    // Route-level completeness: a route is "closed out" for the day if
+    // BOTH a Pickup run and a Dropoff run exist for it, regardless of
+    // which driver did each or whether every kid is on both. This is
+    // intentional — per-youth gaps (e.g., a kid picked up at 4:29 PM
+    // who wasn't tapped on the 7:36 PM Dropoff) are a separate concern
+    // from "the trip wasn't closed out." That separate concern doesn't
+    // belong in this report.
+    type RouteState = {
+      routeName: string;
+      pickups: RunRow[];
+      dropoffs: RunRow[];
     };
-    const youthMap = new Map<string, YouthStatus>();
-    for (const att of attendance) {
-      if (!att.youth_profiles) continue;
-      const run = runById.get(att.run_id);
-      if (!run) continue;
-      if (!youthMap.has(att.youth_id)) {
-        youthMap.set(att.youth_id, { youth: att.youth_profiles, pickedUp: [], droppedOff: [] });
-      }
-      const entry = youthMap.get(att.youth_id)!;
-      if (att.status === "picked_up") entry.pickedUp.push({ run });
-      if (att.status === "dropped_off") entry.droppedOff.push({ run });
+    const byRoute = new Map<string, RouteState>();
+    for (const run of todayRuns) {
+      const name = run.routes?.name;
+      if (!name) continue;
+      if (!byRoute.has(name)) byRoute.set(name, { routeName: name, pickups: [], dropoffs: [] });
+      const s = byRoute.get(name)!;
+      if (run.run_type === "pickup") s.pickups.push(run);
+      if (run.run_type === "dropoff") s.dropoffs.push(run);
     }
 
-    type IncompleteEntry = { youth: YouthRow; runs: RunRow[] };
-    const pickedNoDropoff: IncompleteEntry[] = [];
-    const droppedNoPickup: IncompleteEntry[] = [];
-
-    for (const entry of youthMap.values()) {
-      if (entry.pickedUp.length > 0 && entry.droppedOff.length === 0) {
-        pickedNoDropoff.push({ youth: entry.youth, runs: entry.pickedUp.map((p) => p.run) });
-      }
-      if (entry.droppedOff.length > 0 && entry.pickedUp.length === 0) {
-        droppedNoPickup.push({ youth: entry.youth, runs: entry.droppedOff.map((d) => d.run) });
-      }
+    const missingDropoff: RouteState[] = [];
+    const missingPickup: RouteState[] = [];
+    for (const s of byRoute.values()) {
+      if (s.pickups.length > 0 && s.dropoffs.length === 0) missingDropoff.push(s);
+      if (s.dropoffs.length > 0 && s.pickups.length === 0) missingPickup.push(s);
     }
 
-    if (pickedNoDropoff.length === 0 && droppedNoPickup.length === 0) {
+    if (missingDropoff.length === 0 && missingPickup.length === 0) {
       return new Response(JSON.stringify({ sent: false, reason: "all clean" }), {
         status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    // Action-oriented grouping. The email's job is to tell the operator
-    // what to do next — not just list which pickup the youth came from.
-    // For each missing youth we figure out:
-    //   - which route they need their dropoff (or pickup) submitted for
-    //   - whether a matching run already exists today (so the action is
-    //     "add these youth to that run") or not (so it's "submit a new run")
-    const pickupByRoute = new Map<string, RunRow>();
-    const dropoffByRoute = new Map<string, RunRow>();
-    for (const run of todayRuns) {
-      const name = run.routes?.name;
-      if (!name) continue;
-      if (run.run_type === "pickup" && !pickupByRoute.has(name)) pickupByRoute.set(name, run);
-      if (run.run_type === "dropoff" && !dropoffByRoute.has(name)) dropoffByRoute.set(name, run);
+    // Pull attendance only to surface youth counts on each pickup/dropoff
+    // for context — not for matching anymore.
+    const { data: attendanceRaw } = await supabase
+      .from("transport_attendance")
+      .select("run_id, youth_id, status")
+      .in("run_id", runIds);
+    const youthCountByRun = new Map<string, number>();
+    for (const a of (attendanceRaw || []) as { run_id: string; youth_id: string; status: string }[]) {
+      if (a.status === "picked_up" || a.status === "dropped_off") {
+        youthCountByRun.set(a.run_id, (youthCountByRun.get(a.run_id) || 0) + 1);
+      }
     }
 
-    type ActionGroup = {
-      routeName: string;
-      sourceRun: RunRow;            // the run where they were recorded (pickup for missing-dropoff, vice versa)
-      matchingRun: RunRow | null;   // existing opposite-direction run for the same route, if any
-      direction: "dropoff" | "pickup"; // which direction is missing
-      youth: YouthRow[];
-    };
+    const renderMissingRow = (s: RouteState, missing: "dropoff" | "pickup"): string => {
+      const sourceRuns = missing === "dropoff" ? s.pickups : s.dropoffs;
+      const missingWord = missing === "dropoff" ? "Dropoff" : "Pickup";
+      const sourceLabel = missing === "dropoff" ? "picked up" : "dropped off";
+      const route = escapeHtml(s.routeName);
 
-    const groupByRouteAndAction = (
-      entries: IncompleteEntry[],
-      missingDirection: "dropoff" | "pickup",
-    ): ActionGroup[] => {
-      const m = new Map<string, ActionGroup>();
-      for (const e of entries) {
-        for (const sourceRun of e.runs) {
-          const routeName = sourceRun.routes?.name || "Unknown route";
-          const key = routeName;
-          if (!m.has(key)) {
-            const matchingRun = missingDirection === "dropoff"
-              ? dropoffByRoute.get(routeName) ?? null
-              : pickupByRoute.get(routeName) ?? null;
-            m.set(key, {
-              routeName,
-              sourceRun,
-              matchingRun,
-              direction: missingDirection,
-              youth: [],
-            });
-          }
-          m.get(key)!.youth.push(e.youth);
-        }
-      }
-      // Dedupe youth list (a youth could appear via multiple pickup runs).
-      for (const g of m.values()) {
-        const seen = new Set<string>();
-        g.youth = g.youth.filter((y) => {
-          if (seen.has(y.id)) return false;
-          seen.add(y.id);
-          return true;
-        });
-      }
-      return Array.from(m.values()).sort((a, b) =>
-        a.sourceRun.started_at.localeCompare(b.sourceRun.started_at),
-      );
-    };
-
-    const missingDropoffGroups = groupByRouteAndAction(pickedNoDropoff, "dropoff");
-    const missingPickupGroups = groupByRouteAndAction(droppedNoPickup, "pickup");
-
-    const renderActionGroup = (g: ActionGroup): string => {
-      const route = escapeHtml(g.routeName);
-      const driver = escapeHtml(g.sourceRun.drivers?.name || "Unknown");
-      const sourceTime = formatEasternTime(g.sourceRun.started_at);
-      const names = g.youth.map((y) => escapeHtml(`${y.first_name} ${y.last_name}`)).join(", ");
-      const sourceLabel = g.direction === "dropoff" ? "picked up" : "dropped off";
-      const directionWord = g.direction === "dropoff" ? "Dropoff" : "Pickup";
-
-      const action = g.matchingRun
-        ? `Add ${g.youth.length === 1 ? "this youth" : `these ${g.youth.length} youth`} to the existing <strong>${route} ${directionWord}</strong> at ${formatEasternTime(g.matchingRun.started_at)} (driver: <em>${escapeHtml(g.matchingRun.drivers?.name || "Unknown")}</em>).`
-        : `No <strong>${route} ${directionWord}</strong> run was submitted today — a driver needs to submit one.`;
+      // If multiple pickups/dropoffs exist for the route, list them all
+      // (different drivers/times). Usually just one.
+      const sourceDetails = sourceRuns
+        .sort((a, b) => a.started_at.localeCompare(b.started_at))
+        .map((r) => {
+          const time = formatEasternTime(r.started_at);
+          const driver = escapeHtml(r.drivers?.name || "Unknown driver");
+          const count = youthCountByRun.get(r.id) || 0;
+          return `${count} youth ${sourceLabel} at ${time} by <em>${driver}</em>`;
+        })
+        .join("; ");
 
       return `<li style="margin-bottom: 18px; line-height: 1.55;">
-        <strong style="color: #111827;">${route}</strong> &mdash; ${g.youth.length} youth ${sourceLabel} at ${sourceTime} by <em>${driver}</em>
-        <div style="margin-top: 6px; padding: 8px 12px; background: #fef3c7; border-left: 3px solid #d97706; border-radius: 4px; font-size: 13px; color: #78350f;">
-          <strong>Action:</strong> ${action}
+        <strong style="color: #111827; font-size: 15px;">${route}</strong>
+        <div style="margin-top: 4px; font-size: 13px; color: #6b7280;">${sourceDetails}</div>
+        <div style="margin-top: 8px; padding: 10px 14px; background: #fef3c7; border-left: 3px solid #d97706; border-radius: 4px; font-size: 13px; color: #78350f;">
+          <strong>Action:</strong> No <strong>${route} ${missingWord}</strong> run was submitted today — a driver needs to submit one.
         </div>
-        <div style="margin-top: 6px; font-size: 13px; color: #6b7280;">${g.youth.length} youth: ${names}</div>
       </li>`;
     };
 
@@ -330,21 +262,21 @@ Deno.serve(async (req) => {
     <h1 style="margin: 0 0 8px 0; font-size: 22px; font-weight: 700; color: #111827;">Unclosed Trips</h1>
     <p style="margin: 0 0 24px 0; font-size: 14px; color: #6b7280;">${subjectDate}</p>
 
-    ${missingDropoffGroups.length > 0 ? `
+    ${missingDropoff.length > 0 ? `
       <h3 style="margin: 0 0 12px 0; font-size: 15px; color: #b91c1c;">
-        ${pickedNoDropoff.length} youth picked up today but no dropoff on record
+        ${missingDropoff.length} ${missingDropoff.length === 1 ? "route has" : "routes have"} a Pickup but no Dropoff
       </h3>
       <ul style="margin: 0 0 24px 0; padding-left: 18px; color: #111827; list-style: disc;">
-        ${missingDropoffGroups.map(renderActionGroup).join("")}
+        ${missingDropoff.map((s) => renderMissingRow(s, "dropoff")).join("")}
       </ul>
     ` : ""}
 
-    ${missingPickupGroups.length > 0 ? `
+    ${missingPickup.length > 0 ? `
       <h3 style="margin: 0 0 12px 0; font-size: 15px; color: #b45309;">
-        ${droppedNoPickup.length} youth dropped off today but no pickup on record
+        ${missingPickup.length} ${missingPickup.length === 1 ? "route has" : "routes have"} a Dropoff but no Pickup
       </h3>
       <ul style="margin: 0 0 24px 0; padding-left: 18px; color: #111827; list-style: disc;">
-        ${missingPickupGroups.map(renderActionGroup).join("")}
+        ${missingPickup.map((s) => renderMissingRow(s, "pickup")).join("")}
       </ul>
     ` : ""}
 
@@ -369,8 +301,8 @@ Deno.serve(async (req) => {
 
     return new Response(JSON.stringify({
       sent: true,
-      picked_up_no_dropoff: pickedNoDropoff.length,
-      dropoff_no_pickup: droppedNoPickup.length,
+      routes_missing_dropoff: missingDropoff.length,
+      routes_missing_pickup: missingPickup.length,
       recipients: RECIPIENTS,
     }), {
       status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" },
