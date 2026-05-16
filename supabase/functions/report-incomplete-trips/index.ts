@@ -235,39 +235,88 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Regroup by run so the email has one line per "missing trip" with
-    // the youth as a comma-separated list. Each youth may appear under
-    // multiple runs if the route did a pickup but the youth also had
-    // attendance recorded on another pickup run — uncommon, but we
-    // include them under each.
-    type RunGroup = { run: RunRow; youth: YouthRow[] };
-    const groupByRun = (entries: IncompleteEntry[]): RunGroup[] => {
-      const m = new Map<string, RunGroup>();
+    // Action-oriented grouping. The email's job is to tell the operator
+    // what to do next — not just list which pickup the youth came from.
+    // For each missing youth we figure out:
+    //   - which route they need their dropoff (or pickup) submitted for
+    //   - whether a matching run already exists today (so the action is
+    //     "add these youth to that run") or not (so it's "submit a new run")
+    const pickupByRoute = new Map<string, RunRow>();
+    const dropoffByRoute = new Map<string, RunRow>();
+    for (const run of todayRuns) {
+      const name = run.routes?.name;
+      if (!name) continue;
+      if (run.run_type === "pickup" && !pickupByRoute.has(name)) pickupByRoute.set(name, run);
+      if (run.run_type === "dropoff" && !dropoffByRoute.has(name)) dropoffByRoute.set(name, run);
+    }
+
+    type ActionGroup = {
+      routeName: string;
+      sourceRun: RunRow;            // the run where they were recorded (pickup for missing-dropoff, vice versa)
+      matchingRun: RunRow | null;   // existing opposite-direction run for the same route, if any
+      direction: "dropoff" | "pickup"; // which direction is missing
+      youth: YouthRow[];
+    };
+
+    const groupByRouteAndAction = (
+      entries: IncompleteEntry[],
+      missingDirection: "dropoff" | "pickup",
+    ): ActionGroup[] => {
+      const m = new Map<string, ActionGroup>();
       for (const e of entries) {
-        for (const r of e.runs) {
-          if (!m.has(r.id)) m.set(r.id, { run: r, youth: [] });
-          m.get(r.id)!.youth.push(e.youth);
+        for (const sourceRun of e.runs) {
+          const routeName = sourceRun.routes?.name || "Unknown route";
+          const key = routeName;
+          if (!m.has(key)) {
+            const matchingRun = missingDirection === "dropoff"
+              ? dropoffByRoute.get(routeName) ?? null
+              : pickupByRoute.get(routeName) ?? null;
+            m.set(key, {
+              routeName,
+              sourceRun,
+              matchingRun,
+              direction: missingDirection,
+              youth: [],
+            });
+          }
+          m.get(key)!.youth.push(e.youth);
         }
       }
+      // Dedupe youth list (a youth could appear via multiple pickup runs).
+      for (const g of m.values()) {
+        const seen = new Set<string>();
+        g.youth = g.youth.filter((y) => {
+          if (seen.has(y.id)) return false;
+          seen.add(y.id);
+          return true;
+        });
+      }
       return Array.from(m.values()).sort((a, b) =>
-        a.run.started_at.localeCompare(b.run.started_at),
+        a.sourceRun.started_at.localeCompare(b.sourceRun.started_at),
       );
     };
 
-    const pickupGroups = groupByRun(pickedNoDropoff);
-    const dropoffGroups = groupByRun(droppedNoPickup);
+    const missingDropoffGroups = groupByRouteAndAction(pickedNoDropoff, "dropoff");
+    const missingPickupGroups = groupByRouteAndAction(droppedNoPickup, "pickup");
 
-    const renderRunRow = (g: RunGroup): string => {
-      const route = escapeHtml(g.run.routes?.name || "Unknown route");
-      const driver = escapeHtml(g.run.drivers?.name || "Unknown driver");
-      const time = formatEasternTime(g.run.started_at);
-      const type = g.run.run_type === "pickup" ? "pickup" : "dropoff";
-      const names = g.youth
-        .map((y) => escapeHtml(`${y.first_name} ${y.last_name}`))
-        .join(", ");
-      return `<li style="margin-bottom: 14px; line-height: 1.5;">
-        <strong>${route}</strong> ${type} at ${time} by <em>${driver}</em><br/>
-        <span style="color: #6b7280; font-size: 13px;">${g.youth.length} youth: ${names}</span>
+    const renderActionGroup = (g: ActionGroup): string => {
+      const route = escapeHtml(g.routeName);
+      const driver = escapeHtml(g.sourceRun.drivers?.name || "Unknown");
+      const sourceTime = formatEasternTime(g.sourceRun.started_at);
+      const names = g.youth.map((y) => escapeHtml(`${y.first_name} ${y.last_name}`)).join(", ");
+      const sourceLabel = g.direction === "dropoff" ? "picked up" : "dropped off";
+      const directionWord = g.direction === "dropoff" ? "Dropoff" : "Pickup";
+
+      const action = g.matchingRun
+        ? `Add ${g.youth.length === 1 ? "this youth" : `these ${g.youth.length} youth`} to the existing <strong>${route} ${directionWord}</strong> at ${formatEasternTime(g.matchingRun.started_at)} (driver: <em>${escapeHtml(g.matchingRun.drivers?.name || "Unknown")}</em>).`
+        : `No <strong>${route} ${directionWord}</strong> run was submitted today — a driver needs to submit one.`;
+
+      return `<li style="margin-bottom: 18px; line-height: 1.55;">
+        <strong style="color: #111827;">${route}</strong> &mdash; ${g.youth.length} youth ${sourceLabel} at ${sourceTime} by <em>${driver}</em>
+        <div style="margin-top: 6px; padding: 8px 12px; background: #fef3c7; border-left: 3px solid #d97706; border-radius: 4px; font-size: 13px; color: #78350f;">
+          <strong>Action:</strong> ${action}
+        </div>
+        <div style="margin-top: 6px; font-size: 13px; color: #6b7280;">${g.youth.length} youth: ${names}</div>
       </li>`;
     };
 
@@ -281,21 +330,21 @@ Deno.serve(async (req) => {
     <h1 style="margin: 0 0 8px 0; font-size: 22px; font-weight: 700; color: #111827;">Unclosed Trips</h1>
     <p style="margin: 0 0 24px 0; font-size: 14px; color: #6b7280;">${subjectDate}</p>
 
-    ${pickupGroups.length > 0 ? `
-      <h3 style="margin: 0 0 8px 0; font-size: 15px; color: #b91c1c;">
-        ${pickedNoDropoff.length} youth picked up but no dropoff on record
+    ${missingDropoffGroups.length > 0 ? `
+      <h3 style="margin: 0 0 12px 0; font-size: 15px; color: #b91c1c;">
+        ${pickedNoDropoff.length} youth picked up today but no dropoff on record
       </h3>
-      <ul style="margin: 0 0 24px 0; padding-left: 18px; color: #111827;">
-        ${pickupGroups.map(renderRunRow).join("")}
+      <ul style="margin: 0 0 24px 0; padding-left: 18px; color: #111827; list-style: disc;">
+        ${missingDropoffGroups.map(renderActionGroup).join("")}
       </ul>
     ` : ""}
 
-    ${dropoffGroups.length > 0 ? `
-      <h3 style="margin: 0 0 8px 0; font-size: 15px; color: #b45309;">
-        ${droppedNoPickup.length} youth dropped off but no pickup on record
+    ${missingPickupGroups.length > 0 ? `
+      <h3 style="margin: 0 0 12px 0; font-size: 15px; color: #b45309;">
+        ${droppedNoPickup.length} youth dropped off today but no pickup on record
       </h3>
-      <ul style="margin: 0 0 24px 0; padding-left: 18px; color: #111827;">
-        ${dropoffGroups.map(renderRunRow).join("")}
+      <ul style="margin: 0 0 24px 0; padding-left: 18px; color: #111827; list-style: disc;">
+        ${missingPickupGroups.map(renderActionGroup).join("")}
       </ul>
     ` : ""}
 
