@@ -138,20 +138,39 @@ Deno.serve(async (req) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
     );
 
-    // "Today" in Eastern. The cron fires at 9 PM Eastern so this is
-    // the date that's just ending. For manual runs at other times,
-    // this is the date the operator is sitting in.
-    const now = new Date();
-    const todayEastern = formatEasternDate(now);
+    // Date to scan. The cron call leaves this null and we use today
+    // in Eastern. Manual "Run Now" calls from the admin UI can pass a
+    // specific YYYY-MM-DD via the request body to scan an earlier
+    // day (e.g., to investigate yesterday's miss).
+    let scanDate: string;
+    if (!isCron) {
+      try {
+        const body = await req.json();
+        if (body?.date && /^\d{4}-\d{2}-\d{2}$/.test(body.date)) {
+          scanDate = body.date;
+        } else {
+          scanDate = formatEasternDate(new Date());
+        }
+      } catch {
+        scanDate = formatEasternDate(new Date());
+      }
+    } else {
+      scanDate = formatEasternDate(new Date());
+    }
+    const todayEastern = scanDate;
 
-    // Fetch all runs that started today in Eastern. Window goes back
-    // 36 hours to safely cover the Eastern day regardless of UTC
-    // offset, then filter precisely in JS by Eastern date.
-    const windowStart = new Date(now.getTime() - 36 * 60 * 60 * 1000);
+    // Fetch all runs that fall on the scan date in Eastern. We bracket
+    // the date in UTC with a generous buffer on either side, then
+    // filter precisely in JS by Eastern date — handles both EDT and
+    // EST and arbitrary historical scan dates without arithmetic.
+    const dayUtc = new Date(scanDate + "T00:00:00Z");
+    const windowStart = new Date(dayUtc.getTime() - 12 * 60 * 60 * 1000).toISOString();
+    const windowEnd = new Date(dayUtc.getTime() + 36 * 60 * 60 * 1000).toISOString();
     const { data: runsRaw, error: runsErr } = await supabase
       .from("runs")
       .select("id, run_type, started_at, drivers:drivers(id, name), routes:routes(id, name)")
-      .gte("started_at", windowStart.toISOString());
+      .gte("started_at", windowStart)
+      .lte("started_at", windowEnd);
     if (runsErr) throw runsErr;
 
     const todayRuns: RunRow[] = ((runsRaw || []) as unknown as RunRow[])

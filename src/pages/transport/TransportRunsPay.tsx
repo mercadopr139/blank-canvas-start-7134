@@ -68,6 +68,16 @@ export default function TransportRunsPay() {
   const [noteInputs, setNoteInputs] = useState<Record<string, string>>({});
   const [selectedDriver, setSelectedDriver] = useState<{ id: string; name: string } | null>(null);
   const [runningReport, setRunningReport] = useState(false);
+  // Date picker for the manual "Run Unclosed-Trips Report" button.
+  // Defaults to today (Eastern); operator can change to inspect any
+  // historical day. Format: yyyy-MM-dd.
+  const [reportDate, setReportDate] = useState(() => {
+    const d = new Date();
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, "0");
+    const day = String(d.getDate()).padStart(2, "0");
+    return `${y}-${m}-${day}`;
+  });
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [panelOpen, setPanelOpen] = useState(false);
   const [editingRunId, setEditingRunId] = useState<string | null>(null);
@@ -486,11 +496,14 @@ export default function TransportRunsPay() {
 
   // Manual trigger for the nightly "Unclosed Trips" email — same edge
   // function the cron job calls, just invoked here under the user's
-  // admin JWT. Bypasses the 9 PM Eastern guard.
+  // admin JWT. Bypasses the 9 PM Eastern guard and lets the operator
+  // pick which day to scan.
   const handleSendUnclosedTripsReport = async () => {
     setRunningReport(true);
     try {
-      const res = await supabase.functions.invoke("report-incomplete-trips", {});
+      const res = await supabase.functions.invoke("report-incomplete-trips", {
+        body: { date: reportDate },
+      });
       if (res.error) {
         toast({
           title: "Report failed",
@@ -498,9 +511,9 @@ export default function TransportRunsPay() {
           variant: "destructive",
         });
       } else if (res.data?.sent === false && res.data?.reason === "no runs today") {
-        toast({ title: "No runs today", description: "Nothing to scan." });
+        toast({ title: "No runs on that date", description: `Nothing logged for ${reportDate}.` });
       } else if (res.data?.sent === false && res.data?.reason === "all clean") {
-        toast({ title: "All trips closed cleanly", description: "No email sent." });
+        toast({ title: "All trips closed cleanly", description: `${reportDate} — no email sent.` });
       } else if (res.data?.sent) {
         const p = res.data.picked_up_no_dropoff ?? 0;
         const d = res.data.dropoff_no_pickup ?? 0;
@@ -525,14 +538,24 @@ export default function TransportRunsPay() {
       {/* Page header + export */}
       <div className="flex items-center justify-between flex-wrap gap-3">
         <h1 className="text-xl font-bold text-white">Trips & Pay</h1>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
+          <div className="flex items-center gap-1.5 bg-white/[0.04] border border-white/10 rounded-md pl-2 h-8">
+            <span className="text-[10px] uppercase tracking-wider text-white/40">Scan</span>
+            <input
+              type="date"
+              value={reportDate}
+              onChange={(e) => setReportDate(e.target.value)}
+              className="bg-transparent text-white text-xs px-1 outline-none [color-scheme:dark]"
+              title="Pick which day's runs to scan"
+            />
+          </div>
           <Button
             onClick={handleSendUnclosedTripsReport}
             disabled={runningReport}
             variant="outline"
             size="sm"
             className="gap-2 border-white/10 text-white/60 hover:text-white bg-transparent"
-            title="Scan today's runs for incomplete pickups/dropoffs and email josh + chrissy. Auto-runs at 9 PM Eastern nightly."
+            title="Scan the selected date's runs for incomplete pickups/dropoffs and email josh + chrissy. Auto-runs at 9 PM Eastern nightly."
           >
             <Mail className="w-4 h-4" />
             {runningReport ? "Scanning…" : "Run Unclosed-Trips Report"}
