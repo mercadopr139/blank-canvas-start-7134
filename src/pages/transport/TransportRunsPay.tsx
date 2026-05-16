@@ -6,7 +6,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { useToast } from "@/hooks/use-toast";
 import {
   AlertTriangle, CheckCircle, XCircle,
-  Download, ChevronLeft, ChevronRight, DollarSign, Trash2, Pencil, ChevronDown, ChevronUp, User, Users, Plus, Search,
+  Download, ChevronLeft, ChevronRight, DollarSign, Trash2, Pencil, ChevronDown, ChevronUp, User, Users, Plus, Search, Mail,
 } from "lucide-react";
 import {
   format, startOfMonth, endOfMonth, eachDayOfInterval, getDay,
@@ -67,6 +67,7 @@ export default function TransportRunsPay() {
   const [loading, setLoading] = useState(true);
   const [noteInputs, setNoteInputs] = useState<Record<string, string>>({});
   const [selectedDriver, setSelectedDriver] = useState<{ id: string; name: string } | null>(null);
+  const [runningReport, setRunningReport] = useState(false);
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [panelOpen, setPanelOpen] = useState(false);
   const [editingRunId, setEditingRunId] = useState<string | null>(null);
@@ -483,12 +484,63 @@ export default function TransportRunsPay() {
     return getPayRate(route?.name);
   };
 
+  // Manual trigger for the nightly "Unclosed Trips" email — same edge
+  // function the cron job calls, just invoked here under the user's
+  // admin JWT. Bypasses the 9 PM Eastern guard.
+  const handleSendUnclosedTripsReport = async () => {
+    setRunningReport(true);
+    try {
+      const res = await supabase.functions.invoke("report-incomplete-trips", {});
+      if (res.error) {
+        toast({
+          title: "Report failed",
+          description: res.error.message,
+          variant: "destructive",
+        });
+      } else if (res.data?.sent === false && res.data?.reason === "no runs today") {
+        toast({ title: "No runs today", description: "Nothing to scan." });
+      } else if (res.data?.sent === false && res.data?.reason === "all clean") {
+        toast({ title: "All trips closed cleanly", description: "No email sent." });
+      } else if (res.data?.sent) {
+        const p = res.data.picked_up_no_dropoff ?? 0;
+        const d = res.data.dropoff_no_pickup ?? 0;
+        toast({
+          title: "Report emailed",
+          description: `${p} picked-up-no-dropoff, ${d} dropped-off-no-pickup`,
+        });
+      }
+    } catch (err) {
+      toast({
+        title: "Report failed",
+        description: err instanceof Error ? err.message : "Unknown error",
+        variant: "destructive",
+      });
+    } finally {
+      setRunningReport(false);
+    }
+  };
+
   return (
     <div className="p-4 md:p-6 space-y-6">
       {/* Page header + export */}
       <div className="flex items-center justify-between flex-wrap gap-3">
         <h1 className="text-xl font-bold text-white">Trips & Pay</h1>
-        <Button onClick={exportMonth} variant="outline" size="sm" className="gap-2 border-white/10 text-white/60 hover:text-white bg-transparent"><Download className="w-4 h-4" /> Export CSV</Button>
+        <div className="flex items-center gap-2">
+          <Button
+            onClick={handleSendUnclosedTripsReport}
+            disabled={runningReport}
+            variant="outline"
+            size="sm"
+            className="gap-2 border-white/10 text-white/60 hover:text-white bg-transparent"
+            title="Scan today's runs for incomplete pickups/dropoffs and email josh + chrissy. Auto-runs at 9 PM Eastern nightly."
+          >
+            <Mail className="w-4 h-4" />
+            {runningReport ? "Scanning…" : "Run Unclosed-Trips Report"}
+          </Button>
+          <Button onClick={exportMonth} variant="outline" size="sm" className="gap-2 border-white/10 text-white/60 hover:text-white bg-transparent">
+            <Download className="w-4 h-4" /> Export CSV
+          </Button>
+        </div>
       </div>
 
       {/* Section 1 — Summary Boxes (trip review workflow only; pay totals
