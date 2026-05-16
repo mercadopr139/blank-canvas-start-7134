@@ -305,6 +305,42 @@ const MessageThread = ({ conversation, currentUserId, isSuperAdmin, canPost, scr
     }
   };
 
+  // Flag a sent message as important. Mirrors the compose-time toggle:
+  // sets is_important and fires the email blast. One-way per spec —
+  // no unflag — so the menu hides the option for already-important
+  // messages.
+  const handleFlagImportant = async (msgId: string) => {
+    try {
+      const { error: rpcErr } = await supabase.rpc("mb_mark_message_important", { msg_id: msgId });
+      if (rpcErr) throw rpcErr;
+      queryClient.invalidateQueries({ queryKey: ["mb-messages", conversation.id] });
+      queryClient.invalidateQueries({ queryKey: ["mb-conversations"] });
+
+      const res = await supabase.functions.invoke("send-important-message", {
+        body: { message_id: msgId },
+      });
+      if (res.error) {
+        toast({
+          title: "Flagged, but email failed",
+          description: res.error.message,
+          variant: "destructive",
+          duration: 8000,
+        });
+      } else if (res.data?.sent !== undefined) {
+        toast({
+          title: `Flagged as important · email sent`,
+          description: `Delivered to ${res.data.sent} of ${res.data.attempted} ${res.data.attempted === 1 ? "person" : "people"}.`,
+        });
+      }
+    } catch (err) {
+      toast({
+        title: "Failed to flag message",
+        description: err instanceof Error ? err.message : "Unknown error",
+        variant: "destructive",
+      });
+    }
+  };
+
   const handleSaveConversation = async () => {
     setSavingConv(true);
     try {
@@ -546,6 +582,15 @@ const MessageThread = ({ conversation, currentUserId, isSuperAdmin, canPost, scr
                         <SignalIcon className="w-3.5 h-3.5 mr-2" />
                         Add to my Workbench
                       </DropdownMenuItem>
+                      {!msg.is_important && (
+                        <DropdownMenuItem
+                          onSelect={() => handleFlagImportant(msg.id)}
+                          className="cursor-pointer text-amber-400 focus:text-amber-300 focus:bg-amber-500/10"
+                        >
+                          <Flag className="w-3.5 h-3.5 mr-2" />
+                          Flag as important
+                        </DropdownMenuItem>
+                      )}
                       {isSuperAdmin && (
                         <DropdownMenuItem
                           onSelect={() => handleDeleteMessage(msg.id)}

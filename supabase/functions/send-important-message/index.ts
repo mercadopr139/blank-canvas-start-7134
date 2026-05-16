@@ -205,7 +205,23 @@ const handler = async (req: Request): Promise<Response> => {
       .eq("id", body.message_id)
       .single();
     if (msgErr || !msg) throw new Error("Message not found");
-    if (msg.sender_id !== user.id) throw new Error("Only the sender can fire the important email");
+    // Membership check: any conversation member can fire the important
+    // email (covers both compose-time toggle by the sender AND after-
+    // the-fact "Flag as important" from the ⋯ menu by any member).
+    const { data: callerMembership } = await supabase
+      .from("mb_conversation_members")
+      .select("user_id")
+      .eq("conversation_id", msg.conversation_id)
+      .eq("user_id", user.id)
+      .maybeSingle();
+    const { data: superAdminRow } = await supabase
+      .from("staff_profiles")
+      .select("is_super_admin")
+      .eq("user_id", user.id)
+      .maybeSingle();
+    if (!callerMembership && !superAdminRow?.is_super_admin) {
+      throw new Error("Not a member of this conversation");
+    }
     if (!msg.is_important) throw new Error("Message is not marked important");
 
     // Conversation context (title, pillar, group flag).
