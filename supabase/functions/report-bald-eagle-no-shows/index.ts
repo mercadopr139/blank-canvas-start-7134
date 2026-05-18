@@ -1,4 +1,4 @@
-// Nightly 7:30 PM Eastern email listing Bald Eagles who didn't show up
+// Nightly 8 PM Eastern email listing Bald Eagles who didn't show up
 // today and didn't submit a call-out either. Matches the in-app red
 // banner alert logic exactly:
 //   - Eagles are filtered to Active (bald_eagle_active = true).
@@ -70,17 +70,17 @@ Deno.serve(async (req) => {
       });
     }
 
-    // DST-proof time guard. The cron is scheduled at 23:30 UTC and
-    // 00:30 UTC every day; this guard makes sure only the firing that
-    // lands on 7:30 PM Eastern actually sends:
-    //   - EDT (Mar–Nov): 23:30 UTC = 19:30 ET → sends. 00:30 UTC = 20:30 ET → skip.
-    //   - EST (Nov–Mar): 23:30 UTC = 18:30 ET → skip. 00:30 UTC = 19:30 ET → sends.
+    // DST-proof time guard. The cron is scheduled at 00:00 UTC and
+    // 01:00 UTC every day; this guard makes sure only the firing that
+    // lands on 8 PM Eastern actually sends:
+    //   - EDT (Mar–Nov): 00:00 UTC = 20 ET → sends. 01:00 UTC = 21 ET → skip.
+    //   - EST (Nov–Mar): 00:00 UTC = 19 ET → skip. 01:00 UTC = 20 ET → sends.
     const easternHour = Number(new Intl.DateTimeFormat("en-US", {
       timeZone: "America/New_York",
       hour: "numeric",
       hour12: false,
     }).format(new Date()));
-    if (easternHour !== 19) {
+    if (easternHour !== 20) {
       return new Response(JSON.stringify({ sent: false, reason: `wrong hour: ${easternHour}` }), {
         status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
