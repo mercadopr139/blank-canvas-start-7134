@@ -13,7 +13,7 @@ import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
 import {
-  Star, Search, CheckCircle2, XCircle, Clock, Users, ChevronLeft, ChevronRight, Eye, Pencil, Trash2,
+  Star, Search, Users, ChevronLeft, ChevronRight, Eye, Pencil, Trash2,
 } from "lucide-react";
 import { format, startOfMonth, endOfMonth, subMonths, addMonths, parseISO } from "date-fns";
 import { toast } from "sonner";
@@ -43,7 +43,6 @@ const AdminCallOuts = () => {
   const [editLastName, setEditLastName] = useState("");
   const [editDate, setEditDate] = useState("");
   const [editReason, setEditReason] = useState("");
-  const [editAcceptable, setEditAcceptable] = useState<string>("null");
   const [editSaving, setEditSaving] = useState(false);
 
   // Delete state
@@ -124,15 +123,6 @@ const AdminCallOuts = () => {
   const regularCallouts = filtered.filter((c) => !c.is_bald_eagle);
 
   const totalMonth = callouts.length;
-  const acceptable = callouts.filter((c) => c.is_acceptable === true).length;
-  const unacceptable = callouts.filter((c) => c.is_acceptable === false).length;
-  const unreviewed = callouts.filter((c) => c.is_acceptable === null).length;
-
-  const toggleAcceptable = async (id: string, current: boolean | null) => {
-    const next = current === true ? false : current === false ? null : true;
-    await supabase.from("callouts" as any).update({ is_acceptable: next } as any).eq("id", id);
-    qc.invalidateQueries({ queryKey: ["callouts"] });
-  };
 
   const openEdit = (c: Callout) => {
     setEditCallout(c);
@@ -140,13 +130,11 @@ const AdminCallOuts = () => {
     setEditLastName(c.last_name);
     setEditDate(c.date);
     setEditReason(c.reason);
-    setEditAcceptable(c.is_acceptable === true ? "true" : c.is_acceptable === false ? "false" : "null");
   };
 
   const handleSaveEdit = async () => {
     if (!editCallout) return;
     setEditSaving(true);
-    const acceptableVal = editAcceptable === "true" ? true : editAcceptable === "false" ? false : null;
     const { error } = await supabase
       .from("callouts" as any)
       .update({
@@ -154,7 +142,6 @@ const AdminCallOuts = () => {
         last_name: editLastName.trim(),
         date: editDate,
         reason: editReason.trim(),
-        is_acceptable: acceptableVal,
       } as any)
       .eq("id", editCallout.id);
     setEditSaving(false);
@@ -221,28 +208,6 @@ const AdminCallOuts = () => {
           {format(parseISO(c.created_at), "h:mm a")}
         </TableCell>
         <TableCell>
-          <button
-            onClick={() => toggleAcceptable(c.id, c.is_acceptable)}
-            className="transition-colors"
-          >
-            {c.is_acceptable === true && (
-              <Badge className="bg-green-500/20 text-green-400 border-green-500/30 cursor-pointer">
-                <CheckCircle2 className="w-3 h-3 mr-1" /> Acceptable
-              </Badge>
-            )}
-            {c.is_acceptable === false && (
-              <Badge className="bg-red-500/20 text-red-400 border-red-500/30 cursor-pointer">
-                <XCircle className="w-3 h-3 mr-1" /> Unacceptable
-              </Badge>
-            )}
-            {c.is_acceptable === null && (
-              <Badge className="bg-neutral-700/50 text-neutral-400 border-neutral-600 cursor-pointer">
-                <Clock className="w-3 h-3 mr-1" /> Review
-              </Badge>
-            )}
-          </button>
-        </TableCell>
-        <TableCell>
           <div className="flex items-center gap-1">
             <Button size="icon" variant="ghost" className="h-7 w-7 text-neutral-400 hover:text-white" onClick={() => openEdit(c)}>
               <Pencil className="w-3.5 h-3.5" />
@@ -262,7 +227,6 @@ const AdminCallOuts = () => {
         <TableHead className="text-neutral-400">Youth</TableHead>
         <TableHead className="text-neutral-400">Reason</TableHead>
         <TableHead className="text-neutral-400">Time</TableHead>
-        <TableHead className="text-neutral-400">Status</TableHead>
         <TableHead className="text-neutral-400 w-[80px]">Actions</TableHead>
       </TableRow>
     </TableHeader>
@@ -320,29 +284,19 @@ const AdminCallOuts = () => {
       </div>
 
       {/* Monthly Summary */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
         <Card className="bg-neutral-900 border-neutral-800">
           <CardContent className="p-4 text-center">
             <p className="text-2xl font-bold text-white">{viewMode === "day" ? filtered.length : totalMonth}</p>
-            <p className="text-[11px] text-neutral-400">Total Call-Outs</p>
+            <p className="text-[11px] text-neutral-400">
+              {viewMode === "day" ? "Call-Outs Today" : `Call-Outs in ${format(viewMonth, "MMMM")}`}
+            </p>
           </CardContent>
         </Card>
-        <Card className="bg-neutral-900 border-neutral-800">
+        <Card className="bg-amber-500/5 border-amber-500/20">
           <CardContent className="p-4 text-center">
-            <p className="text-2xl font-bold text-green-400">{acceptable}</p>
-            <p className="text-[11px] text-neutral-400">Acceptable</p>
-          </CardContent>
-        </Card>
-        <Card className="bg-neutral-900 border-neutral-800">
-          <CardContent className="p-4 text-center">
-            <p className="text-2xl font-bold text-red-400">{unacceptable}</p>
-            <p className="text-[11px] text-neutral-400">Unacceptable</p>
-          </CardContent>
-        </Card>
-        <Card className="bg-neutral-900 border-neutral-800">
-          <CardContent className="p-4 text-center">
-            <p className="text-2xl font-bold text-neutral-400">{unreviewed}</p>
-            <p className="text-[11px] text-neutral-400">Needs Review</p>
+            <p className="text-2xl font-bold text-amber-400">{baldEagleCallouts.length}</p>
+            <p className="text-[11px] text-neutral-400">Bald Eagle Call-Outs</p>
           </CardContent>
         </Card>
       </div>
@@ -412,16 +366,9 @@ const AdminCallOuts = () => {
           )}
           <div className="max-h-[400px] overflow-y-auto space-y-2">
             {youthHistory.map((c) => (
-              <div key={c.id} className="flex items-start justify-between bg-neutral-800/50 rounded-lg p-3">
-                <div>
-                  <p className="text-sm font-medium text-white">{format(parseISO(c.date), "EEE, MMM d, yyyy")}</p>
-                  <p className="text-xs text-neutral-400 mt-1">{c.reason}</p>
-                </div>
-                <div>
-                  {c.is_acceptable === true && <Badge className="bg-green-500/20 text-green-400 text-[10px]">✓</Badge>}
-                  {c.is_acceptable === false && <Badge className="bg-red-500/20 text-red-400 text-[10px]">✗</Badge>}
-                  {c.is_acceptable === null && <Badge className="bg-neutral-700 text-neutral-400 text-[10px]">—</Badge>}
-                </div>
+              <div key={c.id} className="bg-neutral-800/50 rounded-lg p-3">
+                <p className="text-sm font-medium text-white">{format(parseISO(c.date), "EEE, MMM d, yyyy")}</p>
+                <p className="text-xs text-neutral-400 mt-1">{c.reason}</p>
               </div>
             ))}
             {youthHistory.length === 0 && (
@@ -457,19 +404,6 @@ const AdminCallOuts = () => {
             <div>
               <label className="text-xs text-neutral-400 mb-1 block">Reason</label>
               <Textarea value={editReason} onChange={(e) => setEditReason(e.target.value)} className="bg-neutral-800 border-neutral-700 text-white min-h-[80px]" />
-            </div>
-            <div>
-              <label className="text-xs text-neutral-400 mb-1 block">Status</label>
-              <Select value={editAcceptable} onValueChange={setEditAcceptable}>
-                <SelectTrigger className="bg-neutral-800 border-neutral-700 text-white">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="null">Needs Review</SelectItem>
-                  <SelectItem value="true">Acceptable</SelectItem>
-                  <SelectItem value="false">Unacceptable</SelectItem>
-                </SelectContent>
-              </Select>
             </div>
           </div>
           <DialogFooter className="gap-2 mt-4">
