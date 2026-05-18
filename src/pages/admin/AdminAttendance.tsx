@@ -1380,15 +1380,20 @@ const AdminAttendance = () => {
   }, [weeklyAvgData, practiceAttendance, regMap, topDistrictToday, totalPresentToday, avgArrivalMonth, prevPracticeAttendance, mtdAvg, isCurrentMonth, viewedMonthShort, calendarMonth, weatherMap, excursionsCalMonth]);
 
   /* ───── BALD EAGLES ───── */
+  // Inactive ≠ "doesn't count." Inactive only means "don't include this
+  // youth in the no-call-no-show alert" (e.g., a kid we agreed only
+  // comes on Wednesdays). Their actual attendance still feeds every
+  // stat below. The `activeBaldEagles` slice is reserved for the alert
+  // logic in `baldEagleNoShows`.
   const baldEagles = registrations.filter((r) => r.is_bald_eagle);
   const activeBaldEagles = baldEagles.filter((r) => r.bald_eagle_active);
-  const baldEaglesPresent = isCurrentMonth ? activeBaldEagles.filter((r) => getStats(r.id).present).length : 0;
-  const baldEaglesMonth = activeBaldEagles.reduce((sum, r) => sum + getStats(r.id).monthCount, 0);
+  const baldEaglesPresent = isCurrentMonth ? baldEagles.filter((r) => getStats(r.id).present).length : 0;
+  const baldEaglesMonth = baldEagles.reduce((sum, r) => sum + getStats(r.id).monthCount, 0);
 
   const baldEagleTrend = useMemo(() => {
     const counts: Record<string, number> = {};
     practiceAttendance.forEach((a) => {
-      if (regMap[a.registration_id]?.is_bald_eagle && regMap[a.registration_id]?.bald_eagle_active) {
+      if (regMap[a.registration_id]?.is_bald_eagle) {
         counts[a.check_in_date] = (counts[a.check_in_date] || 0) + 1;
       }
     });
