@@ -42,6 +42,9 @@ export type Conversation = {
   member_names?: string[];
   unread_count?: number;
   is_member?: boolean;
+  // When the *current user* archived this conversation. Drives the
+  // archived-view grouping/sort. Null for unarchived rows.
+  archived_at?: string | null;
 };
 
 export type StaffProfile = {
@@ -186,7 +189,7 @@ const AdminMessageBoard = () => {
 
       let memQuery = supabase
         .from("mb_conversation_members")
-        .select("conversation_id")
+        .select("conversation_id, archived_at")
         .eq("user_id", user!.id);
       memQuery = listView === "archived"
         ? memQuery.not("archived_at", "is", null)
@@ -195,6 +198,8 @@ const AdminMessageBoard = () => {
       if (memErr) throw memErr;
       if (!memberships || memberships.length === 0) return [];
 
+      const archivedAtByConv = new Map<string, string | null>();
+      for (const m of memberships) archivedAtByConv.set(m.conversation_id, m.archived_at);
       const ids = memberships.map((m) => m.conversation_id);
       const { data: convs, error: convErr } = await supabase
         .from("mb_conversations")
@@ -237,6 +242,7 @@ const AdminMessageBoard = () => {
             last_message_at: lastMsg?.created_at,
             unread_count: unreadMap.get(c.id) ?? 0,
             is_member: true,
+            archived_at: archivedAtByConv.get(c.id) ?? null,
           } as Conversation;
         }),
       );

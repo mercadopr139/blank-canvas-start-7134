@@ -102,6 +102,27 @@ const ConversationList = ({
     return new Date(bTs).getTime() - new Date(aTs).getTime();
   });
 
+  // Render groups: in the Archived tab (non-viewAll), split conversations
+  // into pillar sections so an operator can review by department. Empty
+  // pillar groups are hidden. Within each group, most-recently-archived
+  // first. In every other view, render one flat group preserving the
+  // unread+recency sort above.
+  const isArchivedView = listView === "archived" && !viewAll;
+  const renderGroups: { pillar: Pillar | null; conversations: Conversation[] }[] = isArchivedView
+    ? PILLARS
+        .map((p) => ({
+          pillar: p as Pillar | null,
+          conversations: filteredConversations
+            .filter((c) => c.pillar === p)
+            .sort((a, b) => {
+              const aT = a.archived_at ? new Date(a.archived_at).getTime() : 0;
+              const bT = b.archived_at ? new Date(b.archived_at).getTime() : 0;
+              return bT - aT;
+            }),
+        }))
+        .filter((g) => g.conversations.length > 0)
+    : [{ pillar: null, conversations: sortedConversations }];
+
   // Full-text message search: hits live in a separate section below the
   // conversation list whenever the user has typed something. Empty when
   // viewAll is on (the RPC is membership-scoped and that's the right
@@ -265,7 +286,26 @@ const ConversationList = ({
           </div>
         )}
 
-        {sortedConversations.map((conv) => {
+        {renderGroups.map((group) => (
+          <div key={group.pillar ?? "all"}>
+            {group.pillar && (
+              <div
+                className="px-3 pt-3 pb-1.5 flex items-center gap-2 sticky top-0 z-20 bg-neutral-950/95 backdrop-blur-sm border-b border-white/[0.04]"
+              >
+                <span
+                  className="w-1.5 h-1.5 rounded-full"
+                  style={{ background: PILLAR_COLOR[group.pillar] }}
+                />
+                <span
+                  className="text-[10px] font-semibold uppercase tracking-wider"
+                  style={{ color: PILLAR_COLOR[group.pillar] }}
+                >
+                  {PILLAR_LABEL[group.pillar]}
+                </span>
+                <span className="text-[10px] text-zinc-600">· {group.conversations.length}</span>
+              </div>
+            )}
+            {group.conversations.map((conv) => {
           const title = getConvTitle(conv);
           const recipients = getConvRecipients(conv);
           const isActive = conv.id === activeId;
@@ -427,6 +467,8 @@ const ConversationList = ({
             </div>
           );
         })}
+          </div>
+        ))}
 
         {/* Full-text message search results */}
         {showSearchMessages && (
