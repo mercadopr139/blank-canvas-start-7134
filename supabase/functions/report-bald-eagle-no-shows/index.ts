@@ -15,7 +15,7 @@ const resend = new Resend(Deno.env.get("RESEND_API_KEY"));
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type, x-cron-secret",
+    "authorization, x-client-info, apikey, content-type, x-cron-secret, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
 const RECIPIENTS = [
@@ -62,28 +62,58 @@ Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
 
   try {
+    // Two callers: pg_cron (with X-Cron-Secret) or an admin from the UI
+    // "Run Now" button (with a logged-in JWT). Admin path skips the
+    // Eastern-hour guard and can pass an explicit date.
     const cronSecret = req.headers.get("X-Cron-Secret");
     const isCron = cronSecret && cronSecret === Deno.env.get("CRON_SHARED_SECRET");
-    if (!isCron) {
-      return new Response(JSON.stringify({ error: "Unauthorized" }), {
-        status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
 
-    // DST-proof time guard. The cron is scheduled at 00:00 UTC and
-    // 01:00 UTC every day; this guard makes sure only the firing that
-    // lands on 8 PM Eastern actually sends:
-    //   - EDT (Mar–Nov): 00:00 UTC = 20 ET → sends. 01:00 UTC = 21 ET → skip.
-    //   - EST (Nov–Mar): 00:00 UTC = 19 ET → skip. 01:00 UTC = 20 ET → sends.
-    const easternHour = Number(new Intl.DateTimeFormat("en-US", {
-      timeZone: "America/New_York",
-      hour: "numeric",
-      hour12: false,
-    }).format(new Date()));
-    if (easternHour !== 20) {
-      return new Response(JSON.stringify({ sent: false, reason: `wrong hour: ${easternHour}` }), {
-        status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+    if (isCron) {
+      // DST-proof time guard for cron only. Scheduled at 00:00 UTC and
+      // 01:00 UTC every day:
+      //   - EDT (Mar–Nov): 00:00 UTC = 20 ET → sends. 01:00 UTC = 21 ET → skip.
+      //   - EST (Nov–Mar): 00:00 UTC = 19 ET → skip. 01:00 UTC = 20 ET → sends.
+      const easternHour = Number(new Intl.DateTimeFormat("en-US", {
+        timeZone: "America/New_York",
+        hour: "numeric",
+        hour12: false,
+      }).format(new Date()));
+      if (easternHour !== 20) {
+        return new Response(JSON.stringify({ sent: false, reason: `wrong hour: ${easternHour}` }), {
+          status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+    } else {
+      // Manual UI invocation. Require an admin JWT.
+      const authHeader = req.headers.get("Authorization");
+      if (!authHeader?.startsWith("Bearer ")) {
+        return new Response(JSON.stringify({ error: "Unauthorized" }), {
+          status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      const userClient = createClient(
+        Deno.env.get("SUPABASE_URL")!,
+        Deno.env.get("SUPABASE_ANON_KEY")!,
+        { global: { headers: { Authorization: authHeader } } },
+      );
+      const token = authHeader.replace("Bearer ", "");
+      const { data: { user }, error: authError } = await userClient.auth.getUser(token);
+      if (authError || !user) {
+        return new Response(JSON.stringify({ error: "Unauthorized" }), {
+          status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      const { data: roleData } = await userClient
+        .from("user_roles")
+        .select("role")
+        .eq("user_id", user.id)
+        .eq("role", "admin")
+        .maybeSingle();
+      if (!roleData) {
+        return new Response(JSON.stringify({ error: "Admin only" }), {
+          status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
     }
 
     const supabase = createClient(
@@ -91,7 +121,23 @@ Deno.serve(async (req) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
     );
 
-    const todayEastern = formatEasternDate(new Date());
+    // Date to scan: cron uses today (Eastern). Admin manual run can pass
+    // an explicit YYYY-MM-DD in the body to scan a past day for testing.
+    let todayEastern: string;
+    if (isCron) {
+      todayEastern = formatEasternDate(new Date());
+    } else {
+      try {
+        const body = await req.json();
+        if (body?.date && /^\d{4}-\d{2}-\d{2}$/.test(body.date)) {
+          todayEastern = body.date;
+        } else {
+          todayEastern = formatEasternDate(new Date());
+        }
+      } catch {
+        todayEastern = formatEasternDate(new Date());
+      }
+    }
 
     // 1. Active Bald Eagles
     const { data: eaglesRaw, error: eaglesErr } = await supabase

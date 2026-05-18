@@ -10,7 +10,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import {
   Star, Search, AlertTriangle, Users, Eye, ChevronLeft, ChevronRight, CalendarDays,
-  Clock, TrendingUp, TrendingDown, School, Lightbulb, Activity, Trash2, X, Pencil, UserPlus
+  Clock, TrendingUp, TrendingDown, School, Lightbulb, Activity, Trash2, X, Pencil, UserPlus, Mail
 } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -197,6 +197,11 @@ const AdminAttendance = () => {
   const [daySearch, setDaySearch] = useState("");
   const [addEagleOpen, setAddEagleOpen] = useState(false);
   const [eagleSearch, setEagleSearch] = useState("");
+  const [noShowReportRunning, setNoShowReportRunning] = useState(false);
+  const [noShowReportDate, setNoShowReportDate] = useState<string>(() => {
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+  });
   const [excursionModalOpen, setExcursionModalOpen] = useState(false);
   const [excursionDate, setExcursionDate] = useState<string>("");
   const [excursionName, setExcursionName] = useState("");
@@ -1556,6 +1561,31 @@ const AdminAttendance = () => {
     queryClient.invalidateQueries({ queryKey: ["registrations-attendance-full"] });
   };
 
+  const handleRunNoShowReport = async () => {
+    if (noShowReportRunning) return;
+    setNoShowReportRunning(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("report-bald-eagle-no-shows", {
+        body: { date: noShowReportDate },
+      });
+      if (error) {
+        toast.error(`Report failed: ${error.message}`);
+        return;
+      }
+      if (data?.sent) {
+        toast.success(`Email sent — ${data.no_shows} Bald Eagle no-show(s)`);
+      } else if (data?.reason) {
+        toast.success(`No email sent — ${data.reason}`);
+      } else {
+        toast.success("Report run");
+      }
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Report failed");
+    } finally {
+      setNoShowReportRunning(false);
+    }
+  };
+
   const chartTooltipStyle = {
     backgroundColor: "#111",
     border: "1px solid rgba(255,255,255,0.15)",
@@ -2530,7 +2560,7 @@ const AdminAttendance = () => {
         {/* Bald Eagles Watch List with last attendance */}
           <Card className="bg-amber-500/5 border-amber-500/20 text-white">
             <CardHeader>
-              <div className="flex items-center gap-3">
+              <div className="flex items-center gap-3 flex-wrap">
                 <CardTitle className="text-lg flex items-center gap-2 text-amber-400">
                   <Star className="w-5 h-5 fill-amber-400" /> Bald Eagles Watch List
                 </CardTitle>
@@ -2542,6 +2572,26 @@ const AdminAttendance = () => {
                 >
                   <Users className="w-4 h-4" /> Add Bald Eagle
                 </Button>
+                <div className="flex items-center gap-2 ml-auto">
+                  <input
+                    type="date"
+                    value={noShowReportDate}
+                    onChange={(e) => setNoShowReportDate(e.target.value)}
+                    className="h-8 rounded-md bg-black border border-white/10 text-white text-xs px-2"
+                    title="Day to scan for the no-show email"
+                  />
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="gap-1.5 bg-black border-amber-500/30 text-amber-400 hover:bg-amber-500/10"
+                    onClick={handleRunNoShowReport}
+                    disabled={noShowReportRunning}
+                    title="Send the Bald Eagle no-show email now for the selected day"
+                  >
+                    <Mail className="w-4 h-4" />
+                    {noShowReportRunning ? "Running…" : "Run No-Show Email"}
+                  </Button>
+                </div>
               </div>
             </CardHeader>
             <CardContent>
