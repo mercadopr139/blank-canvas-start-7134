@@ -48,6 +48,26 @@ const formatBytes = (b: number) => {
   return `${(b / 1024 / 1024).toFixed(1)} MB`;
 };
 
+// JS-based blob download. The `<a download>` attribute is silently
+// ignored on cross-origin URLs, and Supabase storage lives on its own
+// `*.supabase.co` domain — so the previous `<a href={signedUrl} download>`
+// just opened the file in a new tab. Fetching as a blob and triggering
+// a same-origin object-URL download works for any mime type.
+const triggerBlobDownload = async (url: string, filename: string) => {
+  const res = await fetch(url);
+  if (!res.ok) throw new Error(`Download failed (${res.status})`);
+  const blob = await res.blob();
+  const objectUrl = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = objectUrl;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  // Revoke after the click has had a chance to start the download.
+  setTimeout(() => URL.revokeObjectURL(objectUrl), 1000);
+};
+
 // Per-attachment renderer. Images load via short-lived signed URLs from
 // the private bucket; clicking expands to a lightbox. Non-image files
 // render as a download card and produce a signed URL on demand.
@@ -55,6 +75,8 @@ const MessageAttachmentView = ({ attachment }: { attachment: Attachment }) => {
   const isImage = attachment.mime_type.startsWith("image/");
   const isPdf = attachment.mime_type === "application/pdf";
   const [lightboxOpen, setLightboxOpen] = useState(false);
+  const [downloading, setDownloading] = useState(false);
+  const { toast } = useToast();
 
   const { data: signedUrl } = useQuery<string | null>({
     queryKey: ["mb-attachment-url", attachment.storage_path],
@@ -70,7 +92,21 @@ const MessageAttachmentView = ({ attachment }: { attachment: Attachment }) => {
     staleTime: 50 * 60 * 1000,
   });
 
-  const downloadHref = signedUrl ?? "#";
+  const handleDownload = async () => {
+    if (!signedUrl || downloading) return;
+    setDownloading(true);
+    try {
+      await triggerBlobDownload(signedUrl, attachment.filename);
+    } catch (err) {
+      toast({
+        title: "Download failed",
+        description: err instanceof Error ? err.message : "Unknown error",
+        variant: "destructive",
+      });
+    } finally {
+      setDownloading(false);
+    }
+  };
 
   if (isImage) {
     return (
@@ -104,15 +140,14 @@ const MessageAttachmentView = ({ attachment }: { attachment: Attachment }) => {
             )}
             <div className="flex items-center justify-between px-2 pt-1 text-xs text-zinc-400">
               <span className="truncate">{attachment.filename}</span>
-              <a
-                href={downloadHref}
-                download={attachment.filename}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center gap-1 hover:text-white"
+              <button
+                type="button"
+                onClick={handleDownload}
+                disabled={!signedUrl || downloading}
+                className="flex items-center gap-1 hover:text-white disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                <Download className="w-3 h-3" /> Download
-              </a>
+                <Download className="w-3 h-3" /> {downloading ? "Downloading…" : "Download"}
+              </button>
             </div>
           </DialogContent>
         </Dialog>
@@ -122,20 +157,22 @@ const MessageAttachmentView = ({ attachment }: { attachment: Attachment }) => {
 
   const Icon = isPdf ? FileText : FileIcon;
   return (
-    <a
-      href={downloadHref}
-      target="_blank"
-      rel="noopener noreferrer"
-      download={attachment.filename}
-      className="inline-flex items-center gap-3 max-w-xs px-3 py-2 rounded-lg border border-white/[0.08] bg-white/[0.04] hover:bg-white/[0.06] transition-colors text-left"
+    <button
+      type="button"
+      onClick={handleDownload}
+      disabled={!signedUrl || downloading}
+      className="inline-flex items-center gap-3 max-w-xs px-3 py-2 rounded-lg border border-white/[0.08] bg-white/[0.04] hover:bg-white/[0.06] transition-colors text-left disabled:opacity-60 disabled:cursor-not-allowed"
+      title={`Download ${attachment.filename}`}
     >
       <Icon className="w-5 h-5 text-zinc-400 shrink-0" />
       <div className="min-w-0">
         <p className="text-xs text-zinc-200 font-medium truncate">{attachment.filename}</p>
-        <p className="text-[10px] text-zinc-500">{formatBytes(attachment.size_bytes)}</p>
+        <p className="text-[10px] text-zinc-500">
+          {downloading ? "Downloading…" : formatBytes(attachment.size_bytes)}
+        </p>
       </div>
       <Download className="w-3.5 h-3.5 text-zinc-500 shrink-0" />
-    </a>
+    </button>
   );
 };
 
