@@ -9,8 +9,8 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { Plus, Search, Users, User, MessageSquare, Pencil, Archive, Trash2, ArchiveRestore, Check, X, Signal as SignalIcon } from "lucide-react";
-import type { Conversation } from "@/pages/admin/AdminMessageBoard";
-import { PILLAR_COLOR, PILLAR_LABEL } from "@/pages/admin/AdminMessageBoard";
+import type { Conversation, Pillar } from "@/pages/admin/AdminMessageBoard";
+import { PILLARS, PILLAR_COLOR, PILLAR_LABEL } from "@/pages/admin/AdminMessageBoard";
 
 interface Props {
   conversations: Conversation[];
@@ -74,6 +74,7 @@ const ConversationList = ({
   const [search, setSearch] = useState("");
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingDraft, setEditingDraft] = useState("");
+  const [editingPillar, setEditingPillar] = useState<Pillar | null>(null);
   const [pendingDelete, setPendingDelete] = useState<Conversation | null>(null);
   const editInputRef = useRef<HTMLInputElement>(null);
 
@@ -123,15 +124,17 @@ const ConversationList = ({
   const startEdit = (conv: Conversation) => {
     setEditingId(conv.id);
     setEditingDraft(conv.name?.trim() || "");
+    setEditingPillar(conv.pillar);
   };
 
   const cancelEdit = () => {
     setEditingId(null);
     setEditingDraft("");
+    setEditingPillar(null);
   };
 
   const saveEdit = async () => {
-    if (!editingId) return;
+    if (!editingId || !editingPillar) return;
     const next = editingDraft.trim();
     if (!next) {
       toast({ title: "Title cannot be empty", variant: "destructive" });
@@ -140,14 +143,14 @@ const ConversationList = ({
     try {
       const { error } = await supabase
         .from("mb_conversations")
-        .update({ name: next })
+        .update({ name: next, pillar: editingPillar })
         .eq("id", editingId);
       if (error) throw error;
       onConversationsChanged();
       cancelEdit();
     } catch (err) {
       toast({
-        title: "Failed to rename",
+        title: "Failed to save changes",
         description: err instanceof Error ? err.message : "Unknown error",
         variant: "destructive",
       });
@@ -357,12 +360,36 @@ const ConversationList = ({
                 </p>
 
                 <div className="flex items-center justify-between mt-1 gap-1">
-                  <span
-                    className="inline-block text-[9px] font-semibold px-1.5 py-0.5 rounded uppercase tracking-wide"
-                    style={{ background: `${pillarColor}18`, color: pillarColor }}
-                  >
-                    {PILLAR_LABEL[conv.pillar]}
-                  </span>
+                  {isEditing ? (
+                    <div className="flex items-center gap-1 flex-wrap pointer-events-auto">
+                      {PILLARS.map((p) => {
+                        const c = PILLAR_COLOR[p];
+                        const active = editingPillar === p;
+                        return (
+                          <button
+                            key={p}
+                            onClick={(e) => { e.stopPropagation(); setEditingPillar(p); }}
+                            className="text-[9px] font-semibold px-1.5 py-0.5 rounded uppercase tracking-wide border transition-colors"
+                            style={{
+                              background: active ? `${c}28` : "transparent",
+                              color: active ? c : "#a1a1aa",
+                              borderColor: active ? c : "rgba(255,255,255,0.08)",
+                            }}
+                            title={`Set pillar to ${PILLAR_LABEL[p]}`}
+                          >
+                            {PILLAR_LABEL[p]}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  ) : (
+                    <span
+                      className="inline-block text-[9px] font-semibold px-1.5 py-0.5 rounded uppercase tracking-wide"
+                      style={{ background: `${pillarColor}18`, color: pillarColor }}
+                    >
+                      {PILLAR_LABEL[conv.pillar]}
+                    </span>
+                  )}
 
                   {!isEditing && (
                     <div className="opacity-0 group-hover/row:opacity-100 transition-opacity flex items-center gap-0.5 pointer-events-auto">
@@ -370,7 +397,7 @@ const ConversationList = ({
                         <button
                           onClick={(e) => { e.stopPropagation(); startEdit(conv); }}
                           className="p-1 rounded text-zinc-500 hover:bg-white/[0.08] hover:text-zinc-200"
-                          title="Rename"
+                          title="Edit title & pillar"
                         >
                           <Pencil className="w-3 h-3" />
                         </button>
