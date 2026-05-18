@@ -8,7 +8,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { Plus, Search, Users, User, MessageSquare, Pencil, Archive, Trash2, ArchiveRestore, Check, X, Signal as SignalIcon } from "lucide-react";
+import { Plus, Search, Users, User, MessageSquare, Pencil, Archive, Trash2, ArchiveRestore, Check, X } from "lucide-react";
 import type { Conversation, Pillar } from "@/pages/admin/AdminMessageBoard";
 import { PILLARS, PILLAR_COLOR, PILLAR_LABEL } from "@/pages/admin/AdminMessageBoard";
 
@@ -24,7 +24,6 @@ interface Props {
   onSelect: (id: string) => void;
   onMessageSelect: (conversationId: string, messageId: string) => void;
   onNew: () => void;
-  onOpenWorkbench: () => void;
   onConversationsChanged: () => void;
   onConversationDeleted: (id: string) => void;
 }
@@ -66,7 +65,6 @@ const ConversationList = ({
   onSelect,
   onMessageSelect,
   onNew,
-  onOpenWorkbench,
   onConversationsChanged,
   onConversationDeleted,
 }: Props) => {
@@ -500,20 +498,6 @@ const ConversationList = ({
             ))}
           </div>
         )}
-      </div>
-
-      {/* Workbench shortcut anchored at the bottom of the conversation
-          list panel. Replaces the old floating bottom-right button so
-          it stops covering the send button in the message composer. */}
-      <div className="border-t border-white/[0.06] p-2 shrink-0">
-        <button
-          onClick={onOpenWorkbench}
-          className="w-full flex items-center justify-center gap-2 h-9 rounded-md bg-emerald-500 hover:bg-emerald-400 text-black text-xs font-semibold transition-colors shadow-sm shadow-emerald-500/20"
-          title="Open my Workbench"
-        >
-          <SignalIcon className="w-4 h-4" />
-          My Workbench
-        </button>
       </div>
 
       <AlertDialog open={!!pendingDelete} onOpenChange={(o) => { if (!o) setPendingDelete(null); }}>

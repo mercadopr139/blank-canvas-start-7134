@@ -267,13 +267,6 @@ const AdminMessageBoard = () => {
     return () => { supabase.removeChannel(channel); };
   }, [user, activeConversationId, queryClient]);
 
-  const taskManagerHref = (() => {
-    if (!myProfile) return null;
-    if (myProfile.task_manager_type === "PD") return "/admin/pd-task-manager";
-    if (myProfile.task_manager_type === "PC") return "/admin/pc-task-manager";
-    return null;
-  })();
-
   const activeConversation = conversations.find((c) => c.id === activeConversationId) || null;
   const totalUnread = Array.from(unreadMap.values()).reduce((s, n) => s + n, 0);
 
@@ -339,17 +332,6 @@ const AdminMessageBoard = () => {
                 <span className="hidden sm:inline">{viewAll ? "View All ON" : "View All"}</span>
               </Button>
             )}
-            {taskManagerHref && !viewAll && (
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={() => navigate(taskManagerHref)}
-                className="border-white/10 text-zinc-300 bg-transparent hover:bg-white/5 hover:text-white text-xs h-8 gap-1.5"
-              >
-                <Signal className="w-3.5 h-3.5" />
-                <span className="hidden sm:inline">My Workbench</span>
-              </Button>
-            )}
           </div>
         </div>
       </header>
@@ -375,7 +357,6 @@ const AdminMessageBoard = () => {
             onSelect={(id) => openConversation(id)}
             onMessageSelect={(convId, msgId) => openConversation(convId, msgId)}
             onNew={() => setNewConvOpen(true)}
-            onOpenWorkbench={() => setWorkbenchOverlayOpen(true)}
             onConversationsChanged={() => {
               queryClient.invalidateQueries({ queryKey: ["mb-conversations", user?.id] });
               queryClient.invalidateQueries({ queryKey: ["mb-unread", user?.id] });
@@ -391,8 +372,20 @@ const AdminMessageBoard = () => {
         <div
           className={`${
             activeConversationId ? "flex" : "hidden lg:flex"
-          } flex-1 flex-col min-w-0`}
+          } flex-1 flex-col min-w-0 relative`}
         >
+          {/* Floating Workbench shortcut — anchored to the top-right of
+              the thread panel so it stays in place as the message list
+              scrolls. Replaces the old sidebar-bottom button and the
+              header shortcut. */}
+          <button
+            onClick={() => setWorkbenchOverlayOpen(true)}
+            className="absolute top-3 right-3 z-30 flex items-center gap-2 h-9 px-3 rounded-full bg-emerald-500 hover:bg-emerald-400 text-black text-xs font-semibold transition-colors shadow-md shadow-emerald-500/30"
+            title="Open my Workbench"
+          >
+            <Signal className="w-4 h-4" />
+            My Workbench
+          </button>
           {activeConversationId && activeConversation ? (
             <MessageThread
               conversation={activeConversation}
