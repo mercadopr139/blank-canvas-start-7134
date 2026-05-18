@@ -1557,7 +1557,7 @@ const AdminAttendance = () => {
       .update({ bald_eagle_active: newActive })
       .eq("id", reg.id);
     if (error) { toast.error("Failed to update status"); return; }
-    toast.success(`${reg.child_first_name} ${reg.child_last_name} set to ${newActive ? "Active" : "Inactive"}`);
+    toast.success(`${reg.child_first_name} ${reg.child_last_name}: Call-Out Alert ${newActive ? "ON" : "OFF"}`);
     queryClient.invalidateQueries({ queryKey: ["registrations-attendance-full"] });
   };
 
@@ -2603,7 +2603,7 @@ const AdminAttendance = () => {
                       <TableHead className="text-white/60">First Name</TableHead>
                       <TableHead className="text-white/60">Last Name</TableHead>
                       <TableHead className="text-white/60">Program</TableHead>
-                      <TableHead className="text-white/60">Status</TableHead>
+                      <TableHead className="text-white/60">Call-Out Alert</TableHead>
                       <TableHead className="text-white/60">Last Attended</TableHead>
                       <TableHead className="text-white/60">This Week</TableHead>
                       <TableHead className="text-white/60">This Month</TableHead>
@@ -2630,7 +2630,9 @@ const AdminAttendance = () => {
                           <TableCell>
                             <button
                               onClick={(e) => { e.stopPropagation(); toggleEagleActive(r); }}
-                              title={r.bald_eagle_active ? "Set Inactive" : "Set Active"}
+                              title={r.bald_eagle_active
+                                ? "Turn off no-call-no-show alert for this youth"
+                                : "Turn on no-call-no-show alert for this youth"}
                             >
                               <Badge
                                 variant="outline"
@@ -2639,7 +2641,7 @@ const AdminAttendance = () => {
                                   : "border-white/20 text-white/40 bg-white/5 hover:bg-white/10 cursor-pointer"
                                 }
                               >
-                                {r.bald_eagle_active ? "Active" : "Inactive"}
+                                {r.bald_eagle_active ? "ON" : "OFF"}
                               </Badge>
                             </button>
                           </TableCell>
