@@ -372,20 +372,8 @@ const AdminMessageBoard = () => {
         <div
           className={`${
             activeConversationId ? "flex" : "hidden lg:flex"
-          } flex-1 flex-col min-w-0 relative`}
+          } flex-1 flex-col min-w-0`}
         >
-          {/* Floating Workbench shortcut — anchored to the top-right of
-              the thread panel so it stays in place as the message list
-              scrolls. Replaces the old sidebar-bottom button and the
-              header shortcut. */}
-          <button
-            onClick={() => setWorkbenchOverlayOpen(true)}
-            className="absolute top-3 right-3 z-30 flex items-center gap-2 h-9 px-3 rounded-full bg-emerald-500 hover:bg-emerald-400 text-black text-xs font-semibold transition-colors shadow-md shadow-emerald-500/30"
-            title="Open my Workbench"
-          >
-            <Signal className="w-4 h-4" />
-            My Workbench
-          </button>
           {activeConversationId && activeConversation ? (
             <MessageThread
               conversation={activeConversation}
@@ -438,6 +426,19 @@ const AdminMessageBoard = () => {
           openConversation(id);
         }}
       />
+
+      {/* Floating Workbench shortcut — fixed to the viewport so it stays
+          visible no matter what scrolls (message list, sidebar groups,
+          outer page). Sits below the page header + thread header so it
+          doesn't cover the pillar badge on the right side. */}
+      <button
+        onClick={() => setWorkbenchOverlayOpen(true)}
+        className="fixed top-[125px] right-4 z-40 flex items-center gap-2 h-9 px-3 rounded-full bg-emerald-500 hover:bg-emerald-400 text-black text-xs font-semibold transition-colors shadow-md shadow-emerald-500/30"
+        title="Open my Workbench"
+      >
+        <Signal className="w-4 h-4" />
+        My Workbench
+      </button>
 
       <MyWorkbenchOverlay
         open={workbenchOverlayOpen}
