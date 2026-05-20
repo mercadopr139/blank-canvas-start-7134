@@ -44,3 +44,6 @@ verify_jwt = false
 
 [functions.report-incomplete-trips]
 verify_jwt = false
+
+[functions.report-bald-eagle-no-shows]
+verify_jwt = false
