@@ -323,8 +323,11 @@ const ConversationList = ({
               }`}
             >
               <div
-                className="absolute left-0 top-0 bottom-0 w-[3px] rounded-r-full transition-all"
-                style={{ background: isActive ? pillarColor : `${pillarColor}60` }}
+                className="absolute left-0 top-0 bottom-0 rounded-r-full transition-all"
+                style={{
+                  width: unread > 0 ? "4px" : "3px",
+                  background: isActive || unread > 0 ? pillarColor : `${pillarColor}60`,
+                }}
               />
 
               <button
@@ -393,7 +396,11 @@ const ConversationList = ({
                   </p>
                 )}
 
-                <p className="text-xs text-zinc-600 truncate mt-0.5">
+                <p
+                  className={`text-xs truncate mt-0.5 ${
+                    unread > 0 ? "text-zinc-200 font-medium" : "text-zinc-600"
+                  }`}
+                >
                   {conv.last_message || "No messages yet"}
                 </p>
 
