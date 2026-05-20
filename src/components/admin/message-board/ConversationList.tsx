@@ -368,7 +368,7 @@ const ConversationList = ({
                     </div>
                   ) : (
                     <>
-                      <span className={`text-sm truncate ${unread > 0 ? "font-bold text-white" : "font-semibold text-white"}`}>
+                      <span className={`text-sm truncate ${unread > 0 ? "font-bold text-white" : "font-medium text-zinc-500"}`}>
                         {title}
                       </span>
                       <div className="flex items-center gap-1.5 flex-shrink-0">
