@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/contexts/AuthContext";
@@ -267,7 +267,19 @@ const AdminMessageBoard = () => {
     return () => { supabase.removeChannel(channel); };
   }, [user, activeConversationId, queryClient]);
 
-  const activeConversation = conversations.find((c) => c.id === activeConversationId) || null;
+  // The two queries (`mb-conversations` and `mb-unread`) resolve
+  // independently. We can't bake unread_count into the conversations
+  // query because the queryFn closes over `unreadMap` at run time —
+  // when conversations finish first, unread comes back later but
+  // conversations don't refetch, so the badges never appear until
+  // some other event invalidates the list. Merge them here as a
+  // derived value so React re-renders whenever either side updates.
+  const conversationsWithUnread = useMemo(
+    () => conversations.map((c) => ({ ...c, unread_count: unreadMap.get(c.id) ?? 0 })),
+    [conversations, unreadMap],
+  );
+
+  const activeConversation = conversationsWithUnread.find((c) => c.id === activeConversationId) || null;
   const totalUnread = Array.from(unreadMap.values()).reduce((s, n) => s + n, 0);
 
   // Open a conversation, optionally scrolling to a specific message
@@ -346,7 +358,7 @@ const AdminMessageBoard = () => {
           } w-full lg:w-72 lg:min-w-[260px] border-r border-white/[0.06] flex-col`}
         >
           <ConversationList
-            conversations={conversations}
+            conversations={conversationsWithUnread}
             loading={convsLoading}
             activeId={activeConversationId}
             currentUserId={user?.id || ""}
