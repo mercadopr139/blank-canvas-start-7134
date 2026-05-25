@@ -33,6 +33,7 @@ type EagleRow = {
 };
 
 type CalloutRow = {
+  registration_id: string | null;
   first_name: string;
   last_name: string;
 };
@@ -164,23 +165,28 @@ Deno.serve(async (req) => {
     if (attErr) throw attErr;
     const checkedIn = new Set((attendance || []).map((a: { registration_id: string }) => a.registration_id));
 
-    // 3. Today's call-outs — match by name (callouts table is not FK'd)
+    // 3. Today's call-outs. Prefer the bulletproof registration_id link
+    // saved on new rows (form now stores the picked youth's reg id).
+    // Fall back to case-insensitive name match for legacy rows that
+    // pre-date that column — those land in calledOutNames.
     const { data: callouts, error: coErr } = await supabase
       .from("callouts")
-      .select("first_name, last_name")
+      .select("registration_id, first_name, last_name")
       .eq("date", todayEastern);
     if (coErr) throw coErr;
-    const calledOut = new Set(
-      ((callouts || []) as CalloutRow[]).map(
-        (c) => `${c.first_name.toLowerCase().trim()}|${c.last_name.toLowerCase().trim()}`,
-      ),
-    );
+    const calledOutIds = new Set<string>();
+    const calledOutNames = new Set<string>();
+    for (const c of (callouts || []) as CalloutRow[]) {
+      if (c.registration_id) calledOutIds.add(c.registration_id);
+      else calledOutNames.add(`${c.first_name.toLowerCase().trim()}|${c.last_name.toLowerCase().trim()}`);
+    }
 
-    // 4. No-shows = active eagles not in either set
+    // 4. No-shows = active eagles not in any of the three sets
     const noShows = eagles.filter((e) => {
       if (checkedIn.has(e.id)) return false;
-      const key = `${e.child_first_name.toLowerCase().trim()}|${e.child_last_name.toLowerCase().trim()}`;
-      if (calledOut.has(key)) return false;
+      if (calledOutIds.has(e.id)) return false;
+      const nameKey = `${e.child_first_name.toLowerCase().trim()}|${e.child_last_name.toLowerCase().trim()}`;
+      if (calledOutNames.has(nameKey)) return false;
       return true;
     });
 

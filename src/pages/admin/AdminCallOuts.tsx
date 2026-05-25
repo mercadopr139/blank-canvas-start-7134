@@ -20,6 +20,7 @@ import { toast } from "sonner";
 
 interface Callout {
   id: string;
+  registration_id: string | null;
   first_name: string;
   last_name: string;
   date: string;
@@ -85,7 +86,7 @@ const AdminCallOuts = () => {
     queryFn: async () => {
       const { data } = await supabase
         .from("youth_registrations")
-        .select("child_first_name, child_last_name, child_headshot_url, is_bald_eagle, bald_eagle_active");
+        .select("id, child_first_name, child_last_name, child_headshot_url, is_bald_eagle, bald_eagle_active");
       return data || [];
     },
   });
@@ -99,9 +100,19 @@ const AdminCallOuts = () => {
     return `${import.meta.env.VITE_SUPABASE_URL}/storage/v1/object/public/youth-photos/${url}`;
   };
 
-  const getPhoto = (first: string, last: string) => {
+  // Prefer the bulletproof registration_id link (set by the form on new
+  // rows). Fall back to name-match for legacy rows that pre-date the
+  // column, so photos still appear for historical call-outs when names
+  // happen to align.
+  const getPhoto = (c: Pick<Callout, "registration_id" | "first_name" | "last_name">) => {
+    if (c.registration_id) {
+      const r = registrations.find((r) => r.id === c.registration_id);
+      if (r) return resolveHeadshot(r.child_headshot_url);
+    }
     const r = registrations.find(
-      (r) => r.child_first_name.toLowerCase() === first.toLowerCase() && r.child_last_name.toLowerCase() === last.toLowerCase()
+      (r) =>
+        r.child_first_name.toLowerCase() === c.first_name.toLowerCase() &&
+        r.child_last_name.toLowerCase() === c.last_name.toLowerCase(),
     );
     return resolveHeadshot(r?.child_headshot_url);
   };
@@ -178,7 +189,7 @@ const AdminCallOuts = () => {
   }, [youthHistory, monthStart, monthEnd]);
 
   const CalloutRow = ({ c }: { c: Callout }) => {
-    const photo = getPhoto(c.first_name, c.last_name);
+    const photo = getPhoto(c);
     return (
       <TableRow className="border-neutral-800">
         <TableCell>
@@ -349,9 +360,20 @@ const AdminCallOuts = () => {
       <Dialog open={!!historyYouth} onOpenChange={(open) => !open && setHistoryYouth(null)}>
         <DialogContent className="bg-neutral-900 border-neutral-700 text-white max-w-lg">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Eye className="w-4 h-4" />
-              Call-Out History: {historyYouth?.first} {historyYouth?.last}
+            <DialogTitle className="flex items-center gap-3">
+              {(() => {
+                const photo = historyYouth ? getPhoto({ registration_id: youthHistory[0]?.registration_id ?? null, first_name: historyYouth.first, last_name: historyYouth.last }) : null;
+                return photo ? (
+                  <img src={photo} alt="" className="w-9 h-9 rounded-full object-cover" />
+                ) : historyYouth ? (
+                  <div className="w-9 h-9 rounded-full bg-neutral-700 flex items-center justify-center text-white text-xs font-bold">
+                    {historyYouth.first[0]}{historyYouth.last[0]}
+                  </div>
+                ) : (
+                  <Eye className="w-4 h-4" />
+                );
+              })()}
+              <span>Call-Out History: {historyYouth?.first} {historyYouth?.last}</span>
             </DialogTitle>
           </DialogHeader>
           {youthHistoryStats && (

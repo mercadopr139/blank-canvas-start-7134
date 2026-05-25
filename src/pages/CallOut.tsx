@@ -102,6 +102,7 @@ const CallOut = () => {
 
     try {
       await supabase.from("callouts" as any).insert({
+        registration_id: selectedYouth.id,
         first_name: selectedYouth.child_first_name,
         last_name: selectedYouth.child_last_name,
         date: today,
