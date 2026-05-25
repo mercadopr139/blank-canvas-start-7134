@@ -17,6 +17,15 @@ interface YouthMatch {
   is_bald_eagle: boolean;
 }
 
+// youth_registrations.child_headshot_url stores either a full http URL
+// (legacy) or a bare filename like "monday_headshot_<uuid>.jpg" pointing
+// into the public youth-photos bucket. Resolve to a real URL either way.
+const resolveHeadshot = (url: string | null | undefined): string | null => {
+  if (!url) return null;
+  if (url.startsWith("http")) return url;
+  return `${import.meta.env.VITE_SUPABASE_URL}/storage/v1/object/public/youth-photos/${url}`;
+};
+
 const CallOut = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [results, setResults] = useState<YouthMatch[]>([]);
@@ -174,8 +183,8 @@ const CallOut = () => {
                 <Label className="text-white text-sm">Search your name *</Label>
                 {selectedYouth ? (
                   <div className="mt-1 flex items-center gap-3 bg-neutral-800 border border-green-500/30 rounded-md px-3 py-2.5">
-                    {selectedYouth.child_headshot_url ? (
-                      <img src={selectedYouth.child_headshot_url} alt="" className="w-8 h-8 rounded-full object-cover" />
+                    {resolveHeadshot(selectedYouth.child_headshot_url) ? (
+                      <img src={resolveHeadshot(selectedYouth.child_headshot_url)!} alt="" className="w-8 h-8 rounded-full object-cover" />
                     ) : (
                       <div className="w-8 h-8 rounded-full bg-neutral-700 flex items-center justify-center text-white text-xs font-bold">
                         {selectedYouth.child_first_name[0]}{selectedYouth.child_last_name[0]}
@@ -208,8 +217,8 @@ const CallOut = () => {
                               onClick={() => handleSelect(r)}
                               className="w-full flex items-center gap-3 px-3 py-2.5 hover:bg-neutral-700 transition-colors text-left"
                             >
-                              {r.child_headshot_url ? (
-                                <img src={r.child_headshot_url} alt="" className="w-8 h-8 rounded-full object-cover" />
+                              {resolveHeadshot(r.child_headshot_url) ? (
+                                <img src={resolveHeadshot(r.child_headshot_url)!} alt="" className="w-8 h-8 rounded-full object-cover" />
                               ) : (
                                 <div className="w-8 h-8 rounded-full bg-neutral-600 flex items-center justify-center text-white text-xs font-bold">
                                   {r.child_first_name[0]}{r.child_last_name[0]}
