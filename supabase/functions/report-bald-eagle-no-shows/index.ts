@@ -84,6 +84,21 @@ Deno.serve(async (req) => {
           status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
+
+      // Skip weekends — academy is closed Sat/Sun so a no-show alert
+      // would be noise. The "wrong hour" guard above already pins us
+      // to 8 PM Eastern, so weekday here is the Eastern weekday at
+      // that moment. Manual "Run Now" calls intentionally bypass this
+      // (admin can still test against a past Sunday).
+      const easternWeekday = new Intl.DateTimeFormat("en-US", {
+        timeZone: "America/New_York",
+        weekday: "short",
+      }).format(new Date());
+      if (easternWeekday === "Sat" || easternWeekday === "Sun") {
+        return new Response(JSON.stringify({ sent: false, reason: `weekend: ${easternWeekday}` }), {
+          status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
     } else {
       // Manual UI invocation. Require an admin JWT.
       const authHeader = req.headers.get("Authorization");
