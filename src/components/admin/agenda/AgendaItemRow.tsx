@@ -161,7 +161,7 @@ interface RowProps {
   onToggleExpand: (id: string) => void;
   onOpenDetail: (item: AgendaItemWithChildren) => void;
   onSetStatus: (id: string, status: AgendaStatus) => void;
-  onChangeOwner: (id: string, userId: string | null) => void;
+  onChangeOwners: (id: string, userIds: string[]) => void;
   onAddChild: (parent: AgendaItemWithChildren, title: string) => Promise<void>;
   onArchive: (id: string) => void;
   onDuplicate: (item: AgendaItemWithChildren) => void;
@@ -175,7 +175,7 @@ export const AgendaItemRow = ({
   onToggleExpand,
   onOpenDetail,
   onSetStatus,
-  onChangeOwner,
+  onChangeOwners,
   onAddChild,
   onArchive,
   onDuplicate,
@@ -288,12 +288,13 @@ export const AgendaItemRow = ({
 
         {dueDateChip(node.due_date)}
 
-        {/* Owner avatar — always visible, shows ? when unassigned */}
+        {/* Owner stack — always visible, shows ? when unassigned, click
+            to add/remove. Multi-owner supported. */}
         <OwnerPicker
-          ownerUserId={node.owner_user_id}
+          ownerUserIds={node.owner_user_ids}
           staff={staff}
           size={style.ownerSize}
-          onChange={(uid) => onChangeOwner(node.id, uid)}
+          onChange={(uids) => onChangeOwners(node.id, uids)}
         />
 
         {/* + Add sub-item — hover-revealed on the row itself.
@@ -382,7 +383,7 @@ export const AgendaItemRow = ({
           onToggleExpand={onToggleExpand}
           onOpenDetail={onOpenDetail}
           onSetStatus={onSetStatus}
-          onChangeOwner={onChangeOwner}
+          onChangeOwners={onChangeOwners}
           onAddChild={onAddChild}
           onArchive={onArchive}
           onDuplicate={onDuplicate}
@@ -433,13 +434,21 @@ export const AgendaItemRow = ({
     </div>
   );
 
-  // L1: wrap row + children in a card so each topic visually contains
-  // its subtree. L2-L4: render inline with a hairline separator so
-  // siblings read as a list without floating off into space.
+  // L1: wrap row + children in a pillar-tinted card so the topic
+  // visually contains its subtree AND pops as the focal point of its
+  // pillar. The row itself gets a stronger tint than the children area
+  // to make the L1 header unmistakable. L2-L4: render inline with a
+  // hairline separator so siblings read as a list without floating.
   if (isL1) {
     return (
-      <div className="rounded-xl border border-white/[0.08] bg-white/[0.02] overflow-hidden mb-3 last:mb-0">
-        {rowContent}
+      <div
+        className="rounded-xl border overflow-hidden mb-3 last:mb-0"
+        style={{
+          borderColor: `${accent}30`,
+          background: `${accent}08`,
+        }}
+      >
+        <div style={{ background: `${accent}18` }}>{rowContent}</div>
         {childrenBlock && <div className="pb-2">{childrenBlock}</div>}
       </div>
     );

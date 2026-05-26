@@ -33,7 +33,7 @@ interface Props {
     notes?: string | null;
     status?: AgendaStatus;
     due_date?: string | null;
-    owner_user_id?: string | null;
+    owner_user_ids?: string[];
   }) => Promise<void>;
 }
 
@@ -50,7 +50,7 @@ export const AgendaItemDetailDialog = ({
   const [notes, setNotes] = useState("");
   const [dueDate, setDueDate] = useState<string>("");
   const [status, setStatus] = useState<AgendaStatus>("signal");
-  const [ownerUserId, setOwnerUserId] = useState<string | null>(null);
+  const [ownerUserIds, setOwnerUserIds] = useState<string[]>([]);
   const [saving, setSaving] = useState(false);
 
   // Reset local form state whenever a different item opens.
@@ -60,7 +60,7 @@ export const AgendaItemDetailDialog = ({
     setNotes(item.notes ?? "");
     setDueDate(item.due_date ?? "");
     setStatus(item.status);
-    setOwnerUserId(item.owner_user_id);
+    setOwnerUserIds(item.owner_user_ids ?? []);
   }, [item?.id]);
 
   if (!item) return null;
@@ -73,7 +73,10 @@ export const AgendaItemDetailDialog = ({
     if ((notes || null) !== (item.notes || null)) patch.notes = notes.trim() || null;
     if ((dueDate || null) !== (item.due_date || null)) patch.due_date = dueDate || null;
     if (status !== item.status) patch.status = status;
-    if ((ownerUserId || null) !== (item.owner_user_id || null)) patch.owner_user_id = ownerUserId;
+    const sameOwners =
+      ownerUserIds.length === (item.owner_user_ids?.length ?? 0) &&
+      ownerUserIds.every((u) => item.owner_user_ids?.includes(u));
+    if (!sameOwners) patch.owner_user_ids = ownerUserIds;
     if (Object.keys(patch).length === 0) {
       onClose();
       return;
@@ -148,12 +151,12 @@ export const AgendaItemDetailDialog = ({
           <div className="grid grid-cols-2 gap-3">
             <div>
               <p className="text-[10px] uppercase tracking-wider text-zinc-500 mb-1.5">
-                Owner
+                Owners
               </p>
               <OwnerPicker
-                ownerUserId={ownerUserId}
+                ownerUserIds={ownerUserIds}
                 staff={staff}
-                onChange={setOwnerUserId}
+                onChange={setOwnerUserIds}
               />
             </div>
             <div>

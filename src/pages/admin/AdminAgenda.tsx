@@ -252,7 +252,7 @@ const AdminAgenda = () => {
           depth: n.depth,
           title: n.title + (newParentId === null ? " (copy)" : ""),
           notes: n.notes,
-          owner_user_id: n.owner_user_id,
+          owner_user_ids: n.owner_user_ids,
           status: "signal", // reset status on duplicate
           due_date: n.due_date,
           is_starred: n.is_starred,
@@ -353,8 +353,8 @@ const AdminAgenda = () => {
               onSetStatus={(id, status) =>
                 updateMutation.mutate({ id, patch: { status } })
               }
-              onChangeOwner={(id, userId) =>
-                updateMutation.mutate({ id, patch: { owner_user_id: userId } })
+              onChangeOwners={(id, userIds) =>
+                updateMutation.mutate({ id, patch: { owner_user_ids: userIds } })
               }
               onAddChild={(parent, title) =>
                 addItem({

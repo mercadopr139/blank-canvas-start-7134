@@ -13,7 +13,7 @@ export interface AgendaItem {
   depth: number;
   title: string;
   notes: string | null;
-  owner_user_id: string | null;
+  owner_user_ids: string[];
   status: AgendaStatus;
   due_date: string | null;
   is_starred: boolean;
