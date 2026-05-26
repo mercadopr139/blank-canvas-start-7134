@@ -1,9 +1,9 @@
 // Recursive row for a single agenda item + its children. Renders one
 // row per node with status, owner, due date, star, progress badge,
-// per-row actions, and an inline child-adder. Deeper levels are
-// progressively more compact + lighter per spec ("render deeper
-// levels more compact/visually lighter so the UI stays clean as it
-// indents").
+// per-row actions, and a hover-revealed child-adder. Strong visual
+// hierarchy across depths: L1 reads as a chunky topic header, L4 reads
+// as small detail. Vertical guide lines in the pillar color connect
+// parents to their children.
 
 import { useState } from "react";
 import {
@@ -35,20 +35,44 @@ import type {
 } from "./types";
 import { flattenSubtree } from "./types";
 
-// Visual scale knobs per depth. L1 is the chunky topic row; L2-L4 get
-// progressively smaller font, tighter padding, and lower opacity so
-// nesting reads as visual hierarchy without bespoke styling per level.
+// Per-depth visual scale. L1 is the chunky topic header; L2-L4 step
+// down in size + weight + opacity. The whole point is that you should
+// be able to tell L1 from L4 without reading the indent.
 const DEPTH_STYLE: Record<number, {
   rowPx: string;
   titleClass: string;
   iconClass: string;
   ownerSize: "sm" | "md";
-  indent: number;
+  rowBg: string;
 }> = {
-  1: { rowPx: "py-2.5 px-3", titleClass: "text-sm font-semibold text-white", iconClass: "w-4 h-4", ownerSize: "md", indent: 0 },
-  2: { rowPx: "py-2 px-3", titleClass: "text-[13px] font-medium text-white/90", iconClass: "w-3.5 h-3.5", ownerSize: "sm", indent: 18 },
-  3: { rowPx: "py-1.5 px-3", titleClass: "text-xs font-medium text-white/80", iconClass: "w-3 h-3", ownerSize: "sm", indent: 36 },
-  4: { rowPx: "py-1 px-3", titleClass: "text-xs text-white/70", iconClass: "w-3 h-3", ownerSize: "sm", indent: 54 },
+  1: {
+    rowPx: "py-2.5 px-3",
+    titleClass: "text-[15px] font-extrabold uppercase tracking-wide text-white",
+    iconClass: "w-4 h-4",
+    ownerSize: "md",
+    rowBg: "bg-white/[0.03]",
+  },
+  2: {
+    rowPx: "py-1.5 px-3",
+    titleClass: "text-sm font-semibold text-white/90",
+    iconClass: "w-3.5 h-3.5",
+    ownerSize: "sm",
+    rowBg: "",
+  },
+  3: {
+    rowPx: "py-1 px-3",
+    titleClass: "text-[13px] font-medium text-white/70",
+    iconClass: "w-3 h-3",
+    ownerSize: "sm",
+    rowBg: "",
+  },
+  4: {
+    rowPx: "py-1 px-3",
+    titleClass: "text-xs font-normal text-white/55",
+    iconClass: "w-3 h-3",
+    ownerSize: "sm",
+    rowBg: "",
+  },
 };
 
 const StatusButton = ({
@@ -186,11 +210,12 @@ export const AgendaItemRow = ({
   };
 
   return (
-    <div className="border-l-2 border-transparent" style={{ paddingLeft: style.indent }}>
+    <div className="group/branch">
+      {/* The row itself */}
       <div
-        className={`group/row flex items-center gap-2 rounded-lg ${style.rowPx} hover:bg-white/[0.04] transition-colors`}
+        className={`group/row flex items-center gap-2 rounded-lg ${style.rowPx} ${style.rowBg} hover:bg-white/[0.05] transition-colors`}
       >
-        {/* Expand/collapse */}
+        {/* Expand/collapse — keeps its slot even when no children so columns align */}
         {hasChildren ? (
           <button
             type="button"
@@ -208,7 +233,7 @@ export const AgendaItemRow = ({
           <span className="w-3.5 shrink-0" />
         )}
 
-        {/* Status pill (column to the LEFT of attachments per spec) */}
+        {/* Status (column to the LEFT of attachments per spec) */}
         <StatusButton
           status={node.status}
           onCycle={() => onSetStatus(node.id, nextStatus(node.status))}
@@ -262,7 +287,7 @@ export const AgendaItemRow = ({
         {/* Due date chip */}
         {dueDateChip(node.due_date)}
 
-        {/* Owner avatar */}
+        {/* Owner avatar — always visible. Shows ? when unassigned. */}
         <OwnerPicker
           ownerUserId={node.owner_user_id}
           staff={staff}
@@ -326,9 +351,15 @@ export const AgendaItemRow = ({
         </DropdownMenu>
       </div>
 
-      {/* Children + inline child-adder */}
-      {isExpanded && (
-        <div className="mt-0.5">
+      {/* Children container — vertical tree-guide line in pillar color
+          shows the parent-child relationship without bespoke per-row
+          borders. The inline add-child is hover-revealed and lives
+          inside this container so it sits at the children's indent. */}
+      {isExpanded && (hasChildren || addingChild || canHaveChildren) && (
+        <div
+          className="ml-[14px] pl-4 border-l"
+          style={{ borderColor: `${accent}22` }}
+        >
           {node.children.map((child) => (
             <AgendaItemRow
               key={child.id}
@@ -348,57 +379,55 @@ export const AgendaItemRow = ({
           ))}
 
           {canHaveChildren && (
-            <div style={{ paddingLeft: DEPTH_STYLE[Math.min(depth + 1, 4)].indent }}>
-              {addingChild ? (
-                <form
-                  onSubmit={handleSubmitChild}
-                  className="flex items-center gap-2 py-1 px-3"
-                >
-                  <span className="w-3.5 shrink-0" />
-                  <Circle className="w-3 h-3 text-white/20 shrink-0" />
-                  <input
-                    autoFocus
-                    value={draftChildTitle}
-                    onChange={(e) => setDraftChildTitle(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === "Escape") {
-                        setAddingChild(false);
-                        setDraftChildTitle("");
-                      }
-                    }}
-                    placeholder="New sub-item…"
-                    disabled={savingChild}
-                    className="flex-1 bg-transparent border-b border-white/15 focus:border-white/40 outline-none text-xs text-white py-0.5"
-                  />
-                  <button
-                    type="submit"
-                    disabled={!draftChildTitle.trim() || savingChild}
-                    className="text-[10px] font-semibold px-2 py-1 rounded bg-white/10 hover:bg-white/20 text-white disabled:opacity-40"
-                  >
-                    {savingChild ? "…" : "Add"}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
+            addingChild ? (
+              <form
+                onSubmit={handleSubmitChild}
+                className="flex items-center gap-2 py-1 px-3"
+              >
+                <span className="w-3.5 shrink-0" />
+                <Circle className="w-3 h-3 text-white/20 shrink-0" />
+                <input
+                  autoFocus
+                  value={draftChildTitle}
+                  onChange={(e) => setDraftChildTitle(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Escape") {
                       setAddingChild(false);
                       setDraftChildTitle("");
-                    }}
-                    className="text-[10px] text-white/40 hover:text-white/70"
-                  >
-                    Cancel
-                  </button>
-                </form>
-              ) : (
+                    }
+                  }}
+                  placeholder="New sub-item…"
+                  disabled={savingChild}
+                  className="flex-1 bg-transparent border-b border-white/15 focus:border-white/40 outline-none text-xs text-white py-0.5"
+                />
+                <button
+                  type="submit"
+                  disabled={!draftChildTitle.trim() || savingChild}
+                  className="text-[10px] font-semibold px-2 py-1 rounded bg-white/10 hover:bg-white/20 text-white disabled:opacity-40"
+                >
+                  {savingChild ? "…" : "Add"}
+                </button>
                 <button
                   type="button"
-                  onClick={() => setAddingChild(true)}
-                  className="flex items-center gap-1.5 text-[10px] text-white/30 hover:text-white/60 transition-colors py-1 px-3"
+                  onClick={() => {
+                    setAddingChild(false);
+                    setDraftChildTitle("");
+                  }}
+                  className="text-[10px] text-white/40 hover:text-white/70"
                 >
-                  <Plus className="w-3 h-3" />
-                  Add sub-item
+                  Cancel
                 </button>
-              )}
-            </div>
+              </form>
+            ) : (
+              <button
+                type="button"
+                onClick={() => setAddingChild(true)}
+                className="flex items-center gap-1.5 text-[10px] text-white/30 hover:text-white/60 transition-colors py-1 px-3 opacity-0 group-hover/branch:opacity-100 focus:opacity-100 transition-[opacity]"
+              >
+                <Plus className="w-3 h-3" />
+                Add sub-item
+              </button>
+            )
           )}
         </div>
       )}
