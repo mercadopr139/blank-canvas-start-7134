@@ -452,6 +452,19 @@ const AdminMessageBoard = () => {
         My Workbench
       </button>
 
+      {/* Floating New Message shortcut — pinned just below My Workbench
+          so a new conversation is always one click away, regardless of
+          whether a thread is open or scrolled. NLA red so it doesn't
+          read as a sibling of the green Workbench pill. */}
+      <button
+        onClick={() => setNewConvOpen(true)}
+        className="fixed top-[170px] right-4 z-40 flex items-center gap-2 h-9 px-3 rounded-full bg-[#bf0f3e] hover:bg-[#a00d34] text-white text-xs font-semibold transition-colors shadow-md shadow-[#bf0f3e]/30"
+        title="Start a new conversation"
+      >
+        <MessageSquare className="w-4 h-4" />
+        New Message
+      </button>
+
       <MyWorkbenchOverlay
         open={workbenchOverlayOpen}
         onClose={() => setWorkbenchOverlayOpen(false)}
