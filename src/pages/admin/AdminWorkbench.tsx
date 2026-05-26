@@ -6,7 +6,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import {
   ArrowLeft, LogOut, Plus, Pencil, GripVertical, Lock,
-  Circle, CheckCircle2, ArrowRight, Trophy, MessageSquare,
+  Circle, CheckCircle2, ArrowRight, Trophy, MessageSquare, Archive,
 } from "lucide-react";
 import { icons } from "lucide-react";
 import { toast } from "sonner";
@@ -283,6 +283,8 @@ const FocusAreaTile = ({
   onToggle,
   onReorder,
   onOpenSignalDetails,
+  onArchiveCompleted,
+  archiving,
 }: {
   area: FocusArea;
   managerType: string;
@@ -292,6 +294,8 @@ const FocusAreaTile = ({
   onToggle: (signal: CoreSignal) => void;
   onReorder: (newOrder: CoreSignal[]) => void;
   onOpenSignalDetails: (signal: CoreSignal) => void;
+  onArchiveCompleted: (ids: string[]) => void;
+  archiving: boolean;
 }) => {
   const navigate = useNavigate();
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
@@ -467,21 +471,39 @@ const FocusAreaTile = ({
         )}
 
         {/* Footer: tile progress + Open → */}
-        <div className="flex items-center justify-between pt-3 mt-2 border-t border-white/5">
+        <div className="flex items-center justify-between pt-3 mt-2 border-t border-white/5 gap-2">
           {signals.length > 0 ? (
-            <span
-              className={`text-[10px] font-semibold ${allDone ? "text-green-400" : "text-white/35"}`}
-            >
-              {completedCount}/{signals.length}
-              {allDone && " ✓"}
-            </span>
+            <div className="flex items-center gap-3 min-w-0">
+              <span
+                className={`text-[10px] font-semibold shrink-0 ${allDone ? "text-green-400" : "text-white/35"}`}
+              >
+                {completedCount}/{signals.length}
+                {allDone && " ✓"}
+              </span>
+              {completedCount > 0 && (
+                <button
+                  type="button"
+                  onClick={() =>
+                    onArchiveCompleted(
+                      signals.filter((s) => s.status === "Complete").map((s) => s.id),
+                    )
+                  }
+                  disabled={archiving}
+                  className="inline-flex items-center gap-1 text-[10px] font-semibold text-white/40 hover:text-white/80 transition-colors disabled:opacity-40 disabled:cursor-not-allowed truncate"
+                  title="Archive all completed signals in this focus area"
+                >
+                  <Archive className="w-3 h-3 shrink-0" />
+                  Archive completed ({completedCount})
+                </button>
+              )}
+            </div>
           ) : (
             <span />
           )}
           <button
             type="button"
             onClick={() => navigate(getSignalsPath(managerType, area.key))}
-            className="inline-flex items-center gap-1 text-xs font-semibold transition-all hover:translate-x-0.5"
+            className="inline-flex items-center gap-1 text-xs font-semibold transition-all hover:translate-x-0.5 shrink-0"
             style={{ color: area.accent_color }}
           >
             <span>Open</span>
@@ -694,6 +716,51 @@ const AdminWorkbench = () => {
     onError: (e: any) => toast.error(e.message),
   });
 
+  // Bulk-archive completed signals from a single focus area tile. Same
+  // write the per-focus-area "Archive completed" button does — just
+  // saves the user from drilling in.
+  const unarchiveMutation = useMutation({
+    mutationFn: async (ids: string[]) => {
+      const { error } = await supabase
+        .from("signals")
+        .update({ is_archived: false, archived_at: null } as any)
+        .in("id", ids);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["task-manager-home-core"] });
+      queryClient.invalidateQueries({ queryKey: ["signals"] });
+      toast.success("Restored");
+    },
+    onError: (e: any) => toast.error(e.message),
+  });
+
+  const archiveCompletedMutation = useMutation({
+    mutationFn: async (ids: string[]) => {
+      if (ids.length === 0) return [] as string[];
+      const { error } = await supabase
+        .from("signals")
+        .update({ is_archived: true, archived_at: new Date().toISOString() } as any)
+        .in("id", ids);
+      if (error) throw error;
+      return ids;
+    },
+    onSuccess: (ids) => {
+      queryClient.invalidateQueries({ queryKey: ["task-manager-home-core"] });
+      queryClient.invalidateQueries({ queryKey: ["signals"] });
+      const count = ids.length;
+      if (count === 0) return;
+      toast.success(`Archived ${count} signal${count === 1 ? "" : "s"}`, {
+        duration: 5000,
+        action: {
+          label: "Undo",
+          onClick: () => unarchiveMutation.mutate(ids),
+        },
+      });
+    },
+    onError: (e: any) => toast.error(e.message),
+  });
+
   const reorderSignalsMutation = useMutation({
     mutationFn: async (newOrder: CoreSignal[]) => {
       const updates = newOrder.map((s, i) =>
@@ -892,6 +959,8 @@ const AdminWorkbench = () => {
                         setDetailsSignal(s);
                         setDetailsAccent(area.accent_color);
                       }}
+                      onArchiveCompleted={(ids) => archiveCompletedMutation.mutate(ids)}
+                      archiving={archiveCompletedMutation.isPending}
                     />
                   );
                 })}
