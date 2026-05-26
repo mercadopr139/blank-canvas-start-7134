@@ -27,11 +27,20 @@ const PILLAR_TO_SIGNAL_PILLAR: Record<Pillar, string> = {
 const agendaStatusToSignalStatus = (s: AgendaStatus): "Pending" | "Complete" =>
   s === "done" ? "Complete" : "Pending";
 
-const sourceForAgendaFocusArea = (managerType: string | null): string | null => {
+// Compute the `source` field a signal needs to land in a given
+// focus area. The Workbench's source convention is:
+//   - manager_type "PD"  →  source = title (e.g. "NLA")
+//   - other manager_types →  source = "<TYPE>:<title>" (e.g. "PC:NLA")
+const sourceForFocusArea = (managerType: string | null, title: string): string | null => {
   if (!managerType) return null;
-  if (managerType === "PD") return "Agenda";
-  return `${managerType}:Agenda`;
+  if (managerType === "PD") return title;
+  return `${managerType}:${title}`;
 };
+
+export interface PushTarget {
+  userId: string;
+  focusAreaId: string;
+}
 
 export interface PushToWorkbenchInput {
   agendaItemId: string;
@@ -39,7 +48,7 @@ export interface PushToWorkbenchInput {
   notes: string | null;
   pillar: Pillar;
   status: AgendaStatus;
-  targetUserIds: string[];
+  targets: PushTarget[];
 }
 
 export interface PushToWorkbenchResult {
@@ -59,28 +68,35 @@ export const pushAgendaItemToWorkbench = async (
     failed: 0,
   };
 
-  // One profile lookup query for all target users keeps this O(1).
-  const { data: profiles } = await supabase
-    .from("staff_profiles")
-    .select("user_id, task_manager_type")
-    .in("user_id", input.targetUserIds);
-  const byUser = new Map(
-    (profiles || []).map((p: { user_id: string; task_manager_type: string | null }) => [
-      p.user_id,
-      p.task_manager_type,
+  // Single round-trip to resolve every chosen focus area's title +
+  // manager_type so we can compute the `source` field per insert.
+  const focusAreaIds = Array.from(new Set(input.targets.map((t) => t.focusAreaId)));
+  if (focusAreaIds.length === 0) return result;
+  const { data: focusAreas } = await supabase
+    .from("focus_areas")
+    .select("id, title, manager_type")
+    .in("id", focusAreaIds);
+  const focusAreaById = new Map(
+    (focusAreas || []).map((fa: { id: string; title: string; manager_type: string | null }) => [
+      fa.id,
+      fa,
     ]),
   );
 
-  for (const userId of input.targetUserIds) {
-    const managerType = byUser.get(userId) ?? null;
-    const source = sourceForAgendaFocusArea(managerType);
+  for (const target of input.targets) {
+    const fa = focusAreaById.get(target.focusAreaId);
+    if (!fa) {
+      result.failed++;
+      continue;
+    }
+    const source = sourceForFocusArea(fa.manager_type, fa.title);
     if (!source) {
       result.noWorkbench++;
       continue;
     }
 
-    // Skip if a signal already exists in this user's workbench for
-    // the same agenda item — pushing twice would duplicate.
+    // Skip duplicates: a signal with this agenda item + this exact
+    // source already exists.
     const { data: existing } = await supabase
       .from("signals")
       .select("id")

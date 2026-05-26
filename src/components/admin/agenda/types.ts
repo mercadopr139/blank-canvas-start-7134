@@ -35,6 +35,10 @@ export interface StaffOption {
   user_id: string;
   full_name: string;
   job_title: string | null;
+  // Null when the staff member doesn't have a Workbench yet. Used by
+  // the Send-to-Workbench chooser to filter focus areas to the ones
+  // this user actually has.
+  task_manager_type: string | null;
 }
 
 // Lightweight summaries fetched at page load so each row can display

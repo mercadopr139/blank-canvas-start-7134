@@ -586,10 +586,32 @@ export const AgendaItemDetailDialog = ({
   const [ownerUserIds, setOwnerUserIds] = useState<string[]>([]);
   const [saving, setSaving] = useState(false);
 
-  // Workbench-send chooser
+  // Workbench-send chooser. Map<userId, focusAreaId>. Entry present
+  // means "send to this user"; value is which focus area on their
+  // Workbench the signal should land in. Empty string = not chosen.
   const [pushOpen, setPushOpen] = useState(false);
-  const [pushTargets, setPushTargets] = useState<Set<string>>(new Set());
+  const [pushSelections, setPushSelections] = useState<Map<string, string>>(new Map());
   const [pushing, setPushing] = useState(false);
+
+  // Focus areas across all manager_types — small table, one query.
+  // Filtered client-side per owner in the chooser. Only fetched while
+  // the chooser is open.
+  const { data: focusAreas = [] } = useQuery<{
+    id: string;
+    title: string;
+    manager_type: string | null;
+  }[]>({
+    queryKey: ["agenda-focus-areas"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("focus_areas")
+        .select("id, title, manager_type")
+        .order("sort_order");
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: pushOpen,
+  });
 
   useEffect(() => {
     if (!item) return;
@@ -748,7 +770,10 @@ export const AgendaItemDetailDialog = ({
               type="button"
               disabled={ownerUserIds.length === 0}
               onClick={() => {
-                setPushTargets(new Set(ownerUserIds));
+                // Pre-check every owner with no focus area chosen yet.
+                const seeded = new Map<string, string>();
+                for (const uid of ownerUserIds) seeded.set(uid, "");
+                setPushSelections(seeded);
                 setPushOpen(true);
               }}
               className="bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-300 border border-emerald-500/30 text-xs h-8 gap-1.5 shrink-0"
@@ -786,8 +811,9 @@ export const AgendaItemDetailDialog = ({
           </div>
         </div>
 
-        {/* Workbench-target chooser — overlays the dialog as a nested
-            Dialog. Pre-checks every owner; user can deselect any. */}
+        {/* Workbench-target chooser — pick which owners receive the
+            push AND which focus area on each of their Workbenches it
+            lands in. The dialog stays open until you confirm. */}
         <Dialog open={pushOpen} onOpenChange={(o) => { if (!o) setPushOpen(false); }}>
           <DialogContent className="bg-neutral-900 border-white/10 text-white max-w-md">
             <DialogHeader>
@@ -795,11 +821,11 @@ export const AgendaItemDetailDialog = ({
                 Send to Workbench
               </DialogTitle>
               <p className="text-xs text-zinc-400 leading-relaxed">
-                Push this item into each selected owner's Workbench.
-                Marking it Done in either place will sync to the other.
+                Pick a focus area on each owner's Workbench to send this
+                item to. Marking it Done in either place syncs to the other.
               </p>
             </DialogHeader>
-            <div className="space-y-1 my-3 max-h-72 overflow-y-auto">
+            <div className="space-y-2 my-3 max-h-72 overflow-y-auto">
               {ownerUserIds.length === 0 ? (
                 <p className="text-xs text-zinc-500 italic text-center py-4">
                   No owners assigned.
@@ -807,42 +833,78 @@ export const AgendaItemDetailDialog = ({
               ) : (
                 ownerUserIds.map((uid) => {
                   const profile = staff.find((s) => s.user_id === uid);
-                  const checked = pushTargets.has(uid);
+                  const checked = pushSelections.has(uid);
+                  const chosenFa = pushSelections.get(uid) ?? "";
+                  const userFocusAreas = profile?.task_manager_type
+                    ? focusAreas.filter((fa) => fa.manager_type === profile.task_manager_type)
+                    : [];
+                  const noWorkbench = !profile?.task_manager_type;
                   return (
-                    <button
+                    <div
                       key={uid}
-                      type="button"
-                      onClick={() => {
-                        setPushTargets((prev) => {
-                          const next = new Set(prev);
-                          if (next.has(uid)) next.delete(uid);
-                          else next.add(uid);
-                          return next;
-                        });
-                      }}
-                      className={`w-full flex items-center gap-3 px-3 py-2 rounded-md text-left transition-colors ${
-                        checked ? "bg-white/[0.06]" : "hover:bg-white/[0.04]"
+                      className={`rounded-md transition-colors ${
+                        checked ? "bg-white/[0.04]" : ""
                       }`}
                     >
-                      <Checkbox checked={checked} className="border-white/30" />
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium text-white truncate">
-                          {profile?.full_name ?? "Unknown user"}
-                        </p>
-                        {profile?.job_title && (
-                          <p className="text-[10px] text-zinc-500 truncate">
-                            {profile.job_title}
+                      <button
+                        type="button"
+                        disabled={noWorkbench}
+                        onClick={() => {
+                          setPushSelections((prev) => {
+                            const next = new Map(prev);
+                            if (next.has(uid)) next.delete(uid);
+                            else next.set(uid, "");
+                            return next;
+                          });
+                        }}
+                        className="w-full flex items-center gap-3 px-3 py-2 hover:bg-white/[0.04] disabled:opacity-50 disabled:cursor-not-allowed text-left"
+                      >
+                        <Checkbox checked={checked} className="border-white/30" />
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium text-white truncate">
+                            {profile?.full_name ?? "Unknown user"}
                           </p>
-                        )}
-                      </div>
-                    </button>
+                          <p className="text-[10px] text-zinc-500 truncate">
+                            {noWorkbench
+                              ? "No Workbench — can't receive items"
+                              : profile?.job_title || profile?.task_manager_type}
+                          </p>
+                        </div>
+                      </button>
+                      {checked && !noWorkbench && (
+                        <div className="px-3 pb-2 pl-12">
+                          <label className="text-[10px] uppercase tracking-wider text-zinc-500">
+                            Send to focus area
+                          </label>
+                          <select
+                            value={chosenFa}
+                            onChange={(e) =>
+                              setPushSelections((prev) => {
+                                const next = new Map(prev);
+                                next.set(uid, e.target.value);
+                                return next;
+                              })
+                            }
+                            className="w-full mt-1 bg-white/[0.04] border border-white/[0.08] rounded-md text-xs text-white py-1.5 px-2 focus:outline-none focus:border-white/20"
+                          >
+                            <option value="" disabled>
+                              Pick a tile…
+                            </option>
+                            {userFocusAreas.map((fa) => (
+                              <option key={fa.id} value={fa.id}>
+                                {fa.title}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+                      )}
+                    </div>
                   );
                 })
               )}
             </div>
             <p className="text-[10px] text-zinc-600 leading-relaxed">
-              Owners without a Workbench (no manager type set) will be skipped.
-              Items already in someone's Workbench won't be duplicated.
+              Already-pushed items won't be duplicated.
             </p>
             <div className="flex gap-2 pt-2">
               <Button
@@ -853,18 +915,26 @@ export const AgendaItemDetailDialog = ({
                 Cancel
               </Button>
               <Button
-                disabled={pushing || pushTargets.size === 0 || !item}
+                disabled={
+                  pushing ||
+                  pushSelections.size === 0 ||
+                  Array.from(pushSelections.values()).some((v) => !v) ||
+                  !item
+                }
                 onClick={async () => {
                   if (!item) return;
                   setPushing(true);
                   try {
+                    const targets = Array.from(pushSelections.entries())
+                      .filter(([, faId]) => !!faId)
+                      .map(([userId, focusAreaId]) => ({ userId, focusAreaId }));
                     const res = await pushAgendaItemToWorkbench({
                       agendaItemId: item.id,
                       title: title.trim() || item.title,
                       notes: notes.trim() || null,
                       pillar: item.pillar,
                       status,
-                      targetUserIds: Array.from(pushTargets),
+                      targets,
                     });
                     const parts: string[] = [];
                     if (res.inserted > 0) parts.push(`${res.inserted} sent`);
@@ -873,7 +943,7 @@ export const AgendaItemDetailDialog = ({
                     if (res.failed > 0) parts.push(`${res.failed} failed`);
                     toast.success(parts.join(" · ") || "Sent");
                     void logAgendaActivity(item.id, "updated", user?.id ?? null, {
-                      pushed_to_workbench: Array.from(pushTargets),
+                      pushed_to_workbench: targets.map((t) => t.userId),
                     });
                     setPushOpen(false);
                   } catch (e: any) {
@@ -884,7 +954,9 @@ export const AgendaItemDetailDialog = ({
                 }}
                 className="flex-1 bg-emerald-500 hover:bg-emerald-600 text-black font-semibold disabled:opacity-50"
               >
-                {pushing ? "Sending…" : `Send (${pushTargets.size})`}
+                {pushing
+                  ? "Sending…"
+                  : `Send (${Array.from(pushSelections.values()).filter((v) => !!v).length})`}
               </Button>
             </div>
           </DialogContent>
