@@ -846,6 +846,14 @@ const AdminWorkbench = () => {
           />
         </div>
 
+        {/* Daily verse — under the logo so it's the first thing Josh
+            reads when the workbench loads, before the focus area tiles. */}
+        {!isLoading && (
+          <div className="mb-10">
+            <DailyVerse />
+          </div>
+        )}
+
         {/* Unified daily progress pill — hidden when there's nothing to track. */}
         {totalCore > 0 && (
           <div className="flex justify-center mb-10">
@@ -1004,13 +1012,6 @@ const AdminWorkbench = () => {
           </div>
         )}
 
-        {/* Daily verse — sits at the bottom of the workbench so the page Josh
-            spends most of his day on is also where he sees scripture. */}
-        {!isLoading && focusAreas.length > 0 && (
-          <div className="mt-16 pt-8 border-t border-white/5">
-            <DailyVerse />
-          </div>
-        )}
       </main>
 
       {modalOpen && (
