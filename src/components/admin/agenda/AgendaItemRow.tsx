@@ -28,6 +28,7 @@ import {
   Circle,
   CheckCircle2,
   PauseCircle,
+  Target,
   StickyNote,
   Paperclip,
   Calendar,
@@ -100,7 +101,7 @@ const STATUS_STYLE: Record<AgendaStatus, { label: string; bg: string; text: stri
     bg: "bg-white/[0.04]",
     text: "text-white/70",
     border: "border-white/[0.10]",
-    Icon: Circle,
+    Icon: Target,
   },
   done: {
     label: "Done",
