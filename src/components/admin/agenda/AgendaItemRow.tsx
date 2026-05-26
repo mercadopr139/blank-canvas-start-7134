@@ -29,6 +29,8 @@ import {
   CheckCircle2,
   PauseCircle,
   StickyNote,
+  Paperclip,
+  Link as LinkIcon,
   GripVertical,
 } from "lucide-react";
 import { useSortable, SortableContext, verticalListSortingStrategy } from "@dnd-kit/sortable";
@@ -46,6 +48,8 @@ import type {
   AgendaItemWithChildren,
   AgendaStatus,
   StaffOption,
+  AttachmentSummary,
+  LinkSummary,
 } from "./types";
 import { flattenSubtree } from "./types";
 
@@ -158,9 +162,85 @@ const dueDateChip = (iso: string | null): React.ReactNode => {
   );
 };
 
+// Three indicator icons (notes / attachments / links) rendered next
+// to every title. Amber when there's content behind them, dim white
+// otherwise. Counts appear next to the icon when > 0. Clicking any
+// of them opens the detail panel — empty icons are an inviting "add"
+// affordance, filled icons are a "review" affordance.
+const ContentIndicators = ({
+  notes,
+  attachments,
+  links,
+  onOpenDetail,
+}: {
+  notes: string | null;
+  attachments: AttachmentSummary[];
+  links: LinkSummary[];
+  onOpenDetail: () => void;
+}) => {
+  const hasNotes = !!(notes && notes.trim());
+  const hasAttachments = attachments.length > 0;
+  const hasLinks = links.length > 0;
+
+  const noteTip = hasNotes
+    ? (() => {
+        const firstLine = notes!.split("\n")[0].trim();
+        return firstLine.length > 120
+          ? `Note: ${firstLine.slice(0, 117)}…`
+          : `Note: ${firstLine}`;
+      })()
+    : "No notes — click to add";
+
+  const attTip = hasAttachments
+    ? `${attachments.length} attachment${attachments.length === 1 ? "" : "s"}: ${attachments
+        .slice(0, 5)
+        .map((a) => a.filename)
+        .join(", ")}${attachments.length > 5 ? `, +${attachments.length - 5} more` : ""}`
+    : "No attachments — click to add";
+
+  const linkTip = hasLinks
+    ? `${links.length} link${links.length === 1 ? "" : "s"}: ${links
+        .slice(0, 5)
+        .map((l) => l.nickname?.trim() || l.url)
+        .join(", ")}${links.length > 5 ? `, +${links.length - 5} more` : ""}`
+    : "No links — click to add";
+
+  // Filled = amber-400 (matches the existing "noteworthy" palette used
+  // by overdue chips and on_hold pills). Empty = white/15 so the icons
+  // recede until they have something.
+  const cls = (filled: boolean) =>
+    `shrink-0 flex items-center gap-0.5 transition-colors ${
+      filled
+        ? "text-amber-400 hover:text-amber-300"
+        : "text-white/15 hover:text-white/40"
+    }`;
+
+  return (
+    <div className="flex items-center gap-2 shrink-0">
+      <button type="button" onClick={onOpenDetail} className={cls(hasNotes)} title={noteTip}>
+        <StickyNote className="w-3.5 h-3.5" />
+      </button>
+      <button type="button" onClick={onOpenDetail} className={cls(hasAttachments)} title={attTip}>
+        <Paperclip className="w-3.5 h-3.5" />
+        {hasAttachments && (
+          <span className="text-[10px] font-semibold tabular-nums">{attachments.length}</span>
+        )}
+      </button>
+      <button type="button" onClick={onOpenDetail} className={cls(hasLinks)} title={linkTip}>
+        <LinkIcon className="w-3.5 h-3.5" />
+        {hasLinks && (
+          <span className="text-[10px] font-semibold tabular-nums">{links.length}</span>
+        )}
+      </button>
+    </div>
+  );
+};
+
 interface RowProps {
   node: AgendaItemWithChildren;
   staff: StaffOption[];
+  attachmentsByItem: Map<string, AttachmentSummary[]>;
+  linksByItem: Map<string, LinkSummary[]>;
   expanded: Set<string>;
   onToggleExpand: (id: string) => void;
   onOpenDetail: (item: AgendaItemWithChildren) => void;
@@ -175,6 +255,8 @@ interface RowProps {
 export const AgendaItemRow = ({
   node,
   staff,
+  attachmentsByItem,
+  linksByItem,
   expanded,
   onToggleExpand,
   onOpenDetail,
@@ -296,21 +378,16 @@ export const AgendaItemRow = ({
         {node.title}
       </button>
 
-      {node.notes && (
-        <button
-          type="button"
-          onClick={() => onOpenDetail(node)}
-          className="shrink-0 text-white/40 hover:text-amber-300 transition-colors"
-          title={(() => {
-            const firstLine = node.notes.split("\n")[0].trim();
-            return firstLine.length > 120
-              ? `Note: ${firstLine.slice(0, 117)}…`
-              : `Note: ${firstLine}`;
-          })()}
-        >
-          <StickyNote className="w-3.5 h-3.5" />
-        </button>
-      )}
+      {/* Content indicators — three always-visible icons. Amber when
+          there's something behind them, dim otherwise. Click any of
+          them (filled or empty) to open the detail panel; an empty
+          icon doubles as a discoverable "add a note/file/link" hint. */}
+      <ContentIndicators
+        notes={node.notes}
+        attachments={attachmentsByItem.get(node.id) || []}
+        links={linksByItem.get(node.id) || []}
+        onOpenDetail={() => onOpenDetail(node)}
+      />
 
       {/* Right-side cluster — tight group that sits right after the title */}
       <div className="flex items-center gap-2 ml-2">
@@ -425,6 +502,8 @@ export const AgendaItemRow = ({
             key={child.id}
             node={child}
             staff={staff}
+            attachmentsByItem={attachmentsByItem}
+            linksByItem={linksByItem}
             expanded={expanded}
             onToggleExpand={onToggleExpand}
             onOpenDetail={onOpenDetail}

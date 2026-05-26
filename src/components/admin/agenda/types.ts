@@ -37,6 +37,19 @@ export interface StaffOption {
   job_title: string | null;
 }
 
+// Lightweight summaries fetched at page load so each row can display
+// attachment/link indicator icons without a per-item query.
+export interface AttachmentSummary {
+  item_id: string;
+  filename: string;
+}
+
+export interface LinkSummary {
+  item_id: string;
+  url: string;
+  nickname: string | null;
+}
+
 export const STATUS_LABEL: Record<AgendaStatus, string> = {
   signal: "Signal",
   done: "Done",

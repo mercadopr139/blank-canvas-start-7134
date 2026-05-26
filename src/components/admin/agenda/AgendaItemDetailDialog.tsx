@@ -204,6 +204,7 @@ const AttachmentsSection = ({
     setUploading(false);
     if (successCount > 0) {
       qc.invalidateQueries({ queryKey: ["agenda-attachments", itemId] });
+      qc.invalidateQueries({ queryKey: ["agenda-attachment-summary"] });
       qc.invalidateQueries({ queryKey: ["agenda-activity", itemId] });
       toast.success(`Uploaded ${successCount} file${successCount === 1 ? "" : "s"}`);
     }
@@ -222,6 +223,7 @@ const AttachmentsSection = ({
         filename: att.filename,
       });
       qc.invalidateQueries({ queryKey: ["agenda-attachments", itemId] });
+      qc.invalidateQueries({ queryKey: ["agenda-attachment-summary"] });
       qc.invalidateQueries({ queryKey: ["agenda-activity", itemId] });
       toast.success("Attachment removed");
     } catch (e: any) {
@@ -373,6 +375,7 @@ const LinksSection = ({ itemId }: { itemId: string }) => {
         nickname: draftNickname.trim() || null,
       });
       qc.invalidateQueries({ queryKey: ["agenda-links", itemId] });
+      qc.invalidateQueries({ queryKey: ["agenda-link-summary"] });
       qc.invalidateQueries({ queryKey: ["agenda-activity", itemId] });
       setDraftUrl("");
       setDraftNickname("");
@@ -393,6 +396,7 @@ const LinksSection = ({ itemId }: { itemId: string }) => {
       if (error) throw error;
       void logAgendaActivity(itemId, "link_removed", user?.id ?? null);
       qc.invalidateQueries({ queryKey: ["agenda-links", itemId] });
+      qc.invalidateQueries({ queryKey: ["agenda-link-summary"] });
       qc.invalidateQueries({ queryKey: ["agenda-activity", itemId] });
     } catch (e: any) {
       toast.error(e.message ?? "Delete failed");

@@ -49,6 +49,8 @@ import {
   type AgendaItemWithChildren,
   type AgendaStatus,
   type StaffOption,
+  type AttachmentSummary,
+  type LinkSummary,
 } from "@/components/admin/agenda/types";
 import { logAgendaActivity } from "@/components/admin/agenda/activityLog";
 
@@ -102,6 +104,50 @@ const AdminAgenda = () => {
         .map((s) => ({ user_id: s.user_id, full_name: s.full_name, job_title: s.job_title }));
     },
   });
+
+  // Page-level summaries so each row can show attachment/link
+  // indicator icons without N per-item queries. The detail dialog
+  // still owns its own full per-item queries for editing — it just
+  // also invalidates these summary keys on mutation.
+  const { data: attachmentSummaries = [] } = useQuery<AttachmentSummary[]>({
+    queryKey: ["agenda-attachment-summary"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("agenda_attachments" as any)
+        .select("item_id, filename");
+      if (error) throw error;
+      return (data || []) as unknown as AttachmentSummary[];
+    },
+  });
+
+  const { data: linkSummaries = [] } = useQuery<LinkSummary[]>({
+    queryKey: ["agenda-link-summary"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("agenda_item_links" as any)
+        .select("item_id, url, nickname");
+      if (error) throw error;
+      return (data || []) as unknown as LinkSummary[];
+    },
+  });
+
+  const attachmentsByItem = useMemo(() => {
+    const m = new Map<string, AttachmentSummary[]>();
+    for (const a of attachmentSummaries) {
+      if (!m.has(a.item_id)) m.set(a.item_id, []);
+      m.get(a.item_id)!.push(a);
+    }
+    return m;
+  }, [attachmentSummaries]);
+
+  const linksByItem = useMemo(() => {
+    const m = new Map<string, LinkSummary[]>();
+    for (const l of linkSummaries) {
+      if (!m.has(l.item_id)) m.set(l.item_id, []);
+      m.get(l.item_id)!.push(l);
+    }
+    return m;
+  }, [linkSummaries]);
 
   const { data: weekSummaryRow } = useQuery<{ summary: string | null } | null>({
     queryKey: ["agenda-week-summary", weekStartIso],
@@ -438,6 +484,8 @@ const AdminAgenda = () => {
                   key={node.id}
                   node={node}
                   staff={staff}
+                  attachmentsByItem={attachmentsByItem}
+                  linksByItem={linksByItem}
                   expanded={expanded}
                   onToggleExpand={toggleExpand}
                   onOpenDetail={(it) => setDetailItem(it)}
