@@ -80,6 +80,7 @@ import AdminTransportImpactReports from "./pages/admin/AdminTransportImpactRepor
 import AdminMealTracker from "./pages/admin/AdminMealTracker";
 import AdminMealReports from "./pages/admin/AdminMealReports";
 import AdminMessageBoard from "./pages/admin/AdminMessageBoard";
+import AdminAgenda from "./pages/admin/AdminAgenda";
 import MealCheckIn from "./pages/MealCheckIn";
 import NotFound from "./pages/NotFound";
 
@@ -351,6 +352,16 @@ const App = () => (
               element={
                 <ProtectedRoute requireAdmin>
                   <AdminMessageBoard />
+                </ProtectedRoute>
+              }
+            />
+
+            {/* Weekly Agenda — internal staff meeting tool spanning all 3 pillars */}
+            <Route
+              path="/admin/agenda"
+              element={
+                <ProtectedRoute requireAdmin>
+                  <AdminAgenda />
                 </ProtectedRoute>
               }
             />
