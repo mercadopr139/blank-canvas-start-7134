@@ -98,9 +98,9 @@ const DEPTH_STYLE: Record<number, {
 const STATUS_STYLE: Record<AgendaStatus, { label: string; bg: string; text: string; border: string; Icon: typeof Circle }> = {
   signal: {
     label: "Signal",
-    bg: "bg-white/[0.04]",
-    text: "text-white/70",
-    border: "border-white/[0.10]",
+    bg: "bg-red-500/15",
+    text: "text-red-400",
+    border: "border-red-500/30",
     Icon: Target,
   },
   done: {
@@ -656,11 +656,28 @@ export const AgendaItemRow = ({
 
   // Children container — vertical tree-guide line in the pillar color
   // plus the inline add-child form (only when actively adding).
+  // Column headers live here at L1 only: tasks always sit under their
+  // Agenda Topic, so labeling the columns directly above the first task
+  // is the most contextual place for them.
   const childrenBlock = isExpanded && (hasChildren || addingChild) && (
     <div
       className="ml-[14px] pl-4 border-l divide-y divide-white/[0.03]"
       style={{ borderColor: `${accent}22` }}
     >
+      {isL1 && (
+        <div className="flex items-center gap-2 px-3 py-1.5 text-[10px] uppercase tracking-wider font-semibold text-zinc-500 select-none">
+          <span className="w-3.5 shrink-0" aria-hidden />
+          <span className="w-3.5 shrink-0" aria-hidden />
+          <span className="flex-1 min-w-0">Task</span>
+          <span className="w-28 shrink-0 hidden sm:block text-center">Status</span>
+          <span className="w-24 shrink-0 hidden sm:block text-center">Due</span>
+          <span className="w-16 shrink-0 hidden md:block text-center">Files</span>
+          <span className="w-14 shrink-0 hidden md:block text-center">Notes</span>
+          {/* Right-side actions cluster (owner + add + menu) spacer so
+              the labels stop where the columns stop, not at the row edge. */}
+          <span className="w-[88px] shrink-0" aria-hidden />
+        </div>
+      )}
       <SortableContext
         items={node.children.map((c) => c.id)}
         strategy={verticalListSortingStrategy}
