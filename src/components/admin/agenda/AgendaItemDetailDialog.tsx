@@ -896,16 +896,33 @@ export const AgendaItemDetailDialog = ({
                             <SelectTrigger className="w-full mt-1 h-8 bg-white/[0.04] border-white/[0.08] text-xs text-white focus:ring-1 focus:ring-white/20">
                               <SelectValue placeholder="Pick a tile…" />
                             </SelectTrigger>
-                            <SelectContent className="bg-neutral-900 border-white/10 text-white">
-                              {userFocusAreas.map((fa) => (
-                                <SelectItem
-                                  key={fa.id}
-                                  value={fa.id}
-                                  className="text-xs text-white focus:bg-white/[0.06] focus:text-white"
-                                >
-                                  {fa.title}
-                                </SelectItem>
-                              ))}
+                            {/* Override the light-theme CSS variables that the shadcn
+                                Select uses internally — without this, the inner Viewport
+                                renders white-on-white because --popover defaults to white. */}
+                            <SelectContent
+                              className="border-white/10"
+                              style={{
+                                ["--popover" as any]: "0 0% 9%",
+                                ["--popover-foreground" as any]: "0 0% 100%",
+                                ["--accent" as any]: "0 0% 100% / 0.06",
+                                ["--accent-foreground" as any]: "0 0% 100%",
+                              }}
+                            >
+                              {userFocusAreas.length === 0 ? (
+                                <div className="px-3 py-2 text-xs text-zinc-500 italic">
+                                  No focus areas on this Workbench.
+                                </div>
+                              ) : (
+                                userFocusAreas.map((fa) => (
+                                  <SelectItem
+                                    key={fa.id}
+                                    value={fa.id}
+                                    className="text-xs text-white focus:bg-white/[0.08] focus:text-white"
+                                  >
+                                    {fa.title}
+                                  </SelectItem>
+                                ))
+                              )}
                             </SelectContent>
                           </Select>
                         </div>
