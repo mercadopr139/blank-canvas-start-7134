@@ -194,25 +194,44 @@ const DueDateCell = ({
     else if (isToday) tone = "bg-amber-500/15 text-amber-300 border-amber-500/30";
     else tone = "bg-white/[0.04] text-zinc-300 border-white/[0.10] hover:bg-white/[0.06]";
   }
+  // The hidden input is the anchor for the browser's date picker.
+  // Clicking the visible button calls showPicker() — fallback to click()
+  // for older browsers (Safari <16). The input is sr-only-style hidden
+  // (not absolutely positioned over the button, which was swallowing
+  // the click in Chrome and never opening the picker).
+  const openPicker = () => {
+    const el = inputRef.current;
+    if (!el) return;
+    try {
+      if (typeof (el as any).showPicker === "function") {
+        (el as any).showPicker();
+        return;
+      }
+    } catch {
+      // Some browsers throw if the element isn't visible — fall through.
+    }
+    el.focus();
+    el.click();
+  };
+
   return (
     <div className="relative w-full group/due">
       <button
         type="button"
-        onClick={() => inputRef.current?.showPicker?.() ?? inputRef.current?.focus()}
+        onClick={openPicker}
         className={`w-full flex items-center justify-center gap-1 px-2 py-1 rounded-md border text-[11px] font-semibold transition-colors ${tone}`}
-        title={value ? `Due ${label}` : "Set due date"}
+        title={value ? `Due ${label} — click to change` : "Set due date"}
       >
         <Calendar className="w-3 h-3 shrink-0" />
         <span>{label}</span>
       </button>
-      {/* The native input is positioned over the trigger so the picker
-          anchors correctly across browsers; it's visually invisible. */}
       <input
         ref={inputRef}
         type="date"
         value={value ?? ""}
         onChange={(e) => onChange(e.target.value || null)}
-        className="absolute inset-0 opacity-0 cursor-pointer"
+        className="sr-only"
+        tabIndex={-1}
         aria-label="Due date"
       />
       {value && (
