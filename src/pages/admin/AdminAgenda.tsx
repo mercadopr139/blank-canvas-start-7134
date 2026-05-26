@@ -53,6 +53,10 @@ import {
   type LinkSummary,
 } from "@/components/admin/agenda/types";
 import { logAgendaActivity } from "@/components/admin/agenda/activityLog";
+import {
+  mirrorAgendaStatusToSignals,
+  mirrorSignalStatusToAgenda,
+} from "@/components/admin/agenda/workbench-sync";
 
 const formatWeekStart = (d: Date): string => {
   const day = d.getDay();
@@ -262,6 +266,11 @@ const AdminAgenda = () => {
       if (Object.keys(tracked).length > 0) {
         void logAgendaActivity(id, "updated", user?.id ?? null, tracked);
       }
+      // Workbench sync: if status changed, mirror to all linked signals
+      // so a Done on the Agenda becomes Complete on every pushed copy.
+      if ("status" in patch) {
+        void mirrorAgendaStatusToSignals(id, patch.status as AgendaStatus);
+      }
     },
     onError: (e: any) => toast.error(e.message),
   });
@@ -379,6 +388,48 @@ const AdminAgenda = () => {
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
   );
+
+  // Realtime channel. Three jobs in one subscription:
+  //   1. Live-meeting collab: any change to agenda_items, attachments,
+  //      links, or week_summary invalidates the relevant React Query
+  //      key so other staff see the edit immediately.
+  //   2. Reverse Workbench sync: when a signal with a
+  //      source_agenda_item_id flips Pending↔Complete, mirror that
+  //      back to the agenda item. mirrorSignalStatusToAgenda uses a
+  //      `.neq` guard so loops can't form.
+  //   3. Activity feed: any new agenda_activity_log row invalidates
+  //      the matching detail-panel query so the feed stays live.
+  useEffect(() => {
+    const channel = supabase
+      .channel("agenda-realtime")
+      .on("postgres_changes", { event: "*", schema: "public", table: "agenda_items" }, () => {
+        queryClient.invalidateQueries({ queryKey: ["agenda-items"] });
+      })
+      .on("postgres_changes", { event: "*", schema: "public", table: "agenda_item_links" }, () => {
+        queryClient.invalidateQueries({ queryKey: ["agenda-link-summary"] });
+      })
+      .on("postgres_changes", { event: "*", schema: "public", table: "agenda_attachments" }, () => {
+        queryClient.invalidateQueries({ queryKey: ["agenda-attachment-summary"] });
+      })
+      .on("postgres_changes", { event: "*", schema: "public", table: "agenda_week_summary" }, () => {
+        queryClient.invalidateQueries({ queryKey: ["agenda-week-summary"] });
+      })
+      .on("postgres_changes", { event: "*", schema: "public", table: "agenda_activity_log" }, (payload: any) => {
+        const itemId = payload.new?.item_id ?? payload.old?.item_id;
+        if (itemId) {
+          queryClient.invalidateQueries({ queryKey: ["agenda-activity", itemId] });
+        }
+      })
+      .on("postgres_changes", { event: "UPDATE", schema: "public", table: "signals" }, (payload: any) => {
+        const newRow = payload.new as { source_agenda_item_id: string | null; status: string } | null;
+        const oldRow = payload.old as { status: string } | null;
+        if (!newRow?.source_agenda_item_id) return;
+        if (oldRow?.status === newRow.status) return;
+        void mirrorSignalStatusToAgenda(newRow.source_agenda_item_id, newRow.status);
+      })
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [queryClient]);
 
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;

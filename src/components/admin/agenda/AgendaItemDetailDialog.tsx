@@ -36,6 +36,7 @@ import {
   Loader2,
   Activity,
   ExternalLink,
+  Send,
 } from "lucide-react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -51,6 +52,8 @@ import {
   type StaffOption,
 } from "./types";
 import { logAgendaActivity, type AgendaActivityRow } from "./activityLog";
+import { pushAgendaItemToWorkbench } from "./workbench-sync";
+import { Checkbox } from "@/components/ui/checkbox";
 
 // ──────────────────────────── helpers ────────────────────────────
 
@@ -575,12 +578,18 @@ export const AgendaItemDetailDialog = ({
   onClose,
   onSave,
 }: Props) => {
+  const { user } = useAuth();
   const [title, setTitle] = useState("");
   const [notes, setNotes] = useState("");
   const [dueDate, setDueDate] = useState<string>("");
   const [status, setStatus] = useState<AgendaStatus>("signal");
   const [ownerUserIds, setOwnerUserIds] = useState<string[]>([]);
   const [saving, setSaving] = useState(false);
+
+  // Workbench-send chooser
+  const [pushOpen, setPushOpen] = useState(false);
+  const [pushTargets, setPushTargets] = useState<Set<string>>(new Set());
+  const [pushing, setPushing] = useState(false);
 
   useEffect(() => {
     if (!item) return;
@@ -724,6 +733,31 @@ export const AgendaItemDetailDialog = ({
             />
           </div>
 
+          {/* Push to Workbench — Phase 4. Disabled with a hint when
+              there are no owners to send to. */}
+          <div className="rounded-md border border-white/[0.06] bg-white/[0.02] p-3 flex items-center justify-between gap-3">
+            <div className="min-w-0">
+              <p className="text-xs font-semibold text-white">Send to Workbench</p>
+              <p className="text-[11px] text-zinc-500 leading-snug">
+                {ownerUserIds.length === 0
+                  ? "Assign an owner first to push this item to their Workbench."
+                  : `Push this item into ${ownerUserIds.length === 1 ? "the owner's" : "selected owners'"} Workbench. Status syncs both ways.`}
+              </p>
+            </div>
+            <Button
+              type="button"
+              disabled={ownerUserIds.length === 0}
+              onClick={() => {
+                setPushTargets(new Set(ownerUserIds));
+                setPushOpen(true);
+              }}
+              className="bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-300 border border-emerald-500/30 text-xs h-8 gap-1.5 shrink-0"
+            >
+              <Send className="w-3.5 h-3.5" />
+              Send
+            </Button>
+          </div>
+
           {/* Attachments — Phase 3b */}
           <AttachmentsSection itemId={item.id} />
 
@@ -751,6 +785,110 @@ export const AgendaItemDetailDialog = ({
             </Button>
           </div>
         </div>
+
+        {/* Workbench-target chooser — overlays the dialog as a nested
+            Dialog. Pre-checks every owner; user can deselect any. */}
+        <Dialog open={pushOpen} onOpenChange={(o) => { if (!o) setPushOpen(false); }}>
+          <DialogContent className="bg-neutral-900 border-white/10 text-white max-w-md">
+            <DialogHeader>
+              <DialogTitle className="text-white text-base font-semibold">
+                Send to Workbench
+              </DialogTitle>
+              <p className="text-xs text-zinc-400 leading-relaxed">
+                Push this item into each selected owner's Workbench.
+                Marking it Done in either place will sync to the other.
+              </p>
+            </DialogHeader>
+            <div className="space-y-1 my-3 max-h-72 overflow-y-auto">
+              {ownerUserIds.length === 0 ? (
+                <p className="text-xs text-zinc-500 italic text-center py-4">
+                  No owners assigned.
+                </p>
+              ) : (
+                ownerUserIds.map((uid) => {
+                  const profile = staff.find((s) => s.user_id === uid);
+                  const checked = pushTargets.has(uid);
+                  return (
+                    <button
+                      key={uid}
+                      type="button"
+                      onClick={() => {
+                        setPushTargets((prev) => {
+                          const next = new Set(prev);
+                          if (next.has(uid)) next.delete(uid);
+                          else next.add(uid);
+                          return next;
+                        });
+                      }}
+                      className={`w-full flex items-center gap-3 px-3 py-2 rounded-md text-left transition-colors ${
+                        checked ? "bg-white/[0.06]" : "hover:bg-white/[0.04]"
+                      }`}
+                    >
+                      <Checkbox checked={checked} className="border-white/30" />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-white truncate">
+                          {profile?.full_name ?? "Unknown user"}
+                        </p>
+                        {profile?.job_title && (
+                          <p className="text-[10px] text-zinc-500 truncate">
+                            {profile.job_title}
+                          </p>
+                        )}
+                      </div>
+                    </button>
+                  );
+                })
+              )}
+            </div>
+            <p className="text-[10px] text-zinc-600 leading-relaxed">
+              Owners without a Workbench (no manager type set) will be skipped.
+              Items already in someone's Workbench won't be duplicated.
+            </p>
+            <div className="flex gap-2 pt-2">
+              <Button
+                variant="ghost"
+                onClick={() => setPushOpen(false)}
+                className="flex-1 text-zinc-400 hover:text-white"
+              >
+                Cancel
+              </Button>
+              <Button
+                disabled={pushing || pushTargets.size === 0 || !item}
+                onClick={async () => {
+                  if (!item) return;
+                  setPushing(true);
+                  try {
+                    const res = await pushAgendaItemToWorkbench({
+                      agendaItemId: item.id,
+                      title: title.trim() || item.title,
+                      notes: notes.trim() || null,
+                      pillar: item.pillar,
+                      status,
+                      targetUserIds: Array.from(pushTargets),
+                    });
+                    const parts: string[] = [];
+                    if (res.inserted > 0) parts.push(`${res.inserted} sent`);
+                    if (res.alreadyPresent > 0) parts.push(`${res.alreadyPresent} already there`);
+                    if (res.noWorkbench > 0) parts.push(`${res.noWorkbench} skipped (no Workbench)`);
+                    if (res.failed > 0) parts.push(`${res.failed} failed`);
+                    toast.success(parts.join(" · ") || "Sent");
+                    void logAgendaActivity(item.id, "updated", user?.id ?? null, {
+                      pushed_to_workbench: Array.from(pushTargets),
+                    });
+                    setPushOpen(false);
+                  } catch (e: any) {
+                    toast.error(e.message ?? "Send failed");
+                  } finally {
+                    setPushing(false);
+                  }
+                }}
+                className="flex-1 bg-emerald-500 hover:bg-emerald-600 text-black font-semibold disabled:opacity-50"
+              >
+                {pushing ? "Sending…" : `Send (${pushTargets.size})`}
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
       </DialogContent>
     </Dialog>
   );
