@@ -549,29 +549,32 @@ export const AgendaItemRow = ({
         {node.title}
       </button>
 
-      {/* Task columns — pinned right. Only on L2-L4. */}
+      {/* Task columns — pinned right. Only on L2-L4. Each column wears
+          a left border so the row reads as a real columnar grid. The
+          border color matches the column header text (zinc-500) at low
+          opacity so it's a soft separator, not a hard divider. */}
       {isTask && (
         <>
-          <div className="w-28 shrink-0 hidden sm:block">
+          <div className="w-28 shrink-0 hidden sm:block border-l border-zinc-500/30 pl-2">
             <StatusDropdown
               status={node.status}
               onChange={(s) => onSetStatus(node.id, s)}
             />
           </div>
-          <div className="w-24 shrink-0 hidden sm:block">
+          <div className="w-24 shrink-0 hidden sm:block border-l border-zinc-500/30 pl-2">
             <DueDateCell
               value={node.due_date}
               onChange={(iso) => onSetDueDate(node.id, iso)}
             />
           </div>
-          <div className="w-16 shrink-0 hidden md:block">
+          <div className="w-16 shrink-0 hidden md:block border-l border-zinc-500/30 pl-2">
             <FilesCell
               attachments={itemAttachments}
               links={itemLinks}
               onOpenDetail={() => onOpenDetail(node)}
             />
           </div>
-          <div className="w-14 shrink-0 hidden md:block">
+          <div className="w-14 shrink-0 hidden md:block border-l border-zinc-500/30 pl-2">
             <NotesCell
               notes={node.notes}
               onSave={(notes) => onUpdateNotes(node.id, notes)}
@@ -682,10 +685,10 @@ export const AgendaItemRow = ({
           <span className="w-3.5 shrink-0" aria-hidden />
           <span className="w-3.5 shrink-0" aria-hidden />
           <span className="flex-1 min-w-0">Task</span>
-          <span className="w-28 shrink-0 hidden sm:block text-center">Status</span>
-          <span className="w-24 shrink-0 hidden sm:block text-center">Due</span>
-          <span className="w-16 shrink-0 hidden md:block text-center">Files</span>
-          <span className="w-14 shrink-0 hidden md:block text-center">Notes</span>
+          <span className="w-28 shrink-0 hidden sm:block text-center border-l border-zinc-500/30 pl-2">Status</span>
+          <span className="w-24 shrink-0 hidden sm:block text-center border-l border-zinc-500/30 pl-2">Due</span>
+          <span className="w-16 shrink-0 hidden md:block text-center border-l border-zinc-500/30 pl-2">Files</span>
+          <span className="w-14 shrink-0 hidden md:block text-center border-l border-zinc-500/30 pl-2">Notes</span>
           {/* Right-side actions cluster (owner + add + menu) spacer so
               the labels stop where the columns stop, not at the row edge. */}
           <span className="w-[88px] shrink-0" aria-hidden />
