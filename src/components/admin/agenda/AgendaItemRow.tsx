@@ -416,6 +416,10 @@ interface RowProps {
   attachmentsByItem: Map<string, AttachmentSummary[]>;
   linksByItem: Map<string, LinkSummary[]>;
   expanded: Set<string>;
+  // Position among siblings — used to zebra-stripe task rows so adjacent
+  // rows read distinctly. Top-level (L1) ignores it since topics are
+  // already card-styled.
+  index?: number;
   onToggleExpand: (id: string) => void;
   onOpenDetail: (item: AgendaItemWithChildren) => void;
   onSetStatus: (id: string, status: AgendaStatus) => void;
@@ -434,6 +438,7 @@ export const AgendaItemRow = ({
   attachmentsByItem,
   linksByItem,
   expanded,
+  index = 0,
   onToggleExpand,
   onOpenDetail,
   onSetStatus,
@@ -502,9 +507,13 @@ export const AgendaItemRow = ({
   const itemAttachments = attachmentsByItem.get(node.id) || [];
   const itemLinks = linksByItem.get(node.id) || [];
 
+  // Zebra striping — only on task rows (L2-L4). L1 already differentiates
+  // via the pillar-tinted card wrapper, so striping there would clash.
+  const stripeBg = isTask && index % 2 === 1 ? "bg-white/[0.025]" : "";
+
   const rowContent = (
     <div
-      className={`group/row flex items-center gap-2 ${style.rowPx} hover:bg-white/[0.04] transition-colors`}
+      className={`group/row flex items-center gap-2 ${style.rowPx} ${stripeBg} hover:bg-white/[0.05] transition-colors`}
     >
       {/* Drag handle — hover-revealed, never steals layout space */}
       <button
@@ -537,13 +546,18 @@ export const AgendaItemRow = ({
         <span className="w-3.5 shrink-0" />
       )}
 
-      {/* Title — flex-1 so columns pin to the right consistently */}
+      {/* Title — for tasks (L2-L4) the title gets a fixed column width so
+          columns sit right next to it (much easier to scan than columns
+          pinned far-right). L1 topics keep flex-1 since they have no
+          columns to anchor against. */}
       <button
         type="button"
         onClick={() => onOpenDetail(node)}
-        className={`flex-1 min-w-0 text-left truncate hover:text-white transition-colors ${
-          style.titleClass
-        } ${node.status === "done" && isTask ? "line-through opacity-50" : ""}`}
+        className={`min-w-0 text-left truncate hover:text-white transition-colors ${
+          isTask ? "w-80 shrink-0" : "flex-1"
+        } ${style.titleClass} ${
+          node.status === "done" && isTask ? "line-through opacity-50" : ""
+        }`}
         title="Open details"
       >
         {node.title}
@@ -580,6 +594,9 @@ export const AgendaItemRow = ({
               onSave={(notes) => onUpdateNotes(node.id, notes)}
             />
           </div>
+          {/* Pushes the right-side actions cluster to the row's right
+              edge so the column block stays anchored to the title. */}
+          <div className="flex-1" aria-hidden />
         </>
       )}
 
@@ -684,13 +701,15 @@ export const AgendaItemRow = ({
         <div className="flex items-center gap-2 px-3 py-1.5 text-[10px] uppercase tracking-wider font-semibold text-zinc-500 select-none">
           <span className="w-3.5 shrink-0" aria-hidden />
           <span className="w-3.5 shrink-0" aria-hidden />
-          <span className="flex-1 min-w-0">Task</span>
+          <span className="w-80 shrink-0">Task</span>
           <span className="w-28 shrink-0 hidden sm:block text-center border-l border-zinc-500/30 pl-2">Status</span>
           <span className="w-24 shrink-0 hidden sm:block text-center border-l border-zinc-500/30 pl-2">Due</span>
           <span className="w-16 shrink-0 hidden md:block text-center border-l border-zinc-500/30 pl-2">Files</span>
           <span className="w-14 shrink-0 hidden md:block text-center border-l border-zinc-500/30 pl-2">Notes</span>
-          {/* Right-side actions cluster (owner + add + menu) spacer so
-              the labels stop where the columns stop, not at the row edge. */}
+          {/* Flex spacer + actions cluster spacer mirror the row layout:
+              columns hug the title on the left, the actions cluster
+              floats on the right. */}
+          <span className="flex-1" aria-hidden />
           <span className="w-[88px] shrink-0" aria-hidden />
         </div>
       )}
@@ -698,7 +717,7 @@ export const AgendaItemRow = ({
         items={node.children.map((c) => c.id)}
         strategy={verticalListSortingStrategy}
       >
-        {node.children.map((child) => (
+        {node.children.map((child, childIndex) => (
           <AgendaItemRow
             key={child.id}
             node={child}
@@ -706,6 +725,7 @@ export const AgendaItemRow = ({
             attachmentsByItem={attachmentsByItem}
             linksByItem={linksByItem}
             expanded={expanded}
+            index={childIndex}
             onToggleExpand={onToggleExpand}
             onOpenDetail={onOpenDetail}
             onSetStatus={onSetStatus}

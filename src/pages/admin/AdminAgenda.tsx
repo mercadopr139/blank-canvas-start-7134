@@ -610,10 +610,11 @@ const AdminAgenda = () => {
               items={tree.map((t) => t.id)}
               strategy={verticalListSortingStrategy}
             >
-              {tree.map((node) => (
+              {tree.map((node, idx) => (
                 <AgendaItemRow
                   key={node.id}
                   node={node}
+                  index={idx}
                   staff={staff}
                   attachmentsByItem={attachmentsByItem}
                   linksByItem={linksByItem}
