@@ -28,6 +28,7 @@ import {
   Circle,
   CheckCircle2,
   PauseCircle,
+  StickyNote,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -264,12 +265,19 @@ export const AgendaItemRow = ({
       </button>
 
       {node.notes && (
-        <span
-          className="text-[10px] text-white/30 shrink-0"
-          title="Has notes"
+        <button
+          type="button"
+          onClick={() => onOpenDetail(node)}
+          className="shrink-0 text-white/40 hover:text-amber-300 transition-colors"
+          title={(() => {
+            const firstLine = node.notes.split("\n")[0].trim();
+            return firstLine.length > 120
+              ? `Note: ${firstLine.slice(0, 117)}…`
+              : `Note: ${firstLine}`;
+          })()}
         >
-          ·
-        </span>
+          <StickyNote className="w-3.5 h-3.5" />
+        </button>
       )}
 
       {/* Right-side cluster — tight group that sits right after the title */}
