@@ -50,6 +50,7 @@ import {
   type AgendaStatus,
   type StaffOption,
 } from "@/components/admin/agenda/types";
+import { logAgendaActivity } from "@/components/admin/agenda/activityLog";
 
 const formatWeekStart = (d: Date): string => {
   const day = d.getDay();
@@ -176,8 +177,8 @@ const AdminAgenda = () => {
     depth: number;
     title: string;
   }) => {
-    const sortOrder = Date.now(); // monotonic — drag-reorder will rewrite in Phase 3
-    const { error } = await supabase
+    const sortOrder = Date.now();
+    const { data, error } = await supabase
       .from("agenda_items" as any)
       .insert({
         pillar: params.pillar,
@@ -186,8 +187,12 @@ const AdminAgenda = () => {
         title: params.title,
         sort_order: sortOrder,
         created_by: user?.id ?? null,
-      } as any);
+      } as any)
+      .select("id")
+      .single();
     if (error) throw error;
+    const newId = (data as { id: string }).id;
+    await logAgendaActivity(newId, "created", user?.id ?? null, { title: params.title });
     await invalidateItems();
   };
 
@@ -199,8 +204,19 @@ const AdminAgenda = () => {
         .update(patch as any)
         .eq("id", args.id);
       if (error) throw error;
+      return args;
     },
-    onSuccess: () => invalidateItems(),
+    onSuccess: ({ id, patch }) => {
+      invalidateItems();
+      // Log structural updates only — last_edited_* are bookkeeping.
+      const tracked: Record<string, unknown> = {};
+      for (const key of ["title", "status", "due_date", "owner_user_ids", "notes"]) {
+        if (key in patch) tracked[key] = patch[key];
+      }
+      if (Object.keys(tracked).length > 0) {
+        void logAgendaActivity(id, "updated", user?.id ?? null, tracked);
+      }
+    },
     onError: (e: any) => toast.error(e.message),
   });
 
@@ -215,6 +231,7 @@ const AdminAgenda = () => {
     },
     onSuccess: (id) => {
       invalidateItems();
+      void logAgendaActivity(id, "archived", user?.id ?? null);
       toast.success("Archived", {
         duration: 5000,
         action: {
@@ -225,6 +242,7 @@ const AdminAgenda = () => {
               .update({ is_archived: false, archived_at: null } as any)
               .eq("id", id);
             invalidateItems();
+            void logAgendaActivity(id, "restored", user?.id ?? null);
           },
         },
       });
