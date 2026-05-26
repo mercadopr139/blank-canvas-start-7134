@@ -4,7 +4,7 @@
 
 import type { Pillar } from "@/pages/admin/AdminMessageBoard";
 
-export type AgendaStatus = "signal" | "done" | "on_hold";
+export type AgendaStatus = "pending_review" | "signal" | "done" | "on_hold";
 
 export interface AgendaItem {
   id: string;
@@ -55,6 +55,7 @@ export interface LinkSummary {
 }
 
 export const STATUS_LABEL: Record<AgendaStatus, string> = {
+  pending_review: "Pending Review",
   signal: "Signal",
   done: "Done",
   on_hold: "On-Hold",

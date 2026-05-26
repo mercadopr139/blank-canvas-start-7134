@@ -576,7 +576,7 @@ interface Props {
   }) => Promise<void>;
 }
 
-const STATUS_OPTIONS: AgendaStatus[] = ["signal", "done", "on_hold"];
+const STATUS_OPTIONS: AgendaStatus[] = ["pending_review", "signal", "on_hold", "done"];
 
 export const AgendaItemDetailDialog = ({
   item,
@@ -691,6 +691,14 @@ export const AgendaItemDetailDialog = ({
             <div className="flex gap-1.5">
               {STATUS_OPTIONS.map((s) => {
                 const active = status === s;
+                const activeClass =
+                  s === "done"
+                    ? "border-green-500/40 bg-green-500/15 text-green-400"
+                    : s === "on_hold"
+                      ? "border-amber-500/40 bg-amber-500/15 text-amber-300"
+                      : s === "signal"
+                        ? "border-red-500/40 bg-red-500/15 text-red-400"
+                        : "border-white/20 bg-white/[0.06] text-zinc-200";
                 return (
                   <button
                     key={s}
@@ -698,11 +706,7 @@ export const AgendaItemDetailDialog = ({
                     onClick={() => setStatus(s)}
                     className={`flex-1 text-xs font-semibold py-1.5 rounded-md border transition-colors ${
                       active
-                        ? s === "done"
-                          ? "border-green-500/40 bg-green-500/15 text-green-400"
-                          : s === "on_hold"
-                            ? "border-amber-500/40 bg-amber-500/15 text-amber-300"
-                            : "border-white/20 bg-white/[0.06] text-white"
+                        ? activeClass
                         : "border-white/[0.06] text-white/40 hover:border-white/15 hover:text-white/70"
                     }`}
                   >

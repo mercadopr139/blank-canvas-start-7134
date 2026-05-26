@@ -5,7 +5,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { ArrowLeft, Plus } from "lucide-react";
+import { ArrowLeft, Plus, RotateCcw } from "lucide-react";
 import {
   DndContext,
   PointerSensor,
@@ -224,6 +224,14 @@ const AdminAgenda = () => {
   const [savingTopic, setSavingTopic] = useState(false);
   const [summaryDraft, setSummaryDraft] = useState<string | null>(null);
   const [savingSummary, setSavingSummary] = useState(false);
+  const [resetConfirmOpen, setResetConfirmOpen] = useState(false);
+
+  // How many Done tasks are sitting in the agenda right now — used as the
+  // count on the Reset Week confirm dialog so the user knows the impact.
+  const doneCount = useMemo(
+    () => items.filter((i) => i.status === "done").length,
+    [items],
+  );
 
   // ─── Mutations ──────────────────────────────────────────────────────
 
@@ -348,7 +356,7 @@ const AdminAgenda = () => {
           title: n.title + (newParentId === null ? " (copy)" : ""),
           notes: n.notes,
           owner_user_ids: n.owner_user_ids,
-          status: "signal", // reset status on duplicate
+          status: "pending_review", // duplicates start fresh — the user will review and re-stage as needed
           due_date: n.due_date,
           is_starred: n.is_starred,
           sort_order: Date.now() * 1000 + Math.floor(Math.random() * 1000),
@@ -392,6 +400,69 @@ const AdminAgenda = () => {
       invalidateItems();
       toast.error(`Reorder failed: ${e.message}`);
     },
+  });
+
+  // Reset Week — the audit refresh button. Flips every Done task back
+  // to Pending Review, mirrors that to any linked Workbench signals,
+  // and writes an activity log entry per item so each task's history
+  // still tells the truth ("Done on Monday → Reset on Friday →
+  // Done again next week"). Signal / On-Hold tasks are left alone:
+  // they're explicitly still in progress and shouldn't get nuked.
+  const resetWeekMutation = useMutation({
+    mutationFn: async () => {
+      const { data: doneItems, error: fetchErr } = await supabase
+        .from("agenda_items" as any)
+        .select("id")
+        .eq("status", "done")
+        .eq("is_archived", false);
+      if (fetchErr) throw fetchErr;
+      const doneIds = ((doneItems as { id: string }[]) || []).map((i) => i.id);
+      if (doneIds.length === 0) return { resetCount: 0 };
+
+      const { error: updErr } = await supabase
+        .from("agenda_items" as any)
+        .update({
+          status: "pending_review",
+          last_edited_at: new Date().toISOString(),
+          last_edited_by: user?.id ?? null,
+        } as any)
+        .in("id", doneIds);
+      if (updErr) throw updErr;
+
+      // Mirror to linked Workbench signals so a fresh week shows the
+      // same state across both surfaces. We don't error out the whole
+      // reset if this fails — the agenda is the source of truth.
+      const { error: sigErr } = await supabase
+        .from("signals")
+        .update({ status: "Pending", completed_at: null } as any)
+        .in("source_agenda_item_id", doneIds)
+        .eq("status", "Complete");
+      if (sigErr) console.warn("Reset: workbench mirror failed:", sigErr.message);
+
+      // Fire-and-forget activity log entries; failures here never
+      // disrupt the user-visible reset.
+      await Promise.all(
+        doneIds.map((id) =>
+          logAgendaActivity(id, "updated", user?.id ?? null, {
+            status: "pending_review",
+            reset: true,
+          }),
+        ),
+      );
+
+      return { resetCount: doneIds.length };
+    },
+    onSuccess: ({ resetCount }) => {
+      invalidateItems();
+      if (resetCount === 0) {
+        toast.info("Nothing to reset — no Done tasks this week.");
+      } else {
+        toast.success(
+          `Reset ${resetCount} task${resetCount === 1 ? "" : "s"} to Pending Review.`,
+        );
+      }
+    },
+    onError: (e: any) => toast.error(`Reset failed: ${e.message}`),
   });
 
   const sensors = useSensors(
@@ -666,6 +737,31 @@ const AdminAgenda = () => {
               </p>
             </div>
           </div>
+
+          {/* Reset Week — disabled when there's nothing to reset so it
+              doesn't tempt the user to fire a no-op + confirm modal. */}
+          <Button
+            variant="ghost"
+            size="sm"
+            disabled={doneCount === 0 || resetWeekMutation.isPending}
+            onClick={() => setResetConfirmOpen(true)}
+            className="text-zinc-400 hover:text-white hover:bg-white/[0.06] gap-1.5 disabled:opacity-40"
+            title={
+              doneCount === 0
+                ? "Nothing to reset — no Done tasks"
+                : `Reset ${doneCount} Done task${doneCount === 1 ? "" : "s"} back to Pending Review`
+            }
+          >
+            <RotateCcw className="w-3.5 h-3.5" />
+            <span className="text-xs font-semibold hidden sm:inline">
+              Reset Week
+            </span>
+            {doneCount > 0 && (
+              <span className="text-[10px] tabular-nums text-zinc-500">
+                ({doneCount})
+              </span>
+            )}
+          </Button>
         </div>
       </header>
 
@@ -747,6 +843,39 @@ const AdminAgenda = () => {
           await updateMutation.mutateAsync({ id: detailItem.id, patch });
         }}
       />
+
+      <AlertDialog open={resetConfirmOpen} onOpenChange={setResetConfirmOpen}>
+        <AlertDialogContent className="bg-neutral-900 border-white/10 text-white">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-white">
+              Reset this week's agenda?
+            </AlertDialogTitle>
+            <AlertDialogDescription className="text-zinc-400">
+              This flips{" "}
+              <strong className="text-white">{doneCount}</strong>{" "}
+              Done task{doneCount === 1 ? "" : "s"} back to{" "}
+              <strong className="text-white">Pending Review</strong> so the team
+              can audit them fresh this week. Tasks still in Signal or On-Hold
+              are left alone. Each item's activity log records the reset, and
+              any linked Workbench signals are mirrored back to Pending.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel className="bg-white/[0.04] border-white/10 text-white hover:bg-white/10">
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-red-500 hover:bg-red-600 text-white"
+              onClick={() => {
+                resetWeekMutation.mutate();
+                setResetConfirmOpen(false);
+              }}
+            >
+              Reset Week
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       <AlertDialog
         open={!!deleteTarget}

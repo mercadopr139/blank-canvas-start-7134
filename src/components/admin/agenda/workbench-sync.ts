@@ -1,11 +1,14 @@
 // Single integration module for Agenda ↔ Workbench sync.
 //
 // The two systems have slightly different status models:
-//   - Agenda: signal | on_hold | done
+//   - Agenda: pending_review | signal | on_hold | done
 //   - Workbench (signals.status): Pending | Complete
 // Mapping is lossy in one direction: a signal flipping back to
-// Pending can't tell whether the agenda item was originally signal
-// or on_hold, so we default to "signal".
+// Pending can't tell whether the agenda item was originally
+// pending_review / signal / on_hold, so we default to "signal" —
+// the user explicitly pushed it to a Workbench, so when it bounces
+// back to Pending it makes more sense as an active action item than
+// as "not yet reviewed".
 //
 // Signal-to-focus-area routing reuses the existing `source` field
 // convention from the Workbench:

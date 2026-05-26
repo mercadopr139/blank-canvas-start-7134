@@ -96,6 +96,15 @@ const DEPTH_STYLE: Record<number, {
 // control in the detail dialog so muscle memory transfers.
 
 const STATUS_STYLE: Record<AgendaStatus, { label: string; bg: string; text: string; border: string; Icon: typeof Circle }> = {
+  pending_review: {
+    // Quietest of the four — "haven't looked at it yet this week" should
+    // recede until someone touches it. Neutral gray + plain circle.
+    label: "Pending Review",
+    bg: "bg-white/[0.04]",
+    text: "text-zinc-400",
+    border: "border-white/[0.10]",
+    Icon: Circle,
+  },
   signal: {
     label: "Signal",
     bg: "bg-red-500/15",
@@ -118,6 +127,10 @@ const STATUS_STYLE: Record<AgendaStatus, { label: string; bg: string; text: stri
     Icon: PauseCircle,
   },
 };
+
+// Status order in the dropdown — left-to-right by escalating attention:
+// neutral default → active → blocked → complete.
+const STATUS_OPTIONS: AgendaStatus[] = ["pending_review", "signal", "on_hold", "done"];
 
 const StatusDropdown = ({
   status,
@@ -147,7 +160,7 @@ const StatusDropdown = ({
         align="start"
         className="bg-neutral-900 border-white/10 text-white text-xs min-w-[8rem]"
       >
-        {(["signal", "done", "on_hold"] as AgendaStatus[]).map((s) => {
+        {STATUS_OPTIONS.map((s) => {
           const opt = STATUS_STYLE[s];
           const OptIcon = opt.Icon;
           return (
