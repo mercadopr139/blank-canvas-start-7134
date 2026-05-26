@@ -520,6 +520,24 @@ const AdminAgenda = () => {
             background: `${color}08`,
           }}
         >
+          {/* Column headers — pinned-right with the exact widths used by
+              the task rows below so labels sit directly above their
+              column controls. The flex-1 spacer on the left absorbs the
+              variable title/indent area. */}
+          {tree.length > 0 && (
+            <div className="flex items-center gap-2 pr-3 mb-2 text-[10px] uppercase tracking-wider font-semibold text-zinc-500 select-none">
+              <span className="flex-1 min-w-0">&nbsp;</span>
+              <span className="w-28 shrink-0 hidden sm:block text-center">Status</span>
+              <span className="w-24 shrink-0 hidden sm:block text-center">Due</span>
+              <span className="w-16 shrink-0 hidden md:block text-center">Files</span>
+              <span className="w-14 shrink-0 hidden md:block text-center">Notes</span>
+              {/* Approximates the right-side actions cluster (owner avatar
+                  + hover-revealed add + menu) so the headers stop where
+                  the columns stop, not at the pillar edge. */}
+              <span className="w-[88px] shrink-0" aria-hidden>&nbsp;</span>
+            </div>
+          )}
+
           {tree.length === 0 && !isAdding && (
             <p className="text-xs text-zinc-500 italic text-center py-4">
               No agenda topics yet. Add your first one.
