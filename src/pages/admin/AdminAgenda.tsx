@@ -678,7 +678,7 @@ const AdminAgenda = () => {
                     setDraftTopicTitle("");
                   }
                 }}
-                placeholder="New agenda topic…"
+                placeholder="New Agenda Topic…"
                 disabled={savingTopic}
                 className="flex-1 bg-transparent outline-none text-sm text-white"
               />
