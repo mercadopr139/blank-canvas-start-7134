@@ -256,7 +256,7 @@ const AdminAgenda = () => {
           status: "signal", // reset status on duplicate
           due_date: n.due_date,
           is_starred: n.is_starred,
-          sort_order: Date.now() + Math.random(),
+          sort_order: Date.now() * 1000 + Math.floor(Math.random() * 1000),
           created_by: user?.id ?? null,
         } as any)
         .select("id")
