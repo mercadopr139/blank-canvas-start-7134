@@ -667,7 +667,9 @@ export const AgendaItemDetailDialog = ({
             >
               {PILLAR_LABEL[item.pillar]}
             </span>
-            <span className="text-[10px] text-zinc-600">Level {item.depth}</span>
+            <span className="text-[10px] text-zinc-600">
+              {item.depth === 1 ? "Agenda Topic" : "Task"}
+            </span>
           </div>
           <DialogTitle className="sr-only">Edit agenda item</DialogTitle>
         </DialogHeader>

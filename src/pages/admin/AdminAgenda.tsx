@@ -522,7 +522,7 @@ const AdminAgenda = () => {
         >
           {tree.length === 0 && !isAdding && (
             <p className="text-xs text-zinc-500 italic text-center py-4">
-              No topics yet. Add your first one.
+              No agenda topics yet. Add your first one.
             </p>
           )}
 
@@ -554,6 +554,12 @@ const AdminAgenda = () => {
                   }
                   onChangeOwners={(id, userIds) =>
                     updateMutation.mutate({ id, patch: { owner_user_ids: userIds } })
+                  }
+                  onSetDueDate={(id, due_date) =>
+                    updateMutation.mutate({ id, patch: { due_date } })
+                  }
+                  onUpdateNotes={(id, notes) =>
+                    updateMutation.mutate({ id, patch: { notes } })
                   }
                   onAddChild={(parent, title) =>
                     addItem({
@@ -600,7 +606,7 @@ const AdminAgenda = () => {
                     setDraftTopicTitle("");
                   }
                 }}
-                placeholder="New topic…"
+                placeholder="New agenda topic…"
                 disabled={savingTopic}
                 className="flex-1 bg-transparent outline-none text-sm text-white"
               />
@@ -610,7 +616,7 @@ const AdminAgenda = () => {
                 className="text-xs font-semibold px-3 py-1 rounded text-white disabled:opacity-40"
                 style={{ background: color }}
               >
-                {savingTopic ? "Saving…" : "Add Topic"}
+                {savingTopic ? "Saving…" : "Add Agenda Topic"}
               </button>
               <button
                 type="button"
@@ -630,7 +636,7 @@ const AdminAgenda = () => {
               className="mt-2 flex items-center gap-1.5 text-xs font-semibold text-white/50 hover:text-white/80 transition-colors px-3 py-2"
             >
               <Plus className="w-3.5 h-3.5" />
-              Add topic
+              Add Agenda Topic
             </button>
           )}
         </div>

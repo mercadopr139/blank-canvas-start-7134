@@ -1,22 +1,22 @@
 // Recursive row for a single agenda item + its children.
 //
+// Hierarchy terminology (locked, do not rename):
+//   - Pillar (Operations / Sales & Marketing / Finance) — the container
+//   - Agenda Topic (L1) — persistent week-to-week; pure container row
+//   - Task (L2-L4) — the editable, week-to-week thing; gets the columns
+//
 // Layout decisions captured here so they don't get re-derived:
-//   - L1 topics get a card-style container so each topic visually
-//     contains its children (huge readability win once the tree fills
-//     in). L2-L4 render as inline rows inside their L1 card.
-//   - Right-side controls (progress / due / owner / + / menu) cluster
-//     tightly together right after the title rather than being pushed
-//     to the far-right edge. Kills the "empty desert in the middle of
-//     every row" problem when the screen is wide.
-//   - "Add sub-item" lives as a hover-revealed "+" icon ON the parent
-//     row (group-hover/row) instead of as a persistent button below
-//     the children list. The old version stacked visibly because CSS
-//     :hover bubbles up the DOM, so hovering a leaf triggered every
-//     ancestor's `group/branch` add button at once.
-//   - Hairline border between sibling rows so they read as a list,
-//     not as floating one-liners.
+//   - L1 (Agenda Topic) renders as a card with title + progress + actions.
+//     No status / due / files / notes inline — topics are containers.
+//   - L2-L4 (Tasks) render with fixed-width columns to the right of the
+//     title: Status dropdown | Due date | Files | Notes. Owner stack
+//     and per-row menu follow.
+//   - "Add Task" lives as a hover-revealed "+" icon ON the parent row
+//     (group-hover/row). Older versions placed it as a persistent button
+//     under the children list, but CSS :hover bubbled and caused every
+//     ancestor's add button to flash simultaneously.
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   ChevronRight,
   ChevronDown,
@@ -30,7 +30,8 @@ import {
   PauseCircle,
   StickyNote,
   Paperclip,
-  Link as LinkIcon,
+  Calendar,
+  X,
   GripVertical,
 } from "lucide-react";
 import { useSortable, SortableContext, verticalListSortingStrategy } from "@dnd-kit/sortable";
@@ -42,6 +43,8 @@ import {
   DropdownMenuItem,
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Textarea } from "@/components/ui/textarea";
 import { OwnerPicker } from "./OwnerPicker";
 import { PILLAR_COLOR } from "@/pages/admin/AdminMessageBoard";
 import type {
@@ -51,7 +54,7 @@ import type {
   AttachmentSummary,
   LinkSummary,
 } from "./types";
-import { flattenSubtree } from "./types";
+import { STATUS_LABEL, flattenSubtree } from "./types";
 
 // Per-depth visual scale. L1 is the chunky topic header (lives inside
 // its own card); L2-L4 step down in size + weight + opacity.
@@ -87,152 +90,290 @@ const DEPTH_STYLE: Record<number, {
   },
 };
 
-const StatusButton = ({
+// ─────────────────────────── Status column ───────────────────────────
+// Inline dropdown for L2-L4 tasks. Pill style matches the segmented
+// control in the detail dialog so muscle memory transfers.
+
+const STATUS_STYLE: Record<AgendaStatus, { label: string; bg: string; text: string; border: string; Icon: typeof Circle }> = {
+  signal: {
+    label: "Signal",
+    bg: "bg-white/[0.04]",
+    text: "text-white/70",
+    border: "border-white/[0.10]",
+    Icon: Circle,
+  },
+  done: {
+    label: "Done",
+    bg: "bg-green-500/15",
+    text: "text-green-400",
+    border: "border-green-500/30",
+    Icon: CheckCircle2,
+  },
+  on_hold: {
+    label: "On-Hold",
+    bg: "bg-amber-500/15",
+    text: "text-amber-300",
+    border: "border-amber-500/30",
+    Icon: PauseCircle,
+  },
+};
+
+const StatusDropdown = ({
   status,
-  onCycle,
-  iconClass,
-  accent,
+  onChange,
 }: {
   status: AgendaStatus;
-  onCycle: () => void;
-  iconClass: string;
-  accent: string;
+  onChange: (s: AgendaStatus) => void;
 }) => {
-  if (status === "done") {
-    return (
-      <button
-        type="button"
-        onClick={onCycle}
-        className="shrink-0 hover:opacity-80 transition-opacity"
-        title="Done — click to cycle (Signal)"
-      >
-        <CheckCircle2 className={iconClass} style={{ color: accent }} />
-      </button>
-    );
-  }
-  if (status === "on_hold") {
-    return (
-      <button
-        type="button"
-        onClick={onCycle}
-        className="shrink-0 text-amber-400 hover:text-amber-300 transition-colors"
-        title="On-Hold — click to cycle (Done)"
-      >
-        <PauseCircle className={iconClass} />
-      </button>
-    );
-  }
+  const style = STATUS_STYLE[status];
+  const Icon = style.Icon;
   return (
-    <button
-      type="button"
-      onClick={onCycle}
-      className="shrink-0 text-white/30 hover:text-white/60 transition-colors"
-      title="Signal — click to cycle (On-Hold)"
-    >
-      <Circle className={iconClass} />
-    </button>
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <button
+          type="button"
+          className={`w-full flex items-center justify-between gap-1.5 px-2 py-1 rounded-md border text-[11px] font-semibold transition-colors hover:bg-white/[0.06] ${style.bg} ${style.text} ${style.border}`}
+          title={`Status: ${style.label}`}
+        >
+          <span className="flex items-center gap-1.5 truncate">
+            <Icon className="w-3 h-3 shrink-0" />
+            <span className="truncate">{style.label}</span>
+          </span>
+          <ChevronDown className="w-3 h-3 shrink-0 opacity-60" />
+        </button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent
+        align="start"
+        className="bg-neutral-900 border-white/10 text-white text-xs min-w-[8rem]"
+      >
+        {(["signal", "done", "on_hold"] as AgendaStatus[]).map((s) => {
+          const opt = STATUS_STYLE[s];
+          const OptIcon = opt.Icon;
+          return (
+            <DropdownMenuItem
+              key={s}
+              onSelect={() => onChange(s)}
+              className="cursor-pointer focus:bg-white/[0.06] gap-2"
+            >
+              <OptIcon className={`w-3.5 h-3.5 ${opt.text}`} />
+              <span className={s === status ? "font-semibold" : ""}>
+                {STATUS_LABEL[s]}
+              </span>
+              {s === status && <span className="ml-auto text-white/40 text-[10px]">current</span>}
+            </DropdownMenuItem>
+          );
+        })}
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 };
 
-// Cycle order: signal -> on_hold -> done -> signal
-const nextStatus = (s: AgendaStatus): AgendaStatus =>
-  s === "signal" ? "on_hold" : s === "on_hold" ? "done" : "signal";
+// ─────────────────────────── Due-date column ───────────────────────────
+// Native date input styled to match the column row. Overdue / today
+// colorations are applied to the trigger surface itself, not a chip,
+// so the column reads as a single editable cell.
 
-const dueDateChip = (iso: string | null): React.ReactNode => {
-  if (!iso) return null;
+const DueDateCell = ({
+  value,
+  onChange,
+}: {
+  value: string | null;
+  onChange: (iso: string | null) => void;
+}) => {
+  const inputRef = useRef<HTMLInputElement>(null);
   const today = new Date();
   today.setHours(0, 0, 0, 0);
-  const due = new Date(iso + "T00:00:00");
-  const isOverdue = due < today;
-  const isToday = due.getTime() === today.getTime();
-  const label = due.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+  let tone = "bg-white/[0.04] text-zinc-400 border-white/[0.08] hover:bg-white/[0.06]";
+  let label = "—";
+  if (value) {
+    const due = new Date(value + "T00:00:00");
+    const isOverdue = due < today;
+    const isToday = due.getTime() === today.getTime();
+    label = due.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+    if (isOverdue) tone = "bg-red-500/15 text-red-400 border-red-500/30";
+    else if (isToday) tone = "bg-amber-500/15 text-amber-300 border-amber-500/30";
+    else tone = "bg-white/[0.04] text-zinc-300 border-white/[0.10] hover:bg-white/[0.06]";
+  }
   return (
-    <span
-      className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-md shrink-0 ${
-        isOverdue
-          ? "bg-red-500/15 text-red-400 border border-red-500/30"
-          : isToday
-            ? "bg-amber-500/15 text-amber-300 border border-amber-500/30"
-            : "bg-white/[0.04] text-zinc-400 border border-white/[0.08]"
-      }`}
-      title={isOverdue ? "Overdue" : isToday ? "Due today" : `Due ${label}`}
-    >
-      {label}
-    </span>
+    <div className="relative w-full group/due">
+      <button
+        type="button"
+        onClick={() => inputRef.current?.showPicker?.() ?? inputRef.current?.focus()}
+        className={`w-full flex items-center justify-center gap-1 px-2 py-1 rounded-md border text-[11px] font-semibold transition-colors ${tone}`}
+        title={value ? `Due ${label}` : "Set due date"}
+      >
+        <Calendar className="w-3 h-3 shrink-0" />
+        <span>{label}</span>
+      </button>
+      {/* The native input is positioned over the trigger so the picker
+          anchors correctly across browsers; it's visually invisible. */}
+      <input
+        ref={inputRef}
+        type="date"
+        value={value ?? ""}
+        onChange={(e) => onChange(e.target.value || null)}
+        className="absolute inset-0 opacity-0 cursor-pointer"
+        aria-label="Due date"
+      />
+      {value && (
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            onChange(null);
+          }}
+          className="absolute -right-1 -top-1 p-0.5 rounded-full bg-neutral-900 border border-white/10 text-zinc-500 hover:text-white opacity-0 group-hover/due:opacity-100 transition-opacity"
+          title="Clear due date"
+        >
+          <X className="w-2.5 h-2.5" />
+        </button>
+      )}
+    </div>
   );
 };
 
-// Three indicator icons (notes / attachments / links) rendered next
-// to every title. Amber when there's content behind them, dim white
-// otherwise. Counts appear next to the icon when > 0. Clicking any
-// of them opens the detail panel — empty icons are an inviting "add"
-// affordance, filled icons are a "review" affordance.
-const ContentIndicators = ({
-  notes,
+// ─────────────────────────── Files column ───────────────────────────
+// Single icon + count combining attachments and links. Click opens
+// the detail dialog where the user can upload/manage both sets — far
+// less duplicated UX than a separate popover.
+
+const FilesCell = ({
   attachments,
   links,
   onOpenDetail,
 }: {
-  notes: string | null;
   attachments: AttachmentSummary[];
   links: LinkSummary[];
   onOpenDetail: () => void;
 }) => {
-  const hasNotes = !!(notes && notes.trim());
-  const hasAttachments = attachments.length > 0;
-  const hasLinks = links.length > 0;
+  const count = attachments.length + links.length;
+  const hasAny = count > 0;
+  const previewLines: string[] = [];
+  if (attachments.length > 0) {
+    const names = attachments.slice(0, 3).map((a) => a.filename);
+    previewLines.push(
+      `${attachments.length} file${attachments.length === 1 ? "" : "s"}: ${names.join(", ")}${
+        attachments.length > 3 ? `, +${attachments.length - 3} more` : ""
+      }`,
+    );
+  }
+  if (links.length > 0) {
+    const names = links.slice(0, 3).map((l) => l.nickname?.trim() || l.url);
+    previewLines.push(
+      `${links.length} link${links.length === 1 ? "" : "s"}: ${names.join(", ")}${
+        links.length > 3 ? `, +${links.length - 3} more` : ""
+      }`,
+    );
+  }
+  const tip = hasAny ? previewLines.join(" · ") : "No files or links — click to add";
+  return (
+    <button
+      type="button"
+      onClick={onOpenDetail}
+      className={`w-full flex items-center justify-center gap-1 px-2 py-1 rounded-md border text-[11px] font-semibold transition-colors ${
+        hasAny
+          ? "bg-amber-400/10 text-amber-400 border-amber-400/30 hover:bg-amber-400/15"
+          : "bg-white/[0.02] text-white/25 border-white/[0.06] hover:text-white/60 hover:bg-white/[0.06]"
+      }`}
+      title={tip}
+    >
+      <Paperclip className="w-3 h-3 shrink-0" />
+      <span className="tabular-nums">{hasAny ? count : "—"}</span>
+    </button>
+  );
+};
 
-  const noteTip = hasNotes
-    ? (() => {
-        const firstLine = notes!.split("\n")[0].trim();
-        return firstLine.length > 120
-          ? `Note: ${firstLine.slice(0, 117)}…`
-          : `Note: ${firstLine}`;
-      })()
+// ─────────────────────────── Notes column ───────────────────────────
+// Icon + count cell. Click opens a popover with a Textarea for quick
+// editing. Hover tooltip shows the first line so context is one
+// mouse-over away — no click needed to peek.
+
+const NotesCell = ({
+  notes,
+  onSave,
+}: {
+  notes: string | null;
+  onSave: (newNotes: string | null) => void;
+}) => {
+  const [open, setOpen] = useState(false);
+  const [draft, setDraft] = useState(notes ?? "");
+  useEffect(() => {
+    if (open) setDraft(notes ?? "");
+  }, [open, notes]);
+
+  const hasNotes = !!(notes && notes.trim());
+  const firstLine = hasNotes ? notes!.split("\n")[0].trim() : "";
+  const tip = hasNotes
+    ? firstLine.length > 140
+      ? `${firstLine.slice(0, 137)}…`
+      : firstLine
     : "No notes — click to add";
 
-  const attTip = hasAttachments
-    ? `${attachments.length} attachment${attachments.length === 1 ? "" : "s"}: ${attachments
-        .slice(0, 5)
-        .map((a) => a.filename)
-        .join(", ")}${attachments.length > 5 ? `, +${attachments.length - 5} more` : ""}`
-    : "No attachments — click to add";
-
-  const linkTip = hasLinks
-    ? `${links.length} link${links.length === 1 ? "" : "s"}: ${links
-        .slice(0, 5)
-        .map((l) => l.nickname?.trim() || l.url)
-        .join(", ")}${links.length > 5 ? `, +${links.length - 5} more` : ""}`
-    : "No links — click to add";
-
-  // Filled = amber-400 (matches the existing "noteworthy" palette used
-  // by overdue chips and on_hold pills). Empty = white/15 so the icons
-  // recede until they have something.
-  const cls = (filled: boolean) =>
-    `shrink-0 flex items-center gap-0.5 transition-colors ${
-      filled
-        ? "text-amber-400 hover:text-amber-300"
-        : "text-white/15 hover:text-white/40"
-    }`;
+  const handleSave = () => {
+    const trimmed = draft.trim();
+    onSave(trimmed.length === 0 ? null : trimmed);
+    setOpen(false);
+  };
 
   return (
-    <div className="flex items-center gap-2 shrink-0">
-      <button type="button" onClick={onOpenDetail} className={cls(hasNotes)} title={noteTip}>
-        <StickyNote className="w-3.5 h-3.5" />
-      </button>
-      <button type="button" onClick={onOpenDetail} className={cls(hasAttachments)} title={attTip}>
-        <Paperclip className="w-3.5 h-3.5" />
-        {hasAttachments && (
-          <span className="text-[10px] font-semibold tabular-nums">{attachments.length}</span>
-        )}
-      </button>
-      <button type="button" onClick={onOpenDetail} className={cls(hasLinks)} title={linkTip}>
-        <LinkIcon className="w-3.5 h-3.5" />
-        {hasLinks && (
-          <span className="text-[10px] font-semibold tabular-nums">{links.length}</span>
-        )}
-      </button>
-    </div>
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <button
+          type="button"
+          className={`w-full flex items-center justify-center gap-1 px-2 py-1 rounded-md border text-[11px] font-semibold transition-colors ${
+            hasNotes
+              ? "bg-amber-400/10 text-amber-400 border-amber-400/30 hover:bg-amber-400/15"
+              : "bg-white/[0.02] text-white/25 border-white/[0.06] hover:text-white/60 hover:bg-white/[0.06]"
+          }`}
+          title={tip}
+        >
+          <StickyNote className="w-3 h-3 shrink-0" />
+          <span className="tabular-nums">{hasNotes ? "•" : "—"}</span>
+        </button>
+      </PopoverTrigger>
+      <PopoverContent
+        align="end"
+        className="w-80 p-3 bg-neutral-900 border-white/10 text-white"
+        onOpenAutoFocus={(e) => e.preventDefault()}
+      >
+        <p className="text-[10px] uppercase tracking-wider text-zinc-500 mb-1.5">
+          Notes
+        </p>
+        <Textarea
+          autoFocus
+          value={draft}
+          onChange={(e) => setDraft(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Escape") setOpen(false);
+            if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
+              e.preventDefault();
+              handleSave();
+            }
+          }}
+          placeholder="Quick note — context, links to discuss, sub-actions…"
+          className="bg-white/[0.04] border-white/[0.08] text-white text-sm min-h-[100px]"
+        />
+        <div className="flex items-center justify-between gap-2 mt-2">
+          <span className="text-[10px] text-zinc-600">⌘/Ctrl + Enter to save</span>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setOpen(false)}
+              className="text-[10px] text-zinc-400 hover:text-white"
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              onClick={handleSave}
+              className="text-[10px] font-semibold px-2 py-1 rounded bg-white/10 hover:bg-white/20 text-white"
+            >
+              Save
+            </button>
+          </div>
+        </div>
+      </PopoverContent>
+    </Popover>
   );
 };
 
@@ -246,6 +387,8 @@ interface RowProps {
   onOpenDetail: (item: AgendaItemWithChildren) => void;
   onSetStatus: (id: string, status: AgendaStatus) => void;
   onChangeOwners: (id: string, userIds: string[]) => void;
+  onSetDueDate: (id: string, iso: string | null) => void;
+  onUpdateNotes: (id: string, notes: string | null) => void;
   onAddChild: (parent: AgendaItemWithChildren, title: string) => Promise<void>;
   onArchive: (id: string) => void;
   onDuplicate: (item: AgendaItemWithChildren) => void;
@@ -262,6 +405,8 @@ export const AgendaItemRow = ({
   onOpenDetail,
   onSetStatus,
   onChangeOwners,
+  onSetDueDate,
+  onUpdateNotes,
   onAddChild,
   onArchive,
   onDuplicate,
@@ -274,16 +419,14 @@ export const AgendaItemRow = ({
   const canHaveChildren = depth < 4;
   const hasChildren = node.children.length > 0;
   const isL1 = depth === 1;
+  const isTask = !isL1; // L2-L4 get the columns; L1 stays a container header
 
   const [addingChild, setAddingChild] = useState(false);
   const [draftChildTitle, setDraftChildTitle] = useState("");
   const [savingChild, setSavingChild] = useState(false);
 
   // Drag-to-reorder. The data payload lets the DndContext at the
-  // pillar level know which parent's child list this drag belongs to
-  // — drops onto items with a different parentId are rejected so the
-  // tree shape stays intact (cross-parent moves use indent/outdent in
-  // the detail panel instead).
+  // pillar level know which parent's child list this drag belongs to.
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
     useSortable({
       id: node.id,
@@ -295,9 +438,9 @@ export const AgendaItemRow = ({
     opacity: isDragging ? 0.4 : 1,
   };
 
-  // Progress roll-up across all descendants (not just direct children)
-  // so a parent-of-parents reflects the whole subtree at a glance.
-  const allDescendants = flattenSubtree(node).slice(1); // exclude self
+  // Progress roll-up across all descendants so a topic header reflects
+  // its whole subtree (not just direct children) at a glance.
+  const allDescendants = flattenSubtree(node).slice(1);
   const doneDescendants = allDescendants.filter((d) => d.status === "done").length;
 
   const handleSubmitChild = async (e: React.FormEvent) => {
@@ -320,8 +463,12 @@ export const AgendaItemRow = ({
     if (!isExpanded) onToggleExpand(node.id);
   };
 
-  // The row content is the same for L1 (inside a card) and L2-L4 (inline).
-  // Wrapping changes the outer container only.
+  const addLabel = isL1 ? "Add Task" : "Add Sub-task";
+  const addPlaceholder = isL1 ? "New task…" : "New sub-task…";
+
+  const itemAttachments = attachmentsByItem.get(node.id) || [];
+  const itemLinks = linksByItem.get(node.id) || [];
+
   const rowContent = (
     <div
       className={`group/row flex items-center gap-2 ${style.rowPx} hover:bg-white/[0.04] transition-colors`}
@@ -357,56 +504,64 @@ export const AgendaItemRow = ({
         <span className="w-3.5 shrink-0" />
       )}
 
-      {/* Status (column to the LEFT of attachments per spec) */}
-      <StatusButton
-        status={node.status}
-        onCycle={() => onSetStatus(node.id, nextStatus(node.status))}
-        iconClass={style.iconClass}
-        accent={accent}
-      />
-
-      {/* Title — clicking opens the detail panel. Capped width so the
-          right-side controls cluster sits close, not at the screen edge. */}
+      {/* Title — flex-1 so columns pin to the right consistently */}
       <button
         type="button"
         onClick={() => onOpenDetail(node)}
-        className={`min-w-0 max-w-[28rem] text-left truncate hover:text-white transition-colors ${
+        className={`flex-1 min-w-0 text-left truncate hover:text-white transition-colors ${
           style.titleClass
-        } ${node.status === "done" ? "line-through opacity-50" : ""}`}
+        } ${node.status === "done" && isTask ? "line-through opacity-50" : ""}`}
         title="Open details"
       >
         {node.title}
       </button>
 
-      {/* Content indicators — three always-visible icons. Amber when
-          there's something behind them, dim otherwise. Click any of
-          them (filled or empty) to open the detail panel; an empty
-          icon doubles as a discoverable "add a note/file/link" hint. */}
-      <ContentIndicators
-        notes={node.notes}
-        attachments={attachmentsByItem.get(node.id) || []}
-        links={linksByItem.get(node.id) || []}
-        onOpenDetail={() => onOpenDetail(node)}
-      />
+      {/* Task columns — pinned right. Only on L2-L4. */}
+      {isTask && (
+        <>
+          <div className="w-28 shrink-0 hidden sm:block">
+            <StatusDropdown
+              status={node.status}
+              onChange={(s) => onSetStatus(node.id, s)}
+            />
+          </div>
+          <div className="w-24 shrink-0 hidden sm:block">
+            <DueDateCell
+              value={node.due_date}
+              onChange={(iso) => onSetDueDate(node.id, iso)}
+            />
+          </div>
+          <div className="w-16 shrink-0 hidden md:block">
+            <FilesCell
+              attachments={itemAttachments}
+              links={itemLinks}
+              onOpenDetail={() => onOpenDetail(node)}
+            />
+          </div>
+          <div className="w-14 shrink-0 hidden md:block">
+            <NotesCell
+              notes={node.notes}
+              onSave={(notes) => onUpdateNotes(node.id, notes)}
+            />
+          </div>
+        </>
+      )}
 
-      {/* Right-side cluster — tight group that sits right after the title */}
-      <div className="flex items-center gap-2 ml-2">
-        {/* Progress roll-up (only when there are descendants) */}
-        {allDescendants.length > 0 && (
-          <span
-            className={`text-[10px] font-semibold shrink-0 tabular-nums ${
-              doneDescendants === allDescendants.length ? "text-green-400" : "text-white/40"
-            }`}
-            title={`${doneDescendants} of ${allDescendants.length} sub-items done`}
-          >
-            {doneDescendants}/{allDescendants.length}
-          </span>
-        )}
+      {/* L1 only — subtree progress count so the topic header reflects
+          weekly progress at a glance. */}
+      {isL1 && allDescendants.length > 0 && (
+        <span
+          className={`text-[11px] font-semibold shrink-0 tabular-nums ${
+            doneDescendants === allDescendants.length ? "text-green-400" : "text-white/50"
+          }`}
+          title={`${doneDescendants} of ${allDescendants.length} tasks done`}
+        >
+          {doneDescendants}/{allDescendants.length}
+        </span>
+      )}
 
-        {dueDateChip(node.due_date)}
-
-        {/* Owner stack — always visible, shows ? when unassigned, click
-            to add/remove. Multi-owner supported. */}
+      {/* Right-side cluster: owner + add + menu */}
+      <div className="flex items-center gap-2 ml-1">
         <OwnerPicker
           ownerUserIds={node.owner_user_ids}
           staff={staff}
@@ -414,22 +569,17 @@ export const AgendaItemRow = ({
           onChange={(uids) => onChangeOwners(node.id, uids)}
         />
 
-        {/* + Add sub-item — hover-revealed on the row itself.
-            Critical: `group-hover/row` only fires when THIS row is
-            hovered, not when a descendant is hovered, so add buttons
-            no longer stack visibly all the way up the tree. */}
         {canHaveChildren && (
           <button
             type="button"
             onClick={startAddingChild}
             className="shrink-0 p-1 rounded text-white/20 hover:text-white/70 hover:bg-white/[0.06] opacity-0 group-hover/row:opacity-100 focus:opacity-100 transition-opacity"
-            title="Add sub-item"
+            title={addLabel}
           >
             <Plus className="w-3.5 h-3.5" />
           </button>
         )}
 
-        {/* Per-row menu */}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <button
@@ -451,7 +601,7 @@ export const AgendaItemRow = ({
                   className="cursor-pointer focus:bg-white/[0.06]"
                 >
                   <Plus className="w-3.5 h-3.5 mr-2" />
-                  Add sub-item
+                  {addLabel}
                 </DropdownMenuItem>
                 <DropdownMenuSeparator className="bg-white/[0.06]" />
               </>
@@ -485,9 +635,7 @@ export const AgendaItemRow = ({
   );
 
   // Children container — vertical tree-guide line in the pillar color
-  // plus the inline add-child form (only when actively adding). Each
-  // parent's children are their own SortableContext so a drag inside
-  // Monday's children doesn't bleed into Tuesday's.
+  // plus the inline add-child form (only when actively adding).
   const childrenBlock = isExpanded && (hasChildren || addingChild) && (
     <div
       className="ml-[14px] pl-4 border-l divide-y divide-white/[0.03]"
@@ -509,6 +657,8 @@ export const AgendaItemRow = ({
             onOpenDetail={onOpenDetail}
             onSetStatus={onSetStatus}
             onChangeOwners={onChangeOwners}
+            onSetDueDate={onSetDueDate}
+            onUpdateNotes={onUpdateNotes}
             onAddChild={onAddChild}
             onArchive={onArchive}
             onDuplicate={onDuplicate}
@@ -534,7 +684,7 @@ export const AgendaItemRow = ({
                 setDraftChildTitle("");
               }
             }}
-            placeholder="New sub-item…"
+            placeholder={addPlaceholder}
             disabled={savingChild}
             className="flex-1 bg-transparent border-b border-white/15 focus:border-white/40 outline-none text-xs text-white py-0.5"
           />
@@ -560,11 +710,8 @@ export const AgendaItemRow = ({
     </div>
   );
 
-  // L1: wrap row + children in a pillar-tinted card so the topic
-  // visually contains its subtree AND pops as the focal point of its
-  // pillar. The row itself gets a stronger tint than the children area
-  // to make the L1 header unmistakable. L2-L4: render inline with a
-  // hairline separator so siblings read as a list without floating.
+  // L1: card-style container with pillar tint. L2-L4: inline rows
+  // separated by hairline borders so siblings read as a list.
   if (isL1) {
     return (
       <div
