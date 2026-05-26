@@ -54,6 +54,13 @@ import {
 import { logAgendaActivity, type AgendaActivityRow } from "./activityLog";
 import { pushAgendaItemToWorkbench } from "./workbench-sync";
 import { Checkbox } from "@/components/ui/checkbox";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 // ──────────────────────────── helpers ────────────────────────────
 
@@ -876,26 +883,31 @@ export const AgendaItemDetailDialog = ({
                           <label className="text-[10px] uppercase tracking-wider text-zinc-500">
                             Send to focus area
                           </label>
-                          <select
-                            value={chosenFa}
-                            onChange={(e) =>
+                          <Select
+                            value={chosenFa || undefined}
+                            onValueChange={(v) =>
                               setPushSelections((prev) => {
                                 const next = new Map(prev);
-                                next.set(uid, e.target.value);
+                                next.set(uid, v);
                                 return next;
                               })
                             }
-                            className="w-full mt-1 bg-white/[0.04] border border-white/[0.08] rounded-md text-xs text-white py-1.5 px-2 focus:outline-none focus:border-white/20"
                           >
-                            <option value="" disabled>
-                              Pick a tile…
-                            </option>
-                            {userFocusAreas.map((fa) => (
-                              <option key={fa.id} value={fa.id}>
-                                {fa.title}
-                              </option>
-                            ))}
-                          </select>
+                            <SelectTrigger className="w-full mt-1 h-8 bg-white/[0.04] border-white/[0.08] text-xs text-white focus:ring-1 focus:ring-white/20">
+                              <SelectValue placeholder="Pick a tile…" />
+                            </SelectTrigger>
+                            <SelectContent className="bg-neutral-900 border-white/10 text-white">
+                              {userFocusAreas.map((fa) => (
+                                <SelectItem
+                                  key={fa.id}
+                                  value={fa.id}
+                                  className="text-xs text-white focus:bg-white/[0.06] focus:text-white"
+                                >
+                                  {fa.title}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
                         </div>
                       )}
                     </div>
