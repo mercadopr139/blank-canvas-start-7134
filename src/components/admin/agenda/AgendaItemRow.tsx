@@ -10,7 +10,6 @@ import {
   ChevronRight,
   ChevronDown,
   Plus,
-  Star,
   MoreHorizontal,
   Archive,
   Copy,
@@ -157,7 +156,6 @@ interface RowProps {
   onToggleExpand: (id: string) => void;
   onOpenDetail: (item: AgendaItemWithChildren) => void;
   onSetStatus: (id: string, status: AgendaStatus) => void;
-  onToggleStar: (id: string, current: boolean) => void;
   onChangeOwner: (id: string, userId: string | null) => void;
   onAddChild: (parent: AgendaItemWithChildren, title: string) => Promise<void>;
   onArchive: (id: string) => void;
@@ -172,7 +170,6 @@ export const AgendaItemRow = ({
   onToggleExpand,
   onOpenDetail,
   onSetStatus,
-  onToggleStar,
   onChangeOwner,
   onAddChild,
   onArchive,
@@ -240,22 +237,6 @@ export const AgendaItemRow = ({
           iconClass={style.iconClass}
           accent={accent}
         />
-
-        {/* Star */}
-        <button
-          type="button"
-          onClick={() => onToggleStar(node.id, node.is_starred)}
-          className="shrink-0"
-          title={node.is_starred ? "Unstar" : "Star — flag as important"}
-        >
-          <Star
-            className={`${style.iconClass} ${
-              node.is_starred
-                ? "fill-amber-400 text-amber-400"
-                : "text-white/15 hover:text-white/40 transition-colors"
-            }`}
-          />
-        </button>
 
         {/* Title — clicking opens the detail panel */}
         <button
@@ -369,7 +350,6 @@ export const AgendaItemRow = ({
               onToggleExpand={onToggleExpand}
               onOpenDetail={onOpenDetail}
               onSetStatus={onSetStatus}
-              onToggleStar={onToggleStar}
               onChangeOwner={onChangeOwner}
               onAddChild={onAddChild}
               onArchive={onArchive}

@@ -353,9 +353,6 @@ const AdminAgenda = () => {
               onSetStatus={(id, status) =>
                 updateMutation.mutate({ id, patch: { status } })
               }
-              onToggleStar={(id, current) =>
-                updateMutation.mutate({ id, patch: { is_starred: !current } })
-              }
               onChangeOwner={(id, userId) =>
                 updateMutation.mutate({ id, patch: { owner_user_id: userId } })
               }

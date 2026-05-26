@@ -13,7 +13,7 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Star, Calendar, X } from "lucide-react";
+import { Calendar, X } from "lucide-react";
 import { OwnerPicker } from "./OwnerPicker";
 import { PILLAR_COLOR, PILLAR_LABEL } from "@/pages/admin/AdminMessageBoard";
 import {
@@ -33,7 +33,6 @@ interface Props {
     notes?: string | null;
     status?: AgendaStatus;
     due_date?: string | null;
-    is_starred?: boolean;
     owner_user_id?: string | null;
   }) => Promise<void>;
 }
@@ -51,7 +50,6 @@ export const AgendaItemDetailDialog = ({
   const [notes, setNotes] = useState("");
   const [dueDate, setDueDate] = useState<string>("");
   const [status, setStatus] = useState<AgendaStatus>("signal");
-  const [starred, setStarred] = useState(false);
   const [ownerUserId, setOwnerUserId] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
@@ -62,7 +60,6 @@ export const AgendaItemDetailDialog = ({
     setNotes(item.notes ?? "");
     setDueDate(item.due_date ?? "");
     setStatus(item.status);
-    setStarred(item.is_starred);
     setOwnerUserId(item.owner_user_id);
   }, [item?.id]);
 
@@ -76,7 +73,6 @@ export const AgendaItemDetailDialog = ({
     if ((notes || null) !== (item.notes || null)) patch.notes = notes.trim() || null;
     if ((dueDate || null) !== (item.due_date || null)) patch.due_date = dueDate || null;
     if (status !== item.status) patch.status = status;
-    if (starred !== item.is_starred) patch.is_starred = starred;
     if ((ownerUserId || null) !== (item.owner_user_id || null)) patch.owner_user_id = ownerUserId;
     if (Object.keys(patch).length === 0) {
       onClose();
@@ -148,8 +144,8 @@ export const AgendaItemDetailDialog = ({
             </div>
           </div>
 
-          {/* Owner + due date + star — single row */}
-          <div className="grid grid-cols-3 gap-3">
+          {/* Owner + due date */}
+          <div className="grid grid-cols-2 gap-3">
             <div>
               <p className="text-[10px] uppercase tracking-wider text-zinc-500 mb-1.5">
                 Owner
@@ -160,7 +156,7 @@ export const AgendaItemDetailDialog = ({
                 onChange={setOwnerUserId}
               />
             </div>
-            <div className="col-span-1">
+            <div>
               <p className="text-[10px] uppercase tracking-wider text-zinc-500 mb-1.5">
                 Due
               </p>
@@ -183,27 +179,6 @@ export const AgendaItemDetailDialog = ({
                   </button>
                 )}
               </div>
-            </div>
-            <div>
-              <p className="text-[10px] uppercase tracking-wider text-zinc-500 mb-1.5">
-                Star
-              </p>
-              <button
-                type="button"
-                onClick={() => setStarred((v) => !v)}
-                className={`flex items-center justify-center h-7 w-full rounded-md border transition-colors ${
-                  starred
-                    ? "border-amber-500/40 bg-amber-500/10"
-                    : "border-white/[0.08] hover:border-white/15"
-                }`}
-                title={starred ? "Starred — click to unstar" : "Star"}
-              >
-                <Star
-                  className={`w-4 h-4 ${
-                    starred ? "fill-amber-400 text-amber-400" : "text-white/30"
-                  }`}
-                />
-              </button>
             </div>
           </div>
 
