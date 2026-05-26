@@ -6,6 +6,19 @@ import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { ArrowLeft, Plus } from "lucide-react";
+import {
+  DndContext,
+  PointerSensor,
+  closestCenter,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+} from "@dnd-kit/core";
+import {
+  SortableContext,
+  verticalListSortingStrategy,
+  arrayMove,
+} from "@dnd-kit/sortable";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import {
@@ -276,6 +289,53 @@ const AdminAgenda = () => {
     }
   };
 
+  // Drag-to-reorder: batch-update sort_order on the affected sibling
+  // list. Same-parent only — a drop onto a different parent is ignored
+  // so the tree shape stays intact. Cross-parent moves will live in
+  // the indent/outdent buttons in the detail panel later.
+  const reorderMutation = useMutation({
+    mutationFn: async (orderedIds: string[]) => {
+      const updates = orderedIds.map((id, i) =>
+        supabase
+          .from("agenda_items" as any)
+          .update({ sort_order: (i + 1) * 1000 } as any)
+          .eq("id", id),
+      );
+      const results = await Promise.all(updates);
+      const failed = results.find((r) => r.error);
+      if (failed?.error) throw failed.error;
+    },
+    onSuccess: () => invalidateItems(),
+    onError: (e: any) => {
+      invalidateItems();
+      toast.error(`Reorder failed: ${e.message}`);
+    },
+  });
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
+  );
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+    const activeData = active.data.current as { parentId: string | null } | undefined;
+    const overData = over.data.current as { parentId: string | null } | undefined;
+    // Same-parent only.
+    if (!activeData || !overData) return;
+    if ((activeData.parentId ?? null) !== (overData.parentId ?? null)) return;
+
+    // Compute the new order of this parent's children.
+    const siblings = items
+      .filter((i) => (i.parent_id ?? null) === (activeData.parentId ?? null))
+      .sort((a, b) => a.sort_order - b.sort_order);
+    const oldIndex = siblings.findIndex((s) => s.id === active.id);
+    const newIndex = siblings.findIndex((s) => s.id === over.id);
+    if (oldIndex === -1 || newIndex === -1) return;
+    const reordered = arrayMove(siblings, oldIndex, newIndex);
+    reorderMutation.mutate(reordered.map((s) => s.id));
+  };
+
   // Week summary — upsert per current week
   const saveSummary = async (text: string) => {
     setSavingSummary(true);
@@ -342,33 +402,48 @@ const AdminAgenda = () => {
             </p>
           )}
 
-          {tree.map((node) => (
-            <AgendaItemRow
-              key={node.id}
-              node={node}
-              staff={staff}
-              expanded={expanded}
-              onToggleExpand={toggleExpand}
-              onOpenDetail={(it) => setDetailItem(it)}
-              onSetStatus={(id, status) =>
-                updateMutation.mutate({ id, patch: { status } })
-              }
-              onChangeOwners={(id, userIds) =>
-                updateMutation.mutate({ id, patch: { owner_user_ids: userIds } })
-              }
-              onAddChild={(parent, title) =>
-                addItem({
-                  pillar: parent.pillar,
-                  parent_id: parent.id,
-                  depth: Math.min(parent.depth + 1, 4),
-                  title,
-                })
-              }
-              onArchive={(id) => archiveMutation.mutate(id)}
-              onDuplicate={(node) => duplicateItem(node)}
-              onDelete={(node) => setDeleteTarget(node)}
-            />
-          ))}
+          {/* One DndContext per pillar so drags can't cross pillars
+              (per spec). L1 items here are the top-level sortable list;
+              each row internally wraps its own children in another
+              SortableContext so nested levels reorder independently. */}
+          <DndContext
+            sensors={sensors}
+            collisionDetection={closestCenter}
+            onDragEnd={handleDragEnd}
+          >
+            <SortableContext
+              items={tree.map((t) => t.id)}
+              strategy={verticalListSortingStrategy}
+            >
+              {tree.map((node) => (
+                <AgendaItemRow
+                  key={node.id}
+                  node={node}
+                  staff={staff}
+                  expanded={expanded}
+                  onToggleExpand={toggleExpand}
+                  onOpenDetail={(it) => setDetailItem(it)}
+                  onSetStatus={(id, status) =>
+                    updateMutation.mutate({ id, patch: { status } })
+                  }
+                  onChangeOwners={(id, userIds) =>
+                    updateMutation.mutate({ id, patch: { owner_user_ids: userIds } })
+                  }
+                  onAddChild={(parent, title) =>
+                    addItem({
+                      pillar: parent.pillar,
+                      parent_id: parent.id,
+                      depth: Math.min(parent.depth + 1, 4),
+                      title,
+                    })
+                  }
+                  onArchive={(id) => archiveMutation.mutate(id)}
+                  onDuplicate={(node) => duplicateItem(node)}
+                  onDelete={(node) => setDeleteTarget(node)}
+                />
+              ))}
+            </SortableContext>
+          </DndContext>
 
           {isAdding ? (
             <form

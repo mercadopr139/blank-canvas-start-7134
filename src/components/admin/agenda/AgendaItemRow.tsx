@@ -29,7 +29,10 @@ import {
   CheckCircle2,
   PauseCircle,
   StickyNote,
+  GripVertical,
 } from "lucide-react";
+import { useSortable, SortableContext, verticalListSortingStrategy } from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -194,6 +197,22 @@ export const AgendaItemRow = ({
   const [draftChildTitle, setDraftChildTitle] = useState("");
   const [savingChild, setSavingChild] = useState(false);
 
+  // Drag-to-reorder. The data payload lets the DndContext at the
+  // pillar level know which parent's child list this drag belongs to
+  // — drops onto items with a different parentId are rejected so the
+  // tree shape stays intact (cross-parent moves use indent/outdent in
+  // the detail panel instead).
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
+    useSortable({
+      id: node.id,
+      data: { parentId: node.parent_id, pillar: node.pillar, depth: node.depth },
+    });
+  const dragStyle: React.CSSProperties = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.4 : 1,
+  };
+
   // Progress roll-up across all descendants (not just direct children)
   // so a parent-of-parents reflects the whole subtree at a glance.
   const allDescendants = flattenSubtree(node).slice(1); // exclude self
@@ -225,6 +244,19 @@ export const AgendaItemRow = ({
     <div
       className={`group/row flex items-center gap-2 ${style.rowPx} hover:bg-white/[0.04] transition-colors`}
     >
+      {/* Drag handle — hover-revealed, never steals layout space */}
+      <button
+        type="button"
+        {...attributes}
+        {...listeners}
+        className="shrink-0 text-white/15 hover:text-white/40 cursor-grab active:cursor-grabbing opacity-0 group-hover/row:opacity-100 focus:opacity-100 transition-opacity touch-none"
+        aria-label="Drag to reorder"
+        title="Drag to reorder"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <GripVertical className="w-3.5 h-3.5" />
+      </button>
+
       {/* Expand/collapse — keeps its slot even when no children so columns align */}
       {hasChildren ? (
         <button
@@ -376,28 +408,35 @@ export const AgendaItemRow = ({
   );
 
   // Children container — vertical tree-guide line in the pillar color
-  // plus the inline add-child form (only when actively adding).
+  // plus the inline add-child form (only when actively adding). Each
+  // parent's children are their own SortableContext so a drag inside
+  // Monday's children doesn't bleed into Tuesday's.
   const childrenBlock = isExpanded && (hasChildren || addingChild) && (
     <div
       className="ml-[14px] pl-4 border-l divide-y divide-white/[0.03]"
       style={{ borderColor: `${accent}22` }}
     >
-      {node.children.map((child) => (
-        <AgendaItemRow
-          key={child.id}
-          node={child}
-          staff={staff}
-          expanded={expanded}
-          onToggleExpand={onToggleExpand}
-          onOpenDetail={onOpenDetail}
-          onSetStatus={onSetStatus}
-          onChangeOwners={onChangeOwners}
-          onAddChild={onAddChild}
-          onArchive={onArchive}
-          onDuplicate={onDuplicate}
-          onDelete={onDelete}
-        />
-      ))}
+      <SortableContext
+        items={node.children.map((c) => c.id)}
+        strategy={verticalListSortingStrategy}
+      >
+        {node.children.map((child) => (
+          <AgendaItemRow
+            key={child.id}
+            node={child}
+            staff={staff}
+            expanded={expanded}
+            onToggleExpand={onToggleExpand}
+            onOpenDetail={onOpenDetail}
+            onSetStatus={onSetStatus}
+            onChangeOwners={onChangeOwners}
+            onAddChild={onAddChild}
+            onArchive={onArchive}
+            onDuplicate={onDuplicate}
+            onDelete={onDelete}
+          />
+        ))}
+      </SortableContext>
 
       {addingChild && (
         <form
@@ -450,11 +489,13 @@ export const AgendaItemRow = ({
   if (isL1) {
     return (
       <div
-        className="rounded-xl border overflow-hidden mb-3 last:mb-0"
+        ref={setNodeRef}
         style={{
+          ...dragStyle,
           borderColor: `${accent}30`,
           background: `${accent}08`,
         }}
+        className="rounded-xl border overflow-hidden mb-3 last:mb-0"
       >
         <div style={{ background: `${accent}18` }}>{rowContent}</div>
         {childrenBlock && <div className="pb-2">{childrenBlock}</div>}
@@ -463,7 +504,7 @@ export const AgendaItemRow = ({
   }
 
   return (
-    <div>
+    <div ref={setNodeRef} style={dragStyle}>
       {rowContent}
       {childrenBlock}
     </div>
