@@ -65,6 +65,19 @@ const formatWeekStart = (d: Date): string => {
   return `${sunday.getFullYear()}-${String(sunday.getMonth() + 1).padStart(2, "0")}-${String(sunday.getDate()).padStart(2, "0")}`;
 };
 
+// Upcoming Friday relative to `from` (defaults to today). If today is
+// Friday, returns today. If today is Sat or Sun, returns next week's
+// Friday. Used as the default due_date for new tasks and the new
+// target date when Reset Week bumps existing tasks forward.
+const upcomingFridayIso = (from: Date = new Date()): string => {
+  const d = new Date(from);
+  d.setHours(0, 0, 0, 0);
+  const day = d.getDay(); // 0 Sun … 5 Fri … 6 Sat
+  const daysUntilFriday = (5 - day + 7) % 7;
+  d.setDate(d.getDate() + daysUntilFriday);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+};
+
 const formatWeekRangeDisplay = (weekStartIso: string): string => {
   const start = new Date(weekStartIso + "T12:00:00");
   const end = new Date(start);
@@ -226,11 +239,18 @@ const AdminAgenda = () => {
   const [savingSummary, setSavingSummary] = useState(false);
   const [resetConfirmOpen, setResetConfirmOpen] = useState(false);
 
-  // How many Done tasks are sitting in the agenda right now — used as the
-  // count on the Reset Week confirm dialog so the user knows the impact.
+  // Counts powering the Reset Week button + confirm dialog. The button
+  // enables when either there's something to reset (Done tasks) OR
+  // something to bump (tasks with a due_date that isn't already on the
+  // new Friday). Both counts are shown to the user before they confirm.
   const doneCount = useMemo(
     () => items.filter((i) => i.status === "done").length,
     [items],
+  );
+  const newFridayIso = useMemo(() => upcomingFridayIso(), [weekStartIso]);
+  const bumpableCount = useMemo(
+    () => items.filter((i) => i.due_date && i.due_date !== newFridayIso).length,
+    [items, newFridayIso],
   );
 
   // ─── Mutations ──────────────────────────────────────────────────────
@@ -245,6 +265,11 @@ const AdminAgenda = () => {
     title: string;
   }) => {
     const sortOrder = Date.now();
+    // Tasks (L2-L4) default to the upcoming Friday since the agenda is
+    // a weekly cadence. L1 topics are containers and don't get a date.
+    // User can still change it from either the row's Due cell or the
+    // detail dialog.
+    const defaultDueDate = params.depth >= 2 ? upcomingFridayIso() : null;
     const { data, error } = await supabase
       .from("agenda_items" as any)
       .insert({
@@ -252,6 +277,7 @@ const AdminAgenda = () => {
         parent_id: params.parent_id,
         depth: params.depth,
         title: params.title,
+        due_date: defaultDueDate,
         sort_order: sortOrder,
         created_by: user?.id ?? null,
       } as any)
@@ -402,65 +428,108 @@ const AdminAgenda = () => {
     },
   });
 
-  // Reset Week — the audit refresh button. Flips every Done task back
-  // to Pending Review, mirrors that to any linked Workbench signals,
-  // and writes an activity log entry per item so each task's history
-  // still tells the truth ("Done on Monday → Reset on Friday →
-  // Done again next week"). Signal / On-Hold tasks are left alone:
-  // they're explicitly still in progress and shouldn't get nuked.
+  // Reset Week — the audit refresh button. Two things happen:
+  //   1. Every Done task flips back to Pending Review (mirroring to any
+  //      linked Workbench signals).
+  //   2. Every non-archived task that already has a due_date gets bumped
+  //      to the upcoming Friday so incomplete work rolls into the new
+  //      week without manual date editing. Tasks with no due date are
+  //      left alone — if someone explicitly cleared the date, Reset
+  //      Week respects that choice.
+  // Activity log records both actions per item so each task's history
+  // still tells the truth ("Done on Monday → Reset on Friday → Done
+  // again next week" or "Signal carrying over to next Friday").
   const resetWeekMutation = useMutation({
     mutationFn: async () => {
-      const { data: doneItems, error: fetchErr } = await supabase
+      const newFriday = upcomingFridayIso();
+
+      // 1) Flip Done → Pending Review.
+      const { data: doneItems, error: doneFetchErr } = await supabase
         .from("agenda_items" as any)
         .select("id")
         .eq("status", "done")
         .eq("is_archived", false);
-      if (fetchErr) throw fetchErr;
+      if (doneFetchErr) throw doneFetchErr;
       const doneIds = ((doneItems as { id: string }[]) || []).map((i) => i.id);
-      if (doneIds.length === 0) return { resetCount: 0 };
 
-      const { error: updErr } = await supabase
+      if (doneIds.length > 0) {
+        const { error: doneUpdErr } = await supabase
+          .from("agenda_items" as any)
+          .update({
+            status: "pending_review",
+            last_edited_at: new Date().toISOString(),
+            last_edited_by: user?.id ?? null,
+          } as any)
+          .in("id", doneIds);
+        if (doneUpdErr) throw doneUpdErr;
+
+        const { error: sigErr } = await supabase
+          .from("signals")
+          .update({ status: "Pending", completed_at: null } as any)
+          .in("source_agenda_item_id", doneIds)
+          .eq("status", "Complete");
+        if (sigErr) console.warn("Reset: workbench mirror failed:", sigErr.message);
+      }
+
+      // 2) Bump existing due_dates forward to the new Friday. Skip any
+      //    that are already on the new date (idempotent re-clicks).
+      const { data: datedItems, error: dateFetchErr } = await supabase
         .from("agenda_items" as any)
-        .update({
-          status: "pending_review",
-          last_edited_at: new Date().toISOString(),
-          last_edited_by: user?.id ?? null,
-        } as any)
-        .in("id", doneIds);
-      if (updErr) throw updErr;
+        .select("id, due_date")
+        .eq("is_archived", false)
+        .not("due_date", "is", null)
+        .neq("due_date", newFriday);
+      if (dateFetchErr) throw dateFetchErr;
+      const datedIds = ((datedItems as { id: string }[]) || []).map((i) => i.id);
 
-      // Mirror to linked Workbench signals so a fresh week shows the
-      // same state across both surfaces. We don't error out the whole
-      // reset if this fails — the agenda is the source of truth.
-      const { error: sigErr } = await supabase
-        .from("signals")
-        .update({ status: "Pending", completed_at: null } as any)
-        .in("source_agenda_item_id", doneIds)
-        .eq("status", "Complete");
-      if (sigErr) console.warn("Reset: workbench mirror failed:", sigErr.message);
+      if (datedIds.length > 0) {
+        const { error: dateUpdErr } = await supabase
+          .from("agenda_items" as any)
+          .update({
+            due_date: newFriday,
+            last_edited_at: new Date().toISOString(),
+            last_edited_by: user?.id ?? null,
+          } as any)
+          .in("id", datedIds);
+        if (dateUpdErr) throw dateUpdErr;
+      }
 
       // Fire-and-forget activity log entries; failures here never
-      // disrupt the user-visible reset.
+      // disrupt the user-visible reset. One entry per touched item.
+      const touched = new Set<string>([...doneIds, ...datedIds]);
       await Promise.all(
-        doneIds.map((id) =>
-          logAgendaActivity(id, "updated", user?.id ?? null, {
-            status: "pending_review",
-            reset: true,
-          }),
-        ),
+        Array.from(touched).map((id) => {
+          const changed: Record<string, unknown> = { reset: true };
+          if (doneIds.includes(id)) changed.status = "pending_review";
+          if (datedIds.includes(id)) changed.due_date = newFriday;
+          return logAgendaActivity(id, "updated", user?.id ?? null, changed);
+        }),
       );
 
-      return { resetCount: doneIds.length };
+      return {
+        resetCount: doneIds.length,
+        bumpedCount: datedIds.length,
+        newFriday,
+      };
     },
-    onSuccess: ({ resetCount }) => {
+    onSuccess: ({ resetCount, bumpedCount, newFriday }) => {
       invalidateItems();
-      if (resetCount === 0) {
-        toast.info("Nothing to reset — no Done tasks this week.");
-      } else {
-        toast.success(
-          `Reset ${resetCount} task${resetCount === 1 ? "" : "s"} to Pending Review.`,
-        );
+      if (resetCount === 0 && bumpedCount === 0) {
+        toast.info("Nothing to reset — no Done tasks and no dates to bump.");
+        return;
       }
+      const parts: string[] = [];
+      if (resetCount > 0) {
+        parts.push(`${resetCount} reset to Pending Review`);
+      }
+      if (bumpedCount > 0) {
+        const friendly = new Date(newFriday + "T12:00:00").toLocaleDateString(
+          "en-US",
+          { month: "short", day: "numeric" },
+        );
+        parts.push(`${bumpedCount} due ${friendly}`);
+      }
+      toast.success(parts.join(" · "));
     },
     onError: (e: any) => toast.error(`Reset failed: ${e.message}`),
   });
@@ -739,27 +808,30 @@ const AdminAgenda = () => {
             </div>
           </div>
 
-          {/* Reset Week — disabled when there's nothing to reset so it
-              doesn't tempt the user to fire a no-op + confirm modal. */}
+          {/* Reset Week — enabled when there's either Done tasks to reset
+              OR existing due dates to bump forward. */}
           <Button
             variant="ghost"
             size="sm"
-            disabled={doneCount === 0 || resetWeekMutation.isPending}
+            disabled={
+              (doneCount === 0 && bumpableCount === 0) ||
+              resetWeekMutation.isPending
+            }
             onClick={() => setResetConfirmOpen(true)}
             className="text-zinc-400 hover:text-white hover:bg-white/[0.06] gap-1.5 disabled:opacity-40"
             title={
-              doneCount === 0
-                ? "Nothing to reset — no Done tasks"
-                : `Reset ${doneCount} Done task${doneCount === 1 ? "" : "s"} back to Pending Review`
+              doneCount === 0 && bumpableCount === 0
+                ? "Nothing to reset — no Done tasks and no dates to bump"
+                : `Reset ${doneCount} Done · bump ${bumpableCount} due dates to next Friday`
             }
           >
             <RotateCcw className="w-3.5 h-3.5" />
             <span className="text-xs font-semibold hidden sm:inline">
               Reset Week
             </span>
-            {doneCount > 0 && (
+            {doneCount + bumpableCount > 0 && (
               <span className="text-[10px] tabular-nums text-zinc-500">
-                ({doneCount})
+                ({doneCount + bumpableCount})
               </span>
             )}
           </Button>
@@ -855,10 +927,18 @@ const AdminAgenda = () => {
               This flips{" "}
               <strong className="text-white">{doneCount}</strong>{" "}
               Done task{doneCount === 1 ? "" : "s"} back to{" "}
-              <strong className="text-white">Pending Review</strong> so the team
-              can audit them fresh this week. Tasks still in Signal or On-Hold
-              are left alone. Each item's activity log records the reset, and
-              any linked Workbench signals are mirrored back to Pending.
+              <strong className="text-white">Pending Review</strong> and bumps{" "}
+              <strong className="text-white">{bumpableCount}</strong>{" "}
+              task{bumpableCount === 1 ? "" : "s"} with a due date to{" "}
+              <strong className="text-white">
+                {new Date(newFridayIso + "T12:00:00").toLocaleDateString("en-US", {
+                  month: "short",
+                  day: "numeric",
+                })}
+              </strong>{" "}
+              (next Friday). Tasks with no due date are left alone. Each
+              item's activity log records the change, and any linked
+              Workbench signals are mirrored back to Pending.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
