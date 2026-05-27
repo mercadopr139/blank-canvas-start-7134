@@ -37,7 +37,6 @@ import {
   File as FileIcon,
   Download,
   Send,
-  Loader2,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -64,10 +63,8 @@ import {
   STATUS_LABEL,
   flattenSubtree,
   isParentTaskComplete,
-  colorForUserId,
-  initialsOf,
 } from "./types";
-import { pushAgendaItemToWorkbench } from "./workbench-sync";
+import { SendToWorkbenchOverlay } from "./SendToWorkbenchOverlay";
 import confetti from "canvas-confetti";
 
 // Per-depth visual scale. L1 is the chunky topic header (lives inside
@@ -215,129 +212,26 @@ const CompletionPill = ({ complete }: { complete: boolean }) => (
   </div>
 );
 
-// ──────────────────────── Quick Send-to-Workbench ────────────────────────
-// Per-row send button that lives in the actions cluster. Click → popover
-// with the four eligible staff workbenches → click a name → instant push
-// to that user's seeded "Agenda" focus area. No focus-area picker needed
-// because the meeting flow is "review this task, hand it to this person."
+// ──────────────────────── Send-to-Workbench trigger ────────────────────────
+// Per-row Send button that opens the full SendToWorkbenchOverlay. The
+// overlay (modeled on MyWorkbenchOverlay) gives full agency: pick the
+// staffer, see their whole Workbench, edit the task title, drop it
+// into whichever tile makes sense. State is hoisted to the row so the
+// agendaItem context follows the click into the modal.
 
-const QuickSendButton = ({
-  node,
-  staff,
-  agendaFocusByManager,
-}: {
-  node: AgendaItemWithChildren;
-  staff: StaffOption[];
-  agendaFocusByManager: Map<string, string>;
-}) => {
-  const [open, setOpen] = useState(false);
-  const [sendingUserId, setSendingUserId] = useState<string | null>(null);
-
-  // Only staff with a task_manager_type that maps to a seeded Agenda
-  // focus area can receive items. Others are filtered out — they'd
-  // silently fail the send otherwise.
-  const eligibleStaff = staff.filter(
-    (s) => s.task_manager_type && agendaFocusByManager.has(s.task_manager_type),
-  );
-
-  const handleSend = async (recipient: StaffOption) => {
-    const focusAreaId = recipient.task_manager_type
-      ? agendaFocusByManager.get(recipient.task_manager_type)
-      : undefined;
-    if (!focusAreaId) {
-      toast.error(`${recipient.full_name} has no Workbench set up.`);
-      return;
-    }
-    setSendingUserId(recipient.user_id);
-    try {
-      const result = await pushAgendaItemToWorkbench({
-        agendaItemId: node.id,
-        title: node.title,
-        notes: node.notes,
-        pillar: node.pillar,
-        status: node.status,
-        targets: [{ userId: recipient.user_id, focusAreaId }],
-      });
-      if (result.inserted > 0) {
-        toast.success(`Sent to ${recipient.full_name}'s Workbench.`);
-      } else if (result.alreadyPresent > 0) {
-        toast.info(`Already on ${recipient.full_name}'s Workbench.`);
-      } else if (result.noWorkbench > 0) {
-        toast.error(`${recipient.full_name} has no Workbench set up.`);
-      } else {
-        toast.error("Send failed.");
-      }
-      setOpen(false);
-    } catch (e: any) {
-      toast.error(e?.message ?? "Send failed.");
-    } finally {
-      setSendingUserId(null);
-    }
-  };
-
-  return (
-    <Popover open={open} onOpenChange={setOpen}>
-      <PopoverTrigger asChild>
-        <button
-          type="button"
-          className="shrink-0 p-1 rounded text-white/25 hover:text-emerald-300 hover:bg-emerald-500/[0.08] opacity-0 group-hover/row:opacity-100 focus:opacity-100 transition-opacity"
-          title="Send to a Workbench"
-          onClick={(e) => e.stopPropagation()}
-        >
-          <Send className="w-3.5 h-3.5" />
-        </button>
-      </PopoverTrigger>
-      <PopoverContent
-        align="end"
-        className="w-60 p-1 bg-neutral-900 border-white/10 text-white"
-      >
-        <p className="text-[10px] uppercase tracking-wider text-zinc-500 px-2.5 py-1.5">
-          Send to Workbench
-        </p>
-        {eligibleStaff.length === 0 ? (
-          <p className="text-xs text-zinc-500 italic px-2.5 py-2">
-            No Workbenches are configured yet.
-          </p>
-        ) : (
-          <div className="space-y-0.5">
-            {eligibleStaff.map((s) => {
-              const sending = sendingUserId === s.user_id;
-              return (
-                <button
-                  key={s.user_id}
-                  type="button"
-                  disabled={!!sendingUserId}
-                  onClick={() => handleSend(s)}
-                  className="w-full flex items-center gap-2.5 px-2.5 py-2 rounded-md hover:bg-white/[0.05] disabled:opacity-50 disabled:cursor-not-allowed text-left transition-colors"
-                >
-                  <div
-                    className="w-6 h-6 rounded-full flex items-center justify-center font-bold text-white text-[10px] shrink-0"
-                    style={{ background: colorForUserId(s.user_id) }}
-                  >
-                    {initialsOf(s.full_name)}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-xs font-medium text-white truncate">
-                      {s.full_name}
-                    </p>
-                    {s.job_title && (
-                      <p className="text-[10px] text-zinc-500 truncate">
-                        {s.job_title}
-                      </p>
-                    )}
-                  </div>
-                  {sending && (
-                    <Loader2 className="w-3.5 h-3.5 text-zinc-400 animate-spin shrink-0" />
-                  )}
-                </button>
-              );
-            })}
-          </div>
-        )}
-      </PopoverContent>
-    </Popover>
-  );
-};
+const QuickSendButton = ({ onOpen }: { onOpen: () => void }) => (
+  <button
+    type="button"
+    onClick={(e) => {
+      e.stopPropagation();
+      onOpen();
+    }}
+    className="shrink-0 p-1 rounded text-white/25 hover:text-emerald-300 hover:bg-emerald-500/[0.08] opacity-0 group-hover/row:opacity-100 focus:opacity-100 transition-opacity"
+    title="Send to a Workbench"
+  >
+    <Send className="w-3.5 h-3.5" />
+  </button>
+);
 
 // ─────────────────────────── Due-date column ───────────────────────────
 // Native date input styled to match the column row. Overdue / today
@@ -727,6 +621,7 @@ export const AgendaItemRow = ({
   const [addingChild, setAddingChild] = useState(false);
   const [draftChildTitle, setDraftChildTitle] = useState("");
   const [savingChild, setSavingChild] = useState(false);
+  const [sendOverlayOpen, setSendOverlayOpen] = useState(false);
 
   // Drag-to-reorder. The data payload lets the DndContext at the
   // pillar level know which parent's child list this drag belongs to.
@@ -1006,11 +901,7 @@ export const AgendaItemRow = ({
           send, move on. */}
       <div className="flex items-center gap-2 ml-1">
         {isTask && (
-          <QuickSendButton
-            node={node}
-            staff={staff}
-            agendaFocusByManager={agendaFocusByManager}
-          />
+          <QuickSendButton onOpen={() => setSendOverlayOpen(true)} />
         )}
 
         <DropdownMenu>
@@ -1174,6 +1065,20 @@ export const AgendaItemRow = ({
   // sit on a near-black surface and the alternating L3+ pattern
   // (subtle-gray over bare-dark) reads cleanly without the pillar tint
   // muddying it.
+  // Send-to-Workbench overlay — rendered once per row so the agendaItem
+  // context follows the click into the modal. Mounted regardless of
+  // open state (Radix Dialog portals nothing when closed, so the
+  // overhead is negligible).
+  const sendOverlay = isTask ? (
+    <SendToWorkbenchOverlay
+      open={sendOverlayOpen}
+      onClose={() => setSendOverlayOpen(false)}
+      agendaItem={node}
+      staff={staff}
+      agendaFocusByManager={agendaFocusByManager}
+    />
+  ) : null;
+
   if (isL1) {
     return (
       <div
@@ -1186,6 +1091,7 @@ export const AgendaItemRow = ({
       >
         <div style={{ background: accent }}>{rowContent}</div>
         {childrenBlock && <div className="pb-2">{childrenBlock}</div>}
+        {sendOverlay}
       </div>
     );
   }
@@ -1194,6 +1100,7 @@ export const AgendaItemRow = ({
     <div ref={setNodeRef} style={dragStyle}>
       {rowContent}
       {childrenBlock}
+      {sendOverlay}
     </div>
   );
 };
