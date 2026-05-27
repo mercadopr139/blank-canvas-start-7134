@@ -456,7 +456,12 @@ export const AgendaItemRow = ({
   const canHaveChildren = depth < 4;
   const hasChildren = node.children.length > 0;
   const isL1 = depth === 1;
-  const isTask = !isL1; // L2-L4 get the columns; L1 stays a container header
+  const isTask = !isL1; // L2-L4 get a status column; L1 stays a container header
+  // L3+ are sub-tasks. They keep the Status column (so you can check them
+  // off in the row) but drop Due/Files/Notes — those live behind the
+  // title click → detail dialog. Keeps the meeting scan-line uncluttered
+  // while every feature stays a click away.
+  const isSubtask = depth >= 3;
 
   const [addingChild, setAddingChild] = useState(false);
   const [draftChildTitle, setDraftChildTitle] = useState("");
@@ -545,15 +550,15 @@ export const AgendaItemRow = ({
         <span className="w-3.5 shrink-0" />
       )}
 
-      {/* Title — for tasks (L2-L4) the title gets a fixed column width so
-          columns sit right next to it (much easier to scan than columns
-          pinned far-right). L1 topics keep flex-1 since they have no
-          columns to anchor against. */}
+      {/* Title — for L2 tasks the title gets a fixed column width so
+          the four columns sit right next to it. L1 topics and L3+
+          subtasks let the title flex-fill since their column block
+          is empty / status-only. */}
       <button
         type="button"
         onClick={() => onOpenDetail(node)}
         className={`min-w-0 text-left truncate hover:text-white transition-colors ${
-          isTask ? "w-80 shrink-0" : "flex-1"
+          isTask && !isSubtask ? "w-80 shrink-0" : "flex-1"
         } ${style.titleClass} ${
           node.status === "done" && isTask ? "line-through opacity-50" : ""
         }`}
@@ -565,7 +570,8 @@ export const AgendaItemRow = ({
       {/* Task columns — pinned right. Only on L2-L4. Each column wears
           a left border so the row reads as a real columnar grid. The
           border color matches the column header text (zinc-500) at low
-          opacity so it's a soft separator, not a hard divider. */}
+          opacity so it's a soft separator, not a hard divider.
+          L3+ subtasks drop Due/Files/Notes — they live in the dialog. */}
       {isTask && (
         <>
           <div className="w-28 shrink-0 hidden sm:block border-l border-zinc-500/30 pl-2">
@@ -574,6 +580,8 @@ export const AgendaItemRow = ({
               onChange={(s) => onSetStatus(node.id, s)}
             />
           </div>
+          {!isSubtask && (
+            <>
           <div className="w-24 shrink-0 hidden sm:block border-l border-zinc-500/30 pl-2">
             <DueDateCell
               value={node.due_date}
@@ -594,8 +602,11 @@ export const AgendaItemRow = ({
             />
           </div>
           {/* Pushes the right-side actions cluster to the row's right
-              edge so the column block stays anchored to the title. */}
+              edge so the column block stays anchored to the title.
+              Subtasks don't need this — their title is flex-1 already. */}
           <div className="flex-1" aria-hidden />
+            </>
+          )}
         </>
       )}
 
