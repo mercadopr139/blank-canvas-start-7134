@@ -125,6 +125,10 @@ export const SendToWorkbenchOverlay = ({
   const targetUser = staff.find((s) => s.user_id === targetUserId) ?? null;
   const managerType = targetUser?.task_manager_type ?? null;
 
+  // Privacy gate: the agenda is NLA-specific work, so the only valid
+  // destination on someone else's Workbench is their NLA tile. Other
+  // tiles (Personal, USA Boxing, FCUSA, etc.) stay private to the
+  // owner — we never fetch or render them here.
   const { data: focusAreas = [], isLoading: areasLoading } = useQuery<FocusArea[]>({
     queryKey: ["send-workbench-focus-areas", managerType],
     queryFn: async () => {
@@ -133,6 +137,7 @@ export const SendToWorkbenchOverlay = ({
         .from("focus_areas")
         .select("id, key, title, manager_type")
         .eq("manager_type", managerType)
+        .eq("key", "nla")
         .order("sort_order", { ascending: true });
       if (error) throw error;
       return (data || []) as FocusArea[];
@@ -140,24 +145,29 @@ export const SendToWorkbenchOverlay = ({
     enabled: !!managerType && open,
   });
 
-  // Current Pending signals on the target Workbench so the user can
-  // see what's already there before adding (avoid duplicates, judge
-  // load). Same filtering convention as MyWorkbenchOverlay.
+  // Current items already on the target's NLA tile — shown so the user
+  // can see what's there (avoid duplicates, judge load) before adding.
+  // Query is scoped to NLA only so other tiles' data never crosses the
+  // wire. PD's NLA signals have source = null (legacy) OR source = "NLA";
+  // every other manager_type uses "{TYPE}:NLA".
   const { data: coreSignals = [] } = useQuery<CoreSignal[]>({
     queryKey: ["send-workbench-core-signals", managerType],
     queryFn: async () => {
       if (!managerType) return [];
-      const { data, error } = await supabase
+      let query = supabase
         .from("signals")
         .select("id, title, status, source")
         .eq("priority_layer", "Core")
         .eq("is_archived", false)
         .eq("is_trashed", false);
+      if (managerType === "PD") {
+        query = query.or("source.is.null,source.eq.NLA");
+      } else {
+        query = query.eq("source", `${managerType}:NLA`);
+      }
+      const { data, error } = await query;
       if (error) throw error;
-      return ((data || []) as CoreSignal[]).filter((s) => {
-        if (managerType === "PD") return !s.source || !s.source.includes(":");
-        return s.source?.startsWith(`${managerType}:`) ?? false;
-      });
+      return (data || []) as CoreSignal[];
     },
     enabled: !!managerType && open,
   });
@@ -231,12 +241,12 @@ export const SendToWorkbenchOverlay = ({
             </div>
             <div className="min-w-0 flex-1 text-left">
               <DialogTitle className="text-sm font-bold text-white">
-                Send to Workbench
+                Send to NLA Workbench
               </DialogTitle>
               <p className="text-[11px] text-zinc-500 truncate">
                 {agendaItem?.title
                   ? `Adding: "${agendaItem.title}"`
-                  : "Pick a Workbench"}
+                  : "Pick a teammate"}
               </p>
             </div>
           </div>
@@ -286,7 +296,7 @@ export const SendToWorkbenchOverlay = ({
 
           {eligibleStaff.length > 0 && !managerType && (
             <p className="text-xs text-zinc-500 italic text-center py-6">
-              Pick a Workbench above to see its tiles.
+              Pick a teammate above to see their NLA tile.
             </p>
           )}
 
@@ -296,7 +306,7 @@ export const SendToWorkbenchOverlay = ({
 
           {!areasLoading && managerType && focusAreas.length === 0 && (
             <p className="text-xs text-zinc-500 italic text-center py-6">
-              This Workbench has no focus areas yet.
+              This teammate doesn't have an NLA tile on their Workbench yet.
             </p>
           )}
 
@@ -409,7 +419,7 @@ export const SendToWorkbenchOverlay = ({
         {/* Footer */}
         <div className="px-5 py-3 border-t border-white/[0.06] flex items-center justify-between shrink-0">
           <p className="text-[10px] text-zinc-600">
-            Tip: open multiple tiles to drop the same task into more than one.
+            Agenda items route to NLA only. Other Workbench tiles stay private.
           </p>
           <button
             type="button"
