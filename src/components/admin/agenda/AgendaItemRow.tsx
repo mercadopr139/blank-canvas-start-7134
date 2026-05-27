@@ -34,7 +34,13 @@ import {
   Calendar,
   X,
   GripVertical,
+  ExternalLink,
+  FileText,
+  File as FileIcon,
+  Download,
 } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 import { useSortable, SortableContext, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import {
@@ -265,9 +271,28 @@ const DueDateCell = ({
 };
 
 // ─────────────────────────── Files column ───────────────────────────
-// Single icon + count combining attachments and links. Click opens
-// the detail dialog where the user can upload/manage both sets — far
-// less duplicated UX than a separate popover.
+// Paperclip + count. Click opens a popover listing every link
+// (click → opens in new tab) and every attachment (click → downloads
+// via a signed URL). The full detail dialog is one footer click away
+// for adding/removing, but for the common case of "grab a file" the
+// row-level popover saves the dialog round-trip.
+//
+// Empty state still routes to onOpenDetail so first-time users land
+// in the dialog where the Add/Upload affordances live.
+
+const triggerBlobDownload = async (url: string, filename: string) => {
+  const res = await fetch(url);
+  if (!res.ok) throw new Error(`Download failed (${res.status})`);
+  const blob = await res.blob();
+  const objectUrl = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = objectUrl;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(objectUrl), 1000);
+};
 
 const FilesCell = ({
   attachments,
@@ -278,40 +303,118 @@ const FilesCell = ({
   links: LinkSummary[];
   onOpenDetail: () => void;
 }) => {
+  const [open, setOpen] = useState(false);
   const count = attachments.length + links.length;
   const hasAny = count > 0;
-  const previewLines: string[] = [];
-  if (attachments.length > 0) {
-    const names = attachments.slice(0, 3).map((a) => a.filename);
-    previewLines.push(
-      `${attachments.length} file${attachments.length === 1 ? "" : "s"}: ${names.join(", ")}${
-        attachments.length > 3 ? `, +${attachments.length - 3} more` : ""
-      }`,
+
+  const handleDownload = async (att: AttachmentSummary) => {
+    try {
+      const { data, error } = await supabase.storage
+        .from("agenda-attachments")
+        .createSignedUrl(att.storage_path, 60 * 60);
+      if (error || !data?.signedUrl) throw error ?? new Error("Could not sign URL");
+      await triggerBlobDownload(data.signedUrl, att.filename);
+    } catch (e: any) {
+      toast.error(e.message ?? "Download failed");
+    }
+  };
+
+  // No files yet — keep the existing "click to add" affordance routing
+  // straight to the detail dialog, since the popover would just be empty.
+  if (!hasAny) {
+    return (
+      <button
+        type="button"
+        onClick={onOpenDetail}
+        className="w-full flex items-center justify-center gap-1 px-2 py-1 rounded-md border text-[11px] font-semibold transition-colors bg-white/[0.02] text-white/25 border-white/[0.06] hover:text-white/60 hover:bg-white/[0.06]"
+        title="No files or links — click to add"
+      >
+        <Paperclip className="w-3 h-3 shrink-0" />
+        <span className="tabular-nums">—</span>
+      </button>
     );
   }
-  if (links.length > 0) {
-    const names = links.slice(0, 3).map((l) => l.nickname?.trim() || l.url);
-    previewLines.push(
-      `${links.length} link${links.length === 1 ? "" : "s"}: ${names.join(", ")}${
-        links.length > 3 ? `, +${links.length - 3} more` : ""
-      }`,
-    );
-  }
-  const tip = hasAny ? previewLines.join(" · ") : "No files or links — click to add";
+
   return (
-    <button
-      type="button"
-      onClick={onOpenDetail}
-      className={`w-full flex items-center justify-center gap-1 px-2 py-1 rounded-md border text-[11px] font-semibold transition-colors ${
-        hasAny
-          ? "bg-amber-400/10 text-amber-400 border-amber-400/30 hover:bg-amber-400/15"
-          : "bg-white/[0.02] text-white/25 border-white/[0.06] hover:text-white/60 hover:bg-white/[0.06]"
-      }`}
-      title={tip}
-    >
-      <Paperclip className="w-3 h-3 shrink-0" />
-      <span className="tabular-nums">{hasAny ? count : "—"}</span>
-    </button>
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <button
+          type="button"
+          className="w-full flex items-center justify-center gap-1 px-2 py-1 rounded-md border text-[11px] font-semibold transition-colors bg-amber-400/10 text-amber-400 border-amber-400/30 hover:bg-amber-400/15"
+          title={`${count} item${count === 1 ? "" : "s"} — click to open`}
+        >
+          <Paperclip className="w-3 h-3 shrink-0" />
+          <span className="tabular-nums">{count}</span>
+        </button>
+      </PopoverTrigger>
+      <PopoverContent
+        align="end"
+        className="w-72 p-0 bg-neutral-900 border-white/10 text-white"
+      >
+        <div className="max-h-64 overflow-y-auto py-1">
+          {links.length > 0 && (
+            <>
+              <p className="px-3 pt-1.5 pb-1 text-[9px] uppercase tracking-wider text-zinc-500">
+                Links
+              </p>
+              {links.map((link) => (
+                <a
+                  key={link.id}
+                  href={link.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  onClick={() => setOpen(false)}
+                  className="flex items-center gap-2 px-3 py-1.5 hover:bg-white/[0.05] transition-colors text-xs text-white"
+                  title={link.url}
+                >
+                  <ExternalLink className="w-3.5 h-3.5 text-zinc-400 shrink-0" />
+                  <span className="flex-1 truncate">
+                    {link.nickname?.trim() || link.url}
+                  </span>
+                </a>
+              ))}
+            </>
+          )}
+          {attachments.length > 0 && (
+            <>
+              <p className="px-3 pt-1.5 pb-1 text-[9px] uppercase tracking-wider text-zinc-500">
+                Files
+              </p>
+              {attachments.map((att) => {
+                const Icon = att.mime_type === "application/pdf" ? FileText : FileIcon;
+                return (
+                  <button
+                    key={att.id}
+                    type="button"
+                    onClick={() => {
+                      setOpen(false);
+                      void handleDownload(att);
+                    }}
+                    className="w-full flex items-center gap-2 px-3 py-1.5 hover:bg-white/[0.05] transition-colors text-xs text-white text-left"
+                    title={`Download ${att.filename}`}
+                  >
+                    <Icon className="w-3.5 h-3.5 text-zinc-400 shrink-0" />
+                    <span className="flex-1 truncate">{att.filename}</span>
+                    <Download className="w-3 h-3 text-zinc-500 shrink-0" />
+                  </button>
+                );
+              })}
+            </>
+          )}
+        </div>
+        <button
+          type="button"
+          onClick={() => {
+            setOpen(false);
+            onOpenDetail();
+          }}
+          className="w-full flex items-center justify-center gap-1.5 px-3 py-2 border-t border-white/[0.06] text-[10px] font-semibold text-zinc-400 hover:bg-white/[0.04] hover:text-white transition-colors"
+        >
+          Manage in details
+          <ChevronRight className="w-3 h-3" />
+        </button>
+      </PopoverContent>
+    </Popover>
   );
 };
 

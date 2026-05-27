@@ -43,12 +43,19 @@ export interface StaffOption {
 
 // Lightweight summaries fetched at page load so each row can display
 // attachment/link indicator icons without a per-item query.
+// `id` + `storage_path` are included on attachments so the row-level
+// Files popover can generate a signed download URL on click without
+// re-fetching the row.
 export interface AttachmentSummary {
+  id: string;
   item_id: string;
   filename: string;
+  storage_path: string;
+  mime_type: string;
 }
 
 export interface LinkSummary {
+  id: string;
   item_id: string;
   url: string;
   nickname: string | null;

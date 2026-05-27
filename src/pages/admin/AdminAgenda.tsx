@@ -127,7 +127,7 @@ const AdminAgenda = () => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("agenda_attachments" as any)
-        .select("item_id, filename");
+        .select("id, item_id, filename, storage_path, mime_type");
       if (error) throw error;
       return (data || []) as unknown as AttachmentSummary[];
     },
@@ -138,7 +138,7 @@ const AdminAgenda = () => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("agenda_item_links" as any)
-        .select("item_id, url, nickname");
+        .select("id, item_id, url, nickname");
       if (error) throw error;
       return (data || []) as unknown as LinkSummary[];
     },
