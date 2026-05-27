@@ -43,6 +43,7 @@ import {
 import { AgendaItemRow } from "@/components/admin/agenda/AgendaItemRow";
 import { AgendaItemDetailDialog } from "@/components/admin/agenda/AgendaItemDetailDialog";
 import { WorkbenchesDrawer } from "@/components/admin/agenda/WorkbenchesDrawer";
+import DailyVerse from "@/components/admin/DailyVerse";
 import {
   buildTree,
   flattenSubtree,
@@ -853,6 +854,10 @@ const AdminAgenda = () => {
             Weekly Review
           </p>
         </div>
+
+        {/* Daily verse — same surface used on Workbench + Signals so
+            the agenda opens on the same note as the rest of the admin. */}
+        <DailyVerse />
 
         {/* Week summary — editable */}
         <div className="rounded-xl border border-white/[0.08] bg-white/[0.02] p-5">
