@@ -629,6 +629,10 @@ export const AgendaItemDetailDialog = ({
   if (!item) return null;
 
   const accent = PILLAR_COLOR[item.pillar];
+  // L1 (Agenda Topic) is a pure container — only its title is editable
+  // in the detail dialog. Status/Due/Notes/Send to Workbench/files/links
+  // belong on the tasks underneath, not on the topic shell itself.
+  const isTopic = item.depth === 1;
 
   const handleSave = async () => {
     const patch: Parameters<typeof onSave>[0] = {};
@@ -668,119 +672,125 @@ export const AgendaItemDetailDialog = ({
         </DialogHeader>
 
         <div className="space-y-5 mt-2">
-          {/* Title — large inline edit */}
+          {/* Title — large inline edit. For topics this is the only field. */}
           <Input
             value={title}
             onChange={(e) => setTitle(e.target.value)}
-            placeholder="Item title"
+            placeholder={isTopic ? "Agenda topic title" : "Task title"}
             className="bg-white/[0.04] border-white/[0.08] text-white text-base font-semibold h-10"
           />
 
-          {/* Status segmented control */}
-          <div>
-            <p className="text-[10px] uppercase tracking-wider text-zinc-500 mb-1.5">
-              Status
-            </p>
-            <div className="flex gap-1.5">
-              {STATUS_OPTIONS.map((s) => {
-                const active = status === s;
-                const activeClass =
-                  s === "done"
-                    ? "border-green-500/40 bg-green-500/15 text-green-400"
-                    : s === "on_hold"
-                      ? "border-amber-500/40 bg-amber-500/15 text-amber-300"
-                      : s === "signal"
-                        ? "border-red-500/40 bg-red-500/15 text-red-400"
-                        : "border-white/20 bg-white/[0.06] text-zinc-200";
-                return (
-                  <button
-                    key={s}
-                    type="button"
-                    onClick={() => setStatus(s)}
-                    className={`flex-1 text-xs font-semibold py-1.5 rounded-md border transition-colors ${
-                      active
-                        ? activeClass
-                        : "border-white/[0.06] text-white/40 hover:border-white/15 hover:text-white/70"
-                    }`}
-                  >
-                    {STATUS_LABEL[s]}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
+          {/* Everything below is task-only. Agenda Topics are containers —
+              their status, due, files, etc. live on the tasks underneath. */}
+          {!isTopic && (
+            <>
+              {/* Status segmented control */}
+              <div>
+                <p className="text-[10px] uppercase tracking-wider text-zinc-500 mb-1.5">
+                  Status
+                </p>
+                <div className="flex gap-1.5">
+                  {STATUS_OPTIONS.map((s) => {
+                    const active = status === s;
+                    const activeClass =
+                      s === "done"
+                        ? "border-green-500/40 bg-green-500/15 text-green-400"
+                        : s === "on_hold"
+                          ? "border-amber-500/40 bg-amber-500/15 text-amber-300"
+                          : s === "signal"
+                            ? "border-red-500/40 bg-red-500/15 text-red-400"
+                            : "border-white/20 bg-white/[0.06] text-zinc-200";
+                    return (
+                      <button
+                        key={s}
+                        type="button"
+                        onClick={() => setStatus(s)}
+                        className={`flex-1 text-xs font-semibold py-1.5 rounded-md border transition-colors ${
+                          active
+                            ? activeClass
+                            : "border-white/[0.06] text-white/40 hover:border-white/15 hover:text-white/70"
+                        }`}
+                      >
+                        {STATUS_LABEL[s]}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
 
-          {/* Due date — owner field was dropped; the agenda is a shared
-              audit tool, so no per-item assignment. */}
-          <div>
-            <p className="text-[10px] uppercase tracking-wider text-zinc-500 mb-1.5">
-              Due
-            </p>
-            <div className="relative">
-              <Calendar className="absolute left-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-zinc-500" />
-              <input
-                type="date"
-                value={dueDate}
-                onChange={(e) => setDueDate(e.target.value)}
-                className="w-full bg-white/[0.04] border border-white/[0.08] rounded-md text-xs text-white py-1.5 pl-7 pr-2"
-              />
-              {dueDate && (
-                <button
+              {/* Due date — owner field was dropped; the agenda is a shared
+                  audit tool, so no per-item assignment. */}
+              <div>
+                <p className="text-[10px] uppercase tracking-wider text-zinc-500 mb-1.5">
+                  Due
+                </p>
+                <div className="relative">
+                  <Calendar className="absolute left-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-zinc-500" />
+                  <input
+                    type="date"
+                    value={dueDate}
+                    onChange={(e) => setDueDate(e.target.value)}
+                    className="w-full bg-white/[0.04] border border-white/[0.08] rounded-md text-xs text-white py-1.5 pl-7 pr-2"
+                  />
+                  {dueDate && (
+                    <button
+                      type="button"
+                      onClick={() => setDueDate("")}
+                      className="absolute right-1 top-1/2 -translate-y-1/2 p-0.5 text-zinc-500 hover:text-white"
+                      title="Clear due date"
+                    >
+                      <X className="w-3 h-3" />
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              {/* Notes */}
+              <div>
+                <p className="text-[10px] uppercase tracking-wider text-zinc-500 mb-1.5">
+                  Notes
+                </p>
+                <Textarea
+                  value={notes}
+                  onChange={(e) => setNotes(e.target.value)}
+                  placeholder="Context, links to discuss, sub-actions…"
+                  className="bg-white/[0.04] border-white/[0.08] text-white text-sm min-h-[120px]"
+                />
+              </div>
+
+              {/* Push to Workbench — Phase 4. Owner-less version: the chooser
+                  opens with every staffer who has a Workbench listed, and the
+                  user picks who to send to. Status syncs both ways once sent. */}
+              <div className="rounded-md border border-white/[0.06] bg-white/[0.02] p-3 flex items-center justify-between gap-3">
+                <div className="min-w-0">
+                  <p className="text-xs font-semibold text-white">Send to Workbench</p>
+                  <p className="text-[11px] text-zinc-500 leading-snug">
+                    Push this item into one or more staff Workbenches. Status syncs both ways.
+                  </p>
+                </div>
+                <Button
                   type="button"
-                  onClick={() => setDueDate("")}
-                  className="absolute right-1 top-1/2 -translate-y-1/2 p-0.5 text-zinc-500 hover:text-white"
-                  title="Clear due date"
+                  onClick={() => {
+                    setPushSelections(new Map());
+                    setPushOpen(true);
+                  }}
+                  className="bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-300 border border-emerald-500/30 text-xs h-8 gap-1.5 shrink-0"
                 >
-                  <X className="w-3 h-3" />
-                </button>
-              )}
-            </div>
-          </div>
+                  <Send className="w-3.5 h-3.5" />
+                  Send
+                </Button>
+              </div>
 
-          {/* Notes */}
-          <div>
-            <p className="text-[10px] uppercase tracking-wider text-zinc-500 mb-1.5">
-              Notes
-            </p>
-            <Textarea
-              value={notes}
-              onChange={(e) => setNotes(e.target.value)}
-              placeholder="Context, links to discuss, sub-actions…"
-              className="bg-white/[0.04] border-white/[0.08] text-white text-sm min-h-[120px]"
-            />
-          </div>
+              {/* Attachments — Phase 3b */}
+              <AttachmentsSection itemId={item.id} />
 
-          {/* Push to Workbench — Phase 4. Owner-less version: the chooser
-              opens with every staffer who has a Workbench listed, and the
-              user picks who to send to. Status syncs both ways once sent. */}
-          <div className="rounded-md border border-white/[0.06] bg-white/[0.02] p-3 flex items-center justify-between gap-3">
-            <div className="min-w-0">
-              <p className="text-xs font-semibold text-white">Send to Workbench</p>
-              <p className="text-[11px] text-zinc-500 leading-snug">
-                Push this item into one or more staff Workbenches. Status syncs both ways.
-              </p>
-            </div>
-            <Button
-              type="button"
-              onClick={() => {
-                setPushSelections(new Map());
-                setPushOpen(true);
-              }}
-              className="bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-300 border border-emerald-500/30 text-xs h-8 gap-1.5 shrink-0"
-            >
-              <Send className="w-3.5 h-3.5" />
-              Send
-            </Button>
-          </div>
+              {/* Links — Phase 3b */}
+              <LinksSection itemId={item.id} />
 
-          {/* Attachments — Phase 3b */}
-          <AttachmentsSection itemId={item.id} />
-
-          {/* Links — Phase 3b */}
-          <LinksSection itemId={item.id} />
-
-          {/* Activity log — Phase 3b */}
-          <ActivitySection itemId={item.id} staff={staff} />
+              {/* Activity log — Phase 3b */}
+              <ActivitySection itemId={item.id} staff={staff} />
+            </>
+          )}
 
           <div className="flex gap-2 pt-1 sticky bottom-0 bg-neutral-900 pb-2">
             <Button
