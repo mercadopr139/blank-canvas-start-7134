@@ -29,8 +29,6 @@ import {
   CheckCircle2,
   StickyNote,
   Paperclip,
-  Calendar,
-  X,
   GripVertical,
   ExternalLink,
   FileText,
@@ -50,7 +48,6 @@ import {
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Textarea } from "@/components/ui/textarea";
 import { PILLAR_COLOR } from "@/pages/admin/AdminMessageBoard";
 import type {
   AgendaItemWithChildren,
@@ -238,83 +235,10 @@ const QuickSendButton = ({ onOpen }: { onOpen: () => void }) => (
 // colorations are applied to the trigger surface itself, not a chip,
 // so the column reads as a single editable cell.
 
-const DueDateCell = ({
-  value,
-  onChange,
-}: {
-  value: string | null;
-  onChange: (iso: string | null) => void;
-}) => {
-  const inputRef = useRef<HTMLInputElement>(null);
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  let tone = "bg-white/[0.04] text-zinc-400 border-white/[0.08] hover:bg-white/[0.06]";
-  let label = "—";
-  if (value) {
-    const due = new Date(value + "T00:00:00");
-    const isOverdue = due < today;
-    const isToday = due.getTime() === today.getTime();
-    label = due.toLocaleDateString("en-US", { month: "short", day: "numeric" });
-    if (isOverdue) tone = "bg-red-500/15 text-red-400 border-red-500/30";
-    else if (isToday) tone = "bg-amber-500/15 text-amber-300 border-amber-500/30";
-    else tone = "bg-white/[0.04] text-zinc-300 border-white/[0.10] hover:bg-white/[0.06]";
-  }
-  // The hidden input is the anchor for the browser's date picker.
-  // Clicking the visible button calls showPicker() — fallback to click()
-  // for older browsers (Safari <16). The input is sr-only-style hidden
-  // (not absolutely positioned over the button, which was swallowing
-  // the click in Chrome and never opening the picker).
-  const openPicker = () => {
-    const el = inputRef.current;
-    if (!el) return;
-    try {
-      if (typeof (el as any).showPicker === "function") {
-        (el as any).showPicker();
-        return;
-      }
-    } catch {
-      // Some browsers throw if the element isn't visible — fall through.
-    }
-    el.focus();
-    el.click();
-  };
-
-  return (
-    <div className="relative w-full group/due">
-      <button
-        type="button"
-        onClick={openPicker}
-        className={`w-full flex items-center justify-center gap-1 px-2 py-1 rounded-md border text-[11px] font-semibold transition-colors ${tone}`}
-        title={value ? `Due ${label} — click to change` : "Set due date"}
-      >
-        <Calendar className="w-3 h-3 shrink-0" />
-        <span>{label}</span>
-      </button>
-      <input
-        ref={inputRef}
-        type="date"
-        value={value ?? ""}
-        onChange={(e) => onChange(e.target.value || null)}
-        className="sr-only"
-        tabIndex={-1}
-        aria-label="Due date"
-      />
-      {value && (
-        <button
-          type="button"
-          onClick={(e) => {
-            e.stopPropagation();
-            onChange(null);
-          }}
-          className="absolute -right-1 -top-1 p-0.5 rounded-full bg-neutral-900 border border-white/10 text-zinc-500 hover:text-white opacity-0 group-hover/due:opacity-100 transition-opacity"
-          title="Clear due date"
-        >
-          <X className="w-2.5 h-2.5" />
-        </button>
-      )}
-    </div>
-  );
-};
+// Due date column removed — every task is implicitly due "this week"
+// in the audit model, so a per-row date control added clutter without
+// adding info. External hard deadlines go in the task title or notes.
+// The agenda_items.due_date column stays in the DB as legacy data.
 
 // ─────────────────────────── Files column ───────────────────────────
 // Paperclip + count. Click opens a popover listing every link
@@ -465,96 +389,36 @@ const FilesCell = ({
 };
 
 // ─────────────────────────── Notes column ───────────────────────────
-// Icon + count cell. Click opens a popover with a Textarea for quick
-// editing. Hover tooltip shows the first line so context is one
-// mouse-over away — no click needed to peek.
+// Lightweight indicator + click target. The full threaded log lives in
+// the detail dialog so the row stays compact; the cell badge shows the
+// entry count so you can spot tasks that have history at a glance.
 
 const NotesCell = ({
-  notes,
-  onSave,
+  count,
+  onOpenDetail,
 }: {
-  notes: string | null;
-  onSave: (newNotes: string | null) => void;
+  count: number;
+  onOpenDetail: () => void;
 }) => {
-  const [open, setOpen] = useState(false);
-  const [draft, setDraft] = useState(notes ?? "");
-  useEffect(() => {
-    if (open) setDraft(notes ?? "");
-  }, [open, notes]);
-
-  const hasNotes = !!(notes && notes.trim());
-  const firstLine = hasNotes ? notes!.split("\n")[0].trim() : "";
-  const tip = hasNotes
-    ? firstLine.length > 140
-      ? `${firstLine.slice(0, 137)}…`
-      : firstLine
-    : "No notes — click to add";
-
-  const handleSave = () => {
-    const trimmed = draft.trim();
-    onSave(trimmed.length === 0 ? null : trimmed);
-    setOpen(false);
-  };
-
+  const hasNotes = count > 0;
   return (
-    <Popover open={open} onOpenChange={setOpen}>
-      <PopoverTrigger asChild>
-        <button
-          type="button"
-          className={`w-full flex items-center justify-center gap-1 px-2 py-1 rounded-md border text-[11px] font-semibold transition-colors ${
-            hasNotes
-              ? "bg-amber-400/10 text-amber-400 border-amber-400/30 hover:bg-amber-400/15"
-              : "bg-white/[0.02] text-white/25 border-white/[0.06] hover:text-white/60 hover:bg-white/[0.06]"
-          }`}
-          title={tip}
-        >
-          <StickyNote className="w-3 h-3 shrink-0" />
-          <span className="tabular-nums">{hasNotes ? "•" : "—"}</span>
-        </button>
-      </PopoverTrigger>
-      <PopoverContent
-        align="end"
-        className="w-80 p-3 bg-neutral-900 border-white/10 text-white"
-        onOpenAutoFocus={(e) => e.preventDefault()}
-      >
-        <p className="text-[10px] uppercase tracking-wider text-zinc-500 mb-1.5">
-          Notes
-        </p>
-        <Textarea
-          autoFocus
-          value={draft}
-          onChange={(e) => setDraft(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === "Escape") setOpen(false);
-            if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
-              e.preventDefault();
-              handleSave();
-            }
-          }}
-          placeholder="Quick note — context, links to discuss, sub-actions…"
-          className="bg-white/[0.04] border-white/[0.08] text-white text-sm min-h-[100px]"
-        />
-        <div className="flex items-center justify-between gap-2 mt-2">
-          <span className="text-[10px] text-zinc-600">⌘/Ctrl + Enter to save</span>
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              onClick={() => setOpen(false)}
-              className="text-[10px] text-zinc-400 hover:text-white"
-            >
-              Cancel
-            </button>
-            <button
-              type="button"
-              onClick={handleSave}
-              className="text-[10px] font-semibold px-2 py-1 rounded bg-white/10 hover:bg-white/20 text-white"
-            >
-              Save
-            </button>
-          </div>
-        </div>
-      </PopoverContent>
-    </Popover>
+    <button
+      type="button"
+      onClick={onOpenDetail}
+      className={`w-full flex items-center justify-center gap-1 px-2 py-1 rounded-md border text-[11px] font-semibold transition-colors ${
+        hasNotes
+          ? "bg-amber-400/10 text-amber-400 border-amber-400/30 hover:bg-amber-400/15"
+          : "bg-white/[0.02] text-white/25 border-white/[0.06] hover:text-white/60 hover:bg-white/[0.06]"
+      }`}
+      title={
+        hasNotes
+          ? `${count} note${count === 1 ? "" : "s"} — click to open`
+          : "No notes — click to add"
+      }
+    >
+      <StickyNote className="w-3 h-3 shrink-0" />
+      <span className="tabular-nums">{hasNotes ? count : "—"}</span>
+    </button>
   );
 };
 
@@ -568,6 +432,10 @@ interface RowProps {
   agendaFocusByManager: Map<string, string>;
   attachmentsByItem: Map<string, AttachmentSummary[]>;
   linksByItem: Map<string, LinkSummary[]>;
+  // Notes are stored per-entry now (agenda_item_notes table). The row
+  // only needs a count so the Notes cell badge can light up — full
+  // content lives in the detail dialog's own query.
+  noteCountsByItem: Map<string, number>;
   expanded: Set<string>;
   // Position among siblings — used to zebra-stripe task rows so adjacent
   // rows read distinctly. Top-level (L1) ignores it since topics are
@@ -577,8 +445,6 @@ interface RowProps {
   onOpenDetail: (item: AgendaItemWithChildren) => void;
   onSetStatus: (id: string, status: AgendaStatus) => void;
   onChangeOwners: (id: string, userIds: string[]) => void;
-  onSetDueDate: (id: string, iso: string | null) => void;
-  onUpdateNotes: (id: string, notes: string | null) => void;
   onAddChild: (parent: AgendaItemWithChildren, title: string) => Promise<void>;
   onArchive: (id: string) => void;
   onDuplicate: (item: AgendaItemWithChildren) => void;
@@ -591,14 +457,13 @@ export const AgendaItemRow = ({
   agendaFocusByManager,
   attachmentsByItem,
   linksByItem,
+  noteCountsByItem,
   expanded,
   index = 0,
   onToggleExpand,
   onOpenDetail,
   onSetStatus,
   onChangeOwners,
-  onSetDueDate,
-  onUpdateNotes,
   onAddChild,
   onArchive,
   onDuplicate,
@@ -700,14 +565,14 @@ export const AgendaItemRow = ({
   // that has notes, files, or links. Screen-width-independent, so deep
   // sub-tasks still get a visible signal even when the columns drift
   // rightward with indentation. Tooltip shows a peek of what's inside.
-  const hasNotes = !!(node.notes && node.notes.trim());
+  const noteCount = noteCountsByItem.get(node.id) ?? 0;
+  const hasNotes = noteCount > 0;
   const hasContent = hasNotes || itemAttachments.length > 0 || itemLinks.length > 0;
   const contentTip = (() => {
     if (!hasContent) return "";
     const parts: string[] = [];
     if (hasNotes) {
-      const first = node.notes!.split("\n")[0].trim();
-      parts.push(first.length > 100 ? `Note: ${first.slice(0, 97)}…` : `Note: ${first}`);
+      parts.push(`${noteCount} note${noteCount === 1 ? "" : "s"}`);
     }
     if (itemAttachments.length > 0) {
       parts.push(`${itemAttachments.length} file${itemAttachments.length === 1 ? "" : "s"}`);
@@ -852,7 +717,7 @@ export const AgendaItemRow = ({
           L3+ subtasks drop Due/Files/Notes — they live in the dialog. */}
       {isTask && (
         <>
-          <div className="w-28 shrink-0 hidden sm:block border-l border-zinc-500/30 pl-2">
+          <div className="w-40 shrink-0 hidden sm:block border-l border-zinc-500/30 pl-2">
             {isParent ? (
               <CompletionPill complete={parentIsComplete} />
             ) : (
@@ -864,12 +729,6 @@ export const AgendaItemRow = ({
           </div>
           {!isSubtask && (
             <>
-              <div className="w-24 shrink-0 hidden sm:block border-l border-zinc-500/30 pl-2">
-                <DueDateCell
-                  value={node.due_date}
-                  onChange={(iso) => onSetDueDate(node.id, iso)}
-                />
-              </div>
               <div className="w-16 shrink-0 hidden md:block border-l border-zinc-500/30 pl-2">
                 <FilesCell
                   attachments={itemAttachments}
@@ -879,8 +738,8 @@ export const AgendaItemRow = ({
               </div>
               <div className="w-14 shrink-0 hidden md:block border-l border-zinc-500/30 pl-2">
                 <NotesCell
-                  notes={node.notes}
-                  onSave={(notes) => onUpdateNotes(node.id, notes)}
+                  count={noteCount}
+                  onOpenDetail={() => onOpenDetail(node)}
                 />
               </div>
             </>
@@ -985,8 +844,7 @@ export const AgendaItemRow = ({
           {/* Slot mirrors the inline "+" button now living next to each
               title — keeps the column headers aligned with the row content. */}
           <span className="w-[22px] shrink-0" aria-hidden />
-          <span className="w-28 shrink-0 hidden sm:block text-center border-l border-zinc-500/30 pl-2">Status</span>
-          <span className="w-24 shrink-0 hidden sm:block text-center border-l border-zinc-500/30 pl-2">Due</span>
+          <span className="w-40 shrink-0 hidden sm:block text-center border-l border-zinc-500/30 pl-2">Status</span>
           <span className="w-16 shrink-0 hidden md:block text-center border-l border-zinc-500/30 pl-2">Files</span>
           <span className="w-14 shrink-0 hidden md:block text-center border-l border-zinc-500/30 pl-2">Notes</span>
           {/* Flex spacer + actions cluster spacer mirror the row layout:
@@ -1008,14 +866,13 @@ export const AgendaItemRow = ({
             agendaFocusByManager={agendaFocusByManager}
             attachmentsByItem={attachmentsByItem}
             linksByItem={linksByItem}
+            noteCountsByItem={noteCountsByItem}
             expanded={expanded}
             index={childIndex}
             onToggleExpand={onToggleExpand}
             onOpenDetail={onOpenDetail}
             onSetStatus={onSetStatus}
             onChangeOwners={onChangeOwners}
-            onSetDueDate={onSetDueDate}
-            onUpdateNotes={onUpdateNotes}
             onAddChild={onAddChild}
             onArchive={onArchive}
             onDuplicate={onDuplicate}

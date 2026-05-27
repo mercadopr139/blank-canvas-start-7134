@@ -24,8 +24,6 @@ import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import {
-  Calendar,
-  X,
   Paperclip,
   FileText,
   File as FileIcon,
@@ -38,7 +36,19 @@ import {
   ExternalLink,
   CheckCircle2,
   Circle,
+  StickyNote,
+  Pencil,
 } from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -515,6 +525,289 @@ const LinksSection = ({ itemId }: { itemId: string }) => {
   );
 };
 
+// ──────────────────────────── Notes section ────────────────────────────
+// Threaded log of notes per agenda item — replaces the old single-blob
+// `notes` column. Notes show oldest-first so the log reads as a
+// chronological journal of context. Hovering a note reveals Edit and
+// Delete; delete prompts a confirm before removing the entry.
+
+interface AgendaNoteRow {
+  id: string;
+  content: string;
+  created_at: string;
+  created_by: string | null;
+  updated_at: string;
+}
+
+const NotesSection = ({
+  itemId,
+  staff,
+}: {
+  itemId: string;
+  staff: StaffOption[];
+}) => {
+  const { user } = useAuth();
+  const qc = useQueryClient();
+  const [draft, setDraft] = useState("");
+  const [adding, setAdding] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editDraft, setEditDraft] = useState("");
+  const [savingEdit, setSavingEdit] = useState(false);
+  const [deleteCandidate, setDeleteCandidate] = useState<AgendaNoteRow | null>(null);
+
+  const { data: notes = [] } = useQuery<AgendaNoteRow[]>({
+    queryKey: ["agenda-notes", itemId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("agenda_item_notes" as any)
+        .select("*")
+        .eq("item_id", itemId)
+        .order("created_at", { ascending: true });
+      if (error) throw error;
+      return (data || []) as unknown as AgendaNoteRow[];
+    },
+  });
+
+  const handleAdd = async () => {
+    const trimmed = draft.trim();
+    if (!trimmed) return;
+    setAdding(true);
+    try {
+      const { error } = await supabase
+        .from("agenda_item_notes" as any)
+        .insert({
+          item_id: itemId,
+          content: trimmed,
+          created_by: user?.id ?? null,
+        } as any);
+      if (error) throw error;
+      void logAgendaActivity(itemId, "updated", user?.id ?? null, {
+        note_added: true,
+      });
+      qc.invalidateQueries({ queryKey: ["agenda-notes", itemId] });
+      qc.invalidateQueries({ queryKey: ["agenda-notes-summary"] });
+      qc.invalidateQueries({ queryKey: ["agenda-activity", itemId] });
+      setDraft("");
+    } catch (e: any) {
+      toast.error(e?.message ?? "Add note failed");
+    } finally {
+      setAdding(false);
+    }
+  };
+
+  const startEdit = (note: AgendaNoteRow) => {
+    setEditingId(note.id);
+    setEditDraft(note.content);
+  };
+
+  const cancelEdit = () => {
+    setEditingId(null);
+    setEditDraft("");
+  };
+
+  const saveEdit = async () => {
+    if (!editingId) return;
+    const trimmed = editDraft.trim();
+    if (!trimmed) return;
+    setSavingEdit(true);
+    try {
+      const { error } = await supabase
+        .from("agenda_item_notes" as any)
+        .update({ content: trimmed, updated_at: new Date().toISOString() } as any)
+        .eq("id", editingId);
+      if (error) throw error;
+      qc.invalidateQueries({ queryKey: ["agenda-notes", itemId] });
+      cancelEdit();
+    } catch (e: any) {
+      toast.error(e?.message ?? "Edit failed");
+    } finally {
+      setSavingEdit(false);
+    }
+  };
+
+  const handleConfirmedDelete = async () => {
+    if (!deleteCandidate) return;
+    try {
+      const { error } = await supabase
+        .from("agenda_item_notes" as any)
+        .delete()
+        .eq("id", deleteCandidate.id);
+      if (error) throw error;
+      qc.invalidateQueries({ queryKey: ["agenda-notes", itemId] });
+      qc.invalidateQueries({ queryKey: ["agenda-notes-summary"] });
+      setDeleteCandidate(null);
+      toast.success("Note deleted");
+    } catch (e: any) {
+      toast.error(e?.message ?? "Delete failed");
+    }
+  };
+
+  const authorName = (uid: string | null): string => {
+    if (!uid) return "Someone";
+    const s = staff.find((x) => x.user_id === uid);
+    return s ? displayNameFor(s) : "Someone";
+  };
+
+  return (
+    <div>
+      <p className="text-[10px] uppercase tracking-wider text-zinc-500 mb-2 flex items-center gap-1.5">
+        <StickyNote className="w-3 h-3" />
+        Notes
+      </p>
+
+      {notes.length === 0 ? (
+        <p className="text-xs text-zinc-600 italic mb-3">No notes yet.</p>
+      ) : (
+        <ul className="space-y-2 mb-3">
+          {notes.map((note) => {
+            const isEditing = editingId === note.id;
+            const edited =
+              note.updated_at && note.updated_at !== note.created_at;
+            return (
+              <li
+                key={note.id}
+                className="bg-white/[0.03] border border-white/[0.06] rounded-md px-3 py-2 group/note"
+              >
+                {isEditing ? (
+                  <div>
+                    <Textarea
+                      autoFocus
+                      value={editDraft}
+                      onChange={(e) => setEditDraft(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Escape") cancelEdit();
+                        if (
+                          e.key === "Enter" &&
+                          (e.metaKey || e.ctrlKey)
+                        ) {
+                          e.preventDefault();
+                          saveEdit();
+                        }
+                      }}
+                      className="bg-white/[0.04] border-white/[0.08] text-white text-sm min-h-[80px]"
+                    />
+                    <div className="flex justify-end items-center gap-2 mt-2">
+                      <button
+                        type="button"
+                        onClick={cancelEdit}
+                        className="text-[10px] text-zinc-400 hover:text-white px-2"
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        type="button"
+                        onClick={saveEdit}
+                        disabled={!editDraft.trim() || savingEdit}
+                        className="text-[10px] font-semibold px-2 py-1 rounded bg-white/10 hover:bg-white/20 text-white disabled:opacity-40"
+                      >
+                        {savingEdit ? "Saving…" : "Save"}
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <>
+                    <p className="text-xs text-zinc-200 whitespace-pre-wrap leading-relaxed">
+                      {note.content}
+                    </p>
+                    <div className="flex items-center justify-between mt-1.5 gap-2">
+                      <span className="text-[10px] text-zinc-500 truncate">
+                        {authorName(note.created_by)} ·{" "}
+                        {formatDistanceToNow(new Date(note.created_at), {
+                          addSuffix: true,
+                        })}
+                        {edited && (
+                          <span className="text-zinc-600"> · edited</span>
+                        )}
+                      </span>
+                      <div className="flex items-center gap-2 opacity-0 group-hover/note:opacity-100 focus-within:opacity-100 transition-opacity shrink-0">
+                        <button
+                          type="button"
+                          onClick={() => startEdit(note)}
+                          className="flex items-center gap-1 text-[10px] text-zinc-400 hover:text-white"
+                          title="Edit note"
+                        >
+                          <Pencil className="w-3 h-3" />
+                          Edit
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setDeleteCandidate(note)}
+                          className="flex items-center gap-1 text-[10px] text-zinc-400 hover:text-red-400"
+                          title="Delete note"
+                        >
+                          <Trash2 className="w-3 h-3" />
+                          Delete
+                        </button>
+                      </div>
+                    </div>
+                  </>
+                )}
+              </li>
+            );
+          })}
+        </ul>
+      )}
+
+      {/* Add new note */}
+      <div>
+        <Textarea
+          value={draft}
+          onChange={(e) => setDraft(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
+              e.preventDefault();
+              handleAdd();
+            }
+          }}
+          placeholder="Add a note — context, decisions, what changed this week…"
+          className="bg-white/[0.04] border-white/[0.08] text-white text-sm min-h-[80px]"
+        />
+        <div className="flex items-center justify-between gap-2 mt-2">
+          <span className="text-[10px] text-zinc-600">⌘/Ctrl + Enter to add</span>
+          <Button
+            type="button"
+            disabled={!draft.trim() || adding}
+            onClick={handleAdd}
+            className="h-7 text-[11px] bg-white/10 hover:bg-white/20 text-white gap-1"
+          >
+            <Plus className="w-3 h-3" />
+            {adding ? "Adding…" : "Add note"}
+          </Button>
+        </div>
+      </div>
+
+      <AlertDialog
+        open={!!deleteCandidate}
+        onOpenChange={(o) => {
+          if (!o) setDeleteCandidate(null);
+        }}
+      >
+        <AlertDialogContent className="bg-neutral-900 border-white/10 text-white">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-white">
+              Delete this note?
+            </AlertDialogTitle>
+            <AlertDialogDescription className="text-zinc-400">
+              This permanently removes the entry from the log. Can't be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel className="bg-white/[0.04] border-white/10 text-white hover:bg-white/10">
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-red-500 hover:bg-red-600 text-white"
+              onClick={handleConfirmedDelete}
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </div>
+  );
+};
+
 // ──────────────────────────── Activity section ────────────────────────────
 
 const ActivitySection = ({
@@ -589,16 +882,12 @@ export const AgendaItemDetailDialog = ({
 }: Props) => {
   const { user } = useAuth();
   const [title, setTitle] = useState("");
-  const [notes, setNotes] = useState("");
-  const [dueDate, setDueDate] = useState<string>("");
   const [status, setStatus] = useState<AgendaStatus>("pending_review");
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     if (!item) return;
     setTitle(item.title);
-    setNotes(item.notes ?? "");
-    setDueDate(item.due_date ?? "");
     setStatus(item.status);
   }, [item?.id]);
 
@@ -610,11 +899,13 @@ export const AgendaItemDetailDialog = ({
   // belong on the tasks underneath, not on the topic shell itself.
   const isTopic = item.depth === 1;
 
+  // Save handles just title + status. Notes are managed inline by the
+  // NotesSection (per-entry CRUD via its own table). The agenda_items
+  // `due_date` and `notes` columns stay in the DB for legacy data but
+  // the dialog no longer writes to them.
   const handleSave = async () => {
     const patch: Parameters<typeof onSave>[0] = {};
     if (title.trim() !== item.title) patch.title = title.trim();
-    if ((notes || null) !== (item.notes || null)) patch.notes = notes.trim() || null;
-    if ((dueDate || null) !== (item.due_date || null)) patch.due_date = dueDate || null;
     if (status !== item.status) patch.status = status;
     if (Object.keys(patch).length === 0) {
       onClose();
@@ -719,50 +1010,13 @@ export const AgendaItemDetailDialog = ({
                 )}
               </div>
 
-              {/* Due date — owner field was dropped; the agenda is a shared
-                  audit tool, so no per-item assignment. */}
-              <div>
-                <p className="text-[10px] uppercase tracking-wider text-zinc-500 mb-1.5">
-                  Due
-                </p>
-                <div className="relative">
-                  <Calendar className="absolute left-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-zinc-500" />
-                  <input
-                    type="date"
-                    value={dueDate}
-                    onChange={(e) => setDueDate(e.target.value)}
-                    className="w-full bg-white/[0.04] border border-white/[0.08] rounded-md text-xs text-white py-1.5 pl-7 pr-2"
-                  />
-                  {dueDate && (
-                    <button
-                      type="button"
-                      onClick={() => setDueDate("")}
-                      className="absolute right-1 top-1/2 -translate-y-1/2 p-0.5 text-zinc-500 hover:text-white"
-                      title="Clear due date"
-                    >
-                      <X className="w-3 h-3" />
-                    </button>
-                  )}
-                </div>
-              </div>
+              {/* Due date dropped — agenda is the weekly cadence so the
+                  date was redundant. Notes is now a threaded log (see
+                  NotesSection) instead of a single Textarea. */}
 
-              {/* Notes */}
-              <div>
-                <p className="text-[10px] uppercase tracking-wider text-zinc-500 mb-1.5">
-                  Notes
-                </p>
-                <Textarea
-                  value={notes}
-                  onChange={(e) => setNotes(e.target.value)}
-                  placeholder="Context, links to discuss, sub-actions…"
-                  className="bg-white/[0.04] border-white/[0.08] text-white text-sm min-h-[120px]"
-                />
-              </div>
-
-              {/* Send-to-Workbench moved out of the detail dialog. It now
-                  lives as a per-row button in the actions cluster so the
-                  meeting flow is one click — review the task, hand it
-                  off, move on. */}
+              {/* Threaded notes log — oldest at top, timestamped, with
+                  inline edit and confirm-to-delete. */}
+              <NotesSection itemId={item.id} staff={staff} />
 
               {/* Attachments — Phase 3b */}
               <AttachmentsSection itemId={item.id} />

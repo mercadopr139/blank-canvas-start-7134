@@ -66,19 +66,6 @@ const formatWeekStart = (d: Date): string => {
   return `${sunday.getFullYear()}-${String(sunday.getMonth() + 1).padStart(2, "0")}-${String(sunday.getDate()).padStart(2, "0")}`;
 };
 
-// Upcoming Friday relative to `from` (defaults to today). If today is
-// Friday, returns today. If today is Sat or Sun, returns next week's
-// Friday. Used as the default due_date for new tasks and the new
-// target date when Reset Week bumps existing tasks forward.
-const upcomingFridayIso = (from: Date = new Date()): string => {
-  const d = new Date(from);
-  d.setHours(0, 0, 0, 0);
-  const day = d.getDay(); // 0 Sun … 5 Fri … 6 Sat
-  const daysUntilFriday = (5 - day + 7) % 7;
-  d.setDate(d.getDate() + daysUntilFriday);
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-};
-
 const formatWeekRangeDisplay = (weekStartIso: string): string => {
   const start = new Date(weekStartIso + "T12:00:00");
   const end = new Date(start);
@@ -184,6 +171,21 @@ const AdminAgenda = () => {
     },
   });
 
+  // Note counts per item — powers the row-level Notes cell badge so it
+  // stays accurate after the per-note migration. Only the id+item_id
+  // pair travels here; the full content lives in the detail dialog's
+  // own query.
+  const { data: noteSummaries = [] } = useQuery<{ item_id: string }[]>({
+    queryKey: ["agenda-notes-summary"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("agenda_item_notes" as any)
+        .select("item_id");
+      if (error) throw error;
+      return (data || []) as { item_id: string }[];
+    },
+  });
+
   const attachmentsByItem = useMemo(() => {
     const m = new Map<string, AttachmentSummary[]>();
     for (const a of attachmentSummaries) {
@@ -201,6 +203,14 @@ const AdminAgenda = () => {
     }
     return m;
   }, [linkSummaries]);
+
+  const noteCountsByItem = useMemo(() => {
+    const m = new Map<string, number>();
+    for (const n of noteSummaries) {
+      m.set(n.item_id, (m.get(n.item_id) ?? 0) + 1);
+    }
+    return m;
+  }, [noteSummaries]);
 
   const { data: weekSummaryRow } = useQuery<{ summary: string | null } | null>({
     queryKey: ["agenda-week-summary", weekStartIso],
@@ -277,18 +287,12 @@ const AdminAgenda = () => {
   const [savingSummary, setSavingSummary] = useState(false);
   const [resetConfirmOpen, setResetConfirmOpen] = useState(false);
 
-  // Counts powering the Reset Week button + confirm dialog. The button
-  // enables when either there's something to reset (Reviewed tasks) OR
-  // something to bump (tasks with a due_date that isn't already on the
-  // new Friday). Both counts are shown to the user before they confirm.
+  // Powers the Reset Week button + confirm dialog. With Due dates
+  // dropped, the only thing Reset Week does now is flip Reviewed →
+  // Pending Review, so the button enables purely on this count.
   const reviewedCount = useMemo(
     () => items.filter((i) => i.status === "reviewed").length,
     [items],
-  );
-  const newFridayIso = useMemo(() => upcomingFridayIso(), [weekStartIso]);
-  const bumpableCount = useMemo(
-    () => items.filter((i) => i.due_date && i.due_date !== newFridayIso).length,
-    [items, newFridayIso],
   );
 
   // ─── Mutations ──────────────────────────────────────────────────────
@@ -303,11 +307,10 @@ const AdminAgenda = () => {
     title: string;
   }) => {
     const sortOrder = Date.now();
-    // Tasks (L2-L4) default to the upcoming Friday since the agenda is
-    // a weekly cadence. L1 topics are containers and don't get a date.
-    // User can still change it from either the row's Due cell or the
-    // detail dialog.
-    const defaultDueDate = params.depth >= 2 ? upcomingFridayIso() : null;
+    // Due dates were dropped in the audit-only redesign — the agenda
+    // IS the weekly cadence, so a per-task date added clutter without
+    // adding info. The column stays in the DB for legacy data but new
+    // tasks never set one.
     const { data, error } = await supabase
       .from("agenda_items" as any)
       .insert({
@@ -315,7 +318,6 @@ const AdminAgenda = () => {
         parent_id: params.parent_id,
         depth: params.depth,
         title: params.title,
-        due_date: defaultDueDate,
         sort_order: sortOrder,
         created_by: user?.id ?? null,
       } as any)
@@ -477,22 +479,15 @@ const AdminAgenda = () => {
     },
   });
 
-  // Reset Week — the audit refresh button. Two things happen:
-  //   1. Every Done task flips back to Pending Review (mirroring to any
-  //      linked Workbench signals).
-  //   2. Every non-archived task that already has a due_date gets bumped
-  //      to the upcoming Friday so incomplete work rolls into the new
-  //      week without manual date editing. Tasks with no due date are
-  //      left alone — if someone explicitly cleared the date, Reset
-  //      Week respects that choice.
-  // Activity log records both actions per item so each task's history
-  // still tells the truth ("Reviewed on Monday → Reset on Friday →
-  // Reviewed again next week").
+  // Reset Week — the audit refresh button. Flips every Reviewed task
+  // back to Pending Review (mirroring to any linked Workbench signals
+  // that were marked Complete by the prior review). Date bumping was
+  // dropped along with the Due column — there's nothing left to bump.
+  // Activity log captures each flip so the per-item history still tells
+  // the truth ("Reviewed on Monday → Reset on Friday → Reviewed again
+  // next week").
   const resetWeekMutation = useMutation({
     mutationFn: async () => {
-      const newFriday = upcomingFridayIso();
-
-      // 1) Flip Reviewed → Pending Review.
       const { data: reviewedItems, error: reviewedFetchErr } = await supabase
         .from("agenda_items" as any)
         .select("id")
@@ -501,84 +496,45 @@ const AdminAgenda = () => {
       if (reviewedFetchErr) throw reviewedFetchErr;
       const reviewedIds = ((reviewedItems as { id: string }[]) || []).map((i) => i.id);
 
-      if (reviewedIds.length > 0) {
-        const { error: reviewedUpdErr } = await supabase
-          .from("agenda_items" as any)
-          .update({
-            status: "pending_review",
-            last_edited_at: new Date().toISOString(),
-            last_edited_by: user?.id ?? null,
-          } as any)
-          .in("id", reviewedIds);
-        if (reviewedUpdErr) throw reviewedUpdErr;
+      if (reviewedIds.length === 0) return { resetCount: 0 };
 
-        const { error: sigErr } = await supabase
-          .from("signals")
-          .update({ status: "Pending", completed_at: null } as any)
-          .in("source_agenda_item_id", reviewedIds)
-          .eq("status", "Complete");
-        if (sigErr) console.warn("Reset: workbench mirror failed:", sigErr.message);
-      }
-
-      // 2) Bump existing due_dates forward to the new Friday. Skip any
-      //    that are already on the new date (idempotent re-clicks).
-      const { data: datedItems, error: dateFetchErr } = await supabase
+      const { error: reviewedUpdErr } = await supabase
         .from("agenda_items" as any)
-        .select("id, due_date")
-        .eq("is_archived", false)
-        .not("due_date", "is", null)
-        .neq("due_date", newFriday);
-      if (dateFetchErr) throw dateFetchErr;
-      const datedIds = ((datedItems as { id: string }[]) || []).map((i) => i.id);
+        .update({
+          status: "pending_review",
+          last_edited_at: new Date().toISOString(),
+          last_edited_by: user?.id ?? null,
+        } as any)
+        .in("id", reviewedIds);
+      if (reviewedUpdErr) throw reviewedUpdErr;
 
-      if (datedIds.length > 0) {
-        const { error: dateUpdErr } = await supabase
-          .from("agenda_items" as any)
-          .update({
-            due_date: newFriday,
-            last_edited_at: new Date().toISOString(),
-            last_edited_by: user?.id ?? null,
-          } as any)
-          .in("id", datedIds);
-        if (dateUpdErr) throw dateUpdErr;
-      }
+      const { error: sigErr } = await supabase
+        .from("signals")
+        .update({ status: "Pending", completed_at: null } as any)
+        .in("source_agenda_item_id", reviewedIds)
+        .eq("status", "Complete");
+      if (sigErr) console.warn("Reset: workbench mirror failed:", sigErr.message);
 
-      // Fire-and-forget activity log entries; failures here never
-      // disrupt the user-visible reset. One entry per touched item.
-      const touched = new Set<string>([...reviewedIds, ...datedIds]);
+      // Fire-and-forget activity log per item; failures never disrupt
+      // the user-visible reset.
       await Promise.all(
-        Array.from(touched).map((id) => {
-          const changed: Record<string, unknown> = { reset: true };
-          if (reviewedIds.includes(id)) changed.status = "pending_review";
-          if (datedIds.includes(id)) changed.due_date = newFriday;
-          return logAgendaActivity(id, "updated", user?.id ?? null, changed);
-        }),
+        reviewedIds.map((id) =>
+          logAgendaActivity(id, "updated", user?.id ?? null, {
+            reset: true,
+            status: "pending_review",
+          }),
+        ),
       );
 
-      return {
-        resetCount: reviewedIds.length,
-        bumpedCount: datedIds.length,
-        newFriday,
-      };
+      return { resetCount: reviewedIds.length };
     },
-    onSuccess: ({ resetCount, bumpedCount, newFriday }) => {
+    onSuccess: ({ resetCount }) => {
       invalidateItems();
-      if (resetCount === 0 && bumpedCount === 0) {
-        toast.info("Nothing to reset — no Reviewed tasks and no dates to bump.");
-        return;
+      if (resetCount === 0) {
+        toast.info("Nothing to reset — no Reviewed tasks.");
+      } else {
+        toast.success(`${resetCount} reset to Pending Review`);
       }
-      const parts: string[] = [];
-      if (resetCount > 0) {
-        parts.push(`${resetCount} reset to Pending Review`);
-      }
-      if (bumpedCount > 0) {
-        const friendly = new Date(newFriday + "T12:00:00").toLocaleDateString(
-          "en-US",
-          { month: "short", day: "numeric" },
-        );
-        parts.push(`${bumpedCount} due ${friendly}`);
-      }
-      toast.success(parts.join(" · "));
     },
     onError: (e: any) => toast.error(`Reset failed: ${e.message}`),
   });
@@ -608,6 +564,13 @@ const AdminAgenda = () => {
       })
       .on("postgres_changes", { event: "*", schema: "public", table: "agenda_attachments" }, () => {
         queryClient.invalidateQueries({ queryKey: ["agenda-attachment-summary"] });
+      })
+      .on("postgres_changes", { event: "*", schema: "public", table: "agenda_item_notes" }, (payload: any) => {
+        queryClient.invalidateQueries({ queryKey: ["agenda-notes-summary"] });
+        const itemId = payload.new?.item_id ?? payload.old?.item_id;
+        if (itemId) {
+          queryClient.invalidateQueries({ queryKey: ["agenda-notes", itemId] });
+        }
       })
       .on("postgres_changes", { event: "*", schema: "public", table: "agenda_week_summary" }, () => {
         queryClient.invalidateQueries({ queryKey: ["agenda-week-summary"] });
@@ -763,6 +726,7 @@ const AdminAgenda = () => {
                   agendaFocusByManager={agendaFocusByManager}
                   attachmentsByItem={attachmentsByItem}
                   linksByItem={linksByItem}
+                  noteCountsByItem={noteCountsByItem}
                   expanded={expanded}
                   onToggleExpand={toggleExpand}
                   onOpenDetail={(it) => setDetailItem(it)}
@@ -771,12 +735,6 @@ const AdminAgenda = () => {
                   }
                   onChangeOwners={(id, userIds) =>
                     updateMutation.mutate({ id, patch: { owner_user_ids: userIds } })
-                  }
-                  onSetDueDate={(id, due_date) =>
-                    updateMutation.mutate({ id, patch: { due_date } })
-                  }
-                  onUpdateNotes={(id, notes) =>
-                    updateMutation.mutate({ id, patch: { notes } })
                   }
                   onAddChild={(parent, title) =>
                     addItem({
@@ -884,30 +842,27 @@ const AdminAgenda = () => {
             </div>
           </div>
 
-          {/* Reset Week — enabled when there's either Reviewed tasks to
-              reset OR existing due dates to bump forward. */}
+          {/* Reset Week — flips every Reviewed task back to Pending
+              Review. Enabled only when there's something to reset. */}
           <Button
             variant="ghost"
             size="sm"
-            disabled={
-              (reviewedCount === 0 && bumpableCount === 0) ||
-              resetWeekMutation.isPending
-            }
+            disabled={reviewedCount === 0 || resetWeekMutation.isPending}
             onClick={() => setResetConfirmOpen(true)}
             className="text-zinc-400 hover:text-white hover:bg-white/[0.06] gap-1.5 disabled:opacity-40"
             title={
-              reviewedCount === 0 && bumpableCount === 0
-                ? "Nothing to reset — no Reviewed tasks and no dates to bump"
-                : `Reset ${reviewedCount} Reviewed · bump ${bumpableCount} due dates to next Friday`
+              reviewedCount === 0
+                ? "Nothing to reset — no Reviewed tasks"
+                : `Reset ${reviewedCount} Reviewed task${reviewedCount === 1 ? "" : "s"} to Pending Review`
             }
           >
             <RotateCcw className="w-3.5 h-3.5" />
             <span className="text-xs font-semibold hidden sm:inline">
               Reset Week
             </span>
-            {reviewedCount + bumpableCount > 0 && (
+            {reviewedCount > 0 && (
               <span className="text-[10px] tabular-nums text-zinc-500">
-                ({reviewedCount + bumpableCount})
+                ({reviewedCount})
               </span>
             )}
           </Button>
@@ -1013,18 +968,10 @@ const AdminAgenda = () => {
               This flips{" "}
               <strong className="text-white">{reviewedCount}</strong>{" "}
               Reviewed task{reviewedCount === 1 ? "" : "s"} back to{" "}
-              <strong className="text-white">Pending Review</strong> and bumps{" "}
-              <strong className="text-white">{bumpableCount}</strong>{" "}
-              task{bumpableCount === 1 ? "" : "s"} with a due date to{" "}
-              <strong className="text-white">
-                {new Date(newFridayIso + "T12:00:00").toLocaleDateString("en-US", {
-                  month: "short",
-                  day: "numeric",
-                })}
-              </strong>{" "}
-              (next Friday). Tasks with no due date are left alone. Each
-              item's activity log records the change, and any linked
-              Workbench signals are mirrored back to Pending.
+              <strong className="text-white">Pending Review</strong> so the
+              team can audit them fresh next week. Each item's activity log
+              records the change, and any linked Workbench signals are
+              mirrored back to Pending.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
