@@ -720,21 +720,30 @@ export const AgendaItemRow = ({
 
   // Row background + framing — three-tier visual hierarchy:
   //   - L1 (Agenda Topic): handled separately below in the card wrapper
-  //     (full pillar color so the topic row reads as a strong anchor)
-  //   - L2 (Task): uniform gray with a pillar-color outline. Each task
-  //     reads as its own framed card so the audit feels like discrete,
-  //     concrete items rather than a flat list.
+  //     (full pillar color so the topic row reads as a strong anchor).
+  //   - L2 (Task): pillar-tinted fill + pillar-color outline. Each task
+  //     reads as its own framed card AND inherits the pillar identity,
+  //     so the audit feels like discrete, on-brand items instead of
+  //     gray boxes that almost disappear against the dark body.
   //   - L3+ (Sub-task): alternating subtle-gray / bare, no outline.
-  //     The bare rows fall through to the L1 card body (bg-neutral-900),
-  //     giving a clean light-gray / black zebra.
+  //     Stays neutral so it doesn't compete with the colored L2 cards
+  //     visually clustered above it.
+  //
+  // The L2 bg is driven by a `--task-bg` CSS variable on the row's
+  // inline style instead of a static class — pillar color is dynamic
+  // at runtime, and we still need `hover:bg-white/[0.12]` to win over
+  // the resting state (which a hard-coded inline `background` would
+  // block on hover because of CSS specificity).
   let rowBg = "";
   let rowExtra = "";
   let rowStyle: React.CSSProperties | undefined;
   if (isTask) {
     if (node.depth === 2) {
-      rowBg = "bg-white/[0.07]";
-      rowExtra = "border rounded-md mt-1";
-      rowStyle = { borderColor: `${accent}55` };
+      rowExtra = "border rounded-md mt-1 bg-[var(--task-bg)]";
+      rowStyle = {
+        borderColor: `${accent}55`,
+        ["--task-bg" as any]: `${accent}30`,
+      };
     } else {
       rowBg = index % 2 === 1 ? "bg-white/[0.04]" : "";
     }
