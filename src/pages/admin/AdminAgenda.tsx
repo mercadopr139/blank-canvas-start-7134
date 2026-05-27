@@ -5,7 +5,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { ArrowLeft, Plus, RotateCcw } from "lucide-react";
+import { ArrowLeft, Plus, RotateCcw, ChevronsDown, ChevronsUp } from "lucide-react";
 import {
   DndContext,
   PointerSensor,
@@ -231,29 +231,40 @@ const AdminAgenda = () => {
 
   // ─── UI state ────────────────────────────────────────────────────────
 
-  // Expanded set — defaults to "all expanded" because the spec wants
-  // every item visible during meetings unless explicitly collapsed.
-  // Auto-add newly-arrived items so children show immediately; never
-  // remove an id here (the user's explicit collapses stick).
+  // Expanded set — defaults to "all collapsed" so a fresh page load
+  // shows just the Agenda Topic headers (cleaner audit view). The
+  // user expands individual topics via the row chevron, or all of them
+  // at once via the per-pillar Expand-all button. We intentionally do
+  // NOT auto-add newly-arrived items here: an item showing up via
+  // realtime (someone else created it) shouldn't surprise-open on
+  // your screen mid-scroll. Items the current user creates are added
+  // to this set explicitly inside `addItem` so the creator sees their
+  // new topic open and ready for tasks.
   const [expanded, setExpanded] = useState<Set<string>>(() => new Set());
-  useEffect(() => {
-    setExpanded((prev) => {
-      let changed = false;
-      const next = new Set(prev);
-      items.forEach((i) => {
-        if (!next.has(i.id)) {
-          next.add(i.id);
-          changed = true;
-        }
-      });
-      return changed ? next : prev;
-    });
-  }, [items]);
 
   const toggleExpand = (id: string) =>
     setExpanded((prev) => {
       const next = new Set(prev);
       next.has(id) ? next.delete(id) : next.add(id);
+      return next;
+    });
+
+  // Bulk operations powering the per-pillar shortcut buttons.
+  const expandAllInPillar = (pillar: Pillar) =>
+    setExpanded((prev) => {
+      const next = new Set(prev);
+      items.forEach((i) => {
+        if (i.pillar === pillar) next.add(i.id);
+      });
+      return next;
+    });
+
+  const collapseAllInPillar = (pillar: Pillar) =>
+    setExpanded((prev) => {
+      const next = new Set(prev);
+      items.forEach((i) => {
+        if (i.pillar === pillar) next.delete(i.id);
+      });
       return next;
     });
 
@@ -313,6 +324,17 @@ const AdminAgenda = () => {
     if (error) throw error;
     const newId = (data as { id: string }).id;
     await logAgendaActivity(newId, "created", user?.id ?? null, { title: params.title });
+    // Auto-expand the just-created item so the creator sees it open and
+    // can immediately drop child tasks underneath. We also expand the
+    // parent so a child added under a collapsed parent doesn't render
+    // invisibly. Items arriving via realtime from other users stay
+    // collapsed (handled by the absence of an auto-add useEffect above).
+    setExpanded((prev) => {
+      const next = new Set(prev);
+      next.add(newId);
+      if (params.parent_id) next.add(params.parent_id);
+      return next;
+    });
     await invalidateItems();
   };
 
@@ -678,6 +700,32 @@ const AdminAgenda = () => {
               ? "· empty"
               : `· ${reviewedCountPillar}/${totalCount} reviewed`}
           </span>
+
+          {/* Expand-all / collapse-all shortcuts for this pillar. Tucked
+              into the header line so they read as quiet utilities, not
+              primary actions. Disabled when the pillar is empty. */}
+          {tree.length > 0 && (
+            <div className="ml-auto flex items-center gap-0.5">
+              <button
+                type="button"
+                onClick={() => expandAllInPillar(pillar)}
+                className="p-1 rounded text-white/30 hover:text-white/80 hover:bg-white/[0.05] transition-colors"
+                title={`Expand all ${label} topics`}
+                aria-label={`Expand all ${label} topics`}
+              >
+                <ChevronsDown className="w-3.5 h-3.5" />
+              </button>
+              <button
+                type="button"
+                onClick={() => collapseAllInPillar(pillar)}
+                className="p-1 rounded text-white/30 hover:text-white/80 hover:bg-white/[0.05] transition-colors"
+                title={`Collapse all ${label} topics`}
+                aria-label={`Collapse all ${label} topics`}
+              >
+                <ChevronsUp className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          )}
         </div>
 
         <div
