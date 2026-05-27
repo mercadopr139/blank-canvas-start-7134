@@ -259,16 +259,16 @@ const AttachmentsSection = ({
           <Paperclip className="w-3 h-3" />
           Attachments
         </p>
-        <label className="cursor-pointer text-[10px] font-semibold text-zinc-400 hover:text-white transition-colors flex items-center gap-1">
+        <label className="cursor-pointer text-xs font-semibold text-[#bf0f3e] hover:text-[#d11447] transition-colors flex items-center gap-1">
           {uploading ? (
             <>
-              <Loader2 className="w-3 h-3 animate-spin" />
+              <Loader2 className="w-3.5 h-3.5 animate-spin" />
               Uploading…
             </>
           ) : (
             <>
-              <Plus className="w-3 h-3" />
-              Upload
+              <Plus className="w-3.5 h-3.5" />
+              Upload file
             </>
           )}
           <input
@@ -423,10 +423,10 @@ const LinksSection = ({ itemId }: { itemId: string }) => {
           <button
             type="button"
             onClick={() => setAdding(true)}
-            className="text-[10px] font-semibold text-zinc-400 hover:text-white transition-colors flex items-center gap-1"
+            className="text-xs font-semibold text-[#bf0f3e] hover:text-[#d11447] transition-colors flex items-center gap-1"
           >
-            <Plus className="w-3 h-3" />
-            Add
+            <Plus className="w-3.5 h-3.5" />
+            Add link
           </button>
         )}
       </div>
@@ -453,13 +453,16 @@ const LinksSection = ({ itemId }: { itemId: string }) => {
             placeholder="https://…"
             className="bg-white/[0.04] border-white/[0.08] text-white text-xs h-7"
           />
+          {/* Primary action — NLA red, full-size button so it can't be
+              missed. Without this Save will dismiss the dialog without
+              persisting the typed URL, which previously caught users out. */}
           <div className="flex items-center gap-2">
             <Button
               type="submit"
               disabled={!draftUrl.trim() || saving}
-              className="h-6 text-[10px] px-2 bg-white/10 hover:bg-white/20 text-white"
+              className="h-8 text-xs px-3 bg-[#bf0f3e] hover:bg-[#d11447] text-white font-semibold disabled:opacity-40"
             >
-              {saving ? "…" : "Add link"}
+              {saving ? "Adding…" : "Add link"}
             </Button>
             <button
               type="button"
@@ -468,7 +471,7 @@ const LinksSection = ({ itemId }: { itemId: string }) => {
                 setDraftUrl("");
                 setDraftNickname("");
               }}
-              className="text-[10px] text-white/40 hover:text-white/70"
+              className="text-xs text-white/50 hover:text-white/80"
             >
               Cancel
             </button>
