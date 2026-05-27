@@ -586,29 +586,26 @@ export const AgendaItemRow = ({
   // Row background + framing — three-tier visual hierarchy:
   //   - L1 (Agenda Topic): handled separately below in the card wrapper
   //     (full pillar color so the topic row reads as a strong anchor).
-  //   - L2 (Task): pillar-tinted fill + pillar-color outline. Each task
-  //     reads as its own framed card AND inherits the pillar identity,
-  //     so the audit feels like discrete, on-brand items instead of
-  //     gray boxes that almost disappear against the dark body.
+  //   - L2 (Task): solid gray fill (bg-zinc-800) + bold pillar outline
+  //     (2px, full pillar color). The gray "pops" against the dark L1
+  //     body and the colored outline keeps the pillar identity without
+  //     bleeding into the fill.
   //   - L3+ (Sub-task): alternating subtle-gray / bare, no outline.
-  //     Stays neutral so it doesn't compete with the colored L2 cards
+  //     Stays neutral so it doesn't compete with the framed L2 cards
   //     visually clustered above it.
   //
-  // The L2 bg is driven by a `--task-bg` CSS variable on the row's
-  // inline style instead of a static class — pillar color is dynamic
-  // at runtime, and we still need `hover:bg-white/[0.12]` to win over
-  // the resting state (which a hard-coded inline `background` would
-  // block on hover because of CSS specificity).
+  // The L2 border color is set via inline style because pillar color is
+  // dynamic at runtime. The bg uses a static Tailwind class so the
+  // hover utility (`hover:bg-white/[0.12]`) can still win on cursor
+  // hover via normal class-based specificity.
   let rowBg = "";
   let rowExtra = "";
   let rowStyle: React.CSSProperties | undefined;
   if (isTask) {
     if (node.depth === 2) {
-      rowExtra = "border rounded-md mt-1 bg-[var(--task-bg)]";
-      rowStyle = {
-        borderColor: `${accent}55`,
-        ["--task-bg" as any]: `${accent}30`,
-      };
+      rowBg = "bg-zinc-800";
+      rowExtra = "border-2 rounded-md mt-1";
+      rowStyle = { borderColor: accent };
     } else {
       rowBg = index % 2 === 1 ? "bg-white/[0.04]" : "";
     }

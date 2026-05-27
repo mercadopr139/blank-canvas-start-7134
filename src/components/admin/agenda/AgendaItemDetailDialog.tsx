@@ -32,7 +32,6 @@ import {
   Plus,
   Trash2,
   Loader2,
-  Activity,
   ExternalLink,
   CheckCircle2,
   Circle,
@@ -62,7 +61,7 @@ import {
   type AgendaStatus,
   type StaffOption,
 } from "./types";
-import { logAgendaActivity, type AgendaActivityRow } from "./activityLog";
+import { logAgendaActivity } from "./activityLog";
 import { displayNameFor } from "@/lib/staff";
 
 // ──────────────────────────── helpers ────────────────────────────
@@ -97,54 +96,10 @@ const triggerBlobDownload = async (url: string, filename: string) => {
   setTimeout(() => URL.revokeObjectURL(objectUrl), 1000);
 };
 
-const renderActivity = (row: AgendaActivityRow, staff: StaffOption[]): string => {
-  const who = row.user_id
-    ? (() => {
-        const s = staff.find((s) => s.user_id === row.user_id);
-        return s ? displayNameFor(s) : "Someone";
-      })()
-    : "Someone";
-  const fields = row.changed_fields as Record<string, unknown>;
-  switch (row.action) {
-    case "created":
-      return `${who} created this item`;
-    case "archived":
-      return `${who} archived this item`;
-    case "restored":
-      return `${who} restored this item`;
-    case "attachment_added":
-      return `${who} added attachment "${fields.filename ?? "file"}"`;
-    case "attachment_removed":
-      return `${who} removed attachment "${fields.filename ?? "file"}"`;
-    case "link_added":
-      return `${who} added link "${fields.nickname ?? fields.url ?? "link"}"`;
-    case "link_removed":
-      return `${who} removed a link`;
-    case "updated": {
-      const parts: string[] = [];
-      if ("title" in fields) parts.push(`title to "${fields.title}"`);
-      if ("status" in fields) parts.push(`status to ${fields.status}`);
-      if ("due_date" in fields) parts.push(`due date to ${fields.due_date ?? "none"}`);
-      if ("owner_user_ids" in fields) {
-        const ids = (fields.owner_user_ids as string[]) || [];
-        const names = ids
-          .map((id) => {
-            const s = staff.find((s) => s.user_id === id);
-            return s ? displayNameFor(s) : null;
-          })
-          .filter(Boolean)
-          .join(", ");
-        parts.push(ids.length === 0 ? "owners (cleared)" : `owners to ${names}`);
-      }
-      if ("notes" in fields) parts.push("notes");
-      return parts.length === 0
-        ? `${who} updated this item`
-        : `${who} changed ${parts.join(", ")}`;
-    }
-    default:
-      return `${who} did something`;
-  }
-};
+// Activity log rendering pulled — the section was removed from the
+// dialog so the helper has no remaining call sites. logAgendaActivity
+// still writes events to the DB in case we ever bring the section
+// back, but no UI reads them today.
 
 // ──────────────────────── Attachments section ────────────────────────
 
@@ -808,52 +763,10 @@ const NotesSection = ({
   );
 };
 
-// ──────────────────────────── Activity section ────────────────────────────
-
-const ActivitySection = ({
-  itemId,
-  staff,
-}: {
-  itemId: string;
-  staff: StaffOption[];
-}) => {
-  const { data: events = [] } = useQuery<AgendaActivityRow[]>({
-    queryKey: ["agenda-activity", itemId],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("agenda_activity_log" as any)
-        .select("*")
-        .eq("item_id", itemId)
-        .order("created_at", { ascending: false })
-        .limit(20);
-      if (error) throw error;
-      return (data || []) as unknown as AgendaActivityRow[];
-    },
-  });
-
-  return (
-    <div>
-      <p className="text-[10px] uppercase tracking-wider text-zinc-500 mb-2 flex items-center gap-1.5">
-        <Activity className="w-3 h-3" />
-        Activity
-      </p>
-      {events.length === 0 ? (
-        <p className="text-xs text-zinc-600 italic">No activity yet.</p>
-      ) : (
-        <ul className="space-y-1.5">
-          {events.map((row) => (
-            <li key={row.id} className="text-xs text-zinc-400 leading-relaxed">
-              <span className="text-zinc-200">{renderActivity(row, staff)}</span>
-              <span className="text-zinc-600 ml-1.5">
-                · {formatDistanceToNow(new Date(row.created_at), { addSuffix: true })}
-              </span>
-            </li>
-          ))}
-        </ul>
-      )}
-    </div>
-  );
-};
+// Activity section dropped from the dialog — the threaded NotesSection
+// covers the "what happened, when" story at a much better signal-to-
+// noise ratio. agenda_activity_log writes still happen passively so
+// the data accumulates if we ever bring the section back.
 
 // ──────────────────────────── Main dialog ────────────────────────────
 
@@ -1024,8 +937,8 @@ export const AgendaItemDetailDialog = ({
               {/* Links — Phase 3b */}
               <LinksSection itemId={item.id} />
 
-              {/* Activity log — Phase 3b */}
-              <ActivitySection itemId={item.id} staff={staff} />
+              {/* Activity log section dropped — the notes log is the
+                  audit trail you actually want to read. */}
             </>
           )}
 
