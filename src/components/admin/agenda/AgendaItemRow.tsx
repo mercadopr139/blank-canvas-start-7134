@@ -550,15 +550,15 @@ export const AgendaItemRow = ({
         <span className="w-3.5 shrink-0" />
       )}
 
-      {/* Title — for L2 tasks the title gets a fixed column width so
-          the four columns sit right next to it. L1 topics and L3+
-          subtasks let the title flex-fill since their column block
-          is empty / status-only. */}
+      {/* Title — all tasks (L2-L4) get the same fixed column width so
+          the status pill aligns next to the title rather than drifting
+          to the right edge. L1 topics still flex-fill since they have
+          no inline columns. */}
       <button
         type="button"
         onClick={() => onOpenDetail(node)}
         className={`min-w-0 text-left truncate hover:text-white transition-colors ${
-          isTask && !isSubtask ? "w-80 shrink-0" : "flex-1"
+          isTask ? "w-80 shrink-0" : "flex-1"
         } ${style.titleClass} ${
           node.status === "done" && isTask ? "line-through opacity-50" : ""
         }`}
@@ -582,31 +582,30 @@ export const AgendaItemRow = ({
           </div>
           {!isSubtask && (
             <>
-          <div className="w-24 shrink-0 hidden sm:block border-l border-zinc-500/30 pl-2">
-            <DueDateCell
-              value={node.due_date}
-              onChange={(iso) => onSetDueDate(node.id, iso)}
-            />
-          </div>
-          <div className="w-16 shrink-0 hidden md:block border-l border-zinc-500/30 pl-2">
-            <FilesCell
-              attachments={itemAttachments}
-              links={itemLinks}
-              onOpenDetail={() => onOpenDetail(node)}
-            />
-          </div>
-          <div className="w-14 shrink-0 hidden md:block border-l border-zinc-500/30 pl-2">
-            <NotesCell
-              notes={node.notes}
-              onSave={(notes) => onUpdateNotes(node.id, notes)}
-            />
-          </div>
-          {/* Pushes the right-side actions cluster to the row's right
-              edge so the column block stays anchored to the title.
-              Subtasks don't need this — their title is flex-1 already. */}
-          <div className="flex-1" aria-hidden />
+              <div className="w-24 shrink-0 hidden sm:block border-l border-zinc-500/30 pl-2">
+                <DueDateCell
+                  value={node.due_date}
+                  onChange={(iso) => onSetDueDate(node.id, iso)}
+                />
+              </div>
+              <div className="w-16 shrink-0 hidden md:block border-l border-zinc-500/30 pl-2">
+                <FilesCell
+                  attachments={itemAttachments}
+                  links={itemLinks}
+                  onOpenDetail={() => onOpenDetail(node)}
+                />
+              </div>
+              <div className="w-14 shrink-0 hidden md:block border-l border-zinc-500/30 pl-2">
+                <NotesCell
+                  notes={node.notes}
+                  onSave={(notes) => onUpdateNotes(node.id, notes)}
+                />
+              </div>
             </>
           )}
+          {/* Pushes the right-side actions cluster to the row's right
+              edge so the column block stays anchored to the title. */}
+          <div className="flex-1" aria-hidden />
         </>
       )}
 
