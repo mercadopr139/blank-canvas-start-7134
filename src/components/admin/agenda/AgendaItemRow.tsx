@@ -58,7 +58,8 @@ import type {
   AttachmentSummary,
   LinkSummary,
 } from "./types";
-import { STATUS_LABEL, flattenSubtree } from "./types";
+import { STATUS_LABEL, flattenSubtree, isParentTaskComplete } from "./types";
+import confetti from "canvas-confetti";
 
 // Per-depth visual scale. L1 is the chunky topic header (lives inside
 // its own card); L2-L4 step down in size + weight + opacity.
@@ -172,6 +173,34 @@ const StatusDropdown = ({
     </DropdownMenu>
   );
 };
+
+// ──────────────────────── Parent completion pill ────────────────────────
+// Replaces the StatusDropdown for any task that has sub-tasks. Status is
+// auto-derived from descendants (see isParentTaskComplete) — the user
+// can't change it manually because the audit model requires walking
+// every sub-task. Disabled-looking pill makes that clear.
+
+const CompletionPill = ({ complete }: { complete: boolean }) => (
+  <div
+    className={`w-full flex items-center justify-center gap-1.5 px-2 py-1 rounded-md border text-[11px] font-semibold cursor-not-allowed ${
+      complete
+        ? "bg-green-500/15 text-green-400 border-green-500/30"
+        : "bg-white/[0.04] text-zinc-400 border-white/[0.10]"
+    }`}
+    title={
+      complete
+        ? "Auto: every sub-task in this branch has been reviewed."
+        : "Auto: flips to Complete when every sub-task in this branch is Reviewed."
+    }
+  >
+    {complete ? (
+      <CheckCircle2 className="w-3 h-3 shrink-0" />
+    ) : (
+      <Circle className="w-3 h-3 shrink-0" />
+    )}
+    <span className="truncate">{complete ? "Complete" : "Incomplete"}</span>
+  </div>
+);
 
 // ─────────────────────────── Due-date column ───────────────────────────
 // Native date input styled to match the column row. Overdue / today
@@ -600,6 +629,35 @@ export const AgendaItemRow = ({
   const itemAttachments = attachmentsByItem.get(node.id) || [];
   const itemLinks = linksByItem.get(node.id) || [];
 
+  // Parent task auto-completion. A task with sub-tasks doesn't carry its
+  // own status — it's "Complete" only when every leaf descendant has
+  // been reviewed. We fire a green confetti pop the moment the
+  // derivation flips Incomplete → Complete (caught via a ref so it
+  // doesn't re-fire on every render or on initial mount).
+  const isParent = isTask && hasChildren;
+  const parentIsComplete = isParent && isParentTaskComplete(node);
+  const rowContentRef = useRef<HTMLDivElement>(null);
+  const prevCompleteRef = useRef(parentIsComplete);
+  useEffect(() => {
+    if (parentIsComplete && !prevCompleteRef.current) {
+      const rect = rowContentRef.current?.getBoundingClientRect();
+      confetti({
+        particleCount: 70,
+        spread: 70,
+        ticks: 90,
+        startVelocity: 35,
+        colors: ["#22c55e", "#10b981", "#34d399", "#86efac"],
+        origin: rect
+          ? {
+              x: (rect.left + rect.width / 2) / window.innerWidth,
+              y: (rect.top + rect.height / 2) / window.innerHeight,
+            }
+          : { y: 0.5 },
+      });
+    }
+    prevCompleteRef.current = parentIsComplete;
+  }, [parentIsComplete]);
+
   // Inline content marker — appears right next to the title on any task
   // that has notes, files, or links. Screen-width-independent, so deep
   // sub-tasks still get a visible signal even when the columns drift
@@ -646,6 +704,7 @@ export const AgendaItemRow = ({
 
   const rowContent = (
     <div
+      ref={rowContentRef}
       className={`group/row flex items-center gap-2 ${style.rowPx} ${rowBg} ${rowExtra} hover:bg-white/[0.12] transition-colors`}
       style={rowStyle}
     >
@@ -692,7 +751,9 @@ export const AgendaItemRow = ({
         className={`min-w-0 text-left truncate hover:text-white transition-colors ${
           isTask ? "w-80 shrink-0" : "flex-1"
         } ${style.titleClass} ${
-          node.status === "reviewed" && isTask ? "line-through opacity-50" : ""
+          isTask && (isParent ? parentIsComplete : node.status === "reviewed")
+            ? "line-through opacity-50"
+            : ""
         }`}
         title="Open details"
       >
@@ -745,10 +806,14 @@ export const AgendaItemRow = ({
       {isTask && (
         <>
           <div className="w-28 shrink-0 hidden sm:block border-l border-zinc-500/30 pl-2">
-            <StatusDropdown
-              status={node.status}
-              onChange={(s) => onSetStatus(node.id, s)}
-            />
+            {isParent ? (
+              <CompletionPill complete={parentIsComplete} />
+            ) : (
+              <StatusDropdown
+                status={node.status}
+                onChange={(s) => onSetStatus(node.id, s)}
+              />
+            )}
           </div>
           {!isSubtask && (
             <>

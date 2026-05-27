@@ -37,6 +37,8 @@ import {
   Activity,
   ExternalLink,
   Send,
+  CheckCircle2,
+  Circle,
 } from "lucide-react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -46,6 +48,7 @@ import { toast } from "sonner";
 import { PILLAR_COLOR, PILLAR_LABEL } from "@/pages/admin/AdminMessageBoard";
 import {
   STATUS_LABEL,
+  isParentTaskComplete,
   type AgendaItemWithChildren,
   type AgendaStatus,
   type StaffOption,
@@ -687,34 +690,63 @@ export const AgendaItemDetailDialog = ({
               their status, due, files, etc. live on the tasks underneath. */}
           {!isTopic && (
             <>
-              {/* Status segmented control */}
+              {/* Status — segmented control for leaf tasks; read-only auto-
+                  derived badge for parent tasks (those with sub-tasks). */}
               <div>
                 <p className="text-[10px] uppercase tracking-wider text-zinc-500 mb-1.5">
                   Status
                 </p>
-                <div className="flex gap-1.5">
-                  {STATUS_OPTIONS.map((s) => {
-                    const active = status === s;
-                    const activeClass =
-                      s === "reviewed"
-                        ? "border-green-500/40 bg-green-500/15 text-green-400"
-                        : "border-white/20 bg-white/[0.06] text-zinc-200";
+                {item.children.length > 0 ? (
+                  (() => {
+                    const complete = isParentTaskComplete(item);
                     return (
-                      <button
-                        key={s}
-                        type="button"
-                        onClick={() => setStatus(s)}
-                        className={`flex-1 text-xs font-semibold py-1.5 rounded-md border transition-colors ${
-                          active
-                            ? activeClass
-                            : "border-white/[0.06] text-white/40 hover:border-white/15 hover:text-white/70"
-                        }`}
-                      >
-                        {STATUS_LABEL[s]}
-                      </button>
+                      <div className="space-y-1.5">
+                        <div
+                          className={`w-full flex items-center justify-center gap-2 px-3 py-2 rounded-md border text-sm font-semibold ${
+                            complete
+                              ? "bg-green-500/15 text-green-400 border-green-500/30"
+                              : "bg-white/[0.04] text-zinc-300 border-white/[0.10]"
+                          }`}
+                        >
+                          {complete ? (
+                            <CheckCircle2 className="w-4 h-4" />
+                          ) : (
+                            <Circle className="w-4 h-4" />
+                          )}
+                          {complete ? "Complete" : "Incomplete"}
+                        </div>
+                        <p className="text-[10px] text-zinc-500 leading-snug">
+                          Auto-derived. Flips to Complete only when every
+                          sub-task in this branch has been Reviewed.
+                        </p>
+                      </div>
                     );
-                  })}
-                </div>
+                  })()
+                ) : (
+                  <div className="flex gap-1.5">
+                    {STATUS_OPTIONS.map((s) => {
+                      const active = status === s;
+                      const activeClass =
+                        s === "reviewed"
+                          ? "border-green-500/40 bg-green-500/15 text-green-400"
+                          : "border-white/20 bg-white/[0.06] text-zinc-200";
+                      return (
+                        <button
+                          key={s}
+                          type="button"
+                          onClick={() => setStatus(s)}
+                          className={`flex-1 text-xs font-semibold py-1.5 rounded-md border transition-colors ${
+                            active
+                              ? activeClass
+                              : "border-white/[0.06] text-white/40 hover:border-white/15 hover:text-white/70"
+                          }`}
+                        >
+                          {STATUS_LABEL[s]}
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
 
               {/* Due date — owner field was dropped; the agenda is a shared

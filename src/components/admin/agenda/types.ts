@@ -126,3 +126,17 @@ export const flattenSubtree = (
   node.children.forEach((c) => out.push(...flattenSubtree(c)));
   return out;
 };
+
+// A "parent task" (any task that has sub-tasks underneath) is auto-derived
+// as Complete only when EVERY leaf descendant in its subtree has been
+// reviewed. Review-completion bubbles up across every layer of nesting
+// so the user can't skip a sub-sub-task and have the parent flip green.
+// Returns false for leaf nodes (they use manual pending_review / reviewed).
+export const isParentTaskComplete = (node: AgendaItemWithChildren): boolean => {
+  if (node.children.length === 0) return false;
+  const everyLeafReviewed = (n: AgendaItemWithChildren): boolean => {
+    if (n.children.length === 0) return n.status === "reviewed";
+    return n.children.every(everyLeafReviewed);
+  };
+  return node.children.every(everyLeafReviewed);
+};
