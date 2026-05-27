@@ -11,6 +11,7 @@ import { toast } from "sonner";
 type StaffOption = {
   user_id: string;
   full_name: string | null;
+  display_name: string | null;
   email: string | null;
   job_title: string | null;
 };
@@ -74,7 +75,7 @@ export default function AddWorkbenchModal({ open, onClose, onCreated }: Props) {
     queryFn: async () => {
       const { data, error } = await (supabase
         .from("staff_profiles")
-        .select("user_id, full_name, email, job_title") as any)
+        .select("user_id, full_name, display_name, email, job_title") as any)
         .eq("status", "active")
         .order("full_name", { ascending: true });
       if (error) throw error;
@@ -119,7 +120,7 @@ export default function AddWorkbenchModal({ open, onClose, onCreated }: Props) {
         display_name: displayName,
         subtitle: "Focus Areas & Daily Signals",
         owner_email: selectedOwner.email,
-        owner_name: selectedOwner.full_name || trimmedName,
+        owner_name: selectedOwner.display_name?.trim() || selectedOwner.full_name || trimmedName,
         accent_color: accentColor,
         icon_name: "signal",
         sort_order: nextSortOrder,
@@ -232,7 +233,7 @@ export default function AddWorkbenchModal({ open, onClose, onCreated }: Props) {
                       className="text-white hover:bg-white/10 focus:bg-white/10 focus:text-white"
                     >
                       <div className="flex flex-col">
-                        <span>{s.full_name || s.email || "Unnamed"}</span>
+                        <span>{s.display_name?.trim() || s.full_name || s.email || "Unnamed"}</span>
                         {s.email && (
                           <span className="text-[10px] text-white/40">{s.email}</span>
                         )}

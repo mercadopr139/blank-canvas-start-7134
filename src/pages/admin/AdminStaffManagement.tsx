@@ -42,6 +42,9 @@ interface StaffMember {
   id: string;
   user_id: string;
   full_name: string;
+  // Optional short label shown when two staffers share a first name
+  // (e.g., "Josh" / "Sanchez"). Falls back to full_name when null.
+  display_name: string | null;
   email: string;
   job_title: string;
   status: string;
@@ -68,7 +71,7 @@ export default function AdminStaffManagement() {
   const [loading, setLoading] = useState(true);
   const [addOpen, setAddOpen] = useState(false);
   const [editTarget, setEditTarget] = useState<StaffMember | null>(null);
-  const [form, setForm] = useState({ full_name: "", email: "", job_title: "" });
+  const [form, setForm] = useState({ full_name: "", display_name: "", email: "", job_title: "" });
   const [saving, setSaving] = useState(false);
 
   // Task managers come from the DB so the checkbox set updates automatically
@@ -145,7 +148,7 @@ export default function AdminStaffManagement() {
       if (res.data?.already_exists) {
         toast({ title: "This email already has an account. You can manage their permissions directly." });
         setAddOpen(false);
-        setForm({ full_name: "", email: "", job_title: "" });
+        setForm({ full_name: "", display_name: "", email: "", job_title: "" });
         fetchStaff();
         setSaving(false);
         return;
@@ -159,7 +162,7 @@ export default function AdminStaffManagement() {
 
       toast({ title: res.data?.message || "Staff member added successfully" });
       setAddOpen(false);
-      setForm({ full_name: "", email: "", job_title: "" });
+      setForm({ full_name: "", display_name: "", email: "", job_title: "" });
       fetchStaff();
     } catch {
       toast({ title: "An error occurred", variant: "destructive" });
@@ -172,7 +175,11 @@ export default function AdminStaffManagement() {
     setSaving(true);
     await supabase
       .from("staff_profiles")
-      .update({ full_name: form.full_name.trim(), job_title: form.job_title.trim() })
+      .update({
+        full_name: form.full_name.trim(),
+        display_name: form.display_name.trim() || null,
+        job_title: form.job_title.trim(),
+      })
       .eq("id", editTarget.id);
     toast({ title: "Staff member updated" });
     setEditTarget(null);
@@ -350,7 +357,7 @@ export default function AdminStaffManagement() {
           </div>
           <Button
             onClick={() => {
-              setForm({ full_name: "", email: "", job_title: "" });
+              setForm({ full_name: "", display_name: "", email: "", job_title: "" });
               setAddOpen(true);
             }}
             className="bg-[#bf0f3e] hover:bg-[#a00d35]"
@@ -382,6 +389,14 @@ export default function AdminStaffManagement() {
                     <div>
                       <div className="flex items-center gap-2 flex-wrap">
                         <CardTitle className="text-lg text-white">{member.full_name}</CardTitle>
+                        {member.display_name && member.display_name.trim() && (
+                          <span
+                            className="inline-flex items-center text-[10px] px-2 py-0.5 rounded-full bg-white/[0.06] border border-white/15 text-white/70 font-medium"
+                            title="Short label shown in lists / avatars when first names collide"
+                          >
+                            "{member.display_name}"
+                          </span>
+                        )}
                         {isMemberSuperAdmin && (
                           <span className="inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full bg-amber-400/15 border border-amber-400/40 text-amber-300 font-semibold">
                             <ShieldCheck className="w-3 h-3" />
@@ -410,6 +425,7 @@ export default function AdminStaffManagement() {
                           setEditTarget(member);
                           setForm({
                             full_name: member.full_name,
+                            display_name: member.display_name ?? "",
                             email: member.email,
                             job_title: member.job_title,
                           });
@@ -515,6 +531,20 @@ export default function AdminStaffManagement() {
               />
             </div>
             <div>
+              <label className="text-sm text-white/60">
+                Display Name <span className="text-white/30">(optional)</span>
+              </label>
+              <Input
+                value={form.display_name}
+                onChange={(e) => setForm({ ...form, display_name: e.target.value })}
+                placeholder="Short label when first names collide (e.g., Sanchez)"
+                className="bg-white/10 border-white/20 text-white"
+              />
+              <p className="text-[10px] text-white/40 mt-1">
+                Shown in lists when set. Avatar initials still use the full name.
+              </p>
+            </div>
+            <div>
               <label className="text-sm text-white/60">NLA Email</label>
               <Input
                 value={form.email}
@@ -565,6 +595,20 @@ export default function AdminStaffManagement() {
                 onChange={(e) => setForm({ ...form, full_name: e.target.value })}
                 className="bg-white/10 border-white/20 text-white"
               />
+            </div>
+            <div>
+              <label className="text-sm text-white/60">
+                Display Name <span className="text-white/30">(optional)</span>
+              </label>
+              <Input
+                value={form.display_name}
+                onChange={(e) => setForm({ ...form, display_name: e.target.value })}
+                placeholder="Short label when first names collide (e.g., Sanchez)"
+                className="bg-white/10 border-white/20 text-white"
+              />
+              <p className="text-[10px] text-white/40 mt-1">
+                Shown in lists when set. Avatar initials still use the full name.
+              </p>
             </div>
             <div>
               <label className="text-sm text-white/60">Email</label>

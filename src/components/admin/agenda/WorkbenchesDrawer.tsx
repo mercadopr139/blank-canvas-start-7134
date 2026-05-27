@@ -24,6 +24,7 @@ import {
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { colorForUserId, initialsOf, type StaffOption } from "./types";
+import { displayNameFor } from "@/lib/staff";
 
 interface AgendaSignal {
   id: string;
@@ -186,7 +187,7 @@ export const WorkbenchesDrawer = ({ staff, agendaFocusByManager }: Props) => {
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-semibold text-white truncate">
-                      {s.full_name}
+                      {displayNameFor(s)}
                     </p>
                     <p className="text-[10px] text-zinc-500 truncate">
                       {s.job_title || s.task_manager_type}

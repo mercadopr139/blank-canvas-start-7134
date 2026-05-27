@@ -51,6 +51,7 @@ export type StaffProfile = {
   id: string;
   user_id: string;
   full_name: string;
+  display_name: string | null;
   job_title: string | null;
   task_manager_type: string | null;
 };
@@ -100,7 +101,7 @@ const AdminMessageBoard = () => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("staff_profiles")
-        .select("id, user_id, full_name, job_title, task_manager_type")
+        .select("id, user_id, full_name, display_name, job_title, task_manager_type")
         .eq("user_id", user!.id)
         .maybeSingle();
       if (error) return null;
@@ -155,9 +156,9 @@ const AdminMessageBoard = () => {
             if (memberIds.length > 0) {
               const { data: profiles } = await supabase
                 .from("staff_profiles")
-                .select("full_name, user_id")
+                .select("full_name, display_name, user_id")
                 .in("user_id", memberIds);
-              member_names = (profiles || []).map((p) => p.full_name);
+              member_names = (profiles || []).map((p) => p.display_name?.trim() || p.full_name);
             }
 
             const { data: lastMsgs } = await supabase
@@ -221,9 +222,9 @@ const AdminMessageBoard = () => {
           if (otherIds.length > 0) {
             const { data: profiles } = await supabase
               .from("staff_profiles")
-              .select("full_name, user_id")
+              .select("full_name, display_name, user_id")
               .in("user_id", otherIds);
-            member_names = (profiles || []).map((p) => p.full_name);
+            member_names = (profiles || []).map((p) => p.display_name?.trim() || p.full_name);
           }
 
           const { data: lastMsgs } = await supabase

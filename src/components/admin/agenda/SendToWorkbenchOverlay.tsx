@@ -36,6 +36,7 @@ import {
   type AgendaItemWithChildren,
   type StaffOption,
 } from "./types";
+import { displayNameFor } from "@/lib/staff";
 
 type FocusArea = {
   id: string;
@@ -200,7 +201,7 @@ export const SendToWorkbenchOverlay = ({
       queryClient.invalidateQueries({ queryKey: ["signals"] });
       queryClient.invalidateQueries({ queryKey: ["my-workbench-core-signals"] });
       toast.success(
-        `Added to ${targetUser?.full_name?.split(" ")[0] ?? "Workbench"}.`,
+        `Added to ${targetUser ? displayNameFor(targetUser) : "Workbench"}.`,
       );
       setAdding(null);
       setAddingDraft("");
@@ -277,7 +278,7 @@ export const SendToWorkbenchOverlay = ({
                       {initialsOf(s.full_name)}
                     </span>
                     <span className="truncate max-w-[120px]">
-                      {s.full_name.split(" ")[0]}
+                      {displayNameFor(s)}
                     </span>
                   </button>
                 );

@@ -268,10 +268,12 @@ const MessageThread = ({ conversation, currentUserId, isSuperAdmin, canPost, scr
       const senderIds = [...new Set((data || []).map((m) => m.sender_id))];
       const { data: profiles } = await supabase
         .from("staff_profiles")
-        .select("user_id, full_name")
+        .select("user_id, full_name, display_name")
         .in("user_id", senderIds);
       const nameMap: Record<string, string> = {};
-      (profiles || []).forEach((p) => { nameMap[p.user_id] = p.full_name; });
+      (profiles || []).forEach((p) => {
+        nameMap[p.user_id] = (p.display_name?.trim() || p.full_name) as string;
+      });
 
       return (data || []).map((m) => ({
         ...m,

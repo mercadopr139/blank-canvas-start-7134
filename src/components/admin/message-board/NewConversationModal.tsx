@@ -10,6 +10,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Users, User } from "lucide-react";
 import type { StaffProfile, Pillar } from "@/pages/admin/AdminMessageBoard";
 import { PILLARS, PILLAR_COLOR, PILLAR_LABEL } from "@/pages/admin/AdminMessageBoard";
+import { displayNameFor } from "@/lib/staff";
 
 interface Props {
   open: boolean;
@@ -31,7 +32,7 @@ const NewConversationModal = ({ open, onClose, currentUserId, onCreated }: Props
     queryFn: async () => {
       const { data, error } = await supabase
         .from("staff_profiles")
-        .select("id, user_id, full_name, job_title, task_manager_type")
+        .select("id, user_id, full_name, display_name, job_title, task_manager_type")
         .order("full_name", { ascending: true });
       if (error) throw error;
       return ((data || []) as StaffProfile[]).filter((s) => s.user_id !== currentUserId);
@@ -204,7 +205,7 @@ const NewConversationModal = ({ open, onClose, currentUserId, onCreated }: Props
                       <User className="w-3.5 h-3.5" />
                     </div>
                     <div>
-                      <p className="text-sm font-medium text-zinc-200">{staff.full_name}</p>
+                      <p className="text-sm font-medium text-zinc-200">{displayNameFor(staff)}</p>
                       <p className="text-xs text-zinc-500">
                         {staff.job_title || ""}
                         {!hasAccount && <span className="ml-1 text-zinc-600">· hasn't logged in yet</span>}

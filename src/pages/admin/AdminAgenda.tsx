@@ -114,18 +114,20 @@ const AdminAgenda = () => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("staff_profiles")
-        .select("user_id, full_name, job_title, task_manager_type, status")
+        .select("user_id, full_name, display_name, job_title, task_manager_type, status")
         .eq("status", "active")
         .order("full_name");
       if (error) throw error;
       return ((data || []) as {
         user_id: string;
         full_name: string;
+        display_name: string | null;
         job_title: string | null;
         task_manager_type: string | null;
       }[]).map((s) => ({
         user_id: s.user_id,
         full_name: s.full_name,
+        display_name: s.display_name,
         job_title: s.job_title,
         task_manager_type: s.task_manager_type,
       }));

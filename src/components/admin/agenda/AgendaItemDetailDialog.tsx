@@ -53,6 +53,7 @@ import {
   type StaffOption,
 } from "./types";
 import { logAgendaActivity, type AgendaActivityRow } from "./activityLog";
+import { displayNameFor } from "@/lib/staff";
 
 // ──────────────────────────── helpers ────────────────────────────
 
@@ -88,7 +89,10 @@ const triggerBlobDownload = async (url: string, filename: string) => {
 
 const renderActivity = (row: AgendaActivityRow, staff: StaffOption[]): string => {
   const who = row.user_id
-    ? staff.find((s) => s.user_id === row.user_id)?.full_name ?? "Someone"
+    ? (() => {
+        const s = staff.find((s) => s.user_id === row.user_id);
+        return s ? displayNameFor(s) : "Someone";
+      })()
     : "Someone";
   const fields = row.changed_fields as Record<string, unknown>;
   switch (row.action) {
@@ -114,7 +118,10 @@ const renderActivity = (row: AgendaActivityRow, staff: StaffOption[]): string =>
       if ("owner_user_ids" in fields) {
         const ids = (fields.owner_user_ids as string[]) || [];
         const names = ids
-          .map((id) => staff.find((s) => s.user_id === id)?.full_name)
+          .map((id) => {
+            const s = staff.find((s) => s.user_id === id);
+            return s ? displayNameFor(s) : null;
+          })
           .filter(Boolean)
           .join(", ");
         parts.push(ids.length === 0 ? "owners (cleared)" : `owners to ${names}`);

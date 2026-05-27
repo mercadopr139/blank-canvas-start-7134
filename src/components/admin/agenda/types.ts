@@ -34,6 +34,10 @@ export interface AgendaItemWithChildren extends AgendaItem {
 export interface StaffOption {
   user_id: string;
   full_name: string;
+  // Optional short label used when two staffers share a first name
+  // (e.g. "Josh" vs "Sanchez"). Falls back to full_name. Read via
+  // displayNameFor() from src/lib/staff.ts.
+  display_name: string | null;
   job_title: string | null;
   // Null when the staff member doesn't have a Workbench yet. Used by
   // the Send-to-Workbench chooser to filter focus areas to the ones

@@ -8,6 +8,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Input } from "@/components/ui/input";
 import { Search, X, Check } from "lucide-react";
 import { colorForUserId, initialsOf, type StaffOption } from "./types";
+import { displayNameFor } from "@/lib/staff";
 
 interface Props {
   ownerUserIds: string[];
@@ -18,14 +19,20 @@ interface Props {
 }
 
 // One initials avatar. Used by both the picker rows and the stack.
+// Initials are derived from `fullName` so the bubble label stays
+// predictable (JS / JM / CC / AM); the tooltip uses `displayName`
+// when set so two staffers sharing a first name still read distinct
+// on hover.
 const SingleAvatar = ({
   userId,
   fullName,
+  displayName,
   size = "md",
   ring = false,
 }: {
   userId: string;
   fullName: string;
+  displayName?: string;
   size?: "sm" | "md";
   ring?: boolean;
 }) => {
@@ -36,7 +43,7 @@ const SingleAvatar = ({
         ring ? "ring-2 ring-neutral-900" : ""
       }`}
       style={{ background: colorForUserId(userId) }}
-      title={fullName}
+      title={displayName || fullName}
     >
       {initialsOf(fullName)}
     </div>
@@ -88,6 +95,7 @@ export const OwnerStack = ({
           <SingleAvatar
             userId={s.user_id}
             fullName={s.full_name}
+            displayName={displayNameFor(s)}
             size={size}
             ring={resolved.length > 1}
           />
@@ -96,7 +104,7 @@ export const OwnerStack = ({
       {overflow > 0 && (
         <div
           className={`${badgePx} ${overlap} rounded-full flex items-center justify-center font-bold bg-neutral-700 text-white/80 ring-2 ring-neutral-900 shrink-0`}
-          title={resolved.slice(3).map((s) => s.full_name).join(", ")}
+          title={resolved.slice(3).map((s) => displayNameFor(s)).join(", ")}
         >
           +{overflow}
         </div>
@@ -121,6 +129,7 @@ export const OwnerPicker = ({
     return staff.filter(
       (s) =>
         s.full_name.toLowerCase().includes(q) ||
+        (s.display_name?.toLowerCase().includes(q) ?? false) ||
         (s.job_title?.toLowerCase().includes(q) ?? false),
     );
   }, [staff, search]);
@@ -193,10 +202,11 @@ export const OwnerPicker = ({
                   <SingleAvatar
                     userId={s.user_id}
                     fullName={s.full_name}
+                    displayName={displayNameFor(s)}
                     size="sm"
                   />
                   <div className="flex-1 min-w-0">
-                    <p className="text-xs font-medium text-white truncate">{s.full_name}</p>
+                    <p className="text-xs font-medium text-white truncate">{displayNameFor(s)}</p>
                     {s.job_title && (
                       <p className="text-[10px] text-zinc-500 truncate">{s.job_title}</p>
                     )}
