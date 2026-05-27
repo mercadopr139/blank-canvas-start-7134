@@ -43,7 +43,6 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { formatDistanceToNow } from "date-fns";
 import { toast } from "sonner";
-import { OwnerPicker } from "./OwnerPicker";
 import { PILLAR_COLOR, PILLAR_LABEL } from "@/pages/admin/AdminMessageBoard";
 import {
   STATUS_LABEL,
@@ -590,7 +589,6 @@ export const AgendaItemDetailDialog = ({
   const [notes, setNotes] = useState("");
   const [dueDate, setDueDate] = useState<string>("");
   const [status, setStatus] = useState<AgendaStatus>("signal");
-  const [ownerUserIds, setOwnerUserIds] = useState<string[]>([]);
   const [saving, setSaving] = useState(false);
 
   // Workbench-send chooser. Map<userId, focusAreaId>. Entry present
@@ -626,7 +624,6 @@ export const AgendaItemDetailDialog = ({
     setNotes(item.notes ?? "");
     setDueDate(item.due_date ?? "");
     setStatus(item.status);
-    setOwnerUserIds(item.owner_user_ids ?? []);
   }, [item?.id]);
 
   if (!item) return null;
@@ -639,10 +636,6 @@ export const AgendaItemDetailDialog = ({
     if ((notes || null) !== (item.notes || null)) patch.notes = notes.trim() || null;
     if ((dueDate || null) !== (item.due_date || null)) patch.due_date = dueDate || null;
     if (status !== item.status) patch.status = status;
-    const sameOwners =
-      ownerUserIds.length === (item.owner_user_ids?.length ?? 0) &&
-      ownerUserIds.every((u) => item.owner_user_ids?.includes(u));
-    if (!sameOwners) patch.owner_user_ids = ownerUserIds;
     if (Object.keys(patch).length === 0) {
       onClose();
       return;
@@ -717,41 +710,30 @@ export const AgendaItemDetailDialog = ({
             </div>
           </div>
 
-          {/* Owners + due date */}
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <p className="text-[10px] uppercase tracking-wider text-zinc-500 mb-1.5">
-                Owners
-              </p>
-              <OwnerPicker
-                ownerUserIds={ownerUserIds}
-                staff={staff}
-                onChange={setOwnerUserIds}
+          {/* Due date — owner field was dropped; the agenda is a shared
+              audit tool, so no per-item assignment. */}
+          <div>
+            <p className="text-[10px] uppercase tracking-wider text-zinc-500 mb-1.5">
+              Due
+            </p>
+            <div className="relative">
+              <Calendar className="absolute left-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-zinc-500" />
+              <input
+                type="date"
+                value={dueDate}
+                onChange={(e) => setDueDate(e.target.value)}
+                className="w-full bg-white/[0.04] border border-white/[0.08] rounded-md text-xs text-white py-1.5 pl-7 pr-2"
               />
-            </div>
-            <div>
-              <p className="text-[10px] uppercase tracking-wider text-zinc-500 mb-1.5">
-                Due
-              </p>
-              <div className="relative">
-                <Calendar className="absolute left-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-zinc-500" />
-                <input
-                  type="date"
-                  value={dueDate}
-                  onChange={(e) => setDueDate(e.target.value)}
-                  className="w-full bg-white/[0.04] border border-white/[0.08] rounded-md text-xs text-white py-1.5 pl-7 pr-2"
-                />
-                {dueDate && (
-                  <button
-                    type="button"
-                    onClick={() => setDueDate("")}
-                    className="absolute right-1 top-1/2 -translate-y-1/2 p-0.5 text-zinc-500 hover:text-white"
-                    title="Clear due date"
-                  >
-                    <X className="w-3 h-3" />
-                  </button>
-                )}
-              </div>
+              {dueDate && (
+                <button
+                  type="button"
+                  onClick={() => setDueDate("")}
+                  className="absolute right-1 top-1/2 -translate-y-1/2 p-0.5 text-zinc-500 hover:text-white"
+                  title="Clear due date"
+                >
+                  <X className="w-3 h-3" />
+                </button>
+              )}
             </div>
           </div>
 
@@ -768,25 +750,20 @@ export const AgendaItemDetailDialog = ({
             />
           </div>
 
-          {/* Push to Workbench — Phase 4. Disabled with a hint when
-              there are no owners to send to. */}
+          {/* Push to Workbench — Phase 4. Owner-less version: the chooser
+              opens with every staffer who has a Workbench listed, and the
+              user picks who to send to. Status syncs both ways once sent. */}
           <div className="rounded-md border border-white/[0.06] bg-white/[0.02] p-3 flex items-center justify-between gap-3">
             <div className="min-w-0">
               <p className="text-xs font-semibold text-white">Send to Workbench</p>
               <p className="text-[11px] text-zinc-500 leading-snug">
-                {ownerUserIds.length === 0
-                  ? "Assign an owner first to push this item to their Workbench."
-                  : `Push this item into ${ownerUserIds.length === 1 ? "the owner's" : "selected owners'"} Workbench. Status syncs both ways.`}
+                Push this item into one or more staff Workbenches. Status syncs both ways.
               </p>
             </div>
             <Button
               type="button"
-              disabled={ownerUserIds.length === 0}
               onClick={() => {
-                // Pre-check every owner with no focus area chosen yet.
-                const seeded = new Map<string, string>();
-                for (const uid of ownerUserIds) seeded.set(uid, "");
-                setPushSelections(seeded);
+                setPushSelections(new Map());
                 setPushOpen(true);
               }}
               className="bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-300 border border-emerald-500/30 text-xs h-8 gap-1.5 shrink-0"
@@ -834,57 +811,56 @@ export const AgendaItemDetailDialog = ({
                 Send to Workbench
               </DialogTitle>
               <p className="text-xs text-zinc-400 leading-relaxed">
-                Pick a focus area on each owner's Workbench to send this
-                item to. Marking it Done in either place syncs to the other.
+                Pick which staff Workbench(es) to send this item to, then
+                choose the focus area on each. Marking it Done in either
+                place syncs to the other.
               </p>
             </DialogHeader>
             <div className="space-y-2 my-3 max-h-72 overflow-y-auto">
-              {ownerUserIds.length === 0 ? (
+              {staff.filter((s) => !!s.task_manager_type).length === 0 ? (
                 <p className="text-xs text-zinc-500 italic text-center py-4">
-                  No owners assigned.
+                  No staff Workbenches available.
                 </p>
               ) : (
-                ownerUserIds.map((uid) => {
-                  const profile = staff.find((s) => s.user_id === uid);
-                  const checked = pushSelections.has(uid);
-                  const chosenFa = pushSelections.get(uid) ?? "";
-                  const userFocusAreas = profile?.task_manager_type
-                    ? focusAreas.filter((fa) => fa.manager_type === profile.task_manager_type)
-                    : [];
-                  const noWorkbench = !profile?.task_manager_type;
-                  return (
-                    <div
-                      key={uid}
-                      className={`rounded-md transition-colors ${
-                        checked ? "bg-white/[0.04]" : ""
-                      }`}
-                    >
-                      <button
-                        type="button"
-                        disabled={noWorkbench}
-                        onClick={() => {
-                          setPushSelections((prev) => {
-                            const next = new Map(prev);
-                            if (next.has(uid)) next.delete(uid);
-                            else next.set(uid, "");
-                            return next;
-                          });
-                        }}
-                        className="w-full flex items-center gap-3 px-3 py-2 hover:bg-white/[0.04] disabled:opacity-50 disabled:cursor-not-allowed text-left"
+                staff
+                  .filter((s) => !!s.task_manager_type)
+                  .map((profile) => {
+                    const uid = profile.user_id;
+                    const checked = pushSelections.has(uid);
+                    const chosenFa = pushSelections.get(uid) ?? "";
+                    const userFocusAreas = focusAreas.filter(
+                      (fa) => fa.manager_type === profile.task_manager_type,
+                    );
+                    return (
+                      <div
+                        key={uid}
+                        className={`rounded-md transition-colors ${
+                          checked ? "bg-white/[0.04]" : ""
+                        }`}
                       >
-                        <Checkbox checked={checked} className="border-white/30" />
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium text-white truncate">
-                            {profile?.full_name ?? "Unknown user"}
-                          </p>
-                          <p className="text-[10px] text-zinc-500 truncate">
-                            {noWorkbench
-                              ? "No Workbench — can't receive items"
-                              : profile?.job_title || profile?.task_manager_type}
-                          </p>
-                        </div>
-                      </button>
-                      {checked && !noWorkbench && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setPushSelections((prev) => {
+                              const next = new Map(prev);
+                              if (next.has(uid)) next.delete(uid);
+                              else next.set(uid, "");
+                              return next;
+                            });
+                          }}
+                          className="w-full flex items-center gap-3 px-3 py-2 hover:bg-white/[0.04] text-left"
+                        >
+                          <Checkbox checked={checked} className="border-white/30" />
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium text-white truncate">
+                              {profile.full_name}
+                            </p>
+                            <p className="text-[10px] text-zinc-500 truncate">
+                              {profile.job_title || profile.task_manager_type}
+                            </p>
+                          </div>
+                        </button>
+                        {checked && (
                         <div className="px-3 pb-2 pl-12">
                           <label className="text-[10px] uppercase tracking-wider text-zinc-500">
                             Send to focus area

@@ -46,7 +46,6 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Textarea } from "@/components/ui/textarea";
-import { OwnerPicker } from "./OwnerPicker";
 import { PILLAR_COLOR } from "@/pages/admin/AdminMessageBoard";
 import type {
   AgendaItemWithChildren,
@@ -613,15 +612,9 @@ export const AgendaItemRow = ({
         </span>
       )}
 
-      {/* Right-side cluster: owner + add + menu */}
+      {/* Right-side cluster: add + menu. Owner picker was dropped —
+          the agenda is a shared audit tool, not per-person assigned work. */}
       <div className="flex items-center gap-2 ml-1">
-        <OwnerPicker
-          ownerUserIds={node.owner_user_ids}
-          staff={staff}
-          size={style.ownerSize}
-          onChange={(uids) => onChangeOwners(node.id, uids)}
-        />
-
         {canHaveChildren && (
           <button
             type="button"
