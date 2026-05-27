@@ -27,13 +27,26 @@ import { colorForUserId, initialsOf, type StaffOption } from "./types";
 
 interface AgendaSignal {
   id: string;
-  user_id: string;
   title: string;
   status: "Pending" | "Complete";
-  source: string;
+  source: string | null;
   source_agenda_item_id: string;
   created_at: string;
 }
+
+// Workbenches are scoped by manager_type, not by user_id (the signals
+// table has no user_id column). The convention:
+//   - PD's NLA tile        → source = null OR "NLA"
+//   - PD's other tiles     → source = "<title>" (e.g. "USA Boxing")
+//   - any non-PD type      → source = "<TYPE>:<title or NLA>"
+// So the manager_type is either the prefix before ":", or PD as the
+// fallback for legacy bare sources.
+const managerTypeFromSource = (source: string | null): string => {
+  if (!source) return "PD";
+  const colon = source.indexOf(":");
+  if (colon > 0) return source.slice(0, colon);
+  return "PD";
+};
 
 interface Props {
   staff: StaffOption[];
@@ -50,14 +63,14 @@ export const WorkbenchesDrawer = ({ staff, agendaFocusByManager }: Props) => {
   const [removingId, setRemovingId] = useState<string | null>(null);
 
   // Only fetch while the drawer is open — keeps the page idle when not
-  // in use. Pulls every agenda-sourced signal, then groups client-side
-  // so the drawer can render all four staff panels off one round trip.
+  // in use. Pulls every agenda-sourced signal in one round trip, then
+  // groups client-side by manager_type derived from the source field.
   const { data: signals = [], isLoading } = useQuery<AgendaSignal[]>({
     queryKey: ["agenda-sourced-signals"],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("signals")
-        .select("id, user_id, title, status, source, source_agenda_item_id, created_at")
+        .select("id, title, status, source, source_agenda_item_id, created_at")
         .not("source_agenda_item_id", "is", null)
         .order("created_at", { ascending: false });
       if (error) throw error;
@@ -89,11 +102,15 @@ export const WorkbenchesDrawer = ({ staff, agendaFocusByManager }: Props) => {
     [staff, agendaFocusByManager],
   );
 
-  const signalsByUser = useMemo(() => {
+  // Group signals by the manager_type embedded in their source. Each
+  // staffer has a unique manager_type now (post-split), so this maps
+  // 1:1 to the staff panels rendered below.
+  const signalsByManagerType = useMemo(() => {
     const m = new Map<string, AgendaSignal[]>();
     for (const s of signals) {
-      if (!m.has(s.user_id)) m.set(s.user_id, []);
-      m.get(s.user_id)!.push(s);
+      const mt = managerTypeFromSource(s.source);
+      if (!m.has(mt)) m.set(mt, []);
+      m.get(mt)!.push(s);
     }
     return m;
   }, [signals]);
@@ -149,7 +166,9 @@ export const WorkbenchesDrawer = ({ staff, agendaFocusByManager }: Props) => {
           )}
 
           {eligibleStaff.map((s) => {
-            const userSignals = signalsByUser.get(s.user_id) || [];
+            const userSignals = s.task_manager_type
+              ? signalsByManagerType.get(s.task_manager_type) || []
+              : [];
             const pending = userSignals.filter((sig) => sig.status === "Pending");
             const completed = userSignals.filter((sig) => sig.status === "Complete");
 
