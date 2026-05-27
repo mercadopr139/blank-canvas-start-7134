@@ -42,6 +42,7 @@ import {
 } from "@/pages/admin/AdminMessageBoard";
 import { AgendaItemRow } from "@/components/admin/agenda/AgendaItemRow";
 import { AgendaItemDetailDialog } from "@/components/admin/agenda/AgendaItemDetailDialog";
+import { WorkbenchesDrawer } from "@/components/admin/agenda/WorkbenchesDrawer";
 import {
   buildTree,
   flattenSubtree,
@@ -130,6 +131,30 @@ const AdminAgenda = () => {
       }));
     },
   });
+
+  // Seeded "Agenda" focus area per manager_type. Powers the per-row
+  // Send-to-Workbench picker (and the floating Workbenches drawer)
+  // — clicking a staff name pushes to that user's Agenda tile without
+  // any further focus-area picking.
+  const { data: agendaFocusAreas = [] } = useQuery<{ id: string; manager_type: string | null }[]>({
+    queryKey: ["agenda-focus-areas-by-manager"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("focus_areas")
+        .select("id, manager_type")
+        .eq("key", "agenda");
+      if (error) throw error;
+      return data || [];
+    },
+  });
+
+  const agendaFocusByManager = useMemo(() => {
+    const m = new Map<string, string>();
+    for (const fa of agendaFocusAreas) {
+      if (fa.manager_type) m.set(fa.manager_type, fa.id);
+    }
+    return m;
+  }, [agendaFocusAreas]);
 
   // Page-level summaries so each row can show attachment/link
   // indicator icons without N per-item queries. The detail dialog
@@ -685,6 +710,7 @@ const AdminAgenda = () => {
                   node={node}
                   index={idx}
                   staff={staff}
+                  agendaFocusByManager={agendaFocusByManager}
                   attachmentsByItem={attachmentsByItem}
                   linksByItem={linksByItem}
                   expanded={expanded}
@@ -915,6 +941,16 @@ const AdminAgenda = () => {
           if (!detailItem) return;
           await updateMutation.mutateAsync({ id: detailItem.id, patch });
         }}
+      />
+
+      {/* Floating Workbenches drawer — always accessible on the agenda
+          page regardless of scroll position. Click the FAB to slide
+          out a panel showing each eligible staffer's pushed-from-agenda
+          signals. Per-row Send button is the primary add mechanism;
+          this drawer is the at-a-glance read + remove surface. */}
+      <WorkbenchesDrawer
+        staff={staff}
+        agendaFocusByManager={agendaFocusByManager}
       />
 
       <AlertDialog open={resetConfirmOpen} onOpenChange={setResetConfirmOpen}>

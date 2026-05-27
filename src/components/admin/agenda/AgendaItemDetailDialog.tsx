@@ -36,7 +36,6 @@ import {
   Loader2,
   Activity,
   ExternalLink,
-  Send,
   CheckCircle2,
   Circle,
 } from "lucide-react";
@@ -54,15 +53,6 @@ import {
   type StaffOption,
 } from "./types";
 import { logAgendaActivity, type AgendaActivityRow } from "./activityLog";
-import { pushAgendaItemToWorkbench } from "./workbench-sync";
-import { Checkbox } from "@/components/ui/checkbox";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 
 // ──────────────────────────── helpers ────────────────────────────
 
@@ -597,33 +587,6 @@ export const AgendaItemDetailDialog = ({
   const [status, setStatus] = useState<AgendaStatus>("pending_review");
   const [saving, setSaving] = useState(false);
 
-  // Workbench-send chooser. Map<userId, focusAreaId>. Entry present
-  // means "send to this user"; value is which focus area on their
-  // Workbench the signal should land in. Empty string = not chosen.
-  const [pushOpen, setPushOpen] = useState(false);
-  const [pushSelections, setPushSelections] = useState<Map<string, string>>(new Map());
-  const [pushing, setPushing] = useState(false);
-
-  // Focus areas across all manager_types — small table, one query.
-  // Filtered client-side per owner in the chooser. Only fetched while
-  // the chooser is open.
-  const { data: focusAreas = [] } = useQuery<{
-    id: string;
-    title: string;
-    manager_type: string | null;
-  }[]>({
-    queryKey: ["agenda-focus-areas"],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("focus_areas")
-        .select("id, title, manager_type")
-        .order("sort_order");
-      if (error) throw error;
-      return data || [];
-    },
-    enabled: pushOpen,
-  });
-
   useEffect(() => {
     if (!item) return;
     setTitle(item.title);
@@ -789,28 +752,10 @@ export const AgendaItemDetailDialog = ({
                 />
               </div>
 
-              {/* Push to Workbench — Phase 4. Owner-less version: the chooser
-                  opens with every staffer who has a Workbench listed, and the
-                  user picks who to send to. Status syncs both ways once sent. */}
-              <div className="rounded-md border border-white/[0.06] bg-white/[0.02] p-3 flex items-center justify-between gap-3">
-                <div className="min-w-0">
-                  <p className="text-xs font-semibold text-white">Send to Workbench</p>
-                  <p className="text-[11px] text-zinc-500 leading-snug">
-                    Push this item into one or more staff Workbenches. Status syncs both ways.
-                  </p>
-                </div>
-                <Button
-                  type="button"
-                  onClick={() => {
-                    setPushSelections(new Map());
-                    setPushOpen(true);
-                  }}
-                  className="bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-300 border border-emerald-500/30 text-xs h-8 gap-1.5 shrink-0"
-                >
-                  <Send className="w-3.5 h-3.5" />
-                  Send
-                </Button>
-              </div>
+              {/* Send-to-Workbench moved out of the detail dialog. It now
+                  lives as a per-row button in the actions cluster so the
+                  meeting flow is one click — review the task, hand it
+                  off, move on. */}
 
               {/* Attachments — Phase 3b */}
               <AttachmentsSection itemId={item.id} />
@@ -842,177 +787,6 @@ export const AgendaItemDetailDialog = ({
           </div>
         </div>
 
-        {/* Workbench-target chooser — pick which owners receive the
-            push AND which focus area on each of their Workbenches it
-            lands in. The dialog stays open until you confirm. */}
-        <Dialog open={pushOpen} onOpenChange={(o) => { if (!o) setPushOpen(false); }}>
-          <DialogContent className="bg-neutral-900 border-white/10 text-white max-w-md">
-            <DialogHeader>
-              <DialogTitle className="text-white text-base font-semibold">
-                Send to Workbench
-              </DialogTitle>
-              <p className="text-xs text-zinc-400 leading-relaxed">
-                Pick which staff Workbench(es) to send this item to, then
-                choose the focus area on each. Marking it Done in either
-                place syncs to the other.
-              </p>
-            </DialogHeader>
-            <div className="space-y-2 my-3 max-h-72 overflow-y-auto">
-              {staff.filter((s) => !!s.task_manager_type).length === 0 ? (
-                <p className="text-xs text-zinc-500 italic text-center py-4">
-                  No staff Workbenches available.
-                </p>
-              ) : (
-                staff
-                  .filter((s) => !!s.task_manager_type)
-                  .map((profile) => {
-                    const uid = profile.user_id;
-                    const checked = pushSelections.has(uid);
-                    const chosenFa = pushSelections.get(uid) ?? "";
-                    const userFocusAreas = focusAreas.filter(
-                      (fa) => fa.manager_type === profile.task_manager_type,
-                    );
-                    return (
-                      <div
-                        key={uid}
-                        className={`rounded-md transition-colors ${
-                          checked ? "bg-white/[0.04]" : ""
-                        }`}
-                      >
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setPushSelections((prev) => {
-                              const next = new Map(prev);
-                              if (next.has(uid)) next.delete(uid);
-                              else next.set(uid, "");
-                              return next;
-                            });
-                          }}
-                          className="w-full flex items-center gap-3 px-3 py-2 hover:bg-white/[0.04] text-left"
-                        >
-                          <Checkbox checked={checked} className="border-white/30" />
-                          <div className="flex-1 min-w-0">
-                            <p className="text-sm font-medium text-white truncate">
-                              {profile.full_name}
-                            </p>
-                            <p className="text-[10px] text-zinc-500 truncate">
-                              {profile.job_title || profile.task_manager_type}
-                            </p>
-                          </div>
-                        </button>
-                        {checked && (
-                        <div className="px-3 pb-2 pl-12">
-                          <label className="text-[10px] uppercase tracking-wider text-zinc-500">
-                            Send to focus area
-                          </label>
-                          <Select
-                            value={chosenFa || undefined}
-                            onValueChange={(v) =>
-                              setPushSelections((prev) => {
-                                const next = new Map(prev);
-                                next.set(uid, v);
-                                return next;
-                              })
-                            }
-                          >
-                            <SelectTrigger className="w-full mt-1 h-8 bg-white/[0.04] border-white/[0.08] text-xs text-white focus:ring-1 focus:ring-white/20">
-                              <SelectValue placeholder="Pick a tile…" />
-                            </SelectTrigger>
-                            {/* Override the light-theme CSS variables that the shadcn
-                                Select uses internally — without this, the inner Viewport
-                                renders white-on-white because --popover defaults to white. */}
-                            <SelectContent
-                              className="border-white/10"
-                              style={{
-                                ["--popover" as any]: "0 0% 9%",
-                                ["--popover-foreground" as any]: "0 0% 100%",
-                                ["--accent" as any]: "0 0% 100% / 0.06",
-                                ["--accent-foreground" as any]: "0 0% 100%",
-                              }}
-                            >
-                              {userFocusAreas.length === 0 ? (
-                                <div className="px-3 py-2 text-xs text-zinc-500 italic">
-                                  No focus areas on this Workbench.
-                                </div>
-                              ) : (
-                                userFocusAreas.map((fa) => (
-                                  <SelectItem
-                                    key={fa.id}
-                                    value={fa.id}
-                                    className="text-xs text-white focus:bg-white/[0.08] focus:text-white"
-                                  >
-                                    {fa.title}
-                                  </SelectItem>
-                                ))
-                              )}
-                            </SelectContent>
-                          </Select>
-                        </div>
-                      )}
-                    </div>
-                  );
-                })
-              )}
-            </div>
-            <p className="text-[10px] text-zinc-600 leading-relaxed">
-              Already-pushed items won't be duplicated.
-            </p>
-            <div className="flex gap-2 pt-2">
-              <Button
-                variant="ghost"
-                onClick={() => setPushOpen(false)}
-                className="flex-1 text-zinc-400 hover:text-white"
-              >
-                Cancel
-              </Button>
-              <Button
-                disabled={
-                  pushing ||
-                  pushSelections.size === 0 ||
-                  Array.from(pushSelections.values()).some((v) => !v) ||
-                  !item
-                }
-                onClick={async () => {
-                  if (!item) return;
-                  setPushing(true);
-                  try {
-                    const targets = Array.from(pushSelections.entries())
-                      .filter(([, faId]) => !!faId)
-                      .map(([userId, focusAreaId]) => ({ userId, focusAreaId }));
-                    const res = await pushAgendaItemToWorkbench({
-                      agendaItemId: item.id,
-                      title: title.trim() || item.title,
-                      notes: notes.trim() || null,
-                      pillar: item.pillar,
-                      status,
-                      targets,
-                    });
-                    const parts: string[] = [];
-                    if (res.inserted > 0) parts.push(`${res.inserted} sent`);
-                    if (res.alreadyPresent > 0) parts.push(`${res.alreadyPresent} already there`);
-                    if (res.noWorkbench > 0) parts.push(`${res.noWorkbench} skipped (no Workbench)`);
-                    if (res.failed > 0) parts.push(`${res.failed} failed`);
-                    toast.success(parts.join(" · ") || "Sent");
-                    void logAgendaActivity(item.id, "updated", user?.id ?? null, {
-                      pushed_to_workbench: targets.map((t) => t.userId),
-                    });
-                    setPushOpen(false);
-                  } catch (e: any) {
-                    toast.error(e.message ?? "Send failed");
-                  } finally {
-                    setPushing(false);
-                  }
-                }}
-                className="flex-1 bg-emerald-500 hover:bg-emerald-600 text-black font-semibold disabled:opacity-50"
-              >
-                {pushing
-                  ? "Sending…"
-                  : `Send (${Array.from(pushSelections.values()).filter((v) => !!v).length})`}
-              </Button>
-            </div>
-          </DialogContent>
-        </Dialog>
       </DialogContent>
     </Dialog>
   );
