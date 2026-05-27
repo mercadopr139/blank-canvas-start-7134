@@ -637,12 +637,14 @@ export const AgendaItemRow = ({
   })();
 
   // Zebra striping — only on task rows (L2-L4). L1 already differentiates
-  // via the pillar-tinted card wrapper, so striping there would clash.
-  const stripeBg = isTask && index % 2 === 1 ? "bg-white/[0.025]" : "";
+  // via the dark card wrapper. Bumped from 0.025 to 0.06 so adjacent
+  // rows read as distinctly alternating against the new dark topic body
+  // — at 0.025 the stripe was invisible on the pillar-tinted background.
+  const stripeBg = isTask && index % 2 === 1 ? "bg-white/[0.06]" : "";
 
   const rowContent = (
     <div
-      className={`group/row flex items-center gap-2 ${style.rowPx} ${stripeBg} hover:bg-white/[0.05] transition-colors`}
+      className={`group/row flex items-center gap-2 ${style.rowPx} ${stripeBg} hover:bg-white/[0.1] transition-colors`}
     >
       {/* Drag handle — hover-revealed, never steals layout space */}
       <button
@@ -678,7 +680,9 @@ export const AgendaItemRow = ({
       {/* Title — all tasks (L2-L4) get the same fixed column width so
           the status pill aligns next to the title rather than drifting
           to the right edge. L1 topics still flex-fill since they have
-          no inline columns. */}
+          no inline columns. L3 / L4 (sub-tasks) get a small middot
+          prefix so they read as "child of the task above" at a glance —
+          matches the visual weight reduction already in DEPTH_STYLE. */}
       <button
         type="button"
         onClick={() => onOpenDetail(node)}
@@ -689,6 +693,9 @@ export const AgendaItemRow = ({
         }`}
         title="Open details"
       >
+        {node.depth >= 3 && (
+          <span className="opacity-50 mr-1.5 select-none">·</span>
+        )}
         {node.title}
       </button>
 
@@ -939,20 +946,28 @@ export const AgendaItemRow = ({
     </div>
   );
 
-  // L1: card-style container with pillar tint. L2-L4: inline rows
-  // separated by hairline borders so siblings read as a list.
+  // L1: dark gray card with pillar identity carried by the border and a
+  // slim accent strip below the header. The body used to be pillar-tinted
+  // (e.g. red for Operations), which bled into every task row and made
+  // the whole agenda feel saturated. Going dark gray here lets the
+  // zebra stripe + status pills do the heavy lifting and keeps the
+  // pillar association where it belongs (the border + section header).
   if (isL1) {
     return (
       <div
         ref={setNodeRef}
         style={{
           ...dragStyle,
-          borderColor: `${accent}30`,
-          background: `${accent}08`,
+          borderColor: `${accent}40`,
         }}
-        className="rounded-xl border overflow-hidden mb-3 last:mb-0"
+        className="rounded-xl border bg-neutral-900 overflow-hidden mb-3 last:mb-0"
       >
-        <div style={{ background: `${accent}18` }}>{rowContent}</div>
+        <div
+          className="border-b"
+          style={{ borderBottomColor: `${accent}30` }}
+        >
+          {rowContent}
+        </div>
         {childrenBlock && <div className="pb-2">{childrenBlock}</div>}
       </div>
     );
