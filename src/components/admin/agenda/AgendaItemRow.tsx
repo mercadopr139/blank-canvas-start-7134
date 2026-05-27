@@ -183,8 +183,12 @@ const StatusDropdown = ({
 const CompletionPill = ({ complete }: { complete: boolean }) => (
   <div
     className={`w-full flex items-center justify-center gap-1.5 px-2 py-1 rounded-md border text-[11px] font-semibold cursor-not-allowed ${
+      // Solid saturated green when Complete so it reads as "earned /
+      // auto-derived" — visually distinct from the soft leaf Reviewed
+      // tint (bg-green-500/15). The user knows at a glance that this
+      // wasn't manually toggled.
       complete
-        ? "bg-green-500/15 text-green-400 border-green-500/30"
+        ? "bg-green-600 text-white border-green-500 shadow-sm shadow-green-900/40"
         : "bg-white/[0.04] text-zinc-400 border-white/[0.10]"
     }`}
     title={

@@ -704,7 +704,7 @@ export const AgendaItemDetailDialog = ({
                         <div
                           className={`w-full flex items-center justify-center gap-2 px-3 py-2 rounded-md border text-sm font-semibold ${
                             complete
-                              ? "bg-green-500/15 text-green-400 border-green-500/30"
+                              ? "bg-green-600 text-white border-green-500 shadow-sm shadow-green-900/40"
                               : "bg-white/[0.04] text-zinc-300 border-white/[0.10]"
                           }`}
                         >
