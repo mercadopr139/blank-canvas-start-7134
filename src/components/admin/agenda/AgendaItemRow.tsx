@@ -636,15 +636,27 @@ export const AgendaItemRow = ({
     return parts.join(" · ");
   })();
 
-  // Zebra striping — only on task rows (L2-L4). L1 already differentiates
-  // via the dark card wrapper. Bumped from 0.025 to 0.06 so adjacent
-  // rows read as distinctly alternating against the new dark topic body
-  // — at 0.025 the stripe was invisible on the pillar-tinted background.
-  const stripeBg = isTask && index % 2 === 1 ? "bg-white/[0.06]" : "";
+  // Row background — three-tier visual hierarchy:
+  //   - L1 (Agenda Topic): handled separately below in the card wrapper
+  //     (full pillar color so the topic row reads as a strong anchor)
+  //   - L2 (Task): uniform gray. No zebra — the spec is one consistent
+  //     surface for top-level tasks so the eye can identify "this is a
+  //     task" at a glance regardless of position.
+  //   - L3+ (Sub-task): alternating subtle-gray / bare. The bare rows
+  //     fall through to the L1 card body (bg-neutral-900, near-black),
+  //     so the pattern reads as "light gray / black" zebra.
+  let rowBg = "";
+  if (isTask) {
+    if (node.depth === 2) {
+      rowBg = "bg-white/[0.07]";
+    } else {
+      rowBg = index % 2 === 1 ? "bg-white/[0.04]" : "";
+    }
+  }
 
   const rowContent = (
     <div
-      className={`group/row flex items-center gap-2 ${style.rowPx} ${stripeBg} hover:bg-white/[0.1] transition-colors`}
+      className={`group/row flex items-center gap-2 ${style.rowPx} ${rowBg} hover:bg-white/[0.12] transition-colors`}
     >
       {/* Drag handle — hover-revealed, never steals layout space */}
       <button
@@ -946,12 +958,13 @@ export const AgendaItemRow = ({
     </div>
   );
 
-  // L1: dark gray card with pillar identity carried by the border and a
-  // slim accent strip below the header. The body used to be pillar-tinted
-  // (e.g. red for Operations), which bled into every task row and made
-  // the whole agenda feel saturated. Going dark gray here lets the
-  // zebra stripe + status pills do the heavy lifting and keeps the
-  // pillar association where it belongs (the border + section header).
+  // L1: dark gray card body with a FULL pillar-color header row. The
+  // header band is the strongest visual anchor in the agenda — at the
+  // section level you should be able to see "Operations / Sales /
+  // Finance" at a glance. The body stays bg-neutral-900 so task rows
+  // sit on a near-black surface and the alternating L3+ pattern
+  // (subtle-gray over bare-dark) reads cleanly without the pillar tint
+  // muddying it.
   if (isL1) {
     return (
       <div
@@ -962,12 +975,7 @@ export const AgendaItemRow = ({
         }}
         className="rounded-xl border bg-neutral-900 overflow-hidden mb-3 last:mb-0"
       >
-        <div
-          className="border-b"
-          style={{ borderBottomColor: `${accent}30` }}
-        >
-          {rowContent}
-        </div>
+        <div style={{ background: accent }}>{rowContent}</div>
         {childrenBlock && <div className="pb-2">{childrenBlock}</div>}
       </div>
     );
