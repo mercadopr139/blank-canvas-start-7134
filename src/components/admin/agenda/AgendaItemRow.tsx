@@ -614,6 +614,28 @@ export const AgendaItemRow = ({
   const itemAttachments = attachmentsByItem.get(node.id) || [];
   const itemLinks = linksByItem.get(node.id) || [];
 
+  // Inline content marker — appears right next to the title on any task
+  // that has notes, files, or links. Screen-width-independent, so deep
+  // sub-tasks still get a visible signal even when the columns drift
+  // rightward with indentation. Tooltip shows a peek of what's inside.
+  const hasNotes = !!(node.notes && node.notes.trim());
+  const hasContent = hasNotes || itemAttachments.length > 0 || itemLinks.length > 0;
+  const contentTip = (() => {
+    if (!hasContent) return "";
+    const parts: string[] = [];
+    if (hasNotes) {
+      const first = node.notes!.split("\n")[0].trim();
+      parts.push(first.length > 100 ? `Note: ${first.slice(0, 97)}…` : `Note: ${first}`);
+    }
+    if (itemAttachments.length > 0) {
+      parts.push(`${itemAttachments.length} file${itemAttachments.length === 1 ? "" : "s"}`);
+    }
+    if (itemLinks.length > 0) {
+      parts.push(`${itemLinks.length} link${itemLinks.length === 1 ? "" : "s"}`);
+    }
+    return parts.join(" · ");
+  })();
+
   // Zebra striping — only on task rows (L2-L4). L1 already differentiates
   // via the pillar-tinted card wrapper, so striping there would clash.
   const stripeBg = isTask && index % 2 === 1 ? "bg-white/[0.025]" : "";
@@ -669,6 +691,21 @@ export const AgendaItemRow = ({
       >
         {node.title}
       </button>
+
+      {/* Inline content marker — small amber dot sitting next to the title
+          when this task has notes / files / links. Always visible
+          regardless of screen width, so deep sub-tasks still telegraph
+          "there's something to review here." Clicking opens the detail
+          dialog; hovering shows a preview. */}
+      {isTask && hasContent && (
+        <button
+          type="button"
+          onClick={() => onOpenDetail(node)}
+          className="shrink-0 -ml-1 w-2 h-2 rounded-full bg-amber-400 hover:bg-amber-300 ring-2 ring-amber-400/15 hover:ring-amber-300/25 transition-colors"
+          title={contentTip}
+          aria-label="Has notes, files, or links — open details"
+        />
+      )}
 
       {/* Add-child button — lives right next to the title so the
           affordance reads as "add under this item" rather than as a
