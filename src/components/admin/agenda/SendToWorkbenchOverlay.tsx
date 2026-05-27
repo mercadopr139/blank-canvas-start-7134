@@ -85,9 +85,6 @@ interface Props {
   onClose: () => void;
   agendaItem: AgendaItemWithChildren | null;
   staff: StaffOption[];
-  // manager_type → focus_area_id of seeded Agenda tile. Used here just
-  // to identify which staff have a Workbench set up (filter the picker).
-  agendaFocusByManager: Map<string, string>;
 }
 
 export const SendToWorkbenchOverlay = ({
@@ -95,19 +92,18 @@ export const SendToWorkbenchOverlay = ({
   onClose,
   agendaItem,
   staff,
-  agendaFocusByManager,
 }: Props) => {
   const queryClient = useQueryClient();
   const [targetUserId, setTargetUserId] = useState<string | null>(null);
   const [adding, setAdding] = useState<string | null>(null);
   const [addingDraft, setAddingDraft] = useState("");
 
+  // Anyone with a task_manager_type can receive items — having a type
+  // means having a Workbench (with at minimum an NLA tile, which is
+  // where every agenda push lands).
   const eligibleStaff = useMemo(
-    () =>
-      staff.filter(
-        (s) => s.task_manager_type && agendaFocusByManager.has(s.task_manager_type),
-      ),
-    [staff, agendaFocusByManager],
+    () => staff.filter((s) => !!s.task_manager_type),
+    [staff],
   );
 
   // Default to the first eligible staffer when the modal opens.

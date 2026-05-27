@@ -425,11 +425,6 @@ const NotesCell = ({
 interface RowProps {
   node: AgendaItemWithChildren;
   staff: StaffOption[];
-  // manager_type → focus_area_id for the seeded "Agenda" tile on each
-  // workbench. Lets the per-row Send button push without an extra
-  // focus-area picker — clicking a staff name lands the task on their
-  // Agenda tile directly.
-  agendaFocusByManager: Map<string, string>;
   attachmentsByItem: Map<string, AttachmentSummary[]>;
   linksByItem: Map<string, LinkSummary[]>;
   // Notes are stored per-entry now (agenda_item_notes table). The row
@@ -454,7 +449,6 @@ interface RowProps {
 export const AgendaItemRow = ({
   node,
   staff,
-  agendaFocusByManager,
   attachmentsByItem,
   linksByItem,
   noteCountsByItem,
@@ -860,7 +854,6 @@ export const AgendaItemRow = ({
             key={child.id}
             node={child}
             staff={staff}
-            agendaFocusByManager={agendaFocusByManager}
             attachmentsByItem={attachmentsByItem}
             linksByItem={linksByItem}
             noteCountsByItem={noteCountsByItem}
@@ -938,7 +931,6 @@ export const AgendaItemRow = ({
       onClose={() => setSendOverlayOpen(false)}
       agendaItem={node}
       staff={staff}
-      agendaFocusByManager={agendaFocusByManager}
     />
   ) : null;
 

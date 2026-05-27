@@ -51,14 +51,9 @@ const managerTypeFromSource = (source: string | null): string => {
 
 interface Props {
   staff: StaffOption[];
-  // manager_type → focus_area_id. Same map the per-row Send button uses
-  // — used here just to determine which staff are "eligible Workbench
-  // recipients" so we don't render empty panels for users who can't
-  // receive items.
-  agendaFocusByManager: Map<string, string>;
 }
 
-export const WorkbenchesDrawer = ({ staff, agendaFocusByManager }: Props) => {
+export const WorkbenchesDrawer = ({ staff }: Props) => {
   const [open, setOpen] = useState(false);
   const queryClient = useQueryClient();
   const [removingId, setRemovingId] = useState<string | null>(null);
@@ -92,15 +87,11 @@ export const WorkbenchesDrawer = ({ staff, agendaFocusByManager }: Props) => {
     onError: (e: any) => toast.error(e?.message ?? "Remove failed."),
   });
 
-  // Eligible recipients: anyone with a task_manager_type that maps to a
-  // seeded Agenda focus area. Same filter the per-row Send picker uses,
-  // so the two surfaces stay symmetrical.
+  // Eligible recipients: anyone with a task_manager_type. Having a
+  // type means having a Workbench (with at minimum an NLA tile).
   const eligibleStaff = useMemo(
-    () =>
-      staff.filter(
-        (s) => s.task_manager_type && agendaFocusByManager.has(s.task_manager_type),
-      ),
-    [staff, agendaFocusByManager],
+    () => staff.filter((s) => !!s.task_manager_type),
+    [staff],
   );
 
   // Group signals by the manager_type embedded in their source. Each
