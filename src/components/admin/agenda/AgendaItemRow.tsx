@@ -670,6 +670,26 @@ export const AgendaItemRow = ({
         {node.title}
       </button>
 
+      {/* Add-child button — lives right next to the title so the
+          affordance reads as "add under this item" rather than as a
+          row-level action. Hover-revealed so it doesn't compete with
+          the title at rest. Width slot is reserved either way so the
+          columns don't shift on hover. */}
+      {canHaveChildren ? (
+        <button
+          type="button"
+          onClick={startAddingChild}
+          className="shrink-0 p-1 rounded text-white/25 hover:text-white hover:bg-white/[0.08] opacity-0 group-hover/row:opacity-100 focus:opacity-100 transition-opacity"
+          title={addLabel}
+        >
+          <Plus className="w-3.5 h-3.5" />
+        </button>
+      ) : (
+        // Keep the slot reserved on L4 (no children allowed) so column
+        // headers and rows still line up.
+        <span className="w-[22px] shrink-0" aria-hidden />
+      )}
+
       {/* Task columns — pinned right. Only on L2-L4. Each column wears
           a left border so the row reads as a real columnar grid. The
           border color matches the column header text (zinc-500) at low
@@ -725,20 +745,10 @@ export const AgendaItemRow = ({
         </span>
       )}
 
-      {/* Right-side cluster: add + menu. Owner picker was dropped —
-          the agenda is a shared audit tool, not per-person assigned work. */}
+      {/* Right-side cluster: just the three-dot menu now. The Add
+          button moved next to the title so the affordance reads as
+          "add under this item" rather than as a generic row action. */}
       <div className="flex items-center gap-2 ml-1">
-        {canHaveChildren && (
-          <button
-            type="button"
-            onClick={startAddingChild}
-            className="shrink-0 p-1 rounded text-white/20 hover:text-white/70 hover:bg-white/[0.06] opacity-0 group-hover/row:opacity-100 focus:opacity-100 transition-opacity"
-            title={addLabel}
-          >
-            <Plus className="w-3.5 h-3.5" />
-          </button>
-        )}
-
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <button
@@ -808,15 +818,18 @@ export const AgendaItemRow = ({
           <span className="w-3.5 shrink-0" aria-hidden />
           <span className="w-3.5 shrink-0" aria-hidden />
           <span className="w-80 shrink-0">Task</span>
+          {/* Slot mirrors the inline "+" button now living next to each
+              title — keeps the column headers aligned with the row content. */}
+          <span className="w-[22px] shrink-0" aria-hidden />
           <span className="w-28 shrink-0 hidden sm:block text-center border-l border-zinc-500/30 pl-2">Status</span>
           <span className="w-24 shrink-0 hidden sm:block text-center border-l border-zinc-500/30 pl-2">Due</span>
           <span className="w-16 shrink-0 hidden md:block text-center border-l border-zinc-500/30 pl-2">Files</span>
           <span className="w-14 shrink-0 hidden md:block text-center border-l border-zinc-500/30 pl-2">Notes</span>
           {/* Flex spacer + actions cluster spacer mirror the row layout:
               columns hug the title on the left, the actions cluster
-              floats on the right. */}
+              (now just the three-dot menu) floats on the right. */}
           <span className="flex-1" aria-hidden />
-          <span className="w-[88px] shrink-0" aria-hidden />
+          <span className="w-[44px] shrink-0" aria-hidden />
         </div>
       )}
       <SortableContext
