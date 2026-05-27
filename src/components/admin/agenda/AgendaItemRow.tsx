@@ -622,19 +622,23 @@ export const AgendaItemRow = ({
     return parts.join(" · ");
   })();
 
-  // Row background — three-tier visual hierarchy:
+  // Row background + framing — three-tier visual hierarchy:
   //   - L1 (Agenda Topic): handled separately below in the card wrapper
   //     (full pillar color so the topic row reads as a strong anchor)
-  //   - L2 (Task): uniform gray. No zebra — the spec is one consistent
-  //     surface for top-level tasks so the eye can identify "this is a
-  //     task" at a glance regardless of position.
-  //   - L3+ (Sub-task): alternating subtle-gray / bare. The bare rows
-  //     fall through to the L1 card body (bg-neutral-900, near-black),
-  //     so the pattern reads as "light gray / black" zebra.
+  //   - L2 (Task): uniform gray with a pillar-color outline. Each task
+  //     reads as its own framed card so the audit feels like discrete,
+  //     concrete items rather than a flat list.
+  //   - L3+ (Sub-task): alternating subtle-gray / bare, no outline.
+  //     The bare rows fall through to the L1 card body (bg-neutral-900),
+  //     giving a clean light-gray / black zebra.
   let rowBg = "";
+  let rowExtra = "";
+  let rowStyle: React.CSSProperties | undefined;
   if (isTask) {
     if (node.depth === 2) {
       rowBg = "bg-white/[0.07]";
+      rowExtra = "border rounded-md mt-1";
+      rowStyle = { borderColor: `${accent}55` };
     } else {
       rowBg = index % 2 === 1 ? "bg-white/[0.04]" : "";
     }
@@ -642,7 +646,8 @@ export const AgendaItemRow = ({
 
   const rowContent = (
     <div
-      className={`group/row flex items-center gap-2 ${style.rowPx} ${rowBg} hover:bg-white/[0.12] transition-colors`}
+      className={`group/row flex items-center gap-2 ${style.rowPx} ${rowBg} ${rowExtra} hover:bg-white/[0.12] transition-colors`}
+      style={rowStyle}
     >
       {/* Drag handle — hover-revealed, never steals layout space */}
       <button
