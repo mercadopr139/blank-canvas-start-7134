@@ -1,14 +1,10 @@
 // Single integration module for Agenda ↔ Workbench sync.
 //
-// The two systems have slightly different status models:
-//   - Agenda: pending_review | signal | on_hold | done
+// The two systems map cleanly now:
+//   - Agenda: pending_review | reviewed
 //   - Workbench (signals.status): Pending | Complete
-// Mapping is lossy in one direction: a signal flipping back to
-// Pending can't tell whether the agenda item was originally
-// pending_review / signal / on_hold, so we default to "signal" —
-// the user explicitly pushed it to a Workbench, so when it bounces
-// back to Pending it makes more sense as an active action item than
-// as "not yet reviewed".
+// pending_review ↔ Pending and reviewed ↔ Complete — no lossy
+// fallback needed since both systems are now binary.
 //
 // Signal-to-focus-area routing reuses the existing `source` field
 // convention from the Workbench:
@@ -28,7 +24,7 @@ const PILLAR_TO_SIGNAL_PILLAR: Record<Pillar, string> = {
 };
 
 const agendaStatusToSignalStatus = (s: AgendaStatus): "Pending" | "Complete" =>
-  s === "done" ? "Complete" : "Pending";
+  s === "reviewed" ? "Complete" : "Pending";
 
 // Compute the `source` field a signal needs to land in a given
 // focus area. The Workbench's source convention is:
@@ -162,7 +158,7 @@ export const mirrorSignalStatusToAgenda = async (
   newSignalStatus: string,
 ): Promise<void> => {
   const targetAgendaStatus: AgendaStatus =
-    newSignalStatus === "Complete" ? "done" : "signal";
+    newSignalStatus === "Complete" ? "reviewed" : "pending_review";
   const { error } = await supabase
     .from("agenda_items" as any)
     .update({ status: targetAgendaStatus } as any)

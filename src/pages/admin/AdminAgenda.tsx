@@ -240,11 +240,11 @@ const AdminAgenda = () => {
   const [resetConfirmOpen, setResetConfirmOpen] = useState(false);
 
   // Counts powering the Reset Week button + confirm dialog. The button
-  // enables when either there's something to reset (Done tasks) OR
+  // enables when either there's something to reset (Reviewed tasks) OR
   // something to bump (tasks with a due_date that isn't already on the
   // new Friday). Both counts are shown to the user before they confirm.
-  const doneCount = useMemo(
-    () => items.filter((i) => i.status === "done").length,
+  const reviewedCount = useMemo(
+    () => items.filter((i) => i.status === "reviewed").length,
     [items],
   );
   const newFridayIso = useMemo(() => upcomingFridayIso(), [weekStartIso]);
@@ -437,36 +437,36 @@ const AdminAgenda = () => {
   //      left alone — if someone explicitly cleared the date, Reset
   //      Week respects that choice.
   // Activity log records both actions per item so each task's history
-  // still tells the truth ("Done on Monday → Reset on Friday → Done
-  // again next week" or "Signal carrying over to next Friday").
+  // still tells the truth ("Reviewed on Monday → Reset on Friday →
+  // Reviewed again next week").
   const resetWeekMutation = useMutation({
     mutationFn: async () => {
       const newFriday = upcomingFridayIso();
 
-      // 1) Flip Done → Pending Review.
-      const { data: doneItems, error: doneFetchErr } = await supabase
+      // 1) Flip Reviewed → Pending Review.
+      const { data: reviewedItems, error: reviewedFetchErr } = await supabase
         .from("agenda_items" as any)
         .select("id")
-        .eq("status", "done")
+        .eq("status", "reviewed")
         .eq("is_archived", false);
-      if (doneFetchErr) throw doneFetchErr;
-      const doneIds = ((doneItems as { id: string }[]) || []).map((i) => i.id);
+      if (reviewedFetchErr) throw reviewedFetchErr;
+      const reviewedIds = ((reviewedItems as { id: string }[]) || []).map((i) => i.id);
 
-      if (doneIds.length > 0) {
-        const { error: doneUpdErr } = await supabase
+      if (reviewedIds.length > 0) {
+        const { error: reviewedUpdErr } = await supabase
           .from("agenda_items" as any)
           .update({
             status: "pending_review",
             last_edited_at: new Date().toISOString(),
             last_edited_by: user?.id ?? null,
           } as any)
-          .in("id", doneIds);
-        if (doneUpdErr) throw doneUpdErr;
+          .in("id", reviewedIds);
+        if (reviewedUpdErr) throw reviewedUpdErr;
 
         const { error: sigErr } = await supabase
           .from("signals")
           .update({ status: "Pending", completed_at: null } as any)
-          .in("source_agenda_item_id", doneIds)
+          .in("source_agenda_item_id", reviewedIds)
           .eq("status", "Complete");
         if (sigErr) console.warn("Reset: workbench mirror failed:", sigErr.message);
       }
@@ -496,18 +496,18 @@ const AdminAgenda = () => {
 
       // Fire-and-forget activity log entries; failures here never
       // disrupt the user-visible reset. One entry per touched item.
-      const touched = new Set<string>([...doneIds, ...datedIds]);
+      const touched = new Set<string>([...reviewedIds, ...datedIds]);
       await Promise.all(
         Array.from(touched).map((id) => {
           const changed: Record<string, unknown> = { reset: true };
-          if (doneIds.includes(id)) changed.status = "pending_review";
+          if (reviewedIds.includes(id)) changed.status = "pending_review";
           if (datedIds.includes(id)) changed.due_date = newFriday;
           return logAgendaActivity(id, "updated", user?.id ?? null, changed);
         }),
       );
 
       return {
-        resetCount: doneIds.length,
+        resetCount: reviewedIds.length,
         bumpedCount: datedIds.length,
         newFriday,
       };
@@ -515,7 +515,7 @@ const AdminAgenda = () => {
     onSuccess: ({ resetCount, bumpedCount, newFriday }) => {
       invalidateItems();
       if (resetCount === 0 && bumpedCount === 0) {
-        toast.info("Nothing to reset — no Done tasks and no dates to bump.");
+        toast.info("Nothing to reset — no Reviewed tasks and no dates to bump.");
         return;
       }
       const parts: string[] = [];
@@ -633,7 +633,7 @@ const AdminAgenda = () => {
     const tree = treeByPillar[pillar];
     const allFlat = tree.flatMap((t) => flattenSubtree(t));
     const totalCount = allFlat.length;
-    const doneCount = allFlat.filter((i) => i.status === "done").length;
+    const reviewedCountPillar = allFlat.filter((i) => i.status === "reviewed").length;
     const isAdding = addingTopicPillar === pillar;
 
     return (
@@ -649,7 +649,7 @@ const AdminAgenda = () => {
           <span className="text-xs text-zinc-600">
             {totalCount === 0
               ? "· empty"
-              : `· ${doneCount}/${totalCount} done`}
+              : `· ${reviewedCountPillar}/${totalCount} reviewed`}
           </span>
         </div>
 
@@ -808,30 +808,30 @@ const AdminAgenda = () => {
             </div>
           </div>
 
-          {/* Reset Week — enabled when there's either Done tasks to reset
-              OR existing due dates to bump forward. */}
+          {/* Reset Week — enabled when there's either Reviewed tasks to
+              reset OR existing due dates to bump forward. */}
           <Button
             variant="ghost"
             size="sm"
             disabled={
-              (doneCount === 0 && bumpableCount === 0) ||
+              (reviewedCount === 0 && bumpableCount === 0) ||
               resetWeekMutation.isPending
             }
             onClick={() => setResetConfirmOpen(true)}
             className="text-zinc-400 hover:text-white hover:bg-white/[0.06] gap-1.5 disabled:opacity-40"
             title={
-              doneCount === 0 && bumpableCount === 0
-                ? "Nothing to reset — no Done tasks and no dates to bump"
-                : `Reset ${doneCount} Done · bump ${bumpableCount} due dates to next Friday`
+              reviewedCount === 0 && bumpableCount === 0
+                ? "Nothing to reset — no Reviewed tasks and no dates to bump"
+                : `Reset ${reviewedCount} Reviewed · bump ${bumpableCount} due dates to next Friday`
             }
           >
             <RotateCcw className="w-3.5 h-3.5" />
             <span className="text-xs font-semibold hidden sm:inline">
               Reset Week
             </span>
-            {doneCount + bumpableCount > 0 && (
+            {reviewedCount + bumpableCount > 0 && (
               <span className="text-[10px] tabular-nums text-zinc-500">
-                ({doneCount + bumpableCount})
+                ({reviewedCount + bumpableCount})
               </span>
             )}
           </Button>
@@ -925,8 +925,8 @@ const AdminAgenda = () => {
             </AlertDialogTitle>
             <AlertDialogDescription className="text-zinc-400">
               This flips{" "}
-              <strong className="text-white">{doneCount}</strong>{" "}
-              Done task{doneCount === 1 ? "" : "s"} back to{" "}
+              <strong className="text-white">{reviewedCount}</strong>{" "}
+              Reviewed task{reviewedCount === 1 ? "" : "s"} back to{" "}
               <strong className="text-white">Pending Review</strong> and bumps{" "}
               <strong className="text-white">{bumpableCount}</strong>{" "}
               task{bumpableCount === 1 ? "" : "s"} with a due date to{" "}

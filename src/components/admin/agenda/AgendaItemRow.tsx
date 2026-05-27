@@ -27,8 +27,6 @@ import {
   Trash2,
   Circle,
   CheckCircle2,
-  PauseCircle,
-  Target,
   StickyNote,
   Paperclip,
   Calendar,
@@ -102,40 +100,28 @@ const DEPTH_STYLE: Record<number, {
 
 const STATUS_STYLE: Record<AgendaStatus, { label: string; bg: string; text: string; border: string; Icon: typeof Circle }> = {
   pending_review: {
-    // Quietest of the four — "haven't looked at it yet this week" should
-    // recede until someone touches it. Neutral gray + plain circle.
+    // Neutral default — "haven't reviewed yet this week" recedes until
+    // someone walks through it during the audit.
     label: "Pending Review",
     bg: "bg-white/[0.04]",
-    text: "text-zinc-400",
+    text: "text-zinc-300",
     border: "border-white/[0.10]",
     Icon: Circle,
   },
-  signal: {
-    label: "Signal",
-    bg: "bg-red-500/15",
-    text: "text-red-400",
-    border: "border-red-500/30",
-    Icon: Target,
-  },
-  done: {
-    label: "Done",
+  reviewed: {
+    // The "we audited it" terminal state. Green to match the muscle
+    // memory of "complete" without naming it that — items aren't
+    // completed in an audit, they're reviewed.
+    label: "Reviewed",
     bg: "bg-green-500/15",
     text: "text-green-400",
     border: "border-green-500/30",
     Icon: CheckCircle2,
   },
-  on_hold: {
-    label: "On-Hold",
-    bg: "bg-amber-500/15",
-    text: "text-amber-300",
-    border: "border-amber-500/30",
-    Icon: PauseCircle,
-  },
 };
 
-// Status order in the dropdown — left-to-right by escalating attention:
-// neutral default → active → blocked → complete.
-const STATUS_OPTIONS: AgendaStatus[] = ["pending_review", "signal", "on_hold", "done"];
+// Status order in the dropdown — simple binary: default → reviewed.
+const STATUS_OPTIONS: AgendaStatus[] = ["pending_review", "reviewed"];
 
 const StatusDropdown = ({
   status,
@@ -586,7 +572,7 @@ export const AgendaItemRow = ({
   // Progress roll-up across all descendants so a topic header reflects
   // its whole subtree (not just direct children) at a glance.
   const allDescendants = flattenSubtree(node).slice(1);
-  const doneDescendants = allDescendants.filter((d) => d.status === "done").length;
+  const reviewedDescendants = allDescendants.filter((d) => d.status === "reviewed").length;
 
   const handleSubmitChild = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -701,7 +687,7 @@ export const AgendaItemRow = ({
         className={`min-w-0 text-left truncate hover:text-white transition-colors ${
           isTask ? "w-80 shrink-0" : "flex-1"
         } ${style.titleClass} ${
-          node.status === "done" && isTask ? "line-through opacity-50" : ""
+          node.status === "reviewed" && isTask ? "line-through opacity-50" : ""
         }`}
         title="Open details"
       >
@@ -793,11 +779,11 @@ export const AgendaItemRow = ({
       {isL1 && allDescendants.length > 0 && (
         <span
           className={`text-[11px] font-semibold shrink-0 tabular-nums ${
-            doneDescendants === allDescendants.length ? "text-green-400" : "text-white/50"
+            reviewedDescendants === allDescendants.length ? "text-green-400" : "text-white/50"
           }`}
-          title={`${doneDescendants} of ${allDescendants.length} tasks done`}
+          title={`${reviewedDescendants} of ${allDescendants.length} tasks reviewed`}
         >
-          {doneDescendants}/{allDescendants.length}
+          {reviewedDescendants}/{allDescendants.length}
         </span>
       )}
 
