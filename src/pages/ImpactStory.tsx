@@ -10,7 +10,7 @@ const ImpactStory = () => {
   const [transportationOpen, setTransportationOpen] = useState(false);
   const topStats = [{
     icon: TrendingUp,
-    value: "$2.7M+",
+    value: "$3M+",
     label: "Raised Since 2020",
     description: "Reinvested in our community"
   }, {

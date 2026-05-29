@@ -29,7 +29,7 @@ const ImpactStrip = () => {
     },
     {
       icon: TrendingUp,
-      value: "$2.7M+",
+      value: "$3M+",
       label: "Raised Since 2020",
     },
   ];
