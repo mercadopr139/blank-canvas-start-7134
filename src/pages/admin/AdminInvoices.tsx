@@ -288,20 +288,27 @@ export default function AdminInvoices() {
     }
   }, [searchParams, clients, handleGeneratePreview]);
 
-  /** Save draft with locked-in total + PDF base64 */
-  const handleSaveDraft = async (subtotal: number, total: number, pdfBase64: string) => {
+  /** Save draft with locked-in total + PDF base64. billingLabel is the
+   * optional Type-column override the user typed in the preview. */
+  const handleSaveDraft = async (
+    subtotal: number,
+    total: number,
+    pdfBase64: string,
+    billingLabel: string | null,
+  ) => {
     if (!selectedClientId) return;
     setIsLoading(true);
     try {
       if (existingInvoice) {
         const { error } = await supabase
           .from("invoices")
-          .update({ 
-            subtotal, 
+          .update({
+            subtotal,
             total,
             pdf_base64: pdfBase64,
             pdf_generated_at: new Date().toISOString(),
-          })
+            billing_label: billingLabel,
+          } as any)
           .eq("id", existingInvoice.id);
         if (error) throw error;
 
@@ -312,6 +319,7 @@ export default function AdminInvoices() {
           total,
           pdf_base64: pdfBase64,
           pdf_generated_at: new Date().toISOString(),
+          billing_label: billingLabel,
         } as any);
 
         toast({ title: "Invoice updated — PDF locked" });
@@ -329,7 +337,8 @@ export default function AdminInvoices() {
               issue_date: format(new Date(), "yyyy-MM-dd"),
               pdf_base64: pdfBase64,
               pdf_generated_at: new Date().toISOString(),
-            },
+              billing_label: billingLabel,
+            } as any,
           ])
           .select()
           .single();

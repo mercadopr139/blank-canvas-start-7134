@@ -54,7 +54,16 @@ interface InvoicePreviewProps {
   month: number;
   year: number;
   existingInvoice?: Invoice | null;
-  onSaveDraft: (subtotal: number, total: number, pdfBase64: string) => void;
+  // billingLabel is the Type-column override the user typed in the
+  // preview. Threaded into the save so the initial draft row already
+  // carries it — otherwise editing the cell before the first save
+  // would be lost.
+  onSaveDraft: (
+    subtotal: number,
+    total: number,
+    pdfBase64: string,
+    billingLabel: string | null,
+  ) => void;
   onMarkSent: () => void;
   onMarkPaid: () => void;
   onInvoiceUpdated?: () => void;
@@ -226,7 +235,7 @@ export default function InvoicePreview({
     setIsSavingDraft(true);
     try {
       const pdfBase64 = await getInvoicePdfBase64(pdfData);
-      onSaveDraft(subtotal, total, pdfBase64);
+      onSaveDraft(subtotal, total, pdfBase64, billingLabel.trim() || null);
     } catch (error: any) {
       toast({ title: "Error generating PDF", description: error.message, variant: "destructive" });
     } finally {
@@ -696,36 +705,29 @@ No Limits Academy`,
                       </td>
                     )}
                     <td className="px-4 py-3 text-sm">
-                      {existingInvoice ? (
-                        // Click to override the Type label for this
-                        // invoice. Empty = falls back to the default.
-                        // Subtle bottom-border hint on hover so the
-                        // affordance is discoverable without shouting.
-                        <input
-                          type="text"
-                          value={billingLabel}
-                          placeholder={
-                            item.billingMethod === "hourly"
-                              ? "Hourly"
-                              : item.billingMethod === "per_day"
-                                ? "Per Day"
-                                : "Monthly Program Cost"
-                          }
-                          onChange={(e) => setBillingLabel(e.target.value)}
-                          onBlur={persistBillingLabel}
-                          onKeyDown={(e) => {
-                            if (e.key === "Enter") (e.target as HTMLInputElement).blur();
-                          }}
-                          className="bg-transparent outline-none border-b border-transparent hover:border-neutral-300 focus:border-neutral-500 transition-colors w-full text-sm placeholder:text-foreground"
-                          title="Click to change the Type label for this invoice"
-                        />
-                      ) : (
-                        item.billingMethod === "hourly"
-                          ? "Hourly"
-                          : item.billingMethod === "per_day"
-                            ? "Per Day"
-                            : "Monthly Program Cost"
-                      )}
+                      {/* Editable Type override. Persists immediately
+                          when an invoice row exists; before the first
+                          save, the value lives in state and ships with
+                          the next Save as Draft. Subtle hover border
+                          hints at the affordance. */}
+                      <input
+                        type="text"
+                        value={billingLabel}
+                        placeholder={
+                          item.billingMethod === "hourly"
+                            ? "Hourly"
+                            : item.billingMethod === "per_day"
+                              ? "Per Day"
+                              : "Monthly Program Cost"
+                        }
+                        onChange={(e) => setBillingLabel(e.target.value)}
+                        onBlur={persistBillingLabel}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") (e.target as HTMLInputElement).blur();
+                        }}
+                        className="bg-transparent outline-none border-b border-transparent hover:border-neutral-300 focus:border-neutral-500 transition-colors w-full text-sm placeholder:text-foreground"
+                        title="Click to change the Type label for this invoice"
+                      />
                     </td>
                     <td className="px-4 py-3 text-sm text-center">
                       {item.billingMethod === "hourly" ? `${item.hours || 0} hrs` : "—"}
