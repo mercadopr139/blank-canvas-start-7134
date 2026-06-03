@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -88,6 +88,16 @@ export default function InvoicePreview({
   const [isSubmittingApproval, setIsSubmittingApproval] = useState(false);
   const [isSavingDraft, setIsSavingDraft] = useState(false);
   const [isBypassingApproval, setIsBypassingApproval] = useState(false);
+  // Per-invoice override for the "Type" column label. Empty string =
+  // use the billing-method default ("Hourly" / "Per Day" / "Monthly
+  // Program Cost"). Persists on blur to the invoices.billing_label
+  // column; the PDF regen on the next Save Draft picks it up.
+  const [billingLabel, setBillingLabel] = useState<string>(
+    ((existingInvoice as any)?.billing_label as string | null) ?? ""
+  );
+  useEffect(() => {
+    setBillingLabel(((existingInvoice as any)?.billing_label as string | null) ?? "");
+  }, [existingInvoice?.id]);
   const { toast } = useToast();
   
   // Get rate info - for display purposes, we derive from line items if client rate is 0
@@ -178,6 +188,28 @@ export default function InvoicePreview({
     month,
     year,
     overrideTotal: total,
+    billingLabel: billingLabel.trim() || null,
+  };
+
+  // Persist the Type-column override to the invoices row. Fires on
+  // blur of the editable cell; only writes when the value actually
+  // changed so unnecessary re-renders / PDF regens are avoided.
+  const persistBillingLabel = async () => {
+    if (!existingInvoice) return;
+    const cleaned = billingLabel.trim();
+    const newValue = cleaned.length === 0 ? null : cleaned;
+    const current = ((existingInvoice as any).billing_label as string | null) ?? null;
+    if (newValue === current) return;
+    try {
+      const { error } = await supabase
+        .from("invoices")
+        .update({ billing_label: newValue } as any)
+        .eq("id", existingInvoice.id);
+      if (error) throw error;
+      onInvoiceUpdated?.();
+    } catch (e: any) {
+      toast({ title: "Couldn't save label", description: e.message, variant: "destructive" });
+    }
   };
 
   const handleDownloadPdf = async () => {
@@ -664,7 +696,36 @@ No Limits Academy`,
                       </td>
                     )}
                     <td className="px-4 py-3 text-sm">
-                      {item.billingMethod === "hourly" ? "Hourly" : item.billingMethod === "per_day" ? "Per Day" : "Monthly Program Cost"}
+                      {existingInvoice ? (
+                        // Click to override the Type label for this
+                        // invoice. Empty = falls back to the default.
+                        // Subtle bottom-border hint on hover so the
+                        // affordance is discoverable without shouting.
+                        <input
+                          type="text"
+                          value={billingLabel}
+                          placeholder={
+                            item.billingMethod === "hourly"
+                              ? "Hourly"
+                              : item.billingMethod === "per_day"
+                                ? "Per Day"
+                                : "Monthly Program Cost"
+                          }
+                          onChange={(e) => setBillingLabel(e.target.value)}
+                          onBlur={persistBillingLabel}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter") (e.target as HTMLInputElement).blur();
+                          }}
+                          className="bg-transparent outline-none border-b border-transparent hover:border-neutral-300 focus:border-neutral-500 transition-colors w-full text-sm placeholder:text-foreground"
+                          title="Click to change the Type label for this invoice"
+                        />
+                      ) : (
+                        item.billingMethod === "hourly"
+                          ? "Hourly"
+                          : item.billingMethod === "per_day"
+                            ? "Per Day"
+                            : "Monthly Program Cost"
+                      )}
                     </td>
                     <td className="px-4 py-3 text-sm text-center">
                       {item.billingMethod === "hourly" ? `${item.hours || 0} hrs` : "—"}

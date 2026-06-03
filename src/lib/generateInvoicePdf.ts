@@ -68,6 +68,10 @@ export interface InvoicePdfData {
   year: number;
   logoBase64?: string;
   overrideTotal?: number;
+  // Optional override for the "Type" column label. When set, every
+  // row in the line-items table prints this string instead of the
+  // billing-method-derived default. Empty / undefined = use defaults.
+  billingLabel?: string | null;
 }
 
 // ─── Colors ───
@@ -79,7 +83,8 @@ const TABLE_HEAD = [31, 41, 55] as const;    // #1f2937
 const BORDER = [229, 231, 235] as const;     // #e5e7eb
 
 export function generateInvoicePdf(data: InvoicePdfData): jsPDF {
-  const { client, serviceLogs, invoiceNumber, issueDate, month, year, logoBase64, overrideTotal } = data;
+  const { client, serviceLogs, invoiceNumber, issueDate, month, year, logoBase64, overrideTotal, billingLabel } = data;
+  const labelOverride = billingLabel?.trim() || null;
   const hourlyRate = (client as any).hourly_rate || 0;
   const serviceTime = (client as any).service_time || "";
   const serviceDays = (client as any).service_days || "";
@@ -267,10 +272,16 @@ export function generateInvoicePdf(data: InvoicePdfData): jsPDF {
     : [["Date", "Type", "Hours", "Amount"]];
 
   const tableData = lineItems.map((item) => {
+    const defaultLabel =
+      item.billingMethod === "hourly"
+        ? "Hourly"
+        : item.billingMethod === "per_day"
+          ? "Per Day"
+          : "Flat Rate";
     const row = [
       format(new Date(item.date + "T00:00:00"), "MMM d, yyyy"),
       ...(hasMultipleServices ? [item.serviceType] : []),
-      item.billingMethod === "hourly" ? "Hourly" : item.billingMethod === "per_day" ? "Per Day" : "Flat Rate",
+      labelOverride ?? defaultLabel,
       item.billingMethod === "hourly" ? `${item.hours || 0} hrs` : "—",
       formatCurrency(item.lineTotal),
     ];
