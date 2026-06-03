@@ -58,6 +58,7 @@ import AdminSupporterDetail from "./pages/admin/AdminSupporterDetail";
 import AdminEngagements from "./pages/admin/AdminEngagements";
 import AdminTasks from "./pages/admin/AdminTasks";
 import AdminBulkOutreach from "./pages/admin/AdminBulkOutreach";
+import AdminInvoiceQuoteGenerator from "./pages/admin/AdminInvoiceQuoteGenerator";
 import AdminSignals from "./pages/admin/AdminSignals";
 import AdminSignalsArchive from "./pages/admin/AdminSignalsArchive";
 import AdminSignalsTrash from "./pages/admin/AdminSignalsTrash";
@@ -211,6 +212,7 @@ const App = () => (
               <Route path="engagements" element={<AdminEngagements />} />
               <Route path="tasks" element={<AdminTasks />} />
               <Route path="bulk-outreach" element={<AdminBulkOutreach />} />
+              <Route path="invoice-quote-generator" element={<AdminInvoiceQuoteGenerator />} />
             </Route>
 
             {/* Finance section — sidebar layout wraps sub-pages */}

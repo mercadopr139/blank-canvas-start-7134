@@ -127,6 +127,13 @@ export const SALES_MARKETING_TILES: PillarTile[] = [
     href: "/admin/sales-marketing/bulk-outreach",
     permKey: "sales_marketing_bulk_outreach",
   },
+  {
+    title: "Invoice / Quote Generator",
+    description: "One-off proposals & bills using the NLA template",
+    icon: Receipt,
+    href: "/admin/sales-marketing/invoice-quote-generator",
+    permKey: "sales_marketing_invoice_quote_generator",
+  },
 ];
 
 export const FINANCE_TILES: PillarTile[] = [
