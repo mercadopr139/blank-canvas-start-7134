@@ -291,8 +291,14 @@ const AdminMessageBoard = () => {
   };
 
   return (
-    <div className="min-h-screen bg-[#09090b] text-white flex flex-col overflow-x-hidden">
-      <header className="border-b border-white/[0.06] bg-[#09090b]/80 backdrop-blur-md sticky top-0 z-30">
+    // h-screen + overflow-hidden locks the whole page to the viewport
+    // so the chat-panel below can confidently flex-fill the leftover
+    // space. Earlier we used min-h-screen + an explicit
+    // calc(100vh - 57px) on the inner panel, but the magic 57 didn't
+    // match the real header height on every screen — the compose box
+    // slipped below the viewport and forced a page-scroll to find it.
+    <div className="h-screen bg-[#09090b] text-white flex flex-col overflow-hidden">
+      <header className="border-b border-white/[0.06] bg-[#09090b]/80 backdrop-blur-md z-30 shrink-0">
         <div className="px-4 py-3 flex items-center justify-between gap-2">
           <div className="flex items-center gap-3 min-w-0">
             {/* On mobile, the back arrow inside the thread handles list return;
@@ -351,8 +357,11 @@ const AdminMessageBoard = () => {
 
       {/* Responsive two-panel:
             - lg+: both panels visible side by side
-            - <lg: single panel — list when no active conv, thread when one selected */}
-      <div className="flex overflow-hidden flex-1" style={{ height: "calc(100vh - 57px)" }}>
+            - <lg: single panel — list when no active conv, thread when one selected
+          flex-1 + overflow-hidden takes exactly what's left after the
+          header, so the chat pane can confidently size its compose to
+          the bottom of the viewport. */}
+      <div className="flex overflow-hidden flex-1 min-h-0">
         <div
           className={`${
             activeConversationId ? "hidden lg:flex" : "flex"
