@@ -273,37 +273,63 @@ const AdminAttendance = () => {
   const prevOfViewedStart = format(startOfMonth(subMonths(calendarMonth, 1)), "yyyy-MM-dd");
   const prevOfViewedEnd = format(endOfMonth(subMonths(calendarMonth, 1)), "yyyy-MM-dd");
 
-  // Calendar month attendance (primary data source for everything)
+  // Calendar month attendance (primary data source for everything).
+  // Paginated — high-volume months (40-80 check-ins per day × 30 days)
+  // can exceed PostgREST's silent 1000-row cap on a single .select(),
+  // which previously caused late-month days (e.g. May 29-31) to show
+  // a fraction of their real sign-ins on the calendar tile. Same trap
+  // the YTD query below explicitly works around.
   const { data: calendarAttendance = [] } = useQuery({
     queryKey: ["calendar-attendance", calMonthStart],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("attendance_records")
-        .select("id, registration_id, check_in_date, check_in_at, program_source, is_manual")
-        .eq("program_source", "NLA")
-        .gte("check_in_date", calMonthStart)
-        .lte("check_in_date", calMonthEnd)
-        .order("check_in_at", { ascending: true });
-      if (error) throw error;
-      return data as AttendanceRecord[];
+      const pageSize = 1000;
+      let from = 0;
+      const all: AttendanceRecord[] = [];
+      while (true) {
+        const { data, error } = await supabase
+          .from("attendance_records")
+          .select("id, registration_id, check_in_date, check_in_at, program_source, is_manual")
+          .eq("program_source", "NLA")
+          .gte("check_in_date", calMonthStart)
+          .lte("check_in_date", calMonthEnd)
+          .order("check_in_at", { ascending: true })
+          .range(from, from + pageSize - 1);
+        if (error) throw error;
+        const rows = (data || []) as AttendanceRecord[];
+        all.push(...rows);
+        if (rows.length < pageSize) break;
+        from += pageSize;
+      }
+      return all;
     },
   });
 
   // Full Excursion attendance records for the calendar month. Used for
   // both the per-date count on the calendar tile AND the day-detail
   // modal's roster (the main calendarAttendance query is NLA-only).
+  // Paginated for the same 1000-row-cap reason as above.
   const { data: excursionAttendanceMonth = [] } = useQuery({
     queryKey: ["excursion-attendance-month", calMonthStart, calMonthEnd],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("attendance_records")
-        .select("id, registration_id, check_in_date, check_in_at, program_source, is_manual, excursion_id")
-        .eq("program_source", "Excursion")
-        .gte("check_in_date", calMonthStart)
-        .lte("check_in_date", calMonthEnd)
-        .order("check_in_at", { ascending: true });
-      if (error) throw error;
-      return data as AttendanceRecord[];
+      const pageSize = 1000;
+      let from = 0;
+      const all: AttendanceRecord[] = [];
+      while (true) {
+        const { data, error } = await supabase
+          .from("attendance_records")
+          .select("id, registration_id, check_in_date, check_in_at, program_source, is_manual, excursion_id")
+          .eq("program_source", "Excursion")
+          .gte("check_in_date", calMonthStart)
+          .lte("check_in_date", calMonthEnd)
+          .order("check_in_at", { ascending: true })
+          .range(from, from + pageSize - 1);
+        if (error) throw error;
+        const rows = (data || []) as AttendanceRecord[];
+        all.push(...rows);
+        if (rows.length < pageSize) break;
+        from += pageSize;
+      }
+      return all;
     },
   });
 
@@ -373,18 +399,29 @@ const AdminAttendance = () => {
     },
   });
 
-  // Previous month attendance (for comparison insights)
+  // Previous month attendance (for comparison insights). Paginated
+  // for the same 1000-row cap reason as the calendar-month query.
   const { data: prevMonthAttendance = [] } = useQuery({
     queryKey: ["attendance-records-prev", prevOfViewedStart],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("attendance_records")
-        .select("id, registration_id, check_in_date, check_in_at, program_source, is_manual")
-        .eq("program_source", "NLA")
-        .gte("check_in_date", prevOfViewedStart)
-        .lte("check_in_date", prevOfViewedEnd);
-      if (error) throw error;
-      return data as AttendanceRecord[];
+      const pageSize = 1000;
+      let from = 0;
+      const all: AttendanceRecord[] = [];
+      while (true) {
+        const { data, error } = await supabase
+          .from("attendance_records")
+          .select("id, registration_id, check_in_date, check_in_at, program_source, is_manual")
+          .eq("program_source", "NLA")
+          .gte("check_in_date", prevOfViewedStart)
+          .lte("check_in_date", prevOfViewedEnd)
+          .range(from, from + pageSize - 1);
+        if (error) throw error;
+        const rows = (data || []) as AttendanceRecord[];
+        all.push(...rows);
+        if (rows.length < pageSize) break;
+        from += pageSize;
+      }
+      return all;
     },
   });
 
