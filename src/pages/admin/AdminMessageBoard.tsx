@@ -457,14 +457,18 @@ const AdminMessageBoard = () => {
                 two-pane layout and never lose sight of the sidebar
                 when opening a conversation. */}
             <div className="hidden md:flex flex-1 min-h-0">
+              {/* autoSaveId bumped to v2 so any pathological saved
+                  width (the sidebar could previously get squished past
+                  its drag handle, stranding the user) is discarded.
+                  Higher minSize prevents the situation from recurring. */}
               <ResizablePanelGroup
                 direction="horizontal"
-                autoSaveId="mb-sidebar-width"
+                autoSaveId="mb-sidebar-width-v2"
                 className="h-full"
               >
                 <ResizablePanel
-                  defaultSize={22}
-                  minSize={16}
+                  defaultSize={24}
+                  minSize={20}
                   maxSize={50}
                   className="border-r border-white/[0.06]"
                 >
@@ -474,7 +478,7 @@ const AdminMessageBoard = () => {
                   withHandle
                   className="bg-white/[0.06] hover:bg-white/[0.12] transition-colors"
                 />
-                <ResizablePanel defaultSize={78} minSize={50}>
+                <ResizablePanel defaultSize={76} minSize={50}>
                   <div className="flex flex-col h-full min-w-0">{threadNode}</div>
                 </ResizablePanel>
               </ResizablePanelGroup>
