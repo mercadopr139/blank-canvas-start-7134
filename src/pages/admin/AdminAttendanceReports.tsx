@@ -250,19 +250,34 @@ const AdminAttendanceReports = () => {
   }, [practiceDayMap]);
 
   // Fetch attendance for range
+  // Paginated: a multi-month range can easily blow past PostgREST's
+  // silent 1000-row cap on a single .select(). Without this loop the
+  // report would under-count youth served — the records furthest from
+  // the start of the range get truncated and never reach the page.
+  // Critical for grant reports, CSBG, and board-facing numbers.
   const { data: attendance = [], isLoading } = useQuery({
     queryKey: ["report-attendance", dateRange.from, dateRange.to],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("attendance_records")
-        .select("id, registration_id, check_in_date, check_in_at, program_source")
-        .eq("program_source", "NLA")
-        .gte("check_in_date", dateRange.from)
-        .lte("check_in_date", dateRange.to)
-        .order("check_in_date")
-        .order("check_in_at");
-      if (error) throw error;
-      return data as AttendanceRecord[];
+      const pageSize = 1000;
+      let from = 0;
+      const all: AttendanceRecord[] = [];
+      while (true) {
+        const { data, error } = await supabase
+          .from("attendance_records")
+          .select("id, registration_id, check_in_date, check_in_at, program_source")
+          .eq("program_source", "NLA")
+          .gte("check_in_date", dateRange.from)
+          .lte("check_in_date", dateRange.to)
+          .order("check_in_date")
+          .order("check_in_at")
+          .range(from, from + pageSize - 1);
+        if (error) throw error;
+        const rows = (data || []) as AttendanceRecord[];
+        all.push(...rows);
+        if (rows.length < pageSize) break;
+        from += pageSize;
+      }
+      return all;
     },
   });
 
