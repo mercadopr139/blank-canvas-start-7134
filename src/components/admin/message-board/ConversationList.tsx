@@ -86,10 +86,21 @@ const ConversationList = ({
     return haystack.includes(search.toLowerCase());
   });
 
-  // Sort: unread first (most recent unread at top), then by last_message_at desc.
-  // The spec calls this out explicitly. Skipped entirely in view-all (super
-  // admin auditing) since unread isn't meaningful there.
+  // Sort: active conversation pinned to the top, then unread first
+  // (most recent unread next), then by last_message_at desc.
+  //
+  // Pinning the active conv prevents the "where did it go?" UX where
+  // opening a conversation marks it read, drops it out of the unread
+  // priority bucket, and re-sorts it down the list — sometimes off
+  // screen. Pinning anchors it under the user's cursor for as long as
+  // they're viewing it; closing the conv releases it back to its
+  // natural sort position. Skipped in view-all (super admin auditing)
+  // where unread isn't meaningful.
   const sortedConversations = [...filteredConversations].sort((a, b) => {
+    if (activeId) {
+      if (a.id === activeId && b.id !== activeId) return -1;
+      if (b.id === activeId && a.id !== activeId) return 1;
+    }
     if (!viewAll) {
       const aUnread = (a.unread_count ?? 0) > 0 ? 1 : 0;
       const bUnread = (b.unread_count ?? 0) > 0 ? 1 : 0;
