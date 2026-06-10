@@ -5,6 +5,11 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useStaffPermissions } from "@/hooks/useStaffPermissions";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
+import {
+  ResizablePanelGroup,
+  ResizablePanel,
+  ResizableHandle,
+} from "@/components/ui/resizable";
 import { ArrowLeft, MessageSquare, Signal, Globe } from "lucide-react";
 import ConversationList from "@/components/admin/message-board/ConversationList";
 import MessageThread from "@/components/admin/message-board/MessageThread";
@@ -372,17 +377,14 @@ const AdminMessageBoard = () => {
       </header>
 
       {/* Responsive two-panel:
-            - lg+: both panels visible side by side
-            - <lg: single panel — list when no active conv, thread when one selected
+            - lg+: resizable side-by-side. Drag the divider to widen the
+              sidebar; autoSaveId persists the width per browser.
+            - <lg: single panel — list when no active conv, thread when one selected.
           flex-1 + overflow-hidden takes exactly what's left after the
           header, so the chat pane can confidently size its compose to
           the bottom of the viewport. */}
-      <div className="flex overflow-hidden flex-1 min-h-0">
-        <div
-          className={`${
-            activeConversationId ? "hidden lg:flex" : "flex"
-          } w-full lg:w-72 lg:min-w-[260px] border-r border-white/[0.06] flex-col`}
-        >
+      {(() => {
+        const convListNode = (
           <ConversationList
             conversations={conversationsWithUnread}
             loading={convsLoading}
@@ -405,32 +407,26 @@ const AdminMessageBoard = () => {
               queryClient.invalidateQueries({ queryKey: ["mb-unread", user?.id] });
             }}
           />
-        </div>
-
-        <div
-          className={`${
-            activeConversationId ? "flex" : "hidden lg:flex"
-          } flex-1 flex-col min-w-0`}
-        >
-          {activeConversationId && activeConversation ? (
-            <MessageThread
-              conversation={activeConversation}
-              currentUserId={user?.id || ""}
-              isSuperAdmin={isSuperAdmin}
-              canPost={activeConversation.is_member ?? true}
-              scrollToMessageId={scrollToMessageId}
-              onBackToList={() => setActiveConversationId(null)}
-              onConversationUpdated={() => queryClient.invalidateQueries({ queryKey: ["mb-conversations", user?.id] })}
-              onMessageRead={() => queryClient.invalidateQueries({ queryKey: ["mb-unread", user?.id] })}
-              onAddMessageToWorkbench={(messageId, content) => setWorkbenchModal({
-                open: true,
-                description: content,
-                sourceMessageId: messageId,
-                sourceConversationId: activeConversation.id,
-                pillar: activeConversation.pillar,
-              })}
-            />
-          ) : (
+        );
+        const threadNode = activeConversationId && activeConversation ? (
+          <MessageThread
+            conversation={activeConversation}
+            currentUserId={user?.id || ""}
+            isSuperAdmin={isSuperAdmin}
+            canPost={activeConversation.is_member ?? true}
+            scrollToMessageId={scrollToMessageId}
+            onBackToList={() => setActiveConversationId(null)}
+            onConversationUpdated={() => queryClient.invalidateQueries({ queryKey: ["mb-conversations", user?.id] })}
+            onMessageRead={() => queryClient.invalidateQueries({ queryKey: ["mb-unread", user?.id] })}
+            onAddMessageToWorkbench={(messageId, content) => setWorkbenchModal({
+              open: true,
+              description: content,
+              sourceMessageId: messageId,
+              sourceConversationId: activeConversation.id,
+              pillar: activeConversation.pillar,
+            })}
+          />
+        ) : (
             <div className="flex-1 flex items-center justify-center">
               <div className="text-center">
                 <div
@@ -450,9 +446,50 @@ const AdminMessageBoard = () => {
                 </Button>
               </div>
             </div>
-          )}
-        </div>
-      </div>
+        );
+
+        return (
+          <div className="flex overflow-hidden flex-1 min-h-0">
+            {/* Desktop (lg+): resizable two-pane. autoSaveId persists
+                the user's chosen sidebar width per browser via
+                localStorage — no extra state needed. */}
+            <div className="hidden lg:flex flex-1 min-h-0">
+              <ResizablePanelGroup
+                direction="horizontal"
+                autoSaveId="mb-sidebar-width"
+                className="h-full"
+              >
+                <ResizablePanel
+                  defaultSize={22}
+                  minSize={16}
+                  maxSize={50}
+                  className="border-r border-white/[0.06]"
+                >
+                  <div className="flex flex-col h-full">{convListNode}</div>
+                </ResizablePanel>
+                <ResizableHandle
+                  withHandle
+                  className="bg-white/[0.06] hover:bg-white/[0.12] transition-colors"
+                />
+                <ResizablePanel defaultSize={78} minSize={50}>
+                  <div className="flex flex-col h-full min-w-0">{threadNode}</div>
+                </ResizablePanel>
+              </ResizablePanelGroup>
+            </div>
+
+            {/* Mobile (<lg): single panel — list when no conv selected,
+                thread when one is. No resize on mobile (touch users
+                wouldn't have a way to drag a hairline anyway). */}
+            <div className="lg:hidden flex flex-1 min-h-0 w-full">
+              {activeConversationId ? (
+                <div className="flex-1 flex flex-col min-w-0">{threadNode}</div>
+              ) : (
+                <div className="flex-1 flex flex-col">{convListNode}</div>
+              )}
+            </div>
+          </div>
+        );
+      })()}
 
       <NewConversationModal
         open={newConvOpen}
