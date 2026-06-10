@@ -461,10 +461,12 @@ const MessageThread = ({ conversation, currentUserId, isSuperAdmin, canPost, scr
           className="px-4 py-3 border-b flex items-center gap-3 group/header"
           style={{ borderColor: `${pillarColor}30` }}
         >
-          {/* Mobile-only back arrow returns to the conversation list */}
+          {/* Back arrow shown whenever the single-panel mobile layout
+              is active (i.e. below the md breakpoint). Keeps users
+              from getting stranded in a thread with no visible sidebar. */}
           <button
             onClick={onBackToList}
-            className="lg:hidden text-zinc-400 hover:text-white hover:bg-white/5 p-1.5 rounded-lg -ml-1"
+            className="md:hidden text-zinc-400 hover:text-white hover:bg-white/5 p-1.5 rounded-lg -ml-1"
             aria-label="Back to conversations"
           >
             <ArrowLeft className="w-5 h-5" />

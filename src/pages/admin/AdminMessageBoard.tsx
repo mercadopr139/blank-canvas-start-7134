@@ -450,10 +450,13 @@ const AdminMessageBoard = () => {
 
         return (
           <div className="flex overflow-hidden flex-1 min-h-0">
-            {/* Desktop (lg+): resizable two-pane. autoSaveId persists
+            {/* Desktop (md+): resizable two-pane. autoSaveId persists
                 the user's chosen sidebar width per browser via
-                localStorage — no extra state needed. */}
-            <div className="hidden lg:flex flex-1 min-h-0">
+                localStorage — no extra state needed. Breakpoint lowered
+                from lg to md so most laptops at any zoom keep the
+                two-pane layout and never lose sight of the sidebar
+                when opening a conversation. */}
+            <div className="hidden md:flex flex-1 min-h-0">
               <ResizablePanelGroup
                 direction="horizontal"
                 autoSaveId="mb-sidebar-width"
@@ -477,10 +480,12 @@ const AdminMessageBoard = () => {
               </ResizablePanelGroup>
             </div>
 
-            {/* Mobile (<lg): single panel — list when no conv selected,
+            {/* Mobile (<md): single panel — list when no conv selected,
                 thread when one is. No resize on mobile (touch users
-                wouldn't have a way to drag a hairline anyway). */}
-            <div className="lg:hidden flex flex-1 min-h-0 w-full">
+                wouldn't have a way to drag a hairline anyway). The
+                back arrow in MessageThread's header (lg:hidden → now
+                md:hidden) is the only way back to the list here. */}
+            <div className="md:hidden flex flex-1 min-h-0 w-full">
               {activeConversationId ? (
                 <div className="flex-1 flex flex-col min-w-0">{threadNode}</div>
               ) : (
