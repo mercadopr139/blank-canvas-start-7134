@@ -45,6 +45,13 @@ export type Conversation = {
   // When the *current user* archived this conversation. Drives the
   // archived-view grouping/sort. Null for unarchived rows.
   archived_at?: string | null;
+  // Per-user "yellow dot" flag — the user wants to revisit this
+  // conversation. Purely a visual marker; doesn't affect sort.
+  needs_revisit?: boolean;
+  // Per-user manual sort position for the read-conversation zone.
+  // Null = not manually positioned; falls back to last_message_at
+  // ordering. Lower values float to the top of the read zone.
+  sort_position?: number | null;
 };
 
 export type StaffProfile = {
@@ -190,7 +197,7 @@ const AdminMessageBoard = () => {
 
       let memQuery = supabase
         .from("mb_conversation_members")
-        .select("conversation_id, archived_at")
+        .select("conversation_id, archived_at, needs_revisit, sort_position")
         .eq("user_id", user!.id);
       memQuery = listView === "archived"
         ? memQuery.not("archived_at", "is", null)
@@ -200,7 +207,14 @@ const AdminMessageBoard = () => {
       if (!memberships || memberships.length === 0) return [];
 
       const archivedAtByConv = new Map<string, string | null>();
-      for (const m of memberships) archivedAtByConv.set(m.conversation_id, m.archived_at);
+      const revisitByConv = new Map<string, boolean>();
+      const sortPosByConv = new Map<string, number | null>();
+      for (const m of memberships) {
+        archivedAtByConv.set(m.conversation_id, m.archived_at);
+        revisitByConv.set(m.conversation_id, !!(m as any).needs_revisit);
+        const sp = (m as any).sort_position;
+        sortPosByConv.set(m.conversation_id, sp === null || sp === undefined ? null : Number(sp));
+      }
       const ids = memberships.map((m) => m.conversation_id);
       const { data: convs, error: convErr } = await supabase
         .from("mb_conversations")
@@ -244,6 +258,8 @@ const AdminMessageBoard = () => {
             unread_count: unreadMap.get(c.id) ?? 0,
             is_member: true,
             archived_at: archivedAtByConv.get(c.id) ?? null,
+            needs_revisit: revisitByConv.get(c.id) ?? false,
+            sort_position: sortPosByConv.get(c.id) ?? null,
           } as Conversation;
         }),
       );

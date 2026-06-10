@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -8,7 +8,18 @@ import {
 } from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { Plus, Search, Users, User, MessageSquare, Pencil, Archive, Trash2, ArchiveRestore, Check, X } from "lucide-react";
+import {
+  Plus, Search, Users, User, MessageSquare, Pencil, Archive, Trash2,
+  ArchiveRestore, Check, X, Flag, GripVertical,
+} from "lucide-react";
+import {
+  DndContext, PointerSensor, closestCenter, useSensor, useSensors,
+  type DragEndEvent,
+} from "@dnd-kit/core";
+import {
+  SortableContext, verticalListSortingStrategy, useSortable, arrayMove,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 import type { Conversation, Pillar } from "@/pages/admin/AdminMessageBoard";
 import { PILLARS, PILLAR_COLOR, PILLAR_LABEL } from "@/pages/admin/AdminMessageBoard";
 
@@ -53,6 +64,50 @@ const getConvTitle = (conv: Conversation) => conv.name?.trim() || "Untitled conv
 const getConvRecipients = (conv: Conversation) =>
   conv.member_names && conv.member_names.length > 0 ? conv.member_names.join(", ") : "";
 
+// Wraps a conversation card in dnd-kit sortable bindings. Used only
+// in the read zone of the standard active view — the top (unread)
+// zone never reorders, so its cards skip this wrapper entirely.
+const SortableConvCard = ({
+  conv,
+  render,
+}: {
+  conv: Conversation;
+  render: (
+    conv: Conversation,
+    draggable: boolean,
+    dragHandle?: React.ReactNode,
+  ) => React.ReactNode;
+}) => {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
+    useSortable({ id: conv.id });
+  const style: React.CSSProperties = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.4 : 1,
+  };
+  // The drag handle is the only piece that gets the listeners — that
+  // way the click-through to open the conversation still works on the
+  // rest of the card.
+  const dragHandle = (
+    <button
+      type="button"
+      {...attributes}
+      {...listeners}
+      className="text-white/15 hover:text-white/50 cursor-grab active:cursor-grabbing opacity-0 group-hover/row:opacity-100 focus:opacity-100 transition-opacity touch-none p-0.5"
+      aria-label="Drag to reorder"
+      title="Drag to reorder"
+      onClick={(e) => e.stopPropagation()}
+    >
+      <GripVertical className="w-3.5 h-3.5" />
+    </button>
+  );
+  return (
+    <div ref={setNodeRef} style={style}>
+      {render(conv, true, dragHandle)}
+    </div>
+  );
+};
+
 const ConversationList = ({
   conversations,
   loading,
@@ -86,17 +141,25 @@ const ConversationList = ({
     return haystack.includes(search.toLowerCase());
   });
 
-  // Sort: active conversation pinned to the top, then unread first
-  // (most recent unread next), then by last_message_at desc.
+  // ── SORT MODEL ──
+  // Standard active view (not archived, not view-all) splits into TWO
+  // zones with a hairline divider between them:
   //
-  // Pinning the active conv prevents the "where did it go?" UX where
-  // opening a conversation marks it read, drops it out of the unread
-  // priority bucket, and re-sorts it down the list — sometimes off
-  // screen. Pinning anchors it under the user's cursor for as long as
-  // they're viewing it; closing the conv releases it back to its
-  // natural sort position. Skipped in view-all (super admin auditing)
-  // where unread isn't meaningful.
-  const sortedConversations = [...filteredConversations].sort((a, b) => {
+  //   TOP zone — unread conversations + the currently-open one.
+  //     Always auto-sorted by last_message_at DESC so "new stuff" is
+  //     always near the top of the screen and never gets buried by
+  //     a manual reorder below.
+  //
+  //   BOTTOM zone — read conversations. Honors the per-user manual
+  //     `sort_position` if the user has dragged any cards (ascending,
+  //     nulls last); otherwise auto-sorted by last_message_at DESC.
+  //     Drag-and-drop reordering only operates on this zone.
+  //
+  // Archived view + view-all keep the existing single-flat-list sort
+  // since neither benefits from the unread/read split.
+  const isStandardView = listView === "active" && !viewAll;
+
+  const baseSorter = (a: Conversation, b: Conversation) => {
     if (activeId) {
       if (a.id === activeId && b.id !== activeId) return -1;
       if (b.id === activeId && a.id !== activeId) return 1;
@@ -109,7 +172,42 @@ const ConversationList = ({
     const aTs = a.last_message_at ?? a.created_at;
     const bTs = b.last_message_at ?? b.created_at;
     return new Date(bTs).getTime() - new Date(aTs).getTime();
-  });
+  };
+
+  const sortedConversations = [...filteredConversations].sort(baseSorter);
+
+  // Top zone: unread + currently-open conversations, newest first.
+  const topConvs = useMemo(() => {
+    if (!isStandardView) return [];
+    return filteredConversations
+      .filter((c) => (c.unread_count ?? 0) > 0 || c.id === activeId)
+      .sort((a, b) => {
+        if (activeId) {
+          if (a.id === activeId && b.id !== activeId) return -1;
+          if (b.id === activeId && a.id !== activeId) return 1;
+        }
+        const aTs = a.last_message_at ?? a.created_at;
+        const bTs = b.last_message_at ?? b.created_at;
+        return new Date(bTs).getTime() - new Date(aTs).getTime();
+      });
+  }, [filteredConversations, isStandardView, activeId]);
+
+  // Bottom zone: read conversations, manual sort_position wins.
+  const bottomConvs = useMemo(() => {
+    if (!isStandardView) return [];
+    return filteredConversations
+      .filter((c) => (c.unread_count ?? 0) === 0 && c.id !== activeId)
+      .sort((a, b) => {
+        const aPos = a.sort_position ?? null;
+        const bPos = b.sort_position ?? null;
+        if (aPos !== null && bPos !== null) return aPos - bPos;
+        if (aPos !== null) return -1;
+        if (bPos !== null) return 1;
+        const aTs = a.last_message_at ?? a.created_at;
+        const bTs = b.last_message_at ?? b.created_at;
+        return new Date(bTs).getTime() - new Date(aTs).getTime();
+      });
+  }, [filteredConversations, isStandardView, activeId]);
 
   // Render groups: in the Archived tab (non-viewAll), split conversations
   // into pillar sections so an operator can review by department. Empty
@@ -206,6 +304,65 @@ const ConversationList = ({
     }
   };
 
+  // Toggle the per-user "needs revisit" yellow dot.
+  const toggleRevisit = async (conv: Conversation) => {
+    try {
+      const { error } = await supabase
+        .from("mb_conversation_members")
+        .update({ needs_revisit: !(conv.needs_revisit ?? false) } as any)
+        .eq("conversation_id", conv.id)
+        .eq("user_id", currentUserId);
+      if (error) throw error;
+      onConversationsChanged();
+    } catch (err) {
+      toast({
+        title: "Couldn't update flag",
+        description: err instanceof Error ? err.message : "Unknown error",
+        variant: "destructive",
+      });
+    }
+  };
+
+  // Drag-and-drop reorder for the read zone. Rewrites every read
+  // conversation's sort_position so the new visual order persists.
+  // Cheaper than fractional indexing for a sidebar that's usually
+  // <50 items and rarely re-sorted in bulk.
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
+  );
+
+  const handleReadDragEnd = async (event: DragEndEvent) => {
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+    const oldIndex = bottomConvs.findIndex((c) => c.id === active.id);
+    const newIndex = bottomConvs.findIndex((c) => c.id === over.id);
+    if (oldIndex === -1 || newIndex === -1) return;
+    const reordered = arrayMove(bottomConvs, oldIndex, newIndex);
+    try {
+      // Write a sort_position for every read conversation so the
+      // order is fully anchored — partial sort writes were causing
+      // unread→read transitions to drop into unexpected spots.
+      const updates = reordered.map((c, i) =>
+        supabase
+          .from("mb_conversation_members")
+          .update({ sort_position: i * 100 } as any)
+          .eq("conversation_id", c.id)
+          .eq("user_id", currentUserId),
+      );
+      const results = await Promise.all(updates);
+      const failed = results.find((r) => r.error);
+      if (failed?.error) throw failed.error;
+      onConversationsChanged();
+    } catch (err) {
+      toast({
+        title: "Reorder failed",
+        description: err instanceof Error ? err.message : "Unknown error",
+        variant: "destructive",
+      });
+      onConversationsChanged(); // re-fetch to restore real state
+    }
+  };
+
   const confirmDelete = async () => {
     if (!pendingDelete) return;
     const id = pendingDelete.id;
@@ -228,6 +385,213 @@ const ConversationList = ({
   };
 
   const showSearchMessages = !viewAll && trimmedSearch.length >= 2 && messageHits.length > 0;
+
+  // Single source of truth for one conversation card. Called from
+  // both the top zone (auto-sorted, non-draggable) and the bottom
+  // zone (rendered inside a SortableConvCard wrapper that supplies
+  // drag bindings). The `dragHandle` arg, when provided, renders a
+  // hover-revealed grip on the left edge wired to dnd-kit listeners.
+  const renderConvCard = (
+    conv: Conversation,
+    draggable: boolean,
+    dragHandle?: React.ReactNode,
+  ) => {
+    const title = getConvTitle(conv);
+    const recipients = getConvRecipients(conv);
+    const isActive = conv.id === activeId;
+    const isEditing = editingId === conv.id;
+    const pillarColor = PILLAR_COLOR[conv.pillar];
+    const isMember = conv.is_member ?? true;
+    const canEdit = (conv.created_by === currentUserId || isSuperAdmin) && isMember;
+    const canDelete = isSuperAdmin;
+    const canArchive = isMember && !viewAll;
+    const unread = conv.unread_count ?? 0;
+    const flagged = conv.needs_revisit ?? false;
+
+    return (
+      <div
+        key={conv.id}
+        className={`w-full text-left px-3 py-3 flex items-start gap-3 border-b border-white/[0.03] transition-colors relative group/row ${
+          isActive ? "bg-white/[0.04]" : "hover:bg-white/[0.03]"
+        }`}
+      >
+        <div
+          className="absolute left-0 top-0 bottom-0 rounded-r-full transition-all"
+          style={{
+            width: unread > 0 ? "4px" : "3px",
+            background: isActive || unread > 0 ? pillarColor : `${pillarColor}60`,
+          }}
+        />
+
+        <button
+          onClick={() => !isEditing && onSelect(conv.id)}
+          className="absolute inset-0 w-full h-full"
+          aria-label={`Open ${title}`}
+          tabIndex={isEditing ? -1 : 0}
+          disabled={isEditing}
+        />
+
+        {/* Drag handle — only present on read-zone cards. Hover-revealed
+            so it doesn't compete with the title at rest. */}
+        {draggable && (
+          <div className="relative z-10 pointer-events-auto self-center">
+            {dragHandle}
+          </div>
+        )}
+
+        <div
+          className="w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 relative z-10 pointer-events-none"
+          style={{ background: `${pillarColor}18`, color: pillarColor }}
+        >
+          {conv.is_group ? <Users className="w-4 h-4" /> : <User className="w-4 h-4" />}
+        </div>
+
+        <div className="flex-1 min-w-0 relative z-10 pointer-events-none">
+          <div className="flex items-center justify-between mb-0.5 gap-1">
+            {isEditing ? (
+              <div className="flex items-center gap-1 flex-1 pointer-events-auto">
+                <Input
+                  ref={editInputRef}
+                  value={editingDraft}
+                  onChange={(e) => setEditingDraft(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") { e.preventDefault(); saveEdit(); }
+                    if (e.key === "Escape") { e.preventDefault(); cancelEdit(); }
+                  }}
+                  className="h-6 text-sm bg-white/[0.06] border-white/[0.12] text-white px-1.5"
+                />
+                <button onClick={saveEdit} className="p-1 rounded text-green-400 hover:bg-green-500/10" title="Save">
+                  <Check className="w-3.5 h-3.5" />
+                </button>
+                <button onClick={cancelEdit} className="p-1 rounded text-zinc-500 hover:bg-white/[0.06] hover:text-zinc-300" title="Cancel">
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            ) : (
+              <>
+                <span className={`text-sm truncate ${unread > 0 ? "font-bold text-white" : "font-medium text-zinc-500"}`}>
+                  {title}
+                </span>
+                <div className="flex items-center gap-1.5 flex-shrink-0">
+                  {unread > 0 && (
+                    <span
+                      className="text-[9px] font-bold text-white rounded-full px-1.5 py-0.5 min-w-[16px] text-center leading-none"
+                      style={{ background: pillarColor }}
+                    >
+                      {unread > 99 ? "99+" : unread}
+                    </span>
+                  )}
+                  {conv.last_message_at && (
+                    <span className="text-[10px] text-zinc-600">
+                      {formatTime(conv.last_message_at)}
+                    </span>
+                  )}
+                </div>
+              </>
+            )}
+          </div>
+
+          {recipients && (
+            <p className="text-[11px] text-zinc-500 truncate">
+              with {recipients}
+            </p>
+          )}
+
+          <p
+            className={`text-xs truncate mt-0.5 ${
+              unread > 0 ? "text-zinc-200 font-medium" : "text-zinc-600"
+            }`}
+          >
+            {conv.last_message || "No messages yet"}
+          </p>
+
+          <div className="flex items-center justify-between mt-1 gap-1">
+            {isEditing ? (
+              <div className="flex items-center gap-1 flex-wrap pointer-events-auto">
+                {PILLARS.map((p) => {
+                  const c = PILLAR_COLOR[p];
+                  const active = editingPillar === p;
+                  return (
+                    <button
+                      key={p}
+                      onClick={(e) => { e.stopPropagation(); setEditingPillar(p); }}
+                      className="text-[9px] font-semibold px-1.5 py-0.5 rounded uppercase tracking-wide border transition-colors"
+                      style={{
+                        background: active ? `${c}28` : "transparent",
+                        color: active ? c : "#a1a1aa",
+                        borderColor: active ? c : "rgba(255,255,255,0.08)",
+                      }}
+                      title={`Set pillar to ${PILLAR_LABEL[p]}`}
+                    >
+                      {PILLAR_LABEL[p]}
+                    </button>
+                  );
+                })}
+              </div>
+            ) : (
+              <span
+                className="inline-block text-[9px] font-semibold px-1.5 py-0.5 rounded uppercase tracking-wide"
+                style={{ background: `${pillarColor}18`, color: pillarColor }}
+              >
+                {PILLAR_LABEL[conv.pillar]}
+              </span>
+            )}
+
+            {!isEditing && (
+              <div className="flex items-center gap-0.5 pointer-events-auto">
+                {/* Yellow "needs revisit" dot. Visible always when ON
+                    so the user can spot flagged threads at a glance;
+                    fades in on hover when OFF so it's available
+                    without cluttering quiet cards. */}
+                <button
+                  onClick={(e) => { e.stopPropagation(); toggleRevisit(conv); }}
+                  className={`p-1 rounded transition-all ${
+                    flagged
+                      ? "text-amber-400 hover:bg-amber-500/10"
+                      : "text-zinc-600 hover:text-amber-400 hover:bg-amber-500/10 opacity-0 group-hover/row:opacity-100"
+                  }`}
+                  title={flagged ? "Clear revisit flag" : "Flag to revisit"}
+                  aria-pressed={flagged}
+                >
+                  <Flag className={`w-3 h-3 ${flagged ? "fill-amber-400" : ""}`} />
+                </button>
+
+                <div className="opacity-0 group-hover/row:opacity-100 transition-opacity flex items-center gap-0.5">
+                  {canEdit && (
+                    <button
+                      onClick={(e) => { e.stopPropagation(); startEdit(conv); }}
+                      className="p-1 rounded text-zinc-500 hover:bg-white/[0.08] hover:text-zinc-200"
+                      title="Edit title & pillar"
+                    >
+                      <Pencil className="w-3 h-3" />
+                    </button>
+                  )}
+                  {canArchive && (
+                    <button
+                      onClick={(e) => { e.stopPropagation(); setArchived(conv, listView === "active"); }}
+                      className="p-1 rounded text-zinc-500 hover:bg-white/[0.08] hover:text-zinc-200"
+                      title={listView === "active" ? "Archive" : "Restore"}
+                    >
+                      {listView === "active" ? <Archive className="w-3 h-3" /> : <ArchiveRestore className="w-3 h-3" />}
+                    </button>
+                  )}
+                  {canDelete && (
+                    <button
+                      onClick={(e) => { e.stopPropagation(); setPendingDelete(conv); }}
+                      className="p-1 rounded text-zinc-500 hover:bg-red-500/10 hover:text-red-400"
+                      title="Delete permanently"
+                    >
+                      <Trash2 className="w-3 h-3" />
+                    </button>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  };
 
   return (
     <div className="flex flex-col h-full">
@@ -295,7 +659,37 @@ const ConversationList = ({
           </div>
         )}
 
-        {renderGroups.map((group) => (
+        {isStandardView ? (
+          <>
+            {/* TOP ZONE — unread + currently-active, auto-sorted by recency */}
+            {topConvs.map((conv) => renderConvCard(conv, false))}
+
+            {/* DIVIDER — only when both zones have content. Subtle hairline. */}
+            {topConvs.length > 0 && bottomConvs.length > 0 && (
+              <div className="mx-3 my-1 border-t border-white/[0.10]" aria-hidden />
+            )}
+
+            {/* BOTTOM ZONE — read conversations, drag-to-reorder. */}
+            <DndContext
+              sensors={sensors}
+              collisionDetection={closestCenter}
+              onDragEnd={handleReadDragEnd}
+            >
+              <SortableContext
+                items={bottomConvs.map((c) => c.id)}
+                strategy={verticalListSortingStrategy}
+              >
+                {bottomConvs.map((conv) => (
+                  <SortableConvCard
+                    key={conv.id}
+                    conv={conv}
+                    render={renderConvCard}
+                  />
+                ))}
+              </SortableContext>
+            </DndContext>
+          </>
+        ) : renderGroups.map((group) => (
           <div key={group.pillar ?? "all"}>
             {group.pillar && (
               <div
@@ -314,175 +708,7 @@ const ConversationList = ({
                 <span className="text-[10px] text-zinc-600">· {group.conversations.length}</span>
               </div>
             )}
-            {group.conversations.map((conv) => {
-          const title = getConvTitle(conv);
-          const recipients = getConvRecipients(conv);
-          const isActive = conv.id === activeId;
-          const isEditing = editingId === conv.id;
-          const pillarColor = PILLAR_COLOR[conv.pillar];
-          const isMember = conv.is_member ?? true;
-          const canEdit = (conv.created_by === currentUserId || isSuperAdmin) && isMember;
-          const canDelete = isSuperAdmin;
-          const canArchive = isMember && !viewAll;
-          const unread = conv.unread_count ?? 0;
-
-          return (
-            <div
-              key={conv.id}
-              className={`w-full text-left px-3 py-3 flex items-start gap-3 border-b border-white/[0.03] transition-colors relative group/row ${
-                isActive ? "bg-white/[0.04]" : "hover:bg-white/[0.03]"
-              }`}
-            >
-              <div
-                className="absolute left-0 top-0 bottom-0 rounded-r-full transition-all"
-                style={{
-                  width: unread > 0 ? "4px" : "3px",
-                  background: isActive || unread > 0 ? pillarColor : `${pillarColor}60`,
-                }}
-              />
-
-              <button
-                onClick={() => !isEditing && onSelect(conv.id)}
-                className="absolute inset-0 w-full h-full"
-                aria-label={`Open ${title}`}
-                tabIndex={isEditing ? -1 : 0}
-                disabled={isEditing}
-              />
-
-              <div
-                className="w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 relative z-10 pointer-events-none"
-                style={{ background: `${pillarColor}18`, color: pillarColor }}
-              >
-                {conv.is_group ? <Users className="w-4 h-4" /> : <User className="w-4 h-4" />}
-              </div>
-
-              <div className="flex-1 min-w-0 relative z-10 pointer-events-none">
-                <div className="flex items-center justify-between mb-0.5 gap-1">
-                  {isEditing ? (
-                    <div className="flex items-center gap-1 flex-1 pointer-events-auto">
-                      <Input
-                        ref={editInputRef}
-                        value={editingDraft}
-                        onChange={(e) => setEditingDraft(e.target.value)}
-                        onKeyDown={(e) => {
-                          if (e.key === "Enter") { e.preventDefault(); saveEdit(); }
-                          if (e.key === "Escape") { e.preventDefault(); cancelEdit(); }
-                        }}
-                        className="h-6 text-sm bg-white/[0.06] border-white/[0.12] text-white px-1.5"
-                      />
-                      <button onClick={saveEdit} className="p-1 rounded text-green-400 hover:bg-green-500/10" title="Save">
-                        <Check className="w-3.5 h-3.5" />
-                      </button>
-                      <button onClick={cancelEdit} className="p-1 rounded text-zinc-500 hover:bg-white/[0.06] hover:text-zinc-300" title="Cancel">
-                        <X className="w-3.5 h-3.5" />
-                      </button>
-                    </div>
-                  ) : (
-                    <>
-                      <span className={`text-sm truncate ${unread > 0 ? "font-bold text-white" : "font-medium text-zinc-500"}`}>
-                        {title}
-                      </span>
-                      <div className="flex items-center gap-1.5 flex-shrink-0">
-                        {unread > 0 && (
-                          <span
-                            className="text-[9px] font-bold text-white rounded-full px-1.5 py-0.5 min-w-[16px] text-center leading-none"
-                            style={{ background: pillarColor }}
-                          >
-                            {unread > 99 ? "99+" : unread}
-                          </span>
-                        )}
-                        {conv.last_message_at && (
-                          <span className="text-[10px] text-zinc-600">
-                            {formatTime(conv.last_message_at)}
-                          </span>
-                        )}
-                      </div>
-                    </>
-                  )}
-                </div>
-
-                {recipients && (
-                  <p className="text-[11px] text-zinc-500 truncate">
-                    with {recipients}
-                  </p>
-                )}
-
-                <p
-                  className={`text-xs truncate mt-0.5 ${
-                    unread > 0 ? "text-zinc-200 font-medium" : "text-zinc-600"
-                  }`}
-                >
-                  {conv.last_message || "No messages yet"}
-                </p>
-
-                <div className="flex items-center justify-between mt-1 gap-1">
-                  {isEditing ? (
-                    <div className="flex items-center gap-1 flex-wrap pointer-events-auto">
-                      {PILLARS.map((p) => {
-                        const c = PILLAR_COLOR[p];
-                        const active = editingPillar === p;
-                        return (
-                          <button
-                            key={p}
-                            onClick={(e) => { e.stopPropagation(); setEditingPillar(p); }}
-                            className="text-[9px] font-semibold px-1.5 py-0.5 rounded uppercase tracking-wide border transition-colors"
-                            style={{
-                              background: active ? `${c}28` : "transparent",
-                              color: active ? c : "#a1a1aa",
-                              borderColor: active ? c : "rgba(255,255,255,0.08)",
-                            }}
-                            title={`Set pillar to ${PILLAR_LABEL[p]}`}
-                          >
-                            {PILLAR_LABEL[p]}
-                          </button>
-                        );
-                      })}
-                    </div>
-                  ) : (
-                    <span
-                      className="inline-block text-[9px] font-semibold px-1.5 py-0.5 rounded uppercase tracking-wide"
-                      style={{ background: `${pillarColor}18`, color: pillarColor }}
-                    >
-                      {PILLAR_LABEL[conv.pillar]}
-                    </span>
-                  )}
-
-                  {!isEditing && (
-                    <div className="opacity-0 group-hover/row:opacity-100 transition-opacity flex items-center gap-0.5 pointer-events-auto">
-                      {canEdit && (
-                        <button
-                          onClick={(e) => { e.stopPropagation(); startEdit(conv); }}
-                          className="p-1 rounded text-zinc-500 hover:bg-white/[0.08] hover:text-zinc-200"
-                          title="Edit title & pillar"
-                        >
-                          <Pencil className="w-3 h-3" />
-                        </button>
-                      )}
-                      {canArchive && (
-                        <button
-                          onClick={(e) => { e.stopPropagation(); setArchived(conv, listView === "active"); }}
-                          className="p-1 rounded text-zinc-500 hover:bg-white/[0.08] hover:text-zinc-200"
-                          title={listView === "active" ? "Archive" : "Restore"}
-                        >
-                          {listView === "active" ? <Archive className="w-3 h-3" /> : <ArchiveRestore className="w-3 h-3" />}
-                        </button>
-                      )}
-                      {canDelete && (
-                        <button
-                          onClick={(e) => { e.stopPropagation(); setPendingDelete(conv); }}
-                          className="p-1 rounded text-zinc-500 hover:bg-red-500/10 hover:text-red-400"
-                          title="Delete permanently"
-                        >
-                          <Trash2 className="w-3 h-3" />
-                        </button>
-                      )}
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
-          );
-        })}
+            {group.conversations.map((conv) => renderConvCard(conv, false))}
           </div>
         ))}
 
