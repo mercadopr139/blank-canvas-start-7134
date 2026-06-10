@@ -376,13 +376,15 @@ const AdminMessageBoard = () => {
         </div>
       </header>
 
-      {/* Responsive two-panel:
-            - lg+: resizable side-by-side. Drag the divider to widen the
-              sidebar; autoSaveId persists the width per browser.
-            - <lg: single panel — list when no active conv, thread when one selected.
-          flex-1 + overflow-hidden takes exactly what's left after the
-          header, so the chat pane can confidently size its compose to
-          the bottom of the viewport. */}
+      {/* Single resizable two-pane layout at ALL viewport sizes.
+            Earlier versions split into desktop two-pane vs mobile
+            single-pane via a Tailwind breakpoint, but that fell over:
+            at certain zoom levels / window widths the layout would
+            flip into single-pane mode and the sidebar disappeared
+            with no obvious way back. Removing the split entirely
+            gives one predictable layout — sidebar always on the left,
+            thread always on the right, divider in between, drag to
+            resize. Matches Slack/iMessage/Outlook navigation rails. */}
       {(() => {
         const convListNode = (
           <ConversationList
@@ -450,53 +452,26 @@ const AdminMessageBoard = () => {
 
         return (
           <div className="flex overflow-hidden flex-1 min-h-0">
-            {/* Desktop (md+): resizable two-pane. autoSaveId persists
-                the user's chosen sidebar width per browser via
-                localStorage — no extra state needed. Breakpoint lowered
-                from lg to md so most laptops at any zoom keep the
-                two-pane layout and never lose sight of the sidebar
-                when opening a conversation. */}
-            <div className="hidden md:flex flex-1 min-h-0">
-              {/* No autoSaveId for now: the persisted layout was
-                  loading a pathological zero-width sidebar that
-                  trapped users in the open thread with no visible
-                  way back. Resetting to defaults on every load is
-                  the safer baseline; we can re-add persistence
-                  once the layout proves stable. */}
-              <ResizablePanelGroup
-                direction="horizontal"
-                className="h-full"
+            <ResizablePanelGroup
+              direction="horizontal"
+              className="h-full"
+            >
+              <ResizablePanel
+                defaultSize={28}
+                minSize={20}
+                maxSize={50}
+                className="border-r border-white/[0.06]"
               >
-                <ResizablePanel
-                  defaultSize={28}
-                  minSize={22}
-                  maxSize={50}
-                  className="border-r border-white/[0.06]"
-                >
-                  <div className="flex flex-col h-full">{convListNode}</div>
-                </ResizablePanel>
-                <ResizableHandle
-                  withHandle
-                  className="bg-white/[0.06] hover:bg-white/[0.12] transition-colors"
-                />
-                <ResizablePanel defaultSize={72} minSize={50}>
-                  <div className="flex flex-col h-full min-w-0">{threadNode}</div>
-                </ResizablePanel>
-              </ResizablePanelGroup>
-            </div>
-
-            {/* Mobile (<md): single panel — list when no conv selected,
-                thread when one is. No resize on mobile (touch users
-                wouldn't have a way to drag a hairline anyway). The
-                back arrow in MessageThread's header (lg:hidden → now
-                md:hidden) is the only way back to the list here. */}
-            <div className="md:hidden flex flex-1 min-h-0 w-full">
-              {activeConversationId ? (
-                <div className="flex-1 flex flex-col min-w-0">{threadNode}</div>
-              ) : (
-                <div className="flex-1 flex flex-col">{convListNode}</div>
-              )}
-            </div>
+                <div className="flex flex-col h-full">{convListNode}</div>
+              </ResizablePanel>
+              <ResizableHandle
+                withHandle
+                className="bg-white/[0.06] hover:bg-white/[0.12] transition-colors"
+              />
+              <ResizablePanel defaultSize={72} minSize={50}>
+                <div className="flex flex-col h-full min-w-0">{threadNode}</div>
+              </ResizablePanel>
+            </ResizablePanelGroup>
           </div>
         );
       })()}

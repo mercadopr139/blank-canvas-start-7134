@@ -461,16 +461,11 @@ const MessageThread = ({ conversation, currentUserId, isSuperAdmin, canPost, scr
           className="px-4 py-3 border-b flex items-center gap-3 group/header"
           style={{ borderColor: `${pillarColor}30` }}
         >
-          {/* Back arrow shown whenever the single-panel mobile layout
-              is active (i.e. below the md breakpoint). Keeps users
-              from getting stranded in a thread with no visible sidebar. */}
-          <button
-            onClick={onBackToList}
-            className="md:hidden text-zinc-400 hover:text-white hover:bg-white/5 p-1.5 rounded-lg -ml-1"
-            aria-label="Back to conversations"
-          >
-            <ArrowLeft className="w-5 h-5" />
-          </button>
+          {/* Back arrow removed: the conversation sidebar is now
+              always visible at every viewport size, so there's no
+              "single-panel mobile" mode to escape from. onBackToList
+              is still passed in case a future caller wants to close
+              the thread programmatically. */}
 
           <div
             className="w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0"
