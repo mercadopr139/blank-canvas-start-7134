@@ -978,6 +978,12 @@ const AdminAttendance = () => {
     queryClient.invalidateQueries({ queryKey: ["excursion-attendance-month", calMonthStart, calMonthEnd] });
   }, [editingExcursionId, queryClient, calMonthStart, calMonthEnd]);
 
+  // All handlers below call the admin_* RPCs from the 2026-06-16 migration.
+  // Two behavioral differences from Coach Mode's RPCs:
+  //   1. attendance backfill uses the excursion's actual date (not today)
+  //   2. admin writes ignore roster_locked_at — the lock is Chrissy's
+  //      safety rail, not a barrier for retroactive admin edits.
+
   const handleEditAddVehicle = async () => {
     if (!editingExcursionId || !editAddingVehicle) return;
     const name = editAddingVehicle.isCustom ? editCustomNameInput.trim() : editAddingVehicle.name;
@@ -987,7 +993,7 @@ const AdminAttendance = () => {
     if (!seat_cap || seat_cap <= 0) return toast.error("Seat capacity must be at least 1.");
     if (!driver) return toast.error("Driver name is required.");
     setEditSavingVehicle(true);
-    const { error } = await supabase.rpc("add_excursion_vehicle", {
+    const { error } = await supabase.rpc("admin_add_excursion_vehicle", {
       _excursion_id: editingExcursionId,
       _name: name,
       _seat_cap: seat_cap,
@@ -1003,13 +1009,13 @@ const AdminAttendance = () => {
   };
 
   const handleEditRemoveVehicle = async (vehicleId: string) => {
-    const { error } = await supabase.rpc("remove_excursion_vehicle", { _vehicle_id: vehicleId });
+    const { error } = await supabase.rpc("admin_remove_excursion_vehicle", { _vehicle_id: vehicleId });
     if (error) { toast.error(error.message || "Couldn't remove vehicle."); return; }
     invalidateEditExcursionQueries();
   };
 
   const handleEditAssignYouth = async (registrationId: string, vehicleId: string) => {
-    const { error } = await supabase.rpc("assign_youth_to_vehicle", {
+    const { error } = await supabase.rpc("admin_assign_youth_to_vehicle", {
       _vehicle_id: vehicleId,
       _registration_id: registrationId,
     });
@@ -1019,7 +1025,7 @@ const AdminAttendance = () => {
 
   const handleEditUnassignYouth = async (registrationId: string) => {
     if (!editingExcursionId) return;
-    const { error } = await supabase.rpc("unassign_youth_from_vehicle", {
+    const { error } = await supabase.rpc("admin_unassign_youth_from_vehicle", {
       _excursion_id: editingExcursionId,
       _registration_id: registrationId,
     });
@@ -1030,7 +1036,7 @@ const AdminAttendance = () => {
   const handleEditAddPersonnel = async () => {
     if (!editingExcursionId || !editPersonnelInput.trim()) return;
     setEditSavingPersonnel(true);
-    const { error } = await supabase.rpc("add_excursion_personnel", {
+    const { error } = await supabase.rpc("admin_add_excursion_personnel", {
       _excursion_id: editingExcursionId,
       _name: editPersonnelInput.trim(),
     });
@@ -1041,19 +1047,20 @@ const AdminAttendance = () => {
   };
 
   const handleEditRemovePersonnel = async (personnelId: string) => {
-    const { error } = await supabase.rpc("remove_excursion_personnel", { _personnel_id: personnelId });
+    const { error } = await supabase.rpc("admin_remove_excursion_personnel", { _personnel_id: personnelId });
     if (error) { toast.error(error.message || "Couldn't remove name."); return; }
     invalidateEditExcursionQueries();
   };
 
-  // Adds a youth to the excursion roster. Mirrors Coach Mode's late-arrival
-  // RPC and works regardless of roster_locked_at — admin overrides the lock.
+  // Backfill a youth into the excursion's roster, dated to the trip's
+  // actual date — NOT today. Fixes the June 13 calendar tile that was
+  // showing 0 because admin-added kids were landing on today's date.
   const handleEditAddYouth = async (registrationId: string) => {
-    if (!editingExcursionId) return;
-    const { error } = await supabase.rpc("coach_add_late_arrival", {
+    if (!editingExcursionId || !editingExcursion?.date) return;
+    const { error } = await supabase.rpc("admin_record_excursion_attendance", {
       _excursion_id: editingExcursionId,
       _registration_id: registrationId,
-      _vehicle_id: null,
+      _check_in_date: editingExcursion.date,
     });
     if (error) { toast.error(error.message || "Couldn't add youth."); return; }
     toast.success("Youth added to the roster.");
