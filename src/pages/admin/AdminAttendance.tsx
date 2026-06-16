@@ -3584,7 +3584,7 @@ const AdminAttendance = () => {
                 </div>
 
                 <p className="text-[10px] text-white/30 mt-2">
-                  All changes save instantly. Admin edits work even after the roster is locked.
+                  All changes save instantly. As admin you can edit any trip — past, locked, or closed — and backfilled youth get stamped to the trip's actual date.
                 </p>
               </div>
 

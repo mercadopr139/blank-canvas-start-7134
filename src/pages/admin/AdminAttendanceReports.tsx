@@ -226,16 +226,34 @@ const AdminAttendanceReports = () => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("excursions")
-        .select("id, date, name, youth_count")
+        .select("id, date, name")
         .gte("date", dateRange.from)
         .lte("date", dateRange.to);
       if (error) throw error;
-      return data as { id: string; date: string; name: string; youth_count: number }[];
+      return data as { id: string; date: string; name: string }[];
+    },
+  });
+
+  // Real youth-on-trip count from attendance_records, not the retired
+  // excursions.youth_count planning-estimate field. Each Excursion row's
+  // count is the number of attendance_records rows with program_source
+  // 'Excursion' and the matching excursion_id, in the report date range.
+  const { data: excursionAttendance = [] } = useQuery({
+    queryKey: ["report-excursion-attendance", dateRange.from, dateRange.to],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("attendance_records")
+        .select("excursion_id")
+        .eq("program_source", "Excursion")
+        .gte("check_in_date", dateRange.from)
+        .lte("check_in_date", dateRange.to);
+      if (error) throw error;
+      return (data || []) as { excursion_id: string | null }[];
     },
   });
 
   const excursionCount = excursionsData.length;
-  const excursionTotalYouth = excursionsData.reduce((sum, e) => sum + e.youth_count, 0);
+  const excursionTotalYouth = excursionAttendance.length;
 
   const practiceDayMap = useMemo(() => {
     const m: Record<string, boolean> = {};
