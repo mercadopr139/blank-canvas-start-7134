@@ -51,6 +51,7 @@ interface AttendanceRecord {
   check_in_at: string;
   program_source: string;
   is_manual: boolean;
+  excursion_id?: string | null;
 }
 
 interface PracticeDay {
@@ -217,7 +218,6 @@ const AdminAttendance = () => {
   const [excursionModalOpen, setExcursionModalOpen] = useState(false);
   const [excursionDate, setExcursionDate] = useState<string>("");
   const [excursionName, setExcursionName] = useState("");
-  const [excursionYouthCount, setExcursionYouthCount] = useState<number | "">("");
   const [excursionNotes, setExcursionNotes] = useState("");
   const [excursionPrevState, setExcursionPrevState] = useState<boolean>(true);
   const [editingExcursion, setEditingExcursion] = useState<Excursion | null>(null);
@@ -367,6 +367,17 @@ const AdminAttendance = () => {
     const counts: Record<string, number> = {};
     excursionAttendanceMonth.forEach((r) => {
       counts[r.check_in_date] = (counts[r.check_in_date] || 0) + 1;
+    });
+    return counts;
+  }, [excursionAttendanceMonth]);
+
+  // Per-excursion-id actual check-in counts, derived from the same paginated
+  // attendance query. Replaces the legacy planning-estimate field
+  // (excursions.youth_count) anywhere we render a "youth on this trip" number.
+  const excursionCountsById = useMemo(() => {
+    const counts: Record<string, number> = {};
+    excursionAttendanceMonth.forEach((r) => {
+      if (r.excursion_id) counts[r.excursion_id] = (counts[r.excursion_id] || 0) + 1;
     });
     return counts;
   }, [excursionAttendanceMonth]);
@@ -748,10 +759,11 @@ const AdminAttendance = () => {
         setEditingExcursion(existingExcursion);
         return;
       }
-      // Open new excursion modal, pre-populate youth count from sign-ins
+      // Open new excursion modal — name + notes only. Phase B (2026-06-16):
+      // retired the planning-estimate field; the real youth count is derived
+      // from check-in / backfill records, not a pre-trip guess.
       setExcursionDate(dateStr);
       setExcursionName("");
-      setExcursionYouthCount(dailyCounts[dateStr] || 0);
       setExcursionNotes("");
       setExcursionPrevState(isPracticeDay(dateStr, calPracticeDayMap));
       setExcursionModalOpen(true);
@@ -782,14 +794,14 @@ const AdminAttendance = () => {
   };
 
   const saveExcursion = async () => {
-    if (!excursionName.trim() || excursionYouthCount === "" || excursionYouthCount < 0) {
-      toast.error("Please fill in excursion name and youth count");
+    if (!excursionName.trim()) {
+      toast.error("Please fill in an excursion name");
       return;
     }
     const { error } = await supabase.from("excursions").insert({
       date: excursionDate,
       name: excursionName.trim(),
-      youth_count: Number(excursionYouthCount),
+      youth_count: 0, // retired field — kept zeroed for the NOT NULL constraint
       notes: excursionNotes.trim() || null,
     });
     if (error) { toast.error("Failed to save excursion"); return; }
@@ -897,9 +909,10 @@ const AdminAttendance = () => {
 
   const saveEditExcursion = async () => {
     if (!editingExcursion) return;
+    // Phase B (2026-06-16): youth_count omitted — retired in favor of the
+    // real check-in count derived from attendance_records.
     const { error } = await supabase.from("excursions").update({
       name: editingExcursion.name,
-      youth_count: editingExcursion.youth_count,
       notes: editingExcursion.notes,
       arrived_at: editingExcursion.arrived_at,
       returned_at: editingExcursion.returned_at,
@@ -1586,12 +1599,12 @@ const AdminAttendance = () => {
 
     /* ── Excursion insights ── */
     if (excursionsCalMonth.length > 0) {
-      const totalYouthExc = excursionsCalMonth.reduce((s, e) => s + e.youth_count, 0);
+      const totalYouthExc = excursionsCalMonth.reduce((s, e) => s + (excursionCountsById[e.id] || 0), 0);
       insights.push(`🟣 ${excursionsCalMonth.length} Excursion${excursionsCalMonth.length > 1 ? "s" : ""} this month reached ${totalYouthExc} youth total.`);
     }
 
     return insights;
-  }, [weeklyAvgData, practiceAttendance, regMap, topDistrictToday, totalPresentToday, avgArrivalMonth, prevPracticeAttendance, mtdAvg, isCurrentMonth, viewedMonthShort, calendarMonth, weatherMap, excursionsCalMonth]);
+  }, [weeklyAvgData, practiceAttendance, regMap, topDistrictToday, totalPresentToday, avgArrivalMonth, prevPracticeAttendance, mtdAvg, isCurrentMonth, viewedMonthShort, calendarMonth, weatherMap, excursionsCalMonth, excursionCountsById]);
 
   /* ───── BALD EAGLES ───── */
   // Inactive ≠ "doesn't count." Inactive only means "don't include this
@@ -2639,11 +2652,11 @@ const AdminAttendance = () => {
                   </div>
                   <div className="text-center p-3 rounded-lg bg-white/5">
                     <p className="text-[10px] uppercase tracking-wider text-white/40">Total Youth</p>
-                    <p className="text-2xl font-bold mt-1 text-purple-400">{excursionsCalMonth.reduce((s, e) => s + e.youth_count, 0)}</p>
+                    <p className="text-2xl font-bold mt-1 text-purple-400">{excursionsCalMonth.reduce((s, e) => s + (excursionCountsById[e.id] || 0), 0)}</p>
                   </div>
                   <div className="text-center p-3 rounded-lg bg-white/5">
                     <p className="text-[10px] uppercase tracking-wider text-white/40">Avg Youth</p>
-                    <p className="text-2xl font-bold mt-1 text-purple-400">{Math.round(excursionsCalMonth.reduce((s, e) => s + e.youth_count, 0) / excursionsCalMonth.length)}</p>
+                    <p className="text-2xl font-bold mt-1 text-purple-400">{Math.round(excursionsCalMonth.reduce((s, e) => s + (excursionCountsById[e.id] || 0), 0) / excursionsCalMonth.length)}</p>
                   </div>
                 </div>
                 <div className="space-y-2">
@@ -2652,7 +2665,7 @@ const AdminAttendance = () => {
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2">
                           <span className="text-sm font-semibold text-white">{exc.name}</span>
-                          <Badge className="bg-purple-500/15 text-purple-400 border-purple-500/30 text-[10px]">{exc.youth_count} youth</Badge>
+                          <Badge className="bg-purple-500/15 text-purple-400 border-purple-500/30 text-[10px]">{excursionCountsById[exc.id] || 0} youth</Badge>
                         </div>
                         <p className="text-xs text-white/40 mt-0.5">{format(parseISO(exc.date), "EEEE, MMMM d, yyyy")}</p>
                         {exc.notes && <p className="text-xs text-white/50 mt-1">{exc.notes}</p>}
@@ -3211,13 +3224,9 @@ const AdminAttendance = () => {
               <Input value={excursionName} onChange={(e) => setExcursionName(e.target.value)} placeholder="e.g. Beach Trip" className="bg-white/5 border-white/20 text-white" autoFocus />
             </div>
             <div>
-              <label className="text-xs text-white/50 mb-1 block">Number of Youth *</label>
-              <Input type="number" min={0} value={excursionYouthCount} onChange={(e) => setExcursionYouthCount(e.target.value === "" ? "" : Number(e.target.value))} placeholder="0" className="bg-white/5 border-white/20 text-white" />
-              <p className="text-[10px] text-white/30 mt-1">Auto-filled from sign-ins — edit if needed</p>
-            </div>
-            <div>
               <label className="text-xs text-white/50 mb-1 block">Notes (optional)</label>
               <Input value={excursionNotes} onChange={(e) => setExcursionNotes(e.target.value)} placeholder="Optional notes..." className="bg-white/5 border-white/20 text-white" />
+              <p className="text-[10px] text-white/30 mt-1">Youth count is tracked automatically as kids check in or get added to the roster.</p>
             </div>
           </div>
           <div className="flex gap-2 justify-end pt-2">
@@ -3239,20 +3248,14 @@ const AdminAttendance = () => {
                 <label className="text-xs text-white/50 mb-1 block">Excursion Name *</label>
                 <Input value={editingExcursion.name} onChange={(e) => setEditingExcursion({ ...editingExcursion, name: e.target.value })} className="bg-white/5 border-white/20 text-white" />
               </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div className="rounded-lg bg-white/[0.03] border border-white/10 px-3 py-2.5">
-                  <p className="text-[10px] uppercase tracking-wider text-white/50 font-semibold">
-                    Actual Youth Checked In
-                  </p>
-                  <p className="text-2xl font-black tabular-nums text-emerald-300">
-                    {editingRosterYouth.length}
-                  </p>
-                </div>
-                <div>
-                  <label className="text-xs text-white/50 mb-1 block">Planning estimate</label>
-                  <Input type="number" min={0} value={editingExcursion.youth_count} onChange={(e) => setEditingExcursion({ ...editingExcursion, youth_count: Number(e.target.value) })} className="bg-white/5 border-white/20 text-white" />
-                  <p className="text-[10px] text-white/30 mt-1">Pre-trip estimate; not the live count.</p>
-                </div>
+              <div className="rounded-lg bg-white/[0.03] border border-white/10 px-3 py-2.5">
+                <p className="text-[10px] uppercase tracking-wider text-white/50 font-semibold">
+                  Youth on Roster
+                </p>
+                <p className="text-2xl font-black tabular-nums text-emerald-300">
+                  {editingRosterYouth.length}
+                </p>
+                <p className="text-[10px] text-white/30 mt-0.5">Live count of who actually went on the trip.</p>
               </div>
               <div>
                 <label className="text-xs text-white/50 mb-1 block">Notes / Lessons for next year</label>
