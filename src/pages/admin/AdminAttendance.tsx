@@ -10,10 +10,12 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import {
   Star, Search, AlertTriangle, Users, Eye, ChevronLeft, ChevronRight, CalendarDays,
-  Clock, TrendingUp, TrendingDown, School, Lightbulb, Activity, Trash2, X, Pencil, UserPlus, Mail
+  Clock, TrendingUp, TrendingDown, School, Lightbulb, Activity, Trash2, X, Pencil, UserPlus, Mail,
+  Plus, Truck, Bus, CheckCircle2
 } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell,
   LineChart, Line, LabelList, ComposedChart,
@@ -72,6 +74,16 @@ interface Excursion {
 }
 
 type DayType = "practice" | "non-practice" | "excursion";
+
+/** Vehicle quick-add presets for the Edit Excursion modal — mirrors the
+ *  same picker available in Coach Mode at /excursion-coach so admin
+ *  backfills produce the same vehicle records as live trips. */
+const EDIT_VEHICLE_PRESETS: Array<{ name: string; seat_cap: number; icon: typeof Truck }> = [
+  { name: "Van A", seat_cap: 14, icon: Truck },
+  { name: "Van B", seat_cap: 14, icon: Truck },
+  { name: "Mini-Van", seat_cap: 6, icon: Truck },
+  { name: "Mini-Bus", seat_cap: 21, icon: Bus },
+];
 
 interface WeatherDay {
   date: string;
@@ -210,6 +222,24 @@ const AdminAttendance = () => {
   const [excursionPrevState, setExcursionPrevState] = useState<boolean>(true);
   const [editingExcursion, setEditingExcursion] = useState<Excursion | null>(null);
   const [deleteExcursionTarget, setDeleteExcursionTarget] = useState<Excursion | null>(null);
+
+  // ── Interactive Edit Excursion modal: vehicle + youth + personnel controls
+  const [editAddingVehicle, setEditAddingVehicle] = useState<{ name: string; seat_cap: number; isCustom: boolean } | null>(null);
+  const [editDriverNameInput, setEditDriverNameInput] = useState("");
+  const [editCustomNameInput, setEditCustomNameInput] = useState("");
+  const [editCustomSeatInput, setEditCustomSeatInput] = useState("");
+  const [editSavingVehicle, setEditSavingVehicle] = useState(false);
+  const [editPersonnelInput, setEditPersonnelInput] = useState("");
+  const [editSavingPersonnel, setEditSavingPersonnel] = useState(false);
+  const [editYouthSearch, setEditYouthSearch] = useState("");
+  const [editYouthResults, setEditYouthResults] = useState<Array<{
+    id: string;
+    child_first_name: string;
+    child_last_name: string;
+    child_boxing_program: string;
+    child_headshot_url: string | null;
+  }>>([]);
+  const [editYouthSearching, setEditYouthSearching] = useState(false);
   const [weatherTooltipDay, setWeatherTooltipDay] = useState<string | null>(null);
   const [contextMenuDay, setContextMenuDay] = useState<{ dateStr: string; x: number; y: number } | null>(null);
   const [noShowAlertDismissed, setNoShowAlertDismissed] = useState(false);
@@ -895,6 +925,141 @@ const AdminAttendance = () => {
   const localInputToIso = (local: string): string | null => {
     if (!local) return null;
     return new Date(local).toISOString();
+  };
+
+  /* ───── Edit Excursion modal — interactive controls ─────
+     Lets an admin backfill youth attendance + vehicles + personnel for any
+     past Excursion (the case where a trip happened but nobody used the
+     kiosk live). Uses the same RPCs Coach Mode does. */
+
+  // Reset all transient inputs whenever the modal closes or switches trips.
+  useEffect(() => {
+    setEditAddingVehicle(null);
+    setEditDriverNameInput("");
+    setEditCustomNameInput("");
+    setEditCustomSeatInput("");
+    setEditPersonnelInput("");
+    setEditYouthSearch("");
+    setEditYouthResults([]);
+  }, [editingExcursionId]);
+
+  // Debounced youth search for the "Add youth" field inside the modal.
+  useEffect(() => {
+    if (!editingExcursionId) return;
+    if (editYouthSearch.trim().length < 2) {
+      setEditYouthResults([]);
+      return;
+    }
+    setEditYouthSearching(true);
+    const t = setTimeout(async () => {
+      const { data } = await supabase.rpc("search_excursion_youth", {
+        _search: editYouthSearch,
+      });
+      setEditYouthResults((data as Array<{
+        id: string;
+        child_first_name: string;
+        child_last_name: string;
+        child_boxing_program: string;
+        child_headshot_url: string | null;
+      }>) || []);
+      setEditYouthSearching(false);
+    }, 300);
+    return () => clearTimeout(t);
+  }, [editYouthSearch, editingExcursionId]);
+
+  // Centralized refresh of every query the modal depends on, plus the
+  // calendar tile counts so the underlying page stays consistent.
+  const invalidateEditExcursionQueries = useCallback(() => {
+    if (!editingExcursionId) return;
+    queryClient.invalidateQueries({ queryKey: ["admin-edit-excursion-roster-youth", editingExcursionId] });
+    queryClient.invalidateQueries({ queryKey: ["admin-edit-excursion-vehicles", editingExcursionId] });
+    queryClient.invalidateQueries({ queryKey: ["admin-edit-excursion-personnel", editingExcursionId] });
+    queryClient.invalidateQueries({ queryKey: ["excursion-checkin-counts-all"] });
+    queryClient.invalidateQueries({ queryKey: ["excursion-attendance-month", calMonthStart, calMonthEnd] });
+  }, [editingExcursionId, queryClient, calMonthStart, calMonthEnd]);
+
+  const handleEditAddVehicle = async () => {
+    if (!editingExcursionId || !editAddingVehicle) return;
+    const name = editAddingVehicle.isCustom ? editCustomNameInput.trim() : editAddingVehicle.name;
+    const seat_cap = editAddingVehicle.isCustom ? Number(editCustomSeatInput) : editAddingVehicle.seat_cap;
+    const driver = editDriverNameInput.trim();
+    if (!name) return toast.error("Vehicle name is required.");
+    if (!seat_cap || seat_cap <= 0) return toast.error("Seat capacity must be at least 1.");
+    if (!driver) return toast.error("Driver name is required.");
+    setEditSavingVehicle(true);
+    const { error } = await supabase.rpc("add_excursion_vehicle", {
+      _excursion_id: editingExcursionId,
+      _name: name,
+      _seat_cap: seat_cap,
+      _driver_name: driver,
+    });
+    setEditSavingVehicle(false);
+    if (error) { toast.error(error.message || "Couldn't add vehicle."); return; }
+    setEditAddingVehicle(null);
+    setEditDriverNameInput("");
+    setEditCustomNameInput("");
+    setEditCustomSeatInput("");
+    invalidateEditExcursionQueries();
+  };
+
+  const handleEditRemoveVehicle = async (vehicleId: string) => {
+    const { error } = await supabase.rpc("remove_excursion_vehicle", { _vehicle_id: vehicleId });
+    if (error) { toast.error(error.message || "Couldn't remove vehicle."); return; }
+    invalidateEditExcursionQueries();
+  };
+
+  const handleEditAssignYouth = async (registrationId: string, vehicleId: string) => {
+    const { error } = await supabase.rpc("assign_youth_to_vehicle", {
+      _vehicle_id: vehicleId,
+      _registration_id: registrationId,
+    });
+    if (error) { toast.error(error.message || "Couldn't assign youth."); return; }
+    invalidateEditExcursionQueries();
+  };
+
+  const handleEditUnassignYouth = async (registrationId: string) => {
+    if (!editingExcursionId) return;
+    const { error } = await supabase.rpc("unassign_youth_from_vehicle", {
+      _excursion_id: editingExcursionId,
+      _registration_id: registrationId,
+    });
+    if (error) { toast.error(error.message || "Couldn't unassign youth."); return; }
+    invalidateEditExcursionQueries();
+  };
+
+  const handleEditAddPersonnel = async () => {
+    if (!editingExcursionId || !editPersonnelInput.trim()) return;
+    setEditSavingPersonnel(true);
+    const { error } = await supabase.rpc("add_excursion_personnel", {
+      _excursion_id: editingExcursionId,
+      _name: editPersonnelInput.trim(),
+    });
+    setEditSavingPersonnel(false);
+    if (error) { toast.error(error.message || "Couldn't add name."); return; }
+    setEditPersonnelInput("");
+    invalidateEditExcursionQueries();
+  };
+
+  const handleEditRemovePersonnel = async (personnelId: string) => {
+    const { error } = await supabase.rpc("remove_excursion_personnel", { _personnel_id: personnelId });
+    if (error) { toast.error(error.message || "Couldn't remove name."); return; }
+    invalidateEditExcursionQueries();
+  };
+
+  // Adds a youth to the excursion roster. Mirrors Coach Mode's late-arrival
+  // RPC and works regardless of roster_locked_at — admin overrides the lock.
+  const handleEditAddYouth = async (registrationId: string) => {
+    if (!editingExcursionId) return;
+    const { error } = await supabase.rpc("coach_add_late_arrival", {
+      _excursion_id: editingExcursionId,
+      _registration_id: registrationId,
+      _vehicle_id: null,
+    });
+    if (error) { toast.error(error.message || "Couldn't add youth."); return; }
+    toast.success("Youth added to the roster.");
+    setEditYouthSearch("");
+    setEditYouthResults([]);
+    invalidateEditExcursionQueries();
   };
 
   /* ───── Derived Data ───── */
@@ -3093,80 +3258,325 @@ const AdminAttendance = () => {
                 <p className="text-[10px] text-white/30 mt-1">Saved on the trip — visible in Excursion History next year for planning.</p>
               </div>
 
-              {/* TRIP ROSTER — read-only mirror of Coach Mode locked view */}
-              {(editingVehicles.length > 0 || editingRosterYouth.length > 0 || editingPersonnel.length > 0) && (
-                <div className="pt-3 mt-2 border-t border-white/10">
-                  <p className="text-xs font-bold uppercase tracking-wider text-white/50 mb-3">Trip Roster</p>
+              {/* TRIP ROSTER — interactive editor (admin override)
+                  Mirrors the same RPCs Coach Mode uses, but available
+                  regardless of roster_locked_at so the admin can backfill
+                  past trips that never went through the kiosk live. */}
+              <div className="pt-3 mt-2 border-t border-white/10">
+                <p className="text-xs font-bold uppercase tracking-wider text-white/50 mb-3">Trip Roster</p>
 
-                  {editingVehicles.length > 0 && (
-                    <div className="space-y-2 mb-3">
-                      {editingVehicles.map((v) => {
-                        const inThisVehicle = editingRosterYouth.filter((y) => y.vehicle_id === v.id);
-                        return (
-                          <div key={v.id} className="rounded-lg bg-white/[0.03] border border-white/10 p-3">
-                            <div className="flex items-center justify-between mb-1.5">
-                              <p className="text-sm font-bold text-purple-200">🚐 {v.name}</p>
-                              <span className="text-xs text-white/50 tabular-nums">
-                                {v.assigned_count}/{v.seat_cap} seats
-                              </span>
+                {/* Vehicles + their assigned youth */}
+                {editingVehicles.length > 0 && (
+                  <div className="space-y-2 mb-3">
+                    {editingVehicles.map((v) => {
+                      const inThisVehicle = editingRosterYouth.filter((y) => y.vehicle_id === v.id);
+                      return (
+                        <div key={v.id} className="rounded-lg bg-white/[0.03] border border-white/10 p-3">
+                          <div className="flex items-start justify-between gap-2 mb-1.5">
+                            <div className="min-w-0">
+                              <p className="text-sm font-bold text-purple-200 flex items-center gap-1.5">
+                                <Truck className="w-3.5 h-3.5" /> {v.name}
+                              </p>
+                              <p className="text-xs text-white/50 mt-0.5">
+                                Driver: <span className="text-white/80 font-semibold">{v.driver_name}</span>
+                              </p>
                             </div>
-                            <p className="text-xs text-white/50 mb-2">
-                              Driver: <span className="text-white/80 font-semibold">{v.driver_name}</span>
-                            </p>
-                            {inThisVehicle.length > 0 ? (
-                              <ul className="text-xs text-white/70 space-y-0.5 pl-1">
-                                {inThisVehicle.map((y) => (
-                                  <li key={y.registration_id}>
-                                    • {y.child_first_name} {y.child_last_name}
-                                  </li>
-                                ))}
-                              </ul>
+                            <div className="flex items-center gap-2 shrink-0">
+                              <span className="text-xs text-white/50 tabular-nums">
+                                {v.assigned_count}/{v.seat_cap}
+                              </span>
+                              <button
+                                onClick={() => handleEditRemoveVehicle(v.id)}
+                                className="text-white/40 hover:text-red-400 transition"
+                                title="Remove vehicle"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
+                          </div>
+                          {inThisVehicle.length > 0 ? (
+                            <div className="flex flex-wrap gap-1.5">
+                              {inThisVehicle.map((y) => (
+                                <div
+                                  key={y.registration_id}
+                                  className="flex items-center gap-1.5 rounded-full bg-purple-500/10 border border-purple-400/30 pl-2 pr-1 py-0.5"
+                                >
+                                  <span className="text-xs font-semibold text-purple-100">
+                                    {y.child_first_name} {y.child_last_name}
+                                  </span>
+                                  <button
+                                    onClick={() => handleEditUnassignYouth(y.registration_id)}
+                                    className="w-4 h-4 rounded-full hover:bg-white/10 flex items-center justify-center text-white/50 hover:text-white"
+                                    aria-label="Unassign"
+                                  >
+                                    <X className="w-3 h-3" />
+                                  </button>
+                                </div>
+                              ))}
+                            </div>
+                          ) : (
+                            <p className="text-xs text-white/30 italic">No youth assigned to this vehicle.</p>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+
+                {/* Unassigned youth — popover to assign to a vehicle */}
+                {(() => {
+                  const unassigned = editingRosterYouth.filter((y) => !y.vehicle_id);
+                  if (unassigned.length === 0) return null;
+                  return (
+                    <div className="rounded-lg bg-yellow-500/[0.05] border border-yellow-400/20 p-3 mb-3">
+                      <p className="text-xs font-bold text-yellow-200/80 mb-2">
+                        Youth not assigned to any vehicle ({unassigned.length})
+                      </p>
+                      <div className="flex flex-wrap gap-1.5">
+                        {unassigned.map((y) => (
+                          <Popover key={y.registration_id}>
+                            <PopoverTrigger asChild disabled={editingVehicles.length === 0}>
+                              <button
+                                disabled={editingVehicles.length === 0}
+                                className="group flex items-center gap-1.5 rounded-full bg-white/[0.06] hover:bg-white/[0.12] border border-white/10 px-2 py-0.5 transition disabled:opacity-50 disabled:cursor-not-allowed"
+                              >
+                                <span className="text-xs font-semibold text-white/80">
+                                  {y.child_first_name} {y.child_last_name}
+                                </span>
+                                <Plus className="w-3 h-3 text-purple-300" />
+                              </button>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-56 bg-neutral-900 border-white/10 text-white p-2">
+                              <p className="text-[10px] text-white/50 px-2 py-1 font-semibold uppercase tracking-wider">
+                                Assign to vehicle
+                              </p>
+                              <div className="space-y-0.5">
+                                {editingVehicles.map((v) => {
+                                  const full = v.assigned_count >= v.seat_cap;
+                                  return (
+                                    <button
+                                      key={v.id}
+                                      disabled={full}
+                                      onClick={() => handleEditAssignYouth(y.registration_id, v.id)}
+                                      className="w-full text-left flex items-center justify-between rounded-md px-2 py-1.5 hover:bg-white/10 transition disabled:opacity-40 disabled:cursor-not-allowed"
+                                    >
+                                      <span className="font-semibold text-xs">{v.name}</span>
+                                      <span className="text-[10px] text-white/50 tabular-nums">
+                                        {v.assigned_count}/{v.seat_cap}{full ? " full" : ""}
+                                      </span>
+                                    </button>
+                                  );
+                                })}
+                              </div>
+                            </PopoverContent>
+                          </Popover>
+                        ))}
+                      </div>
+                      {editingVehicles.length === 0 && (
+                        <p className="text-[10px] text-yellow-200/60 mt-2">
+                          Add a vehicle below to start assigning seats.
+                        </p>
+                      )}
+                    </div>
+                  );
+                })()}
+
+                {/* Add Vehicle — preset picker, then form */}
+                {!editAddingVehicle && (
+                  <div className="rounded-lg bg-white/[0.02] border border-white/10 p-3 mb-3">
+                    <p className="text-[10px] font-bold uppercase tracking-wider text-white/50 mb-2">
+                      Add a Vehicle
+                    </p>
+                    <div className="grid grid-cols-2 md:grid-cols-5 gap-1.5">
+                      {EDIT_VEHICLE_PRESETS.map((p) => {
+                        const Icon = p.icon;
+                        return (
+                          <button
+                            key={p.name}
+                            onClick={() => {
+                              setEditAddingVehicle({ name: p.name, seat_cap: p.seat_cap, isCustom: false });
+                              setEditDriverNameInput("");
+                            }}
+                            className="flex flex-col items-center justify-center gap-1 rounded-md bg-white/[0.04] hover:bg-purple-500/10 hover:border-purple-400/40 border border-white/10 p-2 transition"
+                          >
+                            <Icon className="w-4 h-4 text-purple-300" />
+                            <span className="text-[11px] font-bold leading-none">{p.name}</span>
+                            <span className="text-[10px] text-white/50">{p.seat_cap} seats</span>
+                          </button>
+                        );
+                      })}
+                      <button
+                        onClick={() => {
+                          setEditAddingVehicle({ name: "", seat_cap: 0, isCustom: true });
+                          setEditCustomNameInput("");
+                          setEditCustomSeatInput("");
+                          setEditDriverNameInput("");
+                        }}
+                        className="flex flex-col items-center justify-center gap-1 rounded-md bg-white/[0.04] hover:bg-purple-500/10 hover:border-purple-400/40 border border-dashed border-white/20 p-2 transition"
+                      >
+                        <Plus className="w-4 h-4 text-purple-300" />
+                        <span className="text-[11px] font-bold leading-none">Other</span>
+                        <span className="text-[10px] text-white/50">Custom</span>
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {editAddingVehicle && (
+                  <div className="rounded-lg bg-purple-500/[0.06] border border-purple-400/30 p-3 mb-3 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <p className="text-[10px] font-bold uppercase tracking-wider text-purple-200">
+                        New Vehicle{editAddingVehicle.isCustom ? " — Custom" : ""}
+                      </p>
+                      <button
+                        onClick={() => setEditAddingVehicle(null)}
+                        className="text-white/40 hover:text-white"
+                      >
+                        <X className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                    {editAddingVehicle.isCustom ? (
+                      <div className="grid grid-cols-2 gap-2">
+                        <Input
+                          value={editCustomNameInput}
+                          onChange={(e) => setEditCustomNameInput(e.target.value)}
+                          placeholder="Vehicle name"
+                          className="bg-white/5 border-white/15 text-white text-xs h-8"
+                        />
+                        <Input
+                          type="number"
+                          min={1}
+                          value={editCustomSeatInput}
+                          onChange={(e) => setEditCustomSeatInput(e.target.value)}
+                          placeholder="Seats (excl. driver)"
+                          className="bg-white/5 border-white/15 text-white text-xs h-8"
+                        />
+                      </div>
+                    ) : (
+                      <p className="text-sm font-semibold">
+                        {editAddingVehicle.name}{" "}
+                        <span className="text-white/50 text-xs font-normal">• {editAddingVehicle.seat_cap} seats</span>
+                      </p>
+                    )}
+                    <Input
+                      value={editDriverNameInput}
+                      onChange={(e) => setEditDriverNameInput(e.target.value)}
+                      placeholder="Driver name"
+                      className="bg-white/5 border-white/15 text-white text-xs h-8"
+                    />
+                    <Button
+                      size="sm"
+                      onClick={handleEditAddVehicle}
+                      disabled={editSavingVehicle}
+                      className="w-full bg-purple-600 hover:bg-purple-700 text-white font-bold h-8 text-xs"
+                    >
+                      {editSavingVehicle ? "Adding…" : "Add Vehicle"}
+                    </Button>
+                  </div>
+                )}
+
+                {/* Add Youth — search + add directly to the roster */}
+                <div className="rounded-lg bg-white/[0.02] border border-white/10 p-3 mb-3">
+                  <p className="text-[10px] font-bold uppercase tracking-wider text-white/50 mb-2 flex items-center gap-1.5">
+                    <UserPlus className="w-3 h-3" /> Add Youth to Roster
+                  </p>
+                  <div className="relative mb-2">
+                    <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-white/40" />
+                    <Input
+                      value={editYouthSearch}
+                      onChange={(e) => setEditYouthSearch(e.target.value)}
+                      placeholder="Type a name to search…"
+                      className="pl-7 bg-white/5 border-white/15 text-white text-xs h-8"
+                    />
+                  </div>
+                  {editYouthSearching && (
+                    <p className="text-[11px] text-white/40">Searching…</p>
+                  )}
+                  {!editYouthSearching && editYouthSearch.trim().length >= 2 && editYouthResults.length === 0 && (
+                    <p className="text-[11px] text-white/40">No youth found.</p>
+                  )}
+                  {editYouthResults.length > 0 && (
+                    <div className="space-y-1">
+                      {editYouthResults.map((r) => {
+                        const alreadyIn = editingRosterYouth.some((y) => y.registration_id === r.id);
+                        return (
+                          <div
+                            key={r.id}
+                            className="flex items-center gap-2 rounded-md bg-white/[0.04] border border-white/10 px-2 py-1.5"
+                          >
+                            <div className="flex-1 min-w-0">
+                              <p className="text-xs font-semibold truncate">
+                                {r.child_first_name} {r.child_last_name}
+                              </p>
+                              <p className="text-[10px] text-white/40 truncate">{r.child_boxing_program}</p>
+                            </div>
+                            {alreadyIn ? (
+                              <span className="text-[10px] text-emerald-300 font-semibold flex items-center gap-0.5">
+                                <CheckCircle2 className="w-3 h-3" /> On roster
+                              </span>
                             ) : (
-                              <p className="text-xs text-white/30 italic">No youth assigned to this vehicle.</p>
+                              <Button
+                                size="sm"
+                                onClick={() => handleEditAddYouth(r.id)}
+                                className="bg-purple-600 hover:bg-purple-700 text-white font-bold h-7 text-[11px] px-2"
+                              >
+                                <Plus className="w-3 h-3 mr-0.5" /> Add
+                              </Button>
                             )}
                           </div>
                         );
                       })}
                     </div>
                   )}
+                </div>
 
-                  {(() => {
-                    const unassigned = editingRosterYouth.filter((y) => !y.vehicle_id);
-                    if (unassigned.length === 0) return null;
-                    return (
-                      <div className="rounded-lg bg-yellow-500/[0.05] border border-yellow-400/20 p-3 mb-3">
-                        <p className="text-xs font-bold text-yellow-200/80 mb-1.5">
-                          Youth not assigned to any vehicle ({unassigned.length})
-                        </p>
-                        <ul className="text-xs text-white/70 space-y-0.5 pl-1">
-                          {unassigned.map((y) => (
-                            <li key={y.registration_id}>
-                              • {y.child_first_name} {y.child_last_name}
-                            </li>
-                          ))}
-                        </ul>
-                      </div>
-                    );
-                  })()}
-
+                {/* Coaches & Volunteers riding along */}
+                <div className="rounded-lg bg-white/[0.03] border border-white/10 p-3">
+                  <p className="text-[10px] font-bold uppercase tracking-wider text-white/60 mb-2">
+                    Coaches & Volunteers Riding Along {editingPersonnel.length > 0 && `(${editingPersonnel.length})`}
+                  </p>
                   {editingPersonnel.length > 0 && (
-                    <div className="rounded-lg bg-white/[0.03] border border-white/10 p-3">
-                      <p className="text-xs font-bold text-white/60 mb-1.5">
-                        Coaches & Volunteers riding along ({editingPersonnel.length})
-                      </p>
-                      <ul className="text-xs text-white/70 space-y-0.5 pl-1">
-                        {editingPersonnel.map((p) => (
-                          <li key={p.id}>• {p.name}</li>
-                        ))}
-                      </ul>
+                    <div className="flex flex-wrap gap-1.5 mb-2">
+                      {editingPersonnel.map((p) => (
+                        <div
+                          key={p.id}
+                          className="flex items-center gap-1.5 rounded-full bg-white/[0.06] border border-white/10 pl-2 pr-1 py-0.5"
+                        >
+                          <span className="text-xs font-semibold">{p.name}</span>
+                          <button
+                            onClick={() => handleEditRemovePersonnel(p.id)}
+                            className="w-4 h-4 rounded-full hover:bg-white/10 flex items-center justify-center text-white/50 hover:text-white"
+                            aria-label="Remove"
+                          >
+                            <X className="w-3 h-3" />
+                          </button>
+                        </div>
+                      ))}
                     </div>
                   )}
-
-                  <p className="text-[10px] text-white/30 mt-2">
-                    Read-only summary. To change vehicle assignments or personnel, use Coach Mode.
-                  </p>
+                  <div className="flex gap-1.5">
+                    <Input
+                      value={editPersonnelInput}
+                      onChange={(e) => setEditPersonnelInput(e.target.value)}
+                      onKeyDown={(e) => { if (e.key === "Enter") handleEditAddPersonnel(); }}
+                      placeholder="Add a name and press Enter"
+                      className="bg-white/5 border-white/15 text-white text-xs h-8"
+                    />
+                    <Button
+                      size="sm"
+                      onClick={handleEditAddPersonnel}
+                      disabled={editSavingPersonnel || !editPersonnelInput.trim()}
+                      className="bg-purple-600 hover:bg-purple-700 text-white font-bold h-8 text-xs px-2"
+                    >
+                      <Plus className="w-3 h-3" />
+                    </Button>
+                  </div>
                 </div>
-              )}
+
+                <p className="text-[10px] text-white/30 mt-2">
+                  All changes save instantly. Admin edits work even after the roster is locked.
+                </p>
+              </div>
 
               {/* Trip timeline — read-only roster lock + editable arrival/return */}
               <div className="pt-3 mt-2 border-t border-white/10">
