@@ -222,6 +222,14 @@ const AdminAttendance = () => {
   const [excursionPrevState, setExcursionPrevState] = useState<boolean>(true);
   const [editingExcursion, setEditingExcursion] = useState<Excursion | null>(null);
   const [deleteExcursionTarget, setDeleteExcursionTarget] = useState<Excursion | null>(null);
+  // Pending excursion→practice/non-practice conversion. When set, the user
+  // chose a non-excursion day type from the context menu on a purple tile;
+  // we hold the action behind a confirmation dialog so a single accidental
+  // click can't wipe a backfilled trip + its roster + vehicles + personnel.
+  const [convertExcursionTarget, setConvertExcursionTarget] = useState<{
+    excursion: Excursion;
+    targetType: "practice" | "non-practice";
+  } | null>(null);
 
   // ── Interactive Edit Excursion modal: vehicle + youth + personnel controls
   const [editAddingVehicle, setEditAddingVehicle] = useState<{ name: string; seat_cap: number; isCustom: boolean } | null>(null);
@@ -770,10 +778,17 @@ const AdminAttendance = () => {
       return;
     }
 
-    // If currently an excursion, remove it first
+    // Switching a purple tile to red/green silently deleted the whole
+    // excursion (name, backfilled youth, vehicles, drivers, personnel,
+    // arrival/return timestamps) with no warning and no undo. Route the
+    // action through a confirmation dialog instead. The actual delete +
+    // day-type swap happens in performExcursionConversion on confirm.
     if (isExc && existingExcursion) {
-      await supabase.from("excursions").delete().eq("id", existingExcursion.id);
-      queryClient.invalidateQueries({ queryKey: ["excursions-cal"] });
+      setConvertExcursionTarget({
+        excursion: existingExcursion,
+        targetType: type as "practice" | "non-practice",
+      });
+      return;
     }
 
     const isPracTarget = type === "practice";
@@ -784,6 +799,36 @@ const AdminAttendance = () => {
     }
     queryClient.invalidateQueries({ queryKey: ["practice-days-cal"] });
     toast.success(isPracTarget ? "Marked as practice day" : "Marked as non-practice day");
+  };
+
+  // Runs the actual excursion delete + day-type swap once the user has
+  // confirmed in the conversion dialog. Mirrors the pre-confirmation
+  // logic that used to live inline in setDayType.
+  const performExcursionConversion = async () => {
+    if (!convertExcursionTarget) return;
+    const { excursion: ex, targetType } = convertExcursionTarget;
+    const dateStr = ex.date;
+    const isPracTarget = targetType === "practice";
+
+    const { error: delError } = await supabase.from("excursions").delete().eq("id", ex.id);
+    if (delError) { toast.error("Failed to delete excursion."); return; }
+
+    const existingPracticeDay = practiceDaysCalMonth.find((p) => p.date === dateStr);
+    if (existingPracticeDay) {
+      await supabase.from("practice_days").update({ is_practice_day: isPracTarget }).eq("id", existingPracticeDay.id);
+    } else {
+      await supabase.from("practice_days").insert({ date: dateStr, is_practice_day: isPracTarget });
+    }
+
+    queryClient.invalidateQueries({ queryKey: ["excursions-cal"] });
+    queryClient.invalidateQueries({ queryKey: ["practice-days-cal"] });
+    queryClient.invalidateQueries({ queryKey: ["excursions-ytd", YTD_START] });
+    queryClient.invalidateQueries({ queryKey: ["excursions-history-all"] });
+    queryClient.invalidateQueries({ queryKey: ["excursion-attendance-month", calMonthStart, calMonthEnd] });
+    queryClient.invalidateQueries({ queryKey: ["excursion-checkin-counts-all"] });
+
+    toast.success(isPracTarget ? "Trip deleted. Marked as practice day." : "Trip deleted. Marked as non-practice day.");
+    setConvertExcursionTarget(null);
   };
 
   const openDotContextMenu = (e: React.MouseEvent | React.TouchEvent, dateStr: string) => {
@@ -3675,6 +3720,52 @@ const AdminAttendance = () => {
               </div>
             </div>
           )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Convert Excursion → Practice / Non-Practice Confirmation
+          Guards the calendar-tile context-menu path that used to silently
+          delete the whole trip. */}
+      <Dialog open={!!convertExcursionTarget} onOpenChange={(open) => { if (!open) setConvertExcursionTarget(null); }}>
+        <DialogContent className="bg-zinc-900 border-red-500/30 text-white max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-red-300 flex items-center gap-2">
+              <AlertTriangle className="w-5 h-5" /> Convert this day from Excursion?
+            </DialogTitle>
+          </DialogHeader>
+          {convertExcursionTarget && (() => {
+            const ex = convertExcursionTarget.excursion;
+            const targetLabel = convertExcursionTarget.targetType === "practice" ? "Practice Day" : "Non-Practice Day";
+            const youthCount = excursionCountsById[ex.id] || 0;
+            return (
+              <div className="space-y-3">
+                <p className="text-sm text-white/80">
+                  You're switching{" "}
+                  <span className="font-bold text-white">"{ex.name}"</span>{" "}
+                  to a <span className="font-bold text-white">{targetLabel}</span>. This permanently deletes the trip.
+                </p>
+                <div className="rounded-lg bg-red-500/[0.08] border border-red-500/30 px-3 py-2.5 text-xs text-white/70 space-y-1">
+                  <p className="font-bold text-red-300 mb-1">This will also delete:</p>
+                  <ul className="space-y-0.5 pl-1">
+                    <li>• {youthCount} youth check-in{youthCount === 1 ? "" : "s"} backfilled to this trip</li>
+                    <li>• All vehicles + driver assignments</li>
+                    <li>• All coaches & volunteers riding along</li>
+                    <li>• Trip timeline (locked, arrived, returned)</li>
+                    <li>• Notes / lessons for next year</li>
+                  </ul>
+                </div>
+                <p className="text-xs text-yellow-200/80">
+                  This action <span className="font-bold">cannot be undone</span>.
+                </p>
+              </div>
+            );
+          })()}
+          <div className="flex gap-2 justify-end pt-3 mt-2 border-t border-white/10">
+            <Button variant="outline" size="sm" className="border-white/20 text-white" onClick={() => setConvertExcursionTarget(null)}>Cancel</Button>
+            <Button variant="destructive" size="sm" onClick={performExcursionConversion}>
+              <Trash2 className="w-4 h-4 mr-1.5" /> Convert and Delete Trip
+            </Button>
+          </div>
         </DialogContent>
       </Dialog>
 
