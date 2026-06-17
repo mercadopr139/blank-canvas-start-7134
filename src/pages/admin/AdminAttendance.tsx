@@ -3055,20 +3055,40 @@ const AdminAttendance = () => {
                             onClick={async () => {
                               if (alreadyCheckedIn) return;
                               setManualAdding(true);
-                              const checkInTime = new Date(selectedDay + "T17:15:00");
-                              const { error } = await supabase.from("attendance_records").insert({
-                                registration_id: r.id,
-                                check_in_date: selectedDay,
-                                check_in_at: checkInTime.toISOString(),
-                                program_source: "NLA",
-                                is_manual: true,
-                                added_by_user_id: user?.id || null,
-                              });
+                              // If this day is a purple Excursion day, file the youth
+                              // as Excursion attendance (tagged with the excursion_id)
+                              // so they land on the trip roster — mirroring the table's
+                              // "Add Youth to Roster". Filing as "NLA" here made
+                              // manually-added kids invisible to the excursion until the
+                              // day was flipped back to green.
+                              const excForDay = excursionsCalMonth.find((e) => e.date === selectedDay);
+                              let error;
+                              if (excForDay) {
+                                ({ error } = await supabase.rpc("admin_record_excursion_attendance", {
+                                  _excursion_id: excForDay.id,
+                                  _registration_id: r.id,
+                                  _check_in_date: selectedDay,
+                                }));
+                              } else {
+                                const checkInTime = new Date(selectedDay + "T17:15:00");
+                                ({ error } = await supabase.from("attendance_records").insert({
+                                  registration_id: r.id,
+                                  check_in_date: selectedDay,
+                                  check_in_at: checkInTime.toISOString(),
+                                  program_source: "NLA",
+                                  is_manual: true,
+                                  added_by_user_id: user?.id || null,
+                                }));
+                              }
                               if (error) {
                                 toast.error("Failed to add check-in");
                               } else {
                                 toast.success(`Manual check-in added for ${r.child_first_name} ${r.child_last_name}`);
                                 invalidateAttendance();
+                                if (excForDay) {
+                                  queryClient.invalidateQueries({ queryKey: ["excursion-attendance-month", calMonthStart, calMonthEnd] });
+                                  queryClient.invalidateQueries({ queryKey: ["excursion-checkin-counts-all"] });
+                                }
                                 setManualSearch("");
                                 setManualAddMode(false);
                               }
