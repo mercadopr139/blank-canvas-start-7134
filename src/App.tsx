@@ -28,6 +28,7 @@ import AdminClients from "./pages/admin/AdminClients";
 import AdminServiceCalendar from "./pages/admin/AdminServiceCalendar";
 import AdminInvoices from "./pages/admin/AdminInvoices";
  import AdminRegistrations from "./pages/admin/AdminRegistrations";
+import AdminDuplicateRegistrations from "./pages/admin/AdminDuplicateRegistrations";
  import AdminBilling from "./pages/admin/AdminBilling";
 import AdminCSBGInvoice from "./pages/admin/AdminCSBGInvoice";
 import AdminDocumentVault from "./pages/admin/AdminDocumentVault";
@@ -181,6 +182,7 @@ const App = () => (
               <Route index element={<AdminOperationsIndex />} />
               <Route path="registrations" element={<AdminRegistrations />} />
               <Route path="registration-analytics" element={<AdminRegistrationAnalytics />} />
+              <Route path="duplicate-registrations" element={<AdminDuplicateRegistrations />} />
               <Route path="attendance" element={<AdminAttendance />} />
               <Route path="attendance-reports" element={<AdminAttendanceReports />} />
               <Route path="form-builder" element={<AdminFormBuilder />} />

@@ -11,7 +11,7 @@
 
 import type { LucideIcon } from "lucide-react";
 import {
-  Users, BarChart3, ClipboardList, CalendarCheck, FileBarChart, Settings2,
+  Users, BarChart3, ClipboardList, CalendarCheck, FileBarChart, Settings2, Copy,
   Star, Bus, UserCheck, Radio, PhoneOff, AlertTriangle, FileText,
   UtensilsCrossed, HandCoins, Database, MessageSquare, Mail, Receipt,
   ScrollText, ClipboardCheck, LayoutDashboard, Archive,
@@ -41,6 +41,7 @@ export const OPERATIONS_TILES: PillarTile[] = [
       { title: "Registration Form", href: "/register", icon: ClipboardList, external: true },
       { title: "Registrations", href: "/admin/operations/registrations", icon: Users },
       { title: "Registration Analytics", href: "/admin/operations/registration-analytics", icon: BarChart3 },
+      { title: "Duplicate Registrations", href: "/admin/operations/duplicate-registrations", icon: Copy },
       { title: "Form Builder", href: "/admin/operations/form-builder", icon: Settings2 },
     ],
   },
