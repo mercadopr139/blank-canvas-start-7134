@@ -81,8 +81,11 @@ export default function TransportRunsPay() {
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [panelOpen, setPanelOpen] = useState(false);
   const [editingRunId, setEditingRunId] = useState<string | null>(null);
-  const [editForm, setEditForm] = useState<{ route: string; runType: string; date: string; time: string }>({ route: "", runType: "", date: "", time: "" });
+  const [editForm, setEditForm] = useState<{ route: string; runType: string; date: string; time: string; driver: string }>({ route: "", runType: "", date: "", time: "", driver: "" });
   const [routes, setRoutes] = useState<{ id: string; name: string }[]>([]);
+  // Drivers list for the edit-trip dropdown — lets the admin reassign a
+  // submitted trip to a different driver if the wrong driver was logged.
+  const [drivers, setDrivers] = useState<{ id: string; name: string }[]>([]);
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
   const [expandedRosters, setExpandedRosters] = useState<Set<string>>(new Set());
   const [rosterData, setRosterData] = useState<Record<string, { id: string; youth_id: string; status: string; first_name: string; last_name: string; photo_url: string | null; pickup_zone: string }[]>>({});
@@ -138,17 +141,19 @@ export default function TransportRunsPay() {
 
     // Half-period totals are derived from the visible month's `runs` (split by
     // day-of-month in driverPayData), so no separate pay-period fetch needed.
-    const [runsRes, approvalsRes, attRes, routesRes, yearRunsRes] = await Promise.all([
+    const [runsRes, approvalsRes, attRes, routesRes, yearRunsRes, driversRes] = await Promise.all([
       supabase.from("runs").select("id, run_type, status, started_at, closed_at, driver:drivers(id, name), route:routes(id, name)").eq("status", "completed").gte("started_at", from).lte("started_at", to).order("started_at", { ascending: false }),
       supabase.from("run_approvals").select("id, run_id, status, notes"),
       supabase.from("transport_attendance").select("run_id").gte("recorded_at", from).lte("recorded_at", to),
       supabase.from("routes").select("id, name"),
       supabase.from("runs").select("id, run_type, status, started_at, closed_at, driver:drivers(id, name), route:routes(id, name)").eq("status", "completed").gte("started_at", yearStart).lte("started_at", yearEnd),
+      supabase.from("drivers").select("id, name").order("name"),
     ]);
     if (runsRes.data) setRuns(runsRes.data as unknown as RunWithDetails[]);
     if (approvalsRes.data) setApprovals(approvalsRes.data as unknown as RunApproval[]);
     if (routesRes.data) setRoutes(routesRes.data as unknown as { id: string; name: string }[]);
     if (yearRunsRes.data) setYearRuns(yearRunsRes.data as unknown as RunWithDetails[]);
+    if (driversRes.data) setDrivers(driversRes.data as unknown as { id: string; name: string }[]);
     const counts: Record<string, number> = {};
     (attRes.data || []).forEach((a: { run_id: string }) => { counts[a.run_id] = (counts[a.run_id] || 0) + 1; });
     setAttendanceCounts(counts);
@@ -242,12 +247,26 @@ export default function TransportRunsPay() {
   };
   const startEdit = (r: RunWithDetails) => {
     setEditingRunId(r.id);
-    setEditForm({ route: r.route?.id || "", runType: r.run_type, date: format(new Date(r.started_at), "yyyy-MM-dd"), time: format(new Date(r.started_at), "HH:mm") });
+    setEditForm({
+      route: r.route?.id || "",
+      runType: r.run_type,
+      date: format(new Date(r.started_at), "yyyy-MM-dd"),
+      time: format(new Date(r.started_at), "HH:mm"),
+      driver: r.driver?.id || "",
+    });
   };
   const handleSaveEdit = async () => {
     if (!editingRunId) return;
     const newStartedAt = new Date(`${editForm.date}T${editForm.time}:00`).toISOString();
-    await supabase.from("runs").update({ route_id: editForm.route, run_type: editForm.runType as "pickup" | "dropoff", started_at: newStartedAt }).eq("id", editingRunId);
+    // driver_id may reassign the trip's pay to a different driver. The
+    // existing Paid/Unpaid marks on driver_pay_periods stay attached to
+    // whoever was previously credited — admin owns the reconciliation.
+    await supabase.from("runs").update({
+      route_id: editForm.route,
+      run_type: editForm.runType as "pickup" | "dropoff",
+      started_at: newStartedAt,
+      driver_id: editForm.driver,
+    }).eq("id", editingRunId);
     setEditingRunId(null);
     toast({ title: "Trip updated" }); fetchData();
   };
@@ -722,6 +741,12 @@ export default function TransportRunsPay() {
                   <div key={r.id} className="bg-white/5 border border-blue-500/30 rounded-lg p-3 space-y-3">
                     <p className="text-white text-sm font-medium">Edit Trip</p>
                     <div className="space-y-2">
+                      <div>
+                        <label className="text-white/40 text-[10px] uppercase">Driver</label>
+                        <select value={editForm.driver} onChange={(e) => setEditForm((f) => ({ ...f, driver: e.target.value }))} className="w-full bg-white/5 border border-white/10 rounded px-2 py-1.5 text-sm text-white">
+                          {drivers.map((dr) => <option key={dr.id} value={dr.id} className="bg-[#111827]">{dr.name}</option>)}
+                        </select>
+                      </div>
                       <div>
                         <label className="text-white/40 text-[10px] uppercase">Route</label>
                         <select value={editForm.route} onChange={(e) => setEditForm((f) => ({ ...f, route: e.target.value }))} className="w-full bg-white/5 border border-white/10 rounded px-2 py-1.5 text-sm text-white">
