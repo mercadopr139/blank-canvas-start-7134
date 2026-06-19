@@ -42,6 +42,10 @@ interface Registration {
   household_income_range: string;
   free_or_reduced_lunch: string | null;
   child_race_ethnicity: string | null;
+  // Raw dropdown answer from the registration form. One of:
+  // "Dad and Mom", "Mom + Partner", "Dad + Partner", "Mom Only",
+  // "Dad Only", "Grandparent(s)", "Other", or null for legacy rows.
+  family_structure: string | null;
 }
 
 interface AttendanceRecord {
@@ -295,7 +299,7 @@ const AdminAttendance = () => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("youth_registrations")
-        .select("id, child_first_name, child_last_name, child_boxing_program, child_headshot_url, is_bald_eagle, bald_eagle_active, child_sex, child_school_district, household_income_range, free_or_reduced_lunch, child_race_ethnicity")
+        .select("id, child_first_name, child_last_name, child_boxing_program, child_headshot_url, is_bald_eagle, bald_eagle_active, child_sex, child_school_district, household_income_range, free_or_reduced_lunch, child_race_ethnicity, family_structure")
         .order("child_last_name");
       if (error) throw error;
       return data as Registration[];
@@ -1375,6 +1379,44 @@ const AdminAttendance = () => {
     const whiteCount = counts["White"] || 0;
     const minorityCount = total - whiteCount;
     return { counts: sorted, total, whiteCount, minorityCount };
+  }, [mtdRegIds, regMap]);
+
+  /* ───── FAMILY STRUCTURE (funder-facing) ─────
+   * Reads the raw family_structure dropdown answer from the registration
+   * form. "Dad and Mom" = both biological parents; anything else (or
+   * blank) counts toward "Not With Both Bio Parents" — the metric grant
+   * funders specifically ask about (single-parent, kinship care, etc.).
+   * Same MTD scope as the surrounding demographic cards. */
+  const FAMILY_ORDER = [
+    "Dad and Mom",
+    "Mom Only",
+    "Dad Only",
+    "Mom + Partner",
+    "Dad + Partner",
+    "Grandparent(s)",
+    "Other",
+  ];
+  const mtdFamilyBreakdown = useMemo(() => {
+    const counts: Record<string, number> = {};
+    let withAnswer = 0;
+    mtdRegIds.forEach((id) => {
+      const reg = regMap[id];
+      const fs = reg?.family_structure;
+      if (fs) {
+        counts[fs] = (counts[fs] || 0) + 1;
+        withAnswer++;
+      }
+    });
+    const both = counts["Dad and Mom"] || 0;
+    const notBoth = withAnswer - both;
+    const sorted = FAMILY_ORDER
+      .map((name) => [name, counts[name] || 0] as [string, number])
+      .filter(([, n]) => n > 0);
+    // Append any non-standard / free-text answers we didn't recognize.
+    Object.entries(counts).forEach(([name, n]) => {
+      if (!FAMILY_ORDER.includes(name) && n > 0) sorted.push([name, n]);
+    });
+    return { counts: sorted, total: withAnswer, both, notBoth };
   }, [mtdRegIds, regMap]);
 
   const mtdLabel = isCurrentMonth ? `Month-to-Date — ${viewedMonthShort}` : viewedMonthShort;
@@ -2471,6 +2513,76 @@ const AdminAttendance = () => {
                 <div className="border-t border-white/10 mt-3 pt-1.5 text-center">
                   <p className="text-[10px] text-white/40">
                     <span className="font-semibold text-white/70">{mtdRaceBreakdown.total}</span> total youth served
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        )}
+
+        {/* Family Structure + Not With Both Bio Parents — Month-to-Date
+            Funder-facing demographic. "Dad and Mom" = both biological
+            parents; every other answer (Mom Only, Dad Only, Grandparents,
+            Mom/Dad + Partner, Other) counts toward the disrupted-household
+            stat funders track. */}
+        {mtdFamilyBreakdown.total > 0 && (
+          <div className="flex flex-col md:flex-row gap-4 mb-4 max-w-5xl">
+            <Card className="bg-white/5 border-white/10 text-white flex-1 max-w-2xl">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-medium text-white/60 flex items-center gap-2">
+                  <Users className="w-4 h-4" /> Family Structure — {mtdLabel}
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-2">
+                  {mtdFamilyBreakdown.counts.map(([label, count]) => {
+                    const pctVal = Math.round((count / mtdFamilyBreakdown.total) * 100);
+                    return (
+                      <div key={label} className="flex items-center gap-3">
+                        <span className="text-xs text-white/70 w-52 flex-shrink-0 truncate" title={label}>{label}</span>
+                        <div className="flex-1 h-2 bg-white/5 rounded-full overflow-hidden min-w-0">
+                          <div
+                            className="h-full bg-[#bf0f3e] rounded-full"
+                            style={{ width: `${pctVal}%` }}
+                          />
+                        </div>
+                        <span className="text-xs font-semibold text-white w-10 text-right tabular-nums">{pctVal}%</span>
+                        <span className="text-[10px] text-white/40 w-14 text-right tabular-nums">{count} youth</span>
+                      </div>
+                    );
+                  })}
+                </div>
+                <p className="text-[10px] text-white/30 mt-3 text-right">
+                  {mtdFamilyBreakdown.total} distinct youth answered {isCurrentMonth ? "this month" : `in ${viewedMonthShort}`}
+                </p>
+              </CardContent>
+            </Card>
+
+            <Card className="bg-white/5 border-white/10 text-white w-full md:w-64">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-medium text-white/60">Not With Both Bio Parents — {mtdLabel}</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="flex items-center gap-3">
+                  <div className="text-center flex-1">
+                    <p className="text-3xl font-bold text-[#bf0f3e]">
+                      {Math.round((mtdFamilyBreakdown.notBoth / mtdFamilyBreakdown.total) * 100)}%
+                    </p>
+                    <p className="text-[10px] text-white/60 mt-0.5">Not Both Bio</p>
+                    <p className="text-[10px] text-white/30">{mtdFamilyBreakdown.notBoth} youth</p>
+                  </div>
+                  <div className="w-px h-12 bg-white/10" />
+                  <div className="text-center flex-1">
+                    <p className="text-3xl font-bold text-white/70">
+                      {Math.round((mtdFamilyBreakdown.both / mtdFamilyBreakdown.total) * 100)}%
+                    </p>
+                    <p className="text-[10px] text-white/60 mt-0.5">Both Bio</p>
+                    <p className="text-[10px] text-white/30">{mtdFamilyBreakdown.both} youth</p>
+                  </div>
+                </div>
+                <div className="border-t border-white/10 mt-3 pt-1.5 text-center">
+                  <p className="text-[10px] text-white/40">
+                    <span className="font-semibold text-white/70">{mtdFamilyBreakdown.total}</span> answered the question
                   </p>
                 </div>
               </CardContent>
