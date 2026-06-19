@@ -781,6 +781,7 @@ const EditRegistrationForm = ({
               <SelectItem value="Mom + Partner">Mom + Partner</SelectItem>
               <SelectItem value="Dad + Partner">Dad + Partner</SelectItem>
               <SelectItem value="Grandparent(s)">Grandparent(s)</SelectItem>
+              <SelectItem value="Single Parent Household">Single Parent Household (unspecified)</SelectItem>
               <SelectItem value="Other">Other</SelectItem>
             </SelectContent>
           </Select>
