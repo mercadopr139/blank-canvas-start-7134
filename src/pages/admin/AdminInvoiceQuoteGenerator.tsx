@@ -57,6 +57,7 @@ interface FormState {
   expiryDate: string;  // yyyy-MM-dd
   lineItems: AdHocLineItem[];
   notes: string;
+  noteToRecipient: string;
 }
 
 const todayIso = () => format(new Date(), "yyyy-MM-dd");
@@ -75,6 +76,7 @@ const emptyForm = (): FormState => ({
   expiryDate: thirtyDaysOutIso(),
   lineItems: [{ description: "", quantity: 1, rate: 0, amount: 0 }],
   notes: "",
+  noteToRecipient: "",
 });
 
 const recomputeLineAmount = (item: AdHocLineItem): AdHocLineItem => ({
@@ -100,6 +102,7 @@ interface SavedDoc {
   subtotal: number;
   total: number;
   notes: string | null;
+  note_to_recipient: string | null;
   status: string;
   pdf_base64: string | null;
   created_at: string;
@@ -197,6 +200,7 @@ export default function AdminInvoiceQuoteGenerator() {
       expiryDate: d.expiry_date ?? thirtyDaysOutIso(),
       lineItems: d.line_items.length > 0 ? d.line_items : emptyForm().lineItems,
       notes: d.notes ?? "",
+      noteToRecipient: d.note_to_recipient ?? "",
     });
     setEditingId(d.id);
     setSavedDocNumber(d.doc_number);
@@ -217,6 +221,7 @@ export default function AdminInvoiceQuoteGenerator() {
     subtotal,
     total,
     notes: form.notes || null,
+    noteToRecipient: form.noteToRecipient || null,
   });
 
   const validateForm = (): string | null => {
@@ -260,6 +265,7 @@ export default function AdminInvoiceQuoteGenerator() {
         subtotal,
         total,
         notes: form.notes.trim() || null,
+        note_to_recipient: form.noteToRecipient.trim() || null,
         pdf_base64: pdfBase64,
         pdf_generated_at: new Date().toISOString(),
       };
@@ -326,6 +332,7 @@ export default function AdminInvoiceQuoteGenerator() {
         subtotal,
         total,
         notes: form.notes.trim() || null,
+        note_to_recipient: form.noteToRecipient.trim() || null,
         pdf_base64: pdfBase64,
         pdf_generated_at: new Date().toISOString(),
       };
@@ -668,6 +675,23 @@ export default function AdminInvoiceQuoteGenerator() {
               }
               className="bg-white/5 border-white/10 text-white mt-1 min-h-[80px] text-sm"
             />
+          </div>
+
+          {/* Note to recipient — separate clause printed below TERMS on the
+              PDF. Optional per doc. */}
+          <div>
+            <label className="text-[10px] uppercase tracking-wider text-white/50 font-semibold">
+              Note to recipient
+            </label>
+            <Textarea
+              value={form.noteToRecipient}
+              onChange={(e) => updateField("noteToRecipient", e.target.value)}
+              placeholder="e.g. If no late bus is provided by the school, NLA will provide transport for students in need."
+              className="bg-white/5 border-white/10 text-white mt-1 min-h-[70px] text-sm"
+            />
+            <p className="text-[10px] text-white/30 mt-1">
+              Optional. Prints as its own section on the PDF, below the Terms block.
+            </p>
           </div>
 
           {/* Actions */}

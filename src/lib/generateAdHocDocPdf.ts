@@ -39,6 +39,11 @@ export interface AdHocDocData {
   subtotal: number;
   total: number;
   notes?: string | null;
+  // Free-text clause printed in its own "NOTE TO RECIPIENT" section
+  // below TERMS. Lets the admin spell out per-doc conditions ("If no
+  // late bus is provided by the school, NLA will provide transport
+  // for students in need") without mixing them into the dates block.
+  noteToRecipient?: string | null;
   logoBase64?: string;
 }
 
@@ -70,6 +75,7 @@ export function generateAdHocDocPdf(data: AdHocDocData): jsPDF {
     subtotal,
     total,
     notes,
+    noteToRecipient,
     logoBase64,
   } = data;
 
@@ -269,6 +275,25 @@ export function generateAdHocDocPdf(data: AdHocDocData): jsPDF {
     doc.setTextColor(...BRAND_GRAY);
     doc.text("Payment Terms: Due within 30 days of invoice date.", marginL, y);
     y += 6;
+  }
+
+  // ─── NOTE TO RECIPIENT ───
+  // Per-doc clause (e.g. transportation contingency). Sits below TERMS
+  // so the recipient reads dates first, then the conditions attached.
+  if (noteToRecipient && noteToRecipient.trim()) {
+    drawHR(y);
+    y += 5;
+    doc.setFontSize(7);
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(...BRAND_GRAY);
+    doc.text("NOTE TO RECIPIENT", marginL, y);
+    y += 4;
+    doc.setFontSize(8);
+    doc.setFont("helvetica", "normal");
+    doc.setTextColor(...BRAND_DARK);
+    const lines = doc.splitTextToSize(noteToRecipient.trim(), contentW);
+    doc.text(lines, marginL, y);
+    y += lines.length * 3.5 + 4;
   }
 
   // ─── THANK YOU / SIGNATURE BLOCK ───
