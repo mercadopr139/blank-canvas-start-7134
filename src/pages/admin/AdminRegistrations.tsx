@@ -759,6 +759,32 @@ const EditRegistrationForm = ({
           <Field label="Adults in Household" value={form.adults_in_household?.toString() || ""} onChange={(v) => set("adults_in_household", v ? parseInt(v) : 0)} type="number" />
           <Field label="Siblings in Household" value={form.siblings_in_household?.toString() || ""} onChange={(v) => set("siblings_in_household", v ? parseInt(v) : 0)} type="number" />
         </div>
+        {/* Family Structure — the text-label answer (powers the funder-facing
+            Family Structure card on Attendance Intelligence). Distinct from
+            the numeric Adults in Household count above. The "Not set"
+            sentinel option maps to NULL in the DB; shadcn Select doesn't
+            accept empty-string SelectItem values, hence the sentinel. */}
+        <div className="space-y-1">
+          <Label className="text-xs text-muted-foreground">Family Structure</Label>
+          <Select
+            value={form.family_structure || "__not_set__"}
+            onValueChange={(v) => set("family_structure", v === "__not_set__" ? null : v)}
+          >
+            <SelectTrigger className="text-sm">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="__not_set__">— Not set —</SelectItem>
+              <SelectItem value="Dad and Mom">Dad and Mom</SelectItem>
+              <SelectItem value="Mom Only">Mom Only</SelectItem>
+              <SelectItem value="Dad Only">Dad Only</SelectItem>
+              <SelectItem value="Mom + Partner">Mom + Partner</SelectItem>
+              <SelectItem value="Dad + Partner">Dad + Partner</SelectItem>
+              <SelectItem value="Grandparent(s)">Grandparent(s)</SelectItem>
+              <SelectItem value="Other">Other</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
         <SelectField
           label="Household Income"
           value={form.household_income_range}
@@ -1069,6 +1095,7 @@ const RegistrationDetail = ({ registration: reg, onApprovalChange }: { registrat
         <InfoRow label="Boxing Program" value={reg.child_boxing_program} />
         <InfoRow label="Extended Program" value={(reg as any).extended_program || "Unassigned"} />
         <InfoRow label="Adults in Household" value={reg.adults_in_household} />
+        <InfoRow label="Family Structure" value={(reg as any).family_structure || "— Not set —"} />
         <InfoRow label="Siblings in Household" value={reg.siblings_in_household} />
       </Section>
 
