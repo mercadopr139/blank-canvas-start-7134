@@ -20,7 +20,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { ArrowLeft, Plus, Trash2, Download, Search, FileText, RotateCcw } from "lucide-react";
+import { ArrowLeft, Plus, Trash2, Download, Search, FileText, RotateCcw, FilePlus2 } from "lucide-react";
 import { format } from "date-fns";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -282,6 +282,67 @@ export default function AdminInvoiceQuoteGenerator() {
         setSavedDocNumber(docNumber);
         toast({ title: `${form.docType === "quote" ? "Quote" : "Invoice"} saved`, description: `Doc # ${docNumber}` });
       }
+      qc.invalidateQueries({ queryKey: ["ad-hoc-docs"] });
+    } catch (e: any) {
+      toast({ title: "Save failed", description: e.message, variant: "destructive" });
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  // Duplicate the current form values into a brand-new doc with the next
+  // doc number, leaving the original (editingId) untouched. Used when an
+  // admin wants to edit an existing doc but keep both versions in history
+  // — e.g. revising a quote without overwriting what was already sent.
+  // Same doc type as the current edit (Quote stays Quote, Invoice stays
+  // Invoice).
+  const handleSaveAsNew = async () => {
+    const err = validateForm();
+    if (err) {
+      toast({ title: err, variant: "destructive" });
+      return;
+    }
+    setIsSaving(true);
+    try {
+      const { data: numData, error: numErr } = await supabase.rpc(
+        "next_ad_hoc_doc_number" as any,
+        { p_doc_type: form.docType } as any,
+      );
+      if (numErr) throw numErr;
+      const docNumber = numData as unknown as string;
+
+      const pdfBase64 = await getAdHocDocPdfBase64(buildPdfData(docNumber));
+      const payload = {
+        doc_type: form.docType,
+        doc_number: docNumber,
+        recipient_name: form.recipientName.trim(),
+        recipient_email: form.recipientEmail.trim() || null,
+        recipient_address: form.recipientAddress.trim() || null,
+        issue_date: form.issueDate,
+        expiry_date: form.expiryDate || null,
+        line_items: form.lineItems.filter(
+          (i) => i.description.trim() || i.amount > 0,
+        ),
+        subtotal,
+        total,
+        notes: form.notes.trim() || null,
+        pdf_base64: pdfBase64,
+        pdf_generated_at: new Date().toISOString(),
+      };
+      const { data, error } = await supabase
+        .from("ad_hoc_docs" as any)
+        .insert({ ...payload, created_by: user?.id ?? null } as any)
+        .select("id")
+        .single();
+      if (error) throw error;
+      // Switch the editor to point at the new doc — feels like the user
+      // is now working on the new copy, original is preserved in History.
+      setEditingId((data as { id: string }).id);
+      setSavedDocNumber(docNumber);
+      toast({
+        title: `${form.docType === "quote" ? "Quote" : "Invoice"} saved as new`,
+        description: `Doc # ${docNumber} — original kept intact in History.`,
+      });
       qc.invalidateQueries({ queryKey: ["ad-hoc-docs"] });
     } catch (e: any) {
       toast({ title: "Save failed", description: e.message, variant: "destructive" });
@@ -620,6 +681,21 @@ export default function AdminInvoiceQuoteGenerator() {
               <Download className="w-4 h-4" />
               {isDownloading ? "Generating…" : "Download PDF"}
             </Button>
+            {/* Only show "Save as New" when editing an existing doc — for a
+                brand-new doc, the primary Save button already creates a new
+                row, so a second button would be redundant. */}
+            {editingId && (
+              <Button
+                variant="outline"
+                onClick={handleSaveAsNew}
+                disabled={isSaving}
+                className="border-white/20 bg-transparent text-white hover:bg-white/10 gap-1.5"
+                title={`Save your edits as a new ${isQuote ? "Quote" : "Invoice"} — the original stays untouched.`}
+              >
+                <FilePlus2 className="w-4 h-4" />
+                {isSaving ? "Saving…" : "Save as New"}
+              </Button>
+            )}
             <Button
               onClick={handleSave}
               disabled={isSaving}
