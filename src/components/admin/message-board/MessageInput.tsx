@@ -14,7 +14,7 @@ interface Props {
   onSent: () => void;
 }
 
-const MAX_FILE_BYTES = 25 * 1024 * 1024; // 25MB per file
+const MAX_FILE_BYTES = 100 * 1024 * 1024; // 100MB per file — sized for the scanned PDFs Josh + Chrissy share for review
 const ACCEPTED = "image/*,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,.docx,.doc";
 
 const formatBytes = (b: number) => {
