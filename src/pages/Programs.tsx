@@ -5,6 +5,7 @@ import ProgramsSection from "@/components/sections/ProgramsSection";
 import ProgramsExtrasSection from "@/components/sections/ProgramsExtrasSection";
 import MoreThanBoxingSection from "@/components/sections/MoreThanBoxingSection";
 import DailyRhythmSection from "@/components/sections/DailyRhythmSection";
+import SummerBreakBanner from "@/components/sections/SummerBreakBanner";
 import {
   Dialog,
   DialogContent,
@@ -33,6 +34,7 @@ const Programs = () => {
       <Header />
       
       <main className="flex-1">
+        <SummerBreakBanner />
         <ProgramsSection onMoreInfo={handleMoreInfo} />
         <ProgramsExtrasSection />
         <MoreThanBoxingSection />

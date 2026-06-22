@@ -13,6 +13,7 @@ import { useToast } from "@/hooks/use-toast";
 import { CheckCircle2, Loader2, Upload } from "lucide-react";
 import Header from "@/components/layout/Header";
 import Footer from "@/components/layout/Footer";
+import SummerBreakBanner from "@/components/sections/SummerBreakBanner";
 import WaiverSection from "@/components/registration/WaiverSection";
 import { WAIVER_TEXTS } from "@/components/registration/waiverTexts";
 import ChildPrimaryAddressField from "@/components/registration/ChildPrimaryAddressField";
@@ -678,6 +679,7 @@ const Register = () => {
   return (
     <div className="min-h-screen flex flex-col bg-background">
       <Header />
+      <SummerBreakBanner compact />
       <main className="flex-1 container mx-auto px-4 py-8 max-w-xl">
         <Card className="shadow-lg">
           <CardContent className="pt-8 pb-8">

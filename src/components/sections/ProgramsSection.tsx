@@ -3,9 +3,10 @@ import { Link } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { DollarSign, Shirt, Clock, Utensils, AlarmClock, Megaphone, Dumbbell } from "lucide-react";
+import { DollarSign, Shirt, Clock, Utensils, AlarmClock, Megaphone, Dumbbell, Pause } from "lucide-react";
 import juniorBoxingImage from "@/assets/programs/junior-boxing-modal.png";
 import seniorBoxingImage from "@/assets/programs/senior-boxing-modal.png";
+import { isSummerBreakActive, SUMMER_BREAK_COPY } from "@/lib/summerBreak";
 const programs = [{
   title: "Junior Boxing Program",
   ages: "Ages 7–10 | Tuesdays",
@@ -114,6 +115,17 @@ const ProgramsSection = ({
               <AlarmClock className="h-3.5 w-3.5 text-foreground flex-shrink-0" /> Pick-Up: 7-7:10pm, Please be on time!
             </p>
           </div>
+          {/* Summer-break notice — informational only; sign-up stays active
+              year-round so families in need can still register and NLA can
+              support them case-by-case. */}
+          {isSummerBreakActive() && (
+            <div className="mt-4 flex items-start gap-2.5 rounded-lg bg-amber-500/10 border border-amber-400/30 px-3 py-2.5">
+              <Pause className="h-4 w-4 text-amber-400 mt-0.5 shrink-0" />
+              <p className="text-xs text-foreground/80 leading-snug">
+                <span className="font-semibold text-foreground">Tuesday programming is on summer break.</span> Junior Boxing returns {SUMMER_BREAK_COPY.juniorReturn}. You're still welcome to register — we'll be in touch.
+              </p>
+            </div>
+          )}
           <Button className="w-full mt-4 bg-primary hover:bg-primary/90 text-primary-foreground font-semibold" asChild>
             <Link to="/register">
               SIGN-UP
