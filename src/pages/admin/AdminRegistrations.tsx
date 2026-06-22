@@ -165,7 +165,11 @@ const AdminRegistrations = () => {
       const matchesBaldEagle = baldEagleFilter === "all" || (baldEagleFilter === "yes" ? reg.is_bald_eagle : !reg.is_bald_eagle);
       const matchesExtended = extendedProgramFilter === "all"
         || (extendedProgramFilter === "unassigned" ? !(reg as any).extended_program : (reg as any).extended_program === extendedProgramFilter);
+      // Defensive: if no rows in the dataset have program_year set yet
+      // (Phase B migration not applied), the filter is a no-op so the
+      // list doesn't go blank.
       const matchesProgramYear = programYearFilter === "__all__"
+        || programYears.length === 0
         || (reg as any).program_year === programYearFilter;
 
       return matchesSearch && matchesProgram && matchesDistrict && matchesBaldEagle && matchesExtended && matchesProgramYear;

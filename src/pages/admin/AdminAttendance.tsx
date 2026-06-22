@@ -320,6 +320,11 @@ const AdminAttendance = () => {
   }, [allRegistrations]);
   const registrations = useMemo(() => {
     if (programYearFilter === "__all__") return allRegistrations;
+    // Defensive: if the Phase B migration hasn't been applied yet, no row
+    // will have program_year set. Treat the filter as a no-op so the page
+    // (calendar tile counts, demographic cards, etc.) doesn't go blank.
+    const anyTagged = allRegistrations.some((r) => r.program_year);
+    if (!anyTagged) return allRegistrations;
     return allRegistrations.filter((r) => r.program_year === programYearFilter);
   }, [allRegistrations, programYearFilter]);
 
