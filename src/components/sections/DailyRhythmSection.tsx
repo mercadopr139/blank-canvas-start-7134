@@ -1,4 +1,6 @@
 import { ReactNode } from "react";
+import { Pause } from "lucide-react";
+import { isSummerBreakActive, SUMMER_BREAK_COPY } from "@/lib/summerBreak";
 const seniorScheduleBlocks = [{
   time: "2:30pm–5:15pm",
   title: "Open Gym & Arrival Window",
@@ -88,6 +90,24 @@ const DailyRhythmSection = ({
           {/* Section header */}
           <div className="text-left mb-12">
             <h2 className="text-3xl md:text-4xl lg:text-5xl font-black text-foreground mb-4">{sectionTitle}</h2>
+            {/* Summer-break notice when active — clears up the contradiction
+                between the Tuesday Rhythm timeline below and the fact that
+                Junior Boxing is on break until Sept 29. Also flags the
+                shifted Senior summer time. */}
+            {isSummerBreakActive() && (showJunior || showSenior) && (
+              <div className="mt-6 flex items-start gap-3 rounded-lg bg-amber-500/10 border border-amber-400/30 px-4 py-3">
+                <Pause className="w-4 h-4 text-amber-400 mt-0.5 shrink-0" />
+                <div className="text-sm text-foreground/85 leading-snug space-y-1">
+                  <p className="font-semibold text-foreground">Currently on summer schedule.</p>
+                  {showJunior && (
+                    <p>The Tuesday rhythm below is the school-year schedule. <span className="font-semibold">Junior Boxing returns {SUMMER_BREAK_COPY.juniorReturn}.</span></p>
+                  )}
+                  {showSenior && (
+                    <p>Senior Boxing meets <span className="font-semibold">{SUMMER_BREAK_COPY.seniorSchedule}</span> through summer (the school-year timeline below resumes in September).</p>
+                  )}
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Senior Boxing Schedule */}

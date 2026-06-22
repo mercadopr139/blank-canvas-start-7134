@@ -9,7 +9,7 @@
 // Preview override: append `?summer=1` to any URL to force the banner on
 // outside the configured window — useful for QA before July 1.
 
-const SUMMER_START = new Date(2026, 6, 1); // July 1, 2026 (month is 0-indexed)
+const SUMMER_START = new Date(2026, 5, 22); // June 22, 2026 (month is 0-indexed). Started early per Josh on 2026-06-22 — NLA was already on the summer schedule.
 const SUMMER_END   = new Date(2026, 8, 28); // September 28, 2026
 
 export const SUMMER_BREAK_COPY = {
