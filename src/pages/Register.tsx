@@ -15,6 +15,7 @@ import Header from "@/components/layout/Header";
 import Footer from "@/components/layout/Footer";
 import SummerBreakBanner from "@/components/sections/SummerBreakBanner";
 import WaiverSection from "@/components/registration/WaiverSection";
+import { getProgramYearForRegistration } from "@/lib/programYear";
 import { WAIVER_TEXTS } from "@/components/registration/waiverTexts";
 import ChildPrimaryAddressField from "@/components/registration/ChildPrimaryAddressField";
 import nlaLogo from "@/assets/nla-logo.png";
@@ -304,6 +305,9 @@ const Register = () => {
 
       const { error } = await (supabase.from("youth_registrations") as any).insert({
         submission_date: new Date().toISOString().split("T")[0],
+        // Tag the row with the current program year. Date-driven so the
+        // Aug 1 cutover happens automatically — see programYear.ts.
+        program_year: getProgramYearForRegistration(),
         child_first_name: (formValues["child_first_name"] || "").trim(),
         child_last_name: (formValues["child_last_name"] || "").trim(),
         child_sex: formValues["child_sex"] as any,

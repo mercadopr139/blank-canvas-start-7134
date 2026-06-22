@@ -1153,6 +1153,10 @@ const RegistrationDetail = ({ registration: reg, onApprovalChange }: { registrat
 
       <Section title="Submission">
         <InfoRow label="Submitted On" value={format(parseISO(reg.submission_date), "MMMM d, yyyy")} />
+        <InfoRow label="Program Year" value={(reg as any).program_year || "—"} />
+        {(reg as any).archived_at && (
+          <InfoRow label="Archived On" value={format(parseISO((reg as any).archived_at), "MMMM d, yyyy")} />
+        )}
         <InfoRow label="Registration ID" value={reg.id} />
         {reg.final_signature_name && <InfoRow label="Final Signature Name" value={reg.final_signature_name} />}
       </Section>
