@@ -27,6 +27,7 @@ import {
 } from "date-fns";
 import { toast } from "sonner";
 import { ExcursionHistorySection } from "@/components/admin/ExcursionHistorySection";
+import { getProgramYearForRegistration, shortProgramYear } from "@/lib/programYear";
 
 /* ───────── Types ───────── */
 interface Registration {
@@ -46,6 +47,7 @@ interface Registration {
   // "Dad and Mom", "Mom + Partner", "Dad + Partner", "Mom Only",
   // "Dad Only", "Grandparent(s)", "Other", or null for legacy rows.
   family_structure: string | null;
+  program_year: string | null;
 }
 
 interface AttendanceRecord {
@@ -294,17 +296,32 @@ const AdminAttendance = () => {
   const calMonthEnd = format(endOfMonth(calendarMonth), "yyyy-MM-dd");
 
   /* ───── Data Queries ───── */
-  const { data: registrations = [] } = useQuery({
+  // Pull every registration once; scope by program_year client-side via
+  // the filter dropdown so switching cohorts is instant (no refetch).
+  // Default to the current program year per programYear.ts — flips
+  // automatically when the calendar crosses Aug 1.
+  const [programYearFilter, setProgramYearFilter] = useState<string>(() => getProgramYearForRegistration());
+  const { data: allRegistrations = [] } = useQuery({
     queryKey: ["registrations-attendance-full"],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("youth_registrations")
-        .select("id, child_first_name, child_last_name, child_boxing_program, child_headshot_url, is_bald_eagle, bald_eagle_active, child_sex, child_school_district, household_income_range, free_or_reduced_lunch, child_race_ethnicity, family_structure")
+        .select("id, child_first_name, child_last_name, child_boxing_program, child_headshot_url, is_bald_eagle, bald_eagle_active, child_sex, child_school_district, household_income_range, free_or_reduced_lunch, child_race_ethnicity, family_structure, program_year")
         .order("child_last_name");
       if (error) throw error;
       return data as Registration[];
     },
   });
+  // Distinct program years across all registrations, for the dropdown.
+  const availableProgramYears = useMemo(() => {
+    const years = new Set<string>();
+    allRegistrations.forEach((r) => { if (r.program_year) years.add(r.program_year); });
+    return [...years].sort().reverse(); // newest first
+  }, [allRegistrations]);
+  const registrations = useMemo(() => {
+    if (programYearFilter === "__all__") return allRegistrations;
+    return allRegistrations.filter((r) => r.program_year === programYearFilter);
+  }, [allRegistrations, programYearFilter]);
 
   /* ───── Is viewing current month? ───── */
   const isCurrentMonth = isSameMonth(calendarMonth, now);
@@ -1930,10 +1947,30 @@ const AdminAttendance = () => {
 
       {/* ═══════════ ATTENDANCE INSIGHTS ═══════════ */}
       <div>
-        <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center justify-between mb-4 gap-3 flex-wrap">
           <h2 className="text-xl font-bold text-white flex items-center gap-2">
             <Activity className="w-5 h-5 text-red-400" /> Attendance Intelligence
           </h2>
+          {/* Program-year filter — scopes the registrations underpinning
+              every demographic card on this page (Race, Single Parent,
+              Bald Eagles, etc.). Defaults to the current program year
+              per programYear.ts; flips automatically on Aug 1. */}
+          {availableProgramYears.length > 0 && (
+            <div className="flex items-center gap-2">
+              <span className="text-[10px] uppercase tracking-wider text-white/40 font-semibold">Program Year</span>
+              <Select value={programYearFilter} onValueChange={setProgramYearFilter}>
+                <SelectTrigger className="h-8 w-44 bg-white/5 border-white/15 text-white text-xs">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {availableProgramYears.map((y) => (
+                    <SelectItem key={y} value={y}>{shortProgramYear(y)}{y === getProgramYearForRegistration() ? " (current)" : ""}</SelectItem>
+                  ))}
+                  <SelectItem value="__all__">All years</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          )}
         </div>
 
         {/* Key Insight Cards */}

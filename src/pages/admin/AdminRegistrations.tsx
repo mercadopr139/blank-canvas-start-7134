@@ -18,6 +18,7 @@ import { format, parseISO, differenceInYears, differenceInMonths } from "date-fn
 import { toast } from "sonner";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { useAuth } from "@/contexts/AuthContext";
+import { getProgramYearForRegistration, shortProgramYear } from "@/lib/programYear";
 
 const HeadshotThumbnail = ({ headshotPath, size = "sm" }: { headshotPath: string; size?: "sm" | "lg" }) => {
   const [url, setUrl] = useState<string | null>(null);
@@ -103,6 +104,9 @@ const AdminRegistrations = () => {
   const [districtFilter, setDistrictFilter] = useState<string>("all");
   const [baldEagleFilter, setBaldEagleFilter] = useState<string>("all");
   const [extendedProgramFilter, setExtendedProgramFilter] = useState<string>("all");
+  // Defaults to the current program year so admins see today's cohort
+  // without having to pick. Flips automatically on Aug 1.
+  const [programYearFilter, setProgramYearFilter] = useState<string>(() => getProgramYearForRegistration());
   const [selectedRegistration, setSelectedRegistration] = useState<any | null>(null);
   const [detailMode, setDetailMode] = useState<"view" | "edit">("view");
   const [csvFallbackUrl, setCsvFallbackUrl] = useState<string | null>(null);
@@ -156,8 +160,10 @@ const AdminRegistrations = () => {
       const matchesBaldEagle = baldEagleFilter === "all" || (baldEagleFilter === "yes" ? reg.is_bald_eagle : !reg.is_bald_eagle);
       const matchesExtended = extendedProgramFilter === "all"
         || (extendedProgramFilter === "unassigned" ? !(reg as any).extended_program : (reg as any).extended_program === extendedProgramFilter);
+      const matchesProgramYear = programYearFilter === "__all__"
+        || (reg as any).program_year === programYearFilter;
 
-      return matchesSearch && matchesProgram && matchesDistrict && matchesBaldEagle && matchesExtended;
+      return matchesSearch && matchesProgram && matchesDistrict && matchesBaldEagle && matchesExtended && matchesProgramYear;
     })
     .sort((a, b) => {
       const lastNameCompare = a.child_last_name.localeCompare(b.child_last_name);
@@ -251,6 +257,8 @@ const AdminRegistrations = () => {
 
   const programs = [...new Set(registrations?.map((r) => r.child_boxing_program) || [])];
   const districts = [...new Set(registrations?.map((r) => r.child_school_district) || [])];
+  // Distinct program years from the data, newest first. Drives the filter dropdown.
+  const programYears = [...new Set(registrations?.map((r) => (r as any).program_year).filter(Boolean) || [])].sort().reverse();
 
   const toggleBaldEagle = async (reg: any) => {
     const newValue = !reg.is_bald_eagle;
@@ -453,6 +461,24 @@ const AdminRegistrations = () => {
                   className="pl-10 bg-white/5 border-white/10 text-white placeholder:text-white/30"
                 />
               </div>
+              {/* Program-year filter — defaults to the current cohort so
+                  the list shows today's active kids by default. Switch to
+                  "All years" to see history including archived rows. */}
+              {programYears.length > 0 && (
+                <Select value={programYearFilter} onValueChange={setProgramYearFilter}>
+                  <SelectTrigger className="w-full md:w-[180px] bg-white/5 border-white/10 text-white">
+                    <SelectValue placeholder="Program Year" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {programYears.map((y) => (
+                      <SelectItem key={y} value={y as string}>
+                        {shortProgramYear(y as string)}{y === getProgramYearForRegistration() ? " (current)" : ""}
+                      </SelectItem>
+                    ))}
+                    <SelectItem value="__all__">All years</SelectItem>
+                  </SelectContent>
+                </Select>
+              )}
               <Select value={programFilter} onValueChange={setProgramFilter}>
                 <SelectTrigger className="w-full md:w-[220px] bg-white/5 border-white/10 text-white">
                   <SelectValue placeholder="Filter by program" />
