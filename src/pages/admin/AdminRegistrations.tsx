@@ -18,7 +18,8 @@ import { format, parseISO, differenceInYears, differenceInMonths } from "date-fn
 import { toast } from "sonner";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { useAuth } from "@/contexts/AuthContext";
-import { getProgramYearForRegistration, shortProgramYear } from "@/lib/programYear";
+import { getProgramYearForRegistration, shortProgramYear, getPriorProgramYear, isArchiveWindowOpen } from "@/lib/programYear";
+import { Archive } from "lucide-react";
 
 const HeadshotThumbnail = ({ headshotPath, size = "sm" }: { headshotPath: string; size?: "sm" | "lg" }) => {
   const [url, setUrl] = useState<string | null>(null);
@@ -107,6 +108,10 @@ const AdminRegistrations = () => {
   // Defaults to the current program year so admins see today's cohort
   // without having to pick. Flips automatically on Aug 1.
   const [programYearFilter, setProgramYearFilter] = useState<string>(() => getProgramYearForRegistration());
+  // Archive-ceremony state — confirmation dialog for closing out the
+  // prior program year (visible Aug 1 → Sept 30 each year).
+  const [archiveConfirmOpen, setArchiveConfirmOpen] = useState(false);
+  const [archiving, setArchiving] = useState(false);
   const [selectedRegistration, setSelectedRegistration] = useState<any | null>(null);
   const [detailMode, setDetailMode] = useState<"view" | "edit">("view");
   const [csvFallbackUrl, setCsvFallbackUrl] = useState<string | null>(null);
@@ -259,6 +264,32 @@ const AdminRegistrations = () => {
   const districts = [...new Set(registrations?.map((r) => r.child_school_district) || [])];
   // Distinct program years from the data, newest first. Drives the filter dropdown.
   const programYears = [...new Set(registrations?.map((r) => (r as any).program_year).filter(Boolean) || [])].sort().reverse();
+
+  /* ── Archive ceremony for the prior program year ──
+     Hidden until Aug 1 → Sept 30 each year. Counts how many rows in
+     the prior program year are still un-archived so the button label
+     can show the work clearly ("Archive 2025-26 (137 youth)") and so
+     it disappears entirely once everything's been closed out. */
+  const priorYear = getPriorProgramYear();
+  const priorYearUnarchivedCount = registrations?.filter(
+    (r) => (r as any).program_year === priorYear && !(r as any).archived_at,
+  ).length ?? 0;
+  const showArchiveCeremony = isArchiveWindowOpen() && priorYearUnarchivedCount > 0;
+
+  const handleArchivePriorYear = async () => {
+    setArchiving(true);
+    const { data, error } = await supabase.rpc("admin_archive_program_year" as any, {
+      _program_year: priorYear,
+    } as any);
+    setArchiving(false);
+    setArchiveConfirmOpen(false);
+    if (error) {
+      toast.error(error.message || "Failed to archive program year.");
+      return;
+    }
+    toast.success(`Archived ${data ?? 0} registration${data === 1 ? "" : "s"} from ${shortProgramYear(priorYear)}.`);
+    queryClient.invalidateQueries({ queryKey: ["youth-registrations"] });
+  };
 
   const toggleBaldEagle = async (reg: any) => {
     const newValue = !reg.is_bald_eagle;
@@ -478,6 +509,20 @@ const AdminRegistrations = () => {
                     <SelectItem value="__all__">All years</SelectItem>
                   </SelectContent>
                 </Select>
+              )}
+              {/* Archive ceremony — appears Aug 1 → Sept 30 when there are
+                  un-archived rows in the prior program year. One-click
+                  close-out that stamps archived_at on every row. */}
+              {showArchiveCeremony && (
+                <Button
+                  variant="outline"
+                  onClick={() => setArchiveConfirmOpen(true)}
+                  className="border-amber-400/40 bg-amber-500/10 text-amber-200 hover:bg-amber-500/20 hover:text-amber-100 gap-1.5"
+                  title={`Close out the ${shortProgramYear(priorYear)} program year`}
+                >
+                  <Archive className="w-4 h-4" />
+                  Archive {shortProgramYear(priorYear)} ({priorYearUnarchivedCount})
+                </Button>
               )}
               <Select value={programFilter} onValueChange={setProgramFilter}>
                 <SelectTrigger className="w-full md:w-[220px] bg-white/5 border-white/10 text-white">
@@ -942,6 +987,47 @@ const EditRegistrationForm = ({
               }}
             >
               Permanently Delete
+            </Button>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Archive Program Year Confirmation */}
+      <AlertDialog open={archiveConfirmOpen} onOpenChange={setArchiveConfirmOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <Archive className="w-5 h-5 text-amber-400" /> Archive {shortProgramYear(priorYear)} Program Year?
+            </AlertDialogTitle>
+            <AlertDialogDescription asChild>
+              <div className="space-y-3 text-sm">
+                <p>
+                  This closes out the <span className="font-bold">{shortProgramYear(priorYear)}</span> program year by stamping every still-active row with an archive date.
+                </p>
+                <div className="rounded-lg bg-amber-500/[0.08] border border-amber-400/30 px-3 py-2.5 text-xs space-y-1">
+                  <p className="font-bold text-amber-200 mb-1">What happens:</p>
+                  <ul className="space-y-0.5 pl-1">
+                    <li>• <span className="font-bold">{priorYearUnarchivedCount}</span> registration{priorYearUnarchivedCount === 1 ? "" : "s"} archived</li>
+                    <li>• All attendance history stays intact</li>
+                    <li>• Archived rows still show via the "All years" filter</li>
+                    <li>• Reversible via SQL if needed (no automatic undo button)</li>
+                  </ul>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Run this once you've confirmed everyone who's returning for the new program year has re-registered.
+                </p>
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={archiving}>Cancel</AlertDialogCancel>
+            <Button
+              onClick={handleArchivePriorYear}
+              disabled={archiving}
+              className="bg-amber-600 hover:bg-amber-700 text-white gap-1.5"
+            >
+              <Archive className="w-4 h-4" />
+              {archiving ? "Archiving…" : `Archive ${priorYearUnarchivedCount} row${priorYearUnarchivedCount === 1 ? "" : "s"}`}
             </Button>
           </AlertDialogFooter>
         </AlertDialogContent>

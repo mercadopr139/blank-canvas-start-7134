@@ -42,3 +42,35 @@ export function shortProgramYear(programYear: string | null | undefined): string
   if (!match) return programYear;
   return `${match[1]}-${match[2].slice(2)}`;
 }
+
+/**
+ * The program year that's eligible for archival on this date.
+ * After Aug 1, the current registration year flips to the next year,
+ * which means the OLD year is the one to close out. e.g. on Aug 1, 2026
+ * getProgramYearForRegistration() returns "2026-2027" and this returns
+ * "2025-2026".
+ */
+export function getPriorProgramYear(today: Date = new Date()): string {
+  const current = getProgramYearForRegistration(today);
+  const match = current.match(/^(\d{4})-(\d{4})$/);
+  if (!match) return current;
+  const start = parseInt(match[1], 10);
+  const end = parseInt(match[2], 10);
+  return `${start - 1}-${end - 1}`;
+}
+
+/**
+ * Whether the archive-ceremony button should be visible. The window
+ * runs Aug 1 → Sept 30 each year — the natural moment when the new
+ * cohort has registered and the old cohort can be closed out.
+ */
+export function isArchiveWindowOpen(today: Date = new Date()): boolean {
+  // Preview override via ?archive=1 — same QA hook as summerBreak.
+  if (typeof window !== "undefined") {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("archive") === "1") return true;
+    if (params.get("archive") === "0") return false;
+  }
+  const month = today.getMonth(); // 0-indexed: Aug=7, Sep=8
+  return month === 7 || month === 8;
+}
