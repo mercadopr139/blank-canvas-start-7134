@@ -480,6 +480,33 @@ const AdminRegistrations = () => {
           open={bulkPhotoOpen}
           onOpenChange={setBulkPhotoOpen}
         />
+
+        {/* Archive Program Year Confirmation — lives in AdminRegistrations
+            scope (not the EditRegistrationForm subcomponent) so the
+            state + handler defined above are in scope. */}
+        <AlertDialog open={archiveConfirmOpen} onOpenChange={setArchiveConfirmOpen}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle className="flex items-center gap-2">
+                <Archive className="w-5 h-5 text-amber-400" /> Archive {shortProgramYear(priorYear)} Program Year?
+              </AlertDialogTitle>
+              <AlertDialogDescription>
+                This closes out the {shortProgramYear(priorYear)} program year by stamping every still-active row with an archive date. Attendance history stays intact. Archived rows remain visible under the "All years" filter. Reversible via SQL if needed.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel disabled={archiving}>Cancel</AlertDialogCancel>
+              <Button
+                onClick={handleArchivePriorYear}
+                disabled={archiving}
+                className="bg-amber-600 hover:bg-amber-700 text-white gap-1.5"
+              >
+                <Archive className="w-4 h-4" />
+                {archiving ? "Archiving…" : `Archive ${priorYearUnarchivedCount} row${priorYearUnarchivedCount === 1 ? "" : "s"}`}
+              </Button>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
 
       <div className="container mx-auto px-4 py-6 space-y-6">
@@ -991,47 +1018,6 @@ const EditRegistrationForm = ({
               }}
             >
               Permanently Delete
-            </Button>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-
-      {/* Archive Program Year Confirmation */}
-      <AlertDialog open={archiveConfirmOpen} onOpenChange={setArchiveConfirmOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle className="flex items-center gap-2">
-              <Archive className="w-5 h-5 text-amber-400" /> Archive {shortProgramYear(priorYear)} Program Year?
-            </AlertDialogTitle>
-            <AlertDialogDescription asChild>
-              <div className="space-y-3 text-sm">
-                <p>
-                  This closes out the <span className="font-bold">{shortProgramYear(priorYear)}</span> program year by stamping every still-active row with an archive date.
-                </p>
-                <div className="rounded-lg bg-amber-500/[0.08] border border-amber-400/30 px-3 py-2.5 text-xs space-y-1">
-                  <p className="font-bold text-amber-200 mb-1">What happens:</p>
-                  <ul className="space-y-0.5 pl-1">
-                    <li>• <span className="font-bold">{priorYearUnarchivedCount}</span> registration{priorYearUnarchivedCount === 1 ? "" : "s"} archived</li>
-                    <li>• All attendance history stays intact</li>
-                    <li>• Archived rows still show via the "All years" filter</li>
-                    <li>• Reversible via SQL if needed (no automatic undo button)</li>
-                  </ul>
-                </div>
-                <p className="text-xs text-muted-foreground">
-                  Run this once you've confirmed everyone who's returning for the new program year has re-registered.
-                </p>
-              </div>
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel disabled={archiving}>Cancel</AlertDialogCancel>
-            <Button
-              onClick={handleArchivePriorYear}
-              disabled={archiving}
-              className="bg-amber-600 hover:bg-amber-700 text-white gap-1.5"
-            >
-              <Archive className="w-4 h-4" />
-              {archiving ? "Archiving…" : `Archive ${priorYearUnarchivedCount} row${priorYearUnarchivedCount === 1 ? "" : "s"}`}
             </Button>
           </AlertDialogFooter>
         </AlertDialogContent>
