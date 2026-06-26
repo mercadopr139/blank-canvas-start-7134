@@ -152,6 +152,12 @@ const AdminRegistrations = () => {
     };
   }, [queryClient]);
 
+  // Distinct program years from the data, newest first. Drives the filter
+  // dropdown AND the no-op guard inside the filter below — must be declared
+  // before filteredRegistrations or the filter hits a temporal-dead-zone
+  // ReferenceError and the whole page renders blank.
+  const programYears = [...new Set(registrations?.map((r) => (r as any).program_year).filter(Boolean) || [])].sort().reverse();
+
   const filteredRegistrations = registrations
     ?.filter((reg) => {
       const matchesSearch =
@@ -266,8 +272,6 @@ const AdminRegistrations = () => {
 
   const programs = [...new Set(registrations?.map((r) => r.child_boxing_program) || [])];
   const districts = [...new Set(registrations?.map((r) => r.child_school_district) || [])];
-  // Distinct program years from the data, newest first. Drives the filter dropdown.
-  const programYears = [...new Set(registrations?.map((r) => (r as any).program_year).filter(Boolean) || [])].sort().reverse();
 
   /* ── Archive ceremony for the prior program year ──
      Hidden until Aug 1 → Sept 30 each year. Counts how many rows in
