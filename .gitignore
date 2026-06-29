@@ -24,6 +24,9 @@ dist-ssr
 # Supabase CLI scratch — machine-specific, regenerated per-link
 supabase/.temp/
 
+# Claude Code agent worktrees — temporary checkouts, never commit
+.claude/worktrees/
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
