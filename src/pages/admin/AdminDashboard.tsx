@@ -10,7 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
-import { LogOut, Hammer, BadgeDollarSign, Lightbulb, ArrowLeft, Lock, Plus, Pencil, GripVertical, KeyRound } from "lucide-react";
+import { LogOut, Hammer, BadgeDollarSign, Lightbulb, ArrowLeft, Lock, Plus, Pencil, GripVertical, KeyRound, LayoutGrid, ChevronDown, ChevronUp } from "lucide-react";
 import { icons } from "lucide-react";
 import UpcomingEventsWidget from "@/components/admin/UpcomingEventsWidget";
 import InviteAdminModal from "@/components/admin/InviteAdminModal";
@@ -284,6 +284,25 @@ const AdminDashboard = () => {
   const [editingTile, setEditingTile] = useState<DashboardTile | null>(null);
   const [addTaskManagerOpen, setAddTaskManagerOpen] = useState(false);
   const [seeded, setSeeded] = useState(false);
+  // Secondary tier (workbenches, message board, settings, etc.) stays
+  // collapsed behind a single "Other Admin" tile so the command center
+  // shows only the 3 business pillars by default. We remember the last
+  // open/closed choice per browser via localStorage so a refresh or
+  // re-navigation reopens it the way the user left it.
+  const [showOther, setShowOther] = useState<boolean>(() => {
+    try {
+      return localStorage.getItem("nla-dashboard-other-open") === "true";
+    } catch {
+      return false;
+    }
+  });
+  useEffect(() => {
+    try {
+      localStorage.setItem("nla-dashboard-other-open", String(showOther));
+    } catch {
+      /* localStorage unavailable (private mode / blocked) — non-fatal */
+    }
+  }, [showOther]);
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
 
@@ -552,39 +571,73 @@ const AdminDashboard = () => {
         {/* ── Divider ── */}
         <div className="border-t border-white/[0.04] mb-10" />
 
-        {/* ── Secondary tier (database-driven, drag-and-drop) ── */}
+        {/* ── Secondary tier ── collapsed by default behind a single gray
+            "Other Admin" tile. Expanding reveals the full database-driven,
+            drag-and-drop grid (workbenches, message board, settings, etc.). */}
         {!tilesLoading && tiles.length > 0 && (
           <div className="max-w-5xl mx-auto">
-            <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-              <SortableContext items={tiles.map((t) => t.id)} strategy={rectSortingStrategy}>
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
-                  {tiles.map((tile) => (
-                    <SortableTile
-                      key={tile.id}
-                      tile={tile}
-                      allowed={isTileAllowed(tile)}
-                      onNavigate={() => navigate(tile.href)}
-                      onEdit={() => { setEditingTile(tile); setModalOpen(true); }}
-                    />
-                  ))}
+            {!showOther ? (
+              <div className="flex justify-center">
+                <button
+                  type="button"
+                  onClick={() => setShowOther(true)}
+                  className="group flex items-center gap-3 rounded-xl border border-white/[0.06] bg-white/[0.02] px-5 py-3.5 text-left transition-all duration-200 hover:bg-white/[0.04] hover:border-white/[0.12]"
+                >
+                  <div className="w-9 h-9 rounded-lg flex items-center justify-center bg-white/[0.04] text-zinc-500 group-hover:text-zinc-300 transition-colors">
+                    <LayoutGrid className="w-4.5 h-4.5" strokeWidth={1.8} />
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-semibold text-zinc-300">Other Admin</h3>
+                    <p className="text-[11px] text-zinc-600">Workbenches, message board, settings &amp; more</p>
+                  </div>
+                  <ChevronDown className="w-4 h-4 ml-2 text-zinc-600 group-hover:text-zinc-400 transition-colors" />
+                </button>
+              </div>
+            ) : (
+              <>
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-xs font-semibold uppercase tracking-wide text-zinc-500">Other Admin</h3>
+                  <button
+                    type="button"
+                    onClick={() => setShowOther(false)}
+                    className="flex items-center gap-1.5 text-xs text-zinc-500 hover:text-zinc-300 transition-colors"
+                  >
+                    <ChevronUp className="w-3.5 h-3.5" /> Hide
+                  </button>
                 </div>
-              </SortableContext>
-            </DndContext>
 
-            {/* "Add Workbench" — outside DndContext so DnD sensors don't
-                swallow the click. Replaces the previous generic "Add Tile"
-                button since adding a workbench is the only common reason
-                anyone needs to create a new tile. */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 mt-4">
-              <button
-                type="button"
-                onClick={() => setAddTaskManagerOpen(true)}
-                className="rounded-xl border-2 border-dashed border-white/[0.08] bg-transparent p-5 flex flex-col items-center justify-center gap-2 text-zinc-600 hover:text-zinc-400 hover:border-white/[0.15] transition-colors min-h-[100px]"
-              >
-                <Plus className="w-6 h-6" />
-                <span className="text-xs font-medium">Add Workbench</span>
-              </button>
-            </div>
+                <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+                  <SortableContext items={tiles.map((t) => t.id)} strategy={rectSortingStrategy}>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+                      {tiles.map((tile) => (
+                        <SortableTile
+                          key={tile.id}
+                          tile={tile}
+                          allowed={isTileAllowed(tile)}
+                          onNavigate={() => navigate(tile.href)}
+                          onEdit={() => { setEditingTile(tile); setModalOpen(true); }}
+                        />
+                      ))}
+                    </div>
+                  </SortableContext>
+                </DndContext>
+
+                {/* "Add Workbench" — outside DndContext so DnD sensors don't
+                    swallow the click. Replaces the previous generic "Add Tile"
+                    button since adding a workbench is the only common reason
+                    anyone needs to create a new tile. */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 mt-4">
+                  <button
+                    type="button"
+                    onClick={() => setAddTaskManagerOpen(true)}
+                    className="rounded-xl border-2 border-dashed border-white/[0.08] bg-transparent p-5 flex flex-col items-center justify-center gap-2 text-zinc-600 hover:text-zinc-400 hover:border-white/[0.15] transition-colors min-h-[100px]"
+                  >
+                    <Plus className="w-6 h-6" />
+                    <span className="text-xs font-medium">Add Workbench</span>
+                  </button>
+                </div>
+              </>
+            )}
           </div>
         )}
       </main>
