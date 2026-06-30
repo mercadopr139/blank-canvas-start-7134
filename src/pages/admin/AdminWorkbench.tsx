@@ -380,7 +380,7 @@ const FocusAreaTile = ({
             {IconComp && <IconComp className="w-5 h-5" strokeWidth={1.8} />}
           </div>
           <div className="flex-1 min-w-0 pt-0.5">
-            <h2 className="text-base font-extrabold tracking-tight text-white truncate">
+            <h2 className="text-base font-extrabold tracking-tight text-white line-clamp-2">
               {area.title}
             </h2>
             {area.subtitle && (
