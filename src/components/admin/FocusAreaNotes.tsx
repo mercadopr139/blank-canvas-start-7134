@@ -75,6 +75,18 @@ const linkifyBody = (text: string) => {
 const sanitizeFileName = (name: string) =>
   name.replace(/[^\w.-]+/g, "_").slice(0, 120);
 
+// Supabase error objects aren't JS Error instances, so pull the real
+// message off whatever we're handed rather than falling back to a
+// generic string (which hid the actual cause, e.g. a missing table).
+const errMsg = (err: unknown, fallback: string): string => {
+  if (err instanceof Error) return err.message;
+  if (err && typeof err === "object" && "message" in err) {
+    const m = (err as { message?: unknown }).message;
+    if (typeof m === "string" && m) return m;
+  }
+  return fallback;
+};
+
 interface Props {
   managerType: string;
   focusArea: string;
@@ -148,7 +160,7 @@ export default function FocusAreaNotes({ managerType, focusArea, accentHex, curr
       setEditorOpen(false);
       refresh();
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Couldn't save note");
+      toast.error(errMsg(err, "Couldn't save note"));
     } finally {
       setSaving(false);
     }
@@ -181,7 +193,7 @@ export default function FocusAreaNotes({ managerType, focusArea, accentHex, curr
       setPendingDelete(null);
       refresh();
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Couldn't delete note");
+      toast.error(errMsg(err, "Couldn't delete note"));
     }
   };
 
@@ -239,7 +251,7 @@ export default function FocusAreaNotes({ managerType, focusArea, accentHex, curr
       if (error) throw error;
       refresh();
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Upload failed");
+      toast.error(errMsg(err, "Upload failed"));
     } finally {
       setUploadingNoteId(null);
     }
@@ -268,7 +280,7 @@ export default function FocusAreaNotes({ managerType, focusArea, accentHex, curr
       if (error) throw error;
       refresh();
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Couldn't remove attachment");
+      toast.error(errMsg(err, "Couldn't remove attachment"));
     }
   };
 
