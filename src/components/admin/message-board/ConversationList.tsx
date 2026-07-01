@@ -10,16 +10,8 @@ import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import {
   Plus, Search, Users, User, MessageSquare, Pencil, Archive, Trash2,
-  ArchiveRestore, Check, X, Flag, GripVertical,
+  ArchiveRestore, Check, X, Flag,
 } from "lucide-react";
-import {
-  DndContext, PointerSensor, closestCenter, useSensor, useSensors,
-  type DragEndEvent,
-} from "@dnd-kit/core";
-import {
-  SortableContext, verticalListSortingStrategy, useSortable, arrayMove,
-} from "@dnd-kit/sortable";
-import { CSS } from "@dnd-kit/utilities";
 import type { Conversation, Pillar } from "@/pages/admin/AdminMessageBoard";
 import { PILLARS, PILLAR_COLOR, PILLAR_LABEL } from "@/pages/admin/AdminMessageBoard";
 
@@ -64,50 +56,6 @@ const getConvTitle = (conv: Conversation) => conv.name?.trim() || "Untitled conv
 const getConvRecipients = (conv: Conversation) =>
   conv.member_names && conv.member_names.length > 0 ? conv.member_names.join(", ") : "";
 
-// Wraps a conversation card in dnd-kit sortable bindings. Used only
-// in the read zone of the standard active view — the top (unread)
-// zone never reorders, so its cards skip this wrapper entirely.
-const SortableConvCard = ({
-  conv,
-  render,
-}: {
-  conv: Conversation;
-  render: (
-    conv: Conversation,
-    draggable: boolean,
-    dragHandle?: React.ReactNode,
-  ) => React.ReactNode;
-}) => {
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
-    useSortable({ id: conv.id });
-  const style: React.CSSProperties = {
-    transform: CSS.Transform.toString(transform),
-    transition,
-    opacity: isDragging ? 0.4 : 1,
-  };
-  // The drag handle is the only piece that gets the listeners — that
-  // way the click-through to open the conversation still works on the
-  // rest of the card.
-  const dragHandle = (
-    <button
-      type="button"
-      {...attributes}
-      {...listeners}
-      className="text-white/15 hover:text-white/50 cursor-grab active:cursor-grabbing opacity-0 group-hover/row:opacity-100 focus:opacity-100 transition-opacity touch-none p-0.5"
-      aria-label="Drag to reorder"
-      title="Drag to reorder"
-      onClick={(e) => e.stopPropagation()}
-    >
-      <GripVertical className="w-3.5 h-3.5" />
-    </button>
-  );
-  return (
-    <div ref={setNodeRef} style={style}>
-      {render(conv, true, dragHandle)}
-    </div>
-  );
-};
-
 const ConversationList = ({
   conversations,
   loading,
@@ -150,10 +98,12 @@ const ConversationList = ({
   //     always near the top of the screen and never gets buried by
   //     a manual reorder below.
   //
-  //   BOTTOM zone — read conversations. Honors the per-user manual
-  //     `sort_position` if the user has dragged any cards (ascending,
-  //     nulls last); otherwise auto-sorted by last_message_at DESC.
-  //     Drag-and-drop reordering only operates on this zone.
+  //   BOTTOM zone — read conversations, auto-sorted by last_message_at
+  //     DESC (most recent activity first). Replying to a thread updates
+  //     its last_message_at, so it floats to the TOP of this zone —
+  //     directly under the unread block — rather than dropping to a
+  //     stale spot. (Manual drag-reorder was retired: it froze this
+  //     order and was what buried freshly-answered threads.)
   //
   // Archived view + view-all keep the existing single-flat-list sort
   // since neither benefits from the unread/read split.
@@ -192,17 +142,15 @@ const ConversationList = ({
       });
   }, [filteredConversations, isStandardView, activeId]);
 
-  // Bottom zone: read conversations, manual sort_position wins.
+  // Bottom zone: read conversations, newest activity first. A reply
+  // updates last_message_at, so the answered thread floats to the top
+  // of this zone (right below the unread block) instead of dropping
+  // to a stale position.
   const bottomConvs = useMemo(() => {
     if (!isStandardView) return [];
     return filteredConversations
       .filter((c) => (c.unread_count ?? 0) === 0 && c.id !== activeId)
       .sort((a, b) => {
-        const aPos = a.sort_position ?? null;
-        const bPos = b.sort_position ?? null;
-        if (aPos !== null && bPos !== null) return aPos - bPos;
-        if (aPos !== null) return -1;
-        if (bPos !== null) return 1;
         const aTs = a.last_message_at ?? a.created_at;
         const bTs = b.last_message_at ?? b.created_at;
         return new Date(bTs).getTime() - new Date(aTs).getTime();
@@ -323,46 +271,6 @@ const ConversationList = ({
     }
   };
 
-  // Drag-and-drop reorder for the read zone. Rewrites every read
-  // conversation's sort_position so the new visual order persists.
-  // Cheaper than fractional indexing for a sidebar that's usually
-  // <50 items and rarely re-sorted in bulk.
-  const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
-  );
-
-  const handleReadDragEnd = async (event: DragEndEvent) => {
-    const { active, over } = event;
-    if (!over || active.id === over.id) return;
-    const oldIndex = bottomConvs.findIndex((c) => c.id === active.id);
-    const newIndex = bottomConvs.findIndex((c) => c.id === over.id);
-    if (oldIndex === -1 || newIndex === -1) return;
-    const reordered = arrayMove(bottomConvs, oldIndex, newIndex);
-    try {
-      // Write a sort_position for every read conversation so the
-      // order is fully anchored — partial sort writes were causing
-      // unread→read transitions to drop into unexpected spots.
-      const updates = reordered.map((c, i) =>
-        supabase
-          .from("mb_conversation_members")
-          .update({ sort_position: i * 100 } as any)
-          .eq("conversation_id", c.id)
-          .eq("user_id", currentUserId),
-      );
-      const results = await Promise.all(updates);
-      const failed = results.find((r) => r.error);
-      if (failed?.error) throw failed.error;
-      onConversationsChanged();
-    } catch (err) {
-      toast({
-        title: "Reorder failed",
-        description: err instanceof Error ? err.message : "Unknown error",
-        variant: "destructive",
-      });
-      onConversationsChanged(); // re-fetch to restore real state
-    }
-  };
-
   const confirmDelete = async () => {
     if (!pendingDelete) return;
     const id = pendingDelete.id;
@@ -386,16 +294,10 @@ const ConversationList = ({
 
   const showSearchMessages = !viewAll && trimmedSearch.length >= 2 && messageHits.length > 0;
 
-  // Single source of truth for one conversation card. Called from
-  // both the top zone (auto-sorted, non-draggable) and the bottom
-  // zone (rendered inside a SortableConvCard wrapper that supplies
-  // drag bindings). The `dragHandle` arg, when provided, renders a
-  // hover-revealed grip on the left edge wired to dnd-kit listeners.
-  const renderConvCard = (
-    conv: Conversation,
-    draggable: boolean,
-    dragHandle?: React.ReactNode,
-  ) => {
+  // Single source of truth for one conversation card, used by every
+  // zone/group. The read zone is recency-ordered (no manual drag), so
+  // cards no longer carry drag bindings.
+  const renderConvCard = (conv: Conversation) => {
     const title = getConvTitle(conv);
     const recipients = getConvRecipients(conv);
     const isActive = conv.id === activeId;
@@ -430,14 +332,6 @@ const ConversationList = ({
           tabIndex={isEditing ? -1 : 0}
           disabled={isEditing}
         />
-
-        {/* Drag handle — only present on read-zone cards. Hover-revealed
-            so it doesn't compete with the title at rest. */}
-        {draggable && (
-          <div className="relative z-10 pointer-events-auto self-center">
-            {dragHandle}
-          </div>
-        )}
 
         <div
           className="w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 relative z-10 pointer-events-none"
@@ -662,32 +556,15 @@ const ConversationList = ({
         {isStandardView ? (
           <>
             {/* TOP ZONE — unread + currently-active, auto-sorted by recency */}
-            {topConvs.map((conv) => renderConvCard(conv, false))}
+            {topConvs.map((conv) => renderConvCard(conv))}
 
             {/* DIVIDER — only when both zones have content. Subtle hairline. */}
             {topConvs.length > 0 && bottomConvs.length > 0 && (
               <div className="mx-3 my-1 border-t border-white/[0.10]" aria-hidden />
             )}
 
-            {/* BOTTOM ZONE — read conversations, drag-to-reorder. */}
-            <DndContext
-              sensors={sensors}
-              collisionDetection={closestCenter}
-              onDragEnd={handleReadDragEnd}
-            >
-              <SortableContext
-                items={bottomConvs.map((c) => c.id)}
-                strategy={verticalListSortingStrategy}
-              >
-                {bottomConvs.map((conv) => (
-                  <SortableConvCard
-                    key={conv.id}
-                    conv={conv}
-                    render={renderConvCard}
-                  />
-                ))}
-              </SortableContext>
-            </DndContext>
+            {/* BOTTOM ZONE — read conversations, newest activity first. */}
+            {bottomConvs.map((conv) => renderConvCard(conv))}
           </>
         ) : renderGroups.map((group) => (
           <div key={group.pillar ?? "all"}>
@@ -708,7 +585,7 @@ const ConversationList = ({
                 <span className="text-[10px] text-zinc-600">· {group.conversations.length}</span>
               </div>
             )}
-            {group.conversations.map((conv) => renderConvCard(conv, false))}
+            {group.conversations.map((conv) => renderConvCard(conv))}
           </div>
         ))}
 
