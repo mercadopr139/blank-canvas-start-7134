@@ -10,7 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
-import { LogOut, Hammer, BadgeDollarSign, Lightbulb, ArrowLeft, Lock, Plus, Pencil, GripVertical, KeyRound, LayoutGrid, ChevronRight, MessageSquare } from "lucide-react";
+import { LogOut, Hammer, BadgeDollarSign, Lightbulb, ArrowLeft, Lock, Plus, Pencil, GripVertical, KeyRound, LayoutGrid, ChevronRight, MessageSquare, Trash2 } from "lucide-react";
 import { icons } from "lucide-react";
 import UpcomingEventsWidget from "@/components/admin/UpcomingEventsWidget";
 import InviteAdminModal from "@/components/admin/InviteAdminModal";
@@ -64,6 +64,20 @@ const resolvePermKey = (href: string): PermissionKey | undefined => {
   if (href === "/admin/pd-task-manager") return "task_manager_PD";
   if (href === "/admin/pc-task-manager") return "task_manager_PC";
   return undefined;
+};
+
+/* Reserved workbench keys that can never be deleted from the UI (they
+   mirror the server-side guard in delete_workbench). */
+const RESERVED_WORKBENCH_KEYS = ["PD", "PC"];
+
+/* If a tile is a deletable workbench tile, return its key; otherwise null.
+   Workbench tiles have the shape /admin/task-manager/<KEY>. PD/PC are
+   reserved and never deletable. */
+const deletableWorkbenchKey = (href: string): string | null => {
+  const m = href.match(/^\/admin\/task-manager\/([^/]+)$/);
+  if (!m) return null;
+  const key = m[1].toUpperCase();
+  return RESERVED_WORKBENCH_KEYS.includes(key) ? null : key;
 };
 
 /* Tiles that were removed — delete from DB if found. Listing a tile's href
@@ -131,11 +145,15 @@ const SortableTile = ({
   allowed,
   onNavigate,
   onEdit,
+  onDelete,
 }: {
   tile: DashboardTile;
   allowed: boolean;
   onNavigate: () => void;
   onEdit: () => void;
+  // Only provided for deletable workbench tiles (super admin). When set,
+  // a trash button appears beside the edit pencil.
+  onDelete?: () => void;
 }) => {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: tile.id });
   const style = {
@@ -199,6 +217,17 @@ const SortableTile = ({
       >
         <Pencil className="w-3 h-3" />
       </button>
+      {/* Delete button — only rendered for deletable workbench tiles
+          (super admin). Sits just left of the edit pencil. */}
+      {onDelete && (
+        <button
+          onClick={(e) => { e.stopPropagation(); onDelete(); }}
+          className="absolute top-2 right-8 z-10 p-1 rounded text-white/20 hover:text-red-400 hover:bg-red-500/10 opacity-0 group-hover:opacity-100 transition-opacity"
+          title="Delete workbench"
+        >
+          <Trash2 className="w-3 h-3" />
+        </button>
+      )}
 
       <Tooltip>
         <TooltipTrigger asChild>
@@ -242,7 +271,7 @@ const AdminDashboard = () => {
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const { hasPermission, loading: permLoading } = useStaffPermissions();
+  const { hasPermission, loading: permLoading, isSuperAdmin } = useStaffPermissions();
   const { toast } = useToast();
   const [showChangePassword, setShowChangePassword] = useState(false);
   const [oldPassword, setOldPassword] = useState("");
@@ -290,6 +319,44 @@ const AdminDashboard = () => {
   // settings, etc.) with a Back button. The dashboard is always the
   // landing view, so this is plain in-memory state (not persisted).
   const [showOther, setShowOther] = useState(false);
+
+  // Workbench deletion (super admin only). deleteTarget holds the tile
+  // being removed; impact is fetched from get_workbench_impact so the
+  // confirm dialog can show exactly what will be destroyed before the
+  // irreversible delete_workbench RPC runs.
+  const [deleteTarget, setDeleteTarget] = useState<{ key: string; title: string } | null>(null);
+  const [impact, setImpact] = useState<{ focus_areas: number; signals: number } | null>(null);
+  const [deleting, setDeleting] = useState(false);
+
+  const openDeleteWorkbench = async (tile: DashboardTile) => {
+    const key = deletableWorkbenchKey(tile.href);
+    if (!key) return;
+    setDeleteTarget({ key, title: tile.title });
+    setImpact(null);
+    const { data, error } = await supabase.rpc("get_workbench_impact", { p_key: key });
+    if (error) {
+      toast({ title: "Couldn't load workbench details", description: error.message, variant: "destructive" });
+      return;
+    }
+    const row = (data as { focus_areas: number; signals: number }[] | null)?.[0];
+    setImpact({ focus_areas: row?.focus_areas ?? 0, signals: row?.signals ?? 0 });
+  };
+
+  const confirmDeleteWorkbench = async () => {
+    if (!deleteTarget) return;
+    setDeleting(true);
+    const { error } = await supabase.rpc("delete_workbench", { p_key: deleteTarget.key });
+    setDeleting(false);
+    if (error) {
+      toast({ title: "Delete failed", description: error.message, variant: "destructive" });
+      return;
+    }
+    toast({ title: "Workbench deleted", description: `${deleteTarget.title} and its data were removed.` });
+    setDeleteTarget(null);
+    setImpact(null);
+    queryClient.invalidateQueries({ queryKey: ["task-managers"] });
+    queryClient.invalidateQueries({ queryKey: ["dashboard-tiles", user?.id] });
+  };
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
 
@@ -671,6 +738,11 @@ const AdminDashboard = () => {
                       allowed={isTileAllowed(tile)}
                       onNavigate={() => navigate(tile.href)}
                       onEdit={() => { setEditingTile(tile); setModalOpen(true); }}
+                      onDelete={
+                        isSuperAdmin && deletableWorkbenchKey(tile.href)
+                          ? () => openDeleteWorkbench(tile)
+                          : undefined
+                      }
                     />
                   ))}
                 </div>
@@ -714,6 +786,56 @@ const AdminDashboard = () => {
         onClose={() => setAddTaskManagerOpen(false)}
         onCreated={handleTaskManagerCreated}
       />
+
+      {/* Delete-workbench confirmation. Shows the exact impact (focus areas
+          + signals) fetched before opening, so the destructive action is
+          never a surprise. Runs the guarded delete_workbench RPC. */}
+      <Dialog open={!!deleteTarget} onOpenChange={(open) => { if (!open && !deleting) { setDeleteTarget(null); setImpact(null); } }}>
+        <DialogContent className="bg-neutral-900 border-white/10 text-white">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Trash2 className="w-4 h-4 text-red-400" />
+              Delete {deleteTarget?.title}?
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 mt-2">
+            <p className="text-sm text-zinc-400">
+              This permanently removes the workbench for everyone. It cannot be undone.
+            </p>
+            <div className="rounded-lg border border-white/10 bg-white/[0.02] p-4 text-sm">
+              {impact === null ? (
+                <p className="text-zinc-500">Checking what's attached…</p>
+              ) : (
+                <>
+                  <p className="text-zinc-300 font-medium mb-2">Will be permanently deleted:</p>
+                  <ul className="space-y-1 text-zinc-400">
+                    <li>• <span className="text-white font-semibold">{impact.focus_areas}</span> focus area{impact.focus_areas === 1 ? "" : "s"}</li>
+                    <li>• <span className="text-white font-semibold">{impact.signals}</span> signal{impact.signals === 1 ? "" : "s"}</li>
+                    <li>• the dashboard tile and its access permission</li>
+                  </ul>
+                </>
+              )}
+            </div>
+            <div className="flex justify-end gap-2 pt-1">
+              <Button
+                variant="outline"
+                onClick={() => { setDeleteTarget(null); setImpact(null); }}
+                disabled={deleting}
+                className="border-white/10 text-zinc-300 bg-transparent hover:bg-white/5 hover:text-white text-sm h-9"
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={confirmDeleteWorkbench}
+                disabled={deleting || impact === null}
+                className="bg-red-600 hover:bg-red-500 text-white text-sm h-9"
+              >
+                {deleting ? "Deleting…" : "Delete workbench"}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
