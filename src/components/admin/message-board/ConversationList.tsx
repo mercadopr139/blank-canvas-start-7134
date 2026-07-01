@@ -44,12 +44,14 @@ const formatTime = (iso: string | undefined) => {
   if (!iso) return "";
   const d = new Date(iso);
   const now = new Date();
-  const diffMs = now.getTime() - d.getTime();
-  const diffDays = Math.floor(diffMs / 86400000);
-  if (diffDays === 0) return d.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
-  if (diffDays === 1) return "Yesterday";
-  if (diffDays < 7) return d.toLocaleDateString([], { weekday: "short" });
-  return d.toLocaleDateString([], { month: "short", day: "numeric" });
+  // Compare by calendar day (flips at midnight) rather than a rolling
+  // 24h window, so the label changes when "a new day comes".
+  const startOfDay = (x: Date) =>
+    new Date(x.getFullYear(), x.getMonth(), x.getDate()).getTime();
+  const dayDiff = Math.round((startOfDay(now) - startOfDay(d)) / 86400000);
+  if (dayDiff <= 0) return d.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" }); // today → time
+  if (dayDiff === 1) return "Yesterday";
+  return d.toLocaleDateString([], { month: "short", day: "numeric" }); // 2+ days → "Jun 23"
 };
 
 const getConvTitle = (conv: Conversation) => conv.name?.trim() || "Untitled conversation";
