@@ -30,7 +30,6 @@ import { format } from "date-fns";
 import { todayInET, todayDisplayInET } from "@/lib/easternTime";
 import { ArrowLeft, Plus, CheckCircle2, Circle, LogOut, Archive, ArrowRight, Trash2, MoreVertical, Target, Zap, GripVertical, Radar } from "lucide-react";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import UpcomingEventsWidget from "@/components/admin/UpcomingEventsWidget";
 
 const PILLARS = ["Operations", "Sales & Marketing", "Finance", "Vision", "Personal"] as const;
 
@@ -1018,12 +1017,6 @@ const AdminSignals = ({ managerType = "PD" }: { managerType?: string }) => {
               <Trash2 className="w-3.5 h-3.5 mr-1" />
               Trash
             </Button>
-          </div>
-
-          {/* Upcoming events — bottom of the page, dimmed so it sits as
-              context rather than competing with the kanban above. */}
-          <div className="mt-12 opacity-60 hover:opacity-90 transition-opacity">
-            <UpcomingEventsWidget focusArea={focusArea} />
           </div>
 
           {/* Global Drag Overlay */}
