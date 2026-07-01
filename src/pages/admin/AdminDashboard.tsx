@@ -10,7 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
-import { LogOut, Hammer, BadgeDollarSign, Lightbulb, ArrowLeft, Lock, Plus, Pencil, GripVertical, KeyRound, LayoutGrid, ChevronRight } from "lucide-react";
+import { LogOut, Hammer, BadgeDollarSign, Lightbulb, ArrowLeft, Lock, Plus, Pencil, GripVertical, KeyRound, LayoutGrid, ChevronRight, MessageSquare } from "lucide-react";
 import { icons } from "lucide-react";
 import UpcomingEventsWidget from "@/components/admin/UpcomingEventsWidget";
 import InviteAdminModal from "@/components/admin/InviteAdminModal";
@@ -320,6 +320,43 @@ const AdminDashboard = () => {
     },
   });
 
+  /* Unread message count for the signed-in admin. Same RPC the message
+     board uses (mb_unread_counts returns one row per conversation); we
+     sum it to a single number that drives the alert tile under the
+     pillars. Polls on an interval + on window focus so a message that
+     lands while the dashboard is open eventually surfaces here. */
+  const { data: unreadMessages = 0 } = useQuery({
+    queryKey: ["dashboard-unread-messages", user?.id],
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc("mb_unread_counts", { uid: user!.id });
+      if (error) throw error;
+      return ((data as { unread_count: number }[]) || []).reduce(
+        (sum, r) => sum + Number(r.unread_count),
+        0,
+      );
+    },
+    enabled: !!user,
+    refetchInterval: 60000,
+    refetchOnWindowFocus: true,
+  });
+
+  /* Realtime: any new message anywhere refreshes the unread count so the
+     alert tile lights up the instant a message is sent — not just on the
+     60s poll above (which stays as a safety net if the socket drops).
+     Own channel name so it doesn't collide with the board's "mb-realtime".
+     The RPC re-runs on invalidate and only counts conversations this user
+     is a member of, so messages in threads you're not in are ignored. */
+  useEffect(() => {
+    if (!user) return;
+    const channel = supabase
+      .channel("dashboard-mb-unread")
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "mb_messages" }, () => {
+        queryClient.invalidateQueries({ queryKey: ["dashboard-unread-messages", user.id] });
+      })
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [user, queryClient]);
+
   /* The full default-tile set = static defaults + one tile per task manager.
      This drives both the new-user seed and the missing-tile backfill below. */
   const defaultTiles = useMemo(() => {
@@ -557,9 +594,36 @@ const AdminDashboard = () => {
           })}
         </div>
 
-        {/* ── "Other Admin" entry tile ── smaller & gray, sits below the
-            3 pillars. Clicking it swaps to the secondary-tiles screen. */}
-        <div className="flex justify-center">
+        {/* ── Secondary row under the pillars ── an unread-messages alert
+            (only rendered when you actually have unread messages) beside
+            the "Other Admin" entry tile. */}
+        <div className="flex flex-wrap justify-center items-stretch gap-3">
+          {/* Unread-messages alert — hidden entirely at zero so it reads
+              as a true notification, not permanent chrome. NLA red with a
+              pulsing dot to pull the eye. Clicks straight to the board,
+              where unread conversations already float to the top. */}
+          {unreadMessages > 0 && (
+            <button
+              type="button"
+              onClick={() => navigate("/admin/message-board")}
+              className="group flex items-center gap-3 rounded-xl border border-[#bf0f3e]/40 bg-[#bf0f3e]/[0.08] px-5 py-3.5 text-left transition-all duration-200 hover:bg-[#bf0f3e]/[0.14] hover:border-[#bf0f3e]/60 shadow-[0_0_24px_rgba(191,15,62,0.22)]"
+            >
+              <div className="relative w-9 h-9 rounded-lg flex items-center justify-center bg-[#bf0f3e]/20 text-[#bf0f3e]">
+                <MessageSquare className="w-4.5 h-4.5" strokeWidth={1.8} />
+                <span className="absolute -top-1 -right-1 flex h-2.5 w-2.5">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#bf0f3e] opacity-75" />
+                  <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-[#bf0f3e]" />
+                </span>
+              </div>
+              <div>
+                <h3 className="text-sm font-semibold text-white">
+                  {unreadMessages > 99 ? "99+" : unreadMessages} unread {unreadMessages === 1 ? "message" : "messages"}
+                </h3>
+                <p className="text-[11px] text-[#bf0f3e]/80">Tap to read on the message board</p>
+              </div>
+            </button>
+          )}
+
           <button
             type="button"
             onClick={() => setShowOther(true)}
