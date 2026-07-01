@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import nlaLogoWhite from "@/assets/nla-logo-white.png";
 import { useAuth } from "@/contexts/AuthContext";
@@ -316,9 +316,19 @@ const AdminDashboard = () => {
   // The dashboard is a fixed home of 4 tiles: the 3 business pillars plus
   // one gray "Other Admin" tile. Clicking "Other Admin" swaps to a second
   // screen showing only the secondary tiles (workbenches, message board,
-  // settings, etc.) with a Back button. The dashboard is always the
-  // landing view, so this is plain in-memory state (not persisted).
-  const [showOther, setShowOther] = useState(false);
+  // settings, etc.). We drive that view from the URL (?section=other)
+  // rather than in-memory state so it gets a real history entry — that
+  // makes the browser/phone Back button (and our own back arrow) return
+  // to the pillar dashboard instead of blowing past it to the site.
+  const [searchParams, setSearchParams] = useSearchParams();
+  const showOther = searchParams.get("section") === "other";
+  const enterOther = () => setSearchParams({ section: "other" }); // pushes history
+  // Clear the param (replace, so we don't stack history) to return to the
+  // pillars. Using replace rather than navigate(-1) keeps us in the app
+  // even if the user landed on ?section=other via refresh/deep-link with
+  // no prior in-app entry to pop back to. The browser Back button still
+  // returns to the pillars on its own thanks to the pushed entry above.
+  const exitOther = () => setSearchParams({}, { replace: true });
 
   // Workbench deletion (super admin only). deleteTarget holds the tile
   // being removed; impact is fetched from get_workbench_impact so the
@@ -525,7 +535,17 @@ const AdminDashboard = () => {
       <header className="border-b border-white/[0.06] bg-[#09090b]/80 backdrop-blur-md sticky top-0 z-30">
         <div className="max-w-6xl mx-auto px-6 py-3 flex items-center justify-between">
           <div className="flex items-center gap-4">
-            <Button variant="ghost" size="icon" onClick={() => navigate("/")} aria-label="Back to site" className="text-zinc-400 hover:text-white hover:bg-white/5">
+            {/* Context-aware back: inside "Other Admin" it returns to the
+                pillar dashboard; on the pillar dashboard it exits to the
+                public site. */}
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => (showOther ? exitOther() : navigate("/"))}
+              aria-label={showOther ? "Back to dashboard" : "Back to site"}
+              title={showOther ? "Back to dashboard" : "Back to site"}
+              className="text-zinc-400 hover:text-white hover:bg-white/5"
+            >
               <ArrowLeft className="w-5 h-5" />
             </Button>
             <div>
@@ -693,7 +713,7 @@ const AdminDashboard = () => {
 
           <button
             type="button"
-            onClick={() => setShowOther(true)}
+            onClick={enterOther}
             className="group flex items-center gap-3 rounded-xl border border-white/[0.06] bg-white/[0.02] px-5 py-3.5 text-left transition-all duration-200 hover:bg-white/[0.04] hover:border-white/[0.12]"
           >
             <div className="w-9 h-9 rounded-lg flex items-center justify-center bg-white/[0.04] text-zinc-500 group-hover:text-zinc-300 transition-colors">
@@ -718,7 +738,7 @@ const AdminDashboard = () => {
           </div>
           <Button
             variant="outline"
-            onClick={() => setShowOther(false)}
+            onClick={exitOther}
             className="border-white/10 text-zinc-300 bg-transparent hover:bg-white/5 hover:text-white text-xs h-9"
           >
             <ArrowLeft className="w-3.5 h-3.5 mr-1.5" />
