@@ -13,6 +13,7 @@ import { toast } from "sonner";
 import confetti from "canvas-confetti";
 import nlaLogo from "@/assets/nla-logo-white.png";
 import FocusAreaModal from "@/components/admin/FocusAreaModal";
+import InTheWorksPennant from "@/components/admin/InTheWorksPennant";
 import DailyVerse from "@/components/admin/DailyVerse";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -837,7 +838,12 @@ const AdminWorkbench = () => {
         </div>
       </header>
 
-      <main className="max-w-5xl mx-auto px-6 py-10 sm:py-14">
+      <main className="relative max-w-5xl mx-auto px-6 py-10 sm:py-14">
+        {/* Personal "In the Works" pennant — a private, cross-focus-area
+            watchlist of initiatives to revisit for progress. Scoped by the
+            signed-in user's email (RLS-enforced), so it's only ever theirs. */}
+        {user?.email && <InTheWorksPennant ownerEmail={user.email} />}
+
         <div className="flex justify-center mb-6">
           <img
             src={nlaLogo}
