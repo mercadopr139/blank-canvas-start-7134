@@ -93,12 +93,10 @@ export default function InTheWorksPennant({ ownerEmail }: { ownerEmail: string }
     // so it never overlaps the tiles.
     <div className="relative mx-auto max-w-sm mb-10 lg:mb-0 lg:absolute lg:top-4 lg:right-2 lg:w-64 lg:z-20">
       <div
-        className="relative border-2 px-4 pt-3 pb-7"
+        className="relative rounded-xl border-2 px-4 pt-3 pb-4"
         style={{
           borderColor: `${GOLD}66`,
           background: `linear-gradient(160deg, ${GOLD}1c 0%, ${GOLD}08 55%, transparent 100%)`,
-          // Swallowtail pennant edge — a downward point notched into the bottom.
-          clipPath: "polygon(0 0, 100% 0, 100% calc(100% - 14px), 50% 100%, 0 calc(100% - 14px))",
         }}
       >
         {/* Banner header */}
