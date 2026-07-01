@@ -12,6 +12,7 @@ import quikhitLogo from "@/assets/quikhit-logo.png";
 import nlaMascot from "@/assets/nla-mascot.png";
 import personalFamily from "@/assets/personal-family.png";
 import DailyVerse from "@/components/admin/DailyVerse";
+import FocusAreaNotes from "@/components/admin/FocusAreaNotes";
 import { useNavigate, useParams } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -1018,6 +1019,15 @@ const AdminSignals = ({ managerType = "PD" }: { managerType?: string }) => {
               Trash
             </Button>
           </div>
+
+          {/* Notes — durable, detailed context for this focus area, kept
+              separate from the signals kanban above. */}
+          <FocusAreaNotes
+            managerType={managerType}
+            focusArea={focusArea}
+            accentHex={ac.hex}
+            currentUserId={user?.id || ""}
+          />
 
           {/* Global Drag Overlay */}
           <DragOverlay>
