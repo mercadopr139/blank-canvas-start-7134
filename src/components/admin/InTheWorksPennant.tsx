@@ -91,7 +91,7 @@ export default function InTheWorksPennant({ ownerEmail }: { ownerEmail: string }
     // On large screens this floats in the top-right corner of the workbench;
     // on smaller screens it collapses to a normal centered block above the grid
     // so it never overlaps the tiles.
-    <div className="relative mx-auto max-w-sm mb-10 lg:mb-0 lg:absolute lg:top-4 lg:right-2 lg:w-64 lg:z-20">
+    <div className="relative mx-auto max-w-md mb-10 lg:mb-0 lg:absolute lg:top-4 lg:right-2 lg:w-96 lg:z-20">
       <div
         className="relative rounded-xl border-2 px-4 pt-3 pb-4"
         style={{
