@@ -25,23 +25,13 @@ type WatchItem = {
 // Accent gold — deliberately different from the focus-area tiles so the
 // pennant reads as a distinct, personal banner rather than another tile.
 const GOLD = "#e0b341";
+// Every item's dot is the same green — this is a plain reminder list, not a
+// staleness tracker. The user clears items themselves when they're done.
+const GREEN = "#4ade80";
 
-// Compact "time since last touched". Also drives the staleness dot color:
-// the longer something sits untouched, the warmer the marker runs.
-const touchAge = (iso: string): { label: string; tone: string } => {
-  const then = new Date(iso).getTime();
-  const days = Math.floor((Date.now() - then) / 86_400_000);
-  let label: string;
-  if (days <= 0) label = "today";
-  else if (days === 1) label = "1d ago";
-  else if (days < 7) label = `${days}d ago`;
-  else if (days < 30) label = `${Math.floor(days / 7)}w ago`;
-  else if (days < 365) label = `${Math.floor(days / 30)}mo ago`;
-  else label = `${Math.floor(days / 365)}y ago`;
-  // fresh → muted green, warming → amber, stale → red
-  const tone = days < 7 ? "#4ade80" : days < 21 ? GOLD : "#f87171";
-  return { label, tone };
-};
+// The date the item was added, e.g. "Jul 1".
+const addedOn = (iso: string): string =>
+  new Date(iso).toLocaleDateString(undefined, { month: "short", day: "numeric" });
 
 export default function InTheWorksPennant({ ownerEmail }: { ownerEmail: string }) {
   const queryClient = useQueryClient();
@@ -77,18 +67,6 @@ export default function InTheWorksPennant({ ownerEmail }: { ownerEmail: string }
       if (error) throw error;
     },
     onSuccess: () => { setDraft(""); setAdding(false); refresh(); },
-    onError: (e: any) => toast.error(e.message),
-  });
-
-  // Tapping an item re-stamps it as touched now — the item's whole purpose.
-  const touchMutation = useMutation({
-    mutationFn: async (id: string) => {
-      const { error } = await (supabase.from("workbench_watch_items") as any)
-        .update({ last_touched_at: new Date().toISOString() })
-        .eq("id", id);
-      if (error) throw error;
-    },
-    onSuccess: () => { refresh(); toast.success("Marked as touched today"); },
     onError: (e: any) => toast.error(e.message),
   });
 
@@ -139,27 +117,20 @@ export default function InTheWorksPennant({ ownerEmail }: { ownerEmail: string }
         ) : (
           <div className="space-y-1">
             {items.map((item) => {
-              const { label, tone } = touchAge(item.last_touched_at);
               return (
                 <div key={item.id} className="group/w flex items-start gap-2 py-0.5">
                   <span
                     className="mt-1.5 w-1.5 h-1.5 rounded-full shrink-0"
-                    style={{ background: tone }}
-                    title={`Last touched ${label}`}
+                    style={{ background: GREEN }}
                   />
-                  <button
-                    type="button"
-                    onClick={() => touchMutation.mutate(item.id)}
-                    className="flex-1 min-w-0 text-left"
-                    title="Tap to mark touched today"
-                  >
-                    <span className="text-xs text-white/85 leading-snug break-words group-hover/w:text-white">
+                  <div className="flex-1 min-w-0">
+                    <span className="text-xs text-white/85 leading-snug break-words">
                       {item.title}
                     </span>
-                    <span className="ml-1.5 text-[10px] font-medium" style={{ color: tone }}>
-                      {label}
+                    <span className="ml-1.5 text-[10px] font-medium text-white/40">
+                      {addedOn(item.created_at)}
                     </span>
-                  </button>
+                  </div>
                   <button
                     type="button"
                     onClick={() => removeMutation.mutate(item.id)}
