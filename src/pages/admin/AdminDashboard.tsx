@@ -466,9 +466,14 @@ const AdminDashboard = () => {
           .in("id", deprecatedIds);
       }
 
+      // Upsert (not insert) so a seed that fires more than once can never
+      // create duplicate tiles — the (user_id, href) unique constraint makes
+      // repeat rows a no-op instead of a duplicate. Guards against the effect
+      // re-running before `seeded` flips (which previously multiplied tiles).
       if (tiles.length === 0 || tiles.every((t) => DEPRECATED_TILE_HREFS.includes(t.href))) {
         const rows = defaultTiles.map((t) => ({ ...t, user_id: user.id }));
-        const { error } = await (supabase.from("dashboard_tiles") as any).insert(rows);
+        const { error } = await (supabase.from("dashboard_tiles") as any)
+          .upsert(rows, { onConflict: "user_id,href", ignoreDuplicates: true });
         if (error) console.error("Failed to seed default tiles:", error);
       } else {
         const existingHrefs = new Set(
@@ -477,7 +482,8 @@ const AdminDashboard = () => {
         const missing = defaultTiles.filter((t) => !existingHrefs.has(t.href));
         if (missing.length > 0) {
           const rows = missing.map((t) => ({ ...t, user_id: user.id }));
-          const { error } = await (supabase.from("dashboard_tiles") as any).insert(rows);
+          const { error } = await (supabase.from("dashboard_tiles") as any)
+            .upsert(rows, { onConflict: "user_id,href", ignoreDuplicates: true });
           if (error) console.error("Failed to add missing tiles:", error);
         }
       }
