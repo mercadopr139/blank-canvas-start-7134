@@ -13,5 +13,15 @@ export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABL
     storage: localStorage,
     persistSession: true,
     autoRefreshToken: true,
-  }
+  },
+  realtime: {
+    // Exponential backoff on reconnect (1s, 2s, 4s, 8s … capped at 30s). A
+    // realtime socket that can't authenticate otherwise retries in a tight
+    // loop; that burst of auth traffic can trip Supabase's rate limit (HTTP
+    // 429) on token refresh, which drops the session and bounces the admin
+    // back to /admin/login a second after signing in. Backing off keeps a
+    // failing socket from ever spiralling into a rate-limit lockout.
+    reconnectAfterMs: (tries: number) => Math.min(1000 * 2 ** tries, 30000),
+    heartbeatIntervalMs: 30000,
+  },
 });
