@@ -11,6 +11,7 @@ import {
   ChartTooltipContent,
 } from "@/components/ui/chart";
 import { BarChart, Bar, XAxis, YAxis, PieChart, Pie, Cell } from "recharts";
+import { YouthDistrictMap } from "@/components/admin/YouthDistrictMap";
 
 const COLORS = [
   "#bf0f3e",
@@ -517,6 +518,9 @@ const AdminRegistrationAnalytics = () => {
                 </CardContent>
               </Card>
             </div>
+
+            {/* Where our youth come from — geographic map, above the ranked bar chart */}
+            <YouthDistrictMap />
 
             {/* School District - full width */}
             <Card className="bg-white/5 border-white/10">
