@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import nlaLogoWhite from "@/assets/nla-logo-white.png";
@@ -452,47 +452,75 @@ const AdminDashboard = () => {
   /* Seed default tiles on first load; also add any missing tiles for existing
      users — this is what makes a newly-added task manager auto-appear on
      every admin's dashboard the next time they visit. */
+  // Synchronous guard: the effect below can be re-triggered by a render that
+  // lands before the async work finishes (task-managers query resolving,
+  // tiles refetching, etc.). `seeded` is React state, so it flips too late to
+  // stop a concurrent second run — which is exactly how duplicate tiles piled
+  // up. This ref is set the instant the effect starts, so overlapping runs
+  // bail immediately.
+  const seedingRef = useRef(false);
+
   useEffect(() => {
-    if (!user || tilesLoading || tmLoading || seeded) return;
+    if (!user || tilesLoading || tmLoading || seeded || seedingRef.current) return;
+    seedingRef.current = true;
 
     const seedDefaults = async () => {
-      // Remove any deprecated tiles first
-      const deprecatedIds = tiles
-        .filter((t) => DEPRECATED_TILE_HREFS.includes(t.href))
-        .map((t) => t.id);
-      if (deprecatedIds.length > 0) {
-        await (supabase.from("dashboard_tiles") as any)
-          .delete()
-          .in("id", deprecatedIds);
-      }
-
-      // Upsert (not insert) so a seed that fires more than once can never
-      // create duplicate tiles — the (user_id, href) unique constraint makes
-      // repeat rows a no-op instead of a duplicate. Guards against the effect
-      // re-running before `seeded` flips (which previously multiplied tiles).
-      if (tiles.length === 0 || tiles.every((t) => DEPRECATED_TILE_HREFS.includes(t.href))) {
-        const rows = defaultTiles.map((t) => ({ ...t, user_id: user.id }));
-        const { error } = await (supabase.from("dashboard_tiles") as any)
-          .upsert(rows, { onConflict: "user_id,href", ignoreDuplicates: true });
-        if (error) console.error("Failed to seed default tiles:", error);
-      } else {
-        const existingHrefs = new Set(
-          tiles.filter((t) => !DEPRECATED_TILE_HREFS.includes(t.href)).map((t) => t.href)
-        );
-        const missing = defaultTiles.filter((t) => !existingHrefs.has(t.href));
-        if (missing.length > 0) {
-          const rows = missing.map((t) => ({ ...t, user_id: user.id }));
-          const { error } = await (supabase.from("dashboard_tiles") as any)
-            .upsert(rows, { onConflict: "user_id,href", ignoreDuplicates: true });
-          if (error) console.error("Failed to add missing tiles:", error);
+      try {
+        // 0. Self-heal: collapse any duplicate tiles a previous double-seed
+        //    left behind, keeping the first of each href. Runs entirely
+        //    through the app (RLS lets a user delete their own tiles), so no
+        //    database migration is required to clean an already-affected user.
+        const seenHrefs = new Set<string>();
+        const duplicateIds: string[] = [];
+        for (const t of tiles) {
+          if (seenHrefs.has(t.href)) duplicateIds.push(t.id);
+          else seenHrefs.add(t.href);
         }
+        if (duplicateIds.length > 0) {
+          const { error } = await (supabase.from("dashboard_tiles") as any)
+            .delete()
+            .in("id", duplicateIds);
+          if (error) console.error("Failed to remove duplicate tiles:", error);
+        }
+
+        // 1. Remove any deprecated tiles.
+        const deprecatedIds = tiles
+          .filter((t) => DEPRECATED_TILE_HREFS.includes(t.href))
+          .map((t) => t.id);
+        if (deprecatedIds.length > 0) {
+          await (supabase.from("dashboard_tiles") as any)
+            .delete()
+            .in("id", deprecatedIds);
+        }
+
+        // 2. Seed defaults for a brand-new user, or backfill only the tiles
+        //    they're missing. Both paths insert each href at most once — and
+        //    the seedingRef guard above stops a second concurrent seed — so
+        //    this can no longer multiply tiles.
+        if (tiles.length === 0 || tiles.every((t) => DEPRECATED_TILE_HREFS.includes(t.href))) {
+          const rows = defaultTiles.map((t) => ({ ...t, user_id: user.id }));
+          const { error } = await (supabase.from("dashboard_tiles") as any).insert(rows);
+          if (error) console.error("Failed to seed default tiles:", error);
+        } else {
+          const existingHrefs = new Set(
+            tiles.filter((t) => !DEPRECATED_TILE_HREFS.includes(t.href)).map((t) => t.href)
+          );
+          const missing = defaultTiles.filter((t) => !existingHrefs.has(t.href));
+          if (missing.length > 0) {
+            const rows = missing.map((t) => ({ ...t, user_id: user.id }));
+            const { error } = await (supabase.from("dashboard_tiles") as any).insert(rows);
+            if (error) console.error("Failed to add missing tiles:", error);
+          }
+        }
+        queryClient.invalidateQueries({ queryKey: ["dashboard-tiles", user.id] });
+        setSeeded(true);
+      } finally {
+        seedingRef.current = false;
       }
-      queryClient.invalidateQueries({ queryKey: ["dashboard-tiles", user.id] });
-      setSeeded(true);
     };
 
     seedDefaults();
-  }, [user, tilesLoading, tmLoading, tiles.length, defaultTiles, seeded, queryClient]);
+  }, [user, tilesLoading, tmLoading, tiles, defaultTiles, seeded, queryClient]);
 
   /* When a new task manager is created, immediately drop a tile onto the
      current user's dashboard (the seed effect above only runs once per
