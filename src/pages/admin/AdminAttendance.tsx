@@ -27,6 +27,7 @@ import {
 } from "date-fns";
 import { toast } from "sonner";
 import { ExcursionHistorySection } from "@/components/admin/ExcursionHistorySection";
+import { YouthDistrictMap } from "@/components/admin/YouthDistrictMap";
 import { getProgramYearForRegistration, shortProgramYear } from "@/lib/programYear";
 
 /* ───────── Types ───────── */
@@ -1949,6 +1950,9 @@ const AdminAttendance = () => {
           </div>
         </div>
       )}
+
+      {/* ═══════════ YOUTH PER SCHOOL DISTRICT MAP ═══════════ */}
+      <YouthDistrictMap />
 
       {/* ═══════════ ATTENDANCE INSIGHTS ═══════════ */}
       <div>
