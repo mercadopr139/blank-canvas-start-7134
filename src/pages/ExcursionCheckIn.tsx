@@ -261,7 +261,8 @@ const ExcursionCheckIn = () => {
                 READY FOR THE TRIP!
               </h2>
               <p className="text-3xl md:text-5xl text-white/90 font-bold mb-4">{checkedInName}</p>
-              <p className="text-xl md:text-2xl text-white/60 italic">"Adventure builds character"</p>
+              <p className="text-xl md:text-2xl text-white/60 italic">"The Lord directs our steps"</p>
+              <p className="text-base text-white/40 mt-2">— Proverbs 16:9</p>
             </div>
           </div>
         </>
