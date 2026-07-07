@@ -169,6 +169,14 @@ const ExcursionCoach = () => {
   const [timestampEditValue, setTimestampEditValue] = useState("");
   const [savingTimestamp, setSavingTimestamp] = useState(false);
 
+  // ───── Guided setup wizard ─────
+  // A step-by-step pop-up that walks a coach through setup after PIN entry,
+  // so they never have to figure out what to do first on the busy page. It
+  // reuses every existing handler/state below — it only reorganizes the setup
+  // flow, it doesn't change any data path.
+  const [wizardStepKey, setWizardStepKey] = useState<string>("transport");
+  const [wizardOpen, setWizardOpen] = useState(false);
+
   const loadExcursion = useCallback(async () => {
     const { data, error } = await supabase.rpc("get_todays_excursion");
     if (error) {
@@ -264,6 +272,36 @@ const ExcursionCoach = () => {
   const isArrived = !!excursion?.arrived_at;
   const isClosed = !!excursion?.returned_at;
   const transportRequired = excursion?.transportation_required;
+
+  // Open the guide automatically when a coach reaches an unlocked excursion,
+  // restore the step they were on (survives an iPad lock / reload), and close
+  // it once the roster is submitted.
+  useEffect(() => {
+    if (!pinVerified || !excursion || isLocked || isClosed) {
+      setWizardOpen(false);
+      return;
+    }
+    const exId = excursion.id;
+    const saved = sessionStorage.getItem(`nla_exc_wizard_step_${exId}`);
+    if (saved) setWizardStepKey(saved);
+    const dismissed = sessionStorage.getItem(`nla_exc_wizard_dismissed_${exId}`) === "1";
+    if (!dismissed) setWizardOpen(true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pinVerified, excursion?.id, isLocked, isClosed]);
+
+  // Remember the current step so a reload lands back on it.
+  useEffect(() => {
+    if (excursion?.id) sessionStorage.setItem(`nla_exc_wizard_step_${excursion.id}`, wizardStepKey);
+  }, [wizardStepKey, excursion?.id]);
+
+  const dismissWizard = () => {
+    if (excursion?.id) sessionStorage.setItem(`nla_exc_wizard_dismissed_${excursion.id}`, "1");
+    setWizardOpen(false);
+  };
+  const reopenWizard = () => {
+    if (excursion?.id) sessionStorage.removeItem(`nla_exc_wizard_dismissed_${excursion.id}`);
+    setWizardOpen(true);
+  };
 
   const assignedCount = useMemo(
     () => youth.filter((y) => y.vehicle_id).length,
@@ -620,6 +658,18 @@ const ExcursionCoach = () => {
   const checkedInCount = youth.length;
   const unassignedYouth = youth.filter((y) => !y.vehicle_id);
 
+  // Wizard step order — vehicles + loading are skipped when NLA isn't driving.
+  const wizardSteps: [string, string][] =
+    transportRequired === false
+      ? [["transport", "Transportation"], ["coaches", "Coaches & Volunteers"], ["missing", "Anyone Missing?"], ["review", "Review & Submit"]]
+      : [["transport", "Transportation"], ["vehicles", "Choose Vehicles"], ["load", "Load Youth"], ["coaches", "Coaches & Volunteers"], ["missing", "Anyone Missing?"], ["review", "Review & Submit"]];
+  const wizardKeys = wizardSteps.map((s) => s[0]);
+  const safeStepKey = wizardKeys.includes(wizardStepKey) ? wizardStepKey : wizardKeys[0];
+  const wizardIdx = wizardKeys.indexOf(safeStepKey);
+  const wizardTitle = wizardSteps[wizardIdx][1];
+  const gotoNextStep = () => setWizardStepKey(wizardKeys[Math.min(wizardKeys.length - 1, wizardIdx + 1)]);
+  const gotoPrevStep = () => setWizardStepKey(wizardKeys[Math.max(0, wizardIdx - 1)]);
+
   return (
     <div className="min-h-screen bg-black text-white">
       {/* Header */}
@@ -736,6 +786,51 @@ const ExcursionCoach = () => {
                 <p className="text-xs md:text-sm font-bold text-emerald-200/90 uppercase tracking-wider mt-2">
                   Total on Trip
                 </p>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Trip manifest — who's in each vehicle, so a coach can do a quick
+            headcount per van at arrival and at return. Only when NLA drives. */}
+        {isLocked && transportRequired === true && vehicles.length > 0 && (
+          <Card className="bg-white/[0.03] border-white/10 text-white">
+            <CardContent className="p-5 md:p-6">
+              <p className="text-xs font-bold uppercase tracking-wider text-white/50 mb-4">
+                Trip Manifest — who's in each vehicle
+              </p>
+              <div className="space-y-3">
+                {vehicles.map((v) => {
+                  const kids = youth.filter((y) => y.vehicle_id === v.id);
+                  return (
+                    <div key={v.id} className="rounded-xl bg-white/[0.04] border border-white/10 p-4">
+                      <p className="font-bold flex items-center gap-2">
+                        <Truck className="w-4 h-4 text-purple-300" />{v.name}
+                        <span className="text-white/40 font-medium text-sm">· {v.driver_name} · {kids.length}/{v.seat_cap}</span>
+                      </p>
+                      {kids.length === 0 ? (
+                        <p className="text-sm text-white/30 italic mt-1">No youth assigned.</p>
+                      ) : (
+                        <div className="flex flex-wrap gap-1.5 mt-2">
+                          {kids.map((y) => (
+                            <span key={y.registration_id} className="inline-flex items-center gap-1.5 rounded-full bg-purple-500/10 border border-purple-400/30 px-2.5 py-1 text-sm">
+                              <span className="w-5 h-5 rounded-full bg-white/10 overflow-hidden flex items-center justify-center text-[10px] font-bold text-white/60">
+                                {getHeadshotUrl(y.child_headshot_url) ? <img src={getHeadshotUrl(y.child_headshot_url)!} alt="" className="w-full h-full object-cover" /> : y.child_first_name[0]}
+                              </span>
+                              {y.child_first_name} {y.child_last_name}
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+                {unassignedYouth.length > 0 && (
+                  <div className="rounded-xl bg-yellow-500/[0.06] border border-yellow-400/30 p-4">
+                    <p className="font-bold text-yellow-200/90 text-sm">Not in a vehicle ({unassignedYouth.length})</p>
+                    <p className="text-sm text-yellow-100/60 mt-1">{unassignedYouth.map((y) => `${y.child_first_name} ${y.child_last_name}`).join(", ")}</p>
+                  </div>
+                )}
               </div>
             </CardContent>
           </Card>
@@ -1788,6 +1883,314 @@ const ExcursionCoach = () => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* ═══════════ Guided setup wizard (pop-up) ═══════════ */}
+      {wizardOpen && excursion && !isLocked && (
+        <div className="fixed inset-0 z-50 bg-black/95 backdrop-blur-sm flex flex-col">
+          {/* Header — progress dots + dismiss */}
+          <div className="shrink-0 border-b border-white/10 px-4 md:px-6 py-3">
+            <div className="max-w-2xl mx-auto flex items-center gap-3">
+              <div className="flex items-center gap-1.5">
+                {wizardKeys.map((k, i) => (
+                  <span
+                    key={k}
+                    className={`h-2 rounded-full transition-all ${
+                      i === wizardIdx ? "w-6 bg-purple-400" : i < wizardIdx ? "w-2 bg-purple-500/60" : "w-2 bg-white/15"
+                    }`}
+                  />
+                ))}
+              </div>
+              <p className="text-xs text-purple-300/70 font-semibold ml-1">
+                Step {wizardIdx + 1} of {wizardKeys.length}
+              </p>
+              <button
+                onClick={dismissWizard}
+                className="ml-auto text-xs text-white/40 hover:text-white/80 underline underline-offset-2"
+              >
+                Set up manually
+              </button>
+            </div>
+          </div>
+
+          {/* Step content */}
+          <div className="flex-1 overflow-y-auto px-4 md:px-6 py-6">
+            <div className="max-w-2xl mx-auto">
+              <h2 className="text-2xl md:text-3xl font-black mb-1">{wizardTitle}</h2>
+
+              {/* ── Step: Transportation ── */}
+              {safeStepKey === "transport" && (
+                <>
+                  <p className="text-white/50 mb-6">
+                    Is NLA providing rides for this trip?
+                  </p>
+                  <div className="grid sm:grid-cols-2 gap-4">
+                    <button
+                      onClick={() => { handleSetTransportRequired(true); setWizardStepKey("vehicles"); }}
+                      className={`rounded-2xl border-2 p-6 text-left transition ${transportRequired === true ? "border-purple-400 bg-purple-500/20" : "border-purple-400/40 bg-purple-500/10 hover:bg-purple-500/20"}`}
+                    >
+                      <Truck className="w-8 h-8 text-purple-300 mb-3" />
+                      <p className="text-lg font-bold">Yes, NLA is driving</p>
+                      <p className="text-sm text-white/50 mt-1">You'll add vehicles and load youth.</p>
+                    </button>
+                    <button
+                      onClick={() => { handleSetTransportRequired(false); setWizardStepKey("coaches"); }}
+                      className={`rounded-2xl border-2 p-6 text-left transition ${transportRequired === false ? "border-white/40 bg-white/10" : "border-white/15 bg-white/5 hover:bg-white/10"}`}
+                    >
+                      <Home className="w-8 h-8 text-white/60 mb-3" />
+                      <p className="text-lg font-bold">No, families drop off</p>
+                      <p className="text-sm text-white/50 mt-1">Skip vehicles — just track who's coming.</p>
+                    </button>
+                  </div>
+                </>
+              )}
+
+              {/* ── Step: Choose vehicles ── */}
+              {safeStepKey === "vehicles" && (
+                <>
+                  <p className="text-white/50 mb-4">Add every vehicle and who's driving it.</p>
+                  {vehicles.length > 0 && (
+                    <div className="space-y-2 mb-4">
+                      {vehicles.map((v) => (
+                        <div key={v.id} className="flex items-center justify-between rounded-xl bg-white/[0.04] border border-white/10 px-4 py-3">
+                          <div>
+                            <p className="font-bold flex items-center gap-2"><Truck className="w-4 h-4 text-purple-300" />{v.name}</p>
+                            <p className="text-xs text-white/50">Driver: {v.driver_name} · {v.seat_cap} seats</p>
+                          </div>
+                          <button onClick={() => handleRemoveVehicle(v)} className="text-white/40 hover:text-red-400 p-1"><Trash2 className="w-4 h-4" /></button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  {!addingVehicle ? (
+                    <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
+                      {VEHICLE_PRESETS.map((p) => {
+                        const Icon = p.icon;
+                        return (
+                          <button key={p.name} onClick={() => openAddVehicle(p)} className="flex flex-col items-center gap-1.5 rounded-xl bg-white/[0.04] hover:bg-purple-500/10 hover:border-purple-400/40 border border-white/10 p-4 transition">
+                            <Icon className="w-6 h-6 text-purple-300" /><span className="text-sm font-bold">{p.name}</span><span className="text-xs text-white/50">{p.seat_cap} seats</span>
+                          </button>
+                        );
+                      })}
+                      <button onClick={() => openAddVehicle(null)} className="flex flex-col items-center gap-1.5 rounded-xl bg-white/[0.04] hover:bg-purple-500/10 border border-dashed border-white/20 p-4 transition">
+                        <Plus className="w-6 h-6 text-purple-300" /><span className="text-sm font-bold">Other</span><span className="text-xs text-white/50">Custom</span>
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="rounded-xl bg-purple-500/[0.06] border border-purple-400/30 p-4 space-y-3">
+                      {addingVehicle.isCustom ? (
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                          <div>
+                            <Label className="text-white/70 text-xs uppercase tracking-wider">Vehicle name</Label>
+                            <Input value={customNameInput} onChange={(e) => setCustomNameInput(e.target.value)} placeholder="e.g. Pastor's SUV" className="mt-1 bg-white/5 border-white/15 text-white" />
+                          </div>
+                          <div>
+                            <Label className="text-white/70 text-xs uppercase tracking-wider">Seats (not counting driver)</Label>
+                            <Input type="number" min={1} value={customSeatInput} onChange={(e) => setCustomSeatInput(e.target.value)} placeholder="e.g. 4" className="mt-1 bg-white/5 border-white/15 text-white" />
+                          </div>
+                        </div>
+                      ) : (
+                        <p className="text-lg font-bold">{addingVehicle.name} <span className="text-white/50 font-medium text-base">• {addingVehicle.seat_cap} seats</span></p>
+                      )}
+                      <div>
+                        <Label className="text-white/70 text-xs uppercase tracking-wider">Driver name</Label>
+                        <Input value={driverNameInput} onChange={(e) => setDriverNameInput(e.target.value)} placeholder="e.g. Coach Chris" className="mt-1 bg-white/5 border-white/15 text-white" />
+                      </div>
+                      <div className="flex gap-2">
+                        <Button onClick={handleSaveVehicle} disabled={savingVehicle} className="flex-1 bg-purple-600 hover:bg-purple-500 text-white font-bold">{savingVehicle ? "Adding…" : "Add Vehicle"}</Button>
+                        <Button variant="ghost" onClick={() => setAddingVehicle(null)} className="text-white/50 hover:text-white">Cancel</Button>
+                      </div>
+                    </div>
+                  )}
+                  {vehicles.length === 0 && <p className="text-yellow-300/70 text-sm mt-3">Add at least one vehicle to continue.</p>}
+                </>
+              )}
+
+              {/* ── Step: Load youth ── */}
+              {safeStepKey === "load" && (
+                <>
+                  <p className="text-white/50 mb-3">Tap a youth, then pick their vehicle.</p>
+                  <div className="flex flex-wrap items-center gap-2 mb-2 text-sm">
+                    <span className="rounded-full bg-white/[0.06] border border-white/10 px-3 py-1.5"><b className="tabular-nums">{checkedInCount}</b> checked in</span>
+                    <span className="rounded-full bg-purple-500/10 border border-purple-400/30 text-purple-200 px-3 py-1.5"><b className="tabular-nums">{assignedCount} of {checkedInCount}</b> loaded</span>
+                    <button onClick={handleManualRefresh} className="text-white/40 hover:text-white/80 inline-flex items-center gap-1 text-xs"><RefreshCw className={`w-3.5 h-3.5 ${refreshing ? "animate-spin" : ""}`} /> Refresh</button>
+                  </div>
+                  <p className="text-xs text-white/40 mb-4">Kids can still be checking in at the kiosk — wait for stragglers before you submit.</p>
+                  {unassignedYouth.length === 0 ? (
+                    <p className="text-emerald-300 font-semibold flex items-center gap-1.5"><CheckCircle2 className="w-4 h-4" /> Everyone's loaded!</p>
+                  ) : (
+                    <div className="flex flex-wrap gap-2">
+                      {unassignedYouth.map((y) => (
+                        <Popover key={y.registration_id}>
+                          <PopoverTrigger asChild disabled={vehicles.length === 0}>
+                            <button disabled={vehicles.length === 0} className="group flex items-center gap-2 rounded-full bg-white/[0.06] hover:bg-white/[0.12] border border-white/10 px-3 py-1.5 transition disabled:opacity-50">
+                              <span className="w-7 h-7 rounded-full bg-white/10 overflow-hidden flex items-center justify-center text-xs font-bold text-white/60">{getHeadshotUrl(y.child_headshot_url) ? <img src={getHeadshotUrl(y.child_headshot_url)!} alt="" className="w-full h-full object-cover" /> : y.child_first_name[0]}</span>
+                              <span className="text-sm font-semibold pr-1">{y.child_first_name} {y.child_last_name}</span>
+                              <Plus className="w-4 h-4 text-purple-300" />
+                            </button>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-64 bg-neutral-900 border-white/10 text-white p-2 z-[60]">
+                            <p className="text-xs text-white/50 px-2 py-1.5 font-semibold uppercase tracking-wider">Assign to vehicle</p>
+                            <div className="space-y-1">
+                              {vehicles.map((v) => {
+                                const full = v.assigned_count >= v.seat_cap;
+                                return (
+                                  <button key={v.id} disabled={full} onClick={() => handleAssign(y.registration_id, v.id)} className="w-full text-left flex items-center justify-between rounded-md px-3 py-2 hover:bg-white/10 disabled:opacity-40">
+                                    <span className="font-semibold text-sm">{v.name}</span>
+                                    <span className="text-xs text-white/50 tabular-nums">{v.assigned_count}/{v.seat_cap}{full ? " full" : ""}</span>
+                                  </button>
+                                );
+                              })}
+                            </div>
+                          </PopoverContent>
+                        </Popover>
+                      ))}
+                    </div>
+                  )}
+                  {vehicles.length === 0 && <p className="text-yellow-300/70 text-sm mt-3">Go back and add a vehicle first.</p>}
+                  <div className="mt-6 space-y-2">
+                    {vehicles.map((v) => {
+                      const kids = youth.filter((y) => y.vehicle_id === v.id);
+                      return (
+                        <div key={v.id} className="rounded-xl bg-white/[0.03] border border-white/10 p-3">
+                          <p className="text-sm font-bold flex items-center gap-2"><Truck className="w-4 h-4 text-purple-300" />{v.name} <span className="text-white/40 font-medium">· {v.assigned_count}/{v.seat_cap}</span></p>
+                          {kids.length === 0 ? <p className="text-xs text-white/30 italic mt-1">Empty</p> : (
+                            <div className="flex flex-wrap gap-1.5 mt-2">
+                              {kids.map((y) => (
+                                <span key={y.registration_id} className="inline-flex items-center gap-1 rounded-full bg-purple-500/10 border border-purple-400/30 pl-2 pr-1 py-0.5 text-xs">
+                                  {y.child_first_name} {y.child_last_name}
+                                  <button onClick={() => handleUnassign(y.registration_id)} className="w-5 h-5 rounded-full hover:bg-white/10 flex items-center justify-center text-white/50 hover:text-white"><X className="w-3 h-3" /></button>
+                                </span>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </>
+              )}
+
+              {/* ── Step: Coaches & volunteers ── */}
+              {safeStepKey === "coaches" && (
+                <>
+                  <p className="text-white/50 mb-4">Add NLA staff and volunteers riding along (not driving).</p>
+                  {personnel.length > 0 && (
+                    <div className="flex flex-wrap gap-2 mb-4">
+                      {personnel.map((p) => (
+                        <div key={p.id} className="flex items-center gap-2 rounded-full bg-white/[0.06] border border-white/10 pl-3 pr-1 py-1">
+                          <span className="text-sm font-semibold">{p.name}</span>
+                          <button onClick={() => handleRemovePersonnel(p.id)} className="w-6 h-6 rounded-full hover:bg-white/10 flex items-center justify-center text-white/50 hover:text-white"><X className="w-3.5 h-3.5" /></button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  <div className="flex gap-2">
+                    <Input value={personnelInput} onChange={(e) => setPersonnelInput(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") handleAddPersonnel(); }} placeholder="Add a name and press Enter" className="bg-white/5 border-white/15 text-white" />
+                    <Button onClick={handleAddPersonnel} disabled={savingPersonnel || !personnelInput.trim()} className="bg-purple-600 hover:bg-purple-500 text-white font-bold"><Plus className="w-4 h-4 mr-1" /> Add</Button>
+                  </div>
+                  <p className="text-xs text-white/40 mt-3">Optional — you can add people later too.</p>
+                </>
+              )}
+
+              {/* ── Step: Anyone missing? ── */}
+              {safeStepKey === "missing" && (
+                <>
+                  <p className="text-white/50 mb-4">Search for anyone who couldn't use the kiosk and add them.</p>
+                  <div className="relative mb-3">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/40" />
+                    <Input value={lateSearch} onChange={(e) => setLateSearch(e.target.value)} placeholder="Type a name to search…" className="pl-9 bg-white/5 border-white/15 text-white" />
+                  </div>
+                  {lateSearching && <p className="text-white/40 text-sm">Searching…</p>}
+                  {!lateSearching && lateSearch.trim().length >= 2 && lateResults.length === 0 && <p className="text-white/40 text-sm">No youth found.</p>}
+                  {lateResults.length > 0 && (
+                    <div className="space-y-2">
+                      {lateResults.map((r) => {
+                        const alreadyIn = youth.some((y) => y.registration_id === r.id);
+                        return (
+                          <div key={r.id} className="flex items-center gap-3 rounded-xl bg-white/[0.04] border border-white/10 p-3">
+                            <span className="w-10 h-10 rounded-full bg-white/10 overflow-hidden flex items-center justify-center text-sm font-bold text-white/60 shrink-0">{getHeadshotUrl(r.child_headshot_url) ? <img src={getHeadshotUrl(r.child_headshot_url)!} alt="" className="w-full h-full object-cover" /> : r.child_first_name[0]}</span>
+                            <div className="flex-1 min-w-0"><p className="font-semibold truncate">{r.child_first_name} {r.child_last_name}</p><p className="text-xs text-white/40 truncate">{r.child_boxing_program}</p></div>
+                            {alreadyIn ? <span className="text-xs text-emerald-300 font-semibold flex items-center gap-1"><CheckCircle2 className="w-3.5 h-3.5" /> On roster</span> : <Button size="sm" onClick={() => setPendingLate(r)} className="bg-purple-600 hover:bg-purple-500 text-white font-bold"><Plus className="w-4 h-4 mr-1" /> Add</Button>}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                  <p className="text-xs text-white/40 mt-3">Optional — you can also add late arrivals after submitting.</p>
+                </>
+              )}
+
+              {/* ── Step: Review & submit ── */}
+              {safeStepKey === "review" && (
+                <>
+                  <p className="text-white/50 mb-4">Last check before you lock it in.</p>
+                  {transportRequired === true && unassignedYouth.length > 0 && (
+                    <div className="rounded-xl bg-yellow-500/10 border-2 border-yellow-400/40 p-4 mb-4">
+                      <p className="font-bold text-yellow-200">⚠ {unassignedYouth.length} youth not in a vehicle</p>
+                      <p className="text-sm text-yellow-100/70 mt-1">{unassignedYouth.map((y) => `${y.child_first_name} ${y.child_last_name}`).join(", ")}</p>
+                      <button onClick={() => setWizardStepKey("load")} className="mt-2 text-sm font-semibold text-yellow-200 underline underline-offset-2">← Go back and load them</button>
+                    </div>
+                  )}
+                  {transportRequired === true && vehicles.length > 0 && (
+                    <div className="space-y-2 mb-4">
+                      <p className="text-xs font-bold uppercase tracking-wider text-white/50">Who's in each vehicle</p>
+                      {vehicles.map((v) => {
+                        const kids = youth.filter((y) => y.vehicle_id === v.id);
+                        return (
+                          <div key={v.id} className="rounded-xl bg-white/[0.03] border border-white/10 p-3">
+                            <p className="text-sm font-bold flex items-center gap-2"><Truck className="w-4 h-4 text-purple-300" />{v.name} <span className="text-white/40 font-medium">· {v.driver_name} · {kids.length}/{v.seat_cap}</span></p>
+                            <p className="text-sm text-white/70 mt-1">{kids.length ? kids.map((y) => `${y.child_first_name} ${y.child_last_name}`).join(", ") : <span className="text-white/30 italic">Empty</span>}</p>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                  <div className="grid grid-cols-3 gap-2 mb-3">
+                    <div className="text-center rounded-xl bg-white/[0.04] border border-white/10 p-3"><p className="text-2xl font-black tabular-nums">{checkedInCount}</p><p className="text-[10px] uppercase tracking-wider text-white/50">Youth</p></div>
+                    <div className="text-center rounded-xl bg-white/[0.04] border border-white/10 p-3"><p className="text-2xl font-black tabular-nums">{vehicles.length}</p><p className="text-[10px] uppercase tracking-wider text-white/50">Drivers</p></div>
+                    <div className="text-center rounded-xl bg-white/[0.04] border border-white/10 p-3"><p className="text-2xl font-black tabular-nums">{personnel.length}</p><p className="text-[10px] uppercase tracking-wider text-white/50">Coaches</p></div>
+                  </div>
+                  <div className="text-center rounded-xl bg-emerald-500/15 border-2 border-emerald-400/50 p-4"><p className="text-4xl font-black text-emerald-300 tabular-nums">{checkedInCount + vehicles.length + personnel.length}</p><p className="text-xs font-bold text-emerald-200/90 uppercase tracking-wider mt-1">Total on Trip</p></div>
+                </>
+              )}
+            </div>
+          </div>
+
+          {/* Footer — Back / Continue / Submit */}
+          <div className="shrink-0 border-t border-white/10 px-4 md:px-6 py-3">
+            <div className="max-w-2xl mx-auto flex items-center justify-between gap-3">
+              <Button variant="ghost" disabled={wizardIdx === 0} onClick={gotoPrevStep} className="text-white/60 hover:text-white hover:bg-white/10 disabled:opacity-30">
+                ← Back
+              </Button>
+              {safeStepKey === "review" ? (
+                <Button onClick={() => setConfirmSubmit(true)} className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold px-8">
+                  <Lock className="w-4 h-4 mr-2" /> Submit Roster
+                </Button>
+              ) : !(safeStepKey === "transport" && transportRequired === null) ? (
+                <Button
+                  onClick={gotoNextStep}
+                  disabled={safeStepKey === "vehicles" && vehicles.length === 0}
+                  className="bg-purple-600 hover:bg-purple-500 text-white font-bold px-8 disabled:opacity-40"
+                >
+                  Continue →
+                </Button>
+              ) : (
+                <span className="text-xs text-white/40">Pick an option above</span>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Reopen the guide after "Set up manually" — floating button while setup is open. */}
+      {!wizardOpen && !isLocked && excursion && pinVerified && (
+        <button
+          onClick={reopenWizard}
+          className="fixed bottom-4 right-4 z-40 inline-flex items-center gap-2 rounded-full bg-purple-600 hover:bg-purple-500 text-white font-bold px-4 py-3 shadow-lg shadow-purple-900/40"
+        >
+          <Flag className="w-4 h-4" /> Guided setup
+        </button>
+      )}
     </div>
   );
 };
