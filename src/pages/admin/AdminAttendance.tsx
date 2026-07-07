@@ -1222,24 +1222,20 @@ const AdminAttendance = () => {
     return days.size > 0 ? Math.round(practiceAttendance.length / days.size) : 0;
   }, [practiceAttendance]);
 
-  /* ───── YTD practice attendance (green-only, excl. excursions), since 2026-03-09 ───── */
+  /* ───── YTD practice attendance (practice days), since 2026-03-09 ─────
+     ytdAttendance is NLA-only, so excursion check-ins (program_source
+     'Excursion') are already excluded here. We no longer drop days that have
+     an excursion: a day can be both a practice day and host an excursion, and
+     its evening practice attendance should count — matching the Month Avg. */
   const ytdPracticeDayMap = useMemo(() => {
     const m: Record<string, boolean> = {};
     ytdPracticeDays.forEach((p) => { m[p.date] = p.is_practice_day; });
     return m;
   }, [ytdPracticeDays]);
 
-  const ytdExcursionSet = useMemo(() => {
-    const s = new Set<string>();
-    ytdExcursions.forEach((e: { date: string }) => { s.add(e.date); });
-    return s;
-  }, [ytdExcursions]);
-
   const ytdPracticeAttendance = useMemo(
-    () => ytdAttendance.filter((a) =>
-      isPracticeDay(a.check_in_date, ytdPracticeDayMap) && !ytdExcursionSet.has(a.check_in_date)
-    ),
-    [ytdAttendance, ytdPracticeDayMap, ytdExcursionSet, isPracticeDay]
+    () => ytdAttendance.filter((a) => isPracticeDay(a.check_in_date, ytdPracticeDayMap)),
+    [ytdAttendance, ytdPracticeDayMap, isPracticeDay]
   );
 
   /* ───── STAT BOX: Year Avg → avg per green-practice day since 2026-03-09 ───── */
