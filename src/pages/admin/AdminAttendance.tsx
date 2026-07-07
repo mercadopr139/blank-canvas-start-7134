@@ -2246,7 +2246,7 @@ const AdminAttendance = () => {
                 <span className="w-3 h-3 rounded-full bg-purple-500" />
                 <span className="text-xs text-white/50">Excursion (can overlay a practice day)</span>
               </div>
-              <span className="text-[10px] text-white/30 ml-auto">Click dot: practice ↔ non-practice • Right-click: add/edit excursion</span>
+              <span className="text-[10px] text-white/30 ml-auto">Click a day → add/edit excursion • Click dot → practice ↔ non-practice</span>
             </div>
           </CardContent>
         </Card>
@@ -3242,6 +3242,16 @@ const AdminAttendance = () => {
                 {!isPracticeDay(selectedDay, calPracticeDayMap) && (
                   <Badge className="bg-red-500/15 text-red-400 border-red-500/30 flex-shrink-0">Non-Practice Day</Badge>
                 )}
+                {/* Add or edit the excursion for this day, right where the user
+                    naturally looks after clicking a day. Closes this dialog and
+                    opens the excursion editor. */}
+                <button
+                  onClick={() => { const d = selectedDay; setSelectedDay(null); openExcursionEditor(d); }}
+                  className="ml-auto inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-md border border-purple-400/40 bg-purple-500/10 text-purple-200 hover:bg-purple-500/20 transition-colors flex-shrink-0"
+                >
+                  <Bus className="w-3.5 h-3.5" />
+                  {isExcursionDay(selectedDay) ? "Edit Excursion" : "Add Excursion"}
+                </button>
               </div>
               <div className="relative mb-3">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/40" />
