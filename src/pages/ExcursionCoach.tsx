@@ -845,7 +845,7 @@ const ExcursionCoach = () => {
           <Card className="bg-white/[0.03] border-white/10 text-white">
             <CardContent className="p-5 md:p-6">
               <p className="text-xs font-bold uppercase tracking-wider text-white/50 mb-4">
-                Trip Manifest — who's in each vehicle
+                Ride to Excursion — who's in each vehicle
               </p>
               <div className="space-y-3">
                 {vehicles.map((v) => {

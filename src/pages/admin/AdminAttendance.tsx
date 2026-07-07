@@ -3484,7 +3484,7 @@ const AdminAttendance = () => {
                   regardless of roster_locked_at so the admin can backfill
                   past trips that never went through the kiosk live. */}
               <div className="pt-3 mt-2 border-t border-white/10">
-                <p className="text-xs font-bold uppercase tracking-wider text-white/50 mb-3">Trip Roster</p>
+                <p className="text-xs font-bold uppercase tracking-wider text-white/50 mb-3">Ride to Excursion</p>
 
                 {/* Vehicles + their assigned youth */}
                 {editingVehicles.length > 0 && (
