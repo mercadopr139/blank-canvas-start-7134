@@ -3435,14 +3435,38 @@ const AdminAttendance = () => {
                 <label className="text-xs text-white/50 mb-1 block">Excursion Name *</label>
                 <Input value={editingExcursion.name} onChange={(e) => setEditingExcursion({ ...editingExcursion, name: e.target.value })} className="bg-white/5 border-white/20 text-white" />
               </div>
-              <div className="rounded-lg bg-white/[0.03] border border-white/10 px-3 py-2.5">
-                <p className="text-[10px] uppercase tracking-wider text-white/50 font-semibold">
-                  Youth on Roster
-                </p>
-                <p className="text-2xl font-black tabular-nums text-emerald-300">
-                  {editingRosterYouth.length}
-                </p>
-                <p className="text-[10px] text-white/30 mt-0.5">Live count of who actually went on the trip.</p>
+              {/* Summary strip — at-a-glance headline for the trip. */}
+              <div>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                  <div className="rounded-lg bg-white/[0.03] border border-white/10 px-3 py-2.5 text-center">
+                    <p className="text-2xl font-black tabular-nums text-emerald-300">{editingRosterYouth.length}</p>
+                    <p className="text-[10px] uppercase tracking-wider text-white/50 font-semibold mt-0.5">Youth</p>
+                  </div>
+                  <div className="rounded-lg bg-white/[0.03] border border-white/10 px-3 py-2.5 text-center">
+                    <p className="text-2xl font-black tabular-nums">{editingVehicles.length}</p>
+                    <p className="text-[10px] uppercase tracking-wider text-white/50 font-semibold mt-0.5">Drivers</p>
+                  </div>
+                  <div className="rounded-lg bg-white/[0.03] border border-white/10 px-3 py-2.5 text-center">
+                    <p className="text-2xl font-black tabular-nums">{editingPersonnel.length}</p>
+                    <p className="text-[10px] uppercase tracking-wider text-white/50 font-semibold mt-0.5">Volunteers</p>
+                  </div>
+                  <div className="rounded-lg bg-emerald-500/10 border border-emerald-400/40 px-3 py-2.5 text-center">
+                    <p className="text-2xl font-black tabular-nums text-emerald-300">{editingRosterYouth.length + editingVehicles.length + editingPersonnel.length}</p>
+                    <p className="text-[10px] uppercase tracking-wider text-emerald-200/80 font-semibold mt-0.5">On Trip</p>
+                  </div>
+                </div>
+                {editingExcursion.arrived_at && editingExcursion.returned_at && (() => {
+                  const fmt = (iso: string) => new Date(iso).toLocaleTimeString("en-US", { timeZone: "America/New_York", hour: "numeric", minute: "2-digit" });
+                  const mins = Math.max(0, Math.round((new Date(editingExcursion.returned_at).getTime() - new Date(editingExcursion.arrived_at).getTime()) / 60000));
+                  const h = Math.floor(mins / 60);
+                  const m = mins % 60;
+                  return (
+                    <p className="text-[11px] text-white/50 text-center mt-2">
+                      Arrived {fmt(editingExcursion.arrived_at)} · Back {fmt(editingExcursion.returned_at)} · {h > 0 ? `${h}h ` : ""}{m}m
+                    </p>
+                  );
+                })()}
+                <p className="text-[10px] text-white/30 mt-1.5 text-center">Live count of who actually went on the trip.</p>
               </div>
               <div>
                 <label className="text-xs text-white/50 mb-1 block">Notes / Lessons for next year</label>
