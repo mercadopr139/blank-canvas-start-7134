@@ -750,81 +750,61 @@ const AdminAttendance = () => {
     return !!excursionDayMap[dateStr];
   }, [excursionDayMap]);
 
-  /* ───── Filter attendance to practice days only (exclude excursion days) ───── */
+  /* ───── Filter attendance to practice days ─────
+     calendarAttendance is NLA-only (excursion check-ins are program_source
+     'Excursion', held in a separate query), so we no longer exclude excursion
+     days. A day can now be BOTH a practice day and host an excursion — the
+     evening practice (NLA) check-ins still count as practice attendance here,
+     while the daytime excursion check-ins are counted separately. */
   const practiceAttendance = useMemo(
-    () => calendarAttendance.filter((a) => isPracticeDay(a.check_in_date, calPracticeDayMap) && !isExcursionDay(a.check_in_date)),
-    [calendarAttendance, calPracticeDayMap, isPracticeDay, isExcursionDay]
+    () => calendarAttendance.filter((a) => isPracticeDay(a.check_in_date, calPracticeDayMap)),
+    [calendarAttendance, calPracticeDayMap, isPracticeDay]
   );
 
   const prevPracticeAttendance = useMemo(
-    () => prevMonthAttendance.filter((a) => isPracticeDay(a.check_in_date, prevPracticeDayMap) && !prevExcursionDayMap[a.check_in_date]),
-    [prevMonthAttendance, prevPracticeDayMap, isPracticeDay, prevExcursionDayMap]
+    () => prevMonthAttendance.filter((a) => isPracticeDay(a.check_in_date, prevPracticeDayMap)),
+    [prevMonthAttendance, prevPracticeDayMap, isPracticeDay]
   );
 
   /* ───── Quick Toggle: single click cycles Practice → Non-Practice → Excursion → Practice … ───── */
   const cycleDayType = async (dateStr: string) => {
-    const isExc = isExcursionDay(dateStr);
+    // The dot now only toggles practice ↔ non-practice. Excursions are an
+    // independent add-on managed from the right-click menu, so they're no
+    // longer part of this cycle (a day can be a practice day AND an excursion).
     const isPrac = isPracticeDay(dateStr, calPracticeDayMap);
-
-    if (isExc) {
-      // Purple → Green
-      await setDayType(dateStr, "practice");
-      return;
-    }
-    if (!isPrac) {
-      // Red → open Excursion modal (cancel will revert to Green)
-      await setDayType(dateStr, "excursion");
-      return;
-    }
-    // Green → Red
-    await setDayType(dateStr, "non-practice");
+    await setDayPractice(dateStr, !isPrac);
   };
 
-  /* ───── Context menu: set day type explicitly ───── */
-  const setDayType = async (dateStr: string, type: "practice" | "non-practice" | "excursion") => {
+  /* ───── Practice / non-practice toggle — independent of excursions ───── */
+  const setDayPractice = async (dateStr: string, isPrac: boolean) => {
     setContextMenuDay(null);
     const existingPracticeDay = practiceDaysCalMonth.find((p) => p.date === dateStr);
-    const existingExcursion = excursionsCalMonth.find((e) => e.date === dateStr);
-    const isExc = isExcursionDay(dateStr);
-
-    if (type === "excursion") {
-      // If already excursion, open edit modal with existing data
-      if (isExc && existingExcursion) {
-        setEditingExcursion(existingExcursion);
-        return;
-      }
-      // Open new excursion modal — name + notes only. Phase B (2026-06-16):
-      // retired the planning-estimate field; the real youth count is derived
-      // from check-in / backfill records, not a pre-trip guess.
-      setExcursionDate(dateStr);
-      setExcursionName("");
-      setExcursionNotes("");
-      setExcursionPrevState(isPracticeDay(dateStr, calPracticeDayMap));
-      setExcursionModalOpen(true);
-      return;
-    }
-
-    // Switching a purple tile to red/green silently deleted the whole
-    // excursion (name, backfilled youth, vehicles, drivers, personnel,
-    // arrival/return timestamps) with no warning and no undo. Route the
-    // action through a confirmation dialog instead. The actual delete +
-    // day-type swap happens in performExcursionConversion on confirm.
-    if (isExc && existingExcursion) {
-      setConvertExcursionTarget({
-        excursion: existingExcursion,
-        targetType: type as "practice" | "non-practice",
-      });
-      return;
-    }
-
-    const isPracTarget = type === "practice";
     if (existingPracticeDay) {
-      await supabase.from("practice_days").update({ is_practice_day: isPracTarget }).eq("id", existingPracticeDay.id);
+      await supabase.from("practice_days").update({ is_practice_day: isPrac }).eq("id", existingPracticeDay.id);
     } else {
-      await supabase.from("practice_days").insert({ date: dateStr, is_practice_day: isPracTarget });
+      await supabase.from("practice_days").insert({ date: dateStr, is_practice_day: isPrac });
     }
     queryClient.invalidateQueries({ queryKey: ["practice-days-cal"] });
-    toast.success(isPracTarget ? "Marked as practice day" : "Marked as non-practice day");
+    toast.success(isPrac ? "Marked as practice day" : "Marked as non-practice day");
+  };
+
+  /* ───── Add / edit the excursion attached to a day — independent of
+     practice status. Adding an excursion no longer changes whether the day
+     is a practice day, so a normal practice day can also host a daytime
+     excursion. ───── */
+  const openExcursionEditor = (dateStr: string) => {
+    setContextMenuDay(null);
+    const existingExcursion = excursionsCalMonth.find((e) => e.date === dateStr);
+    if (existingExcursion) {
+      setEditingExcursion(existingExcursion);
+      return;
+    }
+    // New excursion modal — name + notes only (the real youth count is
+    // derived from check-ins, not a pre-trip guess).
+    setExcursionDate(dateStr);
+    setExcursionName("");
+    setExcursionNotes("");
+    setExcursionModalOpen(true);
   };
 
   // Runs the actual excursion delete + day-type swap once the user has
@@ -876,44 +856,27 @@ const AdminAttendance = () => {
       notes: excursionNotes.trim() || null,
     });
     if (error) { toast.error("Failed to save excursion"); return; }
-    // Also mark as non-practice (excursion days aren't practice)
-    const existing = practiceDaysCalMonth.find((p) => p.date === excursionDate);
-    if (existing) {
-      await supabase.from("practice_days").update({ is_practice_day: false }).eq("id", existing.id);
-    } else {
-      await supabase.from("practice_days").insert({ date: excursionDate, is_practice_day: false });
-    }
+    // Excursions are now an add-on: creating one leaves the day's practice /
+    // non-practice status untouched, so a practice day can also host an excursion.
     queryClient.invalidateQueries({ queryKey: ["excursions-cal"] });
-    queryClient.invalidateQueries({ queryKey: ["practice-days-cal"] });
     setExcursionModalOpen(false);
     toast.success("Excursion saved");
   };
 
-  const cancelExcursionModal = async () => {
-    const dateStr = excursionDate;
+  const cancelExcursionModal = () => {
+    // Adding an excursion no longer changes practice status, so cancelling
+    // simply closes the modal — there's nothing to revert.
     setExcursionModalOpen(false);
-    if (!dateStr) return;
-    // Revert the day to Practice (green) so cancel always lands on Green,
-    // even if the user reached the modal from a Non-Practice (red) click.
-    const existing = practiceDaysCalMonth.find((p) => p.date === dateStr);
-    if (existing) {
-      await supabase.from("practice_days").update({ is_practice_day: true }).eq("id", existing.id);
-    } else {
-      await supabase.from("practice_days").insert({ date: dateStr, is_practice_day: true });
-    }
-    queryClient.invalidateQueries({ queryKey: ["practice-days-cal"] });
   };
 
   const handleDeleteExcursion = async () => {
     if (!deleteExcursionTarget) return;
     const { error } = await supabase.from("excursions").delete().eq("id", deleteExcursionTarget.id);
     if (error) { toast.error("Failed to delete excursion"); return; }
-    // Revert to practice day (CASCADE deletes already wiped attendance,
-    // vehicles, assignments, and personnel rows).
-    const existing = practiceDaysCalMonth.find((p) => p.date === deleteExcursionTarget.date);
-    if (existing) {
-      await supabase.from("practice_days").update({ is_practice_day: true }).eq("id", existing.id);
-    }
+    // The day keeps its practice / non-practice status — removing the
+    // excursion overlay doesn't change whether it's a practice day.
+    // (CASCADE deletes already wiped attendance, vehicles, assignments,
+    // and personnel rows.)
     queryClient.invalidateQueries({ queryKey: ["excursions-cal"] });
     queryClient.invalidateQueries({ queryKey: ["excursions-prev"] });
     queryClient.invalidateQueries({ queryKey: ["excursions-ytd", YTD_START] });
@@ -1793,14 +1756,15 @@ const AdminAttendance = () => {
 
   const daySignIns = useMemo(() => {
     if (!selectedDay) return [];
-    // On Excursion days the kiosk records check-ins with program_source =
-    // 'Excursion', which the main NLA-only query excludes. Pull from the
-    // separate Excursion-attendance query for those days.
-    const isExc = isExcursionDay(selectedDay);
-    const source = isExc
+    // A day can carry both practice (NLA) sign-ins and an excursion roster.
+    // Excursion check-ins are program_source 'Excursion' (separate query);
+    // practice check-ins come from the NLA-only calendar query. Show both —
+    // excursion first — so a dual day surfaces everyone.
+    const excSource = isExcursionDay(selectedDay)
       ? excursionAttendanceMonth.filter((a) => a.check_in_date === selectedDay)
-      : filteredCalendarAttendance.filter((a) => a.check_in_date === selectedDay);
-    const all = source
+      : [];
+    const nlaSource = filteredCalendarAttendance.filter((a) => a.check_in_date === selectedDay);
+    const all = [...excSource, ...nlaSource]
       .map((a) => ({ ...a, reg: regMap[a.registration_id] }))
       .filter((a) => a.reg);
     if (!daySearch.trim()) return all;
@@ -2083,9 +2047,16 @@ const AdminAttendance = () => {
                 const isSelected = selectedDay === dateStr;
                 const isPrac = isPracticeDay(dateStr, calPracticeDayMap);
                 const isExc = isExcursionDay(dateStr);
-                // On Excursion days, show the count of Excursion check-ins
-                // (program_source = 'Excursion'), not the NLA practice count.
-                const count = isExc
+                // A day can now be both. "Excursion-only" = an excursion on a
+                // non-practice day (the classic Saturday trip); "dual" = a
+                // practice day that also hosts an excursion.
+                const excursionOnly = isExc && !isPrac;
+                const dualDay = isExc && isPrac;
+                // The centre number is the day's primary attendance: excursion
+                // count when the excursion is the only thing happening, else the
+                // NLA practice count. (A dual day shows its practice count here;
+                // the excursion roster is in the day-detail view.)
+                const count = excursionOnly
                   ? (excursionDailyCounts as Record<string, number>)[dateStr] || 0
                   : dailyCounts[dateStr] || 0;
                 const weather = weatherMap[dateStr] as WeatherDay | undefined;
@@ -2115,8 +2086,9 @@ const AdminAttendance = () => {
                         ${isCurrentDay && !isSelected ? "border border-white/30" : ""}
                         ${!isSelected && !isCurrentDay ? "border border-white/[0.06]" : ""}
                         ${count > 0 ? "hover:bg-white/10 cursor-pointer" : "cursor-default"}
-                        ${isExc ? "bg-purple-500/[0.08]" : !isPrac ? "bg-red-500/[0.06]" : "bg-white/[0.03]"}
+                        ${dualDay ? "" : isExc ? "bg-purple-500/[0.08]" : !isPrac ? "bg-red-500/[0.06]" : "bg-white/[0.03]"}
                       `}
+                      style={dualDay && !isSelected ? { backgroundImage: "linear-gradient(135deg, rgba(255,255,255,0.04) 0%, rgba(255,255,255,0.04) 48%, rgba(124,58,237,0.16) 52%, rgba(124,58,237,0.16) 100%)" } : undefined}
                     >
                       {/* Date number with weather emoji hint */}
                       <span className={`absolute top-1 right-1.5 text-[10px] leading-none flex items-center gap-0.5 ${
@@ -2130,7 +2102,7 @@ const AdminAttendance = () => {
 
                       {count > 0 ? (
                         <span className={`w-8 h-8 sm:w-9 sm:h-9 rounded-full flex items-center justify-center text-sm sm:text-base font-bold ${
-                          isExc
+                          excursionOnly
                             ? "bg-purple-500/20 border border-purple-500/40 text-purple-400"
                             : isPrac
                               ? "bg-green-500/20 border border-green-500/40 text-green-400"
@@ -2138,12 +2110,12 @@ const AdminAttendance = () => {
                         }`}>{count}</span>
                       ) : (
                         <span className={`w-8 h-8 sm:w-9 sm:h-9 rounded-full flex items-center justify-center text-xs ${
-                          isExc
+                          excursionOnly
                             ? "bg-purple-500/[0.03] border border-purple-500/[0.08] text-purple-400/30"
                             : isPrac
                               ? "bg-white/[0.03] border border-white/[0.06] text-white/15"
                               : "bg-red-500/[0.03] border border-red-500/[0.08] text-red-400/30"
-                        }`}>{isExc ? "0" : isPrac ? "0" : <X className="w-3 h-3" />}</span>
+                        }`}>{excursionOnly || isPrac ? "0" : <X className="w-3 h-3" />}</span>
                       )}
                     </button>
                     {/* Weather tooltip - positioned outside cell */}
@@ -2184,20 +2156,25 @@ const AdminAttendance = () => {
                       onTouchEnd={() => { if (longPressTimer.current) { clearTimeout(longPressTimer.current); longPressTimer.current = null; } }}
                       onTouchMove={() => { if (longPressTimer.current) { clearTimeout(longPressTimer.current); longPressTimer.current = null; } }}
                       className={`absolute bottom-0.5 left-1/2 -translate-x-1/2 w-3.5 h-3.5 rounded-full border-2 transition-all hover:scale-125 cursor-pointer z-10 touch-manipulation ${
-                        isExc
-                          ? "bg-purple-500 border-purple-300 shadow-[0_0_4px_rgba(124,58,237,0.5)]"
-                          : isPrac
-                            ? "bg-green-500 border-green-300 shadow-[0_0_4px_rgba(34,197,94,0.5)]"
-                            : "bg-red-500 border-red-300 shadow-[0_0_4px_rgba(239,68,68,0.5)]"
+                        isPrac
+                          ? "bg-green-500 border-green-300 shadow-[0_0_4px_rgba(34,197,94,0.5)]"
+                          : "bg-red-500 border-red-300 shadow-[0_0_4px_rgba(239,68,68,0.5)]"
                       }`}
                       title={
-                        isExc
-                          ? "Excursion — left-click to remove and make practice"
-                          : isPrac
-                            ? "Practice — left-click to make non-practice day"
-                            : "Non-Practice — left-click to mark as excursion"
+                        isPrac
+                          ? "Practice day — left-click to make non-practice. Right-click to add an excursion."
+                          : "Non-practice day — left-click to make practice. Right-click to add an excursion."
                       }
                     />
+                    {/* Excursion overlay marker — an excursion is an add-on to
+                        the day's practice status, so it gets its own purple dot
+                        (top-left) rather than replacing the practice dot. */}
+                    {isExc && (
+                      <span
+                        className="absolute top-0.5 left-0.5 w-2.5 h-2.5 rounded-full bg-purple-500 border border-purple-300 shadow-[0_0_4px_rgba(124,58,237,0.6)] z-10 pointer-events-none"
+                        title="Excursion scheduled"
+                      />
+                    )}
                   </div>
                 );
               })}
@@ -2210,36 +2187,52 @@ const AdminAttendance = () => {
                 style={{ left: contextMenuDay.x, top: contextMenuDay.y }}
                 onClick={(e) => e.stopPropagation()}
               >
+                {/* Practice status — independent of any excursion on the day. */}
                 <button
                   className={`w-full text-left px-3 py-2 text-sm flex items-center gap-2 hover:bg-white/10 transition-colors ${
-                    isPracticeDay(contextMenuDay.dateStr, calPracticeDayMap) && !isExcursionDay(contextMenuDay.dateStr) ? "text-green-400" : "text-white/70"
+                    isPracticeDay(contextMenuDay.dateStr, calPracticeDayMap) ? "text-green-400" : "text-white/70"
                   }`}
-                  onClick={() => setDayType(contextMenuDay.dateStr, "practice")}
+                  onClick={() => setDayPractice(contextMenuDay.dateStr, true)}
                 >
                   <span className="w-3 h-3 rounded-full bg-green-500 inline-block" />
                   Mark as Practice Day
-                  {isPracticeDay(contextMenuDay.dateStr, calPracticeDayMap) && !isExcursionDay(contextMenuDay.dateStr) && <span className="ml-auto text-green-400">✓</span>}
+                  {isPracticeDay(contextMenuDay.dateStr, calPracticeDayMap) && <span className="ml-auto text-green-400">✓</span>}
                 </button>
                 <button
                   className={`w-full text-left px-3 py-2 text-sm flex items-center gap-2 hover:bg-white/10 transition-colors ${
-                    !isPracticeDay(contextMenuDay.dateStr, calPracticeDayMap) && !isExcursionDay(contextMenuDay.dateStr) ? "text-red-400" : "text-white/70"
+                    !isPracticeDay(contextMenuDay.dateStr, calPracticeDayMap) ? "text-red-400" : "text-white/70"
                   }`}
-                  onClick={() => setDayType(contextMenuDay.dateStr, "non-practice")}
+                  onClick={() => setDayPractice(contextMenuDay.dateStr, false)}
                 >
                   <span className="w-3 h-3 rounded-full bg-red-500 inline-block" />
                   Mark as Non-Practice Day
-                  {!isPracticeDay(contextMenuDay.dateStr, calPracticeDayMap) && !isExcursionDay(contextMenuDay.dateStr) && <span className="ml-auto text-red-400">✓</span>}
+                  {!isPracticeDay(contextMenuDay.dateStr, calPracticeDayMap) && <span className="ml-auto text-red-400">✓</span>}
                 </button>
+
+                {/* Excursion — an add-on the day can carry on top of its
+                    practice status. Add/edit, and remove separately. */}
+                <div className="my-1 border-t border-white/10" />
                 <button
-                  className={`w-full text-left px-3 py-2 text-sm flex items-center gap-2 hover:bg-white/10 transition-colors ${
-                    isExcursionDay(contextMenuDay.dateStr) ? "text-purple-400" : "text-white/70"
-                  }`}
-                  onClick={() => setDayType(contextMenuDay.dateStr, "excursion")}
+                  className="w-full text-left px-3 py-2 text-sm flex items-center gap-2 hover:bg-white/10 transition-colors text-white/70"
+                  onClick={() => openExcursionEditor(contextMenuDay.dateStr)}
                 >
                   <span className="w-3 h-3 rounded-full bg-purple-500 inline-block" />
-                  {isExcursionDay(contextMenuDay.dateStr) ? "Edit Excursion Day" : "Mark as Excursion Day"}
+                  {isExcursionDay(contextMenuDay.dateStr) ? "Edit Excursion" : "Add Excursion"}
                   {isExcursionDay(contextMenuDay.dateStr) && <span className="ml-auto text-purple-400">✓</span>}
                 </button>
+                {isExcursionDay(contextMenuDay.dateStr) && (
+                  <button
+                    className="w-full text-left px-3 py-2 text-sm flex items-center gap-2 hover:bg-red-500/10 transition-colors text-red-400/90"
+                    onClick={() => {
+                      const ex = excursionsCalMonth.find((e) => e.date === contextMenuDay.dateStr);
+                      setContextMenuDay(null);
+                      if (ex) setDeleteExcursionTarget(ex);
+                    }}
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                    Remove Excursion
+                  </button>
+                )}
               </div>
             )}
 
@@ -2255,9 +2248,9 @@ const AdminAttendance = () => {
               </div>
               <div className="flex items-center gap-1.5">
                 <span className="w-3 h-3 rounded-full bg-purple-500" />
-                <span className="text-xs text-white/50">Excursion Day</span>
+                <span className="text-xs text-white/50">Excursion (can overlay a practice day)</span>
               </div>
-              <span className="text-[10px] text-white/30 ml-auto">Click dot to toggle • Right-click for more options</span>
+              <span className="text-[10px] text-white/30 ml-auto">Click dot: practice ↔ non-practice • Right-click: add/edit excursion</span>
             </div>
           </CardContent>
         </Card>
@@ -3244,14 +3237,15 @@ const AdminAttendance = () => {
               )}
 
               <div className="mt-2 mb-2 flex items-center gap-3 flex-wrap">
-                <Badge className={`${isExcursionDay(selectedDay) ? "bg-purple-500/15 text-purple-300 border-purple-500/30" : "bg-green-500/15 text-green-400 border-green-500/30"} flex-shrink-0`}>
-                  {daySignIns.length} youth {isExcursionDay(selectedDay) ? "on Excursion" : "signed in"}
+                <Badge className="bg-green-500/15 text-green-400 border-green-500/30 flex-shrink-0">
+                  {daySignIns.length} youth
                 </Badge>
-                {isExcursionDay(selectedDay) ? (
-                  <Badge className="bg-purple-500/15 text-purple-300 border-purple-500/30 flex-shrink-0">Excursion Day</Badge>
-                ) : !isPracticeDay(selectedDay, calPracticeDayMap) ? (
+                {isExcursionDay(selectedDay) && (
+                  <Badge className="bg-purple-500/15 text-purple-300 border-purple-500/30 flex-shrink-0">Excursion</Badge>
+                )}
+                {!isPracticeDay(selectedDay, calPracticeDayMap) && (
                   <Badge className="bg-red-500/15 text-red-400 border-red-500/30 flex-shrink-0">Non-Practice Day</Badge>
-                ) : null}
+                )}
               </div>
               <div className="relative mb-3">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/40" />
