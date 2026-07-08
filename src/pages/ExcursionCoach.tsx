@@ -75,6 +75,7 @@ interface RosterYouth {
   child_headshot_url: string | null;
   vehicle_id: string | null;
   return_vehicle_id: string | null;
+  arrival_note: string | null;
 }
 
 interface ConfirmedSignup {
@@ -242,6 +243,7 @@ const ExcursionCoach = () => {
   const [lateResults, setLateResults] = useState<SearchResultYouth[]>([]);
   const [lateSearching, setLateSearching] = useState(false);
   const [pendingLate, setPendingLate] = useState<SearchResultYouth | null>(null);
+  const [lateNote, setLateNote] = useState("");
 
   // Phase 3 — arrival / return / timestamp edit
   const [confirmArrivalOpen, setConfirmArrivalOpen] = useState(false);
@@ -510,15 +512,17 @@ const ExcursionCoach = () => {
       _excursion_id: excursion.id,
       _registration_id: pendingLate.id,
       _vehicle_id: vehicleId,
+      _note: lateNote.trim() || null,
     });
     if (error) {
       toast.error(error.message || "Couldn't add youth.");
       return;
     }
     toast.success(
-      `${pendingLate.child_first_name} ${pendingLate.child_last_name} added${vehicleId ? "" : " (no vehicle)"}.`
+      `${pendingLate.child_first_name} ${pendingLate.child_last_name} added${vehicleId ? "" : " (arrived separately)"}.`
     );
     setPendingLate(null);
+    setLateNote("");
     setLateSearch("");
     setLateResults([]);
     await loadRoster(excursion.id);
@@ -1061,9 +1065,16 @@ const ExcursionCoach = () => {
                     );
                   })}
                   {unassignedYouth.length > 0 && (
-                    <div className="rounded-xl bg-yellow-500/[0.06] border border-yellow-400/30 p-4">
-                      <p className="font-bold text-yellow-200/90 text-sm">Not in a vehicle ({unassignedYouth.length})</p>
-                      <p className="text-sm text-yellow-100/60 mt-1">{unassignedYouth.map((y) => `${y.child_first_name} ${y.child_last_name}`).join(", ")}</p>
+                    <div className="rounded-xl bg-white/[0.03] border border-white/10 p-4">
+                      <p className="text-xs font-bold uppercase tracking-wider text-white/50 mb-2">Arrived separately / not in a vehicle ({unassignedYouth.length})</p>
+                      <div className="space-y-1.5">
+                        {unassignedYouth.map((y) => (
+                          <div key={y.registration_id} className="text-sm">
+                            <span className="font-semibold">{y.child_first_name} {y.child_last_name}</span>
+                            {y.arrival_note && <span className="text-white/50 italic"> — {y.arrival_note}</span>}
+                          </div>
+                        ))}
+                      </div>
                     </div>
                   )}
                   {/* Coaches/volunteers in their own car — listed so they're
@@ -2061,7 +2072,7 @@ const ExcursionCoach = () => {
       </AlertDialog>
 
       {/* Late-arrival vehicle picker */}
-      <AlertDialog open={!!pendingLate} onOpenChange={(open) => !open && setPendingLate(null)}>
+      <AlertDialog open={!!pendingLate} onOpenChange={(open) => { if (!open) { setPendingLate(null); setLateNote(""); } }}>
         <AlertDialogContent className="bg-neutral-900 border-white/10 text-white">
           <AlertDialogHeader>
             <AlertDialogTitle>
@@ -2069,59 +2080,67 @@ const ExcursionCoach = () => {
             </AlertDialogTitle>
             <AlertDialogDescription className="text-white/60">
               {transportRequired === true
-                ? "Choose which vehicle they'll ride in. You can also add them without a vehicle for now."
+                ? "Put them in a vehicle, or mark them as arrived separately (e.g. a parent dropped them off)."
                 : "This will check them in to the Excursion."}
             </AlertDialogDescription>
           </AlertDialogHeader>
 
-          {transportRequired === true && (
+          {transportRequired === true && vehicles.length > 0 && (
             <div className="space-y-2 my-2">
-              {vehicles.length === 0 ? (
-                <p className="text-yellow-300/80 text-sm">
-                  No vehicles added yet. They'll be checked in but not assigned.
-                </p>
-              ) : (
-                vehicles.map((v) => {
-                  const full = v.assigned_count >= v.seat_cap;
-                  return (
-                    <button
-                      key={v.id}
-                      disabled={full}
-                      onClick={() => handleAddLateArrival(v.id)}
-                      className="w-full flex items-center justify-between rounded-lg bg-white/[0.04] hover:bg-purple-500/10 border border-white/10 hover:border-purple-400/40 px-4 py-3 transition disabled:opacity-40 disabled:cursor-not-allowed"
-                    >
-                      <span className="font-semibold flex items-center gap-2">
-                        <Truck className="w-4 h-4 text-purple-300" /> {v.name}
-                      </span>
-                      <span className="text-xs text-white/50 tabular-nums">
-                        {v.assigned_count}/{v.seat_cap}
-                        {full ? " full" : ""}
-                      </span>
-                    </button>
-                  );
-                })
-              )}
+              <p className="text-[10px] uppercase tracking-wider text-white/40 font-semibold">Riding in an NLA vehicle</p>
+              {vehicles.map((v) => {
+                const full = v.assigned_count >= v.seat_cap;
+                return (
+                  <button
+                    key={v.id}
+                    disabled={full}
+                    onClick={() => handleAddLateArrival(v.id)}
+                    className="w-full flex items-center justify-between rounded-lg bg-white/[0.04] hover:bg-purple-500/10 border border-white/10 hover:border-purple-400/40 px-4 py-3 transition disabled:opacity-40 disabled:cursor-not-allowed"
+                  >
+                    <span className="font-semibold flex items-center gap-2">
+                      <Truck className="w-4 h-4 text-purple-300" /> {v.name}
+                    </span>
+                    <span className="text-xs text-white/50 tabular-nums">
+                      {v.assigned_count}/{v.seat_cap}
+                      {full ? " full" : ""}
+                    </span>
+                  </button>
+                );
+              })}
             </div>
           )}
+
+          {/* Optional arrival note — record how they got here without
+              assigning a vehicle that isn't true. */}
+          <div className="my-2">
+            <Label className="text-white/70 text-xs uppercase tracking-wider">How did they arrive? (optional)</Label>
+            <textarea
+              value={lateNote}
+              onChange={(e) => setLateNote(e.target.value)}
+              rows={2}
+              placeholder="e.g. Came from work — mom dropped off"
+              className="mt-1 w-full text-sm bg-white/5 border border-white/15 rounded-md px-3 py-2 text-white placeholder:text-white/30 resize-none focus:outline-none focus:border-purple-400/50"
+            />
+            <p className="text-[11px] text-white/35 mt-1">Shown on the roster next to their name.</p>
+          </div>
 
           <AlertDialogFooter>
             <AlertDialogCancel className="bg-white/5 border-white/15 text-white hover:bg-white/10">
               Cancel
             </AlertDialogCancel>
-            {(transportRequired === false || vehicles.length === 0) && (
+            {transportRequired === true && vehicles.length > 0 ? (
+              <AlertDialogAction
+                className="bg-sky-600 hover:bg-sky-500 text-white"
+                onClick={() => handleAddLateArrival(null)}
+              >
+                Arrived separately
+              </AlertDialogAction>
+            ) : (
               <AlertDialogAction
                 className="bg-purple-600 hover:bg-purple-500 text-white"
                 onClick={() => handleAddLateArrival(null)}
               >
                 Add to Excursion
-              </AlertDialogAction>
-            )}
-            {transportRequired === true && vehicles.length > 0 && !isLocked && (
-              <AlertDialogAction
-                className="bg-white/10 hover:bg-white/15 text-white"
-                onClick={() => handleAddLateArrival(null)}
-              >
-                Skip — add without vehicle
               </AlertDialogAction>
             )}
           </AlertDialogFooter>
