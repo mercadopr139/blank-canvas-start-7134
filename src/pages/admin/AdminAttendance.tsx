@@ -264,6 +264,8 @@ const AdminAttendance = () => {
   const [manualAddMode, setManualAddMode] = useState(false);
   const [manualSearch, setManualSearch] = useState("");
   const [manualAdding, setManualAdding] = useState(false);
+  // On an excursion day, whether a manual add goes to practice or the trip.
+  const [manualAddTarget, setManualAddTarget] = useState<"practice" | "excursion">("practice");
   const _noShowAlertOpen = false; // reserved for future expansion
   const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const { user } = useAuth();
@@ -288,6 +290,10 @@ const AdminAttendance = () => {
     toast.success(`Removed check-in for ${deleteTarget.name}`);
     setDeleteTarget(null);
     invalidateAttendance();
+    // Excursion check-ins live in a separate query — refresh it too, otherwise
+    // a deleted excursion sign-in lingers on screen until a reload.
+    queryClient.invalidateQueries({ queryKey: ["excursion-attendance-month", calMonthStart, calMonthEnd] });
+    queryClient.invalidateQueries({ queryKey: ["excursion-checkin-counts-all"] });
   };
 
   const getHeadshotUrl = (url: string | null): string | null => {
@@ -2053,13 +2059,13 @@ const AdminAttendance = () => {
                 // practice day that also hosts an excursion.
                 const excursionOnly = isExc && !isPrac;
                 const dualDay = isExc && isPrac;
-                // The centre number is the day's primary attendance: excursion
-                // count when the excursion is the only thing happening, else the
-                // NLA practice count. (A dual day shows its practice count here;
-                // the excursion roster is in the day-detail view.)
-                const count = excursionOnly
-                  ? (excursionDailyCounts as Record<string, number>)[dateStr] || 0
-                  : dailyCounts[dateStr] || 0;
+                // Practice and excursion are tracked separately. On an
+                // excursion day the tile shows BOTH — a green practice count and
+                // a purple excursion count — so neither metric is diluted.
+                const practiceCount = dailyCounts[dateStr] || 0;
+                const excursionCount = (excursionDailyCounts as Record<string, number>)[dateStr] || 0;
+                const count = excursionOnly ? excursionCount : practiceCount;
+                const hasActivity = practiceCount > 0 || excursionCount > 0;
                 const weather = weatherMap[dateStr] as WeatherDay | undefined;
                 const wInfo = weather ? getWeatherInfo(weather.condition_code) : null;
                 const rowIndex = Math.floor(idx / 7);
@@ -2086,7 +2092,7 @@ const AdminAttendance = () => {
                         ${isSelected ? "bg-blue-500/25 border border-blue-400/50 ring-1 ring-blue-400/30" : ""}
                         ${isCurrentDay && !isSelected ? "border border-white/30" : ""}
                         ${!isSelected && !isCurrentDay ? "border border-white/[0.06]" : ""}
-                        ${count > 0 ? "hover:bg-white/10 cursor-pointer" : "cursor-default"}
+                        ${hasActivity ? "hover:bg-white/10 cursor-pointer" : "cursor-default"}
                         ${dualDay ? "" : isExc ? "bg-purple-500/[0.08]" : !isPrac ? "bg-red-500/[0.06]" : "bg-white/[0.03]"}
                       `}
                       style={dualDay && !isSelected ? { backgroundImage: "linear-gradient(135deg, rgba(255,255,255,0.04) 0%, rgba(255,255,255,0.04) 48%, rgba(124,58,237,0.16) 52%, rgba(124,58,237,0.16) 100%)" } : undefined}
@@ -2101,22 +2107,32 @@ const AdminAttendance = () => {
                         <span className={wInfo ? "border-b border-dotted border-white/20" : ""}>{day}</span>
                       </span>
 
-                      {count > 0 ? (
-                        <span className={`w-8 h-8 sm:w-9 sm:h-9 rounded-full flex items-center justify-center text-sm sm:text-base font-bold ${
-                          excursionOnly
-                            ? "bg-purple-500/20 border border-purple-500/40 text-purple-400"
-                            : isPrac
+                      {isExc ? (
+                        // Excursion day — two circles: green practice + purple excursion.
+                        <div className="flex items-center gap-1">
+                          <span className={`w-6 h-6 sm:w-7 sm:h-7 rounded-full flex items-center justify-center text-xs sm:text-sm font-bold ${
+                            practiceCount > 0
                               ? "bg-green-500/20 border border-green-500/40 text-green-400"
-                              : "bg-red-500/20 border border-red-500/40 text-red-400"
+                              : "bg-white/[0.03] border border-white/[0.06] text-white/20"
+                          }`}>{practiceCount}</span>
+                          <span className={`w-6 h-6 sm:w-7 sm:h-7 rounded-full flex items-center justify-center text-xs sm:text-sm font-bold ${
+                            excursionCount > 0
+                              ? "bg-purple-500/20 border border-purple-500/40 text-purple-400"
+                              : "bg-purple-500/[0.03] border border-purple-500/[0.08] text-purple-400/30"
+                          }`}>{excursionCount}</span>
+                        </div>
+                      ) : count > 0 ? (
+                        <span className={`w-8 h-8 sm:w-9 sm:h-9 rounded-full flex items-center justify-center text-sm sm:text-base font-bold ${
+                          isPrac
+                            ? "bg-green-500/20 border border-green-500/40 text-green-400"
+                            : "bg-red-500/20 border border-red-500/40 text-red-400"
                         }`}>{count}</span>
                       ) : (
                         <span className={`w-8 h-8 sm:w-9 sm:h-9 rounded-full flex items-center justify-center text-xs ${
-                          excursionOnly
-                            ? "bg-purple-500/[0.03] border border-purple-500/[0.08] text-purple-400/30"
-                            : isPrac
-                              ? "bg-white/[0.03] border border-white/[0.06] text-white/15"
-                              : "bg-red-500/[0.03] border border-red-500/[0.08] text-red-400/30"
-                        }`}>{excursionOnly || isPrac ? "0" : <X className="w-3 h-3" />}</span>
+                          isPrac
+                            ? "bg-white/[0.03] border border-white/[0.06] text-white/15"
+                            : "bg-red-500/[0.03] border border-red-500/[0.08] text-red-400/30"
+                        }`}>{isPrac ? "0" : <X className="w-3 h-3" />}</span>
                       )}
                     </button>
                     {/* Weather tooltip - positioned outside cell */}
@@ -3141,6 +3157,25 @@ const AdminAttendance = () => {
                       <X className="w-4 h-4" />
                     </button>
                   </div>
+                  {/* On an excursion day, choose whether this add is practice
+                      attendance or goes onto the trip roster. */}
+                  {isExcursionDay(selectedDay) && (
+                    <div className="flex items-center gap-1.5 mb-2">
+                      <span className="text-xs text-white/50">Add to:</span>
+                      <button
+                        onClick={() => setManualAddTarget("practice")}
+                        className={`text-xs font-semibold px-2.5 py-1 rounded-md border transition-colors ${manualAddTarget === "practice" ? "bg-green-500/20 border-green-500/40 text-green-300" : "border-white/15 text-white/50 hover:bg-white/5"}`}
+                      >
+                        Practice
+                      </button>
+                      <button
+                        onClick={() => setManualAddTarget("excursion")}
+                        className={`text-xs font-semibold px-2.5 py-1 rounded-md border transition-colors ${manualAddTarget === "excursion" ? "bg-purple-500/20 border-purple-500/40 text-purple-200" : "border-white/15 text-white/50 hover:bg-white/5"}`}
+                      >
+                        Excursion
+                      </button>
+                    </div>
+                  )}
                   <div className="relative">
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/40" />
                     <Input
@@ -3161,7 +3196,16 @@ const AdminAttendance = () => {
                       })
                       .slice(0, manualSearch.trim() ? 10 : 50)
                       .map((r) => {
-                        const alreadyCheckedIn = daySignIns.some((s) => s.registration_id === r.id);
+                        // On an excursion day the target (practice vs excursion)
+                        // decides both what "already checked in" means and where
+                        // the add lands — a kid in practice can still be added to
+                        // the trip, and vice versa.
+                        const excForDay = excursionsCalMonth.find((e) => e.date === selectedDay);
+                        const addToExcursion = !!excForDay && manualAddTarget === "excursion";
+                        const alreadyCheckedIn = daySignIns.some((s) =>
+                          s.registration_id === r.id &&
+                          (addToExcursion ? s.program_source === "Excursion" : s.program_source === "NLA")
+                        );
                         return (
                           <button
                             key={r.id}
@@ -3169,17 +3213,12 @@ const AdminAttendance = () => {
                             onClick={async () => {
                               if (alreadyCheckedIn) return;
                               setManualAdding(true);
-                              // If this day is a purple Excursion day, file the youth
-                              // as Excursion attendance (tagged with the excursion_id)
-                              // so they land on the trip roster — mirroring the table's
-                              // "Add Youth to Roster". Filing as "NLA" here made
-                              // manually-added kids invisible to the excursion until the
-                              // day was flipped back to green.
-                              const excForDay = excursionsCalMonth.find((e) => e.date === selectedDay);
                               let error;
-                              if (excForDay) {
+                              if (addToExcursion) {
+                                // File as Excursion attendance (tagged with the
+                                // excursion_id) so they land on the trip roster.
                                 ({ error } = await supabase.rpc("admin_record_excursion_attendance", {
-                                  _excursion_id: excForDay.id,
+                                  _excursion_id: excForDay!.id,
                                   _registration_id: r.id,
                                   _check_in_date: selectedDay,
                                 }));
@@ -3197,9 +3236,9 @@ const AdminAttendance = () => {
                               if (error) {
                                 toast.error("Failed to add check-in");
                               } else {
-                                toast.success(`Manual check-in added for ${r.child_first_name} ${r.child_last_name}`);
+                                toast.success(`${addToExcursion ? "Added to excursion" : "Practice check-in added"} for ${r.child_first_name} ${r.child_last_name}`);
                                 invalidateAttendance();
-                                if (excForDay) {
+                                if (addToExcursion) {
                                   queryClient.invalidateQueries({ queryKey: ["excursion-attendance-month", calMonthStart, calMonthEnd] });
                                   queryClient.invalidateQueries({ queryKey: ["excursion-checkin-counts-all"] });
                                 }
@@ -3239,15 +3278,17 @@ const AdminAttendance = () => {
 
               <div className="mt-2 mb-2 flex items-center gap-3 flex-wrap">
                 <Badge className="bg-green-500/15 text-green-400 border-green-500/30 flex-shrink-0">
-                  {daySignIns.length} youth
+                  {daySignIns.filter((s) => s.program_source === "NLA").length} practice
                 </Badge>
                 {!isPracticeDay(selectedDay, calPracticeDayMap) && (
                   <Badge className="bg-red-500/15 text-red-400 border-red-500/30 flex-shrink-0">Non-Practice Day</Badge>
                 )}
-                {/* Excursion badge sits with its own controls on the right,
-                    so the green youth count reads on its own. */}
+                {/* Excursion count sits with its own controls on the right,
+                    so the green practice count reads on its own. */}
                 {isExcursionDay(selectedDay) && (
-                  <Badge className="ml-auto bg-purple-500/15 text-purple-300 border-purple-500/30 flex-shrink-0">Excursion</Badge>
+                  <Badge className="ml-auto bg-purple-500/15 text-purple-300 border-purple-500/30 flex-shrink-0">
+                    {daySignIns.filter((s) => s.program_source === "Excursion").length} excursion
+                  </Badge>
                 )}
                 {/* Add or edit the excursion for this day, right where the user
                     naturally looks after clicking a day. Closes this dialog and
@@ -3296,7 +3337,7 @@ const AdminAttendance = () => {
                         {s.reg.is_bald_eagle && <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-400 flex-shrink-0" />}
                         {s.is_manual && <Badge className="bg-amber-500/15 text-amber-400 border-amber-500/30 text-[10px] px-1.5 py-0">Manual</Badge>}
                       </div>
-                      <p className="text-xs text-white/40">{s.reg.child_boxing_program} · <span className={s.program_source === 'Lil Champs Corner' ? 'text-sky-400' : 'text-green-400'}>{s.program_source}</span></p>
+                      <p className="text-xs text-white/40">{s.reg.child_boxing_program} · <span className={s.program_source === 'Lil Champs Corner' ? 'text-sky-400' : s.program_source === 'Excursion' ? 'text-purple-300' : 'text-green-400'}>{s.program_source}</span></p>
                     </div>
                     <span className={`text-xs flex-shrink-0 ${s.is_manual ? 'text-amber-400' : 'text-white/50'}`}>{format(new Date(s.check_in_at), "h:mm a")}</span>
                     <button
