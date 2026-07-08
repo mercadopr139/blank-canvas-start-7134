@@ -250,6 +250,8 @@ const ExcursionCoach = () => {
   const [confirmArrivalOpen, setConfirmArrivalOpen] = useState(false);
   // Ride-home choice pops up right after arrival is confirmed.
   const [rideHomeChoiceOpen, setRideHomeChoiceOpen] = useState(false);
+  // Add-a-vehicle-for-the-ride-home flow: who we're adding it for.
+  const [addRetVehFor, setAddRetVehFor] = useState<{ kind: "youth" | "coach"; id: string; name: string } | null>(null);
   // After adding a coach/volunteer, ask which vehicle they're riding in.
   const [pendingPersonnel, setPendingPersonnel] = useState<{ id: string; name: string } | null>(null);
   const [confirmCloseOpen, setConfirmCloseOpen] = useState(false);
@@ -674,6 +676,40 @@ const ExcursionCoach = () => {
       return;
     }
     await loadRoster(excursion.id);
+  };
+
+  // "Other" in the ride-home popovers: add a new vehicle on the fly (allowed
+  // until the trip is closed) and drop the person into it for the ride home.
+  const handleAddReturnVehicle = async () => {
+    if (!excursion || !addingVehicle || !addRetVehFor) return;
+    const name = addingVehicle.isCustom ? customNameInput.trim() : addingVehicle.name;
+    const seat_cap = addingVehicle.isCustom ? Number(customSeatInput) : addingVehicle.seat_cap;
+    const driver = driverNameInput.trim();
+    if (!name) return toast.error("Vehicle name is required.");
+    if (!seat_cap || seat_cap <= 0) return toast.error("Seat capacity must be at least 1.");
+    if (!driver) return toast.error("Driver name is required.");
+
+    setSavingVehicle(true);
+    const { data: newId, error } = await supabase.rpc("add_excursion_vehicle", {
+      _excursion_id: excursion.id,
+      _name: name,
+      _seat_cap: seat_cap,
+      _driver_name: driver,
+    });
+    setSavingVehicle(false);
+    if (error) {
+      toast.error(error.message || "Couldn't add vehicle.");
+      return;
+    }
+    const vid = newId as string | null;
+    const target = addRetVehFor;
+    setAddingVehicle(null);
+    setAddRetVehFor(null);
+    if (vid) {
+      if (target.kind === "youth") await handleAssignReturn(target.id, vid);
+      else await handleSetPersonnelReturnVehicle(target.id, vid);
+    }
+    toast.success(`Added ${name} for the ride home.`);
   };
 
   const handleRemovePersonnel = async (personnelId: string) => {
@@ -1299,6 +1335,7 @@ const ExcursionCoach = () => {
                                       </button>
                                     );
                                   })}
+                                  <button onClick={() => setAddRetVehFor({ kind: "youth", id: y.registration_id, name: `${y.child_first_name} ${y.child_last_name}` })} className="w-full text-left rounded-md px-3 py-2 hover:bg-purple-500/15 text-sm text-purple-300 flex items-center gap-2"><Plus className="w-3.5 h-3.5" /> Other — add a vehicle</button>
                                 </div>
                               </PopoverContent>
                             </Popover>
@@ -1326,6 +1363,7 @@ const ExcursionCoach = () => {
                                     );
                                   })}
                                   <button onClick={() => handleSetPersonnelReturnVehicle(p.id, null)} className="w-full text-left rounded-md px-3 py-2 hover:bg-white/10 text-sm text-white/70">Driving separately</button>
+                                  <button onClick={() => setAddRetVehFor({ kind: "coach", id: p.id, name: p.name })} className="w-full text-left rounded-md px-3 py-2 hover:bg-purple-500/15 text-sm text-purple-300 flex items-center gap-2"><Plus className="w-3.5 h-3.5" /> Other — add a vehicle</button>
                                 </div>
                               </PopoverContent>
                             </Popover>
@@ -2180,6 +2218,52 @@ const ExcursionCoach = () => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Add-a-vehicle for the ride home — opened from an "Other" popover choice */}
+      {addRetVehFor && (
+        <div
+          className="fixed inset-0 z-[70] bg-black/80 flex items-center justify-center p-4"
+          onClick={() => { setAddRetVehFor(null); setAddingVehicle(null); }}
+        >
+          <div className="w-full max-w-md bg-neutral-900 border border-white/15 rounded-2xl p-5" onClick={(e) => e.stopPropagation()}>
+            <p className="text-lg font-bold">Add a vehicle</p>
+            <p className="text-sm text-white/50 mb-4">For {addRetVehFor.name}'s ride home.</p>
+            {!addingVehicle ? (
+              <div className="grid grid-cols-2 gap-2">
+                {VEHICLE_PRESETS.map((preset) => {
+                  const Icon = preset.icon;
+                  return (
+                    <button key={preset.name} onClick={() => openAddVehicle(preset)} className="rounded-xl border border-white/15 bg-white/5 hover:bg-white/10 p-3 text-left">
+                      <p className="font-bold text-sm flex items-center gap-1.5"><Icon className="w-4 h-4 text-purple-300" />{preset.name}</p>
+                      <p className="text-xs text-white/50">{preset.seat_cap} seats</p>
+                    </button>
+                  );
+                })}
+                <button onClick={() => openAddVehicle(null)} className="col-span-2 rounded-xl border border-purple-400/40 bg-purple-500/10 hover:bg-purple-500/20 p-3 text-sm font-semibold text-purple-200">Other (custom vehicle)</button>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {addingVehicle.isCustom ? (
+                  <>
+                    <Input value={customNameInput} onChange={(e) => setCustomNameInput(e.target.value)} placeholder="Vehicle name" className="bg-white/5 border-white/15 text-white" />
+                    <Input value={customSeatInput} onChange={(e) => setCustomSeatInput(e.target.value)} inputMode="numeric" placeholder="Seats (excluding driver)" className="bg-white/5 border-white/15 text-white" />
+                  </>
+                ) : (
+                  <p className="text-sm text-white/70 font-semibold">{addingVehicle.name} · {addingVehicle.seat_cap} seats</p>
+                )}
+                <Input value={driverNameInput} onChange={(e) => setDriverNameInput(e.target.value)} placeholder="Driver name (e.g. Coach Chris)" className="bg-white/5 border-white/15 text-white" />
+                <div className="flex gap-2">
+                  <Button variant="outline" onClick={() => setAddingVehicle(null)} className="border-white/20 text-white/70">Back</Button>
+                  <Button onClick={handleAddReturnVehicle} disabled={savingVehicle} className="flex-1 bg-purple-600 hover:bg-purple-500 text-white font-bold">
+                    {savingVehicle ? "Adding…" : "Add & assign"}
+                  </Button>
+                </div>
+              </div>
+            )}
+            <button onClick={() => { setAddRetVehFor(null); setAddingVehicle(null); }} className="mt-3 text-xs text-white/40 hover:text-white/70">Cancel</button>
+          </div>
+        </div>
+      )}
 
       {/* ───── Phase 3 — Confirm Arrival modal ───── */}
       <AlertDialog
