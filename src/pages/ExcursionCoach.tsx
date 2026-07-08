@@ -266,6 +266,12 @@ const ExcursionCoach = () => {
   const [wizardStepKey, setWizardStepKey] = useState<string>("transport");
   const [wizardOpen, setWizardOpen] = useState(false);
 
+  // ───── Headcount Check ─────
+  // A "before we roll" reconciliation shown right after PIN entry: the
+  // pre-trip Confirmed list side-by-side with who's actually signed in, so
+  // coaches instantly see who they're still waiting on. Re-openable anytime.
+  const [headcountOpen, setHeadcountOpen] = useState(false);
+
   const loadExcursion = useCallback(async () => {
     const { data, error } = await supabase.rpc("get_todays_excursion");
     if (error) {
@@ -385,6 +391,22 @@ const ExcursionCoach = () => {
   useEffect(() => {
     if (excursion?.id) sessionStorage.setItem(`nla_exc_wizard_step_${excursion.id}`, wizardStepKey);
   }, [wizardStepKey, excursion?.id]);
+
+  // Auto-show the headcount check once per excursion, right after PIN, but
+  // only when a Confirmed sign-up list actually exists (nothing to reconcile
+  // otherwise). Dismissing sets a per-excursion "seen" flag.
+  useEffect(() => {
+    if (!pinVerified || !excursion || isLocked || isClosed) return;
+    if (confirmedSignups.length === 0) return;
+    const seen = sessionStorage.getItem(`nla_exc_headcount_seen_${excursion.id}`) === "1";
+    if (!seen) setHeadcountOpen(true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pinVerified, excursion?.id, isLocked, isClosed, confirmedSignups.length]);
+
+  const dismissHeadcount = () => {
+    if (excursion?.id) sessionStorage.setItem(`nla_exc_headcount_seen_${excursion.id}`, "1");
+    setHeadcountOpen(false);
+  };
 
   const dismissWizard = () => {
     if (excursion?.id) sessionStorage.setItem(`nla_exc_wizard_dismissed_${excursion.id}`, "1");
@@ -1327,7 +1349,13 @@ const ExcursionCoach = () => {
               <div className="flex items-center gap-2 mb-3">
                 <ListChecks className="w-4 h-4 text-emerald-300" />
                 <p className="text-xs font-bold uppercase tracking-wider text-white/50">Expected Today</p>
-                <span className="ml-auto text-sm font-black tabular-nums">
+                <button
+                  onClick={() => setHeadcountOpen(true)}
+                  className="ml-auto inline-flex items-center gap-1.5 text-[11px] font-semibold px-2.5 py-1 rounded-md border border-emerald-400/30 bg-emerald-500/10 text-emerald-200 hover:bg-emerald-500/20"
+                >
+                  <ListChecks className="w-3.5 h-3.5" /> Headcount Check
+                </button>
+                <span className="text-sm font-black tabular-nums">
                   <span className="text-emerald-300">{expectedHere.length}</span>
                   <span className="text-white/40"> / {confirmedSignups.length} here</span>
                 </span>
@@ -2344,6 +2372,138 @@ const ExcursionCoach = () => {
       </AlertDialog>
 
       {/* ═══════════ Guided setup wizard (pop-up) ═══════════ */}
+      {/* ── HEADCOUNT CHECK — post-PIN "before we roll" reconciliation ── */}
+      {headcountOpen && excursion && (
+        <div className="fixed inset-0 z-[60] bg-black/97 backdrop-blur-sm flex flex-col">
+          <div className="flex-1 overflow-y-auto px-4 md:px-6 py-6">
+            <div className="max-w-4xl mx-auto">
+              {/* Headline */}
+              <div className="text-center mb-6">
+                <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-emerald-300/80 flex items-center justify-center gap-1.5">
+                  <ListChecks className="w-4 h-4" /> Headcount Check
+                </p>
+                <h1 className="text-2xl md:text-3xl font-black mt-1">{excursion.name}</h1>
+                <p className="mt-2 text-lg md:text-xl font-bold">
+                  <span className={expectedHere.length === confirmedSignups.length ? "text-emerald-300" : "text-amber-300"}>
+                    {expectedHere.length} of {confirmedSignups.length}
+                  </span>{" "}
+                  <span className="text-white/60">confirmed youth are here</span>
+                </p>
+              </div>
+
+              {/* Two columns */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {/* LEFT — Confirmed prior to trip */}
+                <div className="rounded-2xl border border-white/10 bg-white/[0.02] overflow-hidden">
+                  <div className="px-4 py-3 border-b border-white/10 flex items-center gap-2">
+                    <p className="text-xs font-bold uppercase tracking-wider text-white/60">Confirmed Prior to Trip</p>
+                    <span className="ml-auto text-sm font-black tabular-nums text-white/50">{confirmedSignups.length}</span>
+                  </div>
+                  <div className="p-2 space-y-1.5">
+                    {confirmedSignups.length === 0 ? (
+                      <p className="text-sm text-white/30 px-2 py-4 text-center">No one was confirmed ahead of time.</p>
+                    ) : (
+                      confirmedSignups.map((c) => {
+                        const here = checkedInIds.has(c.registration_id);
+                        return (
+                          <div
+                            key={c.registration_id}
+                            className={`flex items-center gap-3 rounded-xl px-3 py-2.5 border ${here ? "bg-emerald-500/10 border-emerald-400/25" : "bg-amber-500/10 border-amber-400/30"}`}
+                          >
+                            <span className="w-9 h-9 rounded-full bg-white/10 overflow-hidden flex items-center justify-center text-sm font-bold text-white/60 flex-shrink-0">
+                              {getHeadshotUrl(c.child_headshot_url) ? (
+                                <img src={getHeadshotUrl(c.child_headshot_url)!} alt="" className="w-full h-full object-cover" />
+                              ) : (
+                                c.child_first_name[0]
+                              )}
+                            </span>
+                            <span className="flex-1 min-w-0 truncate font-semibold">{c.child_first_name} {c.child_last_name}</span>
+                            {here ? (
+                              <span className="flex items-center gap-1 text-xs font-bold text-emerald-300 flex-shrink-0">
+                                <CheckCircle2 className="w-4 h-4" /> Here
+                              </span>
+                            ) : (
+                              <span className="flex items-center gap-1 text-xs font-bold text-amber-300 flex-shrink-0">
+                                <Clock className="w-4 h-4" /> Waiting
+                              </span>
+                            )}
+                          </div>
+                        );
+                      })
+                    )}
+                  </div>
+                </div>
+
+                {/* RIGHT — Signed in (highlighted) */}
+                <div className="rounded-2xl border-2 border-emerald-400/40 bg-emerald-500/[0.06] overflow-hidden">
+                  <div className="px-4 py-3 border-b border-emerald-400/20 flex items-center gap-2">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-300" />
+                    <p className="text-xs font-bold uppercase tracking-wider text-emerald-200">Signed In</p>
+                    <span className="ml-auto text-sm font-black tabular-nums text-emerald-300">{youth.length}</span>
+                  </div>
+                  <div className="p-2 space-y-1.5">
+                    {youth.length === 0 ? (
+                      <p className="text-sm text-white/30 px-2 py-4 text-center">No one has checked in yet.</p>
+                    ) : (
+                      youth.map((y) => {
+                        const walkIn = !expectedIds.has(y.registration_id);
+                        return (
+                          <div
+                            key={y.registration_id}
+                            className="flex items-center gap-3 rounded-xl px-3 py-2.5 border bg-white/[0.03] border-white/10"
+                          >
+                            <span className="w-9 h-9 rounded-full bg-white/10 overflow-hidden flex items-center justify-center text-sm font-bold text-white/60 flex-shrink-0">
+                              {getHeadshotUrl(y.child_headshot_url) ? (
+                                <img src={getHeadshotUrl(y.child_headshot_url)!} alt="" className="w-full h-full object-cover" />
+                              ) : (
+                                y.child_first_name[0]
+                              )}
+                            </span>
+                            <span className="flex-1 min-w-0 truncate font-semibold">{y.child_first_name} {y.child_last_name}</span>
+                            {walkIn && (
+                              <span className="text-[10px] font-bold uppercase tracking-wider text-amber-300 bg-amber-500/15 border border-amber-400/30 rounded px-1.5 py-0.5 flex-shrink-0">
+                                Not on list
+                              </span>
+                            )}
+                          </div>
+                        );
+                      })
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Waiting banner */}
+              {expectedMissing.length > 0 ? (
+                <div className="mt-4 rounded-xl bg-amber-500/10 border border-amber-400/30 px-4 py-3 flex items-start gap-2.5">
+                  <AlertTriangle className="w-5 h-5 text-amber-300 flex-shrink-0 mt-0.5" />
+                  <p className="text-sm text-amber-100/90">
+                    <span className="font-bold">Waiting on {expectedMissing.length}:</span>{" "}
+                    {expectedMissing.map((m) => `${m.child_first_name} ${m.child_last_name}`).join(" · ")}
+                  </p>
+                </div>
+              ) : confirmedSignups.length > 0 ? (
+                <div className="mt-4 rounded-xl bg-emerald-500/10 border border-emerald-400/30 px-4 py-3 flex items-center gap-2.5">
+                  <CheckCircle2 className="w-5 h-5 text-emerald-300 flex-shrink-0" />
+                  <p className="text-sm text-emerald-100/90 font-semibold">Everyone who confirmed is here.</p>
+                </div>
+              ) : null}
+
+              {/* Continue */}
+              <Button
+                onClick={dismissHeadcount}
+                className="w-full mt-6 bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-6 rounded-2xl text-lg"
+              >
+                Continue to Coach Mode →
+              </Button>
+              <p className="text-center text-[11px] text-white/30 mt-3">
+                Reopen anytime from the “Headcount Check” button on the Expected Today card.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
       {wizardOpen && excursion && !isLocked && (
         <div className="fixed inset-0 z-50 bg-black/95 backdrop-blur-sm flex flex-col">
           {/* Header — progress dots + dismiss */}
