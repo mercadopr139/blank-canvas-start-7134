@@ -40,6 +40,7 @@ import {
   X,
 } from "lucide-react";
 import nlaLogo from "@/assets/nla-logo-white.png";
+import ExcursionRideComparison from "@/components/admin/ExcursionRideComparison";
 
 const getHeadshotUrl = (url: string | null): string | null => {
   if (!url) return null;
@@ -162,6 +163,8 @@ const ExcursionCoach = () => {
 
   // Phase 3 — arrival / return / timestamp edit
   const [confirmArrivalOpen, setConfirmArrivalOpen] = useState(false);
+  // Ride-home choice pops up right after arrival is confirmed.
+  const [rideHomeChoiceOpen, setRideHomeChoiceOpen] = useState(false);
   const [confirmCloseOpen, setConfirmCloseOpen] = useState(false);
   const [arrivalNoteMode, setArrivalNoteMode] = useState(false);
   const [closeNoteMode, setCloseNoteMode] = useState(false);
@@ -559,6 +562,11 @@ const ExcursionCoach = () => {
     }
     toast.success("Arrival confirmed.");
     await loadExcursion();
+    // Right after arrival, ask about the ride home (unless it's already been
+    // decided, or there's no NLA transportation to arrange).
+    if (transportRequired === true && !returnPlan) {
+      setRideHomeChoiceOpen(true);
+    }
   };
 
   const handleConfirmReturn = async (note: string | null) => {
@@ -839,47 +847,53 @@ const ExcursionCoach = () => {
           </Card>
         )}
 
-        {/* Trip manifest — who's in each vehicle, so a coach can do a quick
-            headcount per van at arrival and at return. Only when NLA drives. */}
+        {/* Vehicles at a glance while locked. Before the ride home is planned
+            it's a simple per-van list; once a ride-home plan is set it becomes
+            the Ride There vs Ride Home comparison (single source, no
+            redundant vehicle list). */}
         {isLocked && transportRequired === true && vehicles.length > 0 && (
           <Card className="bg-white/[0.03] border-white/10 text-white">
             <CardContent className="p-5 md:p-6">
               <p className="text-xs font-bold uppercase tracking-wider text-white/50 mb-4">
-                Ride to Excursion — who's in each vehicle
+                {returnPlan ? "Ride There vs Ride Home" : "Ride to Excursion — who's in each vehicle"}
               </p>
-              <div className="space-y-3">
-                {vehicles.map((v) => {
-                  const kids = youth.filter((y) => y.vehicle_id === v.id);
-                  return (
-                    <div key={v.id} className="rounded-xl bg-white/[0.04] border border-white/10 p-4">
-                      <p className="font-bold flex items-center gap-2">
-                        <Truck className="w-4 h-4 text-purple-300" />{v.name}
-                        <span className="text-white/40 font-medium text-sm">· {v.driver_name} · {kids.length}/{v.seat_cap}</span>
-                      </p>
-                      {kids.length === 0 ? (
-                        <p className="text-sm text-white/30 italic mt-1">No youth assigned.</p>
-                      ) : (
-                        <div className="flex flex-wrap gap-1.5 mt-2">
-                          {kids.map((y) => (
-                            <span key={y.registration_id} className="inline-flex items-center gap-1.5 rounded-full bg-purple-500/10 border border-purple-400/30 px-2.5 py-1 text-sm">
-                              <span className="w-5 h-5 rounded-full bg-white/10 overflow-hidden flex items-center justify-center text-[10px] font-bold text-white/60">
-                                {getHeadshotUrl(y.child_headshot_url) ? <img src={getHeadshotUrl(y.child_headshot_url)!} alt="" className="w-full h-full object-cover" /> : y.child_first_name[0]}
+              {returnPlan ? (
+                <ExcursionRideComparison vehicles={vehicles} youth={youth} returnPlan={returnPlan} />
+              ) : (
+                <div className="space-y-3">
+                  {vehicles.map((v) => {
+                    const kids = youth.filter((y) => y.vehicle_id === v.id);
+                    return (
+                      <div key={v.id} className="rounded-xl bg-white/[0.04] border border-white/10 p-4">
+                        <p className="font-bold flex items-center gap-2">
+                          <Truck className="w-4 h-4 text-purple-300" />{v.name}
+                          <span className="text-white/40 font-medium text-sm">· {v.driver_name} · {kids.length}/{v.seat_cap}</span>
+                        </p>
+                        {kids.length === 0 ? (
+                          <p className="text-sm text-white/30 italic mt-1">No youth assigned.</p>
+                        ) : (
+                          <div className="flex flex-wrap gap-1.5 mt-2">
+                            {kids.map((y) => (
+                              <span key={y.registration_id} className="inline-flex items-center gap-1.5 rounded-full bg-purple-500/10 border border-purple-400/30 px-2.5 py-1 text-sm">
+                                <span className="w-5 h-5 rounded-full bg-white/10 overflow-hidden flex items-center justify-center text-[10px] font-bold text-white/60">
+                                  {getHeadshotUrl(y.child_headshot_url) ? <img src={getHeadshotUrl(y.child_headshot_url)!} alt="" className="w-full h-full object-cover" /> : y.child_first_name[0]}
+                                </span>
+                                {y.child_first_name} {y.child_last_name}
                               </span>
-                              {y.child_first_name} {y.child_last_name}
-                            </span>
-                          ))}
-                        </div>
-                      )}
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                  {unassignedYouth.length > 0 && (
+                    <div className="rounded-xl bg-yellow-500/[0.06] border border-yellow-400/30 p-4">
+                      <p className="font-bold text-yellow-200/90 text-sm">Not in a vehicle ({unassignedYouth.length})</p>
+                      <p className="text-sm text-yellow-100/60 mt-1">{unassignedYouth.map((y) => `${y.child_first_name} ${y.child_last_name}`).join(", ")}</p>
                     </div>
-                  );
-                })}
-                {unassignedYouth.length > 0 && (
-                  <div className="rounded-xl bg-yellow-500/[0.06] border border-yellow-400/30 p-4">
-                    <p className="font-bold text-yellow-200/90 text-sm">Not in a vehicle ({unassignedYouth.length})</p>
-                    <p className="text-sm text-yellow-100/60 mt-1">{unassignedYouth.map((y) => `${y.child_first_name} ${y.child_last_name}`).join(", ")}</p>
-                  </div>
-                )}
-              </div>
+                  )}
+                </div>
+              )}
             </CardContent>
           </Card>
         )}
@@ -1163,8 +1177,10 @@ const ExcursionCoach = () => {
           </Card>
         )}
 
-        {/* STEP 2 — vehicles + assignments (if transportRequired) */}
-        {transportRequired === true && (
+        {/* STEP 2 — vehicles + assignments (if transportRequired). Setup only:
+            once the roster is locked this collapses (Unlock to edit), so the
+            locked screen isn't cluttered with a redundant second vehicle list. */}
+        {transportRequired === true && !isLocked && (
           <>
             {/* Unassigned youth pool */}
             <Card className="bg-white/[0.04] border-white/10 text-white">
@@ -1898,6 +1914,37 @@ const ExcursionCoach = () => {
                 </AlertDialogAction>
               </>
             )}
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* ───── Ride-home choice — pops up right after arrival is confirmed ───── */}
+      <AlertDialog open={rideHomeChoiceOpen} onOpenChange={setRideHomeChoiceOpen}>
+        <AlertDialogContent className="bg-neutral-900 border-white/10 text-white">
+          <AlertDialogHeader>
+            <AlertDialogTitle>The Ride Home</AlertDialogTitle>
+            <AlertDialogDescription className="text-white/60">
+              Riding home in the same vehicles, or rearranging so each van can cover one area?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="grid sm:grid-cols-2 gap-3 my-2">
+            <button
+              onClick={async () => { setRideHomeChoiceOpen(false); await handleSetReturnPlan("same"); }}
+              className="rounded-xl border-2 border-white/15 bg-white/5 hover:bg-white/10 p-4 text-left transition"
+            >
+              <p className="font-bold">Keep the same vehicles</p>
+              <p className="text-sm text-white/50 mt-1">Everyone rides home the way they came.</p>
+            </button>
+            <button
+              onClick={async () => { setRideHomeChoiceOpen(false); await handleSetReturnPlan("custom"); }}
+              className="rounded-xl border-2 border-purple-400/40 bg-purple-500/10 hover:bg-purple-500/20 p-4 text-left transition"
+            >
+              <p className="font-bold">Rearrange</p>
+              <p className="text-sm text-white/50 mt-1">Move kids between vans — one south, one north, etc.</p>
+            </button>
+          </div>
+          <AlertDialogFooter>
+            <AlertDialogCancel className="bg-white/5 border-white/15 text-white hover:bg-white/10">Decide later</AlertDialogCancel>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

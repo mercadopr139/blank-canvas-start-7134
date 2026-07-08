@@ -27,6 +27,7 @@ import {
 } from "date-fns";
 import { toast } from "sonner";
 import { ExcursionHistorySection } from "@/components/admin/ExcursionHistorySection";
+import ExcursionRideComparison from "@/components/admin/ExcursionRideComparison";
 import { getProgramYearForRegistration, shortProgramYear } from "@/lib/programYear";
 
 /* ───────── Types ───────── */
@@ -3751,55 +3752,21 @@ const AdminAttendance = () => {
                   )}
                 </div>
 
-                {/* RIDE HOME — read-only report of the return-leg seating,
-                    which can differ from the ride there (e.g. one van goes
-                    south, one north). Sourced from return_vehicle_id. */}
+                {/* RIDE THERE vs RIDE HOME — a single comparison so you can
+                    see who switched vans for the trip home (changed rows are
+                    highlighted). Replaces the separate ride-home list. */}
                 <div className="pt-3 mt-2 border-t border-white/10">
-                  <p className="text-xs font-bold uppercase tracking-wider text-white/50 mb-3">Ride Home</p>
+                  <p className="text-xs font-bold uppercase tracking-wider text-white/50 mb-3">Ride There vs Ride Home</p>
                   {!editingExcursion.return_plan ? (
                     <p className="text-sm text-white/30 italic">No separate ride-home log was recorded for this trip.</p>
-                  ) : editingExcursion.return_plan === "same" ? (
-                    <p className="text-sm text-white/70 flex items-center gap-2">
-                      <CheckCircle2 className="w-4 h-4 text-emerald-300 shrink-0" /> Everyone rode home in the same vehicles as the trip there.
-                    </p>
+                  ) : editingRosterYouth.length === 0 ? (
+                    <p className="text-sm text-white/30 italic">No youth on this trip.</p>
                   ) : (
-                    <div className="space-y-2">
-                      {editingVehicles.map((v) => {
-                        const inThisVehicle = editingRosterYouth.filter((y) => y.return_vehicle_id === v.id);
-                        return (
-                          <div key={v.id} className="rounded-lg bg-white/[0.03] border border-white/10 p-3">
-                            <div className="flex items-start justify-between gap-2 mb-1.5">
-                              <div className="min-w-0">
-                                <p className="text-sm font-bold text-purple-200 flex items-center gap-1.5"><Truck className="w-3.5 h-3.5" /> {v.name}</p>
-                                <p className="text-xs text-white/50 mt-0.5">Driver: <span className="text-white/80 font-semibold">{v.driver_name}</span></p>
-                              </div>
-                              <span className="text-xs text-white/50 tabular-nums shrink-0">{inThisVehicle.length}/{v.seat_cap}</span>
-                            </div>
-                            {inThisVehicle.length > 0 ? (
-                              <div className="flex flex-wrap gap-1.5">
-                                {inThisVehicle.map((y) => (
-                                  <span key={y.registration_id} className="rounded-full bg-purple-500/10 border border-purple-400/30 px-2 py-0.5 text-xs font-semibold text-purple-100">
-                                    {y.child_first_name} {y.child_last_name}
-                                  </span>
-                                ))}
-                              </div>
-                            ) : (
-                              <p className="text-xs text-white/30 italic">No youth rode home in this vehicle.</p>
-                            )}
-                          </div>
-                        );
-                      })}
-                      {(() => {
-                        const noRide = editingRosterYouth.filter((y) => !y.return_vehicle_id);
-                        if (noRide.length === 0) return null;
-                        return (
-                          <div className="rounded-lg bg-yellow-500/[0.05] border border-yellow-400/20 p-3">
-                            <p className="text-xs font-bold text-yellow-200/80 mb-1">No ride home recorded ({noRide.length})</p>
-                            <p className="text-xs text-yellow-100/60">{noRide.map((y) => `${y.child_first_name} ${y.child_last_name}`).join(", ")}</p>
-                          </div>
-                        );
-                      })()}
-                    </div>
+                    <ExcursionRideComparison
+                      vehicles={editingVehicles}
+                      youth={editingRosterYouth}
+                      returnPlan={editingExcursion.return_plan}
+                    />
                   )}
                 </div>
 
