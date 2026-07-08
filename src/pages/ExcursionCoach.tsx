@@ -18,11 +18,14 @@ import {
 } from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
 import {
+  AlertTriangle,
   ArrowLeft,
   Bus,
   CalendarX,
   CheckCircle2,
+  Clock,
   Flag,
+  ListChecks,
   Home,
   KeyRound,
   Lock,
@@ -72,6 +75,14 @@ interface RosterYouth {
   child_headshot_url: string | null;
   vehicle_id: string | null;
   return_vehicle_id: string | null;
+}
+
+interface ConfirmedSignup {
+  registration_id: string;
+  child_first_name: string;
+  child_last_name: string;
+  child_boxing_program: string;
+  child_headshot_url: string | null;
 }
 
 interface Vehicle {
@@ -193,6 +204,7 @@ const ExcursionCoach = () => {
   const [youth, setYouth] = useState<RosterYouth[]>([]);
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [personnel, setPersonnel] = useState<Personnel[]>([]);
+  const [confirmedSignups, setConfirmedSignups] = useState<ConfirmedSignup[]>([]);
 
   // Add-vehicle form state
   const [addingVehicle, setAddingVehicle] = useState<{
@@ -270,14 +282,16 @@ const ExcursionCoach = () => {
   }, [loadExcursion]);
 
   const loadRoster = useCallback(async (excursionId: string) => {
-    const [youthRes, vehiclesRes, personnelRes] = await Promise.all([
+    const [youthRes, vehiclesRes, personnelRes, confirmedRes] = await Promise.all([
       supabase.rpc("get_excursion_roster_youth", { _excursion_id: excursionId }),
       supabase.rpc("get_excursion_vehicles", { _excursion_id: excursionId }),
       supabase.rpc("get_excursion_personnel", { _excursion_id: excursionId }),
+      supabase.rpc("get_excursion_confirmed_signups", { _excursion_id: excursionId }),
     ]);
     if (youthRes.data) setYouth(youthRes.data as RosterYouth[]);
     if (vehiclesRes.data) setVehicles(vehiclesRes.data as Vehicle[]);
     if (personnelRes.data) setPersonnel(personnelRes.data as Personnel[]);
+    if (confirmedRes.data) setConfirmedSignups(confirmedRes.data as ConfirmedSignup[]);
   }, []);
 
   useEffect(() => {
@@ -819,6 +833,14 @@ const ExcursionCoach = () => {
   const checkedInCount = youth.length;
   const unassignedYouth = youth.filter((y) => !y.vehicle_id);
 
+  // ── Expected roster (from the pre-trip Confirmed sign-up list) ──
+  // Cross-references who was confirmed against who's actually checked in.
+  const checkedInIds = new Set(youth.map((y) => y.registration_id));
+  const expectedIds = new Set(confirmedSignups.map((c) => c.registration_id));
+  const expectedHere = confirmedSignups.filter((c) => checkedInIds.has(c.registration_id));
+  const expectedMissing = confirmedSignups.filter((c) => !checkedInIds.has(c.registration_id));
+  const walkIns = youth.filter((y) => !expectedIds.has(y.registration_id));
+
   // Wizard step order — vehicles + loading are skipped when NLA isn't driving.
   const wizardSteps: [string, string][] =
     transportRequired === false
@@ -1293,6 +1315,66 @@ const ExcursionCoach = () => {
             </button>
           )}
         </div>
+        )}
+
+        {/* EXPECTED TODAY — cross-references the pre-trip Confirmed sign-up
+            list against who's actually checked in. Only shows when a sign-up
+            list exists. Never blocks anyone — it's just a heads-up so coaches
+            see who's still missing and who showed up unexpectedly. */}
+        {!isLocked && confirmedSignups.length > 0 && (
+          <Card className="bg-white/[0.03] border-white/10 text-white">
+            <CardContent className="p-4 md:p-5">
+              <div className="flex items-center gap-2 mb-3">
+                <ListChecks className="w-4 h-4 text-emerald-300" />
+                <p className="text-xs font-bold uppercase tracking-wider text-white/50">Expected Today</p>
+                <span className="ml-auto text-sm font-black tabular-nums">
+                  <span className="text-emerald-300">{expectedHere.length}</span>
+                  <span className="text-white/40"> / {confirmedSignups.length} here</span>
+                </span>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
+                {confirmedSignups.map((c) => {
+                  const here = checkedInIds.has(c.registration_id);
+                  return (
+                    <div
+                      key={c.registration_id}
+                      className={`flex items-center gap-2.5 rounded-lg px-2.5 py-2 border ${here ? "bg-emerald-500/10 border-emerald-400/25" : "bg-white/[0.02] border-white/10"}`}
+                    >
+                      <span className="w-7 h-7 rounded-full bg-white/10 overflow-hidden flex items-center justify-center text-xs font-bold text-white/60 flex-shrink-0">
+                        {getHeadshotUrl(c.child_headshot_url) ? (
+                          <img src={getHeadshotUrl(c.child_headshot_url)!} alt="" className="w-full h-full object-cover" />
+                        ) : (
+                          c.child_first_name[0]
+                        )}
+                      </span>
+                      <span className="flex-1 min-w-0 truncate font-semibold text-sm">
+                        {c.child_first_name} {c.child_last_name}
+                      </span>
+                      {here ? (
+                        <span className="flex items-center gap-1 text-[11px] font-semibold text-emerald-300 flex-shrink-0">
+                          <CheckCircle2 className="w-3.5 h-3.5" /> Here
+                        </span>
+                      ) : (
+                        <span className="flex items-center gap-1 text-[11px] font-semibold text-amber-300/80 flex-shrink-0">
+                          <Clock className="w-3.5 h-3.5" /> Not yet
+                        </span>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+              {walkIns.length > 0 && (
+                <div className="mt-3 rounded-lg bg-amber-500/10 border border-amber-400/30 px-3 py-2">
+                  <p className="text-[11px] font-bold uppercase tracking-wider text-amber-200/90 flex items-center gap-1.5 mb-1">
+                    <AlertTriangle className="w-3.5 h-3.5" /> Checked in — not on confirmed list ({walkIns.length})
+                  </p>
+                  <p className="text-sm text-amber-100/80">
+                    {walkIns.map((w) => `${w.child_first_name} ${w.child_last_name}`).join(", ")}
+                  </p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
         )}
 
         {/* STEP 1 — transport question */}
