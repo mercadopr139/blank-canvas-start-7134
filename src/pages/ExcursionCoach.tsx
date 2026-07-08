@@ -524,6 +524,25 @@ const ExcursionCoach = () => {
     await loadRoster(excursion.id);
   };
 
+  // One-tap manual check-in from the Headcount Check (no vehicle prompt) —
+  // for a confirmed youth who's physically here but never used the kiosk.
+  const handleHeadcountCheckIn = async (regId: string, name: string) => {
+    if (!excursion) return;
+    const { error } = await supabase.rpc("coach_add_late_arrival", {
+      _excursion_id: excursion.id,
+      _registration_id: regId,
+      _vehicle_id: null,
+    });
+    if (error) {
+      toast.error(error.message || "Couldn't check them in.");
+      return;
+    }
+    toast.success(`${name} checked in.`);
+    setLateSearch("");
+    setLateResults([]);
+    await loadRoster(excursion.id);
+  };
+
   const handleAssign = async (registrationId: string, vehicleId: string) => {
     if (!excursion) return;
     const { error } = await supabase.rpc("assign_youth_to_vehicle", {
@@ -2489,10 +2508,72 @@ const ExcursionCoach = () => {
                 </div>
               ) : null}
 
+              {/* Manual check-in — for someone who's here but didn't use the kiosk */}
+              <div className="mt-6 rounded-xl border border-white/10 bg-white/[0.02] p-3">
+                <p className="text-xs font-semibold text-white/60 mb-2 flex items-center gap-1.5">
+                  <UserPlus className="w-3.5 h-3.5" /> Someone here but didn't use the kiosk? Check them in:
+                </p>
+                {/* Quick buttons for the youth you're still waiting on */}
+                {expectedMissing.length > 0 && (
+                  <div className="flex flex-wrap gap-1.5 mb-2">
+                    {expectedMissing.map((m) => (
+                      <button
+                        key={m.registration_id}
+                        onClick={() => handleHeadcountCheckIn(m.registration_id, `${m.child_first_name} ${m.child_last_name}`)}
+                        className="inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1.5 rounded-md border border-emerald-400/30 bg-emerald-500/10 text-emerald-200 hover:bg-emerald-500/20"
+                      >
+                        <CheckCircle2 className="w-3.5 h-3.5" /> {m.child_first_name} {m.child_last_name}
+                      </button>
+                    ))}
+                  </div>
+                )}
+                {/* Search anyone else (walk-ups not on the confirmed list) */}
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/40" />
+                  <Input
+                    value={lateSearch}
+                    onChange={(e) => setLateSearch(e.target.value)}
+                    placeholder="Search any youth by name…"
+                    className="pl-9 bg-white/5 border-white/20 text-white placeholder:text-white/30 h-10"
+                  />
+                </div>
+                {lateSearch.trim().length >= 2 && (
+                  <div className="mt-1.5 max-h-52 overflow-y-auto space-y-1">
+                    {lateSearching ? (
+                      <p className="text-xs text-white/40 px-2 py-2">Searching…</p>
+                    ) : lateResults.filter((r) => !checkedInIds.has(r.id)).length === 0 ? (
+                      <p className="text-xs text-white/40 px-2 py-2">No matches (or already checked in).</p>
+                    ) : (
+                      lateResults
+                        .filter((r) => !checkedInIds.has(r.id))
+                        .map((r) => (
+                          <button
+                            key={r.id}
+                            onClick={() => handleHeadcountCheckIn(r.id, `${r.child_first_name} ${r.child_last_name}`)}
+                            className="w-full flex items-center gap-2.5 p-2 rounded-lg bg-white/[0.03] hover:bg-white/[0.07] border border-white/5 text-left transition-colors"
+                          >
+                            <span className="w-8 h-8 rounded-full bg-white/10 overflow-hidden flex items-center justify-center text-xs font-bold text-white/60 flex-shrink-0">
+                              {getHeadshotUrl(r.child_headshot_url) ? (
+                                <img src={getHeadshotUrl(r.child_headshot_url)!} alt="" className="w-full h-full object-cover" />
+                              ) : (
+                                r.child_first_name[0]
+                              )}
+                            </span>
+                            <span className="flex-1 min-w-0 truncate font-semibold text-sm">{r.child_first_name} {r.child_last_name}</span>
+                            <span className="text-xs font-semibold text-emerald-300 flex items-center gap-1 flex-shrink-0">
+                              <CheckCircle2 className="w-3.5 h-3.5" /> Check in
+                            </span>
+                          </button>
+                        ))
+                    )}
+                  </div>
+                )}
+              </div>
+
               {/* Continue */}
               <Button
                 onClick={dismissHeadcount}
-                className="w-full mt-6 bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-6 rounded-2xl text-lg"
+                className="w-full mt-4 bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-6 rounded-2xl text-lg"
               >
                 Continue to Coach Mode →
               </Button>
