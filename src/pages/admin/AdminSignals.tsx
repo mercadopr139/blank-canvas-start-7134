@@ -257,7 +257,7 @@ const AdminSignals = ({ managerType = "PD" }: { managerType?: string }) => {
   const ownerFirstName = (taskManager?.owner_name || "").trim().split(/\s+/)[0] || "there";
 
   // Fetch dynamic focus area config from DB — scoped by manager_type
-  const { data: focusAreaConfig } = useQuery({
+  const { data: focusAreaConfig, isLoading: focusAreaConfigLoading } = useQuery({
     queryKey: ["focus-area-config", focusArea, managerType],
     queryFn: async () => {
       const { data } = await (supabase
@@ -292,6 +292,10 @@ const AdminSignals = ({ managerType = "PD" }: { managerType?: string }) => {
   // No date filter means this is a single rolling list, not a daily reset.
   const { data: todayCoreSignals = [] } = useQuery({
     queryKey: ["signals", focusArea, "today-core"],
+    // Wait for the focus-area config so the source filter uses the real
+    // title (e.g. "Beach Day"), not the fallback URL key ("beach-day").
+    // Otherwise the first fetch searches the wrong source and caches empty.
+    enabled: !focusAreaConfigLoading,
     queryFn: async () => {
       let q = supabase
         .from("signals")
@@ -310,6 +314,7 @@ const AdminSignals = ({ managerType = "PD" }: { managerType?: string }) => {
 
   const { data: todayBonusSignals = [] } = useQuery({
     queryKey: ["signals", focusArea, "today-bonus"],
+    enabled: !focusAreaConfigLoading,
     queryFn: async () => {
       let q = supabase
         .from("signals")
@@ -331,6 +336,7 @@ const AdminSignals = ({ managerType = "PD" }: { managerType?: string }) => {
   // On Radar means priority_layer IS NULL.
   const { data: onDeckSignals = [] } = useQuery({
     queryKey: ["signals", focusArea, "on-deck"],
+    enabled: !focusAreaConfigLoading,
     queryFn: async () => {
       let q = supabase
         .from("signals")
@@ -384,6 +390,10 @@ const AdminSignals = ({ managerType = "PD" }: { managerType?: string }) => {
 
   const addMutation = useMutation({
     mutationFn: async () => {
+      // Don't save until the focus-area config has resolved, or the signal
+      // could be filed under the fallback key instead of the real title and
+      // become orphaned (invisible to this area's own list).
+      if (focusAreaConfigLoading) throw new Error("One moment — still loading this focus area.");
       const priorityLayer = form.bucket === "core" ? "Core" : form.bucket === "bonus" ? "Bonus" : (form.priority_layer || null);
       const { error } = await supabase.from("signals").insert({
         title: form.title,
