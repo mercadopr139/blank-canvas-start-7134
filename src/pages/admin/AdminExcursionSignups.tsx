@@ -65,14 +65,14 @@ type SearchHit = {
 // Column look — kept as static class strings (Tailwind can't build these
 // dynamically).
 const COLUMNS: { key: Exclude<Status, "declined">; label: string; sub: string; head: string; ring: string; dot: string }[] = [
-  { key: "invited", label: "Excursion List", sub: "Invited — on the list", head: "text-sky-300", ring: "border-sky-400/25", dot: "bg-sky-400" },
+  { key: "invited", label: "Chrissy's List", sub: "Invited — move to Pending or Confirmed", head: "text-sky-300", ring: "border-sky-400/25", dot: "bg-sky-400" },
   { key: "pending", label: "Pending", sub: "Needs follow-up before confirming", head: "text-amber-300", ring: "border-amber-400/25", dot: "bg-amber-400" },
   { key: "confirmed", label: "Confirmed", sub: "Locked in for the trip", head: "text-emerald-300", ring: "border-emerald-400/25", dot: "bg-emerald-400" },
 ];
 
 const STATUS_LABEL: Record<Status, string> = {
   pending: "Pending",
-  invited: "Excursion List",
+  invited: "Chrissy's List",
   confirmed: "Confirmed",
   declined: "Can't make it",
 };
