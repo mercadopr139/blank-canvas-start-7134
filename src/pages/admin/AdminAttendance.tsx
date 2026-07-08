@@ -3407,6 +3407,12 @@ const AdminAttendance = () => {
             <DialogTitle className="text-purple-400 flex items-center gap-2">🟣 Add Excursion</DialogTitle>
           </DialogHeader>
           <div className="space-y-3">
+            <div className="rounded-lg bg-purple-500/10 border border-purple-400/25 px-3 py-2">
+              <p className="text-[10px] uppercase tracking-wider text-purple-200/70 font-semibold">Date</p>
+              <p className="text-sm font-bold text-white">
+                {excursionDate ? format(parseISO(excursionDate), "EEE, MMM d, yyyy") : "—"}
+              </p>
+            </div>
             <div>
               <label className="text-xs text-white/50 mb-1 block">Excursion Name *</label>
               <Input value={excursionName} onChange={(e) => setExcursionName(e.target.value)} placeholder="e.g. Beach Trip" className="bg-white/5 border-white/20 text-white" autoFocus />
@@ -3435,6 +3441,12 @@ const AdminAttendance = () => {
               <div>
                 <label className="text-xs text-white/50 mb-1 block">Excursion Name *</label>
                 <Input value={editingExcursion.name} onChange={(e) => setEditingExcursion({ ...editingExcursion, name: e.target.value })} className="bg-white/5 border-white/20 text-white" />
+              </div>
+              <div className="rounded-lg bg-purple-500/10 border border-purple-400/25 px-3 py-2">
+                <p className="text-[10px] uppercase tracking-wider text-purple-200/70 font-semibold">Date</p>
+                <p className="text-sm font-bold text-white">
+                  {editingExcursion.date ? format(parseISO(editingExcursion.date), "EEE, MMM d, yyyy") : "—"}
+                </p>
               </div>
               {/* Summary strip — at-a-glance headline for the trip. */}
               <div>
