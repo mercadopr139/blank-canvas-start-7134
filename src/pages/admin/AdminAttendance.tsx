@@ -3123,7 +3123,7 @@ const AdminAttendance = () => {
                       size="sm"
                       variant="outline"
                       onClick={() => setManualAddMode(true)}
-                      className="border-amber-500/30 text-amber-400 hover:bg-amber-500/10 hover:text-amber-300 h-8 text-xs"
+                      className="border-green-500/30 text-green-400 hover:bg-green-500/10 hover:text-green-300 h-8 text-xs"
                     >
                       <UserPlus className="w-3.5 h-3.5 mr-1" />
                       Add Youth
@@ -3241,11 +3241,13 @@ const AdminAttendance = () => {
                 <Badge className="bg-green-500/15 text-green-400 border-green-500/30 flex-shrink-0">
                   {daySignIns.length} youth
                 </Badge>
-                {isExcursionDay(selectedDay) && (
-                  <Badge className="bg-purple-500/15 text-purple-300 border-purple-500/30 flex-shrink-0">Excursion</Badge>
-                )}
                 {!isPracticeDay(selectedDay, calPracticeDayMap) && (
                   <Badge className="bg-red-500/15 text-red-400 border-red-500/30 flex-shrink-0">Non-Practice Day</Badge>
+                )}
+                {/* Excursion badge sits with its own controls on the right,
+                    so the green youth count reads on its own. */}
+                {isExcursionDay(selectedDay) && (
+                  <Badge className="ml-auto bg-purple-500/15 text-purple-300 border-purple-500/30 flex-shrink-0">Excursion</Badge>
                 )}
                 {/* Add or edit the excursion for this day, right where the user
                     naturally looks after clicking a day. Closes this dialog and
@@ -3255,7 +3257,7 @@ const AdminAttendance = () => {
                   return exc ? (
                     <button
                       onClick={() => navigate(`/admin/excursion-signups/${exc.id}`)}
-                      className="ml-auto inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-md border border-emerald-400/40 bg-emerald-500/10 text-emerald-200 hover:bg-emerald-500/20 transition-colors flex-shrink-0"
+                      className="inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-md border border-purple-400/40 bg-purple-500/10 text-purple-200 hover:bg-purple-500/20 transition-colors flex-shrink-0"
                     >
                       <UserPlus className="w-3.5 h-3.5" /> Sign-Ups
                     </button>
