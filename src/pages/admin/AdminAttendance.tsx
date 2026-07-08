@@ -940,7 +940,7 @@ const AdminAttendance = () => {
         _excursion_id: editingExcursionId!,
       });
       if (error) throw error;
-      return data as Array<{ id: string; name: string; created_at: string }>;
+      return data as Array<{ id: string; name: string; vehicle_id: string | null; created_at: string }>;
     },
   });
 
@@ -3765,6 +3765,7 @@ const AdminAttendance = () => {
                     <ExcursionRideComparison
                       vehicles={editingVehicles}
                       youth={editingRosterYouth}
+                      personnel={editingPersonnel}
                       returnPlan={editingExcursion.return_plan}
                     />
                   )}

@@ -85,6 +85,7 @@ interface Vehicle {
 interface Personnel {
   id: string;
   name: string;
+  vehicle_id: string | null;
   created_at: string;
 }
 
@@ -115,6 +116,74 @@ const formatTime = (iso: string) =>
     hour: "numeric",
     minute: "2-digit",
   });
+
+// A coach/volunteer chip. When editable and the trip has vehicles, it shows a
+// selector to place them in a van (counts toward that van's seats) or leave
+// them "driving separately".
+const PersonnelChip = ({
+  p,
+  vehicles,
+  editable,
+  showVehicle,
+  onSetVehicle,
+  onRemove,
+}: {
+  p: Personnel;
+  vehicles: Vehicle[];
+  editable: boolean;
+  showVehicle: boolean;
+  onSetVehicle: (vehicleId: string | null) => void;
+  onRemove: () => void;
+}) => {
+  const van = vehicles.find((v) => v.id === p.vehicle_id);
+  return (
+    <div className="flex items-center gap-1.5 rounded-full bg-white/[0.06] border border-white/10 pl-3 pr-1 py-1">
+      <span className="text-sm font-semibold">{p.name}</span>
+      {showVehicle && editable ? (
+        <Popover>
+          <PopoverTrigger asChild>
+            <button className="text-[11px] font-medium text-purple-200/90 hover:text-white inline-flex items-center gap-0.5 rounded px-1.5 py-0.5 bg-purple-500/10 border border-purple-400/25">
+              {van ? van.name : "Driving separately"}
+            </button>
+          </PopoverTrigger>
+          <PopoverContent className="w-56 bg-neutral-900 border-white/10 text-white p-2 z-[60]">
+            <p className="text-[10px] text-white/50 px-2 py-1 font-semibold uppercase tracking-wider">Rides in</p>
+            <div className="space-y-1">
+              {vehicles.map((v) => {
+                const full = v.assigned_count >= v.seat_cap && p.vehicle_id !== v.id;
+                return (
+                  <button
+                    key={v.id}
+                    disabled={full}
+                    onClick={() => onSetVehicle(v.id)}
+                    className="w-full text-left flex items-center justify-between rounded-md px-2 py-1.5 hover:bg-white/10 text-sm disabled:opacity-40"
+                  >
+                    <span className="font-semibold">{v.name}</span>
+                    <span className="text-xs text-white/50 tabular-nums">{v.assigned_count}/{v.seat_cap}{full ? " full" : ""}</span>
+                  </button>
+                );
+              })}
+              <button onClick={() => onSetVehicle(null)} className="w-full text-left rounded-md px-2 py-1.5 hover:bg-white/10 text-sm text-white/70">
+                Driving separately
+              </button>
+            </div>
+          </PopoverContent>
+        </Popover>
+      ) : showVehicle ? (
+        <span className="text-[11px] text-white/50">· {van ? van.name : "separate"}</span>
+      ) : null}
+      {editable && (
+        <button
+          onClick={onRemove}
+          className="w-6 h-6 rounded-full hover:bg-white/10 flex items-center justify-center text-white/50 hover:text-white"
+          aria-label="Remove"
+        >
+          <X className="w-3.5 h-3.5" />
+        </button>
+      )}
+    </div>
+  );
+};
 
 const ExcursionCoach = () => {
   const navigate = useNavigate();
@@ -503,6 +572,19 @@ const ExcursionCoach = () => {
     await loadRoster(excursion.id);
   };
 
+  const handleSetPersonnelVehicle = async (personnelId: string, vehicleId: string | null) => {
+    if (!excursion) return;
+    const { error } = await supabase.rpc("set_excursion_personnel_vehicle", {
+      _personnel_id: personnelId,
+      _vehicle_id: vehicleId,
+    });
+    if (error) {
+      toast.error(error.message || "Couldn't set their vehicle.");
+      return;
+    }
+    await loadRoster(excursion.id);
+  };
+
   const handleRemovePersonnel = async (personnelId: string) => {
     if (!excursion) return;
     const { error } = await supabase.rpc("remove_excursion_personnel", {
@@ -858,7 +940,7 @@ const ExcursionCoach = () => {
                 {returnPlan ? "Ride There vs Ride Home" : "Ride to Excursion — who's in each vehicle"}
               </p>
               {returnPlan ? (
-                <ExcursionRideComparison vehicles={vehicles} youth={youth} returnPlan={returnPlan} />
+                <ExcursionRideComparison vehicles={vehicles} youth={youth} personnel={personnel} returnPlan={returnPlan} />
               ) : (
                 <div className="space-y-3">
                   {vehicles.map((v) => {
@@ -959,7 +1041,9 @@ const ExcursionCoach = () => {
         {/* ───── The Ride Home (return-leg seating) — after arrival, before close ───── */}
         {isLocked && isArrived && !isClosed && transportRequired === true && vehicles.length > 0 && (() => {
           const returnUnassigned = youth.filter((y) => !y.return_vehicle_id);
-          const returnCount = (vid: string) => youth.filter((y) => y.return_vehicle_id === vid).length;
+          const returnCount = (vid: string) =>
+            youth.filter((y) => y.return_vehicle_id === vid).length +
+            personnel.filter((p) => p.vehicle_id === vid).length;
           return (
             <Card className="bg-white/[0.03] border-white/10 text-white">
               <CardContent className="p-5 md:p-6">
@@ -1573,21 +1657,15 @@ const ExcursionCoach = () => {
               {personnel.length > 0 && (
                 <div className="flex flex-wrap gap-2 mb-4">
                   {personnel.map((p) => (
-                    <div
+                    <PersonnelChip
                       key={p.id}
-                      className="flex items-center gap-2 rounded-full bg-white/[0.06] border border-white/10 pl-3 pr-1 py-1"
-                    >
-                      <span className="text-sm font-semibold">{p.name}</span>
-                      {!isLocked && (
-                        <button
-                          onClick={() => handleRemovePersonnel(p.id)}
-                          className="w-6 h-6 rounded-full hover:bg-white/10 flex items-center justify-center text-white/50 hover:text-white"
-                          aria-label="Remove"
-                        >
-                          <X className="w-3.5 h-3.5" />
-                        </button>
-                      )}
-                    </div>
+                      p={p}
+                      vehicles={vehicles}
+                      editable={!isLocked}
+                      showVehicle={transportRequired === true && vehicles.length > 0}
+                      onSetVehicle={(vid) => handleSetPersonnelVehicle(p.id, vid)}
+                      onRemove={() => handleRemovePersonnel(p.id)}
+                    />
                   ))}
                 </div>
               )}
@@ -2277,10 +2355,15 @@ const ExcursionCoach = () => {
                   {personnel.length > 0 && (
                     <div className="flex flex-wrap gap-2 mb-4">
                       {personnel.map((p) => (
-                        <div key={p.id} className="flex items-center gap-2 rounded-full bg-white/[0.06] border border-white/10 pl-3 pr-1 py-1">
-                          <span className="text-sm font-semibold">{p.name}</span>
-                          <button onClick={() => handleRemovePersonnel(p.id)} className="w-6 h-6 rounded-full hover:bg-white/10 flex items-center justify-center text-white/50 hover:text-white"><X className="w-3.5 h-3.5" /></button>
-                        </div>
+                        <PersonnelChip
+                          key={p.id}
+                          p={p}
+                          vehicles={vehicles}
+                          editable
+                          showVehicle={transportRequired === true && vehicles.length > 0}
+                          onSetVehicle={(vid) => handleSetPersonnelVehicle(p.id, vid)}
+                          onRemove={() => handleRemovePersonnel(p.id)}
+                        />
                       ))}
                     </div>
                   )}
