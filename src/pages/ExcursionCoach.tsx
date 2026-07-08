@@ -234,6 +234,8 @@ const ExcursionCoach = () => {
   const [confirmArrivalOpen, setConfirmArrivalOpen] = useState(false);
   // Ride-home choice pops up right after arrival is confirmed.
   const [rideHomeChoiceOpen, setRideHomeChoiceOpen] = useState(false);
+  // After adding a coach/volunteer, ask which vehicle they're riding in.
+  const [pendingPersonnel, setPendingPersonnel] = useState<{ id: string; name: string } | null>(null);
   const [confirmCloseOpen, setConfirmCloseOpen] = useState(false);
   const [arrivalNoteMode, setArrivalNoteMode] = useState(false);
   const [closeNoteMode, setCloseNoteMode] = useState(false);
@@ -558,10 +560,11 @@ const ExcursionCoach = () => {
 
   const handleAddPersonnel = async () => {
     if (!excursion || !personnelInput.trim()) return;
+    const name = personnelInput.trim();
     setSavingPersonnel(true);
-    const { error } = await supabase.rpc("add_excursion_personnel", {
+    const { data, error } = await supabase.rpc("add_excursion_personnel", {
       _excursion_id: excursion.id,
-      _name: personnelInput.trim(),
+      _name: name,
     });
     setSavingPersonnel(false);
     if (error) {
@@ -570,6 +573,12 @@ const ExcursionCoach = () => {
     }
     setPersonnelInput("");
     await loadRoster(excursion.id);
+    // Immediately ask which vehicle they're riding in (when there are vans to
+    // choose from). They're not assumed to be driving separately.
+    const newId = data as string | null;
+    if (newId && transportRequired === true && vehicles.length > 0) {
+      setPendingPersonnel({ id: newId, name });
+    }
   };
 
   const handleSetPersonnelVehicle = async (personnelId: string, vehicleId: string | null) => {
@@ -1992,6 +2001,39 @@ const ExcursionCoach = () => {
                 </AlertDialogAction>
               </>
             )}
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* ───── Which vehicle is a newly-added coach/volunteer riding in? ───── */}
+      <AlertDialog open={!!pendingPersonnel} onOpenChange={(o) => { if (!o) setPendingPersonnel(null); }}>
+        <AlertDialogContent className="bg-neutral-900 border-white/10 text-white">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Which vehicle is {pendingPersonnel?.name} riding in?</AlertDialogTitle>
+            <AlertDialogDescription className="text-white/60">
+              Put them in a van — they'll take a seat — or mark them as driving separately.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="space-y-2 my-2">
+            {vehicles.map((v) => {
+              const full = v.assigned_count >= v.seat_cap;
+              return (
+                <button
+                  key={v.id}
+                  disabled={full}
+                  onClick={async () => { const pp = pendingPersonnel; setPendingPersonnel(null); if (pp) await handleSetPersonnelVehicle(pp.id, v.id); }}
+                  className="w-full flex items-center justify-between rounded-lg bg-white/[0.04] hover:bg-purple-500/10 border border-white/10 hover:border-purple-400/40 px-4 py-3 transition disabled:opacity-40 disabled:cursor-not-allowed"
+                >
+                  <span className="font-semibold flex items-center gap-2"><Truck className="w-4 h-4 text-purple-300" /> {v.name}</span>
+                  <span className="text-xs text-white/50 tabular-nums">{v.assigned_count}/{v.seat_cap}{full ? " full" : ""}</span>
+                </button>
+              );
+            })}
+          </div>
+          <AlertDialogFooter>
+            <AlertDialogCancel className="bg-white/5 border-white/15 text-white hover:bg-white/10">
+              Driving separately
+            </AlertDialogCancel>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
