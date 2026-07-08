@@ -44,6 +44,7 @@ import CheckIn from "./pages/CheckIn";
 import LilChampsCheckIn from "./pages/LilChampsCheckIn";
 import ExcursionCheckIn from "./pages/ExcursionCheckIn";
 import ExcursionCoach from "./pages/ExcursionCoach";
+import AdminExcursionSignups from "./pages/admin/AdminExcursionSignups";
 import AdminLilChampsAttendance from "./pages/admin/AdminLilChampsAttendance";
 import AdminCallOuts from "./pages/admin/AdminCallOuts";
 import Register from "./pages/Register";
@@ -350,6 +351,16 @@ const App = () => (
               }
             />
             
+            {/* Excursion Sign-Ups — pre-trip invite / roster planning */}
+            <Route
+              path="/admin/excursion-signups/:excursionId"
+              element={
+                <ProtectedRoute requireAdmin>
+                  <AdminExcursionSignups />
+                </ProtectedRoute>
+              }
+            />
+
             {/* Message Board */}
             <Route
               path="/admin/message-board"

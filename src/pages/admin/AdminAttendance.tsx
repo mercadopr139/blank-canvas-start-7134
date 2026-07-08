@@ -1,4 +1,5 @@
 import { useState, useMemo, useCallback, useRef, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -206,6 +207,7 @@ const isDefaultPracticeDay = (dateStr: string): boolean => {
 /* ───────── Component ───────── */
 const AdminAttendance = () => {
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState<"all" | "bald-eagles">("all");
   const [selectedYouth, setSelectedYouth] = useState<Registration | null>(null);
@@ -3248,9 +3250,20 @@ const AdminAttendance = () => {
                 {/* Add or edit the excursion for this day, right where the user
                     naturally looks after clicking a day. Closes this dialog and
                     opens the excursion editor. */}
+                {isExcursionDay(selectedDay) && (() => {
+                  const exc = excursionsCalMonth.find((e) => e.date === selectedDay);
+                  return exc ? (
+                    <button
+                      onClick={() => navigate(`/admin/excursion-signups/${exc.id}`)}
+                      className="ml-auto inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-md border border-emerald-400/40 bg-emerald-500/10 text-emerald-200 hover:bg-emerald-500/20 transition-colors flex-shrink-0"
+                    >
+                      <UserPlus className="w-3.5 h-3.5" /> Sign-Ups
+                    </button>
+                  ) : null;
+                })()}
                 <button
                   onClick={() => { const d = selectedDay; setSelectedDay(null); openExcursionEditor(d); }}
-                  className="ml-auto inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-md border border-purple-400/40 bg-purple-500/10 text-purple-200 hover:bg-purple-500/20 transition-colors flex-shrink-0"
+                  className={`${isExcursionDay(selectedDay) ? "" : "ml-auto"} inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-md border border-purple-400/40 bg-purple-500/10 text-purple-200 hover:bg-purple-500/20 transition-colors flex-shrink-0`}
                 >
                   <Bus className="w-3.5 h-3.5" />
                   {isExcursionDay(selectedDay) ? "Edit Excursion" : "Add Excursion"}
@@ -3442,11 +3455,20 @@ const AdminAttendance = () => {
                 <label className="text-xs text-white/50 mb-1 block">Excursion Name *</label>
                 <Input value={editingExcursion.name} onChange={(e) => setEditingExcursion({ ...editingExcursion, name: e.target.value })} className="bg-white/5 border-white/20 text-white" />
               </div>
-              <div className="rounded-lg bg-purple-500/10 border border-purple-400/25 px-3 py-2">
-                <p className="text-[10px] uppercase tracking-wider text-purple-200/70 font-semibold">Date</p>
-                <p className="text-sm font-bold text-white">
-                  {editingExcursion.date ? format(parseISO(editingExcursion.date), "EEE, MMM d, yyyy") : "—"}
-                </p>
+              <div className="flex items-stretch gap-2">
+                <div className="flex-1 rounded-lg bg-purple-500/10 border border-purple-400/25 px-3 py-2">
+                  <p className="text-[10px] uppercase tracking-wider text-purple-200/70 font-semibold">Date</p>
+                  <p className="text-sm font-bold text-white">
+                    {editingExcursion.date ? format(parseISO(editingExcursion.date), "EEE, MMM d, yyyy") : "—"}
+                  </p>
+                </div>
+                {/* Pre-trip planning: build the invite list before excursion day. */}
+                <button
+                  onClick={() => navigate(`/admin/excursion-signups/${editingExcursion.id}`)}
+                  className="flex items-center gap-2 px-3 rounded-lg border border-emerald-400/40 bg-emerald-500/10 text-emerald-200 hover:bg-emerald-500/20 transition-colors font-semibold text-sm flex-shrink-0"
+                >
+                  <UserPlus className="w-4 h-4" /> Sign-Ups
+                </button>
               </div>
               {/* Summary strip — at-a-glance headline for the trip. */}
               <div>
