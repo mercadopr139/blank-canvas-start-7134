@@ -910,7 +910,7 @@ const ExcursionCoach = () => {
   const nextTripAction =
     !nextTripStep ? null
     : nextTripStep.key === "arrived" ? { label: "Confirm Arrival", run: () => setConfirmArrivalOpen(true) }
-    : nextTripStep.key === "ridehome" ? { label: "Set the ride home", run: () => setRideHomeChoiceOpen(true) }
+    : nextTripStep.key === "ridehome" ? { label: "Set the ride home", run: () => document.getElementById("ride-home-card")?.scrollIntoView({ behavior: "smooth", block: "center" }) }
     : { label: "Confirm Return", run: () => setConfirmCloseOpen(true) };
 
   // Wizard step order — vehicles + loading are skipped when NLA isn't driving.
@@ -967,49 +967,6 @@ const ExcursionCoach = () => {
       </div>
 
       <div className="max-w-5xl mx-auto px-4 md:px-6 py-6 md:py-8 space-y-6">
-        {/* Trip status strip — where the trip is + the single next action.
-            Always visible post-lock so re-entering coaches never have to hunt. */}
-        {isLocked && (
-          <Card className="bg-white/[0.04] border-white/10 text-white">
-            <CardContent className="p-4 md:p-5">
-              <div className="flex items-center gap-2 md:gap-3 overflow-x-auto pb-1">
-                {tripSteps.map((s, i) => {
-                  const isNext = nextTripStep?.key === s.key;
-                  return (
-                    <div key={s.key} className="flex items-center gap-2 md:gap-3 shrink-0">
-                      <span className={`flex items-center gap-1.5 text-xs md:text-sm font-semibold whitespace-nowrap ${s.done ? "text-emerald-300" : isNext ? "text-purple-200" : "text-white/35"}`}>
-                        {s.done ? (
-                          <CheckCircle2 className="w-3.5 h-3.5" />
-                        ) : (
-                          <span className={`w-2.5 h-2.5 rounded-full ${isNext ? "bg-purple-400 animate-pulse" : "bg-white/20 border border-white/25"}`} />
-                        )}
-                        {s.label}
-                      </span>
-                      {i < tripSteps.length - 1 && (
-                        <span className={`w-4 md:w-8 h-px ${s.done ? "bg-emerald-400/40" : "bg-white/15"}`} />
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
-              {nextTripAction ? (
-                <div className="mt-3 flex flex-col sm:flex-row sm:items-center gap-2">
-                  <p className="text-sm text-white/60 flex-1">
-                    Next up: <span className="text-white font-semibold">{nextTripAction.label}</span>
-                  </p>
-                  <Button onClick={nextTripAction.run} className="bg-purple-600 hover:bg-purple-500 text-white font-bold">
-                    {nextTripAction.label} <ArrowRight className="w-4 h-4 ml-1.5" />
-                  </Button>
-                </div>
-              ) : (
-                <p className="mt-3 text-sm text-emerald-300 font-semibold flex items-center gap-1.5">
-                  <CheckCircle2 className="w-4 h-4" /> Trip complete — nicely done.
-                </p>
-              )}
-            </CardContent>
-          </Card>
-        )}
-
         {/* Locked banner */}
         {isLocked && (
           <Card className="bg-purple-500/10 border-purple-400/40 text-white">
@@ -1186,24 +1143,50 @@ const ExcursionCoach = () => {
 
         {/* ───── Phase 3 cards (only when locked) ───── */}
 
-        {/* Confirm Arrival — shown after lock, before arrival confirmed */}
-        {isLocked && !isArrived && (
+        {/* Trip status strip — where the trip is + the single next action.
+            Lives here (where the arrival prompt used to be) as the one place
+            to drive the trip: Roster → Arrived → Ride Home → Returned. */}
+        {isLocked && (
           <Card className="bg-purple-500/[0.06] border-purple-400/30 text-white">
-            <CardContent className="p-5 md:p-6 flex flex-col md:flex-row md:items-center gap-4">
-              <Flag className="w-10 h-10 text-purple-300 shrink-0" />
-              <div className="flex-1">
-                <p className="text-lg md:text-xl font-bold">Arrived at the destination?</p>
-                <p className="text-white/60 text-sm md:text-base">
-                  Tap when the group is safely at {excursion.name}. We'll confirm the headcount with you.
-                </p>
+            <CardContent className="p-4 md:p-5">
+              <div className="flex items-center gap-2 md:gap-3 overflow-x-auto pb-1">
+                {tripSteps.map((s, i) => {
+                  const isNext = nextTripStep?.key === s.key;
+                  return (
+                    <div key={s.key} className="flex items-center gap-2 md:gap-3 shrink-0">
+                      <span className={`flex items-center gap-1.5 text-xs md:text-sm font-semibold whitespace-nowrap ${s.done ? "text-emerald-300" : isNext ? "text-purple-200" : "text-white/35"}`}>
+                        {s.done ? (
+                          <CheckCircle2 className="w-3.5 h-3.5" />
+                        ) : (
+                          <span className={`w-2.5 h-2.5 rounded-full ${isNext ? "bg-purple-400 animate-pulse" : "bg-white/20 border border-white/25"}`} />
+                        )}
+                        {s.label}
+                      </span>
+                      {i < tripSteps.length - 1 && (
+                        <span className={`w-4 md:w-8 h-px ${s.done ? "bg-emerald-400/40" : "bg-white/15"}`} />
+                      )}
+                    </div>
+                  );
+                })}
               </div>
-              <Button
-                size="lg"
-                className="bg-purple-600 hover:bg-purple-500 text-white font-bold text-base md:text-lg px-6 md:px-8 py-5 md:py-6 rounded-xl shadow-lg shadow-purple-900/30"
-                onClick={() => setConfirmArrivalOpen(true)}
-              >
-                <Flag className="w-5 h-5 mr-2" /> Confirm Arrival
-              </Button>
+              {nextTripAction ? (
+                <div className="mt-3 flex flex-col sm:flex-row sm:items-center gap-2">
+                  <p className="text-sm text-white/60 flex-1">
+                    Next up: <span className="text-white font-semibold">{nextTripAction.label}</span>
+                  </p>
+                  <Button
+                    size="lg"
+                    onClick={nextTripAction.run}
+                    className="bg-purple-600 hover:bg-purple-500 text-white font-bold px-6 md:px-8 py-5 rounded-xl shadow-lg shadow-purple-900/30"
+                  >
+                    {nextTripAction.label} <ArrowRight className="w-4 h-4 ml-1.5" />
+                  </Button>
+                </div>
+              ) : (
+                <p className="mt-3 text-sm text-emerald-300 font-semibold flex items-center gap-1.5">
+                  <CheckCircle2 className="w-4 h-4" /> Trip complete — nicely done.
+                </p>
+              )}
             </CardContent>
           </Card>
         )}
@@ -1252,7 +1235,7 @@ const ExcursionCoach = () => {
             youth.filter((y) => y.return_vehicle_id === vid).length +
             personnel.filter((p) => p.return_vehicle_id === vid).length;
           return (
-            <Card className="bg-white/[0.03] border-white/10 text-white">
+            <Card id="ride-home-card" className="bg-white/[0.03] border-white/10 text-white scroll-mt-4">
               <CardContent className="p-5 md:p-6">
                 <div className="flex items-center gap-2 mb-1">
                   <Home className="w-5 h-5 text-purple-300" />
@@ -1386,27 +1369,8 @@ const ExcursionCoach = () => {
           );
         })()}
 
-        {/* Close Trip — shown after arrival, before close */}
-        {isLocked && isArrived && !isClosed && (
-          <Card className="bg-purple-500/[0.06] border-purple-400/30 text-white">
-            <CardContent className="p-5 md:p-6 flex flex-col md:flex-row md:items-center gap-4">
-              <Home className="w-10 h-10 text-purple-300 shrink-0" />
-              <div className="flex-1">
-                <p className="text-lg md:text-xl font-bold">Back at the gym?</p>
-                <p className="text-white/60 text-sm md:text-base">
-                  When everyone is safely returned, close the trip. We'll confirm the headcount one more time.
-                </p>
-              </div>
-              <Button
-                size="lg"
-                className="bg-purple-600 hover:bg-purple-500 text-white font-bold text-base md:text-lg px-6 md:px-8 py-5 md:py-6 rounded-xl shadow-lg shadow-purple-900/30"
-                onClick={() => setConfirmCloseOpen(true)}
-              >
-                <Home className="w-5 h-5 mr-2" /> Close Excursion Trip
-              </Button>
-            </CardContent>
-          </Card>
-        )}
+        {/* Close Trip prompt removed — the Trip Status strip's "Confirm Return"
+            button drives closing the trip now (no duplicate button). */}
 
         {/* Returned/closed badge — pencil to edit */}
         {isLocked && isClosed && (
