@@ -10,7 +10,7 @@
 // Admin-only (uses RLS admin policies + direct table access). Sign-ups do
 // NOT check anyone in — the kiosk records actual attendance separately.
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -20,8 +20,8 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { format, parseISO } from "date-fns";
 import { toast } from "sonner";
 import {
-  ArrowLeft, Search, MessageSquare, Mail, MoreHorizontal, X, Check,
-  UserPlus, Users, CalendarDays,
+  ArrowLeft, Search, MoreHorizontal, X, Check,
+  UserPlus, Users, CalendarDays, StickyNote,
 } from "lucide-react";
 
 type Status = "pending" | "invited" | "confirmed" | "declined";
@@ -65,14 +65,14 @@ type SearchHit = {
 // Column look — kept as static class strings (Tailwind can't build these
 // dynamically).
 const COLUMNS: { key: Exclude<Status, "declined">; label: string; sub: string; head: string; ring: string; dot: string }[] = [
-  { key: "pending", label: "Pending", sub: "Requested — not decided", head: "text-amber-300", ring: "border-amber-400/25", dot: "bg-amber-400" },
-  { key: "invited", label: "Invited", sub: "Reached out — awaiting reply", head: "text-sky-300", ring: "border-sky-400/25", dot: "bg-sky-400" },
-  { key: "confirmed", label: "Confirmed", sub: "Locked in", head: "text-emerald-300", ring: "border-emerald-400/25", dot: "bg-emerald-400" },
+  { key: "invited", label: "Excursion List", sub: "Invited — on the list", head: "text-sky-300", ring: "border-sky-400/25", dot: "bg-sky-400" },
+  { key: "pending", label: "Pending", sub: "Needs follow-up before confirming", head: "text-amber-300", ring: "border-amber-400/25", dot: "bg-amber-400" },
+  { key: "confirmed", label: "Confirmed", sub: "Locked in for the trip", head: "text-emerald-300", ring: "border-emerald-400/25", dot: "bg-emerald-400" },
 ];
 
 const STATUS_LABEL: Record<Status, string> = {
   pending: "Pending",
-  invited: "Invited",
+  invited: "Excursion List",
   confirmed: "Confirmed",
   declined: "Can't make it",
 };
@@ -169,10 +169,11 @@ export default function AdminExcursionSignups() {
     refresh();
   };
 
-  const markContacted = async (id: string) => {
-    await (supabase.from("excursion_signups") as any)
-      .update({ parent_contacted_at: new Date().toISOString() })
+  const updateNote = async (id: string, note: string) => {
+    const { error } = await (supabase.from("excursion_signups") as any)
+      .update({ notes: note.trim() || null, updated_at: new Date().toISOString() })
       .eq("id", id);
+    if (error) return toast.error(error.message);
     refresh();
   };
 
@@ -196,16 +197,6 @@ export default function AdminExcursionSignups() {
   const target = excursion?.target_capacity ?? null;
   const over = target != null && confirmedCount > target;
   const full = target != null && confirmedCount >= target;
-
-  /* ── Parent contact links ── */
-  const buildMessage = (y: Youth) => {
-    const parent = y.parent_first_name || "there";
-    const child = y.child_first_name;
-    const name = excursion?.name || "an excursion";
-    const when = excursion?.date ? format(parseISO(excursion.date), "EEEE, MMMM d") : "an upcoming date";
-    return `Hi ${parent}, this is No Limits Boxing Academy — ${child} is invited to join us for ${name} on ${when}. Would you be able to have them come? Thank you!`;
-  };
-  const digits = (p: string | null) => (p || "").replace(/[^\d+]/g, "");
 
   return (
     <div className="min-h-screen bg-black text-white">
@@ -330,9 +321,7 @@ export default function AdminExcursionSignups() {
                       s={s}
                       onSetStatus={setStatus}
                       onRemove={remove}
-                      onContact={markContacted}
-                      buildMessage={buildMessage}
-                      digits={digits}
+                      onUpdateNote={updateNote}
                     />
                   ))
                 )}
@@ -355,9 +344,7 @@ export default function AdminExcursionSignups() {
                   muted
                   onSetStatus={setStatus}
                   onRemove={remove}
-                  onContact={markContacted}
-                  buildMessage={buildMessage}
-                  digits={digits}
+                  onUpdateNote={updateNote}
                 />
               ))}
             </div>
@@ -384,24 +371,18 @@ function Avatar({ url, first }: { url: string | null; first: string }) {
 
 /* ───────── Signup card ───────── */
 function SignupCard({
-  s, muted, onSetStatus, onRemove, onContact, buildMessage, digits,
+  s, muted, onSetStatus, onRemove, onUpdateNote,
 }: {
   s: Signup;
   muted?: boolean;
   onSetStatus: (id: string, status: Status) => void;
   onRemove: (id: string) => void;
-  onContact: (id: string) => void;
-  buildMessage: (y: Youth) => string;
-  digits: (p: string | null) => string;
+  onUpdateNote: (id: string, note: string) => void;
 }) {
   const y = s.youth;
   if (!y) return null;
-  const phone = digits(y.parent_phone);
-  const msg = buildMessage(y);
-  const smsHref = phone ? `sms:${phone}?&body=${encodeURIComponent(msg)}` : null;
-  const mailHref = y.parent_email ? `mailto:${y.parent_email}?subject=${encodeURIComponent("No Limits Boxing Academy — Excursion")}&body=${encodeURIComponent(msg)}` : null;
 
-  const others: Status[] = (["pending", "invited", "confirmed", "declined"] as Status[]).filter((x) => x !== s.status);
+  const others: Status[] = (["invited", "pending", "confirmed", "declined"] as Status[]).filter((x) => x !== s.status);
 
   return (
     <div className={`rounded-lg border p-2.5 ${muted ? "bg-white/[0.02] border-white/5 opacity-70" : "bg-white/[0.04] border-white/10"}`}>
@@ -440,34 +421,33 @@ function SignupCard({
         </Popover>
       </div>
 
-      {/* Parent contact */}
-      {(smsHref || mailHref) && (
-        <div className="flex items-center gap-1.5 mt-2">
-          {smsHref && (
-            <a
-              href={smsHref}
-              onClick={() => onContact(s.id)}
-              className="flex-1 inline-flex items-center justify-center gap-1.5 text-xs font-semibold px-2 py-1.5 rounded-md border border-emerald-400/30 bg-emerald-500/10 text-emerald-200 hover:bg-emerald-500/20"
-            >
-              <MessageSquare className="w-3.5 h-3.5" /> Text
-            </a>
-          )}
-          {mailHref && (
-            <a
-              href={mailHref}
-              onClick={() => onContact(s.id)}
-              className="flex-1 inline-flex items-center justify-center gap-1.5 text-xs font-semibold px-2 py-1.5 rounded-md border border-sky-400/30 bg-sky-500/10 text-sky-200 hover:bg-sky-500/20"
-            >
-              <Mail className="w-3.5 h-3.5" /> Email
-            </a>
-          )}
-        </div>
+      {/* Note — why they're pending / what's needed before confirming */}
+      {muted ? (
+        s.notes && <p className="text-[11px] text-white/40 mt-1.5 italic">“{s.notes}”</p>
+      ) : (
+        <NoteField id={s.id} initial={s.notes} onSave={onUpdateNote} />
       )}
-      {s.parent_contacted_at && (
-        <p className="text-[10px] text-white/35 mt-1.5 flex items-center gap-1">
-          <Check className="w-3 h-3 text-emerald-400" /> Parent contacted
-        </p>
-      )}
+    </div>
+  );
+}
+
+/* ───────── Editable note ───────── */
+function NoteField({ id, initial, onSave }: { id: string; initial: string | null; onSave: (id: string, v: string) => void }) {
+  const [v, setV] = useState(initial ?? "");
+  // Re-sync if the underlying note changes from elsewhere (e.g. refetch).
+  useEffect(() => { setV(initial ?? ""); }, [initial]);
+
+  return (
+    <div className="mt-2 flex items-start gap-1.5">
+      <StickyNote className="w-3.5 h-3.5 text-white/25 mt-1.5 flex-shrink-0" />
+      <textarea
+        value={v}
+        onChange={(e) => setV(e.target.value)}
+        onBlur={() => { if ((v.trim() || "") !== (initial || "")) onSave(id, v); }}
+        rows={2}
+        placeholder="Note — e.g. needs to get off work · talk to mom first"
+        className="w-full text-xs bg-white/5 border border-white/10 rounded-md px-2 py-1.5 text-white/80 placeholder:text-white/25 resize-none focus:outline-none focus:border-white/30"
+      />
     </div>
   );
 }
