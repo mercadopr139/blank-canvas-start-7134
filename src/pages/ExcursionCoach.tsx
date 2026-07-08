@@ -1066,8 +1066,39 @@ const ExcursionCoach = () => {
                       <p className="text-sm text-yellow-100/60 mt-1">{unassignedYouth.map((y) => `${y.child_first_name} ${y.child_last_name}`).join(", ")}</p>
                     </div>
                   )}
+                  {/* Coaches/volunteers in their own car — listed so they're
+                      visible here, not only in the tally. */}
+                  {personnel.some((p) => !p.vehicle_id) && (
+                    <div className="rounded-xl bg-white/[0.04] border border-white/10 p-4">
+                      <p className="text-xs font-bold uppercase tracking-wider text-white/50 mb-2">Driving separately</p>
+                      <div className="flex flex-wrap gap-1.5">
+                        {personnel.filter((p) => !p.vehicle_id).map((p) => (
+                          <span key={p.id} className="inline-flex items-center gap-1.5 rounded-full bg-sky-500/10 border border-sky-400/25 px-2.5 py-1 text-sm text-sky-100">
+                            {p.name}<span className="text-[9px] uppercase tracking-wider text-sky-300/90 font-bold">Coach/Volunteer</span>
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Coaches read-only when locked with NO transportation (there's no
+            ride table to list them in). Keeps them visible without the editor. */}
+        {isLocked && transportRequired === false && personnel.length > 0 && (
+          <Card className="bg-white/[0.03] border-white/10 text-white">
+            <CardContent className="p-5 md:p-6">
+              <p className="text-xs font-bold uppercase tracking-wider text-white/50 mb-3">Coaches & Volunteers</p>
+              <div className="flex flex-wrap gap-1.5">
+                {personnel.map((p) => (
+                  <span key={p.id} className="inline-flex items-center gap-1.5 rounded-full bg-sky-500/10 border border-sky-400/25 px-2.5 py-1 text-sm text-sky-100">
+                    {p.name}<span className="text-[9px] uppercase tracking-wider text-sky-300/90 font-bold">Coach/Volunteer</span>
+                  </span>
+                ))}
+              </div>
             </CardContent>
           </Card>
         )}
@@ -1837,8 +1868,11 @@ const ExcursionCoach = () => {
           </Card>
         )}
 
-        {/* Personnel — shown for both Yes/No transport */}
-        {transportRequired !== null && (
+        {/* Personnel editor — shown while setting up (both Yes/No transport).
+            Hidden once the roster is locked: coaches/volunteers are then shown
+            read-only in the Ride to Excursion table (in a van or "Driving
+            separately"), so this editor would be redundant. Unlock to edit. */}
+        {transportRequired !== null && !isLocked && (
           <Card className="bg-white/[0.04] border-white/10 text-white">
             <CardContent className="p-5 md:p-6">
               <h2 className="text-lg md:text-xl font-bold flex items-center gap-2 mb-1">
