@@ -86,6 +86,7 @@ interface Personnel {
   id: string;
   name: string;
   vehicle_id: string | null;
+  return_vehicle_id: string | null;
   created_at: string;
 }
 
@@ -594,6 +595,19 @@ const ExcursionCoach = () => {
     await loadRoster(excursion.id);
   };
 
+  const handleSetPersonnelReturnVehicle = async (personnelId: string, vehicleId: string | null) => {
+    if (!excursion) return;
+    const { error } = await supabase.rpc("set_excursion_personnel_return_vehicle", {
+      _personnel_id: personnelId,
+      _vehicle_id: vehicleId,
+    });
+    if (error) {
+      toast.error(error.message || "Couldn't set their ride home.");
+      return;
+    }
+    await loadRoster(excursion.id);
+  };
+
   const handleRemovePersonnel = async (personnelId: string) => {
     if (!excursion) return;
     const { error } = await supabase.rpc("remove_excursion_personnel", {
@@ -1055,10 +1069,13 @@ const ExcursionCoach = () => {
 
         {/* ───── The Ride Home (return-leg seating) — after arrival, before close ───── */}
         {isLocked && isArrived && !isClosed && transportRequired === true && vehicles.length > 0 && (() => {
-          const returnUnassigned = youth.filter((y) => !y.return_vehicle_id);
+          const returnUnassignedYouth = youth.filter((y) => !y.return_vehicle_id);
+          const returnUnassignedCoaches = personnel.filter((p) => !p.return_vehicle_id);
+          const notSetCount = returnUnassignedYouth.length + returnUnassignedCoaches.length;
+          const totalRiders = youth.length + personnel.length;
           const returnCount = (vid: string) =>
             youth.filter((y) => y.return_vehicle_id === vid).length +
-            personnel.filter((p) => p.vehicle_id === vid).length;
+            personnel.filter((p) => p.return_vehicle_id === vid).length;
           return (
             <Card className="bg-white/[0.03] border-white/10 text-white">
               <CardContent className="p-5 md:p-6">
@@ -1094,15 +1111,15 @@ const ExcursionCoach = () => {
                   <>
                     <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
                       <p className="text-sm text-white/60">
-                        Tap a youth to set their ride home. <span className="text-purple-200 font-semibold">{youth.length - returnUnassigned.length} of {youth.length}</span> set.
+                        Tap anyone to set their ride home. <span className="text-purple-200 font-semibold">{totalRiders - notSetCount} of {totalRiders}</span> set.
                       </p>
                       <button onClick={() => handleSetReturnPlan("same")} className="text-xs text-white/40 hover:text-white/80 underline underline-offset-2">Actually, keep same →</button>
                     </div>
-                    {returnUnassigned.length > 0 && (
+                    {notSetCount > 0 && (
                       <div className="mb-4">
-                        <p className="text-xs font-semibold uppercase tracking-wider text-white/40 mb-2">Not set yet ({returnUnassigned.length})</p>
+                        <p className="text-xs font-semibold uppercase tracking-wider text-white/40 mb-2">Not set yet ({notSetCount})</p>
                         <div className="flex flex-wrap gap-2">
-                          {returnUnassigned.map((y) => (
+                          {returnUnassignedYouth.map((y) => (
                             <Popover key={y.registration_id}>
                               <PopoverTrigger asChild>
                                 <button className="group flex items-center gap-2 rounded-full bg-white/[0.06] hover:bg-white/[0.12] border border-white/10 px-3 py-1.5 transition">
@@ -1128,13 +1145,40 @@ const ExcursionCoach = () => {
                               </PopoverContent>
                             </Popover>
                           ))}
+                          {returnUnassignedCoaches.map((p) => (
+                            <Popover key={p.id}>
+                              <PopoverTrigger asChild>
+                                <button className="group flex items-center gap-1.5 rounded-full bg-sky-500/10 hover:bg-sky-500/20 border border-sky-400/25 px-3 py-1.5 transition">
+                                  <span className="text-sm font-semibold text-sky-100">{p.name}</span>
+                                  <span className="text-[8px] uppercase tracking-wider text-sky-300/90 font-bold">Coach/Volunteer</span>
+                                  <Plus className="w-4 h-4 text-sky-300" />
+                                </button>
+                              </PopoverTrigger>
+                              <PopoverContent className="w-64 bg-neutral-900 border-white/10 text-white p-2">
+                                <p className="text-xs text-white/50 px-2 py-1.5 font-semibold uppercase tracking-wider">Ride home in…</p>
+                                <div className="space-y-1">
+                                  {vehicles.map((v) => {
+                                    const c = returnCount(v.id);
+                                    const full = c >= v.seat_cap;
+                                    return (
+                                      <button key={v.id} disabled={full} onClick={() => handleSetPersonnelReturnVehicle(p.id, v.id)} className="w-full text-left flex items-center justify-between rounded-md px-3 py-2 hover:bg-white/10 disabled:opacity-40">
+                                        <span className="font-semibold text-sm">{v.name}</span>
+                                        <span className="text-xs text-white/50 tabular-nums">{c}/{v.seat_cap}{full ? " full" : ""}</span>
+                                      </button>
+                                    );
+                                  })}
+                                  <button onClick={() => handleSetPersonnelReturnVehicle(p.id, null)} className="w-full text-left rounded-md px-3 py-2 hover:bg-white/10 text-sm text-white/70">Driving separately</button>
+                                </div>
+                              </PopoverContent>
+                            </Popover>
+                          ))}
                         </div>
                       </div>
                     )}
                     <div className="space-y-2">
                       {vehicles.map((v) => {
                         const kids = youth.filter((y) => y.return_vehicle_id === v.id);
-                        const coaches = personnel.filter((p) => p.vehicle_id === v.id);
+                        const coaches = personnel.filter((p) => p.return_vehicle_id === v.id);
                         return (
                           <div key={v.id} className="rounded-xl bg-white/[0.03] border border-white/10 p-3">
                             <p className="text-sm font-bold flex items-center gap-2"><Truck className="w-4 h-4 text-purple-300" />{v.name} <span className="text-white/40 font-medium">· {v.driver_name} driving · {kids.length + coaches.length}/{v.seat_cap} seats</span></p>
@@ -1149,8 +1193,9 @@ const ExcursionCoach = () => {
                                   </span>
                                 ))}
                                 {coaches.map((p) => (
-                                  <span key={p.id} className="inline-flex items-center gap-1 rounded-full bg-sky-500/10 border border-sky-400/25 px-2 py-0.5 text-xs text-sky-100">
+                                  <span key={p.id} className="inline-flex items-center gap-1 rounded-full bg-sky-500/10 border border-sky-400/25 pl-2 pr-1 py-0.5 text-xs text-sky-100">
                                     {p.name}<span className="text-[8px] uppercase tracking-wider text-sky-300/90 font-bold">Coach/Volunteer</span>
+                                    <button onClick={() => handleSetPersonnelReturnVehicle(p.id, null)} className="w-5 h-5 rounded-full hover:bg-white/10 flex items-center justify-center text-white/50 hover:text-white"><X className="w-3 h-3" /></button>
                                   </span>
                                 ))}
                               </div>

@@ -12,7 +12,7 @@ type RosterYouth = {
   return_vehicle_id: string | null;
 };
 
-type Personnel = { id: string; name: string; vehicle_id: string | null };
+type Personnel = { id: string; name: string; vehicle_id: string | null; return_vehicle_id?: string | null };
 
 export default function ExcursionRideComparison({
   vehicles,
@@ -38,7 +38,8 @@ export default function ExcursionRideComparison({
 
   const anyChanged =
     returnPlan === "custom" &&
-    youth.some((y) => (y.return_vehicle_id ?? null) !== (y.vehicle_id ?? null));
+    (youth.some((y) => (y.return_vehicle_id ?? null) !== (y.vehicle_id ?? null)) ||
+      personnel.some((p) => (p.return_vehicle_id ?? null) !== (p.vehicle_id ?? null)));
 
   return (
     <div>
@@ -75,18 +76,28 @@ export default function ExcursionRideComparison({
               );
             })}
             {personnel.map((p) => {
-              const van = nameFor(p.vehicle_id) ?? "Driving separately";
+              const there = nameFor(p.vehicle_id) ?? "Driving separately";
+              const homeId =
+                returnPlan === "custom" ? p.return_vehicle_id ?? null : returnPlan === "same" ? p.vehicle_id : null;
+              const home = returnPlan ? (nameFor(homeId) ?? "Driving separately") : "—";
+              const changed =
+                returnPlan === "custom" && (p.return_vehicle_id ?? null) !== (p.vehicle_id ?? null);
               return (
                 <div
                   key={p.id}
-                  className="grid grid-cols-[1.4fr_1fr_1fr] gap-2 items-center px-2 py-1.5 rounded-md text-sm border border-transparent"
+                  className={`grid grid-cols-[1.4fr_1fr_1fr] gap-2 items-center px-2 py-1.5 rounded-md text-sm ${
+                    changed ? "bg-amber-500/10 border border-amber-400/30" : "border border-transparent"
+                  }`}
                 >
                   <span className="font-semibold truncate flex items-center gap-1.5">
                     {p.name}
                     <span className="text-[9px] uppercase tracking-wider text-sky-300/90 bg-sky-500/10 border border-sky-400/20 rounded px-1 py-0.5">Coach/Volunteer</span>
                   </span>
-                  <span className="text-white/70 truncate">{van}</span>
-                  <span className="text-white/70 truncate">{van}</span>
+                  <span className="text-white/70 truncate">{there}</span>
+                  <span className={`truncate flex items-center gap-1 ${changed ? "text-amber-200 font-semibold" : "text-white/70"}`}>
+                    {home}
+                    {changed && <span title="Switched vehicles for the ride home">↔</span>}
+                  </span>
                 </div>
               );
             })}
