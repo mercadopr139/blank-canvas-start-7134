@@ -2870,6 +2870,20 @@ const ExcursionCoach = () => {
                       })}
                     </div>
                   )}
+                  {/* Coaches / volunteers not riding a van — shown so they're
+                      not invisible in the review (they still count on the trip). */}
+                  {transportRequired === true && personnel.some((p) => !p.vehicle_id) && (
+                    <div className="rounded-xl bg-white/[0.03] border border-white/10 p-3 mb-4">
+                      <p className="text-xs font-bold uppercase tracking-wider text-white/50 mb-2">Driving separately</p>
+                      <div className="flex flex-wrap gap-1.5">
+                        {personnel.filter((p) => !p.vehicle_id).map((p) => (
+                          <span key={p.id} className="inline-flex items-center gap-1 rounded-full bg-sky-500/10 border border-sky-400/25 px-2 py-0.5 text-xs text-sky-100">
+                            {p.name}<span className="text-[8px] uppercase tracking-wider text-sky-300/90 font-bold">Coach/Volunteer</span>
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                   <div className="grid grid-cols-3 gap-2 mb-3">
                     <div className="text-center rounded-xl bg-white/[0.04] border border-white/10 p-3"><p className="text-2xl font-black tabular-nums">{checkedInCount}</p><p className="text-[10px] uppercase tracking-wider text-white/50">Youth</p></div>
                     <div className="text-center rounded-xl bg-white/[0.04] border border-white/10 p-3"><p className="text-2xl font-black tabular-nums">{vehicles.length}</p><p className="text-[10px] uppercase tracking-wider text-white/50">Drivers</p></div>
