@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -373,6 +373,14 @@ const ExcursionCoach = () => {
   const transportRequired = excursion?.transportation_required;
   const returnPlan = (excursion?.return_plan as "same" | "custom" | null) ?? null;
 
+  // "Per visit" = shown once each time Chrissy navigates into Coach Mode
+  // (the component remounts on navigation, resetting these). So re-entering
+  // from the kiosk resurfaces the workflow — Headcount Check, then the
+  // wizard — while dismissing them keeps them closed for the rest of the
+  // visit. Once the roster is locked, the wizard stays out of the way.
+  const wizardShownThisVisit = useRef(false);
+  const headcountShownThisVisit = useRef(false);
+
   // Open the guide automatically when a coach reaches an unlocked excursion,
   // restore the step they were on (survives an iPad lock / reload), and close
   // it once the roster is submitted.
@@ -384,8 +392,10 @@ const ExcursionCoach = () => {
     const exId = excursion.id;
     const saved = sessionStorage.getItem(`nla_exc_wizard_step_${exId}`);
     if (saved) setWizardStepKey(saved);
-    const dismissed = sessionStorage.getItem(`nla_exc_wizard_dismissed_${exId}`) === "1";
-    if (!dismissed) setWizardOpen(true);
+    if (!wizardShownThisVisit.current) {
+      wizardShownThisVisit.current = true;
+      setWizardOpen(true);
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pinVerified, excursion?.id, isLocked, isClosed]);
 
@@ -394,28 +404,26 @@ const ExcursionCoach = () => {
     if (excursion?.id) sessionStorage.setItem(`nla_exc_wizard_step_${excursion.id}`, wizardStepKey);
   }, [wizardStepKey, excursion?.id]);
 
-  // Auto-show the headcount check once per excursion, right after PIN, but
-  // only when a Confirmed sign-up list actually exists (nothing to reconcile
-  // otherwise). Dismissing sets a per-excursion "seen" flag.
+  // Auto-show the headcount check once per visit (see refs above), right after
+  // PIN, but only when a Confirmed sign-up list actually exists (nothing to
+  // reconcile otherwise).
   useEffect(() => {
     if (!pinVerified || !excursion || isLocked || isClosed) return;
     if (confirmedSignups.length === 0) return;
-    const seen = sessionStorage.getItem(`nla_exc_headcount_seen_${excursion.id}`) === "1";
-    if (!seen) setHeadcountOpen(true);
+    if (headcountShownThisVisit.current) return;
+    headcountShownThisVisit.current = true;
+    setHeadcountOpen(true);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pinVerified, excursion?.id, isLocked, isClosed, confirmedSignups.length]);
 
   const dismissHeadcount = () => {
-    if (excursion?.id) sessionStorage.setItem(`nla_exc_headcount_seen_${excursion.id}`, "1");
     setHeadcountOpen(false);
   };
 
   const dismissWizard = () => {
-    if (excursion?.id) sessionStorage.setItem(`nla_exc_wizard_dismissed_${excursion.id}`, "1");
     setWizardOpen(false);
   };
   const reopenWizard = () => {
-    if (excursion?.id) sessionStorage.removeItem(`nla_exc_wizard_dismissed_${excursion.id}`);
     setWizardOpen(true);
   };
 
