@@ -954,14 +954,15 @@ const ExcursionCoach = () => {
                 <div className="space-y-3">
                   {vehicles.map((v) => {
                     const kids = youth.filter((y) => y.vehicle_id === v.id);
+                    const coaches = personnel.filter((p) => p.vehicle_id === v.id);
                     return (
                       <div key={v.id} className="rounded-xl bg-white/[0.04] border border-white/10 p-4">
                         <p className="font-bold flex items-center gap-2">
                           <Truck className="w-4 h-4 text-purple-300" />{v.name}
-                          <span className="text-white/40 font-medium text-sm">· {v.driver_name} · {kids.length}/{v.seat_cap}</span>
+                          <span className="text-white/40 font-medium text-sm">· {v.driver_name} driving · {v.assigned_count}/{v.seat_cap} seats</span>
                         </p>
-                        {kids.length === 0 ? (
-                          <p className="text-sm text-white/30 italic mt-1">No youth assigned.</p>
+                        {kids.length + coaches.length === 0 ? (
+                          <p className="text-sm text-white/30 italic mt-1">No one assigned.</p>
                         ) : (
                           <div className="flex flex-wrap gap-1.5 mt-2">
                             {kids.map((y) => (
@@ -970,6 +971,11 @@ const ExcursionCoach = () => {
                                   {getHeadshotUrl(y.child_headshot_url) ? <img src={getHeadshotUrl(y.child_headshot_url)!} alt="" className="w-full h-full object-cover" /> : y.child_first_name[0]}
                                 </span>
                                 {y.child_first_name} {y.child_last_name}
+                              </span>
+                            ))}
+                            {coaches.map((p) => (
+                              <span key={p.id} className="inline-flex items-center gap-1.5 rounded-full bg-sky-500/10 border border-sky-400/25 px-2.5 py-1 text-sm text-sky-100">
+                                {p.name}<span className="text-[9px] uppercase tracking-wider text-sky-300/90 font-bold">Coach/Volunteer</span>
                               </span>
                             ))}
                           </div>
@@ -1128,10 +1134,11 @@ const ExcursionCoach = () => {
                     <div className="space-y-2">
                       {vehicles.map((v) => {
                         const kids = youth.filter((y) => y.return_vehicle_id === v.id);
+                        const coaches = personnel.filter((p) => p.vehicle_id === v.id);
                         return (
                           <div key={v.id} className="rounded-xl bg-white/[0.03] border border-white/10 p-3">
-                            <p className="text-sm font-bold flex items-center gap-2"><Truck className="w-4 h-4 text-purple-300" />{v.name} <span className="text-white/40 font-medium">· {v.driver_name} · {kids.length}/{v.seat_cap}</span></p>
-                            {kids.length === 0 ? (
+                            <p className="text-sm font-bold flex items-center gap-2"><Truck className="w-4 h-4 text-purple-300" />{v.name} <span className="text-white/40 font-medium">· {v.driver_name} driving · {kids.length + coaches.length}/{v.seat_cap} seats</span></p>
+                            {kids.length + coaches.length === 0 ? (
                               <p className="text-xs text-white/30 italic mt-1">Empty</p>
                             ) : (
                               <div className="flex flex-wrap gap-1.5 mt-2">
@@ -1139,6 +1146,11 @@ const ExcursionCoach = () => {
                                   <span key={y.registration_id} className="inline-flex items-center gap-1 rounded-full bg-purple-500/10 border border-purple-400/30 pl-2 pr-1 py-0.5 text-xs">
                                     {y.child_first_name} {y.child_last_name}
                                     <button onClick={() => handleUnassignReturn(y.registration_id)} className="w-5 h-5 rounded-full hover:bg-white/10 flex items-center justify-center text-white/50 hover:text-white"><X className="w-3 h-3" /></button>
+                                  </span>
+                                ))}
+                                {coaches.map((p) => (
+                                  <span key={p.id} className="inline-flex items-center gap-1 rounded-full bg-sky-500/10 border border-sky-400/25 px-2 py-0.5 text-xs text-sky-100">
+                                    {p.name}<span className="text-[8px] uppercase tracking-wider text-sky-300/90 font-bold">Coach/Volunteer</span>
                                   </span>
                                 ))}
                               </div>
@@ -2370,15 +2382,21 @@ const ExcursionCoach = () => {
                   <div className="mt-6 space-y-2">
                     {vehicles.map((v) => {
                       const kids = youth.filter((y) => y.vehicle_id === v.id);
+                      const coaches = personnel.filter((p) => p.vehicle_id === v.id);
                       return (
                         <div key={v.id} className="rounded-xl bg-white/[0.03] border border-white/10 p-3">
                           <p className="text-sm font-bold flex items-center gap-2"><Truck className="w-4 h-4 text-purple-300" />{v.name} <span className="text-white/40 font-medium">· {v.assigned_count}/{v.seat_cap}</span></p>
-                          {kids.length === 0 ? <p className="text-xs text-white/30 italic mt-1">Empty</p> : (
+                          {kids.length + coaches.length === 0 ? <p className="text-xs text-white/30 italic mt-1">Empty</p> : (
                             <div className="flex flex-wrap gap-1.5 mt-2">
                               {kids.map((y) => (
                                 <span key={y.registration_id} className="inline-flex items-center gap-1 rounded-full bg-purple-500/10 border border-purple-400/30 pl-2 pr-1 py-0.5 text-xs">
                                   {y.child_first_name} {y.child_last_name}
                                   <button onClick={() => handleUnassign(y.registration_id)} className="w-5 h-5 rounded-full hover:bg-white/10 flex items-center justify-center text-white/50 hover:text-white"><X className="w-3 h-3" /></button>
+                                </span>
+                              ))}
+                              {coaches.map((p) => (
+                                <span key={p.id} className="inline-flex items-center gap-1 rounded-full bg-sky-500/10 border border-sky-400/25 px-2 py-0.5 text-xs text-sky-100">
+                                  {p.name}<span className="text-[8px] uppercase tracking-wider text-sky-300/90 font-bold">Coach/Volunteer</span>
                                 </span>
                               ))}
                             </div>
@@ -2461,10 +2479,24 @@ const ExcursionCoach = () => {
                       <p className="text-xs font-bold uppercase tracking-wider text-white/50">Who's in each vehicle</p>
                       {vehicles.map((v) => {
                         const kids = youth.filter((y) => y.vehicle_id === v.id);
+                        const coaches = personnel.filter((p) => p.vehicle_id === v.id);
                         return (
                           <div key={v.id} className="rounded-xl bg-white/[0.03] border border-white/10 p-3">
-                            <p className="text-sm font-bold flex items-center gap-2"><Truck className="w-4 h-4 text-purple-300" />{v.name} <span className="text-white/40 font-medium">· {v.driver_name} · {kids.length}/{v.seat_cap}</span></p>
-                            <p className="text-sm text-white/70 mt-1">{kids.length ? kids.map((y) => `${y.child_first_name} ${y.child_last_name}`).join(", ") : <span className="text-white/30 italic">Empty</span>}</p>
+                            <p className="text-sm font-bold flex items-center gap-2"><Truck className="w-4 h-4 text-purple-300" />{v.name} <span className="text-white/40 font-medium">· {v.driver_name} driving · {v.assigned_count}/{v.seat_cap} seats</span></p>
+                            {kids.length + coaches.length === 0 ? (
+                              <p className="text-sm text-white/30 italic mt-1">Empty</p>
+                            ) : (
+                              <div className="flex flex-wrap gap-1.5 mt-2">
+                                {kids.map((y) => (
+                                  <span key={y.registration_id} className="rounded-full bg-purple-500/10 border border-purple-400/30 px-2 py-0.5 text-xs font-semibold text-purple-100">{y.child_first_name} {y.child_last_name}</span>
+                                ))}
+                                {coaches.map((p) => (
+                                  <span key={p.id} className="inline-flex items-center gap-1 rounded-full bg-sky-500/10 border border-sky-400/25 px-2 py-0.5 text-xs text-sky-100">
+                                    {p.name}<span className="text-[8px] uppercase tracking-wider text-sky-300/90 font-bold">Coach/Volunteer</span>
+                                  </span>
+                                ))}
+                              </div>
+                            )}
                           </div>
                         );
                       })}

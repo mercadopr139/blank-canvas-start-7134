@@ -83,7 +83,7 @@ export default function ExcursionRideComparison({
                 >
                   <span className="font-semibold truncate flex items-center gap-1.5">
                     {p.name}
-                    <span className="text-[9px] uppercase tracking-wider text-sky-300/90 bg-sky-500/10 border border-sky-400/20 rounded px-1 py-0.5">Coach</span>
+                    <span className="text-[9px] uppercase tracking-wider text-sky-300/90 bg-sky-500/10 border border-sky-400/20 rounded px-1 py-0.5">Coach/Volunteer</span>
                   </span>
                   <span className="text-white/70 truncate">{van}</span>
                   <span className="text-white/70 truncate">{van}</span>
