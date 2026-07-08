@@ -12,7 +12,7 @@ import { Badge } from "@/components/ui/badge";
 import {
   Star, Search, AlertTriangle, Users, Eye, ChevronLeft, ChevronRight, CalendarDays,
   Clock, TrendingUp, TrendingDown, School, Lightbulb, Activity, Trash2, X, Pencil, UserPlus, Mail,
-  Plus, Truck, Bus, CheckCircle2
+  Plus, Truck, Bus, CheckCircle2, Lock, Unlock
 } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -969,6 +969,24 @@ const AdminAttendance = () => {
     queryClient.invalidateQueries({ queryKey: ["excursions-ytd", YTD_START] });
     setEditingExcursion(null);
     toast.success("Excursion updated");
+  };
+
+  // Submit (lock) / unlock the roster from the admin modal — same lock the
+  // phone Coach Mode uses, so an excursion can be finalized from either place.
+  const toggleExcursionLock = async () => {
+    if (!editingExcursion) return;
+    if (editingExcursion.roster_locked_at) {
+      const { error } = await supabase.rpc("unlock_excursion_roster", { _excursion_id: editingExcursion.id });
+      if (error) { toast.error(error.message || "Failed to unlock roster"); return; }
+      setEditingExcursion({ ...editingExcursion, roster_locked_at: null });
+      toast.success("Roster unlocked — edits allowed again.");
+    } else {
+      const { data, error } = await supabase.rpc("lock_excursion_roster", { _excursion_id: editingExcursion.id });
+      if (error) { toast.error(error.message || "Failed to submit roster"); return; }
+      setEditingExcursion({ ...editingExcursion, roster_locked_at: (data as string) || new Date().toISOString() });
+      toast.success("Excursion roster submitted (locked).");
+    }
+    queryClient.invalidateQueries({ queryKey: ["excursions-cal"] });
   };
 
   // Helpers for the datetime-local inputs in the Edit Excursion modal.
@@ -3900,13 +3918,31 @@ const AdminAttendance = () => {
               <div className="pt-3 mt-2 border-t border-white/10">
                 <p className="text-xs font-bold uppercase tracking-wider text-white/50 mb-2">Trip Timeline</p>
                 <div className="space-y-2">
-                  <div className="flex items-center justify-between text-xs">
-                    <span className="text-white/60">Roster Locked</span>
-                    <span className="text-white/80 tabular-nums">
-                      {editingExcursion.roster_locked_at
-                        ? new Date(editingExcursion.roster_locked_at).toLocaleString("en-US", { timeZone: "America/New_York", month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })
-                        : "—"}
-                    </span>
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="text-xs min-w-0">
+                      <span className="text-white/60">Roster: </span>
+                      {editingExcursion.roster_locked_at ? (
+                        <span className="text-emerald-300 font-semibold tabular-nums">
+                          Submitted · {new Date(editingExcursion.roster_locked_at).toLocaleString("en-US", { timeZone: "America/New_York", month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })}
+                        </span>
+                      ) : (
+                        <span className="text-white/50">Not submitted</span>
+                      )}
+                    </div>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className={`shrink-0 ${editingExcursion.roster_locked_at
+                        ? "border-white/20 text-white/70 hover:bg-white/10"
+                        : "border-emerald-400/40 bg-emerald-500/10 text-emerald-200 hover:bg-emerald-500/20"}`}
+                      onClick={toggleExcursionLock}
+                    >
+                      {editingExcursion.roster_locked_at ? (
+                        <><Unlock className="w-3.5 h-3.5 mr-1.5" /> Unlock</>
+                      ) : (
+                        <><Lock className="w-3.5 h-3.5 mr-1.5" /> Submit Excursion Roster</>
+                      )}
+                    </Button>
                   </div>
                   <div>
                     <label className="text-xs text-white/50 mb-1 block">Arrived at destination</label>

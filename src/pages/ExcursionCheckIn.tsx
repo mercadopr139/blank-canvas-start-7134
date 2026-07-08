@@ -283,7 +283,7 @@ const ExcursionCheckIn = () => {
           className="absolute top-4 right-4 z-10 bg-purple-600/80 hover:bg-purple-500 text-white font-semibold border border-purple-400/40 shadow-lg shadow-purple-900/30"
           onClick={() => navigate("/excursion-coach")}
         >
-          <ClipboardCheck className="w-4 h-4 mr-1.5" /> Finalize Roster
+          <ClipboardCheck className="w-4 h-4 mr-1.5" /> Coach Mode
         </Button>
       )}
 
