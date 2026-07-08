@@ -3278,7 +3278,7 @@ const AdminAttendance = () => {
 
               <div className="mt-2 mb-2 flex items-center gap-3 flex-wrap">
                 <Badge className="bg-green-500/15 text-green-400 border-green-500/30 flex-shrink-0">
-                  {daySignIns.filter((s) => s.program_source === "NLA").length} practice
+                  {daySignIns.filter((s) => s.program_source === "NLA").length} Practice
                 </Badge>
                 {!isPracticeDay(selectedDay, calPracticeDayMap) && (
                   <Badge className="bg-red-500/15 text-red-400 border-red-500/30 flex-shrink-0">Non-Practice Day</Badge>
@@ -3287,7 +3287,7 @@ const AdminAttendance = () => {
                     so the green practice count reads on its own. */}
                 {isExcursionDay(selectedDay) && (
                   <Badge className="ml-auto bg-purple-500/15 text-purple-300 border-purple-500/30 flex-shrink-0">
-                    {daySignIns.filter((s) => s.program_source === "Excursion").length} excursion
+                    {daySignIns.filter((s) => s.program_source === "Excursion").length} Excursion
                   </Badge>
                 )}
                 {/* Add or edit the excursion for this day, right where the user
