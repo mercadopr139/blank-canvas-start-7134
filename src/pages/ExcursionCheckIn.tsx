@@ -199,7 +199,7 @@ const ExcursionCheckIn = () => {
           variant="ghost"
           size="sm"
           className="absolute top-4 left-4 text-white/40 hover:text-white hover:bg-white/10 z-10"
-          onClick={() => navigate(-1)}
+          onClick={() => navigate("/")}
         >
           <ArrowLeft className="w-4 h-4 mr-1" /> Back
         </Button>
@@ -225,7 +225,7 @@ const ExcursionCheckIn = () => {
           variant="ghost"
           size="sm"
           className="absolute top-4 left-4 text-white/40 hover:text-white hover:bg-white/10 z-10"
-          onClick={() => navigate(-1)}
+          onClick={() => navigate("/")}
         >
           <ArrowLeft className="w-4 h-4 mr-1" /> Back
         </Button>
@@ -272,7 +272,7 @@ const ExcursionCheckIn = () => {
         variant="ghost"
         size="sm"
         className="absolute top-4 left-4 text-white/40 hover:text-white hover:bg-white/10 z-10"
-        onClick={() => navigate(-1)}
+        onClick={() => navigate("/")}
       >
         <ArrowLeft className="w-4 h-4 mr-1" /> Back
       </Button>
