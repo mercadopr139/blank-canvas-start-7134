@@ -3715,7 +3715,7 @@ const AdminAttendance = () => {
 
               <div>
                 <label className="text-xs text-white/50 mb-1.5 block flex items-center gap-1.5">
-                  <StickyNote className="w-3.5 h-3.5" /> Trip Debrief — the good &amp; the ugly
+                  <StickyNote className="w-3.5 h-3.5" /> Trip Debrief
                 </label>
                 <div className="mb-1.5">
                   <Popover>

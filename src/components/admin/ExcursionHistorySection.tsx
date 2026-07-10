@@ -146,7 +146,7 @@ const ExcursionRow = ({
       {e.notes && e.notes.trim().length > 0 && (
         <div className="mt-3 rounded-md bg-purple-500/10 border border-purple-400/30 px-3 py-2">
           <p className="text-[10px] font-bold uppercase tracking-wider text-purple-200/70 mb-0.5 flex items-center gap-1.5">
-            <StickyNote className="w-3 h-3" /> Trip Debrief — the good & the ugly
+            <StickyNote className="w-3 h-3" /> Trip Debrief
           </p>
           <p className="text-sm text-purple-100/90 whitespace-pre-wrap">{e.notes}</p>
         </div>
