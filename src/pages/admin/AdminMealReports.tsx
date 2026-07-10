@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { format, subDays, startOfWeek, startOfMonth } from "date-fns";
 import { Button } from "@/components/ui/button";
@@ -247,6 +247,18 @@ const AdminMealReports = () => {
   };
 
   useEffect(() => { runReport(); }, []);
+
+  // Auto-refresh the report (data + averages only — NO PDF) shortly after the
+  // date range changes, so the strip/table always match the pickers. The PDF
+  // stays behind the explicit "Print Report" button. Debounced so it waits
+  // until you've settled on a date instead of firing mid-selection.
+  const didMountRef = useRef(false);
+  useEffect(() => {
+    if (!didMountRef.current) { didMountRef.current = true; return; }
+    const t = setTimeout(() => { runReport(false); }, 400);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [startDate, endDate]);
 
   const toggleExpand = async (eventId: string) => {
     if (expandedRow === eventId) { setExpandedRow(null); return; }
