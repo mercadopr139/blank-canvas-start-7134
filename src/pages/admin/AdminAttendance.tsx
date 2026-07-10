@@ -12,7 +12,7 @@ import { Badge } from "@/components/ui/badge";
 import {
   Star, Search, AlertTriangle, Users, Eye, ChevronLeft, ChevronRight, CalendarDays,
   Clock, TrendingUp, TrendingDown, School, Lightbulb, Activity, Trash2, X, Pencil, UserPlus, Mail,
-  Plus, Truck, Bus, CheckCircle2, Lock, Unlock
+  Plus, Truck, Bus, CheckCircle2, Lock, Unlock, StickyNote
 } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -969,6 +969,31 @@ const AdminAttendance = () => {
     queryClient.invalidateQueries({ queryKey: ["excursions-ytd", YTD_START] });
     setEditingExcursion(null);
     toast.success("Excursion updated");
+  };
+
+  // ── Trip Debrief notepad (the "Notes / Lessons" field) ──
+  const debriefRef = useRef<HTMLTextAreaElement>(null);
+
+  // Autosave the debrief on blur so notes can't get lost; drop a lone empty bullet.
+  const saveExcursionNotesNow = async () => {
+    if (!editingExcursion) return;
+    const raw = (editingExcursion.notes || "").trim();
+    const finalNotes = raw === "" || raw === "•" ? null : editingExcursion.notes;
+    const { error } = await supabase.from("excursions").update({ notes: finalNotes }).eq("id", editingExcursion.id);
+    if (!error) queryClient.invalidateQueries({ queryKey: ["excursions-cal"] });
+  };
+
+  // Quick-tag buttons drop a labeled bullet and focus the notepad.
+  const addDebriefBullet = (tag: string) => {
+    if (!editingExcursion) return;
+    // Drop a trailing empty bullet so tags don't stack on a blank line.
+    const cur = (editingExcursion.notes || "").replace(/(^|\n)•\s*$/, (_m, p1) => p1);
+    const prefix = cur.length > 0 && !cur.endsWith("\n") ? "\n" : "";
+    setEditingExcursion({ ...editingExcursion, notes: `${cur}${prefix}• ${tag} ` });
+    requestAnimationFrame(() => {
+      const ta = debriefRef.current;
+      if (ta) { ta.focus(); ta.selectionStart = ta.selectionEnd = ta.value.length; }
+    });
   };
 
   // Submit (lock) / unlock the roster from the admin modal — same lock the
@@ -3565,14 +3590,47 @@ const AdminAttendance = () => {
                 <p className="text-[10px] text-white/30 mt-1.5 text-center">Live count of who actually went on the trip.</p>
               </div>
               <div>
-                <label className="text-xs text-white/50 mb-1 block">Notes / Lessons for next year</label>
-                <Input
+                <label className="text-xs text-white/50 mb-1.5 block flex items-center gap-1.5">
+                  <StickyNote className="w-3.5 h-3.5" /> Trip Debrief — the good &amp; the ugly
+                </label>
+                <div className="flex flex-wrap gap-1.5 mb-1.5">
+                  {[
+                    { tag: "👍 Went well:", label: "👍 Went well" },
+                    { tag: "👎 To improve:", label: "👎 To improve" },
+                    { tag: "📦 Packing:", label: "📦 Packing" },
+                    { tag: "💡 Idea:", label: "💡 Idea" },
+                  ].map((t) => (
+                    <button
+                      key={t.label}
+                      type="button"
+                      onClick={() => addDebriefBullet(t.tag)}
+                      className="text-xs px-2 py-1 rounded-md border border-white/15 bg-white/5 hover:bg-white/10 text-white/70 transition-colors"
+                    >
+                      {t.label}
+                    </button>
+                  ))}
+                </div>
+                <textarea
+                  ref={debriefRef}
                   value={editingExcursion.notes || ""}
                   onChange={(e) => setEditingExcursion({ ...editingExcursion, notes: e.target.value || null })}
-                  placeholder="e.g. Stay 3 nights not 4 — book accordingly"
-                  className="bg-white/5 border-white/20 text-white"
+                  onFocus={() => { if (!editingExcursion.notes) setEditingExcursion({ ...editingExcursion, notes: "• " }); }}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && !e.shiftKey) {
+                      e.preventDefault();
+                      const ta = e.currentTarget;
+                      const start = ta.selectionStart, end = ta.selectionEnd, val = ta.value;
+                      const insert = "\n• ";
+                      setEditingExcursion({ ...editingExcursion, notes: val.slice(0, start) + insert + val.slice(end) });
+                      requestAnimationFrame(() => { ta.selectionStart = ta.selectionEnd = start + insert.length; });
+                    }
+                  }}
+                  onBlur={saveExcursionNotesNow}
+                  rows={6}
+                  placeholder={"Debrief while it's fresh…\n• 👍 Kids loved the sailing\n• 👎 Lunch ran late — pack earlier\n• 📦 Bring extra towels"}
+                  className="w-full bg-white/5 border border-white/20 rounded-md px-3 py-2 text-white text-sm leading-relaxed placeholder:text-white/25 resize-y focus:outline-none focus:border-purple-400/50"
                 />
-                <p className="text-[10px] text-white/30 mt-1">Saved on the trip — visible in Excursion History next year for planning.</p>
+                <p className="text-[10px] text-white/30 mt-1">Autosaves · press Enter for a new bullet · shows up in Excursion History next year for planning.</p>
               </div>
 
               {/* TRIP ROSTER — interactive editor (admin override)
