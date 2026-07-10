@@ -3587,6 +3587,7 @@ const AdminAttendance = () => {
                   <div className="space-y-2 mb-3">
                     {editingVehicles.map((v) => {
                       const inThisVehicle = editingRosterYouth.filter((y) => y.vehicle_id === v.id);
+                      const coachesInVehicle = editingPersonnel.filter((p) => p.vehicle_id === v.id);
                       return (
                         <div key={v.id} className="rounded-lg bg-white/[0.03] border border-white/10 p-3">
                           <div className="flex items-start justify-between gap-2 mb-1.5">
@@ -3611,7 +3612,7 @@ const AdminAttendance = () => {
                               </button>
                             </div>
                           </div>
-                          {inThisVehicle.length > 0 ? (
+                          {inThisVehicle.length + coachesInVehicle.length > 0 ? (
                             <div className="flex flex-wrap gap-1.5">
                               {inThisVehicle.map((y) => (
                                 <div
@@ -3630,13 +3631,45 @@ const AdminAttendance = () => {
                                   </button>
                                 </div>
                               ))}
+                              {coachesInVehicle.map((p) => (
+                                <div
+                                  key={p.id}
+                                  className="flex items-center gap-1 rounded-full bg-sky-500/10 border border-sky-400/25 pl-2 pr-1 py-0.5"
+                                >
+                                  <span className="text-xs font-semibold text-sky-100">{p.name}</span>
+                                  <span className="text-[8px] uppercase tracking-wider text-sky-300/90 font-bold">Coach/Volunteer</span>
+                                  <button
+                                    onClick={() => handleEditRemovePersonnel(p.id)}
+                                    className="w-4 h-4 rounded-full hover:bg-white/10 flex items-center justify-center text-white/50 hover:text-white"
+                                    title="Remove from trip"
+                                  >
+                                    <X className="w-3 h-3" />
+                                  </button>
+                                </div>
+                              ))}
                             </div>
                           ) : (
-                            <p className="text-xs text-white/30 italic">No youth assigned to this vehicle.</p>
+                            <p className="text-xs text-white/30 italic">No one assigned to this vehicle.</p>
                           )}
                         </div>
                       );
                     })}
+                  </div>
+                )}
+
+                {/* Coaches / volunteers who drove separately (their own car) */}
+                {editingPersonnel.some((p) => !p.vehicle_id) && (
+                  <div className="rounded-lg bg-white/[0.03] border border-white/10 p-3 mb-3">
+                    <p className="text-[10px] font-bold uppercase tracking-wider text-white/60 mb-2">Drove Separately</p>
+                    <div className="flex flex-wrap gap-1.5">
+                      {editingPersonnel.filter((p) => !p.vehicle_id).map((p) => (
+                        <div key={p.id} className="flex items-center gap-1 rounded-full bg-sky-500/10 border border-sky-400/25 pl-2 pr-1 py-0.5">
+                          <span className="text-xs font-semibold text-sky-100">{p.name}</span>
+                          <span className="text-[8px] uppercase tracking-wider text-sky-300/90 font-bold">Coach/Volunteer</span>
+                          <button onClick={() => handleEditRemovePersonnel(p.id)} className="w-4 h-4 rounded-full hover:bg-white/10 flex items-center justify-center text-white/50 hover:text-white" title="Remove from trip"><X className="w-3 h-3" /></button>
+                        </div>
+                      ))}
+                    </div>
                   </div>
                 )}
 
@@ -3866,30 +3899,12 @@ const AdminAttendance = () => {
                   )}
                 </div>
 
-                {/* Coaches & Volunteers riding along */}
+                {/* Add a coach / volunteer. They appear in their van above (or
+                    under "Drove Separately" until assigned to a van in Coach Mode). */}
                 <div className="rounded-lg bg-white/[0.03] border border-white/10 p-3">
                   <p className="text-[10px] font-bold uppercase tracking-wider text-white/60 mb-2">
-                    Coaches & Volunteers Riding Along {editingPersonnel.length > 0 && `(${editingPersonnel.length})`}
+                    Add Coach / Volunteer
                   </p>
-                  {editingPersonnel.length > 0 && (
-                    <div className="flex flex-wrap gap-1.5 mb-2">
-                      {editingPersonnel.map((p) => (
-                        <div
-                          key={p.id}
-                          className="flex items-center gap-1.5 rounded-full bg-white/[0.06] border border-white/10 pl-2 pr-1 py-0.5"
-                        >
-                          <span className="text-xs font-semibold">{p.name}</span>
-                          <button
-                            onClick={() => handleEditRemovePersonnel(p.id)}
-                            className="w-4 h-4 rounded-full hover:bg-white/10 flex items-center justify-center text-white/50 hover:text-white"
-                            aria-label="Remove"
-                          >
-                            <X className="w-3 h-3" />
-                          </button>
-                        </div>
-                      ))}
-                    </div>
-                  )}
                   <div className="flex gap-1.5">
                     <Input
                       value={editPersonnelInput}
