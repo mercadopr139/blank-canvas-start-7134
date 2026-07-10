@@ -497,10 +497,11 @@ const AdminMealReports = () => {
           <p className="text-zinc-500 text-xs uppercase tracking-wide mb-2">
             Averages · {format(startDate, "MMM d")} – {format(endDate, "MMM d, yyyy")} · {totalEvents} night{totalEvents === 1 ? "" : "s"}
           </p>
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
             {[
+              { label: "Total Meals", value: totalMealsServed, color: "text-green-400" },
               { label: "Nights Served", value: totalEvents, color: "text-white" },
-              { label: "Avg Meals / Night", value: Math.round(avgMealsPerNight), color: "text-green-400" },
+              { label: "Avg Meals / Night", value: Math.round(avgMealsPerNight), color: "text-emerald-300" },
               { label: "Avg Calories / Meal", value: Math.round(avgCalories), color: "text-amber-400" },
               { label: "Avg Protein / Meal", value: `${Math.round(avgProtein)}g`, color: "text-blue-400" },
               { label: "Avg Sugar / Meal", value: `${Math.round(avgSugar)}g`, color: "text-pink-400" },
