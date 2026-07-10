@@ -1298,6 +1298,30 @@ const AdminAttendance = () => {
     return days.size > 0 ? Math.round(ytdPracticeAttendance.length / days.size) : 0;
   }, [ytdPracticeAttendance]);
 
+  /* ───── Season vs Off-Season averages ─────
+     NLA's program year runs Sept 1 → Aug 31; July & August are the summer
+     off-season (the tail of the year). Keeping them separate stops summer
+     from diluting the Sept–June season number. Derived purely from the
+     check_in_date month (07/08 = off-season) — no stored flag. */
+  const seasonAvg = useMemo(() => {
+    const recs = ytdPracticeAttendance.filter((a) => {
+      const mm = a.check_in_date.slice(5, 7);
+      return mm !== "07" && mm !== "08";
+    });
+    const days = new Set(recs.map((a) => a.check_in_date));
+    return days.size > 0 ? Math.round(recs.length / days.size) : 0;
+  }, [ytdPracticeAttendance]);
+  const offSeasonAvg = useMemo(() => {
+    const recs = ytdPracticeAttendance.filter((a) => {
+      const mm = a.check_in_date.slice(5, 7);
+      return mm === "07" || mm === "08";
+    });
+    const days = new Set(recs.map((a) => a.check_in_date));
+    return days.size > 0 ? Math.round(recs.length / days.size) : 0;
+  }, [ytdPracticeAttendance]);
+  // July (5→6 0-indexed) or August (7) is the summer off-season.
+  const viewedMonthIsOffSeason = calendarMonth.getMonth() === 6 || calendarMonth.getMonth() === 7;
+
   /* ───── STAT BOX: Avg Arrival Time (Year) → across all green-practice days since 2026-03-09 ───── */
   const avgArrivalYear = useMemo(() => {
     const records = ytdPracticeAttendance;
@@ -1993,7 +2017,7 @@ const AdminAttendance = () => {
         </div>
 
         {/* Key Insight Cards */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 mb-6">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-7 gap-3 mb-6">
           <Card className="bg-white/5 border-white/10 text-white">
             <CardContent className="pt-4 pb-3 text-center">
               <p className="text-[10px] uppercase tracking-wider text-green-400/70">Attendance High</p>
@@ -2035,11 +2059,18 @@ const AdminAttendance = () => {
               <p className="text-[10px] text-white/30">per practice day since 3/9</p>
             </CardContent>
           </Card>
-          <Card className="bg-white/5 border-white/10 text-white">
+          <Card className="bg-green-500/[0.06] border-green-500/25 text-white">
             <CardContent className="pt-4 pb-3 text-center">
-              <p className="text-[10px] uppercase tracking-wider text-white/40">Year Avg</p>
-              <p className="text-3xl font-bold mt-1">{yearAvg}</p>
-              <p className="text-[10px] text-white/30">per practice day since 3/9</p>
+              <p className="text-[10px] uppercase tracking-wider text-green-400/80">Season Avg</p>
+              <p className="text-3xl font-bold mt-1 text-green-300">{seasonAvg}</p>
+              <p className="text-[10px] text-white/30">Sept–Jun · per practice day</p>
+            </CardContent>
+          </Card>
+          <Card className="bg-amber-500/[0.06] border-amber-500/25 text-white">
+            <CardContent className="pt-4 pb-3 text-center">
+              <p className="text-[10px] uppercase tracking-wider text-amber-400/80">Off-Season Avg</p>
+              <p className="text-3xl font-bold mt-1 text-amber-300">{offSeasonAvg}</p>
+              <p className="text-[10px] text-white/30">Jul–Aug · per practice day</p>
             </CardContent>
           </Card>
         </div>
@@ -2076,7 +2107,12 @@ const AdminAttendance = () => {
               <Button variant="ghost" size="icon" className="text-white/60 hover:text-white hover:bg-white/10" onClick={() => setCalendarMonth((m) => subMonths(m, 1))}>
                 <ChevronLeft className="w-5 h-5" />
               </Button>
-              <h3 className="text-lg font-semibold tracking-wide">{format(calendarMonth, "MMMM yyyy")}</h3>
+              <div className="flex items-center gap-2">
+                <h3 className="text-lg font-semibold tracking-wide">{format(calendarMonth, "MMMM yyyy")}</h3>
+                {viewedMonthIsOffSeason && (
+                  <Badge className="bg-amber-500/15 text-amber-300 border-amber-500/30 text-[10px]">Off-Season</Badge>
+                )}
+              </div>
               <Button variant="ghost" size="icon" className="text-white/60 hover:text-white hover:bg-white/10" onClick={() => setCalendarMonth((m) => addMonths(m, 1))}>
                 <ChevronRight className="w-5 h-5" />
               </Button>
