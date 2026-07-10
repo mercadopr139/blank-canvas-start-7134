@@ -86,6 +86,13 @@ interface Excursion {
 
 type DayType = "practice" | "non-practice" | "excursion";
 
+// Emoji palette for the Trip Overview / Debrief notepads — tap to insert.
+const NOTE_EMOJIS = [
+  "👍", "👎", "⭐", "✅", "⚠️", "❗", "💡", "🎉",
+  "❤️", "😀", "😐", "🙁", "📍", "👤", "🗓️", "⏰",
+  "📦", "🍽️", "🚐", "⛵", "☀️", "🌧️", "💧", "📸",
+];
+
 /** Vehicle quick-add presets for the Edit Excursion modal — mirrors the
  *  same picker available in Coach Mode at /excursion-coach so admin
  *  backfills produce the same vehicle records as live trips. */
@@ -997,6 +1004,19 @@ const AdminAttendance = () => {
       const ta = ref.current;
       if (ta) { ta.focus(); ta.selectionStart = ta.selectionEnd = ta.value.length; }
     });
+  };
+
+  // Insert an emoji at the cursor (or end) of a notepad.
+  const insertNoteEmoji = (field: "notes" | "details", ref: { current: HTMLTextAreaElement | null }, emoji: string) => {
+    if (!editingExcursion) return;
+    const ta = ref.current;
+    if (!ta) {
+      setEditingExcursion({ ...editingExcursion, [field]: (editingExcursion[field] || "") + emoji });
+      return;
+    }
+    const s = ta.selectionStart, e = ta.selectionEnd, v = ta.value;
+    setEditingExcursion({ ...editingExcursion, [field]: v.slice(0, s) + emoji + v.slice(e) });
+    requestAnimationFrame(() => { ta.focus(); ta.selectionStart = ta.selectionEnd = s + emoji.length; });
   };
 
   // Enter → new bullet; Tab / Shift+Tab → indent / outdent (outline format).
@@ -3676,6 +3696,19 @@ const AdminAttendance = () => {
                     </button>
                   ))}
                 </div>
+                <div className="flex flex-wrap gap-0.5 mb-1.5">
+                  {NOTE_EMOJIS.map((em) => (
+                    <button
+                      key={em}
+                      type="button"
+                      onClick={() => insertNoteEmoji("details", detailsRef, em)}
+                      className="text-base leading-none w-7 h-7 rounded hover:bg-white/10 transition-colors flex items-center justify-center"
+                      title="Insert emoji"
+                    >
+                      {em}
+                    </button>
+                  ))}
+                </div>
                 <textarea
                   ref={detailsRef}
                   value={editingExcursion.details || ""}
@@ -3708,6 +3741,19 @@ const AdminAttendance = () => {
                       className="text-xs px-2 py-1 rounded-md border border-white/15 bg-white/5 hover:bg-white/10 text-white/70 transition-colors"
                     >
                       {t.label}
+                    </button>
+                  ))}
+                </div>
+                <div className="flex flex-wrap gap-0.5 mb-1.5">
+                  {NOTE_EMOJIS.map((em) => (
+                    <button
+                      key={em}
+                      type="button"
+                      onClick={() => insertNoteEmoji("notes", debriefRef, em)}
+                      className="text-base leading-none w-7 h-7 rounded hover:bg-white/10 transition-colors flex items-center justify-center"
+                      title="Insert emoji"
+                    >
+                      {em}
                     </button>
                   ))}
                 </div>
