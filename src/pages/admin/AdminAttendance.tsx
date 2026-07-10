@@ -3696,18 +3696,24 @@ const AdminAttendance = () => {
                     </button>
                   ))}
                 </div>
-                <div className="flex flex-wrap gap-0.5 mb-1.5">
-                  {NOTE_EMOJIS.map((em) => (
-                    <button
-                      key={em}
-                      type="button"
-                      onClick={() => insertNoteEmoji("details", detailsRef, em)}
-                      className="text-base leading-none w-7 h-7 rounded hover:bg-white/10 transition-colors flex items-center justify-center"
-                      title="Insert emoji"
-                    >
-                      {em}
-                    </button>
-                  ))}
+                <div className="mb-1.5">
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <button type="button" className="text-xs px-2 py-1 rounded-md border border-white/15 bg-white/5 hover:bg-white/10 text-white/70 transition-colors">
+                        😀 Emoji
+                      </button>
+                    </PopoverTrigger>
+                    <PopoverContent align="start" className="w-64 bg-neutral-900 border-white/15 p-2">
+                      <div className="grid grid-cols-8 gap-0.5">
+                        {NOTE_EMOJIS.map((em) => (
+                          <button key={em} type="button" onClick={() => insertNoteEmoji("details", detailsRef, em)}
+                            className="text-lg leading-none w-7 h-7 rounded hover:bg-white/10 flex items-center justify-center">
+                            {em}
+                          </button>
+                        ))}
+                      </div>
+                    </PopoverContent>
+                  </Popover>
                 </div>
                 <textarea
                   ref={detailsRef}
@@ -3744,18 +3750,24 @@ const AdminAttendance = () => {
                     </button>
                   ))}
                 </div>
-                <div className="flex flex-wrap gap-0.5 mb-1.5">
-                  {NOTE_EMOJIS.map((em) => (
-                    <button
-                      key={em}
-                      type="button"
-                      onClick={() => insertNoteEmoji("notes", debriefRef, em)}
-                      className="text-base leading-none w-7 h-7 rounded hover:bg-white/10 transition-colors flex items-center justify-center"
-                      title="Insert emoji"
-                    >
-                      {em}
-                    </button>
-                  ))}
+                <div className="mb-1.5">
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <button type="button" className="text-xs px-2 py-1 rounded-md border border-white/15 bg-white/5 hover:bg-white/10 text-white/70 transition-colors">
+                        😀 Emoji
+                      </button>
+                    </PopoverTrigger>
+                    <PopoverContent align="start" className="w-64 bg-neutral-900 border-white/15 p-2">
+                      <div className="grid grid-cols-8 gap-0.5">
+                        {NOTE_EMOJIS.map((em) => (
+                          <button key={em} type="button" onClick={() => insertNoteEmoji("notes", debriefRef, em)}
+                            className="text-lg leading-none w-7 h-7 rounded hover:bg-white/10 flex items-center justify-center">
+                            {em}
+                          </button>
+                        ))}
+                      </div>
+                    </PopoverContent>
+                  </Popover>
                 </div>
                 <textarea
                   ref={debriefRef}
