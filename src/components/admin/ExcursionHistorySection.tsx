@@ -20,6 +20,7 @@ interface Excursion {
   name: string;
   youth_count: number;
   notes: string | null;
+  details: string | null;
   created_at: string;
   roster_locked_at: string | null;
   arrived_at: string | null;
@@ -131,11 +132,21 @@ const ExcursionRow = ({
         </div>
       )}
 
-      {/* Lessons-for-next-year notes */}
+      {/* Trip Overview / Details */}
+      {e.details && e.details.trim().length > 0 && (
+        <div className="mt-3 rounded-md bg-white/[0.04] border border-white/10 px-3 py-2">
+          <p className="text-[10px] font-bold uppercase tracking-wider text-white/50 mb-0.5 flex items-center gap-1.5">
+            <StickyNote className="w-3 h-3" /> Trip Overview / Details
+          </p>
+          <p className="text-sm text-white/80 whitespace-pre-wrap">{e.details}</p>
+        </div>
+      )}
+
+      {/* Trip debrief — the good & the ugly */}
       {e.notes && e.notes.trim().length > 0 && (
         <div className="mt-3 rounded-md bg-purple-500/10 border border-purple-400/30 px-3 py-2">
           <p className="text-[10px] font-bold uppercase tracking-wider text-purple-200/70 mb-0.5 flex items-center gap-1.5">
-            <StickyNote className="w-3 h-3" /> Notes / Lessons for next year
+            <StickyNote className="w-3 h-3" /> Trip Debrief — the good & the ugly
           </p>
           <p className="text-sm text-purple-100/90 whitespace-pre-wrap">{e.notes}</p>
         </div>
