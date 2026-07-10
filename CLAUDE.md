@@ -46,6 +46,7 @@ A full operational platform for **No Limits Boxing Academy** — a non-profit bo
 - RPC functions are used for secure kiosk searches (e.g. `search_kiosk_youth`, `search_lil_champs_youth`) — these use `SECURITY DEFINER` and are callable by `anon`
 - Youth only appear in kiosk searches when `approved_for_attendance = true` on their `youth_registrations` row
 - Migrations live in `supabase/migrations/` — always add new DB changes as a new migration file, never edit existing ones
+- **Applying migrations:** the Supabase CLI is installed, authenticated, and linked to the **NLA Production** project (`rkdkmzjontaufbyjbcku`), and migration history is baselined/synced. Apply new migrations with **`npx supabase db push`** — no more manual paste into the SQL Editor. Show the migration for review before pushing to production.
 
 ## Brand & Styling
 
