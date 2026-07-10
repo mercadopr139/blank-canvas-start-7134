@@ -422,6 +422,9 @@ const AdminMealReports = () => {
   const avgFat = totalEvents > 0 ? reportData.reduce((s, r) => s + r.total_fat, 0) / totalEvents : 0;
   const avgCalories = totalEvents > 0 ? reportData.reduce((s, r) => s + r.total_calories, 0) / totalEvents : 0;
   const lowProteinCount = reportData.filter((r) => r.total_protein < 10).length;
+  const totalMealsServed = reportData.reduce((s, r) => s + (r.meal_count || 0), 0);
+  const avgMealsPerNight = totalEvents > 0 ? totalMealsServed / totalEvents : 0;
+  const avgSugar = totalEvents > 0 ? reportData.reduce((s, r) => s + (r.total_sugar || 0), 0) / totalEvents : 0;
 
   const donorMap = new Map<string, { meals: number; dates: string[]; totalProtein: number; count: number }>();
   reportData.forEach((r) => {
@@ -472,6 +475,29 @@ const AdminMealReports = () => {
           <div>
             <p className="text-white font-medium">Generating nutritional estimates...</p>
             <p className="text-zinc-500 text-sm">AI is analyzing food items to estimate calories, protein, carbs, and fat.</p>
+          </div>
+        </div>
+      )}
+
+      {/* Averages for the served nights in the selected range */}
+      {totalEvents > 0 && (
+        <div>
+          <p className="text-zinc-500 text-xs uppercase tracking-wide mb-2">
+            Averages · {format(startDate, "MMM d")} – {format(endDate, "MMM d, yyyy")} · {totalEvents} night{totalEvents === 1 ? "" : "s"}
+          </p>
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+            {[
+              { label: "Nights Served", value: totalEvents, color: "text-white" },
+              { label: "Avg Meals / Night", value: Math.round(avgMealsPerNight), color: "text-green-400" },
+              { label: "Avg Calories / Meal", value: Math.round(avgCalories), color: "text-amber-400" },
+              { label: "Avg Protein / Meal", value: `${Math.round(avgProtein)}g`, color: "text-blue-400" },
+              { label: "Avg Sugar / Meal", value: `${Math.round(avgSugar)}g`, color: "text-pink-400" },
+            ].map((s) => (
+              <div key={s.label} className="bg-zinc-900 border border-zinc-800 rounded-lg p-3 text-center">
+                <p className={cn("text-2xl font-bold", s.color)}>{s.value}</p>
+                <p className="text-zinc-500 text-[11px] uppercase tracking-wide mt-0.5">{s.label}</p>
+              </div>
+            ))}
           </div>
         </div>
       )}
