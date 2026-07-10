@@ -87,10 +87,11 @@ interface Excursion {
 type DayType = "practice" | "non-practice" | "excursion";
 
 // Emoji palette for the Trip Overview / Debrief notepads — tap to insert.
+// Common tags first (location/contact/itinerary/packing · went-well/improve/idea).
 const NOTE_EMOJIS = [
-  "👍", "👎", "⭐", "✅", "⚠️", "❗", "💡", "🎉",
-  "❤️", "😀", "😐", "🙁", "📍", "👤", "🗓️", "⏰",
-  "📦", "🍽️", "🚐", "⛵", "☀️", "🌧️", "💧", "📸",
+  "📍", "👤", "🗓️", "📦", "👍", "👎", "💡", "⭐",
+  "✅", "⚠️", "❗", "🎉", "❤️", "🍽️", "🚐", "⛵",
+  "⏰", "☀️", "🌧️", "💧", "📸", "😀", "😐", "🙁",
 ];
 
 /** Vehicle quick-add presets for the Edit Excursion modal — mirrors the
@@ -3679,23 +3680,6 @@ const AdminAttendance = () => {
                 <label className="text-xs text-white/50 mb-1.5 block flex items-center gap-1.5">
                   <StickyNote className="w-3.5 h-3.5 text-purple-300" /> Trip Overview / Details
                 </label>
-                <div className="flex flex-wrap gap-1.5 mb-1.5">
-                  {[
-                    { tag: "📍 Location:", label: "📍 Location" },
-                    { tag: "👤 Contact:", label: "👤 Contact" },
-                    { tag: "🗓️ Itinerary:", label: "🗓️ Itinerary" },
-                    { tag: "📦 Packing:", label: "📦 Packing" },
-                  ].map((t) => (
-                    <button
-                      key={t.label}
-                      type="button"
-                      onClick={() => addNoteBullet("details", detailsRef, t.tag)}
-                      className="text-xs px-2 py-1 rounded-md border border-white/15 bg-white/5 hover:bg-white/10 text-white/70 transition-colors"
-                    >
-                      {t.label}
-                    </button>
-                  ))}
-                </div>
                 <div className="mb-1.5">
                   <Popover>
                     <PopoverTrigger asChild>
@@ -3733,23 +3717,6 @@ const AdminAttendance = () => {
                 <label className="text-xs text-white/50 mb-1.5 block flex items-center gap-1.5">
                   <StickyNote className="w-3.5 h-3.5" /> Trip Debrief — the good &amp; the ugly
                 </label>
-                <div className="flex flex-wrap gap-1.5 mb-1.5">
-                  {[
-                    { tag: "👍 Went well:", label: "👍 Went well" },
-                    { tag: "👎 To improve:", label: "👎 To improve" },
-                    { tag: "📦 Packing:", label: "📦 Packing" },
-                    { tag: "💡 Idea:", label: "💡 Idea" },
-                  ].map((t) => (
-                    <button
-                      key={t.label}
-                      type="button"
-                      onClick={() => addNoteBullet("notes", debriefRef, t.tag)}
-                      className="text-xs px-2 py-1 rounded-md border border-white/15 bg-white/5 hover:bg-white/10 text-white/70 transition-colors"
-                    >
-                      {t.label}
-                    </button>
-                  ))}
-                </div>
                 <div className="mb-1.5">
                   <Popover>
                     <PopoverTrigger asChild>
