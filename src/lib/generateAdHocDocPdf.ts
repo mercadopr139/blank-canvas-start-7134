@@ -338,7 +338,7 @@ export function generateAdHocDocPdf(data: AdHocDocData): jsPDF {
   doc.setFontSize(7);
   doc.setTextColor(180, 180, 180);
   doc.text(
-    "nolimitsboxingacademy.org   •   Facebook @nolimitsboxingacademy   •   Instagram @nolimitsboxingacademy",
+    "www.nolimitsboxingacademy.org   •   Facebook @nolimitsboxingacademy   •   Instagram @nolimitsboxingacademy",
     pageWidth / 2,
     pageHeight - 13,
     { align: "center" },
