@@ -335,13 +335,18 @@ export function generateAdHocDocPdf(data: AdHocDocData): jsPDF {
   doc.text("joshmercado@nolimitsboxingacademy.org", marginL, y);
 
   // ─── FOOTER ───
-  const footerY = pageHeight - 10;
   doc.setFontSize(7);
   doc.setTextColor(180, 180, 180);
   doc.text(
-    "No Limits Academy  •  If you have questions, reply to joshmercado@nolimitsboxingacademy.org",
+    "nolimitsboxingacademy.org   •   Facebook @nolimitsboxingacademy   •   Instagram @nolimitsboxingacademy",
     pageWidth / 2,
-    footerY,
+    pageHeight - 13,
+    { align: "center" },
+  );
+  doc.text(
+    "No Limits Academy   •   Questions? Reply to joshmercado@nolimitsboxingacademy.org",
+    pageWidth / 2,
+    pageHeight - 9,
     { align: "center" },
   );
 

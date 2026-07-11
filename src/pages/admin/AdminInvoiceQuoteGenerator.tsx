@@ -66,6 +66,13 @@ const thirtyDaysOutIso = () => {
   d.setDate(d.getDate() + 30);
   return format(d, "yyyy-MM-dd");
 };
+// Due Date / Valid Until = 30 days after the given issue date (yyyy-MM-dd).
+const plus30Iso = (iso: string) => {
+  const d = new Date(iso + "T00:00:00");
+  if (isNaN(d.getTime())) return "";
+  d.setDate(d.getDate() + 30);
+  return format(d, "yyyy-MM-dd");
+};
 
 const emptyForm = (): FormState => ({
   docType: "quote",
@@ -437,9 +444,9 @@ export default function AdminInvoiceQuoteGenerator() {
     // overwrite an explicit date the user set, or one loaded from a
     // saved doc currently being edited.
     if (!editingId && !form.expiryDate) {
-      setForm((p) => ({ ...p, expiryDate: thirtyDaysOutIso() }));
+      setForm((p) => ({ ...p, expiryDate: plus30Iso(form.issueDate) }));
     }
-  }, [form.docType, editingId, form.expiryDate]);
+  }, [form.docType, editingId, form.expiryDate, form.issueDate]);
 
   const isQuote = form.docType === "quote";
   const expiryLabel = isQuote ? "Valid Until" : "Due Date";
@@ -562,7 +569,12 @@ export default function AdminInvoiceQuoteGenerator() {
               <Input
                 type="date"
                 value={form.issueDate}
-                onChange={(e) => updateField("issueDate", e.target.value)}
+                onChange={(e) => {
+                  const v = e.target.value;
+                  // Auto-set the Due Date / Valid Until to 30 days out
+                  // (still editable in the field below if needed).
+                  setForm((p) => ({ ...p, issueDate: v, expiryDate: v ? plus30Iso(v) : p.expiryDate }));
+                }}
                 className="bg-white/5 border-white/10 text-white mt-1"
               />
             </div>
