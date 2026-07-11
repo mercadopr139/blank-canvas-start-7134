@@ -20,7 +20,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { ArrowLeft, Plus, Trash2, Download, Search, FileText, RotateCcw, FilePlus2 } from "lucide-react";
+import { ArrowLeft, Plus, Trash2, Download, Search, FileText, RotateCcw, FilePlus2, Pencil } from "lucide-react";
 import { format } from "date-fns";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -286,7 +286,7 @@ export default function AdminInvoiceQuoteGenerator() {
         if (error) throw error;
         setEditingId((data as { id: string }).id);
         setSavedDocNumber(docNumber);
-        toast({ title: `${form.docType === "quote" ? "Quote" : "Invoice"} saved`, description: `Doc # ${docNumber}` });
+        toast({ title: `${form.docType === "quote" ? "Quote" : "Invoice"} saved`, description: `Doc # ${docNumber} · Reopen from History anytime to edit.` });
       }
       qc.invalidateQueries({ queryKey: ["ad-hoc-docs"] });
     } catch (e: any) {
@@ -379,6 +379,14 @@ export default function AdminInvoiceQuoteGenerator() {
         setSavedDocNumber(docNumber);
       }
       await downloadAdHocDocPdf(buildPdfData(docNumber!));
+      // A download-only doc is never persisted, so it won't appear in
+      // History and can't be reopened/edited later — nudge the user to save.
+      if (!editingId) {
+        toast({
+          title: "Downloaded",
+          description: `This isn't saved yet — click "Save ${form.docType === "quote" ? "Quote" : "Invoice"}" to keep it in History so you can edit it later.`,
+        });
+      }
     } catch (e: any) {
       toast({ title: "Download failed", description: e.message, variant: "destructive" });
     } finally {
@@ -824,9 +832,11 @@ export default function AdminInvoiceQuoteGenerator() {
                             variant="ghost"
                             size="sm"
                             onClick={() => loadDocIntoForm(d)}
-                            className="h-7 px-2 text-xs text-white/70 hover:text-white hover:bg-white/10"
+                            className="h-7 px-2 text-xs text-white/70 hover:text-white hover:bg-white/10 gap-1"
+                            title="Edit this doc"
                           >
-                            Open
+                            <Pencil className="w-3.5 h-3.5" />
+                            Edit
                           </Button>
                           <Button
                             type="button"
