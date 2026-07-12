@@ -189,6 +189,15 @@ const FieldEditorDialog = ({
               {draft.is_core && <p className="text-xs text-muted-foreground mt-1">Core field types cannot be changed.</p>}
             </div>
 
+            {draft.field_type === "waiver" && (
+              <div>
+                <Label>Waiver Text</Label>
+                <p className="text-xs text-muted-foreground mb-1">The full legal text parents read and sign below. This is the wording families agree to.</p>
+                <Textarea value={draft.default_value || ""} onChange={e => setDraft({ ...draft, default_value: e.target.value || null })} className="mt-1 text-sm" rows={14} />
+              </div>
+            )}
+
+            {draft.field_type !== "waiver" && (<>
             <div>
               <Label>Help Text / Instructions</Label>
               <Textarea value={draft.help_text || ""} onChange={e => setDraft({ ...draft, help_text: e.target.value || null })} className="mt-1" rows={3} />
@@ -205,12 +214,8 @@ const FieldEditorDialog = ({
             </div>
 
             <div>
-              <Label>{draft.field_type === "waiver" ? "Waiver Text" : "Default Value"}</Label>
-              {draft.field_type === "waiver" ? (
-                <Textarea value={draft.default_value || ""} onChange={e => setDraft({ ...draft, default_value: e.target.value || null })} className="mt-1 text-sm" rows={12} placeholder="The full legal text parents read and sign below." />
-              ) : (
-                <Input value={draft.default_value || ""} onChange={e => setDraft({ ...draft, default_value: e.target.value || null })} className="mt-1" />
-              )}
+              <Label>Default Value</Label>
+              <Input value={draft.default_value || ""} onChange={e => setDraft({ ...draft, default_value: e.target.value || null })} className="mt-1" />
             </div>
 
             <div className="flex items-center justify-between">
@@ -233,6 +238,7 @@ const FieldEditorDialog = ({
                 />
               </div>
             )}
+            </>)}
           </div>
         </ScrollArea>
         <DialogFooter>
