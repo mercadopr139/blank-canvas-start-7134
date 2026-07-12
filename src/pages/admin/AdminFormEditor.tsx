@@ -30,6 +30,7 @@ import {
 import { CSS } from "@dnd-kit/utilities";
 import { QRCodeCanvas } from "qrcode.react";
 import { FormRenderer } from "@/components/forms/FormRenderer";
+import { downloadFormResponsePdf } from "@/lib/generateFormResponsePdf";
 import {
   FIELD_TYPES, fieldTypeIcon, fieldTypeLabel, isInputField, makeField, parseOptions, slugify, ageFromDob,
   type FormFieldDef, type FormRecord,
@@ -345,6 +346,10 @@ const AdminFormEditor = () => {
     }
   };
 
+  const downloadResponsePdf = (r: { data: Record<string, unknown>; submitted_at: string }) => {
+    downloadFormResponsePdf({ formTitle: title, fields: inputFields, data: r.data, submittedAt: r.submitted_at });
+  };
+
   const exportCsv = () => {
     if (!responses || responses.length === 0) { toast.error("No responses yet"); return; }
     const cols = inputFields.filter((f) => f.field_type !== "signature");
@@ -468,6 +473,7 @@ const AdminFormEditor = () => {
                           <div className="text-sm font-medium truncate">{firstAnswers.length ? firstAnswers.map(String).join(" · ") : "Response"}</div>
                           <div className="text-xs text-white/35">{new Date(r.submitted_at).toLocaleString()}</div>
                         </div>
+                        <Button size="icon" variant="ghost" onClick={() => downloadResponsePdf(r)} title="Download PDF" className="h-8 w-8 text-white/50 hover:text-white"><Download className="w-4 h-4" /></Button>
                         <Button size="icon" variant="ghost" onClick={() => setViewResp(r)} className="h-8 w-8 text-white/50 hover:text-white"><Eye className="w-4 h-4" /></Button>
                         <Button size="icon" variant="ghost" onClick={() => setDeleteRespId(r.id)} className="h-8 w-8 text-red-400/50 hover:text-red-400"><Trash2 className="w-4 h-4" /></Button>
                       </div>
@@ -567,7 +573,10 @@ const AdminFormEditor = () => {
                 <Button onClick={saveResponseEdit} disabled={savingResp}>{savingResp ? "Saving…" : "Save changes"}</Button>
               </>
             ) : (
-              <Button variant="outline" onClick={() => setEditData({ ...(viewResp?.data || {}) })} className="gap-1.5"><Pencil className="w-4 h-4" /> Edit response</Button>
+              <>
+                <Button variant="outline" onClick={() => viewResp && downloadResponsePdf(viewResp)} className="gap-1.5"><Download className="w-4 h-4" /> Download PDF</Button>
+                <Button variant="outline" onClick={() => setEditData({ ...(viewResp?.data || {}) })} className="gap-1.5"><Pencil className="w-4 h-4" /> Edit response</Button>
+              </>
             )}
           </DialogFooter>
         </DialogContent>
