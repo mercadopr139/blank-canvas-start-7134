@@ -11,7 +11,6 @@ import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
@@ -31,7 +30,7 @@ import { CSS } from "@dnd-kit/utilities";
 import { QRCodeCanvas } from "qrcode.react";
 import { FormRenderer } from "@/components/forms/FormRenderer";
 import {
-  FIELD_TYPES, fieldTypeIcon, fieldTypeLabel, isInputField, makeField, parseOptions,
+  FIELD_TYPES, fieldTypeIcon, fieldTypeLabel, isInputField, makeField, parseOptions, slugify,
   type FormFieldDef, type FormRecord,
 } from "@/lib/formKit";
 
@@ -71,7 +70,7 @@ const FieldEditor = ({ field, onClose, onSave }: { field: FormFieldDef | null; o
     <Dialog open={!!field} onOpenChange={(o) => !o && onClose()}>
       <DialogContent className="max-w-lg max-h-[90vh]">
         <DialogHeader><DialogTitle>Edit Field</DialogTitle></DialogHeader>
-        <ScrollArea className="max-h-[65vh] pr-4">
+        <div className="max-h-[65vh] overflow-y-auto pr-1 -mr-1">
           <div className="space-y-4">
             <div>
               <Label>{layout ? "Text" : "Question / Label"}</Label>
@@ -115,7 +114,7 @@ const FieldEditor = ({ field, onClose, onSave }: { field: FormFieldDef | null; o
               </div>
             )}
           </div>
-        </ScrollArea>
+        </div>
         <DialogFooter>
           <Button variant="outline" onClick={onClose}>Cancel</Button>
           <Button onClick={() => onSave({ ...draft, options: hasOptions ? opts.filter((o) => o.trim()) : null })}>Done</Button>
@@ -157,6 +156,8 @@ const AdminFormEditor = () => {
   const [showLogo, setShowLogo] = useState(true);
   const [theme, setTheme] = useState<"light" | "dark">("light");
   const [status, setStatus] = useState<"draft" | "published">("draft");
+  const [slugEdited, setSlugEdited] = useState(false);
+  const [tab, setTab] = useState("build");
   const [dirty, setDirty] = useState(false);
   const [saving, setSaving] = useState(false);
   const [editingField, setEditingField] = useState<FormFieldDef | null>(null);
@@ -193,6 +194,10 @@ const AdminFormEditor = () => {
     setShowLogo(s.showLogo !== false);
     setTheme(s.theme === "dark" ? "dark" : "light");
     setStatus(form.status || "draft");
+    // The slug "follows" the title until the user hand-edits it — but never
+    // auto-changes a slug that's already meaningful or already published
+    // (which would break links already handed out).
+    setSlugEdited(!(form.status !== "published" && /^form-[a-z0-9]{4,8}$/.test(form.slug || "")));
     setDirty(false);
   }, [form]);
 
@@ -207,6 +212,14 @@ const AdminFormEditor = () => {
   });
 
   const touch = () => setDirty(true);
+
+  // Warn before closing/refreshing the tab with unsaved changes.
+  useEffect(() => {
+    const h = (e: BeforeUnloadEvent) => { if (dirty) { e.preventDefault(); e.returnValue = ""; } };
+    window.addEventListener("beforeunload", h);
+    return () => window.removeEventListener("beforeunload", h);
+  }, [dirty]);
+
   const publicUrl = `${window.location.origin}/f/${slug}`;
   const inputFields = useMemo(() => fields.filter((f) => isInputField(f.field_type)), [fields]);
 
@@ -223,6 +236,10 @@ const AdminFormEditor = () => {
 
   const save = async (nextStatus?: "draft" | "published") => {
     if (!id) return;
+    if (nextStatus === "published") {
+      if (!title.trim()) { toast.error("Add a form title before publishing."); return; }
+      if (!fields.some((f) => isInputField(f.field_type))) { toast.error("Add at least one question before publishing."); return; }
+    }
     setSaving(true);
     try {
       const normalized = fields.map((f, i) => ({
@@ -244,6 +261,7 @@ const AdminFormEditor = () => {
       const { error } = await supabase.from("forms" as never).update(payload as never).eq("id", id);
       if (error) throw error;
       if (nextStatus) setStatus(nextStatus);
+      if (nextStatus === "published") setTab("share");
       setDirty(false);
       qc.invalidateQueries({ queryKey: ["admin-forms"] });
       qc.invalidateQueries({ queryKey: ["admin-form", id] });
@@ -283,8 +301,8 @@ const AdminFormEditor = () => {
     <div className="text-white">
       {/* header */}
       <div className="flex items-center gap-3 mb-5 flex-wrap">
-        <Button size="icon" variant="ghost" onClick={() => navigate("/admin/operations/forms")} className="text-white/70 hover:text-white hover:bg-white/10"><ArrowLeft className="w-5 h-5" /></Button>
-        <Input value={title} onChange={(e) => { setTitle(e.target.value); touch(); }} className="max-w-sm bg-white/5 border-white/15 text-white text-lg font-semibold" placeholder="Form title" />
+        <Button size="icon" variant="ghost" onClick={() => { if (dirty && !window.confirm("You have unsaved changes. Leave without saving?")) return; navigate("/admin/operations/forms"); }} className="text-white/70 hover:text-white hover:bg-white/10"><ArrowLeft className="w-5 h-5" /></Button>
+        <Input value={title} onChange={(e) => { const v = e.target.value; setTitle(v); if (!slugEdited && status === "draft") setSlug(slugify(v)); touch(); }} className="max-w-sm bg-white/5 border-white/15 text-white text-lg font-semibold" placeholder="Form title" />
         {status === "published" ? <Badge className="bg-green-500/15 text-green-400 border-green-500/30">Published</Badge> : <Badge className="bg-white/10 text-white/50 border-white/15">Draft</Badge>}
         {dirty && <span className="text-amber-400 text-xs">Unsaved changes</span>}
         <div className="ml-auto flex items-center gap-2">
@@ -298,7 +316,7 @@ const AdminFormEditor = () => {
       {/* two-pane: controls | live preview */}
       <div className="grid lg:grid-cols-[1fr_minmax(340px,400px)] gap-6 items-start">
         <div>
-          <Tabs defaultValue="build">
+          <Tabs value={tab} onValueChange={setTab}>
             <TabsList className="bg-white/5 border border-white/10">
               <TabsTrigger value="build">Build</TabsTrigger>
               <TabsTrigger value="design">Design</TabsTrigger>
@@ -358,7 +376,7 @@ const AdminFormEditor = () => {
               </div>
               <div>
                 <Label className="text-white/70">Custom link ending (slug)</Label>
-                <Input value={slug} onChange={(e) => { setSlug(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, "")); touch(); }} className="mt-1 bg-white/5 border-white/15 text-white font-mono text-sm" />
+                <Input value={slug} onChange={(e) => { setSlug(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, "")); setSlugEdited(true); touch(); }} className="mt-1 bg-white/5 border-white/15 text-white font-mono text-sm" />
                 <p className="text-xs text-white/40 mt-1">Changing this changes the public link. Save after editing.</p>
               </div>
               <div>
@@ -431,7 +449,7 @@ const AdminFormEditor = () => {
       <Dialog open={!!viewResp} onOpenChange={(o) => !o && setViewResp(null)}>
         <DialogContent className="max-w-lg max-h-[90vh]">
           <DialogHeader><DialogTitle>Response</DialogTitle></DialogHeader>
-          <ScrollArea className="max-h-[70vh] pr-4">
+          <div className="max-h-[70vh] overflow-y-auto pr-1 -mr-1">
             <div className="space-y-3">
               <p className="text-xs text-muted-foreground">{viewResp && new Date(viewResp.submitted_at).toLocaleString()}</p>
               {viewResp && inputFields.map((f) => {
@@ -446,7 +464,7 @@ const AdminFormEditor = () => {
                 );
               })}
             </div>
-          </ScrollArea>
+          </div>
         </DialogContent>
       </Dialog>
 
