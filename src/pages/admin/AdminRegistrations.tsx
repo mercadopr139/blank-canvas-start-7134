@@ -1100,6 +1100,16 @@ const RegistrationDetail = ({ registration: reg, onApprovalChange }: { registrat
           urls[field.key] = data.signedUrl;
         }
       }
+
+      // New dynamic waivers stored in waivers_data (keyed by field_key).
+      const wd = (reg as any).waivers_data || {};
+      for (const wkey of Object.keys(wd)) {
+        const path = wd[wkey]?.signaturePath;
+        if (!path) continue;
+        const filePath = path.includes('registration-signatures/') ? path.split('registration-signatures/').pop() : path;
+        const { data: sig } = await supabase.storage.from('registration-signatures').createSignedUrl(filePath, 3600);
+        if (sig?.signedUrl) urls[`waiver_${wkey}`] = sig.signedUrl;
+      }
       
       setSignedUrls(urls);
       setLoadingUrls(false);
@@ -1227,6 +1237,12 @@ const RegistrationDetail = ({ registration: reg, onApprovalChange }: { registrat
           <div className="flex items-center gap-2 text-muted-foreground py-2">
             <Loader2 className="w-4 h-4 animate-spin" /> Loading signatures...
           </div>
+        ) : (reg as any).waivers_data && Object.keys((reg as any).waivers_data).length > 0 ? (
+          <>
+            {Object.entries((reg as any).waivers_data).map(([wkey, w]: [string, any]) => (
+              <SignatureRow key={wkey} label={w?.title || wkey} name={w?.name || ""} url={signedUrls[`waiver_${wkey}`]} completed={!!(w?.name || w?.signaturePath)} />
+            ))}
+          </>
         ) : (
           <>
             <SignatureRow label="Medical Consent" name={reg.medical_consent_name} url={signedUrls.medical_consent_signature_url} completed={!!reg.medical_consent_name} />

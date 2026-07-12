@@ -48,16 +48,29 @@
 NLA's focus is on providing a nurturing, caring, and encouraging environment where youth can explore God, at their own pace, if they choose to do so. By signing below, I understand NLA's Spiritual Development Policy.`,
  
    counseling_services: `As part of our commitment to supporting the emotional, social, and mental well-being of our participants, our program offers on-site counseling services. These may include both informal counseling (such as supportive conversations, wellness check-ins, and guidance provided by trained staff) and formal counseling (scheduled sessions with a qualified licensed counselor or mental health professional).
- 
+
  By registering your child in our program, you acknowledge and consent to the following:
- 
+
 - You understand that informal counseling or supportive conversations may be provided by program staff as part of ongoing youth development and mentoring.
- 
+
 - You understand that formal counseling services may be offered on-site by a licensed professional, and that these services will be coordinated with parents/guardians prior to initiation of regular sessions.
- 
+
 - You give permission for your child to participate in informal or formal counseling support while enrolled in the program. You may withdraw or modify this permission at any time by contacting the program director in writing.
- 
+
 - You understand that any information shared in a counseling setting is confidential, except in situations where disclosure is legally required (such as imminent harm to self or others, or suspected child abuse/neglect).
- 
+
  Please sign below to acknowledge that you have read and understand this policy, and grant permission for your child to access on-site counseling support as described above.`,
  };
+
+// Single source for the default waivers — used to (a) seed the editable
+// waiver rows into registration_form_fields the first time the Registration
+// Editor is opened, and (b) render the live form if no waiver rows exist yet.
+// `field_key` doubles as the key in youth_registrations.waivers_data.
+export const DEFAULT_WAIVERS: { field_key: string; title: string; body: string }[] = [
+  { field_key: "medical_consent", title: "Signature Required:", body: WAIVER_TEXTS.medical_consent },
+  { field_key: "liability_waiver", title: "Release of Liability & Waiver Form", body: WAIVER_TEXTS.liability_waiver },
+  { field_key: "transportation_excursions", title: "Waiver and Permission - Transportation and Excursions", body: WAIVER_TEXTS.transportation_excursions },
+  { field_key: "media_consent", title: "Media Consent, Release & Waiver", body: WAIVER_TEXTS.media_consent },
+  { field_key: "spiritual_development", title: "Spiritual Development Policy", body: WAIVER_TEXTS.spiritual_development },
+  { field_key: "counseling_services", title: "Counseling Services Notice & Consent", body: WAIVER_TEXTS.counseling_services },
+];

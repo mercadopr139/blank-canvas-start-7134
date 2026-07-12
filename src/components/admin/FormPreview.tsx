@@ -179,6 +179,14 @@ const FormPreview = ({ fields }: { fields: FormField[] }) => {
             </div>
           </div>
         );
+      case "waiver":
+        return (
+          <div key={field.id} className="border-t pt-4">
+            <h3 className="text-lg font-semibold">{field.label}</h3>
+            <div className="text-sm text-muted-foreground whitespace-pre-wrap max-h-40 overflow-auto border rounded p-2 mt-2">{field.default_value}</div>
+            <p className="text-xs text-muted-foreground mt-2">☑ Acknowledgement + typed name + drawn signature required</p>
+          </div>
+        );
       default:
         return (
           <div key={field.id}>

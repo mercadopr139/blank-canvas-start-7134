@@ -15,7 +15,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   GripVertical, Plus, Trash2, Eye, Save, Pencil,
   Type, AlignLeft, Hash, CalendarDays, ChevronDown, CheckSquare, Phone, Mail,
-  MapPin, Upload, Heading, FileText, ToggleLeft, List
+  MapPin, Upload, Heading, FileText, ToggleLeft, List, FileSignature
 } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -28,6 +28,7 @@ import {
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import FormPreview from "@/components/admin/FormPreview";
+import { DEFAULT_WAIVERS } from "@/components/registration/waiverTexts";
 
 const FIELD_TYPES = [
   { value: "short_text", label: "Short Text", icon: Type },
@@ -44,6 +45,7 @@ const FIELD_TYPES = [
   { value: "file_upload", label: "File Upload", icon: Upload },
   { value: "section_header", label: "Section Header", icon: Heading },
   { value: "paragraph", label: "Paragraph / Instructions", icon: FileText },
+  { value: "waiver", label: "Waiver / Signature", icon: FileSignature },
 ] as const;
 
 type FormField = {
@@ -203,8 +205,12 @@ const FieldEditorDialog = ({
             </div>
 
             <div>
-              <Label>Default Value</Label>
-              <Input value={draft.default_value || ""} onChange={e => setDraft({ ...draft, default_value: e.target.value || null })} className="mt-1" />
+              <Label>{draft.field_type === "waiver" ? "Waiver Text" : "Default Value"}</Label>
+              {draft.field_type === "waiver" ? (
+                <Textarea value={draft.default_value || ""} onChange={e => setDraft({ ...draft, default_value: e.target.value || null })} className="mt-1 text-sm" rows={12} placeholder="The full legal text parents read and sign below." />
+              ) : (
+                <Input value={draft.default_value || ""} onChange={e => setDraft({ ...draft, default_value: e.target.value || null })} className="mt-1" />
+              )}
             </div>
 
             <div className="flex items-center justify-between">
@@ -271,6 +277,23 @@ const AdminFormBuilder = () => {
       setHasChanges(false);
     }
   }, [dbFields]);
+
+  // First time the editor is opened, seed the 6 current waivers as editable
+  // rows (ordered after the questions) so they show up here and can be edited.
+  // Idempotent: the has-waivers guard + unique field_key prevent duplicates.
+  useEffect(() => {
+    if (!dbFields || dbFields.some((f) => f.field_type === "waiver")) return;
+    const maxSort = dbFields.reduce((m, f) => Math.max(m, f.sort_order), 0);
+    const rows = DEFAULT_WAIVERS.map((w, i) => ({
+      field_key: w.field_key, field_type: "waiver", label: w.title,
+      help_text: null, placeholder: null, required: true, options: null,
+      sort_order: maxSort + (i + 1) * 10, is_active: true, is_core: false,
+      db_column: null, default_value: w.body, section: "Waivers",
+    }));
+    supabase.from("registration_form_fields").insert(rows).then(({ error }) => {
+      if (!error) queryClient.invalidateQueries({ queryKey: ["form-fields"] });
+    });
+  }, [dbFields, queryClient]);
 
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;

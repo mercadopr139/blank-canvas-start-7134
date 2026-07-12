@@ -16,7 +16,7 @@ import Footer from "@/components/layout/Footer";
 import SummerBreakBanner from "@/components/sections/SummerBreakBanner";
 import WaiverSection from "@/components/registration/WaiverSection";
 import { getProgramYearForRegistration } from "@/lib/programYear";
-import { WAIVER_TEXTS } from "@/components/registration/waiverTexts";
+import { DEFAULT_WAIVERS } from "@/components/registration/waiverTexts";
 import ChildPrimaryAddressField from "@/components/registration/ChildPrimaryAddressField";
 import nlaLogo from "@/assets/nla-logo.png";
 import { digitsOnly, formatPhoneDisplay, toE164, isValidPhone } from "@/lib/validators";
@@ -38,23 +38,9 @@ type FormFieldDef = {
   section: string | null;
 };
 
-interface Signatures {
-  medical_consent: Blob | null;
-  liability_waiver: Blob | null;
-  transportation_excursions: Blob | null;
-  media_consent: Blob | null;
-  spiritual_development: Blob | null;
-  counseling_services: Blob | null;
-}
-
-interface Acknowledgements {
-  medical_consent: boolean;
-  liability_waiver: boolean;
-  transportation_excursions: boolean;
-  media_consent: boolean;
-  spiritual_development: boolean;
-  counseling_services: boolean;
-}
+// Waivers are dynamic (admin-editable). Each waiver's drawn signature,
+// acknowledgement checkbox, and typed name are held in Records keyed by the
+// waiver's field_key.
 
 const parseOptions = (opts: any): string[] => {
   if (!opts) return [];
@@ -71,14 +57,9 @@ const Register = () => {
   const [headshotPreview, setHeadshotPreview] = useState<string | null>(null);
   const [formValues, setFormValues] = useState<Record<string, string>>({});
   const [honeypot, setHoneypot] = useState(""); // Spam protection
-  const [signatures, setSignatures] = useState<Signatures>({
-    medical_consent: null, liability_waiver: null, transportation_excursions: null,
-    media_consent: null, spiritual_development: null, counseling_services: null,
-  });
-  const [acknowledgements, setAcknowledgements] = useState<Acknowledgements>({
-    medical_consent: false, liability_waiver: false, transportation_excursions: false,
-    media_consent: false, spiritual_development: false, counseling_services: false,
-  });
+  const [waiverSigs, setWaiverSigs] = useState<Record<string, Blob | null>>({});
+  const [waiverAcks, setWaiverAcks] = useState<Record<string, boolean>>({});
+  const [waiverNames, setWaiverNames] = useState<Record<string, string>>({});
 
   // Fetch form fields from DB
   const { data: formFields, isLoading: fieldsLoading } = useQuery({
@@ -98,12 +79,14 @@ const Register = () => {
     setFormValues(prev => ({ ...prev, [key]: value }));
   };
 
-  const handleSignatureChange = (field: keyof Signatures, blob: Blob | null) => {
-    setSignatures(prev => ({ ...prev, [field]: blob }));
-  };
-  const handleAcknowledgementChange = (field: keyof Acknowledgements, value: boolean) => {
-    setAcknowledgements(prev => ({ ...prev, [field]: value }));
-  };
+  // Waivers come from the DB (field_type 'waiver', ordered after the questions)
+  // once they've been set up in the Registration Editor; otherwise fall back to
+  // the bundled defaults so the live form always shows the waivers.
+  const questionFields = (formFields || []).filter((f) => f.field_type !== "waiver");
+  const dbWaivers = (formFields || []).filter((f) => f.field_type === "waiver");
+  const waivers = dbWaivers.length > 0
+    ? dbWaivers.map((f) => ({ field_key: f.field_key, title: f.label, body: f.default_value || "" }))
+    : DEFAULT_WAIVERS;
 
   const uploadSignature = async (blob: Blob, prefix: string): Promise<string> => {
     const fileName = `${prefix}_${Date.now()}_${Math.random().toString(36).substring(7)}.png`;
@@ -189,7 +172,7 @@ const Register = () => {
         if (!childHeadshot) return `Please upload a picture of your participant.`;
         continue;
       }
-      if (["section_header", "paragraph"].includes(field.field_type)) continue;
+      if (["section_header", "paragraph", "waiver"].includes(field.field_type)) continue;
 
       const val = formValues[field.field_key];
       if (!val || !val.trim()) {
@@ -207,24 +190,13 @@ const Register = () => {
     const email = formValues["parent_email"];
     if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return "Please enter a valid email address.";
 
-    // Waiver validations
-    const requiredSignatures: (keyof Signatures)[] = [
-      "medical_consent", "liability_waiver", "transportation_excursions",
-      "media_consent", "spiritual_development", "counseling_services"
-    ];
-    for (const sig of requiredSignatures) {
-      if (!signatures[sig]) return `Please sign all waivers. Missing: ${sig.replace(/_/g, " ")}`;
+    // Waiver validations (dynamic — one per active waiver)
+    for (const w of waivers) {
+      if (!waiverAcks[w.field_key]) return "Please acknowledge all waivers by checking the boxes.";
+      if (!waiverSigs[w.field_key]) return `Please sign all waivers. Missing: ${w.title}`;
+      if (!waiverNames[w.field_key]?.trim()) return `Please type your name for all waiver signatures.`;
     }
-    for (const ack of Object.keys(acknowledgements) as (keyof Acknowledgements)[]) {
-      if (!acknowledgements[ack]) return "Please acknowledge all waivers by checking the boxes.";
-    }
-
-    // Waiver names
-    const waiverNames = ["medical_consent_name", "liability_waiver_name", "transportation_excursions_waiver_name",
-      "media_consent_name", "spiritual_development_policy_name", "counseling_services_name", "final_signature_name"];
-    for (const wn of waiverNames) {
-      if (!formValues[wn]?.trim()) return `Please fill in your name for all waiver signatures.`;
-    }
+    if (!formValues["final_signature_name"]?.trim()) return "Please type your name in the final confirmation box.";
 
     return null;
   };
@@ -247,14 +219,12 @@ const Register = () => {
 
     setIsSubmitting(true);
     try {
-      const [medicalSigUrl, liabilitySigUrl, transportSigUrl, mediaSigUrl, spiritualSigUrl, counselingSigUrl] = await Promise.all([
-        uploadSignature(signatures.medical_consent!, "medical"),
-        uploadSignature(signatures.liability_waiver!, "liability"),
-        uploadSignature(signatures.transportation_excursions!, "transport"),
-        uploadSignature(signatures.media_consent!, "media"),
-        uploadSignature(signatures.spiritual_development!, "spiritual"),
-        uploadSignature(signatures.counseling_services!, "counseling"),
-      ]);
+      // Upload every waiver's signature and build the flexible waivers_data store.
+      const waiverEntries = await Promise.all(waivers.map(async (w) => {
+        const path = await uploadSignature(waiverSigs[w.field_key]!, w.field_key);
+        return [w.field_key, { title: w.title, name: (waiverNames[w.field_key] || "").trim(), signaturePath: path }] as const;
+      }));
+      const waiversData = Object.fromEntries(waiverEntries);
       const headshotUrl = await uploadHeadshot(childHeadshot!);
 
       // Build core fields payload.
@@ -297,7 +267,7 @@ const Register = () => {
       // Collect custom fields (non-core)
       const customData: Record<string, string> = {};
       for (const field of (formFields || [])) {
-        if (!field.is_core && !["section_header", "paragraph"].includes(field.field_type)) {
+        if (!field.is_core && !["section_header", "paragraph", "waiver"].includes(field.field_type)) {
           const val = formValues[field.field_key];
           if (val) customData[field.field_key] = val;
         }
@@ -332,18 +302,7 @@ const Register = () => {
         allergies: (formValues["allergies"] || "").trim() || null,
         asthma_inhaler_info: (formValues["asthma_inhaler_info"] || "").trim() || null,
         important_child_notes: (formValues["important_child_notes"] || "").trim() || null,
-        medical_consent_name: (formValues["medical_consent_name"] || "").trim(),
-        medical_consent_signature_url: medicalSigUrl,
-        liability_waiver_name: (formValues["liability_waiver_name"] || "").trim(),
-        liability_waiver_signature_url: liabilitySigUrl,
-        transportation_excursions_waiver_name: (formValues["transportation_excursions_waiver_name"] || "").trim(),
-        transportation_excursions_signature_url: transportSigUrl,
-        media_consent_name: (formValues["media_consent_name"] || "").trim(),
-        media_consent_signature_url: mediaSigUrl,
-        spiritual_development_policy_name: (formValues["spiritual_development_policy_name"] || "").trim(),
-        spiritual_development_policy_signature_url: spiritualSigUrl,
-        counseling_services_name: (formValues["counseling_services_name"] || "").trim(),
-        counseling_services_signature_url: counselingSigUrl,
+        waivers_data: waiversData,
         child_headshot_url: headshotUrl,
         final_signature_name: (formValues["final_signature_name"] || "").trim(),
         custom_fields_data: Object.keys(customData).length > 0 ? customData : null,
@@ -719,80 +678,22 @@ const Register = () => {
                 </div>
 
                 {/* Dynamic fields from DB */}
-                {(formFields || []).map(renderDynamicField)}
+                {questionFields.map(renderDynamicField)}
 
-                {/* === WAIVERS (always rendered, not editable via form builder) === */}
-                <div className="border-t pt-6">
-                  <WaiverSection
-                    title="Signature Required:"
-                    text={WAIVER_TEXTS.medical_consent}
-                    nameValue={formValues["medical_consent_name"] || ""}
-                    onNameChange={v => handleInputChange("medical_consent_name", v)}
-                    onSignatureChange={blob => handleSignatureChange("medical_consent", blob)}
-                    acknowledged={acknowledgements.medical_consent}
-                    onAcknowledgeChange={v => handleAcknowledgementChange("medical_consent", v)}
-                  />
-                </div>
-
-                <div className="border-t pt-6">
-                  <WaiverSection
-                    title="Release of Liability & Waiver Form"
-                    text={WAIVER_TEXTS.liability_waiver}
-                    nameValue={formValues["liability_waiver_name"] || ""}
-                    onNameChange={v => handleInputChange("liability_waiver_name", v)}
-                    onSignatureChange={blob => handleSignatureChange("liability_waiver", blob)}
-                    acknowledged={acknowledgements.liability_waiver}
-                    onAcknowledgeChange={v => handleAcknowledgementChange("liability_waiver", v)}
-                  />
-                </div>
-
-                <div className="border-t pt-6">
-                  <WaiverSection
-                    title="Waiver and Permission - Transportation and Excursions"
-                    text={WAIVER_TEXTS.transportation_excursions}
-                    nameValue={formValues["transportation_excursions_waiver_name"] || ""}
-                    onNameChange={v => handleInputChange("transportation_excursions_waiver_name", v)}
-                    onSignatureChange={blob => handleSignatureChange("transportation_excursions", blob)}
-                    acknowledged={acknowledgements.transportation_excursions}
-                    onAcknowledgeChange={v => handleAcknowledgementChange("transportation_excursions", v)}
-                  />
-                </div>
-
-                <div className="border-t pt-6">
-                  <WaiverSection
-                    title="Media Consent, Release & Waiver"
-                    text={WAIVER_TEXTS.media_consent}
-                    nameValue={formValues["media_consent_name"] || ""}
-                    onNameChange={v => handleInputChange("media_consent_name", v)}
-                    onSignatureChange={blob => handleSignatureChange("media_consent", blob)}
-                    acknowledged={acknowledgements.media_consent}
-                    onAcknowledgeChange={v => handleAcknowledgementChange("media_consent", v)}
-                  />
-                </div>
-
-                <div className="border-t pt-6">
-                  <WaiverSection
-                    title="Spiritual Development Policy"
-                    text={WAIVER_TEXTS.spiritual_development}
-                    nameValue={formValues["spiritual_development_policy_name"] || ""}
-                    onNameChange={v => handleInputChange("spiritual_development_policy_name", v)}
-                    onSignatureChange={blob => handleSignatureChange("spiritual_development", blob)}
-                    acknowledged={acknowledgements.spiritual_development}
-                    onAcknowledgeChange={v => handleAcknowledgementChange("spiritual_development", v)}
-                  />
-                </div>
-
-                <div className="border-t pt-6">
-                  <WaiverSection
-                    title="Counseling Services Notice & Consent"
-                    text={WAIVER_TEXTS.counseling_services}
-                    nameValue={formValues["counseling_services_name"] || ""}
-                    onNameChange={v => handleInputChange("counseling_services_name", v)}
-                    onSignatureChange={blob => handleSignatureChange("counseling_services", blob)}
-                    acknowledged={acknowledgements.counseling_services}
-                    onAcknowledgeChange={v => handleAcknowledgementChange("counseling_services", v)}
-                  />
-                </div>
+                {/* === WAIVERS (admin-editable via the Registration Editor; falls back to bundled defaults) === */}
+                {waivers.map((w) => (
+                  <div key={w.field_key} className="border-t pt-6">
+                    <WaiverSection
+                      title={w.title}
+                      text={w.body}
+                      nameValue={waiverNames[w.field_key] || ""}
+                      onNameChange={(v) => setWaiverNames((prev) => ({ ...prev, [w.field_key]: v }))}
+                      onSignatureChange={(blob) => setWaiverSigs((prev) => ({ ...prev, [w.field_key]: blob }))}
+                      acknowledged={waiverAcks[w.field_key] || false}
+                      onAcknowledgeChange={(v) => setWaiverAcks((prev) => ({ ...prev, [w.field_key]: v }))}
+                    />
+                  </div>
+                ))}
 
                 {/* Final typed name */}
                 <div className="border-t pt-6">
