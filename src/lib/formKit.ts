@@ -5,7 +5,7 @@
 import {
   Type, AlignLeft, Hash, CalendarDays, ChevronDown, ToggleLeft,
   CheckSquare, Phone, Mail, MapPin, PenLine, Image as ImageIcon, ListChecks, Star,
-  Heading, FileText, type LucideIcon,
+  DollarSign, Clock, CircleDot, Cake, Heading, FileText, type LucideIcon,
 } from "lucide-react";
 
 export type FieldCondition = {
@@ -54,8 +54,12 @@ export const FIELD_TYPES: { value: string; label: string; icon: LucideIcon }[] =
   { value: "short_text", label: "Short Text", icon: Type },
   { value: "long_text", label: "Long Text", icon: AlignLeft },
   { value: "number", label: "Number", icon: Hash },
+  { value: "currency", label: "Amount ($)", icon: DollarSign },
   { value: "date", label: "Date", icon: CalendarDays },
+  { value: "dob", label: "Date of Birth", icon: Cake },
+  { value: "time", label: "Time", icon: Clock },
   { value: "dropdown", label: "Dropdown", icon: ChevronDown },
+  { value: "radio", label: "Single Choice (pick one)", icon: CircleDot },
   { value: "multi_select", label: "Multiple Choice (pick many)", icon: ListChecks },
   { value: "yes_no", label: "Yes / No", icon: ToggleLeft },
   { value: "rating", label: "Rating (stars)", icon: Star },
@@ -106,7 +110,7 @@ export const makeField = (type: string, order: number): FormFieldDef => ({
   help_text: null,
   placeholder: null,
   required: false,
-  options: type === "dropdown" || type === "multi_select" ? ["Option 1", "Option 2"] : null,
+  options: type === "dropdown" || type === "multi_select" || type === "radio" ? ["Option 1", "Option 2"] : null,
   sort_order: order,
   condition: null,
 });
@@ -125,6 +129,18 @@ export function conditionMet(cond: FieldCondition | null | undefined, values: Re
     default: return arr ? arr.includes(val) : String(sv ?? "") === val;
   }
 }
+
+// Age in whole years from a yyyy-MM-dd date of birth (null if invalid/future).
+export const ageFromDob = (iso: string | null | undefined): number | null => {
+  if (!iso) return null;
+  const d = new Date(String(iso) + "T00:00:00");
+  if (isNaN(d.getTime())) return null;
+  const t = new Date();
+  let a = t.getFullYear() - d.getFullYear();
+  const m = t.getMonth() - d.getMonth();
+  if (m < 0 || (m === 0 && t.getDate() < d.getDate())) a--;
+  return a >= 0 && a < 130 ? a : null;
+};
 
 export const blankForm = (): FormRecord => ({
   id: rid(),

@@ -31,7 +31,7 @@ import { CSS } from "@dnd-kit/utilities";
 import { QRCodeCanvas } from "qrcode.react";
 import { FormRenderer } from "@/components/forms/FormRenderer";
 import {
-  FIELD_TYPES, fieldTypeIcon, fieldTypeLabel, isInputField, makeField, parseOptions, slugify,
+  FIELD_TYPES, fieldTypeIcon, fieldTypeLabel, isInputField, makeField, parseOptions, slugify, ageFromDob,
   type FormFieldDef, type FormRecord,
 } from "@/lib/formKit";
 
@@ -62,7 +62,7 @@ const FieldEditor = ({ field, allFields, onClose, onSave }: { field: FormFieldDe
   const [draft, setDraft] = useState<FormFieldDef | null>(null);
   useEffect(() => { setDraft(field ? { ...field, options: field.options ? [...parseOptions(field.options)] : null } : null); }, [field]);
   if (!draft) return null;
-  const hasOptions = draft.field_type === "dropdown" || draft.field_type === "multi_select";
+  const hasOptions = draft.field_type === "dropdown" || draft.field_type === "multi_select" || draft.field_type === "radio";
   const opts = parseOptions(draft.options);
   const setOpts = (arr: string[]) => setDraft({ ...draft, options: arr });
   const layout = draft.field_type === "paragraph" || draft.field_type === "section_header";
@@ -81,7 +81,7 @@ const FieldEditor = ({ field, allFields, onClose, onSave }: { field: FormFieldDe
             </div>
             <div>
               <Label>Field Type</Label>
-              <Select value={draft.field_type} onValueChange={(v) => setDraft({ ...draft, field_type: v, options: (v === "dropdown" || v === "multi_select") ? (opts.length ? opts : ["Option 1", "Option 2"]) : null })}>
+              <Select value={draft.field_type} onValueChange={(v) => setDraft({ ...draft, field_type: v, options: (v === "dropdown" || v === "multi_select" || v === "radio") ? (opts.length ? opts : ["Option 1", "Option 2"]) : null })}>
                 <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
                 <SelectContent>{FIELD_TYPES.map((ft) => <SelectItem key={ft.value} value={ft.value}>{ft.label}</SelectItem>)}</SelectContent>
               </Select>
@@ -531,7 +531,7 @@ const AdminFormEditor = () => {
                     ) : editData ? (
                       f.field_type === "long_text" ? (
                         <Textarea value={String(v ?? "")} onChange={(e) => setV(e.target.value)} className="mt-1" rows={3} />
-                      ) : f.field_type === "dropdown" ? (
+                      ) : (f.field_type === "dropdown" || f.field_type === "radio") ? (
                         <Select value={String(v ?? "")} onValueChange={setV}><SelectTrigger className="mt-1"><SelectValue placeholder="Select…" /></SelectTrigger><SelectContent>{parseOptions(f.options).map((o) => <SelectItem key={o} value={o}>{o}</SelectItem>)}</SelectContent></Select>
                       ) : f.field_type === "yes_no" ? (
                         <Select value={String(v ?? "")} onValueChange={setV}><SelectTrigger className="mt-1"><SelectValue placeholder="Select…" /></SelectTrigger><SelectContent><SelectItem value="Yes">Yes</SelectItem><SelectItem value="No">No</SelectItem></SelectContent></Select>
@@ -550,10 +550,10 @@ const AdminFormEditor = () => {
                           ))}
                         </div>
                       ) : (
-                        <Input type={f.field_type === "number" ? "number" : f.field_type === "date" ? "date" : f.field_type === "email" ? "email" : f.field_type === "phone" ? "tel" : "text"} value={String(v ?? "")} onChange={(e) => setV(e.target.value)} className="mt-1" />
+                        <Input type={f.field_type === "number" ? "number" : (f.field_type === "date" || f.field_type === "dob") ? "date" : f.field_type === "time" ? "time" : f.field_type === "email" ? "email" : f.field_type === "phone" ? "tel" : "text"} value={String(v ?? "")} onChange={(e) => setV(e.target.value)} className="mt-1" />
                       )
                     ) : (
-                      <div className="text-sm mt-0.5">{Array.isArray(v) ? (v.length ? v.join(", ") : "—") : f.field_type === "rating" ? (v ? `${v} / 5` : "—") : v === true ? "Yes" : v === false ? "No" : (v ? String(v) : "—")}</div>
+                      <div className="text-sm mt-0.5">{Array.isArray(v) ? (v.length ? v.join(", ") : "—") : f.field_type === "rating" ? (v ? `${v} / 5` : "—") : f.field_type === "dob" ? (v ? `${v}${ageFromDob(String(v)) !== null ? ` (age ${ageFromDob(String(v))})` : ""}` : "—") : v === true ? "Yes" : v === false ? "No" : (v ? String(v) : "—")}</div>
                     )}
                   </div>
                 );

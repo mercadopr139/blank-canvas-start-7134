@@ -9,7 +9,7 @@ import { CheckCircle2, Upload, Star } from "lucide-react";
 import SignatureCanvas from "@/components/registration/SignatureCanvas";
 import { supabase } from "@/integrations/supabase/client";
 import nlaLogo from "@/assets/nla-logo.png";
-import { type FormFieldDef, parseOptions, isInputField, conditionMet } from "@/lib/formKit";
+import { type FormFieldDef, parseOptions, isInputField, conditionMet, ageFromDob } from "@/lib/formKit";
 
 export type FormBranding = {
   accentColor?: string;
@@ -98,6 +98,21 @@ function AddressInput({ value, onChange, placeholder }: { value: string; onChang
   );
 }
 
+// Money field: keeps a numeric string, prefixes $, formats to 2 decimals on blur.
+function CurrencyInput({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+  const [text, setText] = useState(value || "");
+  useEffect(() => { setText(value || ""); }, [value]);
+  const clean = (s: string) => s.replace(/[^0-9.]/g, "").replace(/(\..*)\./g, "$1");
+  return (
+    <div className="relative mt-1.5">
+      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-neutral-500 pointer-events-none">$</span>
+      <Input value={text} inputMode="decimal" className="pl-7" placeholder="0.00"
+        onChange={(e) => { const c = clean(e.target.value); setText(c); onChange(c); }}
+        onBlur={() => { if (text.trim() === "") return; const n = parseFloat(text.replace(/,/g, "")); if (!isNaN(n)) { const f = n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 }); setText(f); onChange(f); } }} />
+    </div>
+  );
+}
+
 // Image/photo upload field — stores the file in the public youth-photos
 // bucket (same place the registration headshots live) and keeps the URL.
 function ImageFieldControl({ value, onChange, preview, dark }: { value?: string; onChange: (url: string) => void; preview?: boolean; dark: boolean }) {
@@ -160,6 +175,7 @@ export function FormRenderer({
   const sorted = [...fields].sort((a, c) => a.sort_order - c.sort_order);
   const setVal = (k: string, v: string | boolean | string[] | number) => setValues((p) => ({ ...p, [k]: v }));
   const visible = (f: FormFieldDef) => conditionMet(f.condition, values);
+  const todayLong = new Date().toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" });
 
   // theme tokens
   const page = dark ? "bg-neutral-950" : "bg-neutral-100";
@@ -187,6 +203,9 @@ export function FormRenderer({
       }
       if (f.field_type === "phone" && values[f.field_key] && String(values[f.field_key]).replace(/\D/g, "").length !== 10) {
         return `Enter a complete 10-digit phone number for: ${f.label}`;
+      }
+      if (f.field_type === "dob" && values[f.field_key] && String(values[f.field_key]) > new Date().toISOString().slice(0, 10)) {
+        return `Date of birth can’t be in the future: ${f.label}`;
       }
     }
     return null;
@@ -332,6 +351,47 @@ export function FormRenderer({
             <AddressInput value={(values[key] as string) || ""} onChange={(v) => setVal(key, v)} placeholder={f.placeholder || undefined} />
           </div>
         );
+      case "currency":
+        return (
+          <div key={f.id}>
+            <Label className={`font-medium ${labelC}`}>{f.label}{req(f.required)}</Label>{help}
+            <CurrencyInput value={(values[key] as string) || ""} onChange={(v) => setVal(key, v)} />
+          </div>
+        );
+      case "time":
+        return (
+          <div key={f.id}>
+            <Label className={`font-medium ${labelC}`}>{f.label}{req(f.required)}</Label>{help}
+            <Input type="time" className="mt-1.5" value={(values[key] as string) || ""} onChange={(e) => setVal(key, e.target.value)} />
+          </div>
+        );
+      case "radio": {
+        const ropts = parseOptions(f.options);
+        return (
+          <div key={f.id}>
+            <Label className={`font-medium ${labelC}`}>{f.label}{req(f.required)}</Label>{help}
+            <div className="mt-1.5 space-y-2">
+              {ropts.map((o) => (
+                <label key={o} className="flex items-center gap-2 cursor-pointer">
+                  <input type="radio" name={f.id} checked={values[key] === o} onChange={() => setVal(key, o)} style={{ accentColor: b.accentColor }} />
+                  <span className={`text-sm ${labelC}`}>{o}</span>
+                </label>
+              ))}
+            </div>
+          </div>
+        );
+      }
+      case "dob": {
+        const maxDay = new Date().toISOString().slice(0, 10);
+        const age = ageFromDob(values[key] as string);
+        return (
+          <div key={f.id}>
+            <Label className={`font-medium ${labelC}`}>{f.label}{req(f.required)}</Label>{help}
+            <Input type="date" max={maxDay} className="mt-1.5" value={(values[key] as string) || ""} onChange={(e) => setVal(key, e.target.value)} />
+            {age !== null && <p className={`text-xs mt-1 ${mutedC}`}>Age: {age}</p>}
+          </div>
+        );
+      }
       default: {
         const type = f.field_type === "number" ? "number" : f.field_type === "date" ? "date" : f.field_type === "email" ? "email" : "text";
         return (
@@ -367,6 +427,10 @@ export function FormRenderer({
           </div>
           <form onSubmit={handleSubmit} className="p-6 space-y-5">
             {error && <div className="rounded-lg bg-red-50 border border-red-200 text-red-700 text-sm px-4 py-3">{error}</div>}
+            <div>
+              <Label className={`font-medium ${labelC}`}>Today's Date</Label>
+              <Input value={todayLong} readOnly disabled className="mt-1.5" />
+            </div>
             {sorted.length === 0 && <p className={`text-center text-sm py-6 ${mutedC}`}>No fields yet — add some in the builder.</p>}
             {sorted.filter(visible).map(renderField)}
             {sorted.length > 0 && (
