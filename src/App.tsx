@@ -39,6 +39,9 @@ import AdminCSBGSubmissions from "./pages/admin/AdminCSBGSubmissions";
 import AdminRegistrationAnalytics from "./pages/admin/AdminRegistrationAnalytics";
 import AdminAttendance from "./pages/admin/AdminAttendance";
 import AdminFormBuilder from "./pages/admin/AdminFormBuilder";
+import AdminForms from "./pages/admin/AdminForms";
+import AdminFormEditor from "./pages/admin/AdminFormEditor";
+import PublicForm from "./pages/PublicForm";
 import AdminAttendanceReports from "./pages/admin/AdminAttendanceReports";
 import CheckIn from "./pages/CheckIn";
 import LilChampsCheckIn from "./pages/LilChampsCheckIn";
@@ -139,6 +142,7 @@ const App = () => (
             <Route path="/house-rules-test" element={<HouseRulesTest />} />
             <Route path="/house-rules" element={<HouseRules />} />
             <Route path="/register" element={<Register />} />
+            <Route path="/f/:slug" element={<PublicForm />} />
             <Route path="/supporters" element={<Supporters />} />
             <Route path="/check-in" element={<CheckIn />} />
             <Route path="/check-in/lil-champs-corner" element={<LilChampsCheckIn />} />
@@ -187,6 +191,8 @@ const App = () => (
               <Route path="attendance" element={<AdminAttendance />} />
               <Route path="attendance-reports" element={<AdminAttendanceReports />} />
               <Route path="form-builder" element={<AdminFormBuilder />} />
+              <Route path="forms" element={<AdminForms />} />
+              <Route path="forms/:id" element={<AdminFormEditor />} />
               <Route path="lil-champs-attendance" element={<AdminLilChampsAttendance />} />
               <Route path="callouts" element={<AdminCallOuts />} />
               <Route path="transportation/drivers" element={<TransportDrivers />} />

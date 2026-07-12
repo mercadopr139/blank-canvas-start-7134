@@ -46,6 +46,13 @@ export const OPERATIONS_TILES: PillarTile[] = [
     ],
   },
   {
+    title: "Forms & Waivers",
+    description: "Build standalone forms & collect responses",
+    icon: FileText,
+    href: "/admin/operations/forms",
+    permKey: "operations_forms",
+  },
+  {
     title: "Attendance",
     description: "Attendance tracking & reports",
     icon: CalendarCheck,
