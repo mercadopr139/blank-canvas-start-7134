@@ -162,7 +162,9 @@ const AdminFormEditor = () => {
   const [saving, setSaving] = useState(false);
   const [editingField, setEditingField] = useState<FormFieldDef | null>(null);
   const [addOpen, setAddOpen] = useState(false);
-  const [viewResp, setViewResp] = useState<{ data: Record<string, unknown>; submitted_at: string } | null>(null);
+  const [viewResp, setViewResp] = useState<{ id: string; data: Record<string, unknown>; submitted_at: string } | null>(null);
+  const [editData, setEditData] = useState<Record<string, unknown> | null>(null);
+  const [savingResp, setSavingResp] = useState(false);
   const [deleteRespId, setDeleteRespId] = useState<string | null>(null);
 
   const sensors = useSensors(
@@ -279,6 +281,25 @@ const AdminFormEditor = () => {
     setDeleteRespId(null);
     qc.invalidateQueries({ queryKey: ["form-responses", id] });
     toast.success("Response deleted");
+  };
+
+  const saveResponseEdit = async () => {
+    if (!viewResp || !editData) return;
+    setSavingResp(true);
+    try {
+      const newData = { ...editData, _editedAt: new Date().toISOString() };
+      const { data, error } = await supabase.from("form_responses" as never).update({ data: newData } as never).eq("id", viewResp.id).select();
+      if (error) throw error;
+      if (!data || (data as unknown[]).length === 0) throw new Error("Editing isn’t enabled yet — run the one-time database snippet, then try again.");
+      qc.invalidateQueries({ queryKey: ["form-responses", id] });
+      setViewResp({ ...viewResp, data: newData });
+      setEditData(null);
+      toast.success("Response updated");
+    } catch (e) {
+      toast.error((e as Error).message || "Update failed");
+    } finally {
+      setSavingResp(false);
+    }
   };
 
   const exportCsv = () => {
@@ -445,26 +466,55 @@ const AdminFormEditor = () => {
 
       <FieldEditor field={editingField} onClose={() => setEditingField(null)} onSave={saveField} />
 
-      {/* view response */}
-      <Dialog open={!!viewResp} onOpenChange={(o) => !o && setViewResp(null)}>
+      {/* view / edit response */}
+      <Dialog open={!!viewResp} onOpenChange={(o) => { if (!o) { setViewResp(null); setEditData(null); } }}>
         <DialogContent className="max-w-lg max-h-[90vh]">
-          <DialogHeader><DialogTitle>Response</DialogTitle></DialogHeader>
-          <div className="max-h-[70vh] overflow-y-auto pr-1 -mr-1">
+          <DialogHeader><DialogTitle>{editData ? "Edit Response" : "Response"}</DialogTitle></DialogHeader>
+          <div className="max-h-[65vh] overflow-y-auto px-1 pr-3">
             <div className="space-y-3">
-              <p className="text-xs text-muted-foreground">{viewResp && new Date(viewResp.submitted_at).toLocaleString()}</p>
+              <p className="text-xs text-muted-foreground">
+                Submitted {viewResp && new Date(viewResp.submitted_at).toLocaleString()}
+                {viewResp?.data?._editedAt ? ` · edited ${new Date(String(viewResp.data._editedAt)).toLocaleString()}` : ""}
+              </p>
               {viewResp && inputFields.map((f) => {
-                const v = viewResp.data?.[f.field_key];
+                const v = editData ? editData[f.field_key] : viewResp.data?.[f.field_key];
+                const setV = (nv: unknown) => setEditData((p) => ({ ...(p || {}), [f.field_key]: nv }));
+                const isMedia = f.field_type === "signature" || f.field_type === "image";
                 return (
                   <div key={f.id} className="border-b pb-2">
                     <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">{f.label}</div>
-                    {(f.field_type === "signature" || f.field_type === "image")
-                      ? (v ? <img src={String(v)} alt={f.field_type} className="mt-1 border rounded bg-white max-h-40 object-contain" /> : <span className="text-sm text-muted-foreground">—</span>)
-                      : <div className="text-sm mt-0.5">{v === true ? "Yes" : v === false ? "No" : (v ? String(v) : "—")}</div>}
+                    {isMedia ? (
+                      v ? <img src={String(v)} alt={f.field_type} className="mt-1 border rounded bg-white max-h-40 object-contain" /> : <span className="text-sm text-muted-foreground">—</span>
+                    ) : editData ? (
+                      f.field_type === "long_text" ? (
+                        <Textarea value={String(v ?? "")} onChange={(e) => setV(e.target.value)} className="mt-1" rows={3} />
+                      ) : f.field_type === "dropdown" ? (
+                        <Select value={String(v ?? "")} onValueChange={setV}><SelectTrigger className="mt-1"><SelectValue placeholder="Select…" /></SelectTrigger><SelectContent>{parseOptions(f.options).map((o) => <SelectItem key={o} value={o}>{o}</SelectItem>)}</SelectContent></Select>
+                      ) : f.field_type === "yes_no" ? (
+                        <Select value={String(v ?? "")} onValueChange={setV}><SelectTrigger className="mt-1"><SelectValue placeholder="Select…" /></SelectTrigger><SelectContent><SelectItem value="Yes">Yes</SelectItem><SelectItem value="No">No</SelectItem></SelectContent></Select>
+                      ) : f.field_type === "checkbox" ? (
+                        <div className="mt-1"><Switch checked={v === true} onCheckedChange={(c) => setV(c === true)} /></div>
+                      ) : (
+                        <Input type={f.field_type === "number" ? "number" : f.field_type === "date" ? "date" : f.field_type === "email" ? "email" : f.field_type === "phone" ? "tel" : "text"} value={String(v ?? "")} onChange={(e) => setV(e.target.value)} className="mt-1" />
+                      )
+                    ) : (
+                      <div className="text-sm mt-0.5">{v === true ? "Yes" : v === false ? "No" : (v ? String(v) : "—")}</div>
+                    )}
                   </div>
                 );
               })}
             </div>
           </div>
+          <DialogFooter>
+            {editData ? (
+              <>
+                <Button variant="outline" onClick={() => setEditData(null)}>Cancel</Button>
+                <Button onClick={saveResponseEdit} disabled={savingResp}>{savingResp ? "Saving…" : "Save changes"}</Button>
+              </>
+            ) : (
+              <Button variant="outline" onClick={() => setEditData({ ...(viewResp?.data || {}) })} className="gap-1.5"><Pencil className="w-4 h-4" /> Edit response</Button>
+            )}
+          </DialogFooter>
         </DialogContent>
       </Dialog>
 
