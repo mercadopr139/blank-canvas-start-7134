@@ -397,7 +397,7 @@ const AdminFormEditor = () => {
               ) : (
                 <div className="space-y-2">
                   {responses.map((r) => {
-                    const firstAnswers = inputFields.filter((f) => f.field_type !== "signature").slice(0, 2).map((f) => r.data?.[f.field_key]).filter((x) => x !== undefined && x !== null && x !== "");
+                    const firstAnswers = inputFields.filter((f) => f.field_type !== "signature" && f.field_type !== "image").slice(0, 2).map((f) => r.data?.[f.field_key]).filter((x) => x !== undefined && x !== null && x !== "");
                     return (
                       <div key={r.id} className="flex items-center gap-3 bg-white/5 border border-white/10 rounded-lg px-4 py-3">
                         <div className="flex-1 min-w-0">
@@ -457,8 +457,8 @@ const AdminFormEditor = () => {
                 return (
                   <div key={f.id} className="border-b pb-2">
                     <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">{f.label}</div>
-                    {f.field_type === "signature"
-                      ? (v ? <img src={String(v)} alt="signature" className="mt-1 border rounded bg-white max-h-28" /> : <span className="text-sm text-muted-foreground">—</span>)
+                    {(f.field_type === "signature" || f.field_type === "image")
+                      ? (v ? <img src={String(v)} alt={f.field_type} className="mt-1 border rounded bg-white max-h-40 object-contain" /> : <span className="text-sm text-muted-foreground">—</span>)
                       : <div className="text-sm mt-0.5">{v === true ? "Yes" : v === false ? "No" : (v ? String(v) : "—")}</div>}
                   </div>
                 );

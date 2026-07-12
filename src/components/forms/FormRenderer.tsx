@@ -5,8 +5,9 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { CheckCircle2 } from "lucide-react";
+import { CheckCircle2, Upload } from "lucide-react";
 import SignatureCanvas from "@/components/registration/SignatureCanvas";
+import { supabase } from "@/integrations/supabase/client";
 import nlaLogo from "@/assets/nla-logo.png";
 import { type FormFieldDef, parseOptions, isInputField } from "@/lib/formKit";
 
@@ -40,6 +41,43 @@ const blobToDataUrl = (blob: Blob): Promise<string> =>
     r.onloadend = () => resolve(r.result as string);
     r.readAsDataURL(blob);
   });
+
+// Image/photo upload field — stores the file in the public youth-photos
+// bucket (same place the registration headshots live) and keeps the URL.
+function ImageFieldControl({ value, onChange, preview, dark }: { value?: string; onChange: (url: string) => void; preview?: boolean; dark: boolean }) {
+  const [uploading, setUploading] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+  const onFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setErr(null);
+    if (preview) { onChange(URL.createObjectURL(file)); return; }
+    setUploading(true);
+    try {
+      const ext = (file.name.split(".").pop() || "jpg").toLowerCase();
+      const path = `form-uploads/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
+      const { error } = await supabase.storage.from("youth-photos").upload(path, file, { contentType: file.type, upsert: true });
+      if (error) throw error;
+      const { data } = supabase.storage.from("youth-photos").getPublicUrl(path);
+      onChange(data.publicUrl);
+    } catch {
+      setErr("Upload failed. Please try again.");
+    } finally {
+      setUploading(false);
+    }
+  };
+  return (
+    <div className="mt-1.5">
+      {value && <img src={value} alt="upload preview" className="mb-2 rounded-lg max-h-40 border object-contain" />}
+      <label className={`inline-flex items-center gap-2 px-3 py-2 rounded-md border cursor-pointer text-sm ${dark ? "border-neutral-700 text-neutral-200 hover:bg-neutral-800" : "border-neutral-300 text-neutral-700 hover:bg-neutral-50"}`}>
+        <input type="file" accept="image/*" className="hidden" onChange={onFile} disabled={uploading} />
+        <Upload className="w-4 h-4" />
+        {uploading ? "Uploading…" : value ? "Replace photo" : "Choose photo"}
+      </label>
+      {err && <p className="text-red-600 text-sm mt-1">{err}</p>}
+    </div>
+  );
+}
 
 export function FormRenderer({
   title, description, fields, branding, confirmation, onSubmit, preview = false,
@@ -173,6 +211,13 @@ export function FormRenderer({
           <div key={f.id}>
             <Label className={`font-medium ${labelC}`}>{f.label}{req(f.required)}</Label>{help}
             <div className="mt-1.5"><SignatureCanvas onSignatureChange={(blob) => setSigs((p) => ({ ...p, [key]: blob }))} /></div>
+          </div>
+        );
+      case "image":
+        return (
+          <div key={f.id}>
+            <Label className={`font-medium ${labelC}`}>{f.label}{req(f.required)}</Label>{help}
+            <ImageFieldControl value={values[key] as string} onChange={(url) => setVal(key, url)} preview={preview} dark={dark} />
           </div>
         );
       default: {

@@ -4,7 +4,7 @@
 
 import {
   Type, AlignLeft, Hash, CalendarDays, ChevronDown, ToggleLeft,
-  CheckSquare, Phone, Mail, PenLine, Heading, FileText, type LucideIcon,
+  CheckSquare, Phone, Mail, PenLine, Image as ImageIcon, Heading, FileText, type LucideIcon,
 } from "lucide-react";
 
 export type FormFieldDef = {
@@ -53,6 +53,7 @@ export const FIELD_TYPES: { value: string; label: string; icon: LucideIcon }[] =
   { value: "phone", label: "Phone", icon: Phone },
   { value: "email", label: "Email", icon: Mail },
   { value: "signature", label: "Signature", icon: PenLine },
+  { value: "image", label: "Image / Photo", icon: ImageIcon },
   { value: "section_header", label: "Section Header", icon: Heading },
   { value: "paragraph", label: "Paragraph / Text", icon: FileText },
 ];
