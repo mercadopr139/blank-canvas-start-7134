@@ -4,7 +4,7 @@
 
 import {
   Type, AlignLeft, Hash, CalendarDays, ChevronDown, ToggleLeft,
-  CheckSquare, Phone, Mail, PenLine, Image as ImageIcon, ListChecks, Star,
+  CheckSquare, Phone, Mail, MapPin, PenLine, Image as ImageIcon, ListChecks, Star,
   Heading, FileText, type LucideIcon,
 } from "lucide-react";
 
@@ -62,6 +62,7 @@ export const FIELD_TYPES: { value: string; label: string; icon: LucideIcon }[] =
   { value: "checkbox", label: "Checkbox / Consent", icon: CheckSquare },
   { value: "phone", label: "Phone", icon: Phone },
   { value: "email", label: "Email", icon: Mail },
+  { value: "address", label: "Address (autocomplete)", icon: MapPin },
   { value: "signature", label: "Signature", icon: PenLine },
   { value: "image", label: "Image / Photo", icon: ImageIcon },
   { value: "section_header", label: "Section Header", icon: Heading },

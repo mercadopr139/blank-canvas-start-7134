@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -41,6 +41,62 @@ const blobToDataUrl = (blob: Blob): Promise<string> =>
     r.onloadend = () => resolve(r.result as string);
     r.readAsDataURL(blob);
   });
+
+// US phone formatting -> (555) 555-5555, kept consistent for later texting / CRM use.
+const formatPhone = (v: string) => {
+  const d = v.replace(/\D/g, "").slice(0, 10);
+  if (d.length <= 3) return d;
+  if (d.length <= 6) return `(${d.slice(0, 3)}) ${d.slice(3)}`;
+  return `(${d.slice(0, 3)}) ${d.slice(3, 6)}-${d.slice(6)}`;
+};
+
+// Build a clean one-line address from a Photon geocoder result.
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const fmtAddress = (p: any) => {
+  const line1 = [p.housenumber, p.street || p.name].filter(Boolean).join(" ");
+  const cs = [p.city || p.district || p.county, [p.state, p.postcode].filter(Boolean).join(" ")].filter(Boolean).join(", ");
+  return [line1, cs].filter(Boolean).join(", ");
+};
+
+// Address field with free autocomplete (Photon / OpenStreetMap, no API key).
+// Degrades to a plain text box if the service is unavailable.
+function AddressInput({ value, onChange, placeholder }: { value: string; onChange: (v: string) => void; placeholder?: string }) {
+  const [q, setQ] = useState(value || "");
+  const [sugs, setSugs] = useState<string[]>([]);
+  const [open, setOpen] = useState(false);
+  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => { setQ(value || ""); }, [value]);
+  const search = (text: string) => {
+    setQ(text); onChange(text); setOpen(true);
+    if (timer.current) clearTimeout(timer.current);
+    if (text.trim().length < 4) { setSugs([]); return; }
+    timer.current = setTimeout(async () => {
+      try {
+        const res = await fetch(`https://photon.komoot.io/api/?q=${encodeURIComponent(text)}&limit=5&lang=en`);
+        const data = await res.json();
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const list = (data.features || []).map((ft: any) => fmtAddress(ft.properties)).filter((x: string) => x);
+        setSugs(Array.from(new Set(list)) as string[]);
+      } catch { setSugs([]); }
+    }, 300);
+  };
+  const pick = (label: string) => { onChange(label); setQ(label); setSugs([]); setOpen(false); };
+  return (
+    <div className="relative mt-1.5">
+      <Input value={q} autoComplete="off" placeholder={placeholder || "Start typing your address…"}
+        onChange={(e) => search(e.target.value)}
+        onFocus={() => { if (sugs.length) setOpen(true); }}
+        onBlur={() => setTimeout(() => setOpen(false), 150)} />
+      {open && sugs.length > 0 && (
+        <div className="absolute z-30 mt-1 w-full rounded-md border border-neutral-200 bg-white shadow-lg max-h-56 overflow-auto">
+          {sugs.map((s, i) => (
+            <button type="button" key={i} onMouseDown={(e) => { e.preventDefault(); pick(s); }} className="block w-full text-left px-3 py-2 text-sm text-neutral-800 hover:bg-neutral-100">{s}</button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
 
 // Image/photo upload field — stores the file in the public youth-photos
 // bucket (same place the registration headshots live) and keeps the URL.
@@ -128,6 +184,9 @@ export function FormRenderer({
       }
       if (f.field_type === "email" && values[f.field_key] && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(values[f.field_key]))) {
         return `Enter a valid email for: ${f.label}`;
+      }
+      if (f.field_type === "phone" && values[f.field_key] && String(values[f.field_key]).replace(/\D/g, "").length !== 10) {
+        return `Enter a complete 10-digit phone number for: ${f.label}`;
       }
     }
     return null;
@@ -259,12 +318,26 @@ export function FormRenderer({
           </div>
         );
       }
-      default: {
-        const type = f.field_type === "number" ? "number" : f.field_type === "date" ? "date" : f.field_type === "phone" ? "tel" : f.field_type === "email" ? "email" : "text";
+      case "phone":
         return (
           <div key={f.id}>
             <Label className={`font-medium ${labelC}`}>{f.label}{req(f.required)}</Label>{help}
-            <Input type={type} className="mt-1.5" placeholder={f.placeholder || ""} value={(values[key] as string) || ""} onChange={(e) => setVal(key, e.target.value)} />
+            <Input type="tel" inputMode="tel" className="mt-1.5" placeholder={f.placeholder || "(555) 555-5555"} value={(values[key] as string) || ""} onChange={(e) => setVal(key, formatPhone(e.target.value))} />
+          </div>
+        );
+      case "address":
+        return (
+          <div key={f.id}>
+            <Label className={`font-medium ${labelC}`}>{f.label}{req(f.required)}</Label>{help}
+            <AddressInput value={(values[key] as string) || ""} onChange={(v) => setVal(key, v)} placeholder={f.placeholder || undefined} />
+          </div>
+        );
+      default: {
+        const type = f.field_type === "number" ? "number" : f.field_type === "date" ? "date" : f.field_type === "email" ? "email" : "text";
+        return (
+          <div key={f.id}>
+            <Label className={`font-medium ${labelC}`}>{f.label}{req(f.required)}</Label>{help}
+            <Input type={type} inputMode={f.field_type === "email" ? "email" : undefined} className="mt-1.5" placeholder={f.placeholder || (f.field_type === "email" ? "you@example.com" : "")} value={(values[key] as string) || ""} onChange={(e) => setVal(key, e.target.value)} />
           </div>
         );
       }
