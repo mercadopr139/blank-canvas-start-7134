@@ -497,11 +497,11 @@ const AdminFormEditor = () => {
 
       {/* add field picker */}
       <Dialog open={addOpen} onOpenChange={setAddOpen}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="max-w-lg">
           <DialogHeader><DialogTitle>Add a field</DialogTitle></DialogHeader>
           <div className="grid grid-cols-2 gap-2">
             {FIELD_TYPES.map((ft) => { const Icon = ft.icon; return (
-              <Button key={ft.value} variant="outline" className="justify-start gap-2 h-auto py-3" onClick={() => addField(ft.value)}><Icon className="w-4 h-4 shrink-0" /> <span className="text-sm">{ft.label}</span></Button>
+              <Button key={ft.value} variant="outline" className="justify-start items-center gap-2 h-auto min-h-[46px] py-2.5 whitespace-normal text-left" onClick={() => addField(ft.value)}><Icon className="w-4 h-4 shrink-0" /> <span className="text-sm leading-tight">{ft.label}</span></Button>
             ); })}
           </div>
         </DialogContent>
