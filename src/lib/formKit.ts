@@ -5,7 +5,7 @@
 import {
   Type, AlignLeft, Hash, CalendarDays, ChevronDown, ToggleLeft,
   CheckSquare, Phone, Mail, MapPin, PenLine, Image as ImageIcon, ListChecks, Star,
-  DollarSign, Clock, CircleDot, Cake, Heading, FileText, type LucideIcon,
+  DollarSign, Clock, CircleDot, Cake, SeparatorHorizontal, Heading, FileText, type LucideIcon,
 } from "lucide-react";
 
 export type FieldCondition = {
@@ -71,6 +71,7 @@ export const FIELD_TYPES: { value: string; label: string; icon: LucideIcon }[] =
   { value: "image", label: "Image / Photo", icon: ImageIcon },
   { value: "section_header", label: "Section Header", icon: Heading },
   { value: "paragraph", label: "Paragraph / Text", icon: FileText },
+  { value: "page_break", label: "Page Break", icon: SeparatorHorizontal },
 ];
 
 export const fieldTypeLabel = (t: string) =>
@@ -81,7 +82,7 @@ export const fieldTypeIcon = (t: string): LucideIcon =>
 
 // Layout-only fields (headers, paragraphs) don't collect an answer.
 export const isInputField = (t: string) =>
-  !["section_header", "paragraph"].includes(t);
+  !["section_header", "paragraph", "page_break"].includes(t);
 
 export const parseOptions = (opts: unknown): string[] => {
   if (!opts) return [];

@@ -171,11 +171,21 @@ export function FormRenderer({
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [step, setStep] = useState(0);
 
   const sorted = [...fields].sort((a, c) => a.sort_order - c.sort_order);
   const setVal = (k: string, v: string | boolean | string[] | number) => setValues((p) => ({ ...p, [k]: v }));
   const visible = (f: FormFieldDef) => conditionMet(f.condition, values);
   const todayLong = new Date().toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" });
+
+  // Split visible fields into pages at each "page_break".
+  const pages: FormFieldDef[][] = [[]];
+  for (const f of sorted) {
+    if (f.field_type === "page_break") { pages.push([]); continue; }
+    if (visible(f)) pages[pages.length - 1].push(f);
+  }
+  const pageIdx = Math.min(step, pages.length - 1);
+  const multi = pages.length > 1;
 
   // theme tokens
   const page = dark ? "bg-neutral-950" : "bg-neutral-100";
@@ -183,8 +193,8 @@ export function FormRenderer({
   const labelC = dark ? "text-neutral-200" : "text-neutral-800";
   const mutedC = dark ? "text-neutral-400" : "text-neutral-500";
 
-  const validate = (): string | null => {
-    for (const f of sorted) {
+  const validate = (fs: FormFieldDef[]): string | null => {
+    for (const f of fs) {
       if (!visible(f)) continue;
       if (!isInputField(f.field_type) || !f.required) continue;
       if (f.field_type === "signature") {
@@ -215,7 +225,7 @@ export function FormRenderer({
     e.preventDefault();
     if (preview || !onSubmit) return;
     setError(null);
-    const v = validate();
+    const v = validate(sorted);
     if (v) { setError(v); window.scrollTo({ top: 0, behavior: "smooth" }); return; }
     setSubmitting(true);
     try {
@@ -239,6 +249,13 @@ export function FormRenderer({
       setSubmitting(false);
     }
   };
+
+  const goNext = () => {
+    const v = validate(pages[pageIdx]);
+    if (v) { setError(v); window.scrollTo({ top: 0, behavior: "smooth" }); return; }
+    setError(null); setStep(pageIdx + 1); window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+  const goBack = () => { setError(null); setStep(Math.max(0, pageIdx - 1)); window.scrollTo({ top: 0, behavior: "smooth" }); };
 
   const req = (on: boolean) => (on ? <span style={{ color: b.accentColor }}> *</span> : null);
 
@@ -427,16 +444,35 @@ export function FormRenderer({
           </div>
           <form onSubmit={handleSubmit} className="p-6 space-y-5">
             {error && <div className="rounded-lg bg-red-50 border border-red-200 text-red-700 text-sm px-4 py-3">{error}</div>}
-            <div>
-              <Label className={`font-medium ${labelC}`}>Today's Date</Label>
-              <Input value={todayLong} readOnly disabled className="mt-1.5" />
-            </div>
+            {pageIdx === 0 && (
+              <div>
+                <Label className={`font-medium ${labelC}`}>Today's Date</Label>
+                <Input value={todayLong} readOnly disabled className="mt-1.5" />
+              </div>
+            )}
+            {multi && (
+              <div>
+                <div className={`flex justify-between text-xs mb-1 ${mutedC}`}><span>Step {pageIdx + 1} of {pages.length}</span></div>
+                <div className="h-1.5 rounded-full overflow-hidden" style={{ background: dark ? "rgba(255,255,255,.12)" : "rgba(0,0,0,.1)" }}>
+                  <div className="h-full rounded-full transition-all" style={{ width: `${((pageIdx + 1) / pages.length) * 100}%`, background: b.accentColor }} />
+                </div>
+              </div>
+            )}
             {sorted.length === 0 && <p className={`text-center text-sm py-6 ${mutedC}`}>No fields yet — add some in the builder.</p>}
-            {sorted.filter(visible).map(renderField)}
-            {sorted.length > 0 && (
-              <Button type="submit" disabled={submitting || preview} style={{ backgroundColor: b.accentColor, color: accentText }} className="w-full font-semibold py-6 text-base hover:opacity-90">
-                {preview ? "Submit (preview)" : submitting ? "Submitting…" : "Submit"}
-              </Button>
+            {pages[pageIdx].map(renderField)}
+            {multi ? (
+              <div className="flex gap-3 pt-1">
+                {pageIdx > 0 && <Button type="button" variant="outline" onClick={goBack} className="flex-1 py-6">Back</Button>}
+                {pageIdx < pages.length - 1
+                  ? <Button type="button" onClick={goNext} style={{ backgroundColor: b.accentColor, color: accentText }} className="flex-1 font-semibold py-6 hover:opacity-90">Next</Button>
+                  : <Button type="submit" disabled={submitting || preview} style={{ backgroundColor: b.accentColor, color: accentText }} className="flex-1 font-semibold py-6 hover:opacity-90">{preview ? "Submit (preview)" : submitting ? "Submitting…" : "Submit"}</Button>}
+              </div>
+            ) : (
+              sorted.length > 0 && (
+                <Button type="submit" disabled={submitting || preview} style={{ backgroundColor: b.accentColor, color: accentText }} className="w-full font-semibold py-6 text-base hover:opacity-90">
+                  {preview ? "Submit (preview)" : submitting ? "Submitting…" : "Submit"}
+                </Button>
+              )
             )}
             <p className={`text-center text-xs pt-1 ${mutedC}`}>Powered by No Limits Academy</p>
           </form>
