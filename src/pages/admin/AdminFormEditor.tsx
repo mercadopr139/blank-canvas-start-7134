@@ -29,21 +29,20 @@ import {
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { QRCodeCanvas } from "qrcode.react";
+import { FormRenderer } from "@/components/forms/FormRenderer";
 import {
   FIELD_TYPES, fieldTypeIcon, fieldTypeLabel, isInputField, makeField, parseOptions,
   type FormFieldDef, type FormRecord,
 } from "@/lib/formKit";
 
-/* ── one sortable field row ── */
+/* ── sortable field row ── */
 const FieldRow = ({ field, onEdit, onDelete }: { field: FormFieldDef; onEdit: () => void; onDelete: () => void }) => {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: field.id });
   const style = { transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.5 : 1 };
   const Icon = fieldTypeIcon(field.field_type);
   return (
     <div ref={setNodeRef} style={style} className="flex items-center gap-3 px-3 py-2.5 rounded-lg border bg-white/5 border-white/10 hover:border-white/20">
-      <button {...attributes} {...listeners} className="cursor-grab active:cursor-grabbing text-white/30 hover:text-white/60">
-        <GripVertical className="w-4 h-4" />
-      </button>
+      <button {...attributes} {...listeners} className="cursor-grab active:cursor-grabbing text-white/30 hover:text-white/60"><GripVertical className="w-4 h-4" /></button>
       <Icon className="w-4 h-4 text-white/40 shrink-0" />
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2">
@@ -58,12 +57,16 @@ const FieldRow = ({ field, onEdit, onDelete }: { field: FormFieldDef; onEdit: ()
   );
 };
 
-/* ── field editor dialog ── */
+/* ── field editor dialog (with proper add/remove options) ── */
 const FieldEditor = ({ field, onClose, onSave }: { field: FormFieldDef | null; onClose: () => void; onSave: (f: FormFieldDef) => void }) => {
   const [draft, setDraft] = useState<FormFieldDef | null>(null);
-  useEffect(() => { setDraft(field ? { ...field } : null); }, [field]);
+  useEffect(() => { setDraft(field ? { ...field, options: field.options ? [...parseOptions(field.options)] : null } : null); }, [field]);
   if (!draft) return null;
   const hasOptions = draft.field_type === "dropdown";
+  const opts = parseOptions(draft.options);
+  const setOpts = (arr: string[]) => setDraft({ ...draft, options: arr });
+  const layout = draft.field_type === "paragraph" || draft.field_type === "section_header";
+
   return (
     <Dialog open={!!field} onOpenChange={(o) => !o && onClose()}>
       <DialogContent className="max-w-lg max-h-[90vh]">
@@ -71,12 +74,12 @@ const FieldEditor = ({ field, onClose, onSave }: { field: FormFieldDef | null; o
         <ScrollArea className="max-h-[65vh] pr-4">
           <div className="space-y-4">
             <div>
-              <Label>{draft.field_type === "paragraph" || draft.field_type === "section_header" ? "Text" : "Question / Label"}</Label>
+              <Label>{layout ? "Text" : "Question / Label"}</Label>
               <Input value={draft.label} onChange={(e) => setDraft({ ...draft, label: e.target.value })} className="mt-1" />
             </div>
             <div>
               <Label>Field Type</Label>
-              <Select value={draft.field_type} onValueChange={(v) => setDraft({ ...draft, field_type: v, options: v === "dropdown" ? (draft.options || ["Option 1", "Option 2"]) : null })}>
+              <Select value={draft.field_type} onValueChange={(v) => setDraft({ ...draft, field_type: v, options: v === "dropdown" ? (opts.length ? opts : ["Option 1", "Option 2"]) : null })}>
                 <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
                 <SelectContent>{FIELD_TYPES.map((ft) => <SelectItem key={ft.value} value={ft.value}>{ft.label}</SelectItem>)}</SelectContent>
               </Select>
@@ -99,23 +102,40 @@ const FieldEditor = ({ field, onClose, onSave }: { field: FormFieldDef | null; o
             )}
             {hasOptions && (
               <div>
-                <Label>Dropdown Options</Label>
-                <p className="text-xs text-muted-foreground mb-1">One per line</p>
-                <Textarea value={parseOptions(draft.options).join("\n")} onChange={(e) => setDraft({ ...draft, options: e.target.value.split("\n").filter((x) => x.trim()) })} className="mt-1 font-mono text-sm" rows={5} />
+                <Label>Options</Label>
+                <div className="space-y-2 mt-1.5">
+                  {opts.map((opt, i) => (
+                    <div key={i} className="flex gap-2">
+                      <Input value={opt} onChange={(e) => { const a = [...opts]; a[i] = e.target.value; setOpts(a); }} placeholder={`Option ${i + 1}`} />
+                      <Button type="button" variant="ghost" size="icon" onClick={() => setOpts(opts.filter((_, idx) => idx !== i))} className="shrink-0 text-red-400/60 hover:text-red-400"><Trash2 className="w-4 h-4" /></Button>
+                    </div>
+                  ))}
+                  <Button type="button" variant="outline" size="sm" onClick={() => setOpts([...opts, ""])} className="gap-1.5"><Plus className="w-4 h-4" /> Add option</Button>
+                </div>
               </div>
             )}
           </div>
         </ScrollArea>
         <DialogFooter>
           <Button variant="outline" onClick={onClose}>Cancel</Button>
-          <Button onClick={() => onSave(draft)}>Done</Button>
+          <Button onClick={() => onSave({ ...draft, options: hasOptions ? opts.filter((o) => o.trim()) : null })}>Done</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
   );
 };
 
-/* ── CSV helpers ── */
+/* ── small color control ── */
+const ColorField = ({ label, value, onChange }: { label: string; value: string; onChange: (v: string) => void }) => (
+  <div>
+    <Label className="text-white/70">{label}</Label>
+    <div className="flex gap-2 mt-1 items-center">
+      <input type="color" value={value} onChange={(e) => onChange(e.target.value)} className="w-10 h-9 rounded border border-white/15 bg-transparent cursor-pointer" />
+      <Input value={value} onChange={(e) => onChange(e.target.value)} className="w-32 bg-white/5 border-white/15 text-white font-mono text-sm" />
+    </div>
+  </div>
+);
+
 const csvEscape = (v: unknown) => {
   const s = v === null || v === undefined ? "" : String(v);
   return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
@@ -130,9 +150,12 @@ const AdminFormEditor = () => {
   const [description, setDescription] = useState("");
   const [slug, setSlug] = useState("");
   const [fields, setFields] = useState<FormFieldDef[]>([]);
-  const [notifyEmail, setNotifyEmail] = useState("");
   const [confirmationTitle, setConfirmationTitle] = useState("");
   const [confirmationMessage, setConfirmationMessage] = useState("");
+  const [accentColor, setAccentColor] = useState("#bf0f3e");
+  const [headerColor, setHeaderColor] = useState("#000000");
+  const [showLogo, setShowLogo] = useState(true);
+  const [theme, setTheme] = useState<"light" | "dark">("light");
   const [status, setStatus] = useState<"draft" | "published">("draft");
   const [dirty, setDirty] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -158,13 +181,17 @@ const AdminFormEditor = () => {
 
   useEffect(() => {
     if (!form) return;
+    const s = form.settings || {};
     setTitle(form.title || "");
     setDescription(form.description || "");
     setSlug(form.slug || "");
     setFields([...(form.fields || [])].sort((a, b) => a.sort_order - b.sort_order));
-    setNotifyEmail(form.settings?.notifyEmail || "");
-    setConfirmationTitle(form.settings?.confirmationTitle || "");
-    setConfirmationMessage(form.settings?.confirmationMessage || "");
+    setConfirmationTitle(s.confirmationTitle || "");
+    setConfirmationMessage(s.confirmationMessage || "");
+    setAccentColor(s.accentColor || "#bf0f3e");
+    setHeaderColor(s.headerColor || "#000000");
+    setShowLogo(s.showLogo !== false);
+    setTheme(s.theme === "dark" ? "dark" : "light");
     setStatus(form.status || "draft");
     setDirty(false);
   }, [form]);
@@ -186,42 +213,31 @@ const AdminFormEditor = () => {
   const onDragEnd = (e: DragEndEvent) => {
     const { active, over } = e;
     if (!over || active.id === over.id) return;
-    const oldIdx = fields.findIndex((f) => f.id === active.id);
-    const newIdx = fields.findIndex((f) => f.id === over.id);
-    setFields(arrayMove(fields, oldIdx, newIdx));
+    setFields(arrayMove(fields, fields.findIndex((f) => f.id === active.id), fields.findIndex((f) => f.id === over.id)));
     touch();
   };
 
-  const addField = (type: string) => {
-    const nf = makeField(type, (fields.length + 1) * 10);
-    setFields((p) => [...p, nf]);
-    setAddOpen(false);
-    setEditingField(nf);
-    touch();
-  };
-
-  const saveField = (updated: FormFieldDef) => {
-    setFields((p) => p.map((f) => (f.id === updated.id ? updated : f)));
-    setEditingField(null);
-    touch();
-  };
-
+  const addField = (type: string) => { const nf = makeField(type, (fields.length + 1) * 10); setFields((p) => [...p, nf]); setAddOpen(false); setEditingField(nf); touch(); };
+  const saveField = (u: FormFieldDef) => { setFields((p) => p.map((f) => (f.id === u.id ? u : f))); setEditingField(null); touch(); };
   const deleteField = (fid: string) => { setFields((p) => p.filter((f) => f.id !== fid)); touch(); };
 
   const save = async (nextStatus?: "draft" | "published") => {
     if (!id) return;
     setSaving(true);
     try {
-      const normalized = fields.map((f, i) => ({ ...f, sort_order: (i + 1) * 10 }));
+      const normalized = fields.map((f, i) => ({
+        ...f, sort_order: (i + 1) * 10,
+        options: f.field_type === "dropdown" ? parseOptions(f.options).filter((o) => o.trim()) : null,
+      }));
       const payload = {
         title: title.trim() || "Untitled Form",
         description: description.trim() || null,
         slug: slug.trim(),
         fields: normalized,
         settings: {
-          notifyEmail: notifyEmail.trim() || null,
           confirmationTitle: confirmationTitle.trim() || null,
           confirmationMessage: confirmationMessage.trim() || null,
+          accentColor, headerColor, showLogo, theme,
         },
         status: nextStatus || status,
       };
@@ -235,9 +251,7 @@ const AdminFormEditor = () => {
     } catch (e) {
       const msg = (e as Error).message || "";
       toast.error(msg.includes("duplicate") || msg.includes("unique") ? "That link (slug) is already taken — try another." : "Save failed: " + msg);
-    } finally {
-      setSaving(false);
-    }
+    } finally { setSaving(false); }
   };
 
   const deleteResponse = async () => {
@@ -253,13 +267,7 @@ const AdminFormEditor = () => {
     if (!responses || responses.length === 0) { toast.error("No responses yet"); return; }
     const cols = inputFields.filter((f) => f.field_type !== "signature");
     const headers = ["Submitted", ...cols.map((c) => c.label)];
-    const rows = responses.map((r) => [
-      new Date(r.submitted_at).toLocaleString(),
-      ...cols.map((c) => {
-        const v = r.data?.[c.field_key];
-        return v === true ? "Yes" : v === false ? "No" : (v ?? "");
-      }),
-    ]);
+    const rows = responses.map((r) => [new Date(r.submitted_at).toLocaleString(), ...cols.map((c) => { const v = r.data?.[c.field_key]; return v === true ? "Yes" : v === false ? "No" : (v ?? ""); })]);
     const csv = [headers, ...rows].map((row) => row.map(csvEscape).join(",")).join("\n");
     const blob = new Blob([csv], { type: "text/csv" });
     const url = URL.createObjectURL(blob);
@@ -269,147 +277,150 @@ const AdminFormEditor = () => {
     setTimeout(() => URL.revokeObjectURL(url), 1000);
   };
 
-  const answerLabel = (fieldKey: string) => inputFields.find((f) => f.field_key === fieldKey)?.label || fieldKey;
-
-  if (isLoading) {
-    return <div className="flex justify-center py-20"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white" /></div>;
-  }
+  if (isLoading) return <div className="flex justify-center py-20"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white" /></div>;
 
   return (
     <div className="text-white">
       {/* header */}
       <div className="flex items-center gap-3 mb-5 flex-wrap">
-        <Button size="icon" variant="ghost" onClick={() => navigate("/admin/operations/forms")} className="text-white/70 hover:text-white hover:bg-white/10">
-          <ArrowLeft className="w-5 h-5" />
-        </Button>
+        <Button size="icon" variant="ghost" onClick={() => navigate("/admin/operations/forms")} className="text-white/70 hover:text-white hover:bg-white/10"><ArrowLeft className="w-5 h-5" /></Button>
         <Input value={title} onChange={(e) => { setTitle(e.target.value); touch(); }} className="max-w-sm bg-white/5 border-white/15 text-white text-lg font-semibold" placeholder="Form title" />
-        {status === "published"
-          ? <Badge className="bg-green-500/15 text-green-400 border-green-500/30">Published</Badge>
-          : <Badge className="bg-white/10 text-white/50 border-white/15">Draft</Badge>}
+        {status === "published" ? <Badge className="bg-green-500/15 text-green-400 border-green-500/30">Published</Badge> : <Badge className="bg-white/10 text-white/50 border-white/15">Draft</Badge>}
         {dirty && <span className="text-amber-400 text-xs">Unsaved changes</span>}
         <div className="ml-auto flex items-center gap-2">
-          <Button variant="outline" onClick={() => save()} disabled={saving || !dirty} className="border-white/20 text-white hover:bg-white/10 gap-1.5">
-            <Save className="w-4 h-4" /> {saving ? "Saving…" : "Save"}
-          </Button>
+          <Button variant="outline" onClick={() => save()} disabled={saving || !dirty} className="border-white/20 text-white hover:bg-white/10 gap-1.5"><Save className="w-4 h-4" /> {saving ? "Saving…" : "Save"}</Button>
           {status === "published"
             ? <Button variant="outline" onClick={() => save("draft")} disabled={saving} className="border-white/20 text-white hover:bg-white/10">Unpublish</Button>
             : <Button onClick={() => save("published")} disabled={saving} className="bg-green-600 hover:bg-green-700 text-white">Publish</Button>}
         </div>
       </div>
 
-      <Tabs defaultValue="build">
-        <TabsList className="bg-white/5 border border-white/10">
-          <TabsTrigger value="build">Build</TabsTrigger>
-          <TabsTrigger value="share">Share</TabsTrigger>
-          <TabsTrigger value="responses">Responses{responses && responses.length > 0 ? ` (${responses.length})` : ""}</TabsTrigger>
-        </TabsList>
+      {/* two-pane: controls | live preview */}
+      <div className="grid lg:grid-cols-[1fr_minmax(340px,400px)] gap-6 items-start">
+        <div>
+          <Tabs defaultValue="build">
+            <TabsList className="bg-white/5 border border-white/10">
+              <TabsTrigger value="build">Build</TabsTrigger>
+              <TabsTrigger value="design">Design</TabsTrigger>
+              <TabsTrigger value="share">Share</TabsTrigger>
+              <TabsTrigger value="responses">Responses{responses && responses.length > 0 ? ` (${responses.length})` : ""}</TabsTrigger>
+            </TabsList>
 
-        {/* ── BUILD ── */}
-        <TabsContent value="build" className="mt-4 max-w-2xl space-y-4">
-          <div>
-            <Label className="text-white/70">Description (optional, shown under the title)</Label>
-            <Textarea value={description} onChange={(e) => { setDescription(e.target.value); touch(); }} className="mt-1 bg-white/5 border-white/15 text-white" rows={2} />
-          </div>
-
-          <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={onDragEnd}>
-            <SortableContext items={fields.map((f) => f.id)} strategy={verticalListSortingStrategy}>
-              <div className="space-y-2">
-                {fields.map((f) => <FieldRow key={f.id} field={f} onEdit={() => setEditingField(f)} onDelete={() => deleteField(f.id)} />)}
+            {/* BUILD */}
+            <TabsContent value="build" className="mt-4 space-y-4">
+              <div>
+                <Label className="text-white/70">Description (optional, shown under the title)</Label>
+                <Textarea value={description} onChange={(e) => { setDescription(e.target.value); touch(); }} className="mt-1 bg-white/5 border-white/15 text-white" rows={2} />
               </div>
-            </SortableContext>
-          </DndContext>
+              <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={onDragEnd}>
+                <SortableContext items={fields.map((f) => f.id)} strategy={verticalListSortingStrategy}>
+                  <div className="space-y-2">{fields.map((f) => <FieldRow key={f.id} field={f} onEdit={() => setEditingField(f)} onDelete={() => deleteField(f.id)} />)}</div>
+                </SortableContext>
+              </DndContext>
+              <Button variant="outline" onClick={() => setAddOpen(true)} className="w-full border-dashed border-white/20 text-white/60 hover:text-white hover:bg-white/5 gap-2"><Plus className="w-4 h-4" /> Add Field</Button>
+              <div className="border-t border-white/10 pt-4 space-y-3">
+                <h3 className="text-sm font-semibold text-white/70 uppercase tracking-wide">After they submit</h3>
+                <div><Label className="text-white/70">Confirmation heading</Label><Input value={confirmationTitle} onChange={(e) => { setConfirmationTitle(e.target.value); touch(); }} placeholder="Thank you!" className="mt-1 bg-white/5 border-white/15 text-white" /></div>
+                <div><Label className="text-white/70">Confirmation message</Label><Textarea value={confirmationMessage} onChange={(e) => { setConfirmationMessage(e.target.value); touch(); }} placeholder="Your response has been recorded." className="mt-1 bg-white/5 border-white/15 text-white" rows={2} /></div>
+              </div>
+            </TabsContent>
 
-          <Button variant="outline" onClick={() => setAddOpen(true)} className="w-full border-dashed border-white/20 text-white/60 hover:text-white hover:bg-white/5 gap-2">
-            <Plus className="w-4 h-4" /> Add Field
-          </Button>
+            {/* DESIGN */}
+            <TabsContent value="design" className="mt-4 space-y-5">
+              <ColorField label="Accent color (buttons & highlights)" value={accentColor} onChange={(v) => { setAccentColor(v); touch(); }} />
+              <ColorField label="Header banner color" value={headerColor} onChange={(v) => { setHeaderColor(v); touch(); }} />
+              <div>
+                <Label className="text-white/70">Page theme</Label>
+                <div className="flex gap-2 mt-1">
+                  {(["light", "dark"] as const).map((t) => (
+                    <Button key={t} type="button" variant={theme === t ? "default" : "outline"} onClick={() => { setTheme(t); touch(); }}
+                      className={theme === t ? "bg-[#bf0f3e] hover:bg-[#a50d35] text-white capitalize" : "border-white/20 text-white hover:bg-white/10 capitalize"}>{t}</Button>
+                  ))}
+                </div>
+              </div>
+              <div className="flex items-center justify-between max-w-xs">
+                <Label className="text-white/70">Show NLA logo</Label>
+                <Switch checked={showLogo} onCheckedChange={(v) => { setShowLogo(v); touch(); }} />
+              </div>
+              <p className="text-xs text-white/40">Changes appear instantly in the live preview →</p>
+            </TabsContent>
 
-          <div className="border-t border-white/10 pt-4 space-y-3">
-            <h3 className="text-sm font-semibold text-white/70 uppercase tracking-wide">After they submit</h3>
-            <div>
-              <Label className="text-white/70">Confirmation heading</Label>
-              <Input value={confirmationTitle} onChange={(e) => { setConfirmationTitle(e.target.value); touch(); }} placeholder="Thank you!" className="mt-1 bg-white/5 border-white/15 text-white" />
-            </div>
-            <div>
-              <Label className="text-white/70">Confirmation message</Label>
-              <Textarea value={confirmationMessage} onChange={(e) => { setConfirmationMessage(e.target.value); touch(); }} placeholder="Your response has been recorded." className="mt-1 bg-white/5 border-white/15 text-white" rows={2} />
-            </div>
-          </div>
-        </TabsContent>
+            {/* SHARE */}
+            <TabsContent value="share" className="mt-4 space-y-5">
+              {status !== "published" && <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 text-amber-200 text-sm px-4 py-3">This form is a <strong>draft</strong>. Click <strong>Publish</strong> (top right) to make the link and QR code go live.</div>}
+              <div>
+                <Label className="text-white/70">Public link</Label>
+                <div className="flex gap-2 mt-1">
+                  <Input readOnly value={publicUrl} className="bg-white/5 border-white/15 text-white font-mono text-sm" />
+                  <Button variant="outline" onClick={() => { navigator.clipboard.writeText(publicUrl); toast.success("Link copied"); }} className="border-white/20 text-white hover:bg-white/10 gap-1.5 shrink-0"><Link2 className="w-4 h-4" /> Copy</Button>
+                  <Button variant="outline" onClick={() => window.open(publicUrl, "_blank")} className="border-white/20 text-white hover:bg-white/10 shrink-0"><ExternalLink className="w-4 h-4" /></Button>
+                </div>
+              </div>
+              <div>
+                <Label className="text-white/70">Custom link ending (slug)</Label>
+                <Input value={slug} onChange={(e) => { setSlug(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, "")); touch(); }} className="mt-1 bg-white/5 border-white/15 text-white font-mono text-sm" />
+                <p className="text-xs text-white/40 mt-1">Changing this changes the public link. Save after editing.</p>
+              </div>
+              <div>
+                <Label className="text-white/70">QR code</Label>
+                <div className="mt-2 inline-block bg-white p-4 rounded-xl"><QRCodeCanvas value={publicUrl} size={180} includeMargin /></div>
+                <p className="text-xs text-white/40 mt-2">Right-click the code to save the image, then print or post it for parents to scan.</p>
+              </div>
+            </TabsContent>
 
-        {/* ── SHARE ── */}
-        <TabsContent value="share" className="mt-4 max-w-xl space-y-5">
-          {status !== "published" ? (
-            <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 text-amber-200 text-sm px-4 py-3">
-              This form is a <strong>draft</strong>. Click <strong>Publish</strong> (top right) to make the link and QR code go live.
-            </div>
-          ) : null}
-          <div>
-            <Label className="text-white/70">Public link</Label>
-            <div className="flex gap-2 mt-1">
-              <Input readOnly value={publicUrl} className="bg-white/5 border-white/15 text-white font-mono text-sm" />
-              <Button variant="outline" onClick={() => { navigator.clipboard.writeText(publicUrl); toast.success("Link copied"); }} className="border-white/20 text-white hover:bg-white/10 gap-1.5 shrink-0"><Link2 className="w-4 h-4" /> Copy</Button>
-              <Button variant="outline" onClick={() => window.open(publicUrl, "_blank")} className="border-white/20 text-white hover:bg-white/10 shrink-0"><ExternalLink className="w-4 h-4" /></Button>
-            </div>
-          </div>
-          <div>
-            <Label className="text-white/70">Custom link ending (slug)</Label>
-            <Input value={slug} onChange={(e) => { setSlug(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, "")); touch(); }} className="mt-1 bg-white/5 border-white/15 text-white font-mono text-sm" />
-            <p className="text-xs text-white/40 mt-1">Changing this changes the public link. Save after editing.</p>
-          </div>
-          <div>
-            <Label className="text-white/70">QR code</Label>
-            <div className="mt-2 inline-block bg-white p-4 rounded-xl">
-              <QRCodeCanvas value={publicUrl} size={180} includeMargin />
-            </div>
-            <p className="text-xs text-white/40 mt-2">Right-click the code to save the image, then print or post it for parents to scan.</p>
-          </div>
-        </TabsContent>
+            {/* RESPONSES */}
+            <TabsContent value="responses" className="mt-4">
+              <div className="flex items-center justify-between mb-3">
+                <p className="text-white/60 text-sm">{responses?.length || 0} response{(responses?.length || 0) === 1 ? "" : "s"}</p>
+                <Button variant="outline" size="sm" onClick={exportCsv} className="border-white/20 text-white hover:bg-white/10 gap-1.5"><Download className="w-4 h-4" /> Export CSV</Button>
+              </div>
+              {!responses || responses.length === 0 ? (
+                <div className="border border-dashed border-white/15 rounded-xl py-14 text-center"><Inbox className="w-9 h-9 mx-auto text-white/20 mb-2" /><p className="text-white/50">No responses yet.</p></div>
+              ) : (
+                <div className="space-y-2">
+                  {responses.map((r) => {
+                    const firstAnswers = inputFields.filter((f) => f.field_type !== "signature").slice(0, 2).map((f) => r.data?.[f.field_key]).filter((x) => x !== undefined && x !== null && x !== "");
+                    return (
+                      <div key={r.id} className="flex items-center gap-3 bg-white/5 border border-white/10 rounded-lg px-4 py-3">
+                        <div className="flex-1 min-w-0">
+                          <div className="text-sm font-medium truncate">{firstAnswers.length ? firstAnswers.map(String).join(" · ") : "Response"}</div>
+                          <div className="text-xs text-white/35">{new Date(r.submitted_at).toLocaleString()}</div>
+                        </div>
+                        <Button size="icon" variant="ghost" onClick={() => setViewResp(r)} className="h-8 w-8 text-white/50 hover:text-white"><Eye className="w-4 h-4" /></Button>
+                        <Button size="icon" variant="ghost" onClick={() => setDeleteRespId(r.id)} className="h-8 w-8 text-red-400/50 hover:text-red-400"><Trash2 className="w-4 h-4" /></Button>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </TabsContent>
+          </Tabs>
+        </div>
 
-        {/* ── RESPONSES ── */}
-        <TabsContent value="responses" className="mt-4">
-          <div className="flex items-center justify-between mb-3">
-            <p className="text-white/60 text-sm">{responses?.length || 0} response{(responses?.length || 0) === 1 ? "" : "s"}</p>
-            <Button variant="outline" size="sm" onClick={exportCsv} className="border-white/20 text-white hover:bg-white/10 gap-1.5"><Download className="w-4 h-4" /> Export CSV</Button>
+        {/* LIVE PREVIEW */}
+        <div className="lg:sticky lg:top-4">
+          <p className="text-[10px] uppercase tracking-wider text-white/40 font-semibold mb-2">Live preview</p>
+          <div className="rounded-xl overflow-hidden border border-white/10 max-h-[80vh] overflow-y-auto">
+            <FormRenderer
+              preview
+              title={title}
+              description={description}
+              fields={fields}
+              branding={{ accentColor, headerColor, showLogo, theme }}
+              confirmation={{ title: confirmationTitle, message: confirmationMessage }}
+            />
           </div>
-          {!responses || responses.length === 0 ? (
-            <div className="border border-dashed border-white/15 rounded-xl py-14 text-center">
-              <Inbox className="w-9 h-9 mx-auto text-white/20 mb-2" />
-              <p className="text-white/50">No responses yet.</p>
-            </div>
-          ) : (
-            <div className="space-y-2">
-              {responses.map((r) => {
-                const firstAnswers = inputFields.filter((f) => f.field_type !== "signature").slice(0, 2)
-                  .map((f) => r.data?.[f.field_key]).filter((x) => x !== undefined && x !== null && x !== "");
-                return (
-                  <div key={r.id} className="flex items-center gap-3 bg-white/5 border border-white/10 rounded-lg px-4 py-3">
-                    <div className="flex-1 min-w-0">
-                      <div className="text-sm font-medium truncate">{firstAnswers.length ? firstAnswers.map(String).join(" · ") : "Response"}</div>
-                      <div className="text-xs text-white/35">{new Date(r.submitted_at).toLocaleString()}</div>
-                    </div>
-                    <Button size="icon" variant="ghost" onClick={() => setViewResp(r)} className="h-8 w-8 text-white/50 hover:text-white"><Eye className="w-4 h-4" /></Button>
-                    <Button size="icon" variant="ghost" onClick={() => setDeleteRespId(r.id)} className="h-8 w-8 text-red-400/50 hover:text-red-400"><Trash2 className="w-4 h-4" /></Button>
-                  </div>
-                );
-              })}
-            </div>
-          )}
-        </TabsContent>
-      </Tabs>
+        </div>
+      </div>
 
       {/* add field picker */}
       <Dialog open={addOpen} onOpenChange={setAddOpen}>
         <DialogContent className="max-w-md">
           <DialogHeader><DialogTitle>Add a field</DialogTitle></DialogHeader>
           <div className="grid grid-cols-2 gap-2">
-            {FIELD_TYPES.map((ft) => {
-              const Icon = ft.icon;
-              return (
-                <Button key={ft.value} variant="outline" className="justify-start gap-2 h-auto py-3" onClick={() => addField(ft.value)}>
-                  <Icon className="w-4 h-4 shrink-0" /> <span className="text-sm">{ft.label}</span>
-                </Button>
-              );
-            })}
+            {FIELD_TYPES.map((ft) => { const Icon = ft.icon; return (
+              <Button key={ft.value} variant="outline" className="justify-start gap-2 h-auto py-3" onClick={() => addField(ft.value)}><Icon className="w-4 h-4 shrink-0" /> <span className="text-sm">{ft.label}</span></Button>
+            ); })}
           </div>
         </DialogContent>
       </Dialog>
@@ -441,14 +452,8 @@ const AdminFormEditor = () => {
 
       <AlertDialog open={!!deleteRespId} onOpenChange={(o) => !o && setDeleteRespId(null)}>
         <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Delete this response?</AlertDialogTitle>
-            <AlertDialogDescription>This permanently removes the submission. This can’t be undone.</AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction className="bg-red-500 hover:bg-red-600 text-white" onClick={deleteResponse}>Delete</AlertDialogAction>
-          </AlertDialogFooter>
+          <AlertDialogHeader><AlertDialogTitle>Delete this response?</AlertDialogTitle><AlertDialogDescription>This permanently removes the submission. This can’t be undone.</AlertDialogDescription></AlertDialogHeader>
+          <AlertDialogFooter><AlertDialogCancel>Cancel</AlertDialogCancel><AlertDialogAction className="bg-red-500 hover:bg-red-600 text-white" onClick={deleteResponse}>Delete</AlertDialogAction></AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
     </div>

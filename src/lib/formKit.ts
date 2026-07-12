@@ -23,6 +23,11 @@ export type FormSettings = {
   notifyEmail?: string | null;
   confirmationTitle?: string | null;
   confirmationMessage?: string | null;
+  // Branding (Phase 1)
+  accentColor?: string;
+  headerColor?: string;
+  showLogo?: boolean;
+  theme?: "light" | "dark";
 };
 
 export type FormRecord = {
