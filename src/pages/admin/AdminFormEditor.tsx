@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
@@ -17,7 +18,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import {
   ArrowLeft, Plus, Trash2, GripVertical, Pencil, Save, Link2, ExternalLink,
-  Download, Eye, Inbox,
+  Download, Eye, Inbox, Star,
 } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -61,7 +62,7 @@ const FieldEditor = ({ field, onClose, onSave }: { field: FormFieldDef | null; o
   const [draft, setDraft] = useState<FormFieldDef | null>(null);
   useEffect(() => { setDraft(field ? { ...field, options: field.options ? [...parseOptions(field.options)] : null } : null); }, [field]);
   if (!draft) return null;
-  const hasOptions = draft.field_type === "dropdown";
+  const hasOptions = draft.field_type === "dropdown" || draft.field_type === "multi_select";
   const opts = parseOptions(draft.options);
   const setOpts = (arr: string[]) => setDraft({ ...draft, options: arr });
   const layout = draft.field_type === "paragraph" || draft.field_type === "section_header";
@@ -78,7 +79,7 @@ const FieldEditor = ({ field, onClose, onSave }: { field: FormFieldDef | null; o
             </div>
             <div>
               <Label>Field Type</Label>
-              <Select value={draft.field_type} onValueChange={(v) => setDraft({ ...draft, field_type: v, options: v === "dropdown" ? (opts.length ? opts : ["Option 1", "Option 2"]) : null })}>
+              <Select value={draft.field_type} onValueChange={(v) => setDraft({ ...draft, field_type: v, options: (v === "dropdown" || v === "multi_select") ? (opts.length ? opts : ["Option 1", "Option 2"]) : null })}>
                 <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
                 <SelectContent>{FIELD_TYPES.map((ft) => <SelectItem key={ft.value} value={ft.value}>{ft.label}</SelectItem>)}</SelectContent>
               </Select>
@@ -306,7 +307,7 @@ const AdminFormEditor = () => {
     if (!responses || responses.length === 0) { toast.error("No responses yet"); return; }
     const cols = inputFields.filter((f) => f.field_type !== "signature");
     const headers = ["Submitted", ...cols.map((c) => c.label)];
-    const rows = responses.map((r) => [new Date(r.submitted_at).toLocaleString(), ...cols.map((c) => { const v = r.data?.[c.field_key]; return v === true ? "Yes" : v === false ? "No" : (v ?? ""); })]);
+    const rows = responses.map((r) => [new Date(r.submitted_at).toLocaleString(), ...cols.map((c) => { const v = r.data?.[c.field_key]; return Array.isArray(v) ? v.join("; ") : v === true ? "Yes" : v === false ? "No" : (v ?? ""); })]);
     const csv = [headers, ...rows].map((row) => row.map(csvEscape).join(",")).join("\n");
     const blob = new Blob([csv], { type: "text/csv" });
     const url = URL.createObjectURL(blob);
@@ -494,11 +495,23 @@ const AdminFormEditor = () => {
                         <Select value={String(v ?? "")} onValueChange={setV}><SelectTrigger className="mt-1"><SelectValue placeholder="Select…" /></SelectTrigger><SelectContent><SelectItem value="Yes">Yes</SelectItem><SelectItem value="No">No</SelectItem></SelectContent></Select>
                       ) : f.field_type === "checkbox" ? (
                         <div className="mt-1"><Switch checked={v === true} onCheckedChange={(c) => setV(c === true)} /></div>
+                      ) : f.field_type === "multi_select" ? (
+                        <div className="mt-1 space-y-1.5">
+                          {parseOptions(f.options).map((o) => { const sel = Array.isArray(v) ? (v as string[]) : []; return (
+                            <label key={o} className="flex items-center gap-2"><Checkbox checked={sel.includes(o)} onCheckedChange={() => setV(sel.includes(o) ? sel.filter((x) => x !== o) : [...sel, o])} /><span className="text-sm">{o}</span></label>
+                          ); })}
+                        </div>
+                      ) : f.field_type === "rating" ? (
+                        <div className="mt-1 flex gap-1">
+                          {[1, 2, 3, 4, 5].map((n) => (
+                            <button type="button" key={n} onClick={() => setV(n)}><Star className="w-6 h-6" style={{ fill: (typeof v === "number" && n <= v) ? "#f59e0b" : "transparent", color: "#f59e0b" }} /></button>
+                          ))}
+                        </div>
                       ) : (
                         <Input type={f.field_type === "number" ? "number" : f.field_type === "date" ? "date" : f.field_type === "email" ? "email" : f.field_type === "phone" ? "tel" : "text"} value={String(v ?? "")} onChange={(e) => setV(e.target.value)} className="mt-1" />
                       )
                     ) : (
-                      <div className="text-sm mt-0.5">{v === true ? "Yes" : v === false ? "No" : (v ? String(v) : "—")}</div>
+                      <div className="text-sm mt-0.5">{Array.isArray(v) ? (v.length ? v.join(", ") : "—") : f.field_type === "rating" ? (v ? `${v} / 5` : "—") : v === true ? "Yes" : v === false ? "No" : (v ? String(v) : "—")}</div>
                     )}
                   </div>
                 );

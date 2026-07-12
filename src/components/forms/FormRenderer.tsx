@@ -5,7 +5,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { CheckCircle2, Upload } from "lucide-react";
+import { CheckCircle2, Upload, Star } from "lucide-react";
 import SignatureCanvas from "@/components/registration/SignatureCanvas";
 import { supabase } from "@/integrations/supabase/client";
 import nlaLogo from "@/assets/nla-logo.png";
@@ -95,14 +95,14 @@ export function FormRenderer({
   const headerText = readableOn(b.headerColor);
   const accentText = readableOn(b.accentColor);
 
-  const [values, setValues] = useState<Record<string, string | boolean>>({});
+  const [values, setValues] = useState<Record<string, string | boolean | string[] | number>>({});
   const [sigs, setSigs] = useState<Record<string, Blob | null>>({});
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const sorted = [...fields].sort((a, c) => a.sort_order - c.sort_order);
-  const setVal = (k: string, v: string | boolean) => setValues((p) => ({ ...p, [k]: v }));
+  const setVal = (k: string, v: string | boolean | string[] | number) => setValues((p) => ({ ...p, [k]: v }));
 
   // theme tokens
   const page = dark ? "bg-neutral-950" : "bg-neutral-100";
@@ -117,6 +117,10 @@ export function FormRenderer({
         if (!sigs[f.field_key]) return `Please sign: ${f.label}`;
       } else if (f.field_type === "checkbox") {
         if (values[f.field_key] !== true) return `Please check: ${f.label}`;
+      } else if (f.field_type === "multi_select") {
+        if (!Array.isArray(values[f.field_key]) || (values[f.field_key] as string[]).length === 0) return `Please choose at least one: ${f.label}`;
+      } else if (f.field_type === "rating") {
+        if (!values[f.field_key]) return `Please rate: ${f.label}`;
       } else if (String(values[f.field_key] ?? "").trim() === "") {
         return `Please complete: ${f.label}`;
       }
@@ -220,6 +224,38 @@ export function FormRenderer({
             <ImageFieldControl value={values[key] as string} onChange={(url) => setVal(key, url)} preview={preview} dark={dark} />
           </div>
         );
+      case "multi_select": {
+        const opts = parseOptions(f.options);
+        const sel = Array.isArray(values[key]) ? (values[key] as string[]) : [];
+        return (
+          <div key={f.id}>
+            <Label className={`font-medium ${labelC}`}>{f.label}{req(f.required)}</Label>{help}
+            <div className="mt-1.5 space-y-2">
+              {opts.map((o) => (
+                <label key={o} className="flex items-center gap-2 cursor-pointer">
+                  <Checkbox checked={sel.includes(o)} onCheckedChange={() => setVal(key, sel.includes(o) ? sel.filter((x) => x !== o) : [...sel, o])} />
+                  <span className={`text-sm ${labelC}`}>{o}</span>
+                </label>
+              ))}
+            </div>
+          </div>
+        );
+      }
+      case "rating": {
+        const rv = typeof values[key] === "number" ? (values[key] as number) : 0;
+        return (
+          <div key={f.id}>
+            <Label className={`font-medium ${labelC}`}>{f.label}{req(f.required)}</Label>{help}
+            <div className="mt-1.5 flex gap-1">
+              {[1, 2, 3, 4, 5].map((n) => (
+                <button type="button" key={n} onClick={() => setVal(key, n)} aria-label={`${n} star${n > 1 ? "s" : ""}`}>
+                  <Star className="w-7 h-7 transition-transform hover:scale-110" style={{ fill: n <= rv ? b.accentColor : "transparent", color: b.accentColor }} />
+                </button>
+              ))}
+            </div>
+          </div>
+        );
+      }
       default: {
         const type = f.field_type === "number" ? "number" : f.field_type === "date" ? "date" : f.field_type === "phone" ? "tel" : f.field_type === "email" ? "email" : "text";
         return (

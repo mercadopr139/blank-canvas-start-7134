@@ -4,7 +4,8 @@
 
 import {
   Type, AlignLeft, Hash, CalendarDays, ChevronDown, ToggleLeft,
-  CheckSquare, Phone, Mail, PenLine, Image as ImageIcon, Heading, FileText, type LucideIcon,
+  CheckSquare, Phone, Mail, PenLine, Image as ImageIcon, ListChecks, Star,
+  Heading, FileText, type LucideIcon,
 } from "lucide-react";
 
 export type FormFieldDef = {
@@ -48,7 +49,9 @@ export const FIELD_TYPES: { value: string; label: string; icon: LucideIcon }[] =
   { value: "number", label: "Number", icon: Hash },
   { value: "date", label: "Date", icon: CalendarDays },
   { value: "dropdown", label: "Dropdown", icon: ChevronDown },
+  { value: "multi_select", label: "Multiple Choice (pick many)", icon: ListChecks },
   { value: "yes_no", label: "Yes / No", icon: ToggleLeft },
+  { value: "rating", label: "Rating (stars)", icon: Star },
   { value: "checkbox", label: "Checkbox / Consent", icon: CheckSquare },
   { value: "phone", label: "Phone", icon: Phone },
   { value: "email", label: "Email", icon: Mail },
@@ -95,7 +98,7 @@ export const makeField = (type: string, order: number): FormFieldDef => ({
   help_text: null,
   placeholder: null,
   required: false,
-  options: type === "dropdown" ? ["Option 1", "Option 2"] : null,
+  options: type === "dropdown" || type === "multi_select" ? ["Option 1", "Option 2"] : null,
   sort_order: order,
 });
 
