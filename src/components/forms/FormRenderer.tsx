@@ -9,7 +9,7 @@ import { CheckCircle2, Upload, Star } from "lucide-react";
 import SignatureCanvas from "@/components/registration/SignatureCanvas";
 import { supabase } from "@/integrations/supabase/client";
 import nlaLogo from "@/assets/nla-logo.png";
-import { type FormFieldDef, parseOptions, isInputField } from "@/lib/formKit";
+import { type FormFieldDef, parseOptions, isInputField, conditionMet } from "@/lib/formKit";
 
 export type FormBranding = {
   accentColor?: string;
@@ -103,6 +103,7 @@ export function FormRenderer({
 
   const sorted = [...fields].sort((a, c) => a.sort_order - c.sort_order);
   const setVal = (k: string, v: string | boolean | string[] | number) => setValues((p) => ({ ...p, [k]: v }));
+  const visible = (f: FormFieldDef) => conditionMet(f.condition, values);
 
   // theme tokens
   const page = dark ? "bg-neutral-950" : "bg-neutral-100";
@@ -112,6 +113,7 @@ export function FormRenderer({
 
   const validate = (): string | null => {
     for (const f of sorted) {
+      if (!visible(f)) continue;
       if (!isInputField(f.field_type) || !f.required) continue;
       if (f.field_type === "signature") {
         if (!sigs[f.field_key]) return `Please sign: ${f.label}`;
@@ -142,6 +144,7 @@ export function FormRenderer({
       const data: Record<string, unknown> = {};
       for (const f of sorted) {
         if (!isInputField(f.field_type)) continue;
+        if (!visible(f)) continue;
         if (f.field_type === "signature") {
           const blob = sigs[f.field_key];
           data[f.field_key] = blob ? await blobToDataUrl(blob) : null;
@@ -292,7 +295,7 @@ export function FormRenderer({
           <form onSubmit={handleSubmit} className="p-6 space-y-5">
             {error && <div className="rounded-lg bg-red-50 border border-red-200 text-red-700 text-sm px-4 py-3">{error}</div>}
             {sorted.length === 0 && <p className={`text-center text-sm py-6 ${mutedC}`}>No fields yet — add some in the builder.</p>}
-            {sorted.map(renderField)}
+            {sorted.filter(visible).map(renderField)}
             {sorted.length > 0 && (
               <Button type="submit" disabled={submitting || preview} style={{ backgroundColor: b.accentColor, color: accentText }} className="w-full font-semibold py-6 text-base hover:opacity-90">
                 {preview ? "Submit (preview)" : submitting ? "Submitting…" : "Submit"}

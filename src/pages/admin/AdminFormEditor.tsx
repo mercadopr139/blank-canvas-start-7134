@@ -58,7 +58,7 @@ const FieldRow = ({ field, onEdit, onDelete }: { field: FormFieldDef; onEdit: ()
 };
 
 /* ── field editor dialog (with proper add/remove options) ── */
-const FieldEditor = ({ field, onClose, onSave }: { field: FormFieldDef | null; onClose: () => void; onSave: (f: FormFieldDef) => void }) => {
+const FieldEditor = ({ field, allFields, onClose, onSave }: { field: FormFieldDef | null; allFields: FormFieldDef[]; onClose: () => void; onSave: (f: FormFieldDef) => void }) => {
   const [draft, setDraft] = useState<FormFieldDef | null>(null);
   useEffect(() => { setDraft(field ? { ...field, options: field.options ? [...parseOptions(field.options)] : null } : null); }, [field]);
   if (!draft) return null;
@@ -66,6 +66,8 @@ const FieldEditor = ({ field, onClose, onSave }: { field: FormFieldDef | null; o
   const opts = parseOptions(draft.options);
   const setOpts = (arr: string[]) => setDraft({ ...draft, options: arr });
   const layout = draft.field_type === "paragraph" || draft.field_type === "section_header";
+  const myIdx = allFields.findIndex((f) => f.id === draft.id);
+  const priorFields = allFields.filter((f, i) => i < myIdx && isInputField(f.field_type));
 
   return (
     <Dialog open={!!field} onOpenChange={(o) => !o && onClose()}>
@@ -112,6 +114,46 @@ const FieldEditor = ({ field, onClose, onSave }: { field: FormFieldDef | null; o
                   ))}
                   <Button type="button" variant="outline" size="sm" onClick={() => setOpts([...opts, ""])} className="gap-1.5"><Plus className="w-4 h-4" /> Add option</Button>
                 </div>
+              </div>
+            )}
+
+            {priorFields.length > 0 && (
+              <div className="border-t pt-3">
+                <div className="flex items-center justify-between">
+                  <Label>Only show this field based on an answer</Label>
+                  <Switch checked={!!draft.condition} onCheckedChange={(on) => setDraft({ ...draft, condition: on ? { field: priorFields[0].field_key, op: "eq", value: "" } : null })} />
+                </div>
+                {draft.condition && (() => {
+                  const cond = draft.condition!;
+                  const src = priorFields.find((f) => f.field_key === cond.field) || priorFields[0];
+                  const srcOpts = src.field_type === "yes_no" ? ["Yes", "No"] : parseOptions(src.options);
+                  return (
+                    <div className="space-y-2 mt-3">
+                      <p className="text-xs text-muted-foreground">Show this field only when…</p>
+                      <Select value={cond.field} onValueChange={(v) => setDraft({ ...draft, condition: { ...cond, field: v, value: "" } })}>
+                        <SelectTrigger><SelectValue /></SelectTrigger>
+                        <SelectContent>{priorFields.map((pf) => <SelectItem key={pf.id} value={pf.field_key}>{pf.label}</SelectItem>)}</SelectContent>
+                      </Select>
+                      <Select value={cond.op} onValueChange={(v) => setDraft({ ...draft, condition: { ...cond, op: v as "eq" | "neq" | "contains" | "answered" } })}>
+                        <SelectTrigger><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="eq">is</SelectItem>
+                          <SelectItem value="neq">is not</SelectItem>
+                          <SelectItem value="contains">includes</SelectItem>
+                          <SelectItem value="answered">is answered</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      {cond.op !== "answered" && (srcOpts.length > 0 ? (
+                        <Select value={cond.value || ""} onValueChange={(v) => setDraft({ ...draft, condition: { ...cond, value: v } })}>
+                          <SelectTrigger><SelectValue placeholder="Select a value" /></SelectTrigger>
+                          <SelectContent>{srcOpts.map((o) => <SelectItem key={o} value={o}>{o}</SelectItem>)}</SelectContent>
+                        </Select>
+                      ) : (
+                        <Input value={cond.value || ""} onChange={(e) => setDraft({ ...draft, condition: { ...cond, value: e.target.value } })} placeholder="Enter a value" />
+                      ))}
+                    </div>
+                  );
+                })()}
               </div>
             )}
           </div>
@@ -465,7 +507,7 @@ const AdminFormEditor = () => {
         </DialogContent>
       </Dialog>
 
-      <FieldEditor field={editingField} onClose={() => setEditingField(null)} onSave={saveField} />
+      <FieldEditor field={editingField} allFields={fields} onClose={() => setEditingField(null)} onSave={saveField} />
 
       {/* view / edit response */}
       <Dialog open={!!viewResp} onOpenChange={(o) => { if (!o) { setViewResp(null); setEditData(null); } }}>
