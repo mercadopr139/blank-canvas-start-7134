@@ -318,10 +318,10 @@ const AdminFormEditor = () => {
         <div>
           <Tabs value={tab} onValueChange={setTab}>
             <TabsList className="bg-white/5 border border-white/10">
-              <TabsTrigger value="build">Build</TabsTrigger>
-              <TabsTrigger value="design">Design</TabsTrigger>
-              <TabsTrigger value="share">Share</TabsTrigger>
-              <TabsTrigger value="responses">Responses{responses && responses.length > 0 ? ` (${responses.length})` : ""}</TabsTrigger>
+              <TabsTrigger value="build" className="text-white/60 data-[state=active]:bg-white data-[state=active]:text-black">Build</TabsTrigger>
+              <TabsTrigger value="design" className="text-white/60 data-[state=active]:bg-white data-[state=active]:text-black">Design</TabsTrigger>
+              <TabsTrigger value="share" className="text-white/60 data-[state=active]:bg-white data-[state=active]:text-black">Share</TabsTrigger>
+              <TabsTrigger value="responses" className="text-white/60 data-[state=active]:bg-white data-[state=active]:text-black">Responses{responses && responses.length > 0 ? ` (${responses.length})` : ""}</TabsTrigger>
             </TabsList>
 
             {/* BUILD */}
