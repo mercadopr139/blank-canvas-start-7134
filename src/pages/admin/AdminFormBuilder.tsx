@@ -376,7 +376,7 @@ const AdminFormBuilder = () => {
       {/* Header bar */}
       <div className="border-b border-white/10 px-4 py-3 flex items-center justify-between sticky top-0 bg-black z-10">
         <div className="flex items-center gap-3">
-          <h2 className="text-base font-semibold">Registration Form Builder</h2>
+          <h2 className="text-base font-semibold">Registration Editor</h2>
           {hasChanges && (
             <Badge className="bg-amber-500/15 text-amber-400 border-amber-500/30 text-xs">Unsaved Changes</Badge>
           )}
