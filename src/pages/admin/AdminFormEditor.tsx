@@ -70,7 +70,7 @@ const FieldEditor = ({ field, onClose, onSave }: { field: FormFieldDef | null; o
     <Dialog open={!!field} onOpenChange={(o) => !o && onClose()}>
       <DialogContent className="max-w-lg max-h-[90vh]">
         <DialogHeader><DialogTitle>Edit Field</DialogTitle></DialogHeader>
-        <div className="max-h-[65vh] overflow-y-auto pr-1 -mr-1">
+        <div className="max-h-[65vh] overflow-y-auto px-1 pr-3">
           <div className="space-y-4">
             <div>
               <Label>{layout ? "Text" : "Question / Label"}</Label>
