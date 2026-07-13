@@ -42,6 +42,7 @@ export const OPERATIONS_TILES: PillarTile[] = [
       { title: "Registrations", href: "/admin/operations/registrations", icon: Users },
       { title: "Registration Intelligence", href: "/admin/operations/registration-analytics", icon: BarChart3 },
       { title: "Re-Registration Readiness", href: "/admin/operations/reregistration-readiness", icon: UserCheck },
+      { title: "Re-Registration Approvals", href: "/admin/operations/reregistration-approvals", icon: ClipboardCheck },
       { title: "Duplicate Registrations", href: "/admin/operations/duplicate-registrations", icon: Copy },
       { title: "Registration Editor", href: "/admin/operations/form-builder", icon: Settings2 },
     ],

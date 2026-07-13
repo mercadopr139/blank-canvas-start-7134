@@ -322,7 +322,15 @@ const LilChampsCheckIn = () => {
 
           <div className="space-y-4">
             {loading && <p className="text-center text-white/40 text-lg py-8">Searching...</p>}
-            {showEmpty && <p className="text-center text-white/40 text-lg py-8">No students found</p>}
+            {showEmpty && (
+              <div className="text-center py-8 px-4">
+                <p className="text-white/50 text-lg">No match found</p>
+                <p className="text-white/60 text-sm mt-3 max-w-md mx-auto leading-relaxed">
+                  Double-check the spelling. If you haven't <strong className="text-white/80">registered for this program year</strong> yet,
+                  please see a coach — you may just need to re-register to check in.
+                </p>
+              </div>
+            )}
             {youth.map((y, index) =>
             <Card
               key={y.id}
