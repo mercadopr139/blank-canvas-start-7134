@@ -28,6 +28,7 @@ import {
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import FormPreview from "@/components/admin/FormPreview";
+import { RichTextEditor } from "@/components/ui/rich-text-editor";
 import { DEFAULT_WAIVERS } from "@/components/registration/waiverTexts";
 
 const FIELD_TYPES = [
@@ -192,8 +193,14 @@ const FieldEditorDialog = ({
             {draft.field_type === "waiver" && (
               <div>
                 <Label>Waiver Text</Label>
-                <p className="text-xs text-muted-foreground mb-1">The full legal text parents read and sign below. This is the wording families agree to.</p>
-                <Textarea value={draft.default_value || ""} onChange={e => setDraft({ ...draft, default_value: e.target.value || null })} className="mt-1 text-sm" rows={14} />
+                <p className="text-xs text-muted-foreground mb-1">The full legal text parents read and sign below. Select words and use B / I / U to format.</p>
+                <RichTextEditor
+                  value={draft.default_value || ""}
+                  onChange={(html) => setDraft({ ...draft, default_value: html || null })}
+                  placeholder="Enter the waiver text families agree to…"
+                  minHeight={240}
+                  className="mt-1"
+                />
               </div>
             )}
 

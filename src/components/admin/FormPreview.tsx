@@ -5,6 +5,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Checkbox } from "@/components/ui/checkbox";
 
 import { Card, CardContent } from "@/components/ui/card";
+import { RichText } from "@/components/ui/rich-text";
 import { Upload } from "lucide-react";
 import nlaLogo from "@/assets/nla-logo.png";
 
@@ -46,7 +47,7 @@ const FormPreview = ({ fields }: { fields: FormField[] }) => {
       case "paragraph":
         return (
           <div key={field.id} className="py-2">
-            <p className="text-sm text-muted-foreground whitespace-pre-wrap">{field.label}</p>
+            <RichText html={field.label} className="text-sm text-muted-foreground" />
             {field.help_text && <p className="text-sm text-muted-foreground">{field.help_text}</p>}
           </div>
         );
@@ -183,7 +184,7 @@ const FormPreview = ({ fields }: { fields: FormField[] }) => {
         return (
           <div key={field.id} className="border-t pt-4">
             <h3 className="text-lg font-semibold">{field.label}</h3>
-            <div className="text-sm text-muted-foreground whitespace-pre-wrap max-h-40 overflow-auto border rounded p-2 mt-2">{field.default_value}</div>
+            <RichText html={field.default_value} className="text-sm text-muted-foreground max-h-40 overflow-auto border rounded p-2 mt-2 block" />
             <p className="text-xs text-muted-foreground mt-2">☑ Acknowledgement + typed name + drawn signature required</p>
           </div>
         );

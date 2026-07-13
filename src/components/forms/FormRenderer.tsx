@@ -10,6 +10,7 @@ import SignatureCanvas from "@/components/registration/SignatureCanvas";
 import { supabase } from "@/integrations/supabase/client";
 import nlaLogo from "@/assets/nla-logo.png";
 import { type FormFieldDef, parseOptions, isInputField, conditionMet, ageFromDob } from "@/lib/formKit";
+import { RichText } from "@/components/ui/rich-text";
 
 export type FormBranding = {
   accentColor?: string;
@@ -261,7 +262,7 @@ export function FormRenderer({
 
   const renderField = (f: FormFieldDef) => {
     const key = f.field_key;
-    const help = f.help_text ? <p className={`text-sm mt-0.5 ${mutedC}`}>{f.help_text}</p> : null;
+    const help = f.help_text ? <RichText html={f.help_text} className={`text-sm mt-0.5 ${mutedC}`} /> : null;
     switch (f.field_type) {
       case "section_header":
         return (
@@ -271,7 +272,7 @@ export function FormRenderer({
           </div>
         );
       case "paragraph":
-        return <p key={f.id} className={`text-sm whitespace-pre-wrap leading-relaxed ${mutedC}`}>{f.label}</p>;
+        return <RichText key={f.id} html={f.label} className={`text-sm leading-relaxed ${mutedC}`} />;
       case "long_text":
         return (
           <div key={f.id}>
@@ -311,7 +312,9 @@ export function FormRenderer({
       case "signature":
         return (
           <div key={f.id}>
-            <Label className={`font-medium ${labelC}`}>{f.label}{req(f.required)}</Label>{help}
+            <RichText html={f.label} className={`text-sm leading-relaxed ${labelC}`} />
+            {help}
+            <Label className={`font-medium ${labelC} mt-3 block`}>Your signature{req(f.required)}</Label>
             <div className="mt-1.5"><SignatureCanvas onSignatureChange={(blob) => setSigs((p) => ({ ...p, [key]: blob }))} /></div>
           </div>
         );

@@ -3,6 +3,7 @@
  import { Checkbox } from "@/components/ui/checkbox";
  import { ScrollArea } from "@/components/ui/scroll-area";
  import SignatureCanvas from "./SignatureCanvas";
+ import { RichText } from "@/components/ui/rich-text";
  
  interface WaiverSectionProps {
    title: string;
@@ -29,7 +30,7 @@
        
        {/* Waiver Text */}
        <ScrollArea className="h-[200px] border border-input rounded-md p-3 bg-muted/30">
-         <div className="text-sm whitespace-pre-wrap">{text}</div>
+         <RichText html={text} className="text-sm leading-relaxed" />
        </ScrollArea>
  
        {/* Acknowledgement Checkbox */}

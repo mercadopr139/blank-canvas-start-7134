@@ -6,6 +6,7 @@ import jsPDF from "jspdf";
 import { format } from "date-fns";
 import nlaLogo from "@/assets/nla-logo.png";
 import { type FormFieldDef, ageFromDob } from "@/lib/formKit";
+import { htmlToPlainText } from "@/lib/richText";
 
 const BRAND_DARK = [17, 24, 39] as const;
 const BRAND_GRAY = [107, 114, 128] as const;
@@ -116,8 +117,10 @@ export async function downloadFormResponsePdf(opts: {
     doc.setFontSize(7.5);
     doc.setFont("helvetica", "bold");
     doc.setTextColor(...BRAND_GRAY);
-    doc.text((f.label || "").toUpperCase(), mL, y);
-    y += 4.5;
+    const labelLines = doc.splitTextToSize(htmlToPlainText(f.label).toUpperCase(), contentW);
+    ensureSpace(labelLines.length * 3.6 + 2);
+    doc.text(labelLines, mL, y);
+    y += labelLines.length * 3.6 + 1;
 
     const isImg = f.field_type === "signature" || f.field_type === "image";
     const img = imgCache[f.field_key];

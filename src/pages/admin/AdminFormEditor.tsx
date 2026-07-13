@@ -30,6 +30,8 @@ import {
 import { CSS } from "@dnd-kit/utilities";
 import { QRCodeCanvas } from "qrcode.react";
 import { FormRenderer } from "@/components/forms/FormRenderer";
+import { RichTextEditor } from "@/components/ui/rich-text-editor";
+import { htmlToPlainText } from "@/lib/richText";
 import { downloadFormResponsePdf } from "@/lib/generateFormResponsePdf";
 import {
   FIELD_TYPES, fieldTypeIcon, fieldTypeLabel, isInputField, makeField, parseOptions, slugify, ageFromDob,
@@ -59,7 +61,7 @@ const FieldRow = ({ field, onEdit, onDelete }: { field: FormFieldDef; onEdit: ()
       <Icon className="w-4 h-4 text-white/40 shrink-0" />
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2">
-          <span className="text-sm font-medium truncate">{field.label}</span>
+          <span className="text-sm font-medium truncate">{htmlToPlainText(field.label) || <span className="text-white/30 italic">Untitled</span>}</span>
           {field.required && <Badge className="bg-red-500/15 text-red-400 border-red-500/30 text-[10px] px-1.5 py-0">Required</Badge>}
         </div>
         <span className="text-xs text-white/30">{fieldTypeLabel(field.field_type)}</span>
@@ -95,6 +97,7 @@ const FieldEditor = ({ field, allFields, onClose, onSave }: { field: FormFieldDe
   const opts = parseOptions(draft.options);
   const setOpts = (arr: string[]) => setDraft({ ...draft, options: arr });
   const layout = draft.field_type === "paragraph" || draft.field_type === "section_header";
+  const richText = draft.field_type === "paragraph" || draft.field_type === "signature";
   const myIdx = allFields.findIndex((f) => f.id === draft.id);
   const priorFields = allFields.filter((f, i) => i < myIdx && isInputField(f.field_type));
 
@@ -105,8 +108,17 @@ const FieldEditor = ({ field, allFields, onClose, onSave }: { field: FormFieldDe
         <div className="max-h-[65vh] overflow-y-auto px-1 pr-3">
           <div className="space-y-4">
             <div>
-              <Label>{layout ? "Text" : "Question / Label"}</Label>
-              <Input value={draft.label} onChange={(e) => setDraft({ ...draft, label: e.target.value })} className="mt-1" />
+              <Label>{draft.field_type === "signature" ? "Agreement Text (shown above the signature)" : layout ? "Text" : "Question / Label"}</Label>
+              {richText ? (
+                <RichTextEditor
+                  value={draft.label}
+                  onChange={(html) => setDraft({ ...draft, label: html })}
+                  placeholder="Type the text parents will read. Select words and use B / I / U to format."
+                  className="mt-1"
+                />
+              ) : (
+                <Input value={draft.label} onChange={(e) => setDraft({ ...draft, label: e.target.value })} className="mt-1" />
+              )}
             </div>
             <div>
               <Label>Field Type</Label>
@@ -119,7 +131,13 @@ const FieldEditor = ({ field, allFields, onClose, onSave }: { field: FormFieldDe
               <>
                 <div>
                   <Label>Help Text (optional)</Label>
-                  <Textarea value={draft.help_text || ""} onChange={(e) => setDraft({ ...draft, help_text: e.target.value || null })} className="mt-1" rows={2} />
+                  <RichTextEditor
+                    value={draft.help_text || ""}
+                    onChange={(html) => setDraft({ ...draft, help_text: html || null })}
+                    placeholder="Optional guidance shown under the question. Select words and use B / I / U."
+                    minHeight={80}
+                    className="mt-1"
+                  />
                 </div>
                 <div>
                   <Label>Placeholder (optional)</Label>
