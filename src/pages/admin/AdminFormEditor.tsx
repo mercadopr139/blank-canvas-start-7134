@@ -42,8 +42,20 @@ const FieldRow = ({ field, onEdit, onDelete }: { field: FormFieldDef; onEdit: ()
   const style = { transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.5 : 1 };
   const Icon = fieldTypeIcon(field.field_type);
   return (
-    <div ref={setNodeRef} style={style} className="flex items-center gap-3 px-3 py-2.5 rounded-lg border bg-white/5 border-white/10 hover:border-white/20">
-      <button {...attributes} {...listeners} className="cursor-grab active:cursor-grabbing text-white/30 hover:text-white/60"><GripVertical className="w-4 h-4" /></button>
+    <div
+      ref={setNodeRef}
+      style={style}
+      onClick={onEdit}
+      className="group flex items-center gap-3 px-3 py-2.5 rounded-lg border bg-white/5 border-white/10 hover:border-white/30 hover:bg-white/[0.08] cursor-pointer transition-colors"
+    >
+      <button
+        {...attributes}
+        {...listeners}
+        onClick={(e) => e.stopPropagation()}
+        className="shrink-0 cursor-grab active:cursor-grabbing text-white/30 hover:text-white/60"
+      >
+        <GripVertical className="w-4 h-4" />
+      </button>
       <Icon className="w-4 h-4 text-white/40 shrink-0" />
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2">
@@ -52,8 +64,24 @@ const FieldRow = ({ field, onEdit, onDelete }: { field: FormFieldDef; onEdit: ()
         </div>
         <span className="text-xs text-white/30">{fieldTypeLabel(field.field_type)}</span>
       </div>
-      <Button size="icon" variant="ghost" onClick={onEdit} className="h-8 w-8 text-white/50 hover:text-white"><Pencil className="w-3.5 h-3.5" /></Button>
-      <Button size="icon" variant="ghost" onClick={onDelete} className="h-8 w-8 text-red-400/50 hover:text-red-400"><Trash2 className="w-3.5 h-3.5" /></Button>
+      <div className="flex items-center gap-1 shrink-0">
+        <Button
+          size="sm"
+          variant="ghost"
+          onClick={(e) => { e.stopPropagation(); onEdit(); }}
+          className="h-8 gap-1.5 px-2 text-white/60 hover:text-white hover:bg-white/10"
+        >
+          <Pencil className="w-3.5 h-3.5" /> Edit
+        </Button>
+        <Button
+          size="sm"
+          variant="ghost"
+          onClick={(e) => { e.stopPropagation(); onDelete(); }}
+          className="h-8 gap-1.5 px-2 text-red-400/70 hover:text-red-400 hover:bg-red-500/10"
+        >
+          <Trash2 className="w-3.5 h-3.5" /> Delete
+        </Button>
+      </div>
     </div>
   );
 };
@@ -383,8 +411,8 @@ const AdminFormEditor = () => {
       </div>
 
       {/* two-pane: controls | live preview */}
-      <div className="grid lg:grid-cols-[1fr_minmax(340px,400px)] gap-6 items-start">
-        <div>
+      <div className="grid lg:grid-cols-[minmax(0,1fr)_minmax(340px,400px)] gap-6 items-start">
+        <div className="min-w-0">
           <Tabs value={tab} onValueChange={setTab}>
             <TabsList className="bg-white/5 border border-white/10">
               <TabsTrigger value="build" className="text-white/60 data-[state=active]:bg-white data-[state=active]:text-black">Build</TabsTrigger>
