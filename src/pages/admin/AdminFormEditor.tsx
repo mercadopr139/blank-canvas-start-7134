@@ -432,7 +432,7 @@ const AdminFormEditor = () => {
                   <div className="space-y-2">{fields.map((f) => <FieldRow key={f.id} field={f} onEdit={() => setEditingField(f)} onDelete={() => deleteField(f.id)} />)}</div>
                 </SortableContext>
               </DndContext>
-              <Button variant="outline" onClick={() => setAddOpen(true)} className="w-full border-dashed border-white/20 text-white/60 hover:text-white hover:bg-white/5 gap-2"><Plus className="w-4 h-4" /> Add Field</Button>
+              <Button variant="outline" onClick={() => setAddOpen(true)} className="w-full border-dashed border-white/20 bg-white/5 text-white hover:text-white hover:bg-white/10 gap-2"><Plus className="w-4 h-4" /> Add Field</Button>
               <div className="border-t border-white/10 pt-4 space-y-3">
                 <h3 className="text-sm font-semibold text-white/70 uppercase tracking-wide">After they submit</h3>
                 <div><Label className="text-white/70">Confirmation heading</Label><Input value={confirmationTitle} onChange={(e) => { setConfirmationTitle(e.target.value); touch(); }} placeholder="Thank you!" className="mt-1 bg-white/5 border-white/15 text-white" /></div>
