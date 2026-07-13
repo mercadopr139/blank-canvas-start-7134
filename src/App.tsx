@@ -83,6 +83,7 @@ import TransportTripDetails from "./pages/transport/TransportTripDetails";
 import TransportRun from "./pages/transport/TransportRun";
 import TransportIncidents from "./pages/transport/TransportIncidents";
 import AdminTransportImpactReports from "./pages/admin/AdminTransportImpactReports";
+import AdminTransportIntelligence from "./pages/admin/AdminTransportIntelligence";
 import AdminMealTracker from "./pages/admin/AdminMealTracker";
 import AdminMealReports from "./pages/admin/AdminMealReports";
 import AdminMessageBoard from "./pages/admin/AdminMessageBoard";
@@ -199,6 +200,7 @@ const App = () => (
               <Route path="transportation/youth" element={<TransportYouth />} />
               <Route path="transportation/runs" element={<TransportRunsPay />} />
               <Route path="transportation/incidents" element={<TransportIncidents />} />
+              <Route path="transportation/intelligence" element={<AdminTransportIntelligence />} />
               <Route path="transportation/impact-reports" element={<AdminTransportImpactReports />} />
               <Route path="meal-tracker" element={<AdminMealTracker />} />
               <Route path="meal-reports" element={<AdminMealReports />} />

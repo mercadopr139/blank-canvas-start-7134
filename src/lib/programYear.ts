@@ -34,6 +34,20 @@ export function getProgramYearForRegistration(today: Date = new Date()): string 
 }
 
 /**
+ * The calendar date range [start, end] a program-year tag covers.
+ * "2025-2026" → Sept 1 2025 → Aug 31 2026 (end is inclusive, 23:59:59).
+ * Falls back to the current program year if the tag is malformed.
+ */
+export function programYearRange(programYear?: string | null): [Date, Date] {
+  const tag = programYear && /^(\d{4})-(\d{4})$/.test(programYear)
+    ? programYear
+    : getProgramYearForRegistration();
+  const startYr = parseInt(tag.slice(0, 4), 10);
+  // Sept 1 (month index 8) of the start year → Aug 31 of the next year.
+  return [new Date(startYr, 8, 1, 0, 0, 0), new Date(startYr + 1, 7, 31, 23, 59, 59)];
+}
+
+/**
  * Short display label for a program year. "2025-2026" → "2025-26".
  */
 export function shortProgramYear(programYear: string | null | undefined): string {

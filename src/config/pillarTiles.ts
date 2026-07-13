@@ -14,7 +14,7 @@ import {
   Users, BarChart3, ClipboardList, CalendarCheck, FileBarChart, Settings2, Copy,
   Star, Bus, UserCheck, Radio, PhoneOff, AlertTriangle, FileText,
   UtensilsCrossed, HandCoins, Database, MessageSquare, Mail, Receipt,
-  ScrollText, ClipboardCheck, LayoutDashboard, Archive,
+  ScrollText, ClipboardCheck, LayoutDashboard, Archive, Gauge,
 } from "lucide-react";
 
 export interface PillarTile {
@@ -72,6 +72,7 @@ export const OPERATIONS_TILES: PillarTile[] = [
     href: "/admin/operations/transportation",
     permKey: "operations_transportation",
     children: [
+      { title: "Transportation Intelligence", href: "/admin/operations/transportation/intelligence", icon: Gauge },
       { title: "Drivers", href: "/admin/operations/transportation/drivers", icon: UserCheck },
       { title: "Youth Profiles", href: "/admin/operations/transportation/youth", icon: Users },
       { title: "Trips & Pay", href: "/admin/operations/transportation/runs", icon: Radio },
