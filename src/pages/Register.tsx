@@ -127,26 +127,32 @@ const Register = () => {
     try {
       const { data, error } = await supabase
         .from("youth_registrations")
-        .select("id, child_first_name, child_last_name, parent_email")
+        .select("id, child_first_name, child_last_name, parent_email, program_year")
         .eq("child_date_of_birth", dob);
 
       if (error) throw error;
 
-      if (data && data.length > 0) {
-        for (const existing of data) {
-          const existingFirst = (existing.child_first_name || "").toLowerCase();
-          const existingLast = (existing.child_last_name || "").toLowerCase();
-          const existingEmail = (existing.parent_email || "").toLowerCase();
+      // Only a registration for the SAME program year counts as a duplicate.
+      // NLA re-registers annually (Sept 1 → Aug 31), so a prior year's record
+      // is expected and must never block a new-year sign-up. `currentPY` is the
+      // same tag we stamp on this submission below.
+      const currentPY = getProgramYearForRegistration();
+      const rows = (data as unknown as Array<{ child_first_name: string | null; child_last_name: string | null; parent_email: string | null; program_year: string | null }>) || [];
 
-          // Check if names match
-          if (existingFirst === childFirst && existingLast === childLast) {
-            return `A registration for ${formValues["child_first_name"]} ${formValues["child_last_name"]} with this date of birth already exists. If you need to update information, please contact us.`;
-          }
+      for (const existing of rows) {
+        if ((existing.program_year || "") !== currentPY) continue; // prior-year record — allowed
+        const existingFirst = (existing.child_first_name || "").toLowerCase();
+        const existingLast = (existing.child_last_name || "").toLowerCase();
+        const existingEmail = (existing.parent_email || "").toLowerCase();
 
-          // Check if email matches with same DOB
-          if (parentEmail && existingEmail === parentEmail) {
-            return `A registration with this parent email and date of birth already exists. If you need to update information, please contact us.`;
-          }
+        // Check if names match
+        if (existingFirst === childFirst && existingLast === childLast) {
+          return `${formValues["child_first_name"]} ${formValues["child_last_name"]} is already registered for the ${currentPY} program year. If you need to update information, please contact us.`;
+        }
+
+        // Check if email matches with same DOB
+        if (parentEmail && existingEmail === parentEmail) {
+          return `A registration with this parent email and date of birth already exists for the ${currentPY} program year. If you need to update information, please contact us.`;
         }
       }
     } catch (error) {
