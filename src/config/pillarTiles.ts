@@ -40,7 +40,7 @@ export const OPERATIONS_TILES: PillarTile[] = [
     children: [
       { title: "Registration Form", href: "/register", icon: ClipboardList, external: true },
       { title: "Registrations", href: "/admin/operations/registrations", icon: Users },
-      { title: "Registration Analytics", href: "/admin/operations/registration-analytics", icon: BarChart3 },
+      { title: "Registration Intelligence", href: "/admin/operations/registration-analytics", icon: BarChart3 },
       { title: "Duplicate Registrations", href: "/admin/operations/duplicate-registrations", icon: Copy },
       { title: "Registration Editor", href: "/admin/operations/form-builder", icon: Settings2 },
     ],
@@ -88,7 +88,7 @@ export const OPERATIONS_TILES: PillarTile[] = [
     permKey: "operations_meal_tracker",
     children: [
       { title: "Meal Setup", href: "/admin/operations/meal-tracker", icon: UtensilsCrossed },
-      { title: "Meal Reports", href: "/admin/operations/meal-reports", icon: BarChart3 },
+      { title: "Meal Intelligence", href: "/admin/operations/meal-reports", icon: BarChart3 },
     ],
   },
 ];

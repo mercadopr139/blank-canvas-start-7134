@@ -311,7 +311,7 @@ const AdminRegistrationAnalytics = () => {
   return (
     <div className="bg-black text-white">
       <div className="border-b border-white/10 px-4 py-3">
-        <h2 className="text-base font-semibold text-white">Registration Analytics</h2>
+        <h2 className="text-base font-semibold text-white">Registration Intelligence</h2>
         <p className="text-xs text-white/50">Insights from youth registrations</p>
       </div>
 

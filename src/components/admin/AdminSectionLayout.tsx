@@ -130,7 +130,7 @@ const AdminSectionLayout = ({
                     ${childActive ? `${ac.link} font-medium` : "text-white/70 hover:text-white hover:bg-white/5"}`}
                 >
                   <card.icon className={`w-4 h-4 flex-shrink-0 ${childActive ? ac.icon : ""}`} />
-                  <span className="text-sm leading-tight truncate flex-1">{card.title}</span>
+                  <span className="text-sm leading-tight break-words flex-1">{card.title}</span>
                   <ChevronDown className={`w-3.5 h-3.5 flex-shrink-0 transition-transform ${expanded ? "rotate-180" : ""}`} />
                 </button>
 
@@ -150,7 +150,7 @@ const AdminSectionLayout = ({
                               ${active ? `${ac.link} font-medium` : "text-white/60 hover:text-white"}`}
                           >
                             <child.icon className={`w-3.5 h-3.5 flex-shrink-0 ${active ? ac.icon : ""}`} />
-                            <span className="text-xs leading-tight truncate">{child.title}</span>
+                            <span className="text-xs leading-tight break-words">{child.title}</span>
                             {child.external && <ExternalLink className="w-3 h-3 ml-auto flex-shrink-0 opacity-50" />}
                           </button>
                         </div>
@@ -175,7 +175,7 @@ const AdminSectionLayout = ({
                   ${active ? `${ac.link} font-medium` : "text-white/70 hover:text-white"}`}
               >
                 <card.icon className={`w-4 h-4 flex-shrink-0 ${active ? ac.icon : ""}`} />
-                <span className="text-sm leading-tight truncate">{card.title}</span>
+                <span className="text-sm leading-tight break-words">{card.title}</span>
                 {card.external && <ExternalLink className="w-3 h-3 ml-auto flex-shrink-0 opacity-50" />}
               </button>
             </div>
@@ -213,7 +213,7 @@ const AdminSectionLayout = ({
       </header>
 
       <div className="flex flex-1 overflow-hidden">
-        <aside className="hidden md:flex w-56 flex-shrink-0 border-r border-white/10 bg-black flex-col">
+        <aside className="hidden md:flex w-64 flex-shrink-0 border-r border-white/10 bg-black flex-col">
           <SidebarContent />
         </aside>
 
