@@ -84,6 +84,7 @@ import TransportRun from "./pages/transport/TransportRun";
 import TransportIncidents from "./pages/transport/TransportIncidents";
 import AdminTransportImpactReports from "./pages/admin/AdminTransportImpactReports";
 import AdminTransportIntelligence from "./pages/admin/AdminTransportIntelligence";
+import AdminReRegistrationReadiness from "./pages/admin/AdminReRegistrationReadiness";
 import AdminMealTracker from "./pages/admin/AdminMealTracker";
 import AdminMealReports from "./pages/admin/AdminMealReports";
 import AdminMessageBoard from "./pages/admin/AdminMessageBoard";
@@ -188,6 +189,7 @@ const App = () => (
               <Route index element={<AdminOperationsIndex />} />
               <Route path="registrations" element={<AdminRegistrations />} />
               <Route path="registration-analytics" element={<AdminRegistrationAnalytics />} />
+              <Route path="reregistration-readiness" element={<AdminReRegistrationReadiness />} />
               <Route path="duplicate-registrations" element={<AdminDuplicateRegistrations />} />
               <Route path="attendance" element={<AdminAttendance />} />
               <Route path="attendance-reports" element={<AdminAttendanceReports />} />

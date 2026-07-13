@@ -34,6 +34,28 @@ export function getProgramYearForRegistration(today: Date = new Date()): string 
 }
 
 /**
+ * The program year currently IN SESSION for attendance. Unlike
+ * getProgramYearForRegistration() — which rolls NEW sign-ups forward on
+ * Aug 1 (the re-registration window) — the *active* attendance year does
+ * not flip until Sept 1, when the new program year actually begins.
+ *   Jan–Aug of year Y  → "(Y-1)-Y"   (still last September's year)
+ *   Sept–Dec of year Y → "Y-(Y+1)"   (new year has started)
+ */
+export function getCurrentAttendanceYear(today: Date = new Date()): string {
+  const month = today.getMonth(); // 0-indexed; Sept = 8
+  const year = today.getFullYear();
+  if (month >= 8) return `${year}-${year + 1}`;
+  return `${year - 1}-${year}`;
+}
+
+/** The program year immediately after a "YYYY-YYYY" tag. "2025-2026" → "2026-2027". */
+export function nextProgramYear(programYear: string): string {
+  const m = programYear.match(/^(\d{4})-(\d{4})$/);
+  if (!m) return programYear;
+  return `${parseInt(m[1], 10) + 1}-${parseInt(m[2], 10) + 1}`;
+}
+
+/**
  * The calendar date range [start, end] a program-year tag covers.
  * "2025-2026" → Sept 1 2025 → Aug 31 2026 (end is inclusive, 23:59:59).
  * Falls back to the current program year if the tag is malformed.
