@@ -9,7 +9,7 @@ import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Plus, Pencil, Trash2, ExternalLink, Link2, FileText } from "lucide-react";
+import { Plus, Pencil, Trash2, ExternalLink, Link2, FileText, Copy } from "lucide-react";
 import { toast } from "sonner";
 import { slugify, type FormRecord } from "@/lib/formKit";
 
@@ -18,6 +18,7 @@ const AdminForms = () => {
   const qc = useQueryClient();
   const { user } = useAuth();
   const [creating, setCreating] = useState(false);
+  const [duplicatingId, setDuplicatingId] = useState<string | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<FormRecord | null>(null);
 
   const { data: forms, isLoading } = useQuery({
@@ -53,6 +54,37 @@ const AdminForms = () => {
       toast.error("Couldn't create form: " + (e as Error).message);
     } finally {
       setCreating(false);
+    }
+  };
+
+  const duplicateForm = async (f: FormRecord) => {
+    setDuplicatingId(f.id);
+    try {
+      // Fresh form-xxxx slug so it stays unique AND keeps auto-following the
+      // title while it's a draft — retyping the title updates the public link.
+      const slug = `form-${Math.random().toString(36).slice(2, 7)}`;
+      // New field ids so the copy never shares identity with the original.
+      const clonedFields = (f.fields || []).map((fld) => ({ ...fld, id: crypto.randomUUID() }));
+      const { data, error } = await supabase
+        .from("forms" as never)
+        .insert({
+          title: `Copy of ${f.title || "Untitled Form"}`,
+          slug,
+          status: "draft", // never auto-publish a copy — staff reviews + publishes
+          fields: clonedFields as never,
+          settings: (f.settings ?? {}) as never,
+          created_by: user?.id ?? null,
+        } as never)
+        .select("id")
+        .single();
+      if (error) throw error;
+      toast.success("Form duplicated — rename it, then Publish when ready.");
+      qc.invalidateQueries({ queryKey: ["admin-forms"] });
+      navigate(`/admin/operations/forms/${(data as { id: string }).id}`);
+    } catch (e) {
+      toast.error("Couldn't duplicate: " + (e as Error).message);
+    } finally {
+      setDuplicatingId(null);
     }
   };
 
@@ -121,6 +153,9 @@ const AdminForms = () => {
                     </Button>
                   </>
                 )}
+                <Button size="icon" variant="ghost" onClick={() => duplicateForm(f)} disabled={duplicatingId === f.id} title="Duplicate this form" className="h-8 w-8 text-white/50 hover:text-white">
+                  <Copy className="w-4 h-4" />
+                </Button>
                 <Button size="icon" variant="ghost" onClick={() => navigate(`/admin/operations/forms/${f.id}`)} title="Edit" className="h-8 w-8 text-white/60 hover:text-white">
                   <Pencil className="w-4 h-4" />
                 </Button>
