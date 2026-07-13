@@ -7,6 +7,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { UserCheck, Search, Download, CheckCircle2, AlertCircle, HelpCircle } from "lucide-react";
 import { getCurrentAttendanceYear, nextProgramYear, shortProgramYear } from "@/lib/programYear";
+import KioskGateControl from "@/components/admin/KioskGateControl";
 
 /* One registration row, trimmed to what we need for matching. */
 type Reg = {
@@ -159,6 +160,8 @@ export default function AdminReRegistrationReadiness() {
           Who from {shortProgramYear(fromYear)} has re-registered for {shortProgramYear(toYear)} — and who still needs to.
         </p>
       </div>
+
+      <KioskGateControl />
 
       {/* year pickers */}
       <div className="flex flex-wrap items-end gap-3">
