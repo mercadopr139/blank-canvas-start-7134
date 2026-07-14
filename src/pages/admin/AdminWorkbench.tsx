@@ -687,6 +687,12 @@ const AdminWorkbench = () => {
 
   const handleSaved = () => {
     queryClient.invalidateQueries({ queryKey: ["focus-areas", managerType] });
+    // Also refresh the signals: a rename migrates their `source` to the new
+    // title, so the on-screen task list must refetch to re-group them under the
+    // renamed tile — otherwise the stale cache makes the tasks look like they
+    // vanished until a full page reload.
+    queryClient.invalidateQueries({ queryKey: ["task-manager-home-core"] });
+    queryClient.invalidateQueries({ queryKey: ["signals"] });
     setEditingArea(null);
   };
 
