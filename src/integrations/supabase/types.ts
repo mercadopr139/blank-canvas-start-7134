@@ -1862,6 +1862,7 @@ export type Database = {
           is_trashed: boolean
           metadata: Json | null
           pillar: Database["public"]["Enums"]["signal_pillar"] | null
+          planned_date: string | null
           priority_layer: Database["public"]["Enums"]["priority_layer"] | null
           reopen_count: number
           reopened_at: string | null
@@ -1889,6 +1890,7 @@ export type Database = {
           is_trashed?: boolean
           metadata?: Json | null
           pillar?: Database["public"]["Enums"]["signal_pillar"] | null
+          planned_date?: string | null
           priority_layer?: Database["public"]["Enums"]["priority_layer"] | null
           reopen_count?: number
           reopened_at?: string | null
@@ -1916,6 +1918,7 @@ export type Database = {
           is_trashed?: boolean
           metadata?: Json | null
           pillar?: Database["public"]["Enums"]["signal_pillar"] | null
+          planned_date?: string | null
           priority_layer?: Database["public"]["Enums"]["priority_layer"] | null
           reopen_count?: number
           reopened_at?: string | null
@@ -2082,6 +2085,7 @@ export type Database = {
         Row: {
           accent_color: string | null
           created_at: string | null
+          daily_goal: number
           display_name: string
           icon_name: string | null
           id: string
@@ -2095,6 +2099,7 @@ export type Database = {
         Insert: {
           accent_color?: string | null
           created_at?: string | null
+          daily_goal?: number
           display_name: string
           icon_name?: string | null
           id?: string
@@ -2108,6 +2113,7 @@ export type Database = {
         Update: {
           accent_color?: string | null
           created_at?: string | null
+          daily_goal?: number
           display_name?: string
           icon_name?: string | null
           id?: string

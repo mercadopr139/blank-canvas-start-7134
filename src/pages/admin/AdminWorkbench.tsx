@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import {
   ArrowLeft, LogOut, Plus, Pencil, GripVertical, Lock,
   Circle, CheckCircle2, ArrowRight, Trophy, MessageSquare, Archive,
+  Target, ChevronDown, X,
 } from "lucide-react";
 import { icons } from "lucide-react";
 import { toast } from "sonner";
@@ -93,6 +94,8 @@ type CoreSignal = {
   today_sort_order: number | null;
   description: string | null;
   pillar: string | null;
+  completed_at: string | null;
+  planned_date: string | null;
 };
 
 const getGradient = (hex: string) =>
@@ -109,17 +112,25 @@ const getIconComponent = (name: string) => {
 /* ───────── Sortable signal row inside a tile ───────── */
 const TileSignalRow = ({
   signal,
+  areaKey,
   accentColor,
+  isPlanned,
   onToggle,
   onOpenDetails,
+  onTogglePlan,
 }: {
   signal: CoreSignal;
+  areaKey: string;
   accentColor: string;
+  isPlanned: boolean;
   onToggle: () => void;
   onOpenDetails: () => void;
+  onTogglePlan: () => void;
 }) => {
+  // `data.type` lets the single page-level drag handler tell a signal drag from
+  // a focus-area drag; `areaKey` scopes same-tile reordering.
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
-    useSortable({ id: signal.id });
+    useSortable({ id: signal.id, data: { type: "signal", areaKey } });
   const style = {
     transform: CSS.Transform.toString(transform),
     transition,
@@ -170,6 +181,24 @@ const TileSignalRow = ({
           <span className="ml-1 text-[10px] text-white/30 align-middle" aria-label="has notes">
             ·
           </span>
+        )}
+      </button>
+      {/* Add / remove this task from Today's Plan — a reliable click that
+          leaves the task in its focus area and mirrors it into the plan. */}
+      <button
+        type="button"
+        onClick={onTogglePlan}
+        className={`shrink-0 pt-0.5 transition-colors ${
+          isPlanned
+            ? "text-green-400 hover:text-green-300"
+            : "text-white/20 hover:text-white/60 opacity-0 group-hover/row:opacity-100"
+        }`}
+        title={isPlanned ? "On Today's Plan — click to remove" : "Add to Today's Plan"}
+      >
+        {isPlanned ? (
+          <Target className="w-4 h-4" />
+        ) : (
+          <Plus className="w-4 h-4" />
         )}
       </button>
     </div>
@@ -279,28 +308,30 @@ const FocusAreaTile = ({
   area,
   managerType,
   signals,
+  todayStr,
   onEdit,
   onAdd,
   onToggle,
-  onReorder,
   onOpenSignalDetails,
   onArchiveCompleted,
+  onTogglePlan,
   archiving,
 }: {
   area: FocusArea;
   managerType: string;
   signals: CoreSignal[];
+  todayStr: string;
   onEdit: () => void;
   onAdd: (title: string) => Promise<void>;
   onToggle: (signal: CoreSignal) => void;
-  onReorder: (newOrder: CoreSignal[]) => void;
   onOpenSignalDetails: (signal: CoreSignal) => void;
   onArchiveCompleted: (ids: string[]) => void;
+  onTogglePlan: (signal: CoreSignal) => void;
   archiving: boolean;
 }) => {
   const navigate = useNavigate();
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
-    useSortable({ id: area.id });
+    useSortable({ id: area.id, data: { type: "area" } });
 
   const style = {
     transform: CSS.Transform.toString(transform),
@@ -315,12 +346,6 @@ const FocusAreaTile = ({
   const [draftTitle, setDraftTitle] = useState("");
   const [savingAdd, setSavingAdd] = useState(false);
 
-  // Each tile owns its own DnD context so reordering signals within one tile
-  // doesn't bubble up to the page-level focus-area reorder.
-  const tileSensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 5 } })
-  );
-
   const handleSubmitAdd = async (e: React.FormEvent) => {
     e.preventDefault();
     const trimmed = draftTitle.trim();
@@ -333,15 +358,6 @@ const FocusAreaTile = ({
     } finally {
       setSavingAdd(false);
     }
-  };
-
-  const handleSignalReorder = (event: DragEndEvent) => {
-    const { active, over } = event;
-    if (!over || active.id === over.id) return;
-    const oldIndex = signals.findIndex((s) => s.id === active.id);
-    const newIndex = signals.findIndex((s) => s.id === over.id);
-    if (oldIndex === -1 || newIndex === -1) return;
-    onReorder(arrayMove(signals, oldIndex, newIndex));
   };
 
   const completedCount = signals.filter((s) => s.status === "Complete").length;
@@ -397,28 +413,25 @@ const FocusAreaTile = ({
               No signals for today
             </p>
           ) : (
-            <DndContext
-              sensors={tileSensors}
-              collisionDetection={closestCenter}
-              onDragEnd={handleSignalReorder}
+            <SortableContext
+              items={signals.map((s) => s.id)}
+              strategy={verticalListSortingStrategy}
             >
-              <SortableContext
-                items={signals.map((s) => s.id)}
-                strategy={verticalListSortingStrategy}
-              >
-                <div className="space-y-0.5">
-                  {signals.map((s) => (
-                    <TileSignalRow
-                      key={s.id}
-                      signal={s}
-                      accentColor={area.accent_color}
-                      onToggle={() => onToggle(s)}
-                      onOpenDetails={() => onOpenSignalDetails(s)}
-                    />
-                  ))}
-                </div>
-              </SortableContext>
-            </DndContext>
+              <div className="space-y-0.5">
+                {signals.map((s) => (
+                  <TileSignalRow
+                    key={s.id}
+                    signal={s}
+                    areaKey={area.key}
+                    accentColor={area.accent_color}
+                    isPlanned={s.planned_date === todayStr}
+                    onToggle={() => onToggle(s)}
+                    onOpenDetails={() => onOpenSignalDetails(s)}
+                    onTogglePlan={() => onTogglePlan(s)}
+                  />
+                ))}
+              </div>
+            </SortableContext>
           )}
         </div>
 
@@ -527,6 +540,11 @@ const AdminWorkbench = () => {
   // Read-only details modal opened by clicking a signal title in any tile.
   const [detailsSignal, setDetailsSignal] = useState<CoreSignal | null>(null);
   const [detailsAccent, setDetailsAccent] = useState<string>("#a1a1aa");
+  // Inline editor for the per-manager daily "Win the Day" goal (suggested size).
+  const [editingGoal, setEditingGoal] = useState(false);
+  const [goalDraft, setGoalDraft] = useState<string>("");
+  // Today's Plan expand-in-place panel.
+  const [planOpen, setPlanOpen] = useState(false);
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } })
@@ -540,11 +558,11 @@ const AdminWorkbench = () => {
     queryFn: async () => {
       const { data, error } = await (supabase
         .from("task_managers")
-        .select("key, owner_email, owner_name, accent_color, display_name") as any)
+        .select("key, owner_email, owner_name, accent_color, display_name, daily_goal") as any)
         .eq("key", managerType)
         .maybeSingle();
       if (error) throw error;
-      return data as { key: string; owner_email: string | null; owner_name: string | null; accent_color: string | null; display_name: string } | null;
+      return data as { key: string; owner_email: string | null; owner_name: string | null; accent_color: string | null; display_name: string; daily_goal: number | null } | null;
     },
   });
 
@@ -570,12 +588,12 @@ const AdminWorkbench = () => {
   // the top fires only when every item in the list is Complete.
   // Source-prefix filter is applied client-side because the PostgREST
   // "not.like" syntax with reserved chars in the value is fragile.
-  const { data: todaysCoreSignals = [] } = useQuery({
+  const { data: todaysCoreSignals = [], isFetched: coreFetched } = useQuery({
     queryKey: ["task-manager-home-core", managerType],
     queryFn: async () => {
       const { data, error } = await (supabase
         .from("signals")
-        .select("id, title, status, source, today_sort_order, description, pillar") as any)
+        .select("id, title, status, source, today_sort_order, description, pillar, completed_at, planned_date") as any)
         .eq("priority_layer", "Core")
         .eq("is_archived", false)
         .eq("is_trashed", false)
@@ -603,17 +621,39 @@ const AdminWorkbench = () => {
     return map;
   }, [focusAreas, todaysCoreSignals, managerType]);
 
-  // Unified daily progress across all focus areas (Personal counts).
-  const totalCore = todaysCoreSignals.length;
-  const completedCore = todaysCoreSignals.filter((s) => s.status === "Complete").length;
-  const donePct = totalCore > 0 ? Math.round((completedCore / totalCore) * 100) : 0;
-  const dayWon = totalCore > 0 && completedCore === totalCore;
+  // "Today's Plan" — the curated subset of signals a manager commits to for
+  // today. The old model required clearing the entire Core backlog (unreachable
+  // as focus areas grew). Now the user hand-picks a small set each morning
+  // (planned_date === today) and the day is "won" when every planned task is
+  // complete. dailyGoal is just a suggested plan size — a nudge, not a gate.
+  const dailyGoal = Math.max(1, taskManager?.daily_goal ?? 5);
+
+  // Local YYYY-MM-DD. Stable within a render/day, so it's a safe memo dep.
+  const now = new Date();
+  const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+
+  const plannedSignals = useMemo(
+    () => todaysCoreSignals.filter((s) => s.planned_date === todayStr),
+    [todaysCoreSignals, todayStr]
+  );
+  const plannedCount = plannedSignals.length;
+  const plannedDone = plannedSignals.filter((s) => s.status === "Complete").length;
+  const dayWon = plannedCount > 0 && plannedDone === plannedCount;
 
   // Confetti fires once on the false → true transition into Day Won. If the
   // user undoes a completion and re-completes, it fires again, which is what
-  // we want — every win deserves the celebration.
+  // we want — every win deserves the celebration. We seed the ref on first
+  // data load (seededRef) so reopening the page after the goal is already met
+  // doesn't re-trigger confetti — only genuine in-session crossings do.
   const dayWonRef = useRef(false);
+  const seededRef = useRef(false);
   useEffect(() => {
+    if (!coreFetched) return;
+    if (!seededRef.current) {
+      seededRef.current = true;
+      dayWonRef.current = dayWon;
+      return;
+    }
     if (dayWon && !dayWonRef.current) {
       dayWonRef.current = true;
       const colors = ["#22c55e", "#16a34a", "#86efac", "#bbf7d0", "#facc15"];
@@ -625,7 +665,7 @@ const AdminWorkbench = () => {
     } else if (!dayWon && dayWonRef.current) {
       dayWonRef.current = false;
     }
-  }, [dayWon]);
+  }, [dayWon, coreFetched]);
 
   // Lock rule: NLA is shared across every task manager; everything else
   // is editable only by the owner of this task manager. (If the manager
@@ -785,24 +825,91 @@ const AdminWorkbench = () => {
     },
   });
 
-  const handleFocusAreaDragEnd = async (event: DragEndEvent) => {
+  // Add / remove a signal from today's plan by stamping (or clearing)
+  // planned_date. The stamp goes stale overnight, so plans are fresh each day.
+  const setPlanMutation = useMutation({
+    mutationFn: async ({ id, planned }: { id: string; planned: boolean }) => {
+      const { error } = await supabase
+        .from("signals")
+        .update({ planned_date: planned ? todayStr : null } as any)
+        .eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["task-manager-home-core"] });
+      queryClient.invalidateQueries({ queryKey: ["signals"] });
+    },
+    onError: (e: any) => toast.error(e.message),
+  });
+
+  // Update the per-manager daily goal (owner-only via canAdd gating in the UI;
+  // RLS also restricts task_managers writes to admins).
+  const updateGoalMutation = useMutation({
+    mutationFn: async (goal: number) => {
+      const { error } = await (supabase
+        .from("task_managers")
+        .update({ daily_goal: goal } as any))
+        .eq("key", managerType);
+      if (error) throw error;
+      return goal;
+    },
+    onSuccess: (goal) => {
+      queryClient.invalidateQueries({ queryKey: ["task-manager", managerType] });
+      setEditingGoal(false);
+      toast.success(`Daily goal set to ${goal}`);
+    },
+    onError: (e: any) => toast.error(e.message),
+  });
+
+  const handleSaveGoal = () => {
+    const parsed = parseInt(goalDraft, 10);
+    if (!Number.isFinite(parsed) || parsed < 1) {
+      toast.error("Goal must be at least 1");
+      return;
+    }
+    updateGoalMutation.mutate(Math.min(parsed, 99));
+  };
+
+  // One drag handler for the whole page. Focus-area tiles and signal rows share
+  // a single DndContext; we branch on the dragged item's `data.type` to reorder
+  // either the focus areas or the signals within a tile. (Adding a signal to
+  // Today's Plan is a click on the row's "+", not a drag.)
+  const handleDragEnd = async (event: DragEndEvent) => {
     const { active, over } = event;
-    if (!over || active.id === over.id) return;
-    const oldIndex = focusAreas.findIndex((a) => a.id === active.id);
-    const newIndex = focusAreas.findIndex((a) => a.id === over.id);
-    if (oldIndex === -1 || newIndex === -1) return;
-    const reordered = [...focusAreas];
-    const [moved] = reordered.splice(oldIndex, 1);
-    reordered.splice(newIndex, 0, moved);
-    try {
-      await Promise.all(
-        reordered.map((area, idx) =>
-          supabase.from("focus_areas").update({ sort_order: idx }).eq("id", area.id)
-        )
-      );
-      queryClient.invalidateQueries({ queryKey: ["focus-areas", managerType] });
-    } catch {
-      toast.error("Failed to reorder");
+    if (!over) return;
+    const type = active.data.current?.type;
+
+    if (type === "signal") {
+      // Reorder within the same focus-area tile.
+      if (active.id === over.id) return;
+      const areaKey = active.data.current?.areaKey;
+      if (!areaKey || areaKey !== over.data.current?.areaKey) return;
+      const list = signalsByArea.get(areaKey) || [];
+      const oldIndex = list.findIndex((s) => s.id === active.id);
+      const newIndex = list.findIndex((s) => s.id === over.id);
+      if (oldIndex === -1 || newIndex === -1) return;
+      reorderSignalsMutation.mutate(arrayMove(list, oldIndex, newIndex));
+      return;
+    }
+
+    if (type === "area") {
+      if (active.id === over.id) return;
+      const oldIndex = focusAreas.findIndex((a) => a.id === active.id);
+      const newIndex = focusAreas.findIndex((a) => a.id === over.id);
+      if (oldIndex === -1 || newIndex === -1) return;
+      const reordered = [...focusAreas];
+      const [moved] = reordered.splice(oldIndex, 1);
+      reordered.splice(newIndex, 0, moved);
+      try {
+        await Promise.all(
+          reordered.map((area, idx) =>
+            supabase.from("focus_areas").update({ sort_order: idx }).eq("id", area.id)
+          )
+        );
+        queryClient.invalidateQueries({ queryKey: ["focus-areas", managerType] });
+      } catch {
+        toast.error("Failed to reorder");
+      }
     }
   };
 
@@ -860,27 +967,165 @@ const AdminWorkbench = () => {
           </div>
         )}
 
-        {/* Unified daily progress pill — hidden when there's nothing to track. */}
-        {totalCore > 0 && (
-          <div className="flex justify-center mb-10">
-            <div
-              className={`inline-flex items-center gap-2 px-4 py-1.5 rounded-full border text-xs font-semibold transition-all ${
+        {/* One drag context wraps the focus-area tiles for reordering areas and
+            signals within a tile. */}
+        <DndContext
+          sensors={sensors}
+          collisionDetection={closestCenter}
+          onDragEnd={handleDragEnd}
+        >
+        {/* Today's Plan — a green box showing progress against the tasks the
+            user committed to today. Click it to expand the plan in place (check
+            items off, remove them). Add tasks with the "+" on each focus-area
+            row. "Day Won" fires when every planned task is complete. */}
+        {!isLoading && focusAreas.length > 0 && (
+          <div className="max-w-md mx-auto mb-10">
+            <button
+              type="button"
+              onClick={() => setPlanOpen((o) => !o)}
+              className={`w-full inline-flex items-center justify-center gap-2 px-4 py-2 rounded-xl border text-sm font-semibold transition-all ${
                 dayWon
                   ? "bg-green-500/15 border-green-500/40 text-green-300"
-                  : "bg-white/5 border-white/10 text-white/60"
+                  : "bg-green-500/[0.07] border-green-500/25 text-green-100/80 hover:bg-green-500/[0.12]"
               }`}
+              title="View today's plan"
             >
               {dayWon ? (
-                <>
-                  <Trophy className="w-3.5 h-3.5" />
-                  <span>Day Won! · {completedCore}/{totalCore}</span>
-                </>
+                <Trophy className="w-4 h-4" />
               ) : (
-                <span>
-                  {completedCore}/{totalCore} · {donePct}%
-                </span>
+                <Target className="w-4 h-4" />
               )}
-            </div>
+              <span>
+                {dayWon
+                  ? `Day Won! · ${plannedDone}/${plannedCount}`
+                  : plannedCount === 0
+                  ? "Plan your day"
+                  : `${plannedDone} / ${plannedCount} today`}
+              </span>
+              <ChevronDown
+                className={`w-4 h-4 transition-transform ${planOpen ? "rotate-180" : ""}`}
+              />
+            </button>
+
+            {planOpen && (
+              <div className="mt-2 rounded-xl border border-green-500/20 bg-white/[0.02] p-3">
+                <div className="flex items-center justify-between mb-2">
+                  <p className="text-[10px] uppercase tracking-[0.15em] text-white/30">
+                    Today's Plan
+                  </p>
+                  <span
+                    className={`text-[11px] font-semibold ${
+                      dayWon ? "text-green-400" : "text-white/40"
+                    }`}
+                  >
+                    {plannedDone}/{plannedCount}
+                    {dayWon && " ✓"}
+                  </span>
+                </div>
+
+                {/* Planned tasks — check off or remove from the plan. */}
+                {plannedCount === 0 ? (
+                  <p className="text-[11px] text-white/30 italic py-2 text-center">
+                    Nothing planned yet. Click the + on any focus-area task to add it here.
+                  </p>
+                ) : (
+                  <div className="space-y-0.5 mb-1">
+                    {plannedSignals.map((s) => {
+                      const isComplete = s.status === "Complete";
+                      return (
+                        <div
+                          key={s.id}
+                          className="flex items-center gap-2 px-1 py-1 rounded-md hover:bg-white/[0.03] group/plan"
+                        >
+                          <button
+                            type="button"
+                            onClick={() =>
+                              toggleStatusMutation.mutate({ id: s.id, current: s.status })
+                            }
+                            className="shrink-0"
+                            title={isComplete ? "Mark incomplete" : "Mark complete"}
+                          >
+                            {isComplete ? (
+                              <CheckCircle2 className="w-4 h-4 text-green-400" />
+                            ) : (
+                              <Circle className="w-4 h-4 text-white/30 hover:text-white/60 transition-colors" />
+                            )}
+                          </button>
+                          <span
+                            className={`text-sm flex-1 min-w-0 truncate ${
+                              isComplete ? "line-through text-white/30" : "text-white/85"
+                            }`}
+                          >
+                            {s.title || "Untitled"}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => setPlanMutation.mutate({ id: s.id, planned: false })}
+                            className="shrink-0 text-white/15 hover:text-white/50 opacity-0 group-hover/plan:opacity-100 transition-opacity"
+                            title="Remove from today's plan"
+                          >
+                            <X className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+
+                {/* Suggested plan size — a gentle owner-only nudge, not a gate. */}
+                {canAdd && (
+                  <div className="pt-2 mt-2 border-t border-white/5 flex items-center justify-center">
+                    {editingGoal ? (
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-[11px] text-white/40">Suggested size:</span>
+                        <input
+                          autoFocus
+                          type="number"
+                          min={1}
+                          max={99}
+                          value={goalDraft}
+                          onChange={(e) => setGoalDraft(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter") handleSaveGoal();
+                            if (e.key === "Escape") setEditingGoal(false);
+                          }}
+                          className="w-14 bg-white/5 border border-white/15 focus:border-white/35 rounded px-2 py-0.5 text-xs text-white text-center focus:outline-none"
+                          disabled={updateGoalMutation.isPending}
+                        />
+                        <button
+                          type="button"
+                          onClick={handleSaveGoal}
+                          disabled={updateGoalMutation.isPending}
+                          className="text-[11px] font-semibold px-2 py-0.5 rounded bg-white/10 hover:bg-white/20 text-white disabled:opacity-30 transition-colors"
+                        >
+                          {updateGoalMutation.isPending ? "…" : "Save"}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setEditingGoal(false)}
+                          className="text-[11px] text-white/40 hover:text-white/70 px-1"
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setGoalDraft(String(dailyGoal));
+                          setEditingGoal(true);
+                        }}
+                        className="inline-flex items-center gap-1 text-[11px] text-white/30 hover:text-white/60 transition-colors"
+                        title="Set your suggested daily plan size"
+                      >
+                        Suggested: {dailyGoal} tasks
+                        <Pencil className="w-3 h-3" />
+                      </button>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         )}
 
@@ -905,11 +1150,6 @@ const AdminWorkbench = () => {
             )}
           </div>
         ) : (
-          <DndContext
-            sensors={sensors}
-            collisionDetection={closestCenter}
-            onDragEnd={handleFocusAreaDragEnd}
-          >
             <SortableContext items={focusAreas.map((a) => a.id)} strategy={rectSortingStrategy}>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 max-w-4xl mx-auto">
                 {focusAreas.map((area) => {
@@ -960,6 +1200,7 @@ const AdminWorkbench = () => {
                       area={area}
                       managerType={managerType}
                       signals={signalsByArea.get(area.key) || []}
+                      todayStr={todayStr}
                       onEdit={() => {
                         setEditingArea(area);
                         setModalOpen(true);
@@ -968,12 +1209,16 @@ const AdminWorkbench = () => {
                       onToggle={(s) =>
                         toggleStatusMutation.mutate({ id: s.id, current: s.status })
                       }
-                      onReorder={(newOrder) => reorderSignalsMutation.mutate(newOrder)}
                       onOpenSignalDetails={(s) => {
                         setDetailsSignal(s);
                         setDetailsAccent(area.accent_color);
                       }}
                       onArchiveCompleted={(ids) => archiveCompletedMutation.mutate(ids)}
+                      onTogglePlan={(s) => {
+                        const planned = s.planned_date !== todayStr;
+                        setPlanMutation.mutate({ id: s.id, planned });
+                        if (planned) setPlanOpen(true);
+                      }}
                       archiving={archiveCompletedMutation.isPending}
                     />
                   );
@@ -999,8 +1244,8 @@ const AdminWorkbench = () => {
                 )}
               </div>
             </SortableContext>
-          </DndContext>
         )}
+        </DndContext>
 
         {/* Open Message Board — symmetric to the floating Workbench button
             on the message board page. Single entry point, sits below the
