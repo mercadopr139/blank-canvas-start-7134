@@ -42,6 +42,21 @@ interface Props {
 const slugify = (s: string) =>
   s.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
 
+// Signals are linked to a focus area by this title-based `source` string (same
+// convention as AdminWorkbench). PD uses null for NLA and the raw title
+// otherwise; every other manager uses the "<KEY>:<title>" form. Renaming a tile
+// must migrate its signals from the old source to the new one, or the tasks
+// orphan (they'd still exist but no longer group under any tile).
+const sourceForTitle = (
+  managerType: string,
+  key: string,
+  title: string
+): string | null => {
+  const isNla = key === "nla";
+  if (managerType === "PD") return isNla ? null : title;
+  return `${managerType}:${isNla ? "NLA" : title}`;
+};
+
 const FocusAreaModal = ({ open, onClose, onSaved, editingArea, managerType = "PD" }: Props) => {
   const isEditing = !!editingArea;
 
@@ -129,10 +144,11 @@ const FocusAreaModal = ({ open, onClose, onSaved, editingArea, managerType = "PD
       }
 
       if (isEditing && editingArea) {
+        const newTitle = title.trim();
         const { error } = await supabase
           .from("focus_areas")
           .update({
-            title: title.trim(),
+            title: newTitle,
             subtitle: subtitle.trim() || null,
             icon_name: iconName,
             accent_color: accentColor,
@@ -141,6 +157,20 @@ const FocusAreaModal = ({ open, onClose, onSaved, editingArea, managerType = "PD
           })
           .eq("id", editingArea.id);
         if (error) throw error;
+
+        // Title changed → carry this tile's tasks along so they aren't orphaned.
+        // NLA is keyed by "nla" (not its title), so it never needs migration.
+        if (editingArea.key !== "nla" && editingArea.title !== newTitle) {
+          const oldSource = sourceForTitle(managerType, editingArea.key, editingArea.title);
+          const newSource = sourceForTitle(managerType, editingArea.key, newTitle);
+          if (oldSource && newSource && oldSource !== newSource) {
+            const { error: migrateErr } = await supabase
+              .from("signals")
+              .update({ source: newSource } as any)
+              .eq("source", oldSource);
+            if (migrateErr) throw migrateErr;
+          }
+        }
         toast.success("Focus area updated");
       } else {
         const key = slugify(title);
