@@ -6,7 +6,8 @@ import { supabase } from "@/integrations/supabase/client";
 import type { Tables } from "@/integrations/supabase/types";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { ArrowLeft, Send, Sparkles, ChevronDown, ChevronRight, Loader2, Database, Pin, Archive, Trash2, Plus } from "lucide-react";
+import { ArrowLeft, Send, Sparkles, ChevronDown, ChevronRight, Loader2, Database, Pin, Archive, Trash2, Plus, FileDown } from "lucide-react";
+import CornerCoachReportSheet, { type ReportSource } from "@/components/admin/CornerCoachReportSheet";
 
 const SUPER_ADMIN_EMAIL = "joshmercado@nolimitsboxingacademy.org";
 
@@ -39,6 +40,7 @@ const AdminCornerCoach = () => {
   const [openSteps, setOpenSteps] = useState<Record<number, boolean>>({});
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
   const [showArchived, setShowArchived] = useState(false);
+  const [reportSource, setReportSource] = useState<ReportSource | null>(null);
   const endRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -307,18 +309,29 @@ const AdminCornerCoach = () => {
               >
                 {m.content}
 
-                {/* Transparency: what queries ran */}
-                {m.role === "assistant" && m.steps && m.steps.length > 0 && (
+                {/* Actions + transparency (queries run) */}
+                {m.role === "assistant" && !m.error && (
                   <div className="mt-3 pt-2 border-t border-white/[0.06]">
-                    <button
-                      onClick={() => setOpenSteps((p) => ({ ...p, [i]: !p[i] }))}
-                      className="flex items-center gap-1 text-xs text-zinc-500 hover:text-zinc-300"
-                    >
-                      {openSteps[i] ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronRight className="w-3.5 h-3.5" />}
-                      <Database className="w-3 h-3" />
-                      {m.steps.length} quer{m.steps.length === 1 ? "y" : "ies"} run
-                    </button>
-                    {openSteps[i] && (
+                    <div className="flex items-center gap-4 flex-wrap">
+                      <button
+                        onClick={() => setReportSource({ question: messages[i - 1]?.content ?? "", answer: m.content, steps: m.steps })}
+                        className="flex items-center gap-1 text-xs text-zinc-400 hover:text-white"
+                      >
+                        <FileDown className="w-3.5 h-3.5" />
+                        Make Report
+                      </button>
+                      {m.steps && m.steps.length > 0 && (
+                        <button
+                          onClick={() => setOpenSteps((p) => ({ ...p, [i]: !p[i] }))}
+                          className="flex items-center gap-1 text-xs text-zinc-500 hover:text-zinc-300"
+                        >
+                          {openSteps[i] ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronRight className="w-3.5 h-3.5" />}
+                          <Database className="w-3 h-3" />
+                          {m.steps.length} quer{m.steps.length === 1 ? "y" : "ies"} run
+                        </button>
+                      )}
+                    </div>
+                    {m.steps && openSteps[i] && (
                       <div className="mt-2 space-y-2">
                         {m.steps.map((s, j) => (
                           <div key={j} className="text-xs">
@@ -357,6 +370,12 @@ const AdminCornerCoach = () => {
           </div>
         </div>
       )}
+
+      <CornerCoachReportSheet
+        open={!!reportSource}
+        source={reportSource}
+        onClose={() => setReportSource(null)}
+      />
     </div>
   );
 };
