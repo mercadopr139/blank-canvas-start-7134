@@ -336,7 +336,12 @@ const AdminFormEditor = () => {
     try {
       const normalized = fields.map((f, i) => ({
         ...f, sort_order: (i + 1) * 10,
-        options: f.field_type === "dropdown" ? parseOptions(f.options).filter((o) => o.trim()) : null,
+        // Keep options for every choice-style field. Must match the editor's
+        // hasOptions set (dropdown/radio/multi_select) — otherwise Single/
+        // Multiple Choice fields get their choices wiped to null on save.
+        options: ["dropdown", "radio", "multi_select"].includes(f.field_type)
+          ? parseOptions(f.options).filter((o) => o.trim())
+          : null,
       }));
       const payload = {
         title: title.trim() || "Untitled Form",
