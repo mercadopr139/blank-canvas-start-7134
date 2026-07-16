@@ -37,6 +37,17 @@ function drawHR(doc: jsPDF, y: number, marginL: number, marginR: number) {
   doc.line(marginL, y, pageWidth - marginR, y);
 }
 
+// jsPDF's standard fonts don't carry some Unicode punctuation the model tends
+// to emit (≥, ≤, smart quotes, ellipsis). Map them to safe equivalents so the
+// document reads cleanly for external funders — no missing-glyph boxes.
+const clean = (s: unknown): string =>
+  String(s ?? "")
+    .replace(/≥/g, ">=")
+    .replace(/≤/g, "<=")
+    .replace(/[’‘]/g, "'")
+    .replace(/[“”]/g, '"')
+    .replace(/…/g, "...");
+
 function generateCornerCoachReportPdf(data: CornerCoachReportData): jsPDF {
   const { title, periodLabel, narrative, stats, table, logoBase64 } = data;
 
@@ -65,7 +76,7 @@ function generateCornerCoachReportPdf(data: CornerCoachReportData): jsPDF {
   doc.setFontSize(17);
   doc.setFont("helvetica", "bold");
   // Long titles wrap so they never collide with the meta column.
-  const titleLines = doc.splitTextToSize(title.toUpperCase(), pageWidth - logoRightEdge - 70);
+  const titleLines = doc.splitTextToSize(clean(title).toUpperCase(), pageWidth - logoRightEdge - 70);
   doc.text(titleLines[0] ?? "REPORT", logoRightEdge, 18);
 
   doc.setFontSize(9);
@@ -83,7 +94,7 @@ function generateCornerCoachReportPdf(data: CornerCoachReportData): jsPDF {
   doc.setTextColor(...BRAND_DARK);
   doc.setFont("helvetica", "bold");
   doc.setFontSize(8);
-  if (periodLabel) doc.text(periodLabel, metaX, 12, { align: "right" });
+  if (periodLabel) doc.text(clean(periodLabel), metaX, 12, { align: "right" });
   doc.setFont("helvetica", "normal");
   doc.text(format(new Date(), "MMM d, yyyy"), metaX, periodLabel ? 18 : 12, { align: "right" });
 
@@ -94,27 +105,51 @@ function generateCornerCoachReportPdf(data: CornerCoachReportData): jsPDF {
   let y = 52;
 
   // ─── SUMMARY STAT STRIP ───
-  const cleanStats = (stats ?? []).slice(0, 5);
+  const cleanStats = (stats ?? []).slice(0, 5).map((s) => ({ label: clean(s.label), value: clean(s.value) }));
   if (cleanStats.length > 0) {
-    const gap = 2.67;
+    const gap = 3;
     const boxW = (contentW - gap * (cleanStats.length - 1)) / cleanStats.length;
-    cleanStats.forEach((item, i) => {
+    const LABEL_FONT = 6.2;
+    const LABEL_LH = 2.5; // mm per wrapped label line
+    const VAL_PAD = 3;
+
+    // Measure each tile up front: shrink the value to fit one line, wrap the
+    // label to as many lines as it needs (capped). Then use one uniform height
+    // sized to the tallest tile so nothing is ever clipped.
+    const measured = cleanStats.map((s) => {
+      doc.setFont("helvetica", "bold");
+      let vf = 13;
+      doc.setFontSize(vf);
+      while (vf > 8 && doc.getTextWidth(s.value) > boxW - VAL_PAD * 2) {
+        vf -= 0.5;
+        doc.setFontSize(vf);
+      }
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(LABEL_FONT);
+      const labelLines = (doc.splitTextToSize(s.label, boxW - VAL_PAD * 2) as string[]).slice(0, 4);
+      return { ...s, vf, labelLines };
+    });
+
+    const maxLabelLines = Math.max(...measured.map((m) => m.labelLines.length));
+    const boxH = 11 + maxLabelLines * LABEL_LH + 3; // value block + labels + padding
+
+    measured.forEach((m, i) => {
       const x = marginL + i * (boxW + gap);
       doc.setFillColor(...LIGHT_BG);
       doc.setDrawColor(...BORDER);
-      doc.roundedRect(x, y, boxW, 18, 2, 2, "FD");
-      doc.setFontSize(12);
+      doc.roundedRect(x, y, boxW, boxH, 2, 2, "FD");
+
       doc.setFont("helvetica", "bold");
+      doc.setFontSize(m.vf);
       doc.setTextColor(...BRAND_DARK);
-      const valLines = doc.splitTextToSize(item.value, boxW - 4);
-      doc.text(valLines[0] ?? "", x + boxW / 2, y + 9, { align: "center" });
-      doc.setFontSize(6);
+      doc.text(m.value, x + boxW / 2, y + 8, { align: "center" });
+
       doc.setFont("helvetica", "normal");
+      doc.setFontSize(LABEL_FONT);
       doc.setTextColor(...BRAND_GRAY);
-      const labelLines = doc.splitTextToSize(item.label, boxW - 3);
-      doc.text(labelLines.slice(0, 2), x + boxW / 2, y + 14, { align: "center" });
+      doc.text(m.labelLines, x + boxW / 2, y + 12.5, { align: "center" });
     });
-    y += 24;
+    y += boxH + 6;
   }
 
   const checkPage = (needed: number) => {
@@ -137,7 +172,7 @@ function generateCornerCoachReportPdf(data: CornerCoachReportData): jsPDF {
     doc.setFontSize(9.5);
     doc.setFont("helvetica", "normal");
     doc.setTextColor(...BRAND_DARK);
-    const paragraphs = narrative.trim().split(/\n{2,}/);
+    const paragraphs = clean(narrative).trim().split(/\n{2,}/);
     paragraphs.forEach((para) => {
       const lines = doc.splitTextToSize(para.replace(/\s*\n\s*/g, " ").trim(), contentW);
       lines.forEach((line: string) => {
@@ -155,8 +190,8 @@ function generateCornerCoachReportPdf(data: CornerCoachReportData): jsPDF {
     checkPage(20);
     autoTable(doc, {
       startY: y,
-      head: [table.columns],
-      body: table.rows,
+      head: [table.columns.map(clean)],
+      body: table.rows.map((r) => r.map(clean)),
       theme: "striped",
       headStyles: {
         fillColor: [...TABLE_HEAD],

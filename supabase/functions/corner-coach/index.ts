@@ -88,7 +88,7 @@ const emitReportTool = {
       period_label: { type: "string", description: "Human-readable date range if the report is time-bound, e.g. 'June 16 – July 16, 2026'. Empty string if the report is not time-bound." },
       stats: {
         type: "array",
-        description: "3 to 5 headline figures for the summary strip at the top of the report. Short label + short value.",
+        description: "3 to 5 headline figures for the summary strip. Keep BOTH parts short and scannable: labels 2–4 words (e.g. 'Total Registrations', 'Check-Ins Logged', 'Free/Reduced Lunch'), values compact (e.g. '514', '66%', '4,295'). Never pack a comparison sentence into a tile — comparisons and context belong in the narrative, not on a tile.",
         items: {
           type: "object",
           properties: {
@@ -222,6 +222,8 @@ Deno.serve(async (req) => {
       "- Base every figure on actual query results. Use run_sql to pull any extra detail you need. Never invent numbers.\n" +
       "- Write standard PostgreSQL. Handle relative dates with CURRENT_DATE + interval math.\n" +
       "- When you have what you need, call emit_report exactly once with: a clear title, the period (if time-bound), 3–5 headline stats, a professional 1–2 paragraph narrative, and a data table if one makes sense (skip the table for single-number answers).\n" +
+      "- The audience is federal grant funders and boards, so keep it polished and plainspoken. Stat tiles must be scannable — short labels (2–4 words) and compact values; put all comparisons and nuance in the narrative, never crammed onto a tile.\n" +
+      "- Use plain ASCII punctuation in labels and values (write '1+' not '≥1').\n" +
       "- Keep the table to at most 100 rows; summarize/aggregate rather than dumping raw personal records.\n\n" +
       "Database schema (table_name(columns)):\n\n" + schema;
 
