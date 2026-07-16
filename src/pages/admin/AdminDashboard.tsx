@@ -745,20 +745,41 @@ const AdminDashboard = () => {
             </button>
           )}
 
-          <button
-            type="button"
-            onClick={enterOther}
-            className="group flex items-center gap-3 rounded-xl border border-white/[0.06] bg-white/[0.02] px-5 py-3.5 text-left transition-all duration-200 hover:bg-white/[0.04] hover:border-white/[0.12]"
-          >
-            <div className="w-9 h-9 rounded-lg flex items-center justify-center bg-white/[0.04] text-zinc-500 group-hover:text-zinc-300 transition-colors">
-              <LayoutGrid className="w-4.5 h-4.5" strokeWidth={1.8} />
-            </div>
-            <div>
-              <h3 className="text-sm font-semibold text-zinc-300">Other Admin</h3>
-              <p className="text-[11px] text-zinc-600">Workbenches, message board, settings &amp; more</p>
-            </div>
-            <ChevronRight className="w-4 h-4 ml-2 text-zinc-600 group-hover:text-zinc-400 transition-colors" />
-          </button>
+          {/* Other Admin entry + Corner Coach stacked directly beneath it
+              (Corner Coach is super-admin only). */}
+          <div className="flex flex-col gap-3">
+            <button
+              type="button"
+              onClick={enterOther}
+              className="group flex items-center gap-3 rounded-xl border border-white/[0.06] bg-white/[0.02] px-5 py-3.5 text-left transition-all duration-200 hover:bg-white/[0.04] hover:border-white/[0.12]"
+            >
+              <div className="w-9 h-9 rounded-lg flex items-center justify-center bg-white/[0.04] text-zinc-500 group-hover:text-zinc-300 transition-colors">
+                <LayoutGrid className="w-4.5 h-4.5" strokeWidth={1.8} />
+              </div>
+              <div>
+                <h3 className="text-sm font-semibold text-zinc-300">Other Admin</h3>
+                <p className="text-[11px] text-zinc-600">Workbenches, message board, settings &amp; more</p>
+              </div>
+              <ChevronRight className="w-4 h-4 ml-2 text-zinc-600 group-hover:text-zinc-400 transition-colors" />
+            </button>
+
+            {isSuperAdmin && (
+              <button
+                type="button"
+                onClick={() => navigate("/admin/corner-coach")}
+                className="group flex items-center gap-3 rounded-xl border border-[#bf0f3e]/30 bg-[#bf0f3e]/[0.06] px-5 py-3.5 text-left transition-all duration-200 hover:bg-[#bf0f3e]/[0.12] hover:border-[#bf0f3e]/50"
+              >
+                <div className="w-9 h-9 rounded-lg flex items-center justify-center bg-[#bf0f3e]/20 text-[#bf0f3e]">
+                  <Sparkles className="w-4.5 h-4.5" strokeWidth={1.8} />
+                </div>
+                <div>
+                  <h3 className="text-sm font-semibold text-white">Corner Coach</h3>
+                  <p className="text-[11px] text-zinc-500">Ask your data anything</p>
+                </div>
+                <ChevronRight className="w-4 h-4 ml-2 text-zinc-600 group-hover:text-[#bf0f3e]/70 transition-colors" />
+              </button>
+            )}
+          </div>
         </div>
         </>
         ) : (
@@ -779,27 +800,6 @@ const AdminDashboard = () => {
             Back to Dashboard
           </Button>
         </div>
-
-        {/* Corner Coach — super-admin-only AI data assistant. Fixed entry (not a
-            workbench tile), so it lives here above the sortable grid. */}
-        {isSuperAdmin && (
-          <div className="max-w-5xl mx-auto mb-6">
-            <button
-              type="button"
-              onClick={() => navigate("/admin/corner-coach")}
-              className="group w-full flex items-center gap-3 rounded-xl border border-[#bf0f3e]/30 bg-[#bf0f3e]/[0.06] px-5 py-4 text-left transition-all duration-200 hover:bg-[#bf0f3e]/[0.12] hover:border-[#bf0f3e]/50"
-            >
-              <div className="w-10 h-10 rounded-lg flex items-center justify-center bg-[#bf0f3e]/20 text-[#bf0f3e]">
-                <Sparkles className="w-5 h-5" strokeWidth={1.8} />
-              </div>
-              <div className="flex-1">
-                <h3 className="text-sm font-semibold text-white">Corner Coach</h3>
-                <p className="text-[11px] text-zinc-500">Ask your data anything — attendance, trips, meals, supporters</p>
-              </div>
-              <ChevronRight className="w-4 h-4 text-zinc-600 group-hover:text-[#bf0f3e]/70 transition-colors" />
-            </button>
-          </div>
-        )}
 
         {!tilesLoading && tiles.length > 0 && (
           <div className="max-w-5xl mx-auto">
