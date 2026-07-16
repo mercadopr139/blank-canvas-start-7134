@@ -47,6 +47,7 @@ export type Database = {
           id: string
           pinned: boolean
           question: string
+          report: Json | null
           steps: Json | null
           user_id: string
         }
@@ -57,6 +58,7 @@ export type Database = {
           id?: string
           pinned?: boolean
           question: string
+          report?: Json | null
           steps?: Json | null
           user_id: string
         }
@@ -67,6 +69,7 @@ export type Database = {
           id?: string
           pinned?: boolean
           question?: string
+          report?: Json | null
           steps?: Json | null
           user_id?: string
         }

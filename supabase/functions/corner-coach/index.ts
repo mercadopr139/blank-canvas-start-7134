@@ -6,7 +6,9 @@
 //   - "report": turns a prior Q&A into a structured, branded report. Claude may
 //     pull extra detail with run_sql, writes a narrative, then calls emit_report
 //     to return { title, period_label, stats[], narrative, table }.
-//   - "revise_narrative": rewrites just a report's narrative from an instruction.
+//   - "revise_narrative": revises an existing report from an instruction. Like
+//     report mode, it can run NEW queries to bring in data the report doesn't
+//     have yet (e.g. attendance-by-demographic to enrich the story).
 //
 // Security:
 //   - Locked to the super-admin email (server-side check on the verified JWT).
@@ -81,7 +83,7 @@ const emitReportTool = {
   input_schema: {
     type: "object",
     properties: {
-      title: { type: "string", description: "A clear report title, e.g. 'Attendance Report' or 'Meal Service Summary'." },
+      title: { type: "string", description: "A clear report title, e.g. 'Attendance Report' or 'Demographics Summary'." },
       period_label: { type: "string", description: "Human-readable date range if the report is time-bound, e.g. 'June 16 – July 16, 2026'. Empty string if the report is not time-bound." },
       stats: {
         type: "array",
@@ -130,6 +132,49 @@ async function execRunSql(serviceClient: any, block: any, steps: any[]) {
   return { type: "tool_result", tool_use_id: block.id, content: payload };
 }
 
+// Shared tool-use loop for both report generation and report revision: Claude
+// may run_sql as needed, then calls emit_report with the finished report.
+async function runReportLoop(
+  anthropic: any,
+  serviceClient: any,
+  systemText: string,
+  seedContent: string,
+): Promise<{ report: any; steps: any[] } | null> {
+  const system = [{ type: "text", text: systemText, cache_control: { type: "ephemeral" } }];
+  const messages: any[] = [{ role: "user", content: seedContent }];
+  const steps: any[] = [];
+
+  for (let i = 0; i < MAX_STEPS; i++) {
+    const response = await anthropic.messages.create({
+      model: MODEL,
+      max_tokens: 4096,
+      system,
+      tools: [runSqlTool, emitReportTool],
+      messages,
+    });
+
+    if (response.stop_reason !== "tool_use") {
+      const text = response.content.filter((b: any) => b.type === "text").map((b: any) => b.text).join("\n").trim();
+      return { report: { title: "Report", period_label: "", stats: [], narrative: text, table: null }, steps };
+    }
+
+    messages.push({ role: "assistant", content: response.content });
+
+    const emit = (response.content as any[]).find((b) => b.type === "tool_use" && b.name === "emit_report");
+    if (emit) return { report: emit.input, steps };
+
+    const toolResults: any[] = [];
+    for (const block of response.content as any[]) {
+      if (block.type === "tool_use" && block.name === "run_sql") {
+        toolResults.push(await execRunSql(serviceClient, block, steps));
+      }
+    }
+    messages.push({ role: "user", content: toolResults });
+  }
+
+  return null; // exhausted the step budget
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
@@ -159,47 +204,48 @@ Deno.serve(async (req) => {
     const mode: string = body.mode ?? "chat";
     const anthropic = new Anthropic({ apiKey: ANTHROPIC_API_KEY });
 
-    // ─────────────────────────────────────────────────────────────────────
-    // Mode: revise_narrative — rewrite just the narrative from an instruction.
-    // No DB access needed; fast single call.
-    // ─────────────────────────────────────────────────────────────────────
-    if (mode === "revise_narrative") {
-      const { report, instruction } = body;
-      if (!report?.narrative || !instruction) {
-        return json({ error: "A report and an instruction are required." }, 400);
-      }
-      const response = await anthropic.messages.create({
-        model: MODEL,
-        max_tokens: 1500,
-        system:
-          "You are Corner Coach, editing the narrative section of a report for No Limits Boxing Academy, a youth boxing non-profit. " +
-          "Apply the user's instruction to the narrative. Keep it truthful to the figures given — never invent numbers. " +
-          "Return ONLY the revised narrative as plain prose: no preamble, no markdown headings, no quotes around it.",
-        messages: [
-          {
-            role: "user",
-            content:
-              `Report title: ${report.title}\n` +
-              `Headline figures: ${JSON.stringify(report.stats ?? [])}\n\n` +
-              `Current narrative:\n${report.narrative}\n\n` +
-              `Revise it with this instruction: ${instruction}`,
-          },
-        ],
-      });
-      const narrative = response.content
-        .filter((b: any) => b.type === "text")
-        .map((b: any) => b.text)
-        .join("\n")
-        .trim();
-      return json({ narrative });
-    }
-
-    // Both chat and report modes talk to the database.
+    // Every mode talks to the database now (revise can pull new data too).
     const serviceClient = createClient(
       Deno.env.get("SUPABASE_URL")!,
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
     );
     const schema = await loadSchema(serviceClient);
+
+    const reportSystem =
+      "You are Corner Coach, preparing a polished, professional report for No Limits Boxing Academy, a youth boxing non-profit. " +
+      "The report will be rendered into a branded PDF for internal review, boards, and grant funders. Rules:\n" +
+      "- Base every figure on actual query results. Use run_sql to pull any extra detail you need. Never invent numbers.\n" +
+      "- Write standard PostgreSQL. Handle relative dates with CURRENT_DATE + interval math.\n" +
+      "- When you have what you need, call emit_report exactly once with: a clear title, the period (if time-bound), 3–5 headline stats, a professional 1–2 paragraph narrative, and a data table if one makes sense (skip the table for single-number answers).\n" +
+      "- Keep the table to at most 100 rows; summarize/aggregate rather than dumping raw personal records.\n\n" +
+      "Database schema (table_name(columns)):\n\n" + schema;
+
+    // ─────────────────────────────────────────────────────────────────────
+    // Mode: revise_narrative — revise an existing report, pulling new data if
+    // the instruction calls for facts the report doesn't have yet.
+    // ─────────────────────────────────────────────────────────────────────
+    if (mode === "revise_narrative") {
+      const { report, instruction } = body;
+      if (!report || !instruction) {
+        return json({ error: "A report and an instruction are required." }, 400);
+      }
+
+      const seed =
+        `Here is the CURRENT report. Revise it according to the instruction below. ` +
+        `If the instruction needs facts the report doesn't already contain, run the queries to get them — do not guess. ` +
+        `Keep every figure truthful to the data.\n\n` +
+        `Title: ${report.title ?? ""}\n` +
+        `Period: ${report.periodLabel ?? report.period_label ?? ""}\n` +
+        `Current stats: ${JSON.stringify(report.stats ?? [])}\n` +
+        `Current narrative:\n${report.narrative ?? ""}\n` +
+        `Current table columns: ${JSON.stringify(report.table?.columns ?? [])}\n\n` +
+        `Instruction: ${instruction}\n\n` +
+        `When done, call emit_report with the FULL updated report — update the narrative, and update the stats/table too if the new data changes them.`;
+
+      const result = await runReportLoop(anthropic, serviceClient, reportSystem, seed);
+      if (!result) return json({ error: "Couldn't complete that revision within a reasonable number of steps. Try a simpler instruction." }, 422);
+      return json({ report: result.report, steps: result.steps });
+    }
 
     // ─────────────────────────────────────────────────────────────────────
     // Mode: report — turn a prior Q&A into a structured, branded report.
@@ -208,79 +254,22 @@ Deno.serve(async (req) => {
       const { question, answer, steps: priorSteps } = body;
       if (!question) return json({ error: "A question is required." }, 400);
 
-      // Summarize the data already gathered so Claude can reuse it (and pull
-      // more detail with run_sql if it needs a proper table).
       const priorData = Array.isArray(priorSteps)
         ? priorSteps
-            .map((s: any, i: number) => {
-              const rowsJson = JSON.stringify(s.rows ?? []).slice(0, 8000);
-              return `Query ${i + 1}: ${s.sql}\nRows: ${rowsJson}`;
-            })
+            .map((s: any, i: number) => `Query ${i + 1}: ${s.sql}\nRows: ${JSON.stringify(s.rows ?? []).slice(0, 8000)}`)
             .join("\n\n")
         : "(none)";
 
-      const system = [
-        {
-          type: "text",
-          text:
-            "You are Corner Coach, preparing a polished, professional report for No Limits Boxing Academy, a youth boxing non-profit. " +
-            "The report will be rendered into a branded PDF for internal review, boards, and grant funders. Rules:\n" +
-            "- Base every figure on actual query results. Use run_sql to pull any extra detail you need (e.g. a per-item breakdown for the table). Never invent numbers.\n" +
-            "- Write standard PostgreSQL. Handle relative dates with CURRENT_DATE + interval math.\n" +
-            "- When you have what you need, call emit_report exactly once with: a clear title, the period (if time-bound), 3–5 headline stats, a professional 1–2 paragraph narrative, and a data table if one makes sense (skip the table for single-number answers).\n" +
-            "- Keep the table to at most 100 rows; summarize/aggregate rather than dumping raw personal records.\n\n" +
-            "Database schema (table_name(columns)):\n\n" + schema,
-          cache_control: { type: "ephemeral" },
-        },
-      ];
+      const seed =
+        `Prepare a report based on this question and the answer already given.\n\n` +
+        `Question: ${question}\n\n` +
+        `Answer given: ${answer ?? "(none)"}\n\n` +
+        `Data already pulled (reuse it; run more queries if you need detail for the table):\n${priorData}\n\n` +
+        `Build the report and call emit_report.`;
 
-      const messages: any[] = [
-        {
-          role: "user",
-          content:
-            `Prepare a report based on this question and the answer already given.\n\n` +
-            `Question: ${question}\n\n` +
-            `Answer given: ${answer ?? "(none)"}\n\n` +
-            `Data already pulled (reuse it; run more queries if you need detail for the table):\n${priorData}\n\n` +
-            `Build the report and call emit_report.`,
-        },
-      ];
-
-      const steps: any[] = [];
-      for (let i = 0; i < MAX_STEPS; i++) {
-        const response = await anthropic.messages.create({
-          model: MODEL,
-          max_tokens: 4096,
-          system,
-          tools: [runSqlTool, emitReportTool],
-          messages,
-        });
-
-        if (response.stop_reason !== "tool_use") {
-          // Model answered in prose without emitting a report — wrap it so the
-          // client still gets something usable.
-          const text = response.content.filter((b: any) => b.type === "text").map((b: any) => b.text).join("\n").trim();
-          return json({ report: { title: "Report", period_label: "", stats: [], narrative: text, table: null }, steps });
-        }
-
-        messages.push({ role: "assistant", content: response.content });
-
-        const emit = (response.content as any[]).find((b) => b.type === "tool_use" && b.name === "emit_report");
-        if (emit) {
-          return json({ report: emit.input, steps });
-        }
-
-        // Otherwise run any run_sql calls and continue.
-        const toolResults: any[] = [];
-        for (const block of response.content as any[]) {
-          if (block.type === "tool_use" && block.name === "run_sql") {
-            toolResults.push(await execRunSql(serviceClient, block, steps));
-          }
-        }
-        messages.push({ role: "user", content: toolResults });
-      }
-
-      return json({ error: "Couldn't assemble the report within a reasonable number of steps. Try a narrower question." }, 422);
+      const result = await runReportLoop(anthropic, serviceClient, reportSystem, seed);
+      if (!result) return json({ error: "Couldn't assemble the report within a reasonable number of steps. Try a narrower question." }, 422);
+      return json({ report: result.report, steps: result.steps });
     }
 
     // ─────────────────────────────────────────────────────────────────────

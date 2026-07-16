@@ -7,7 +7,7 @@ import type { Tables } from "@/integrations/supabase/types";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { ArrowLeft, Send, Sparkles, ChevronDown, ChevronRight, Loader2, Database, Pin, Archive, Trash2, Plus, FileDown } from "lucide-react";
-import CornerCoachReportSheet, { type ReportSource } from "@/components/admin/CornerCoachReportSheet";
+import CornerCoachReportSheet, { type ReportSource, type SavedReport } from "@/components/admin/CornerCoachReportSheet";
 
 const SUPER_ADMIN_EMAIL = "joshmercado@nolimitsboxingacademy.org";
 
@@ -17,6 +17,7 @@ type Msg = {
   content: string;
   steps?: Step[];
   error?: boolean;
+  historyId?: string; // the corner_coach_history row this answer was saved as
 };
 type HistoryRow = Tables<"corner_coach_history">;
 
@@ -55,7 +56,7 @@ const AdminCornerCoach = () => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("corner_coach_history")
-        .select("id, question, answer, steps, pinned, archived, created_at, user_id")
+        .select("id, question, answer, steps, report, pinned, archived, created_at, user_id")
         .order("created_at", { ascending: false });
       if (error) throw error;
       return data as HistoryRow[];
@@ -106,17 +107,19 @@ const AdminCornerCoach = () => {
       } else {
         const answer = data.answer || "(no answer)";
         const steps: Step[] | undefined = data.steps;
-        setMessages([...nextMessages, { role: "assistant", content: answer, steps }]);
-        // Save the completed Q&A so it can be reopened later.
+        // Save the completed Q&A first so we can attach its history id to the
+        // message — that id is how a drafted report gets persisted back to it.
+        let historyId: string | undefined;
         if (user) {
-          await supabase.from("corner_coach_history").insert({
-            user_id: user.id,
-            question,
-            answer,
-            steps: (steps ?? null) as any,
-          });
+          const { data: inserted } = await supabase
+            .from("corner_coach_history")
+            .insert({ user_id: user.id, question, answer, steps: (steps ?? null) as any })
+            .select("id")
+            .single();
+          historyId = inserted?.id;
           refreshHistory();
         }
+        setMessages([...nextMessages, { role: "assistant", content: answer, steps, historyId }]);
       }
     } catch (e: any) {
       setMessages([...nextMessages, { role: "assistant", content: e?.message || "Something went wrong. Try again.", error: true }]);
@@ -130,7 +133,7 @@ const AdminCornerCoach = () => {
     setConfirmDelete(null);
     setMessages([
       { role: "user", content: h.question },
-      { role: "assistant", content: h.answer, steps: (h.steps as unknown as Step[]) ?? undefined },
+      { role: "assistant", content: h.answer, steps: (h.steps as unknown as Step[]) ?? undefined, historyId: h.id },
     ]);
   };
 
@@ -321,7 +324,16 @@ const AdminCornerCoach = () => {
                   <div className="mt-3 pt-2 border-t border-white/[0.06]">
                     <div className="flex items-center gap-4 flex-wrap">
                       <button
-                        onClick={() => setReportSource({ question: messages[i - 1]?.content ?? "", answer: m.content, steps: m.steps })}
+                        onClick={() => {
+                          const saved = (history.find((x) => x.id === m.historyId)?.report ?? null) as SavedReport | null;
+                          setReportSource({
+                            question: messages[i - 1]?.content ?? "",
+                            answer: m.content,
+                            steps: m.steps,
+                            historyId: m.historyId,
+                            savedReport: saved,
+                          });
+                        }}
                         className="flex items-center gap-1 text-xs text-zinc-400 hover:text-white"
                       >
                         <FileDown className="w-3.5 h-3.5" />
@@ -382,6 +394,7 @@ const AdminCornerCoach = () => {
         open={!!reportSource}
         source={reportSource}
         onClose={() => setReportSource(null)}
+        onSaved={refreshHistory}
       />
     </div>
   );

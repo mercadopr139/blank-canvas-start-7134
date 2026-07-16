@@ -4,26 +4,44 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Loader2, FileDown, Sparkles, Wand2 } from "lucide-react";
+import { Loader2, FileDown, Sparkles, Wand2, RefreshCw } from "lucide-react";
 import { downloadCornerCoachReportPdf } from "@/lib/generateCornerCoachReportPdf";
 
 type Step = { sql: string; rowCount: number | null; error?: string; rows?: any[] };
 type Stat = { label: string; value: string };
 type ReportTable = { columns: string[]; rows: string[][] };
 
-export type ReportSource = { question: string; answer: string; steps?: Step[] };
+// The persisted draft shape (stored on the history row and reloaded on reopen).
+export type SavedReport = {
+  title: string;
+  periodLabel: string;
+  narrative: string;
+  stats: Stat[];
+  table: ReportTable | null;
+};
+
+export type ReportSource = {
+  question: string;
+  answer: string;
+  steps?: Step[];
+  historyId?: string;
+  savedReport?: SavedReport | null;
+};
 
 interface Props {
   open: boolean;
   source: ReportSource | null;
   onClose: () => void;
+  onSaved?: () => void; // called after a draft is persisted, so history refreshes
 }
 
 // A draft-report editor: Corner Coach drafts a branded report from a prior
 // answer, then the operator can edit the narrative directly, prompt for AI
-// revisions, and download the branded PDF. The stats + table stay data-derived
-// (not hand-editable) so a report can never drift from the real numbers.
-const CornerCoachReportSheet = ({ open, source, onClose }: Props) => {
+// revisions (which can pull new data), and download the branded PDF. The stats
+// + table stay data-derived (not hand-editable) so a report can't drift from
+// the real numbers. A drafted report persists on its history row, so reopening
+// brings back the edited version rather than regenerating.
+const CornerCoachReportSheet = ({ open, source, onClose, onSaved }: Props) => {
   const [generating, setGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [title, setTitle] = useState("");
@@ -34,63 +52,92 @@ const CornerCoachReportSheet = ({ open, source, onClose }: Props) => {
   const [reviseInput, setReviseInput] = useState("");
   const [revising, setRevising] = useState(false);
 
+  const applyReport = (r: any) => {
+    setTitle(r.title || "Report");
+    setPeriodLabel(r.period_label || r.periodLabel || "");
+    setNarrative(r.narrative || "");
+    setStats(Array.isArray(r.stats) ? r.stats : []);
+    setTable(r.table && Array.isArray(r.table.columns) && r.table.columns.length ? r.table : null);
+  };
+
+  const generate = async () => {
+    if (!source) return;
+    setGenerating(true);
+    setError(null);
+    setReviseInput("");
+    try {
+      const { data, error } = await supabase.functions.invoke("corner-coach", {
+        body: { mode: "report", question: source.question, answer: source.answer, steps: source.steps ?? [] },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      applyReport(data.report ?? {});
+    } catch (e: any) {
+      setError(e?.message || "Couldn't build the report. Try again.");
+    } finally {
+      setGenerating(false);
+    }
+  };
+
+  // On open: load the saved draft if this question already has one; otherwise
+  // generate a fresh draft.
   useEffect(() => {
     if (!open || !source) return;
-    let cancelled = false;
-    (async () => {
-      setGenerating(true);
+    if (source.savedReport) {
+      const s = source.savedReport;
       setError(null);
-      setTitle("");
-      setPeriodLabel("");
-      setNarrative("");
-      setStats([]);
-      setTable(null);
       setReviseInput("");
-      try {
-        const { data, error } = await supabase.functions.invoke("corner-coach", {
-          body: { mode: "report", question: source.question, answer: source.answer, steps: source.steps ?? [] },
-        });
-        if (error) throw error;
-        if (data?.error) throw new Error(data.error);
-        const r = data.report ?? {};
-        if (cancelled) return;
-        setTitle(r.title || "Report");
-        setPeriodLabel(r.period_label || "");
-        setNarrative(r.narrative || "");
-        setStats(Array.isArray(r.stats) ? r.stats : []);
-        setTable(r.table && Array.isArray(r.table.columns) && r.table.columns.length ? r.table : null);
-      } catch (e: any) {
-        if (!cancelled) setError(e?.message || "Couldn't build the report. Try again.");
-      } finally {
-        if (!cancelled) setGenerating(false);
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
+      setTitle(s.title || "Report");
+      setPeriodLabel(s.periodLabel || "");
+      setNarrative(s.narrative || "");
+      setStats(Array.isArray(s.stats) ? s.stats : []);
+      setTable(s.table && s.table.columns?.length ? s.table : null);
+      setGenerating(false);
+      return;
+    }
+    generate();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, source]);
 
   const revise = async () => {
     const instruction = reviseInput.trim();
     if (!instruction || revising) return;
     setRevising(true);
+    setError(null);
     try {
       const { data, error } = await supabase.functions.invoke("corner-coach", {
-        body: { mode: "revise_narrative", report: { title, stats, narrative }, instruction },
+        body: { mode: "revise_narrative", report: { title, periodLabel, stats, narrative, table }, instruction },
       });
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
-      setNarrative(data.narrative || narrative);
+      const r = data.report ?? {};
+      // Narrative always updates; stats/table update when the new data changes
+      // them. Title/period keep the operator's edits.
+      setNarrative(r.narrative || narrative);
+      if (Array.isArray(r.stats) && r.stats.length) setStats(r.stats);
+      if (r.table && Array.isArray(r.table.columns) && r.table.columns.length) setTable(r.table);
       setReviseInput("");
     } catch (e: any) {
-      setError(e?.message || "Couldn't revise the narrative. Try again.");
+      setError(e?.message || "Couldn't revise the report. Try again.");
     } finally {
       setRevising(false);
     }
   };
 
-  const download = () =>
-    downloadCornerCoachReportPdf({ title, periodLabel, narrative, stats, table });
+  // Persist the current draft on its history row so it reopens as-is.
+  const persist = async () => {
+    if (!source?.historyId) return;
+    const payload: SavedReport = { title, periodLabel, narrative, stats, table };
+    await supabase.from("corner_coach_history").update({ report: payload as any }).eq("id", source.historyId);
+    onSaved?.();
+  };
+
+  const download = async () => {
+    await persist();
+    await downloadCornerCoachReportPdf({ title, periodLabel, narrative, stats, table });
+  };
+
+  const busy = generating || revising;
 
   return (
     <Dialog open={open} onOpenChange={(o) => { if (!o) onClose(); }}>
@@ -109,9 +156,14 @@ const CornerCoachReportSheet = ({ open, source, onClose }: Props) => {
         ) : error ? (
           <div className="py-10 text-center">
             <p className="text-red-300 text-sm">{error}</p>
-            <Button variant="outline" className="mt-4 border-white/10 text-zinc-300 bg-transparent hover:bg-white/5" onClick={onClose}>
-              Close
-            </Button>
+            <div className="mt-4 flex justify-center gap-2">
+              <Button variant="outline" className="border-white/10 text-zinc-300 bg-transparent hover:bg-white/5" onClick={generate}>
+                Try again
+              </Button>
+              <Button variant="outline" className="border-white/10 text-zinc-300 bg-transparent hover:bg-white/5" onClick={onClose}>
+                Close
+              </Button>
+            </div>
           </div>
         ) : (
           <div className="space-y-5">
@@ -155,15 +207,16 @@ const CornerCoachReportSheet = ({ open, source, onClose }: Props) => {
               />
             </div>
 
-            {/* AI revise */}
+            {/* AI revise (can pull new data) */}
             <div className="flex items-end gap-2">
               <div className="flex-1">
-                <label className="text-xs text-zinc-500 mb-1 block">Ask Corner Coach to revise</label>
+                <label className="text-xs text-zinc-500 mb-1 block">Ask Corner Coach to revise — it can pull more data if needed</label>
                 <Input
                   value={reviseInput}
                   onChange={(e) => setReviseInput(e.target.value)}
                   onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); revise(); } }}
-                  placeholder='e.g. "make it more formal" or "add a line on grant impact"'
+                  placeholder='e.g. "add attendance consistency by demographic"'
+                  disabled={revising}
                   className="bg-white/[0.04] border-white/10 text-white placeholder:text-zinc-600"
                 />
               </div>
@@ -176,6 +229,7 @@ const CornerCoachReportSheet = ({ open, source, onClose }: Props) => {
                 {revising ? <Loader2 className="w-4 h-4 animate-spin" /> : <Wand2 className="w-4 h-4" />}
               </Button>
             </div>
+            {revising && <p className="text-[11px] text-zinc-500 -mt-3">Corner Coach is checking the data and revising…</p>}
 
             {/* Table preview */}
             {table && (
@@ -208,13 +262,24 @@ const CornerCoachReportSheet = ({ open, source, onClose }: Props) => {
             )}
 
             {/* Actions */}
-            <div className="flex justify-end gap-2 pt-1">
-              <Button variant="outline" onClick={onClose} className="border-white/10 text-zinc-300 bg-transparent hover:bg-white/5">
-                Cancel
+            <div className="flex items-center justify-between gap-2 pt-1">
+              <Button
+                variant="ghost"
+                onClick={generate}
+                disabled={busy}
+                className="text-zinc-400 hover:text-white hover:bg-white/5"
+                title="Start a fresh draft from the data"
+              >
+                <RefreshCw className="w-4 h-4 mr-1.5" /> Regenerate
               </Button>
-              <Button onClick={download} disabled={!title.trim()} className="bg-[#bf0f3e] hover:bg-[#bf0f3e]/80 text-white">
-                <FileDown className="w-4 h-4 mr-1.5" /> Download PDF
-              </Button>
+              <div className="flex gap-2">
+                <Button variant="outline" onClick={onClose} className="border-white/10 text-zinc-300 bg-transparent hover:bg-white/5">
+                  Cancel
+                </Button>
+                <Button onClick={download} disabled={busy || !title.trim()} className="bg-[#bf0f3e] hover:bg-[#bf0f3e]/80 text-white">
+                  <FileDown className="w-4 h-4 mr-1.5" /> Download PDF
+                </Button>
+              </div>
             </div>
           </div>
         )}
