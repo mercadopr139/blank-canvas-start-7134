@@ -1,10 +1,12 @@
 import { useState, useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
+import type { Tables } from "@/integrations/supabase/types";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { ArrowLeft, Send, Sparkles, ChevronDown, ChevronRight, Loader2, Database } from "lucide-react";
+import { ArrowLeft, Send, Sparkles, ChevronDown, ChevronRight, Loader2, Database, Pin, Archive, Trash2, Plus } from "lucide-react";
 
 const SUPER_ADMIN_EMAIL = "joshmercado@nolimitsboxingacademy.org";
 
@@ -15,26 +17,55 @@ type Msg = {
   steps?: Step[];
   error?: boolean;
 };
+type HistoryRow = Tables<"corner_coach_history">;
 
-const SUGGESTIONS = [
-  "How many trips has Harold made in the past 10 days?",
-  "How many days has Maicol attended this month?",
-  "Which youth have the most call-outs this month?",
-  "How many meals did we serve last week?",
-];
+// "Jul 16, 2026, 9:42 AM" — every saved question carries its full date + time.
+const formatWhen = (iso: string) =>
+  new Date(iso).toLocaleString(undefined, {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+  });
 
 const AdminCornerCoach = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
+  const queryClient = useQueryClient();
   const [messages, setMessages] = useState<Msg[]>([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const [openSteps, setOpenSteps] = useState<Record<number, boolean>>({});
+  const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
+  const [showArchived, setShowArchived] = useState(false);
   const endRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     endRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, loading]);
+
+  // Saved Q&A history (owner-only via RLS). Newest first; split into pinned /
+  // recent / archived on the client.
+  const { data: history = [] } = useQuery({
+    queryKey: ["corner-coach-history", user?.id],
+    enabled: !!user,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("corner_coach_history")
+        .select("id, question, answer, steps, pinned, archived, created_at, user_id")
+        .order("created_at", { ascending: false });
+      if (error) throw error;
+      return data as HistoryRow[];
+    },
+  });
+
+  const refreshHistory = () =>
+    queryClient.invalidateQueries({ queryKey: ["corner-coach-history", user?.id] });
+
+  const pinned = history.filter((h) => h.pinned && !h.archived);
+  const recent = history.filter((h) => !h.pinned && !h.archived);
+  const archived = history.filter((h) => h.archived);
 
   // Extra guard on top of the server-side super-admin check.
   if (user && user.email?.toLowerCase() !== SUPER_ADMIN_EMAIL) {
@@ -71,7 +102,19 @@ const AdminCornerCoach = () => {
       if (data?.error) {
         setMessages([...nextMessages, { role: "assistant", content: data.error, error: true }]);
       } else {
-        setMessages([...nextMessages, { role: "assistant", content: data.answer || "(no answer)", steps: data.steps }]);
+        const answer = data.answer || "(no answer)";
+        const steps: Step[] | undefined = data.steps;
+        setMessages([...nextMessages, { role: "assistant", content: answer, steps }]);
+        // Save the completed Q&A so it can be reopened later.
+        if (user) {
+          await supabase.from("corner_coach_history").insert({
+            user_id: user.id,
+            question,
+            answer,
+            steps: (steps ?? null) as any,
+          });
+          refreshHistory();
+        }
       }
     } catch (e: any) {
       setMessages([...nextMessages, { role: "assistant", content: e?.message || "Something went wrong. Try again.", error: true }]);
@@ -79,6 +122,106 @@ const AdminCornerCoach = () => {
       setLoading(false);
     }
   };
+
+  // Reopen a saved item as its full exchange (question + answer + queries).
+  const reopen = (h: HistoryRow) => {
+    setConfirmDelete(null);
+    setMessages([
+      { role: "user", content: h.question },
+      { role: "assistant", content: h.answer, steps: (h.steps as unknown as Step[]) ?? undefined },
+    ]);
+  };
+
+  const togglePin = async (h: HistoryRow) => {
+    await supabase.from("corner_coach_history").update({ pinned: !h.pinned }).eq("id", h.id);
+    refreshHistory();
+  };
+  const toggleArchive = async (h: HistoryRow) => {
+    await supabase.from("corner_coach_history").update({ archived: !h.archived }).eq("id", h.id);
+    refreshHistory();
+  };
+  const doDelete = async (h: HistoryRow) => {
+    await supabase.from("corner_coach_history").delete().eq("id", h.id);
+    setConfirmDelete(null);
+    refreshHistory();
+  };
+
+  const startNew = () => {
+    setMessages([]);
+    setInput("");
+    setConfirmDelete(null);
+  };
+
+  // The input row is used in two spots: centered under the question when the
+  // screen is empty, and pinned to the bottom once a conversation is going.
+  const composer = (
+    <div className="flex items-end gap-2">
+      <Textarea
+        value={input}
+        onChange={(e) => setInput(e.target.value)}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" && !e.shiftKey) {
+            e.preventDefault();
+            ask(input);
+          }
+        }}
+        placeholder="e.g. How many days has Maicol attended this month?"
+        rows={1}
+        className="resize-none bg-white/[0.04] border-white/10 text-white placeholder:text-zinc-600 min-h-[44px] max-h-40"
+      />
+      <Button
+        onClick={() => ask(input)}
+        disabled={loading || !input.trim()}
+        className="bg-[#bf0f3e] hover:bg-[#bf0f3e]/80 text-white h-11 px-4 shrink-0"
+      >
+        <Send className="w-4 h-4" />
+      </Button>
+    </div>
+  );
+
+  const renderItem = (h: HistoryRow) => (
+    <div
+      key={h.id}
+      className="group flex items-start gap-2 rounded-xl border border-white/[0.06] bg-white/[0.02] hover:bg-white/[0.04] px-4 py-3 transition-colors"
+    >
+      <button onClick={() => reopen(h)} className="flex-1 text-left min-w-0">
+        <p className="text-sm text-zinc-200 truncate">{h.question}</p>
+        <p className="text-[11px] text-zinc-600 mt-0.5">{formatWhen(h.created_at)}</p>
+      </button>
+      <div className="flex items-center gap-0.5 shrink-0">
+        {confirmDelete === h.id ? (
+          <>
+            <button onClick={() => doDelete(h)} className="text-[11px] font-medium text-red-400 hover:text-red-300 px-1.5 py-1">Delete</button>
+            <button onClick={() => setConfirmDelete(null)} className="text-[11px] text-zinc-500 hover:text-zinc-300 px-1.5 py-1">Cancel</button>
+          </>
+        ) : (
+          <>
+            <button
+              onClick={() => togglePin(h)}
+              title={h.pinned ? "Unpin" : "Pin"}
+              className={`p-1.5 rounded transition-colors ${h.pinned ? "text-[#bf0f3e]" : "text-zinc-600 hover:text-zinc-300"}`}
+            >
+              <Pin className="w-3.5 h-3.5" fill={h.pinned ? "currentColor" : "none"} />
+            </button>
+            <button
+              onClick={() => toggleArchive(h)}
+              title={h.archived ? "Unarchive" : "Archive"}
+              className="p-1.5 rounded text-zinc-600 hover:text-zinc-300 transition-colors"
+            >
+              <Archive className="w-3.5 h-3.5" />
+            </button>
+            <button
+              onClick={() => setConfirmDelete(h.id)}
+              title="Delete"
+              className="p-1.5 rounded text-zinc-600 hover:text-red-400 transition-colors"
+            >
+              <Trash2 className="w-3.5 h-3.5" />
+            </button>
+          </>
+        )}
+      </div>
+    </div>
+  );
 
   return (
     <div className="min-h-screen bg-black flex flex-col">
@@ -95,6 +238,16 @@ const AdminCornerCoach = () => {
               <p className="text-xs text-zinc-500 font-medium">Your data, in your corner</p>
             </div>
           </div>
+          {messages.length > 0 && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={startNew}
+              className="ml-auto text-zinc-400 hover:text-white hover:bg-white/5 text-xs h-8"
+            >
+              <Plus className="w-4 h-4 mr-1" /> New question
+            </Button>
+          )}
         </div>
       </header>
 
@@ -102,23 +255,44 @@ const AdminCornerCoach = () => {
       <div className="flex-1 overflow-y-auto">
         <div className="max-w-3xl mx-auto px-6 py-6 space-y-4">
           {messages.length === 0 && !loading && (
-            <div className="text-center py-12">
-              <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-[#bf0f3e]/10 mb-4">
-                <Sparkles className="w-7 h-7 text-[#bf0f3e]" />
+            <div className="py-12 max-w-xl mx-auto">
+              <div className="text-center">
+                <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-[#bf0f3e]/10 mb-4">
+                  <Sparkles className="w-7 h-7 text-[#bf0f3e]" />
+                </div>
+                <h2 className="text-xl font-semibold text-white mb-5">What data would you like me to pull?</h2>
               </div>
-              <h2 className="text-xl font-semibold text-white mb-2">What can I look up for you?</h2>
-              <p className="text-zinc-500 mb-6 text-sm">Ask in plain English — trips, attendance, call-outs, meals, supporters, anything in your data.</p>
-              <div className="grid sm:grid-cols-2 gap-2 max-w-xl mx-auto">
-                {SUGGESTIONS.map((s) => (
+              {composer}
+
+              {/* History */}
+              {pinned.length > 0 && (
+                <div className="mt-8">
+                  <h3 className="text-xs font-semibold uppercase tracking-wide text-zinc-500 mb-2 flex items-center gap-1.5">
+                    <Pin className="w-3 h-3" fill="currentColor" /> Pinned
+                  </h3>
+                  <div className="space-y-2">{pinned.map(renderItem)}</div>
+                </div>
+              )}
+
+              {recent.length > 0 && (
+                <div className="mt-6">
+                  <h3 className="text-xs font-semibold uppercase tracking-wide text-zinc-500 mb-2">Recent</h3>
+                  <div className="space-y-2">{recent.map(renderItem)}</div>
+                </div>
+              )}
+
+              {archived.length > 0 && (
+                <div className="mt-6">
                   <button
-                    key={s}
-                    onClick={() => ask(s)}
-                    className="text-left text-sm text-zinc-300 bg-white/[0.03] hover:bg-white/[0.06] border border-white/[0.06] rounded-xl px-4 py-3 transition-colors"
+                    onClick={() => setShowArchived((s) => !s)}
+                    className="text-xs font-semibold uppercase tracking-wide text-zinc-600 hover:text-zinc-400 mb-2 flex items-center gap-1"
                   >
-                    {s}
+                    {showArchived ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronRight className="w-3.5 h-3.5" />}
+                    Archived ({archived.length})
                   </button>
-                ))}
-              </div>
+                  {showArchived && <div className="space-y-2">{archived.map(renderItem)}</div>}
+                </div>
+              )}
             </div>
           )}
 
@@ -173,34 +347,16 @@ const AdminCornerCoach = () => {
         </div>
       </div>
 
-      {/* Composer */}
-      <div className="border-t border-white/[0.06] bg-[#09090b]/80 backdrop-blur-md sticky bottom-0">
-        <div className="max-w-3xl mx-auto px-6 py-4">
-          <div className="flex items-end gap-2">
-            <Textarea
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter" && !e.shiftKey) {
-                  e.preventDefault();
-                  ask(input);
-                }
-              }}
-              placeholder="e.g. How many days has Maicol attended this month?"
-              rows={1}
-              className="resize-none bg-white/[0.04] border-white/10 text-white placeholder:text-zinc-600 min-h-[44px] max-h-40"
-            />
-            <Button
-              onClick={() => ask(input)}
-              disabled={loading || !input.trim()}
-              className="bg-[#bf0f3e] hover:bg-[#bf0f3e]/80 text-white h-11 px-4 shrink-0"
-            >
-              <Send className="w-4 h-4" />
-            </Button>
+      {/* Composer — pinned to the bottom only while a conversation is active;
+          when the screen is empty it lives up under the question instead. */}
+      {(messages.length > 0 || loading) && (
+        <div className="border-t border-white/[0.06] bg-[#09090b]/80 backdrop-blur-md sticky bottom-0">
+          <div className="max-w-3xl mx-auto px-6 py-4">
+            {composer}
+            <p className="text-[11px] text-zinc-600 mt-2 text-center">Corner Coach reads your live data — it can't change anything. For figures you'll report externally, glance at the query to confirm it asked what you meant.</p>
           </div>
-          <p className="text-[11px] text-zinc-600 mt-2 text-center">Corner Coach reads your database only — it can't change anything. Double-check figures before sharing externally.</p>
         </div>
-      </div>
+      )}
     </div>
   );
 };

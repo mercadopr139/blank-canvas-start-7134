@@ -588,12 +588,6 @@ const AdminDashboard = () => {
             </div>
           </div>
           <div className="flex items-center gap-2">
-            {user?.email?.toLowerCase() === "joshmercado@nolimitsboxingacademy.org" && (
-              <Button onClick={() => navigate("/admin/corner-coach")} className="bg-[#bf0f3e] hover:bg-[#bf0f3e]/80 text-white text-xs h-9">
-                <Sparkles className="w-3.5 h-3.5 mr-1.5" />
-                Corner Coach
-              </Button>
-            )}
             <InviteAdminModal />
             <Button variant="outline" onClick={() => setShowChangePassword(true)} className="border-white/10 text-zinc-300 bg-transparent hover:bg-white/5 hover:text-white text-xs h-9">
               <KeyRound className="w-3.5 h-3.5 mr-1.5" />
@@ -785,6 +779,27 @@ const AdminDashboard = () => {
             Back to Dashboard
           </Button>
         </div>
+
+        {/* Corner Coach — super-admin-only AI data assistant. Fixed entry (not a
+            workbench tile), so it lives here above the sortable grid. */}
+        {isSuperAdmin && (
+          <div className="max-w-5xl mx-auto mb-6">
+            <button
+              type="button"
+              onClick={() => navigate("/admin/corner-coach")}
+              className="group w-full flex items-center gap-3 rounded-xl border border-[#bf0f3e]/30 bg-[#bf0f3e]/[0.06] px-5 py-4 text-left transition-all duration-200 hover:bg-[#bf0f3e]/[0.12] hover:border-[#bf0f3e]/50"
+            >
+              <div className="w-10 h-10 rounded-lg flex items-center justify-center bg-[#bf0f3e]/20 text-[#bf0f3e]">
+                <Sparkles className="w-5 h-5" strokeWidth={1.8} />
+              </div>
+              <div className="flex-1">
+                <h3 className="text-sm font-semibold text-white">Corner Coach</h3>
+                <p className="text-[11px] text-zinc-500">Ask your data anything — attendance, trips, meals, supporters</p>
+              </div>
+              <ChevronRight className="w-4 h-4 text-zinc-600 group-hover:text-[#bf0f3e]/70 transition-colors" />
+            </button>
+          </div>
+        )}
 
         {!tilesLoading && tiles.length > 0 && (
           <div className="max-w-5xl mx-auto">

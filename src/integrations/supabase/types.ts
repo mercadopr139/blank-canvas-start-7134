@@ -39,6 +39,39 @@ export type Database = {
   }
   public: {
     Tables: {
+      corner_coach_history: {
+        Row: {
+          answer: string
+          archived: boolean
+          created_at: string
+          id: string
+          pinned: boolean
+          question: string
+          steps: Json | null
+          user_id: string
+        }
+        Insert: {
+          answer: string
+          archived?: boolean
+          created_at?: string
+          id?: string
+          pinned?: boolean
+          question: string
+          steps?: Json | null
+          user_id: string
+        }
+        Update: {
+          answer?: string
+          archived?: boolean
+          created_at?: string
+          id?: string
+          pinned?: boolean
+          question?: string
+          steps?: Json | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       admin_allowlist: {
         Row: {
           added_by: string | null
