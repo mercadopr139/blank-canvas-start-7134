@@ -10,7 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
-import { LogOut, Hammer, BadgeDollarSign, Lightbulb, ArrowLeft, Lock, Plus, Pencil, GripVertical, KeyRound, LayoutGrid, ChevronRight, MessageSquare, Trash2 } from "lucide-react";
+import { LogOut, Hammer, BadgeDollarSign, Lightbulb, ArrowLeft, Lock, Plus, Pencil, GripVertical, KeyRound, LayoutGrid, ChevronRight, MessageSquare, Trash2, Sparkles } from "lucide-react";
 import { icons } from "lucide-react";
 import UpcomingEventsWidget from "@/components/admin/UpcomingEventsWidget";
 import InviteAdminModal from "@/components/admin/InviteAdminModal";
@@ -588,6 +588,12 @@ const AdminDashboard = () => {
             </div>
           </div>
           <div className="flex items-center gap-2">
+            {user?.email?.toLowerCase() === "joshmercado@nolimitsboxingacademy.org" && (
+              <Button onClick={() => navigate("/admin/corner-coach")} className="bg-[#bf0f3e] hover:bg-[#bf0f3e]/80 text-white text-xs h-9">
+                <Sparkles className="w-3.5 h-3.5 mr-1.5" />
+                Corner Coach
+              </Button>
+            )}
             <InviteAdminModal />
             <Button variant="outline" onClick={() => setShowChangePassword(true)} className="border-white/10 text-zinc-300 bg-transparent hover:bg-white/5 hover:text-white text-xs h-9">
               <KeyRound className="w-3.5 h-3.5 mr-1.5" />

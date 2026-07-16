@@ -21,6 +21,7 @@ import HouseRules from "./pages/HouseRules";
 import AdminIndex from "./pages/admin/AdminIndex";
 import AdminLogin from "./pages/admin/AdminLogin";
 import AdminDashboard from "./pages/admin/AdminDashboard";
+import AdminCornerCoach from "./pages/admin/AdminCornerCoach";
 import AdminOperations, { AdminOperationsIndex } from "./pages/admin/AdminOperations";
 import AdminSalesMarketing, { AdminSalesMarketingIndex } from "./pages/admin/AdminSalesMarketing";
 import AdminFinance, { AdminFinanceIndex } from "./pages/admin/AdminFinance";
@@ -175,6 +176,14 @@ const App = () => (
               element={
                 <ProtectedRoute requireAdmin>
                   <AdminDashboard />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin/corner-coach"
+              element={
+                <ProtectedRoute requireAdmin>
+                  <AdminCornerCoach />
                 </ProtectedRoute>
               }
             />
