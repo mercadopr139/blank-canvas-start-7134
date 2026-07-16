@@ -952,23 +952,30 @@ const AdminWorkbench = () => {
       </header>
 
       <main className="relative max-w-5xl mx-auto px-6 py-10 sm:py-14">
-        {/* Personal "In the Works" pennant — a private, cross-focus-area
-            watchlist of initiatives to revisit for progress. Scoped by the
-            signed-in user's email (RLS-enforced), so it's only ever theirs. */}
-        {user?.email && <InTheWorksPennant ownerEmail={user.email} />}
-
-        <div className="flex justify-center mb-6">
-          <img
-            src={nlaLogo}
-            alt="No Limits Academy"
-            className="h-24 sm:h-32 w-auto drop-shadow-[0_0_60px_rgba(191,15,62,0.15)]"
-          />
+        {/* Top band: the logo stays centered across the full width while the
+            personal "In the Works" pennant (a private, RLS-scoped cross-focus
+            watchlist) sits top-right. Both share ONE grid cell, so the cell
+            grows with the pennant and pushes the verse below it — the list can
+            grow to any length without ever overlapping the verse. */}
+        <div className="lg:grid lg:grid-cols-1 lg:items-center">
+          {user?.email && (
+            <div className="lg:col-start-1 lg:row-start-1 lg:justify-self-end lg:w-96">
+              <InTheWorksPennant ownerEmail={user.email} />
+            </div>
+          )}
+          <div className="lg:col-start-1 lg:row-start-1 flex justify-center mb-6 lg:mb-0">
+            <img
+              src={nlaLogo}
+              alt="No Limits Academy"
+              className="h-24 sm:h-32 w-auto drop-shadow-[0_0_60px_rgba(191,15,62,0.15)]"
+            />
+          </div>
         </div>
 
         {/* Daily verse — under the logo so it's the first thing Josh
             reads when the workbench loads, before the focus area tiles. */}
         {!isLoading && (
-          <div className="mb-10">
+          <div className="mb-10 mt-6 lg:mt-8">
             <DailyVerse />
           </div>
         )}

@@ -88,10 +88,11 @@ export default function InTheWorksPennant({ ownerEmail }: { ownerEmail: string }
   };
 
   return (
-    // On large screens this floats in the top-right corner of the workbench;
-    // on smaller screens it collapses to a normal centered block above the grid
-    // so it never overlaps the tiles.
-    <div className="relative mx-auto max-w-md mb-10 lg:mb-0 lg:absolute lg:top-4 lg:right-2 lg:w-96 lg:z-20">
+    // Sits top-right on large screens (placed by the workbench's top-band grid)
+    // and collapses to a centered block above the grid on smaller screens. Kept
+    // in normal flow so a growing list pushes content down instead of
+    // overlapping the verse beneath it.
+    <div className="mx-auto w-full max-w-md mb-8 lg:mb-0">
       <div
         className="relative rounded-xl border-2 px-4 pt-3 pb-4"
         style={{
