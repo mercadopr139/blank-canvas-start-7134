@@ -52,6 +52,19 @@ const CornerCoachReportSheet = ({ open, source, onClose, onSaved }: Props) => {
   const [reviseInput, setReviseInput] = useState("");
   const [revising, setRevising] = useState(false);
 
+  // supabase-js reports non-2xx as a FunctionsHttpError whose .context is the
+  // raw Response — read our JSON { error } out of it so the user sees the real
+  // reason instead of "Edge Function returned a non-2xx status code".
+  const extractError = async (e: any): Promise<string> => {
+    try {
+      const body = await e?.context?.json?.();
+      if (body?.error) return body.error;
+    } catch {
+      /* ignore */
+    }
+    return e?.message || "Something went wrong. Try again.";
+  };
+
   const applyReport = (r: any) => {
     setTitle(r.title || "Report");
     setPeriodLabel(r.period_label || r.periodLabel || "");
@@ -66,14 +79,22 @@ const CornerCoachReportSheet = ({ open, source, onClose, onSaved }: Props) => {
     setError(null);
     setReviseInput("");
     try {
+      // Send only a light sample of each query's rows — the model just needs a
+      // representative peek, and the full payload (up to 500 rows × many
+      // queries) can exceed the edge-function request limit.
+      const lightSteps = (source.steps ?? []).map((s) => ({
+        sql: s.sql,
+        rowCount: s.rowCount,
+        rows: (s.rows ?? []).slice(0, 50),
+      }));
       const { data, error } = await supabase.functions.invoke("corner-coach", {
-        body: { mode: "report", question: source.question, answer: source.answer, steps: source.steps ?? [] },
+        body: { mode: "report", question: source.question, answer: source.answer, steps: lightSteps },
       });
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
       applyReport(data.report ?? {});
     } catch (e: any) {
-      setError(e?.message || "Couldn't build the report. Try again.");
+      setError(await extractError(e));
     } finally {
       setGenerating(false);
     }
@@ -118,7 +139,7 @@ const CornerCoachReportSheet = ({ open, source, onClose, onSaved }: Props) => {
       if (r.table && Array.isArray(r.table.columns) && r.table.columns.length) setTable(r.table);
       setReviseInput("");
     } catch (e: any) {
-      setError(e?.message || "Couldn't revise the report. Try again.");
+      setError(await extractError(e));
     } finally {
       setRevising(false);
     }

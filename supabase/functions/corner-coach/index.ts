@@ -26,7 +26,8 @@ const corsHeaders = {
 // text-to-SQL: strong multi-table reasoning, fast, and inexpensive.
 const MODEL = "claude-sonnet-5";
 const SUPER_ADMIN_EMAIL = "joshmercado@nolimitsboxingacademy.org";
-const MAX_STEPS = 8; // safety cap on the tool-use loop
+const MAX_STEPS = 8; // safety cap on the chat tool-use loop
+const REPORT_MAX_STEPS = 12; // reports may need more queries for a full picture
 
 // How many rows of each query we hand back to the browser alongside the prose
 // answer. Kept small — this is what the report/PDF export will format.
@@ -144,12 +145,16 @@ async function runReportLoop(
   const messages: any[] = [{ role: "user", content: seedContent }];
   const steps: any[] = [];
 
-  for (let i = 0; i < MAX_STEPS; i++) {
+  for (let i = 0; i < REPORT_MAX_STEPS; i++) {
+    // On the final allowed step, force emit_report so we always return a
+    // finished report rather than running out of steps and erroring.
+    const lastStep = i === REPORT_MAX_STEPS - 1;
     const response = await anthropic.messages.create({
       model: MODEL,
-      max_tokens: 4096,
+      max_tokens: 8000, // room for a full table without truncating the tool call
       system,
       tools: [runSqlTool, emitReportTool],
+      tool_choice: lastStep ? { type: "tool", name: "emit_report" } : { type: "auto" },
       messages,
     });
 
@@ -172,7 +177,7 @@ async function runReportLoop(
     messages.push({ role: "user", content: toolResults });
   }
 
-  return null; // exhausted the step budget
+  return null; // exhausted the step budget (shouldn't happen — last step forces emit)
 }
 
 Deno.serve(async (req) => {
