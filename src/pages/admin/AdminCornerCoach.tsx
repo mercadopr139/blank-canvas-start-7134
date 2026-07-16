@@ -230,7 +230,14 @@ const AdminCornerCoach = () => {
       {/* Header */}
       <header className="border-b border-white/[0.06] bg-[#09090b]/80 backdrop-blur-md sticky top-0 z-30">
         <div className="max-w-3xl mx-auto px-6 py-3 flex items-center gap-4">
-          <Button variant="ghost" size="icon" onClick={() => navigate("/admin/dashboard")} aria-label="Back to dashboard" className="text-zinc-400 hover:text-white hover:bg-white/5">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => (messages.length > 0 ? startNew() : navigate("/admin/dashboard"))}
+            aria-label={messages.length > 0 ? "Back to Corner Coach home" : "Back to dashboard"}
+            title={messages.length > 0 ? "Back" : "Back to dashboard"}
+            className="text-zinc-400 hover:text-white hover:bg-white/5"
+          >
             <ArrowLeft className="w-5 h-5" />
           </Button>
           <div className="flex items-center gap-2">
