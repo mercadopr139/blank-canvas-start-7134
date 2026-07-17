@@ -92,6 +92,7 @@ type CoreSignal = {
   status: string;
   source: string | null;
   today_sort_order: number | null;
+  plan_sort_order: number | null;
   description: string | null;
   pillar: string | null;
   completed_at: string | null;
@@ -200,6 +201,72 @@ const TileSignalRow = ({
         ) : (
           <Plus className="w-4 h-4" />
         )}
+      </button>
+    </div>
+  );
+};
+
+/* ───────── A draggable row in Today's Plan — the same look as the inline plan
+    row plus a grip handle. data.type "plan" routes the drag to the plan-reorder
+    branch of the page-level handler (writes plan_sort_order). ───────── */
+const SortablePlanRow = ({
+  signal,
+  onToggle,
+  onRemove,
+}: {
+  signal: CoreSignal;
+  onToggle: () => void;
+  onRemove: () => void;
+}) => {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
+    useSortable({ id: signal.id, data: { type: "plan" } });
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.4 : 1,
+  };
+  const isComplete = signal.status === "Complete";
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      className="flex items-center gap-2 px-1 py-1 rounded-md hover:bg-white/[0.03] group/plan"
+    >
+      <button
+        {...attributes}
+        {...listeners}
+        type="button"
+        className="text-white/15 hover:text-white/40 cursor-grab active:cursor-grabbing opacity-0 group-hover/plan:opacity-100 transition-opacity shrink-0"
+        title="Drag to reorder"
+      >
+        <GripVertical className="w-3 h-3" />
+      </button>
+      <button
+        type="button"
+        onClick={onToggle}
+        className="shrink-0"
+        title={isComplete ? "Mark incomplete" : "Mark complete"}
+      >
+        {isComplete ? (
+          <CheckCircle2 className="w-4 h-4 text-green-400" />
+        ) : (
+          <Circle className="w-4 h-4 text-white/30 hover:text-white/60 transition-colors" />
+        )}
+      </button>
+      <span
+        className={`text-sm flex-1 min-w-0 truncate ${
+          isComplete ? "line-through text-white/30" : "text-white/85"
+        }`}
+      >
+        {signal.title || "Untitled"}
+      </span>
+      <button
+        type="button"
+        onClick={onRemove}
+        className="shrink-0 text-white/15 hover:text-white/50 opacity-0 group-hover/plan:opacity-100 transition-opacity"
+        title="Remove from today's plan"
+      >
+        <X className="w-3.5 h-3.5" />
       </button>
     </div>
   );
@@ -593,7 +660,7 @@ const AdminWorkbench = () => {
     queryFn: async () => {
       const { data, error } = await (supabase
         .from("signals")
-        .select("id, title, status, source, today_sort_order, description, pillar, completed_at, planned_date") as any)
+        .select("id, title, status, source, today_sort_order, plan_sort_order, description, pillar, completed_at, planned_date") as any)
         .eq("priority_layer", "Core")
         .eq("is_archived", false)
         .eq("is_trashed", false)
@@ -633,7 +700,17 @@ const AdminWorkbench = () => {
   const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
 
   const plannedSignals = useMemo(
-    () => todaysCoreSignals.filter((s) => s.planned_date === todayStr),
+    () =>
+      todaysCoreSignals
+        .filter((s) => s.planned_date === todayStr)
+        // Honor the manual plan order; items never dragged (plan_sort_order
+        // null) keep their existing relative order via the stable sort.
+        .slice()
+        .sort(
+          (a, b) =>
+            (a.plan_sort_order ?? Number.MAX_SAFE_INTEGER) -
+            (b.plan_sort_order ?? Number.MAX_SAFE_INTEGER)
+        ),
     [todaysCoreSignals, todayStr]
   );
   const plannedCount = plannedSignals.length;
@@ -831,6 +908,31 @@ const AdminWorkbench = () => {
     },
   });
 
+  // Persist a drag-reorder of Today's Plan into plan_sort_order. Separate from
+  // reorderSignalsMutation (which writes today_sort_order for in-tile order).
+  const reorderPlanMutation = useMutation({
+    mutationFn: async (newOrder: CoreSignal[]) => {
+      const updates = newOrder.map((s, i) =>
+        supabase
+          .from("signals")
+          .update({ plan_sort_order: (i + 1) * 10 } as any)
+          .eq("id", s.id)
+      );
+      const results = await Promise.all(updates);
+      const failed = results.find((r) => r.error);
+      if (failed?.error) throw failed.error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["task-manager-home-core"] });
+      queryClient.invalidateQueries({ queryKey: ["signals"] });
+    },
+    onError: () => {
+      queryClient.invalidateQueries({ queryKey: ["task-manager-home-core"] });
+      queryClient.invalidateQueries({ queryKey: ["signals"] });
+      toast.error("Couldn't save plan order");
+    },
+  });
+
   // Add / remove a signal from today's plan by stamping (or clearing)
   // planned_date. The stamp goes stale overnight, so plans are fresh each day.
   const setPlanMutation = useMutation({
@@ -895,6 +997,16 @@ const AdminWorkbench = () => {
       const newIndex = list.findIndex((s) => s.id === over.id);
       if (oldIndex === -1 || newIndex === -1) return;
       reorderSignalsMutation.mutate(arrayMove(list, oldIndex, newIndex));
+      return;
+    }
+
+    if (type === "plan") {
+      // Reorder Today's Plan.
+      if (active.id === over.id) return;
+      const oldIndex = plannedSignals.findIndex((s) => s.id === active.id);
+      const newIndex = plannedSignals.findIndex((s) => s.id === over.id);
+      if (oldIndex === -1 || newIndex === -1) return;
+      reorderPlanMutation.mutate(arrayMove(plannedSignals, oldIndex, newIndex));
       return;
     }
 
@@ -1042,47 +1154,23 @@ const AdminWorkbench = () => {
                     Nothing planned yet. Click the + on any focus-area task to add it here.
                   </p>
                 ) : (
-                  <div className="space-y-0.5 mb-1">
-                    {plannedSignals.map((s) => {
-                      const isComplete = s.status === "Complete";
-                      return (
-                        <div
+                  <SortableContext
+                    items={plannedSignals.map((s) => s.id)}
+                    strategy={verticalListSortingStrategy}
+                  >
+                    <div className="space-y-0.5 mb-1">
+                      {plannedSignals.map((s) => (
+                        <SortablePlanRow
                           key={s.id}
-                          className="flex items-center gap-2 px-1 py-1 rounded-md hover:bg-white/[0.03] group/plan"
-                        >
-                          <button
-                            type="button"
-                            onClick={() =>
-                              toggleStatusMutation.mutate({ id: s.id, current: s.status })
-                            }
-                            className="shrink-0"
-                            title={isComplete ? "Mark incomplete" : "Mark complete"}
-                          >
-                            {isComplete ? (
-                              <CheckCircle2 className="w-4 h-4 text-green-400" />
-                            ) : (
-                              <Circle className="w-4 h-4 text-white/30 hover:text-white/60 transition-colors" />
-                            )}
-                          </button>
-                          <span
-                            className={`text-sm flex-1 min-w-0 truncate ${
-                              isComplete ? "line-through text-white/30" : "text-white/85"
-                            }`}
-                          >
-                            {s.title || "Untitled"}
-                          </span>
-                          <button
-                            type="button"
-                            onClick={() => setPlanMutation.mutate({ id: s.id, planned: false })}
-                            className="shrink-0 text-white/15 hover:text-white/50 opacity-0 group-hover/plan:opacity-100 transition-opacity"
-                            title="Remove from today's plan"
-                          >
-                            <X className="w-3.5 h-3.5" />
-                          </button>
-                        </div>
-                      );
-                    })}
-                  </div>
+                          signal={s}
+                          onToggle={() =>
+                            toggleStatusMutation.mutate({ id: s.id, current: s.status })
+                          }
+                          onRemove={() => setPlanMutation.mutate({ id: s.id, planned: false })}
+                        />
+                      ))}
+                    </div>
+                  </SortableContext>
                 )}
 
                 {/* Suggested plan size — a gentle owner-only nudge, not a gate. */}

@@ -1907,6 +1907,7 @@ export type Database = {
           source: string | null
           status: Database["public"]["Enums"]["signal_status"]
           title: string | null
+          plan_sort_order: number | null
           today_sort_order: number | null
           trashed_at: string | null
           trashed_by: string | null
@@ -1935,6 +1936,7 @@ export type Database = {
           source?: string | null
           status?: Database["public"]["Enums"]["signal_status"]
           title?: string | null
+          plan_sort_order?: number | null
           today_sort_order?: number | null
           trashed_at?: string | null
           trashed_by?: string | null
@@ -1963,6 +1965,7 @@ export type Database = {
           source?: string | null
           status?: Database["public"]["Enums"]["signal_status"]
           title?: string | null
+          plan_sort_order?: number | null
           today_sort_order?: number | null
           trashed_at?: string | null
           trashed_by?: string | null
