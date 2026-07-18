@@ -1075,7 +1075,9 @@ const RegistrationDetail = ({ registration: reg, onApprovalChange }: { registrat
   const [isSavingApproval, setIsSavingApproval] = useState(false);
 
   useEffect(() => {
+    let cancelled = false;
     const generateSignedUrls = async () => {
+      setLoadingUrls(true);
       const urlFields = [
         { key: 'medical_consent_signature_url', value: reg.medical_consent_signature_url },
         { key: 'liability_waiver_signature_url', value: reg.liability_waiver_signature_url },
@@ -1084,39 +1086,41 @@ const RegistrationDetail = ({ registration: reg, onApprovalChange }: { registrat
         { key: 'spiritual_development_policy_signature_url', value: reg.spiritual_development_policy_signature_url },
         { key: 'counseling_services_signature_url', value: reg.counseling_services_signature_url },
       ].filter(f => f.value);
+      const wd = (reg as any).waivers_data || {};
+      const waiverKeys = Object.keys(wd).filter((k) => wd[k]?.signaturePath);
 
-      const urls: Record<string, string> = {};
-      
-      for (const field of urlFields) {
-        const filePath = field.value.includes('registration-signatures/') 
-          ? field.value.split('registration-signatures/').pop() 
-          : field.value;
-        
+      const signOne = async (rawPath: string): Promise<string | undefined> => {
+        const filePath = rawPath.includes('registration-signatures/')
+          ? rawPath.split('registration-signatures/').pop()
+          : rawPath;
         const { data } = await supabase.storage
           .from('registration-signatures')
-          .createSignedUrl(filePath, 3600);
-        
-        if (data?.signedUrl) {
-          urls[field.key] = data.signedUrl;
-        }
-      }
+          .createSignedUrl(filePath as string, 3600);
+        return data?.signedUrl;
+      };
 
-      // New dynamic waivers stored in waivers_data (keyed by field_key).
-      const wd = (reg as any).waivers_data || {};
-      for (const wkey of Object.keys(wd)) {
-        const path = wd[wkey]?.signaturePath;
-        if (!path) continue;
-        const filePath = path.includes('registration-signatures/') ? path.split('registration-signatures/').pop() : path;
-        const { data: sig } = await supabase.storage.from('registration-signatures').createSignedUrl(filePath, 3600);
-        if (sig?.signedUrl) urls[`waiver_${wkey}`] = sig.signedUrl;
-      }
-      
+      // Sign every signature image IN PARALLEL. This used to run one request
+      // at a time (6–12 back-to-back round-trips); on the academy's slower
+      // connection those queued ahead of the Approve request and made the
+      // button spin for many seconds. Promise.all collapses them into one wait.
+      const [legacyPairs, waiverPairs] = await Promise.all([
+        Promise.all(urlFields.map(async (f) => [f.key, await signOne(f.value)] as const)),
+        Promise.all(waiverKeys.map(async (k) => [`waiver_${k}`, await signOne(wd[k].signaturePath)] as const)),
+      ]);
+      if (cancelled) return;
+
+      const urls: Record<string, string> = {};
+      for (const [k, v] of [...legacyPairs, ...waiverPairs]) if (v) urls[k] = v;
       setSignedUrls(urls);
       setLoadingUrls(false);
     };
 
     generateSignedUrls();
-  }, [reg]);
+    return () => { cancelled = true; };
+    // Keyed on reg.id (not the whole reg object) so flipping the approval
+    // flag no longer re-fetches every signature — that redundant refetch was
+    // competing with the approval request for the browser's connection slots.
+  }, [reg.id]);
 
   const handleApprovalSelection = async (approved: boolean) => {
     if (isSavingApproval || approved === !!reg.approved_for_attendance) return;
