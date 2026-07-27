@@ -779,26 +779,6 @@ const AdminDashboard = () => {
                 <ChevronRight className="w-4 h-4 ml-2 text-zinc-600 group-hover:text-[#bf0f3e]/70 transition-colors" />
               </button>
             )}
-
-            {/* Website Photos — for anyone granted the manage_website_photos
-                permission (super-admin included). Lets non-technical staff
-                replace/add/remove/reorder public-site photos. */}
-            {hasPermission("manage_website_photos") && (
-              <button
-                type="button"
-                onClick={() => navigate("/admin/website-photos")}
-                className="group flex items-center gap-3 rounded-xl border border-white/[0.06] bg-white/[0.02] px-5 py-3.5 text-left transition-all duration-200 hover:bg-white/[0.04] hover:border-white/[0.12]"
-              >
-                <div className="w-9 h-9 rounded-lg flex items-center justify-center bg-white/[0.04] text-zinc-400 group-hover:text-zinc-200 transition-colors">
-                  <ImageIcon className="w-4.5 h-4.5" strokeWidth={1.8} />
-                </div>
-                <div>
-                  <h3 className="text-sm font-semibold text-white">Website Photos</h3>
-                  <p className="text-[11px] text-zinc-500">Replace, add &amp; reorder public-site photos</p>
-                </div>
-                <ChevronRight className="w-4 h-4 ml-2 text-zinc-600 group-hover:text-zinc-400 transition-colors" />
-              </button>
-            )}
           </div>
         </div>
         </>
@@ -820,6 +800,27 @@ const AdminDashboard = () => {
             Back to Dashboard
           </Button>
         </div>
+
+        {/* Website Photos — lives in Other Admin. Shown to anyone granted the
+            manage_website_photos permission (super-admin included). */}
+        {hasPermission("manage_website_photos") && (
+          <div className="max-w-5xl mx-auto mb-6">
+            <button
+              type="button"
+              onClick={() => navigate("/admin/website-photos")}
+              className="group w-full flex items-center gap-3 rounded-xl border border-white/[0.06] bg-white/[0.02] px-5 py-4 text-left transition-all duration-200 hover:bg-white/[0.04] hover:border-white/[0.12]"
+            >
+              <div className="w-10 h-10 rounded-lg flex items-center justify-center bg-white/[0.04] text-zinc-400 group-hover:text-zinc-200 transition-colors">
+                <ImageIcon className="w-5 h-5" strokeWidth={1.8} />
+              </div>
+              <div className="flex-1">
+                <h3 className="text-sm font-semibold text-white">Website Photos</h3>
+                <p className="text-[11px] text-zinc-500">Replace, add &amp; reorder public-site photos</p>
+              </div>
+              <ChevronRight className="w-4 h-4 text-zinc-600 group-hover:text-zinc-400 transition-colors" />
+            </button>
+          </div>
+        )}
 
         {!tilesLoading && tiles.length > 0 && (
           <div className="max-w-5xl mx-auto">
