@@ -75,6 +75,42 @@ export type Database = {
         }
         Relationships: []
       }
+      site_images: {
+        Row: {
+          alt: string | null
+          caption: string | null
+          created_at: string
+          group_key: string
+          id: string
+          object_position: string | null
+          sort_order: number
+          updated_at: string
+          url: string
+        }
+        Insert: {
+          alt?: string | null
+          caption?: string | null
+          created_at?: string
+          group_key: string
+          id?: string
+          object_position?: string | null
+          sort_order?: number
+          updated_at?: string
+          url: string
+        }
+        Update: {
+          alt?: string | null
+          caption?: string | null
+          created_at?: string
+          group_key?: string
+          id?: string
+          object_position?: string | null
+          sort_order?: number
+          updated_at?: string
+          url?: string
+        }
+        Relationships: []
+      }
       admin_allowlist: {
         Row: {
           added_by: string | null

@@ -1,49 +1,11 @@
-import { useState, useMemo } from "react";
-import coachingRingsideImage from "@/assets/programs/coaching-ringside.jpg";
+import { useState } from "react";
 import { Link } from "react-router-dom";
 import { YouTubeEmbed } from "@/components/orientation/YouTubeEmbed";
-import groupActivityImage from "@/assets/programs/group-activity.jpg";
-import groupLessonImage from "@/assets/programs/group-lesson.jpg";
-import instructorSpeakingImage from "@/assets/programs/instructor-speaking.jpg";
-import teamActivityImage from "@/assets/programs/team-activity.jpg";
-import smileLabDisplayImage from "@/assets/programs/smile-lab-display.jpg";
-import smileLabModelsImage from "@/assets/programs/smile-lab-models.jpg";
-import lilChampsActivity1 from "@/assets/programs/lil-champs-activity-1.jpg";
-import lilChampsActivity2 from "@/assets/programs/lil-champs-activity-2.jpg";
-import lilChampsActivity3 from "@/assets/programs/lil-champs-activity-3.jpg";
-import lilChampsActivity4 from "@/assets/programs/lil-champs-activity-4.jpg";
-import lilChampsActivity5 from "@/assets/programs/lil-champs-activity-5.jpg";
-import lilChampsActivity6 from "@/assets/programs/lil-champs-activity-6.jpg";
-import nj4sLogo from "@/assets/programs/nj4s-logo.png";
-import capeAssistLogo from "@/assets/programs/cape-assist-logo.png";
-import cbim1 from "@/assets/programs/cbim-1.png";
-import cbim2 from "@/assets/programs/cbim-2.png";
-import cbim3 from "@/assets/programs/cbim-3.png";
-import cbim4 from "@/assets/programs/cbim-4.png";
-import cbim5 from "@/assets/programs/cbim-5.png";
-import cbim6 from "@/assets/programs/cbim-6.png";
-import deltaDentalLogo from "@/assets/programs/delta-dental-logo.png";
-import launchPadLogo from "@/assets/programs/launch-pad-logo.png";
-import spiritualDevPrayer1 from "@/assets/programs/spiritual-dev-prayer-1.jpg";
-import spiritualDevPrayer2 from "@/assets/programs/spiritual-dev-prayer-2.jpg";
-import spiritualDevPrayer3 from "@/assets/programs/spiritual-dev-prayer-3.jpg";
-import spiritualDevPrayer4 from "@/assets/programs/spiritual-dev-prayer-4.jpg";
-import spiritualDevPrayer5 from "@/assets/programs/spiritual-dev-prayer-5.jpg";
-import spiritualDevPrayer6 from "@/assets/programs/spiritual-dev-prayer-6.jpg";
-import smileLabGroupImage from "@/assets/programs/smile-lab-group.png";
-import smileLabInstructorImage from "@/assets/programs/smile-lab-instructor.png";
-import smileLabKidsPuzzle from "@/assets/programs/smile-lab-kids-puzzle.png";
-import smileLabBoysCraft from "@/assets/programs/smile-lab-boys-craft.png";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { ClickToEnlargeGallery } from "@/components/ui/click-to-enlarge-gallery";
-
-// Excursions images (shared gallery)
-import { excursionGalleryImages } from "@/data/excursionsGallery";
-import realTalkJoeFranco from "@/assets/programs/real-talk-joe-franco.png";
-import realTalkNateEvans from "@/assets/programs/real-talk-nate-evans.jpg";
-import oceanFirstBankLogo from "@/assets/programs/oceanfirst-bank-logo.png";
-import { mealTrainGalleryImages } from "@/data/mealTrainGallery";
+import { useSiteImages } from "@/hooks/useSiteImages";
+import type { SiteImageItem } from "@/config/siteImages";
 type ProgramItem = {
   id: string;
   title: string;
@@ -51,51 +13,21 @@ type ProgramItem = {
   ageRange: string;
   blurb: string;
   policyText?: string;
-  images: {
-    src: string;
-    alt: string;
-    caption?: string;
-  }[];
+  images: SiteImageItem[];
   buttonLabel: string;
 };
 const ProgramsExtrasSection = () => {
-  const items: ProgramItem[] = useMemo(() => [{
+  // Photos are managed from the admin (Website Photos); resolveGroup returns the
+  // edited images if a group has been changed, else the bundled defaults.
+  const { resolveGroup } = useSiteImages();
+  const single = (key: string) => resolveGroup(key)[0]?.src ?? "";
+  const items: ProgramItem[] = [{
     id: "smile-lab",
     title: "Delta Dental's Smile Lab",
     subtitle: "Junior Boxers Only",
     ageRange: "7–10 years old",
     blurb: "Smile Lab is part of Double Punch Tuesday—our Junior Boxing program followed by optional aftercare. After training, youth participate in an oral health initiative through our partnership with Delta Dental, designed to improve access to care and deliver engaging education that empowers youth to take control of their oral health and overall well-being.",
-    images: [{
-      src: groupLessonImage,
-      alt: "Students participating in a group lesson at a table"
-    }, {
-      src: instructorSpeakingImage,
-      alt: "Instructor speaking with students during a group activity"
-    }, {
-      src: teamActivityImage,
-      alt: "Student giving a high five during a group activity"
-    }, {
-      src: groupActivityImage,
-      alt: "Kids participating in a group activity"
-    }, {
-      src: smileLabDisplayImage,
-      alt: "Smile Lab oral health display inside No Limits Academy"
-    }, {
-      src: smileLabModelsImage,
-      alt: "Dental education models demonstrating oral health"
-    }, {
-      src: smileLabGroupImage,
-      alt: "Smile Lab instructor teaching youth about oral health"
-    }, {
-      src: smileLabInstructorImage,
-      alt: "Smile Lab instructor with dental models at No Limits Academy"
-    }, {
-      src: smileLabKidsPuzzle,
-      alt: "Kids working together on a dental puzzle activity"
-    }, {
-      src: smileLabBoysCraft,
-      alt: "Boys building dental models during Smile Lab"
-    }],
+    images: resolveGroup("programs.smile-lab"),
     buttonLabel: "Back to Programs"
   }, {
     id: "excursions",
@@ -103,7 +35,7 @@ const ProgramsExtrasSection = () => {
     subtitle: "Senior Boxers Only",
     ageRange: "11–19 years old",
     blurb: "Our excursions take youth beyond the facility walls—exposing them to new experiences, education, and opportunities that expand perspective and reinforce life skills learned in the gym.",
-    images: excursionGalleryImages,
+    images: resolveGroup("programs.excursions"),
     buttonLabel: "Back to Programs"
   }, {
     id: "lil-champs",
@@ -111,25 +43,7 @@ const ProgramsExtrasSection = () => {
     subtitle: "Junior Boxers Only",
     ageRange: "7–10 years old",
     blurb: "Lil' Champs' Corner is part of Double Punch Tuesday—our Junior Boxing program followed by optional aftercare. After training, youth participate in age-appropriate education programming through our NJ4S partnership with Acenda, building life skills like routines, hygiene, and habits that translate into confidence and responsibility.",
-    images: [{
-      src: lilChampsActivity1,
-      alt: "Child working on a hands-on learning activity during Lil' Champs program"
-    }, {
-      src: lilChampsActivity2,
-      alt: "Instructor engaging with kids during a Lil' Champs group activity"
-    }, {
-      src: lilChampsActivity3,
-      alt: "Kids working together on a hands-on learning activity during Lil' Champs"
-    }, {
-      src: lilChampsActivity4,
-      alt: "Child decorating a heart-shaped craft during Lil' Champs"
-    }, {
-      src: lilChampsActivity5,
-      alt: "Lil' Champs students proudly holding up their handmade heart crafts"
-    }, {
-      src: lilChampsActivity6,
-      alt: "Student participating in a Lil' Champs hands-on learning activity"
-    }],
+    images: resolveGroup("programs.lil-champs"),
     buttonLabel: "Back to Programs"
   }, {
     id: "real-talk",
@@ -137,15 +51,7 @@ const ProgramsExtrasSection = () => {
     subtitle: "Senior Boxers",
     ageRange: "11–19 years old",
     blurb: "Real Talk Sessions bring influential adults to No Limits Academy to share honest stories of struggle, failure, heartbreak, and setbacks—showing youth what perseverance and resilience look like in real life. Speakers share how resilience and faith helped anchor them through adversity, with the goal of inspiring youth to keep moving forward.",
-    images: [{
-      src: realTalkJoeFranco,
-      alt: "Joe Franco with NLA youth at Real Talk Session",
-      caption: "Joe Franco, NLA Donor & Wildwood Crest Commissioner"
-    }, {
-      src: realTalkNateEvans,
-      alt: "Nate Evans speaking at Real Talk Session",
-      caption: "Resilience Coach & Mentor, Nate Evans"
-    }],
+    images: resolveGroup("programs.real-talk"),
     buttonLabel: "Back to Programs"
   }, {
     id: "spiritual-development",
@@ -154,32 +60,7 @@ const ProgramsExtrasSection = () => {
     ageRange: "7–19 years old",
     blurb: "Spiritual development at No Limits Academy focuses on reflection, values, purpose, and personal growth within a supportive and respectful environment. This component is designed to complement our youth development work by encouraging mindfulness, character, and healthy decision-making.",
     policyText: "At No Limits Academy, we respect each individual's unique spiritual journey. Participation in any aspect of spiritual development is entirely voluntary. We do not require youth participants to read, engage with, or participate in spiritual practices or teachings. For youth who are curious or willing to explore their spiritual development, we are here to offer support and guidance. NLA's focus is on providing a nurturing, caring, and encouraging environment where youth can explore God, at their own pace, if they choose to do so.",
-    images: [{
-      src: spiritualDevPrayer1,
-      alt: "Youth in reflection during spiritual development",
-      caption: "Spiritual Development"
-    }, {
-      src: spiritualDevPrayer2,
-      alt: "Group reflection during spiritual development",
-      caption: "Spiritual Development"
-    }, {
-      src: spiritualDevPrayer3,
-      alt: "Youth in group prayer during spiritual development at NLA",
-      caption: "Spiritual Development"
-    }, {
-      src: spiritualDevPrayer4,
-      alt: "Youth gathered listening during spiritual development",
-      caption: "Spiritual Development"
-    }, {
-      src: spiritualDevPrayer5,
-      alt: "Two youth in prayer during spiritual development",
-      caption: "Spiritual Development",
-      objectPosition: "center 20%"
-    }, {
-      src: spiritualDevPrayer6,
-      alt: "Youth and mentors in reflection during spiritual development",
-      caption: "Spiritual Development"
-    }],
+    images: resolveGroup("programs.spiritual-development"),
     buttonLabel: "Back to Programs"
   }, {
     id: "launch-pad",
@@ -187,25 +68,7 @@ const ProgramsExtrasSection = () => {
     subtitle: "Senior Boxers Only",
     ageRange: "11–19 years old",
     blurb: "The Launch Pad is how No Limits Academy executes its mission long-term. It keeps young people connected to guidance, opportunity, and support long after they leave the gym—through a growing network of mentors, local businesses, and real-world partnerships.\n\nWe don't just train athletes. We develop future leaders, employees, employers, entrepreneurs, and community builders—youth who graduate with a clear path forward and the discipline to succeed.",
-    images: [{
-      src: "/placeholder.svg",
-      alt: "Launch Pad photo 1"
-    }, {
-      src: "/placeholder.svg",
-      alt: "Launch Pad photo 2"
-    }, {
-      src: "/placeholder.svg",
-      alt: "Launch Pad photo 3"
-    }, {
-      src: "/placeholder.svg",
-      alt: "Launch Pad photo 4"
-    }, {
-      src: "/placeholder.svg",
-      alt: "Launch Pad photo 5"
-    }, {
-      src: "/placeholder.svg",
-      alt: "Launch Pad photo 6"
-    }],
+    images: resolveGroup("programs.launch-pad"),
     buttonLabel: "Back to Programs"
   }, {
     id: "coaching-boys-into-men",
@@ -213,25 +76,7 @@ const ProgramsExtrasSection = () => {
     subtitle: "Senior Boxers",
     ageRange: "11–19 years old",
     blurb: "In partnership with Cape Assist, CBIM is an evidence-based violence prevention program that trains coaches to teach young male athletes about respect, integrity, and non-violence. Through ongoing conversations and teachable moments, coaches help shape attitudes and behaviors that prevent relationship abuse and promote healthy masculinity.",
-    images: [{
-      src: cbim1,
-      alt: "CBIM closing session presentation"
-    }, {
-      src: cbim2,
-      alt: "CBIM coach leading discussion"
-    }, {
-      src: cbim3,
-      alt: "CBIM lesson on healthy behaviors"
-    }, {
-      src: cbim4,
-      alt: "CBIM group session at NLA"
-    }, {
-      src: cbim5,
-      alt: "CBIM coaches in discussion"
-    }, {
-      src: cbim6,
-      alt: "CBIM participants listening"
-    }],
+    images: resolveGroup("programs.coaching-boys-into-men"),
     buttonLabel: "Back to Programs"
   }, {
     id: "meal-train",
@@ -239,9 +84,9 @@ const ProgramsExtrasSection = () => {
     subtitle: "All Participants",
     ageRange: "7–19 years old",
     blurb: "The NLA Meal Train supports our youth participants by providing free, sit-down meals during scheduled program days. These meals create consistency, build community, and ensure our athletes are fueled, focused, and cared for while they train and learn together. Volunteers play a vital role in making this possible.",
-    images: mealTrainGalleryImages,
+    images: resolveGroup("programs.meal-train"),
     buttonLabel: "Back to Programs"
-  }], []);
+  }];
   const [openId, setOpenId] = useState<string | null>(null);
   const [bankingBoxingOpen, setBankingBoxingOpen] = useState(false);
   const openItem = items.find((x) => x.id === openId) || null;
@@ -267,7 +112,7 @@ const ProgramsExtrasSection = () => {
       {/* Background image on the right */}
       <div className="absolute right-0 top-0 bottom-0 w-full md:w-1/3 pointer-events-none">
         <img
-        src={coachingRingsideImage}
+        src={single("programs.background-coaching-ringside")}
         alt=""
         className="h-full w-full object-cover object-[60%_20%] opacity-25 md:opacity-100" />
       
@@ -342,7 +187,7 @@ const ProgramsExtrasSection = () => {
 
             {/* Delta Dental Logo for Smile Lab */}
             {openItem?.id === "smile-lab" && <div className="flex justify-center my-4">
-                <img src={deltaDentalLogo} alt="Delta Dental Logo" className="h-20 w-auto border-none" />
+                <img src={single("programs.smile-lab-logo")} alt="Delta Dental Logo" className="h-20 w-auto border-none" />
               </div>}
 
             {/* NJ4S Video + Logo for Lil' Champs */}
@@ -351,18 +196,18 @@ const ProgramsExtrasSection = () => {
                   <YouTubeEmbed videoId="R6HPefPkv20" title="NJ4S Lil' Champs' Corner Program" />
                 </div>
                 <div className="flex justify-center my-0">
-                  <img src={nj4sLogo} alt="NJ4S Logo" className="h-48 w-auto border-none" />
+                  <img src={single("programs.lil-champs-logo")} alt="NJ4S Logo" className="h-48 w-auto border-none" />
                 </div>
               </>}
 
             {/* Cape Assist Logo for Coaching Boys into Men */}
             {openItem?.id === "coaching-boys-into-men" && <div className="flex justify-center my-0">
-                <img src={capeAssistLogo} alt="Cape Assist Logo" className="h-48 w-auto border-none" />
+                <img src={single("programs.cbim-logo")} alt="Cape Assist Logo" className="h-48 w-auto border-none" />
               </div>}
 
             {/* Launch Pad Logo */}
             {openItem?.id === "launch-pad" && <div className="flex flex-col items-center my-4">
-                <img src={launchPadLogo} alt="The Launch Pad Logo" className="h-48 w-auto border-none" />
+                <img src={single("programs.launch-pad-logo")} alt="The Launch Pad Logo" className="h-48 w-auto border-none" />
                 <p className="text-sm text-muted-foreground italic mt-2">Pictures coming soon</p>
               </div>}
 
@@ -393,7 +238,7 @@ const ProgramsExtrasSection = () => {
               {"In Banking & Boxing, our youth train bankers in boxing, and bankers return the favor by teaching financial literacy. The exchange helps young people recognize their value first—then absorb new knowledge with confidence."}
             </p>
             <div className="flex justify-center my-2">
-              <img src={oceanFirstBankLogo} alt="OceanFirst Bank Logo" className="h-20 w-auto border-none" />
+              <img src={single("programs.banking-boxing-logo")} alt="OceanFirst Bank Logo" className="h-20 w-auto border-none" />
             </div>
             <YouTubeEmbed videoId="TsXbq70NB70" title="Banking & Boxing" />
             <div className="mt-6 flex justify-end">

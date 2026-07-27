@@ -487,6 +487,14 @@ export default function AdminStaffManagement() {
                         superAdminMode={isMemberSuperAdmin}
                       />
 
+                      {/* Website Photos — lets a staffer manage public-site photos */}
+                      <Check
+                        userId={member.user_id}
+                        permKey="manage_website_photos"
+                        label="Website Photos"
+                        superAdminMode={isMemberSuperAdmin}
+                      />
+
                       {/* Settings — super-admin gated for granting */}
                       <Check
                         userId={member.user_id}

@@ -22,6 +22,7 @@ import AdminIndex from "./pages/admin/AdminIndex";
 import AdminLogin from "./pages/admin/AdminLogin";
 import AdminDashboard from "./pages/admin/AdminDashboard";
 import AdminCornerCoach from "./pages/admin/AdminCornerCoach";
+import AdminWebsitePhotos from "./pages/admin/AdminWebsitePhotos";
 import AdminOperations, { AdminOperationsIndex } from "./pages/admin/AdminOperations";
 import AdminSalesMarketing, { AdminSalesMarketingIndex } from "./pages/admin/AdminSalesMarketing";
 import AdminFinance, { AdminFinanceIndex } from "./pages/admin/AdminFinance";
@@ -184,6 +185,14 @@ const App = () => (
               element={
                 <ProtectedRoute requireAdmin>
                   <AdminCornerCoach />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin/website-photos"
+              element={
+                <ProtectedRoute requireAdmin>
+                  <AdminWebsitePhotos />
                 </ProtectedRoute>
               }
             />
