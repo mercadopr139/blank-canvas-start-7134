@@ -801,24 +801,27 @@ const AdminDashboard = () => {
           </Button>
         </div>
 
-        {/* Website Photos — lives in Other Admin. Shown to anyone granted the
-            manage_website_photos permission (super-admin included). */}
+        {/* Website Photos — lives in Other Admin, styled as a grid tile like the
+            workbenches. Shown to holders of manage_website_photos (super-admin
+            included). */}
         {hasPermission("manage_website_photos") && (
-          <div className="max-w-5xl mx-auto mb-6">
-            <button
-              type="button"
-              onClick={() => navigate("/admin/website-photos")}
-              className="group w-full flex items-center gap-3 rounded-xl border border-white/[0.06] bg-white/[0.02] px-5 py-4 text-left transition-all duration-200 hover:bg-white/[0.04] hover:border-white/[0.12]"
-            >
-              <div className="w-10 h-10 rounded-lg flex items-center justify-center bg-white/[0.04] text-zinc-400 group-hover:text-zinc-200 transition-colors">
-                <ImageIcon className="w-5 h-5" strokeWidth={1.8} />
-              </div>
-              <div className="flex-1">
-                <h3 className="text-sm font-semibold text-white">Website Photos</h3>
-                <p className="text-[11px] text-zinc-500">Replace, add &amp; reorder public-site photos</p>
-              </div>
-              <ChevronRight className="w-4 h-4 text-zinc-600 group-hover:text-zinc-400 transition-colors" />
-            </button>
+          <div className="max-w-5xl mx-auto mb-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+              <button
+                type="button"
+                onClick={() => navigate("/admin/website-photos")}
+                className="w-full group text-left rounded-xl border border-white/[0.06] bg-white/[0.02] p-5 transition-all duration-200 hover:bg-white/[0.04] hover:border-white/[0.12] cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-white/20"
+              >
+                <div
+                  className="w-9 h-9 rounded-lg flex items-center justify-center mb-3"
+                  style={{ background: "rgba(255,255,255,0.05)", color: "#a1a1aa" }}
+                >
+                  <ImageIcon className="w-4.5 h-4.5" strokeWidth={1.8} />
+                </div>
+                <h3 className="text-sm font-semibold text-zinc-200 mb-0.5">Website Photos</h3>
+                <p className="text-[11px] text-zinc-600">Replace, add &amp; reorder public-site photos</p>
+              </button>
+            </div>
           </div>
         )}
 
