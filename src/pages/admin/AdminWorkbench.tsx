@@ -24,6 +24,7 @@ import {
   PointerSensor,
   useSensor,
   useSensors,
+  useDroppable,
   DragEndEvent,
 } from "@dnd-kit/core";
 import {
@@ -284,6 +285,9 @@ const SignalDetailsModal = ({
   onMoveToOnDeck,
   onMoveToOnRadar,
   isMoving,
+  focusAreas,
+  managerType,
+  onMoveToArea,
 }: {
   signal: CoreSignal | null;
   accentColor: string;
@@ -292,8 +296,14 @@ const SignalDetailsModal = ({
   onMoveToOnDeck: (id: string) => void;
   onMoveToOnRadar: (id: string) => void;
   isMoving: boolean;
+  focusAreas: FocusArea[];
+  managerType: string;
+  onMoveToArea: (id: string, area: FocusArea) => void;
 }) => {
   if (!signal) return null;
+  // Focus areas this task could move to (all but the one it's already in).
+  const currentAreaKey = sourceToFocusAreaKey(signal.source, managerType, focusAreas);
+  const otherAreas = focusAreas.filter((a) => a.key !== currentAreaKey);
   return (
     <Dialog open={open} onOpenChange={(o) => { if (!o) onClose(); }}>
       <DialogContent className="bg-zinc-900 border-white/10 text-white max-w-md">
@@ -336,11 +346,36 @@ const SignalDetailsModal = ({
             )}
           </div>
 
+          {/* Move this task to a different focus area — updates the signal's
+              source, so it shows in the new tile AND its inner view. */}
+          {otherAreas.length > 0 && (
+            <div className="pt-3 border-t border-white/5 space-y-2">
+              <p className="text-[10px] uppercase tracking-[0.15em] text-white/30">
+                Move to focus area
+              </p>
+              <div className="flex flex-wrap gap-2">
+                {otherAreas.map((a) => (
+                  <button
+                    key={a.id}
+                    type="button"
+                    onClick={() => onMoveToArea(signal.id, a)}
+                    disabled={isMoving}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md border text-xs font-medium transition-colors hover:bg-white/[0.04] disabled:opacity-40 disabled:cursor-not-allowed"
+                    style={{ borderColor: `${a.accent_color}55`, color: a.accent_color }}
+                    title={`Move to ${a.title}`}
+                  >
+                    {a.title}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
           {/* Reschedule buttons — demote Core back to On-Deck or On Radar
               without leaving the workbench. */}
           <div className="pt-3 border-t border-white/5 space-y-2">
             <p className="text-[10px] uppercase tracking-[0.15em] text-white/30">
-              Move to
+              Move to stage
             </p>
             <div className="flex gap-2">
               <button
@@ -399,6 +434,15 @@ const FocusAreaTile = ({
   const navigate = useNavigate();
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
     useSortable({ id: area.id, data: { type: "area" } });
+
+  // A drop zone covering the tile body, so a signal can be dragged INTO this
+  // area — including empty tiles. `active` lets us light it up only for signal
+  // drags (not focus-area reordering).
+  const { setNodeRef: setDropRef, isOver, active: dropActive } = useDroppable({
+    id: `zone-${area.key}`,
+    data: { type: "signalZone", areaKey: area.key },
+  });
+  const signalDragOver = isOver && dropActive?.data?.current?.type === "signal";
 
   const style = {
     transform: CSS.Transform.toString(transform),
@@ -473,8 +517,13 @@ const FocusAreaTile = ({
           </div>
         </div>
 
-        {/* Signal list */}
-        <div className="flex-1 min-h-[60px]">
+        {/* Signal list — also the drop zone for moving a signal into this area. */}
+        <div
+          ref={setDropRef}
+          className={`flex-1 min-h-[60px] rounded-lg transition-colors ${
+            signalDragOver ? "ring-2 ring-inset ring-white/25 bg-white/[0.04]" : ""
+          }`}
+        >
           {signals.length === 0 ? (
             <p className="text-[11px] text-white/25 italic text-center pt-6">
               No signals for today
@@ -933,6 +982,29 @@ const AdminWorkbench = () => {
     },
   });
 
+  // Move a signal to a different focus area by rewriting its `source`. Because
+  // both the tile card and the inner kanban filter by source, this one update
+  // makes the task appear in the new area everywhere. Lands at the bottom of
+  // the target area's list.
+  const moveSignalToAreaMutation = useMutation({
+    mutationFn: async ({ id, targetArea }: { id: string; targetArea: FocusArea }) => {
+      const source = signalSourceFor(managerType, targetArea);
+      const targetList = signalsByArea.get(targetArea.key) || [];
+      const maxOrder = targetList.reduce((m, s) => Math.max(m, s.today_sort_order ?? 0), 0);
+      const { error } = await supabase
+        .from("signals")
+        .update({ source, today_sort_order: maxOrder + 10 } as any)
+        .eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["task-manager-home-core"] });
+      queryClient.invalidateQueries({ queryKey: ["signals"] });
+      toast.success("Task moved");
+    },
+    onError: (e: any) => toast.error(e?.message || "Couldn't move the task"),
+  });
+
   // Add / remove a signal from today's plan by stamping (or clearing)
   // planned_date. The stamp goes stale overnight, so plans are fresh each day.
   const setPlanMutation = useMutation({
@@ -988,15 +1060,35 @@ const AdminWorkbench = () => {
     const type = active.data.current?.type;
 
     if (type === "signal") {
-      // Reorder within the same focus-area tile.
-      if (active.id === over.id) return;
-      const areaKey = active.data.current?.areaKey;
-      if (!areaKey || areaKey !== over.data.current?.areaKey) return;
-      const list = signalsByArea.get(areaKey) || [];
-      const oldIndex = list.findIndex((s) => s.id === active.id);
-      const newIndex = list.findIndex((s) => s.id === over.id);
-      if (oldIndex === -1 || newIndex === -1) return;
-      reorderSignalsMutation.mutate(arrayMove(list, oldIndex, newIndex));
+      const fromAreaKey = active.data.current?.areaKey as string | undefined;
+      if (!fromAreaKey) return;
+      // Resolve the target area from whatever we dropped on: a signal row or a
+      // tile's drop zone (both carry areaKey), or a focus-area tile itself.
+      let toAreaKey = over.data.current?.areaKey as string | undefined;
+      if (!toAreaKey && over.data.current?.type === "area") {
+        toAreaKey = focusAreas.find((a) => a.id === over.id)?.key;
+      }
+      if (!toAreaKey) return;
+
+      if (fromAreaKey === toAreaKey) {
+        // Reorder within the same tile. Dropping on the tile's empty space
+        // (the zone, not a sibling row) sends the task to the bottom.
+        const list = signalsByArea.get(fromAreaKey) || [];
+        const oldIndex = list.findIndex((s) => s.id === active.id);
+        if (oldIndex === -1) return;
+        const newIndex =
+          over.data.current?.type === "signalZone"
+            ? list.length - 1
+            : list.findIndex((s) => s.id === over.id);
+        if (newIndex === -1 || newIndex === oldIndex) return;
+        reorderSignalsMutation.mutate(arrayMove(list, oldIndex, newIndex));
+        return;
+      }
+
+      // Cross-area move — rewrite the signal's source to the target area.
+      const targetArea = focusAreas.find((a) => a.key === toAreaKey);
+      if (!targetArea) return;
+      moveSignalToAreaMutation.mutate({ id: String(active.id), targetArea });
       return;
     }
 
@@ -1012,8 +1104,16 @@ const AdminWorkbench = () => {
 
     if (type === "area") {
       if (active.id === over.id) return;
+      // The drop may land on a tile's inner drop zone rather than the tile
+      // itself; map a zone back to its focus-area id so reordering still works.
+      let overAreaId = String(over.id);
+      if (over.data.current?.type === "signalZone") {
+        const k = over.data.current?.areaKey;
+        const a = focusAreas.find((x) => x.key === k);
+        if (a) overAreaId = a.id;
+      }
       const oldIndex = focusAreas.findIndex((a) => a.id === active.id);
-      const newIndex = focusAreas.findIndex((a) => a.id === over.id);
+      const newIndex = focusAreas.findIndex((a) => a.id === overAreaId);
       if (oldIndex === -1 || newIndex === -1) return;
       const reordered = [...focusAreas];
       const [moved] = reordered.splice(oldIndex, 1);
@@ -1386,7 +1486,13 @@ const AdminWorkbench = () => {
         onClose={() => setDetailsSignal(null)}
         onMoveToOnDeck={(id) => moveSignalMutation.mutate({ id, target: "on-deck" })}
         onMoveToOnRadar={(id) => moveSignalMutation.mutate({ id, target: "on-radar" })}
-        isMoving={moveSignalMutation.isPending}
+        isMoving={moveSignalMutation.isPending || moveSignalToAreaMutation.isPending}
+        focusAreas={focusAreas}
+        managerType={managerType}
+        onMoveToArea={(id, area) => {
+          moveSignalToAreaMutation.mutate({ id, targetArea: area });
+          setDetailsSignal(null);
+        }}
       />
     </div>
   );
