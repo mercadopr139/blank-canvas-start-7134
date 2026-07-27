@@ -4,10 +4,12 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import {
   ArrowLeft, LogOut, Plus, Pencil, GripVertical, Lock,
   Circle, CheckCircle2, ArrowRight, Trophy, MessageSquare, Archive,
-  Target, ChevronDown, X,
+  Target, ChevronDown, X, Save,
 } from "lucide-react";
 import { icons } from "lucide-react";
 import { toast } from "sonner";
@@ -288,6 +290,8 @@ const SignalDetailsModal = ({
   focusAreas,
   managerType,
   onMoveToArea,
+  onUpdate,
+  isSaving,
 }: {
   signal: CoreSignal | null;
   accentColor: string;
@@ -299,11 +303,29 @@ const SignalDetailsModal = ({
   focusAreas: FocusArea[];
   managerType: string;
   onMoveToArea: (id: string, area: FocusArea) => void;
+  onUpdate: (id: string, patch: { title: string; description: string | null }) => void;
+  isSaving: boolean;
 }) => {
+  const [title, setTitle] = useState("");
+  const [notes, setNotes] = useState("");
+  // Reset the editable fields whenever a different signal is opened.
+  useEffect(() => {
+    setTitle(signal?.title ?? "");
+    setNotes(signal?.description ?? "");
+  }, [signal?.id]);
+
   if (!signal) return null;
   // Focus areas this task could move to (all but the one it's already in).
   const currentAreaKey = sourceToFocusAreaKey(signal.source, managerType, focusAreas);
   const otherAreas = focusAreas.filter((a) => a.key !== currentAreaKey);
+  const dirty =
+    title.trim() !== (signal.title ?? "") ||
+    (notes.trim() || "") !== (signal.description?.trim() ?? "");
+  const saveEdits = () => {
+    if (!title.trim()) return;
+    onUpdate(signal.id, { title: title.trim(), description: notes.trim() || null });
+  };
+
   return (
     <Dialog open={open} onOpenChange={(o) => { if (!o) onClose(); }}>
       <DialogContent className="bg-zinc-900 border-white/10 text-white max-w-md">
@@ -311,11 +333,21 @@ const SignalDetailsModal = ({
           <p className="text-[10px] uppercase tracking-[0.15em] text-white/30 mb-1">
             Core
           </p>
-          <DialogTitle className="text-white text-base leading-snug">
-            {signal.title || "Untitled"}
-          </DialogTitle>
+          <DialogTitle className="sr-only">Edit signal</DialogTitle>
         </DialogHeader>
-        <div className="space-y-3 mt-2">
+        <div className="space-y-3 mt-1">
+          {/* Editable title — fix a typo right here, no drilling in. */}
+          <div>
+            <label className="text-[10px] uppercase tracking-[0.15em] text-white/30 mb-1.5 block">Title</label>
+            <Input
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); saveEdits(); } }}
+              placeholder="Signal title"
+              className="bg-white/[0.04] border-white/10 text-white"
+            />
+          </div>
+
           <div className="flex items-center gap-2 text-xs text-white/50">
             {signal.pillar && (
               <span
@@ -333,17 +365,28 @@ const SignalDetailsModal = ({
               {signal.status}
             </span>
           </div>
+
+          {/* Editable notes */}
           <div>
-            <p className="text-[10px] uppercase tracking-[0.15em] text-white/30 mb-1.5">
-              Notes
-            </p>
-            {signal.description?.trim() ? (
-              <p className="text-sm text-white/80 whitespace-pre-wrap leading-relaxed">
-                {signal.description}
-              </p>
-            ) : (
-              <p className="text-sm text-white/30 italic">No notes for this signal.</p>
-            )}
+            <label className="text-[10px] uppercase tracking-[0.15em] text-white/30 mb-1.5 block">Notes</label>
+            <Textarea
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+              placeholder="Add notes…"
+              rows={3}
+              className="bg-white/[0.04] border-white/10 text-white min-h-[70px]"
+            />
+          </div>
+
+          <div className="flex justify-end">
+            <Button
+              size="sm"
+              onClick={saveEdits}
+              disabled={isSaving || !title.trim() || !dirty}
+              className="bg-[#bf0f3e] hover:bg-[#bf0f3e]/80 text-white text-xs h-8"
+            >
+              <Save className="w-3.5 h-3.5 mr-1" /> Save
+            </Button>
           </div>
 
           {/* Move this task to a different focus area — updates the signal's
@@ -396,7 +439,7 @@ const SignalDetailsModal = ({
               </button>
             </div>
             <p className="text-[10px] text-white/25">
-              To edit the title, notes, or pillar, click <span className="text-white/40">Open →</span> on the focus area tile.
+              To change the pillar, click <span className="text-white/40">Open →</span> on the focus area tile.
             </p>
           </div>
         </div>
@@ -887,6 +930,24 @@ const AdminWorkbench = () => {
       queryClient.invalidateQueries({ queryKey: ["signals"] });
     },
     onError: (e: any) => toast.error(e.message),
+  });
+
+  // Edit a signal's title / notes inline from the details modal — the quick
+  // fix for a typo, without drilling into the focus area's kanban.
+  const updateSignalMutation = useMutation({
+    mutationFn: async ({ id, title, description }: { id: string; title: string; description: string | null }) => {
+      const { error } = await supabase
+        .from("signals")
+        .update({ title, description } as any)
+        .eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["task-manager-home-core"] });
+      queryClient.invalidateQueries({ queryKey: ["signals"] });
+      toast.success("Saved");
+    },
+    onError: (e: any) => toast.error(e?.message || "Couldn't save"),
   });
 
   // Bulk-archive completed signals from a single focus area tile. Same
@@ -1492,6 +1553,11 @@ const AdminWorkbench = () => {
         onMoveToArea={(id, area) => {
           moveSignalToAreaMutation.mutate({ id, targetArea: area });
           setDetailsSignal(null);
+        }}
+        isSaving={updateSignalMutation.isPending}
+        onUpdate={(id, patch) => {
+          updateSignalMutation.mutate({ id, ...patch });
+          setDetailsSignal((prev) => (prev ? { ...prev, title: patch.title, description: patch.description } : prev));
         }}
       />
     </div>
