@@ -29,7 +29,7 @@ import {
 import { toast } from "sonner";
 import { ExcursionHistorySection } from "@/components/admin/ExcursionHistorySection";
 import ExcursionRideComparison from "@/components/admin/ExcursionRideComparison";
-import { getProgramYearForRegistration, shortProgramYear } from "@/lib/programYear";
+import { getCurrentAttendanceYear, shortProgramYear } from "@/lib/programYear";
 
 /* ───────── Types ───────── */
 interface Registration {
@@ -317,9 +317,11 @@ const AdminAttendance = () => {
   /* ───── Data Queries ───── */
   // Pull every registration once; scope by program_year client-side via
   // the filter dropdown so switching cohorts is instant (no refetch).
-  // Default to the current program year per programYear.ts — flips
-  // automatically when the calendar crosses Aug 1.
-  const [programYearFilter, setProgramYearFilter] = useState<string>(() => getProgramYearForRegistration());
+  // Default to the program year IN SESSION for attendance (flips Sept 1), NOT
+  // the sign-up year (flips Aug 1). Using the sign-up year blanked the calendar
+  // every Aug 1–31: it selected next season's cohort, which has no check-ins
+  // (and no dropdown entry) yet, so every day read 0.
+  const [programYearFilter, setProgramYearFilter] = useState<string>(() => getCurrentAttendanceYear());
   const { data: allRegistrations = [] } = useQuery({
     queryKey: ["registrations-attendance-full"],
     queryFn: async () => {
@@ -337,6 +339,18 @@ const AdminAttendance = () => {
     allRegistrations.forEach((r) => { if (r.program_year) years.add(r.program_year); });
     return [...years].sort().reverse(); // newest first
   }, [allRegistrations]);
+  // Never leave the filter pointed at a year with no cohort (which shows a blank
+  // dropdown + all-zero tiles). If the default/selected year has no tagged
+  // registrations, fall back to the in-session attendance year, then the
+  // newest year that actually has data.
+  useEffect(() => {
+    if (availableProgramYears.length === 0) return;
+    if (programYearFilter === "__all__" || availableProgramYears.includes(programYearFilter)) return;
+    const attendanceYear = getCurrentAttendanceYear();
+    setProgramYearFilter(
+      availableProgramYears.includes(attendanceYear) ? attendanceYear : availableProgramYears[0]
+    );
+  }, [availableProgramYears, programYearFilter]);
   const registrations = useMemo(() => {
     if (programYearFilter === "__all__") return allRegistrations;
     // Defensive: if the Phase B migration hasn't been applied yet, no row
@@ -2056,7 +2070,7 @@ const AdminAttendance = () => {
                 </SelectTrigger>
                 <SelectContent>
                   {availableProgramYears.map((y) => (
-                    <SelectItem key={y} value={y}>{shortProgramYear(y)}{y === getProgramYearForRegistration() ? " (current)" : ""}</SelectItem>
+                    <SelectItem key={y} value={y}>{shortProgramYear(y)}{y === getCurrentAttendanceYear() ? " (current)" : ""}</SelectItem>
                   ))}
                   <SelectItem value="__all__">All years</SelectItem>
                 </SelectContent>
