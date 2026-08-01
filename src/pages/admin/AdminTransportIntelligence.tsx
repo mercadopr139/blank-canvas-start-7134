@@ -6,7 +6,7 @@ import { format, startOfMonth, differenceInYears, parseISO } from "date-fns";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { RefreshCw, FileText, Bus, Users, DollarSign, ArrowUpRight, ArrowDownRight, UserCheck } from "lucide-react";
-import { getProgramYearForRegistration, programYearRange, shortProgramYear } from "@/lib/programYear";
+import { getCurrentAttendanceYear, programYearRange, shortProgramYear } from "@/lib/programYear";
 
 /* ── zones ── */
 const ZONES = ["Woodbine", "Wildwood"] as const;
@@ -46,7 +46,10 @@ function windowRange(w: Window): [Date, Date] {
   const now = new Date();
   if (w === "month") return [startOfMonth(now), now];
   if (w === "all") return [new Date(2020, 0, 1), now];
-  return programYearRange(getProgramYearForRegistration()); // program year
+  // In-session attendance year (flips Sept 1), not the sign-up year (flips
+  // Aug 1) — otherwise Aug 1–31 points at next season's future window and
+  // shows "no completed trips".
+  return programYearRange(getCurrentAttendanceYear()); // program year
 }
 
 /* ── data fetch + per-zone computation ── */
@@ -266,7 +269,7 @@ export default function AdminTransportIntelligence() {
   const windowLabel = useMemo(() => {
     if (win === "month") return format(new Date(), "MMMM yyyy");
     if (win === "all") return "All-time";
-    return `Program Year ${shortProgramYear(getProgramYearForRegistration())}`;
+    return `Program Year ${shortProgramYear(getCurrentAttendanceYear())}`;
   }, [win]);
 
   const combined = data?.Combined;
