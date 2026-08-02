@@ -4,7 +4,9 @@ import { supabase } from "@/integrations/supabase/client";
 import { parseISO, format } from "date-fns";
 import { getCurrentAttendanceYear, shortProgramYear } from "@/lib/programYear";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { MapPin, Users, UserCheck, TrendingUp, Award, Lock, CheckCircle2, Loader2 } from "lucide-react";
+import { MapPin, Users, UserCheck, TrendingUp, Award, Lock, CheckCircle2, Loader2, FileText } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import ExcursionReportSheet, { type ExcursionReportSource } from "@/components/admin/ExcursionReportSheet";
 
 type ExcursionRow = {
   id: string;
@@ -85,6 +87,7 @@ const AdminExcursionIntelligence = () => {
   }, [excursions]);
 
   const [year, setYear] = useState<string>(() => getCurrentAttendanceYear());
+  const [reportSource, setReportSource] = useState<ExcursionReportSource | null>(null);
   // Never sit on a year with no trips (blank dropdown) — fall back to the
   // in-session year, then the newest year that has data.
   useEffect(() => {
@@ -240,6 +243,7 @@ const AdminExcursionIntelligence = () => {
                     <th className="text-left font-semibold px-4 py-2.5">Trip</th>
                     <th className="text-center font-semibold px-4 py-2.5">Youth</th>
                     <th className="text-left font-semibold px-4 py-2.5">Status</th>
+                    <th className="text-right font-semibold px-4 py-2.5">Report</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -257,6 +261,26 @@ const AdminExcursionIntelligence = () => {
                           ))}
                         </div>
                       </td>
+                      <td className="px-4 py-2.5 text-right">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="h-7 border-white/10 text-zinc-200 bg-transparent hover:bg-white/5 text-xs"
+                          onClick={() =>
+                            setReportSource({
+                              id: e.id,
+                              name: e.name,
+                              date: e.date,
+                              details: e.details,
+                              notes: e.notes,
+                              youthCount: countByExcursion[e.id] || 0,
+                              regIds: [...(regIdsByExcursion[e.id] ?? [])],
+                            })
+                          }
+                        >
+                          <FileText className="w-3.5 h-3.5 mr-1" /> Grant Report
+                        </Button>
+                      </td>
                     </tr>
                   ))}
                 </tbody>
@@ -265,10 +289,16 @@ const AdminExcursionIntelligence = () => {
           </div>
 
           <p className="text-[11px] text-white/25">
-            Grant-report narratives (a short write-up per trip you can edit and export) are coming in the next step.
+            Click <span className="text-white/50">Grant Report</span> on any trip for an editable narrative you can revise and export as a branded PDF.
           </p>
         </>
       )}
+
+      <ExcursionReportSheet
+        open={!!reportSource}
+        source={reportSource}
+        onClose={() => setReportSource(null)}
+      />
     </div>
   );
 };
