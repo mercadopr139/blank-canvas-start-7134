@@ -922,6 +922,9 @@ export type Database = {
           roster_locked_at: string | null
           transportation_required: boolean | null
           youth_count: number
+          details: string | null
+          target_capacity: number | null
+          return_plan: string | null
         }
         Insert: {
           arrival_note?: string | null
@@ -936,6 +939,9 @@ export type Database = {
           roster_locked_at?: string | null
           transportation_required?: boolean | null
           youth_count?: number
+          details?: string | null
+          target_capacity?: number | null
+          return_plan?: string | null
         }
         Update: {
           arrival_note?: string | null
@@ -950,6 +956,9 @@ export type Database = {
           roster_locked_at?: string | null
           transportation_required?: boolean | null
           youth_count?: number
+          details?: string | null
+          target_capacity?: number | null
+          return_plan?: string | null
         }
         Relationships: []
       }

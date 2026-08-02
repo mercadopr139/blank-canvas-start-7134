@@ -6,6 +6,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
@@ -238,6 +239,9 @@ const AdminAttendance = () => {
   const [excursionDate, setExcursionDate] = useState<string>("");
   const [excursionName, setExcursionName] = useState("");
   const [excursionNotes, setExcursionNotes] = useState("");
+  // A few words about the trip, captured at creation to seed the grant-report
+  // narrative later. Saved to excursions.details (the Trip Overview field).
+  const [excursionDetails, setExcursionDetails] = useState("");
   const [excursionPrevState, setExcursionPrevState] = useState<boolean>(true);
   const [editingExcursion, setEditingExcursion] = useState<Excursion | null>(null);
   const [deleteExcursionTarget, setDeleteExcursionTarget] = useState<Excursion | null>(null);
@@ -837,6 +841,7 @@ const AdminAttendance = () => {
     setExcursionDate(dateStr);
     setExcursionName("");
     setExcursionNotes("");
+    setExcursionDetails("");
     setExcursionModalOpen(true);
   };
 
@@ -887,6 +892,7 @@ const AdminAttendance = () => {
       name: excursionName.trim(),
       youth_count: 0, // retired field — kept zeroed for the NOT NULL constraint
       notes: excursionNotes.trim() || null,
+      details: excursionDetails.trim() || null,
     });
     if (error) { toast.error("Failed to save excursion"); return; }
     // Excursions are now an add-on: creating one leaves the day's practice /
@@ -3619,6 +3625,17 @@ const AdminAttendance = () => {
               <label className="text-xs text-white/50 mb-1 block">Notes (optional)</label>
               <Input value={excursionNotes} onChange={(e) => setExcursionNotes(e.target.value)} placeholder="Optional notes..." className="bg-white/5 border-white/20 text-white" />
               <p className="text-[10px] text-white/30 mt-1">Youth count is tracked automatically as kids check in or get added to the roster.</p>
+            </div>
+            <div>
+              <label className="text-xs text-white/50 mb-1 block">A few words about this trip</label>
+              <Textarea
+                value={excursionDetails}
+                onChange={(e) => setExcursionDetails(e.target.value)}
+                placeholder="e.g. Took the senior boxers to the Naval Academy to explore college & career paths."
+                rows={2}
+                className="bg-white/5 border-white/20 text-white min-h-[52px]"
+              />
+              <p className="text-[10px] text-white/30 mt-1">Helps write the grant report later — what it was, where, and why it mattered. You can edit this anytime.</p>
             </div>
           </div>
           <div className="flex gap-2 justify-end pt-2">
