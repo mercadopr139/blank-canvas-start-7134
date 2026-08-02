@@ -1,12 +1,15 @@
-import { useEffect, useMemo, useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { Fragment, useEffect, useMemo, useState } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 import { parseISO, format } from "date-fns";
 import { getCurrentAttendanceYear, shortProgramYear } from "@/lib/programYear";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { MapPin, Users, UserCheck, TrendingUp, Award, Lock, CheckCircle2, Loader2, FileText, Download } from "lucide-react";
+import { MapPin, Users, UserCheck, TrendingUp, Award, Lock, CheckCircle2, Loader2, FileText, Download, ChevronDown, ChevronRight, StickyNote, Pencil } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
 import ExcursionReportSheet, { type ExcursionReportSource } from "@/components/admin/ExcursionReportSheet";
+import EditExcursionModal, { type Excursion } from "@/components/admin/EditExcursionModal";
 import { downloadCornerCoachReportPdf } from "@/lib/generateCornerCoachReportPdf";
 
 // Same poverty rule as Attendance & Transport Intelligence so all three agree.
@@ -16,16 +19,8 @@ const isBelowPoverty = (reg: any): boolean =>
 const sortBreakdown = (rec: Record<string, number>) =>
   Object.entries(rec).map(([label, count]) => ({ label, count })).sort((a, b) => b.count - a.count);
 
-type ExcursionRow = {
-  id: string;
-  date: string;
-  name: string;
-  arrived_at: string | null;
-  returned_at: string | null;
-  roster_locked_at: string | null;
-  details: string | null;
-  notes: string | null;
-};
+// Full excursion shape (shared with the Edit modal) so a row can open the editor.
+type ExcursionRow = Excursion;
 
 type ExAttendance = {
   id: string;
@@ -44,7 +39,7 @@ const AdminExcursionIntelligence = () => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("excursions")
-        .select("id, date, name, arrived_at, returned_at, roster_locked_at, details, notes")
+        .select("id, date, name, youth_count, notes, details, created_at, roster_locked_at, arrived_at, returned_at, arrival_note, return_note, return_plan")
         .order("date", { ascending: false });
       if (error) throw error;
       return (data ?? []) as ExcursionRow[];
@@ -82,7 +77,7 @@ const AdminExcursionIntelligence = () => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("youth_registrations")
-        .select("id, child_race_ethnicity, child_sex, household_income_range, free_or_reduced_lunch, is_bald_eagle");
+        .select("id, child_first_name, child_last_name, child_race_ethnicity, child_sex, household_income_range, free_or_reduced_lunch, is_bald_eagle");
       if (error) throw error;
       return data ?? [];
     },
@@ -113,6 +108,23 @@ const AdminExcursionIntelligence = () => {
 
   const [year, setYear] = useState<string>(() => getCurrentAttendanceYear());
   const [reportSource, setReportSource] = useState<ExcursionReportSource | null>(null);
+  const queryClient = useQueryClient();
+
+  // Expand a trip to see its full picture (roster, timeline, overview, debrief).
+  const [expandedId, setExpandedId] = useState<string | null>(null);
+  const toggleExpand = (e: ExcursionRow) => setExpandedId(expandedId === e.id ? null : e.id);
+
+  // The full Edit Excursion modal — the SAME editor used on the Attendance
+  // calendar. Editing here updates the same records everywhere.
+  const [editingExcursion, setEditingExcursion] = useState<Excursion | null>(null);
+  const refreshAfterEdit = () => {
+    queryClient.invalidateQueries({ queryKey: ["excursion-intel-excursions"] });
+    queryClient.invalidateQueries({ queryKey: ["excursion-intel-attendance"] });
+    queryClient.invalidateQueries({ queryKey: ["excursion-intel-demographics"] });
+    queryClient.invalidateQueries({ queryKey: ["excursions-cal"] });
+    queryClient.invalidateQueries({ queryKey: ["excursion-checkin-counts-all"] });
+  };
+
   // Never sit on a year with no trips (blank dropdown) — fall back to the
   // in-session year, then the newest year that has data.
   useEffect(() => {
@@ -381,10 +393,33 @@ const AdminExcursionIntelligence = () => {
                   </tr>
                 </thead>
                 <tbody>
-                  {yearExcursions.map((e) => (
-                    <tr key={e.id} className="border-t border-white/[0.06] hover:bg-white/[0.02]">
+                  {yearExcursions.map((e) => {
+                    const expanded = expandedId === e.id;
+                    const hasDetails = !!(e.details?.trim() || e.notes?.trim());
+                    const rosterNames = expanded
+                      ? [...(regIdsByExcursion[e.id] ?? [])]
+                          .map((id) => regMap.get(id))
+                          .filter(Boolean)
+                          .map((r) => `${r.child_first_name ?? ""} ${r.child_last_name ?? ""}`.trim())
+                          .filter(Boolean)
+                          .sort((a, b) => a.localeCompare(b))
+                      : [];
+                    return (
+                    <Fragment key={e.id}>
+                    <tr className="border-t border-white/[0.06] hover:bg-white/[0.02]">
                       <td className="px-4 py-2.5 text-white/70 whitespace-nowrap">{format(parseISO(e.date), "MMM d, yyyy")}</td>
-                      <td className="px-4 py-2.5 text-white font-medium">{e.name}</td>
+                      <td className="px-4 py-2.5">
+                        <button
+                          type="button"
+                          onClick={() => toggleExpand(e)}
+                          className="flex items-center gap-1.5 text-left text-white font-medium hover:text-white/80"
+                          title="View / edit trip overview & debrief"
+                        >
+                          {expanded ? <ChevronDown className="w-3.5 h-3.5 text-white/40 shrink-0" /> : <ChevronRight className="w-3.5 h-3.5 text-white/40 shrink-0" />}
+                          <span>{e.name}</span>
+                          {hasDetails && <StickyNote className="w-3 h-3 text-purple-300/70 shrink-0" />}
+                        </button>
+                      </td>
                       <td className="px-4 py-2.5 text-center text-white/90 font-semibold">{countByExcursion[e.id] || 0}</td>
                       <td className="px-4 py-2.5">
                         <div className="flex flex-wrap gap-1">
@@ -416,7 +451,73 @@ const AdminExcursionIntelligence = () => {
                         </Button>
                       </td>
                     </tr>
-                  ))}
+                    {expanded && (
+                      <tr className="border-t border-white/[0.04] bg-white/[0.015]">
+                        <td colSpan={5} className="px-4 py-4 space-y-4">
+                          {/* Timeline */}
+                          {(e.roster_locked_at || e.arrived_at || e.returned_at) && (
+                            <div className="flex flex-wrap gap-4 text-xs">
+                              {e.roster_locked_at && <span className="text-white/50">🔒 Locked <span className="text-amber-300 font-medium">{format(parseISO(e.roster_locked_at), "h:mm a")}</span></span>}
+                              {e.arrived_at && <span className="text-white/50">🛬 Arrived <span className="text-sky-300 font-medium">{format(parseISO(e.arrived_at), "h:mm a")}</span></span>}
+                              {e.returned_at && <span className="text-white/50">🏠 Returned <span className="text-green-300 font-medium">{format(parseISO(e.returned_at), "h:mm a")}</span></span>}
+                            </div>
+                          )}
+
+                          {/* Attendance roster */}
+                          <div>
+                            <p className="text-[10px] uppercase tracking-wider text-white/40 font-semibold mb-2">
+                              Attendance · {rosterNames.length} youth
+                            </p>
+                            {rosterNames.length === 0 ? (
+                              <p className="text-xs text-white/30 italic">No check-ins recorded for this trip.</p>
+                            ) : (
+                              <div className="flex flex-wrap gap-1.5">
+                                {rosterNames.map((n, i) => (
+                                  <span key={`${n}-${i}`} className="text-xs px-2 py-0.5 rounded-full bg-white/[0.04] border border-white/10 text-white/80">{n}</span>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+
+                          {/* Overview + Debrief — read-only here; edit in the full modal */}
+                          <div className="grid md:grid-cols-2 gap-4">
+                            <div>
+                              <p className="text-[10px] uppercase tracking-wider text-purple-200/70 font-semibold flex items-center gap-1.5 mb-1.5">
+                                <StickyNote className="w-3.5 h-3.5 text-purple-300" /> Trip Overview / Details
+                              </p>
+                              {e.details?.trim() ? (
+                                <p className="text-sm text-white/80 whitespace-pre-wrap leading-relaxed">{e.details}</p>
+                              ) : (
+                                <p className="text-xs text-white/30 italic">None yet.</p>
+                              )}
+                            </div>
+                            <div>
+                              <p className="text-[10px] uppercase tracking-wider text-purple-200/70 font-semibold flex items-center gap-1.5 mb-1.5">
+                                <StickyNote className="w-3.5 h-3.5 text-purple-300" /> Trip Debrief
+                              </p>
+                              {e.notes?.trim() ? (
+                                <p className="text-sm text-white/80 whitespace-pre-wrap leading-relaxed">{e.notes}</p>
+                              ) : (
+                                <p className="text-xs text-white/30 italic">None yet.</p>
+                              )}
+                            </div>
+                          </div>
+                          <div className="flex items-center justify-between gap-2 flex-wrap pt-1">
+                            <p className="text-[10px] text-white/30">Edit vehicles, roster, times &amp; notes in the full editor — the same one on the calendar.</p>
+                            <Button
+                              size="sm"
+                              onClick={() => setEditingExcursion(e)}
+                              className="bg-purple-600 hover:bg-purple-700 text-white text-xs h-8 shrink-0"
+                            >
+                              <Pencil className="w-3.5 h-3.5 mr-1" /> Edit Excursion
+                            </Button>
+                          </div>
+                        </td>
+                      </tr>
+                    )}
+                    </Fragment>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
@@ -432,6 +533,13 @@ const AdminExcursionIntelligence = () => {
         open={!!reportSource}
         source={reportSource}
         onClose={() => setReportSource(null)}
+      />
+
+      <EditExcursionModal
+        excursion={editingExcursion}
+        onChange={setEditingExcursion}
+        onClose={() => setEditingExcursion(null)}
+        onSaved={refreshAfterEdit}
       />
     </div>
   );
