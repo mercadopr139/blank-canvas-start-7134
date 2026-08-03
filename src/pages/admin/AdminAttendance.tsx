@@ -3363,21 +3363,13 @@ const AdminAttendance = () => {
             </p>
             <div className="rounded-lg bg-red-500/[0.08] border border-red-500/30 px-3 py-2.5 text-xs text-white/70 space-y-1">
               <p className="font-bold text-red-300 mb-1">This will also delete:</p>
-              {(() => {
-                const isCurrent = deleteExcursionTarget?.id === editingExcursion?.id;
-                const youthCount = isCurrent ? editingRosterYouth.length : null;
-                const vehicleCount = isCurrent ? editingVehicles.length : null;
-                const personnelCount = isCurrent ? editingPersonnel.length : null;
-                return (
-                  <ul className="space-y-0.5 pl-1">
-                    <li>• {youthCount !== null ? `${youthCount} youth check-in${youthCount === 1 ? "" : "s"}` : "All youth check-ins for the day"}</li>
-                    <li>• {vehicleCount !== null ? `${vehicleCount} vehicle${vehicleCount === 1 ? "" : "s"} + driver assignment${vehicleCount === 1 ? "" : "s"}` : "All vehicle + driver assignments"}</li>
-                    <li>• {personnelCount !== null ? `${personnelCount} coach${personnelCount === 1 ? "" : "es"}/volunteer${personnelCount === 1 ? "" : "s"} riding along` : "All coaches & volunteers riding along"}</li>
-                    <li>• Trip timeline (locked, arrived, returned)</li>
-                    <li>• Notes / lessons for next year</li>
-                  </ul>
-                );
-              })()}
+              <ul className="space-y-0.5 pl-1">
+                <li>• All youth check-ins for the day</li>
+                <li>• All vehicle + driver assignments</li>
+                <li>• All coaches &amp; volunteers riding along</li>
+                <li>• Trip timeline (locked, arrived, returned)</li>
+                <li>• Notes / lessons for next year</li>
+              </ul>
             </div>
             <p className="text-xs text-yellow-200/80">
               The day reverts to a regular practice day. This action <span className="font-bold">cannot be undone</span>.
