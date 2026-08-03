@@ -11,7 +11,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import {
-  Star, Search, AlertTriangle, Users, Eye, ChevronLeft, ChevronRight, CalendarDays,
+  Star, Search, AlertTriangle, Users, Eye, ChevronLeft, ChevronRight, CalendarDays, MapPin,
   Clock, TrendingUp, TrendingDown, School, Lightbulb, Activity, Trash2, X, Pencil, UserPlus, Mail,
   Plus, Truck, Bus, CheckCircle2, Lock, Unlock, StickyNote
 } from "lucide-react";
@@ -28,7 +28,6 @@ import {
   isWeekend, isSameMonth,
 } from "date-fns";
 import { toast } from "sonner";
-import { ExcursionHistorySection } from "@/components/admin/ExcursionHistorySection";
 import ExcursionRideComparison from "@/components/admin/ExcursionRideComparison";
 import EditExcursionModal, { type Excursion } from "@/components/admin/EditExcursionModal";
 import { getCurrentAttendanceYear, shortProgramYear } from "@/lib/programYear";
@@ -2063,12 +2062,6 @@ const AdminAttendance = () => {
           </CardContent>
         </Card>
 
-        {/* ═══════════ EXCURSIONS — month list + history ═══════════ */}
-        <ExcursionHistorySection
-          monthExcursions={excursionsCalMonth}
-          viewedMonthShort={viewedMonthShort}
-          onEdit={(exc) => setEditingExcursion(exc)}
-        />
 
         {/* TODAY row (live, resets daily) — only when viewing current month */}
         {isCurrentMonth && [
@@ -2604,9 +2597,20 @@ const AdminAttendance = () => {
         {/* ═══════════ EXCURSION LOG ═══════════ */}
         <Card className="bg-purple-500/5 border-purple-500/20 text-white mb-6">
           <CardHeader className="pb-2">
-            <CardTitle className="text-lg flex items-center gap-2 text-purple-400">
-              🟣 Excursion Log — {format(calendarMonth, "MMMM yyyy")}
-            </CardTitle>
+            <div className="flex items-center justify-between gap-2">
+              <CardTitle className="text-lg flex items-center gap-2 text-purple-400">
+                🟣 Excursion Log — {format(calendarMonth, "MMMM yyyy")}
+              </CardTitle>
+              {/* Quick glance here; jump to the full hub for rosters, equity & reports. */}
+              <button
+                type="button"
+                onClick={() => navigate("/admin/operations/excursion-intelligence")}
+                className="flex items-center gap-1 text-xs font-semibold text-purple-300 hover:text-purple-200 shrink-0"
+                title="Open the full Excursion Intelligence hub"
+              >
+                Full details <ChevronRight className="w-3.5 h-3.5" />
+              </button>
+            </div>
           </CardHeader>
           <CardContent>
             {excursionsCalMonth.length > 0 ? (
@@ -2622,7 +2626,15 @@ const AdminAttendance = () => {
                   </div>
                   <div className="text-center p-3 rounded-lg bg-white/5">
                     <p className="text-[10px] uppercase tracking-wider text-white/40">Avg Youth</p>
-                    <p className="text-2xl font-bold mt-1 text-purple-400">{Math.round(excursionsCalMonth.reduce((s, e) => s + (excursionCountsById[e.id] || 0), 0) / excursionsCalMonth.length)}</p>
+                    {/* Average only over excursions that have already happened —
+                        future trips (0 youth) would otherwise drag it down. */}
+                    <p className="text-2xl font-bold mt-1 text-purple-400">{(() => {
+                      const passed = excursionsCalMonth.filter((e) => e.date <= todayStr);
+                      if (passed.length === 0) return 0;
+                      const total = passed.reduce((s, e) => s + (excursionCountsById[e.id] || 0), 0);
+                      return Math.round(total / passed.length);
+                    })()}</p>
+                    <p className="text-[9px] text-white/25 mt-0.5">per trip so far</p>
                   </div>
                 </div>
                 <div className="space-y-2">
@@ -3241,7 +3253,7 @@ const AdminAttendance = () => {
             This will delete <span className="font-medium text-white">{deleteTarget?.name}</span>'s check-in for <span className="font-medium text-white">{deleteTarget?.date ? format(new Date(deleteTarget.date + "T12:00:00"), "MMMM d, yyyy") : ""}</span>.
           </p>
           <div className="flex gap-2 justify-end pt-2">
-            <Button variant="outline" size="sm" className="border-white/20 text-white" onClick={() => setDeleteTarget(null)}>Cancel</Button>
+            <Button variant="outline" size="sm" className="border-white/20 bg-transparent text-white hover:bg-white/10" onClick={() => setDeleteTarget(null)}>Cancel</Button>
             <Button variant="destructive" size="sm" onClick={handleDeleteSingle}>Remove Check-In</Button>
           </div>
         </DialogContent>
@@ -3282,7 +3294,7 @@ const AdminAttendance = () => {
             </div>
           </div>
           <div className="flex gap-2 justify-end pt-2">
-            <Button variant="outline" size="sm" className="border-white/20 text-white" onClick={cancelExcursionModal}>Cancel</Button>
+            <Button variant="outline" size="sm" className="border-white/20 bg-transparent text-white hover:bg-white/10" onClick={cancelExcursionModal}>Cancel</Button>
             <Button size="sm" className="bg-purple-600 hover:bg-purple-700 text-white" onClick={saveExcursion}>Save</Button>
           </div>
         </DialogContent>
@@ -3340,7 +3352,7 @@ const AdminAttendance = () => {
             );
           })()}
           <div className="flex gap-2 justify-end pt-3 mt-2 border-t border-white/10">
-            <Button variant="outline" size="sm" className="border-white/20 text-white" onClick={() => setConvertExcursionTarget(null)}>Cancel</Button>
+            <Button variant="outline" size="sm" className="border-white/20 bg-transparent text-white hover:bg-white/10" onClick={() => setConvertExcursionTarget(null)}>Cancel</Button>
             <Button variant="destructive" size="sm" onClick={performExcursionConversion}>
               <Trash2 className="w-4 h-4 mr-1.5" /> Convert and Delete Trip
             </Button>
@@ -3376,7 +3388,7 @@ const AdminAttendance = () => {
             </p>
           </div>
           <div className="flex gap-2 justify-end pt-3 mt-2 border-t border-white/10">
-            <Button variant="outline" size="sm" className="border-white/20 text-white" onClick={() => setDeleteExcursionTarget(null)}>Cancel</Button>
+            <Button variant="outline" size="sm" className="border-white/20 bg-transparent text-white hover:bg-white/10" onClick={() => setDeleteExcursionTarget(null)}>Cancel</Button>
             <Button variant="destructive" size="sm" onClick={handleDeleteExcursion}>
               <Trash2 className="w-4 h-4 mr-1.5" /> Yes, Delete Permanently
             </Button>

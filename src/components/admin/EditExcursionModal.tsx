@@ -341,7 +341,7 @@ const EditExcursionModal = ({ excursion, onChange, onClose, onSaved, onRequestDe
 
   return (
       <Dialog open={!!editingExcursion} onOpenChange={(open) => { if (!open) setEditingExcursion(null); }}>
-        <DialogContent className="bg-black border-purple-500/20 text-white max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="bg-neutral-800 border-purple-500/30 text-white max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="text-purple-400 flex items-center gap-2">🟣 Edit Excursion</DialogTitle>
           </DialogHeader>
@@ -829,7 +829,7 @@ const EditExcursionModal = ({ excursion, onChange, onClose, onSaved, onRequestDe
                       size="sm"
                       variant="outline"
                       className={`shrink-0 ${editingExcursion.roster_locked_at
-                        ? "border-white/20 text-white/70 hover:bg-white/10"
+                        ? "border-white/20 bg-transparent text-white/80 hover:bg-white/10 hover:text-white"
                         : "border-emerald-400/40 bg-emerald-500/10 text-emerald-200 hover:bg-emerald-500/20"}`}
                       onClick={toggleExcursionLock}
                     >
@@ -852,7 +852,7 @@ const EditExcursionModal = ({ excursion, onChange, onClose, onSaved, onRequestDe
                       {editingExcursion.arrived_at && (
                         <Button
                           variant="outline" size="sm"
-                          className="border-white/20 text-white/60 hover:text-white shrink-0"
+                          className="border-white/20 bg-transparent text-white/70 hover:bg-white/10 hover:text-white shrink-0"
                           onClick={() => setEditingExcursion({ ...editingExcursion, arrived_at: null, arrival_note: null })}
                         >
                           Clear
@@ -880,7 +880,7 @@ const EditExcursionModal = ({ excursion, onChange, onClose, onSaved, onRequestDe
                       {editingExcursion.returned_at && (
                         <Button
                           variant="outline" size="sm"
-                          className="border-white/20 text-white/60 hover:text-white shrink-0"
+                          className="border-white/20 bg-transparent text-white/70 hover:bg-white/10 hover:text-white shrink-0"
                           onClick={() => setEditingExcursion({ ...editingExcursion, returned_at: null, return_note: null })}
                         >
                           Clear
@@ -913,7 +913,7 @@ const EditExcursionModal = ({ excursion, onChange, onClose, onSaved, onRequestDe
                   <span />
                 )}
                 <div className="flex gap-2">
-                  <Button variant="outline" size="sm" className="border-white/20 text-white" onClick={() => setEditingExcursion(null)}>Cancel</Button>
+                  <Button variant="outline" size="sm" className="border-white/20 bg-transparent text-white hover:bg-white/10" onClick={() => setEditingExcursion(null)}>Cancel</Button>
                   <Button size="sm" className="bg-purple-600 hover:bg-purple-700 text-white" onClick={saveEditExcursion}>Save</Button>
                 </div>
               </div>

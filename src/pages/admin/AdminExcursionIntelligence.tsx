@@ -140,13 +140,20 @@ const AdminExcursionIntelligence = () => {
   }, [excursions, year]);
 
   const stats = useMemo(() => {
+    const todayStr = new Date().toLocaleDateString("en-CA", { timeZone: "America/New_York" });
     const total = yearExcursions.length;
     let youthTrips = 0;
+    let passedCount = 0; // excursions that have already happened
+    let passedYouthTrips = 0;
     const uniqueYouth = new Set<string>();
     let top: { name: string; count: number } | null = null;
     for (const e of yearExcursions) {
       const c = countByExcursion[e.id] || 0;
       youthTrips += c;
+      if (e.date <= todayStr) {
+        passedCount += 1;
+        passedYouthTrips += c;
+      }
       regIdsByExcursion[e.id]?.forEach((id) => uniqueYouth.add(id));
       if (!top || c > top.count) top = { name: e.name, count: c };
     }
@@ -154,7 +161,9 @@ const AdminExcursionIntelligence = () => {
       total,
       youthTrips,
       uniqueYouth: uniqueYouth.size,
-      avg: total > 0 ? Math.round(youthTrips / total) : 0,
+      // Average only over trips that have already happened — future trips
+      // (0 youth) would otherwise drag the average down.
+      avg: passedCount > 0 ? Math.round(passedYouthTrips / passedCount) : 0,
       top,
     };
   }, [yearExcursions, countByExcursion, regIdsByExcursion]);
@@ -452,7 +461,7 @@ const AdminExcursionIntelligence = () => {
                       </td>
                     </tr>
                     {expanded && (
-                      <tr className="border-t border-white/[0.04] bg-white/[0.015]">
+                      <tr className="border-t border-white/10 bg-white/[0.07]">
                         <td colSpan={5} className="px-4 py-4 space-y-4">
                           {/* Timeline */}
                           {(e.roster_locked_at || e.arrived_at || e.returned_at) && (
