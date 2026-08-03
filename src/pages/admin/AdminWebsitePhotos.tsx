@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -23,7 +23,11 @@ import {
   RotateCcw,
   Save,
   ImageIcon,
+  GripVertical,
 } from "lucide-react";
+import { DndContext, closestCenter, PointerSensor, useSensor, useSensors, type DragEndEvent } from "@dnd-kit/core";
+import { SortableContext, rectSortingStrategy, useSortable, arrayMove } from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 
 // The resolved preview src for a stored token (a Storage URL or a default-token).
 const previewOf = (token: string): string => resolveDefaultToken(token)?.src ?? token;
@@ -62,6 +66,35 @@ const toEditItems = (group: SiteImageGroup, rows: SiteImageRow[]): EditItem[] =>
   }));
 };
 
+// Wraps a photo card so it can be dragged to reorder (galleries only). Shows a
+// grip handle in the corner; the up/down arrows remain as a touch-friendly
+// fallback.
+const SortablePhotoCard = ({ id, draggable, children }: { id: string; draggable: boolean; children: ReactNode }) => {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id, disabled: !draggable });
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.4 : 1,
+    zIndex: isDragging ? 50 : undefined,
+  };
+  return (
+    <div ref={setNodeRef} style={style} className="relative">
+      {draggable && (
+        <button
+          {...attributes}
+          {...listeners}
+          type="button"
+          className="absolute top-1 left-1 z-10 p-1 rounded bg-black/60 text-white/60 hover:text-white cursor-grab active:cursor-grabbing"
+          title="Drag to reorder"
+        >
+          <GripVertical className="w-3.5 h-3.5" />
+        </button>
+      )}
+      {children}
+    </div>
+  );
+};
+
 const GroupEditor = ({
   group,
   rows,
@@ -82,6 +115,16 @@ const GroupEditor = ({
     setDirty(true);
   };
 
+  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }));
+  const onDragEnd = (e: DragEndEvent) => {
+    const { active, over } = e;
+    if (!over || active.id === over.id) return;
+    const oldIndex = items.findIndex((it) => it.uid === active.id);
+    const newIndex = items.findIndex((it) => it.uid === over.id);
+    if (oldIndex === -1 || newIndex === -1) return;
+    mutate(arrayMove(items, oldIndex, newIndex));
+  };
+
   const move = (i: number, dir: -1 | 1) => {
     const j = i + dir;
     if (j < 0 || j >= items.length) return;
@@ -98,7 +141,8 @@ const GroupEditor = ({
     try {
       const url = await uploadImage(file);
       if (target === "new") {
-        setItems((prev) => [...prev, { uid: `up-${Date.now()}`, token: url, alt: "", caption: "" }]);
+        // New photos land at the front (recent first); reorder by drag/arrows.
+        setItems((prev) => [{ uid: `up-${Date.now()}`, token: url, alt: "", caption: "" }, ...prev]);
       } else {
         setItems((prev) => prev.map((it, idx) => (idx === target ? { ...it, token: url } : it)));
       }
@@ -195,9 +239,12 @@ const GroupEditor = ({
         </div>
       </div>
 
+      <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={onDragEnd}>
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+        <SortableContext items={items.map((it) => it.uid)} strategy={rectSortingStrategy}>
         {items.map((it, i) => (
-          <div key={it.uid} className="rounded-lg border border-white/10 bg-black/30 overflow-hidden">
+          <SortablePhotoCard key={it.uid} id={it.uid} draggable={isGallery}>
+          <div className="rounded-lg border border-white/10 bg-black/30 overflow-hidden">
             <div className="relative aspect-video bg-black/40">
               {previewOf(it.token) ? (
                 <img src={previewOf(it.token)} alt={it.alt} className="w-full h-full object-cover" />
@@ -280,7 +327,9 @@ const GroupEditor = ({
               )}
             </div>
           </div>
+          </SortablePhotoCard>
         ))}
+        </SortableContext>
 
         {isGallery && (
           <button
@@ -305,6 +354,7 @@ const GroupEditor = ({
           </button>
         )}
       </div>
+      </DndContext>
     </div>
   );
 };
