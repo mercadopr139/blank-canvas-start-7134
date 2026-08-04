@@ -62,6 +62,7 @@ export const OPERATIONS_TILES: PillarTile[] = [
     permKey: "operations_attendance",
     children: [
       { title: "Attendance Intelligence", href: "/admin/operations/attendance", icon: CalendarCheck },
+      { title: "Program Highlights", href: "/admin/operations/program-highlights", icon: Sparkles },
       { title: "Excursion Intelligence", href: "/admin/operations/excursion-intelligence", icon: MapPin },
       { title: "Events Intelligence", href: "/admin/operations/events-intelligence", icon: Sparkles },
       { title: "Attendance Reports", href: "/admin/operations/attendance-reports", icon: FileBarChart },

@@ -59,13 +59,28 @@ Mirrors the Excursion equivalents:
 - Edit Event opens the shared `EditEventModal`. Roster add/remove stays in the
   calendar day pop-up (Phase 1/2); a modal-roster variant is parked for later.
 
-### ⬜ Phase 4 — Program Highlights page (TO DO)
-- New **top-level** page in **Operations** (own route + sidebar tile).
-- A **chronological timeline** of excursions 🟣 + events 🟡.
-- A **date-range picker + "Generate Program Highlights Report"** → ONE combined
-  grant narrative (new or extended edge function like
-  `supabase/functions/excursion-report/index.ts`) → edit/revise → PDF via
-  `src/lib/generateCornerCoachReportPdf.ts`.
+### ✅ Phase 4 — Program Highlights page (DONE, on GitHub)
+- `src/pages/admin/AdminProgramHighlights.tsx` — a **chronological timeline** of
+  excursions 🟣 + events 🟡 with a **date-range picker** (defaults to the current
+  program year) and a **"Generate Program Highlights Report"** button.
+- `supabase/functions/program-highlights-report/index.ts` — writes ONE combined,
+  **donor-grade** narrative: a short intro + `## Title: Tagline` sections, 3–4 rich
+  paragraphs each, stats woven into the prose, whole-child mission framing, no
+  fabricated specifics. Supports generate + revise (deployed live).
+- `src/components/admin/ProgramHighlightsReportSheet.tsx` — editable/revisable, then
+  **Download PDF** (visual, prose-focused) or **Copy for Google Docs** (plain text).
+- `src/lib/generateProgramHighlightsPdf.ts` — branded, prose-focused PDF (logo
+  header, bold `##` section titles, sign-off, footers) — NOT the stat-strip style.
+- Sidebar: lives **inside the Attendance group, above Excursion & Events
+  Intelligence** (per Josh); route `program-highlights` in `src/App.tsx`.
+
+## 🎉 All four phases complete. The three-layer model is live:
+Excursion Intelligence (one trip) · Events Intelligence (one event) · Program
+Highlights (date-range rollup of both).
+
+### Parked / possible follow-ups
+- Add/remove youth directly from the **Edit Event modal** (Josh asked earlier;
+  a working version is stashed — roster today lives in the calendar day pop-up).
 
 ## Files to mirror (stay consistent, don't reinvent)
 - `src/components/admin/ExcursionReportSheet.tsx` — the report/AI-narrative UI

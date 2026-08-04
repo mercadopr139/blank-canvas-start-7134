@@ -42,6 +42,7 @@ import AdminRegistrationAnalytics from "./pages/admin/AdminRegistrationAnalytics
 import AdminAttendance from "./pages/admin/AdminAttendance";
 import AdminExcursionIntelligence from "./pages/admin/AdminExcursionIntelligence";
 import AdminEventsIntelligence from "./pages/admin/AdminEventsIntelligence";
+import AdminProgramHighlights from "./pages/admin/AdminProgramHighlights";
 import AdminFormBuilder from "./pages/admin/AdminFormBuilder";
 import AdminForms from "./pages/admin/AdminForms";
 import AdminFormEditor from "./pages/admin/AdminFormEditor";
@@ -216,6 +217,7 @@ const App = () => (
               <Route path="attendance" element={<AdminAttendance />} />
               <Route path="excursion-intelligence" element={<AdminExcursionIntelligence />} />
               <Route path="events-intelligence" element={<AdminEventsIntelligence />} />
+              <Route path="program-highlights" element={<AdminProgramHighlights />} />
               <Route path="attendance-reports" element={<AdminAttendanceReports />} />
               <Route path="form-builder" element={<AdminFormBuilder />} />
               <Route path="forms" element={<AdminForms />} />
