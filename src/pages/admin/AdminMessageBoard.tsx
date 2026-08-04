@@ -148,56 +148,91 @@ const AdminMessageBoard = () => {
   const { data: conversations = [], isLoading: convsLoading } = useQuery<Conversation[]>({
     queryKey: ["mb-conversations", user?.id, listView, viewAll],
     queryFn: async () => {
+      // Bulk-load members, display names, and the last message for a set of
+      // conversations in a FIXED number of queries — not one-per-conversation.
+      // This is the whole speedup: it replaces the old N+1 (3 round-trips per
+      // conversation) that made the board slow to open. Last messages come from
+      // the mb_last_messages() DB helper (one call for all conversations). If
+      // that helper isn't deployed yet, previews are simply omitted rather than
+      // the board failing to load.
+      const bulkLoad = async (ids: string[], opts: { attachments?: boolean }) => {
+        const membersByConv = new Map<string, string[]>();
+        const nameByUser = new Map<string, string>();
+        const lastByConv = new Map<string, { message_id?: string; content: string | null; created_at: string }>();
+        const attByMsg = new Map<string, { filename: string; mime_type: string }[]>();
+        if (ids.length === 0) return { membersByConv, nameByUser, lastByConv, attByMsg };
+
+        const { data: allMembers } = await supabase
+          .from("mb_conversation_members")
+          .select("conversation_id, user_id")
+          .in("conversation_id", ids);
+        (allMembers || []).forEach((m) => {
+          const arr = membersByConv.get(m.conversation_id) || [];
+          arr.push(m.user_id);
+          membersByConv.set(m.conversation_id, arr);
+        });
+
+        const allUserIds = [...new Set((allMembers || []).map((m) => m.user_id))];
+        if (allUserIds.length > 0) {
+          const { data: profiles } = await supabase
+            .from("staff_profiles")
+            .select("full_name, display_name, user_id")
+            .in("user_id", allUserIds);
+          (profiles || []).forEach((p: any) => nameByUser.set(p.user_id, p.display_name?.trim() || p.full_name));
+        }
+
+        const { data: lastRows } = await (supabase as any).rpc("mb_last_messages", { conv_ids: ids });
+        const msgIds: string[] = [];
+        (lastRows || []).forEach((r: any) => {
+          lastByConv.set(r.conversation_id, { message_id: r.message_id, content: r.content, created_at: r.created_at });
+          if (r.message_id) msgIds.push(r.message_id);
+        });
+
+        if (opts.attachments && msgIds.length > 0) {
+          const { data: atts } = await supabase
+            .from("mb_attachments")
+            .select("message_id, filename, mime_type")
+            .in("message_id", msgIds);
+          (atts || []).forEach((a: any) => {
+            const arr = attByMsg.get(a.message_id) || [];
+            arr.push(a);
+            attByMsg.set(a.message_id, arr);
+          });
+        }
+        return { membersByConv, nameByUser, lastByConv, attByMsg };
+      };
+
       if (viewAll && isSuperAdmin) {
         const { data: convs, error: convErr } = await supabase
           .from("mb_conversations")
           .select("id, name, is_group, created_by, created_at, pillar")
           .order("created_at", { ascending: false });
         if (convErr) throw convErr;
+        const ids = (convs || []).map((c) => c.id);
+        const { membersByConv, nameByUser, lastByConv, attByMsg } = await bulkLoad(ids, { attachments: true });
 
-        return Promise.all(
-          (convs || []).map(async (c) => {
-            const { data: members } = await supabase
-              .from("mb_conversation_members")
-              .select("user_id")
-              .eq("conversation_id", c.id);
-            const memberIds = (members || []).map((m) => m.user_id);
-            const isMember = memberIds.includes(user!.id);
+        return (convs || []).map((c) => {
+          const memberIds = membersByConv.get(c.id) || [];
+          const isMember = memberIds.includes(user!.id);
+          const member_names = memberIds.map((id) => nameByUser.get(id)).filter(Boolean) as string[];
+          const lm = lastByConv.get(c.id);
+          const lastAttachments = lm?.message_id ? (attByMsg.get(lm.message_id) || []) : [];
+          const lastMessagePreview = lm?.content?.trim()
+            ? lm.content
+            : lastAttachments.length > 0
+              ? `📎 ${lastAttachments[0].mime_type.startsWith("image/") ? "Image" : lastAttachments[0].filename}${lastAttachments.length > 1 ? ` +${lastAttachments.length - 1}` : ""}`
+              : undefined;
 
-            let member_names: string[] = [];
-            if (memberIds.length > 0) {
-              const { data: profiles } = await supabase
-                .from("staff_profiles")
-                .select("full_name, display_name, user_id")
-                .in("user_id", memberIds);
-              member_names = (profiles || []).map((p) => p.display_name?.trim() || p.full_name);
-            }
-
-            const { data: lastMsgs } = await supabase
-              .from("mb_messages")
-              .select("content, created_at, mb_attachments(filename, mime_type)")
-              .eq("conversation_id", c.id)
-              .order("created_at", { ascending: false })
-              .limit(1);
-            const lastMsg = lastMsgs?.[0];
-            const lastAttachments = ((lastMsg as { mb_attachments?: { filename: string; mime_type: string }[] } | undefined)?.mb_attachments) || [];
-            const lastMessagePreview = lastMsg?.content?.trim()
-              ? lastMsg.content
-              : lastAttachments.length > 0
-                ? `📎 ${lastAttachments[0].mime_type.startsWith("image/") ? "Image" : lastAttachments[0].filename}${lastAttachments.length > 1 ? ` +${lastAttachments.length - 1}` : ""}`
-                : undefined;
-
-            return {
-              ...c,
-              pillar: c.pillar as Pillar,
-              member_names,
-              last_message: lastMessagePreview,
-              last_message_at: lastMsg?.created_at,
-              unread_count: 0,
-              is_member: isMember,
-            } as Conversation;
-          }),
-        );
+          return {
+            ...c,
+            pillar: c.pillar as Pillar,
+            member_names,
+            last_message: lastMessagePreview,
+            last_message_at: lm?.created_at,
+            unread_count: 0,
+            is_member: isMember,
+          } as Conversation;
+        });
       }
 
       let memQuery = supabase
@@ -228,46 +263,27 @@ const AdminMessageBoard = () => {
         .order("created_at", { ascending: false });
       if (convErr) throw convErr;
 
-      return Promise.all(
-        (convs || []).map(async (c) => {
-          const { data: members } = await supabase
-            .from("mb_conversation_members")
-            .select("user_id")
-            .eq("conversation_id", c.id);
-          const memberIds = (members || []).map((m) => m.user_id);
-          const otherIds = memberIds.filter((id) => id !== user!.id);
+      const { membersByConv, nameByUser, lastByConv } = await bulkLoad(ids, { attachments: false });
 
-          let member_names: string[] = [];
-          if (otherIds.length > 0) {
-            const { data: profiles } = await supabase
-              .from("staff_profiles")
-              .select("full_name, display_name, user_id")
-              .in("user_id", otherIds);
-            member_names = (profiles || []).map((p) => p.display_name?.trim() || p.full_name);
-          }
+      return (convs || []).map((c) => {
+        const memberIds = membersByConv.get(c.id) || [];
+        const otherIds = memberIds.filter((id) => id !== user!.id);
+        const member_names = otherIds.map((id) => nameByUser.get(id)).filter(Boolean) as string[];
+        const lm = lastByConv.get(c.id);
 
-          const { data: lastMsgs } = await supabase
-            .from("mb_messages")
-            .select("content, created_at")
-            .eq("conversation_id", c.id)
-            .order("created_at", { ascending: false })
-            .limit(1);
-          const lastMsg = lastMsgs?.[0];
-
-          return {
-            ...c,
-            pillar: c.pillar as Pillar,
-            member_names,
-            last_message: lastMsg?.content,
-            last_message_at: lastMsg?.created_at,
-            unread_count: unreadMap.get(c.id) ?? 0,
-            is_member: true,
-            archived_at: archivedAtByConv.get(c.id) ?? null,
-            needs_revisit: revisitByConv.get(c.id) ?? false,
-            sort_position: sortPosByConv.get(c.id) ?? null,
-          } as Conversation;
-        }),
-      );
+        return {
+          ...c,
+          pillar: c.pillar as Pillar,
+          member_names,
+          last_message: lm?.content,
+          last_message_at: lm?.created_at,
+          unread_count: unreadMap.get(c.id) ?? 0,
+          is_member: true,
+          archived_at: archivedAtByConv.get(c.id) ?? null,
+          needs_revisit: revisitByConv.get(c.id) ?? false,
+          sort_position: sortPosByConv.get(c.id) ?? null,
+        } as Conversation;
+      });
     },
     enabled: !!user,
   });
