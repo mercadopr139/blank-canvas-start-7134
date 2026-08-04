@@ -41,6 +41,7 @@ import AdminCSBGSubmissions from "./pages/admin/AdminCSBGSubmissions";
 import AdminRegistrationAnalytics from "./pages/admin/AdminRegistrationAnalytics";
 import AdminAttendance from "./pages/admin/AdminAttendance";
 import AdminExcursionIntelligence from "./pages/admin/AdminExcursionIntelligence";
+import AdminEventsIntelligence from "./pages/admin/AdminEventsIntelligence";
 import AdminFormBuilder from "./pages/admin/AdminFormBuilder";
 import AdminForms from "./pages/admin/AdminForms";
 import AdminFormEditor from "./pages/admin/AdminFormEditor";
@@ -214,6 +215,7 @@ const App = () => (
               <Route path="duplicate-registrations" element={<AdminDuplicateRegistrations />} />
               <Route path="attendance" element={<AdminAttendance />} />
               <Route path="excursion-intelligence" element={<AdminExcursionIntelligence />} />
+              <Route path="events-intelligence" element={<AdminEventsIntelligence />} />
               <Route path="attendance-reports" element={<AdminAttendanceReports />} />
               <Route path="form-builder" element={<AdminFormBuilder />} />
               <Route path="forms" element={<AdminForms />} />

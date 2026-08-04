@@ -47,13 +47,17 @@ Key design decisions (confirmed with Josh):
 > Supabase SQL Editor). The migration files are idempotent, so `supabase db push`
 > from a linked machine is safe (no-op). **Do NOT re-run the SQL by hand.**
 
-### ⬜ Phase 3 — Events Intelligence page (TO DO)
-Mirror the existing Excursion equivalents:
-- New page like `src/pages/admin/AdminExcursionIntelligence.tsx` — list events,
-  each with a **Grant Report** button.
-- Reuse the report pattern in `src/components/admin/ExcursionReportSheet.tsx`
-  (AI narrative via edge function → edit → revise → download PDF).
-- Add a **route** in `src/App.tsx` and a **sidebar tile** in `src/config/pillarTiles.ts`.
+### ✅ Phase 3 — Events Intelligence page (DONE, on GitHub)
+Mirrors the Excursion equivalents:
+- `src/pages/admin/AdminEventsIntelligence.tsx` — year-scoped list of events with
+  stat tiles, Reach & Equity, monthly trend, and a **Grant Report** button per
+  event. Honors `count_attendance` (narrative-only events never move the numbers).
+- `src/components/admin/EventReportSheet.tsx` — AI narrative → edit → revise → PDF,
+  backed by `supabase/functions/events-report/index.ts` (deployed live).
+- Route `events-intelligence` in `src/App.tsx`; sidebar tile "Events Intelligence"
+  in `src/config/pillarTiles.ts` (under Attendance, after Excursion Intelligence).
+- Edit Event opens the shared `EditEventModal`. Roster add/remove stays in the
+  calendar day pop-up (Phase 1/2); a modal-roster variant is parked for later.
 
 ### ⬜ Phase 4 — Program Highlights page (TO DO)
 - New **top-level** page in **Operations** (own route + sidebar tile).
