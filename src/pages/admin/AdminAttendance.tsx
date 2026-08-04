@@ -13,7 +13,7 @@ import { Badge } from "@/components/ui/badge";
 import {
   Star, Search, AlertTriangle, Users, Eye, ChevronLeft, ChevronRight, CalendarDays, MapPin,
   Clock, TrendingUp, TrendingDown, School, Lightbulb, Activity, Trash2, X, Pencil, UserPlus, Mail,
-  Plus, Truck, Bus, CheckCircle2, Lock, Unlock, StickyNote
+  Plus, Truck, Bus, CheckCircle2, Lock, Unlock, StickyNote, Sparkles
 } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -30,6 +30,7 @@ import {
 import { toast } from "sonner";
 import ExcursionRideComparison from "@/components/admin/ExcursionRideComparison";
 import EditExcursionModal, { type Excursion } from "@/components/admin/EditExcursionModal";
+import EditEventModal, { type ProgramEvent, newEventForDate } from "@/components/admin/EditEventModal";
 import { getCurrentAttendanceYear, shortProgramYear } from "@/lib/programYear";
 
 /* ───────── Types ───────── */
@@ -214,6 +215,9 @@ const AdminAttendance = () => {
   const [excursionPrevState, setExcursionPrevState] = useState<boolean>(true);
   const [editingExcursion, setEditingExcursion] = useState<Excursion | null>(null);
   const [deleteExcursionTarget, setDeleteExcursionTarget] = useState<Excursion | null>(null);
+  // Events — on-site program activities (an add-on to a day, like excursions).
+  const [editingEvent, setEditingEvent] = useState<ProgramEvent | null>(null);
+  const [deleteEventTarget, setDeleteEventTarget] = useState<ProgramEvent | null>(null);
   // Pending excursion→practice/non-practice conversion. When set, the user
   // chose a non-excursion day type from the context menu on a purple tile;
   // we hold the action behind a confirmation dialog so a single accidental
@@ -229,8 +233,9 @@ const AdminAttendance = () => {
   const [manualAddMode, setManualAddMode] = useState(false);
   const [manualSearch, setManualSearch] = useState("");
   const [manualAdding, setManualAdding] = useState(false);
-  // On an excursion day, whether a manual add goes to practice or the trip.
-  const [manualAddTarget, setManualAddTarget] = useState<"practice" | "excursion">("practice");
+  // On an excursion/event day, whether a manual add goes to practice, the trip,
+  // or the event.
+  const [manualAddTarget, setManualAddTarget] = useState<"practice" | "excursion" | "event">("practice");
   const _noShowAlertOpen = false; // reserved for future expansion
   const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const { user } = useAuth();
@@ -259,6 +264,9 @@ const AdminAttendance = () => {
     // a deleted excursion sign-in lingers on screen until a reload.
     queryClient.invalidateQueries({ queryKey: ["excursion-attendance-month", calMonthStart, calMonthEnd] });
     queryClient.invalidateQueries({ queryKey: ["excursion-checkin-counts-all"] });
+    // Event check-ins live in their own query too — refresh it so a deleted
+    // event sign-in disappears without a reload.
+    queryClient.invalidateQueries({ queryKey: ["event-attendance-month", calMonthStart, calMonthEnd] });
   };
 
   const getHeadshotUrl = (url: string | null): string | null => {
@@ -404,6 +412,51 @@ const AdminAttendance = () => {
     });
     return counts;
   }, [excursionAttendanceMonth]);
+
+  // Event attendance for the calendar month (program_source 'Event'). Kept in
+  // its own query and its own counts so it never mixes into the 'NLA' practice
+  // numbers — same separation excursions use. Paginated for the 1000-row cap.
+  const { data: eventAttendanceMonth = [] } = useQuery({
+    queryKey: ["event-attendance-month", calMonthStart, calMonthEnd],
+    queryFn: async () => {
+      const pageSize = 1000;
+      let from = 0;
+      const all: AttendanceRecord[] = [];
+      while (true) {
+        // `event_id` isn't in the generated Supabase types yet (added by the
+        // Phase 2 migration), so cast the builder to bypass the column check —
+        // same pattern used for program_events above.
+        const { data, error } = await (supabase.from("attendance_records") as any)
+          .select("id, registration_id, check_in_date, check_in_at, program_source, is_manual, event_id")
+          .eq("program_source", "Event")
+          .gte("check_in_date", calMonthStart)
+          .lte("check_in_date", calMonthEnd)
+          .order("check_in_at", { ascending: true })
+          .range(from, from + pageSize - 1);
+        if (error) throw error;
+        const rows = (data || []) as (AttendanceRecord & { event_id?: string | null })[];
+        all.push(...rows);
+        if (rows.length < pageSize) break;
+        from += pageSize;
+      }
+      return all;
+    },
+  });
+
+  const eventDailyCounts = useMemo(() => {
+    const counts: Record<string, number> = {};
+    eventAttendanceMonth.forEach((r) => { counts[r.check_in_date] = (counts[r.check_in_date] || 0) + 1; });
+    return counts;
+  }, [eventAttendanceMonth]);
+
+  const eventCountsById = useMemo(() => {
+    const counts: Record<string, number> = {};
+    eventAttendanceMonth.forEach((r) => {
+      const eid = (r as any).event_id as string | null;
+      if (eid) counts[eid] = (counts[eid] || 0) + 1;
+    });
+    return counts;
+  }, [eventAttendanceMonth]);
 
   // (Weather data is loaded once via `weatherMap` further down — both the
   // calendar emojis and the chart correlation panel read from that single
@@ -560,6 +613,22 @@ const AdminAttendance = () => {
         .order("date");
       if (error) throw error;
       return (data || []) as Excursion[];
+    },
+  });
+
+  // Events for the calendar month — on-site activities attached to a day,
+  // the same way excursions are. (`program_events` isn't in the generated
+  // Supabase types yet, so we cast, matching the forms-builder pattern.)
+  const { data: eventsCalMonth = [] } = useQuery({
+    queryKey: ["events-cal", calMonthStart],
+    queryFn: async () => {
+      const { data, error } = await (supabase.from("program_events" as never) as any)
+        .select("*")
+        .gte("date", calMonthStart)
+        .lte("date", calMonthEnd)
+        .order("date");
+      if (error) throw error;
+      return (data || []) as ProgramEvent[];
     },
   });
 
@@ -739,6 +808,17 @@ const AdminAttendance = () => {
     return !!excursionDayMap[dateStr];
   }, [excursionDayMap]);
 
+  /* ───── Event maps ───── */
+  const eventDayMap = useMemo(() => {
+    const m: Record<string, boolean> = {};
+    eventsCalMonth.forEach((e) => { m[e.date] = true; });
+    return m;
+  }, [eventsCalMonth]);
+
+  const isEventDay = useCallback((dateStr: string): boolean => {
+    return !!eventDayMap[dateStr];
+  }, [eventDayMap]);
+
   /* ───── Filter attendance to practice days ─────
      calendarAttendance is NLA-only (excursion check-ins are program_source
      'Excursion', held in a separate query), so we no longer exclude excursion
@@ -879,6 +959,27 @@ const AdminAttendance = () => {
     setDeleteExcursionTarget(null);
     setEditingExcursion(null); // Close Edit modal too if delete was triggered from there
     toast.success("Excursion deleted");
+  };
+
+  /* ───── Add / edit / remove the event attached to a day — independent of
+     practice status and of any excursion (a day can be a practice day, host
+     an excursion, AND host an event). ───── */
+  const openEventEditor = (dateStr: string) => {
+    setContextMenuDay(null);
+    const existing = eventsCalMonth.find((e) => e.date === dateStr);
+    setEditingEvent(existing ? { ...existing } : newEventForDate(dateStr));
+  };
+
+  const handleDeleteEvent = async () => {
+    if (!deleteEventTarget) return;
+    const { error } = await (supabase.from("program_events" as never) as any).delete().eq("id", deleteEventTarget.id);
+    if (error) { toast.error("Failed to delete event"); return; }
+    queryClient.invalidateQueries({ queryKey: ["events-cal"] });
+    // Deleting an event CASCADE-deletes its attendance rows — refresh those too.
+    queryClient.invalidateQueries({ queryKey: ["event-attendance-month", calMonthStart, calMonthEnd] });
+    setDeleteEventTarget(null);
+    setEditingEvent(null); // close the editor too if delete came from there
+    toast.success("Event deleted");
   };
 
   /* ───── Derived Data ───── */
@@ -1548,14 +1649,17 @@ const AdminAttendance = () => {
     const excSource = isExcursionDay(selectedDay)
       ? excursionAttendanceMonth.filter((a) => a.check_in_date === selectedDay)
       : [];
+    const evtSource = isEventDay(selectedDay)
+      ? eventAttendanceMonth.filter((a) => a.check_in_date === selectedDay)
+      : [];
     const nlaSource = filteredCalendarAttendance.filter((a) => a.check_in_date === selectedDay);
-    const all = [...excSource, ...nlaSource]
+    const all = [...excSource, ...evtSource, ...nlaSource]
       .map((a) => ({ ...a, reg: regMap[a.registration_id] }))
       .filter((a) => a.reg);
     if (!daySearch.trim()) return all;
     const q = daySearch.toLowerCase();
     return all.filter((a) => `${a.reg.child_first_name} ${a.reg.child_last_name}`.toLowerCase().includes(q));
-  }, [selectedDay, filteredCalendarAttendance, excursionAttendanceMonth, isExcursionDay, regMap, daySearch]);
+  }, [selectedDay, filteredCalendarAttendance, excursionAttendanceMonth, eventAttendanceMonth, isExcursionDay, isEventDay, regMap, daySearch]);
 
   const calendarDays = useMemo(() => {
     const monthStart = startOfMonth(calendarMonth);
@@ -1844,6 +1948,7 @@ const AdminAttendance = () => {
                 const isSelected = selectedDay === dateStr;
                 const isPrac = isPracticeDay(dateStr, calPracticeDayMap);
                 const isExc = isExcursionDay(dateStr);
+                const isEvt = isEventDay(dateStr);
                 // A day can now be both. "Excursion-only" = an excursion on a
                 // non-practice day (the classic Saturday trip); "dual" = a
                 // practice day that also hosts an excursion.
@@ -1854,8 +1959,9 @@ const AdminAttendance = () => {
                 // a purple excursion count — so neither metric is diluted.
                 const practiceCount = dailyCounts[dateStr] || 0;
                 const excursionCount = (excursionDailyCounts as Record<string, number>)[dateStr] || 0;
+                const eventCount = (eventDailyCounts as Record<string, number>)[dateStr] || 0;
                 const count = excursionOnly ? excursionCount : practiceCount;
-                const hasActivity = practiceCount > 0 || excursionCount > 0;
+                const hasActivity = practiceCount > 0 || excursionCount > 0 || eventCount > 0;
                 const weather = weatherMap[dateStr] as WeatherDay | undefined;
                 const wInfo = weather ? getWeatherInfo(weather.condition_code) : null;
                 const rowIndex = Math.floor(idx / 7);
@@ -1897,19 +2003,30 @@ const AdminAttendance = () => {
                         <span className={wInfo ? "border-b border-dotted border-white/20" : ""}>{day}</span>
                       </span>
 
-                      {isExc ? (
-                        // Excursion day — two circles: green practice + purple excursion.
+                      {(isExc || isEvt) ? (
+                        // Overlay day — a row of circles: green practice, plus a
+                        // purple excursion count and/or a yellow event count.
+                        // Each add-on keeps its own number so nothing dilutes.
                         <div className="flex items-center gap-1">
                           <span className={`w-6 h-6 sm:w-7 sm:h-7 rounded-full flex items-center justify-center text-xs sm:text-sm font-bold ${
                             practiceCount > 0
                               ? "bg-green-500/20 border border-green-500/40 text-green-400"
                               : "bg-white/[0.03] border border-white/[0.06] text-white/20"
                           }`}>{practiceCount}</span>
-                          <span className={`w-6 h-6 sm:w-7 sm:h-7 rounded-full flex items-center justify-center text-xs sm:text-sm font-bold ${
-                            excursionCount > 0
-                              ? "bg-purple-500/20 border border-purple-500/40 text-purple-400"
-                              : "bg-purple-500/[0.03] border border-purple-500/[0.08] text-purple-400/30"
-                          }`}>{excursionCount}</span>
+                          {isExc && (
+                            <span className={`w-6 h-6 sm:w-7 sm:h-7 rounded-full flex items-center justify-center text-xs sm:text-sm font-bold ${
+                              excursionCount > 0
+                                ? "bg-purple-500/20 border border-purple-500/40 text-purple-400"
+                                : "bg-purple-500/[0.03] border border-purple-500/[0.08] text-purple-400/30"
+                            }`}>{excursionCount}</span>
+                          )}
+                          {isEvt && (
+                            <span className={`w-6 h-6 sm:w-7 sm:h-7 rounded-full flex items-center justify-center text-xs sm:text-sm font-bold ${
+                              eventCount > 0
+                                ? "bg-yellow-500/20 border border-yellow-400/40 text-yellow-300"
+                                : "bg-yellow-500/[0.03] border border-yellow-400/[0.08] text-yellow-300/30"
+                            }`}>{eventCount}</span>
+                          )}
                         </div>
                       ) : count > 0 ? (
                         <span className={`w-8 h-8 sm:w-9 sm:h-9 rounded-full flex items-center justify-center text-sm sm:text-base font-bold ${
@@ -1982,6 +2099,15 @@ const AdminAttendance = () => {
                         title="Excursion scheduled"
                       />
                     )}
+                    {/* Event overlay marker — yellow dot, bottom-left, so it
+                        can sit alongside the purple excursion dot and the
+                        green/red practice dot without overlapping. */}
+                    {isEvt && (
+                      <span
+                        className="absolute bottom-0.5 left-0.5 w-2.5 h-2.5 rounded-full bg-yellow-400 border border-yellow-200 shadow-[0_0_4px_rgba(250,204,21,0.6)] z-10 pointer-events-none"
+                        title="Event scheduled"
+                      />
+                    )}
                   </div>
                 );
               })}
@@ -2040,6 +2166,31 @@ const AdminAttendance = () => {
                     Remove Excursion
                   </button>
                 )}
+
+                {/* Event — a second add-on the day can carry, alongside any
+                    excursion and independent of practice status. */}
+                <div className="my-1 border-t border-white/10" />
+                <button
+                  className="w-full text-left px-3 py-2 text-sm flex items-center gap-2 hover:bg-white/10 transition-colors text-white/70"
+                  onClick={() => openEventEditor(contextMenuDay.dateStr)}
+                >
+                  <span className="w-3 h-3 rounded-full bg-yellow-400 inline-block" />
+                  {isEventDay(contextMenuDay.dateStr) ? "Edit Event" : "Add Event"}
+                  {isEventDay(contextMenuDay.dateStr) && <span className="ml-auto text-yellow-400">✓</span>}
+                </button>
+                {isEventDay(contextMenuDay.dateStr) && (
+                  <button
+                    className="w-full text-left px-3 py-2 text-sm flex items-center gap-2 hover:bg-red-500/10 transition-colors text-red-400/90"
+                    onClick={() => {
+                      const ev = eventsCalMonth.find((e) => e.date === contextMenuDay.dateStr);
+                      setContextMenuDay(null);
+                      if (ev) setDeleteEventTarget({ ...ev });
+                    }}
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                    Remove Event
+                  </button>
+                )}
               </div>
             )}
 
@@ -2057,7 +2208,11 @@ const AdminAttendance = () => {
                 <span className="w-3 h-3 rounded-full bg-purple-500" />
                 <span className="text-xs text-white/50">Excursion (can overlay a practice day)</span>
               </div>
-              <span className="text-[10px] text-white/30 ml-auto">Click a day → add/edit excursion • Click dot → practice ↔ non-practice</span>
+              <div className="flex items-center gap-1.5">
+                <span className="w-3 h-3 rounded-full bg-yellow-400" />
+                <span className="text-xs text-white/50">Event (on-site, can overlay any day)</span>
+              </div>
+              <span className="text-[10px] text-white/30 ml-auto">Click a day → add/edit excursion or event • Click dot → practice ↔ non-practice</span>
             </div>
           </CardContent>
         </Card>
@@ -2941,7 +3096,7 @@ const AdminAttendance = () => {
                     <Button
                       size="sm"
                       variant="outline"
-                      onClick={() => setManualAddMode(true)}
+                      onClick={() => { setManualAddTarget("practice"); setManualAddMode(true); }}
                       className="border-green-500/30 text-green-400 hover:bg-green-500/10 hover:text-green-300 h-8 text-xs"
                     >
                       <UserPlus className="w-3.5 h-3.5 mr-1" />
@@ -2960,10 +3115,10 @@ const AdminAttendance = () => {
                       <X className="w-4 h-4" />
                     </button>
                   </div>
-                  {/* On an excursion day, choose whether this add is practice
-                      attendance or goes onto the trip roster. */}
-                  {isExcursionDay(selectedDay) && (
-                    <div className="flex items-center gap-1.5 mb-2">
+                  {/* On an excursion/event day, choose whether this add is
+                      practice attendance, the trip roster, or the event roster. */}
+                  {(isExcursionDay(selectedDay) || isEventDay(selectedDay)) && (
+                    <div className="flex items-center gap-1.5 mb-2 flex-wrap">
                       <span className="text-xs text-white/50">Add to:</span>
                       <button
                         onClick={() => setManualAddTarget("practice")}
@@ -2971,12 +3126,22 @@ const AdminAttendance = () => {
                       >
                         Practice
                       </button>
-                      <button
-                        onClick={() => setManualAddTarget("excursion")}
-                        className={`text-xs font-semibold px-2.5 py-1 rounded-md border transition-colors ${manualAddTarget === "excursion" ? "bg-purple-500/20 border-purple-500/40 text-purple-200" : "border-white/15 text-white/50 hover:bg-white/5"}`}
-                      >
-                        Excursion
-                      </button>
+                      {isExcursionDay(selectedDay) && (
+                        <button
+                          onClick={() => setManualAddTarget("excursion")}
+                          className={`text-xs font-semibold px-2.5 py-1 rounded-md border transition-colors ${manualAddTarget === "excursion" ? "bg-purple-500/20 border-purple-500/40 text-purple-200" : "border-white/15 text-white/50 hover:bg-white/5"}`}
+                        >
+                          Excursion
+                        </button>
+                      )}
+                      {isEventDay(selectedDay) && (
+                        <button
+                          onClick={() => setManualAddTarget("event")}
+                          className={`text-xs font-semibold px-2.5 py-1 rounded-md border transition-colors ${manualAddTarget === "event" ? "bg-yellow-500/20 border-yellow-400/40 text-yellow-200" : "border-white/15 text-white/50 hover:bg-white/5"}`}
+                        >
+                          Event
+                        </button>
+                      )}
                     </div>
                   )}
                   <div className="relative">
@@ -3004,10 +3169,14 @@ const AdminAttendance = () => {
                         // the add lands — a kid in practice can still be added to
                         // the trip, and vice versa.
                         const excForDay = excursionsCalMonth.find((e) => e.date === selectedDay);
+                        const evtForDay = eventsCalMonth.find((e) => e.date === selectedDay);
                         const addToExcursion = !!excForDay && manualAddTarget === "excursion";
+                        const addToEvent = !!evtForDay && manualAddTarget === "event";
                         const alreadyCheckedIn = daySignIns.some((s) =>
                           s.registration_id === r.id &&
-                          (addToExcursion ? s.program_source === "Excursion" : s.program_source === "NLA")
+                          (addToExcursion ? s.program_source === "Excursion"
+                            : addToEvent ? s.program_source === "Event"
+                            : s.program_source === "NLA")
                         );
                         return (
                           <button
@@ -3025,6 +3194,14 @@ const AdminAttendance = () => {
                                   _registration_id: r.id,
                                   _check_in_date: selectedDay,
                                 }));
+                              } else if (addToEvent) {
+                                // File as Event attendance (tagged with the event_id).
+                                // program_source 'Event' keeps it out of practice numbers.
+                                ({ error } = await (supabase as any).rpc("admin_record_event_attendance", {
+                                  _event_id: evtForDay!.id,
+                                  _registration_id: r.id,
+                                  _check_in_date: selectedDay,
+                                }));
                               } else {
                                 const checkInTime = new Date(selectedDay + "T17:15:00");
                                 ({ error } = await supabase.from("attendance_records").insert({
@@ -3039,11 +3216,14 @@ const AdminAttendance = () => {
                               if (error) {
                                 toast.error("Failed to add check-in");
                               } else {
-                                toast.success(`${addToExcursion ? "Added to excursion" : "Practice check-in added"} for ${r.child_first_name} ${r.child_last_name}`);
+                                toast.success(`${addToExcursion ? "Added to excursion" : addToEvent ? "Added to event" : "Practice check-in added"} for ${r.child_first_name} ${r.child_last_name}`);
                                 invalidateAttendance();
                                 if (addToExcursion) {
                                   queryClient.invalidateQueries({ queryKey: ["excursion-attendance-month", calMonthStart, calMonthEnd] });
                                   queryClient.invalidateQueries({ queryKey: ["excursion-checkin-counts-all"] });
+                                }
+                                if (addToEvent) {
+                                  queryClient.invalidateQueries({ queryKey: ["event-attendance-month", calMonthStart, calMonthEnd] });
                                 }
                                 setManualSearch("");
                                 setManualAddMode(false);
@@ -3079,41 +3259,62 @@ const AdminAttendance = () => {
                 </div>
               )}
 
-              <div className="mt-2 mb-2 flex items-center gap-3 flex-wrap">
-                <Badge className="bg-green-500/15 text-green-400 border-green-500/30 flex-shrink-0">
-                  {daySignIns.filter((s) => s.program_source === "NLA").length} Practice
-                </Badge>
-                {!isPracticeDay(selectedDay, calPracticeDayMap) && (
-                  <Badge className="bg-red-500/15 text-red-400 border-red-500/30 flex-shrink-0">Non-Practice Day</Badge>
-                )}
-                {/* Excursion count sits with its own controls on the right,
-                    so the green practice count reads on its own. */}
-                {isExcursionDay(selectedDay) && (
-                  <Badge className="ml-auto bg-purple-500/15 text-purple-300 border-purple-500/30 flex-shrink-0">
-                    {daySignIns.filter((s) => s.program_source === "Excursion").length} Excursion
+              <div className="mt-2 mb-2 space-y-2.5">
+                {/* Status badges — Practice, Excursion, Event — all grouped
+                    together on the left so the day's makeup reads at a glance. */}
+                <div className="flex items-center gap-2 flex-wrap">
+                  <Badge className="bg-green-500/15 text-green-400 border-green-500/30 flex-shrink-0">
+                    {daySignIns.filter((s) => s.program_source === "NLA").length} Practice
                   </Badge>
-                )}
-                {/* Add or edit the excursion for this day, right where the user
-                    naturally looks after clicking a day. Closes this dialog and
-                    opens the excursion editor. */}
-                {isExcursionDay(selectedDay) && (() => {
-                  const exc = excursionsCalMonth.find((e) => e.date === selectedDay);
-                  return exc ? (
+                  {!isPracticeDay(selectedDay, calPracticeDayMap) && (
+                    <Badge className="bg-red-500/15 text-red-400 border-red-500/30 flex-shrink-0">Non-Practice Day</Badge>
+                  )}
+                  {isExcursionDay(selectedDay) && (
+                    <Badge className="bg-purple-500/15 text-purple-300 border-purple-500/30 flex-shrink-0">
+                      {daySignIns.filter((s) => s.program_source === "Excursion").length} Excursion
+                    </Badge>
+                  )}
+                  {isEventDay(selectedDay) && (
+                    <Badge className="bg-yellow-500/15 text-yellow-200 border-yellow-400/30 flex-shrink-0">
+                      {daySignIns.filter((s) => s.program_source === "Event").length} Event
+                    </Badge>
+                  )}
+                </div>
+
+                {/* Action buttons in columns: the excursion column (Edit
+                    Excursion with its Sign-Ups stacked under it) sits beside the
+                    event column, so related controls line up under each other. */}
+                <div className="flex items-start gap-2 flex-wrap">
+                  <div className="flex flex-col gap-1.5">
                     <button
-                      onClick={() => navigate(`/admin/excursion-signups/${exc.id}`)}
-                      className="inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-md border border-purple-400/40 bg-purple-500/10 text-purple-200 hover:bg-purple-500/20 transition-colors flex-shrink-0"
+                      onClick={() => { const d = selectedDay; setSelectedDay(null); openExcursionEditor(d); }}
+                      className="inline-flex items-center justify-center gap-1.5 min-w-[9rem] text-xs font-semibold px-3 py-1.5 rounded-md border border-purple-400/40 bg-purple-500/10 text-purple-200 hover:bg-purple-500/20 transition-colors"
                     >
-                      <UserPlus className="w-3.5 h-3.5" /> Sign-Ups
+                      <Bus className="w-3.5 h-3.5" />
+                      {isExcursionDay(selectedDay) ? "Edit Excursion" : "Add Excursion"}
                     </button>
-                  ) : null;
-                })()}
-                <button
-                  onClick={() => { const d = selectedDay; setSelectedDay(null); openExcursionEditor(d); }}
-                  className={`${isExcursionDay(selectedDay) ? "" : "ml-auto"} inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-md border border-purple-400/40 bg-purple-500/10 text-purple-200 hover:bg-purple-500/20 transition-colors flex-shrink-0`}
-                >
-                  <Bus className="w-3.5 h-3.5" />
-                  {isExcursionDay(selectedDay) ? "Edit Excursion" : "Add Excursion"}
-                </button>
+                    {isExcursionDay(selectedDay) && (() => {
+                      const exc = excursionsCalMonth.find((e) => e.date === selectedDay);
+                      return exc ? (
+                        <button
+                          onClick={() => navigate(`/admin/excursion-signups/${exc.id}`)}
+                          className="inline-flex items-center justify-center gap-1.5 min-w-[9rem] text-xs font-semibold px-3 py-1.5 rounded-md border border-purple-400/40 bg-purple-500/10 text-purple-200 hover:bg-purple-500/20 transition-colors"
+                        >
+                          <UserPlus className="w-3.5 h-3.5" /> Sign-Ups
+                        </button>
+                      ) : null;
+                    })()}
+                  </div>
+                  <div className="flex flex-col gap-1.5">
+                    <button
+                      onClick={() => { const d = selectedDay; setSelectedDay(null); openEventEditor(d); }}
+                      className="inline-flex items-center justify-center gap-1.5 min-w-[9rem] text-xs font-semibold px-3 py-1.5 rounded-md border border-yellow-400/40 bg-yellow-500/10 text-yellow-200 hover:bg-yellow-500/20 transition-colors"
+                    >
+                      <Sparkles className="w-3.5 h-3.5" />
+                      {isEventDay(selectedDay) ? "Edit Event" : "Add Event"}
+                    </button>
+                  </div>
+                </div>
               </div>
               <div className="relative mb-3">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/40" />
@@ -3124,35 +3325,66 @@ const AdminAttendance = () => {
                   className="pl-9 bg-white/5 border-white/20 text-white placeholder:text-white/30 h-9"
                 />
               </div>
-              <div className="space-y-1 overflow-y-auto flex-1">
-                {daySignIns.map((s) => (
-                  <div key={s.id} className="flex items-center gap-3 p-2.5 rounded-lg bg-white/5 border border-white/5">
-                    <div className="w-8 h-8 rounded-full bg-white/10 overflow-hidden flex-shrink-0">
-                      {getHeadshotUrl(s.reg.child_headshot_url) ? (
-                        <img src={getHeadshotUrl(s.reg.child_headshot_url)!} alt="" className="w-full h-full object-cover" />
-                      ) : (
-                        <span className="flex items-center justify-center w-full h-full text-xs text-white/40">{s.reg.child_first_name[0]}</span>
-                      )}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-1.5">
-                        <span className="font-medium text-sm text-white">{s.reg.child_first_name} {s.reg.child_last_name}</span>
-                        {s.reg.is_bald_eagle && <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-400 flex-shrink-0" />}
-                        {s.is_manual && <Badge className="bg-amber-500/15 text-amber-400 border-amber-500/30 text-[10px] px-1.5 py-0">Manual</Badge>}
+              <div className="space-y-3 overflow-y-auto flex-1">
+                {(() => {
+                  // Group the roster by activity so each list (Practice /
+                  // Excursion / Event) reads and manages on its own — even on a
+                  // day that hosts all three. A section shows when the day HAS
+                  // that activity (so you can add to an empty practice list) or
+                  // when someone is already checked into it.
+                  const groups = [
+                    { key: "NLA", label: "Practice", dot: "bg-green-500", text: "text-green-400", show: isPracticeDay(selectedDay, calPracticeDayMap) },
+                    { key: "Excursion", label: "Excursion", dot: "bg-purple-500", text: "text-purple-300", show: isExcursionDay(selectedDay) },
+                    { key: "Event", label: "Event", dot: "bg-yellow-400", text: "text-yellow-200", show: isEventDay(selectedDay) },
+                  ];
+                  const visible = groups.filter((g) => g.show || daySignIns.some((s) => s.program_source === g.key));
+                  if (visible.length === 0) {
+                    return <p className="text-sm text-white/30 text-center py-4">No sign-ins for this day</p>;
+                  }
+                  return visible.map((g) => {
+                    const rows = daySignIns.filter((s) => s.program_source === g.key);
+                    return (
+                      <div key={g.key} className="space-y-1">
+                        <div className="flex items-center gap-2 px-1 pt-1">
+                          <span className={`w-2 h-2 rounded-full ${g.dot}`} />
+                          <span className={`text-xs font-bold uppercase tracking-wide ${g.text}`}>{g.label}</span>
+                          <span className="text-xs text-white/40">({rows.length})</span>
+                        </div>
+                        {rows.length === 0 ? (
+                          <p className="text-xs text-white/25 italic pl-4 py-1">
+                            {daySearch.trim() ? "— no matches —" : "— no one yet — use “Add Youth” to add —"}
+                          </p>
+                        ) : rows.map((s) => (
+                          <div key={s.id} className="flex items-center gap-3 p-2.5 rounded-lg bg-white/5 border border-white/5">
+                            <div className="w-8 h-8 rounded-full bg-white/10 overflow-hidden flex-shrink-0">
+                              {getHeadshotUrl(s.reg.child_headshot_url) ? (
+                                <img src={getHeadshotUrl(s.reg.child_headshot_url)!} alt="" className="w-full h-full object-cover" />
+                              ) : (
+                                <span className="flex items-center justify-center w-full h-full text-xs text-white/40">{s.reg.child_first_name[0]}</span>
+                              )}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-1.5">
+                                <span className="font-medium text-sm text-white">{s.reg.child_first_name} {s.reg.child_last_name}</span>
+                                {s.reg.is_bald_eagle && <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-400 flex-shrink-0" />}
+                                {s.is_manual && <Badge className="bg-amber-500/15 text-amber-400 border-amber-500/30 text-[10px] px-1.5 py-0">Manual</Badge>}
+                              </div>
+                              <p className="text-xs text-white/40">{s.reg.child_boxing_program}</p>
+                            </div>
+                            <span className={`text-xs flex-shrink-0 ${s.is_manual ? 'text-amber-400' : 'text-white/50'}`}>{format(new Date(s.check_in_at), "h:mm a")}</span>
+                            <button
+                              onClick={(e) => { e.stopPropagation(); setDeleteTarget({ id: s.id, name: `${s.reg.child_first_name} ${s.reg.child_last_name}`, date: s.check_in_date }); }}
+                              className="p-1 rounded hover:bg-red-500/20 text-white/30 hover:text-red-400 transition-colors flex-shrink-0"
+                              title={s.is_manual ? "Remove manual check-in" : "Remove check-in"}
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        ))}
                       </div>
-                      <p className="text-xs text-white/40">{s.reg.child_boxing_program} · <span className={s.program_source === 'Lil Champs Corner' ? 'text-sky-400' : s.program_source === 'Excursion' ? 'text-purple-300' : 'text-green-400'}>{s.program_source}</span></p>
-                    </div>
-                    <span className={`text-xs flex-shrink-0 ${s.is_manual ? 'text-amber-400' : 'text-white/50'}`}>{format(new Date(s.check_in_at), "h:mm a")}</span>
-                    <button
-                      onClick={(e) => { e.stopPropagation(); setDeleteTarget({ id: s.id, name: `${s.reg.child_first_name} ${s.reg.child_last_name}`, date: s.check_in_date }); }}
-                      className="p-1 rounded hover:bg-red-500/20 text-white/30 hover:text-red-400 transition-colors flex-shrink-0"
-                      title={s.is_manual ? "Remove manual check-in" : "Remove check-in"}
-                    >
-                      <Trash2 className="w-3.5 h-3.5" />
-                    </button>
-                  </div>
-                ))}
-                {daySignIns.length === 0 && <p className="text-sm text-white/30 text-center py-4">No sign-ins for this day</p>}
+                    );
+                  });
+                })()}
               </div>
             </>
           )}
@@ -3314,6 +3546,16 @@ const AdminAttendance = () => {
         }}
       />
 
+      {/* Edit / Add Event Modal */}
+      <EditEventModal
+        event={editingEvent}
+        onClose={() => setEditingEvent(null)}
+        onRequestDelete={(ev) => setDeleteEventTarget(ev)}
+        onSaved={() => {
+          queryClient.invalidateQueries({ queryKey: ["events-cal"] });
+        }}
+      />
+
       {/* Convert Excursion → Practice / Non-Practice Confirmation
           Guards the calendar-tile context-menu path that used to silently
           delete the whole trip. */}
@@ -3390,6 +3632,33 @@ const AdminAttendance = () => {
           <div className="flex gap-2 justify-end pt-3 mt-2 border-t border-white/10">
             <Button variant="outline" size="sm" className="border-white/20 bg-transparent text-white hover:bg-white/10" onClick={() => setDeleteExcursionTarget(null)}>Cancel</Button>
             <Button variant="destructive" size="sm" onClick={handleDeleteExcursion}>
+              <Trash2 className="w-4 h-4 mr-1.5" /> Yes, Delete Permanently
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Event Confirmation */}
+      <Dialog open={!!deleteEventTarget} onOpenChange={(open) => { if (!open) setDeleteEventTarget(null); }}>
+        <DialogContent className="bg-zinc-900 border-red-500/30 text-white max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-red-300 flex items-center gap-2">
+              <AlertTriangle className="w-5 h-5" /> Delete Event?
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3">
+            <p className="text-sm text-white/80">
+              You're about to permanently delete{" "}
+              <span className="font-bold text-white">"{deleteEventTarget?.name}"</span>.
+            </p>
+            <p className="text-xs text-white/60">
+              The day keeps its practice / non-practice status and any excursion. This action{" "}
+              <span className="font-bold">cannot be undone</span>.
+            </p>
+          </div>
+          <div className="flex gap-2 justify-end pt-3 mt-2 border-t border-white/10">
+            <Button variant="outline" size="sm" className="border-white/20 bg-transparent text-white hover:bg-white/10" onClick={() => setDeleteEventTarget(null)}>Cancel</Button>
+            <Button variant="destructive" size="sm" onClick={handleDeleteEvent}>
               <Trash2 className="w-4 h-4 mr-1.5" /> Yes, Delete Permanently
             </Button>
           </div>
