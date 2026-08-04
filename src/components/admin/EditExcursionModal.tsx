@@ -571,6 +571,11 @@ const EditExcursionModal = ({ excursion, onChange, onClose, onSaved, onRequestDe
                       <p className="text-xs font-bold text-yellow-200/80 mb-2">
                         Youth not assigned to any vehicle ({unassigned.length})
                       </p>
+                      {editingVehicles.length === 0 && (
+                        <p className="text-[11px] text-yellow-200/70 mb-2 leading-snug">
+                          Add a vehicle above first (e.g. Van A) — then tap a youth here to assign them to it.
+                        </p>
+                      )}
                       <div className="flex flex-wrap gap-1.5">
                         {unassigned.map((y) => (
                           <Popover key={y.registration_id}>
