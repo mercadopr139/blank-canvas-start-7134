@@ -346,28 +346,37 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Get qualifying donations for 2026
-    const { data: donations, error: donErr } = await supabase
-      .from("donations")
-      .select("deposit_date, reference_id, amount, revenue_type, revenue_description, donor_name")
+    // Get qualifying revenue for 2026. Read straight from the `revenue` table
+    // (the source of truth shown on the Revenue page) instead of the mirrored
+    // `donations` table. Legacy/imported revenue rows never got a `donations`
+    // counterpart, so reading `donations` made their receipts fail with
+    // "No qualifying donations." `revenue` is the complete ledger.
+    const { data: revenueRows, error: revErr } = await supabase
+      .from("revenue")
+      .select("date, reference_id, amount, revenue_type")
       .eq("supporter_id", supporter_id)
-      .gte("deposit_date", "2026-01-01")
-      .lte("deposit_date", "2026-12-31")
-      .order("deposit_date", { ascending: true });
+      .gte("date", "2026-01-01")
+      .lte("date", "2026-12-31")
+      .order("date", { ascending: true });
 
-    if (donErr) {
-      return new Response(JSON.stringify({ error: donErr.message }), {
+    if (revErr) {
+      return new Response(JSON.stringify({ error: revErr.message }), {
         status: 500,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    // Filter to qualifying types
-    const qualifying = (donations || []).filter(
-      (d: any) =>
-        d.revenue_type === "Donation" ||
-        (d.revenue_type === "Fundraising" && d.revenue_description === "Sponsor")
-    );
+    // Donations and Sponsorships are tax-receiptable; other types (e.g. Fee for
+    // Service) are not. Shape each row to what the PDF builder expects.
+    const qualifying = (revenueRows || [])
+      .filter((r: any) => r.revenue_type === "Donation" || r.revenue_type === "Sponsorship")
+      .map((r: any) => ({
+        deposit_date: r.date,
+        reference_id: r.reference_id,
+        amount: r.amount,
+        revenue_type: r.revenue_type,
+        donor_name: supporter.name,
+      }));
 
     if (qualifying.length === 0) {
       return new Response(
