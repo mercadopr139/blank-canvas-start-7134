@@ -245,6 +245,30 @@ const GroupEditor = ({
 
       <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={onDragEnd}>
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+        {/* Add photo sits FIRST — new photos land at the front of the list, so
+            the button belongs right next to where they'll appear. */}
+        {isGallery && (
+          <button
+            type="button"
+            onClick={() => addInputRef.current?.click()}
+            disabled={busy}
+            className="rounded-lg border-2 border-dashed border-white/10 hover:border-white/25 hover:bg-white/[0.02] flex flex-col items-center justify-center gap-1.5 text-zinc-600 hover:text-zinc-400 min-h-[120px] transition-colors"
+          >
+            <Plus className="w-6 h-6" />
+            <span className="text-xs font-medium">Add photo</span>
+            <input
+              ref={addInputRef}
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={(e) => {
+                const f = e.target.files?.[0];
+                if (f) uploadTo("new", f);
+                e.target.value = "";
+              }}
+            />
+          </button>
+        )}
         <SortableContext items={items.map((it) => it.uid)} strategy={rectSortingStrategy}>
         {items.map((it, i) => (
           <SortablePhotoCard key={it.uid} id={it.uid} draggable={isGallery}>
@@ -334,29 +358,6 @@ const GroupEditor = ({
           </SortablePhotoCard>
         ))}
         </SortableContext>
-
-        {isGallery && (
-          <button
-            type="button"
-            onClick={() => addInputRef.current?.click()}
-            disabled={busy}
-            className="rounded-lg border-2 border-dashed border-white/10 hover:border-white/25 hover:bg-white/[0.02] flex flex-col items-center justify-center gap-1.5 text-zinc-600 hover:text-zinc-400 min-h-[120px] transition-colors"
-          >
-            <Plus className="w-6 h-6" />
-            <span className="text-xs font-medium">Add photo</span>
-            <input
-              ref={addInputRef}
-              type="file"
-              accept="image/*"
-              className="hidden"
-              onChange={(e) => {
-                const f = e.target.files?.[0];
-                if (f) uploadTo("new", f);
-                e.target.value = "";
-              }}
-            />
-          </button>
-        )}
       </div>
       </DndContext>
     </div>

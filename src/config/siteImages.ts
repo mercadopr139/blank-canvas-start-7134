@@ -46,6 +46,7 @@ import launchPadLogo from "@/assets/programs/launch-pad-logo.png";
 import oceanFirstBankLogo from "@/assets/programs/oceanfirst-bank-logo.png";
 import { excursionGalleryImages } from "@/data/excursionsGallery";
 import { mealTrainGalleryImages } from "@/data/mealTrainGallery";
+import { gymBuddiesGalleryImages } from "@/data/gymBuddiesGallery";
 
 export type SiteImageItem = {
   src: string;
@@ -203,6 +204,24 @@ export const SITE_IMAGE_GROUPS: SiteImageGroup[] = [
     section: "Extended Programs",
     kind: "gallery",
     defaults: mealTrainGalleryImages as SiteImageItem[],
+  },
+  {
+    // Starts empty — no bundled photos yet. Staff add photos in Website Photos
+    // and they appear in the Banking & Boxing dialog on the Programs page.
+    key: "programs.banking-boxing",
+    label: "Banking & Boxing — photo gallery",
+    section: "Extended Programs",
+    kind: "gallery",
+    defaults: [],
+  },
+
+  // ── Gym Buddies ──
+  {
+    key: "programs.gym-buddies",
+    label: "Gym Buddies — photo gallery",
+    section: "Gym Buddies",
+    kind: "gallery",
+    defaults: gymBuddiesGalleryImages as SiteImageItem[],
   },
 ];
 

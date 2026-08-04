@@ -241,6 +241,12 @@ const ProgramsExtrasSection = () => {
               <img src={single("programs.banking-boxing-logo")} alt="OceanFirst Bank Logo" className="h-20 w-auto border-none" />
             </div>
             <YouTubeEmbed videoId="TsXbq70NB70" title="Banking & Boxing" />
+            {/* Photo gallery — managed in Website Photos; hidden until photos are added. */}
+            {resolveGroup("programs.banking-boxing").length > 0 && (
+              <div className="mt-4">
+                <ClickToEnlargeGallery images={resolveGroup("programs.banking-boxing")} showCaptions />
+              </div>
+            )}
             <div className="mt-6 flex justify-end">
               <Button onClick={() => setBankingBoxingOpen(false)} className="bg-foreground text-background hover:bg-foreground/90">
                 Back to Programs
