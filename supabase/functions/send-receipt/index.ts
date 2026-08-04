@@ -47,6 +47,7 @@ async function generateReceiptPdf(
   donations: DonationRow[],
   total: number,
   dateIssued: string,
+  year: number,
   logoBytes?: Uint8Array
 ): Promise<Uint8Array> {
   const pdf = await PDFDocument.create();
@@ -188,12 +189,12 @@ async function generateReceiptPdf(
   y = drawWrappedText(page, missionText, MARGIN_L, y, font, 10, black);
   y -= 6;
 
-  const totalIntroText = `Your total tax-deductible contributions for the 2026 calendar year total: ${formatCurrency(total)}. A detailed summary of your 2026 donations is provided below for your records:`;
+  const totalIntroText = `Your total tax-deductible contributions for the ${year} calendar year total: ${formatCurrency(total)}. A detailed summary of your ${year} donations is provided below for your records:`;
   y = drawWrappedText(page, totalIntroText, MARGIN_L, y, font, 10, black);
   y -= 10;
 
   // Donation Summary heading
-  page.drawText("2026 Donation Summary", { x: MARGIN_L, y, font: fontBold, size: 12, color: black });
+  page.drawText(`${year} Donation Summary`, { x: MARGIN_L, y, font: fontBold, size: 12, color: black });
   y -= 20;
 
   // Table header
@@ -204,7 +205,7 @@ async function generateReceiptPdf(
     if (y < 120) {
       page = pdf.addPage([PAGE_W, PAGE_H]);
       y = drawHeader(page);
-      page.drawText("2026 Donation Summary (continued)", { x: MARGIN_L, y, font: fontBold, size: 12, color: black });
+      page.drawText(`${year} Donation Summary (continued)`, { x: MARGIN_L, y, font: fontBold, size: 12, color: black });
       y -= 20;
       y = drawTableHeader(page, y);
     }
@@ -235,7 +236,7 @@ async function generateReceiptPdf(
 
   // Disclaimer paragraph
   const disclaimerLines = [
-    `Please retain this donation acknowledgment for your records. This receipt may be used for tax and accounting purposes. If you have any questions regarding your 2026 contributions, please contact ${ORG_NAME} at ${ORG_PHONE} or ${ORG_EMAIL}.`,
+    `Please retain this donation acknowledgment for your records. This receipt may be used for tax and accounting purposes. If you have any questions regarding your ${year} contributions, please contact ${ORG_NAME} at ${ORG_PHONE} or ${ORG_EMAIL}.`,
   ];
   for (const dl of disclaimerLines) {
     y = drawWrappedText(page, dl, MARGIN_L, y, font, 8, gray);
@@ -346,17 +347,20 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Get qualifying revenue for 2026. Read straight from the `revenue` table
-    // (the source of truth shown on the Revenue page) instead of the mirrored
-    // `donations` table. Legacy/imported revenue rows never got a `donations`
-    // counterpart, so reading `donations` made their receipts fail with
-    // "No qualifying donations." `revenue` is the complete ledger.
+    // The receipt is always for the current calendar (tax) year.
+    const RECEIPT_YEAR = new Date().getFullYear();
+
+    // Get qualifying revenue for the year. Read straight from the `revenue`
+    // table (the source of truth shown on the Revenue page) instead of the
+    // mirrored `donations` table. Legacy/imported revenue rows never got a
+    // `donations` counterpart, so reading `donations` made their receipts fail
+    // with "No qualifying donations." `revenue` is the complete ledger.
     const { data: revenueRows, error: revErr } = await supabase
       .from("revenue")
       .select("date, reference_id, amount, revenue_type")
       .eq("supporter_id", supporter_id)
-      .gte("date", "2026-01-01")
-      .lte("date", "2026-12-31")
+      .gte("date", `${RECEIPT_YEAR}-01-01`)
+      .lte("date", `${RECEIPT_YEAR}-12-31`)
       .order("date", { ascending: true });
 
     if (revErr) {
@@ -380,7 +384,7 @@ Deno.serve(async (req) => {
 
     if (qualifying.length === 0) {
       return new Response(
-        JSON.stringify({ error: "No qualifying donations in 2026" }),
+        JSON.stringify({ error: `No qualifying donations in ${RECEIPT_YEAR}` }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
@@ -413,21 +417,20 @@ Deno.serve(async (req) => {
     }
 
     // Generate PDF
-    const pdfBytes = await generateReceiptPdf(receiptName, qualifying, total, dateIssued, logoBytes);
+    const pdfBytes = await generateReceiptPdf(receiptName, qualifying, total, dateIssued, RECEIPT_YEAR, logoBytes);
     const pdfBase64 = btoa(String.fromCharCode(...pdfBytes));
-    const pdfFilename = `2026-Donation-Receipt-${receiptName.replace(/\s+/g, "-")}.pdf`;
+    const pdfFilename = `${RECEIPT_YEAR}-Donation-Receipt-${receiptName.replace(/\s+/g, "-")}.pdf`;
 
     // Try to send email
     if (!resendApiKey) {
-      // Dual-write: legacy year-specific column + new generic columns. The
-      // generic columns are the source of truth going forward; legacy
-      // columns stay populated during the transition so a rollback is safe.
+      // Receipt status lives in the generic latest_receipt_* columns (the
+      // source of truth). The old year-specific receipt_2026_* columns are no
+      // longer written — nothing reads them, and they don't roll over.
       const currentYearFailedNoKey = new Date().getFullYear();
       const nowIsoFailedNoKey = new Date().toISOString();
       await supabase
         .from("supporters")
         .update({
-          receipt_2026_status: "Failed",
           latest_receipt_year: currentYearFailedNoKey,
           latest_receipt_status: "Failed",
           latest_receipt_sent_at: nowIsoFailedNoKey,
@@ -486,7 +489,7 @@ Deno.serve(async (req) => {
     <td style="padding:36px 40px 20px;">
       <p style="margin:0 0 20px;color:#222;font-size:15px;line-height:1.7;">Dear ${receiptName},</p>
       ${personalHtml}
-      <p style="margin:0 0 20px;color:#222;font-size:15px;line-height:1.7;">Please find your <strong>2026 Annual Donation Receipt</strong> attached to this email for your records.</p>
+      <p style="margin:0 0 20px;color:#222;font-size:15px;line-height:1.7;">Please find your <strong>${RECEIPT_YEAR} Annual Donation Receipt</strong> attached to this email for your records.</p>
       <p style="margin:0 0 28px;color:#222;font-size:15px;line-height:1.7;">Thank you for your generous support. Your contribution helps us use the discipline of boxing to promote personal, professional, and spiritual development within our community.</p>
     </td>
   </tr>
@@ -530,7 +533,7 @@ Deno.serve(async (req) => {
     // Plain text version
     const textBody = `Dear ${receiptName},
 
-${personalText}Please find your 2026 Annual Donation Receipt attached to this email for your records.
+${personalText}Please find your ${RECEIPT_YEAR} Annual Donation Receipt attached to this email for your records.
 
 Thank you for your generous support. Your contribution helps us use the discipline of boxing to promote personal, professional, and spiritual development within our community.
 
@@ -557,7 +560,7 @@ EIN: 84-3998071 | 501(c)(3) Nonprofit`;
         from: `No Limits Academy <${SENDER_EMAIL}>`,
         reply_to: SENDER_EMAIL,
         to: [supporter.email],
-        subject: `Your 2026 Donation Receipt from No Limits Academy`,
+        subject: `Your ${RECEIPT_YEAR} Donation Receipt from No Limits Academy`,
         html: emailBody,
         text: textBody,
         attachments: [
@@ -579,7 +582,6 @@ EIN: 84-3998071 | 501(c)(3) Nonprofit`;
       await supabase
         .from("supporters")
         .update({
-          receipt_2026_status: "Failed",
           latest_receipt_year: currentYearResendFail,
           latest_receipt_status: "Failed",
           latest_receipt_sent_at: nowIsoResendFail,
@@ -596,7 +598,7 @@ EIN: 84-3998071 | 501(c)(3) Nonprofit`;
         status: "Failed",
         sent_at: nowIsoResendFail,
         sent_to: supporter.email,
-        subject: `Your 2026 Donation Receipt from No Limits Academy`,
+        subject: `Your ${RECEIPT_YEAR} Donation Receipt from No Limits Academy`,
         email_html: emailBody,
         email_text: textBody,
         pdf_base64: pdfBase64,
@@ -622,9 +624,6 @@ EIN: 84-3998071 | 501(c)(3) Nonprofit`;
     await supabase
       .from("supporters")
       .update({
-        receipt_2026_status: "Sent",
-        receipt_2026_sent_at: nowIso,
-        receipt_2026_last_sent_to: supporter.email,
         latest_receipt_year: currentYear,
         latest_receipt_status: "Sent",
         latest_receipt_sent_at: nowIso,
@@ -641,7 +640,7 @@ EIN: 84-3998071 | 501(c)(3) Nonprofit`;
       status: "Sent",
       sent_at: nowIso,
       sent_to: supporter.email,
-      subject: `Your 2026 Donation Receipt from No Limits Academy`,
+      subject: `Your ${RECEIPT_YEAR} Donation Receipt from No Limits Academy`,
       email_html: emailBody,
       email_text: textBody,
       pdf_base64: pdfBase64,
