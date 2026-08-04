@@ -10,6 +10,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import ExcursionRideComparison from "@/components/admin/ExcursionRideComparison";
+import StandoutMoments from "@/components/admin/StandoutMoments";
 
 // Shared Excursion shape (used by the calendar, Excursion Intelligence, and this
 // modal). Kept here so every consumer agrees on the fields.
@@ -469,6 +470,15 @@ const EditExcursionModal = ({ excursion, onChange, onClose, onSaved, onRequestDe
                   className="w-full bg-white/5 border border-white/20 rounded-md px-3 py-2 text-white text-sm leading-relaxed placeholder:text-white/25 resize-y focus:outline-none focus:border-purple-400/50"
                 />
                 <p className="text-[10px] text-white/30 mt-1">Autosaves · Enter = new bullet · Tab = indent · shows in Excursion History next year for planning.</p>
+              </div>
+
+              {/* Standout Moments — real stories that feed the Program Highlights report. */}
+              <div className="pt-3 mt-2 border-t border-white/10">
+                <p className="text-xs font-bold uppercase tracking-wider text-amber-300/80 mb-1 flex items-center gap-1.5">
+                  <StickyNote className="w-3.5 h-3.5" /> Standout Moments
+                </p>
+                <p className="text-[10px] text-white/40 mb-2">Short real stories — participant wins, quotes, breakthroughs. These give the Program Highlights report substance.</p>
+                <StandoutMoments table="excursions" rowId={editingExcursion.id} />
               </div>
 
               <div className="pt-3 mt-2 border-t border-white/10">

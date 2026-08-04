@@ -24,6 +24,16 @@ const json = (body: unknown, status = 200) =>
     headers: { ...corsHeaders, "Content-Type": "application/json" },
   });
 
+// Shared "house voice" — kept identical across excursion-report, events-report
+// and program-highlights-report so everything NLA generates sounds like the
+// same caring person wrote it.
+const HOUSE_VOICE =
+  "\nHOUSE VOICE (use this EXACT voice in every report, every time — consistency matters):\n" +
+  "- Warm, personal, and human — write as the Program Director speaking heart-to-heart to a supporter who genuinely cares about these kids.\n" +
+  "- Friendly and sincere; never corporate, stiff, or buzzword-y — yet polished, credible, and grant-worthy.\n" +
+  "- Grounded and specific: honor the youth, coaches, and community, and let real details carry the warmth.\n" +
+  "- Keep the tone consistent from the first sentence to the last.\n";
+
 const SYSTEM =
   "You are the communications writer for No Limits Academy (also called No Limits Boxing Academy), a youth boxing non-profit in Cape May County, NJ. " +
   "Write a polished, in-depth \"Program Highlights\" report that a Program Director would proudly share with DONORS and funders. It rolls up several activities from a period into ONE cohesive document.\n" +
@@ -37,19 +47,23 @@ const SYSTEM =
   "- Separate sections with a blank line. Use NO bullet points, NO stat boxes, and NO headings other than the `## ` title lines.\n" +
   "\n" +
   "CONTENT RULES:\n" +
+  "- When an activity has \"Standout moments\" listed, FEATURE them prominently and specifically — name the youth, the win, the quote. These real stories are the substance of the report; keep their specifics intact rather than flattening them into generic praise.\n" +
   "- Base every SPECIFIC fact (names, partners, sponsors, numbers, dates) ONLY on the facts provided. Never invent them. If a specific isn't given, write around it rather than making it up.\n" +
   "- You MAY add general, true mission framing about No Limits' values and approach, but never invented specifics.\n" +
   "- Warm, vivid, donor-facing, and professional. Solutions- and partnership-oriented; never disparage schools, families, or other organizations.\n" +
+  HOUSE_VOICE +
   "- Return ONLY the report text (the intro followed by the `## ` sections). No preamble, no closing sign-off.";
 
 const highlightsBlock = (period: string, items: any[]): string => {
   const lines = (items ?? []).map((h, i) => {
     const kind = h?.type === "event" ? "On-site event" : "Excursion";
     const attend = h?.countsAttendance ? `${h?.youthCount ?? 0} youth attended` : "attendance not tracked (narrative only)";
+    const standouts = Array.isArray(h?.standouts) ? h.standouts.filter((s: any) => typeof s === "string" && s.trim()) : [];
     return (
       `${i + 1}. ${h?.name ?? "Activity"} (${kind}, ${h?.date ?? "date unspecified"}, ${attend})\n` +
       (h?.description ? `   Overview (staff notes): ${h.description}\n` : "") +
-      (h?.debrief ? `   Debrief / reflections: ${h.debrief}\n` : "")
+      (h?.debrief ? `   Debrief / reflections: ${h.debrief}\n` : "") +
+      (standouts.length ? `   Standout moments (REAL stories staff recorded — feature these specifically): ${standouts.map((s: string) => `"${s}"`).join("; ")}\n` : "")
     );
   });
   return `Reporting period: ${period}\n\nActivities to feature:\n${lines.join("\n")}`;
@@ -95,6 +109,13 @@ Deno.serve(async (req) => {
     const period: string = body.period ?? "the reporting period";
     const anthropic = new Anthropic({ apiKey: ANTHROPIC_API_KEY });
 
+    // Each highlight is a titled 3–4 paragraph section, so the output grows with
+    // the number of activities. Scale max_tokens to fit them all (was a fixed
+    // 4000 that truncated ~10-activity reports mid-sentence). Cap at ~14k: this
+    // is a non-streaming call, and above ~16k the SDK risks an HTTP timeout.
+    const nHighlights = Array.isArray(body.highlights) ? body.highlights.length : 6;
+    const maxTokens = Math.min(14000, 3000 + nHighlights * 1100);
+
     let userContent: string;
     if (mode === "revise") {
       const { narrative, instruction, highlights } = body;
@@ -112,7 +133,7 @@ Deno.serve(async (req) => {
 
     const response = await anthropic.messages.create({
       model: MODEL,
-      max_tokens: 4000,
+      max_tokens: maxTokens,
       system: SYSTEM,
       messages: [{ role: "user", content: userContent }],
     });

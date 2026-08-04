@@ -9,6 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { CalendarDays, Loader2, Save, StickyNote, Trash2, Sparkles } from "lucide-react";
 import { toast } from "sonner";
+import StandoutMoments from "@/components/admin/StandoutMoments";
 
 /* Shared shape for a program event. `id === ""` means an unsaved new event. */
 export interface ProgramEvent {
@@ -177,6 +178,15 @@ const EditEventModal = ({ event, onClose, onSaved, onRequestDelete }: Props) => 
               placeholder="How did it go? Anything to remember for next year."
               className="bg-white/5 border-white/15 text-white placeholder:text-white/30 min-h-[72px]"
             />
+          </div>
+
+          {/* Standout Moments — real stories that feed the Program Highlights report. */}
+          <div>
+            <Label className="flex items-center gap-1.5 text-amber-300/80 mb-1">
+              <StickyNote className="w-3.5 h-3.5" /> Standout Moments
+            </Label>
+            <p className="text-[10px] text-white/40 mb-2">Short real stories — participant wins, quotes, breakthroughs. These give the Program Highlights report substance.</p>
+            <StandoutMoments table="program_events" rowId={draft.id} />
           </div>
 
           {/* The situational switch: does this event feed attendance numbers? */}

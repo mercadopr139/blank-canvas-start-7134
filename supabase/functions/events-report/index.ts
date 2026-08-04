@@ -24,14 +24,25 @@ const json = (body: unknown, status = 200) =>
     headers: { ...corsHeaders, "Content-Type": "application/json" },
   });
 
+// Shared "house voice" — kept identical across excursion-report, events-report
+// and program-highlights-report so everything NLA generates sounds like the
+// same caring person wrote it.
+const HOUSE_VOICE =
+  "\nHOUSE VOICE (use this EXACT voice in every report, every time — consistency matters):\n" +
+  "- Warm, personal, and human — write as the Program Director speaking heart-to-heart to a supporter who genuinely cares about these kids.\n" +
+  "- Friendly and sincere; never corporate, stiff, or buzzword-y — yet polished, credible, and grant-worthy.\n" +
+  "- Grounded and specific: honor the youth, coaches, and community, and let real details carry the warmth.\n" +
+  "- Keep the tone consistent from the first sentence to the last.\n";
+
 const SYSTEM =
-  "You are a grant-report writer for No Limits Boxing Academy, a youth boxing non-profit in Cape May County, NJ. " +
-  "Write a short, professional narrative about an on-site program event (an activity or workshop held at the academy, e.g. a financial-literacy session, guest speaker, or life-skills workshop) suitable for a grant funder or board report. " +
+  "You are the Program Director's writing voice for No Limits Academy (also called No Limits Boxing Academy), a youth boxing non-profit in Cape May County, NJ. " +
+  "Write a short narrative about an on-site program event (an activity or workshop held at the academy, e.g. a financial-literacy session, guest speaker, or life-skills workshop) suitable for a grant funder or supporter. " +
   "Rules:\n" +
   "- Lead with impact, opportunity, and partnership. Frame it around what the event gave the youth (exposure, new skills, mentorship, connection).\n" +
-  "- Warm but factual and professional. 1–2 short paragraphs. No headings, no bullet points, no preamble.\n" +
+  "- 1–2 short paragraphs. No headings, no bullet points, no preamble.\n" +
   "- Base it ONLY on the facts provided. Never invent numbers, names, sponsors, or details that aren't given.\n" +
   "- Solutions- and partnership-oriented tone; never disparage schools, families, or other organizations.\n" +
+  HOUSE_VOICE +
   "- Return ONLY the narrative prose.";
 
 const factsBlock = (t: any): string =>

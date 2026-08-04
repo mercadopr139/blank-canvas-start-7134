@@ -5,7 +5,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Loader2, FileDown, Sparkles, Wand2, Copy, Check } from "lucide-react";
+import { Loader2, FileDown, Sparkles, Wand2, Copy, Check, Save } from "lucide-react";
 import { toast } from "sonner";
 import { downloadProgramHighlightsPdf, type HighlightSection } from "@/lib/generateProgramHighlightsPdf";
 
@@ -18,13 +18,19 @@ export type HighlightFact = {
   notes: string | null;
   youthCount: number;
   countsAttendance: boolean;
+  standouts: string[]; // real stories staff added — the substance of the report
 };
 
 interface Props {
   open: boolean;
-  period: string; // e.g. "Sep 1, 2025 – Jun 30, 2026"
-  highlights: HighlightFact[];
   onClose: () => void;
+  onSaved: () => void; // refresh the history list on the page
+  period: string; // label, e.g. "Sep 1, 2025 - Jun 30, 2026"
+  periodFrom: string; // ISO date
+  periodTo: string; // ISO date
+  highlights: HighlightFact[]; // activities in range (for generate + revise)
+  reportId?: string | null; // set → open an existing saved report (no auto-generate)
+  initialNarrative?: string; // for the open case
 }
 
 const extractError = async (e: any): Promise<string> => {
@@ -35,8 +41,21 @@ const extractError = async (e: any): Promise<string> => {
   return e?.message || "Something went wrong. Try again.";
 };
 
-// Split the model's output (a short intro, then `## Title` sections) into an
-// intro + titled sections for the PDF.
+const factsFor = (highlights: HighlightFact[]) =>
+  highlights
+    .slice()
+    .sort((a, b) => (a.date < b.date ? -1 : 1))
+    .map((h) => ({
+      type: h.type,
+      name: h.name,
+      date: format(parseISO(h.date), "MMMM d, yyyy"),
+      youthCount: h.youthCount,
+      countsAttendance: h.countsAttendance,
+      description: h.details || "",
+      debrief: h.notes || "",
+      standouts: Array.isArray(h.standouts) ? h.standouts : [],
+    }));
+
 const parseNarrative = (text: string): { intro: string; sections: HighlightSection[] } => {
   const lines = (text || "").split("\n");
   let intro = "";
@@ -57,33 +76,22 @@ const parseNarrative = (text: string): { intro: string; sections: HighlightSecti
   return { intro: intro.trim(), sections: sections.map((s) => ({ title: s.title, body: s.body.trim() })) };
 };
 
-// Google-Docs-friendly plain text: drop the `## ` markers so titles read as
-// clean lines the user can style in Docs.
 const toPlainText = (text: string, period: string): string =>
   `Program Highlights\n${period}\n\n` + (text || "").replace(/^\s*##\s+/gm, "").trim() + "\n";
 
-const factsFor = (highlights: HighlightFact[]) =>
-  highlights
-    .slice()
-    .sort((a, b) => (a.date < b.date ? -1 : 1))
-    .map((h) => ({
-      type: h.type,
-      name: h.name,
-      date: format(parseISO(h.date), "MMMM d, yyyy"),
-      youthCount: h.youthCount,
-      countsAttendance: h.countsAttendance,
-      description: h.details || "",
-      debrief: h.notes || "",
-    }));
-
-const ProgramHighlightsReportSheet = ({ open, period, highlights, onClose }: Props) => {
+const ProgramHighlightsReportSheet = ({
+  open, onClose, onSaved, period, periodFrom, periodTo, highlights, reportId, initialNarrative,
+}: Props) => {
   const [generating, setGenerating] = useState(false);
   const [revising, setRevising] = useState(false);
+  const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [narrative, setNarrative] = useState("");
+  const [savedNarrative, setSavedNarrative] = useState(""); // last persisted copy
   const [reviseInput, setReviseInput] = useState("");
   const [downloading, setDownloading] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [savedId, setSavedId] = useState<string | null>(null);
 
   const totals = useMemo(() => {
     const events = highlights.filter((h) => h.type === "event").length;
@@ -92,21 +100,60 @@ const ProgramHighlightsReportSheet = ({ open, period, highlights, onClose }: Pro
     return { events, excursions, youth, total: highlights.length };
   }, [highlights]);
 
+  // Insert a fresh saved report and remember its id.
+  const insertReport = async (text: string) => {
+    const { data, error } = await (supabase.from("program_highlights_reports" as never) as any)
+      .insert({
+        title: "Program Highlights",
+        period_from: periodFrom,
+        period_to: periodTo,
+        period_label: period,
+        narrative: text,
+        activity_count: highlights.length,
+      })
+      .select("id")
+      .single();
+    if (error) { toast.error("Saved report failed: " + error.message); return; }
+    setSavedId(data.id as string);
+    setSavedNarrative(text);
+    onSaved();
+  };
+
+  const generateNarrative = async (): Promise<string> => {
+    const { data, error } = await supabase.functions.invoke("program-highlights-report", {
+      body: { mode: "generate", period, highlights: factsFor(highlights) },
+    });
+    if (error) throw error;
+    if (data?.error) throw new Error(data.error);
+    return (data?.narrative as string) || "";
+  };
+
+  // Open: generate a brand-new report (auto-saved) OR load an existing one.
   useEffect(() => {
     if (!open) return;
     let cancelled = false;
+    setError(null);
+    setReviseInput("");
+    setCopied(false);
+    if (reportId) {
+      // Existing saved report — just load it.
+      setSavedId(reportId);
+      setNarrative(initialNarrative || "");
+      setSavedNarrative(initialNarrative || "");
+      setGenerating(false);
+      return;
+    }
+    // New report — generate then auto-save.
+    setSavedId(null);
+    setNarrative("");
+    setSavedNarrative("");
     (async () => {
       setGenerating(true);
-      setError(null);
-      setNarrative("");
-      setReviseInput("");
       try {
-        const { data, error } = await supabase.functions.invoke("program-highlights-report", {
-          body: { mode: "generate", period, highlights: factsFor(highlights) },
-        });
-        if (error) throw error;
-        if (data?.error) throw new Error(data.error);
-        if (!cancelled) setNarrative(data.narrative || "");
+        const text = await generateNarrative();
+        if (cancelled) return;
+        setNarrative(text);
+        await insertReport(text); // auto-save on generate
       } catch (e) {
         if (!cancelled) setError(await extractError(e));
       } finally {
@@ -115,7 +162,24 @@ const ProgramHighlightsReportSheet = ({ open, period, highlights, onClose }: Pro
     })();
     return () => { cancelled = true; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open]);
+  }, [open, reportId]);
+
+  const dirty = narrative !== savedNarrative;
+
+  // Every save writes a NEW versioned report; the previously-saved one stays in
+  // the history as an audit trail of what was produced (and possibly sent).
+  const persist = async (text: string) => {
+    await insertReport(text);
+    return true;
+  };
+
+  const saveEdits = async () => {
+    if (saving || !dirty) return;
+    setSaving(true);
+    const ok = await persist(narrative);
+    setSaving(false);
+    if (ok) toast.success("Saved as a new report");
+  };
 
   const revise = async () => {
     const instruction = reviseInput.trim();
@@ -159,13 +223,20 @@ const ProgramHighlightsReportSheet = ({ open, period, highlights, onClose }: Pro
     }
   };
 
+  // Save any pending edits when the sheet closes, so nothing is lost.
+  const handleClose = async () => {
+    if (dirty && savedId) await persist(narrative);
+    onClose();
+  };
+
   return (
-    <Dialog open={open} onOpenChange={(o) => { if (!o) onClose(); }}>
+    <Dialog open={open} onOpenChange={(o) => { if (!o) handleClose(); }}>
       <DialogContent className="bg-neutral-900 border-white/10 text-white max-w-3xl max-h-[92vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
+          <DialogTitle className="flex items-center gap-2 flex-wrap">
             <Sparkles className="w-4 h-4 text-yellow-400" /> Program Highlights Report
             <span className="text-xs font-normal text-white/40">· {period}</span>
+            {savedId && <span className="text-[10px] font-normal text-green-300/80 flex items-center gap-1"><Check className="w-3 h-3" /> saved</span>}
           </DialogTitle>
         </DialogHeader>
 
@@ -181,7 +252,7 @@ const ProgramHighlightsReportSheet = ({ open, period, highlights, onClose }: Pro
           </div>
         ) : (
           <div className="space-y-4">
-            <div className="flex flex-wrap gap-2 text-xs text-zinc-400">
+            <div className="flex flex-wrap items-center gap-2 text-xs text-zinc-400">
               <span className="px-2 py-1 rounded-md bg-white/[0.04] border border-white/10">{totals.total} activities</span>
               <span className="px-2 py-1 rounded-md bg-white/[0.04] border border-white/10">🟣 {totals.excursions} excursions</span>
               <span className="px-2 py-1 rounded-md bg-white/[0.04] border border-white/10">🟡 {totals.events} events</span>
@@ -225,7 +296,10 @@ const ProgramHighlightsReportSheet = ({ open, period, highlights, onClose }: Pro
             {revising && <p className="text-[11px] text-zinc-500 -mt-2">Revising…</p>}
 
             <div className="flex justify-end gap-2 pt-1 flex-wrap">
-              <Button variant="outline" onClick={onClose} className="border-white/10 text-zinc-300 bg-transparent hover:bg-white/5">Cancel</Button>
+              <Button variant="outline" onClick={handleClose} className="border-white/10 text-zinc-300 bg-transparent hover:bg-white/5">Close</Button>
+              <Button variant="outline" onClick={saveEdits} disabled={!dirty || saving} className="border-white/10 text-zinc-200 bg-transparent hover:bg-white/5">
+                {saving ? <Loader2 className="w-4 h-4 mr-1.5 animate-spin" /> : <Save className="w-4 h-4 mr-1.5" />} {dirty ? "Save as new report" : "Saved"}
+              </Button>
               <Button variant="outline" onClick={copyForDocs} disabled={!narrative.trim()} className="border-white/10 text-zinc-200 bg-transparent hover:bg-white/5">
                 {copied ? <Check className="w-4 h-4 mr-1.5 text-green-400" /> : <Copy className="w-4 h-4 mr-1.5" />} Copy for Google Docs
               </Button>
