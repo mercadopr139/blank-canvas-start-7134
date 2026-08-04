@@ -36,7 +36,29 @@ type FormFieldDef = {
   db_column: string | null;
   default_value: string | null;
   section: string | null;
+  condition: { field: string; op?: string; value?: string } | null;
 };
+
+// Show-if logic for a registration field. A field with no condition always
+// shows; otherwise it renders (and is required, if flagged) only when the
+// referenced field's answer matches.
+function conditionMet(
+  cond: { field: string; op?: string; value?: string } | null | undefined,
+  values: Record<string, string>
+): boolean {
+  if (!cond || !cond.field) return true;
+  const answer = values[cond.field] ?? "";
+  const target = cond.value ?? "";
+  switch (cond.op) {
+    case "neq":
+      return answer !== target;
+    case "answered":
+      return answer.trim() !== "";
+    case "eq":
+    default:
+      return answer === target;
+  }
+}
 
 // Waivers are dynamic (admin-editable). Each waiver's drawn signature,
 // acknowledgement checkbox, and typed name are held in Records keyed by the
@@ -174,6 +196,9 @@ const Register = () => {
 
     for (const field of formFields) {
       if (!field.required || !field.is_active) continue;
+      // Skip fields hidden by their show-if condition (e.g. inhaler info when
+      // "Does your child have asthma?" is No) — hidden means not required.
+      if (!conditionMet(field.condition, formValues)) continue;
       if (field.field_key === "child_headshot") {
         if (!childHeadshot) return `Please upload a picture of your participant.`;
         continue;
@@ -181,6 +206,10 @@ const Register = () => {
       if (["section_header", "paragraph", "waiver"].includes(field.field_type)) continue;
 
       const val = formValues[field.field_key];
+      if (field.field_type === "checkbox") {
+        if (val !== "true") return `Please check the box: ${field.label}`;
+        continue;
+      }
       if (!val || !val.trim()) {
         return `Please fill in: ${field.label}`;
       }
@@ -274,6 +303,9 @@ const Register = () => {
       const customData: Record<string, string> = {};
       for (const field of (formFields || [])) {
         if (!field.is_core && !["section_header", "paragraph", "waiver"].includes(field.field_type)) {
+          // Don't persist answers to fields hidden by their condition (e.g. the
+          // asthma acknowledgment if they switched asthma back to No).
+          if (!conditionMet(field.condition, formValues)) continue;
           const val = formValues[field.field_key];
           if (val) customData[field.field_key] = val;
         }
@@ -306,7 +338,12 @@ const Register = () => {
         household_income_range: formValues["household_income_range"] as any,
         free_or_reduced_lunch: (formValues["free_or_reduced_lunch"] as any) || null,
         allergies: (formValues["allergies"] || "").trim() || null,
-        asthma_inhaler_info: (formValues["asthma_inhaler_info"] || "").trim() || null,
+        // Only save inhaler info when they answered Yes to asthma (the field is
+        // hidden otherwise), so a "No" child never carries stale inhaler text.
+        // Only null it out when they explicitly answered "No". If the has_asthma
+        // gate isn't present yet (pre-migration), fall back to saving whatever
+        // was typed — keeps this backward-compatible with the old always-on field.
+        asthma_inhaler_info: formValues["has_asthma"] === "No" ? null : ((formValues["asthma_inhaler_info"] || "").trim() || null),
         important_child_notes: (formValues["important_child_notes"] || "").trim() || null,
         waivers_data: waiversData,
         child_headshot_url: headshotUrl,
@@ -683,8 +720,9 @@ const Register = () => {
                   <Input type="date" value={new Date().toISOString().split('T')[0]} disabled className="mt-2 bg-muted" />
                 </div>
 
-                {/* Dynamic fields from DB */}
-                {questionFields.map(renderDynamicField)}
+                {/* Dynamic fields from DB — a field with a show-if condition
+                    (e.g. inhaler info) only renders when its condition is met. */}
+                {questionFields.filter((f) => conditionMet(f.condition, formValues)).map(renderDynamicField)}
 
                 {/* === WAIVERS (admin-editable via the Registration Editor; falls back to bundled defaults) === */}
                 {waivers.map((w) => (

@@ -64,6 +64,9 @@ type FormField = {
   db_column: string | null;
   default_value: string | null;
   section: string | null;
+  // Show-if condition (jsonb). No editor UI yet — carried through publish
+  // untouched so conditional fields (e.g. the asthma flow) keep working.
+  condition?: { field: string; op?: string; value?: string } | null;
 };
 
 const fieldTypeIcon = (type: string) => {

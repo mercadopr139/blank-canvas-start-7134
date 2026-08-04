@@ -201,7 +201,7 @@ const AdminRegistrations = () => {
   };
 
   const hasMedicalAlerts = (reg: any) => {
-    return (reg.allergies && reg.allergies.trim()) || (reg.asthma_inhaler_info && reg.asthma_inhaler_info.trim());
+    return (reg.allergies && reg.allergies.trim()) || (reg.asthma_inhaler_info && reg.asthma_inhaler_info.trim()) || reg.custom_fields_data?.has_asthma === "Yes";
   };
 
 

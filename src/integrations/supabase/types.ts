@@ -1612,6 +1612,7 @@ export type Database = {
       }
       registration_form_fields: {
         Row: {
+          condition: Json | null
           created_at: string
           db_column: string | null
           default_value: string | null
@@ -1630,6 +1631,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          condition?: Json | null
           created_at?: string
           db_column?: string | null
           default_value?: string | null
@@ -1648,6 +1650,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          condition?: Json | null
           created_at?: string
           db_column?: string | null
           default_value?: string | null
