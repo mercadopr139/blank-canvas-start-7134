@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { normalizeImageForUpload } from "@/lib/imageUpload";
 import { useStaffPermissions } from "@/hooks/useStaffPermissions";
 import { useSiteImages, type SiteImageRow } from "@/hooks/useSiteImages";
 import {
@@ -33,12 +34,15 @@ import { CSS } from "@dnd-kit/utilities";
 const previewOf = (token: string): string => resolveDefaultToken(token)?.src ?? token;
 
 // Upload a file to the public site-images bucket and return its public URL.
+// iPhone HEIC photos are auto-converted to JPG first (browsers can't render
+// HEIC — it would upload as a black/broken tile otherwise).
 async function uploadImage(file: File): Promise<string> {
-  const ext = (file.name.split(".").pop() || "jpg").toLowerCase();
+  const normalized = await normalizeImageForUpload(file);
+  const ext = (normalized.name.split(".").pop() || "jpg").toLowerCase();
   const path = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
   const { error } = await supabase.storage
     .from("site-images")
-    .upload(path, file, { upsert: true, contentType: file.type || undefined });
+    .upload(path, normalized, { upsert: true, contentType: normalized.type || undefined });
   if (error) throw error;
   const { data } = supabase.storage.from("site-images").getPublicUrl(path);
   return data.publicUrl;
