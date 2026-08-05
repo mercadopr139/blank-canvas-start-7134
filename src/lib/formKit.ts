@@ -27,6 +27,20 @@ export type FormFieldDef = {
   condition?: FieldCondition | null;          // show-if logic (optional)
 };
 
+// Maps this form's field_keys to the demographic buckets NLA reports on, so a
+// form's respondents can be counted as "Youth Served" (impact/total-reach)
+// alongside registered youth. Name + DOB drive de-duplication.
+export type ImpactFieldMap = {
+  firstName?: string;
+  lastName?: string;
+  dob?: string;
+  district?: string;
+  race?: string;
+  gender?: string;
+  income?: string;
+  lunch?: string;
+};
+
 export type FormSettings = {
   notifyEmail?: string | null;
   confirmationTitle?: string | null;
@@ -36,6 +50,9 @@ export type FormSettings = {
   headerColor?: string;
   showLogo?: boolean;
   theme?: "light" | "dark";
+  // Impact snapshot — count this form's respondents toward "Youth Served".
+  impactSource?: boolean;
+  impactMap?: ImpactFieldMap;
 };
 
 export type FormRecord = {

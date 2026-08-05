@@ -35,8 +35,20 @@ import { htmlToPlainText } from "@/lib/richText";
 import { downloadFormResponsePdf } from "@/lib/generateFormResponsePdf";
 import {
   FIELD_TYPES, fieldTypeIcon, fieldTypeLabel, isInputField, makeField, parseOptions, slugify, ageFromDob,
-  type FormFieldDef, type FormRecord,
+  type FormFieldDef, type FormRecord, type ImpactFieldMap,
 } from "@/lib/formKit";
+
+// Demographic buckets a form can map its fields to for the Youth Served snapshot.
+const IMPACT_MAP_FIELDS: { key: keyof ImpactFieldMap; label: string; hint?: string }[] = [
+  { key: "firstName", label: "First name", hint: "for de-dup" },
+  { key: "lastName", label: "Last name", hint: "for de-dup" },
+  { key: "dob", label: "Date of birth", hint: "for de-dup" },
+  { key: "district", label: "School district" },
+  { key: "race", label: "Race / ethnicity" },
+  { key: "gender", label: "Gender" },
+  { key: "lunch", label: "Free/Reduced lunch" },
+  { key: "income", label: "Household income" },
+];
 
 /* ── sortable field row ── */
 const FieldRow = ({ field, onEdit, onDelete }: { field: FormFieldDef; onEdit: () => void; onDelete: () => void }) => {
@@ -225,6 +237,30 @@ const ColorField = ({ label, value, onChange }: { label: string; value: string; 
   </div>
 );
 
+// One titled bar-breakdown for the impact snapshot.
+const SnapshotBreakdown = ({ title, data }: { title: string; data: { name: string; count: number }[] }) => {
+  const total = data.reduce((s, d) => s + d.count, 0);
+  if (total === 0) return null;
+  return (
+    <div>
+      <p className="text-[11px] font-semibold text-white/60 mb-1.5">{title} <span className="text-white/30">· {total}</span></p>
+      <div className="space-y-1.5">
+        {data.map((d) => {
+          const pct = total > 0 ? Math.round((d.count / total) * 100) : 0;
+          return (
+            <div key={d.name} className="flex items-center gap-2">
+              <span className="text-[11px] text-white/70 w-32 shrink-0 truncate" title={d.name}>{d.name}</span>
+              <div className="flex-1 h-1.5 bg-white/5 rounded-full overflow-hidden min-w-0"><div className="h-full bg-[#bf0f3e] rounded-full" style={{ width: `${pct}%` }} /></div>
+              <span className="text-[11px] font-semibold text-white w-9 text-right tabular-nums">{pct}%</span>
+              <span className="text-[10px] text-white/40 w-8 text-right tabular-nums">{d.count}</span>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+};
+
 const csvEscape = (v: unknown) => {
   const s = v === null || v === undefined ? "" : String(v);
   return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
@@ -245,6 +281,8 @@ const AdminFormEditor = () => {
   const [headerColor, setHeaderColor] = useState("#000000");
   const [showLogo, setShowLogo] = useState(true);
   const [theme, setTheme] = useState<"light" | "dark">("light");
+  const [impactSource, setImpactSource] = useState(false);
+  const [impactMap, setImpactMap] = useState<ImpactFieldMap>({});
   const [status, setStatus] = useState<"draft" | "published">("draft");
   const [slugEdited, setSlugEdited] = useState(false);
   const [tab, setTab] = useState("build");
@@ -285,6 +323,8 @@ const AdminFormEditor = () => {
     setHeaderColor(s.headerColor || "#000000");
     setShowLogo(s.showLogo !== false);
     setTheme(s.theme === "dark" ? "dark" : "light");
+    setImpactSource(s.impactSource === true);
+    setImpactMap(s.impactMap || {});
     setStatus(form.status || "draft");
     // The slug "follows" the title until the user hand-edits it — but never
     // auto-changes a slug that's already meaningful or already published
@@ -314,6 +354,60 @@ const AdminFormEditor = () => {
 
   const publicUrl = `${window.location.origin}/f/${slug}`;
   const inputFields = useMemo(() => fields.filter((f) => isInputField(f.field_type)), [fields]);
+
+  // Impact snapshot — demographics of everyone who submitted THIS form, using
+  // the field mapping. Unique youth are de-duped by name + birthday; responses
+  // missing name/DOB each count as their own head (can't be matched).
+  const impactSnapshot = useMemo(() => {
+    if (!impactSource) return null;
+    const val = (data: Record<string, unknown> | undefined, k: keyof ImpactFieldMap) => (impactMap[k] ? data?.[impactMap[k] as string] : undefined);
+    const norm = (s: unknown) => String(s ?? "").trim().toLowerCase();
+    const byKey = new Map<string, { district?: unknown; race?: unknown; gender?: unknown; lunch?: unknown; income?: unknown; dob?: string }>();
+    let noKey = 0;
+    (responses || []).forEach((r) => {
+      const first = val(r.data, "firstName"), last = val(r.data, "lastName"), dobRaw = val(r.data, "dob");
+      const rec = {
+        district: val(r.data, "district"), race: val(r.data, "race"), gender: val(r.data, "gender"),
+        lunch: val(r.data, "lunch"), income: val(r.data, "income"),
+        dob: dobRaw ? String(dobRaw).slice(0, 10) : undefined,
+      };
+      if (first && last && dobRaw) {
+        const key = `${norm(first)}|${norm(last)}|${String(dobRaw).slice(0, 10)}`;
+        if (!byKey.has(key)) byKey.set(key, rec);
+      } else {
+        byKey.set(`__nokey_${noKey++}`, rec);
+      }
+    });
+    const unique = [...byKey.values()];
+    const tally = (vals: unknown[]) => {
+      const m: Record<string, number> = {};
+      vals.forEach((v) => { const s = (v == null ? "" : String(v)).trim(); if (s) m[s] = (m[s] || 0) + 1; });
+      return Object.entries(m).map(([name, count]) => ({ name, count })).sort((a, b) => b.count - a.count);
+    };
+    const ages = unique.map((u) => ageFromDob(u.dob)).filter((a): a is number => a != null);
+    const buckets: Record<string, number> = { "7-9": 0, "10-12": 0, "13-15": 0, "16-17": 0, "18-19": 0, "Other": 0 };
+    ages.forEach((a) => {
+      if (a >= 7 && a <= 9) buckets["7-9"]++; else if (a >= 10 && a <= 12) buckets["10-12"]++;
+      else if (a >= 13 && a <= 15) buckets["13-15"]++; else if (a >= 16 && a <= 17) buckets["16-17"]++;
+      else if (a >= 18 && a <= 19) buckets["18-19"]++; else buckets["Other"]++;
+    });
+    return {
+      totalResponses: responses?.length || 0,
+      uniqueCount: unique.length,
+      noKey,
+      lunch: tally(unique.map((u) => u.lunch)),
+      race: tally(unique.map((u) => u.race)),
+      district: tally(unique.map((u) => u.district)),
+      gender: tally(unique.map((u) => u.gender)),
+      // Income sorts by bracket size (highest at top, "Less than $25,000" last),
+      // not by count. "Greater than $80,001" → 80001 ranks above every "Less than".
+      income: tally(unique.map((u) => u.income)).sort((a, b) => {
+        const dollars = (s: string) => { const d = s.replace(/[^0-9]/g, ""); return d ? parseInt(d, 10) : -1; };
+        return dollars(b.name) - dollars(a.name);
+      }),
+      ageData: Object.entries(buckets).filter(([, n]) => n > 0).map(([name, count]) => ({ name, count })),
+    };
+  }, [impactSource, impactMap, responses]);
 
   const onDragEnd = (e: DragEndEvent) => {
     const { active, over } = e;
@@ -352,6 +446,7 @@ const AdminFormEditor = () => {
           confirmationTitle: confirmationTitle.trim() || null,
           confirmationMessage: confirmationMessage.trim() || null,
           accentColor, headerColor, showLogo, theme,
+          impactSource, impactMap,
         },
         status: nextStatus || status,
       };
@@ -460,6 +555,77 @@ const AdminFormEditor = () => {
                 <h3 className="text-sm font-semibold text-white/70 uppercase tracking-wide">After they submit</h3>
                 <div><Label className="text-white/70">Confirmation heading</Label><Input value={confirmationTitle} onChange={(e) => { setConfirmationTitle(e.target.value); touch(); }} placeholder="Thank you!" className="mt-1 bg-white/5 border-white/15 text-white" /></div>
                 <div><Label className="text-white/70">Confirmation message</Label><Textarea value={confirmationMessage} onChange={(e) => { setConfirmationMessage(e.target.value); touch(); }} placeholder="Your response has been recorded." className="mt-1 bg-white/5 border-white/15 text-white" rows={2} /></div>
+              </div>
+
+              {/* Impact Snapshot — count this form's respondents as Youth Served. */}
+              <div className="border-t border-white/10 pt-4 space-y-3">
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <h3 className="text-sm font-semibold text-white/70 uppercase tracking-wide">Impact Snapshot</h3>
+                    <p className="text-xs text-white/40 mt-0.5 max-w-md">Count everyone who submits this form as <span className="text-white/60">Youth Served</span> in Registration Intelligence — for total-reach reporting (e.g. camp / one-day programming).</p>
+                  </div>
+                  <Switch checked={impactSource} onCheckedChange={(v) => { setImpactSource(v); touch(); }} />
+                </div>
+                {impactSource && (
+                  <>
+                  <div className="space-y-2 rounded-lg border border-white/10 bg-white/[0.02] p-3">
+                    <p className="text-[11px] text-white/50">
+                      Match this form's fields to the demographics NLA reports on, so served youth combine cleanly with registered youth.
+                      <span className="text-amber-200/70"> First name, last name, and date of birth are used to avoid double-counting</span> — map those if the form asks them.
+                    </p>
+                    {IMPACT_MAP_FIELDS.map(({ key, label, hint }) => (
+                      <div key={key} className="flex items-center gap-2">
+                        <Label className="text-white/60 text-xs w-40 shrink-0">
+                          {label}{hint && <span className="text-white/30"> · {hint}</span>}
+                        </Label>
+                        <Select
+                          value={impactMap[key] || "__none__"}
+                          onValueChange={(v) => { setImpactMap((m) => ({ ...m, [key]: v === "__none__" ? undefined : v })); touch(); }}
+                        >
+                          <SelectTrigger className="h-8 bg-white/5 border-white/15 text-white text-xs"><SelectValue placeholder="— not asked —" /></SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="__none__">— not asked —</SelectItem>
+                            {inputFields.map((f) => <SelectItem key={f.field_key} value={f.field_key}>{f.label}</SelectItem>)}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Live impact snapshot for this form's responses. */}
+                  {impactSnapshot && (
+                    <div className="rounded-lg border border-[#bf0f3e]/30 bg-[#bf0f3e]/[0.05] p-3 space-y-3">
+                      <div className="flex items-baseline gap-5">
+                        <div>
+                          <p className="text-2xl font-bold text-white leading-none">{impactSnapshot.uniqueCount}</p>
+                          <p className="text-[10px] uppercase tracking-wider text-white/40 mt-1">Unique youth served</p>
+                        </div>
+                        <div>
+                          <p className="text-lg font-semibold text-white/70 leading-none">{impactSnapshot.totalResponses}</p>
+                          <p className="text-[10px] uppercase tracking-wider text-white/40 mt-1">Total responses</p>
+                        </div>
+                      </div>
+                      {impactSnapshot.noKey > 0 && (
+                        <p className="text-[10px] text-amber-300/70">
+                          {impactSnapshot.noKey} response{impactSnapshot.noKey === 1 ? "" : "s"} had no name + birthday, so each counts as its own head (couldn't de-duplicate). Map those fields above to fix.
+                        </p>
+                      )}
+                      {impactSnapshot.totalResponses === 0 ? (
+                        <p className="text-xs text-white/40">No responses yet — this snapshot fills in as people submit the form.</p>
+                      ) : (
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-3">
+                          <SnapshotBreakdown title="Free / Reduced Lunch" data={impactSnapshot.lunch} />
+                          <SnapshotBreakdown title="Race / Ethnicity" data={impactSnapshot.race} />
+                          <SnapshotBreakdown title="School District" data={impactSnapshot.district} />
+                          <SnapshotBreakdown title="Gender" data={impactSnapshot.gender} />
+                          <SnapshotBreakdown title="Age" data={impactSnapshot.ageData} />
+                          <SnapshotBreakdown title="Household Income" data={impactSnapshot.income} />
+                        </div>
+                      )}
+                    </div>
+                  )}
+                  </>
+                )}
               </div>
             </TabsContent>
 

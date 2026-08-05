@@ -68,6 +68,22 @@ const AdminRegistrationAnalytics = () => {
     },
   });
 
+  // Youth Served — respondents to forms flagged as an "impact source" (e.g. the
+  // one-day camp waiver). Loaded here to build the Total Reach snapshot.
+  const { data: impact } = useQuery({
+    queryKey: ["impact-youth-served"],
+    queryFn: async () => {
+      const { data: forms, error } = await (supabase.from("forms" as never) as any).select("id, title, settings");
+      if (error) throw error;
+      const impactForms = (forms || []).filter((f: any) => f?.settings?.impactSource);
+      if (impactForms.length === 0) return { forms: [] as any[], responses: [] as any[] };
+      const ids = impactForms.map((f: any) => f.id);
+      const { data: resp, error: e2 } = await (supabase.from("form_responses" as never) as any).select("form_id, data").in("form_id", ids);
+      if (e2) throw e2;
+      return { forms: impactForms as any[], responses: (resp || []) as any[] };
+    },
+  });
+
   const now = new Date();
   const last7Days = subDays(now, 7);
   const last30Days = subDays(now, 30);
@@ -303,6 +319,53 @@ const AdminRegistrationAnalytics = () => {
       : 0,
   }));
 
+  /* ───── TOTAL REACH — registered program youth + camp/served youth ─────
+   * Served youth come from forms flagged as an impact source. Each response's
+   * mapped fields give name + DOB (for de-dup) plus demographics. We count
+   * UNIQUE served youth, then split "also enrolled" vs "additional", so the
+   * total-reach number never double-counts a kid who is in both.
+   */
+  const norm = (s: unknown) => String(s ?? "").trim().toLowerCase();
+  const registrationKeys = new Set<string>();
+  registrations?.forEach((r) => {
+    if (!r.child_first_name || !r.child_last_name || !r.child_date_of_birth) return;
+    registrationKeys.add(`${norm(r.child_first_name)}|${norm(r.child_last_name)}|${r.child_date_of_birth}`);
+  });
+
+  const impactFormsById = new Map<string, any>((impact?.forms || []).map((f) => [f.id, f]));
+  const servedByKey = new Map<string, { first: string; last: string; dob: string; district?: string; race?: string; gender?: string; lunch?: string; income?: string }>();
+  let servedWithoutKey = 0; // responses missing name/DOB — can't de-dup
+  (impact?.responses || []).forEach((resp) => {
+    const map = impactFormsById.get(resp.form_id)?.settings?.impactMap || {};
+    const data = resp.data || {};
+    const val = (k: string) => (map[k] ? data[map[k]] : undefined);
+    const first = val("firstName"), last = val("lastName"), dobRaw = val("dob");
+    if (!first || !last || !dobRaw) { servedWithoutKey++; return; }
+    const dob = String(dobRaw).slice(0, 10);
+    const key = `${norm(first)}|${norm(last)}|${dob}`;
+    if (!servedByKey.has(key)) {
+      const str = (k: string) => { const v = val(k); return v ? String(v) : undefined; };
+      servedByKey.set(key, { first: String(first), last: String(last), dob, district: str("district"), race: str("race"), gender: str("gender"), lunch: str("lunch"), income: str("income") });
+    }
+  });
+  const servedUnique = [...servedByKey.values()];
+  const servedCount = servedUnique.length;
+  const servedOverlap = servedUnique.filter((y) => registrationKeys.has(`${norm(y.first)}|${norm(y.last)}|${y.dob}`)).length;
+  const servedAdditional = servedCount - servedOverlap;
+  const programCount = registrations?.length || 0;
+  const totalReach = programCount + servedAdditional;
+  const hasImpact = (impact?.forms?.length || 0) > 0;
+
+  const tally = (vals: (string | undefined)[]) => {
+    const m: Record<string, number> = {};
+    vals.forEach((v) => { if (v && v.trim()) m[v.trim()] = (m[v.trim()] || 0) + 1; });
+    return Object.entries(m).map(([name, count]) => ({ name, count })).sort((a, b) => b.count - a.count);
+  };
+  const servedRace = tally(servedUnique.map((y) => y.race));
+  const servedDistrict = tally(servedUnique.map((y) => y.district));
+  const servedRaceTotal = servedRace.reduce((s, d) => s + d.count, 0);
+  const servedDistrictTotal = servedDistrict.reduce((s, d) => s + d.count, 0);
+
   const chartConfig = {
     count: { label: "Count", color: "#bf0f3e" },
     value: { label: "Count", color: "#bf0f3e" },
@@ -347,6 +410,91 @@ const AdminRegistrationAnalytics = () => {
                 icon={<Calendar className="w-5 h-5" />}
               />
             </div>
+
+            {/* ═══════════ TOTAL REACH (program + camp/served youth) ═══════════ */}
+            {hasImpact && (
+              <div>
+                <h3 className="text-sm font-semibold text-white/80 mb-3 tracking-wide uppercase flex items-center gap-2">
+                  <Users2 className="w-4 h-4 text-[#bf0f3e]" /> Total Reach
+                  <span className="text-[10px] text-white/40 font-normal normal-case tracking-normal">program youth + youth served through camps / one-day programming</span>
+                </h3>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <Card className="bg-white/5 border-white/10">
+                    <CardContent className="pt-4">
+                      <p className="text-[10px] uppercase tracking-wider text-white/40 mb-2">Program Youth</p>
+                      <p className="text-3xl font-bold text-white">{programCount.toLocaleString()}</p>
+                      <p className="text-xs text-white/40 mt-0.5">enrolled in the program</p>
+                    </CardContent>
+                  </Card>
+                  <Card className="bg-white/5 border-white/10">
+                    <CardContent className="pt-4">
+                      <p className="text-[10px] uppercase tracking-wider text-white/40 mb-2">Youth Served</p>
+                      <p className="text-3xl font-bold text-white">{servedCount.toLocaleString()}</p>
+                      <p className="text-xs text-white/40 mt-0.5">unique, via camp/one-day waivers</p>
+                    </CardContent>
+                  </Card>
+                  <Card className="bg-[#bf0f3e]/10 border-[#bf0f3e]/40">
+                    <CardContent className="pt-4">
+                      <p className="text-[10px] uppercase tracking-wider text-white/50 mb-2">Total Unduplicated Reach</p>
+                      <p className="text-3xl font-bold text-[#bf0f3e]">{totalReach.toLocaleString()}</p>
+                      <p className="text-xs text-white/40 mt-0.5">every youth counted once</p>
+                    </CardContent>
+                  </Card>
+                </div>
+                <p className="text-xs text-white/40 mt-2">
+                  Of the {servedCount.toLocaleString()} youth served through one-day programming,{" "}
+                  <span className="text-white/70 font-semibold">{servedOverlap.toLocaleString()}</span> were also enrolled program youth (counted once), so{" "}
+                  <span className="text-white/70 font-semibold">{servedAdditional.toLocaleString()}</span> are additional youth on top of the {programCount.toLocaleString()} program youth.
+                  {servedWithoutKey > 0 && (
+                    <span className="text-amber-300/70"> {servedWithoutKey} response{servedWithoutKey === 1 ? "" : "s"} lacked a name + birthday, so couldn't be de-duplicated — map those fields on the form to include them.</span>
+                  )}
+                </p>
+
+                {/* Served-youth demographics (the additional reach story) */}
+                {(servedRaceTotal > 0 || servedDistrictTotal > 0) && (
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mt-4">
+                    {servedRaceTotal > 0 && (
+                      <Card className="bg-white/5 border-white/10">
+                        <CardHeader className="pb-2"><CardTitle className="text-sm text-white">Served Youth · Race / Ethnicity</CardTitle></CardHeader>
+                        <CardContent className="space-y-1.5">
+                          {servedRace.map((d) => {
+                            const pct = Math.round((d.count / servedRaceTotal) * 100);
+                            return (
+                              <div key={d.name} className="flex items-center gap-3">
+                                <span className="text-xs text-white/70 w-40 shrink-0 truncate" title={d.name}>{d.name}</span>
+                                <div className="flex-1 h-2 bg-white/5 rounded-full overflow-hidden min-w-0"><div className="h-full bg-[#bf0f3e] rounded-full" style={{ width: `${pct}%` }} /></div>
+                                <span className="text-xs font-semibold text-white w-10 text-right tabular-nums">{pct}%</span>
+                                <span className="text-[10px] text-white/40 w-12 text-right tabular-nums">{d.count}</span>
+                              </div>
+                            );
+                          })}
+                          <p className="text-[10px] text-white/30 text-right pt-1">{servedRaceTotal} reported</p>
+                        </CardContent>
+                      </Card>
+                    )}
+                    {servedDistrictTotal > 0 && (
+                      <Card className="bg-white/5 border-white/10">
+                        <CardHeader className="pb-2"><CardTitle className="text-sm text-white">Served Youth · School District</CardTitle></CardHeader>
+                        <CardContent className="space-y-1.5">
+                          {servedDistrict.slice(0, 8).map((d) => {
+                            const pct = Math.round((d.count / servedDistrictTotal) * 100);
+                            return (
+                              <div key={d.name} className="flex items-center gap-3">
+                                <span className="text-xs text-white/70 w-40 shrink-0 truncate" title={d.name}>{d.name}</span>
+                                <div className="flex-1 h-2 bg-white/5 rounded-full overflow-hidden min-w-0"><div className="h-full bg-[#bf0f3e] rounded-full" style={{ width: `${pct}%` }} /></div>
+                                <span className="text-xs font-semibold text-white w-10 text-right tabular-nums">{pct}%</span>
+                                <span className="text-[10px] text-white/40 w-12 text-right tabular-nums">{d.count}</span>
+                              </div>
+                            );
+                          })}
+                          <p className="text-[10px] text-white/30 text-right pt-1">{servedDistrictTotal} reported</p>
+                        </CardContent>
+                      </Card>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
 
             {/* Registrations Over Time */}
             <Card className="bg-white/5 border-white/10">
