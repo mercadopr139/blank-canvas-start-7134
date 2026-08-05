@@ -5,6 +5,10 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Copy, ChevronRight, Star, AlertTriangle, CheckCircle2, XCircle } from "lucide-react";
 import { toast } from "sonner";
 import { format, parseISO } from "date-fns";
@@ -14,11 +18,15 @@ interface DupeRow {
   child_first_name: string;
   child_last_name: string;
   child_boxing_program: string;
+  child_date_of_birth: string | null;
+  parent_first_name: string | null;
+  parent_last_name: string | null;
   registered_on: string; // YYYY-MM-DD
   approved_for_attendance: boolean;
   attendance_count: number;
   first_attendance: string | null;
   last_attendance: string | null;
+  dup_key: string;
 }
 
 interface MergeResult {
@@ -60,19 +68,67 @@ export default function AdminDuplicateRegistrations() {
     },
   });
 
-  // Group rows by normalized (first_name, last_name). Each group is one kid.
+  // Groups an admin has marked "not a duplicate" (e.g. twins). Keyed by the
+  // sorted set of registration ids in the group.
+  const { data: dismissals = [], refetch: refetchDismissals } = useQuery({
+    queryKey: ["duplicate-dismissals"],
+    queryFn: async () => {
+      const { data, error } = await (supabase.from("duplicate_dismissals" as never) as any)
+        .select("group_key");
+      if (error) throw error;
+      return (data ?? []) as { group_key: string }[];
+    },
+  });
+  const dismissedKeys = useMemo(() => new Set(dismissals.map((d) => d.group_key)), [dismissals]);
+  const [showDismissed, setShowDismissed] = useState(false);
+
+  // Canonical key for a group = its member registration ids, sorted + joined.
+  const canonicalKey = (groupRows: DupeRow[]) => groupRows.map((r) => r.id).sort().join("|");
+
+  const dismissGroup = async (groupRows: DupeRow[]) => {
+    const reg_ids = groupRows.map((r) => r.id).sort();
+    const { error } = await (supabase.from("duplicate_dismissals" as never) as any)
+      .insert({ group_key: reg_ids.join("|"), reg_ids });
+    if (error) { toast.error(error.message || "Couldn't dismiss."); return; }
+    toast.success("Marked as not a duplicate.");
+    setActiveGroupKey(null);
+    refetchDismissals();
+    queryClient.invalidateQueries({ queryKey: ["youth-registrations"] }); // refresh inline badges
+  };
+
+  const restoreDismissed = async (key: string) => {
+    const { error } = await (supabase.from("duplicate_dismissals" as never) as any)
+      .delete().eq("group_key", key);
+    if (error) { toast.error("Couldn't restore."); return; }
+    refetchDismissals();
+    queryClient.invalidateQueries({ queryKey: ["youth-registrations"] });
+  };
+
+  // Confirm before dismissing, so a mis-tap can't quietly hide a real duplicate.
+  const [dismissTarget, setDismissTarget] = useState<DupeRow[] | null>(null);
+  const dismissLabel = (groupRows: DupeRow[]) => {
+    const names = [...new Set(groupRows.map((r) => `${r.child_first_name} ${r.child_last_name}`.trim()))];
+    if (names.length <= 1) return names[0] || "these registrations";
+    return names.slice(0, -1).join(", ") + " and " + names[names.length - 1];
+  };
+
+  // Group rows by the DB-provided dup_key (same birthday + last name, or exact
+  // name when no birthday). Each group is one kid — even if the first name is
+  // spelled differently across their registrations.
   const groups = useMemo(() => {
-    const map = new Map<string, { key: string; firstName: string; lastName: string; rows: DupeRow[] }>();
+    const map = new Map<string, DupeRow[]>();
     rows.forEach((r) => {
-      const key = `${r.child_first_name.trim().toLowerCase()}|${r.child_last_name.trim().toLowerCase()}`;
-      if (!map.has(key)) {
-        map.set(key, { key, firstName: r.child_first_name.trim(), lastName: r.child_last_name.trim(), rows: [] });
-      }
-      map.get(key)!.rows.push(r);
+      if (!map.has(r.dup_key)) map.set(r.dup_key, []);
+      map.get(r.dup_key)!.push(r);
     });
-    // Sort each group's rows by keeper rank — top of list = recommended keeper.
-    const arr = [...map.values()];
-    arr.forEach((g) => g.rows.sort(keeperRank));
+    const arr = [...map.entries()].map(([key, groupRows]) => {
+      // Top of list (after keeper-rank sort) = the recommended keeper; use its
+      // name/DOB/parent as the group's identity.
+      const sorted = [...groupRows].sort(keeperRank);
+      const top = sorted[0];
+      const parentName = `${top.parent_first_name ?? ""} ${top.parent_last_name ?? ""}`.trim();
+      return { key, ckey: canonicalKey(sorted), firstName: top.child_first_name.trim(), lastName: top.child_last_name.trim(), dob: top.child_date_of_birth, parentName, rows: sorted };
+    });
     // Sort groups by impact (rows with attendance first, then by name).
     arr.sort((a, b) => {
       const aTotal = a.rows.reduce((s, r) => s + r.attendance_count, 0);
@@ -82,6 +138,9 @@ export default function AdminDuplicateRegistrations() {
     });
     return arr;
   }, [rows]);
+
+  const visibleGroups = useMemo(() => groups.filter((g) => !dismissedKeys.has(g.ckey)), [groups, dismissedKeys]);
+  const dismissedGroups = useMemo(() => groups.filter((g) => dismissedKeys.has(g.ckey)), [groups, dismissedKeys]);
 
   const activeGroup = useMemo(
     () => groups.find((g) => g.key === activeGroupKey) ?? null,
@@ -128,9 +187,9 @@ export default function AdminDuplicateRegistrations() {
     refetch();
   };
 
-  const totalKids = groups.length;
-  const totalDupeRows = rows.length;
-  const totalAttendanceAtRisk = rows.reduce((s, r) => s + r.attendance_count, 0);
+  const totalKids = visibleGroups.length;
+  const totalDupeRows = visibleGroups.reduce((s, g) => s + g.rows.length, 0);
+  const totalAttendanceAtRisk = visibleGroups.reduce((s, g) => s + g.rows.reduce((t, r) => t + r.attendance_count, 0), 0);
 
   return (
     <div className="p-4 md:p-6 space-y-6">
@@ -172,12 +231,12 @@ export default function AdminDuplicateRegistrations() {
       {/* Groups list */}
       {isLoading ? (
         <p className="text-center text-white/40 py-10">Loading…</p>
-      ) : groups.length === 0 ? (
+      ) : visibleGroups.length === 0 ? (
         <Card className="bg-emerald-500/10 border-emerald-400/30 text-white">
           <CardContent className="p-6 flex items-center gap-3">
             <CheckCircle2 className="w-6 h-6 text-emerald-300 shrink-0" />
             <p className="text-sm">
-              No duplicate registrations found. Everyone has a single registration row.
+              No duplicate registrations to review. Everyone has a single registration (or has been marked "not a duplicate").
             </p>
           </CardContent>
         </Card>
@@ -189,15 +248,15 @@ export default function AdminDuplicateRegistrations() {
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-2">
-            {groups.map((g) => {
+            {visibleGroups.map((g) => {
               const total = g.rows.reduce((s, r) => s + r.attendance_count, 0);
               const program = g.rows[0]?.child_boxing_program;
               return (
-                <button
+                <div
                   key={g.key}
-                  onClick={() => setActiveGroupKey(g.key)}
-                  className="w-full flex items-center justify-between gap-3 p-3 rounded-lg bg-white/[0.03] border border-white/10 hover:bg-white/[0.07] hover:border-purple-400/40 transition text-left"
+                  className="w-full flex items-center justify-between gap-3 p-3 rounded-lg bg-white/[0.03] border border-white/10 hover:border-purple-400/40 transition"
                 >
+                  <button onClick={() => setActiveGroupKey(g.key)} className="min-w-0 flex-1 text-left">
                   <div className="min-w-0 flex-1">
                     <p className="text-white font-semibold text-sm truncate flex items-center gap-2">
                       {g.firstName} {g.lastName}
@@ -206,15 +265,56 @@ export default function AdminDuplicateRegistrations() {
                       </Badge>
                     </p>
                     <p className="text-white/40 text-xs mt-0.5">
+                      Born {formatDate(g.dob)}{g.parentName ? ` · Parent: ${g.parentName}` : ""}
+                    </p>
+                    <p className="text-white/30 text-[11px] mt-0.5">
                       {program} · {total} attendance record{total === 1 ? "" : "s"} across all rows
                     </p>
                   </div>
-                  <ChevronRight className="w-4 h-4 text-white/40 shrink-0" />
-                </button>
+                  </button>
+                  <div className="flex items-center gap-1.5 shrink-0">
+                    <button
+                      onClick={() => setDismissTarget(g.rows)}
+                      className="text-[11px] font-medium text-white/40 hover:text-amber-300 border border-white/10 hover:border-amber-400/30 rounded-md px-2 py-1 transition whitespace-nowrap"
+                      title="These are different kids (e.g. twins) — hide from this list"
+                    >
+                      Not a duplicate
+                    </button>
+                    <button onClick={() => setActiveGroupKey(g.key)} title="Review &amp; merge">
+                      <ChevronRight className="w-4 h-4 text-white/40 hover:text-white/70" />
+                    </button>
+                  </div>
+                </div>
               );
             })}
           </CardContent>
         </Card>
+      )}
+
+      {/* Dismissed (marked "not a duplicate") — collapsible, with restore. */}
+      {dismissedGroups.length > 0 && (
+        <div className="rounded-lg border border-white/10 bg-white/[0.02] px-3 py-2">
+          <button
+            onClick={() => setShowDismissed((v) => !v)}
+            className="text-xs text-white/50 hover:text-white/80 flex items-center gap-1.5"
+          >
+            {showDismissed ? "Hide" : "Show"} {dismissedGroups.length} marked “not a duplicate”
+          </button>
+          {showDismissed && (
+            <div className="mt-2 space-y-1">
+              {dismissedGroups.map((g) => (
+                <div key={g.key} className="flex items-center justify-between gap-3 px-3 py-2 rounded-lg bg-white/[0.02] border border-white/10">
+                  <span className="text-xs text-white/60 truncate">
+                    {g.firstName} {g.lastName} · Born {formatDate(g.dob)} · {g.rows.length} registrations
+                  </span>
+                  <button onClick={() => restoreDismissed(g.ckey)} className="text-[11px] text-white/40 hover:text-purple-300 shrink-0">
+                    Restore
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
       )}
 
       {/* Last result snapshot */}
@@ -256,6 +356,9 @@ export default function AdminDuplicateRegistrations() {
               <p className="text-xs text-white/50">
                 Pick which registration to keep. Attendance from the others gets re-pointed to the keeper before the dupes are deleted. The top row is recommended (most attendance, approved, oldest).
               </p>
+              <p className="text-xs text-amber-200/70">
+                First check these are truly the <span className="font-semibold">same child</span> (same birthday + parent). Twins share a birthday and last name — if that's what you're seeing, click <span className="font-semibold">Not a duplicate</span> instead of merging.
+              </p>
 
               <div className="space-y-2">
                 {activeGroup.rows.map((r, idx) => {
@@ -273,7 +376,15 @@ export default function AdminDuplicateRegistrations() {
                     >
                       <div className="flex items-start justify-between gap-3">
                         <div className="min-w-0 flex-1">
-                          <p className="text-[10px] uppercase tracking-wider text-white/40 font-semibold">
+                          {/* Name shown per-row — within a group the spelling can
+                              differ (e.g. Chris vs Christian); the shared birthday
+                              is what confirms they're the same kid. */}
+                          <p className="text-sm font-semibold text-white truncate">{r.child_first_name} {r.child_last_name}</p>
+                          <p className="text-[11px] text-white/50">
+                            Born {formatDate(r.child_date_of_birth)}
+                            {(r.parent_first_name || r.parent_last_name) ? ` · Parent: ${`${r.parent_first_name ?? ""} ${r.parent_last_name ?? ""}`.trim()}` : ""}
+                          </p>
+                          <p className="text-[10px] uppercase tracking-wider text-white/40 font-semibold mt-2">
                             Registration ID
                           </p>
                           <p className="text-xs font-mono text-white/80 truncate">{r.id}</p>
@@ -314,22 +425,33 @@ export default function AdminDuplicateRegistrations() {
                 })}
               </div>
 
-              <div className="flex gap-2 justify-end pt-3 mt-2 border-t border-white/10">
+              <div className="flex gap-2 items-center justify-between pt-3 mt-2 border-t border-white/10">
                 <Button
                   variant="outline"
                   size="sm"
-                  className="border-white/20 text-white"
-                  onClick={() => setActiveGroupKey(null)}
+                  className="border-amber-400/30 bg-transparent text-amber-200/80 hover:bg-amber-500/10"
+                  onClick={() => activeGroup && setDismissTarget(activeGroup.rows)}
+                  title="These are different kids (e.g. twins) — hide from the list"
                 >
-                  Cancel
+                  Not a duplicate
                 </Button>
-                <Button
-                  size="sm"
-                  onClick={() => setConfirmOpen(true)}
-                  className="bg-purple-600 hover:bg-purple-700 text-white font-bold"
-                >
-                  Preview Merge
-                </Button>
+                <div className="flex gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="border-white/20 text-white"
+                    onClick={() => setActiveGroupKey(null)}
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    size="sm"
+                    onClick={() => setConfirmOpen(true)}
+                    className="bg-purple-600 hover:bg-purple-700 text-white font-bold"
+                  >
+                    Preview Merge
+                  </Button>
+                </div>
               </div>
             </div>
           )}
@@ -390,6 +512,29 @@ export default function AdminDuplicateRegistrations() {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Confirm before marking a group "not a duplicate". */}
+      <AlertDialog open={!!dismissTarget} onOpenChange={(o) => { if (!o) setDismissTarget(null); }}>
+        <AlertDialogContent className="bg-zinc-900 border-white/10 text-white">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Mark as “not a duplicate”?</AlertDialogTitle>
+            <AlertDialogDescription className="text-white/60">
+              {dismissTarget && (
+                <>You're confirming that <span className="font-semibold text-white/80">{dismissLabel(dismissTarget)}</span> are different children — not the same kid registered twice. They'll be removed from the duplicate list. You can Restore them later if this was a mistake.</>
+              )}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel className="border-white/15 bg-transparent text-white/80 hover:bg-white/5">Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => { if (dismissTarget) dismissGroup(dismissTarget); setDismissTarget(null); }}
+              className="bg-amber-600 hover:bg-amber-700 text-white"
+            >
+              Yes, not a duplicate
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

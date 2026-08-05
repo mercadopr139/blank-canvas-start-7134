@@ -11,7 +11,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { AlertDialog, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Search, Eye, AlertTriangle, ExternalLink, Loader2, Pencil, Trash2, CheckCircle2, XCircle, ShieldCheck, Download, Star, ImagePlus } from "lucide-react";
+import { Search, Eye, AlertTriangle, ExternalLink, Loader2, Pencil, Trash2, CheckCircle2, XCircle, ShieldCheck, Download, Star, ImagePlus, Copy } from "lucide-react";
 import MondayPhotoSyncModal from "@/components/admin/MondayPhotoSyncModal";
 import { Switch } from "@/components/ui/switch";
 import { format, parseISO, differenceInYears, differenceInMonths } from "date-fns";
@@ -129,6 +129,18 @@ const AdminRegistrations = () => {
       return data;
     },
   });
+
+  // Groups an admin marked "not a duplicate" (e.g. twins) — excluded from the
+  // inline "Possible dup" badge. Keyed by the sorted set of registration ids.
+  const { data: dupDismissals = [] } = useQuery({
+    queryKey: ["duplicate-dismissals"],
+    queryFn: async () => {
+      const { data, error } = await (supabase.from("duplicate_dismissals" as never) as any).select("group_key");
+      if (error) throw error;
+      return (data ?? []) as { group_key: string }[];
+    },
+  });
+  const dismissedDupKeys = new Set(dupDismissals.map((d) => d.group_key));
 
   // Realtime subscription for photo updates
   useEffect(() => {
@@ -328,6 +340,31 @@ const AdminRegistrations = () => {
     toast.success("Extended Program updated");
   };
 
+  // Possible-duplicate detector for the inline badge. Same rule as the
+  // Duplicate Registrations page: same birthday + last name = likely the same
+  // kid (first name may be spelled differently); no birthday → exact name.
+  const possibleDuplicateIds = (() => {
+    const groups = new Map<string, string[]>();
+    (registrations || []).forEach((r: any) => {
+      if (!r.child_last_name) return;
+      const ln = String(r.child_last_name).trim().toLowerCase();
+      const key = r.child_date_of_birth
+        ? `dob:${r.child_date_of_birth}|${ln}`
+        : `name:${String(r.child_first_name || "").trim().toLowerCase()}|${ln}`;
+      if (!groups.has(key)) groups.set(key, []);
+      groups.get(key)!.push(r.id);
+    });
+    const ids = new Set<string>();
+    groups.forEach((arr) => {
+      if (arr.length <= 1) return;
+      // Skip groups an admin already marked "not a duplicate" (e.g. twins).
+      const ckey = [...arr].sort().join("|");
+      if (dismissedDupKeys.has(ckey)) return;
+      arr.forEach((id) => ids.add(id));
+    });
+    return ids;
+  })();
+
   const renderTable = (rows: any[], emptyMessage: string) => (
     <div className="overflow-auto max-h-[70vh]">
       <Table>
@@ -366,6 +403,14 @@ const AdminRegistrations = () => {
               </TableCell>
               <TableCell className="font-medium text-white">
                 {reg.child_last_name}, {reg.child_first_name}
+                {possibleDuplicateIds.has(reg.id) && (
+                  <span
+                    className="ml-2 inline-flex items-center gap-0.5 rounded-full border border-amber-400/30 bg-amber-500/15 px-1.5 py-0.5 text-[9px] font-medium text-amber-300 align-middle whitespace-nowrap"
+                    title="Another registration shares this birthday + last name — check the Duplicate Registrations page"
+                  >
+                    <Copy className="w-2.5 h-2.5" /> Possible dup
+                  </span>
+                )}
               </TableCell>
               <TableCell className="text-white">
                 {(() => {
