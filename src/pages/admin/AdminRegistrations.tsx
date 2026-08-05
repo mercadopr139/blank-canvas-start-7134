@@ -479,6 +479,19 @@ const AdminRegistrations = () => {
           <Button size="sm" onClick={exportFilteredCsv} className="bg-white/10 hover:bg-white/15 text-white border border-white/20 gap-1.5">
             <Download className="w-3.5 h-3.5" /> Export Filtered List
           </Button>
+          {/* Archive ceremony — a deliberate, seasonal action; kept in the
+              header (not among the filters) so it can't be fat-fingered. */}
+          {showArchiveCeremony && (
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => setArchiveConfirmOpen(true)}
+              className="border-amber-400/40 bg-amber-500/10 text-amber-200 hover:bg-amber-500/20 hover:text-amber-100 gap-1.5"
+              title={`Close out the ${shortProgramYear(priorYear)} program year`}
+            >
+              <Archive className="w-3.5 h-3.5" /> Archive {shortProgramYear(priorYear)} ({priorYearUnarchivedCount})
+            </Button>
+          )}
         </div>
         <MondayPhotoSyncModal
           open={bulkPhotoOpen}
@@ -517,16 +530,19 @@ const AdminRegistrations = () => {
         {/* Filters */}
         <Card className="bg-white/5 border-white/10">
           <CardContent className="pt-4">
-            <div className="flex flex-col md:flex-row gap-4">
-              <div className="flex-1 relative">
+            <div className="space-y-3">
+              {/* Search on its own full-width row so it's always easy to type in. */}
+              <div className="relative">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/50" />
                 <Input
-                  placeholder="Search by name or email..."
+                  placeholder="Search by youth or parent name, or email…"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   className="pl-10 bg-white/5 border-white/10 text-white placeholder:text-white/30"
                 />
               </div>
+              {/* Filters wrap onto their own row below the search. */}
+              <div className="flex flex-wrap gap-3">
               {/* Program-year filter — defaults to the current cohort so
                   the list shows today's active kids by default. Switch to
                   "All years" to see history including archived rows. */}
@@ -544,20 +560,6 @@ const AdminRegistrations = () => {
                     <SelectItem value="__all__">All years</SelectItem>
                   </SelectContent>
                 </Select>
-              )}
-              {/* Archive ceremony — appears Aug 1 → Sept 30 when there are
-                  un-archived rows in the prior program year. One-click
-                  close-out that stamps archived_at on every row. */}
-              {showArchiveCeremony && (
-                <Button
-                  variant="outline"
-                  onClick={() => setArchiveConfirmOpen(true)}
-                  className="border-amber-400/40 bg-amber-500/10 text-amber-200 hover:bg-amber-500/20 hover:text-amber-100 gap-1.5"
-                  title={`Close out the ${shortProgramYear(priorYear)} program year`}
-                >
-                  <Archive className="w-4 h-4" />
-                  Archive {shortProgramYear(priorYear)} ({priorYearUnarchivedCount})
-                </Button>
               )}
               <Select value={programFilter} onValueChange={setProgramFilter}>
                 <SelectTrigger className="w-full md:w-[220px] bg-white/5 border-white/10 text-white">
@@ -603,6 +605,7 @@ const AdminRegistrations = () => {
                   <SelectItem value="unassigned">Unassigned</SelectItem>
                 </SelectContent>
               </Select>
+              </div>
             </div>
           </CardContent>
         </Card>
