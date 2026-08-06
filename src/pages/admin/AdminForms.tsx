@@ -1,17 +1,20 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Switch } from "@/components/ui/switch";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Plus, Pencil, Trash2, ExternalLink, Link2, FileText, Copy } from "lucide-react";
+import { Plus, Pencil, Trash2, ExternalLink, Link2, FileText, Copy, Users } from "lucide-react";
 import { toast } from "sonner";
 import { slugify, type FormRecord } from "@/lib/formKit";
+import { computeImpactSnapshot, type ImpactForm } from "@/lib/impactSnapshot";
+import { ImpactSnapshotView } from "@/components/admin/ImpactSnapshotView";
 
 const AdminForms = () => {
   const navigate = useNavigate();
@@ -20,6 +23,7 @@ const AdminForms = () => {
   const [creating, setCreating] = useState(false);
   const [duplicatingId, setDuplicatingId] = useState<string | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<FormRecord | null>(null);
+  const [togglingId, setTogglingId] = useState<string | null>(null);
 
   const { data: forms, isLoading } = useQuery({
     queryKey: ["admin-forms"],
@@ -102,6 +106,88 @@ const AdminForms = () => {
     toast.success("Public link copied");
   };
 
+  // Forms toggled ON feed the youth-reached snapshot at the bottom of the page.
+  const impactForms = useMemo(() => (forms || []).filter((f) => f.settings?.impactSource), [forms]);
+  const impactIds = impactForms.map((f) => f.id);
+
+  // Toggle whether a form's youth are counted in the snapshot below. Persisted
+  // on the form's settings so it survives across sessions / other machines.
+  // We flip the value IN PLACE in the cache (not via a refetch) — refetching
+  // re-sorts the list by updated_at, which would make the row jump and the
+  // next click land on the wrong form.
+  const toggleImpact = async (f: FormRecord, on: boolean) => {
+    setTogglingId(f.id);
+    const settings = { ...(f.settings || {}), impactSource: on };
+    const patch = (s: FormRecord["settings"]) =>
+      qc.setQueryData<FormRecord[]>(["admin-forms"], (prev) =>
+        (prev || []).map((x) => (x.id === f.id ? { ...x, settings: s } : x)));
+    patch(settings); // optimistic — row stays put
+    try {
+      const { error } = await supabase.from("forms" as never).update({ settings } as never).eq("id", f.id);
+      if (error) throw error;
+      await qc.invalidateQueries({ queryKey: ["forms-impact-responses"] });
+    } catch (e) {
+      patch(f.settings); // revert on failure
+      toast.error("Couldn't update: " + (e as Error).message);
+    } finally {
+      setTogglingId(null);
+    }
+  };
+
+  // Responses for every toggled-on form, for the aggregate snapshot.
+  const { data: impactResponses } = useQuery({
+    queryKey: ["forms-impact-responses", impactIds.join(",")],
+    enabled: impactIds.length > 0,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("form_responses" as never)
+        .select("form_id, data")
+        .in("form_id", impactIds);
+      if (error) throw error;
+      return (data as unknown as { form_id: string; data: Record<string, unknown> }[]) || [];
+    },
+  });
+
+  const aggregateSnapshot = useMemo(() => {
+    if (impactForms.length === 0) return null;
+    const byForm: Record<string, { data: Record<string, unknown> }[]> = {};
+    (impactResponses || []).forEach((r) => { (byForm[r.form_id] ||= []).push({ data: r.data }); });
+    const inputs: ImpactForm[] = impactForms.map((f) => ({
+      fields: f.fields || [], settings: f.settings, responses: byForm[f.id] || [],
+    }));
+    return computeImpactSnapshot(inputs);
+  }, [impactForms, impactResponses]);
+
+  // Live NLA registered youth — the funder baseline. Also used to make sure a
+  // camp youth who is ALSO a registered youth is counted once (no double-count).
+  const { data: registered } = useQuery({
+    queryKey: ["forms-nla-registered-keys"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("youth_registrations")
+        .select("child_first_name, child_last_name, child_date_of_birth");
+      if (error) throw error;
+      return (data as { child_first_name: string | null; child_last_name: string | null; child_date_of_birth: string | null }[]) || [];
+    },
+  });
+
+  // Combined, unduplicated reach: registered youth + camp youth who aren't
+  // already registered. Keys match impactSnapshot's `first|last|dob` format.
+  const reach = useMemo(() => {
+    const registeredCount = registered?.length || 0;
+    const norm = (s: unknown) => String(s ?? "").trim().toLowerCase();
+    const regKeys = new Set<string>();
+    (registered || []).forEach((r) => {
+      if (!r.child_first_name || !r.child_last_name || !r.child_date_of_birth) return;
+      regKeys.add(`${norm(r.child_first_name)}|${norm(r.child_last_name)}|${String(r.child_date_of_birth).slice(0, 10)}`);
+    });
+    const campUnique = aggregateSnapshot?.uniqueCount || 0;
+    const campKeys = aggregateSnapshot?.youthKeys || [];
+    const overlap = campKeys.filter((k) => regKeys.has(k)).length; // in both systems
+    const campAdditional = campUnique - overlap;
+    return { registeredCount, campUnique, overlap, campAdditional, total: registeredCount + campAdditional };
+  }, [registered, aggregateSnapshot]);
+
   return (
     <div className="text-white">
       <div className="flex items-center justify-between mb-6 gap-3 flex-wrap">
@@ -142,6 +228,18 @@ const AdminForms = () => {
                   {f.status === "published" && <> · /f/{f.slug}</>}
                 </span>
               </div>
+              <div
+                className="flex items-center gap-1.5 shrink-0 mr-1 pl-3 border-l border-white/10"
+                title="Count this form's youth in the reached snapshot at the bottom of the page"
+              >
+                <Users className={`w-3.5 h-3.5 ${f.settings?.impactSource ? "text-[#bf0f3e]" : "text-white/25"}`} />
+                <Switch
+                  checked={!!f.settings?.impactSource}
+                  disabled={togglingId === f.id}
+                  onCheckedChange={(v) => toggleImpact(f, v)}
+                  className="data-[state=checked]:bg-[#bf0f3e]"
+                />
+              </div>
               <div className="flex items-center gap-1 shrink-0">
                 {f.status === "published" && (
                   <>
@@ -165,6 +263,69 @@ const AdminForms = () => {
               </div>
             </div>
           ))}
+        </div>
+      )}
+
+      {/* ── Total Youth Reached — NLA registered youth + camp/one-day youth ──
+          Every child counted once (camp youth already registered are removed),
+          so the total holds up for funders. */}
+      {forms && forms.length > 0 && (
+        <div className="mt-8 border-t border-white/10 pt-6">
+          <div className="flex items-center gap-2 mb-1">
+            <Users className="w-5 h-5 text-[#bf0f3e]" />
+            <h2 className="text-lg font-bold">Total Youth Reached</h2>
+          </div>
+          <p className="text-white/50 text-sm mb-4 max-w-2xl">
+            Your live NLA registered youth, plus the camp / one-day youth from any form you toggle on above.
+            Every child is counted once — a camp youth who is also registered isn't double-counted — so it holds up for funders.
+          </p>
+
+          {/* Combined reach tile */}
+          <div className="rounded-xl border border-[#bf0f3e]/40 bg-[#bf0f3e]/[0.07] p-5 mb-5">
+            <div className="flex flex-wrap items-end justify-between gap-x-8 gap-y-4">
+              <div>
+                <p className="text-[11px] uppercase tracking-wider text-white/50 mb-1">Total unique youth reached</p>
+                <p className="text-5xl font-extrabold text-white leading-none">{reach.total.toLocaleString()}</p>
+              </div>
+              <div className="text-sm space-y-1.5 min-w-[280px]">
+                <div className="flex items-center justify-between gap-6">
+                  <span className="text-white/60">NLA registered youth</span>
+                  <span className="font-semibold text-white tabular-nums">{reach.registeredCount.toLocaleString()}</span>
+                </div>
+                <div className="flex items-center justify-between gap-6">
+                  <span className="text-white/60">Camp / one-day youth{reach.overlap > 0 ? ` (+${reach.campAdditional.toLocaleString()} new)` : ""}</span>
+                  <span className="font-semibold text-white tabular-nums">{reach.campUnique.toLocaleString()}</span>
+                </div>
+                {reach.overlap > 0 && (
+                  <p className="text-[11px] text-white/40">{reach.overlap} camp youth {reach.overlap === 1 ? "is" : "are"} also registered — counted once.</p>
+                )}
+                <div className="border-t border-white/10 pt-1.5 flex items-center justify-between gap-6">
+                  <span className="text-white/80 font-medium">Total unique reached</span>
+                  <span className="font-bold text-[#bf0f3e] tabular-nums">{reach.total.toLocaleString()}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Camp / one-day youth breakdown (the youth added on top of registrations) */}
+          {impactForms.length === 0 ? (
+            <div className="border border-dashed border-white/15 rounded-xl py-8 text-center">
+              <p className="text-white/50 text-sm">Toggle a camp or waiver form above to add its youth to the total.</p>
+              <p className="text-white/40 text-xs mt-1">Their demographics will appear here.</p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              <div className="flex flex-wrap items-center gap-1.5">
+                <span className="text-[11px] uppercase tracking-wider text-white/40">Camp youth from:</span>
+                {impactForms.map((f) => (
+                  <Badge key={f.id} className="bg-[#bf0f3e]/15 text-[#bf0f3e] border-[#bf0f3e]/30 text-[10px]">
+                    {f.title || "Untitled Form"}
+                  </Badge>
+                ))}
+              </div>
+              {aggregateSnapshot && <ImpactSnapshotView snap={aggregateSnapshot} emptyHint="No responses in the selected forms yet." />}
+            </div>
+          )}
         </div>
       )}
 
