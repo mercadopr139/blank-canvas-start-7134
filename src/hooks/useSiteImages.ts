@@ -4,6 +4,9 @@ import { supabase } from "@/integrations/supabase/client";
 import {
   SITE_IMAGE_GROUP_BY_KEY,
   resolveDefaultToken,
+  isYouTubeToken,
+  videoIdFromToken,
+  youtubeThumb,
   type SiteImageItem,
 } from "@/config/siteImages";
 import type { Tables } from "@/integrations/supabase/types";
@@ -23,6 +26,10 @@ async function fetchSiteImages(): Promise<SiteImageRow[]> {
 // Turn a stored row (real Storage URL, or a default-token pointing at a bundled
 // image) into a display item.
 export function rowToItem(row: SiteImageRow): SiteImageItem {
+  if (isYouTubeToken(row.url)) {
+    const id = videoIdFromToken(row.url) as string;
+    return { src: youtubeThumb(id), alt: row.alt ?? "", caption: row.caption ?? undefined, videoId: id };
+  }
   const def = resolveDefaultToken(row.url);
   if (def) {
     return {
@@ -30,6 +37,7 @@ export function rowToItem(row: SiteImageRow): SiteImageItem {
       alt: row.alt ?? def.alt,
       caption: row.caption ?? def.caption,
       objectPosition: def.objectPosition,
+      videoId: def.videoId,
     };
   }
   return {

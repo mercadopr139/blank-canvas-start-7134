@@ -53,14 +53,16 @@ export type SiteImageItem = {
   alt: string;
   caption?: string;
   objectPosition?: string;
+  videoId?: string; // set → this item is a YouTube video, not a photo
 };
 
 export type SiteImageGroup = {
   key: string;
   label: string; // shown in the admin manager
   section: string; // grouping header in the admin manager
-  kind: "single" | "gallery";
+  kind: "single" | "gallery" | "video";
   defaults: SiteImageItem[];
+  hidden?: boolean; // not shown as its own card (e.g. a gallery's paired video)
 };
 
 const LAUNCH_PAD_PLACEHOLDERS: SiteImageItem[] = Array.from({ length: 6 }, (_, i) => ({
@@ -68,7 +70,7 @@ const LAUNCH_PAD_PLACEHOLDERS: SiteImageItem[] = Array.from({ length: 6 }, (_, i
   alt: `Launch Pad photo ${i + 1}`,
 }));
 
-export const SITE_IMAGE_GROUPS: SiteImageGroup[] = [
+const CONTENT_GROUPS: SiteImageGroup[] = [
   // ── Extended Programs · single images / logos ──
   {
     key: "programs.background-coaching-ringside",
@@ -225,9 +227,86 @@ export const SITE_IMAGE_GROUPS: SiteImageGroup[] = [
   },
 ];
 
+// ── Program videos (one per program) ────────────────────────────────────────
+// Each program gallery can carry a single YouTube video, managed in Website
+// Photos and shown at the top of that program's popup. Stored in its own
+// `<galleryKey>.video` group so editing a program's photos never touches its
+// video (and vice-versa). The three programs that already had a hardcoded
+// video keep it here as a default, so nothing changes until staff edit it.
+const PROGRAM_VIDEO_DEFAULTS: Record<string, string> = {
+  "programs.excursions": "ogMH05MZFwM",
+  "programs.lil-champs": "R6HPefPkv20",
+  "programs.banking-boxing": "TsXbq70NB70",
+};
+
+// Gallery keys that get a video slot in the manager + a player on the site.
+export const PROGRAM_VIDEO_GALLERY_KEYS = [
+  "programs.smile-lab",
+  "programs.excursions",
+  "programs.lil-champs",
+  "programs.real-talk",
+  "programs.spiritual-development",
+  "programs.launch-pad",
+  "programs.coaching-boys-into-men",
+  "programs.meal-train",
+  "programs.banking-boxing",
+];
+
+export const videoGroupKey = (galleryKey: string) => `${galleryKey}.video`;
+export const supportsVideo = (galleryKey: string) => PROGRAM_VIDEO_GALLERY_KEYS.includes(galleryKey);
+
+const VIDEO_GROUPS: SiteImageGroup[] = PROGRAM_VIDEO_GALLERY_KEYS.map((k) => {
+  const def = PROGRAM_VIDEO_DEFAULTS[k];
+  return {
+    key: videoGroupKey(k),
+    label: "Program video",
+    section: "Extended Programs",
+    kind: "video" as const,
+    hidden: true,
+    defaults: def ? [{ src: "", alt: "", videoId: def }] : [],
+  };
+});
+
+export const SITE_IMAGE_GROUPS: SiteImageGroup[] = [...CONTENT_GROUPS, ...VIDEO_GROUPS];
+
 export const SITE_IMAGE_GROUP_BY_KEY: Record<string, SiteImageGroup> = Object.fromEntries(
   SITE_IMAGE_GROUPS.map((g) => [g.key, g])
 );
+
+// ── YouTube helpers ──────────────────────────────────────────────────────────
+// A video item is stored with url = "youtube:<id>" (no schema change needed).
+export const YT_TOKEN_PREFIX = "youtube:";
+export const youtubeToken = (id: string) => `${YT_TOKEN_PREFIX}${id}`;
+export const isYouTubeToken = (url: string) => typeof url === "string" && url.startsWith(YT_TOKEN_PREFIX);
+export const videoIdFromToken = (url: string) => (isYouTubeToken(url) ? url.slice(YT_TOKEN_PREFIX.length) : null);
+export const youtubeThumb = (id: string) => `https://img.youtube.com/vi/${id}/hqdefault.jpg`;
+
+// Pull a video ID out of any common YouTube link (watch, youtu.be, embed,
+// shorts) or a raw 11-char ID. Returns null if we can't find one.
+export function parseYouTubeId(input: string): string | null {
+  const s = (input || "").trim();
+  if (!s) return null;
+  if (/^[a-zA-Z0-9_-]{11}$/.test(s)) return s;
+  try {
+    const url = new URL(s.startsWith("http") ? s : `https://${s}`);
+    const host = url.hostname.replace(/^www\./, "");
+    if (host === "youtu.be") {
+      const id = url.pathname.slice(1).split("/")[0];
+      if (/^[a-zA-Z0-9_-]{11}$/.test(id)) return id;
+    }
+    if (host.endsWith("youtube.com")) {
+      const v = url.searchParams.get("v");
+      if (v && /^[a-zA-Z0-9_-]{11}$/.test(v)) return v;
+      const parts = url.pathname.split("/").filter(Boolean);
+      const i = parts.findIndex((p) => p === "embed" || p === "shorts" || p === "v");
+      if (i >= 0 && /^[a-zA-Z0-9_-]{11}$/.test(parts[i + 1] || "")) return parts[i + 1];
+    }
+  } catch {
+    /* not a URL — fall through */
+  }
+  const m = s.match(/[a-zA-Z0-9_-]{11}/);
+  return m ? m[0] : null;
+}
 
 // Stable reference to a bundled default image (survives deploys, unlike the
 // build-hashed asset URL). Stored in site_images.url when a default is kept in

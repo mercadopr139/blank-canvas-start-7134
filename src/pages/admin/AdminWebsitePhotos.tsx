@@ -7,8 +7,16 @@ import { useStaffPermissions } from "@/hooks/useStaffPermissions";
 import { useSiteImages, type SiteImageRow } from "@/hooks/useSiteImages";
 import {
   SITE_IMAGE_GROUPS,
+  SITE_IMAGE_GROUP_BY_KEY,
   defaultToken,
   resolveDefaultToken,
+  supportsVideo,
+  videoGroupKey,
+  youtubeToken,
+  youtubeThumb,
+  videoIdFromToken,
+  isYouTubeToken,
+  parseYouTubeId,
   type SiteImageGroup,
 } from "@/config/siteImages";
 import { Button } from "@/components/ui/button";
@@ -25,6 +33,8 @@ import {
   Save,
   ImageIcon,
   GripVertical,
+  Youtube,
+  Play,
 } from "lucide-react";
 import { DndContext, closestCenter, PointerSensor, useSensor, useSensors, type DragEndEvent } from "@dnd-kit/core";
 import { SortableContext, rectSortingStrategy, useSortable, arrayMove } from "@dnd-kit/sortable";
@@ -99,13 +109,28 @@ const SortablePhotoCard = ({ id, draggable, children }: { id: string; draggable:
   );
 };
 
+// The current video id for a program's paired video group: the saved override
+// if it has one, otherwise the bundled default (the 3 pre-existing videos).
+const toVideoId = (videoGroup: SiteImageGroup | undefined, videoRows: SiteImageRow[] | undefined): string | null => {
+  if (!videoGroup) return null;
+  if (videoRows && videoRows.length) {
+    const row = videoRows.find((r) => isYouTubeToken(r.url)) ?? videoRows[0];
+    return videoIdFromToken(row.url);
+  }
+  return videoGroup.defaults[0]?.videoId ?? null;
+};
+
 const GroupEditor = ({
   group,
   rows,
+  videoGroup,
+  videoRows,
   onSaved,
 }: {
   group: SiteImageGroup;
   rows: SiteImageRow[];
+  videoGroup?: SiteImageGroup;
+  videoRows?: SiteImageRow[];
   onSaved: () => void;
 }) => {
   const [items, setItems] = useState<EditItem[]>(() => toEditItems(group, rows));
@@ -113,6 +138,27 @@ const GroupEditor = ({
   const [busy, setBusy] = useState(false);
   const addInputRef = useRef<HTMLInputElement>(null);
   const isGallery = group.kind === "gallery";
+
+  // Program video (one per program) — stored in a separate `*.video` group.
+  const [video, setVideo] = useState<string | null>(() => toVideoId(videoGroup, videoRows));
+  const [videoEditing, setVideoEditing] = useState(false);
+  const [videoInput, setVideoInput] = useState("");
+  const [videoError, setVideoError] = useState<string | null>(null);
+
+  const startEditVideo = () => {
+    setVideoInput(video ? `https://youtu.be/${video}` : "");
+    setVideoError(null);
+    setVideoEditing(true);
+  };
+  const applyVideo = () => {
+    const id = parseYouTubeId(videoInput);
+    if (!id) { setVideoError("Couldn't find a YouTube video in that link — paste a link like youtube.com/watch?v=… or youtu.be/…"); return; }
+    setVideo(id);
+    setVideoEditing(false);
+    setVideoError(null);
+    setDirty(true);
+  };
+  const removeVideo = () => { setVideo(null); setDirty(true); };
 
   const mutate = (next: EditItem[]) => {
     setItems(next);
@@ -177,8 +223,20 @@ const GroupEditor = ({
         const ins = await supabase.from("site_images").insert(payload as any);
         if (ins.error) throw ins.error;
       }
+      // Program video — its own group, saved alongside the photos.
+      if (videoGroup) {
+        const vdel = await supabase.from("site_images").delete().eq("group_key", videoGroup.key);
+        if (vdel.error) throw vdel.error;
+        if (video) {
+          const vins = await supabase.from("site_images").insert([{
+            group_key: videoGroup.key, sort_order: 10, url: youtubeToken(video),
+            alt: "Program video", caption: null, object_position: null,
+          }] as any);
+          if (vins.error) throw vins.error;
+        }
+      }
       setDirty(false);
-      toast.success("Photos saved — live on the site");
+      toast.success("Saved — live on the site");
       onSaved();
     } catch (e: any) {
       toast.error(e?.message || "Couldn't save");
@@ -192,6 +250,11 @@ const GroupEditor = ({
     try {
       const del = await supabase.from("site_images").delete().eq("group_key", group.key);
       if (del.error) throw del.error;
+      if (videoGroup) {
+        const vdel = await supabase.from("site_images").delete().eq("group_key", videoGroup.key);
+        if (vdel.error) throw vdel.error;
+        setVideo(videoGroup.defaults[0]?.videoId ?? null);
+      }
       setItems(
         group.defaults.map((d, i) => ({
           uid: `def-${i}`,
@@ -200,8 +263,9 @@ const GroupEditor = ({
           caption: d.caption ?? "",
         }))
       );
+      setVideoEditing(false);
       setDirty(false);
-      toast.success("Reverted to the original photos");
+      toast.success("Reverted to the originals");
       onSaved();
     } catch (e: any) {
       toast.error(e?.message || "Couldn't reset");
@@ -242,6 +306,61 @@ const GroupEditor = ({
           </Button>
         </div>
       </div>
+
+      {/* Program video — one YouTube video, shown at the top of this program's popup. */}
+      {videoGroup && (
+        <div className="mb-4 rounded-lg border border-white/10 bg-black/20 p-3">
+          <div className="flex items-center gap-2 mb-2">
+            <Youtube className="w-4 h-4 text-[#bf0f3e]" />
+            <span className="text-xs font-semibold text-white">Program video</span>
+            <span className="text-[10px] text-zinc-500">One YouTube video, plays at the top of this program's popup</span>
+          </div>
+          {videoEditing ? (
+            <div className="space-y-2">
+              <div className="flex flex-wrap gap-2">
+                <Input
+                  autoFocus
+                  value={videoInput}
+                  onChange={(e) => { setVideoInput(e.target.value); setVideoError(null); }}
+                  onKeyDown={(e) => { if (e.key === "Enter") applyVideo(); }}
+                  placeholder="Paste a YouTube link (youtube.com/watch?v=… or youtu.be/…)"
+                  className="h-8 text-xs bg-white/[0.04] border-white/10 text-white placeholder:text-zinc-600 flex-1 min-w-[240px]"
+                />
+                <Button size="sm" onClick={applyVideo} className="h-8 bg-[#bf0f3e] hover:bg-[#bf0f3e]/80 text-white text-xs">Save link</Button>
+                <Button size="sm" variant="ghost" onClick={() => { setVideoEditing(false); setVideoError(null); }} className="h-8 text-zinc-400 hover:text-white hover:bg-white/5 text-xs">Cancel</Button>
+              </div>
+              {videoError && <p className="text-[11px] text-red-400">{videoError}</p>}
+            </div>
+          ) : video ? (
+            <div className="flex items-center gap-3">
+              <div className="relative w-40 aspect-video rounded overflow-hidden bg-black/40 shrink-0">
+                <img src={youtubeThumb(video)} alt="" className="w-full h-full object-cover" />
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <div className="w-8 h-8 rounded-full bg-black/60 flex items-center justify-center">
+                    <Play className="w-4 h-4 text-white fill-white" />
+                  </div>
+                </div>
+              </div>
+              <div className="flex-1 min-w-0 space-y-2">
+                <p className="text-[11px] text-zinc-500 font-mono truncate">youtu.be/{video}</p>
+                <div className="flex gap-2">
+                  <Button size="sm" variant="outline" onClick={startEditVideo} disabled={busy} className="h-7 text-xs bg-transparent border-white/15 text-white hover:bg-white/10">Change</Button>
+                  <Button size="sm" variant="ghost" onClick={removeVideo} disabled={busy} className="h-7 text-xs text-zinc-400 hover:text-red-400 hover:bg-white/5">Remove</Button>
+                </div>
+              </div>
+            </div>
+          ) : (
+            <button
+              type="button"
+              onClick={startEditVideo}
+              disabled={busy}
+              className="w-full rounded-lg border-2 border-dashed border-white/10 hover:border-white/25 hover:bg-white/[0.02] py-4 flex items-center justify-center gap-2 text-zinc-500 hover:text-zinc-300 text-xs transition-colors"
+            >
+              <Plus className="w-4 h-4" /> Add YouTube video
+            </button>
+          )}
+        </div>
+      )}
 
       <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={onDragEnd}>
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
@@ -379,6 +498,7 @@ const AdminWebsitePhotos = () => {
   const sections = useMemo(() => {
     const map = new Map<string, SiteImageGroup[]>();
     for (const g of SITE_IMAGE_GROUPS) {
+      if (g.hidden) continue; // paired video groups render inside their gallery card
       const list = map.get(g.section) ?? [];
       list.push(g);
       map.set(g.section, list);
@@ -425,14 +545,19 @@ const AdminWebsitePhotos = () => {
               <div key={section}>
                 <h2 className="text-xs font-semibold uppercase tracking-[0.15em] text-zinc-500 mb-3">{section}</h2>
                 <div className="space-y-4">
-                  {groups.map((g) => (
-                    <GroupEditor
-                      key={g.key}
-                      group={g}
-                      rows={byGroup.get(g.key) ?? []}
-                      onSaved={refetch}
-                    />
-                  ))}
+                  {groups.map((g) => {
+                    const vKey = supportsVideo(g.key) ? videoGroupKey(g.key) : null;
+                    return (
+                      <GroupEditor
+                        key={g.key}
+                        group={g}
+                        rows={byGroup.get(g.key) ?? []}
+                        videoGroup={vKey ? SITE_IMAGE_GROUP_BY_KEY[vKey] : undefined}
+                        videoRows={vKey ? byGroup.get(vKey) ?? [] : undefined}
+                        onSaved={refetch}
+                      />
+                    );
+                  })}
                 </div>
               </div>
             ))}
