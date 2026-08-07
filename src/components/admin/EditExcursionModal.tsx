@@ -1,10 +1,16 @@
-import { useState, useRef, useEffect, useCallback, type KeyboardEvent as ReactKeyboardEvent } from "react";
+import { useState, useRef, useEffect, useCallback, type KeyboardEvent as ReactKeyboardEvent, type ReactNode } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { format, parseISO } from "date-fns";
-import { UserPlus, StickyNote, Truck, Trash2, X, Plus, Search, CheckCircle2, Lock, Unlock, Bus } from "lucide-react";
+import { UserPlus, StickyNote, Truck, Trash2, X, Plus, Search, CheckCircle2, Lock, Unlock, Bus, Move } from "lucide-react";
+import {
+  DndContext, useDraggable, useDroppable, PointerSensor, useSensor, useSensors,
+  DragOverlay, pointerWithin, type DragEndEvent, type DragStartEvent,
+} from "@dnd-kit/core";
+import { CSS } from "@dnd-kit/utilities";
+import { cn } from "@/lib/utils";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Input } from "@/components/ui/input";
@@ -45,6 +51,102 @@ const EDIT_VEHICLE_PRESETS: Array<{ name: string; seat_cap: number; icon: typeof
   { name: "Mini-Van", seat_cap: 6, icon: Truck },
   { name: "Mini-Bus", seat_cap: 21, icon: Bus },
 ];
+
+type MoveVehicle = { id: string; name: string; seat_cap: number; assigned_count: number };
+type ChipKind = "youth" | "coach";
+
+// A droppable target (a vehicle card, "Drove Separately", or the unassigned
+// zone). Highlights while a chip hovers over it.
+const DropZone = ({ id, className, activeClass, children }: {
+  id: string;
+  className?: string;
+  activeClass?: string;
+  children: ReactNode;
+}) => {
+  const { setNodeRef, isOver } = useDroppable({ id });
+  return <div ref={setNodeRef} className={cn(className, isOver && activeClass)}>{children}</div>;
+};
+
+// A person chip that can be DRAGGED into another vehicle, and also CLICKED to
+// open a menu (move / take off / remove) — the menu is the touch-friendly
+// fallback and holds the delete action so a coach can't vanish by accident.
+const PersonChip = ({
+  dragId, kind, label, badge, currentVehicleId, vehicles, onMove, offVehicle, remove,
+}: {
+  dragId: string;
+  kind: ChipKind;
+  label: string;
+  badge?: string;
+  currentVehicleId: string | null;
+  vehicles: MoveVehicle[];
+  onMove: (vehicleId: string) => void;
+  offVehicle?: { label: string; onClick: () => void };
+  remove?: { label: string; onClick: () => void };
+}) => {
+  const [open, setOpen] = useState(false);
+  const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
+    id: dragId,
+    data: { kind, currentVehicleId, label, badge },
+  });
+  const isYouth = kind === "youth";
+  const style = { transform: CSS.Translate.toString(transform), opacity: isDragging ? 0.35 : 1 };
+  const act = (fn: () => void) => () => { setOpen(false); fn(); };
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <button
+          ref={setNodeRef}
+          style={style}
+          {...listeners}
+          {...attributes}
+          title="Drag onto a vehicle — or click for options"
+          className={cn(
+            "flex items-center gap-1 rounded-full pl-2.5 pr-2 py-0.5 transition touch-none cursor-grab active:cursor-grabbing",
+            isYouth
+              ? "bg-purple-500/10 hover:bg-purple-500/20 border border-purple-400/30"
+              : "bg-sky-500/10 hover:bg-sky-500/20 border border-sky-400/25",
+          )}
+        >
+          <span className={cn("text-xs font-semibold", isYouth ? "text-purple-100" : "text-sky-100")}>{label}</span>
+          {badge && <span className="text-[8px] uppercase tracking-wider text-sky-300/90 font-bold">{badge}</span>}
+          <Move className={cn("w-3 h-3", isYouth ? "text-purple-300/70" : "text-sky-300/70")} />
+        </button>
+      </PopoverTrigger>
+      <PopoverContent align="start" className="w-56 bg-neutral-900 border-white/10 text-white p-2">
+        <p className="text-[10px] text-white/50 px-2 py-1 font-semibold uppercase tracking-wider">Move to vehicle</p>
+        <div className="space-y-0.5">
+          {vehicles.length === 0 && <p className="text-[11px] text-white/40 px-2 py-1">No vehicles added yet.</p>}
+          {vehicles.map((v) => {
+            const isCurrent = v.id === currentVehicleId;
+            const full = !isCurrent && v.assigned_count >= v.seat_cap;
+            return (
+              <button
+                key={v.id}
+                disabled={isCurrent || full}
+                onClick={act(() => onMove(v.id))}
+                className="w-full text-left flex items-center justify-between rounded-md px-2 py-1.5 hover:bg-white/10 transition disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                <span className="font-semibold text-xs">{v.name}{isCurrent ? " · here now" : ""}</span>
+                <span className="text-[10px] text-white/50 tabular-nums">{v.assigned_count}/{v.seat_cap}{full ? " full" : ""}</span>
+              </button>
+            );
+          })}
+        </div>
+        {(offVehicle || remove) && <div className="my-1 border-t border-white/10" />}
+        {offVehicle && (
+          <button onClick={act(offVehicle.onClick)} className="w-full text-left rounded-md px-2 py-1.5 hover:bg-white/10 transition text-xs font-semibold text-white/80">
+            {offVehicle.label}
+          </button>
+        )}
+        {remove && (
+          <button onClick={act(remove.onClick)} className="w-full text-left rounded-md px-2 py-1.5 hover:bg-red-500/15 transition text-xs font-semibold text-red-300">
+            {remove.label}
+          </button>
+        )}
+      </PopoverContent>
+    </Popover>
+  );
+};
 
 interface Props {
   /** The excursion being edited; null closes the modal. Controlled by the host. */
@@ -326,6 +428,53 @@ const EditExcursionModal = ({ excursion, onChange, onClose, onSaved, onRequestDe
     invalidateEditExcursionQueries();
   };
 
+  // Move a coach/volunteer to a vehicle, or to "Drove Separately" (null). Admin
+  // RPC bypasses the roster lock so past/locked trips can still be corrected.
+  const handleEditMovePersonnel = async (personnelId: string, vehicleId: string | null) => {
+    const { error } = await (supabase.rpc as any)("admin_set_excursion_personnel_vehicle", {
+      _personnel_id: personnelId,
+      _vehicle_id: vehicleId,
+    });
+    if (error) { toast.error(error.message || "Couldn't move coach/volunteer."); return; }
+    invalidateEditExcursionQueries();
+  };
+
+  // ── Drag-and-drop: move a person onto a vehicle / off a vehicle ──
+  // Distance constraint so a plain click still opens the chip's options menu.
+  const dndSensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 8 } }));
+  const [activeChip, setActiveChip] = useState<{ label: string; kind: ChipKind; badge?: string } | null>(null);
+
+  const onRosterDragStart = (e: DragStartEvent) => {
+    const d = e.active.data.current as { kind: ChipKind; label: string; badge?: string } | undefined;
+    setActiveChip(d ? { label: d.label, kind: d.kind, badge: d.badge } : null);
+  };
+
+  const onRosterDragEnd = (e: DragEndEvent) => {
+    setActiveChip(null);
+    const { active, over } = e;
+    if (!over) return;
+    const kind = active.data.current?.kind as ChipKind | undefined;
+    const currentVehicleId = (active.data.current?.currentVehicleId ?? null) as string | null;
+    const personId = String(active.id).replace(/^(youth|coach):/, "");
+    const target = String(over.id);
+    const targetVehicleId = target.startsWith("veh:") ? target.slice(4) : null;
+    const droppedOff = target === "sep" || target === "unassigned"; // "not on a vehicle" zones
+
+    if (kind === "youth") {
+      if (targetVehicleId) {
+        if (targetVehicleId !== currentVehicleId) handleEditAssignYouth(personId, targetVehicleId);
+      } else if (droppedOff && currentVehicleId) {
+        handleEditUnassignYouth(personId);
+      }
+    } else if (kind === "coach") {
+      if (targetVehicleId) {
+        if (targetVehicleId !== currentVehicleId) handleEditMovePersonnel(personId, targetVehicleId);
+      } else if (droppedOff && currentVehicleId) {
+        handleEditMovePersonnel(personId, null);
+      }
+    }
+  };
+
   const handleEditAddYouth = async (registrationId: string) => {
     if (!editingExcursionId || !editingExcursion?.date) return;
     const { error } = await supabase.rpc("admin_record_excursion_attendance", {
@@ -484,156 +633,160 @@ const EditExcursionModal = ({ excursion, onChange, onClose, onSaved, onRequestDe
               <div className="pt-3 mt-2 border-t border-white/10">
                 <p className="text-xs font-bold uppercase tracking-wider text-white/50 mb-3">Ride to Excursion</p>
 
-                {editingVehicles.length > 0 && (
-                  <div className="space-y-2 mb-3">
-                    {editingVehicles.map((v) => {
-                      const inThisVehicle = editingRosterYouth.filter((y) => y.vehicle_id === v.id);
-                      const coachesInVehicle = editingPersonnel.filter((p) => p.vehicle_id === v.id);
-                      return (
-                        <div key={v.id} className="rounded-lg bg-white/[0.03] border border-white/10 p-3">
-                          <div className="flex items-start justify-between gap-2 mb-1.5">
-                            <div className="min-w-0">
-                              <p className="text-sm font-bold text-purple-200 flex items-center gap-1.5">
-                                <Truck className="w-3.5 h-3.5" /> {v.name}
-                              </p>
-                              <p className="text-xs text-white/50 mt-0.5">
-                                Driver: <span className="text-white/80 font-semibold">{v.driver_name}</span>
-                              </p>
-                            </div>
-                            <div className="flex items-center gap-2 shrink-0">
-                              <span className="text-xs text-white/50 tabular-nums">
-                                {v.assigned_count}/{v.seat_cap}
-                              </span>
-                              <button
-                                onClick={() => handleEditRemoveVehicle(v.id)}
-                                className="text-white/40 hover:text-red-400 transition"
-                                title="Remove vehicle"
-                              >
-                                <Trash2 className="w-3.5 h-3.5" />
-                              </button>
-                            </div>
-                          </div>
-                          {inThisVehicle.length + coachesInVehicle.length > 0 ? (
-                            <div className="flex flex-wrap gap-1.5">
-                              {inThisVehicle.map((y) => (
-                                <div
-                                  key={y.registration_id}
-                                  className="flex items-center gap-1.5 rounded-full bg-purple-500/10 border border-purple-400/30 pl-2 pr-1 py-0.5"
-                                >
-                                  <span className="text-xs font-semibold text-purple-100">
-                                    {y.child_first_name} {y.child_last_name}
-                                  </span>
-                                  <button
-                                    onClick={() => handleEditUnassignYouth(y.registration_id)}
-                                    className="w-4 h-4 rounded-full hover:bg-white/10 flex items-center justify-center text-white/50 hover:text-white"
-                                    aria-label="Unassign"
-                                  >
-                                    <X className="w-3 h-3" />
-                                  </button>
-                                </div>
-                              ))}
-                              {coachesInVehicle.map((p) => (
-                                <div
-                                  key={p.id}
-                                  className="flex items-center gap-1 rounded-full bg-sky-500/10 border border-sky-400/25 pl-2 pr-1 py-0.5"
-                                >
-                                  <span className="text-xs font-semibold text-sky-100">{p.name}</span>
-                                  <span className="text-[8px] uppercase tracking-wider text-sky-300/90 font-bold">Coach/Volunteer</span>
-                                  <button
-                                    onClick={() => handleEditRemovePersonnel(p.id)}
-                                    className="w-4 h-4 rounded-full hover:bg-white/10 flex items-center justify-center text-white/50 hover:text-white"
-                                    title="Remove from trip"
-                                  >
-                                    <X className="w-3 h-3" />
-                                  </button>
-                                </div>
-                              ))}
-                            </div>
-                          ) : (
-                            <p className="text-xs text-white/30 italic">No one assigned to this vehicle.</p>
-                          )}
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
+                <DndContext
+                  sensors={dndSensors}
+                  collisionDetection={pointerWithin}
+                  onDragStart={onRosterDragStart}
+                  onDragEnd={onRosterDragEnd}
+                  onDragCancel={() => setActiveChip(null)}
+                >
+                  {editingVehicles.length > 0 && (
+                    <p className="text-[10px] text-white/40 mb-2">Drag a name onto a vehicle to move them — or click a name for options.</p>
+                  )}
 
-                {editingPersonnel.some((p) => !p.vehicle_id) && (
-                  <div className="rounded-lg bg-white/[0.03] border border-white/10 p-3 mb-3">
-                    <p className="text-[10px] font-bold uppercase tracking-wider text-white/60 mb-2">Drove Separately</p>
-                    <div className="flex flex-wrap gap-1.5">
-                      {editingPersonnel.filter((p) => !p.vehicle_id).map((p) => (
-                        <div key={p.id} className="flex items-center gap-1 rounded-full bg-sky-500/10 border border-sky-400/25 pl-2 pr-1 py-0.5">
-                          <span className="text-xs font-semibold text-sky-100">{p.name}</span>
-                          <span className="text-[8px] uppercase tracking-wider text-sky-300/90 font-bold">Coach/Volunteer</span>
-                          <button onClick={() => handleEditRemovePersonnel(p.id)} className="w-4 h-4 rounded-full hover:bg-white/10 flex items-center justify-center text-white/50 hover:text-white" title="Remove from trip"><X className="w-3 h-3" /></button>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {(() => {
-                  const unassigned = editingRosterYouth.filter((y) => !y.vehicle_id);
-                  if (unassigned.length === 0) return null;
-                  return (
-                    <div className="rounded-lg bg-yellow-500/[0.05] border border-yellow-400/20 p-3 mb-3">
-                      <p className="text-xs font-bold text-yellow-200/80 mb-2">
-                        Youth not assigned to any vehicle ({unassigned.length})
-                      </p>
-                      {editingVehicles.length === 0 && (
-                        <p className="text-[11px] text-yellow-200/70 mb-2 leading-snug">
-                          Add a vehicle above first (e.g. Van A) — then tap a youth here to assign them to it.
-                        </p>
-                      )}
-                      <div className="flex flex-wrap gap-1.5">
-                        {unassigned.map((y) => (
-                          <Popover key={y.registration_id}>
-                            <PopoverTrigger asChild disabled={editingVehicles.length === 0}>
-                              <button
-                                disabled={editingVehicles.length === 0}
-                                className="group flex items-center gap-1.5 rounded-full bg-white/[0.06] hover:bg-white/[0.12] border border-white/10 px-2 py-0.5 transition disabled:opacity-50 disabled:cursor-not-allowed"
-                              >
-                                <span className="text-xs font-semibold text-white/80">
-                                  {y.child_first_name} {y.child_last_name}
-                                </span>
-                                <Plus className="w-3 h-3 text-purple-300" />
-                              </button>
-                            </PopoverTrigger>
-                            <PopoverContent className="w-56 bg-neutral-900 border-white/10 text-white p-2">
-                              <p className="text-[10px] text-white/50 px-2 py-1 font-semibold uppercase tracking-wider">
-                                Assign to vehicle
-                              </p>
-                              <div className="space-y-0.5">
-                                {editingVehicles.map((v) => {
-                                  const full = v.assigned_count >= v.seat_cap;
-                                  return (
-                                    <button
-                                      key={v.id}
-                                      disabled={full}
-                                      onClick={() => handleEditAssignYouth(y.registration_id, v.id)}
-                                      className="w-full text-left flex items-center justify-between rounded-md px-2 py-1.5 hover:bg-white/10 transition disabled:opacity-40 disabled:cursor-not-allowed"
-                                    >
-                                      <span className="font-semibold text-xs">{v.name}</span>
-                                      <span className="text-[10px] text-white/50 tabular-nums">
-                                        {v.assigned_count}/{v.seat_cap}{full ? " full" : ""}
-                                      </span>
-                                    </button>
-                                  );
-                                })}
+                  {editingVehicles.length > 0 && (
+                    <div className="space-y-2 mb-3">
+                      {editingVehicles.map((v) => {
+                        const inThisVehicle = editingRosterYouth.filter((y) => y.vehicle_id === v.id);
+                        const coachesInVehicle = editingPersonnel.filter((p) => p.vehicle_id === v.id);
+                        return (
+                          <DropZone
+                            key={v.id}
+                            id={`veh:${v.id}`}
+                            className="rounded-lg bg-white/[0.03] border border-white/10 p-3"
+                            activeClass="ring-2 ring-purple-400/60 border-purple-400/40 bg-purple-500/[0.06]"
+                          >
+                            <div className="flex items-start justify-between gap-2 mb-1.5">
+                              <div className="min-w-0">
+                                <p className="text-sm font-bold text-purple-200 flex items-center gap-1.5">
+                                  <Truck className="w-3.5 h-3.5" /> {v.name}
+                                </p>
+                                <p className="text-xs text-white/50 mt-0.5">
+                                  Driver: <span className="text-white/80 font-semibold">{v.driver_name}</span>
+                                </p>
                               </div>
-                            </PopoverContent>
-                          </Popover>
+                              <div className="flex items-center gap-2 shrink-0">
+                                <span className="text-xs text-white/50 tabular-nums">
+                                  {v.assigned_count}/{v.seat_cap}
+                                </span>
+                                <button
+                                  onClick={() => handleEditRemoveVehicle(v.id)}
+                                  className="text-white/40 hover:text-red-400 transition"
+                                  title="Remove vehicle"
+                                >
+                                  <Trash2 className="w-3.5 h-3.5" />
+                                </button>
+                              </div>
+                            </div>
+                            {inThisVehicle.length + coachesInVehicle.length > 0 ? (
+                              <div className="flex flex-wrap gap-1.5">
+                                {inThisVehicle.map((y) => (
+                                  <PersonChip
+                                    key={y.registration_id}
+                                    dragId={`youth:${y.registration_id}`}
+                                    kind="youth"
+                                    label={`${y.child_first_name} ${y.child_last_name}`}
+                                    currentVehicleId={v.id}
+                                    vehicles={editingVehicles}
+                                    onMove={(vid) => handleEditAssignYouth(y.registration_id, vid)}
+                                    offVehicle={{ label: "Take off this vehicle", onClick: () => handleEditUnassignYouth(y.registration_id) }}
+                                  />
+                                ))}
+                                {coachesInVehicle.map((p) => (
+                                  <PersonChip
+                                    key={p.id}
+                                    dragId={`coach:${p.id}`}
+                                    kind="coach"
+                                    label={p.name}
+                                    badge="Coach/Volunteer"
+                                    currentVehicleId={v.id}
+                                    vehicles={editingVehicles}
+                                    onMove={(vid) => handleEditMovePersonnel(p.id, vid)}
+                                    offVehicle={{ label: "Move to Drove Separately", onClick: () => handleEditMovePersonnel(p.id, null) }}
+                                    remove={{ label: "Remove from trip", onClick: () => handleEditRemovePersonnel(p.id) }}
+                                  />
+                                ))}
+                              </div>
+                            ) : (
+                              <p className="text-xs text-white/30 italic">Empty — drag a name here.</p>
+                            )}
+                          </DropZone>
+                        );
+                      })}
+                    </div>
+                  )}
+
+                  {editingPersonnel.some((p) => !p.vehicle_id) && (
+                    <DropZone
+                      id="sep"
+                      className="rounded-lg bg-white/[0.03] border border-white/10 p-3 mb-3"
+                      activeClass="ring-2 ring-sky-400/60 border-sky-400/40 bg-sky-500/[0.06]"
+                    >
+                      <p className="text-[10px] font-bold uppercase tracking-wider text-white/60 mb-2">Drove Separately</p>
+                      <div className="flex flex-wrap gap-1.5">
+                        {editingPersonnel.filter((p) => !p.vehicle_id).map((p) => (
+                          <PersonChip
+                            key={p.id}
+                            dragId={`coach:${p.id}`}
+                            kind="coach"
+                            label={p.name}
+                            badge="Coach/Volunteer"
+                            currentVehicleId={null}
+                            vehicles={editingVehicles}
+                            onMove={(vid) => handleEditMovePersonnel(p.id, vid)}
+                            remove={{ label: "Remove from trip", onClick: () => handleEditRemovePersonnel(p.id) }}
+                          />
                         ))}
                       </div>
-                      {editingVehicles.length === 0 && (
-                        <p className="text-[10px] text-yellow-200/60 mt-2">
-                          Add a vehicle below to start assigning seats.
+                    </DropZone>
+                  )}
+
+                  {(() => {
+                    const unassigned = editingRosterYouth.filter((y) => !y.vehicle_id);
+                    if (unassigned.length === 0) return null;
+                    return (
+                      <DropZone
+                        id="unassigned"
+                        className="rounded-lg bg-yellow-500/[0.05] border border-yellow-400/20 p-3 mb-3"
+                        activeClass="ring-2 ring-yellow-400/50 border-yellow-400/40"
+                      >
+                        <p className="text-xs font-bold text-yellow-200/80 mb-2">
+                          Youth not assigned to any vehicle ({unassigned.length})
                         </p>
-                      )}
-                    </div>
-                  );
-                })()}
+                        {editingVehicles.length === 0 && (
+                          <p className="text-[11px] text-yellow-200/70 mb-2 leading-snug">
+                            Add a vehicle above first (e.g. Van A) — then drag or click a youth here to assign them.
+                          </p>
+                        )}
+                        <div className="flex flex-wrap gap-1.5">
+                          {unassigned.map((y) => (
+                            <PersonChip
+                              key={y.registration_id}
+                              dragId={`youth:${y.registration_id}`}
+                              kind="youth"
+                              label={`${y.child_first_name} ${y.child_last_name}`}
+                              currentVehicleId={null}
+                              vehicles={editingVehicles}
+                              onMove={(vid) => handleEditAssignYouth(y.registration_id, vid)}
+                            />
+                          ))}
+                        </div>
+                      </DropZone>
+                    );
+                  })()}
+
+                  <DragOverlay>
+                    {activeChip ? (
+                      <div className={cn(
+                        "flex items-center gap-1 rounded-full pl-2.5 pr-2 py-0.5 shadow-xl cursor-grabbing",
+                        activeChip.kind === "youth" ? "bg-purple-500/30 border border-purple-400/50" : "bg-sky-500/30 border border-sky-400/50",
+                      )}>
+                        <span className={cn("text-xs font-semibold", activeChip.kind === "youth" ? "text-purple-50" : "text-sky-50")}>{activeChip.label}</span>
+                        {activeChip.badge && <span className="text-[8px] uppercase tracking-wider text-sky-200 font-bold">{activeChip.badge}</span>}
+                      </div>
+                    ) : null}
+                  </DragOverlay>
+                </DndContext>
 
                 {!editAddingVehicle && (
                   <div className="rounded-lg bg-white/[0.02] border border-white/10 p-3 mb-3">
