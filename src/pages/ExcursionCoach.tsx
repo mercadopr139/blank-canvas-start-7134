@@ -43,6 +43,12 @@ import {
   Users,
   X,
 } from "lucide-react";
+import {
+  DndContext, useDraggable, useDroppable, PointerSensor, useSensor, useSensors,
+  DragOverlay, pointerWithin, type DragEndEvent, type DragStartEvent,
+} from "@dnd-kit/core";
+import { CSS } from "@dnd-kit/utilities";
+import { cn } from "@/lib/utils";
 import nlaLogo from "@/assets/nla-logo-white.png";
 import ExcursionRideComparison from "@/components/admin/ExcursionRideComparison";
 
@@ -91,7 +97,8 @@ interface Vehicle {
   id: string;
   name: string;
   seat_cap: number;
-  driver_name: string;
+  driver_name: string | null;
+  driver_personnel_id: string | null;
   assigned_count: number;
 }
 
@@ -100,6 +107,7 @@ interface Personnel {
   name: string;
   vehicle_id: string | null;
   return_vehicle_id: string | null;
+  driving_vehicle_id: string | null;
   created_at: string;
 }
 
@@ -114,11 +122,12 @@ interface SearchResultYouth {
 const COACH_PIN = "1086";
 const PIN_SESSION_KEY = "nla_coach_pin_ok";
 
+// Seat caps INCLUDE the driver (the driver is a person who takes a seat).
 const VEHICLE_PRESETS: { name: string; seat_cap: number; icon: typeof Truck }[] = [
-  { name: "Van A", seat_cap: 14, icon: Truck },
-  { name: "Van B", seat_cap: 14, icon: Truck },
-  { name: "Mini-Van", seat_cap: 6, icon: Truck },
-  { name: "Mini-Bus", seat_cap: 21, icon: Bus },
+  { name: "Van A", seat_cap: 15, icon: Truck },
+  { name: "Van B", seat_cap: 15, icon: Truck },
+  { name: "Mini-Van", seat_cap: 7, icon: Truck },
+  { name: "Mini-Bus", seat_cap: 22, icon: Bus },
 ];
 
 const formatTime = (iso: string) =>
@@ -196,6 +205,87 @@ const PersonnelChip = ({
         </button>
       )}
     </div>
+  );
+};
+
+// ── Load-step drag & drop pieces ──
+type ChipKind = "youth" | "coach";
+
+// A droppable target (a vehicle, its driver slot, or the unassigned pool).
+const DropBox = ({ id, className, activeClass, children }: {
+  id: string; className?: string; activeClass?: string; children: React.ReactNode;
+}) => {
+  const { setNodeRef, isOver } = useDroppable({ id });
+  return <div ref={setNodeRef} className={cn(className, isOver && activeClass)}>{children}</div>;
+};
+
+// A draggable participant chip that also opens a click-menu (touch fallback).
+const PartChip = ({
+  dragId, kind, label, headshotUrl, isDriver, vehicles, currentVehicleId, onRide, offVehicle,
+}: {
+  dragId: string;
+  kind: ChipKind;
+  label: string;
+  headshotUrl?: string | null;
+  isDriver?: boolean;
+  vehicles: Vehicle[];
+  currentVehicleId: string | null;
+  onRide: (vehicleId: string) => void;
+  offVehicle?: { label: string; onClick: () => void };
+}) => {
+  const [open, setOpen] = useState(false);
+  const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
+    id: dragId, data: { kind, currentVehicleId, label },
+  });
+  const style = { transform: CSS.Translate.toString(transform), opacity: isDragging ? 0.35 : 1 };
+  const isYouth = kind === "youth";
+  const act = (fn: () => void) => () => { setOpen(false); fn(); };
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <button
+          ref={setNodeRef} style={style} {...listeners} {...attributes}
+          title="Drag onto a vehicle — or click for options"
+          className={cn(
+            "inline-flex items-center gap-1.5 rounded-full pl-1.5 pr-2.5 py-1 transition touch-none cursor-grab active:cursor-grabbing text-sm",
+            isYouth ? "bg-purple-500/10 hover:bg-purple-500/20 border border-purple-400/30"
+                    : "bg-sky-500/10 hover:bg-sky-500/20 border border-sky-400/25",
+          )}
+        >
+          {isYouth && (
+            <span className="w-6 h-6 rounded-full bg-white/10 overflow-hidden flex items-center justify-center text-[10px] font-bold text-white/60 shrink-0">
+              {headshotUrl ? <img src={headshotUrl} alt="" className="w-full h-full object-cover" /> : label[0]}
+            </span>
+          )}
+          <span className={cn("font-semibold", isYouth ? "text-purple-100" : "text-sky-100")}>{label}</span>
+          {isDriver && <span className="text-[8px] uppercase tracking-wider text-amber-300 font-bold">Driver</span>}
+          {!isYouth && !isDriver && <span className="text-[8px] uppercase tracking-wider text-sky-300/90 font-bold">Coach/Vol</span>}
+        </button>
+      </PopoverTrigger>
+      <PopoverContent align="start" className="w-56 bg-neutral-900 border-white/10 text-white p-2 z-[70]">
+        <p className="text-[10px] text-white/50 px-2 py-1 font-semibold uppercase tracking-wider">{isYouth ? "Put in vehicle" : "Rides in"}</p>
+        <div className="space-y-0.5">
+          {vehicles.length === 0 && <p className="text-[11px] text-white/40 px-2 py-1">No vehicles yet.</p>}
+          {vehicles.map((v) => {
+            const isCurrent = v.id === currentVehicleId;
+            const full = !isCurrent && v.assigned_count >= v.seat_cap;
+            return (
+              <button key={v.id} disabled={isCurrent || full} onClick={act(() => onRide(v.id))}
+                className="w-full text-left flex items-center justify-between rounded-md px-2 py-1.5 hover:bg-white/10 text-sm disabled:opacity-40 disabled:cursor-not-allowed">
+                <span className="font-semibold">{v.name}{isCurrent ? " · here now" : ""}</span>
+                <span className="text-[10px] text-white/50 tabular-nums">{v.assigned_count}/{v.seat_cap}{full ? " full" : ""}</span>
+              </button>
+            );
+          })}
+        </div>
+        {offVehicle && (
+          <>
+            <div className="my-1 border-t border-white/10" />
+            <button onClick={act(offVehicle.onClick)} className="w-full text-left rounded-md px-2 py-1.5 hover:bg-white/10 text-sm font-semibold text-white/80">{offVehicle.label}</button>
+          </>
+        )}
+      </PopoverContent>
+    </Popover>
   );
 };
 
@@ -300,8 +390,8 @@ const ExcursionCoach = () => {
       supabase.rpc("get_excursion_confirmed_signups", { _excursion_id: excursionId }),
     ]);
     if (youthRes.data) setYouth(youthRes.data as RosterYouth[]);
-    if (vehiclesRes.data) setVehicles(vehiclesRes.data as Vehicle[]);
-    if (personnelRes.data) setPersonnel(personnelRes.data as Personnel[]);
+    if (vehiclesRes.data) setVehicles(vehiclesRes.data as unknown as Vehicle[]);
+    if (personnelRes.data) setPersonnel(personnelRes.data as unknown as Personnel[]);
     if (confirmedRes.data) setConfirmedSignups(confirmedRes.data as ConfirmedSignup[]);
   }, []);
 
@@ -435,6 +525,25 @@ const ExcursionCoach = () => {
     [youth]
   );
 
+  // ── Head counts (each person counted ONCE) ──
+  // A driver is a person marked as driving a van (counted under Drivers, NOT
+  // also under Coaches). Older trips whose driver is a legacy text name (no
+  // person marked) are counted via `legacyDriverVehicles`.
+  const legacyDriverVehicles = useMemo(
+    () => vehicles.filter((v) => !v.driver_personnel_id && v.driver_name && v.driver_name.trim()),
+    [vehicles]
+  );
+  const driversCount = useMemo(
+    () => personnel.filter((p) => p.driving_vehicle_id).length + legacyDriverVehicles.length,
+    [personnel, legacyDriverVehicles]
+  );
+  const coachesCount = useMemo(
+    () => personnel.filter((p) => !p.driving_vehicle_id).length,
+    [personnel]
+  );
+  const youthCountForTotal = useMemo(() => youth.length, [youth]);
+  const totalOnTrip = youthCountForTotal + driversCount + coachesCount;
+
   const handleSetTransportRequired = async (required: boolean) => {
     if (!excursion) return;
     const { error } = await supabase.rpc("set_excursion_transportation_required", {
@@ -463,18 +572,17 @@ const ExcursionCoach = () => {
     if (!excursion || !addingVehicle) return;
     const name = addingVehicle.isCustom ? customNameInput.trim() : addingVehicle.name;
     const seat_cap = addingVehicle.isCustom ? Number(customSeatInput) : addingVehicle.seat_cap;
-    const driver = driverNameInput.trim();
 
     if (!name) return toast.error("Vehicle name is required.");
     if (!seat_cap || seat_cap <= 0) return toast.error("Seat capacity must be at least 1.");
-    if (!driver) return toast.error("Driver name is required.");
 
     setSavingVehicle(true);
+    // Driver is assigned later, on the Load Participants step.
     const { error } = await supabase.rpc("add_excursion_vehicle", {
       _excursion_id: excursion.id,
       _name: name,
       _seat_cap: seat_cap,
-      _driver_name: driver,
+      _driver_name: null as unknown as string,
     });
     setSavingVehicle(false);
 
@@ -484,6 +592,77 @@ const ExcursionCoach = () => {
     }
     setAddingVehicle(null);
     await loadRoster(excursion.id);
+  };
+
+  // One-tap add for a preset vehicle (no driver needed here).
+  const handleAddPreset = async (preset: (typeof VEHICLE_PRESETS)[number]) => {
+    if (!excursion) return;
+    if (vehicles.some((v) => v.name === preset.name)) {
+      toast.error(`${preset.name} is already added.`);
+      return;
+    }
+    setSavingVehicle(true);
+    const { error } = await supabase.rpc("add_excursion_vehicle", {
+      _excursion_id: excursion.id,
+      _name: preset.name,
+      _seat_cap: preset.seat_cap,
+      _driver_name: null as unknown as string,
+    });
+    setSavingVehicle(false);
+    if (error) { toast.error(error.message || "Couldn't add vehicle."); return; }
+    await loadRoster(excursion.id);
+  };
+
+  // Set / clear a van's driver (a loaded person).
+  const handleSetVehicleDriver = async (vehicleId: string, personnelId: string) => {
+    if (!excursion) return;
+    const { error } = await (supabase.rpc as any)("set_excursion_vehicle_driver", {
+      _vehicle_id: vehicleId,
+      _personnel_id: personnelId,
+    });
+    if (error) { toast.error(error.message || "Couldn't set the driver."); return; }
+    await loadRoster(excursion.id);
+  };
+
+  const handleClearVehicleDriver = async (vehicleId: string) => {
+    if (!excursion) return;
+    const { error } = await (supabase.rpc as any)("clear_excursion_vehicle_driver", {
+      _vehicle_id: vehicleId,
+    });
+    if (error) { toast.error(error.message || "Couldn't clear the driver."); return; }
+    await loadRoster(excursion.id);
+  };
+
+  // ── Load-step drag & drop ──
+  const loadSensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 8 } }));
+  const [activeChip, setActiveChip] = useState<{ label: string; kind: ChipKind } | null>(null);
+
+  const onLoadDragStart = (e: DragStartEvent) => {
+    const d = e.active.data.current as { kind: ChipKind; label: string } | undefined;
+    setActiveChip(d ? { label: d.label, kind: d.kind } : null);
+  };
+  const onLoadDragEnd = (e: DragEndEvent) => {
+    setActiveChip(null);
+    const { active, over } = e;
+    if (!over) return;
+    const kind = active.data.current?.kind as ChipKind | undefined;
+    const currentVehicleId = (active.data.current?.currentVehicleId ?? null) as string | null;
+    const personId = String(active.id).replace(/^(youth|coach):/, "");
+    const target = String(over.id);
+    if (target.startsWith("driver:")) {
+      // Only a person can drive; dropping a youth on the driver slot just rides them in.
+      const vid = target.slice(7);
+      if (kind === "coach") handleSetVehicleDriver(vid, personId);
+      else handleAssign(personId, vid);
+    } else if (target.startsWith("veh:")) {
+      const vid = target.slice(4);
+      if (vid === currentVehicleId) return;
+      if (kind === "youth") handleAssign(personId, vid);
+      else handleSetPersonnelVehicle(personId, vid);
+    } else if (target === "pool") {
+      if (kind === "youth") { if (currentVehicleId) handleUnassign(personId); }
+      else handleSetPersonnelVehicle(personId, null);
+    }
   };
 
   const handleRemoveVehicle = (vehicle: Vehicle) => {
@@ -953,7 +1132,7 @@ const ExcursionCoach = () => {
   const wizardSteps: [string, string][] =
     transportRequired === false
       ? [["transport", "Transportation"], ["coaches", "Coaches & Volunteers"], ["missing", "Anyone Missing?"], ["review", "Review & Submit"]]
-      : [["transport", "Transportation"], ["vehicles", "Choose Vehicles"], ["load", "Load Youth"], ["coaches", "Coaches & Volunteers"], ["missing", "Anyone Missing?"], ["review", "Review & Submit"]];
+      : [["transport", "Transportation"], ["vehicles", "Choose Vehicles"], ["load", "Load Participants"], ["coaches", "Coaches & Volunteers"], ["missing", "Anyone Missing?"], ["review", "Review & Submit"]];
   const wizardKeys = wizardSteps.map((s) => s[0]);
   const safeStepKey = wizardKeys.includes(wizardStepKey) ? wizardStepKey : wizardKeys[0];
   const wizardIdx = wizardKeys.indexOf(safeStepKey);
@@ -1058,13 +1237,13 @@ const ExcursionCoach = () => {
                   </p>
                 </div>
                 <div className="text-center bg-white/[0.04] border border-white/10 rounded-xl p-4 md:p-5">
-                  <p className="text-3xl md:text-5xl font-black tabular-nums">{vehicles.length}</p>
+                  <p className="text-3xl md:text-5xl font-black tabular-nums">{driversCount}</p>
                   <p className="text-[11px] md:text-xs text-white/60 uppercase tracking-wider mt-1 font-semibold">
                     Total Drivers
                   </p>
                 </div>
                 <div className="text-center bg-white/[0.04] border border-white/10 rounded-xl p-4 md:p-5">
-                  <p className="text-3xl md:text-5xl font-black tabular-nums">{personnel.length}</p>
+                  <p className="text-3xl md:text-5xl font-black tabular-nums">{coachesCount}</p>
                   <p className="text-[11px] md:text-xs text-white/60 uppercase tracking-wider mt-1 font-semibold">
                     Coaches & Volunteers
                   </p>
@@ -1072,7 +1251,7 @@ const ExcursionCoach = () => {
               </div>
               <div className="text-center bg-emerald-500/15 border-2 border-emerald-400/50 rounded-xl p-5 md:p-6">
                 <p className="text-5xl md:text-7xl font-black text-emerald-300 tabular-nums leading-none">
-                  {checkedInCount + vehicles.length + personnel.length}
+                  {totalOnTrip}
                 </p>
                 <p className="text-xs md:text-sm font-bold text-emerald-200/90 uppercase tracking-wider mt-2">
                   Total on Trip
@@ -1098,12 +1277,12 @@ const ExcursionCoach = () => {
                 <div className="space-y-3">
                   {vehicles.map((v) => {
                     const kids = youth.filter((y) => y.vehicle_id === v.id);
-                    const coaches = personnel.filter((p) => p.vehicle_id === v.id);
+                    const coaches = personnel.filter((p) => p.vehicle_id === v.id && p.driving_vehicle_id !== v.id);
                     return (
                       <div key={v.id} className="rounded-xl bg-white/[0.04] border border-white/10 p-4">
                         <p className="font-bold flex items-center gap-2">
                           <Truck className="w-4 h-4 text-purple-300" />{v.name}
-                          <span className="text-white/40 font-medium text-sm">· {v.driver_name} driving · {v.assigned_count}/{v.seat_cap} seats</span>
+                          <span className="text-white/40 font-medium text-sm">· {v.driver_name ? `${v.driver_name} driving` : "no driver"} · {v.assigned_count}/{v.seat_cap} seats</span>
                         </p>
                         {kids.length + coaches.length === 0 ? (
                           <p className="text-sm text-white/30 italic mt-1">No one assigned.</p>
@@ -2296,16 +2475,16 @@ const ExcursionCoach = () => {
               </div>
               <div className="flex items-center justify-between rounded-lg bg-white/[0.04] border border-white/10 px-4 py-2.5">
                 <span className="text-sm text-white/70">Total Drivers</span>
-                <span className="text-lg font-black tabular-nums">{vehicles.length}</span>
+                <span className="text-lg font-black tabular-nums">{driversCount}</span>
               </div>
               <div className="flex items-center justify-between rounded-lg bg-white/[0.04] border border-white/10 px-4 py-2.5">
                 <span className="text-sm text-white/70">Coaches & Volunteers</span>
-                <span className="text-lg font-black tabular-nums">{personnel.length}</span>
+                <span className="text-lg font-black tabular-nums">{coachesCount}</span>
               </div>
               <div className="flex items-center justify-between rounded-lg bg-emerald-500/15 border-2 border-emerald-400/50 px-4 py-3">
                 <span className="text-sm font-bold text-emerald-200 uppercase tracking-wider">Total on Trip</span>
                 <span className="text-2xl font-black tabular-nums text-emerald-300">
-                  {checkedInCount + vehicles.length + personnel.length}
+                  {totalOnTrip}
                 </span>
               </div>
             </div>
@@ -2338,7 +2517,7 @@ const ExcursionCoach = () => {
                   className="bg-emerald-600 hover:bg-emerald-500 text-white"
                   onClick={() => handleConfirmArrival(null)}
                 >
-                  Yes, all {checkedInCount + vehicles.length + personnel.length} are here
+                  Yes, all {totalOnTrip} are here
                 </AlertDialogAction>
               </>
             ) : (
@@ -2457,16 +2636,16 @@ const ExcursionCoach = () => {
               </div>
               <div className="flex items-center justify-between rounded-lg bg-white/[0.04] border border-white/10 px-4 py-2.5">
                 <span className="text-sm text-white/70">Total Drivers</span>
-                <span className="text-lg font-black tabular-nums">{vehicles.length}</span>
+                <span className="text-lg font-black tabular-nums">{driversCount}</span>
               </div>
               <div className="flex items-center justify-between rounded-lg bg-white/[0.04] border border-white/10 px-4 py-2.5">
                 <span className="text-sm text-white/70">Coaches & Volunteers</span>
-                <span className="text-lg font-black tabular-nums">{personnel.length}</span>
+                <span className="text-lg font-black tabular-nums">{coachesCount}</span>
               </div>
               <div className="flex items-center justify-between rounded-lg bg-emerald-500/15 border-2 border-emerald-400/50 px-4 py-3">
                 <span className="text-sm font-bold text-emerald-200 uppercase tracking-wider">Total on Trip</span>
                 <span className="text-2xl font-black tabular-nums text-emerald-300">
-                  {checkedInCount + vehicles.length + personnel.length}
+                  {totalOnTrip}
                 </span>
               </div>
               <p className="text-xs text-yellow-200/70 mt-2 px-1">
@@ -2818,14 +2997,16 @@ const ExcursionCoach = () => {
               {/* ── Step: Choose vehicles ── */}
               {safeStepKey === "vehicles" && (
                 <>
-                  <p className="text-white/50 mb-4">Add every vehicle and who's driving it.</p>
+                  <p className="text-white/50 mb-4">Add every vehicle. You'll pick each van's driver on the next step, when you load people in.</p>
                   {vehicles.length > 0 && (
                     <div className="space-y-2 mb-4">
                       {vehicles.map((v) => (
                         <div key={v.id} className="flex items-center justify-between rounded-xl bg-white/[0.04] border border-white/10 px-4 py-3">
                           <div>
                             <p className="font-bold flex items-center gap-2"><Truck className="w-4 h-4 text-purple-300" />{v.name}</p>
-                            <p className="text-xs text-white/50">Driver: {v.driver_name} · {v.seat_cap} seats</p>
+                            <p className="text-xs text-white/50">
+                              {v.driver_name ? <>Driver: {v.driver_name}</> : <span className="text-yellow-300/70">Driver: set on the next step</span>} · {v.seat_cap} seats
+                            </p>
                           </div>
                           <button onClick={() => handleRemoveVehicle(v)} className="text-white/40 hover:text-red-400 p-1"><Trash2 className="w-4 h-4" /></button>
                         </div>
@@ -2836,9 +3017,27 @@ const ExcursionCoach = () => {
                     <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
                       {VEHICLE_PRESETS.map((p) => {
                         const Icon = p.icon;
+                        const already = vehicles.some((v) => v.name === p.name);
                         return (
-                          <button key={p.name} onClick={() => openAddVehicle(p)} className="flex flex-col items-center gap-1.5 rounded-xl bg-white/[0.04] hover:bg-purple-500/10 hover:border-purple-400/40 border border-white/10 p-4 transition">
-                            <Icon className="w-6 h-6 text-purple-300" /><span className="text-sm font-bold">{p.name}</span><span className="text-xs text-white/50">{p.seat_cap} seats</span>
+                          <button
+                            key={p.name}
+                            onClick={() => handleAddPreset(p)}
+                            disabled={already || savingVehicle}
+                            title={already ? `${p.name} is already added` : undefined}
+                            className={`relative flex flex-col items-center gap-1.5 rounded-xl border p-4 transition ${
+                              already
+                                ? "bg-emerald-500/[0.06] border-emerald-400/30 cursor-not-allowed"
+                                : "bg-white/[0.04] hover:bg-purple-500/10 hover:border-purple-400/40 border-white/10"
+                            }`}
+                          >
+                            {already && (
+                              <span className="absolute top-1.5 right-1.5 inline-flex items-center gap-0.5 text-[9px] font-bold uppercase tracking-wider text-emerald-300">
+                                <CheckCircle2 className="w-3 h-3" /> Added
+                              </span>
+                            )}
+                            <Icon className={`w-6 h-6 ${already ? "text-emerald-300/60" : "text-purple-300"}`} />
+                            <span className={`text-sm font-bold ${already ? "text-white/40" : ""}`}>{p.name}</span>
+                            <span className="text-xs text-white/50">{p.seat_cap} seats</span>
                           </button>
                         );
                       })}
@@ -2848,23 +3047,15 @@ const ExcursionCoach = () => {
                     </div>
                   ) : (
                     <div className="rounded-xl bg-purple-500/[0.06] border border-purple-400/30 p-4 space-y-3">
-                      {addingVehicle.isCustom ? (
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                          <div>
-                            <Label className="text-white/70 text-xs uppercase tracking-wider">Vehicle name</Label>
-                            <Input value={customNameInput} onChange={(e) => setCustomNameInput(e.target.value)} placeholder="e.g. Pastor's SUV" className="mt-1 bg-white/5 border-white/15 text-white" />
-                          </div>
-                          <div>
-                            <Label className="text-white/70 text-xs uppercase tracking-wider">Seats (not counting driver)</Label>
-                            <Input type="number" min={1} value={customSeatInput} onChange={(e) => setCustomSeatInput(e.target.value)} placeholder="e.g. 4" className="mt-1 bg-white/5 border-white/15 text-white" />
-                          </div>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div>
+                          <Label className="text-white/70 text-xs uppercase tracking-wider">Vehicle name</Label>
+                          <Input value={customNameInput} onChange={(e) => setCustomNameInput(e.target.value)} placeholder="e.g. Pastor's SUV" className="mt-1 bg-white/5 border-white/15 text-white" />
                         </div>
-                      ) : (
-                        <p className="text-lg font-bold">{addingVehicle.name} <span className="text-white/50 font-medium text-base">• {addingVehicle.seat_cap} seats</span></p>
-                      )}
-                      <div>
-                        <Label className="text-white/70 text-xs uppercase tracking-wider">Driver name</Label>
-                        <Input value={driverNameInput} onChange={(e) => setDriverNameInput(e.target.value)} placeholder="e.g. Coach Chris" className="mt-1 bg-white/5 border-white/15 text-white" />
+                        <div>
+                          <Label className="text-white/70 text-xs uppercase tracking-wider">Seats (including driver)</Label>
+                          <Input type="number" min={1} value={customSeatInput} onChange={(e) => setCustomSeatInput(e.target.value)} placeholder="e.g. 5" className="mt-1 bg-white/5 border-white/15 text-white" />
+                        </div>
                       </div>
                       <div className="flex gap-2">
                         <Button onClick={handleSaveVehicle} disabled={savingVehicle} className="flex-1 bg-purple-600 hover:bg-purple-500 text-white font-bold">{savingVehicle ? "Adding…" : "Add Vehicle"}</Button>
@@ -2876,74 +3067,140 @@ const ExcursionCoach = () => {
                 </>
               )}
 
-              {/* ── Step: Load youth ── */}
+              {/* ── Step: Load participants ── */}
               {safeStepKey === "load" && (
                 <>
-                  <p className="text-white/50 mb-3">Tap a youth, then pick their vehicle.</p>
-                  <div className="flex flex-wrap items-center gap-2 mb-2 text-sm">
-                    <span className="rounded-full bg-white/[0.06] border border-white/10 px-3 py-1.5"><b className="tabular-nums">{checkedInCount}</b> checked in</span>
-                    <span className="rounded-full bg-purple-500/10 border border-purple-400/30 text-purple-200 px-3 py-1.5"><b className="tabular-nums">{assignedCount} of {checkedInCount}</b> loaded</span>
+                  <p className="text-white/50 mb-3">Drag a name into a vehicle — or click a name to pick one. Set each van's driver too.</p>
+                  <div className="flex flex-wrap items-center gap-2 mb-3 text-sm">
+                    <span className="rounded-full bg-white/[0.06] border border-white/10 px-3 py-1.5"><b className="tabular-nums">{checkedInCount}</b> youth</span>
+                    <span className="rounded-full bg-purple-500/10 border border-purple-400/30 text-purple-200 px-3 py-1.5"><b className="tabular-nums">{assignedCount} of {checkedInCount}</b> in a van</span>
                     <button onClick={handleManualRefresh} className="text-white/40 hover:text-white/80 inline-flex items-center gap-1 text-xs"><RefreshCw className={`w-3.5 h-3.5 ${refreshing ? "animate-spin" : ""}`} /> Refresh</button>
                   </div>
-                  <p className="text-xs text-white/40 mb-4">Kids can still be checking in at the kiosk — wait for stragglers before you submit.</p>
-                  {unassignedYouth.length === 0 ? (
-                    <p className="text-emerald-300 font-semibold flex items-center gap-1.5"><CheckCircle2 className="w-4 h-4" /> Everyone's loaded!</p>
-                  ) : (
-                    <div className="flex flex-wrap gap-2">
-                      {unassignedYouth.map((y) => (
-                        <Popover key={y.registration_id}>
-                          <PopoverTrigger asChild disabled={vehicles.length === 0}>
-                            <button disabled={vehicles.length === 0} className="group flex items-center gap-2 rounded-full bg-white/[0.06] hover:bg-white/[0.12] border border-white/10 px-3 py-1.5 transition disabled:opacity-50">
-                              <span className="w-7 h-7 rounded-full bg-white/10 overflow-hidden flex items-center justify-center text-xs font-bold text-white/60">{getHeadshotUrl(y.child_headshot_url) ? <img src={getHeadshotUrl(y.child_headshot_url)!} alt="" className="w-full h-full object-cover" /> : y.child_first_name[0]}</span>
-                              <span className="text-sm font-semibold pr-1">{y.child_first_name} {y.child_last_name}</span>
-                              <Plus className="w-4 h-4 text-purple-300" />
-                            </button>
-                          </PopoverTrigger>
-                          <PopoverContent className="w-64 bg-neutral-900 border-white/10 text-white p-2 z-[60]">
-                            <p className="text-xs text-white/50 px-2 py-1.5 font-semibold uppercase tracking-wider">Assign to vehicle</p>
-                            <div className="space-y-1">
-                              {vehicles.map((v) => {
-                                const full = v.assigned_count >= v.seat_cap;
-                                return (
-                                  <button key={v.id} disabled={full} onClick={() => handleAssign(y.registration_id, v.id)} className="w-full text-left flex items-center justify-between rounded-md px-3 py-2 hover:bg-white/10 disabled:opacity-40">
-                                    <span className="font-semibold text-sm">{v.name}</span>
-                                    <span className="text-xs text-white/50 tabular-nums">{v.assigned_count}/{v.seat_cap}{full ? " full" : ""}</span>
-                                  </button>
-                                );
-                              })}
-                            </div>
-                          </PopoverContent>
-                        </Popover>
-                      ))}
+
+                  {/* On-the-fly add: youth (search) + coach/volunteer (name) */}
+                  <div className="rounded-xl bg-white/[0.03] border border-white/10 p-3 mb-4 space-y-2">
+                    <p className="text-[10px] font-bold uppercase tracking-wider text-white/50">Add someone who isn't here yet</p>
+                    <div className="relative">
+                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/40" />
+                      <Input value={lateSearch} onChange={(e) => setLateSearch(e.target.value)} placeholder="Search a youth by name…" className="pl-9 bg-white/5 border-white/15 text-white h-9" />
                     </div>
-                  )}
-                  {vehicles.length === 0 && <p className="text-yellow-300/70 text-sm mt-3">Go back and add a vehicle first.</p>}
-                  <div className="mt-6 space-y-2">
-                    {vehicles.map((v) => {
-                      const kids = youth.filter((y) => y.vehicle_id === v.id);
-                      const coaches = personnel.filter((p) => p.vehicle_id === v.id);
-                      return (
-                        <div key={v.id} className="rounded-xl bg-white/[0.03] border border-white/10 p-3">
-                          <p className="text-sm font-bold flex items-center gap-2"><Truck className="w-4 h-4 text-purple-300" />{v.name} <span className="text-white/40 font-medium">· {v.assigned_count}/{v.seat_cap}</span></p>
-                          {kids.length + coaches.length === 0 ? <p className="text-xs text-white/30 italic mt-1">Empty</p> : (
-                            <div className="flex flex-wrap gap-1.5 mt-2">
-                              {kids.map((y) => (
-                                <span key={y.registration_id} className="inline-flex items-center gap-1 rounded-full bg-purple-500/10 border border-purple-400/30 pl-2 pr-1 py-0.5 text-xs">
-                                  {y.child_first_name} {y.child_last_name}
-                                  <button onClick={() => handleUnassign(y.registration_id)} className="w-5 h-5 rounded-full hover:bg-white/10 flex items-center justify-center text-white/50 hover:text-white"><X className="w-3 h-3" /></button>
-                                </span>
+                    {lateResults.length > 0 && (
+                      <div className="space-y-1">
+                        {lateResults.map((r) => {
+                          const alreadyIn = youth.some((y) => y.registration_id === r.id);
+                          return (
+                            <div key={r.id} className="flex items-center gap-2 rounded-lg bg-white/[0.04] border border-white/10 px-2 py-1.5">
+                              <span className="flex-1 text-sm font-semibold truncate">{r.child_first_name} {r.child_last_name}</span>
+                              {alreadyIn ? <span className="text-[11px] text-emerald-300 font-semibold">On roster</span>
+                                : <Button size="sm" onClick={() => setPendingLate(r)} className="h-7 bg-purple-600 hover:bg-purple-500 text-white text-xs px-2"><Plus className="w-3 h-3 mr-0.5" />Add</Button>}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                    <div className="flex gap-2 pt-1">
+                      <Input value={personnelInput} onChange={(e) => setPersonnelInput(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") handleAddPersonnel(); }} placeholder="Add a coach / volunteer / driver name…" className="bg-white/5 border-white/15 text-white h-9" />
+                      <Button onClick={handleAddPersonnel} disabled={savingPersonnel || !personnelInput.trim()} className="h-9 bg-purple-600 hover:bg-purple-500 text-white font-bold px-3"><Plus className="w-4 h-4" /></Button>
+                    </div>
+                  </div>
+
+                  {vehicles.length === 0 ? (
+                    <p className="text-yellow-300/70 text-sm">Go back and add a vehicle first.</p>
+                  ) : (
+                    <DndContext sensors={loadSensors} collisionDetection={pointerWithin} onDragStart={onLoadDragStart} onDragEnd={onLoadDragEnd} onDragCancel={() => setActiveChip(null)}>
+                      <div className="space-y-3">
+                        {vehicles.map((v) => {
+                          const kids = youth.filter((y) => y.vehicle_id === v.id);
+                          const driverP = personnel.find((p) => p.driving_vehicle_id === v.id);
+                          const coachesRiding = personnel.filter((p) => p.vehicle_id === v.id && p.driving_vehicle_id !== v.id);
+                          return (
+                            <DropBox key={v.id} id={`veh:${v.id}`} className="rounded-xl bg-white/[0.03] border border-white/10 p-3" activeClass="ring-2 ring-purple-400/60 bg-purple-500/[0.06]">
+                              <div className="flex items-center justify-between gap-2 mb-2">
+                                <p className="text-sm font-bold flex items-center gap-2"><Truck className="w-4 h-4 text-purple-300" />{v.name} <span className="text-white/40 font-medium">· {v.assigned_count}/{v.seat_cap}</span></p>
+                              </div>
+                              {/* Driver slot */}
+                              <DropBox id={`driver:${v.id}`} className="rounded-lg border border-dashed border-amber-400/30 bg-amber-500/[0.04] px-2.5 py-2 mb-2 flex items-center gap-2" activeClass="ring-2 ring-amber-400/60 bg-amber-500/10">
+                                <span className="text-[10px] font-bold uppercase tracking-wider text-amber-300/80 shrink-0">Driver</span>
+                                {driverP ? (
+                                  <div className="flex items-center gap-1.5">
+                                    <span className="text-sm font-semibold text-amber-100">{driverP.name}</span>
+                                    <button onClick={() => handleClearVehicleDriver(v.id)} className="w-5 h-5 rounded-full hover:bg-white/10 flex items-center justify-center text-white/50 hover:text-white" title="Clear driver"><X className="w-3 h-3" /></button>
+                                  </div>
+                                ) : (
+                                  <Popover>
+                                    <PopoverTrigger asChild>
+                                      <button className="text-xs font-semibold text-amber-200/90 hover:text-white rounded px-2 py-0.5 bg-amber-500/10 border border-amber-400/25">Tap to set driver</button>
+                                    </PopoverTrigger>
+                                    <PopoverContent className="w-60 bg-neutral-900 border-white/10 text-white p-2 z-[70]">
+                                      <p className="text-[10px] text-white/50 px-2 py-1 font-semibold uppercase tracking-wider">Who's driving {v.name}?</p>
+                                      <div className="space-y-0.5 max-h-56 overflow-y-auto">
+                                        {personnel.length === 0 && <p className="text-[11px] text-white/40 px-2 py-1">Add a coach/volunteer above first.</p>}
+                                        {personnel.map((p) => (
+                                          <button key={p.id} onClick={() => handleSetVehicleDriver(v.id, p.id)} className="w-full text-left rounded-md px-2 py-1.5 hover:bg-white/10 text-sm font-semibold">{p.name}{p.driving_vehicle_id && p.driving_vehicle_id !== v.id ? <span className="text-[10px] text-white/40"> · driving another van</span> : null}</button>
+                                        ))}
+                                      </div>
+                                    </PopoverContent>
+                                  </Popover>
+                                )}
+                                <span className="text-[10px] text-white/30 ml-auto shrink-0">drag a name here</span>
+                              </DropBox>
+                              {/* Riders */}
+                              {kids.length + coachesRiding.length === 0 ? (
+                                <p className="text-xs text-white/30 italic">Empty — drag youth or coaches here.</p>
+                              ) : (
+                                <div className="flex flex-wrap gap-1.5">
+                                  {kids.map((y) => (
+                                    <PartChip key={y.registration_id} dragId={`youth:${y.registration_id}`} kind="youth"
+                                      label={`${y.child_first_name} ${y.child_last_name}`} headshotUrl={getHeadshotUrl(y.child_headshot_url)}
+                                      vehicles={vehicles} currentVehicleId={v.id}
+                                      onRide={(vid) => handleAssign(y.registration_id, vid)}
+                                      offVehicle={{ label: "Take out of vehicle", onClick: () => handleUnassign(y.registration_id) }} />
+                                  ))}
+                                  {coachesRiding.map((p) => (
+                                    <PartChip key={p.id} dragId={`coach:${p.id}`} kind="coach" label={p.name}
+                                      vehicles={vehicles} currentVehicleId={v.id}
+                                      onRide={(vid) => handleSetPersonnelVehicle(p.id, vid)}
+                                      offVehicle={{ label: "Drive separately", onClick: () => handleSetPersonnelVehicle(p.id, null) }} />
+                                  ))}
+                                </div>
+                              )}
+                            </DropBox>
+                          );
+                        })}
+
+                        {/* Unassigned pool */}
+                        <DropBox id="pool" className="rounded-xl bg-yellow-500/[0.05] border border-yellow-400/20 p-3" activeClass="ring-2 ring-yellow-400/50">
+                          <p className="text-xs font-bold text-yellow-200/80 mb-2">Not in a vehicle yet</p>
+                          {unassignedYouth.length + personnel.filter((p) => !p.vehicle_id).length === 0 ? (
+                            <p className="text-emerald-300 text-sm font-semibold flex items-center gap-1.5"><CheckCircle2 className="w-4 h-4" /> Everyone's loaded!</p>
+                          ) : (
+                            <div className="flex flex-wrap gap-1.5">
+                              {unassignedYouth.map((y) => (
+                                <PartChip key={y.registration_id} dragId={`youth:${y.registration_id}`} kind="youth"
+                                  label={`${y.child_first_name} ${y.child_last_name}`} headshotUrl={getHeadshotUrl(y.child_headshot_url)}
+                                  vehicles={vehicles} currentVehicleId={null}
+                                  onRide={(vid) => handleAssign(y.registration_id, vid)} />
                               ))}
-                              {coaches.map((p) => (
-                                <span key={p.id} className="inline-flex items-center gap-1 rounded-full bg-sky-500/10 border border-sky-400/25 px-2 py-0.5 text-xs text-sky-100">
-                                  {p.name}<span className="text-[8px] uppercase tracking-wider text-sky-300/90 font-bold">Coach/Volunteer</span>
-                                </span>
+                              {personnel.filter((p) => !p.vehicle_id).map((p) => (
+                                <PartChip key={p.id} dragId={`coach:${p.id}`} kind="coach" label={p.name}
+                                  vehicles={vehicles} currentVehicleId={null}
+                                  onRide={(vid) => handleSetPersonnelVehicle(p.id, vid)} />
                               ))}
                             </div>
                           )}
-                        </div>
-                      );
-                    })}
-                  </div>
+                        </DropBox>
+                      </div>
+
+                      <DragOverlay>
+                        {activeChip ? (
+                          <div className={cn("inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-sm font-semibold shadow-xl",
+                            activeChip.kind === "youth" ? "bg-purple-500/30 border border-purple-400/50 text-purple-50" : "bg-sky-500/30 border border-sky-400/50 text-sky-50")}>
+                            {activeChip.label}
+                          </div>
+                        ) : null}
+                      </DragOverlay>
+                    </DndContext>
+                  )}
                 </>
               )}
 
@@ -3013,15 +3270,22 @@ const ExcursionCoach = () => {
                       <button onClick={() => setWizardStepKey("load")} className="mt-2 text-sm font-semibold text-yellow-200 underline underline-offset-2">← Go back and load them</button>
                     </div>
                   )}
+                  {transportRequired === true && vehicles.some((v) => !v.driver_name) && (
+                    <div className="rounded-xl bg-yellow-500/10 border-2 border-yellow-400/40 p-4 mb-4">
+                      <p className="font-bold text-yellow-200">⚠ {vehicles.filter((v) => !v.driver_name).length} vehicle{vehicles.filter((v) => !v.driver_name).length === 1 ? "" : "s"} with no driver</p>
+                      <p className="text-sm text-yellow-100/70 mt-1">{vehicles.filter((v) => !v.driver_name).map((v) => v.name).join(", ")} — you can still submit, but set a driver when you know it.</p>
+                      <button onClick={() => setWizardStepKey("load")} className="mt-2 text-sm font-semibold text-yellow-200 underline underline-offset-2">← Go back and set drivers</button>
+                    </div>
+                  )}
                   {transportRequired === true && vehicles.length > 0 && (
                     <div className="space-y-2 mb-4">
                       <p className="text-xs font-bold uppercase tracking-wider text-white/50">Who's in each vehicle</p>
                       {vehicles.map((v) => {
                         const kids = youth.filter((y) => y.vehicle_id === v.id);
-                        const coaches = personnel.filter((p) => p.vehicle_id === v.id);
+                        const coaches = personnel.filter((p) => p.vehicle_id === v.id && p.driving_vehicle_id !== v.id);
                         return (
                           <div key={v.id} className="rounded-xl bg-white/[0.03] border border-white/10 p-3">
-                            <p className="text-sm font-bold flex items-center gap-2"><Truck className="w-4 h-4 text-purple-300" />{v.name} <span className="text-white/40 font-medium">· {v.driver_name} driving · {v.assigned_count}/{v.seat_cap} seats</span></p>
+                            <p className="text-sm font-bold flex items-center gap-2"><Truck className="w-4 h-4 text-purple-300" />{v.name} <span className="text-white/40 font-medium">· {v.driver_name ? `${v.driver_name} driving` : "no driver"} · {v.assigned_count}/{v.seat_cap} seats</span></p>
                             {kids.length + coaches.length === 0 ? (
                               <p className="text-sm text-white/30 italic mt-1">Empty</p>
                             ) : (
@@ -3057,10 +3321,10 @@ const ExcursionCoach = () => {
                   )}
                   <div className="grid grid-cols-3 gap-2 mb-3">
                     <div className="text-center rounded-xl bg-white/[0.04] border border-white/10 p-3"><p className="text-2xl font-black tabular-nums">{checkedInCount}</p><p className="text-[10px] uppercase tracking-wider text-white/50">Youth</p></div>
-                    <div className="text-center rounded-xl bg-white/[0.04] border border-white/10 p-3"><p className="text-2xl font-black tabular-nums">{vehicles.length}</p><p className="text-[10px] uppercase tracking-wider text-white/50">Drivers</p></div>
-                    <div className="text-center rounded-xl bg-white/[0.04] border border-white/10 p-3"><p className="text-2xl font-black tabular-nums">{personnel.length}</p><p className="text-[10px] uppercase tracking-wider text-white/50">Coaches</p></div>
+                    <div className="text-center rounded-xl bg-white/[0.04] border border-white/10 p-3"><p className="text-2xl font-black tabular-nums">{driversCount}</p><p className="text-[10px] uppercase tracking-wider text-white/50">Drivers</p></div>
+                    <div className="text-center rounded-xl bg-white/[0.04] border border-white/10 p-3"><p className="text-2xl font-black tabular-nums">{coachesCount}</p><p className="text-[10px] uppercase tracking-wider text-white/50">Coaches</p></div>
                   </div>
-                  <div className="text-center rounded-xl bg-emerald-500/15 border-2 border-emerald-400/50 p-4"><p className="text-4xl font-black text-emerald-300 tabular-nums">{checkedInCount + vehicles.length + personnel.length}</p><p className="text-xs font-bold text-emerald-200/90 uppercase tracking-wider mt-1">Total on Trip</p></div>
+                  <div className="text-center rounded-xl bg-emerald-500/15 border-2 border-emerald-400/50 p-4"><p className="text-4xl font-black text-emerald-300 tabular-nums">{totalOnTrip}</p><p className="text-xs font-bold text-emerald-200/90 uppercase tracking-wider mt-1">Total on Trip</p></div>
                 </>
               )}
             </div>

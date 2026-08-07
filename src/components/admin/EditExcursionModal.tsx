@@ -44,12 +44,12 @@ const NOTE_EMOJIS = [
 ];
 
 // Vehicle quick-add presets — mirror Coach Mode so admin backfills produce the
-// same vehicle records as live trips.
+// same vehicle records as live trips. Seat caps INCLUDE the driver.
 const EDIT_VEHICLE_PRESETS: Array<{ name: string; seat_cap: number; icon: typeof Truck }> = [
-  { name: "Van A", seat_cap: 14, icon: Truck },
-  { name: "Van B", seat_cap: 14, icon: Truck },
-  { name: "Mini-Van", seat_cap: 6, icon: Truck },
-  { name: "Mini-Bus", seat_cap: 21, icon: Bus },
+  { name: "Van A", seat_cap: 15, icon: Truck },
+  { name: "Van B", seat_cap: 15, icon: Truck },
+  { name: "Mini-Van", seat_cap: 7, icon: Truck },
+  { name: "Mini-Bus", seat_cap: 22, icon: Bus },
 ];
 
 type MoveVehicle = { id: string; name: string; seat_cap: number; assigned_count: number };
@@ -222,7 +222,7 @@ const EditExcursionModal = ({ excursion, onChange, onClose, onSaved, onRequestDe
     queryFn: async () => {
       const { data, error } = await supabase.rpc("get_excursion_vehicles", { _excursion_id: editingExcursionId! });
       if (error) throw error;
-      return data as Array<{ id: string; name: string; seat_cap: number; driver_name: string; assigned_count: number }>;
+      return data as unknown as Array<{ id: string; name: string; seat_cap: number; driver_name: string | null; driver_personnel_id: string | null; assigned_count: number }>;
     },
   });
   const { data: editingPersonnel = [] } = useQuery({
@@ -231,9 +231,17 @@ const EditExcursionModal = ({ excursion, onChange, onClose, onSaved, onRequestDe
     queryFn: async () => {
       const { data, error } = await supabase.rpc("get_excursion_personnel", { _excursion_id: editingExcursionId! });
       if (error) throw error;
-      return data as Array<{ id: string; name: string; vehicle_id: string | null; return_vehicle_id: string | null; created_at: string }>;
+      return data as unknown as Array<{ id: string; name: string; vehicle_id: string | null; return_vehicle_id: string | null; driving_vehicle_id: string | null; created_at: string }>;
     },
   });
+
+  // Head counts — each person counted once (a driver is a person, not a
+  // separate head). Legacy trips whose driver is a text name count via
+  // legacyDriverVehicles.
+  const legacyDriverVehicles = editingVehicles.filter((v) => !v.driver_personnel_id && v.driver_name && v.driver_name.trim());
+  const driversCount = editingPersonnel.filter((p) => p.driving_vehicle_id).length + legacyDriverVehicles.length;
+  const coachesCount = editingPersonnel.filter((p) => !p.driving_vehicle_id).length;
+  const totalOnTrip = editingRosterYouth.length + driversCount + coachesCount;
 
   const saveEditExcursion = async () => {
     if (!editingExcursion) return;
@@ -376,13 +384,12 @@ const EditExcursionModal = ({ excursion, onChange, onClose, onSaved, onRequestDe
     const driver = editDriverNameInput.trim();
     if (!name) return toast.error("Vehicle name is required.");
     if (!seat_cap || seat_cap <= 0) return toast.error("Seat capacity must be at least 1.");
-    if (!driver) return toast.error("Driver name is required.");
     setEditSavingVehicle(true);
     const { error } = await supabase.rpc("admin_add_excursion_vehicle", {
       _excursion_id: editingExcursionId,
       _name: name,
       _seat_cap: seat_cap,
-      _driver_name: driver,
+      _driver_name: (driver || null) as unknown as string,
     });
     setEditSavingVehicle(false);
     if (error) { toast.error(error.message || "Couldn't add vehicle."); return; }
@@ -439,6 +446,18 @@ const EditExcursionModal = ({ excursion, onChange, onClose, onSaved, onRequestDe
     invalidateEditExcursionQueries();
   };
 
+  // Set / clear a van's driver (a person). Admin RPCs bypass the lock.
+  const handleEditSetDriver = async (vehicleId: string, personnelId: string) => {
+    const { error } = await (supabase.rpc as any)("admin_set_excursion_vehicle_driver", { _vehicle_id: vehicleId, _personnel_id: personnelId });
+    if (error) { toast.error(error.message || "Couldn't set the driver."); return; }
+    invalidateEditExcursionQueries();
+  };
+  const handleEditClearDriver = async (vehicleId: string) => {
+    const { error } = await (supabase.rpc as any)("admin_clear_excursion_vehicle_driver", { _vehicle_id: vehicleId });
+    if (error) { toast.error(error.message || "Couldn't clear the driver."); return; }
+    invalidateEditExcursionQueries();
+  };
+
   // ── Drag-and-drop: move a person onto a vehicle / off a vehicle ──
   // Distance constraint so a plain click still opens the chip's options menu.
   const dndSensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 8 } }));
@@ -458,16 +477,21 @@ const EditExcursionModal = ({ excursion, onChange, onClose, onSaved, onRequestDe
     const personId = String(active.id).replace(/^(youth|coach):/, "");
     const target = String(over.id);
     const targetVehicleId = target.startsWith("veh:") ? target.slice(4) : null;
+    const targetDriverVehicleId = target.startsWith("driver:") ? target.slice(7) : null;
     const droppedOff = target === "sep" || target === "unassigned"; // "not on a vehicle" zones
 
     if (kind === "youth") {
-      if (targetVehicleId) {
+      if (targetDriverVehicleId) {
+        handleEditAssignYouth(personId, targetDriverVehicleId); // youth can't drive — just ride in
+      } else if (targetVehicleId) {
         if (targetVehicleId !== currentVehicleId) handleEditAssignYouth(personId, targetVehicleId);
       } else if (droppedOff && currentVehicleId) {
         handleEditUnassignYouth(personId);
       }
     } else if (kind === "coach") {
-      if (targetVehicleId) {
+      if (targetDriverVehicleId) {
+        handleEditSetDriver(targetDriverVehicleId, personId);
+      } else if (targetVehicleId) {
         if (targetVehicleId !== currentVehicleId) handleEditMovePersonnel(personId, targetVehicleId);
       } else if (droppedOff && currentVehicleId) {
         handleEditMovePersonnel(personId, null);
@@ -522,15 +546,15 @@ const EditExcursionModal = ({ excursion, onChange, onClose, onSaved, onRequestDe
                     <p className="text-[10px] uppercase tracking-wider text-white/50 font-semibold mt-0.5">Youth</p>
                   </div>
                   <div className="rounded-lg bg-white/[0.03] border border-white/10 px-3 py-2.5 text-center">
-                    <p className="text-2xl font-black tabular-nums">{editingVehicles.length}</p>
+                    <p className="text-2xl font-black tabular-nums">{driversCount}</p>
                     <p className="text-[10px] uppercase tracking-wider text-white/50 font-semibold mt-0.5">Drivers</p>
                   </div>
                   <div className="rounded-lg bg-white/[0.03] border border-white/10 px-3 py-2.5 text-center">
-                    <p className="text-2xl font-black tabular-nums">{editingPersonnel.length}</p>
+                    <p className="text-2xl font-black tabular-nums">{coachesCount}</p>
                     <p className="text-[10px] uppercase tracking-wider text-white/50 font-semibold mt-0.5">Volunteers</p>
                   </div>
                   <div className="rounded-lg bg-emerald-500/10 border border-emerald-400/40 px-3 py-2.5 text-center">
-                    <p className="text-2xl font-black tabular-nums text-emerald-300">{editingRosterYouth.length + editingVehicles.length + editingPersonnel.length}</p>
+                    <p className="text-2xl font-black tabular-nums text-emerald-300">{totalOnTrip}</p>
                     <p className="text-[10px] uppercase tracking-wider text-emerald-200/80 font-semibold mt-0.5">On Trip</p>
                   </div>
                 </div>
@@ -648,7 +672,8 @@ const EditExcursionModal = ({ excursion, onChange, onClose, onSaved, onRequestDe
                     <div className="space-y-2 mb-3">
                       {editingVehicles.map((v) => {
                         const inThisVehicle = editingRosterYouth.filter((y) => y.vehicle_id === v.id);
-                        const coachesInVehicle = editingPersonnel.filter((p) => p.vehicle_id === v.id);
+                        const driverP = editingPersonnel.find((p) => p.driving_vehicle_id === v.id);
+                        const coachesInVehicle = editingPersonnel.filter((p) => p.vehicle_id === v.id && p.driving_vehicle_id !== v.id);
                         return (
                           <DropZone
                             key={v.id}
@@ -661,9 +686,32 @@ const EditExcursionModal = ({ excursion, onChange, onClose, onSaved, onRequestDe
                                 <p className="text-sm font-bold text-purple-200 flex items-center gap-1.5">
                                   <Truck className="w-3.5 h-3.5" /> {v.name}
                                 </p>
-                                <p className="text-xs text-white/50 mt-0.5">
-                                  Driver: <span className="text-white/80 font-semibold">{v.driver_name}</span>
-                                </p>
+                                <DropZone id={`driver:${v.id}`} className="mt-1 inline-flex items-center gap-1.5 rounded-md border border-dashed border-amber-400/30 bg-amber-500/[0.04] px-2 py-1" activeClass="ring-2 ring-amber-400/60 bg-amber-500/10">
+                                  <span className="text-[9px] font-bold uppercase tracking-wider text-amber-300/80">Driver</span>
+                                  {driverP ? (
+                                    <>
+                                      <span className="text-xs font-semibold text-amber-100">{driverP.name}</span>
+                                      <button onClick={() => handleEditClearDriver(v.id)} className="w-4 h-4 rounded-full hover:bg-white/10 flex items-center justify-center text-white/50 hover:text-white" title="Clear driver"><X className="w-3 h-3" /></button>
+                                    </>
+                                  ) : v.driver_name ? (
+                                    <span className="text-xs text-white/70">{v.driver_name}</span>
+                                  ) : (
+                                    <Popover>
+                                      <PopoverTrigger asChild>
+                                        <button className="text-[11px] font-semibold text-amber-200/90 hover:text-white rounded px-1.5 py-0.5 bg-amber-500/10 border border-amber-400/25">Set driver</button>
+                                      </PopoverTrigger>
+                                      <PopoverContent align="start" className="w-56 bg-neutral-900 border-white/10 text-white p-2 z-[70]">
+                                        <p className="text-[10px] text-white/50 px-2 py-1 font-semibold uppercase tracking-wider">Who's driving {v.name}?</p>
+                                        <div className="space-y-0.5 max-h-56 overflow-y-auto">
+                                          {editingPersonnel.length === 0 && <p className="text-[11px] text-white/40 px-2 py-1">Add a coach/volunteer below first.</p>}
+                                          {editingPersonnel.map((p) => (
+                                            <button key={p.id} onClick={() => handleEditSetDriver(v.id, p.id)} className="w-full text-left rounded-md px-2 py-1.5 hover:bg-white/10 text-xs font-semibold">{p.name}</button>
+                                          ))}
+                                        </div>
+                                      </PopoverContent>
+                                    </Popover>
+                                  )}
+                                </DropZone>
                               </div>
                               <div className="flex items-center gap-2 shrink-0">
                                 <span className="text-xs text-white/50 tabular-nums">
@@ -867,7 +915,7 @@ const EditExcursionModal = ({ excursion, onChange, onClose, onSaved, onRequestDe
                     <Input
                       value={editDriverNameInput}
                       onChange={(e) => setEditDriverNameInput(e.target.value)}
-                      placeholder="Driver name"
+                      placeholder="Driver name (optional — or set it per van below)"
                       className="bg-white/5 border-white/15 text-white text-xs h-8"
                     />
                     <Button
