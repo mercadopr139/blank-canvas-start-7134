@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { parseISO, format } from "date-fns";
 import { getCurrentAttendanceYear, shortProgramYear } from "@/lib/programYear";
+import { summarizeMinority } from "@/lib/demographics";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { MapPin, Users, UserCheck, TrendingUp, Award, Lock, CheckCircle2, Loader2, FileText, Download, ChevronDown, ChevronRight, StickyNote, Pencil } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -184,6 +185,8 @@ const AdminExcursionIntelligence = () => {
       if (r.is_bald_eagle) baldEagles += 1;
     });
     const n = reached.length;
+    // Minority = anyone not White — shared rule so it never drifts.
+    const { minority, minorityPct } = summarizeMinority(reached.map((r) => r.child_race_ethnicity));
     return {
       n,
       race: sortBreakdown(race),
@@ -191,6 +194,8 @@ const AdminExcursionIntelligence = () => {
       poverty,
       povertyPct: n > 0 ? Math.round((poverty / n) * 100) : 0,
       baldEagles,
+      minority,
+      minorityPct,
     };
   }, [yearExcursions, regIdsByExcursion, regMap]);
 
@@ -336,6 +341,10 @@ const AdminExcursionIntelligence = () => {
                 <div className="rounded-lg border border-white/10 bg-white/[0.02] px-3 py-2">
                   <p className="text-2xl font-bold text-amber-300">{equity.povertyPct}%</p>
                   <p className="text-[10px] text-white/40">At/below poverty line</p>
+                </div>
+                <div className="rounded-lg border border-white/10 bg-white/[0.02] px-3 py-2">
+                  <p className="text-2xl font-bold text-[#bf0f3e]">{equity.minorityPct}%</p>
+                  <p className="text-[10px] text-white/40">Minority (non-white)</p>
                 </div>
                 <div className="rounded-lg border border-white/10 bg-white/[0.02] px-3 py-2">
                   <p className="text-2xl font-bold text-red-300">{equity.baldEagles}</p>

@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/chart";
 import { BarChart, Bar, XAxis, YAxis, PieChart, Pie, Cell } from "recharts";
 import { YouthDistrictMap } from "@/components/admin/YouthDistrictMap";
+import { summarizeMinority } from "@/lib/demographics";
 
 const COLORS = [
   "#bf0f3e",
@@ -129,11 +130,10 @@ const AdminRegistrationAnalytics = () => {
     if (race) acc[race] = (acc[race] || 0) + 1;
     return acc;
   }, {} as Record<string, number>) || {};
-  const raceTotal = Object.values(raceCounts).reduce((s, n) => s + n, 0);
   const raceSorted = Object.entries(raceCounts).sort((a, b) => b[1] - a[1]);
-  const whiteCount = raceCounts["White"] || 0;
-  const minorityCount = raceTotal - whiteCount;
-  const minorityPct = raceTotal > 0 ? Math.round((minorityCount / raceTotal) * 100) : 0;
+  // Minority = anyone not White — via the shared rule so it never drifts.
+  const { total: raceTotal, white: whiteCount, minority: minorityCount, minorityPct } =
+    summarizeMinority((registrations || []).map((r) => r.child_race_ethnicity));
 
   /* ───── BELOW FEDERAL POVERTY LINE ───── */
   // Derived from the Free/Reduced Lunch answer, since F/R lunch eligibility is

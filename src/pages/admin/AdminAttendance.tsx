@@ -32,6 +32,7 @@ import ExcursionRideComparison from "@/components/admin/ExcursionRideComparison"
 import EditExcursionModal, { type Excursion } from "@/components/admin/EditExcursionModal";
 import EditEventModal, { type ProgramEvent, newEventForDate } from "@/components/admin/EditEventModal";
 import { getCurrentAttendanceYear, shortProgramYear } from "@/lib/programYear";
+import { summarizeMinority } from "@/lib/demographics";
 
 /* ───────── Types ───────── */
 interface Registration {
@@ -1239,16 +1240,17 @@ const AdminAttendance = () => {
 
   const mtdRaceBreakdown = useMemo(() => {
     const counts: Record<string, number> = {};
+    const races: Array<string | null> = [];
     mtdRegIds.forEach((id) => {
       const reg = regMap[id];
       if (reg?.child_race_ethnicity) {
         counts[reg.child_race_ethnicity] = (counts[reg.child_race_ethnicity] || 0) + 1;
+        races.push(reg.child_race_ethnicity);
       }
     });
-    const total = Object.values(counts).reduce((s, n) => s + n, 0);
     const sorted = Object.entries(counts).sort((a, b) => b[1] - a[1]);
-    const whiteCount = counts["White"] || 0;
-    const minorityCount = total - whiteCount;
+    // Minority = anyone not White — via the shared rule so it never drifts.
+    const { total, white: whiteCount, minority: minorityCount } = summarizeMinority(races);
     return { counts: sorted, total, whiteCount, minorityCount };
   }, [mtdRegIds, regMap]);
 
