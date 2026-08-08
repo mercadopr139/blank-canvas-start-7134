@@ -41,6 +41,7 @@ const SYSTEM =
   "- Lead with impact, opportunity, and partnership. Frame it around what the event gave the youth (exposure, new skills, mentorship, connection).\n" +
   "- 1–3 short paragraphs. No headings, no bullet points, no preamble.\n" +
   "- Base it ONLY on the facts provided. Never invent numbers, names, sponsors, or details that aren't given.\n" +
+  "- If 'Standout moments' are provided, FEATURE them specifically — keep the youth's name, the win, the quote intact rather than flattening them into generic praise. These real stories are the most compelling, fundable part of the report.\n" +
   "- If a 'YOUTH REACHED breakdown' is provided, weave those exact figures into the narrative so the funder sees who was reached — one natural extra short paragraph is fine. Use ONLY the numbers given; never invent demographic figures.\n" +
   "- Solutions- and partnership-oriented tone; never disparage schools, families, or other organizations.\n" +
   HOUSE_VOICE +
@@ -62,6 +63,13 @@ const youthReachedBlock = (yr: any): string => {
   return any ? out : "";
 };
 
+// Real stories staff starred on the event — the substance of a fundable report.
+const standoutsBlock = (arr: any): string => {
+  const list = Array.isArray(arr) ? arr.filter((s: any) => typeof s === "string" && s.trim()) : [];
+  if (!list.length) return "";
+  return `Standout moments (REAL stories staff recorded — feature these specifically): ${list.map((s: string) => `"${s}"`).join("; ")}\n`;
+};
+
 const factsBlock = (t: any): string =>
   `Event name: ${t?.name ?? "Program event"}\n` +
   `Date: ${t?.date ?? "(unspecified)"}\n` +
@@ -70,6 +78,7 @@ const factsBlock = (t: any): string =>
     : `Attendance: not tracked for this event (narrative only).\n`) +
   (t?.description ? `What the event was about (staff notes): ${t.description}\n` : "") +
   (t?.debrief ? `Staff debrief / reflections: ${t.debrief}\n` : "") +
+  standoutsBlock(t?.standouts) +
   youthReachedBlock(t?.youthReached);
 
 Deno.serve(async (req) => {

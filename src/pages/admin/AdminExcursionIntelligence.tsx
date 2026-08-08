@@ -38,9 +38,10 @@ const AdminExcursionIntelligence = () => {
   const { data: excursions = [], isLoading: exLoading } = useQuery({
     queryKey: ["excursion-intel-excursions"],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("excursions")
-        .select("id, date, name, youth_count, notes, details, created_at, roster_locked_at, arrived_at, returned_at, arrival_note, return_note, return_plan")
+      // `highlights` (standout moments) isn't in the generated types yet — cast,
+      // same pattern used elsewhere for not-yet-generated columns.
+      const { data, error } = await (supabase.from("excursions") as any)
+        .select("id, date, name, youth_count, notes, details, highlights, created_at, roster_locked_at, arrived_at, returned_at, arrival_note, return_note, return_plan")
         .order("date", { ascending: false });
       if (error) throw error;
       return (data ?? []) as ExcursionRow[];
@@ -461,6 +462,7 @@ const AdminExcursionIntelligence = () => {
                               details: e.details,
                               notes: e.notes,
                               youthCount: countByExcursion[e.id] || 0,
+                              standouts: Array.isArray((e as any).highlights) ? (e as any).highlights : [],
                               regIds: [...(regIdsByExcursion[e.id] ?? [])],
                             })
                           }

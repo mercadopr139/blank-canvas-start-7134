@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { format, parseISO } from "date-fns";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -25,6 +25,8 @@ export type ActivityReportSource = {
   notes: string | null; // debrief
   youthCount: number;
   regIds: string[];
+  /** Real stories staff starred on the trip/event — featured in the narrative. */
+  standouts?: string[];
   /** Events only. Omitted for excursions (which always count attendance). */
   countsAttendance?: boolean;
 };
@@ -159,6 +161,7 @@ const ActivityReportSheet = ({ open, source, config, onClose }: Props) => {
     youthCount: s.youthCount,
     description: s.details || "",
     debrief: s.notes || "",
+    ...(s.standouts && s.standouts.length ? { standouts: s.standouts } : {}),
     ...(s.countsAttendance !== undefined ? { countsAttendance: s.countsAttendance } : {}),
     ...(yrPayload ? { youthReached: yrPayload } : {}),
   });

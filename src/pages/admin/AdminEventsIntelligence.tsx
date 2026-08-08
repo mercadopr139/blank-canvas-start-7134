@@ -40,7 +40,7 @@ const AdminEventsIntelligence = () => {
       // program_events isn't in the generated Supabase types yet — cast, same
       // pattern used across AdminAttendance.
       const { data, error } = await (supabase.from("program_events" as never) as any)
-        .select("id, date, name, details, notes, count_attendance")
+        .select("id, date, name, details, notes, count_attendance, highlights")
         .order("date", { ascending: false });
       if (error) throw error;
       return (data ?? []) as ProgramEvent[];
@@ -463,6 +463,7 @@ const AdminEventsIntelligence = () => {
                               notes: e.notes,
                               youthCount: countByEvent[e.id] || 0,
                               countsAttendance: e.count_attendance,
+                              standouts: Array.isArray((e as any).highlights) ? (e as any).highlights : [],
                               regIds: [...(regIdsByEvent[e.id] ?? [])],
                             })
                           }
