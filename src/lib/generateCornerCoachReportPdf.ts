@@ -263,15 +263,30 @@ async function loadLogoBase64(): Promise<string | undefined> {
   }
 }
 
+function reportFileName(title: string): string {
+  const slug = (title || "report")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 40);
+  return `NLA_${slug}_${format(new Date(), "yyyy-MM-dd")}.pdf`;
+}
+
 export async function downloadCornerCoachReportPdf(
   data: Omit<CornerCoachReportData, "logoBase64">
 ): Promise<void> {
   const logoBase64 = await loadLogoBase64();
   const doc = generateCornerCoachReportPdf({ ...data, logoBase64 });
-  const slug = (data.title || "report")
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "")
-    .slice(0, 40);
-  doc.save(`NLA_${slug}_${format(new Date(), "yyyy-MM-dd")}.pdf`);
+  doc.save(reportFileName(data.title));
+}
+
+// Opens the finished PDF in a new browser tab so it can be reviewed before
+// saving — same document downloadCornerCoachReportPdf produces, just previewed.
+export async function previewCornerCoachReportPdf(
+  data: Omit<CornerCoachReportData, "logoBase64">
+): Promise<void> {
+  const logoBase64 = await loadLogoBase64();
+  const doc = generateCornerCoachReportPdf({ ...data, logoBase64 });
+  const url = doc.output("bloburl");
+  window.open(url as unknown as string, "_blank", "noopener,noreferrer");
 }

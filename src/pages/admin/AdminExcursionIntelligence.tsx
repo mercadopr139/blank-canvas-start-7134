@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { MapPin, Users, UserCheck, TrendingUp, Award, Lock, CheckCircle2, Loader2, FileText, Download, ChevronDown, ChevronRight, StickyNote, Pencil } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import ExcursionReportSheet, { type ExcursionReportSource } from "@/components/admin/ExcursionReportSheet";
+import ActivityReportSheet, { EXCURSION_REPORT_CONFIG, type ActivityReportSource } from "@/components/admin/ActivityReportSheet";
 import EditExcursionModal, { type Excursion } from "@/components/admin/EditExcursionModal";
 import { downloadCornerCoachReportPdf } from "@/lib/generateCornerCoachReportPdf";
 
@@ -108,7 +108,7 @@ const AdminExcursionIntelligence = () => {
   }, [excursions]);
 
   const [year, setYear] = useState<string>(() => getCurrentAttendanceYear());
-  const [reportSource, setReportSource] = useState<ExcursionReportSource | null>(null);
+  const [reportSource, setReportSource] = useState<ActivityReportSource | null>(null);
   const queryClient = useQueryClient();
 
   // Expand a trip to see its full picture (roster, timeline, overview, debrief).
@@ -335,7 +335,7 @@ const AdminExcursionIntelligence = () => {
           {equity.n > 0 && (
             <div className="rounded-xl border border-white/10 bg-white/[0.02] p-4 space-y-4">
               <p className="text-[10px] uppercase tracking-wider text-white/40 font-semibold">
-                Reach &amp; Equity · {equity.n} unique youth reached
+                Youth Reached · {equity.n} unique youth
               </p>
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                 <div className="rounded-lg border border-white/10 bg-white/[0.02] px-3 py-2">
@@ -547,9 +547,10 @@ const AdminExcursionIntelligence = () => {
         </>
       )}
 
-      <ExcursionReportSheet
+      <ActivityReportSheet
         open={!!reportSource}
         source={reportSource}
+        config={EXCURSION_REPORT_CONFIG}
         onClose={() => setReportSource(null)}
       />
 

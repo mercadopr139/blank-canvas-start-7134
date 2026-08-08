@@ -12,7 +12,7 @@ import {
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
-import EventReportSheet, { type EventReportSource } from "@/components/admin/EventReportSheet";
+import ActivityReportSheet, { EVENT_REPORT_CONFIG, type ActivityReportSource } from "@/components/admin/ActivityReportSheet";
 import EditEventModal, { type ProgramEvent } from "@/components/admin/EditEventModal";
 import { downloadCornerCoachReportPdf } from "@/lib/generateCornerCoachReportPdf";
 
@@ -107,7 +107,7 @@ const AdminEventsIntelligence = () => {
   }, [events]);
 
   const [year, setYear] = useState<string>(() => getCurrentAttendanceYear());
-  const [reportSource, setReportSource] = useState<EventReportSource | null>(null);
+  const [reportSource, setReportSource] = useState<ActivityReportSource | null>(null);
   const queryClient = useQueryClient();
 
   const [expandedId, setExpandedId] = useState<string | null>(null);
@@ -338,7 +338,7 @@ const AdminEventsIntelligence = () => {
           {equity.n > 0 && (
             <div className="rounded-xl border border-white/10 bg-white/[0.02] p-4 space-y-4">
               <p className="text-[10px] uppercase tracking-wider text-white/40 font-semibold">
-                Reach &amp; Equity · {equity.n} unique youth reached
+                Youth Reached · {equity.n} unique youth
               </p>
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                 <div className="rounded-lg border border-white/10 bg-white/[0.02] px-3 py-2">
@@ -540,7 +540,7 @@ const AdminEventsIntelligence = () => {
         </>
       )}
 
-      <EventReportSheet open={!!reportSource} source={reportSource} onClose={() => setReportSource(null)} />
+      <ActivityReportSheet open={!!reportSource} source={reportSource} config={EVENT_REPORT_CONFIG} onClose={() => setReportSource(null)} />
 
       <EditEventModal
         event={editingEvent}

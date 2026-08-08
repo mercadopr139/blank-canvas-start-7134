@@ -37,18 +37,36 @@ const SYSTEM =
   "Write a short narrative about a youth excursion (a field trip / enrichment outing) suitable for a grant funder or supporter. " +
   "Rules:\n" +
   "- Lead with impact, opportunity, and partnership. Frame it around what the experience gave the youth (exposure, new experiences, life skills, connection).\n" +
-  "- 1–2 short paragraphs. No headings, no bullet points, no preamble.\n" +
+  "- 1–3 short paragraphs. No headings, no bullet points, no preamble.\n" +
   "- Base it ONLY on the facts provided. Never invent numbers, names, sponsors, or details that aren't given.\n" +
+  "- If a 'YOUTH REACHED breakdown' is provided, weave those exact figures into the narrative so the funder sees who was reached — one natural extra short paragraph is fine. Use ONLY the numbers given; never invent demographic figures.\n" +
   "- Solutions- and partnership-oriented tone; never disparage schools, families, or other organizations.\n" +
   HOUSE_VOICE +
   "- Return ONLY the narrative prose.";
+
+// Optional "Youth Reached" breakdown — included only when the client opts in.
+const youthReachedBlock = (yr: any): string => {
+  if (!yr) return "";
+  let out = "\nYOUTH REACHED breakdown (weave these EXACT figures into the narrative):\n";
+  let any = false;
+  if (yr.total != null) { out += `- Total youth reached: ${yr.total}\n`; any = true; }
+  if (yr.belowPovertyPct != null) { out += `- From households at or below the poverty line: ${yr.belowPovertyPct}%\n`; any = true; }
+  if (yr.minorityPct != null) { out += `- Minority (non-white): ${yr.minorityPct}%\n`; any = true; }
+  if (yr.boysPct != null || yr.girlsPct != null) { out += `- Boys: ${yr.boysPct ?? 0}%, Girls: ${yr.girlsPct ?? 0}%\n`; any = true; }
+  if (Array.isArray(yr.races) && yr.races.length) {
+    out += `- Backgrounds: ${yr.races.map((r: any) => `${r.label} (${r.pct}%)`).join(", ")}\n`;
+    any = true;
+  }
+  return any ? out : "";
+};
 
 const factsBlock = (t: any): string =>
   `Trip name: ${t?.name ?? "Excursion"}\n` +
   `Date: ${t?.date ?? "(unspecified)"}\n` +
   `Number of youth who attended: ${t?.youthCount ?? 0}\n` +
   (t?.description ? `What the trip was about (staff notes): ${t.description}\n` : "") +
-  (t?.debrief ? `Staff debrief / reflections: ${t.debrief}\n` : "");
+  (t?.debrief ? `Staff debrief / reflections: ${t.debrief}\n` : "") +
+  youthReachedBlock(t?.youthReached);
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
