@@ -809,6 +809,33 @@ const AdminWorkbench = () => {
   const plannedDone = plannedSignals.filter((s) => s.status === "Complete").length;
   const dayWon = plannedCount > 0 && plannedDone === plannedCount;
 
+  // Carry-over: a task you planned for an earlier day but never finished rolls
+  // into TODAY's plan automatically, so committed work never silently vanishes
+  // overnight. We re-stamp its planned_date to today (once per day) — completed
+  // tasks are left alone (they stay done in their tile's list). Scoped to this
+  // manager's own signals since todaysCoreSignals is already source-filtered.
+  const rolledForDate = useRef<string | null>(null);
+  useEffect(() => {
+    if (!coreFetched || rolledForDate.current === todayStr) return;
+    const stale = todaysCoreSignals.filter(
+      (s) => s.planned_date && s.planned_date < todayStr && s.status !== "Complete",
+    );
+    if (stale.length === 0) { rolledForDate.current = todayStr; return; }
+    rolledForDate.current = todayStr;
+    (async () => {
+      const { error } = await supabase
+        .from("signals")
+        .update({ planned_date: todayStr } as any)
+        .in("id", stale.map((s) => s.id));
+      if (error) {
+        rolledForDate.current = null; // let it retry
+      } else {
+        queryClient.invalidateQueries({ queryKey: ["task-manager-home-core"] });
+        queryClient.invalidateQueries({ queryKey: ["signals"] });
+      }
+    })();
+  }, [coreFetched, todaysCoreSignals, todayStr, queryClient]);
+
   // Confetti fires once on the false → true transition into Day Won. If the
   // user undoes a completion and re-completes, it fires again, which is what
   // we want — every win deserves the celebration. We seed the ref on first
