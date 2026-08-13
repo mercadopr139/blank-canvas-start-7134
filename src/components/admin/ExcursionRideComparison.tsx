@@ -12,7 +12,7 @@ type RosterYouth = {
   return_vehicle_id: string | null;
 };
 
-type Personnel = { id: string; name: string; vehicle_id: string | null; return_vehicle_id?: string | null };
+type Personnel = { id: string; name: string; vehicle_id: string | null; return_vehicle_id?: string | null; driving_vehicle_id?: string | null };
 
 export default function ExcursionRideComparison({
   vehicles,
@@ -91,7 +91,11 @@ export default function ExcursionRideComparison({
                 >
                   <span className="font-semibold truncate flex items-center gap-1.5">
                     {p.name}
-                    <span className="text-[9px] uppercase tracking-wider text-sky-300/90 bg-sky-500/10 border border-sky-400/20 rounded px-1 py-0.5">Coach/Volunteer</span>
+                    {p.driving_vehicle_id ? (
+                      <span className="text-[9px] uppercase tracking-wider text-amber-300 bg-amber-500/10 border border-amber-400/25 rounded px-1 py-0.5">Driver</span>
+                    ) : (
+                      <span className="text-[9px] uppercase tracking-wider text-sky-300/90 bg-sky-500/10 border border-sky-400/20 rounded px-1 py-0.5">Coach/Volunteer</span>
+                    )}
                   </span>
                   <span className="text-white/70 truncate">{there}</span>
                   <span className={`truncate flex items-center gap-1 ${changed ? "text-amber-200 font-semibold" : "text-white/70"}`}>

@@ -154,21 +154,28 @@ const ExcursionCheckIn = () => {
     setCheckedIn(null);
     setAlreadyIn(null);
     setShowCelebration(false);
-    const today = new Date().toLocaleDateString("en-CA", { timeZone: "America/New_York" });
-    const { error: insertError } = await supabase.from("attendance_records").insert({
-      registration_id: y.id,
-      check_in_date: today,
-      program_source: "Excursion",
-      excursion_id: excursion.id,
+    // Server-gated check-in: the RPC enforces the roster lock (and stamps the
+    // Eastern date), so a stale kiosk can't write after the roster is submitted.
+    const { data: status, error: rpcError } = await (supabase.rpc as any)("excursion_kiosk_check_in", {
+      _excursion_id: excursion.id,
+      _registration_id: y.id,
     });
 
-    if (insertError) {
-      if (insertError.message.includes("duplicate") || insertError.code === "23505") {
-        setAlreadyIn(y.id);
-        setTimeout(() => setAlreadyIn(null), 3000);
-      } else {
-        setError("Something went wrong. Please try again.");
-      }
+    if (rpcError) {
+      setError("Something went wrong. Please try again.");
+      return;
+    }
+    if (status === "duplicate") {
+      setAlreadyIn(y.id);
+      setTimeout(() => setAlreadyIn(null), 3000);
+      return;
+    }
+    if (status === "locked") {
+      setError("This roster has already been submitted. Please see a coach.");
+      return;
+    }
+    if (status !== "ok") {
+      setError("Something went wrong. Please try again.");
       return;
     }
 

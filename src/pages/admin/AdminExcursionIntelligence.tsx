@@ -41,7 +41,7 @@ const AdminExcursionIntelligence = () => {
       // `highlights` (standout moments) isn't in the generated types yet — cast,
       // same pattern used elsewhere for not-yet-generated columns.
       const { data, error } = await (supabase.from("excursions") as any)
-        .select("id, date, name, youth_count, notes, details, highlights, created_at, roster_locked_at, arrived_at, returned_at, arrival_note, return_note, return_plan")
+        .select("id, date, name, notes, details, highlights, created_at, roster_locked_at, arrived_at, returned_at, arrival_note, return_note, return_plan")
         .order("date", { ascending: false });
       if (error) throw error;
       return (data ?? []) as ExcursionRow[];
