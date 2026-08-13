@@ -1196,6 +1196,72 @@ const AdminAttendance = () => {
     return sorted.length > 0 ? sorted[0] : null;
   }, [isCurrentMonth, effectiveRegIds, practiceAttendance, regMap]);
 
+  /* ───── THIS WEEK — average per practice (Monday → yesterday) ─────
+     The middle snapshot row. Averages are over the practice days that
+     ACTUALLY happened this week (Mon through yesterday), detected by which
+     days have attendance — so weekends and off-season Fridays never count,
+     and we never divide by 7. Today is excluded (it's the "Today" row) and
+     rolls in tomorrow. Poverty % and Top District are pooled across the
+     week's attendances (rates/leaders don't average cleanly). */
+  const weekAvg = useMemo(() => {
+    const empty = { hasData: false, n: 0, program: [] as [string, number][], sex: {} as Record<string, number>, totalAvg: 0, poverty: { below: 0, total: 0 }, topDistrict: null as [string, number] | null };
+    if (!isCurrentMonth) return empty;
+    // Monday of the current week (in ET, matching todayStr).
+    const d = parseISO(todayStr);
+    const back = (d.getDay() + 6) % 7; // days since Monday (Mon=0 … Sun=6)
+    const ws = new Date(d);
+    ws.setDate(d.getDate() - back);
+    const weekStartStr = format(ws, "yyyy-MM-dd");
+    // Distinct youth per completed practice day this week (weekStart ≤ date < today).
+    const byDate: Record<string, Set<string>> = {};
+    practiceAttendance.forEach((a) => {
+      if (a.check_in_date >= weekStartStr && a.check_in_date < todayStr) {
+        (byDate[a.check_in_date] ||= new Set()).add(a.registration_id);
+      }
+    });
+    const days = Object.keys(byDate);
+    const n = days.length;
+    if (n === 0) return empty;
+    const programSum: Record<string, number> = {};
+    const sexSum: Record<string, number> = {};
+    const districtSum: Record<string, number> = {};
+    let belowSum = 0, totalSum = 0;
+    days.forEach((date) => {
+      byDate[date].forEach((id) => {
+        const reg = regMap[id];
+        if (!reg) return;
+        programSum[reg.child_boxing_program] = (programSum[reg.child_boxing_program] || 0) + 1;
+        sexSum[reg.child_sex] = (sexSum[reg.child_sex] || 0) + 1;
+        districtSum[reg.child_school_district] = (districtSum[reg.child_school_district] || 0) + 1;
+        if (POVERTY_INCOMES.includes(reg.household_income_range) || reg.free_or_reduced_lunch === "Yes") belowSum++;
+        totalSum++;
+      });
+    });
+    const program = Object.entries(programSum)
+      .map(([p, c]) => [p, Math.round(c / n)] as [string, number])
+      .filter(([, c]) => c > 0)
+      .sort((a, b) => b[1] - a[1]);
+    const sex = { Male: Math.round((sexSum["Male"] || 0) / n), Female: Math.round((sexSum["Female"] || 0) / n) };
+    const districtSorted = Object.entries(districtSum).sort((a, b) => b[1] - a[1]);
+    return {
+      hasData: true, n, program, sex,
+      totalAvg: Math.round(totalSum / n),
+      poverty: { below: belowSum, total: totalSum },
+      topDistrict: districtSorted.length > 0 ? (districtSorted[0] as [string, number]) : null,
+    };
+  }, [isCurrentMonth, practiceAttendance, regMap]);
+
+  // Middle snapshot row data: current month → This Week averages; any other
+  // month → that month's aggregate (existing behavior).
+  const weekSuffix = weekAvg.hasData ? `Wk Avg/Practice (÷${weekAvg.n})` : "This Week";
+  const midHeaderSuffix = isCurrentMonth ? weekSuffix : viewedMonthShort;
+  const midProgram = isCurrentMonth ? weekAvg.program : programSplitToday;
+  const midSex = isCurrentMonth ? weekAvg.sex : sexSplitToday;
+  const midPoverty = isCurrentMonth ? weekAvg.poverty : povertyToday;
+  const midDistrict = isCurrentMonth ? weekAvg.topDistrict : topDistrictToday;
+  const midTotal = isCurrentMonth ? weekAvg.totalAvg : ((sexSplitToday["Male"] || 0) + (sexSplitToday["Female"] || 0));
+  const midTotalLabel = isCurrentMonth ? "Avg Youth / Practice" : "Total Distinct Youth";
+
   /* ───── TODAY-ONLY snapshot (resets daily, live) ───── */
   const todayOnlyRegIds = useMemo(() => {
     if (!isCurrentMonth) return new Set<string>();
@@ -2293,19 +2359,19 @@ const AdminAttendance = () => {
           </div>
         ))}
 
-        {/* Second row of insight cards — only render when it wouldn't duplicate the TODAY row above.
-            On current month + today-has-check-ins, the TODAY row already covers this exact data. */}
-        {!(isCurrentMonth && effectiveLabel === "Today") && (
+        {/* Middle snapshot row — current month → This Week averages (per
+            practice, Mon→yesterday); other months → that month's aggregate. */}
+        {(
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
           {/* Program Split */}
           <Card className="bg-white/5 border-white/10 text-white">
             <CardContent className="pt-4 pb-3">
-              <p className="text-[10px] uppercase tracking-wider text-white/40 mb-2">{isCurrentMonth ? `Program Split — ${effectiveLabel}` : `Program Split — ${viewedMonthShort}`}</p>
-              {programSplitToday.length === 0 ? (
+              <p className="text-[10px] uppercase tracking-wider text-white/40 mb-2">Program Split — {midHeaderSuffix}</p>
+              {midProgram.length === 0 ? (
                 <p className="text-white/30 text-sm">—</p>
               ) : (
                 <div className="space-y-1">
-                  {programSplitToday.map(([prog, count]) => (
+                  {midProgram.map(([prog, count]) => (
                     <div key={prog} className="flex justify-between items-center">
                       <span className="text-xs text-white/70 truncate">{prog.replace(/\s*\(.*\)/, "")}</span>
                       <span className="text-sm font-bold">{count}</span>
@@ -2319,20 +2385,20 @@ const AdminAttendance = () => {
           {/* Boy / Girl Ratio */}
           <Card className="bg-white/5 border-white/10 text-white">
             <CardContent className="pt-4 pb-3">
-              <p className="text-[10px] uppercase tracking-wider text-white/40 mb-2">{isCurrentMonth ? `Boy / Girl — ${effectiveLabel}` : `Boy / Girl — ${viewedMonthShort}`}</p>
+              <p className="text-[10px] uppercase tracking-wider text-white/40 mb-2">Boy / Girl — {midHeaderSuffix}</p>
               <div className="flex items-center gap-3">
                 <div className="text-center flex-1">
-                  <p className="text-2xl font-bold text-blue-400">{sexSplitToday["Male"] || 0}</p>
+                  <p className="text-2xl font-bold text-blue-400">{midSex["Male"] || 0}</p>
                   <p className="text-[10px] text-white/40">Boys</p>
                 </div>
                 <div className="w-px h-8 bg-white/10" />
                 <div className="text-center flex-1">
-                  <p className="text-2xl font-bold text-pink-400">{sexSplitToday["Female"] || 0}</p>
+                  <p className="text-2xl font-bold text-pink-400">{midSex["Female"] || 0}</p>
                   <p className="text-[10px] text-white/40">Girls</p>
                 </div>
               </div>
               <div className="border-t border-white/10 mt-2 pt-1.5 text-center">
-                <p className="text-xs text-white/60"><span className="font-semibold text-white">{(sexSplitToday["Male"] || 0) + (sexSplitToday["Female"] || 0)}</span> Total Distinct Youth</p>
+                <p className="text-xs text-white/60"><span className="font-semibold text-white">{midTotal}</span> {midTotalLabel}</p>
               </div>
             </CardContent>
           </Card>
@@ -2340,9 +2406,9 @@ const AdminAttendance = () => {
           {/* Poverty % */}
           <Card className="bg-white/5 border-white/10 text-white">
             <CardContent className="pt-4 pb-3 text-center">
-              <p className="text-[10px] uppercase tracking-wider text-white/40">{isCurrentMonth ? `Below Poverty — ${effectiveLabel}` : `Below Poverty — ${viewedMonthShort}`}</p>
-              <p className="text-3xl font-bold mt-1">{pct(povertyToday.below, povertyToday.total)}</p>
-              <p className="text-[10px] text-white/30">{povertyToday.below} of {povertyToday.total}</p>
+              <p className="text-[10px] uppercase tracking-wider text-white/40">Below Poverty — {midHeaderSuffix}</p>
+              <p className="text-3xl font-bold mt-1">{pct(midPoverty.below, midPoverty.total)}</p>
+              <p className="text-[10px] text-white/30">{midPoverty.below} of {midPoverty.total}</p>
             </CardContent>
           </Card>
 
@@ -2350,12 +2416,12 @@ const AdminAttendance = () => {
           <Card className="bg-white/5 border-white/10 text-white">
             <CardContent className="pt-4 pb-3 text-center">
               <p className="text-[10px] uppercase tracking-wider text-white/40 flex items-center justify-center gap-1">
-                <School className="w-3 h-3" /> {isCurrentMonth ? `Top District — ${effectiveLabel}` : `Top District — ${viewedMonthShort}`}
+                <School className="w-3 h-3" /> Top District — {midHeaderSuffix}
               </p>
-              {topDistrictToday ? (
+              {midDistrict ? (
                 <>
-                  <p className="text-sm font-bold mt-1.5 truncate">{topDistrictToday[0]}</p>
-                  <p className="text-[10px] text-white/30">{topDistrictToday[1]} youth</p>
+                  <p className="text-sm font-bold mt-1.5 truncate">{midDistrict[0]}</p>
+                  <p className="text-[10px] text-white/30">{midDistrict[1]} youth</p>
                 </>
               ) : (
                 <p className="text-white/30 text-sm mt-1">—</p>
