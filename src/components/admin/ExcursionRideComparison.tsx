@@ -12,7 +12,11 @@ type RosterYouth = {
   return_vehicle_id: string | null;
 };
 
-type Personnel = { id: string; name: string; vehicle_id: string | null; return_vehicle_id?: string | null; driving_vehicle_id?: string | null };
+type Personnel = { id: string; name: string; vehicle_id: string | null; return_vehicle_id?: string | null; driving_vehicle_id?: string | null; return_driving_vehicle_id?: string | null };
+
+const DriverTag = () => (
+  <span className="text-[9px] uppercase tracking-wider text-amber-300 bg-amber-500/10 border border-amber-400/25 rounded px-1 py-0.5 shrink-0">Driver</span>
+);
 
 export default function ExcursionRideComparison({
   vehicles,
@@ -76,12 +80,15 @@ export default function ExcursionRideComparison({
               );
             })}
             {personnel.map((p) => {
-              const there = nameFor(p.vehicle_id) ?? "Driving separately";
+              const there = nameFor(p.vehicle_id) ?? "Drove Separately";
               const homeId =
                 returnPlan === "custom" ? p.return_vehicle_id ?? null : returnPlan === "same" ? p.vehicle_id : null;
-              const home = returnPlan ? (nameFor(homeId) ?? "Driving separately") : "—";
+              const home = returnPlan ? (nameFor(homeId) ?? "Drove Separately") : "—";
               const changed =
                 returnPlan === "custom" && (p.return_vehicle_id ?? null) !== (p.vehicle_id ?? null);
+              // Driver is per-leg: they may drive there but ride home (or vice-versa).
+              const drivesThere = !!p.driving_vehicle_id && p.driving_vehicle_id === p.vehicle_id;
+              const drivesHome = !!p.return_driving_vehicle_id && p.return_driving_vehicle_id === homeId;
               return (
                 <div
                   key={p.id}
@@ -91,15 +98,15 @@ export default function ExcursionRideComparison({
                 >
                   <span className="font-semibold truncate flex items-center gap-1.5">
                     {p.name}
-                    {p.driving_vehicle_id ? (
-                      <span className="text-[9px] uppercase tracking-wider text-amber-300 bg-amber-500/10 border border-amber-400/25 rounded px-1 py-0.5">Driver</span>
-                    ) : (
-                      <span className="text-[9px] uppercase tracking-wider text-sky-300/90 bg-sky-500/10 border border-sky-400/20 rounded px-1 py-0.5">Coach/Volunteer</span>
-                    )}
+                    <span className="text-[9px] uppercase tracking-wider text-sky-300/90 bg-sky-500/10 border border-sky-400/20 rounded px-1 py-0.5 shrink-0">Coach/Vol</span>
                   </span>
-                  <span className="text-white/70 truncate">{there}</span>
-                  <span className={`truncate flex items-center gap-1 ${changed ? "text-amber-200 font-semibold" : "text-white/70"}`}>
+                  <span className="text-white/70 truncate flex items-center gap-1.5">
+                    {there}
+                    {drivesThere && <DriverTag />}
+                  </span>
+                  <span className={`truncate flex items-center gap-1.5 ${changed ? "text-amber-200 font-semibold" : "text-white/70"}`}>
                     {home}
+                    {drivesHome && <DriverTag />}
                     {changed && <span title="Switched vehicles for the ride home">↔</span>}
                   </span>
                 </div>

@@ -222,7 +222,7 @@ const DropBox = ({ id, className, activeClass, children }: {
 
 // A draggable participant chip that also opens a click-menu (touch fallback).
 const PartChip = ({
-  dragId, kind, label, headshotUrl, isDriver, vehicles, currentVehicleId, onRide, offVehicle,
+  dragId, kind, label, headshotUrl, isDriver, vehicles, currentVehicleId, onRide, offVehicle, onRename,
 }: {
   dragId: string;
   kind: ChipKind;
@@ -233,6 +233,7 @@ const PartChip = ({
   currentVehicleId: string | null;
   onRide: (vehicleId: string) => void;
   offVehicle?: { label: string; onClick: () => void };
+  onRename?: () => void;
 }) => {
   const [open, setOpen] = useState(false);
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
@@ -279,11 +280,12 @@ const PartChip = ({
             );
           })}
         </div>
+        {(offVehicle || onRename) && <div className="my-1 border-t border-white/10" />}
         {offVehicle && (
-          <>
-            <div className="my-1 border-t border-white/10" />
-            <button onClick={act(offVehicle.onClick)} className="w-full text-left rounded-md px-2 py-1.5 hover:bg-white/10 text-sm font-semibold text-white/80">{offVehicle.label}</button>
-          </>
+          <button onClick={act(offVehicle.onClick)} className="w-full text-left rounded-md px-2 py-1.5 hover:bg-white/10 text-sm font-semibold text-white/80">{offVehicle.label}</button>
+        )}
+        {onRename && (
+          <button onClick={act(onRename)} className="w-full text-left rounded-md px-2 py-1.5 hover:bg-white/10 text-sm font-semibold text-white/80 flex items-center gap-1.5"><Pencil className="w-3.5 h-3.5" /> Rename</button>
         )}
       </PopoverContent>
     </Popover>
@@ -312,6 +314,11 @@ const ExcursionCoach = () => {
 
   // Personnel form
   const [personnelInput, setPersonnelInput] = useState("");
+  const [renamingPersonnel, setRenamingPersonnel] = useState<{ id: string; name: string } | null>(null);
+  const [renameInput, setRenameInput] = useState("");
+  // Where to land after unlocking: the top banner button re-checks (Review),
+  // "Fix ride there" jumps straight to Load Participants.
+  const [unlockGoTo, setUnlockGoTo] = useState<"review" | "load">("review");
   const [savingPersonnel, setSavingPersonnel] = useState(false);
 
   // Submit / unlock confirms
@@ -466,6 +473,10 @@ const ExcursionCoach = () => {
   const isClosed = !!excursion?.returned_at;
   const transportRequired = excursion?.transportation_required;
   const returnPlan = (excursion?.return_plan as "same" | "custom" | null) ?? null;
+  // After arrival, the Headcount screen becomes a "before we head home" count of
+  // everyone actually on the trip, instead of the pre-trip sign-up reconciliation.
+  const departureMode = isArrived && !isClosed;
+  const onTripCount = youth.length + personnel.length;
 
   // "Per visit" = shown once each time Chrissy navigates into Coach Mode
   // (the component remounts on navigation, resetting these). So re-entering
@@ -483,10 +494,13 @@ const ExcursionCoach = () => {
       setWizardOpen(false);
       return;
     }
-    const exId = excursion.id;
-    const saved = sessionStorage.getItem(`nla_exc_wizard_step_${exId}`);
-    if (saved) setWizardStepKey(saved);
+    // Restore the saved step + auto-open ONLY on first entry this visit — not
+    // on every lock/unlock change. Otherwise unlocking would fight the explicit
+    // "go to Review & Submit" in handleUnlockRoster and land inconsistently.
     if (!wizardShownThisVisit.current) {
+      const exId = excursion.id;
+      const saved = sessionStorage.getItem(`nla_exc_wizard_step_${exId}`);
+      if (saved) setWizardStepKey(saved);
       wizardShownThisVisit.current = true;
       setWizardOpen(true);
     }
@@ -933,6 +947,20 @@ const ExcursionCoach = () => {
     await loadRoster(excursion.id);
   };
 
+  // Fix a misspelled coach/volunteer name in place (keeps their vehicle/driver).
+  const handleRenamePersonnel = async () => {
+    if (!excursion || !renamingPersonnel || !renameInput.trim()) return;
+    const { error } = await (supabase.rpc as any)("rename_excursion_personnel", {
+      _personnel_id: renamingPersonnel.id,
+      _name: renameInput.trim(),
+    });
+    if (error) { toast.error(error.message || "Couldn't rename."); return; }
+    setRenamingPersonnel(null);
+    setRenameInput("");
+    await loadRoster(excursion.id);
+  };
+  const openRename = (id: string, name: string) => { setRenamingPersonnel({ id, name }); setRenameInput(name); };
+
   const handleSubmitRoster = async () => {
     if (!excursion) return;
     setSubmitting(true);
@@ -972,6 +1000,11 @@ const ExcursionCoach = () => {
     }
     toast.success(wasClosed ? "Trip reopened & roster unlocked — you can edit it again." : "Roster unlocked. You can edit it again.");
     await loadExcursion();
+    // Land where the trigger asked: the top banner re-checks on Review, while
+    // "Fix ride there" drops straight onto Load Participants to change seating.
+    setWizardStepKey(unlockGoTo === "load" ? "load" : "review");
+    setWizardOpen(true);
+    setUnlockGoTo("review"); // reset to the default for the next unlock
   };
 
   // ───── Phase 3: arrival / return / timestamp edit ────────────────
@@ -1240,7 +1273,7 @@ const ExcursionCoach = () => {
               <Button
                 variant="outline"
                 className="border-purple-400/50 bg-transparent text-purple-200 hover:bg-purple-500/20 shrink-0"
-                onClick={() => setConfirmUnlock(true)}
+                onClick={() => { setUnlockGoTo("review"); setConfirmUnlock(true); }}
               >
                 <Unlock className="w-4 h-4 mr-2" /> {isClosed ? "Reopen & Unlock" : "Unlock Roster"}
               </Button>
@@ -1310,9 +1343,16 @@ const ExcursionCoach = () => {
         {isLocked && transportRequired === true && vehicles.length > 0 && (
           <Card className="bg-white/[0.03] border-white/10 text-white">
             <CardContent className="p-5 md:p-6">
-              <p className="text-xs font-bold uppercase tracking-wider text-white/50 mb-4">
-                {returnPlan ? "Ride There vs Ride Home" : "Ride to Excursion — who's in each vehicle"}
-              </p>
+              <div className="flex items-center justify-between gap-2 mb-4 flex-wrap">
+                <p className="text-xs font-bold uppercase tracking-wider text-white/50">
+                  {returnPlan ? "Ride There vs Ride Home" : "Ride to Excursion — who's in each vehicle"}
+                </p>
+                {!isClosed && (
+                  <button onClick={() => { setUnlockGoTo("load"); setConfirmUnlock(true); }} className="text-xs font-semibold text-purple-200/90 hover:text-white inline-flex items-center gap-1 rounded px-2 py-1 bg-purple-500/10 border border-purple-400/25 shrink-0">
+                    <Pencil className="w-3 h-3" /> Adjust Ride There
+                  </button>
+                )}
+              </div>
               {returnPlan ? (
                 <ExcursionRideComparison vehicles={vehicles} youth={youth} personnel={personnel} returnPlan={returnPlan} />
               ) : (
@@ -1495,9 +1535,14 @@ const ExcursionCoach = () => {
           return (
             <Card id="ride-home-card" className="bg-white/[0.03] border-white/10 text-white scroll-mt-4">
               <CardContent className="p-5 md:p-6">
-                <div className="flex items-center gap-2 mb-1">
-                  <Home className="w-5 h-5 text-purple-300" />
-                  <h2 className="text-lg md:text-xl font-bold">The Ride Home</h2>
+                <div className="flex items-center justify-between gap-2 mb-1 flex-wrap">
+                  <div className="flex items-center gap-2">
+                    <Home className="w-5 h-5 text-purple-300" />
+                    <h2 className="text-lg md:text-xl font-bold">The Ride Home</h2>
+                  </div>
+                  <button onClick={() => setHeadcountOpen(true)} className="text-xs font-semibold text-emerald-200/90 hover:text-white inline-flex items-center gap-1 rounded px-2 py-1 bg-emerald-500/10 border border-emerald-400/25 shrink-0">
+                    <ListChecks className="w-3.5 h-3.5" /> Headcount before we leave
+                  </button>
                 </div>
 
                 {!returnPlan ? (
@@ -2329,6 +2374,28 @@ const ExcursionCoach = () => {
       </AlertDialog>
 
       {/* Unlock confirm */}
+      {/* Rename a coach / volunteer */}
+      <AlertDialog open={!!renamingPersonnel} onOpenChange={(o) => { if (!o) { setRenamingPersonnel(null); setRenameInput(""); } }}>
+        <AlertDialogContent className="bg-neutral-900 border-white/10 text-white">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Rename coach / volunteer</AlertDialogTitle>
+            <AlertDialogDescription className="text-white/60">Fix a typo — this keeps their vehicle and driver assignment.</AlertDialogDescription>
+          </AlertDialogHeader>
+          <Input
+            autoFocus
+            value={renameInput}
+            onChange={(e) => setRenameInput(e.target.value)}
+            onKeyDown={(e) => { if (e.key === "Enter") handleRenamePersonnel(); }}
+            placeholder="Name"
+            className="my-2 bg-white/5 border-white/15 text-white"
+          />
+          <AlertDialogFooter>
+            <AlertDialogCancel className="bg-white/5 border-white/15 text-white hover:bg-white/10">Cancel</AlertDialogCancel>
+            <AlertDialogAction className="bg-purple-600 hover:bg-purple-500 text-white" onClick={handleRenamePersonnel} disabled={!renameInput.trim()}>Save</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
       <AlertDialog open={confirmUnlock} onOpenChange={setConfirmUnlock}>
         <AlertDialogContent className="bg-neutral-900 border-white/10 text-white">
           <AlertDialogHeader>
@@ -2841,27 +2908,49 @@ const ExcursionCoach = () => {
               {/* Headline */}
               <div className="text-center mb-6">
                 <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-emerald-300/80 flex items-center justify-center gap-1.5">
-                  <ListChecks className="w-4 h-4" /> Headcount Check
+                  <ListChecks className="w-4 h-4" /> {departureMode ? "Before We Head Home" : "Headcount Check"}
                 </p>
                 <h1 className="text-2xl md:text-3xl font-black mt-1">{excursion.name}</h1>
-                <p className="mt-2 text-lg md:text-xl font-bold">
-                  <span className={expectedHere.length === confirmedSignups.length ? "text-emerald-300" : "text-amber-300"}>
-                    {expectedHere.length} of {confirmedSignups.length}
-                  </span>{" "}
-                  <span className="text-white/60">confirmed youth are here</span>
-                </p>
+                {departureMode ? (
+                  <p className="mt-2 text-lg md:text-xl font-bold">
+                    <span className="text-emerald-300">{onTripCount}</span>{" "}
+                    <span className="text-white/60">on the trip — everyone here before we leave?</span>
+                  </p>
+                ) : (
+                  <p className="mt-2 text-lg md:text-xl font-bold">
+                    <span className={expectedHere.length === confirmedSignups.length ? "text-emerald-300" : "text-amber-300"}>
+                      {expectedHere.length} of {confirmedSignups.length}
+                    </span>{" "}
+                    <span className="text-white/60">confirmed youth are here</span>
+                  </p>
+                )}
               </div>
 
               {/* Two columns */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {/* LEFT — Confirmed prior to trip */}
+                {/* LEFT — before trip: Confirmed prior · after arrival: Coaches & Drivers */}
                 <div className="rounded-2xl border-2 border-purple-400/50 bg-neutral-900 overflow-hidden">
                   <div className="px-4 py-3 border-b border-purple-400/25 bg-purple-500/10 flex items-center gap-2">
-                    <p className="text-xs font-bold uppercase tracking-wider text-purple-200">Confirmed Prior to Trip</p>
-                    <span className="ml-auto text-sm font-black tabular-nums text-purple-200/80">{confirmedSignups.length}</span>
+                    <p className="text-xs font-bold uppercase tracking-wider text-purple-200">{departureMode ? "Coaches & Drivers" : "Confirmed Prior to Trip"}</p>
+                    <span className="ml-auto text-sm font-black tabular-nums text-purple-200/80">{departureMode ? personnel.length : confirmedSignups.length}</span>
                   </div>
                   <div className="p-2 space-y-1.5">
-                    {confirmedSignups.length === 0 ? (
+                    {departureMode ? (
+                      personnel.length === 0 ? (
+                        <p className="text-sm text-white/30 px-2 py-4 text-center">No coaches or drivers on the trip.</p>
+                      ) : (
+                        personnel.map((p) => (
+                          <div key={p.id} className="flex items-center gap-3 rounded-xl px-3 py-2.5 border bg-white/[0.03] border-white/10">
+                            <span className="flex-1 min-w-0 truncate font-semibold">{p.name}</span>
+                            {p.driving_vehicle_id ? (
+                              <span className="text-[10px] font-bold uppercase tracking-wider text-amber-300 bg-amber-500/15 border border-amber-400/30 rounded px-1.5 py-0.5 flex-shrink-0">Driver</span>
+                            ) : (
+                              <span className="text-[10px] font-bold uppercase tracking-wider text-sky-300/90 bg-sky-500/10 border border-sky-400/20 rounded px-1.5 py-0.5 flex-shrink-0">Coach/Vol</span>
+                            )}
+                          </div>
+                        ))
+                      )
+                    ) : confirmedSignups.length === 0 ? (
                       <p className="text-sm text-white/30 px-2 py-4 text-center">No one was confirmed ahead of time.</p>
                     ) : (
                       confirmedSignups.map((c) => {
@@ -2895,7 +2984,7 @@ const ExcursionCoach = () => {
                 <div className="rounded-2xl border-2 border-emerald-400/50 bg-neutral-900 overflow-hidden">
                   <div className="px-4 py-3 border-b border-emerald-400/25 bg-emerald-500/10 flex items-center gap-2">
                     <CheckCircle2 className="w-4 h-4 text-emerald-300" />
-                    <p className="text-xs font-bold uppercase tracking-wider text-emerald-200">Signed In</p>
+                    <p className="text-xs font-bold uppercase tracking-wider text-emerald-200">{departureMode ? "Youth" : "Signed In"}</p>
                     <span className="ml-auto text-sm font-black tabular-nums text-emerald-300">{youth.length}</span>
                   </div>
                   <div className="p-2 space-y-1.5">
@@ -2933,8 +3022,8 @@ const ExcursionCoach = () => {
                 </div>
               </div>
 
-              {/* Waiting banner */}
-              {expectedMissing.length > 0 ? (
+              {/* Waiting banner — pre-trip only (post-arrival everyone's already on the trip) */}
+              {!departureMode && (expectedMissing.length > 0 ? (
                 <div className="mt-4 rounded-xl bg-amber-500/10 border border-amber-400/30 px-4 py-3 flex items-start gap-2.5">
                   <AlertTriangle className="w-5 h-5 text-amber-300 flex-shrink-0 mt-0.5" />
                   <p className="text-sm text-amber-100/90">
@@ -2947,7 +3036,7 @@ const ExcursionCoach = () => {
                   <CheckCircle2 className="w-5 h-5 text-emerald-300 flex-shrink-0" />
                   <p className="text-sm text-emerald-100/90 font-semibold">Everyone who confirmed is here.</p>
                 </div>
-              ) : null}
+              ) : null)}
 
               {/* Manual check-in — for someone who's here but didn't use the kiosk */}
               <div className="mt-6 rounded-xl border border-white/10 bg-white/[0.02] p-3">
@@ -3019,8 +3108,9 @@ const ExcursionCoach = () => {
                 {personnel.length > 0 && (
                   <div className="flex flex-wrap gap-1.5 mb-2">
                     {personnel.map((p) => (
-                      <span key={p.id} className="inline-flex items-center gap-1 rounded-full bg-sky-500/10 border border-sky-400/25 pl-2.5 pr-1 py-0.5 text-xs text-sky-100">
+                      <span key={p.id} className="inline-flex items-center gap-1 rounded-full bg-sky-500/10 border border-sky-400/25 pl-2.5 pr-0.5 py-0.5 text-xs text-sky-100">
                         {p.name}
+                        <button onClick={() => openRename(p.id, p.name)} className="w-5 h-5 rounded-full hover:bg-white/10 flex items-center justify-center text-white/50 hover:text-white" aria-label="Rename"><Pencil className="w-3 h-3" /></button>
                         <button onClick={() => handleRemovePersonnel(p.id)} className="w-5 h-5 rounded-full hover:bg-white/10 flex items-center justify-center text-white/50 hover:text-white" aria-label="Remove"><X className="w-3 h-3" /></button>
                       </span>
                     ))}
@@ -3045,10 +3135,10 @@ const ExcursionCoach = () => {
                 onClick={dismissHeadcount}
                 className="w-full mt-4 bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-6 rounded-2xl text-lg"
               >
-                Continue to Coach Mode →
+                {departureMode ? "✓ All here — back to trip" : "Continue to Coach Mode →"}
               </Button>
               <p className="text-center text-[11px] text-white/30 mt-3">
-                Reopen anytime from the “Headcount Check” button on the Expected Today card.
+                {departureMode ? "Do this right before you leave the destination." : "Reopen anytime from the “Headcount Check” button on the Expected Today card."}
               </p>
             </div>
           </div>
@@ -3298,7 +3388,8 @@ const ExcursionCoach = () => {
                                     <PartChip key={p.id} dragId={`coach:${p.id}`} kind="coach" label={p.name}
                                       vehicles={vehicles} currentVehicleId={v.id}
                                       onRide={(vid) => handleSetPersonnelVehicle(p.id, vid)}
-                                      offVehicle={{ label: "Drive separately", onClick: () => handleSetPersonnelVehicle(p.id, null) }} />
+                                      offVehicle={{ label: "Drive separately", onClick: () => handleSetPersonnelVehicle(p.id, null) }}
+                                      onRename={() => openRename(p.id, p.name)} />
                                   ))}
                                 </div>
                               )}
@@ -3322,7 +3413,8 @@ const ExcursionCoach = () => {
                               {personnel.filter((p) => !p.vehicle_id).map((p) => (
                                 <PartChip key={p.id} dragId={`coach:${p.id}`} kind="coach" label={p.name}
                                   vehicles={vehicles} currentVehicleId={null}
-                                  onRide={(vid) => handleSetPersonnelVehicle(p.id, vid)} />
+                                  onRide={(vid) => handleSetPersonnelVehicle(p.id, vid)}
+                                  onRename={() => openRename(p.id, p.name)} />
                               ))}
                             </div>
                           )}
