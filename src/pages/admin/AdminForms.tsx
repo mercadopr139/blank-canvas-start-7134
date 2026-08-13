@@ -10,7 +10,7 @@ import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Plus, Pencil, Trash2, ExternalLink, Link2, FileText, Copy, Users } from "lucide-react";
+import { Plus, Eye, Trash2, ExternalLink, Link2, FileText, Copy, Users } from "lucide-react";
 import { toast } from "sonner";
 import { slugify, type FormRecord } from "@/lib/formKit";
 import { computeImpactSnapshot, type ImpactForm } from "@/lib/impactSnapshot";
@@ -34,6 +34,21 @@ const AdminForms = () => {
         .order("updated_at", { ascending: false });
       if (error) throw error;
       return (data as unknown as FormRecord[]) || [];
+    },
+  });
+
+  // Response counts per form, so the list shows how many submissions each form
+  // has without opening it. One lightweight query, tallied client-side.
+  const { data: responseCounts } = useQuery({
+    queryKey: ["admin-forms-response-counts"],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("form_responses" as never).select("form_id");
+      if (error) throw error;
+      const counts: Record<string, number> = {};
+      (data as unknown as { form_id: string }[] || []).forEach((r) => {
+        counts[r.form_id] = (counts[r.form_id] || 0) + 1;
+      });
+      return counts;
     },
   });
 
@@ -225,6 +240,10 @@ const AdminForms = () => {
                 </div>
                 <span className="text-xs text-white/35">
                   {(f.fields?.length || 0)} field{(f.fields?.length || 0) === 1 ? "" : "s"}
+                  {" · "}
+                  <span className={(responseCounts?.[f.id] ?? 0) > 0 ? "text-emerald-300/80 font-semibold" : "text-white/35"}>
+                    {responseCounts?.[f.id] ?? 0} response{(responseCounts?.[f.id] ?? 0) === 1 ? "" : "s"}
+                  </span>
                   {f.status === "published" && <> · /f/{f.slug}</>}
                 </span>
               </div>
@@ -254,8 +273,8 @@ const AdminForms = () => {
                 <Button size="icon" variant="ghost" onClick={() => duplicateForm(f)} disabled={duplicatingId === f.id} title="Duplicate this form" className="h-8 w-8 text-white/50 hover:text-white">
                   <Copy className="w-4 h-4" />
                 </Button>
-                <Button size="icon" variant="ghost" onClick={() => navigate(`/admin/operations/forms/${f.id}`)} title="Edit" className="h-8 w-8 text-white/60 hover:text-white">
-                  <Pencil className="w-4 h-4" />
+                <Button size="icon" variant="ghost" onClick={() => navigate(`/admin/operations/forms/${f.id}`)} title="View / edit" className="h-8 w-8 text-white/60 hover:text-white">
+                  <Eye className="w-4 h-4" />
                 </Button>
                 <Button size="icon" variant="ghost" onClick={() => setDeleteTarget(f)} title="Delete" className="h-8 w-8 text-red-400/60 hover:text-red-400">
                   <Trash2 className="w-4 h-4" />
