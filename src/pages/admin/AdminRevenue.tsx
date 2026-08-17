@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import { fetchAllRows } from "@/lib/fetchAllRows";
 import SupporterAutocomplete from "@/components/admin/SupporterAutocomplete";
 import ValidatedPhoneInput from "@/components/admin/ValidatedPhoneInput";
 import ValidatedEmailInput from "@/components/admin/ValidatedEmailInput";
@@ -106,10 +107,13 @@ const AdminRevenue = () => {
 
   const fetchRows = useCallback(async () => {
     setLoading(true);
-    const { data } = await supabase.
-    from("revenue").
-    select("id, supporter_id, date, amount, revenue_type, payment_method, reference_id, logged_by").
-    order("date", { ascending: false });
+    const data = await fetchAllRows((from, to) =>
+      supabase
+        .from("revenue")
+        .select("id, supporter_id, date, amount, revenue_type, payment_method, reference_id, logged_by")
+        .order("date", { ascending: false })
+        .range(from, to)
+    );
 
     // Fetch supporter names + latest-receipt state for linked records.
     // receipt_sent_this_year is derived: latest_receipt_year matches the

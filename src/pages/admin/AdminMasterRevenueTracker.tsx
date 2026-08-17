@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import { fetchAllRows } from "@/lib/fetchAllRows";
 import { formatUSD } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft } from "lucide-react";
@@ -75,11 +76,12 @@ const AdminMasterRevenueTracker = () => {
   useEffect(() => {
     const fetchRevenue = async () => {
       setLoading(true);
-      const { data } = await supabase
-        .from("revenue")
-        .select("id, supporter_id, amount, date, revenue_type, payment_method, reference_id");
-
-      const rawRows = (data as RevenueRow[]) ?? [];
+      const rawRows = await fetchAllRows<RevenueRow>((from, to) =>
+        supabase
+          .from("revenue")
+          .select("id, supporter_id, amount, date, revenue_type, payment_method, reference_id")
+          .range(from, to)
+      );
 
       // Resolve supporter names so the drill-down can show a human name
       const supporterIds = [...new Set(rawRows.map((r) => r.supporter_id).filter(Boolean))] as string[];

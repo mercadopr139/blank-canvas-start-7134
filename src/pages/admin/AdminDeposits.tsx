@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { format } from "date-fns";
 import { formatUSD } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
+import { fetchAllRows } from "@/lib/fetchAllRows";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, Plus, Trash2 } from "lucide-react";
 import {
@@ -72,13 +73,16 @@ const AdminDeposits = () => {
 
     // Fetch donation aggregates per batch
     const batchIds = batchRows.map((b: any) => b.id);
-    const { data: donations } = await supabase
-      .from("donations")
-      .select("deposit_batch_id, amount")
-      .in("deposit_batch_id", batchIds);
+    const donations = await fetchAllRows((from, to) =>
+      supabase
+        .from("donations")
+        .select("deposit_batch_id, amount")
+        .in("deposit_batch_id", batchIds)
+        .range(from, to)
+    );
 
     const aggregates: Record<string, { count: number; total: number }> = {};
-    (donations ?? []).forEach((d: any) => {
+    donations.forEach((d: any) => {
       if (!aggregates[d.deposit_batch_id]) aggregates[d.deposit_batch_id] = { count: 0, total: 0 };
       aggregates[d.deposit_batch_id].count++;
       aggregates[d.deposit_batch_id].total += Number(d.amount);

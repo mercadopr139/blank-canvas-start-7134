@@ -12,7 +12,7 @@ import {
 } from "@/components/ui/chart";
 import { BarChart, Bar, XAxis, YAxis, PieChart, Pie, Cell } from "recharts";
 import { YouthDistrictMap } from "@/components/admin/YouthDistrictMap";
-import { summarizeMinority } from "@/lib/demographics";
+import { summarizeMinority, isBelowPoverty } from "@/lib/demographics";
 
 const COLORS = [
   "#bf0f3e",
@@ -136,16 +136,18 @@ const AdminRegistrationAnalytics = () => {
     summarizeMinority((registrations || []).map((r) => r.child_race_ethnicity));
 
   /* ───── BELOW FEDERAL POVERTY LINE ───── */
-  // Derived from the Free/Reduced Lunch answer, since F/R lunch eligibility is
-  // federally defined around the poverty guidelines and is the metric schools,
-  // CSBG, and most federal youth grants actually use.
+  // Uses the ONE shared rule (low income bracket OR free/reduced-lunch) from
+  // @/lib/demographics, so this page's poverty % agrees with Attendance,
+  // Excursion, and Transportation Intelligence. Denominator = youth we can
+  // actually assess (an income bracket or a lunch answer on record), so the
+  // rate isn't diluted by youth with no economic data at all.
   let belowFPL = 0;
   let fplEligible = 0;
   registrations?.forEach((r) => {
-    const answer = r.free_or_reduced_lunch;
-    if (answer !== "Yes" && answer !== "No") return;
+    const assessable = !!r.household_income_range || r.free_or_reduced_lunch === "Yes" || r.free_or_reduced_lunch === "No";
+    if (!assessable) return;
     fplEligible++;
-    if (answer === "Yes") belowFPL++;
+    if (isBelowPoverty(r)) belowFPL++;
   });
   const belowFPLPct = fplEligible > 0 ? Math.round((belowFPL / fplEligible) * 100) : 0;
 

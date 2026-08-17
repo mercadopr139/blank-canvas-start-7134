@@ -43,11 +43,14 @@ const AdminSupporters = () => {
 
     if (!supporters) { setLoading(false); return; }
 
+    // Current calendar year — was hardcoded to 2026, which would silently read
+    // $0 for every supporter on Jan 1, 2027.
+    const yr = new Date().getFullYear();
     const { data: donations } = await supabase
       .from("donations")
       .select("supporter_id, amount, revenue_type, revenue_description, deposit_date")
-      .gte("deposit_date", "2026-01-01")
-      .lte("deposit_date", "2026-12-31");
+      .gte("deposit_date", `${yr}-01-01`)
+      .lte("deposit_date", `${yr}-12-31`);
 
     const totals: Record<string, number> = {};
     (donations || []).forEach((d: any) => {

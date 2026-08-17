@@ -2,6 +2,7 @@ import { useState, useMemo, useCallback, useRef, useEffect, type KeyboardEvent a
 import { useNavigate } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { fetchAllRows } from "@/lib/fetchAllRows";
 import { useAuth } from "@/contexts/AuthContext";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -289,14 +290,14 @@ const AdminAttendance = () => {
   const [programYearFilter, setProgramYearFilter] = useState<string>(() => getCurrentAttendanceYear());
   const { data: allRegistrations = [] } = useQuery({
     queryKey: ["registrations-attendance-full"],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("youth_registrations")
-        .select("id, child_first_name, child_last_name, child_boxing_program, child_headshot_url, is_bald_eagle, bald_eagle_active, child_sex, child_school_district, household_income_range, free_or_reduced_lunch, child_race_ethnicity, family_structure, program_year")
-        .order("child_last_name");
-      if (error) throw error;
-      return data as Registration[];
-    },
+    queryFn: () =>
+      fetchAllRows<Registration>((from, to) =>
+        supabase
+          .from("youth_registrations")
+          .select("id, child_first_name, child_last_name, child_boxing_program, child_headshot_url, is_bald_eagle, bald_eagle_active, child_sex, child_school_district, household_income_range, free_or_reduced_lunch, child_race_ethnicity, family_structure, program_year")
+          .order("child_last_name")
+          .range(from, to)
+      ),
   });
   // Distinct program years across all registrations, for the dropdown.
   const availableProgramYears = useMemo(() => {
@@ -463,8 +464,12 @@ const AdminAttendance = () => {
   // calendar emojis and the chart correlation panel read from that single
   // source so the calendar and chart never disagree on the day's weather.)
 
-  // YTD attendance since the new check-in system launched (March 9, 2026)
-  const YTD_START = "2026-03-09";
+  // "Year Avg" is anchored to the CURRENT program year (Sept 1 → today), not a
+  // fixed launch date — so after each Sept 1 the average resets to the new
+  // program year instead of blending two years into one misleading number.
+  // (Data only exists from the March 9, 2026 launch, so this reads identically
+  // until the first Sept 1 rollover, then correctly starts fresh.)
+  const YTD_START = `${getCurrentAttendanceYear().slice(0, 4)}-09-01`;
 
   const { data: ytdAttendance = [] } = useQuery({
     queryKey: ["attendance-records-ytd", YTD_START],
@@ -1105,7 +1110,7 @@ const AdminAttendance = () => {
     [ytdAttendance, ytdPracticeDayMap, isPracticeDay]
   );
 
-  /* ───── STAT BOX: Year Avg → avg per green-practice day since 2026-03-09 ───── */
+  /* ───── STAT BOX: Year Avg → avg per green-practice day this program year ───── */
   const yearAvg = useMemo(() => {
     const days = new Set(ytdPracticeAttendance.map((a) => a.check_in_date));
     return days.size > 0 ? Math.round(ytdPracticeAttendance.length / days.size) : 0;

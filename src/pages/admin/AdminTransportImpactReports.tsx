@@ -3,6 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { format, subDays, startOfWeek, startOfMonth, startOfYear, subMonths, parseISO, differenceInYears } from "date-fns";
 import { isBelowPoverty } from "@/lib/demographics";
+import { fetchAllRows } from "@/lib/fetchAllRows";
 import { getCurrentAttendanceYear, programYearRange } from "@/lib/programYear";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -133,12 +134,15 @@ export default function AdminTransportImpactReports() {
 
     try {
       // Fetch runs in date range
-      const { data: runs } = await supabase
-        .from("runs")
-        .select("*, drivers(name), routes(name)")
-        .gte("started_at", ds)
-        .lte("started_at", de + "T23:59:59")
-        .eq("status", "completed");
+      const runs = await fetchAllRows((from, to) =>
+        supabase
+          .from("runs")
+          .select("*, drivers(name), routes(name)")
+          .gte("started_at", ds)
+          .lte("started_at", de + "T23:59:59")
+          .eq("status", "completed")
+          .range(from, to)
+      );
 
       // Fetch attendance for those runs
       const runIds = (runs || []).map(r => r.id);
@@ -147,7 +151,7 @@ export default function AdminTransportImpactReports() {
         // Batch in groups of 50
         for (let i = 0; i < runIds.length; i += 50) {
           const batch = runIds.slice(i, i + 50);
-          const { data } = await supabase.from("transport_attendance").select("*, youth_profiles(*)").in("run_id", batch);
+          const { data } = await supabase.from("transport_attendance").select("*, youth_profiles(*)").neq("status", "no_show").in("run_id", batch);
           if (data) attendance = attendance.concat(data);
         }
       }
@@ -167,8 +171,9 @@ export default function AdminTransportImpactReports() {
       const youthNames = youthProfiles.map(y => ({ first: y.first_name, last: y.last_name }));
       let registrations: any[] = [];
       if (youthNames.length > 0) {
-        const { data } = await supabase.from("youth_registrations").select("*");
-        if (data) registrations = data;
+        registrations = await fetchAllRows((from, to) =>
+          supabase.from("youth_registrations").select("*").range(from, to)
+        );
       }
 
       // Match youth profiles to registrations by name
@@ -303,13 +308,15 @@ export default function AdminTransportImpactReports() {
       // dashboard — not the Jan–Dec calendar year — so the two screens agree.
       const [pyStart] = programYearRange(getCurrentAttendanceYear());
       const ytdStart = format(pyStart, "yyyy-MM-dd");
-      const { data: ytdRuns } = await supabase.from("runs").select("id").gte("started_at", ytdStart).eq("status", "completed");
+      const ytdRuns = await fetchAllRows((from, to) =>
+        supabase.from("runs").select("id").gte("started_at", ytdStart).eq("status", "completed").range(from, to)
+      );
       let ytdAttendance: any[] = [];
       const ytdRunIds = (ytdRuns || []).map(r => r.id);
       if (ytdRunIds.length > 0) {
         for (let i = 0; i < ytdRunIds.length; i += 50) {
           const batch = ytdRunIds.slice(i, i + 50);
-          const { data } = await supabase.from("transport_attendance").select("youth_id").in("run_id", batch);
+          const { data } = await supabase.from("transport_attendance").select("youth_id").neq("status", "no_show").in("run_id", batch);
           if (data) ytdAttendance = ytdAttendance.concat(data);
         }
       }

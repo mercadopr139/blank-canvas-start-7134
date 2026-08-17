@@ -8,6 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { RefreshCw, FileText, Bus, Users, DollarSign, ArrowUpRight, ArrowDownRight, UserCheck } from "lucide-react";
 import { getCurrentAttendanceYear, programYearRange, shortProgramYear } from "@/lib/programYear";
 import { isBelowPoverty } from "@/lib/demographics";
+import { fetchAllRows } from "@/lib/fetchAllRows";
 
 /* ── zones ── */
 const ZONES = ["Woodbine", "Wildwood"] as const;
@@ -24,6 +25,7 @@ type ZoneStats = {
   dropoffs: number;
   rides: number;
   uniqueYouth: number;
+  assessedYouth: number;
   avgYouthPerTrip: string;
   drivers: { name: string; trips: number }[];
   age: Breakdown;
@@ -55,13 +57,15 @@ async function buildIntelligence(w: Window) {
   const ds = format(start, "yyyy-MM-dd");
   const de = format(end, "yyyy-MM-dd");
 
-  const { data: runsRaw } = await supabase
-    .from("runs")
-    .select("id, run_type, started_at, driver:drivers(name), route:routes(name)")
-    .eq("status", "completed")
-    .gte("started_at", ds)
-    .lte("started_at", de + "T23:59:59");
-  const runs = (runsRaw || []) as any[];
+  const runs = (await fetchAllRows((from, to) =>
+    supabase
+      .from("runs")
+      .select("id, run_type, started_at, driver:drivers(name), route:routes(name)")
+      .eq("status", "completed")
+      .gte("started_at", ds)
+      .lte("started_at", de + "T23:59:59")
+      .range(from, to)
+  )) as any[];
 
   // Attendance (batched) — carries each youth's pickup_zone via the join.
   const runIds = runs.map((r) => r.id);
@@ -70,15 +74,18 @@ async function buildIntelligence(w: Window) {
     const { data } = await supabase
       .from("transport_attendance")
       .select("run_id, youth_id, youth:youth_profiles(id, first_name, last_name, pickup_zone)")
+      .neq("status", "no_show") // a no-show isn't a ride given or a youth served
       .in("run_id", runIds.slice(i, i + 50));
     if (data) attendance = attendance.concat(data);
   }
 
   // Registrations for demographics (matched to youth by name, like the report).
-  const { data: regsRaw } = await supabase
-    .from("youth_registrations")
-    .select("child_first_name, child_last_name, child_date_of_birth, child_sex, child_race_ethnicity, household_income_range, free_or_reduced_lunch");
-  const regs = (regsRaw || []) as any[];
+  const regs = (await fetchAllRows((from, to) =>
+    supabase
+      .from("youth_registrations")
+      .select("child_first_name, child_last_name, child_date_of_birth, child_sex, child_race_ethnicity, household_income_range, free_or_reduced_lunch")
+      .range(from, to)
+  )) as any[];
   const regByName = new Map<string, any>();
   regs.forEach((r) => regByName.set(`${(r.child_first_name || "").toLowerCase()}|${(r.child_last_name || "").toLowerCase()}`, r));
 
@@ -117,12 +124,12 @@ async function buildIntelligence(w: Window) {
   // accumulator per zone (+ combined)
   type Acc = {
     trips: Set<string>; pickups: Set<string>; dropoffs: Set<string>; rides: number;
-    youth: Set<string>; drivers: Map<string, Set<string>>;
+    youth: Set<string>; matched: Set<string>; drivers: Map<string, Set<string>>;
     age: Record<string, number>; gender: Record<string, number>; race: Record<string, number>; poverty: Set<string>;
   };
   const mkAcc = (): Acc => ({
     trips: new Set(), pickups: new Set(), dropoffs: new Set(), rides: 0,
-    youth: new Set(), drivers: new Map(), age: {}, gender: {}, race: {}, poverty: new Set(),
+    youth: new Set(), matched: new Set(), drivers: new Map(), age: {}, gender: {}, race: {}, poverty: new Set(),
   });
   const acc: Record<string, Acc> = { Woodbine: mkAcc(), Wildwood: mkAcc(), Combined: mkAcc() };
   const bump = (a: Acc, driver: string, runId: string, type: string) => {
@@ -156,6 +163,9 @@ async function buildIntelligence(w: Window) {
     targets.forEach((a) => a.youth.add(youthId));
     const reg = info.reg;
     if (!reg) return;
+    // Only youth matched to a registration can be assessed for poverty — track
+    // them so the poverty % divides by "assessed," not by all youth served.
+    targets.forEach((a) => a.matched.add(youthId));
     if (reg.child_date_of_birth) {
       const age = differenceInYears(new Date(), parseISO(reg.child_date_of_birth));
       if (age >= 0 && age < 30) targets.forEach((a) => { a.age[String(age)] = (a.age[String(age)] || 0) + 1; });
@@ -168,19 +178,23 @@ async function buildIntelligence(w: Window) {
   const finalize = (a: Acc): ZoneStats => {
     const trips = a.trips.size;
     const uniqueYouth = a.youth.size;
+    const assessedYouth = a.matched.size;
     return {
       trips,
       pickups: a.pickups.size,
       dropoffs: a.dropoffs.size,
       rides: a.rides,
       uniqueYouth,
+      assessedYouth,
       avgYouthPerTrip: trips > 0 ? (a.rides / trips).toFixed(1) : "0",
       drivers: [...a.drivers.entries()].map(([name, ids]) => ({ name, trips: ids.size })).sort((x, y) => y.trips - x.trips),
       age: sortBreakdown(a.age).sort((x, y) => Number(x.label) - Number(y.label)),
       gender: sortBreakdown(a.gender),
       race: sortBreakdown(a.race),
       povertyCount: a.poverty.size,
-      povertyPct: uniqueYouth > 0 ? ((a.poverty.size / uniqueYouth) * 100).toFixed(0) : "0",
+      // Divide by ASSESSED youth (matched to a registration), matching the
+      // printed report — not by all youth served, which would read low.
+      povertyPct: assessedYouth > 0 ? ((a.poverty.size / assessedYouth) * 100).toFixed(0) : "0",
     };
   };
 
@@ -244,7 +258,7 @@ const ZoneColumn = ({ name, stats }: { name: ZoneKey; stats: ZoneStats }) => (
       <div className="bg-white/5 rounded-lg p-3 flex items-center justify-between">
         <div>
           <p className="text-white/50 text-[11px]">At / below federal poverty line</p>
-          <p className="text-white/40 text-[11px]">{stats.povertyCount} of {stats.uniqueYouth} youth</p>
+          <p className="text-white/40 text-[11px]">{stats.povertyCount} of {stats.assessedYouth} assessed</p>
         </div>
         <p className="text-2xl font-bold" style={{ color: ZONE_ACCENT[name] }}>{stats.povertyPct}%</p>
       </div>

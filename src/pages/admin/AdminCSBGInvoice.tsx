@@ -47,7 +47,14 @@ const AdminCSBGInvoice = () => {
     },
   });
 
-  const nextNumber = `NLA-${String((invoices.length || 0) + 1).padStart(3, "0")}`;
+  // Next invoice number derived from the HIGHEST existing number, not the row
+  // count — otherwise deleting any earlier invoice makes the next one reuse a
+  // number, which federal auditors flag on reimbursement paperwork.
+  const maxInvoiceNum = (invoices || []).reduce((max: number, inv: any) => {
+    const n = parseInt(String(inv?.invoice_number ?? "").replace(/\D+/g, ""), 10);
+    return Number.isFinite(n) && n > max ? n : max;
+  }, 0);
+  const nextNumber = `NLA-${String(maxInvoiceNum + 1).padStart(3, "0")}`;
 
   const createMutation = useMutation({
     mutationFn: async () => {

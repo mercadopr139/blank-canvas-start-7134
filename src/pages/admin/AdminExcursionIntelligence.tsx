@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import { parseISO, format } from "date-fns";
 import { getCurrentAttendanceYear, shortProgramYear } from "@/lib/programYear";
 import { summarizeMinority } from "@/lib/demographics";
+import { fetchAllRows } from "@/lib/fetchAllRows";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { MapPin, Users, UserCheck, TrendingUp, Award, Lock, CheckCircle2, Loader2, FileText, Download, ChevronDown, ChevronRight, StickyNote, Pencil } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -76,13 +77,13 @@ const AdminExcursionIntelligence = () => {
   // Youth demographics, for the equity/reach breakdown (who we're reaching).
   const { data: regDemographics = [] } = useQuery({
     queryKey: ["excursion-intel-demographics"],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("youth_registrations")
-        .select("id, child_first_name, child_last_name, child_race_ethnicity, child_sex, household_income_range, free_or_reduced_lunch, is_bald_eagle");
-      if (error) throw error;
-      return data ?? [];
-    },
+    queryFn: () =>
+      fetchAllRows((from, to) =>
+        supabase
+          .from("youth_registrations")
+          .select("id, child_first_name, child_last_name, child_race_ethnicity, child_sex, household_income_range, free_or_reduced_lunch, is_bald_eagle")
+          .range(from, to)
+      ),
   });
   const regMap = useMemo(() => {
     const m = new Map<string, any>();

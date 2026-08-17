@@ -101,12 +101,14 @@ const AdminDonations = () => {
     } else {
       // If this donation was linked to a supporter, check remaining qualifying donations
       if (supporterId) {
+        // Current calendar year — was hardcoded to 2026 (would misfire in 2027).
+        const yr = new Date().getFullYear();
         const { data: remaining } = await supabase
           .from("donations")
           .select("id, revenue_type, revenue_description")
           .eq("supporter_id", supporterId)
-          .gte("deposit_date", "2026-01-01")
-          .lte("deposit_date", "2026-12-31");
+          .gte("deposit_date", `${yr}-01-01`)
+          .lte("deposit_date", `${yr}-12-31`);
 
         const qualifying = (remaining || []).filter(
           (d: any) =>
