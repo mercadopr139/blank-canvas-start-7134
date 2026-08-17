@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { RefreshCw, FileText, Bus, Users, DollarSign, ArrowUpRight, ArrowDownRight, UserCheck } from "lucide-react";
 import { getCurrentAttendanceYear, programYearRange, shortProgramYear } from "@/lib/programYear";
+import { isBelowPoverty } from "@/lib/demographics";
 
 /* ── zones ── */
 const ZONES = ["Woodbine", "Wildwood"] as const;
@@ -35,12 +36,8 @@ type ZoneStats = {
 const sortBreakdown = (rec: Record<string, number>): Breakdown =>
   Object.entries(rec).map(([label, count]) => ({ label, count })).sort((a, b) => b.count - a.count);
 
-// Identical poverty rule to Attendance Intelligence so the two screens agree:
-// a youth counts as at/below the line if their household income bracket is low
-// OR they qualify for free/reduced lunch (NLA's primary economic-need signal).
-const POVERTY_INCOMES = ["Under $25,000", "Less than $25,000", "Less than $35,000"];
-const isBelowPoverty = (reg: any): boolean =>
-  !!reg && (POVERTY_INCOMES.includes(reg.household_income_range) || reg.free_or_reduced_lunch === "Yes");
+// Poverty rule lives in one place (@/lib/demographics) so every Intelligence
+// screen and the printed report agree — see isBelowPoverty.
 
 function windowRange(w: Window): [Date, Date] {
   const now = new Date();
@@ -85,20 +82,37 @@ async function buildIntelligence(w: Window) {
   const regByName = new Map<string, any>();
   regs.forEach((r) => regByName.set(`${(r.child_first_name || "").toLowerCase()}|${(r.child_last_name || "").toLowerCase()}`, r));
 
-  // run id → set of zones it actually served (from the youth carried).
-  const runZones = new Map<string, Set<string>>();
+  // run id → youth count per zone, so each trip can be attributed to ONE primary
+  // zone (the zone most of its riders came from). That single-assignment is what
+  // makes the two zone columns add up exactly to the Combined total.
+  const runZoneCounts = new Map<string, Record<string, number>>();
   // unique youth → { zone, registration }
   const youthById = new Map<string, { zone: string; reg: any }>();
   attendance.forEach((a) => {
     const zone = a.youth?.pickup_zone;
     if (!zone || !ZONES.includes(zone)) return;
-    if (!runZones.has(a.run_id)) runZones.set(a.run_id, new Set());
-    runZones.get(a.run_id)!.add(zone);
+    if (!runZoneCounts.has(a.run_id)) runZoneCounts.set(a.run_id, {});
+    const rec = runZoneCounts.get(a.run_id)!;
+    rec[zone] = (rec[zone] || 0) + 1;
     if (!youthById.has(a.youth_id)) {
       const reg = regByName.get(`${(a.youth?.first_name || "").toLowerCase()}|${(a.youth?.last_name || "").toLowerCase()}`);
       youthById.set(a.youth_id, { zone, reg: reg || null });
     }
   });
+
+  // A run's primary zone = the zone most of its riders came from (ties broken by
+  // ZONES order for a stable, deterministic result).
+  const primaryZone = (runId: string): ZoneKey | null => {
+    const rec = runZoneCounts.get(runId);
+    if (!rec) return null;
+    let best: ZoneKey | null = null;
+    let bestN = 0;
+    for (const z of ZONES) {
+      const n = rec[z] || 0;
+      if (n > bestN) { bestN = n; best = z; }
+    }
+    return best;
+  };
 
   // accumulator per zone (+ combined)
   type Acc = {
@@ -119,12 +133,13 @@ async function buildIntelligence(w: Window) {
     a.drivers.get(driver)!.add(runId);
   };
 
-  // Trips / pickups / dropoffs / drivers — attribute each run to every zone it served.
+  // Trips / pickups / dropoffs / drivers — each run counted ONCE, in its primary
+  // zone, so Woodbine + Wildwood always equals the Combined total.
   runs.forEach((r) => {
-    const zones = runZones.get(r.id);
-    if (!zones) return; // run with no zoned youth — skip
+    const primary = primaryZone(r.id);
+    if (!primary) return; // run with no zoned youth — skip
     const driver = r.driver?.name || "Unknown";
-    zones.forEach((z) => bump(acc[z], driver, r.id, r.run_type));
+    bump(acc[primary], driver, r.id, r.run_type);
     bump(acc.Combined, driver, r.id, r.run_type); // combined counts the run once
   });
 
@@ -337,8 +352,8 @@ export default function AdminTransportIntelligence() {
           </div>
 
           <p className="text-white/30 text-xs text-center">
-            Trips serving both communities count toward each zone. Youth are counted once, in their home pickup zone.
-            Demographics reflect youth matched to a registration record.
+            Each trip is counted once, in the zone most of its riders came from, so the two zones add up to the total.
+            Youth are counted once, in their home pickup zone. Demographics reflect youth matched to a registration record.
           </p>
         </>
       )}

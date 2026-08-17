@@ -2,6 +2,8 @@ import { useState, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { format, subDays, startOfWeek, startOfMonth, startOfYear, subMonths, parseISO, differenceInYears } from "date-fns";
+import { isBelowPoverty } from "@/lib/demographics";
+import { getCurrentAttendanceYear, programYearRange } from "@/lib/programYear";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -178,12 +180,14 @@ export default function AdminTransportImpactReports() {
         return { ...yp, registration: reg || null };
       });
 
-      // Fetch driver pay periods
+      // Fetch driver pay periods that fall WITHIN the report window (not merely
+      // overlapping it) — so a period straddling the edge can't drag in dollars
+      // earned outside the reported dates and overstate program cost.
       const { data: payPeriods } = await supabase
         .from("driver_pay_periods")
         .select("*, drivers(name)")
-        .lte("period_start", de)
-        .gte("period_end", ds);
+        .gte("period_start", ds)
+        .lte("period_end", de);
 
       // Fetch run approvals
       let runApprovals: any[] = [];
@@ -254,15 +258,13 @@ export default function AdminTransportImpactReports() {
           if (reg.child_race_ethnicity) {
             raceMap[reg.child_race_ethnicity] = (raceMap[reg.child_race_ethnicity] || 0) + 1;
           }
-          // Income
+          // Income bracket (for the distribution chart)
           if (reg.household_income_range) {
             incomeMap[reg.household_income_range] = (incomeMap[reg.household_income_range] || 0) + 1;
-            // Rough poverty check
-            const income = reg.household_income_range.toLowerCase();
-            if (income.includes("under") || income.includes("below") || income.includes("0") || income.includes("15,000") || income.includes("20,000") || income.includes("25,000") || income.includes("30,000")) {
-              povertyCount++;
-            }
           }
+          // Poverty — the ONE shared rule (low income bracket OR free/reduced
+          // lunch), identical to the live dashboard so the two never disagree.
+          if (isBelowPoverty(reg)) povertyCount++;
         }
       });
 
@@ -270,7 +272,14 @@ export default function AdminTransportImpactReports() {
       const genderData = Object.entries(genderMap).map(([name, value]) => ({ name, value }));
       const raceData = Object.entries(raceMap).map(([name, value]) => ({ name, value }));
       const incomeData = Object.entries(incomeMap).map(([name, value]) => ({ name, value }));
-      const povertyPct = uniqueYouth > 0 ? ((povertyCount / uniqueYouth) * 100).toFixed(1) : "0";
+      // How many youth we could actually assess (matched to a registration) and,
+      // per field, how many had that field on record. Percentages divide by these
+      // — NOT by total youth served — so each breakdown honestly sums to 100%.
+      const matchedYouth = youthWithDemographics.filter((y) => y.registration).length;
+      const genderKnown = Object.values(genderMap).reduce((a, b) => a + b, 0);
+      const raceKnown = Object.values(raceMap).reduce((a, b) => a + b, 0);
+      const incomeKnown = Object.values(incomeMap).reduce((a, b) => a + b, 0);
+      const povertyPct = matchedYouth > 0 ? ((povertyCount / matchedYouth) * 100).toFixed(1) : "0";
 
       // Driver summary
       const driverMap: Record<string, { name: string; trips: number; approved: number; pending: number; totalPay: number }> = {};
@@ -290,8 +299,10 @@ export default function AdminTransportImpactReports() {
       const driverData = Object.values(driverMap);
       const totalProgramCost = driverData.reduce((s, d) => s + d.totalPay, 0);
 
-      // YTD totals
-      const ytdStart = format(startOfYear(new Date()), "yyyy-MM-dd");
+      // "Year-to-date" = the NLA PROGRAM year (Sept 1 → today), matching the live
+      // dashboard — not the Jan–Dec calendar year — so the two screens agree.
+      const [pyStart] = programYearRange(getCurrentAttendanceYear());
+      const ytdStart = format(pyStart, "yyyy-MM-dd");
       const { data: ytdRuns } = await supabase.from("runs").select("id").gte("started_at", ytdStart).eq("status", "completed");
       let ytdAttendance: any[] = [];
       const ytdRunIds = (ytdRuns || []).map(r => r.id);
@@ -317,6 +328,10 @@ export default function AdminTransportImpactReports() {
         genderData,
         raceData,
         incomeData,
+        matchedYouth,
+        genderKnown,
+        raceKnown,
+        incomeKnown,
         povertyCount,
         povertyPct,
         driverData,
@@ -493,13 +508,20 @@ export default function AdminTransportImpactReports() {
     // ── Demographics ──
     if (s.includes("demographics")) {
       children.push(sectionTitle("Demographics Breakdown"));
+      children.push(new Paragraph({
+        spacing: { after: 80 },
+        children: [new TextRun({
+          text: `Based on ${previewData.matchedYouth} of ${previewData.uniqueYouth} youth matched to a registration record. Percentages are of youth with each field on record, so each breakdown totals 100%.`,
+          italics: true, font: "Arial", size: 18, color: "666666",
+        })],
+      }));
       if (previewData.genderData?.length) {
         children.push(new Paragraph({ spacing: { before: 200, after: 100 }, children: [new TextRun({ text: "Gender Breakdown", bold: true, font: "Arial", size: 22 })] }));
         children.push(new Table({
           width: { size: 9360, type: WidthType.DXA },
           columnWidths: [4000, 2680, 2680],
           rows: [makeHeaderRow(["Gender", "Count", "Percentage"]),
-            ...previewData.genderData.map((g: any, i: number) => makeRow([g.name, String(g.value), `${((g.value / previewData.uniqueYouth) * 100).toFixed(1)}%`], i % 2 === 1))],
+            ...previewData.genderData.map((g: any, i: number) => makeRow([g.name, String(g.value), `${previewData.genderKnown > 0 ? ((g.value / previewData.genderKnown) * 100).toFixed(1) : "0"}%`], i % 2 === 1))],
         }));
       }
       if (previewData.raceData?.length) {
@@ -508,7 +530,7 @@ export default function AdminTransportImpactReports() {
           width: { size: 9360, type: WidthType.DXA },
           columnWidths: [4000, 2680, 2680],
           rows: [makeHeaderRow(["Race / Ethnicity", "Count", "Percentage"]),
-            ...previewData.raceData.map((r: any, i: number) => makeRow([r.name, String(r.value), `${((r.value / previewData.uniqueYouth) * 100).toFixed(1)}%`], i % 2 === 1))],
+            ...previewData.raceData.map((r: any, i: number) => makeRow([r.name, String(r.value), `${previewData.raceKnown > 0 ? ((r.value / previewData.raceKnown) * 100).toFixed(1) : "0"}%`], i % 2 === 1))],
         }));
       }
       if (previewData.ageData?.length) {
@@ -529,8 +551,16 @@ export default function AdminTransportImpactReports() {
         width: { size: 9360, type: WidthType.DXA },
         columnWidths: [6000, 3360],
         rows: [makeHeaderRow(["Metric", "Value"]),
-          makeRow(["Youth at/below Poverty Line", String(previewData.povertyCount)]),
-          makeRow(["Percentage of Total Youth Served", `${previewData.povertyPct}%`], true)],
+          makeRow(["Youth assessed (matched to a registration)", String(previewData.matchedYouth)]),
+          makeRow(["Youth at/below Poverty Line", String(previewData.povertyCount)], true),
+          makeRow(["Percentage of Assessed Youth", `${previewData.povertyPct}%`])],
+      }));
+      children.push(new Paragraph({
+        spacing: { before: 80 },
+        children: [new TextRun({
+          text: `Counts a youth as at/below the line when their household income is a low bracket or they qualify for free/reduced-price lunch. Percentage is of the ${previewData.matchedYouth} youth we could assess.`,
+          italics: true, font: "Arial", size: 18, color: "666666",
+        })],
       }));
       if (previewData.incomeData?.length) {
         children.push(new Paragraph({ spacing: { before: 300, after: 100 }, children: [new TextRun({ text: "Household Income Distribution", bold: true, font: "Arial", size: 22 })] }));
@@ -538,7 +568,7 @@ export default function AdminTransportImpactReports() {
           width: { size: 9360, type: WidthType.DXA },
           columnWidths: [4000, 2680, 2680],
           rows: [makeHeaderRow(["Income Bracket", "Count", "Percentage"]),
-            ...previewData.incomeData.map((inc: any, i: number) => makeRow([inc.name, String(inc.value), `${((inc.value / previewData.uniqueYouth) * 100).toFixed(1)}%`], i % 2 === 1))],
+            ...previewData.incomeData.map((inc: any, i: number) => makeRow([inc.name, String(inc.value), `${previewData.incomeKnown > 0 ? ((inc.value / previewData.incomeKnown) * 100).toFixed(1) : "0"}%`], i % 2 === 1))],
         }));
       }
     }
@@ -550,7 +580,22 @@ export default function AdminTransportImpactReports() {
         width: { size: 9360, type: WidthType.DXA },
         columnWidths: [4000, 2680, 2680],
         rows: [makeHeaderRow(["Route / Zone", "Trips", "Unique Youth"]),
-          ...previewData.routeData.map((r: any, i: number) => makeRow([r.name, String(r.trips), String(r.youth)], i % 2 === 1))],
+          ...previewData.routeData.map((r: any, i: number) => makeRow([r.name, String(r.trips), String(r.youth)], i % 2 === 1)),
+          new TableRow({
+            children: ["Total", String(previewData.totalTrips), String(previewData.uniqueYouth)].map((c) =>
+              new TableCell({
+                borders: cellBorders, margins: cellMargins, shading: headerShading,
+                children: [new Paragraph({ children: [new TextRun({ text: c, bold: true, color: "FFFFFF", font: "Arial", size: 20 })] })],
+              })
+            ),
+          })],
+      }));
+      children.push(new Paragraph({
+        spacing: { before: 80 },
+        children: [new TextRun({
+          text: "Trips add up to the total. A youth who rides more than one route is counted under each route, so the youth column can exceed the unique total shown.",
+          italics: true, font: "Arial", size: 18, color: "666666",
+        })],
       }));
     }
 
@@ -575,15 +620,23 @@ export default function AdminTransportImpactReports() {
           ...previewData.driverData.map((d: any, i: number) => makeRow([d.name, String(d.trips), String(d.approved), String(d.pending), `$${d.totalPay.toFixed(2)}`], i % 2 === 1))],
       }));
       children.push(new Paragraph({ spacing: { before: 200 }, children: [new TextRun({ text: `Total Program Transportation Cost: $${previewData.totalProgramCost.toFixed(2)}`, bold: true, font: "Arial", size: 24, color: red })] }));
+      children.push(new Paragraph({
+        spacing: { before: 60 },
+        children: [new TextRun({ text: "Reflects driver pay periods that fall within the selected dates.", italics: true, font: "Arial", size: 18, color: "666666" })],
+      }));
     }
 
     // ── YTD ──
     if (s.includes("ytd")) {
-      children.push(sectionTitle("Year-to-Date Totals"));
+      children.push(sectionTitle("Program Year-to-Date Totals"));
+      children.push(new Paragraph({
+        spacing: { after: 80 },
+        children: [new TextRun({ text: "Program year to date — September 1 through today.", italics: true, font: "Arial", size: 18, color: "666666" })],
+      }));
       children.push(new Table({
         width: { size: 9360, type: WidthType.DXA },
         columnWidths: [6000, 3360],
-        rows: [makeHeaderRow(["Metric", "YTD Value"]),
+        rows: [makeHeaderRow(["Metric", "Value"]),
           makeRow(["Total Trips", String(previewData.ytd.trips)]),
           makeRow(["Unique Youth Served", String(previewData.ytd.uniqueYouth)], true),
           makeRow(["Total Driver Pay", `$${previewData.ytd.totalPay.toFixed(2)}`])],
@@ -957,6 +1010,9 @@ function ReportPreviewContent({ data, sections, reportName, dateStart, dateEnd }
         <Card className="bg-zinc-900/60 border-white/10">
           <CardHeader><CardTitle className="text-white flex items-center gap-2"><PieChart className="w-5 h-5 text-[#002868]" /> Demographics Breakdown</CardTitle></CardHeader>
           <CardContent className="space-y-6">
+            <p className="text-white/40 text-xs -mt-2">
+              Based on {data.matchedYouth ?? 0} of {data.uniqueYouth} youth matched to a registration. Percentages are of youth with each field on record.
+            </p>
             {data.genderData?.length > 0 && (
               <div>
                 <p className="text-white/70 text-sm font-medium mb-3">Gender</p>
@@ -1023,9 +1079,12 @@ function ReportPreviewContent({ data, sections, reportName, dateStart, dateEnd }
               </div>
               <div className="bg-white/5 rounded-lg p-4 text-center">
                 <p className="text-3xl font-bold text-[#002868]">{data.povertyPct}%</p>
-                <p className="text-white/50 text-xs mt-1">Of Total Youth Served</p>
+                <p className="text-white/50 text-xs mt-1">Of Assessed Youth ({data.matchedYouth ?? 0})</p>
               </div>
             </div>
+            <p className="text-white/40 text-xs mb-4">
+              At/below the line = low income bracket or free/reduced-price lunch. Percentage is of the {data.matchedYouth ?? 0} youth matched to a registration.
+            </p>
             {data.incomeData?.length > 0 && (
               <div className="h-56">
                 <ResponsiveContainer width="100%" height="100%">
@@ -1065,9 +1124,17 @@ function ReportPreviewContent({ data, sections, reportName, dateStart, dateEnd }
                           <td className="text-white/70 text-right py-2 px-3">{r.youth}</td>
                         </tr>
                       ))}
+                      <tr className="border-t-2 border-white/20 font-semibold">
+                        <td className="text-white py-2 px-3">Total</td>
+                        <td className="text-white text-right py-2 px-3">{data.totalTrips}</td>
+                        <td className="text-white text-right py-2 px-3">{data.uniqueYouth}</td>
+                      </tr>
                     </tbody>
                   </table>
                 </div>
+                <p className="text-white/40 text-xs mb-4">
+                  Trips add up to the total. A youth riding more than one route is counted under each, so the youth column can exceed the unique total.
+                </p>
                 <div className="h-48">
                   <ResponsiveContainer width="100%" height="100%">
                     <BarChart data={data.routeData}>
@@ -1151,20 +1218,21 @@ function ReportPreviewContent({ data, sections, reportName, dateStart, dateEnd }
       {/* YTD */}
       {s.includes("ytd") && (
         <Card className="bg-zinc-900/60 border-white/10">
-          <CardHeader><CardTitle className="text-white flex items-center gap-2"><BarChart3 className="w-5 h-5 text-[#002868]" /> Year-to-Date Totals</CardTitle></CardHeader>
+          <CardHeader><CardTitle className="text-white flex items-center gap-2"><BarChart3 className="w-5 h-5 text-[#002868]" /> Program Year-to-Date Totals</CardTitle></CardHeader>
           <CardContent>
+            <p className="text-white/40 text-xs mb-4">Program year to date — September 1 through today.</p>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <div className="bg-white/5 rounded-lg p-4 text-center">
                 <p className="text-3xl font-bold text-white">{data.ytd?.trips ?? 0}</p>
-                <p className="text-white/50 text-xs mt-1">YTD Trips</p>
+                <p className="text-white/50 text-xs mt-1">Trips</p>
               </div>
               <div className="bg-white/5 rounded-lg p-4 text-center">
                 <p className="text-3xl font-bold text-white">{data.ytd?.uniqueYouth ?? 0}</p>
-                <p className="text-white/50 text-xs mt-1">YTD Unique Youth</p>
+                <p className="text-white/50 text-xs mt-1">Unique Youth</p>
               </div>
               <div className="bg-white/5 rounded-lg p-4 text-center">
                 <p className="text-3xl font-bold text-white">${(data.ytd?.totalPay ?? 0).toFixed(2)}</p>
-                <p className="text-white/50 text-xs mt-1">YTD Driver Pay</p>
+                <p className="text-white/50 text-xs mt-1">Driver Pay</p>
               </div>
             </div>
           </CardContent>

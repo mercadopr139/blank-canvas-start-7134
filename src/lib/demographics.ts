@@ -41,3 +41,20 @@ export function summarizeMinority(
   const pct = (n: number) => (total > 0 ? Math.round((n / total) * 100) : 0);
   return { total, white, minority, whitePct: pct(white), minorityPct: pct(minority) };
 }
+
+// ── Poverty: single source of truth, mirrored across Attendance, Excursion,
+// and Transportation Intelligence so every screen agrees. A youth counts as at
+// or below the federal poverty line when their household income bracket is one
+// of the low brackets OR they qualify for free/reduced-price school lunch
+// (NLA's primary economic-need signal). Match the bracket text EXACTLY — never
+// substring-match (e.g. `.includes("0")` wrongly matches "$50,000").
+export const POVERTY_INCOMES = ["Under $25,000", "Less than $25,000", "Less than $35,000"];
+
+/** True when a registration record is at/below the poverty line. */
+export const isBelowPoverty = (reg: {
+  household_income_range?: string | null;
+  free_or_reduced_lunch?: string | null;
+} | null | undefined): boolean =>
+  !!reg &&
+  (POVERTY_INCOMES.includes(reg.household_income_range ?? "") ||
+    reg.free_or_reduced_lunch === "Yes");
