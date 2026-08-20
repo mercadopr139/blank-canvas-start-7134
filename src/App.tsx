@@ -52,6 +52,8 @@ import CheckIn from "./pages/CheckIn";
 import LilChampsCheckIn from "./pages/LilChampsCheckIn";
 import ExcursionCheckIn from "./pages/ExcursionCheckIn";
 import ExcursionCoach from "./pages/ExcursionCoach";
+import StrengthCoach from "./pages/StrengthCoach";
+import StrengthIntelligence from "./pages/StrengthIntelligence";
 import AdminExcursionSignups from "./pages/admin/AdminExcursionSignups";
 import AdminLilChampsAttendance from "./pages/admin/AdminLilChampsAttendance";
 import AdminCallOuts from "./pages/admin/AdminCallOuts";
@@ -156,6 +158,8 @@ const App = () => (
             <Route path="/check-in/lil-champs-corner" element={<LilChampsCheckIn />} />
             <Route path="/excursion-check-in" element={<ExcursionCheckIn />} />
             <Route path="/excursion-coach" element={<ExcursionCoach />} />
+            <Route path="/strength-coach" element={<StrengthCoach />} />
+            <Route path="/strength-coach/intelligence" element={<StrengthIntelligence />} />
             <Route path="/call-out" element={<CallOut />} />
             <Route path="/meal-check-in" element={<MealCheckIn />} />
             <Route path="/approvals/invoice/:token" element={<InvoiceApproval />} />

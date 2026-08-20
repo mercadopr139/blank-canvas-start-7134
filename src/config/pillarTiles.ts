@@ -14,7 +14,7 @@ import {
   Users, BarChart3, ClipboardList, CalendarCheck, FileBarChart, Settings2, Copy,
   Star, Bus, UserCheck, Radio, PhoneOff, AlertTriangle, FileText,
   UtensilsCrossed, HandCoins, Database, MessageSquare, Mail, Receipt,
-  ScrollText, ClipboardCheck, LayoutDashboard, Archive, Gauge, MapPin, Sparkles,
+  ScrollText, ClipboardCheck, LayoutDashboard, Archive, Gauge, MapPin, Sparkles, Dumbbell,
 } from "lucide-react";
 
 export interface PillarTile {
@@ -94,6 +94,18 @@ export const OPERATIONS_TILES: PillarTile[] = [
     children: [
       { title: "Meal Setup", href: "/admin/operations/meal-tracker", icon: UtensilsCrossed },
       { title: "Meal Intelligence", href: "/admin/operations/meal-reports", icon: BarChart3 },
+    ],
+  },
+  {
+    title: "Strength & Conditioning",
+    description: "AI workout board — bench, squat, deadlift",
+    icon: Dumbbell,
+    href: "/strength-coach",
+    external: true,
+    permKey: "operations_strength_conditioning",
+    children: [
+      { title: "Workout Board", href: "/strength-coach", icon: Dumbbell, external: true },
+      { title: "S&C Intelligence", href: "/strength-coach/intelligence", icon: BarChart3, external: true },
     ],
   },
 ];
