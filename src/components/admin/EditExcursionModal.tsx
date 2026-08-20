@@ -261,13 +261,35 @@ const EditExcursionModal = ({ excursion, onChange, onClose, onSaved, onRequestDe
   };
 
   // Autosave a notepad field on blur; drop a lone empty bullet.
+  const [noteSaveStatus, setNoteSaveStatus] = useState<Partial<Record<"notes" | "details", "saving" | "saved">>>({});
+  const detailsDirty = useRef(false);
+  const notesDirty = useRef(false);
+
   const saveExcursionFieldNow = async (field: "notes" | "details") => {
     if (!editingExcursion) return;
     const raw = (editingExcursion[field] || "").trim();
     const finalVal = raw === "" || raw === "•" ? null : editingExcursion[field];
+    setNoteSaveStatus((s) => ({ ...s, [field]: "saving" }));
     const { error } = await supabase.from("excursions").update({ [field]: finalVal }).eq("id", editingExcursion.id);
-    if (!error) onSaved?.();
+    if (error) { setNoteSaveStatus((s) => ({ ...s, [field]: undefined })); return; }
+    setNoteSaveStatus((s) => ({ ...s, [field]: "saved" }));
+    onSaved?.();
   };
+
+  // Autosave the Overview/Debrief notepads ~1.2s after the last change (typing
+  // OR voice-to-text), so content persists without needing to blur the field.
+  useEffect(() => {
+    if (!editingExcursionId || !detailsDirty.current) return;
+    const t = setTimeout(() => saveExcursionFieldNow("details"), 1200);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [editingExcursion?.details, editingExcursionId]);
+  useEffect(() => {
+    if (!editingExcursionId || !notesDirty.current) return;
+    const t = setTimeout(() => saveExcursionFieldNow("notes"), 1200);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [editingExcursion?.notes, editingExcursionId]);
 
   // Insert an emoji at the cursor (or end) of a notepad.
   const insertNoteEmoji = (field: "notes" | "details", ref: { current: HTMLTextAreaElement | null }, emoji: string) => {
@@ -343,6 +365,9 @@ const EditExcursionModal = ({ excursion, onChange, onClose, onSaved, onRequestDe
     setEditPersonnelInput("");
     setEditYouthSearch("");
     setEditYouthResults([]);
+    detailsDirty.current = false;
+    notesDirty.current = false;
+    setNoteSaveStatus({});
   }, [editingExcursionId]);
 
   // Debounced youth search for the "Add youth" field.
@@ -597,7 +622,7 @@ const EditExcursionModal = ({ excursion, onChange, onClose, onSaved, onRequestDe
                 <textarea
                   ref={detailsRef}
                   value={editingExcursion.details || ""}
-                  onChange={(e) => setEditingExcursion({ ...editingExcursion, details: e.target.value || null })}
+                  onChange={(e) => { detailsDirty.current = true; setNoteSaveStatus((s) => ({ ...s, details: undefined })); setEditingExcursion({ ...editingExcursion, details: e.target.value || null }); }}
                   onFocus={() => { if (!editingExcursion.details) setEditingExcursion({ ...editingExcursion, details: "• " }); }}
                   onKeyDown={noteKeyDown("details")}
                   onBlur={() => saveExcursionFieldNow("details")}
@@ -605,7 +630,7 @@ const EditExcursionModal = ({ excursion, onChange, onClose, onSaved, onRequestDe
                   placeholder={"The facts of the trip…\n• 📍 Location: Corinthian Yacht Club, Cape May\n• 👤 Contact: Sandra Baldino\n• 📦 Packing: towel, water shoes, rash guard"}
                   className="w-full bg-white/5 border border-white/20 rounded-md px-3 py-2 text-white text-sm leading-relaxed placeholder:text-white/25 resize-y focus:outline-none focus:border-purple-400/50"
                 />
-                <p className="text-[10px] text-white/30 mt-1">Autosaves · Enter = new bullet · Tab = indent (outline) · shows in Excursion History.</p>
+                <p className="text-[10px] text-white/30 mt-1">Autosaves · Enter = new bullet · Tab = indent (outline) · shows in Excursion History.{noteSaveStatus.details === "saving" ? <span className="text-white/40"> · Saving…</span> : noteSaveStatus.details === "saved" ? <span className="text-emerald-300/80"> · Saved ✓</span> : null}</p>
               </div>
 
               <div>
@@ -634,7 +659,7 @@ const EditExcursionModal = ({ excursion, onChange, onClose, onSaved, onRequestDe
                 <textarea
                   ref={debriefRef}
                   value={editingExcursion.notes || ""}
-                  onChange={(e) => setEditingExcursion({ ...editingExcursion, notes: e.target.value || null })}
+                  onChange={(e) => { notesDirty.current = true; setNoteSaveStatus((s) => ({ ...s, notes: undefined })); setEditingExcursion({ ...editingExcursion, notes: e.target.value || null }); }}
                   onFocus={() => { if (!editingExcursion.notes) setEditingExcursion({ ...editingExcursion, notes: "• " }); }}
                   onKeyDown={noteKeyDown("notes")}
                   onBlur={() => saveExcursionFieldNow("notes")}
@@ -642,7 +667,7 @@ const EditExcursionModal = ({ excursion, onChange, onClose, onSaved, onRequestDe
                   placeholder={"Debrief while it's fresh…\n• 👍 Kids loved the sailing\n• 👎 Lunch ran late — pack earlier\n• 💡 Order dinner for after, not during"}
                   className="w-full bg-white/5 border border-white/20 rounded-md px-3 py-2 text-white text-sm leading-relaxed placeholder:text-white/25 resize-y focus:outline-none focus:border-purple-400/50"
                 />
-                <p className="text-[10px] text-white/30 mt-1">Autosaves · Enter = new bullet · Tab = indent · shows in Excursion History next year for planning.</p>
+                <p className="text-[10px] text-white/30 mt-1">Autosaves · Enter = new bullet · Tab = indent · shows in Excursion History next year for planning.{noteSaveStatus.notes === "saving" ? <span className="text-white/40"> · Saving…</span> : noteSaveStatus.notes === "saved" ? <span className="text-emerald-300/80"> · Saved ✓</span> : null}</p>
               </div>
 
               {/* Standout Moments — real stories that feed the Program Highlights report. */}

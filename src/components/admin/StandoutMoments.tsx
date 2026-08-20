@@ -27,6 +27,8 @@ const StandoutMoments = ({ table, rowId }: Props) => {
   const ref = useRef<HTMLTextAreaElement>(null);
   const [text, setText] = useState("");
   const initedFor = useRef<string | null>(null);
+  const lastSavedRef = useRef("");
+  const [status, setStatus] = useState<"idle" | "saving" | "saved">("idle");
 
   const { data: saved = [] } = useQuery({
     queryKey: ["standout-moments", table, rowId],
@@ -43,22 +45,36 @@ const StandoutMoments = ({ table, rowId }: Props) => {
   // refetches so autosave never clobbers what's being typed.
   useEffect(() => {
     if (rowId && initedFor.current !== rowId && Array.isArray(saved)) {
-      setText(arrayToText(saved));
+      const seeded = arrayToText(saved);
+      setText(seeded);
+      lastSavedRef.current = seeded;
       initedFor.current = rowId;
     }
-    if (!rowId) { initedFor.current = null; setText(""); }
+    if (!rowId) { initedFor.current = null; setText(""); lastSavedRef.current = ""; }
   }, [rowId, saved]);
 
   const save = async () => {
     if (!rowId) return;
-    const arr = textToArray(text);
+    const current = text;
+    setStatus("saving");
     const { error } = await (supabase.from(table as never) as any)
-      .update({ highlights: arr }).eq("id", rowId);
-    if (error) { toast.error("Couldn't save standout moments"); return; }
+      .update({ highlights: textToArray(current) }).eq("id", rowId);
+    if (error) { toast.error("Couldn't save standout moments"); setStatus("idle"); return; }
+    lastSavedRef.current = current;
+    setStatus("saved");
     // Let the Program Highlights report pick up the change.
     queryClient.invalidateQueries({ queryKey: ["highlights-excursions"] });
     queryClient.invalidateQueries({ queryKey: ["highlights-events"] });
   };
+
+  // Autosave ~1.2s after the last change (typing OR voice-to-text), so content
+  // persists even if the field never loses focus. The onBlur save stays too.
+  useEffect(() => {
+    if (!rowId || text === lastSavedRef.current) return;
+    const t = setTimeout(() => { void save(); }, 1200);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [text, rowId]);
 
   // Enter starts a new bullet — mirrors the Overview/Debrief notepads.
   const onKeyDown = (e: ReactKeyboardEvent<HTMLTextAreaElement>) => {
@@ -88,7 +104,7 @@ const StandoutMoments = ({ table, rowId }: Props) => {
 
   return (
     <div>
-      <div className="mb-1.5">
+      <div className="mb-1.5 flex items-center justify-between">
         <Popover>
           <PopoverTrigger asChild>
             <button type="button" className="text-xs px-2 py-1 rounded-md border border-white/15 bg-white/5 hover:bg-white/10 text-white/70 transition-colors">
@@ -106,11 +122,16 @@ const StandoutMoments = ({ table, rowId }: Props) => {
             </div>
           </PopoverContent>
         </Popover>
+        {status === "saving" ? (
+          <span className="text-[10px] text-white/40">Saving…</span>
+        ) : status === "saved" ? (
+          <span className="text-[10px] text-emerald-300/80">Saved ✓</span>
+        ) : null}
       </div>
       <Textarea
         ref={ref}
         value={text}
-        onChange={(e) => setText(e.target.value)}
+        onChange={(e) => { setStatus("idle"); setText(e.target.value); }}
         onFocus={() => { if (!text) setText("• "); }}
         onKeyDown={onKeyDown}
         onBlur={save}
