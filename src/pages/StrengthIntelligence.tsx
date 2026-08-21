@@ -162,6 +162,12 @@ const StrengthIntelligence = () => {
   return (
     <div className="min-h-screen bg-black text-white">
       <div className="max-w-5xl mx-auto px-4 py-6 sm:py-8">
+        {/* Back to admin */}
+        <button onClick={() => navigate("/admin/operations")}
+          className="inline-flex items-center gap-1.5 text-sm text-white/50 hover:text-white mb-4">
+          <ArrowLeft className="h-4 w-4" /> Operations
+        </button>
+
         {/* Header */}
         <div className="flex items-center justify-between gap-3 mb-6">
           <div className="flex items-center gap-3">
