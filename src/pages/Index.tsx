@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import Header from "@/components/layout/Header";
 import Footer from "@/components/layout/Footer";
 import HeroSection from "@/components/sections/HeroSection";
+import EventBanner from "@/components/sections/EventBanner";
 import FreeAccessMarquee from "@/components/sections/FreeAccessMarquee";
 import ImpactStrip from "@/components/sections/ImpactStrip";
 import CoreValuesSection from "@/components/sections/CoreValuesSection";
@@ -48,6 +49,7 @@ const Index = () => {
       <Header />
       
       <main className="flex-1">
+        <EventBanner />
         <HeroSection />
         <FreeAccessMarquee />
         <ImpactStrip />

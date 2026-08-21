@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { normalizeImageForUpload } from "@/lib/imageUpload";
 import { useStaffPermissions } from "@/hooks/useStaffPermissions";
+import EventBannerEditor from "@/components/admin/EventBannerEditor";
 import { useSiteImages, type SiteImageRow } from "@/hooks/useSiteImages";
 import {
   SITE_IMAGE_GROUPS,
@@ -534,6 +535,9 @@ const AdminWebsitePhotos = () => {
           Changes go live on the public website as soon as you hit <span className="text-white font-medium">Save</span> for a group.
           Use <span className="text-white font-medium">Reset</span> to put a group's original photos back.
         </p>
+
+        <EventBannerEditor />
+
 
         {isLoading ? (
           <div className="py-20 flex items-center justify-center text-zinc-500 gap-2">
