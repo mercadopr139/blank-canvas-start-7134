@@ -49,13 +49,14 @@ import AdminFormEditor from "./pages/admin/AdminFormEditor";
 import PublicForm from "./pages/PublicForm";
 import AdminAttendanceReports from "./pages/admin/AdminAttendanceReports";
 import CheckIn from "./pages/CheckIn";
-import LilChampsCheckIn from "./pages/LilChampsCheckIn";
+import SmileLabCheckIn from "./pages/SmileLabCheckIn";
+import SmileLabBoard from "./pages/SmileLabBoard";
 import ExcursionCheckIn from "./pages/ExcursionCheckIn";
 import ExcursionCoach from "./pages/ExcursionCoach";
 import StrengthCoach from "./pages/StrengthCoach";
 import StrengthIntelligence from "./pages/StrengthIntelligence";
 import AdminExcursionSignups from "./pages/admin/AdminExcursionSignups";
-import AdminLilChampsAttendance from "./pages/admin/AdminLilChampsAttendance";
+import AdminSmileLabAttendance from "./pages/admin/AdminSmileLabAttendance";
 import AdminCallOuts from "./pages/admin/AdminCallOuts";
 import Register from "./pages/Register";
 import Supporters from "./pages/Supporters";
@@ -155,7 +156,9 @@ const App = () => (
             <Route path="/f/:slug" element={<PublicForm />} />
             <Route path="/supporters" element={<Supporters />} />
             <Route path="/check-in" element={<CheckIn />} />
-            <Route path="/check-in/lil-champs-corner" element={<LilChampsCheckIn />} />
+            <Route path="/check-in/smile-lab" element={<SmileLabCheckIn />} />
+            <Route path="/smile-lab" element={<SmileLabBoard />} />
+            <Route path="/check-in/lil-champs-corner" element={<Navigate to="/check-in/smile-lab" replace />} />
             <Route path="/excursion-check-in" element={<ExcursionCheckIn />} />
             <Route path="/excursion-coach" element={<ExcursionCoach />} />
             <Route path="/strength-coach" element={<StrengthCoach />} />
@@ -226,7 +229,8 @@ const App = () => (
               <Route path="form-builder" element={<AdminFormBuilder />} />
               <Route path="forms" element={<AdminForms />} />
               <Route path="forms/:id" element={<AdminFormEditor />} />
-              <Route path="lil-champs-attendance" element={<AdminLilChampsAttendance />} />
+              <Route path="smile-lab-attendance" element={<AdminSmileLabAttendance />} />
+              <Route path="lil-champs-attendance" element={<Navigate to="/admin/operations/smile-lab-attendance" replace />} />
               <Route path="callouts" element={<AdminCallOuts />} />
               <Route path="transportation/drivers" element={<TransportDrivers />} />
               <Route path="transportation/youth" element={<TransportYouth />} />

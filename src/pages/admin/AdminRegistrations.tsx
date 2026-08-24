@@ -58,7 +58,7 @@ const HeadshotThumbnail = ({ headshotPath, size = "sm" }: { headshotPath: string
   );
 };
 
-const EXTENDED_PROGRAMS = ["Rams Program", "Hawk Squad", "Islanders", "Lil Champs Corner"] as const;
+const EXTENDED_PROGRAMS = ["Rams Program", "Hawk Squad", "Islanders", "Smile Lab"] as const;
 
 const getFunctionErrorMessage = (error: unknown) => {
   if (typeof error === "object" && error !== null) {
@@ -443,7 +443,7 @@ const AdminRegistrations = () => {
               </TableCell>
               <TableCell>
                 {reg.child_boxing_program === "Junior Boxing (Ages 7-10)" ? (
-                  <span className="text-xs text-sky-400 font-medium">Lil Champs Corner</span>
+                  <span className="text-xs text-teal-400 font-medium">Smile Lab</span>
                 ) : (
                   <Select
                     value={reg.extended_program || "unassigned"}
@@ -964,7 +964,7 @@ const EditRegistrationForm = ({
         {form.child_boxing_program === "Junior Boxing (Ages 7-10)" ? (
           <div className="space-y-1">
             <Label className="text-sm text-white/60">Extended Program</Label>
-            <p className="text-sm text-sky-400 font-medium py-1">Lil Champs Corner (auto-assigned)</p>
+            <p className="text-sm text-teal-400 font-medium py-1">Smile Lab (auto-assigned)</p>
           </div>
         ) : (
           <SelectField

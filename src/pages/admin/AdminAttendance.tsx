@@ -3525,7 +3525,7 @@ const AdminAttendance = () => {
                         <div key={a.id} className="flex items-center justify-between p-2 rounded bg-white/5 text-sm">
                           <div className="flex items-center gap-2">
                             <span>{format(new Date(a.check_in_date), "EEEE, MMM d, yyyy")}</span>
-                            <span className={`text-xs px-1.5 py-0.5 rounded-full ${a.program_source === 'Lil Champs Corner' ? 'bg-sky-500/15 text-sky-400' : 'bg-green-500/15 text-green-400'}`}>{a.program_source}</span>
+                            <span className={`text-xs px-1.5 py-0.5 rounded-full ${a.program_source === 'Smile Lab' ? 'bg-teal-500/15 text-teal-400' : a.program_source === 'Lil Champs Corner' ? 'bg-sky-500/15 text-sky-400' : 'bg-green-500/15 text-green-400'}`}>{a.program_source}</span>
                           </div>
                           <div className="flex items-center gap-2">
                             <span className="text-white/40">{format(new Date(a.check_in_at), "h:mm a")}</span>

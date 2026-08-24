@@ -14,7 +14,7 @@ import {
   Users, BarChart3, ClipboardList, CalendarCheck, FileBarChart, Settings2, Copy,
   Star, Bus, UserCheck, Radio, PhoneOff, AlertTriangle, FileText,
   UtensilsCrossed, HandCoins, Database, MessageSquare, Mail, Receipt,
-  ScrollText, ClipboardCheck, LayoutDashboard, Archive, Gauge, MapPin, Sparkles, Dumbbell,
+  ScrollText, ClipboardCheck, LayoutDashboard, Archive, Gauge, MapPin, Sparkles, Dumbbell, Smile,
 } from "lucide-react";
 
 export interface PillarTile {
@@ -67,7 +67,7 @@ export const OPERATIONS_TILES: PillarTile[] = [
       { title: "Events Intelligence", href: "/admin/operations/events-intelligence", icon: Sparkles },
       { title: "Attendance Reports", href: "/admin/operations/attendance-reports", icon: FileBarChart },
       { title: "Call-Outs", href: "/admin/operations/callouts", icon: PhoneOff },
-      { title: "Lil Champ's Corner", href: "/admin/operations/lil-champs-attendance", icon: Star },
+      { title: "Smile Lab Intelligence", href: "/admin/operations/smile-lab-attendance", icon: Smile },
     ],
   },
   {

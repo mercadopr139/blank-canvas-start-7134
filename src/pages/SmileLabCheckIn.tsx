@@ -6,7 +6,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Search, CheckCircle2, Users, ArrowLeft, Eye } from "lucide-react";
 import nlaLogo from "@/assets/nla-logo-white.png";
-import LilChampsRoster from "@/components/checkin/LilChampsRoster";
+import SmileLabRoster from "@/components/checkin/SmileLabRoster";
 
 const getHeadshotUrl = (url: string | null): string | null => {
   if (!url) return null;
@@ -19,7 +19,7 @@ const getHeadshotUrl = (url: string | null): string | null => {
   return `${supabaseUrl}/storage/v1/object/public/youth-photos/${url}${bustParam}`;
 };
 
-interface LilChampsYouth {
+interface SmileLabYouth {
   id: string;
   child_first_name: string;
   child_last_name: string;
@@ -69,10 +69,11 @@ const Confetti = () => {
 
 };
 
-const LilChampsCheckIn = () => {
+const SmileLabCheckIn = () => {
   const navigate = useNavigate();
+  const goBack = () => { if (window.history.length > 1) navigate(-1); else navigate("/"); };
   const [search, setSearch] = useState("");
-  const [youth, setYouth] = useState<LilChampsYouth[]>([]);
+  const [youth, setYouth] = useState<SmileLabYouth[]>([]);
   const [loading, setLoading] = useState(false);
   const [checkedIn, setCheckedIn] = useState<string | null>(null);
   const [checkedInName, setCheckedInName] = useState("");
@@ -86,7 +87,7 @@ const LilChampsCheckIn = () => {
   const searchRef = useRef<HTMLInputElement>(null);
 
   const fetchCount = useCallback(async () => {
-    const { data } = await supabase.rpc("get_today_lil_champs_count");
+    const { data } = await (supabase.rpc as any)("get_today_smile_lab_count");
     if (typeof data === "number") setTodayCount(data);
   }, []);
 
@@ -96,7 +97,7 @@ const LilChampsCheckIn = () => {
       .from("attendance_records")
       .select("registration_id")
       .eq("check_in_date", today)
-      .eq("program_source", "Lil Champs Corner");
+      .eq("program_source", "Smile Lab");
     if (data) setCheckedInIds(new Set(data.map((r) => r.registration_id)));
   }, []);
 
@@ -104,7 +105,7 @@ const LilChampsCheckIn = () => {
 
   useEffect(() => {
     const channel = supabase
-      .channel("lil_champs_counter")
+      .channel("smile_lab_counter")
       .on("postgres_changes", { event: "INSERT", schema: "public", table: "attendance_records" }, () => {
         fetchCount();
         fetchCheckedInIds();
@@ -119,12 +120,12 @@ const LilChampsCheckIn = () => {
     if (search.length < 2) {setYouth([]);return;}
     const timeout = setTimeout(async () => {
       setLoading(true);
-      const { data, error } = await supabase.rpc("search_lil_champs_youth", { _search: search });
+      const { data, error } = await (supabase.rpc as any)("search_smile_lab_youth", { _search: search });
       if (error) {
-        console.error("Lil Champs search failed:", error);
+        console.error("Smile Lab search failed:", error);
         setYouth([]);
       } else {
-        setYouth(data as LilChampsYouth[] || []);
+        setYouth(data as SmileLabYouth[] || []);
       }
       setLoading(false);
     }, 300);
@@ -137,7 +138,7 @@ const LilChampsCheckIn = () => {
     }
   };
 
-  const handleCheckIn = async (y: LilChampsYouth) => {
+  const handleCheckIn = async (y: SmileLabYouth) => {
     setError(null);
     setCheckedIn(null);
     setAlreadyIn(null);
@@ -145,7 +146,7 @@ const LilChampsCheckIn = () => {
     const today = new Date().toLocaleDateString('en-CA', { timeZone: 'America/New_York' });
     const { error: insertError } = await supabase.
     from("attendance_records").
-    insert({ registration_id: y.id, check_in_date: today, program_source: "Lil Champs Corner" });
+    insert({ registration_id: y.id, check_in_date: today, program_source: "Smile Lab" });
 
     if (insertError) {
       if (insertError.message.includes("duplicate") || insertError.code === "23505") {
@@ -176,7 +177,7 @@ const LilChampsCheckIn = () => {
     const today = new Date().toLocaleDateString('en-CA', { timeZone: 'America/New_York' });
     const { error: insertError } = await supabase
       .from("attendance_records")
-      .insert({ registration_id: y.id, check_in_date: today, program_source: "Lil Champs Corner" });
+      .insert({ registration_id: y.id, check_in_date: today, program_source: "Smile Lab" });
 
     if (insertError) {
       if (insertError.message.includes("duplicate") || insertError.code === "23505") {
@@ -197,7 +198,7 @@ const LilChampsCheckIn = () => {
       .delete()
       .eq("registration_id", y.id)
       .eq("check_in_date", today)
-      .eq("program_source", "Lil Champs Corner");
+      .eq("program_source", "Smile Lab");
 
     if (deleteError) {
       console.error("Undo check-in failed:", deleteError);
@@ -232,10 +233,10 @@ const LilChampsCheckIn = () => {
                 {checkedInName}
               </p>
               <p className="text-xl md:text-2xl text-white/60 italic">
-                "Train up a child in the way he should go"
+                "A cheerful heart is good medicine"
               </p>
               <p className="text-base text-white/40 mt-2">
-                — Proverbs 22:6
+                — Proverbs 17:22
               </p>
             </div>
           </div>
@@ -247,7 +248,7 @@ const LilChampsCheckIn = () => {
         variant="ghost"
         size="sm"
         className="absolute top-4 left-4 text-white/40 hover:text-white hover:bg-white/10 z-10"
-        onClick={() => navigate("/")}>
+        onClick={goBack}>
         
         <ArrowLeft className="w-4 h-4 mr-1" />
         Back
@@ -267,12 +268,16 @@ const LilChampsCheckIn = () => {
         <h1 className={`font-black tracking-tight text-center transition-all duration-500 ${
         isIdle ? "text-3xl md:text-5xl mb-1" : "text-2xl md:text-3xl mb-1"}`
         }>
-          <span style={{ color: '#38bdf8' }}>Lil' Champs Corner</span> Check-In
+          <span style={{ color: '#2dd4bf' }}>Smile Lab</span> Check-In 😊
         </h1>
-        <p className={`text-white/50 text-center transition-all duration-500 ${
+        <p className={`text-center font-semibold transition-all duration-500 ${
         isIdle ? "text-lg md:text-xl mb-4" : "text-sm md:text-base mb-3"}`
         }>
-          Search your name and tap to check in
+          <span style={{ color: '#2dd4bf' }}>Healthy Smiles</span>
+          <span className="text-white/30"> · </span>
+          <span style={{ color: '#facc15' }}>Healthy Habits</span>
+          <span className="text-white/30"> · </span>
+          <span style={{ color: '#2dd4bf' }}>Happy Kids</span>
         </p>
 
         <div className={`flex items-center gap-2.5 rounded-full border border-yellow-500/20 bg-yellow-500/[0.06] px-5 py-2 mb-6 transition-all duration-300 ${
@@ -291,7 +296,7 @@ const LilChampsCheckIn = () => {
         {isIdle && (
           <Button
             onClick={() => setShowRoster(true)}
-            className="mb-6 bg-sky-600 hover:bg-sky-500 text-white font-bold text-base sm:text-lg px-6 py-4 rounded-xl shadow-lg transition-all active:scale-95"
+            className="mb-6 bg-teal-600 hover:bg-teal-500 text-white font-bold text-base sm:text-lg px-6 py-4 rounded-xl shadow-lg transition-all active:scale-95"
           >
             <Eye className="w-5 h-5 mr-2" />
             Browse by Photo
@@ -368,7 +373,7 @@ const LilChampsCheckIn = () => {
                   }
                     {alreadyIn === y.id &&
                   <span className="text-orange-400 text-sm md:text-base font-semibold text-center">
-                        Already checked in for<br />Lil' Champs Corner today ✓
+                        Already checked in for<br />Smile Lab today ✓
                       </span>
                   }
                     {!checkedIn && !alreadyIn &&
@@ -398,7 +403,7 @@ const LilChampsCheckIn = () => {
 
       {/* Photo Roster Overlay */}
       {showRoster && (
-        <LilChampsRoster
+        <SmileLabRoster
           onCheckIn={handleRosterCheckIn}
           onUndo={handleRosterUndo}
           onClose={() => setShowRoster(false)}
@@ -409,4 +414,4 @@ const LilChampsCheckIn = () => {
 
 };
 
-export default LilChampsCheckIn;
+export default SmileLabCheckIn;

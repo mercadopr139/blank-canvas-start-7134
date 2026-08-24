@@ -41,7 +41,7 @@ const calculateAge = (dob: string): number => {
 type SortMode = "alpha" | "age";
 type FilterMode = "all" | "not-checked-in" | "checked-in";
 
-interface LilChampsRosterProps {
+interface SmileLabRosterProps {
   onCheckIn: (y: RosterYouth) => Promise<void>;
   onUndo: (y: RosterYouth) => Promise<void>;
   onClose: () => void;
@@ -50,7 +50,7 @@ interface LilChampsRosterProps {
 
 const DOUBLE_TAP_DELAY = 400;
 
-const LilChampsRoster = ({ onCheckIn, onUndo, onClose, checkedInIds }: LilChampsRosterProps) => {
+const SmileLabRoster = ({ onCheckIn, onUndo, onClose, checkedInIds }: SmileLabRosterProps) => {
   const [roster, setRoster] = useState<RosterYouth[]>([]);
   const [loading, setLoading] = useState(true);
   const [filterText, setFilterText] = useState("");
@@ -69,7 +69,7 @@ const LilChampsRoster = ({ onCheckIn, onUndo, onClose, checkedInIds }: LilChamps
     const { data, error } = await (supabase.rpc as unknown as (
       fn: string,
     ) => Promise<{ data: RosterYouth[] | null; error: unknown }>)(
-      "get_lil_champs_roster",
+      "get_smile_lab_roster",
     );
     if (!error && data) setRoster(data);
     setLoading(false);
@@ -152,7 +152,7 @@ const LilChampsRoster = ({ onCheckIn, onUndo, onClose, checkedInIds }: LilChamps
         <div className="flex items-center justify-between gap-3 mb-3">
           <div className="min-w-0">
             <h2 className="text-lg sm:text-xl font-bold text-white truncate">
-              <span style={{ color: '#38bdf8' }}>Lil' Champs</span> Roster
+              <span style={{ color: '#2dd4bf' }}>Smile Lab</span> Roster
             </h2>
             <p className="text-white/40 text-xs sm:text-sm">
               {checkedCount} of {roster.length} checked in
@@ -240,7 +240,7 @@ const LilChampsRoster = ({ onCheckIn, onUndo, onClose, checkedInIds }: LilChamps
                   className={`relative flex flex-col items-center rounded-2xl p-3 sm:p-4 transition-all duration-200 border-2 select-none
                     ${isChecked
                       ? "border-green-500/40 bg-green-500/10"
-                      : "border-white/10 bg-white/[0.04] hover:bg-white/[0.08] hover:border-sky-400/30"
+                      : "border-white/10 bg-white/[0.04] hover:bg-white/[0.08] hover:border-teal-400/30"
                     }
                     ${isProcessing ? "opacity-60 pointer-events-none" : ""}
                   `}
@@ -282,7 +282,7 @@ const LilChampsRoster = ({ onCheckIn, onUndo, onClose, checkedInIds }: LilChamps
                       ✓ Checked In
                     </span>
                   ) : (
-                    <span className="mt-1.5 text-[10px] sm:text-xs font-medium text-sky-400/70">
+                    <span className="mt-1.5 text-[10px] sm:text-xs font-medium text-teal-400/70">
                       Double-tap to check in
                     </span>
                   )}
@@ -296,4 +296,4 @@ const LilChampsRoster = ({ onCheckIn, onUndo, onClose, checkedInIds }: LilChamps
   );
 };
 
-export default LilChampsRoster;
+export default SmileLabRoster;

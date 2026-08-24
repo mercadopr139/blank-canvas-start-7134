@@ -7,12 +7,15 @@ import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Search, Download, Calendar, UserPlus, Trash2, FileText } from "lucide-react";
-import { generateLilChampsAttendancePdf } from "@/lib/generateLilChampsAttendancePdf";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { generateSmileLabAttendancePdf } from "@/lib/generateSmileLabAttendancePdf";
+import SmileLabJournalTab from "@/components/admin/SmileLabJournalTab";
+import SmileLabIntelligence from "@/components/admin/SmileLabIntelligence";
 import { format } from "date-fns";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useToast } from "@/hooks/use-toast";
 
-interface LilChampsRecord {
+interface SmileLabRecord {
   id: string;
   check_in_date: string;
   check_in_at: string;
@@ -39,8 +42,8 @@ const calculateAge = (dob: string): number => {
   return age;
 };
 
-const AdminLilChampsAttendance = () => {
-  const [records, setRecords] = useState<LilChampsRecord[]>([]);
+const AdminSmileLabAttendance = () => {
+  const [records, setRecords] = useState<SmileLabRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [dateFilter, setDateFilter] = useState("");
@@ -52,21 +55,21 @@ const AdminLilChampsAttendance = () => {
   const [addSearch, setAddSearch] = useState("");
   const [adding, setAdding] = useState(false);
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
-  const [allLilChampsYouth, setAllLilChampsYouth] = useState<SearchResult[]>([]);
+  const [allSmileLabYouth, setAllSmileLabYouth] = useState<SearchResult[]>([]);
 
-  // Load all Lil Champs youth when modal opens
+  // Load all Smile Lab youth when modal opens
   useEffect(() => {
     if (!addOpen) return;
     const fetchAll = async () => {
       const { data, error } = await supabase
         .from("youth_registrations")
         .select("id, child_first_name, child_last_name, child_headshot_url, child_date_of_birth")
-        .eq("extended_program", "Lil Champs Corner")
+        .eq("extended_program", "Smile Lab")
         .eq("approved_for_attendance", true)
         .order("child_last_name")
         .limit(200);
-      if (error) console.error("Lil Champs youth fetch error:", error);
-      setAllLilChampsYouth(data || []);
+      if (error) console.error("Smile Lab youth fetch error:", error);
+      setAllSmileLabYouth(data || []);
     };
     fetchAll();
   }, [addOpen]);
@@ -80,7 +83,7 @@ const AdminLilChampsAttendance = () => {
     const { data, error } = await supabase
       .from("attendance_records")
       .select("id, check_in_date, check_in_at, registration_id, is_manual, youth_registrations!inner(child_first_name, child_last_name, child_date_of_birth)")
-      .eq("program_source", "Lil Champs Corner")
+      .eq("program_source", "Smile Lab")
       .order("check_in_at", { ascending: false })
       .limit(500);
 
@@ -114,14 +117,14 @@ const AdminLilChampsAttendance = () => {
       const age = calculateAge(r.child_date_of_birth);
       const date = r.check_in_date;
       const time = format(new Date(r.check_in_at), "h:mm a");
-      return `"${name}",${age},${date},${time},Lil Champs Corner`;
+      return `"${name}",${age},${date},${time},Smile Lab`;
     });
     const csv = [header, ...rows].join("\n");
     const blob = new Blob([csv], { type: "text/csv" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `lil-champs-attendance-${dateFilter || "all"}.csv`;
+    a.download = `smile-lab-attendance-${dateFilter || "all"}.csv`;
     a.click();
     URL.revokeObjectURL(url);
   };
@@ -134,8 +137,8 @@ const AdminLilChampsAttendance = () => {
   // Compute displayed youth: if searching, filter; otherwise show all
   const displayedAddYouth = (() => {
     const q = addSearch.trim().toLowerCase();
-    if (!q) return allLilChampsYouth;
-    return allLilChampsYouth.filter((y) => {
+    if (!q) return allSmileLabYouth;
+    return allSmileLabYouth.filter((y) => {
       const full = `${y.child_first_name} ${y.child_last_name}`.toLowerCase();
       return full.includes(q);
     });
@@ -162,7 +165,7 @@ const AdminLilChampsAttendance = () => {
       registration_id: youth.id,
       check_in_date: targetDate,
       check_in_at: checkInAt,
-      program_source: "Lil Champs Corner",
+      program_source: "Smile Lab",
       is_manual: true,
     });
 
@@ -190,29 +193,40 @@ const AdminLilChampsAttendance = () => {
 
   return (
     <div className="space-y-4 md:space-y-6">
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-        <h2 className="text-xl md:text-2xl font-bold text-white">Lil Champ's Corner Attendance</h2>
-        <div className="flex gap-2 w-full sm:w-auto">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setAddOpen(true)}
-            className="gap-2 text-amber-400 border-amber-500/30 hover:bg-amber-500/10"
-          >
-            <UserPlus className="w-4 h-4" /> Add Youth
-          </Button>
-          <Button variant="outline" size="sm" onClick={exportCsv} className="gap-2 text-white border-white/30 hover:bg-white/10">
-            <Download className="w-4 h-4" /> Export CSV
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => generateLilChampsAttendancePdf(filtered, dateFilter)}
-            className="gap-2 text-white bg-red-700 hover:bg-red-800 border-red-700"
-          >
-            <FileText className="w-4 h-4" /> Export PDF
-          </Button>
-        </div>
+      <h2 className="text-xl md:text-2xl font-bold text-white">Smile Lab Intelligence</h2>
+
+      <Tabs defaultValue="intelligence">
+        <TabsList className="bg-white/5 border border-white/10 gap-1">
+          <TabsTrigger value="intelligence" className="text-white/70 hover:text-white data-[state=active]:bg-teal-500 data-[state=active]:text-black font-semibold">Overview</TabsTrigger>
+          <TabsTrigger value="attendance" className="text-white/70 hover:text-white data-[state=active]:bg-teal-500 data-[state=active]:text-black font-semibold">Attendance</TabsTrigger>
+          <TabsTrigger value="journal" className="text-white/70 hover:text-white data-[state=active]:bg-teal-500 data-[state=active]:text-black font-semibold">Journal</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="intelligence" className="mt-4">
+          <SmileLabIntelligence />
+        </TabsContent>
+
+        <TabsContent value="attendance" className="space-y-4 mt-4">
+      <div className="flex flex-wrap gap-2 justify-end">
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => setAddOpen(true)}
+          className="gap-2 text-amber-400 border-amber-500/30 hover:bg-amber-500/10"
+        >
+          <UserPlus className="w-4 h-4" /> Add Youth
+        </Button>
+        <Button variant="outline" size="sm" onClick={exportCsv} className="gap-2 text-white border-white/30 hover:bg-white/10">
+          <Download className="w-4 h-4" /> Export CSV
+        </Button>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => generateSmileLabAttendancePdf(filtered, dateFilter)}
+          className="gap-2 text-white bg-red-700 hover:bg-red-800 border-red-700"
+        >
+          <FileText className="w-4 h-4" /> Export PDF
+        </Button>
       </div>
 
       <div className="flex flex-col sm:flex-row gap-3">
@@ -259,7 +273,7 @@ const AdminLilChampsAttendance = () => {
                       )}
                     </div>
                     <div className="flex items-center gap-2">
-                      <span className="text-xs px-2 py-0.5 rounded-full" style={{ backgroundColor: 'rgba(56,189,248,0.15)', color: '#38bdf8' }}>Lil Champs</span>
+                      <span className="text-xs px-2 py-0.5 rounded-full" style={{ backgroundColor: 'rgba(45,212,191,0.15)', color: '#2dd4bf' }}>Smile Lab</span>
                       <button onClick={() => setDeleteConfirmId(r.id)} className="text-white/30 hover:text-red-400 transition-colors">
                           <Trash2 className="w-3.5 h-3.5" />
                         </button>
@@ -301,7 +315,7 @@ const AdminLilChampsAttendance = () => {
                       <TableCell className="text-white/70">{r.check_in_date}</TableCell>
                       <TableCell className={r.is_manual ? "text-amber-400" : "text-white/70"}>{format(new Date(r.check_in_at), "h:mm a")}</TableCell>
                       <TableCell>
-                        <span className="text-xs px-2 py-0.5 rounded-full" style={{ backgroundColor: 'rgba(56,189,248,0.15)', color: '#38bdf8' }}>Lil Champs Corner</span>
+                        <span className="text-xs px-2 py-0.5 rounded-full" style={{ backgroundColor: 'rgba(45,212,191,0.15)', color: '#2dd4bf' }}>Smile Lab</span>
                       </TableCell>
                       <TableCell>
                         <button onClick={() => setDeleteConfirmId(r.id)} className="text-white/30 hover:text-red-400 transition-colors">
@@ -316,6 +330,12 @@ const AdminLilChampsAttendance = () => {
           )}
         </CardContent>
       </Card>
+        </TabsContent>
+
+        <TabsContent value="journal" className="mt-4">
+          <SmileLabJournalTab />
+        </TabsContent>
+      </Tabs>
 
       {/* Manual Add Youth Modal */}
       <Dialog open={addOpen} onOpenChange={(o) => { setAddOpen(o); if (!o) { setAddSearch(""); } }}>
@@ -324,7 +344,7 @@ const AdminLilChampsAttendance = () => {
             <DialogTitle>Add Youth Check-In</DialogTitle>
           </DialogHeader>
           <p className="text-white/50 text-sm">
-            {addSearch.trim() ? "Select a youth to add a manual check-in" : "Browse all Lil Champs youth or search by name"}
+            {addSearch.trim() ? "Select a youth to add a manual check-in" : "Browse all Smile Lab youth or search by name"}
             {dateFilter ? ` for ${dateFilter}` : " for today"}.
           </p>
           <div className="relative">
@@ -389,4 +409,4 @@ const AdminLilChampsAttendance = () => {
   );
 };
 
-export default AdminLilChampsAttendance;
+export default AdminSmileLabAttendance;

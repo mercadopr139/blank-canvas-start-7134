@@ -21,7 +21,7 @@ const calculateAge = (dob: string): number => {
   return age;
 };
 
-export function generateLilChampsAttendancePdf(
+export function generateSmileLabAttendancePdf(
   records: AttendanceRecord[],
   dateFilter: string
 ) {
@@ -62,7 +62,7 @@ export function generateLilChampsAttendancePdf(
   // Title
   doc.setFont("helvetica", "bold");
   doc.setFontSize(16);
-  doc.text("Lil Champs Corner — Attendance Report", pageWidth / 2, y, { align: "center" });
+  doc.text("Smile Lab — Attendance Report", pageWidth / 2, y, { align: "center" });
   y += 20;
 
   doc.setFont("helvetica", "normal");
@@ -88,7 +88,7 @@ export function generateLilChampsAttendancePdf(
     String(calculateAge(r.child_date_of_birth)),
     r.check_in_date,
     format(new Date(r.check_in_at), "h:mm a"),
-    r.is_manual ? "Manual" : "Lil Champs Corner",
+    r.is_manual ? "Manual" : "Smile Lab",
   ]);
 
   autoTable(doc, {
@@ -161,6 +161,6 @@ export function generateLilChampsAttendancePdf(
   });
 
   // Save
-  const fileName = `LilChampsCorner_Attendance_${dateFilter || format(new Date(), "yyyy-MM-dd")}.pdf`;
+  const fileName = `SmileLab_Attendance_${dateFilter || format(new Date(), "yyyy-MM-dd")}.pdf`;
   doc.save(fileName);
 }
