@@ -32,8 +32,8 @@ const juniorScheduleBlocks = [{
   description: <>Foundational boxing instruction focused on movement, coordination, and confidence, with Senior Boxing youth assisting as part of their service and leadership responsibilities. Junior Boxing concludes at 6:00 PM, with parent pick-up permitted at that time. <span className="font-bold">Optional aftercare</span> programming is available but not required.</>
 }, {
   time: "6:00pm–7:00pm",
-  title: "Reflection & Learning",
-  description: "Age-appropriate reflection and values-based discussion, followed by Smile Lab—our Tuesday aftercare where kids rotate between caring for their own smile (oral health & hygiene) and sharing their smile (character & everyday skills). Smile Lab strengthens core life skills—hygiene, responsibility, kindness, and respect—while encouraging youth to be good stewards of their community.",
+  title: "Smile Lab",
+  description: "Our Tuesday aftercare: age-appropriate reflection and values-based discussion where kids rotate between two Smile Lab experiences—caring for their own smile (oral health & hygiene) and sharing their smile (character & everyday skills like kindness, gratitude, and confidence). Smile Lab strengthens core life skills—hygiene, responsibility, kindness, and respect—while encouraging youth to be good stewards of their community.",
   optional: true
 }, {
   time: "7:00pm–7:15pm",
@@ -140,7 +140,7 @@ const DailyRhythmSection = ({
                     Tuesdays Only
                   </p>
                   <p className="text-base md:text-lg text-primary-foreground/90 leading-relaxed">
-                    Junior Boxing follows a shortened, age-appropriate schedule designed to introduce structure, discipline, and community in a supportive environment. <span className="font-medium">Practice officially ends at 6:00pm</span>—extended programming and dinner are available for children who wish to stay.
+                    Junior Boxing follows a shortened, age-appropriate schedule designed to introduce structure, discipline, and community in a supportive environment. Training focuses on fundamentals—<span className="font-medium">Junior Boxers do not spar</span>. <span className="font-medium">Practice officially ends at 6:00pm</span>—extended programming and dinner are available for children who wish to stay.
                   </p>
                 </div>
               </div>
