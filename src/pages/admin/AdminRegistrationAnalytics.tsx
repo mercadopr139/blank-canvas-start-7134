@@ -1,3 +1,4 @@
+import { useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -57,7 +58,7 @@ const AdminRegistrationAnalytics = () => {
   const navigate = useNavigate();
   const goBack = () => navigate("/admin/operations");
 
-  const { data: registrations, isLoading } = useQuery({
+  const { data: rawRegistrations, isLoading } = useQuery({
     queryKey: ["youth-registrations-analytics"],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -68,6 +69,32 @@ const AdminRegistrationAnalytics = () => {
       return data;
     },
   });
+
+  // Program-year filter + distinct-youth dedupe. NLA re-registers annually
+  // (Sept 1 → Aug 31), so a kid gets a NEW record each year — counting rows
+  // double-counts them across years. Every stat below reads `registrations`,
+  // so filtering + deduping here makes the whole dashboard year-aware and
+  // per-child (distinct youth), not per-record.
+  const [yearFilter, setYearFilter] = useState<string>("all");
+  const years = useMemo(() => {
+    const set = new Set<string>();
+    (rawRegistrations || []).forEach((r: any) => { if (r.program_year) set.add(r.program_year); });
+    return Array.from(set).sort().reverse();
+  }, [rawRegistrations]);
+  const childKey = (r: any) =>
+    `${(r.child_first_name || "").trim().toLowerCase()}|${(r.child_last_name || "").trim().toLowerCase()}|${r.child_date_of_birth || ""}`;
+  const inFilter = useMemo(
+    () => (rawRegistrations || []).filter((r: any) => yearFilter === "all" || (r.program_year || "") === yearFilter),
+    [rawRegistrations, yearFilter]
+  );
+  const recordCount = inFilter.length;
+  const registrations = useMemo(() => {
+    const seen = new Set<string>();
+    const out: any[] = [];
+    for (const r of inFilter) { const k = childKey(r); if (seen.has(k)) continue; seen.add(k); out.push(r); }
+    return out;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [inFilter]);
 
   const now = new Date();
   const last7Days = subDays(now, 7);
@@ -322,12 +349,27 @@ const AdminRegistrationAnalytics = () => {
           <div className="text-center py-12 text-white/50">Loading analytics...</div>
         ) : (
           <>
+            {/* Program-year filter + records→distinct clarity */}
+            <div className="flex flex-wrap items-center gap-3">
+              <span className="text-sm text-white/60">Program year</span>
+              <select value={yearFilter} onChange={(e) => setYearFilter(e.target.value)}
+                className="rounded-lg bg-neutral-900 border border-white/15 px-3 py-1.5 text-sm text-white focus:outline-none">
+                <option value="all">All years</option>
+                {years.map((y) => <option key={y} value={y}>{y}</option>)}
+              </select>
+              <span className="text-xs text-white/40">
+                {recordCount.toLocaleString()} registration record{recordCount === 1 ? "" : "s"} →{" "}
+                <span className="text-white/70 font-semibold">{registrations.length.toLocaleString()} distinct youth</span>
+                {yearFilter === "all" ? " (all years, deduped by name + DOB)" : ""}
+              </span>
+            </div>
+
             {/* Summary Cards */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               <StatCard
-                title="Total"
+                title="Distinct Youth"
                 value={registrations?.length || 0}
-                subtitle="All time"
+                subtitle={yearFilter === "all" ? "All years" : yearFilter}
                 icon={<Users className="w-5 h-5" />}
               />
               <StatCard
