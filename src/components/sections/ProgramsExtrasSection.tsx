@@ -26,10 +26,10 @@ const ProgramsExtrasSection = () => {
   const videoId = (galleryKey: string) => resolveGroup(videoGroupKey(galleryKey))[0]?.videoId;
   const items: ProgramItem[] = [{
     id: "smile-lab",
-    title: "Delta Dental's Smile Lab",
+    title: "Smile Lab",
     subtitle: "Junior Boxers Only",
     ageRange: "7–10 years old",
-    blurb: "Smile Lab is part of Double Punch Tuesday—our Junior Boxing program followed by optional aftercare. After training, youth participate in an oral health initiative through our partnership with Delta Dental, designed to improve access to care and deliver engaging education that empowers youth to take control of their oral health and overall well-being.",
+    blurb: "Smile Lab is our complimentary aftercare for Junior Boxing participants (ages 7–10), every Tuesday from 6:00–7:00 PM. Built on one belief—a healthy smile is about more than healthy teeth—kids rotate between two experiences: Caring for Your Smile (oral health & hygiene) and Sharing Your Smile (character & everyday skills like kindness, gratitude, and confidence). In partnership with Delta Dental, Smile Lab helps kids take care of themselves and care about others—both healthy habits.",
     images: resolveGroup("programs.smile-lab"),
     videoId: videoId("programs.smile-lab"),
     buttonLabel: "Back to Programs"
@@ -47,7 +47,7 @@ const ProgramsExtrasSection = () => {
     title: "NJ4S Lil' Champs' Corner",
     subtitle: "Junior Boxers Only",
     ageRange: "7–10 years old",
-    blurb: "Lil' Champs' Corner is part of Double Punch Tuesday—our Junior Boxing program followed by optional aftercare. After training, youth participate in age-appropriate education programming through our NJ4S partnership with Acenda, building life skills like routines, hygiene, and habits that translate into confidence and responsibility.",
+    blurb: "Lil' Champs' Corner was part of Double Punch Tuesday—our Junior Boxing program followed by optional aftercare. After training, youth participated in age-appropriate education programming through our NJ4S partnership with Acenda, building life skills like routines, hygiene, and habits that translate into confidence and responsibility. This chapter of our story has since evolved into Smile Lab.",
     images: resolveGroup("programs.lil-champs"),
     videoId: videoId("programs.lil-champs"),
     buttonLabel: "Back to Programs"
