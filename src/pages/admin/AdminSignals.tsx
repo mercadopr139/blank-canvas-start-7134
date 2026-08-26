@@ -7,7 +7,7 @@ import { SortableContext, verticalListSortingStrategy, useSortable, arrayMove } 
 import { CSS } from "@dnd-kit/utilities";
 import nlaLogo from "@/assets/nla-logo-white.png";
 import usaBoxingLogo from "@/assets/usa-boxing-logo.png";
-import fcusaLogo from "@/assets/FightingChanceUSA.png";
+import fcusaLogo from "@/assets/FightTheGoodFight.png";
 import quikhitLogo from "@/assets/quikhit-logo.png";
 import nlaMascot from "@/assets/nla-mascot.png";
 import personalFamily from "@/assets/personal-family.png";
@@ -772,7 +772,7 @@ const AdminSignals = ({ managerType = "PD" }: { managerType?: string }) => {
               <img src={usaBoxingLogo} alt="USA Boxing" className="h-40 w-auto shrink-0" />
             )}
             {focusArea === "fcusa" && !dynamicImageUrl && (
-              <img src={fcusaLogo} alt="Fighting Chance USA" className="h-40 w-auto shrink-0" />
+              <img src={fcusaLogo} alt="Fight the Good Fight" className="h-40 w-auto shrink-0" />
             )}
             {focusArea === "quikhit" && !dynamicImageUrl && (
               <img src={quikhitLogo} alt="QUIKHIT" className="h-40 w-auto shrink-0" />
