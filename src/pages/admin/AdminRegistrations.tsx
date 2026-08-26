@@ -60,6 +60,22 @@ const HeadshotThumbnail = ({ headshotPath, size = "sm" }: { headshotPath: string
 
 const EXTENDED_PROGRAMS = ["Rams Program", "Hawk Squad", "Islanders", "Smile Lab"] as const;
 
+// A free-text medical field only counts as a real alert when it actually
+// describes a concern. Parents routinely type "N/A" or "None" to say they have
+// none — that must NOT trigger a Medical alert. We flag only when the whole
+// answer isn't a known "no concern" phrase (so "no peanuts" still flags).
+const NO_CONCERN = new Set([
+  "na", "n/a", "none", "no", "nope", "nil", "null", "0", "-", "--", "x",
+  "nomedical", "nomedicalissues", "nomedicalconcerns", "nomedicalconditions",
+  "noallergies", "noknownallergies", "noknownmedical", "noknownconditions",
+  "noasthma", "noneknown", "healthy", "allgood", "good", "nothing",
+]);
+const isMedicalConcern = (v?: string | null): boolean => {
+  if (!v) return false;
+  const norm = v.trim().toLowerCase().replace(/[^a-z0-9]/g, "");
+  return norm.length > 0 && !NO_CONCERN.has(norm);
+};
+
 const getFunctionErrorMessage = (error: unknown) => {
   if (typeof error === "object" && error !== null) {
     const functionError = error as { message?: string; context?: { error?: string } };
@@ -213,7 +229,7 @@ const AdminRegistrations = () => {
   };
 
   const hasMedicalAlerts = (reg: any) => {
-    return (reg.allergies && reg.allergies.trim()) || (reg.asthma_inhaler_info && reg.asthma_inhaler_info.trim()) || reg.custom_fields_data?.has_asthma === "Yes";
+    return isMedicalConcern(reg.allergies) || isMedicalConcern(reg.asthma_inhaler_info) || reg.custom_fields_data?.has_asthma === "Yes";
   };
 
 
@@ -1225,7 +1241,7 @@ const RegistrationDetail = ({ registration: reg, onApprovalChange }: { registrat
         </CardContent>
       </Card>
 
-      {(reg.allergies || reg.asthma_inhaler_info) && (
+      {(isMedicalConcern(reg.allergies) || isMedicalConcern(reg.asthma_inhaler_info) || reg.custom_fields_data?.has_asthma === "Yes") && (
         <Card className="border-destructive bg-destructive/5">
           <CardHeader className="pb-2">
             <CardTitle className="text-destructive flex items-center gap-2 text-base">
@@ -1233,8 +1249,9 @@ const RegistrationDetail = ({ registration: reg, onApprovalChange }: { registrat
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-2 text-sm">
-            {reg.allergies && <div><strong>Allergies:</strong> {reg.allergies}</div>}
-            {reg.asthma_inhaler_info && <div><strong>Asthma/Inhaler:</strong> {reg.asthma_inhaler_info}</div>}
+            {isMedicalConcern(reg.allergies) && <div><strong>Allergies:</strong> {reg.allergies}</div>}
+            {isMedicalConcern(reg.asthma_inhaler_info) && <div><strong>Asthma/Inhaler:</strong> {reg.asthma_inhaler_info}</div>}
+            {reg.custom_fields_data?.has_asthma === "Yes" && <div><strong>Asthma:</strong> Yes</div>}
           </CardContent>
         </Card>
       )}
