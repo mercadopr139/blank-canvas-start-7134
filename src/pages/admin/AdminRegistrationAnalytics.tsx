@@ -1,5 +1,6 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import { getProgramYearForRegistration } from "@/lib/programYear";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -75,12 +76,17 @@ const AdminRegistrationAnalytics = () => {
   // double-counts them across years. Every stat below reads `registrations`,
   // so filtering + deduping here makes the whole dashboard year-aware and
   // per-child (distinct youth), not per-record.
-  const [yearFilter, setYearFilter] = useState<string>("all");
+  // Default to the current program year; the user can switch to a prior year
+  // or "All years". Falls back to All if the current year has no data yet.
+  const [yearFilter, setYearFilter] = useState<string>(() => getProgramYearForRegistration());
   const years = useMemo(() => {
     const set = new Set<string>();
     (rawRegistrations || []).forEach((r: any) => { if (r.program_year) set.add(r.program_year); });
     return Array.from(set).sort().reverse();
   }, [rawRegistrations]);
+  useEffect(() => {
+    if (yearFilter !== "all" && years.length > 0 && !years.includes(yearFilter)) setYearFilter("all");
+  }, [years, yearFilter]);
   const childKey = (r: any) =>
     `${(r.child_first_name || "").trim().toLowerCase()}|${(r.child_last_name || "").trim().toLowerCase()}|${r.child_date_of_birth || ""}`;
   const inFilter = useMemo(
@@ -564,7 +570,7 @@ const AdminRegistrationAnalytics = () => {
             </div>
 
             {/* Where our youth come from — geographic map, above the ranked bar chart */}
-            <YouthDistrictMap />
+            <YouthDistrictMap youth={registrations.map((r: any) => ({ latitude: r.latitude, longitude: r.longitude, child_school_district: r.child_school_district }))} />
 
             {/* School District - full width */}
             <Card className="bg-white/5 border-white/10">

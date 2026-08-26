@@ -1,9 +1,11 @@
-import { useMemo } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useMemo, useState } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent } from "@/components/ui/card";
-import { MapPin } from "lucide-react";
+import { MapPin, Loader2, LocateFixed } from "lucide-react";
+import { toast } from "sonner";
 import { capeMayGeo } from "@/data/capeMayGeo";
+import YouthStreetMap, { type StreetPoint } from "@/components/admin/YouthStreetMap";
 
 /*
   Youth Per School District — a real map of Cape May County with one dot per
@@ -151,35 +153,34 @@ function buildGeometry() {
     if (biggest) munIndex[name] = { ring: biggest, area: bigArea, c: ringCentroid(biggest) };
   });
 
-  return { munPaths, munIndex };
+  return { munPaths, munIndex, P };
 }
 
-export function YouthDistrictMap() {
-  const { data: rows } = useQuery({
+type YouthPoint = { latitude: number | null; longitude: number | null; child_school_district: string | null };
+
+export function YouthDistrictMap({ youth: youthProp }: { youth?: YouthPoint[] } = {}) {
+  const queryClient = useQueryClient();
+  const [geo, setGeo] = useState<{ running: boolean; done: number; remaining: number } | null>(null);
+  const [view, setView] = useState<"district" | "street">("district");
+
+  // If the parent passes filtered/deduped youth, use those; otherwise fetch all.
+  const { data: fetched } = useQuery({
     queryKey: ["youth-district-map"],
+    enabled: !youthProp,
     queryFn: async () => {
-      const { data, error } = await supabase.from("youth_registrations").select("child_school_district");
+      const { data, error } = await supabase.from("youth_registrations").select("latitude, longitude, child_school_district");
       if (error) throw error;
-      return data as { child_school_district: string | null }[];
+      return data as YouthPoint[];
     },
   });
+  const youth = youthProp ?? fetched ?? [];
 
-  const { munPaths, munIndex } = useMemo(buildGeometry, []);
+  const { munPaths, munIndex, P } = useMemo(buildGeometry, []);
 
-  const countsByDistrict = useMemo(() => {
-    const acc: Record<string, number> = {};
-    (rows || []).forEach((r) => {
-      const key = r.child_school_district || "Other";
-      acc[key] = (acc[key] || 0) + 1;
-    });
-    return acc;
-  }, [rows]);
-
-  const { dots, labels, groupCounts, total, served, offMapCount } = useMemo(() => {
-    // seeded RNG so dots stay put across re-renders
+  const { dots, labels, groupCounts, total, served, offMapCount, located, geocodable } = useMemo(() => {
+    // seeded RNG so approximate dots + jitter stay put across re-renders
     let seed = 20260705;
     const rnd = () => { seed = (seed * 1103515245 + 12345) & 0x7fffffff; return seed / 0x7fffffff; };
-
     const scatterInto = (ring: Pt[]): Pt => {
       let xmin = 1e9, xmax = -1e9, ymin = 1e9, ymax = -1e9;
       ring.forEach((p) => { if (p.x < xmin) xmin = p.x; if (p.x > xmax) xmax = p.x; if (p.y < ymin) ymin = p.y; if (p.y > ymax) ymax = p.y; });
@@ -190,26 +191,34 @@ export function YouthDistrictMap() {
       return ringCentroid(ring);
     };
 
-    const dots: { cx: number; cy: number; fill: string; key: string }[] = [];
+    const dots: { cx: number; cy: number; fill: string; key: string; real: boolean }[] = [];
     const groupCounts: Record<string, number> = {};
-    let total = 0, offMapCount = 0, di = 0;
+    let total = 0, offMapCount = 0, located = 0, geocodable = 0;
 
-    Object.entries(countsByDistrict).forEach(([district, count]) => {
+    youth.forEach((y, idx) => {
+      total++;
+      const district = y.child_school_district || "Other";
       const map = DISTRICT_MAP[district] || { g: "home" as GroupKey, mun: null };
       const group = GROUPS[map.g];
-      groupCounts[map.g] = (groupCounts[map.g] || 0) + count;
-      total += count;
-      if (!map.mun || group.offMap) { offMapCount += count; return; }
-      const target = munIndex[map.mun];
-      if (!target) { offMapCount += count; return; }
-      for (let i = 0; i < count; i++) {
-        const p = scatterInto(target.ring);
-        dots.push({ cx: +p.x.toFixed(1), cy: +p.y.toFixed(1), fill: group.color, key: district + i + di });
+      groupCounts[map.g] = (groupCounts[map.g] || 0) + 1;
+      if (!map.mun || group.offMap) { offMapCount++; return; } // no fixed town
+      geocodable++;
+      // Real address → plot at true location (tiny jitter for privacy).
+      if (typeof y.latitude === "number" && typeof y.longitude === "number") {
+        const p = P(y.longitude, y.latitude);
+        const x = p.x + (rnd() - 0.5) * 4, yy = p.y + (rnd() - 0.5) * 4;
+        if (x >= BOX.L - 8 && x <= BOX.R + 8 && yy >= BOX.T - 8 && yy <= BOX.B + 8) {
+          dots.push({ cx: +x.toFixed(1), cy: +yy.toFixed(1), fill: group.color, key: "r" + idx, real: true });
+          located++;
+          return;
+        }
       }
-      di += count;
+      // Not yet located → approximate scatter inside the district.
+      const target = munIndex[map.mun];
+      if (target) { const p = scatterInto(target.ring); dots.push({ cx: +p.x.toFixed(1), cy: +p.y.toFixed(1), fill: group.color, key: "s" + idx, real: false }); }
+      else offMapCount++;
     });
 
-    // group labels at the area-weighted center of each geographic region
     const labels: { x: number; y: number; text: string }[] = [];
     (Object.keys(GEO_GROUP_MUNS) as GroupKey[]).forEach((gk) => {
       if (!groupCounts[gk]) return;
@@ -221,8 +230,37 @@ export function YouthDistrictMap() {
     });
 
     const served = GROUP_ORDER.filter((g) => g !== "home" && groupCounts[g] > 0).length;
-    return { dots, labels, groupCounts, total, served, offMapCount };
-  }, [countsByDistrict, munIndex]);
+    return { dots, labels, groupCounts, total, served, offMapCount, located, geocodable };
+  }, [youth, munIndex, P]);
+
+  const streetPoints = useMemo<StreetPoint[]>(() =>
+    youth
+      .filter((y) => typeof y.latitude === "number" && typeof y.longitude === "number")
+      .map((y) => {
+        const map = DISTRICT_MAP[y.child_school_district || "Other"] || { g: "home" as GroupKey, mun: null };
+        return { lat: y.latitude as number, lng: y.longitude as number, color: GROUPS[map.g].color };
+      }),
+    [youth]);
+
+  const locateAddresses = async () => {
+    setGeo({ running: true, done: 0, remaining: 0 });
+    try {
+      for (let guard = 0; guard < 60; guard++) {
+        const { data, error } = await supabase.functions.invoke("geocode-youth", { body: {} });
+        if (error) throw error;
+        if (data?.error) throw new Error(data.error);
+        setGeo((g) => ({ running: true, done: (g?.done || 0) + (data.processed || 0), remaining: data.remaining || 0 }));
+        if ((data.remaining || 0) <= 0 || (data.processed || 0) === 0) break;
+      }
+      await queryClient.invalidateQueries({ queryKey: ["youth-registrations-analytics"] });
+      await queryClient.invalidateQueries({ queryKey: ["youth-district-map"] });
+      toast.success("Addresses located.");
+    } catch (e: any) {
+      toast.error(e?.message || "Geocoding failed.");
+    } finally {
+      setGeo((g) => (g ? { ...g, running: false } : null));
+    }
+  };
 
   return (
     <Card className="bg-white/5 border-white/10 text-white">
@@ -234,7 +272,7 @@ export function YouthDistrictMap() {
               <MapPin className="w-5 h-5 text-red-400" /> Youth Per School District
             </h2>
             <p className="text-white/50 text-sm mt-1 max-w-xl">
-              Every dot is one young person we serve, placed in the Cape May County district they attend.
+              Every dot is one young person we serve, placed at their actual home address (from registration) and colored by school district.
             </p>
           </div>
           <div className="text-right">
@@ -247,16 +285,43 @@ export function YouthDistrictMap() {
           </div>
         </div>
 
+        {/* Geocoding status + action */}
+        <div className="flex items-center justify-between gap-3 flex-wrap mb-4">
+          <p className="text-xs text-white/45">
+            <span className="text-white/70 font-semibold">{located.toLocaleString()}</span> of {geocodable.toLocaleString()} plotted at their real address
+            {geocodable - located > 0 ? ` · ${(geocodable - located).toLocaleString()} shown approximately in-district until located` : ""}
+          </p>
+          <button onClick={locateAddresses} disabled={geo?.running}
+            className="inline-flex items-center gap-2 text-sm px-3 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 border border-white/15 text-white disabled:opacity-60">
+            {geo?.running ? <Loader2 className="h-4 w-4 animate-spin" /> : <LocateFixed className="h-4 w-4" />}
+            {geo?.running ? `Locating… ${geo.done} done · ${geo.remaining} left` : "Locate addresses"}
+          </button>
+        </div>
+
+        {/* District (branded) vs Street (real, zoomable) view */}
+        <div className="inline-flex rounded-lg border border-white/10 bg-white/5 p-0.5 mb-3">
+          <button onClick={() => setView("district")}
+            className={`px-3 py-1.5 rounded-md text-sm font-semibold transition-colors ${view === "district" ? "bg-white/10 text-white" : "text-white/50 hover:text-white/80"}`}>District</button>
+          <button onClick={() => setView("street")}
+            className={`px-3 py-1.5 rounded-md text-sm font-semibold transition-colors ${view === "street" ? "bg-white/10 text-white" : "text-white/50 hover:text-white/80"}`}>Street</button>
+        </div>
+
         <div className="grid grid-cols-1 lg:grid-cols-[1.4fr_1fr] gap-4 items-start">
           {/* Map */}
-          <div className="rounded-xl overflow-hidden" style={{ background: "#0c141d" }}>
+          <div>
+            {view === "street" ? (
+              streetPoints.length > 0
+                ? <YouthStreetMap points={streetPoints} />
+                : <div className="rounded-xl grid place-items-center text-white/40 text-sm p-6 text-center" style={{ height: 520, background: "#0c141d" }}>No located youth yet — click "Locate addresses" above to plot real homes.</div>
+            ) : (
+            <div className="rounded-xl overflow-hidden" style={{ background: "#0c141d" }}>
             <svg viewBox={`0 0 ${VB_W} ${VB_H}`} className="w-full h-auto block" role="img" aria-label="Map of Cape May County youth by school district">
               {munPaths.map((m) => (
                 <path key={m.key} d={m.d} fill={m.fill} fillOpacity={m.fillOpacity}
                   stroke="rgba(255,255,255,.14)" strokeWidth={0.8} strokeLinejoin="round" />
               ))}
               {dots.map((dt) => (
-                <circle key={dt.key} cx={dt.cx} cy={dt.cy} r={4.3} fill={dt.fill}
+                <circle key={dt.key} cx={dt.cx} cy={dt.cy} r={dt.real ? 4.3 : 3.6} fill={dt.fill} fillOpacity={dt.real ? 1 : 0.4}
                   stroke="rgba(0,0,0,.4)" strokeWidth={0.8} />
               ))}
               {labels.map((l, i) => (
@@ -274,6 +339,8 @@ export function YouthDistrictMap() {
                 Atlantic Ocean
               </text>
             </svg>
+            </div>
+            )}
           </div>
 
           {/* Legend */}
