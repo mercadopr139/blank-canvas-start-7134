@@ -69,6 +69,9 @@ const NO_CONCERN = new Set([
   "nomedical", "nomedicalissues", "nomedicalconcerns", "nomedicalconditions",
   "noallergies", "noknownallergies", "noknownmedical", "noknownconditions",
   "noasthma", "noneknown", "healthy", "allgood", "good", "nothing",
+  // "No known", medical shorthand (NKA = no known allergies), and variants
+  "noknown", "nka", "nkda", "noknownissues", "noknownmedicalissues",
+  "noknownmedicalconditions", "noknownallergy", "noknownallergiesormedical",
 ]);
 const isMedicalConcern = (v?: string | null): boolean => {
   if (!v) return false;
