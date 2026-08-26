@@ -25,17 +25,17 @@ export default function SummerBreakBanner({ compact = false }: { compact?: boole
             </div>
             <div className="flex-1 min-w-0">
               <p className="text-xs font-bold uppercase tracking-[0.15em] text-amber-300 mb-1">
-                Summer Schedule — through September 28
+                Junior Boxing returns September 29
               </p>
               <ul className="space-y-1 text-sm md:text-base text-foreground/85">
                 <li>
                   <span className="font-semibold text-foreground">Senior Boxing</span> meets {SUMMER_BREAK_COPY.seniorSchedule}
                 </li>
                 <li>
-                  <span className="font-semibold text-foreground">Junior Boxing</span> returns {SUMMER_BREAK_COPY.juniorReturn}
+                  <span className="font-semibold text-foreground">Junior Boxing</span> &amp; its Smile Lab aftercare return {SUMMER_BREAK_COPY.juniorReturn}
                 </li>
                 <li>
-                  <span className="font-semibold text-foreground">Re-registration</span> for the {SUMMER_BREAK_COPY.newProgramYear} program year opens {SUMMER_BREAK_COPY.reRegistrationOpens}
+                  <span className="font-semibold text-foreground">Re-registration</span> for the {SUMMER_BREAK_COPY.newProgramYear} program year is open
                 </li>
               </ul>
               {!compact && (

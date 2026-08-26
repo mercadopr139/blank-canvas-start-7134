@@ -122,7 +122,7 @@ const ProgramsSection = ({
             <div className="mt-4 flex items-start gap-2.5 rounded-lg bg-amber-500/10 border border-amber-400/30 px-3 py-2.5">
               <Pause className="h-4 w-4 text-amber-400 mt-0.5 shrink-0" />
               <p className="text-xs text-foreground/80 leading-snug">
-                <span className="font-semibold text-foreground">Tuesday programming is on summer break.</span> Junior Boxing returns {SUMMER_BREAK_COPY.juniorReturn}. You're still welcome to register — we'll be in touch.
+                <span className="font-semibold text-foreground">Tuesday programming returns for the new program year.</span> Junior Boxing and its Smile Lab aftercare start {SUMMER_BREAK_COPY.juniorReturn}. You're welcome to register now — we'll be in touch.
               </p>
             </div>
           )}

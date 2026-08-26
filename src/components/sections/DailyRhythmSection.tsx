@@ -94,17 +94,12 @@ const DailyRhythmSection = ({
                 between the Tuesday Rhythm timeline below and the fact that
                 Junior Boxing is on break until Sept 29. Also flags the
                 shifted Senior summer time. */}
-            {isSummerBreakActive() && (showJunior || showSenior) && (
+            {isSummerBreakActive() && showJunior && (
               <div className="mt-6 flex items-start gap-3 rounded-lg bg-amber-500/10 border border-amber-400/30 px-4 py-3">
                 <Pause className="w-4 h-4 text-amber-400 mt-0.5 shrink-0" />
                 <div className="text-sm text-foreground/85 leading-snug space-y-1">
-                  <p className="font-semibold text-foreground">Currently on summer schedule.</p>
-                  {showJunior && (
-                    <p>The Tuesday rhythm below is the school-year schedule. <span className="font-semibold">Junior Boxing returns {SUMMER_BREAK_COPY.juniorReturn}.</span></p>
-                  )}
-                  {showSenior && (
-                    <p>Senior Boxing meets <span className="font-semibold">{SUMMER_BREAK_COPY.seniorSchedule}</span> through summer (the school-year timeline below resumes in September).</p>
-                  )}
+                  <p className="font-semibold text-foreground">Junior Boxing returns {SUMMER_BREAK_COPY.juniorReturn}.</p>
+                  <p>The Tuesday rhythm below is the school-year schedule—Junior Boxing and its Smile Lab aftercare resume then.</p>
                 </div>
               </div>
             )}

@@ -12,8 +12,11 @@
 const SUMMER_START = new Date(2026, 5, 22); // June 22, 2026 (month is 0-indexed). Started early per Josh on 2026-06-22 — NLA was already on the summer schedule.
 const SUMMER_END   = new Date(2026, 8, 28); // September 28, 2026
 
+// Senior Boxing is on the regular season schedule (Mon–Fri, 5:15–7:15pm).
+// The window below now serves one purpose: flag that Junior Boxing and its
+// Smile Lab aftercare (Tuesdays) haven't resumed yet — they return Sept 29.
 export const SUMMER_BREAK_COPY = {
-  seniorSchedule: "Monday–Thursday, 6:15pm–8:15pm",
+  seniorSchedule: "Monday–Friday, 5:15pm–7:15pm",
   juniorReturn: "Tuesday, September 29",
   reRegistrationOpens: "August 1",
   newProgramYear: "2026-27",
