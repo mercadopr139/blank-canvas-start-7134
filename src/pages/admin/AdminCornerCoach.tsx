@@ -6,7 +6,7 @@ import { supabase } from "@/integrations/supabase/client";
 import type { Tables } from "@/integrations/supabase/types";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { ArrowLeft, Send, Sparkles, ChevronDown, ChevronRight, Loader2, Database, Pin, Archive, Trash2, Plus, FileDown } from "lucide-react";
+import { ArrowLeft, Send, Sparkles, ChevronDown, ChevronRight, Loader2, Database, Pin, Archive, Trash2, Plus, FileDown, Search, X } from "lucide-react";
 import CornerCoachReportSheet, { type ReportSource, type SavedReport } from "@/components/admin/CornerCoachReportSheet";
 
 const SUPER_ADMIN_EMAIL = "joshmercado@nolimitsboxingacademy.org";
@@ -20,6 +20,31 @@ type Msg = {
   historyId?: string; // the corner_coach_history row this answer was saved as
 };
 type HistoryRow = Tables<"corner_coach_history">;
+
+// Pull a short excerpt of `text` around the first occurrence of `term`.
+const makeSnippet = (text: string, term: string): string => {
+  const t = text || "";
+  const i = t.toLowerCase().indexOf(term);
+  if (i < 0) return "";
+  const start = Math.max(0, i - 40);
+  const end = Math.min(t.length, i + term.length + 90);
+  return (start > 0 ? "…" : "") + t.slice(start, end).replace(/\s+/g, " ").trim() + (end < t.length ? "…" : "");
+};
+
+// Render `text` with every case-insensitive occurrence of `term` highlighted.
+const Highlighted = ({ text, term }: { text: string; term: string }) => {
+  if (!term) return <>{text}</>;
+  const parts = text.split(new RegExp(`(${term.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")})`, "ig"));
+  return (
+    <>
+      {parts.map((p, i) =>
+        p.toLowerCase() === term.toLowerCase()
+          ? <mark key={i} className="bg-[#bf0f3e]/40 text-white rounded px-0.5">{p}</mark>
+          : <span key={i}>{p}</span>
+      )}
+    </>
+  );
+};
 
 // "Jul 16, 2026, 9:42 AM" — every saved question carries its full date + time.
 const formatWhen = (iso: string) =>
@@ -41,6 +66,7 @@ const AdminCornerCoach = () => {
   const [openSteps, setOpenSteps] = useState<Record<number, boolean>>({});
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
   const [showArchived, setShowArchived] = useState(false);
+  const [search, setSearch] = useState("");
   const [reportSource, setReportSource] = useState<ReportSource | null>(null);
   const endRef = useRef<HTMLDivElement>(null);
 
@@ -69,6 +95,14 @@ const AdminCornerCoach = () => {
   const pinned = history.filter((h) => h.pinned && !h.archived);
   const recent = history.filter((h) => !h.pinned && !h.archived);
   const archived = history.filter((h) => h.archived);
+
+  // Keyword search across the full text of every saved Q&A (question + answer),
+  // so "phillies" finds a conversation even when its title only says "excursion".
+  const q = search.trim().toLowerCase();
+  const searching = q.length > 0;
+  const results = searching
+    ? history.filter((h) => h.question.toLowerCase().includes(q) || (h.answer ?? "").toLowerCase().includes(q))
+    : [];
 
   // Extra guard on top of the server-side super-admin check.
   if (user && user.email?.toLowerCase() !== SUPER_ADMIN_EMAIL) {
@@ -172,7 +206,7 @@ const AdminCornerCoach = () => {
         }}
         placeholder="e.g. How many days has Maicol attended this month?"
         rows={1}
-        className="resize-none bg-white/[0.04] border-white/10 text-white placeholder:text-zinc-600 min-h-[44px] max-h-40"
+        className="resize-none bg-white/[0.04] border border-[#bf0f3e] focus-visible:ring-[#bf0f3e]/40 text-white placeholder:text-zinc-600 min-h-[44px] max-h-40"
       />
       <Button
         onClick={() => ask(input)}
@@ -184,13 +218,18 @@ const AdminCornerCoach = () => {
     </div>
   );
 
-  const renderItem = (h: HistoryRow) => (
+  const renderItem = (h: HistoryRow, term = "") => (
     <div
       key={h.id}
       className="group flex items-start gap-2 rounded-xl border border-white/[0.06] bg-white/[0.02] hover:bg-white/[0.04] px-4 py-3 transition-colors"
     >
       <button onClick={() => reopen(h)} className="flex-1 text-left min-w-0">
-        <p className="text-sm text-zinc-200 truncate">{h.question}</p>
+        <p className="text-sm text-zinc-200 truncate"><Highlighted text={h.question} term={term} /></p>
+        {term && !h.question.toLowerCase().includes(term) && makeSnippet(h.answer ?? "", term) && (
+          <p className="text-[11px] text-zinc-500 mt-0.5 truncate">
+            <Highlighted text={makeSnippet(h.answer ?? "", term)} term={term} />
+          </p>
+        )}
         <p className="text-[11px] text-zinc-600 mt-0.5">{formatWhen(h.created_at)}</p>
       </button>
       <div className="flex items-center gap-0.5 shrink-0">
@@ -276,20 +315,51 @@ const AdminCornerCoach = () => {
               </div>
               {composer}
 
+              {/* Search past questions + answers */}
+              {history.length > 0 && (
+                <div className="mt-6 relative">
+                  <Search className="w-4 h-4 text-zinc-600 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+                  <input
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
+                    placeholder="Search past questions & answers…"
+                    className="w-full pl-9 pr-9 py-2.5 rounded-xl bg-white/[0.04] border border-white/10 text-white placeholder:text-zinc-600 text-sm focus:outline-none focus:border-white/20"
+                  />
+                  {searching && (
+                    <button onClick={() => setSearch("")} title="Clear" className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-600 hover:text-zinc-300">
+                      <X className="w-4 h-4" />
+                    </button>
+                  )}
+                </div>
+              )}
+
+              {searching ? (
+                <div className="mt-4">
+                  <h3 className="text-xs font-semibold uppercase tracking-wide text-zinc-500 mb-2">
+                    {results.length} result{results.length === 1 ? "" : "s"} for “{search.trim()}”
+                  </h3>
+                  {results.length > 0 ? (
+                    <div className="space-y-2">{results.map((h) => renderItem(h, q))}</div>
+                  ) : (
+                    <p className="text-sm text-zinc-600 py-4">No matches — try a different word.</p>
+                  )}
+                </div>
+              ) : (
+              <>
               {/* History */}
               {pinned.length > 0 && (
                 <div className="mt-8">
                   <h3 className="text-xs font-semibold uppercase tracking-wide text-zinc-500 mb-2 flex items-center gap-1.5">
                     <Pin className="w-3 h-3" fill="currentColor" /> Pinned
                   </h3>
-                  <div className="space-y-2">{pinned.map(renderItem)}</div>
+                  <div className="space-y-2">{pinned.map((h) => renderItem(h))}</div>
                 </div>
               )}
 
               {recent.length > 0 && (
                 <div className="mt-6">
                   <h3 className="text-xs font-semibold uppercase tracking-wide text-zinc-500 mb-2">Recent</h3>
-                  <div className="space-y-2">{recent.map(renderItem)}</div>
+                  <div className="space-y-2">{recent.map((h) => renderItem(h))}</div>
                 </div>
               )}
 
@@ -302,8 +372,10 @@ const AdminCornerCoach = () => {
                     {showArchived ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronRight className="w-3.5 h-3.5" />}
                     Archived ({archived.length})
                   </button>
-                  {showArchived && <div className="space-y-2">{archived.map(renderItem)}</div>}
+                  {showArchived && <div className="space-y-2">{archived.map((h) => renderItem(h))}</div>}
                 </div>
+              )}
+              </>
               )}
             </div>
           )}
