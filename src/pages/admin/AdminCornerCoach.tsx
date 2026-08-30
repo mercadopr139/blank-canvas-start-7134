@@ -69,9 +69,14 @@ const AdminCornerCoach = () => {
   const [search, setSearch] = useState("");
   const [reportSource, setReportSource] = useState<ReportSource | null>(null);
   const endRef = useRef<HTMLDivElement>(null);
+  const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    endRef.current?.scrollIntoView({ behavior: "smooth" });
+    // Pin to the newest message while in a conversation; snap back to the top
+    // when the chat clears (e.g. hitting back) so we don't land at the bottom
+    // of the history list.
+    if (messages.length > 0) endRef.current?.scrollIntoView({ behavior: "smooth" });
+    else scrollRef.current?.scrollTo({ top: 0 });
   }, [messages, loading]);
 
   // Saved Q&A history (owner-only via RLS). Newest first; split into pinned /
@@ -303,7 +308,7 @@ const AdminCornerCoach = () => {
       </header>
 
       {/* Conversation */}
-      <div className="flex-1 overflow-y-auto">
+      <div ref={scrollRef} className="flex-1 overflow-y-auto">
         <div className="max-w-3xl mx-auto px-6 py-6 space-y-4">
           {messages.length === 0 && !loading && (
             <div className="py-12 max-w-xl mx-auto">
