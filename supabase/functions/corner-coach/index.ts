@@ -22,9 +22,12 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-// Change this one line to swap models. Sonnet 5 is the sweet spot for
-// text-to-SQL: strong multi-table reasoning, fast, and inexpensive.
+// Reports use Sonnet 5 (polished PDFs — quality matters most there).
 const MODEL = "claude-sonnet-5";
+// Chat Q&A uses Haiku for speed — most questions are straightforward pulls,
+// and the tool loop auto-retries if a query errors. Swap back to MODEL here
+// if accuracy on complex multi-table questions ever slips.
+const CHAT_MODEL = "claude-haiku-4-5-20251001";
 const SUPER_ADMIN_EMAIL = "joshmercado@nolimitsboxingacademy.org";
 const MAX_STEPS = 8; // safety cap on the chat tool-use loop
 const REPORT_MAX_STEPS = 12; // reports may need more queries for a full picture
@@ -312,7 +315,7 @@ Deno.serve(async (req) => {
     const steps: any[] = [];
     for (let i = 0; i < MAX_STEPS; i++) {
       const response = await anthropic.messages.create({
-        model: MODEL,
+        model: CHAT_MODEL,
         max_tokens: 4096,
         system,
         tools: [runSqlTool],
