@@ -2,57 +2,57 @@ import { useState } from "react";
 import Header from "@/components/layout/Header";
 import Footer from "@/components/layout/Footer";
 import PortalLightbox from "@/components/ui/portal-lightbox";
-import joshMcNallyDave from "@/assets/our-story/josh-mcnally-dave.jpeg";
-import joshParents from "@/assets/our-story/josh-parents.png";
-import daveFamily from "@/assets/our-story/dave-family.png";
-import joshDaveEarly from "@/assets/our-story/josh-dave-early.png";
-import joshBasketballCoach from "@/assets/our-story/josh-basketball-coach.png";
-import daveBrigadeChampion from "@/assets/our-story/dave-brigade-champion.png";
-import joshProBoxing from "@/assets/our-story/josh-pro-boxing-2.png";
-import facilityConstructionCrew from "@/assets/facility/facility-construction-crew.png";
-import facilityPlumbingCrew from "@/assets/facility/facility-plumbing-crew.png";
-import facilityRebarPrep from "@/assets/facility/facility-rebar-prep.png";
-import facilityFloorWork from "@/assets/facility/facility-floor-work.png";
-import facilityThumbsUp from "@/assets/facility/facility-thumbs-up.png";
-import facilityFramingFloorWork from "@/assets/facility/facility-framing-floor.png";
-import facilityBathroom from "@/assets/facility/facility-bathroom.png";
-import facilityLoungeArea from "@/assets/facility/facility-lounge-area.png";
-import facilityFloorCleaning from "@/assets/facility/facility-floor-cleaning.png";
-import facilityMovingBoxes from "@/assets/facility/facility-moving-boxes.png";
-import facilityDoorInstall from "@/assets/facility/facility-door-install.png";
-import facilityKitchen from "@/assets/facility/facility-kitchen.png";
-import facilityDemolition from "@/assets/facility/facility-demolition.png";
-import facilityBuildCrew from "@/assets/facility/facility-build-crew.png";
-import facilityPlanning from "@/assets/facility/facility-planning.png";
-import facilityGreenTeam from "@/assets/facility/facility-green-team.png";
-import facilityEmptyWarehouse from "@/assets/facility/facility-empty-warehouse.png";
-import facilityMetalwork from "@/assets/facility/facility-metalwork.png";
-import facilitySteelFrame from "@/assets/facility/facility-steel-frame.png";
-import facilityWelding from "@/assets/facility/facility-welding.png";
-import facilityDumpster from "@/assets/facility/facility-dumpster.png";
-import facilityGymFloorPrep from "@/assets/facility/facility-gym-floor-prep.png";
-import facilityRigInstall from "@/assets/facility/facility-rig-install.png";
-import facilityKidOnPlates from "@/assets/facility/facility-kid-on-plates.png";
-import facilityFramingOverview from "@/assets/facility/facility-framing-overview.png";
-import facilityFramingFloor from "@/assets/facility/facility-framing-floor.png";
-import facilityFramingWall from "@/assets/facility/facility-framing-wall.png";
-import facilityWallRaising from "@/assets/facility/facility-wall-raising.png";
-import facilityWallFraming from "@/assets/facility/facility-wall-framing.png";
-import facilityPlywoodWall from "@/assets/facility/facility-plywood-wall.png";
-import facilityEquipmentPrep from "@/assets/facility/facility-equipment-prep.png";
-import facilityFinishedGym from "@/assets/facility/facility-finished-gym.png";
-import facilityFoundersCleaning from "@/assets/facility/facility-founders-cleaning.png";
-import facilityDemoFloor from "@/assets/facility/facility-demo-floor.png";
-import facilityFloorInstall1 from "@/assets/facility/facility-floor-install-1.png";
-import facilityFloorInstall2 from "@/assets/facility/facility-floor-install-2.png";
-import facilityFloorDiscussion from "@/assets/facility/facility-floor-discussion.png";
-import facilityScaffoldWork from "@/assets/facility/facility-scaffold-work.png";
-import facilityHighWork from "@/assets/facility/facility-high-work.png";
-import facilityFinishedCourt from "@/assets/facility/facility-finished-court.png";
-import facilityFinishedGymNew from "@/assets/facility/facility-finished-gym-new.jpg";
-import facilityFinishedCourtNew from "@/assets/facility/facility-finished-court-new.jpg";
-import facilityFinishedLearningCenter from "@/assets/facility/facility-finished-learning-center.jpg";
-import facilityFinishedTeenCenter from "@/assets/facility/facility-finished-teen-center.jpg";
+import joshMcNallyDave from "@/assets/our-story/josh-mcnally-dave.webp";
+import joshParents from "@/assets/our-story/josh-parents.webp";
+import daveFamily from "@/assets/our-story/dave-family.webp";
+import joshDaveEarly from "@/assets/our-story/josh-dave-early.webp";
+import joshBasketballCoach from "@/assets/our-story/josh-basketball-coach.webp";
+import daveBrigadeChampion from "@/assets/our-story/dave-brigade-champion.webp";
+import joshProBoxing from "@/assets/our-story/josh-pro-boxing-2.webp";
+import facilityConstructionCrew from "@/assets/facility/facility-construction-crew.webp";
+import facilityPlumbingCrew from "@/assets/facility/facility-plumbing-crew.webp";
+import facilityRebarPrep from "@/assets/facility/facility-rebar-prep.webp";
+import facilityFloorWork from "@/assets/facility/facility-floor-work.webp";
+import facilityThumbsUp from "@/assets/facility/facility-thumbs-up.webp";
+import facilityFramingFloorWork from "@/assets/facility/facility-framing-floor.webp";
+import facilityBathroom from "@/assets/facility/facility-bathroom.webp";
+import facilityLoungeArea from "@/assets/facility/facility-lounge-area.webp";
+import facilityFloorCleaning from "@/assets/facility/facility-floor-cleaning.webp";
+import facilityMovingBoxes from "@/assets/facility/facility-moving-boxes.webp";
+import facilityDoorInstall from "@/assets/facility/facility-door-install.webp";
+import facilityKitchen from "@/assets/facility/facility-kitchen.webp";
+import facilityDemolition from "@/assets/facility/facility-demolition.webp";
+import facilityBuildCrew from "@/assets/facility/facility-build-crew.webp";
+import facilityPlanning from "@/assets/facility/facility-planning.webp";
+import facilityGreenTeam from "@/assets/facility/facility-green-team.webp";
+import facilityEmptyWarehouse from "@/assets/facility/facility-empty-warehouse.webp";
+import facilityMetalwork from "@/assets/facility/facility-metalwork.webp";
+import facilitySteelFrame from "@/assets/facility/facility-steel-frame.webp";
+import facilityWelding from "@/assets/facility/facility-welding.webp";
+import facilityDumpster from "@/assets/facility/facility-dumpster.webp";
+import facilityGymFloorPrep from "@/assets/facility/facility-gym-floor-prep.webp";
+import facilityRigInstall from "@/assets/facility/facility-rig-install.webp";
+import facilityKidOnPlates from "@/assets/facility/facility-kid-on-plates.webp";
+import facilityFramingOverview from "@/assets/facility/facility-framing-overview.webp";
+import facilityFramingFloor from "@/assets/facility/facility-framing-floor.webp";
+import facilityFramingWall from "@/assets/facility/facility-framing-wall.webp";
+import facilityWallRaising from "@/assets/facility/facility-wall-raising.webp";
+import facilityWallFraming from "@/assets/facility/facility-wall-framing.webp";
+import facilityPlywoodWall from "@/assets/facility/facility-plywood-wall.webp";
+import facilityEquipmentPrep from "@/assets/facility/facility-equipment-prep.webp";
+import facilityFinishedGym from "@/assets/facility/facility-finished-gym.webp";
+import facilityFoundersCleaning from "@/assets/facility/facility-founders-cleaning.webp";
+import facilityDemoFloor from "@/assets/facility/facility-demo-floor.webp";
+import facilityFloorInstall1 from "@/assets/facility/facility-floor-install-1.webp";
+import facilityFloorInstall2 from "@/assets/facility/facility-floor-install-2.webp";
+import facilityFloorDiscussion from "@/assets/facility/facility-floor-discussion.webp";
+import facilityScaffoldWork from "@/assets/facility/facility-scaffold-work.webp";
+import facilityHighWork from "@/assets/facility/facility-high-work.webp";
+import facilityFinishedCourt from "@/assets/facility/facility-finished-court.webp";
+import facilityFinishedGymNew from "@/assets/facility/facility-finished-gym-new.webp";
+import facilityFinishedCourtNew from "@/assets/facility/facility-finished-court-new.webp";
+import facilityFinishedLearningCenter from "@/assets/facility/facility-finished-learning-center.webp";
+import facilityFinishedTeenCenter from "@/assets/facility/facility-finished-teen-center.webp";
 
 type FacilityImg = {src: string;alt: string;};
 
@@ -127,7 +127,7 @@ const OurStory = () => {
               <div className="md:float-right md:ml-5 md:mb-3 md:max-w-[260px] mb-6 w-full max-w-[320px] mx-auto md:mx-0">
                 <div className="bg-muted rounded-lg shadow-md overflow-hidden">
                   <button type="button" onClick={() => setActiveImg({ src: joshParents, alt: "Josh, pictured with step dad & mom" })} aria-label="Enlarge photo">
-                    <img
+                    <img loading="lazy"
                       src={joshParents}
                       alt="Josh, pictured with Step Dad & Mom"
                       className="w-full h-auto cursor-pointer" />
@@ -138,7 +138,7 @@ const OurStory = () => {
                 </div>
                 <div className="bg-muted rounded-lg shadow-md overflow-hidden mt-3">
                   <button type="button" onClick={() => setActiveImg({ src: joshProBoxing, alt: "Josh competing professionally" })} aria-label="Enlarge photo">
-                    <img src={joshProBoxing} alt="Josh competing professionally" className="w-full h-auto cursor-pointer" />
+                    <img loading="lazy" src={joshProBoxing} alt="Josh competing professionally" className="w-full h-auto cursor-pointer" />
                   </button>
                   <div className="px-2 py-1 text-center">
                     <p className="text-[10px] text-muted-foreground italic leading-tight">Josh competed in 7 professional fights, before retiring to focus on his career as an educator</p>
@@ -161,7 +161,7 @@ const OurStory = () => {
               <div className="md:float-left md:mr-5 md:mb-3 md:max-w-[240px] md:-mt-4 mb-6 w-full max-w-[300px] mx-auto md:mx-0">
                 <div className="bg-muted rounded-lg shadow-md overflow-hidden">
                   <button type="button" onClick={() => setActiveImg({ src: joshBasketballCoach, alt: "Josh, Head Varsity Basketball Coach, 2015-2021" })} aria-label="Enlarge photo">
-                    <img
+                    <img loading="lazy"
                       src={joshBasketballCoach}
                       alt="Josh, Head Varsity Basketball Coach, 2015-2021"
                       className="w-full h-auto cursor-pointer" />
@@ -189,7 +189,7 @@ const OurStory = () => {
               <div className="md:float-right md:ml-5 md:mb-3 md:max-w-[260px] mb-6 w-full max-w-[320px] mx-auto md:mx-0">
                 <div className="bg-muted rounded-lg shadow-md overflow-hidden">
                   <button type="button" onClick={() => setActiveImg({ src: daveFamily, alt: "Dave, pictured with sister & parents" })} aria-label="Enlarge photo">
-                    <img
+                    <img loading="lazy"
                       src={daveFamily}
                       alt="Dave, pictured with sister & parents"
                       className="w-full h-auto cursor-pointer" />
@@ -213,7 +213,7 @@ const OurStory = () => {
               <div className="md:float-right md:ml-5 md:mb-3 md:max-w-[200px] mb-6 w-full max-w-[240px] mx-auto md:mx-0">
                 <div className="bg-muted rounded-lg shadow-md overflow-hidden">
                   <button type="button" onClick={() => setActiveImg({ src: daveBrigadeChampion, alt: "Dave, 2015 Brigade Champion" })} aria-label="Enlarge photo">
-                    <img
+                    <img loading="lazy"
                       src={daveBrigadeChampion}
                       alt="Dave, 2015 Brigade Champion"
                       className="w-full h-auto cursor-pointer" />
@@ -232,7 +232,7 @@ const OurStory = () => {
               <div className="md:float-right md:ml-5 md:mb-3 md:max-w-[260px] mb-6 w-full max-w-[320px] mx-auto md:mx-0">
                 <div className="bg-muted rounded-lg shadow-md overflow-hidden">
                   <button type="button" onClick={() => setActiveImg({ src: joshMcNallyDave, alt: "Josh Mercado, Coach Jim McNally & Dave Von Savage" })} aria-label="Enlarge photo">
-                    <img
+                    <img loading="lazy"
                       src={joshMcNallyDave}
                       alt="Josh Mercado, Coach Jim McNally & Dave Von Savage"
                       className="w-full h-auto cursor-pointer" />
@@ -278,7 +278,7 @@ McNally coached Navy boxing for 37 years and interestingly, in the late 1970s, h
                     className="block w-full aspect-[16/10]"
                     aria-label={`Enlarge ${img.alt}`}>
 
-                      <img
+                      <img loading="lazy"
                       src={img.src}
                       alt={img.alt}
                       className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" />
@@ -308,7 +308,7 @@ McNally coached Navy boxing for 37 years and interestingly, in the late 1970s, h
                     onClick={() => setActiveImg(img)}
                     className="block w-full aspect-[4/3]"
                     aria-label={`Enlarge ${img.alt}`}>
-                      <img
+                      <img loading="lazy"
                       src={img.src}
                       alt={img.alt}
                       className="w-full h-full object-cover" />
