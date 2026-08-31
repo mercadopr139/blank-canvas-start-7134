@@ -6,9 +6,13 @@ import PortalLightbox from "@/components/ui/portal-lightbox";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { ClickToEnlargeGallery } from "@/components/ui/click-to-enlarge-gallery";
-import { excursionGalleryImages } from "@/data/excursionsGallery";
+import { useSiteImages } from "@/hooks/useSiteImages";
 
 const MoreThanBoxingSection = () => {
+  // Single source of truth: the "More Excursions" gallery pulls the same managed
+  // excursion photos Chrissy updates in Website Photos (programs.excursions), so
+  // it always matches the Extended Program excursions — no duplicate upkeep.
+  const { resolveGroup } = useSiteImages();
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const [lightboxImg, setLightboxImg] = useState<{ src: string; alt: string }>({ src: "", alt: "" });
   const [galleryOpen, setGalleryOpen] = useState(false);
@@ -112,7 +116,7 @@ const MoreThanBoxingSection = () => {
           <DialogHeader>
             <DialogTitle className="text-2xl font-bold">Excursions</DialogTitle>
           </DialogHeader>
-          <ClickToEnlargeGallery images={excursionGalleryImages} showCaptions />
+          <ClickToEnlargeGallery images={resolveGroup("programs.excursions")} showCaptions />
           <div className="mt-6 flex justify-end">
             <Button onClick={() => setGalleryOpen(false)} className="bg-foreground text-background hover:bg-foreground/90">
               Back to Programs
