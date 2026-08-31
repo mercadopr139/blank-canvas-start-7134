@@ -16,6 +16,7 @@ const AwardsSection = () => {
     <section className="py-16 bg-black md:py-[60px]" id="awards">
       <div className="container">
         <div className="max-w-4xl mx-auto">
+          {/* Header */}
           <div className="border-l-4 border-[#bf0f3e] pl-4 mb-8">
             <p className="text-xs font-semibold tracking-[0.2em] uppercase text-[#bf0f3e] mb-2">
               Honored & Recognized
@@ -28,6 +29,23 @@ const AwardsSection = () => {
               organizations for our youth impact, mentorship, and community leadership.
             </p>
           </div>
+
+          {/* Feature photo — full width, cleanly framed (no forced crop) */}
+          <figure className="mb-8">
+            <div className="rounded-xl overflow-hidden border border-white/10 shadow-2xl shadow-black/50 aspect-[5/2] md:aspect-[3/1]">
+              <img
+                src={georgeHillAward}
+                alt="No Limits Academy receives the USA Boxing George Hill Humanitarian Award at Middle Township"
+                className="w-full h-full object-cover"
+                style={{ objectPosition: "50% 64%" }}
+              />
+            </div>
+            <figcaption className="mt-3 text-center text-xs text-white/50">
+              No Limits Academy honored at Middle Township — accepting the USA Boxing George Hill Humanitarian Award.
+            </figcaption>
+          </figure>
+
+          {/* Award bullets */}
           <ul className="space-y-3">
             {awards.map((award) => (
               <li key={award} className="flex items-start gap-3">
@@ -36,17 +54,8 @@ const AwardsSection = () => {
               </li>
             ))}
           </ul>
-          <div className="mt-8 flex justify-center">
-            <div className="w-full max-w-2xl rounded-lg overflow-hidden">
-              <img
-                src={georgeHillAward}
-                alt="NLA receives USA Boxing George Hill Humanitarian Award at Middle Township"
-                className="w-full object-cover object-bottom"
-                style={{ marginTop: '-15%' }}
-              />
-            </div>
-          </div>
-          <div className="mt-6 border-b border-white/30" />
+
+          <div className="mt-8 border-b border-white/30" />
         </div>
       </div>
     </section>
