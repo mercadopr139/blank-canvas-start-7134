@@ -2,7 +2,10 @@ import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { normalizeImageForUpload } from "@/lib/imageUpload";
+import { normalizeImageForUpload, compressImageForUpload } from "@/lib/imageUpload";
+import { useAuth } from "@/contexts/AuthContext";
+
+const SUPER_ADMIN_EMAIL = "joshmercado@nolimitsboxingacademy.org";
 import { useStaffPermissions } from "@/hooks/useStaffPermissions";
 import EventBannerEditor from "@/components/admin/EventBannerEditor";
 import { useSiteImages, type SiteImageRow } from "@/hooks/useSiteImages";
@@ -30,6 +33,7 @@ import {
   ChevronDown,
   Plus,
   Loader2,
+  Zap,
   RotateCcw,
   Save,
   ImageIcon,
@@ -487,7 +491,49 @@ const GroupEditor = ({
 const AdminWebsitePhotos = () => {
   const navigate = useNavigate();
   const { hasPermission, loading: permLoading } = useStaffPermissions();
-  const { byGroup, refetch, isLoading } = useSiteImages();
+  const { byGroup, refetch, isLoading, rows } = useSiteImages();
+  const { user } = useAuth();
+  const isSuperAdmin = user?.email?.toLowerCase() === SUPER_ADMIN_EMAIL;
+  const [optimize, setOptimize] = useState<{ running: boolean; done: number; total: number } | null>(null);
+
+  // One-time cleanup: shrink already-uploaded photos (stored full-size) so the
+  // public site loads fast. Downloads each storage image, re-encodes it small
+  // (via compressImageForUpload), re-uploads, repoints the row, deletes the old
+  // file. Runs in the signed-in owner's browser — RLS allows the writes.
+  const optimizeAllPhotos = async () => {
+    const candidates = (rows ?? []).filter(
+      (r) => typeof r.url === "string" && r.url.includes("/storage/v1/object/public/site-images/")
+    );
+    if (!candidates.length) { toast.info("No uploaded photos to optimize."); return; }
+    setOptimize({ running: true, done: 0, total: candidates.length });
+    let savedBytes = 0;
+    for (let i = 0; i < candidates.length; i++) {
+      const row = candidates[i];
+      try {
+        const blob = await (await fetch(row.url as string)).blob();
+        if (blob.size >= 350_000) {
+          const compressed = await compressImageForUpload(new File([blob], "photo", { type: blob.type || "image/jpeg" }));
+          if (compressed.size < blob.size) {
+            const path = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}.webp`;
+            const up = await supabase.storage.from("site-images").upload(path, compressed, { upsert: true, contentType: "image/webp" });
+            if (up.error) throw up.error;
+            const newUrl = supabase.storage.from("site-images").getPublicUrl(path).data.publicUrl;
+            const upd = await supabase.from("site_images").update({ url: newUrl }).eq("id", row.id);
+            if (upd.error) throw upd.error;
+            const oldPath = (row.url as string).split("/site-images/")[1];
+            if (oldPath) await supabase.storage.from("site-images").remove([decodeURIComponent(oldPath)]);
+            savedBytes += blob.size - compressed.size;
+          }
+        }
+      } catch (e) {
+        console.error("optimize failed for row", row.id, e);
+      }
+      setOptimize({ running: true, done: i + 1, total: candidates.length });
+    }
+    setOptimize(null);
+    await refetch();
+    toast.success(`Photos optimized — saved ~${(savedBytes / 1e6).toFixed(0)} MB. Your site loads faster now.`);
+  };
 
   // Fine-grained gate (ProtectedRoute only checks isAdmin).
   useEffect(() => {
@@ -531,10 +577,28 @@ const AdminWebsitePhotos = () => {
       </header>
 
       <main className="max-w-5xl mx-auto px-6 py-8">
-        <p className="text-sm text-zinc-400 mb-6 max-w-2xl">
+        <p className="text-sm text-zinc-400 mb-4 max-w-2xl">
           Changes go live on the public website as soon as you hit <span className="text-white font-medium">Save</span> for a group.
           Use <span className="text-white font-medium">Reset</span> to put a group's original photos back.
         </p>
+
+        {/* One-time cleanup for big uploaded photos — owner only */}
+        {isSuperAdmin && (
+        <div className="mb-6 flex items-center gap-3 flex-wrap rounded-xl border border-white/[0.06] bg-white/[0.02] px-4 py-3">
+          <Button
+            onClick={optimizeAllPhotos}
+            disabled={!!optimize?.running || isLoading}
+            size="sm"
+            className="bg-[#bf0f3e] hover:bg-[#bf0f3e]/80 text-white gap-2 shrink-0"
+          >
+            {optimize?.running ? <Loader2 className="w-4 h-4 animate-spin" /> : <Zap className="w-4 h-4" />}
+            {optimize?.running ? `Optimizing ${optimize.done}/${optimize.total}…` : "Optimize photos"}
+          </Button>
+          <span className="text-xs text-zinc-500">
+            One-time cleanup — shrinks large uploaded photos so the site loads fast. They stay crisp; run it after adding a batch.
+          </span>
+        </div>
+        )}
 
         <EventBannerEditor />
 

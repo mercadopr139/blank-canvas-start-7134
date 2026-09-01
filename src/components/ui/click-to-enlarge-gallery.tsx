@@ -56,6 +56,8 @@ export function ClickToEnlargeGallery({
               <img
                 src={img.src}
                 alt={img.alt}
+                loading="lazy"
+                decoding="async"
                 className={ui.imgClassName}
                 style={{
                   objectPosition: img.objectPosition || "center",
