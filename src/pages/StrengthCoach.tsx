@@ -345,6 +345,107 @@ const StrengthCoach = () => {
 };
 
 // The glanceable board view of a single day.
+// Auto-finds a kid-safe demo video for an exercise (via the find-exercise-video
+// edge function, which caches the pick). Shows a thumbnail; tapping opens an
+// in-app pop-up player (the app stays underneath) with a Close button.
+const ExerciseVideo = ({ name }: { name: string }) => {
+  const [loading, setLoading] = useState(true);
+  const [videoId, setVideoId] = useState<string | null>(null);
+  const [open, setOpen] = useState(false);
+  useEffect(() => {
+    let alive = true;
+    setLoading(true);
+    supabase.functions
+      .invoke("find-exercise-video", { body: { name } })
+      .then(({ data }) => { if (alive) { setVideoId((data as { youtube_id?: string })?.youtube_id ?? null); setLoading(false); } })
+      .catch(() => { if (alive) { setVideoId(null); setLoading(false); } });
+    return () => { alive = false; };
+  }, [name]);
+
+  // While the pop-up is open: lock scroll + close on Escape.
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") setOpen(false); };
+    window.addEventListener("keydown", onKey);
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => { window.removeEventListener("keydown", onKey); document.body.style.overflow = prev; };
+  }, [open]);
+
+  const searchUrl = `https://www.youtube.com/results?search_query=${encodeURIComponent(name + " proper form technique")}`;
+
+  return (
+    <>
+      <div className="rounded-lg overflow-hidden border border-white/10 bg-black/40 w-full">
+        {videoId ? (
+          <button
+            type="button"
+            onClick={() => setOpen(true)}
+            className="group relative block w-full"
+            style={{ aspectRatio: "16 / 9" }}
+            title="Play proper-form demo"
+          >
+            <img
+              src={`https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`}
+              alt={`${name} demo`}
+              loading="lazy"
+              className="absolute inset-0 h-full w-full object-cover"
+            />
+            <span className="absolute inset-0 flex flex-col items-center justify-center gap-1 bg-black/40 transition group-hover:bg-black/25">
+              <PlayCircle className="w-14 h-14 text-white drop-shadow-lg" />
+              <span className="text-xs font-semibold text-white/90 drop-shadow">See proper form</span>
+            </span>
+          </button>
+        ) : (
+          <a
+            href={searchUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center justify-center gap-2 text-sky-300 hover:text-sky-200 text-sm font-semibold"
+            style={{ aspectRatio: "16 / 9" }}
+          >
+            <PlayCircle className="w-5 h-5" /> {loading ? "Finding demo…" : "Watch demo"}
+          </a>
+        )}
+      </div>
+
+      {/* In-app pop-up player */}
+      {open && videoId && (
+        <div
+          className="fixed inset-0 z-[60] flex items-center justify-center bg-black/85 p-4"
+          onClick={() => setOpen(false)}
+        >
+          <div className="relative w-full max-w-3xl" onClick={(e) => e.stopPropagation()}>
+            <button
+              onClick={() => setOpen(false)}
+              className="absolute -top-10 right-0 flex items-center gap-1 text-sm text-white/70 hover:text-white"
+            >
+              <X className="w-5 h-5" /> Close
+            </button>
+            <div className="relative w-full overflow-hidden rounded-xl bg-black" style={{ aspectRatio: "16 / 9" }}>
+              <iframe
+                src={`https://www.youtube-nocookie.com/embed/${videoId}?autoplay=1&rel=0&playsinline=1&origin=${encodeURIComponent(typeof window !== "undefined" ? window.location.origin : "")}`}
+                title={`${name} demo`}
+                allow="autoplay; encrypted-media; picture-in-picture; fullscreen"
+                allowFullScreen
+                className="absolute inset-0 h-full w-full"
+              />
+            </div>
+            <a
+              href={`https://www.youtube.com/watch?v=${videoId}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="mt-2 inline-block text-xs text-white/50 hover:text-white/80"
+            >
+              Trouble playing? Open on YouTube ↗
+            </a>
+          </div>
+        </div>
+      )}
+    </>
+  );
+};
+
 const BoardDay = ({ day }: { day: DayWorkout }) => (
   <div className="rounded-2xl border border-white/10 bg-neutral-900/60 overflow-hidden">
     <div className="px-5 sm:px-7 py-5 border-b border-white/10 flex items-end justify-between gap-3" style={{ background: "linear-gradient(90deg, rgba(191,15,62,0.25), transparent)" }}>
@@ -392,25 +493,20 @@ const BoardDay = ({ day }: { day: DayWorkout }) => (
       {/* Extra Work */}
       {day.accessories?.length ? (
         <Section label="Extra Work">
-          <div className="grid gap-3 sm:grid-cols-2">
+          <div className="space-y-3">
             {day.accessories.map((a, i) => (
-              <div key={i} className="rounded-xl bg-white/5 border border-white/10 p-4">
-                <div className="flex items-baseline justify-between gap-2">
-                  <div className="font-bold text-lg">{a.name}</div>
-                  <div className="font-bold" style={{ color: NLA_RED }}>{a.sets}</div>
+              <div key={i} className="rounded-xl bg-white/5 border border-white/10 p-4 grid gap-4 sm:grid-cols-[1fr_300px] items-start">
+                <div>
+                  <div className="flex items-baseline justify-between gap-2">
+                    <div className="font-bold text-lg">{a.name}</div>
+                    <div className="font-bold whitespace-nowrap" style={{ color: NLA_RED }}>{a.sets}</div>
+                  </div>
+                  <div className="text-[11px] text-white/40 mt-0.5">{a.equipment}{a.targets ? ` · ${a.targets}` : ""}</div>
+                  {a.howTo ? <p className="text-sm text-white/70 mt-2">{a.howTo}</p> : null}
+                  {a.scale ? <p className="text-xs text-amber-200/80 mt-2">⚖ {a.scale}</p> : null}
+                  {a.rest ? <div className="text-[11px] text-white/40 mt-1">Rest {a.rest}</div> : null}
                 </div>
-                <div className="text-[11px] text-white/40 mt-0.5">{a.equipment}{a.targets ? ` · ${a.targets}` : ""}</div>
-                {a.howTo ? <p className="text-sm text-white/70 mt-2">{a.howTo}</p> : null}
-                {a.scale ? <p className="text-xs text-amber-200/80 mt-2">⚖ {a.scale}</p> : null}
-                {a.rest ? <div className="text-[11px] text-white/40 mt-1">Rest {a.rest}</div> : null}
-                <a
-                  href={`https://www.youtube.com/results?search_query=${encodeURIComponent(a.name + " proper form technique")}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1.5 mt-3 text-xs font-semibold text-sky-300 hover:text-sky-200"
-                >
-                  <PlayCircle className="w-4 h-4" /> See proper form
-                </a>
+                <ExerciseVideo name={a.name} />
               </div>
             ))}
           </div>
