@@ -27,6 +27,10 @@ interface DupeRow {
   first_attendance: string | null;
   last_attendance: string | null;
   dup_key: string;
+  // 'strong'  = two rows share a birthday (high confidence).
+  // 'possible' = same first+last name but the birthday differs/is missing —
+  //              likely the same kid with a mistyped DOB, but verify first.
+  match_type?: "strong" | "possible";
 }
 
 interface MergeResult {
@@ -127,7 +131,10 @@ export default function AdminDuplicateRegistrations() {
       const sorted = [...groupRows].sort(keeperRank);
       const top = sorted[0];
       const parentName = `${top.parent_first_name ?? ""} ${top.parent_last_name ?? ""}`.trim();
-      return { key, ckey: canonicalKey(sorted), firstName: top.child_first_name.trim(), lastName: top.child_last_name.trim(), dob: top.child_date_of_birth, parentName, rows: sorted };
+      // "Possible" = clustered only by matching name, with a differing/missing
+      // birthday. These need a closer look before merging.
+      const possible = groupRows.some((r) => r.match_type === "possible");
+      return { key, ckey: canonicalKey(sorted), firstName: top.child_first_name.trim(), lastName: top.child_last_name.trim(), dob: top.child_date_of_birth, parentName, possible, rows: sorted };
     });
     // Sort groups by impact (rows with attendance first, then by name).
     arr.sort((a, b) => {
@@ -154,12 +161,20 @@ export default function AdminDuplicateRegistrations() {
 
   const handleMerge = async () => {
     if (!activeGroup || !activeKeeperId) return;
-    const dupeIds = activeGroup.rows.filter((r) => r.id !== activeKeeperId).map((r) => r.id);
+    const keeperRow = activeGroup.rows.find((r) => r.id === activeKeeperId);
+    const dupeRows = activeGroup.rows.filter((r) => r.id !== activeKeeperId);
+    const dupeIds = dupeRows.map((r) => r.id);
     if (dupeIds.length === 0) return;
+    // Only override the safety guard when a dupe's birthday actually differs
+    // from the keeper's — so ordinary same-birthday merges keep the strict check.
+    const allowDobMismatch = dupeRows.some(
+      (d) => (d.child_date_of_birth || null) !== (keeperRow?.child_date_of_birth || null)
+    );
     setMerging(true);
     const { data, error } = await supabase.rpc("admin_merge_youth_registrations", {
       _keeper_id: activeKeeperId,
       _dupe_ids: dupeIds,
+      _allow_dob_mismatch: allowDobMismatch,
     });
     setMerging(false);
     setConfirmOpen(false);
@@ -263,6 +278,11 @@ export default function AdminDuplicateRegistrations() {
                       <Badge className="bg-purple-500/15 text-purple-300 border-purple-400/30 text-[10px]">
                         {g.rows.length} registrations
                       </Badge>
+                      {g.possible && (
+                        <Badge className="bg-amber-500/15 text-amber-300 border-amber-400/30 text-[10px]">
+                          Possible · birthday differs
+                        </Badge>
+                      )}
                     </p>
                     <p className="text-white/40 text-xs mt-0.5">
                       Born {formatDate(g.dob)}{g.parentName ? ` · Parent: ${g.parentName}` : ""}
@@ -471,11 +491,22 @@ export default function AdminDuplicateRegistrations() {
             const dupeRows = activeGroup.rows.filter((r) => r.id !== activeKeeperId);
             const movedEstimate = dupeRows.reduce((s, r) => s + r.attendance_count, 0);
             const keeperCount = keeperRow?.attendance_count || 0;
+            const dobDiffers = dupeRows.some(
+              (r) => (r.child_date_of_birth || null) !== (keeperRow?.child_date_of_birth || null)
+            );
             return (
               <div className="space-y-3">
                 <p className="text-sm text-white/80">
                   This will merge <span className="font-bold text-white">{activeGroup.firstName} {activeGroup.lastName}</span> into a single registration.
                 </p>
+                {dobDiffers && (
+                  <div className="rounded-lg bg-amber-500/[0.1] border border-amber-400/40 px-3 py-2.5 text-xs text-amber-100/90">
+                    <p className="font-bold text-amber-200 mb-0.5">⚠ Birthdays don't match</p>
+                    These records have different (or missing) birthdays. Only continue if you're
+                    sure it's the <span className="font-semibold">same child</span> with a mistyped
+                    date of birth — not two different kids who share a name.
+                  </div>
+                )}
                 <div className="rounded-lg bg-red-500/[0.08] border border-red-500/30 px-3 py-2.5 text-xs text-white/70 space-y-1">
                   <p className="font-bold text-red-300 mb-1">What happens:</p>
                   <ul className="space-y-0.5 pl-1">
