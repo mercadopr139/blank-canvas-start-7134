@@ -3,16 +3,16 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { ChevronLeft, ChevronRight, Dumbbell, Lock, Unlock, RefreshCw, Sparkles, Wand2, CalendarDays, History, Search, Plus, Trash2, X, Pencil, ClipboardList, TrendingUp } from "lucide-react";
+import { ChevronLeft, ChevronRight, Dumbbell, Lock, Unlock, RefreshCw, Sparkles, Wand2, CalendarDays, History, Search, Plus, Trash2, X, Pencil, ClipboardList, TrendingUp, PlayCircle } from "lucide-react";
 
 // Strength & Conditioning Coach — Phase 1. One screen the onsite coach opens on the
-// gym board: generate the week (Mon Bench · Wed Squat · Thu Deadlift), review each
+// gym board: generate the week (Mon Bench · Wed Squat · Fri Deadlift), review each
 // day big and glanceable, revise any day in plain English, then lock the week.
 // The AI never prescribes weights — athletes (13–18) self-select their loads.
 
 const NLA_RED = "#bf0f3e";
 
-type DayKey = "monday" | "wednesday" | "thursday";
+type DayKey = "monday" | "wednesday" | "friday";
 
 interface Accessory {
   name: string; sets: string; equipment: string; targets: string;
@@ -38,7 +38,7 @@ interface WeekRow {
 const DAYS: { key: DayKey; label: string; lift: string; weekday: number }[] = [
   { key: "monday", label: "Monday", lift: "Bench Press", weekday: 1 },
   { key: "wednesday", label: "Wednesday", lift: "Back Squat", weekday: 3 },
-  { key: "thursday", label: "Thursday", lift: "Deadlift", weekday: 4 },
+  { key: "friday", label: "Friday", lift: "Deadlift", weekday: 5 },
 ];
 
 const toMonday = (d: Date): Date => {
@@ -254,7 +254,7 @@ const StrengthCoach = () => {
             <Sparkles className="h-10 w-10 mx-auto mb-4 text-white/30" />
             <h2 className="text-xl font-bold mb-1">No workout for this week yet</h2>
             <p className="text-white/50 mb-6 max-w-md mx-auto">
-              Generate all three days at once — Monday bench, Wednesday squat, Thursday deadlift — with warm-ups, extra work and built-in scaling.
+              Generate all three days at once — Monday bench, Wednesday squat, Friday deadlift — with warm-ups, extra work and built-in scaling.
             </p>
             <button onClick={generateWeek} disabled={generating}
               className="inline-flex items-center gap-2 px-6 py-3 rounded-xl font-semibold text-white disabled:opacity-60"
@@ -403,6 +403,14 @@ const BoardDay = ({ day }: { day: DayWorkout }) => (
                 {a.howTo ? <p className="text-sm text-white/70 mt-2">{a.howTo}</p> : null}
                 {a.scale ? <p className="text-xs text-amber-200/80 mt-2">⚖ {a.scale}</p> : null}
                 {a.rest ? <div className="text-[11px] text-white/40 mt-1">Rest {a.rest}</div> : null}
+                <a
+                  href={`https://www.youtube.com/results?search_query=${encodeURIComponent(a.name + " proper form technique")}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1.5 mt-3 text-xs font-semibold text-sky-300 hover:text-sky-200"
+                >
+                  <PlayCircle className="w-4 h-4" /> See proper form
+                </a>
               </div>
             ))}
           </div>

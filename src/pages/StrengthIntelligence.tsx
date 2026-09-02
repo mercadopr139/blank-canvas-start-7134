@@ -14,7 +14,7 @@ const NLA_RED = "#bf0f3e";
 interface LogRow {
   youth_id: string;
   athlete_name: string;
-  day_key: "monday" | "wednesday" | "thursday";
+  day_key: "monday" | "wednesday" | "thursday" | "friday";
   workout_date: string;
   sets: { set: number; weight: number | null; reps: number | null }[];
 }
@@ -22,7 +22,7 @@ interface LogRow {
 const LIFTS: { key: LogRow["day_key"]; name: string }[] = [
   { key: "monday", name: "Bench Press" },
   { key: "wednesday", name: "Back Squat" },
-  { key: "thursday", name: "Deadlift" },
+  { key: "friday", name: "Deadlift" },
 ];
 
 const bestSet = (sets: LogRow["sets"]): { weight: number; reps: number } => {
