@@ -54,6 +54,7 @@ interface Registration {
   // "Dad Only", "Grandparent(s)", "Other", or null for legacy rows.
   family_structure: string | null;
   program_year: string | null;
+  youth_link_id: string | null;
 }
 
 interface AttendanceRecord {
@@ -287,14 +288,18 @@ const AdminAttendance = () => {
   // the sign-up year (flips Aug 1). Using the sign-up year blanked the calendar
   // every Aug 1–31: it selected next season's cohort, which has no check-ins
   // (and no dropdown entry) yet, so every day read 0.
-  const [programYearFilter, setProgramYearFilter] = useState<string>(() => getCurrentAttendanceYear());
+  // Default to all cohorts. Kids are counted once via their cross-year identity
+  // link, so "All" gives complete, unduplicated numbers through the Sept
+  // re-registration transition (a single-year view can't show kids who checked
+  // in under last year's registration).
+  const [programYearFilter, setProgramYearFilter] = useState<string>("__all__");
   const { data: allRegistrations = [] } = useQuery({
     queryKey: ["registrations-attendance-full"],
     queryFn: () =>
       fetchAllRows<Registration>((from, to) =>
         supabase
           .from("youth_registrations")
-          .select("id, child_first_name, child_last_name, child_boxing_program, child_headshot_url, is_bald_eagle, bald_eagle_active, child_sex, child_school_district, household_income_range, free_or_reduced_lunch, child_race_ethnicity, family_structure, program_year")
+          .select("id, child_first_name, child_last_name, child_boxing_program, child_headshot_url, is_bald_eagle, bald_eagle_active, child_sex, child_school_district, household_income_range, free_or_reduced_lunch, child_race_ethnicity, family_structure, program_year, youth_link_id")
           .order("child_last_name")
           .range(from, to)
       ),
@@ -995,6 +1000,15 @@ const AdminAttendance = () => {
     return m;
   }, [registrations]);
 
+  // Map each registration to its cross-year identity (its link id, or itself).
+  // Built from ALL registrations so a kid's identity resolves even when the
+  // page is filtered to a single program year. Used to count kids ONCE.
+  const identityById = useMemo(() => {
+    const m: Record<string, string> = {};
+    allRegistrations.forEach((r) => { m[r.id] = r.youth_link_id || r.id; });
+    return m;
+  }, [allRegistrations]);
+
   const programs = useMemo(() => {
     const set = new Set(registrations.map((r) => r.child_boxing_program));
     return Array.from(set).sort();
@@ -1027,7 +1041,7 @@ const AdminAttendance = () => {
       : [],
     [practiceAttendance, todayIsPractice, isCurrentMonth]
   );
-  const todayRegIds = useMemo(() => new Set(todayRecords.map((a) => a.registration_id)), [todayRecords]);
+  const todayRegIds = useMemo(() => new Set(todayRecords.map((a) => identityById[a.registration_id] || a.registration_id)), [todayRecords]);
   const totalPresentToday = todayRegIds.size;
 
   /* ───── EFFECTIVE "TODAY" for snapshot widgets ─────
@@ -1056,13 +1070,13 @@ const AdminAttendance = () => {
       if (dates.length > 0) {
         const d = dates[0];
         const recs = byDate[d];
-        const ids = new Set(recs.map((a) => a.registration_id));
+        const ids = new Set(recs.map((a) => identityById[a.registration_id] || a.registration_id));
         const label = format(parseISO(d), "MMM d");
         return { effectiveDate: d, effectiveRecords: recs, effectiveRegIds: ids, effectiveLabel: `Last Practice — ${label}` };
       }
     }
     // Viewing a past/future month → show all month aggregates (existing behavior)
-    const ids = new Set(practiceAttendance.map((a) => a.registration_id));
+    const ids = new Set(practiceAttendance.map((a) => identityById[a.registration_id] || a.registration_id));
     return { effectiveDate: null, effectiveRecords: practiceAttendance, effectiveRegIds: ids, effectiveLabel: viewedMonthShort };
   }, [isCurrentMonth, todayRecords, todayRegIds, practiceAttendance, viewedMonthShort]);
 
@@ -1071,7 +1085,7 @@ const AdminAttendance = () => {
     const dayCounts: Record<string, Set<string>> = {};
     practiceAttendance.forEach((a) => {
       if (!dayCounts[a.check_in_date]) dayCounts[a.check_in_date] = new Set();
-      dayCounts[a.check_in_date].add(a.registration_id);
+      dayCounts[a.check_in_date].add(identityById[a.registration_id] || a.registration_id);
     });
     let maxDate = "";
     let maxCount = 0;
@@ -1158,7 +1172,7 @@ const AdminAttendance = () => {
 
   /* ───── PROGRAM SPLIT (viewed month) ───── */
   const programSplitToday = useMemo(() => {
-    const regIds = isCurrentMonth ? effectiveRegIds : new Set(practiceAttendance.map((a) => a.registration_id));
+    const regIds = isCurrentMonth ? effectiveRegIds : new Set(practiceAttendance.map((a) => identityById[a.registration_id] || a.registration_id));
     const counts: Record<string, number> = {};
     regIds.forEach((id) => {
       const reg = regMap[id];
@@ -1169,7 +1183,7 @@ const AdminAttendance = () => {
 
   /* ───── BOY / GIRL RATIO ───── */
   const sexSplitToday = useMemo(() => {
-    const regIds = isCurrentMonth ? effectiveRegIds : new Set(practiceAttendance.map((a) => a.registration_id));
+    const regIds = isCurrentMonth ? effectiveRegIds : new Set(practiceAttendance.map((a) => identityById[a.registration_id] || a.registration_id));
     const counts: Record<string, number> = {};
     regIds.forEach((id) => {
       const reg = regMap[id];
@@ -1180,7 +1194,7 @@ const AdminAttendance = () => {
 
   /* ───── POVERTY % ───── */
   const povertyToday = useMemo(() => {
-    const regIds = isCurrentMonth ? effectiveRegIds : new Set(practiceAttendance.map((a) => a.registration_id));
+    const regIds = isCurrentMonth ? effectiveRegIds : new Set(practiceAttendance.map((a) => identityById[a.registration_id] || a.registration_id));
     let below = 0;
     regIds.forEach((id) => {
       const reg = regMap[id];
@@ -1191,7 +1205,7 @@ const AdminAttendance = () => {
 
   /* ───── TOP SCHOOL DISTRICT ───── */
   const topDistrictToday = useMemo(() => {
-    const regIds = isCurrentMonth ? effectiveRegIds : new Set(practiceAttendance.map((a) => a.registration_id));
+    const regIds = isCurrentMonth ? effectiveRegIds : new Set(practiceAttendance.map((a) => identityById[a.registration_id] || a.registration_id));
     const counts: Record<string, number> = {};
     regIds.forEach((id) => {
       const reg = regMap[id];
@@ -1221,7 +1235,7 @@ const AdminAttendance = () => {
     const byDate: Record<string, Set<string>> = {};
     practiceAttendance.forEach((a) => {
       if (a.check_in_date >= weekStartStr && a.check_in_date < todayStr) {
-        (byDate[a.check_in_date] ||= new Set()).add(a.registration_id);
+        (byDate[a.check_in_date] ||= new Set()).add(identityById[a.registration_id] || a.registration_id);
       }
     });
     const days = Object.keys(byDate);
@@ -1270,7 +1284,7 @@ const AdminAttendance = () => {
   /* ───── TODAY-ONLY snapshot (resets daily, live) ───── */
   const todayOnlyRegIds = useMemo(() => {
     if (!isCurrentMonth) return new Set<string>();
-    return new Set(practiceAttendance.filter(a => a.check_in_date === todayStr).map(a => a.registration_id));
+    return new Set(practiceAttendance.filter(a => a.check_in_date === todayStr).map(a => identityById[a.registration_id] || a.registration_id));
   }, [isCurrentMonth, practiceAttendance]);
 
   const buildSnapshot = useCallback((regIds: Set<string>) => {
@@ -1302,7 +1316,7 @@ const AdminAttendance = () => {
   const mtdRegIds = useMemo(() => {
     const ids = new Set<string>();
     practiceAttendance.forEach((a) => {
-      if (!isCurrentMonth || a.check_in_date <= todayStr) ids.add(a.registration_id);
+      if (!isCurrentMonth || a.check_in_date <= todayStr) ids.add(identityById[a.registration_id] || a.registration_id);
     });
     return ids;
   }, [practiceAttendance, isCurrentMonth]);
@@ -1498,7 +1512,7 @@ const AdminAttendance = () => {
   /* ───── SCHOOL DISTRICT BREAKDOWN (viewed month, practice days only) ───── */
   const districtBreakdown = useMemo(() => {
     const counts: Record<string, number> = {};
-    const ids = new Set(practiceAttendance.map((a) => a.registration_id));
+    const ids = new Set(practiceAttendance.map((a) => identityById[a.registration_id] || a.registration_id));
     ids.forEach((id) => {
       const reg = regMap[id];
       if (reg) counts[reg.child_school_district] = (counts[reg.child_school_district] || 0) + 1;
@@ -1508,7 +1522,7 @@ const AdminAttendance = () => {
 
   /* ───── POVERTY SUMMARY (viewed month, practice days only) ───── */
   const povertyMonth = useMemo(() => {
-    const ids = new Set(practiceAttendance.map((a) => a.registration_id));
+    const ids = new Set(practiceAttendance.map((a) => identityById[a.registration_id] || a.registration_id));
     let below = 0;
     ids.forEach((id) => {
       const reg = regMap[id];
@@ -1530,9 +1544,9 @@ const AdminAttendance = () => {
       insights.push(`${weakest.week} (${weakest.range}) has lower average attendance (${weakest.avg}/day).`);
     }
 
-    const monthRegIds = new Set(practiceAttendance.map((a) => a.registration_id));
-    const jrIds = new Set(practiceAttendance.filter((a) => regMap[a.registration_id]?.child_boxing_program.includes("Junior")).map((a) => a.registration_id));
-    const srIds = new Set(practiceAttendance.filter((a) => regMap[a.registration_id]?.child_boxing_program.includes("Senior")).map((a) => a.registration_id));
+    const monthRegIds = new Set(practiceAttendance.map((a) => identityById[a.registration_id] || a.registration_id));
+    const jrIds = new Set(practiceAttendance.filter((a) => regMap[a.registration_id]?.child_boxing_program.includes("Junior")).map((a) => identityById[a.registration_id] || a.registration_id));
+    const srIds = new Set(practiceAttendance.filter((a) => regMap[a.registration_id]?.child_boxing_program.includes("Senior")).map((a) => identityById[a.registration_id] || a.registration_id));
     if (jrIds.size > 0 || srIds.size > 0) {
       insights.push(`${srIds.size} Senior Boxers and ${jrIds.size} Junior Boxers attended in ${viewedMonthShort} (Junior Boxing meets once per week).`);
     }
@@ -1681,7 +1695,7 @@ const AdminAttendance = () => {
     if (estHour < 20) return [];
 
     const todayCheckedInIds = new Set(
-      calendarAttendance.filter((a) => a.check_in_date === todayStr).map((a) => a.registration_id)
+      calendarAttendance.filter((a) => a.check_in_date === todayStr).map((a) => identityById[a.registration_id] || a.registration_id)
     );
     const calledOutNames = new Set(
       todayCallouts.map((c) => `${c.first_name.toLowerCase()}|${c.last_name.toLowerCase()}`)
@@ -1708,10 +1722,16 @@ const AdminAttendance = () => {
   );
 
   const dailyCounts = useMemo(() => {
+    // Distinct kids (by cross-year identity) per day — so a re-registered kid
+    // is never counted twice, and the tile shows the true headcount.
+    const sets: Record<string, Set<string>> = {};
+    filteredCalendarAttendance.forEach((a) => {
+      (sets[a.check_in_date] ||= new Set()).add(identityById[a.registration_id] || a.registration_id);
+    });
     const map: Record<string, number> = {};
-    filteredCalendarAttendance.forEach((a) => { map[a.check_in_date] = (map[a.check_in_date] || 0) + 1; });
+    Object.entries(sets).forEach(([d, s]) => { map[d] = s.size; });
     return map;
-  }, [filteredCalendarAttendance]);
+  }, [filteredCalendarAttendance, identityById]);
 
   const daySignIns = useMemo(() => {
     if (!selectedDay) return [];

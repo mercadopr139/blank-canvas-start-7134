@@ -26,7 +26,14 @@ interface Registration {
   is_bald_eagle: boolean;
   household_income_range: string;
   free_or_reduced_lunch: string | null;
+  youth_link_id: string | null;
 }
+
+// A kid's stable identity across program years: their link id if they've been
+// linked to an earlier registration, otherwise just their own id. Counting by
+// this makes "unique youth" unduplicated even when a kid re-registers.
+const idOf = (regId: string, regMap: Record<string, Registration>): string =>
+  regMap[regId]?.youth_link_id || regId;
 
 interface AttendanceRecord {
   id: string;
@@ -53,15 +60,16 @@ const uniqueBreakdownBy = (records: AttendanceRecord[], regMap: Record<string, R
     if (!reg) return;
     const val = String(reg[field] || "Unknown");
     if (!groups[val]) groups[val] = new Set();
-    groups[val].add(r.registration_id);
+    groups[val].add(idOf(r.registration_id, regMap));
   });
   return Object.entries(groups).map(([k, s]) => [k, s.size] as [string, number]).sort((a, b) => b[1] - a[1]);
 };
 
-const uniqueYouth = (records: AttendanceRecord[]) => new Set(records.map((r) => r.registration_id)).size;
+const uniqueYouth = (records: AttendanceRecord[], regMap: Record<string, Registration>) =>
+  new Set(records.map((r) => idOf(r.registration_id, regMap))).size;
 
 const povertyCount = (records: AttendanceRecord[], regMap: Record<string, Registration>) => {
-  const ids = new Set(records.map((r) => r.registration_id));
+  const ids = new Set(records.map((r) => idOf(r.registration_id, regMap)));
   let below = 0;
   ids.forEach((id) => {
     const reg = regMap[id];
@@ -171,7 +179,7 @@ const AdminAttendanceReports = () => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("youth_registrations")
-        .select("id, child_first_name, child_last_name, child_boxing_program, child_sex, child_school_district, child_headshot_url, is_bald_eagle, household_income_range, free_or_reduced_lunch")
+        .select("id, child_first_name, child_last_name, child_boxing_program, child_sex, child_school_district, child_headshot_url, is_bald_eagle, household_income_range, free_or_reduced_lunch, youth_link_id")
         .order("child_last_name");
       if (error) throw error;
       return data as Registration[];
@@ -329,7 +337,7 @@ const AdminAttendanceReports = () => {
 
   // Computed stats
   const totalAttendance = filteredAttendance.length;
-  const uniqueCount = uniqueYouth(filteredAttendance);
+  const uniqueCount = uniqueYouth(filteredAttendance, regMap);
   const poverty = povertyCount(filteredAttendance, regMap);
   const programBreakdown = uniqueBreakdownBy(filteredAttendance, regMap, "child_boxing_program");
   const sexBreakdown = uniqueBreakdownBy(filteredAttendance, regMap, "child_sex");
@@ -368,7 +376,7 @@ const AdminAttendanceReports = () => {
 
   // Bald eagles stats
   const baldEagleRecords = useMemo(() => practiceFilteredAttendance.filter((a) => regMap[a.registration_id]?.is_bald_eagle), [practiceFilteredAttendance, regMap]);
-  const baldEagleUniqueCount = uniqueYouth(baldEagleRecords);
+  const baldEagleUniqueCount = uniqueYouth(baldEagleRecords, regMap);
 
   // Individual youth data
   const selectedYouthReg = selectedYouthId ? regMap[selectedYouthId] : null;
