@@ -9,7 +9,7 @@ import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Copy, ChevronRight, Star, AlertTriangle, CheckCircle2, XCircle } from "lucide-react";
+import { Copy, ChevronRight, Star, AlertTriangle, CheckCircle2, XCircle, Link2 } from "lucide-react";
 import { toast } from "sonner";
 import { format, parseISO } from "date-fns";
 
@@ -61,6 +61,7 @@ export default function AdminDuplicateRegistrations() {
   const [keeperOverrides, setKeeperOverrides] = useState<Record<string, string>>({});
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [merging, setMerging] = useState(false);
+  const [linking, setLinking] = useState(false);
   const [lastResult, setLastResult] = useState<{ name: string; result: MergeResult } | null>(null);
 
   const { data: rows = [], isLoading, refetch } = useQuery({
@@ -199,6 +200,28 @@ export default function AdminDuplicateRegistrations() {
       return next;
     });
     queryClient.invalidateQueries({ queryKey: ["admin-duplicate-registrations"] });
+    refetch();
+  };
+
+  // Link (don't merge): mark the group as the SAME kid across different program
+  // years — keeps both years' records but counts them as one person everywhere.
+  // Then resolve the group so it drops off the review list.
+  const handleLink = async () => {
+    if (!activeGroup) return;
+    const ids = activeGroup.rows.map((r) => r.id);
+    if (ids.length < 2) return;
+    setLinking(true);
+    const { error } = await supabase.rpc("admin_link_youth" as never, { _ids: ids } as never);
+    if (error) { setLinking(false); toast.error(error.message || "Couldn't link."); return; }
+    const reg_ids = [...ids].sort();
+    await (supabase.from("duplicate_dismissals" as never) as any)
+      .insert({ group_key: reg_ids.join("|"), reg_ids });
+    setLinking(false);
+    toast.success(`${activeGroup.firstName} ${activeGroup.lastName}: linked across years — counted once now.`);
+    setActiveGroupKey(null);
+    refetchDismissals();
+    queryClient.invalidateQueries({ queryKey: ["admin-duplicate-registrations"] });
+    queryClient.invalidateQueries({ queryKey: ["youth-registrations"] });
     refetch();
   };
 
@@ -376,6 +399,11 @@ export default function AdminDuplicateRegistrations() {
               <p className="text-xs text-white/50">
                 Pick which registration to keep. Attendance from the others gets re-pointed to the keeper before the dupes are deleted. The top row is recommended (most attendance, approved, oldest).
               </p>
+              <p className="text-xs text-sky-200/70">
+                Same kid across <span className="font-semibold">different years</span> (they re-registered)? Use{" "}
+                <span className="font-semibold">Link</span> — keeps both years' records but counts them as{" "}
+                <span className="font-semibold">one person</span> everywhere. Use <span className="font-semibold">Merge</span> only for the same kid entered twice in the <span className="font-semibold">same</span> year.
+              </p>
               <p className="text-xs text-amber-200/70">
                 First check these are truly the <span className="font-semibold">same child</span> (same birthday + parent). Twins share a birthday and last name — if that's what you're seeing, click <span className="font-semibold">Not a duplicate</span> instead of merging.
               </p>
@@ -463,6 +491,15 @@ export default function AdminDuplicateRegistrations() {
                     onClick={() => setActiveGroupKey(null)}
                   >
                     Cancel
+                  </Button>
+                  <Button
+                    size="sm"
+                    onClick={handleLink}
+                    disabled={linking}
+                    className="bg-sky-600 hover:bg-sky-700 text-white font-bold gap-1.5"
+                    title="Same kid across different years — keep both, count once"
+                  >
+                    <Link2 className="w-4 h-4" /> {linking ? "Linking…" : "Link (same kid)"}
                   </Button>
                   <Button
                     size="sm"
