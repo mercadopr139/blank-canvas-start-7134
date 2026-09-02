@@ -1,6 +1,6 @@
 import { useMemo } from "react";
 import { useNavigate } from "react-router-dom";
-import { Star, LogIn, UtensilsCrossed, MapPin, Smile } from "lucide-react";
+import { Star, LogIn, UtensilsCrossed, MapPin, Smile, Scale } from "lucide-react";
 import AdminSectionLayout, { SectionCard } from "@/components/admin/AdminSectionLayout";
 import { Button } from "@/components/ui/button";
 import { useStaffPermissions } from "@/hooks/useStaffPermissions";
@@ -64,6 +64,14 @@ const AdminOperations = () => {
       >
         <MapPin className="w-4 h-4 mr-1.5" />
         Excursion Check-In
+      </Button>
+      <Button
+        size="sm"
+        className="w-full bg-green-600 hover:bg-green-500 text-white text-sm font-medium"
+        onClick={() => navigate("/weigh-in")}
+      >
+        <Scale className="w-4 h-4 mr-1.5" />
+        Weight Watchers
       </Button>
     </div>
   );

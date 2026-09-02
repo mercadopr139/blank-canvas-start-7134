@@ -49,6 +49,8 @@ import AdminFormEditor from "./pages/admin/AdminFormEditor";
 import PublicForm from "./pages/PublicForm";
 import AdminAttendanceReports from "./pages/admin/AdminAttendanceReports";
 import CheckIn from "./pages/CheckIn";
+import WeighIn from "./pages/WeighIn";
+import AdminWeightWatchers from "./pages/admin/AdminWeightWatchers";
 import SmileLabCheckIn from "./pages/SmileLabCheckIn";
 import SmileLabBoard from "./pages/SmileLabBoard";
 import ExcursionCheckIn from "./pages/ExcursionCheckIn";
@@ -156,6 +158,7 @@ const App = () => (
             <Route path="/f/:slug" element={<PublicForm />} />
             <Route path="/supporters" element={<Supporters />} />
             <Route path="/check-in" element={<CheckIn />} />
+            <Route path="/weigh-in" element={<WeighIn />} />
             <Route path="/check-in/smile-lab" element={<SmileLabCheckIn />} />
             <Route path="/smile-lab" element={<SmileLabBoard />} />
             <Route path="/check-in/lil-champs-corner" element={<Navigate to="/check-in/smile-lab" replace />} />
@@ -222,6 +225,7 @@ const App = () => (
               <Route path="reregistration-approvals" element={<AdminReRegistrationApprovals />} />
               <Route path="duplicate-registrations" element={<AdminDuplicateRegistrations />} />
               <Route path="attendance" element={<AdminAttendance />} />
+              <Route path="weight-watchers" element={<AdminWeightWatchers />} />
               <Route path="excursion-intelligence" element={<AdminExcursionIntelligence />} />
               <Route path="events-intelligence" element={<AdminEventsIntelligence />} />
               <Route path="program-highlights" element={<AdminProgramHighlights />} />
