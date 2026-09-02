@@ -36,7 +36,7 @@ const SYSTEM =
   "THE FIXED WEEKLY SPLIT (never change which lift goes on which day):\n" +
   "- Monday = BENCH PRESS, main work 5 sets of 5 reps (5×5).\n" +
   "- Wednesday = BACK SQUAT, main work 5 sets of 5 reps (5×5).\n" +
-  "- Thursday = DEADLIFT, main work 5 sets of 5 reps (5×5).\n" +
+  "- Friday = DEADLIFT, main work 5 sets of 5 reps (5×5).\n" +
   "The 5×5 scheme is deliberate: these are teenagers who want to lift heavy, and 5 clean reps lets them chase that while grooving " +
   "good technique. Use 5×5 on ALL THREE days, every week — that consistency is the point. NOTE for deadlift: it is the most " +
   "fatiguing lift, so include a cue reminding athletes to keep the load MODERATE and stop any rep the moment the back rounds — all " +
@@ -98,6 +98,7 @@ const SYSTEM =
 const dayLabel = (k: string): string =>
   k === "monday" ? "Monday (Bench Press, 5 sets × 5 reps)"
   : k === "wednesday" ? "Wednesday (Back Squat, 5 sets × 5 reps)"
+  : k === "friday" ? "Friday (Deadlift, 5 sets × 5 reps)"
   : "Thursday (Deadlift, 5 sets × 5 reps)";
 
 const historyBlock = (history: any): string => {
@@ -110,7 +111,7 @@ const historyBlock = (history: any): string => {
       const list = Array.isArray(d?.[dayKey]?.accessories) ? d[dayKey].accessories : [];
       return list.map((a: any) => a?.name).filter(Boolean).join(", ") || "—";
     };
-    out += `- Week of ${w?.week_start ?? "?"}: Mon [${acc("monday")}] · Wed [${acc("wednesday")}] · Thu [${acc("thursday")}]\n`;
+    out += `- Week of ${w?.week_start ?? "?"}: Mon [${acc("monday")}] · Wed [${acc("wednesday")}] · Fri [${acc("friday")}]\n`;
   }
   return out;
 };
