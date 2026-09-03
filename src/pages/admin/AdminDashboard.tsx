@@ -16,6 +16,7 @@ import UpcomingEventsWidget from "@/components/admin/UpcomingEventsWidget";
 import InviteAdminModal from "@/components/admin/InviteAdminModal";
 import DashboardTileModal, { type DashboardTile } from "@/components/admin/DashboardTileModal";
 import AddWorkbenchModal from "@/components/admin/AddWorkbenchModal";
+import PoweredByQuiktech from "@/components/admin/PoweredByQuiktech";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 
 import {
@@ -867,6 +868,9 @@ const AdminDashboard = () => {
         </>
         )}
       </main>
+
+      {/* Powered-by footer, bottom/center of the dashboard (slightly larger). */}
+      <PoweredByQuiktech size="lg" />
 
       {/* Edit-only modal: opens when the user clicks the pencil on an
           existing tile. New tiles all flow through AddWorkbenchModal,

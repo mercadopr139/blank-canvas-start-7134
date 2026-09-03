@@ -38,8 +38,8 @@ export const OPERATIONS_TILES: PillarTile[] = [
     href: "/admin/operations/registration",
     permKey: "operations_registration",
     children: [
-      { title: "Registrations", href: "/admin/operations/registrations", icon: Users },
       { title: "Registration Intelligence", href: "/admin/operations/registration-analytics", icon: BarChart3 },
+      { title: "Registrations", href: "/admin/operations/registrations", icon: Users },
       { title: "Re-Registration Readiness", href: "/admin/operations/reregistration-readiness", icon: UserCheck },
       // Re-Registration Approvals hidden from the sidebar (duplicates Registrations → New Submissions).
       // Route/page kept alive at /admin/operations/reregistration-approvals; re-add this line to restore

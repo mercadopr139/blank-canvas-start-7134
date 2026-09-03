@@ -3,6 +3,7 @@ import { useNavigate, useLocation, Outlet } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, Menu, X, ExternalLink, ChevronDown } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
+import PoweredByQuiktech from "@/components/admin/PoweredByQuiktech";
 
 export interface SectionCard {
   title: string;
@@ -228,6 +229,7 @@ const AdminSectionLayout = ({
 
         <main className="flex-1 overflow-y-auto overflow-x-hidden flex flex-col">
           <Outlet />
+          <PoweredByQuiktech size="lg" />
         </main>
       </div>
     </div>
