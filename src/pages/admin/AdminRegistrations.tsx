@@ -359,17 +359,23 @@ const AdminRegistrations = () => {
     toast.success("Extended Program updated");
   };
 
-  // Possible-duplicate detector for the inline badge. Same rule as the
-  // Duplicate Registrations page: same birthday + last name = likely the same
-  // kid (first name may be spelled differently); no birthday → exact name.
+  // Possible-duplicate detector for the inline badge. Flags a likely same kid
+  // (same birthday + last name; first name may be spelled differently; no
+  // birthday → exact name) — but ONLY within the SAME program year. A kid who
+  // re-registers for a new year legitimately has two rows (last year + this
+  // year); that is a cross-year re-registration, NOT a duplicate, and must be
+  // LINKED, never merged. Scoping the key by program_year keeps those returning
+  // kids from being flagged (and removes the tempting-but-dangerous "merge"
+  // path across years). Only a true same-year double-registration trips it.
   const possibleDuplicateIds = (() => {
     const groups = new Map<string, string[]>();
     (registrations || []).forEach((r: any) => {
       if (!r.child_last_name) return;
       const ln = String(r.child_last_name).trim().toLowerCase();
+      const py = String(r.program_year || "").trim();
       const key = r.child_date_of_birth
-        ? `dob:${r.child_date_of_birth}|${ln}`
-        : `name:${String(r.child_first_name || "").trim().toLowerCase()}|${ln}`;
+        ? `${py}|dob:${r.child_date_of_birth}|${ln}`
+        : `${py}|name:${String(r.child_first_name || "").trim().toLowerCase()}|${ln}`;
       if (!groups.has(key)) groups.set(key, []);
       groups.get(key)!.push(r.id);
     });
