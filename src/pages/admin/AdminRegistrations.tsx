@@ -150,16 +150,24 @@ const AdminRegistrations = () => {
   });
 
   // Groups an admin marked "not a duplicate" (e.g. twins) — excluded from the
-  // inline "Possible dup" badge. Keyed by the sorted set of registration ids.
+  // inline "Possible dup" badge. Each dismissal stores the exact set of
+  // registration ids the admin declared "not duplicates of each other."
   const { data: dupDismissals = [] } = useQuery({
     queryKey: ["duplicate-dismissals"],
     queryFn: async () => {
-      const { data, error } = await (supabase.from("duplicate_dismissals" as never) as any).select("group_key");
+      const { data, error } = await (supabase.from("duplicate_dismissals" as never) as any).select("group_key, reg_ids");
       if (error) throw error;
-      return (data ?? []) as { group_key: string }[];
+      return (data ?? []) as { group_key: string; reg_ids: string[] | null }[];
     },
   });
-  const dismissedDupKeys = new Set(dupDismissals.map((d) => d.group_key));
+  // Build one id-set per dismissal. A flagged inline group counts as dismissed
+  // when its rows are a SUBSET of any one dismissal — so a dismissal made on the
+  // Duplicate Registrations page (which groups across ALL years) still clears the
+  // inline badge (which groups per-year), even though the two id-sets differ.
+  // Falls back to splitting the legacy group_key for rows saved before reg_ids.
+  const dismissedIdSets = dupDismissals.map(
+    (d) => new Set<string>(d.reg_ids ?? (d.group_key ? String(d.group_key).split("|") : []))
+  );
 
   // Realtime subscription for photo updates
   useEffect(() => {
@@ -359,32 +367,37 @@ const AdminRegistrations = () => {
     toast.success("Extended Program updated");
   };
 
-  // Possible-duplicate detector for the inline badge. Flags a likely same kid
-  // (same birthday + last name; first name may be spelled differently; no
-  // birthday → exact name) — but ONLY within the SAME program year. A kid who
-  // re-registers for a new year legitimately has two rows (last year + this
-  // year); that is a cross-year re-registration, NOT a duplicate, and must be
-  // LINKED, never merged. Scoping the key by program_year keeps those returning
-  // kids from being flagged (and removes the tempting-but-dangerous "merge"
-  // path across years). Only a true same-year double-registration trips it.
+  // Possible-duplicate detector for the inline badge. High-precision on purpose:
+  // it flags only an OBVIOUS same-year double-registration — same FIRST name,
+  // same LAST name, same (or missing) birthday, within the SAME program year.
+  //  - First name is part of the key, so TWINS (same last name + birthday but
+  //    different first names, e.g. Jordyn vs Justin Banks) never collide.
+  //  - Program year is part of the key, so a returning kid's last-year + this-
+  //    year rows (a cross-year re-registration) aren't flagged — those get
+  //    LINKED, never merged.
+  // Fuzzier cases (first-name misspellings, cross-year matches) still surface on
+  // the dedicated Duplicate Registrations page, which is the place to review them.
   const possibleDuplicateIds = (() => {
     const groups = new Map<string, string[]>();
     (registrations || []).forEach((r: any) => {
       if (!r.child_last_name) return;
       const ln = String(r.child_last_name).trim().toLowerCase();
+      const fn = String(r.child_first_name || "").trim().toLowerCase();
       const py = String(r.program_year || "").trim();
       const key = r.child_date_of_birth
-        ? `${py}|dob:${r.child_date_of_birth}|${ln}`
-        : `${py}|name:${String(r.child_first_name || "").trim().toLowerCase()}|${ln}`;
+        ? `${py}|dob:${r.child_date_of_birth}|${fn}|${ln}`
+        : `${py}|name:${fn}|${ln}`;
       if (!groups.has(key)) groups.set(key, []);
       groups.get(key)!.push(r.id);
     });
     const ids = new Set<string>();
     groups.forEach((arr) => {
       if (arr.length <= 1) return;
-      // Skip groups an admin already marked "not a duplicate" (e.g. twins).
-      const ckey = [...arr].sort().join("|");
-      if (dismissedDupKeys.has(ckey)) return;
+      // Skip a group when its rows are covered by any "not a duplicate" dismissal
+      // (subset match), so a dismissal made on the Duplicate Registrations page
+      // clears the inline badge too — even though that page groups across years.
+      const dismissed = dismissedIdSets.some((set) => arr.every((id) => set.has(id)));
+      if (dismissed) return;
       arr.forEach((id) => ids.add(id));
     });
     return ids;
