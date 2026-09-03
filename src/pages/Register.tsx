@@ -102,7 +102,7 @@ const Register = () => {
   };
 
   // Waivers come from the DB (field_type 'waiver', ordered after the questions)
-  // once they've been set up in the Registration Editor; otherwise fall back to
+  // once they've been set up in the Registration Form Editor; otherwise fall back to
   // the bundled defaults so the live form always shows the waivers.
   const questionFields = (formFields || []).filter((f) => f.field_type !== "waiver");
   const dbWaivers = (formFields || []).filter((f) => f.field_type === "waiver");
@@ -724,7 +724,7 @@ const Register = () => {
                     (e.g. inhaler info) only renders when its condition is met. */}
                 {questionFields.filter((f) => conditionMet(f.condition, formValues)).map(renderDynamicField)}
 
-                {/* === WAIVERS (admin-editable via the Registration Editor; falls back to bundled defaults) === */}
+                {/* === WAIVERS (admin-editable via the Registration Form Editor; falls back to bundled defaults) === */}
                 {waivers.map((w) => (
                   <div key={w.field_key} className="border-t pt-6">
                     <WaiverSection

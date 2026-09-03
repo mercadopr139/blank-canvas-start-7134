@@ -38,13 +38,16 @@ export const OPERATIONS_TILES: PillarTile[] = [
     href: "/admin/operations/registration",
     permKey: "operations_registration",
     children: [
-      { title: "Registration Form", href: "/register", icon: ClipboardList, external: true },
       { title: "Registrations", href: "/admin/operations/registrations", icon: Users },
       { title: "Registration Intelligence", href: "/admin/operations/registration-analytics", icon: BarChart3 },
       { title: "Re-Registration Readiness", href: "/admin/operations/reregistration-readiness", icon: UserCheck },
-      { title: "Re-Registration Approvals", href: "/admin/operations/reregistration-approvals", icon: ClipboardCheck },
+      // Re-Registration Approvals hidden from the sidebar (duplicates Registrations → New Submissions).
+      // Route/page kept alive at /admin/operations/reregistration-approvals; re-add this line to restore
+      // the one-click "Approve all returning" bulk button (handy during re-reg rush):
+      // { title: "Re-Registration Approvals", href: "/admin/operations/reregistration-approvals", icon: ClipboardCheck },
       { title: "Duplicate Registrations", href: "/admin/operations/duplicate-registrations", icon: Copy },
-      { title: "Registration Editor", href: "/admin/operations/form-builder", icon: Settings2 },
+      { title: "Registration Form", href: "/register", icon: ClipboardList, external: true },
+      { title: "Registration Form Editor", href: "/admin/operations/form-builder", icon: Settings2 },
     ],
   },
   {

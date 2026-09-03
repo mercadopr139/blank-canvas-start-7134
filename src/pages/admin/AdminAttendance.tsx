@@ -146,7 +146,15 @@ const getWeatherInfo = (code: number | null) => {
  */
 const RAIN_THRESHOLD_IN = 0.1;
 const COLD_THRESHOLD_F = 50;
-const MIN_DAYS_PER_BUCKET = 4; // insights need at least N days per side to surface
+const MIN_DAYS_PER_BUCKET = 4; // text insights need at least N days per side to surface
+
+// The chart's rainy-vs-dry panel is intentionally looser than the text insights:
+// surface the drop even for a SINGLE rainy day (we just want to know what the
+// drop was that day). Still require a few dry days so the baseline it's compared
+// against is a real average, not one lone day. The UI labels the sample size and
+// flags a single-day reading as a one-off, not a trend.
+const MIN_RAINY_DAYS_PANEL = 1;
+const MIN_DRY_DAYS_PANEL = 3;
 
 // Rainy / sunny classification reads the 8am-8pm window total, not the
 // full 24-hour total — so overnight rain that cleared by morning doesn't
@@ -1418,7 +1426,7 @@ const AdminAttendance = () => {
     if (withWeather.length === 0) return null;
     const rainy = withWeather.filter((d) => (d.precip ?? 0) >= RAIN_THRESHOLD_IN);
     const dry = withWeather.filter((d) => (d.precip ?? 0) < RAIN_THRESHOLD_IN);
-    if (rainy.length < MIN_DAYS_PER_BUCKET || dry.length < MIN_DAYS_PER_BUCKET) return null;
+    if (rainy.length < MIN_RAINY_DAYS_PANEL || dry.length < MIN_DRY_DAYS_PANEL) return null;
     // Round at the end so dropCount isn't a rounded-minus-rounded artifact.
     const rainyTotal = rainy.reduce((s, r) => s + r.count, 0);
     const dryTotal = dry.reduce((s, r) => s + r.count, 0);
@@ -2723,10 +2731,13 @@ const AdminAttendance = () => {
                       <TrendingDown className="w-5 h-5 text-amber-400 flex-shrink-0 mt-0.5" />
                       <div className="flex-1 min-w-0">
                         <p className="text-amber-300 font-semibold text-sm">
-                          {weatherCorrelation.dropPct}% lower attendance on rainy days this month
+                          {weatherCorrelation.dropPct}% lower attendance on {weatherCorrelation.rainyDays === 1 ? "the rainy day" : "rainy days"} this month
                         </p>
                         <p className="text-white/60 text-xs mt-0.5">
-                          About {weatherCorrelation.dropCount} fewer youth per session on the {weatherCorrelation.rainyDays} rainy days vs the {weatherCorrelation.dryDays} dry days. Single-month observation — could shift next month.
+                          About {weatherCorrelation.dropCount} fewer youth on {weatherCorrelation.rainyDays === 1 ? "the rainy day" : `the ${weatherCorrelation.rainyDays} rainy days`} ({weatherCorrelation.rainyAvg}) vs the dry-day average of {weatherCorrelation.dryAvg} ({weatherCorrelation.dryDays} days).{" "}
+                          {weatherCorrelation.rainyDays === 1
+                            ? "Based on a single rainy day — a one-off, not a trend yet."
+                            : "Single-month observation — could shift next month."}
                         </p>
                       </div>
                     </div>
@@ -2736,7 +2747,7 @@ const AdminAttendance = () => {
                 <p className="mt-2 text-xs text-white/30">Loading weather data…</p>
               ) : (
                 <p className="mt-2 text-xs text-white/30">
-                  Not enough rainy / dry practice days this month to compare.
+                  No rainy practice days this month yet — nothing to compare.
                 </p>
               )}
             </CardContent>

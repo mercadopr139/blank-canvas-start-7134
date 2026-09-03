@@ -234,8 +234,8 @@ export default function AdminReRegistrationReadiness() {
                 visible.map((x, i) => (
                   <div key={i} className="flex items-center justify-between px-4 py-2.5 gap-3">
                     <div className="min-w-0">
-                      <p className="text-sm truncate">{x.reg.child_first_name} {x.reg.child_last_name}</p>
-                      <p className="text-white/35 text-xs truncate">
+                      <p className="text-sm text-white font-medium truncate">{x.reg.child_first_name} {x.reg.child_last_name}</p>
+                      <p className="text-white/50 text-xs truncate">
                         {x.reg.child_boxing_program || "—"}{x.reason ? <span className="text-white/45"> · {x.reason}</span> : null}
                       </p>
                     </div>
