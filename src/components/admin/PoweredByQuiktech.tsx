@@ -17,7 +17,7 @@ interface PoweredByQuiktechProps {
 
 const PoweredByQuiktech = ({ size = "sm" }: PoweredByQuiktechProps) => {
   const [imgOk, setImgOk] = useState(true);
-  const logoHeight = size === "lg" ? "h-20" : "h-7";
+  const logoHeight = size === "lg" ? "h-24" : "h-7";
   const textSize = size === "lg" ? "text-sm" : "text-xs";
 
   return (
@@ -27,7 +27,7 @@ const PoweredByQuiktech = ({ size = "sm" }: PoweredByQuiktechProps) => {
         {imgOk ? (
           <img
             src="/quiktech-logo.png"
-            alt="QUIKTECH — Gym Management Software"
+            alt="QUIKTECH"
             className={`${logoHeight} w-auto opacity-90`}
             onError={() => setImgOk(false)}
           />
