@@ -1,7 +1,8 @@
 // Nightly 8 PM Eastern email listing Bald Eagles who didn't show up
 // today and didn't submit a call-out either. Matches the in-app red
 // banner alert logic exactly:
-//   - Eagles are filtered to Active (bald_eagle_active = true).
+//   - Eagles are filtered to Active (bald_eagle_active = true) AND to the
+//     current program year, so a returning Eagle isn't counted twice.
 //   - Today's attendance_records and today's callouts are subtracted.
 //   - Call-outs are matched by case-insensitive first/last name pair,
 //     not registration_id (the callouts table doesn't carry a reg id).
@@ -155,12 +156,29 @@ Deno.serve(async (req) => {
       }
     }
 
-    // 1. Active Bald Eagles
+    // 1. Active Bald Eagles — current program year only.
+    //
+    // A kid has one registration row per year, and Eagle status now
+    // carries across years, so a returning Eagle is flagged on BOTH the
+    // old and the new row. Without this filter each one is listed twice,
+    // and the old row can never match today's attendance (which records
+    // against the current registration id) — so it reads as a no-show
+    // even when the kid was standing in the gym. Archived rows are out
+    // for the same reason.
+    const programYear = (() => {
+      const [y, m] = todayEastern.split("-").map((n) => parseInt(n, 10));
+      // The attendance year turns over on Sept 1, same as
+      // current_attendance_program_year() in the database.
+      return m >= 9 ? `${y}-${y + 1}` : `${y - 1}-${y}`;
+    })();
+
     const { data: eaglesRaw, error: eaglesErr } = await supabase
       .from("youth_registrations")
       .select("id, child_first_name, child_last_name, child_boxing_program")
       .eq("is_bald_eagle", true)
-      .eq("bald_eagle_active", true);
+      .eq("bald_eagle_active", true)
+      .eq("program_year", programYear)
+      .is("archived_at", null);
     if (eaglesErr) throw eaglesErr;
     const eagles: EagleRow[] = (eaglesRaw || []) as EagleRow[];
 
