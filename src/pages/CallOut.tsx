@@ -8,6 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { CheckCircle2, X, Search } from "lucide-react";
 import { format } from "date-fns";
+import { getCurrentAttendanceYear, shortProgramYear } from "@/lib/programYear";
 
 interface YouthMatch {
   id: string;
@@ -15,6 +16,7 @@ interface YouthMatch {
   child_last_name: string;
   child_headshot_url: string | null;
   is_bald_eagle: boolean;
+  is_current_year: boolean;
 }
 
 // youth_registrations.child_headshot_url stores either a full http URL
@@ -35,6 +37,7 @@ const CallOut = () => {
   const [reason, setReason] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
+  const [submitError, setSubmitError] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -53,24 +56,19 @@ const CallOut = () => {
     if (debounceRef.current) clearTimeout(debounceRef.current);
     debounceRef.current = setTimeout(async () => {
       setSearching(true);
-      const { data } = await supabase.rpc("search_kiosk_youth", { _search: searchQuery.trim() });
-      const mapped = ((data as any[]) || []).map((r: any) => ({
+      // search_callout_youth is deliberately NOT year-gated: a youth who
+      // hasn't re-registered yet must still be able to tell us they'll be
+      // out. It also returns is_bald_eagle, which the old direct read of
+      // youth_registrations could never get (RLS blocks anon there).
+      const { data } = await (supabase.rpc as any)("search_callout_youth", { _search: searchQuery.trim() });
+      const mapped: YouthMatch[] = ((data as any[]) || []).map((r: any) => ({
         id: r.id,
         child_first_name: r.child_first_name,
         child_last_name: r.child_last_name,
         child_headshot_url: r.child_headshot_url || null,
-        is_bald_eagle: false, // We'll check separately
+        is_bald_eagle: !!r.is_bald_eagle,
+        is_current_year: !!r.is_current_year,
       }));
-
-      // Check bald eagle status for results
-      if (mapped.length > 0) {
-        const { data: regData } = await supabase
-          .from("youth_registrations")
-          .select("id, is_bald_eagle")
-          .in("id", mapped.map((m) => m.id));
-        const eagleMap = new Map((regData || []).map((r) => [r.id, r.is_bald_eagle]));
-        mapped.forEach((m) => { m.is_bald_eagle = eagleMap.get(m.id) || false; });
-      }
 
       setResults(mapped);
       setShowDropdown(mapped.length > 0 || searchQuery.trim().length >= 2);
@@ -108,9 +106,13 @@ const CallOut = () => {
     e.preventDefault();
     if (!selectedYouth || !reason.trim()) return;
     setSubmitting(true);
+    setSubmitError(false);
 
     try {
-      await supabase.from("callouts" as any).insert({
+      // supabase-js reports insert failures on `error` rather than
+      // throwing, so this has to be checked explicitly — otherwise a
+      // call-out that never saved still shows the green confirmation.
+      const { error } = await supabase.from("callouts" as any).insert({
         registration_id: selectedYouth.id,
         first_name: selectedYouth.child_first_name,
         last_name: selectedYouth.child_last_name,
@@ -118,9 +120,13 @@ const CallOut = () => {
         reason: reason.trim(),
         is_bald_eagle: selectedYouth.is_bald_eagle,
       } as any);
+      if (error) {
+        setSubmitError(true);
+        return;
+      }
       setSubmitted(true);
     } catch {
-      setSubmitted(true);
+      setSubmitError(true);
     } finally {
       setSubmitting(false);
     }
@@ -141,9 +147,20 @@ const CallOut = () => {
               <p className="text-lg font-semibold text-white mb-6">
                 100% Communication is Required!
               </p>
+              {selectedYouth && !selectedYouth.is_current_year && (
+                <div className="mb-6 rounded-lg border border-amber-500/40 bg-amber-500/10 p-4 text-left">
+                  <p className="text-sm font-bold text-amber-300">One more thing &mdash;</p>
+                  <p className="mt-1 text-sm text-amber-100/90">
+                    You still need to re-register for{" "}
+                    {shortProgramYear(getCurrentAttendanceYear())}. See a coach
+                    before your next practice so you can keep checking in.
+                  </p>
+                </div>
+              )}
               <Button
                 onClick={() => {
                   setSubmitted(false);
+                  setSubmitError(false);
                   setSelectedYouth(null);
                   setSearchQuery("");
                   setReason("");
@@ -271,6 +288,16 @@ const CallOut = () => {
                   </p>
                 </div>
               </div>
+
+              {submitError && (
+                <div className="rounded-lg border border-red-500/40 bg-red-500/10 p-4">
+                  <p className="text-sm font-bold text-red-300">That didn&rsquo;t send.</p>
+                  <p className="mt-1 text-sm text-red-100/90">
+                    Your call-out was not recorded. Please try again, and if it
+                    still fails, tell a coach directly.
+                  </p>
+                </div>
+              )}
 
               <Button
                 type="submit"

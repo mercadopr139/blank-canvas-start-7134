@@ -47,9 +47,20 @@ function lev(a: string, b: string): number {
   return prev[n];
 }
 
+/** The program year immediately before a "YYYY-YYYY" tag. "2026-2027" -> "2025-2026". */
+function priorProgramYear(programYear: string): string {
+  const [start, end] = programYear.split("-").map((n) => parseInt(n, 10));
+  if (!Number.isFinite(start) || !Number.isFinite(end)) return programYear;
+  return `${start - 1}-${end - 1}`;
+}
+
 export default function AdminReRegistrationReadiness() {
-  const [fromYear, setFromYear] = useState<string>(() => getCurrentAttendanceYear());
-  const [toYear, setToYear] = useState<string>(() => nextProgramYear(getCurrentAttendanceYear()));
+  // Open on the roll-over that's actually live: last program year into
+  // the one currently in session — "who came back?". Defaulting to
+  // current -> next asked about a roll-over twelve months out, so the
+  // page always opened reading 0% re-registered.
+  const [fromYear, setFromYear] = useState<string>(() => priorProgramYear(getCurrentAttendanceYear()));
+  const [toYear, setToYear] = useState<string>(() => getCurrentAttendanceYear());
   const [q, setQ] = useState("");
   const [filter, setFilter] = useState<"all" | Status>("all");
 
@@ -67,6 +78,7 @@ export default function AdminReRegistrationReadiness() {
   const yearOptions = useMemo(() => {
     const set = new Set<string>();
     regs.forEach((r) => r.program_year && set.add(r.program_year));
+    set.add(priorProgramYear(getCurrentAttendanceYear()));
     set.add(getCurrentAttendanceYear());
     set.add(nextProgramYear(getCurrentAttendanceYear()));
     return [...set].sort().reverse();
