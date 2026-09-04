@@ -334,8 +334,8 @@ const AdminMessageBoard = () => {
     // calc(100vh - 57px) on the inner panel, but the magic 57 didn't
     // match the real header height on every screen — the compose box
     // slipped below the viewport and forced a page-scroll to find it.
-    <div className="h-screen bg-[#09090b] text-white flex flex-col overflow-hidden">
-      <header className="border-b border-white/[0.06] bg-[#09090b]/80 backdrop-blur-md z-30 shrink-0">
+    <div className="h-screen bg-black text-white flex flex-col overflow-hidden">
+      <header className="border-b border-white/[0.06] bg-black/80 backdrop-blur-md z-30 shrink-0">
         <div className="px-4 py-3 flex items-center justify-between gap-2">
           <div className="flex items-center gap-3 min-w-0">
             {/* On mobile, the back arrow inside the thread handles list return;

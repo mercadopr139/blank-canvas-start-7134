@@ -1220,8 +1220,8 @@ const AdminWorkbench = () => {
   };
 
   return (
-    <div className="min-h-screen bg-[#09090b] text-white overflow-x-hidden">
-      <header className="border-b border-white/[0.06] bg-[#09090b]/80 backdrop-blur-md sticky top-0 z-30">
+    <div className="min-h-screen bg-black text-white overflow-x-hidden">
+      <header className="border-b border-white/[0.06] bg-black/80 backdrop-blur-md sticky top-0 z-30">
         <div className="max-w-5xl mx-auto px-6 py-3 flex items-center justify-between">
           <div className="flex items-center gap-4">
             <Button

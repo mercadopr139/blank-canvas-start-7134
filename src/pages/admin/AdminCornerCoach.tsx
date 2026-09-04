@@ -275,7 +275,7 @@ const AdminCornerCoach = () => {
   return (
     <div className="min-h-screen bg-black flex flex-col">
       {/* Header */}
-      <header className="border-b border-white/[0.06] bg-[#09090b]/80 backdrop-blur-md sticky top-0 z-30">
+      <header className="border-b border-white/[0.06] bg-black/80 backdrop-blur-md sticky top-0 z-30">
         <div className="max-w-3xl mx-auto px-6 py-3 flex items-center gap-4">
           <Button
             variant="ghost"
@@ -459,7 +459,7 @@ const AdminCornerCoach = () => {
       {/* Composer — pinned to the bottom only while a conversation is active;
           when the screen is empty it lives up under the question instead. */}
       {(messages.length > 0 || loading) && (
-        <div className="border-t border-white/[0.06] bg-[#09090b]/80 backdrop-blur-md sticky bottom-0">
+        <div className="border-t border-white/[0.06] bg-black/80 backdrop-blur-md sticky bottom-0">
           <div className="max-w-3xl mx-auto px-6 py-4">
             {composer}
             <p className="text-[11px] text-zinc-600 mt-2 text-center">Corner Coach reads your live data — it can't change anything. For figures you'll report externally, glance at the query to confirm it asked what you meant.</p>

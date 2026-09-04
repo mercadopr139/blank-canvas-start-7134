@@ -18,6 +18,7 @@ interface Reg {
   child_boxing_program: string | null;
   program_year: string | null;
   archived_at: string | null;
+  youth_link_id: string | null;
 }
 interface WeighIn { registration_id: string; weigh_date: string; weight_lb: number; }
 interface Goal { registration_id: string; target_weight: number | null; kiosk_message: string | null; }
@@ -75,7 +76,7 @@ export default function AdminWeightWatchers() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("youth_registrations")
-        .select("id, child_first_name, child_last_name, child_boxing_program, program_year, archived_at")
+        .select("id, child_first_name, child_last_name, child_boxing_program, program_year, archived_at, youth_link_id")
         .eq("approved_for_attendance", true)
         .is("archived_at", null)
         .order("child_last_name")
@@ -133,6 +134,29 @@ export default function AdminWeightWatchers() {
     return m;
   }, [regs]);
 
+  // Identity of a registration = its linked-kid id (youth_link_id) or its own id.
+  // A returning kid has one record per program year; both share one identity, so
+  // grouping by it shows each kid ONCE on the roster (no cross-year doubling).
+  const identityById = useMemo(() => {
+    const m: Record<string, string> = {};
+    regs.forEach((r) => (m[r.id] = r.youth_link_id || r.id));
+    return m;
+  }, [regs]);
+
+  // identity -> its registration records, newest program year first (the first
+  // is the "primary" record we display and target for edits/goals).
+  const regsByIdentity = useMemo(() => {
+    const m: Record<string, Reg[]> = {};
+    regs.forEach((r) => {
+      const key = r.youth_link_id || r.id;
+      (m[key] ||= []).push(r);
+    });
+    Object.values(m).forEach((list) =>
+      list.sort((a, b) => String(b.program_year || "").localeCompare(String(a.program_year || "")))
+    );
+    return m;
+  }, [regs]);
+
   const goalMap = useMemo(() => {
     const m: Record<string, Goal> = {};
     goals.forEach((g) => (m[g.registration_id] = g));
@@ -159,24 +183,45 @@ export default function AdminWeightWatchers() {
   const rows = useMemo<Row[]>(() => {
     // Boxers who weighed in this week OR who have a goal set (the camp roster
     // the coach opted in) — so goals can be preset before a first weigh-in.
-    const ids = Array.from(new Set([...Object.keys(weighMap), ...Object.keys(goalMap)]));
-    return ids
-      .map((id) => {
-        const reg = regById[id];
-        if (!reg) return null; // a weigh-in with no matching approved boxer — skip
-        const byDate = weighMap[id] || {}; // goal-only boxers have no weigh-ins yet
-        const days = weekDays.map((d) => (d in byDate ? byDate[d] : null));
+    // Roll every weigh-in/goal up to the KID (identity), not the raw record, so
+    // a returning kid with a last-year + this-year record shows a single row.
+    const identities = new Set<string>();
+    [...Object.keys(weighMap), ...Object.keys(goalMap)].forEach((rid) => {
+      const idn = identityById[rid];
+      if (idn) identities.add(idn);
+    });
+
+    return Array.from(identities)
+      .map((idn) => {
+        const memberRegs = regsByIdentity[idn];
+        if (!memberRegs || memberRegs.length === 0) return null; // no approved boxer — skip
+        const reg = memberRegs[0]; // primary = newest program year; edits/goals target this
+        const memberIds = memberRegs.map((r) => r.id);
+        // Each day's weight = the first member record that has one that day
+        // (member records are newest-first, so the current year wins).
+        const days = weekDays.map((d) => {
+          for (const rid of memberIds) {
+            const v = weighMap[rid]?.[d];
+            if (v !== undefined && v !== null) return v;
+          }
+          return null;
+        });
         // Latest = most recent day this week that has a value (Fri → Mon).
         let latest: number | null = null;
         for (let i = days.length - 1; i >= 0; i--) {
           if (days[i] !== null) { latest = days[i]; break; }
         }
-        const goal = goalMap[id]?.target_weight ?? null;
+        // Goal = the primary record's goal if set, else any member record's.
+        let goal: number | null = null;
+        for (const rid of memberIds) {
+          const g = goalMap[rid]?.target_weight;
+          if (g !== undefined && g !== null) { goal = g; break; }
+        }
         const vsGoal = latest !== null && goal !== null ? Math.round((latest - goal) * 10) / 10 : null;
         return { reg, days, latest, goal, vsGoal };
       })
       .filter((r): r is Row => r !== null);
-  }, [weighMap, regById, weekDays, goalMap]);
+  }, [weighMap, goalMap, regsByIdentity, identityById, weekDays]);
 
   const sortedRows = useMemo(() => {
     const dir = sortDir === "asc" ? 1 : -1;
