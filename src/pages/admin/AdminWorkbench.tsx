@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useRef } from "react";
+import { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -22,12 +22,15 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import {
   DndContext,
-  closestCenter,
+  closestCorners,
+  pointerWithin,
   PointerSensor,
+  TouchSensor,
   useSensor,
   useSensors,
   useDroppable,
   DragEndEvent,
+  CollisionDetection,
 } from "@dnd-kit/core";
 import {
   SortableContext,
@@ -37,6 +40,28 @@ import {
   arrayMove,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
+
+// Dropping a signal anywhere on the Today's Plan block adds it to the plan.
+// This wraps the whole block — pill and expanded panel — so the target exists
+// whether or not the panel is open. The "+" on each row still works exactly as
+// before; dragging is an addition, not a replacement.
+const PlanDropTarget = ({ children }: { children: React.ReactNode }) => {
+  const { setNodeRef, isOver, active } = useDroppable({
+    id: "today-plan-zone",
+    data: { type: "planZone" },
+  });
+  const signalOver = isOver && active?.data?.current?.type === "signal";
+  return (
+    <div
+      ref={setNodeRef}
+      className={`max-w-md mx-auto mb-10 rounded-xl transition-all ${
+        signalOver ? "ring-2 ring-green-400/50 ring-offset-2 ring-offset-black" : ""
+      }`}
+    >
+      {children}
+    </div>
+  );
+};
 
 const getSignalsPath = (managerType: string, key: string) => {
   if (managerType === "PD") return `/admin/signals/${key}`;
@@ -153,7 +178,7 @@ const TileSignalRow = ({
         {...attributes}
         {...listeners}
         type="button"
-        className="text-white/15 hover:text-white/40 cursor-grab active:cursor-grabbing pt-1 opacity-0 group-hover/row:opacity-100 transition-opacity shrink-0"
+        className="text-white/15 hover:text-white/40 cursor-grab active:cursor-grabbing pt-1 opacity-0 group-hover/row:opacity-100 transition-opacity shrink-0 touch-none [@media(hover:none)]:opacity-100"
         title="Drag to reorder"
       >
         <GripVertical className="w-3 h-3" />
@@ -239,7 +264,7 @@ const SortablePlanRow = ({
         {...attributes}
         {...listeners}
         type="button"
-        className="text-white/15 hover:text-white/40 cursor-grab active:cursor-grabbing opacity-0 group-hover/plan:opacity-100 transition-opacity shrink-0"
+        className="text-white/15 hover:text-white/40 cursor-grab active:cursor-grabbing opacity-0 group-hover/plan:opacity-100 transition-opacity shrink-0 touch-none [@media(hover:none)]:opacity-100"
         title="Drag to reorder"
       >
         <GripVertical className="w-3 h-3" />
@@ -523,7 +548,7 @@ const FocusAreaTile = ({
         {...attributes}
         {...listeners}
         type="button"
-        className="absolute top-3 left-3 z-20 p-1 rounded text-white/20 hover:text-white/50 cursor-grab active:cursor-grabbing opacity-0 group-hover:opacity-100 transition-opacity"
+        className="absolute top-3 left-3 z-20 p-1 rounded text-white/20 hover:text-white/50 cursor-grab active:cursor-grabbing opacity-0 group-hover:opacity-100 transition-opacity touch-none [@media(hover:none)]:opacity-100"
         title="Drag to reorder focus area"
       >
         <GripVertical className="w-4 h-4" />
@@ -705,9 +730,57 @@ const AdminWorkbench = () => {
   // Today's Plan expand-in-place panel.
   const [planOpen, setPlanOpen] = useState(false);
 
+
   const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 8 } })
+    useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
+    useSensor(TouchSensor, {
+      activationConstraint: { delay: 200, tolerance: 8 },
+    })
   );
+
+  // Three kinds of thing are draggable inside one DndContext: signal rows,
+  // Today's-Plan rows, and whole focus-area tiles. Plain closestCenter
+  // compares against EVERY droppable, so a big tile's centre often beat the
+  // small sibling row you were actually aiming at — the drag then either
+  // dumped the task at the bottom of the list or moved it to another focus
+  // area. Two rules fix that:
+  //   1. only consider targets that make sense for what's being dragged, and
+  //   2. whatever is directly under the pointer wins, most specific first
+  //      (a row beats the tile-sized zone it sits in).
+  const collisionDetection: CollisionDetection = useCallback((args) => {
+    const activeType = args.active.data.current?.type as string | undefined;
+
+    const accepts = (t?: string) => {
+      if (activeType === "area") return t === "area";
+      // A planned row reorders within the plan only.
+      if (activeType === "plan") return t === "plan";
+      // A signal can reorder in its tile, move to another tile, or be
+      // dropped into Today's Plan.
+      if (activeType === "signal") {
+        return t === "signal" || t === "signalZone" || t === "planZone" || t === "area";
+      }
+      return true;
+    };
+
+    const droppableContainers = args.droppableContainers.filter((c) =>
+      accepts(c.data.current?.type as string | undefined)
+    );
+    if (droppableContainers.length === 0) return [];
+
+    // Rank: individual rows beat drop zones, drop zones beat whole tiles.
+    const rank = (id: string | number) => {
+      const t = droppableContainers.find((c) => c.id === id)?.data.current?.type;
+      if (t === "signal" || t === "plan") return 0;
+      if (t === "signalZone" || t === "planZone") return 1;
+      return 2;
+    };
+
+    const under = pointerWithin({ ...args, droppableContainers });
+    if (under.length > 0) {
+      return [...under].sort((a, b) => rank(a.id) - rank(b.id));
+    }
+    return closestCorners({ ...args, droppableContainers });
+  }, []);
 
   // Load the task manager record so we know its owner (for lock logic and
   // future per-manager metadata). PD and PC are always present (seeded);
@@ -747,8 +820,10 @@ const AdminWorkbench = () => {
   // the top fires only when every item in the list is Complete.
   // Source-prefix filter is applied client-side because the PostgREST
   // "not.like" syntax with reserved chars in the value is fragile.
+  const CORE_KEY = ["task-manager-home-core", managerType] as const;
+
   const { data: todaysCoreSignals = [], isFetched: coreFetched } = useQuery({
-    queryKey: ["task-manager-home-core", managerType],
+    queryKey: CORE_KEY,
     queryFn: async () => {
       const { data, error } = await (supabase
         .from("signals")
@@ -1034,14 +1109,40 @@ const AdminWorkbench = () => {
       const failed = results.find((r) => r.error);
       if (failed?.error) throw failed.error;
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["task-manager-home-core"] });
-      queryClient.invalidateQueries({ queryKey: ["signals"] });
+    // Move the row in the cache right away. Without this it snapped back to
+    // where it started and stayed until every per-row update and two refetches
+    // finished — which reads as "the drag didn't work".
+    onMutate: async (newOrder: CoreSignal[]) => {
+      await queryClient.cancelQueries({ queryKey: CORE_KEY });
+      const previous = queryClient.getQueryData<CoreSignal[]>(CORE_KEY);
+      const nextOrder = new Map(newOrder.map((sig, i) => [sig.id, (i + 1) * 10]));
+      queryClient.setQueryData<CoreSignal[]>(CORE_KEY, (old) => {
+        if (!old) return old;
+        const patched = old.map((sig) =>
+          nextOrder.has(sig.id)
+            ? { ...sig, today_sort_order: nextOrder.get(sig.id)! }
+            : sig
+        );
+        // Tiles group off this array's order, so re-sort it the way the query
+        // does. Ties keep their current positions.
+        return patched
+          .map((sig, i) => ({ sig, i }))
+          .sort((a, b) => {
+            const av = a.sig.today_sort_order ?? Number.MAX_SAFE_INTEGER;
+            const bv = b.sig.today_sort_order ?? Number.MAX_SAFE_INTEGER;
+            return av === bv ? a.i - b.i : av - bv;
+          })
+          .map(({ sig }) => sig);
+      });
+      return { previous };
     },
-    onError: () => {
+    onError: (_e, _v, ctx: { previous?: CoreSignal[] } | undefined) => {
+      if (ctx?.previous) queryClient.setQueryData(CORE_KEY, ctx.previous);
+      toast.error("Couldn't save order");
+    },
+    onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ["task-manager-home-core"] });
       queryClient.invalidateQueries({ queryKey: ["signals"] });
-      toast.error("Couldn't save order");
     },
   });
 
@@ -1059,14 +1160,28 @@ const AdminWorkbench = () => {
       const failed = results.find((r) => r.error);
       if (failed?.error) throw failed.error;
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["task-manager-home-core"] });
-      queryClient.invalidateQueries({ queryKey: ["signals"] });
+    onMutate: async (newOrder: CoreSignal[]) => {
+      await queryClient.cancelQueries({ queryKey: CORE_KEY });
+      const previous = queryClient.getQueryData<CoreSignal[]>(CORE_KEY);
+      const nextOrder = new Map(newOrder.map((sig, i) => [sig.id, (i + 1) * 10]));
+      // Today's Plan sorts on plan_sort_order directly, so patching the field
+      // is enough — the array itself doesn't need re-sorting.
+      queryClient.setQueryData<CoreSignal[]>(CORE_KEY, (old) =>
+        (old || []).map((sig) =>
+          nextOrder.has(sig.id)
+            ? { ...sig, plan_sort_order: nextOrder.get(sig.id)! }
+            : sig
+        )
+      );
+      return { previous };
     },
-    onError: () => {
+    onError: (_e, _v, ctx: { previous?: CoreSignal[] } | undefined) => {
+      if (ctx?.previous) queryClient.setQueryData(CORE_KEY, ctx.previous);
+      toast.error("Couldn't save plan order");
+    },
+    onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ["task-manager-home-core"] });
       queryClient.invalidateQueries({ queryKey: ["signals"] });
-      toast.error("Couldn't save plan order");
     },
   });
 
@@ -1103,11 +1218,26 @@ const AdminWorkbench = () => {
         .eq("id", id);
       if (error) throw error;
     },
-    onSuccess: () => {
+    // Optimistic so a drag into Today's Plan (and the "+" click) lands
+    // instantly instead of after a round-trip.
+    onMutate: async ({ id, planned }: { id: string; planned: boolean }) => {
+      await queryClient.cancelQueries({ queryKey: CORE_KEY });
+      const previous = queryClient.getQueryData<CoreSignal[]>(CORE_KEY);
+      queryClient.setQueryData<CoreSignal[]>(CORE_KEY, (old) =>
+        (old || []).map((sig) =>
+          sig.id === id ? { ...sig, planned_date: planned ? todayStr : null } : sig
+        )
+      );
+      return { previous };
+    },
+    onError: (e: any, _v, ctx: { previous?: CoreSignal[] } | undefined) => {
+      if (ctx?.previous) queryClient.setQueryData(CORE_KEY, ctx.previous);
+      toast.error(e.message);
+    },
+    onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ["task-manager-home-core"] });
       queryClient.invalidateQueries({ queryKey: ["signals"] });
     },
-    onError: (e: any) => toast.error(e.message),
   });
 
   // Update the per-manager daily goal (owner-only via canAdd gating in the UI;
@@ -1150,6 +1280,18 @@ const AdminWorkbench = () => {
     if (type === "signal") {
       const fromAreaKey = active.data.current?.areaKey as string | undefined;
       if (!fromAreaKey) return;
+
+      // Dropped onto Today's Plan (the pill or the open panel) — add it.
+      // Same effect as clicking the row's "+", which still works.
+      const overType = over.data.current?.type;
+      if (overType === "planZone" || overType === "plan") {
+        const signal = (signalsByArea.get(fromAreaKey) || []).find(
+          (s) => s.id === active.id
+        );
+        if (signal?.planned_date === todayStr) return; // already planned
+        setPlanMutation.mutate({ id: String(active.id), planned: true });
+        return;
+      }
       // Resolve the target area from whatever we dropped on: a signal row or a
       // tile's drop zone (both carry areaKey), or a focus-area tile itself.
       let toAreaKey = over.data.current?.areaKey as string | undefined;
@@ -1284,7 +1426,7 @@ const AdminWorkbench = () => {
             signals within a tile. */}
         <DndContext
           sensors={sensors}
-          collisionDetection={closestCenter}
+          collisionDetection={collisionDetection}
           onDragEnd={handleDragEnd}
         >
         {/* Today's Plan — a green box showing progress against the tasks the
@@ -1292,7 +1434,7 @@ const AdminWorkbench = () => {
             items off, remove them). Add tasks with the "+" on each focus-area
             row. "Day Won" fires when every planned task is complete. */}
         {!isLoading && focusAreas.length > 0 && (
-          <div className="max-w-md mx-auto mb-10">
+          <PlanDropTarget>
             <button
               type="button"
               onClick={() => setPlanOpen((o) => !o)}
@@ -1339,7 +1481,7 @@ const AdminWorkbench = () => {
                 {/* Planned tasks — check off or remove from the plan. */}
                 {plannedCount === 0 ? (
                   <p className="text-[11px] text-white/30 italic py-2 text-center">
-                    Nothing planned yet. Click the + on any focus-area task to add it here.
+                    Nothing planned yet. Click the + on any focus-area task — or drag one here.
                   </p>
                 ) : (
                   <SortableContext
@@ -1415,7 +1557,7 @@ const AdminWorkbench = () => {
                 )}
               </div>
             )}
-          </div>
+          </PlanDropTarget>
         )}
 
         {isLoading ? (
@@ -1439,7 +1581,13 @@ const AdminWorkbench = () => {
             )}
           </div>
         ) : (
-            <SortableContext items={focusAreas.map((a) => a.id)} strategy={rectSortingStrategy}>
+            /* Locked tiles render as plain divs (not draggable), so they must
+               stay out of the sortable id list — including them threw the
+               reorder indexes off by however many locked tiles came first. */
+            <SortableContext
+              items={focusAreas.filter((a) => !isLocked(a)).map((a) => a.id)}
+              strategy={rectSortingStrategy}
+            >
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 max-w-4xl mx-auto">
                 {focusAreas.map((area) => {
                   if (isLocked(area)) {
