@@ -300,7 +300,15 @@ const AdminAttendance = () => {
   // link, so "All" gives complete, unduplicated numbers through the Sept
   // re-registration transition (a single-year view can't show kids who checked
   // in under last year's registration).
-  const [programYearFilter, setProgramYearFilter] = useState<string>("__all__");
+  // Open on the year in session, not All Years. A kid who re-registered has a
+  // row per program year, so All Years counted them once per year — inflating
+  // the calendar tiles, demographic cards and Bald Eagle totals with cross-year
+  // duplicates. "All years" is still in the dropdown for anyone who wants it;
+  // it just isn't what the page assumes you meant. The effect below moves this
+  // on if the current year has no cohort yet.
+  const [programYearFilter, setProgramYearFilter] = useState<string>(() =>
+    getCurrentAttendanceYear()
+  );
   const { data: allRegistrations = [] } = useQuery({
     queryKey: ["registrations-attendance-full"],
     queryFn: () =>
