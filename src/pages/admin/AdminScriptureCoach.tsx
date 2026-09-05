@@ -43,6 +43,59 @@ interface Youth {
   child_headshot_url: string | null;
 }
 
+/**
+ * An open bible, drawn rather than iconed — this is the first thing a mentor
+ * sees before a hard conversation, and a stock glyph doesn't carry the weight.
+ * Thin strokes and a soft red glow so it reads as calm, not decorative.
+ */
+const OpenBible = () => (
+  <div className="relative">
+    <div
+      className="absolute inset-0 blur-2xl opacity-40"
+      style={{ background: `radial-gradient(circle, ${NLA_RED}, transparent 70%)` }}
+      aria-hidden
+    />
+    <svg
+      viewBox="0 0 96 72"
+      className="relative w-[104px] h-[78px]"
+      fill="none"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      role="img"
+      aria-label="An open bible"
+    >
+      {/* page block, left and right */}
+      <path
+        d="M48 20C40 13 28 10 14 11.5c-2 .2-3.5 1.9-3.5 3.9v39c0 2.3 2 4.1 4.3 3.9C27.6 57.2 39.4 59.7 48 66"
+        stroke="rgba(255,255,255,0.85)"
+        strokeWidth="2.2"
+      />
+      <path
+        d="M48 20c8-7 20-10 34-8.5 2 .2 3.5 1.9 3.5 3.9v39c0 2.3-2 4.1-4.3 3.9C68.4 57.2 56.6 59.7 48 66"
+        stroke="rgba(255,255,255,0.85)"
+        strokeWidth="2.2"
+      />
+      {/* spine */}
+      <path d="M48 20v46" stroke={NLA_RED} strokeWidth="2.4" />
+      {/* text lines, suggested not spelled out */}
+      <g stroke="rgba(255,255,255,0.22)" strokeWidth="1.6">
+        <path d="M20 24h18M20 31h18M20 38h14" />
+        <path d="M58 24h18M58 31h18M58 38h14" />
+      </g>
+      {/* a cross on the right page, quiet */}
+      <g stroke={NLA_RED} strokeWidth="1.8" opacity="0.75">
+        <path d="M67 44v10M62.5 47.5h9" />
+      </g>
+      {/* page edges */}
+      <path
+        d="M14 57.4c11.6-1.1 23.4 1.4 34 8.6 10.6-7.2 22.4-9.7 34-8.6"
+        stroke="rgba(255,255,255,0.3)"
+        strokeWidth="1.6"
+      />
+    </svg>
+  </div>
+);
+
 type Phase = "topic" | "curate" | "session";
 
 const AdminScriptureCoach = () => {
@@ -303,9 +356,10 @@ const AdminScriptureCoach = () => {
   if (!youth) {
     return (
       <div className="p-4 md:p-8 space-y-6 max-w-5xl mx-auto text-white">
-        <div>
-          <h2 className="text-xl font-bold text-white">Scripture Coach</h2>
-          <p className="text-sm text-neutral-400 mt-1">
+        <div className="flex flex-col items-center text-center pt-4">
+          <OpenBible />
+          <h2 className="text-2xl font-bold text-white mt-4">Scripture Coach</h2>
+          <p className="text-sm text-neutral-400 mt-1.5">
             Who are you sitting down with?
           </p>
         </div>
