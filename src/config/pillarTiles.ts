@@ -15,6 +15,7 @@ import {
   Star, Bus, UserCheck, Radio, PhoneOff, AlertTriangle, FileText,
   UtensilsCrossed, HandCoins, Database, MessageSquare, Mail, Receipt,
   ScrollText, ClipboardCheck, LayoutDashboard, Archive, Gauge, MapPin, Sparkles, Dumbbell, Smile, Scale,
+  BookOpenCheck, HeartHandshake,
 } from "lucide-react";
 
 export interface PillarTile {
@@ -118,6 +119,20 @@ export const OPERATIONS_TILES: PillarTile[] = [
     href: "/admin/operations/weight-watchers",
     permKey: "operations_weight_watchers",
   },
+  {
+    title: "Scripture Coach",
+    description: "Scripture & talking points for a youth conversation",
+    icon: BookOpenCheck,
+    href: "/admin/operations/scripture-coach",
+    permKey: "operations_scripture_coach",
+  },
+  {
+    title: "Spiritual Coach Intelligence",
+    description: "Session journal, follow-ups & reports",
+    icon: HeartHandshake,
+    href: "/admin/operations/scripture-coach-intelligence",
+    permKey: "operations_scripture_coach",
+  },
 ];
 
 export const SALES_MARKETING_TILES: PillarTile[] = [
@@ -203,12 +218,29 @@ export const FINANCE_TILES: PillarTile[] = [
   },
 ];
 
+// Permissions that aren't a sidebar tile of their own. Scripture Coach
+// sessions must be signed off by someone other than the mentor who ran them,
+// and this key is who may do that — so adding a reviewer is a checkbox in
+// Staff Management rather than a code change.
+export const OPERATIONS_EXTRA_SUBS: { key: string; label: string }[] = [
+  {
+    key: "operations_scripture_coach_reviewer",
+    label: "Scripture Coach — Reviewer (can sign off sessions)",
+  },
+];
+
 // Derive `{ key, label }[]` for AdminStaffManagement's sub-checkbox groups.
-// Tiles without a permKey are skipped (no checkbox to render).
+// Tiles without a permKey are skipped (no checkbox to render), and tiles that
+// share a permKey collapse to one checkbox rather than rendering twice.
 export function pillarSubsFromTiles(
   tiles: PillarTile[]
 ): { key: string; label: string }[] {
-  return tiles
-    .filter((t) => !!t.permKey)
-    .map((t) => ({ key: t.permKey as string, label: t.title }));
+  const seen = new Set<string>();
+  const subs: { key: string; label: string }[] = [];
+  for (const t of tiles) {
+    if (!t.permKey || seen.has(t.permKey)) continue;
+    seen.add(t.permKey);
+    subs.push({ key: t.permKey, label: t.title });
+  }
+  return subs;
 }

@@ -9,6 +9,7 @@ import {
   OPERATIONS_TILES,
   SALES_MARKETING_TILES,
   FINANCE_TILES,
+  OPERATIONS_EXTRA_SUBS,
   pillarSubsFromTiles,
 } from "@/config/pillarTiles";
 
@@ -16,7 +17,10 @@ import {
 // from the same tile configs the pillar pages render. Adding a tile with a
 // permKey there automatically gives it a checkbox here. No registry to keep
 // in sync.
-const OPERATIONS_SUBS: PillarSub[] = pillarSubsFromTiles(OPERATIONS_TILES);
+const OPERATIONS_SUBS: PillarSub[] = [
+  ...pillarSubsFromTiles(OPERATIONS_TILES),
+  ...OPERATIONS_EXTRA_SUBS,
+];
 const SALES_MARKETING_SUBS: PillarSub[] = pillarSubsFromTiles(SALES_MARKETING_TILES);
 const FINANCE_SUBS: PillarSub[] = pillarSubsFromTiles(FINANCE_TILES);
 import { Button } from "@/components/ui/button";

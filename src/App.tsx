@@ -53,6 +53,8 @@ import WeighIn from "./pages/WeighIn";
 import AdminWeightWatchers from "./pages/admin/AdminWeightWatchers";
 import SmileLabCheckIn from "./pages/SmileLabCheckIn";
 import SmileLabBoard from "./pages/SmileLabBoard";
+import AdminScriptureCoach from "./pages/admin/AdminScriptureCoach";
+import AdminScriptureCoachIntelligence from "./pages/admin/AdminScriptureCoachIntelligence";
 import ExcursionCheckIn from "./pages/ExcursionCheckIn";
 import ExcursionCoach from "./pages/ExcursionCoach";
 import StrengthCoach from "./pages/StrengthCoach";
@@ -244,6 +246,8 @@ const App = () => (
               <Route path="transportation/impact-reports" element={<AdminTransportImpactReports />} />
               <Route path="meal-tracker" element={<AdminMealTracker />} />
               <Route path="meal-reports" element={<AdminMealReports />} />
+              <Route path="scripture-coach" element={<AdminScriptureCoach />} />
+              <Route path="scripture-coach-intelligence" element={<AdminScriptureCoachIntelligence />} />
             </Route>
 
             {/* Sales & Marketing section — sidebar layout wraps sub-pages */}
