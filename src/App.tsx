@@ -53,6 +53,8 @@ import WeighIn from "./pages/WeighIn";
 import AdminWeightWatchers from "./pages/admin/AdminWeightWatchers";
 import SmileLabCheckIn from "./pages/SmileLabCheckIn";
 import SmileLabBoard from "./pages/SmileLabBoard";
+import PracticeBoard from "./pages/PracticeBoard";
+import AdminPracticePlan from "./pages/admin/AdminPracticePlan";
 import AdminScriptureCoach from "./pages/admin/AdminScriptureCoach";
 import AdminScriptureCoachIntelligence from "./pages/admin/AdminScriptureCoachIntelligence";
 import ExcursionCheckIn from "./pages/ExcursionCheckIn";
@@ -166,6 +168,8 @@ const App = () => (
             <Route path="/check-in/lil-champs-corner" element={<Navigate to="/check-in/smile-lab" replace />} />
             <Route path="/excursion-check-in" element={<ExcursionCheckIn />} />
             <Route path="/excursion-coach" element={<ExcursionCoach />} />
+            {/* The gym board — a TV in the room, no login. */}
+            <Route path="/practice-board" element={<PracticeBoard />} />
             <Route path="/strength-coach" element={<StrengthCoach />} />
             <Route path="/strength-coach/intelligence" element={<StrengthIntelligence />} />
             <Route path="/call-out" element={<CallOut />} />
@@ -246,6 +250,7 @@ const App = () => (
               <Route path="transportation/impact-reports" element={<AdminTransportImpactReports />} />
               <Route path="meal-tracker" element={<AdminMealTracker />} />
               <Route path="meal-reports" element={<AdminMealReports />} />
+              <Route path="practice-plan" element={<AdminPracticePlan />} />
               <Route path="scripture-coach" element={<AdminScriptureCoach />} />
               <Route path="scripture-coach-intelligence" element={<AdminScriptureCoachIntelligence />} />
             </Route>

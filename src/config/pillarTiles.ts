@@ -15,7 +15,7 @@ import {
   Star, Bus, UserCheck, Radio, PhoneOff, AlertTriangle, FileText,
   UtensilsCrossed, HandCoins, Database, MessageSquare, Mail, Receipt,
   ScrollText, ClipboardCheck, LayoutDashboard, Archive, Gauge, MapPin, Sparkles, Dumbbell, Smile, Scale,
-  BookOpenCheck, HeartHandshake,
+  BookOpenCheck, HeartHandshake, Monitor,
 } from "lucide-react";
 
 export interface PillarTile {
@@ -118,6 +118,17 @@ export const OPERATIONS_TILES: PillarTile[] = [
     icon: Scale,
     href: "/admin/operations/weight-watchers",
     permKey: "operations_weight_watchers",
+  },
+  {
+    title: "Practice Plan",
+    description: "The weekly plan and the gym board",
+    icon: ClipboardList,
+    href: "/admin/operations/practice-plan",
+    permKey: "operations_practice_plan",
+    children: [
+      { title: "Weekly Plan", href: "/admin/operations/practice-plan", icon: ClipboardList },
+      { title: "Gym Board", href: "/practice-board", icon: Monitor, external: true },
+    ],
   },
   {
     title: "Scripture Coach",
