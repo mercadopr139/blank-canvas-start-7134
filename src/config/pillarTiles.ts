@@ -125,13 +125,14 @@ export const OPERATIONS_TILES: PillarTile[] = [
     icon: BookOpenCheck,
     href: "/admin/operations/scripture-coach",
     permKey: "operations_scripture_coach",
-  },
-  {
-    title: "Spiritual Coach Intelligence",
-    description: "Session journal, follow-ups & reports",
-    icon: HeartHandshake,
-    href: "/admin/operations/scripture-coach-intelligence",
-    permKey: "operations_scripture_coach",
+    children: [
+      { title: "New Session", href: "/admin/operations/scripture-coach", icon: BookOpenCheck },
+      {
+        title: "Spiritual Coach Intelligence",
+        href: "/admin/operations/scripture-coach-intelligence",
+        icon: HeartHandshake,
+      },
+    ],
   },
 ];
 
