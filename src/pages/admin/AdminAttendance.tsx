@@ -330,6 +330,20 @@ const AdminAttendance = () => {
       availableProgramYears.includes(attendanceYear) ? attendanceYear : availableProgramYears[0]
     );
   }, [availableProgramYears, programYearFilter]);
+  // Who a manual check-in may be recorded against. A check-in is for TODAY, so
+  // last year's registration is never a valid target — a kid who re-registered
+  // has a row per program year, and picking the old one files attendance
+  // against a record that is invisible in current-year counts and corrupts the
+  // unduplicated youth figures used for grant reporting. Deliberately ignores
+  // the page's year filter: viewing an old year is fine, checking in against
+  // one is not.
+  const manualAddCandidates = useMemo(() => {
+    const currentYear = getCurrentAttendanceYear();
+    const anyTagged = allRegistrations.some((r) => r.program_year);
+    if (!anyTagged) return allRegistrations; // pre-migration safety, as below
+    return allRegistrations.filter((r) => r.program_year === currentYear);
+  }, [allRegistrations]);
+
   const registrations = useMemo(() => {
     if (programYearFilter === "__all__") return allRegistrations;
     // Defensive: if the Phase B migration hasn't been applied yet, no row
@@ -3260,7 +3274,7 @@ const AdminAttendance = () => {
                   </div>
                   {/* Show all youth when search is empty, filter when typing */}
                   <div className="mt-2 max-h-40 overflow-y-auto space-y-1">
-                    {registrations
+                    {manualAddCandidates
                       .filter((r) => {
                         if (!manualSearch.trim()) return true;
                         const fullName = `${r.child_first_name} ${r.child_last_name}`.toLowerCase();
@@ -3353,7 +3367,7 @@ const AdminAttendance = () => {
                           </button>
                         );
                       })}
-                    {registrations.filter((r) => {
+                    {manualAddCandidates.filter((r) => {
                       if (!manualSearch.trim()) return true;
                       return `${r.child_first_name} ${r.child_last_name}`.toLowerCase().includes(manualSearch.toLowerCase());
                     }).length === 0 && (
