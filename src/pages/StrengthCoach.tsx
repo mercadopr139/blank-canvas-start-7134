@@ -240,9 +240,24 @@ const StrengthCoach = () => {
             </button>
           </div>
           {hasWeek && (
-            <span className={`text-xs font-semibold px-3 py-1.5 rounded-full border ${locked ? "bg-emerald-500/15 border-emerald-400/30 text-emerald-300" : "bg-amber-500/15 border-amber-400/30 text-amber-300"}`}>
-              {locked ? "🔒 Locked" : "✏️ Draft"}
-            </span>
+            <div className="flex items-center gap-2 flex-wrap justify-end">
+              {locked ? (
+                <button onClick={() => setLocked(false)} className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-semibold bg-white/5 hover:bg-white/10 border border-white/15">
+                  <Unlock className="h-4 w-4" /> Unlock to edit
+                </button>
+              ) : (
+                <button onClick={() => setLocked(true)} className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-semibold text-white" style={{ background: NLA_RED }}>
+                  <Lock className="h-4 w-4" /> Lock the week
+                </button>
+              )}
+              <button onClick={generateWeek} disabled={generating}
+                className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-semibold bg-white/5 hover:bg-white/10 border border-white/15 disabled:opacity-60">
+                <RefreshCw className={`h-4 w-4 ${generating ? "animate-spin" : ""}`} /> {generating ? "Regenerating…" : "Regenerate week"}
+              </button>
+              <span className={`text-xs font-semibold px-3 py-1.5 rounded-full border ${locked ? "bg-emerald-500/15 border-emerald-400/30 text-emerald-300" : "bg-amber-500/15 border-amber-400/30 text-amber-300"}`}>
+                {locked ? "🔒 Locked" : "✏️ Draft"}
+              </span>
+            </div>
           )}
         </div>
 
@@ -289,23 +304,6 @@ const StrengthCoach = () => {
                 Nothing for this day.
               </div>
             )}
-
-            {/* Controls */}
-            <div className="mt-5 flex flex-wrap items-center gap-3">
-              {locked ? (
-                <button onClick={() => setLocked(false)} className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl font-semibold bg-white/5 hover:bg-white/10 border border-white/15">
-                  <Unlock className="h-4 w-4" /> Unlock to edit
-                </button>
-              ) : (
-                <button onClick={() => setLocked(true)} className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl font-semibold text-white" style={{ background: NLA_RED }}>
-                  <Lock className="h-4 w-4" /> Lock the week
-                </button>
-              )}
-              <button onClick={generateWeek} disabled={generating}
-                className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl font-semibold bg-white/5 hover:bg-white/10 border border-white/15 disabled:opacity-60">
-                <RefreshCw className={`h-4 w-4 ${generating ? "animate-spin" : ""}`} /> {generating ? "Regenerating…" : "Regenerate week"}
-              </button>
-            </div>
 
             {/* Revise this day — only while unlocked */}
             {!locked && (

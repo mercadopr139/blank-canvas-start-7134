@@ -61,6 +61,11 @@ const SYSTEM =
   "  different words.\n" +
   "- Never condescending. Teenagers detect it instantly and stop listening.\n\n" +
 
+  "PLAIN ENGLISH: for EVERY passage, also give a 'plain_english' — the same passage restated in simple, " +
+  "everyday words the child of this exact age would understand, so a mentor can lean on it when the ESV wording " +
+  "is hard to follow. It is an EXPLANATION, faithful to the meaning and to the same theology — never a new " +
+  "translation, never a substitute for the verse, and it must not quote the ESV wording back. 1-2 short sentences.\n\n" +
+
   "TALKING POINTS are questions and prompts that get the YOUNG PERSON talking — not a lecture outline for the mentor. " +
   "Open-ended, specific to their situation, the kind of thing that opens a 10–20 minute conversation.\n\n" +
 
@@ -81,7 +86,7 @@ const SYSTEM =
 
   "OUTPUT: valid JSON only. No prose before or after, no markdown fences.\n" +
   "{\n" +
-  '  "passages": [ { "ref": "1 Corinthians 6:18-20", "context": "2-3 short sentences on what this passage is saying and why it speaks to this situation." } ],\n' +
+  '  "passages": [ { "ref": "1 Corinthians 6:18-20", "context": "2-3 short sentences on what this passage is saying and why it speaks to this situation.", "plain_english": "1-2 short sentences restating the passage in plain, everyday words for this age." } ],\n' +
   '  "talking_points": ["one sentence each"],\n' +
   '  "responses": ["what the mentor could say next — same order and count as talking_points"],\n' +
   '  "prayer_points": ["short phrase each"]\n' +
@@ -203,7 +208,7 @@ Deno.serve(async (req: Request) => {
           "for this conversation:\n" + exclude.map((r) => `- ${r}`).join("\n") + "\n\n"
         : "") +
       `Return ONLY this shape, with exactly ${count} passage${count === 1 ? "" : "s"}:\n` +
-      '{ "passages": [ { "ref": "...", "context": "..." } ] }';
+      '{ "passages": [ { "ref": "...", "context": "...", "plain_english": "..." } ] }';
 
     const pointsPrompt =
       situation +
@@ -221,18 +226,24 @@ Deno.serve(async (req: Request) => {
 
     const parsed = { ...pointsResult, ...passagesResult };
 
-    const rawPassages: Array<{ ref?: string; context?: string }> =
+    const rawPassages: Array<{ ref?: string; context?: string; plain_english?: string }> =
       Array.isArray(passagesResult?.passages) ? passagesResult.passages : [];
 
     // Look the verses up in parallel; drop anything the ESV API can't resolve
-    // rather than showing an empty card.
+    // rather than showing an empty card. The verse TEXT comes from Crossway; the
+    // context and plain_english are the model's explanation, carried through.
     const withText = await Promise.all(
       rawPassages.slice(0, count).map(async (p) => {
         const ref = String(p?.ref ?? "").trim();
         if (!ref) return null;
         const esv_text = await fetchEsv(ref, ESV_API_KEY);
         if (!esv_text) return null;
-        return { ref, esv_text, context: String(p?.context ?? "").trim() };
+        return {
+          ref,
+          esv_text,
+          context: String(p?.context ?? "").trim(),
+          plain_english: String(p?.plain_english ?? "").trim(),
+        };
       })
     );
 

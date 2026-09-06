@@ -22,7 +22,7 @@ import {
 } from "lucide-react";
 import {
   NLA_RED, TOGETHER_GRAY, GROUPS, QUICK_BLOCKS, PracticeGroup, blockAccent, spiritualAccent,
-  daysFor, mondayOf, dateForWeekday, todayWeekday,
+  daysFor, mondayOf, dateForWeekday, todayWeekday, addDays, formatWeekRange,
   msUntilStart, countdownParts, formatStartTime, equipmentFor,
   PracticeSettings, PracticeWeek, PracticeBlock, SpiritualDay, MeetingPoints,
   SeasonMode,
@@ -33,12 +33,25 @@ const PracticeBoard = () => {
   const qc = useQueryClient();
   const { isAdmin } = useAuth();
   const [editing, setEditing] = useState(false);
-  const weekStart = mondayOf();
+  // Admin-only override to preview another week; null = follow the live week,
+  // so the TV keeps auto-rolling to today's week (recomputed every render).
+  const [weekOverride, setWeekOverride] = useState<string | null>(null);
+  const weekStart = weekOverride ?? mondayOf();
+  const isCurrentWeek = weekStart === mondayOf();
   // Open on today. Outside the training week (weekend), show Monday.
-  const [weekday, setWeekday] = useState(() => {
+  const defaultWeekday = () => {
     const t = todayWeekday();
     return t >= 1 && t <= 5 ? t : 1;
-  });
+  };
+  const [weekday, setWeekday] = useState(defaultWeekday);
+  const shiftWeek = (dir: number) => {
+    setWeekOverride(addDays(weekStart, dir * 7));
+    setWeekday(1);
+  };
+  const backToThisWeek = () => {
+    setWeekOverride(null);
+    setWeekday(defaultWeekday());
+  };
   const [countdownOpen, setCountdownOpen] = useState(false);
   const [workoutOpen, setWorkoutOpen] = useState(false);
   const [pointDraft, setPointDraft] = useState("");
@@ -139,19 +152,22 @@ const PracticeBoard = () => {
     },
   });
 
-  // The verse already generated for this calendar day — the same row the
-  // admin Daily Verse shows, so the board never disagrees with the office.
+  // "Verse of the Day" = TODAY's verse — the exact same row (and the exact same
+  // lookup) the admin Daily Verse shows on the Workbench. Keyed on today's
+  // calendar date, NOT the displayed practice day, so the board and the office
+  // never disagree no matter which day's plan is on screen. Recomputed each
+  // render, so a TV left up overnight rolls to the new day's verse on its own.
+  const verseNow = new Date();
+  const verseIso = `${verseNow.getFullYear()}-${verseNow.getMonth() + 1}-${verseNow.getDate()}`;
   const { data: verse } = useQuery({
-    queryKey: ["board-verse", dateForWeekday(weekStart, weekday)],
+    queryKey: ["board-verse", verseIso],
     queryFn: async () => {
-      const iso = dateForWeekday(weekStart, weekday);
-      const [y, m, d] = iso.split("-").map((n) => parseInt(n, 10));
       const { data } = await supabase
         .from("calendar_verses")
         .select("reference, text")
-        .eq("year", y)
-        .eq("month", m)
-        .eq("day", d)
+        .eq("year", verseNow.getFullYear())
+        .eq("month", verseNow.getMonth() + 1)
+        .eq("day", verseNow.getDate())
         .eq("is_trashed", false)
         .maybeSingle();
       return (data as { reference: string; text: string } | null) ?? null;
@@ -277,7 +293,7 @@ const PracticeBoard = () => {
   });
 
   return (
-    <div className="min-h-screen bg-black text-white flex flex-col">
+    <div className="h-screen overflow-hidden bg-black text-white flex flex-col">
       {/* Header */}
       <header className="flex items-center justify-between gap-4 px-6 py-4 border-b border-white/10 flex-wrap">
         <div className="flex items-center gap-4">
@@ -353,6 +369,43 @@ const PracticeBoard = () => {
         </div>
       </header>
 
+      {/* Admin-only week preview — lets you prep on a Sunday and see next week
+          on the board before Monday. The public/TV view never renders this, so
+          the wall stays locked to the live week and keeps auto-rolling. */}
+      {isAdmin && (
+        <div className="flex items-center justify-center gap-3 px-6 py-2.5 border-b border-white/10 bg-amber-500/[0.05]">
+          <span className="text-[11px] uppercase tracking-[0.15em] text-amber-300/70 font-semibold">
+            Admin preview
+          </span>
+          <button
+            onClick={() => shiftWeek(-1)}
+            aria-label="Previous week"
+            className="h-7 w-7 grid place-items-center rounded-md bg-white/5 hover:bg-white/10 border border-white/10"
+          >
+            <ChevronLeft className="w-4 h-4" />
+          </button>
+          <span className="text-sm font-semibold min-w-[11rem] text-center">
+            {formatWeekRange(weekStart, season)}
+            {isCurrentWeek && <span className="text-white/40 font-normal"> · This week</span>}
+          </span>
+          <button
+            onClick={() => shiftWeek(1)}
+            aria-label="Next week"
+            className="h-7 w-7 grid place-items-center rounded-md bg-white/5 hover:bg-white/10 border border-white/10"
+          >
+            <ChevronRight className="w-4 h-4" />
+          </button>
+          {!isCurrentWeek && (
+            <button
+              onClick={backToThisWeek}
+              className="ml-1 text-xs font-semibold px-2.5 py-1 rounded-md bg-white/5 hover:bg-white/10 border border-white/10"
+            >
+              Back to this week
+            </button>
+          )}
+        </div>
+      )}
+
       {!week ? (
         <div className="flex-1 flex flex-col items-center justify-center gap-6 px-6">
           <img
@@ -365,16 +418,16 @@ const PracticeBoard = () => {
           </p>
         </div>
       ) : (
-        /* Not flex-1: the plan hugs the top so the countdown sits just under
-           the group columns instead of being pushed to the floor of a tall
-           TV. The spacer further down takes the slack. */
-        <main className="px-6 py-6 space-y-6">
+        /* Fills the screen between the header and the pinned countdown banner,
+           and scrolls INSIDE itself only if a plan is unusually long — so the
+           board never page-scrolls and the countdown stays in view at the foot. */
+        <main className="flex-1 min-h-0 overflow-y-auto px-6 py-4 space-y-5">
           {/* The mark opens the board, above everything. */}
           <div className="flex justify-center">
             <img
               src={nlaLogoWhite}
               alt="No Limits Academy"
-              className="h-20 md:h-28 w-auto opacity-90 drop-shadow-[0_0_60px_rgba(191,15,62,0.18)]"
+              className="h-14 md:h-20 w-auto opacity-90 drop-shadow-[0_0_60px_rgba(191,15,62,0.18)]"
             />
           </div>
 
@@ -768,21 +821,6 @@ const PracticeBoard = () => {
         </main>
       )}
 
-      {/* A band under the plan, not an overlay — the room reads the plan and
-          watches the clock at the same time. */}
-      {countdownOpen && (
-        <>
-          {/* One clock-height of air between the columns and the countdown, so
-              the timer sits low without falling to the floor of the screen. */}
-          <div aria-hidden className="h-[4.5rem] md:h-32 shrink-0" />
-          <CountdownBar startTime={startTime} onClose={() => setCountdownOpen(false)} />
-        </>
-      )}
-
-      {/* Takes the slack on a tall screen so the day tabs stay at the floor
-          while the plan and clock stay together at the top. */}
-      <div className="flex-1" />
-
       {workoutOpen && (
         <WorkoutPrepPanel
           workout={
@@ -808,6 +846,13 @@ const PracticeBoard = () => {
           </button>
         ))}
       </footer>
+
+      {/* Big countdown banner pinned across the bottom — always in view with the
+          plan, so the room reads the plan and watches the clock at once, and the
+          board never has to be scrolled to find the timer. */}
+      {countdownOpen && (
+        <CountdownBar startTime={startTime} onClose={() => setCountdownOpen(false)} />
+      )}
     </div>
   );
 };

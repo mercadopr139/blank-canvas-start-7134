@@ -483,6 +483,14 @@ const SessionDetail = ({
                   {p.context && (
                     <p className="mt-2 text-xs text-neutral-500 leading-relaxed">{p.context}</p>
                   )}
+                  {p.plain_english && (
+                    <div className="mt-2 rounded-md border border-sky-500/20 bg-sky-500/[0.04] px-2.5 py-2">
+                      <p className="text-[9px] uppercase tracking-[0.15em] text-sky-300/70 font-semibold mb-0.5">
+                        In Plain English
+                      </p>
+                      <p className="text-[13px] text-sky-100/80 leading-relaxed">{p.plain_english}</p>
+                    </div>
+                  )}
                 </div>
               ))}
             </div>

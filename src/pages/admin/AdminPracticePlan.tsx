@@ -454,9 +454,18 @@ const AdminPracticePlan = () => {
                 >
                   {week.status === "published" ? "Published" : "Draft"}
                 </Badge>
-                <span className="text-[11px] text-neutral-500">
-                  {filledCount}/{blocks.length} filled in
-                </span>
+                {/* A completeness meter, worded so it can't read as a date. */}
+                <div className="flex items-center gap-2">
+                  <div className="h-1.5 w-16 rounded-full bg-neutral-800 overflow-hidden" aria-hidden>
+                    <div
+                      className="h-full rounded-full bg-emerald-500/70 transition-all"
+                      style={{ width: `${blocks.length ? Math.round((filledCount / blocks.length) * 100) : 0}%` }}
+                    />
+                  </div>
+                  <span className="text-[11px] text-neutral-400 whitespace-nowrap">
+                    {filledCount} of {blocks.length} drills filled
+                  </span>
+                </div>
               </div>
             )}
           </div>

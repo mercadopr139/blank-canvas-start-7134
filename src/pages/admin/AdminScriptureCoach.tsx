@@ -25,7 +25,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import {
   Search, X, Sparkles, RefreshCw, ArrowRight, ArrowLeft, Check,
-  MessageSquareQuote, MessagesSquare, HandHeart, NotebookPen, Save, Loader2, Trash2, History,
+  MessageSquareQuote, MessagesSquare, HandHeart, NotebookPen, Save, Loader2, Trash2, History, Languages,
 } from "lucide-react";
 import { toast } from "sonner";
 import { format, parseISO } from "date-fns";
@@ -241,7 +241,7 @@ const AdminScriptureCoach = () => {
       if (data?.error) throw new Error(data.error);
 
       const next: SessionPassage[] = (data.passages || []).map((p: SessionPassage) => ({
-        ref: p.ref, esv_text: p.esv_text, context: p.context, kept: true, used: false,
+        ref: p.ref, esv_text: p.esv_text, context: p.context, plain_english: p.plain_english ?? null, kept: true, used: false,
       }));
       setPassages(next);
       setTalkingPoints(data.talking_points || []);
@@ -274,7 +274,7 @@ const AdminScriptureCoach = () => {
       if (data?.error) throw new Error(data.error);
 
       const incoming: SessionPassage[] = (data.passages || []).map((p: SessionPassage) => ({
-        ref: p.ref, esv_text: p.esv_text, context: p.context, kept: true, used: false,
+        ref: p.ref, esv_text: p.esv_text, context: p.context, plain_english: p.plain_english ?? null, kept: true, used: false,
       }));
       if (incoming.length === 0) {
         toast.error("No new passages came back — try rewording the topic.");
@@ -779,6 +779,21 @@ const PassageCard = ({
             <p className="mt-3 text-[13px] leading-relaxed text-neutral-400">
               {passage.context}
             </p>
+          )}
+
+          {/* Plain-English helper — always on screen so it's a live aid during
+              the conversation. Clearly an explanation: the ESV text above is the
+              scripture; this is "here's what that means" for a child. Saved with
+              the passage, so it prints in the report. */}
+          {passage.plain_english?.trim() && (
+            <div className="mt-3 rounded-lg border border-sky-500/25 bg-sky-500/[0.05] px-3.5 py-2.5">
+              <p className="text-[10px] uppercase tracking-[0.15em] text-sky-300/80 font-semibold mb-1 flex items-center gap-1.5">
+                <Languages className="w-3 h-3" /> In Plain English
+              </p>
+              <p className="text-[14px] leading-relaxed text-sky-100/90">
+                {passage.plain_english.trim()}
+              </p>
+            </div>
           )}
         </div>
       </div>

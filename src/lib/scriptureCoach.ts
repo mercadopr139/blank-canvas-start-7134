@@ -23,6 +23,12 @@ export interface SessionPassage {
   context: string;
   kept: boolean;
   used: boolean;
+  /**
+   * Plain-English restatement, generated on demand by the mentor. An
+   * EXPLANATION in the same theological lane — never a replacement for the ESV
+   * text, which stays exactly as fetched. Saved with the session so it prints.
+   */
+  plain_english?: string | null;
 }
 
 export interface ScriptureSession {
@@ -237,6 +243,14 @@ export const buildSessionPdf = (session: ScriptureSession): jsPDF => {
       para(p.esv_text.replace(/\s+/g, " ").trim(), 11.5, "normal", [35, 35, 35], "times", 1.5);
       y += 4;
       if (p.context) para(p.context, 10, "normal", [105, 105, 105]);
+      // Plain-English helper — clearly labelled as an explanation, never the
+      // scripture itself, so the printed record can't be mistaken for the text.
+      if (p.plain_english?.trim()) {
+        y += 4;
+        para("IN PLAIN ENGLISH", 8, "bold", [r, g, b]);
+        y += 1;
+        para(p.plain_english.trim(), 10, "normal", [70, 70, 70]);
+      }
       y += 14;
     }
   }
