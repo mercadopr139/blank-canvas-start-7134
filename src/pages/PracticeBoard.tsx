@@ -504,14 +504,14 @@ const PracticeBoard = () => {
                 {points.length === 0 && !editing ? (
                   <p className="text-white/25 italic text-xs">Nothing to cover tonight</p>
                 ) : (
-                  <ul className="space-y-1.5">
+                  <ul className="space-y-2.5">
                     {points.map((p, i) => (
-                      <li key={i} className="flex items-start gap-2 group/pt">
+                      <li key={i} className="flex items-start gap-2.5 group/pt">
                         <span
-                          className="w-1 h-1 rounded-full mt-1.5 shrink-0"
+                          className="w-1.5 h-1.5 rounded-full mt-2 shrink-0"
                           style={{ backgroundColor: TOGETHER_GRAY }}
                         />
-                        <span className="flex-1 text-[10px] md:text-xs leading-snug text-white">
+                        <span className="flex-1 text-sm md:text-base leading-snug text-white/50">
                           {p}
                         </span>
                         {editing && (
@@ -561,10 +561,9 @@ const PracticeBoard = () => {
                 )}
               </div>
 
-              {/* The day's verse fills the space this tile always had spare.
-                  Set in serif so it reads as scripture rather than another
-                  notice, and quiet enough not to pull attention off the
-                  discussion points beside it. */}
+              {/* The day's verse. Clean sans to match the rest of the board,
+                  wrapped in quotation marks with relaxed leading so it reads as
+                  scripture without the serif clashing with the wall. */}
               {verse && (
                 <div
                   className="md:border-l md:pl-7"
@@ -576,14 +575,14 @@ const PracticeBoard = () => {
                   >
                     Verse of the day
                   </p>
-                  <p className="font-serif text-base md:text-lg leading-relaxed text-white/85">
-                    {verse.text}
+                  <p className="text-base md:text-lg leading-relaxed text-white/50">
+                    &ldquo;{verse.text}&rdquo;
                   </p>
                   <p
-                    className="mt-2 text-sm font-bold"
+                    className="mt-2.5 text-sm font-semibold tracking-wide"
                     style={{ color: TOGETHER_GRAY }}
                   >
-                    {verse.reference}
+                    &mdash; {verse.reference}
                   </p>
                 </div>
               )}
