@@ -127,6 +127,7 @@ export const OPERATIONS_TILES: PillarTile[] = [
     permKey: "operations_practice_plan",
     children: [
       { title: "Weekly Plan", href: "/admin/operations/practice-plan", icon: ClipboardList },
+      { title: "Daily Duties Intelligence", href: "/admin/operations/daily-duties", icon: Sparkles },
       { title: "Gym Board", href: "/practice-board", icon: Monitor, external: true },
     ],
   },

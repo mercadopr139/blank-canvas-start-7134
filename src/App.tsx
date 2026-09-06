@@ -55,6 +55,7 @@ import SmileLabCheckIn from "./pages/SmileLabCheckIn";
 import SmileLabBoard from "./pages/SmileLabBoard";
 import PracticeBoard from "./pages/PracticeBoard";
 import AdminPracticePlan from "./pages/admin/AdminPracticePlan";
+import AdminDailyDuties from "./pages/admin/AdminDailyDuties";
 import AdminScriptureCoach from "./pages/admin/AdminScriptureCoach";
 import AdminScriptureCoachIntelligence from "./pages/admin/AdminScriptureCoachIntelligence";
 import ExcursionCheckIn from "./pages/ExcursionCheckIn";
@@ -251,6 +252,7 @@ const App = () => (
               <Route path="meal-tracker" element={<AdminMealTracker />} />
               <Route path="meal-reports" element={<AdminMealReports />} />
               <Route path="practice-plan" element={<AdminPracticePlan />} />
+              <Route path="daily-duties" element={<AdminDailyDuties />} />
               <Route path="scripture-coach" element={<AdminScriptureCoach />} />
               <Route path="scripture-coach-intelligence" element={<AdminScriptureCoachIntelligence />} />
             </Route>

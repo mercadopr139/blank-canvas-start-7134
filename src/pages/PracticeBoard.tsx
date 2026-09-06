@@ -18,8 +18,9 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import {
   ArrowLeft, ChevronLeft, ChevronRight, Timer, X, Users, Megaphone,
-  Pencil, Check, Trash2, Plus, Dumbbell,
+  Pencil, Check, Trash2, Plus, Dumbbell, Sparkles,
 } from "lucide-react";
+import DailyDutiesBoard from "@/components/duties/DailyDutiesBoard";
 import {
   NLA_RED, TOGETHER_GRAY, GROUPS, QUICK_BLOCKS, PracticeGroup, blockAccent, spiritualAccent,
   daysFor, mondayOf, dateForWeekday, todayWeekday, addDays, formatWeekRange,
@@ -54,6 +55,7 @@ const PracticeBoard = () => {
   };
   const [countdownOpen, setCountdownOpen] = useState(false);
   const [workoutOpen, setWorkoutOpen] = useState(false);
+  const [dutiesOpen, setDutiesOpen] = useState(false);
   const [pointDraft, setPointDraft] = useState("");
   const [reminderDraft, setReminderDraft] = useState("");
 
@@ -359,6 +361,13 @@ const PracticeBoard = () => {
             </Button>
           )}
           <Button
+            onClick={() => setDutiesOpen(true)}
+            className="bg-neutral-800 hover:bg-neutral-700 text-white font-bold"
+          >
+            <Sparkles className="w-4 h-4 mr-2" />
+            Daily Duties
+          </Button>
+          <Button
             onClick={() => setCountdownOpen((o) => !o)}
             className={countdownOpen ? "bg-neutral-800 hover:bg-neutral-700 text-white font-bold" : "text-white font-bold"}
             style={countdownOpen ? undefined : { backgroundColor: NLA_RED }}
@@ -368,6 +377,8 @@ const PracticeBoard = () => {
           </Button>
         </div>
       </header>
+
+      <DailyDutiesBoard open={dutiesOpen} onClose={() => setDutiesOpen(false)} />
 
       {/* Admin-only week preview — lets you prep on a Sunday and see next week
           on the board before Monday. The public/TV view never renders this, so
