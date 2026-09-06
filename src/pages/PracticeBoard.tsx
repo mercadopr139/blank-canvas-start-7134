@@ -422,13 +422,19 @@ const PracticeBoard = () => {
            and scrolls INSIDE itself only if a plan is unusually long — so the
            board never page-scrolls and the countdown stays in view at the foot. */
         <main className="flex-1 min-h-0 overflow-y-auto px-6 py-4 space-y-5">
-          {/* The mark opens the board, above everything. */}
-          <div className="flex justify-center">
+          {/* The mark opens the board, centered; the live countdown pins to the
+              right side of the page when it's running. */}
+          <div className="relative flex justify-center">
             <img
               src={nlaLogoWhite}
               alt="No Limits Academy"
               className="h-14 md:h-20 w-auto opacity-90 drop-shadow-[0_0_60px_rgba(191,15,62,0.18)]"
             />
+            {countdownOpen && (
+              <div className="absolute right-0 top-1/2 -translate-y-1/2">
+                <CountdownBar startTime={startTime} onClose={() => setCountdownOpen(false)} />
+              </div>
+            )}
           </div>
 
           {/* The five minutes that open practice. Always shown — the meeting
@@ -846,13 +852,6 @@ const PracticeBoard = () => {
           </button>
         ))}
       </footer>
-
-      {/* Big countdown banner pinned across the bottom — always in view with the
-          plan, so the room reads the plan and watches the clock at once, and the
-          board never has to be scrolled to find the timer. */}
-      {countdownOpen && (
-        <CountdownBar startTime={startTime} onClose={() => setCountdownOpen(false)} />
-      )}
     </div>
   );
 };
@@ -1089,10 +1088,9 @@ const AddBlock = ({
 };
 
 /**
- * The countdown to the practice start, as a band across the foot of the board
- * rather than a screen over it. The room reads the plan and watches the clock
- * at the same time — covering the plan to show a timer defeats the point of
- * putting the plan up.
+ * The countdown to practice start, as a compact pill in the header — small and
+ * out of the way so the whole plan stays on screen. Turns red in the last
+ * minute; auto-hides shortly after practice begins.
  */
 const CountdownBar = ({
   startTime, onClose,
@@ -1128,74 +1126,41 @@ const CountdownBar = ({
 
   return (
     <div
-      className="relative border-t transition-colors"
+      className="inline-flex items-center gap-2.5 rounded-xl border px-4 py-2.5 shadow-md transition-colors"
       style={{
-        borderColor: lastMinute ? NLA_RED : "rgba(255,255,255,0.1)",
-        background: lastMinute ? `${NLA_RED}1a` : "rgba(255,255,255,0.03)",
+        borderColor: lastMinute ? NLA_RED : "rgba(52,211,153,0.45)",
+        background: lastMinute ? `${NLA_RED}22` : "rgba(52,211,153,0.10)",
+        boxShadow: lastMinute ? `0 0 28px ${NLA_RED}66` : "0 0 20px rgba(52,211,153,0.20)",
       }}
       role="timer"
       aria-label="Practice countdown"
     >
-      {/* Label above, clock beneath it, both centred. */}
-      <div className="flex flex-col items-center px-6 py-4">
-        {justStarted ? (
-          <p
-            className="text-4xl md:text-6xl font-black uppercase tracking-tight animate-pulse text-center"
-            style={{ color: NLA_RED }}
-          >
-            Practice starts now
-          </p>
-        ) : (
-          <>
-            <p className="uppercase tracking-[0.25em] text-sm md:text-base text-white/50 text-center">
-              {started ? (
-                <>
-                  Practice underway since{" "}
-                  <span className="text-white/70">{formatStartTime(startTime)}</span>
-                </>
-              ) : (
-                <>
-                  Practice starts{" "}
-                  <span className="text-white/80 font-bold">
-                    {formatStartTime(startTime)}
-                  </span>
-                </>
-              )}
-            </p>
-
-            {/* Seconds sit in grey against the white minutes — still the
-                part that moves and the part the room watches, but no longer
-                competing with Non-Battle Team gold. */}
-            <p
-              className="mt-1 text-7xl md:text-9xl leading-none font-black tabular-nums transition-colors text-center"
-              style={{
-                color: lastMinute ? NLA_RED : started ? "rgba(255,255,255,0.75)" : "#ffffff",
-              }}
-            >
-              {lead}
-              <span className="text-white/45">:{secs}</span>
-            </p>
-
-            {lastMinute && (
-              <p
-                className="mt-1 text-2xl md:text-4xl font-black uppercase tracking-wide text-center"
-                style={{ color: NLA_RED }}
-              >
-                Line it up
-              </p>
-            )}
-          </>
-        )}
-      </div>
-
-      <button
-        type="button"
-        onClick={onClose}
-        className="absolute top-2 right-3 text-white/30 hover:text-white p-1.5"
-        aria-label="Hide countdown"
-      >
-        <X className="w-5 h-5" />
-      </button>
+      <Timer
+        className="w-5 h-5 md:w-6 md:h-6 shrink-0"
+        style={{ color: lastMinute ? NLA_RED : "#34d399" }}
+      />
+      {justStarted ? (
+        <span className="text-xl md:text-2xl font-black uppercase tracking-wide animate-pulse" style={{ color: NLA_RED }}>
+          Practice starts now
+        </span>
+      ) : started ? (
+        <span className="text-base md:text-lg font-bold text-white/70 whitespace-nowrap">
+          Practice underway · {formatStartTime(startTime)}
+        </span>
+      ) : (
+        <div className="flex flex-col leading-none">
+          <span className="text-[10px] md:text-[11px] uppercase tracking-[0.2em] text-white/55 font-bold mb-0.5">
+            Practice {formatStartTime(startTime)}
+          </span>
+          {/* Minutes green, seconds red — two colours so the moving part reads
+              distinctly. Everything is red in the last minute. */}
+          <span className="text-2xl md:text-3xl font-black tabular-nums leading-none">
+            <span style={{ color: lastMinute ? NLA_RED : "#34d399" }}>{lead}</span>
+            <span className="text-white/25">:</span>
+            <span style={{ color: NLA_RED }}>{secs}</span>
+          </span>
+        </div>
+      )}
     </div>
   );
 };
