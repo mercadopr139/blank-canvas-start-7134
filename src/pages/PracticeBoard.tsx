@@ -18,9 +18,10 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import {
   ArrowLeft, ChevronLeft, ChevronRight, Timer, X, Users, Megaphone,
-  Pencil, Check, Trash2, Plus, Dumbbell, Sparkles,
+  Pencil, Check, Trash2, Plus, Dumbbell, Sparkles, Maximize, Minimize,
 } from "lucide-react";
 import DailyDutiesBoard from "@/components/duties/DailyDutiesBoard";
+import VerseDiscussion, { DiscussionDay } from "@/components/verse/VerseDiscussion";
 import {
   NLA_RED, TOGETHER_GRAY, GROUPS, QUICK_BLOCKS, PracticeGroup, blockAccent, spiritualAccent,
   daysFor, mondayOf, dateForWeekday, todayWeekday, addDays, formatWeekRange,
@@ -56,6 +57,23 @@ const PracticeBoard = () => {
   const [countdownOpen, setCountdownOpen] = useState(false);
   const [workoutOpen, setWorkoutOpen] = useState(false);
   const [dutiesOpen, setDutiesOpen] = useState(false);
+  const [verseDiscussion, setVerseDiscussion] = useState<DiscussionDay | null>(null);
+
+  // Fullscreen: on the gym TV this hides the browser tabs, address bar and the
+  // Android nav bar, which is most of the wasted space up top and down bottom.
+  const [isFullscreen, setIsFullscreen] = useState(false);
+  const toggleFullscreen = () => {
+    if (!document.fullscreenElement) {
+      document.documentElement.requestFullscreen?.().catch(() => {});
+    } else {
+      document.exitFullscreen?.().catch(() => {});
+    }
+  };
+  useEffect(() => {
+    const sync = () => setIsFullscreen(!!document.fullscreenElement);
+    document.addEventListener("fullscreenchange", sync);
+    return () => document.removeEventListener("fullscreenchange", sync);
+  }, []);
   const [pointDraft, setPointDraft] = useState("");
   const [reminderDraft, setReminderDraft] = useState("");
 
@@ -173,6 +191,39 @@ const PracticeBoard = () => {
         .eq("is_trashed", false)
         .maybeSingle();
       return (data as { reference: string; text: string } | null) ?? null;
+    },
+  });
+
+  // Themed "Verse of the Week" for the day being shown, when the coach has
+  // PUBLISHED one. The board's own query filters to published, so an admin
+  // previewing a draft never projects it. No published theme → the classic
+  // daily verse above stands in (and an admin sees a nudge to set one).
+  const { data: themed } = useQuery({
+    queryKey: ["board-verse-week", weekStart, weekday],
+    refetchInterval: 60000,
+    queryFn: async () => {
+      const { data: wk } = await supabase
+        .from("board_verse_weeks" as never)
+        .select("theme, is_published")
+        .eq("week_start", weekStart)
+        .maybeSingle();
+      const week = (wk as unknown as { theme: string; is_published: boolean } | null) ?? null;
+      if (!week?.is_published) return { published: false, day: null as DiscussionDay | null };
+      const { data: dayRow } = await supabase
+        .from("board_verse_days" as never)
+        .select("reference, text, context, questions, answers")
+        .eq("week_start", weekStart)
+        .eq("weekday", weekday)
+        .maybeSingle();
+      const d = dayRow as unknown as
+        | { reference: string; text: string; context: string | null; questions: string[]; answers: string[] }
+        | null;
+      return {
+        published: true,
+        day: d
+          ? ({ reference: d.reference, text: d.text, context: d.context, questions: d.questions ?? [], answers: d.answers ?? [] } as DiscussionDay)
+          : null,
+      };
     },
   });
 
@@ -341,6 +392,17 @@ const PracticeBoard = () => {
         </div>
 
         <div className="flex items-center gap-3 flex-wrap">
+          {/* Fullscreen — the biggest space win on the wall TV. Reclaims the
+              browser chrome and the Android nav bar for the plan itself. */}
+          <Button
+            onClick={toggleFullscreen}
+            variant="ghost" size="icon"
+            className="text-white/40 hover:text-white hover:bg-white/10 h-9 w-9"
+            aria-label={isFullscreen ? "Exit fullscreen" : "Fullscreen"}
+            title={isFullscreen ? "Exit fullscreen" : "Fullscreen"}
+          >
+            {isFullscreen ? <Minimize className="w-5 h-5" /> : <Maximize className="w-5 h-5" />}
+          </Button>
           {/* Only a signed-in admin is offered editing. Everyone else — the
               TV, a kid with the URL — sees a read-only board. */}
           {isAdmin && week && (
@@ -379,6 +441,7 @@ const PracticeBoard = () => {
       </header>
 
       <DailyDutiesBoard open={dutiesOpen} onClose={() => setDutiesOpen(false)} />
+      <VerseDiscussion day={verseDiscussion} onClose={() => setVerseDiscussion(null)} />
 
       {/* Admin-only week preview — lets you prep on a Sunday and see next week
           on the board before Monday. The public/TV view never renders this, so
@@ -432,37 +495,32 @@ const PracticeBoard = () => {
         /* Fills the screen between the header and the pinned countdown banner,
            and scrolls INSIDE itself only if a plan is unusually long — so the
            board never page-scrolls and the countdown stays in view at the foot. */
-        <main className="flex-1 min-h-0 overflow-y-auto px-6 py-4 space-y-5">
-          {/* The mark opens the board, centered; the live countdown pins to the
-              right side of the page when it's running. */}
-          <div className="relative flex justify-center">
-            <img
-              src={nlaLogoWhite}
-              alt="No Limits Academy"
-              className="h-14 md:h-20 w-auto opacity-90 drop-shadow-[0_0_60px_rgba(191,15,62,0.18)]"
-            />
-            {countdownOpen && (
-              <div className="absolute right-0 top-1/2 -translate-y-1/2">
-                <CountdownBar startTime={startTime} onClose={() => setCountdownOpen(false)} />
-              </div>
-            )}
-          </div>
+        <main className="flex-1 min-h-0 flex flex-col px-6 py-3 gap-3 overflow-y-auto md:overflow-hidden">
+          {/* Logo removed to hand its space to the group tiles. The live
+              countdown, when running, sits on its own slim row on the right. */}
+          {countdownOpen && (
+            <div className="flex justify-end shrink-0">
+              <CountdownBar startTime={startTime} onClose={() => setCountdownOpen(false)} />
+            </div>
+          )}
 
           {/* The five minutes that open practice. Always shown — the meeting
               happens every day whether or not anyone wrote points for it. */}
           <section
-            className="rounded-2xl border p-5 md:p-6"
+            className="rounded-2xl border p-2.5 md:p-3 shrink-0"
             style={{
               borderColor: `${TOGETHER_GRAY}55`,
               background: `${TOGETHER_GRAY}12`,
             }}
           >
-            <div className="grid grid-cols-1 md:grid-cols-[minmax(0,17rem)_1fr_minmax(0,22rem)] gap-5 md:gap-7">
+            {/* Verse of the Day is the flexible (widest) column — verses run
+                longer than the notes on either side of it. */}
+            <div className="grid grid-cols-1 md:grid-cols-[minmax(0,11rem)_minmax(0,13rem)_minmax(0,1fr)_minmax(0,13rem)] gap-3 md:gap-5">
               {/* Same shape as the spiritual band under the columns — eyebrow,
                   name, who leads it — because it is the other thing the whole
                   academy does together. */}
               <div className="flex items-start gap-3">
-                <Users className="w-6 h-6 mt-1 shrink-0" style={{ color: TOGETHER_GRAY }} />
+                <Users className="w-4 h-4 mt-0.5 shrink-0" style={{ color: TOGETHER_GRAY }} />
                 <div>
                   <p
                     className="text-[10px] md:text-[11px] font-bold uppercase tracking-[0.2em] opacity-70"
@@ -471,17 +529,17 @@ const PracticeBoard = () => {
                     Everybody · together
                   </p>
                   <h2
-                    className="mt-1 text-lg md:text-xl font-bold leading-tight"
+                    className="text-sm md:text-base font-bold leading-tight"
                     style={{ color: TOGETHER_GRAY }}
                   >
                     Team Meeting
-                    <span className="ml-2 text-sm md:text-base font-medium opacity-60">
+                    <span className="ml-2 text-[11px] md:text-xs font-medium opacity-60">
                       5 min
                     </span>
                   </h2>
                   {meetingLeader && (
                     <p
-                      className="text-sm md:text-base font-medium opacity-75"
+                      className="text-[11px] md:text-xs font-medium opacity-75"
                       style={{ color: TOGETHER_GRAY }}
                     >
                       with {meetingLeader}
@@ -511,7 +569,7 @@ const PracticeBoard = () => {
                           className="w-1.5 h-1.5 rounded-full mt-2 shrink-0"
                           style={{ backgroundColor: TOGETHER_GRAY }}
                         />
-                        <span className="flex-1 text-sm md:text-base leading-snug text-white/50">
+                        <span className="flex-1 text-xs md:text-sm leading-snug text-white/50">
                           {p}
                         </span>
                         {editing && (
@@ -561,36 +619,168 @@ const PracticeBoard = () => {
                 )}
               </div>
 
-              {/* The day's verse. Clean sans to match the rest of the board,
-                  wrapped in quotation marks with relaxed leading so it reads as
-                  scripture without the serif clashing with the wall. */}
-              {verse && (
-                <div
-                  className="md:border-l md:pl-7"
-                  style={{ borderColor: `${TOGETHER_GRAY}33` }}
-                >
+              {/* The day's verse. A PUBLISHED themed verse (tappable — opens the
+                  team-meeting discussion) wins; else the classic daily verse;
+                  and an admin with no theme set sees a quiet nudge to make one.
+                  Clean sans, muted, so it never competes with the group tiles. */}
+              {(() => {
+                const themedDay = themed?.published ? themed.day : null;
+                if (themedDay) {
+                  return (
+                    <button
+                      onClick={() => setVerseDiscussion(themedDay)}
+                      className="md:border-l md:pl-7 text-left w-full group"
+                      style={{ borderColor: `${TOGETHER_GRAY}33` }}
+                    >
+                      <p className="text-[10px] md:text-[11px] font-bold uppercase tracking-[0.2em] opacity-70 mb-2 flex items-center gap-1.5" style={{ color: TOGETHER_GRAY }}>
+                        Verse of the day
+                        <span className="text-[9px] rounded-full px-1.5 py-0.5 font-semibold" style={{ color: "#2dd4bf", background: "#2dd4bf1a" }}>
+                          Tap to discuss
+                        </span>
+                      </p>
+                      <p className="text-sm md:text-base leading-relaxed text-white/60 group-hover:text-white/85 transition-colors">
+                        &ldquo;{themedDay.text}&rdquo;
+                      </p>
+                      <p className="mt-1.5 text-xs font-semibold tracking-wide" style={{ color: TOGETHER_GRAY }}>
+                        &mdash; {themedDay.reference}
+                      </p>
+                    </button>
+                  );
+                }
+                if (isAdmin && !themed?.published) {
+                  return (
+                    <button
+                      onClick={() => navigate("/admin/operations/practice-plan")}
+                      className="md:border-l md:pl-7 text-left w-full"
+                      style={{ borderColor: `${TOGETHER_GRAY}33` }}
+                    >
+                      <p className="text-[10px] md:text-[11px] font-bold uppercase tracking-[0.2em] opacity-70 mb-2" style={{ color: TOGETHER_GRAY }}>
+                        Verse of the day
+                      </p>
+                      <p className="text-xs md:text-sm text-amber-300/80 leading-snug">
+                        No theme set this week — tap to generate this week's Bible topic.
+                      </p>
+                    </button>
+                  );
+                }
+                if (verse) {
+                  return (
+                    <div className="md:border-l md:pl-7" style={{ borderColor: `${TOGETHER_GRAY}33` }}>
+                      <p className="text-[10px] md:text-[11px] font-bold uppercase tracking-[0.2em] opacity-70 mb-2" style={{ color: TOGETHER_GRAY }}>
+                        Verse of the day
+                      </p>
+                      <p className="text-sm md:text-base leading-relaxed text-white/50">
+                        &ldquo;{verse.text}&rdquo;
+                      </p>
+                      <p className="mt-1.5 text-xs font-semibold tracking-wide" style={{ color: TOGETHER_GRAY }}>
+                        &mdash; {verse.reference}
+                      </p>
+                    </div>
+                  );
+                }
+                return null;
+              })()}
+
+              {/* Special Reminders as the fourth column — they belong with the
+                  "everybody together" open, and moving them here frees the whole
+                  bottom of the board for the group tiles. */}
+              <div
+                className="md:border-l md:pl-7"
+                style={{ borderColor: `${TOGETHER_GRAY}33` }}
+              >
+                <div className="flex items-center gap-1.5 mb-2">
+                  <Megaphone className="w-3.5 h-3.5" style={{ color: TOGETHER_GRAY }} />
                   <p
-                    className="text-[10px] md:text-[11px] font-bold uppercase tracking-[0.2em] opacity-70 mb-2"
+                    className="text-[10px] md:text-[11px] font-bold uppercase tracking-[0.2em] opacity-70"
                     style={{ color: TOGETHER_GRAY }}
                   >
-                    Verse of the day
-                  </p>
-                  <p className="text-base md:text-lg leading-relaxed text-white/50">
-                    &ldquo;{verse.text}&rdquo;
-                  </p>
-                  <p
-                    className="mt-2.5 text-sm font-semibold tracking-wide"
-                    style={{ color: TOGETHER_GRAY }}
-                  >
-                    &mdash; {verse.reference}
+                    Special Reminders
                   </p>
                 </div>
-              )}
+
+                {standingToday.length === 0 && weekReminders.length === 0 ? (
+                  <p className="text-white/25 italic text-xs">Nothing special tonight.</p>
+                ) : (
+                  <ul className="space-y-1.5">
+                    {standingToday.map((r) => (
+                      <li key={`std-${r}`} className="flex items-start gap-2">
+                        <span
+                          className="w-1 h-1 rounded-full mt-1.5 shrink-0"
+                          style={{ backgroundColor: TOGETHER_GRAY }}
+                        />
+                        <span className="flex-1 text-xs md:text-sm leading-snug text-white/70">
+                          {r}
+                        </span>
+                        {editing && (
+                          <span className="text-[9px] uppercase tracking-wider text-white/25 mt-1 shrink-0">
+                            every week
+                          </span>
+                        )}
+                      </li>
+                    ))}
+                    {weekReminders.map((r, i) => (
+                      <li key={i} className="flex items-start gap-2 group/rm">
+                        <span
+                          className="w-1 h-1 rounded-full mt-1.5 shrink-0"
+                          style={{ backgroundColor: TOGETHER_GRAY }}
+                        />
+                        <span className="flex-1 text-xs md:text-sm leading-snug text-white/70">
+                          {r}
+                        </span>
+                        {editing && (
+                          <button
+                            type="button"
+                            onClick={() =>
+                              saveReminders.mutate(weekReminders.filter((_, x) => x !== i))
+                            }
+                            className="text-white/25 hover:text-red-400 shrink-0 mt-0.5"
+                            aria-label="Remove this reminder"
+                          >
+                            <X className="w-3.5 h-3.5" />
+                          </button>
+                        )}
+                      </li>
+                    ))}
+                  </ul>
+                )}
+
+                {editing && (
+                  <div className="mt-2 flex gap-2">
+                    <input
+                      value={reminderDraft}
+                      onChange={(e) => setReminderDraft(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" && reminderDraft.trim()) {
+                          saveReminders.mutate([...weekReminders, reminderDraft.trim()]);
+                          setReminderDraft("");
+                        }
+                      }}
+                      placeholder="Event Tomorrow — Must Set Up"
+                      className="flex-1 rounded-lg bg-black/60 border border-white/15 px-2 py-1.5 text-xs text-white outline-none focus:border-white/40"
+                    />
+                    <Button
+                      onClick={() => {
+                        if (!reminderDraft.trim()) return;
+                        saveReminders.mutate([...weekReminders, reminderDraft.trim()]);
+                        setReminderDraft("");
+                      }}
+                      disabled={!reminderDraft.trim()}
+                      size="sm"
+                      className="font-bold text-black"
+                      style={{ backgroundColor: TOGETHER_GRAY }}
+                    >
+                      <Plus className="w-4 h-4" />
+                    </Button>
+                  </div>
+                )}
+              </div>
             </div>
           </section>
 
-          {/* Three groups, side by side */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {/* Three groups, side by side. On the wall they fill the space left
+              under the meeting banner and each column scrolls inside itself, so
+              the plan is always on screen and never pushes the tiles off. */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:flex-1 md:min-h-0 md:grid-rows-1">
             {GROUPS.map((g) => {
               const gb = blocks
                 .filter((b) => b.group === g.key && b.weekday === day.n)
@@ -598,23 +788,23 @@ const PracticeBoard = () => {
               return (
                 <section
                   key={g.key}
-                  className="rounded-2xl border border-white/10 bg-white/[0.03] overflow-hidden flex flex-col"
+                  className="rounded-2xl border border-white/10 bg-white/[0.03] overflow-hidden flex flex-col md:min-h-0"
                 >
                   <div
-                    className="px-5 py-3 border-b"
+                    className="px-5 py-2.5 border-b shrink-0"
                     style={{ borderColor: `${g.accent}44`, background: `${g.accent}18` }}
                   >
                     <h2
-                      className="text-xl md:text-2xl font-black uppercase tracking-wide"
+                      className="text-base md:text-lg font-black uppercase tracking-wide leading-tight"
                       style={{ color: g.accent }}
                     >
                       {g.label}
                     </h2>
-                    <p className="text-[11px] md:text-xs text-white/40 mt-0.5">
+                    <p className="text-[10px] md:text-[11px] text-white/40 mt-0.5">
                       {g.blurb}
                     </p>
                   </div>
-                  <div className="p-5 space-y-5 flex-1">
+                  <div className="p-4 space-y-4 flex-1 md:overflow-y-auto">
                     {gb.length === 0 && !editing ? (
                       <p className="text-white/25 italic">Nothing scheduled</p>
                     ) : (
@@ -653,7 +843,7 @@ const PracticeBoard = () => {
                               className="w-full rounded-lg bg-black/60 border border-white/15 px-3 py-2 text-lg text-white outline-none focus:border-white/40"
                             />
                           ) : b.detail?.trim() ? (
-                            <p className="text-lg md:text-xl leading-snug text-white whitespace-pre-line">
+                            <p className="text-base md:text-lg leading-snug text-white whitespace-pre-line">
                               {b.detail}
                             </p>
                           ) : (
@@ -699,140 +889,35 @@ const PracticeBoard = () => {
                       is the one thing every group does together. */}
                   {sp && (
                     <div
-                      className="border-t px-5 py-3.5"
+                      className="border-t px-4 py-2 shrink-0"
                       style={{
                         borderColor: `${spiritualAccent(sp.label)}55`,
                         background: `${spiritualAccent(sp.label)}14`,
                       }}
                     >
                       <p
-                        className="text-[10px] md:text-[11px] font-bold uppercase tracking-[0.2em] opacity-70"
+                        className="text-[9px] md:text-[10px] font-bold uppercase tracking-[0.2em] opacity-70"
                         style={{ color: spiritualAccent(sp.label) }}
                       >
                         Everybody · together
                       </p>
                       <p
-                        className="mt-1 text-lg md:text-xl font-bold leading-tight"
+                        className="text-sm md:text-base font-bold leading-tight"
                         style={{ color: spiritualAccent(sp.label) }}
                       >
                         {sp.label}
+                        {sp.leader && (
+                          <span className="ml-2 text-[11px] md:text-xs font-medium opacity-70">
+                            with {sp.leader}
+                          </span>
+                        )}
                       </p>
-                      {sp.leader && (
-                        <p
-                          className="text-sm md:text-base font-medium opacity-75"
-                          style={{ color: spiritualAccent(sp.label) }}
-                        >
-                          with {sp.leader}
-                        </p>
-                      )}
                     </div>
                   )}
                 </section>
               );
             })}
           </div>
-
-          {/* Special Reminders — announcements that stay up all night.
-              Deliberately not the meeting agenda: "Things to Discuss" is what
-              gets said in those five minutes, this is what the room should
-              keep seeing afterwards. Amber, because it is the one thing on the
-              board asking to be noticed. */}
-          <section
-            className="rounded-2xl border p-4 md:p-5"
-            style={{
-              borderColor: `${TOGETHER_GRAY}44`,
-              background: `${TOGETHER_GRAY}0d`,
-            }}
-          >
-              <div className="flex items-center gap-2 mb-2.5">
-                <Megaphone className="w-4 h-4" style={{ color: TOGETHER_GRAY }} />
-                <p
-                  className="text-[10px] md:text-[11px] font-bold uppercase tracking-[0.2em]"
-                  style={{ color: TOGETHER_GRAY }}
-                >
-                  Special Reminders
-                </p>
-              </div>
-
-              {standingToday.length === 0 && weekReminders.length === 0 ? (
-                <p className="text-white/25 italic text-sm">
-                  Nothing special tonight.
-                </p>
-              ) : (
-                <ul className="space-y-1.5">
-                  {standingToday.map((r) => (
-                    <li key={`std-${r}`} className="flex items-start gap-2.5">
-                      <span
-                        className="w-1.5 h-1.5 rounded-full mt-2 shrink-0"
-                        style={{ backgroundColor: TOGETHER_GRAY }}
-                      />
-                      <span className="flex-1 text-base md:text-lg leading-snug text-white">
-                        {r}
-                      </span>
-                      {editing && (
-                        <span className="text-[10px] uppercase tracking-wider text-white/25 mt-1.5 shrink-0">
-                          every week
-                        </span>
-                      )}
-                    </li>
-                  ))}
-                  {weekReminders.map((r, i) => (
-                    <li key={i} className="flex items-start gap-2.5 group/rm">
-                      <span
-                        className="w-1.5 h-1.5 rounded-full mt-2 shrink-0"
-                        style={{ backgroundColor: TOGETHER_GRAY }}
-                      />
-                      <span className="flex-1 text-base md:text-lg leading-snug text-white">
-                        {r}
-                      </span>
-                      {editing && (
-                        <button
-                          type="button"
-                          onClick={() =>
-                            saveReminders.mutate(
-                              weekReminders.filter((_, x) => x !== i)
-                            )
-                          }
-                          className="text-white/25 hover:text-red-400 shrink-0 mt-1"
-                          aria-label="Remove this reminder"
-                        >
-                          <X className="w-4 h-4" />
-                        </button>
-                      )}
-                    </li>
-                  ))}
-                </ul>
-              )}
-
-              {editing && (
-                <div className="mt-3 flex gap-2">
-                  <input
-                    value={reminderDraft}
-                    onChange={(e) => setReminderDraft(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter" && reminderDraft.trim()) {
-                        saveReminders.mutate([...weekReminders, reminderDraft.trim()]);
-                        setReminderDraft("");
-                      }
-                    }}
-                    placeholder="Event Tomorrow — Must Set Up"
-                    className="flex-1 rounded-lg bg-black/60 border border-white/15 px-3 py-2 text-base text-white outline-none focus:border-white/40"
-                  />
-                  <Button
-                    onClick={() => {
-                      if (!reminderDraft.trim()) return;
-                      saveReminders.mutate([...weekReminders, reminderDraft.trim()]);
-                      setReminderDraft("");
-                    }}
-                    disabled={!reminderDraft.trim()}
-                    className="font-bold text-black"
-                    style={{ backgroundColor: TOGETHER_GRAY }}
-                  >
-                    <Plus className="w-4 h-4 mr-1" /> Add
-                  </Button>
-                </div>
-              )}
-          </section>
 
         </main>
       )}

@@ -24,6 +24,7 @@ import {
   X, Sparkles, CalendarDays, Trash2, Pencil, Check, RefreshCw,
 } from "lucide-react";
 import { toast } from "sonner";
+import VerseOfTheWeekAdmin from "@/components/verse/VerseOfTheWeekAdmin";
 import {
   NLA_RED, TOGETHER_GRAY, GROUPS, WEEKDAYS, QUICK_BLOCKS, spiritualAccent, daysFor, mondayOf, addDays, formatWeekRange,
   dateForWeekday, blockAccent, PracticeGroup, PracticeSettings, PracticeWeek, PracticeBlock,
@@ -402,6 +403,12 @@ const AdminPracticePlan = () => {
           >
             Template
           </TabsTrigger>
+          <TabsTrigger
+            value="verse"
+            className="px-5 h-9 text-sm font-semibold text-neutral-300 hover:text-white data-[state=active]:bg-white data-[state=active]:text-black"
+          >
+            Verse of the Week
+          </TabsTrigger>
         </TabsList>
 
         {/* ── The week ── */}
@@ -545,6 +552,11 @@ const AdminPracticePlan = () => {
             startTime={settings?.start_time ?? "17:15:00"}
             onSeason={(s) => setSeason.mutate(s)}
           />
+        </TabsContent>
+
+        {/* ── Verse of the Week ── */}
+        <TabsContent value="verse" className="mt-4">
+          <VerseOfTheWeekAdmin season={season} />
         </TabsContent>
       </Tabs>
     </div>
