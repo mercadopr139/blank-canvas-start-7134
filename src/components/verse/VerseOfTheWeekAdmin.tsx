@@ -25,17 +25,25 @@ const DAYS: { n: number; label: string }[] = [
   { n: 5, label: "Friday" },
 ];
 
+// A named person in the passage, with the one-liner that tells the room who
+// they were. Editable here like everything else the AI writes.
+interface VerseFigure {
+  name: string;
+  who: string;
+}
+
 interface VerseDay {
   weekday: number;
   reference: string;
   text: string;
   context: string;
+  figures: VerseFigure[];
   questions: string[];
   answers: string[];
 }
 
 const emptyDay = (weekday: number): VerseDay => ({
-  weekday, reference: "", text: "", context: "", questions: ["", ""], answers: ["", ""],
+  weekday, reference: "", text: "", context: "", figures: [], questions: ["", ""], answers: ["", ""],
 });
 
 const VerseOfTheWeekAdmin = ({ season = "in_season" }: { season?: SeasonMode }) => {
@@ -59,7 +67,7 @@ const VerseOfTheWeekAdmin = ({ season = "in_season" }: { season?: SeasonMode }) 
         .maybeSingle();
       const { data: dys } = await supabase
         .from("board_verse_days" as never)
-        .select("weekday, reference, text, context, questions, answers")
+        .select("weekday, reference, text, context, figures, questions, answers")
         .eq("week_start", weekStart)
         .order("weekday");
       return { wk: (wk as never) ?? null, dys: (dys as never) ?? [] };
@@ -70,7 +78,7 @@ const VerseOfTheWeekAdmin = ({ season = "in_season" }: { season?: SeasonMode }) 
     const wk = (loaded?.wk ?? null) as { theme?: string; is_published?: boolean } | null;
     const dys = (loaded?.dys ?? []) as Array<{
       weekday: number; reference: string; text: string; context: string | null;
-      questions: unknown; answers: unknown;
+      figures: unknown; questions: unknown; answers: unknown;
     }>;
     setTheme(wk?.theme ?? "");
     setPublished(!!wk?.is_published);
@@ -83,6 +91,7 @@ const VerseOfTheWeekAdmin = ({ season = "in_season" }: { season?: SeasonMode }) 
           reference: row.reference ?? "",
           text: row.text ?? "",
           context: row.context ?? "",
+          figures: Array.isArray(row.figures) ? (row.figures as VerseFigure[]) : [],
           questions: [...(Array.isArray(row.questions) ? (row.questions as string[]) : []), "", ""].slice(0, 2),
           answers: [...(Array.isArray(row.answers) ? (row.answers as string[]) : []), "", ""].slice(0, 2),
         };
@@ -108,7 +117,7 @@ const VerseOfTheWeekAdmin = ({ season = "in_season" }: { season?: SeasonMode }) 
       });
       if (error) throw error;
       const resDays = (data?.days ?? []) as Array<{
-        ref: string; esv_text: string; context: string; questions: string[]; answers: string[];
+        ref: string; esv_text: string; context: string; figures: VerseFigure[]; questions: string[]; answers: string[];
       }>;
       if (resDays.length === 0) {
         toast.error(data?.error ?? "Nothing came back. Try rewording the theme.");
@@ -123,6 +132,7 @@ const VerseOfTheWeekAdmin = ({ season = "in_season" }: { season?: SeasonMode }) 
             reference: r.ref ?? "",
             text: r.esv_text ?? "",
             context: r.context ?? "",
+            figures: Array.isArray(r.figures) ? r.figures : [],
             questions: [...(r.questions ?? []), "", ""].slice(0, 2),
             answers: [...(r.answers ?? []), "", ""].slice(0, 2),
           };
@@ -153,6 +163,17 @@ const VerseOfTheWeekAdmin = ({ season = "in_season" }: { season?: SeasonMode }) 
     setDirty(true);
   };
 
+  const patchFigure = (weekday: number, idx: number, field: "name" | "who", value: string) => {
+    setDays((prev) =>
+      prev.map((d) => {
+        if (d.weekday !== weekday) return d;
+        const figures = d.figures.map((f, i) => (i === idx ? { ...f, [field]: value } : f));
+        return { ...d, figures };
+      })
+    );
+    setDirty(true);
+  };
+
   const save = async () => {
     if (!hasContent) {
       toast.error("Generate the week before saving.");
@@ -175,6 +196,9 @@ const VerseOfTheWeekAdmin = ({ season = "in_season" }: { season?: SeasonMode }) 
           reference: d.reference.trim(),
           text: d.text.trim(),
           context: d.context.trim(),
+          figures: d.figures
+            .map((f) => ({ name: f.name.trim(), who: f.who.trim() }))
+            .filter((f) => f.name && f.who),
           questions: d.questions.map((q) => q.trim()).filter(Boolean),
           answers: d.answers.map((a) => a.trim()).filter(Boolean),
         }));
@@ -297,6 +321,31 @@ const VerseOfTheWeekAdmin = ({ season = "in_season" }: { season?: SeasonMode }) 
                       rows={3}
                       className="mt-1 bg-neutral-800 border-neutral-700 text-white text-sm"
                     />
+                    {d.figures.length > 0 && (
+                      <div className="mt-3">
+                        <label className="text-[10px] uppercase tracking-wide text-neutral-500 font-semibold">
+                          Who they are (shown on the board)
+                        </label>
+                        <div className="mt-1 space-y-1.5">
+                          {d.figures.map((f, i) => (
+                            <div key={i} className="flex gap-1.5">
+                              <Input
+                                value={f.name}
+                                onChange={(e) => patchFigure(d.weekday, i, "name", e.target.value)}
+                                placeholder="Name"
+                                className="h-8 w-[120px] shrink-0 bg-neutral-800 border-neutral-700 text-white text-sm font-semibold"
+                              />
+                              <Input
+                                value={f.who}
+                                onChange={(e) => patchFigure(d.weekday, i, "who", e.target.value)}
+                                placeholder="One sentence on who they were"
+                                className="h-8 flex-1 bg-neutral-800 border-neutral-700 text-white text-sm"
+                              />
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
                   </div>
                   <div className="space-y-2">
                     {[0, 1].map((i) => (

@@ -21,7 +21,7 @@ import {
   Pencil, Check, Trash2, Plus, Dumbbell, Sparkles, Maximize, Minimize,
 } from "lucide-react";
 import DailyDutiesBoard from "@/components/duties/DailyDutiesBoard";
-import VerseDiscussion, { DiscussionDay } from "@/components/verse/VerseDiscussion";
+import VerseDiscussion, { DiscussionDay, DiscussionFigure } from "@/components/verse/VerseDiscussion";
 import {
   NLA_RED, TOGETHER_GRAY, GROUPS, QUICK_BLOCKS, PracticeGroup, blockAccent, spiritualAccent,
   daysFor, mondayOf, dateForWeekday, todayWeekday, addDays, formatWeekRange,
@@ -251,17 +251,17 @@ const PracticeBoard = () => {
       if (!week?.is_published) return { published: false, day: null as DiscussionDay | null };
       const { data: dayRow } = await supabase
         .from("board_verse_days" as never)
-        .select("reference, text, context, questions, answers")
+        .select("reference, text, context, figures, questions, answers")
         .eq("week_start", weekStart)
         .eq("weekday", weekday)
         .maybeSingle();
       const d = dayRow as unknown as
-        | { reference: string; text: string; context: string | null; questions: string[]; answers: string[] }
+        | { reference: string; text: string; context: string | null; figures: DiscussionFigure[]; questions: string[]; answers: string[] }
         | null;
       return {
         published: true,
         day: d
-          ? ({ reference: d.reference, text: d.text, context: d.context, questions: d.questions ?? [], answers: d.answers ?? [] } as DiscussionDay)
+          ? ({ reference: d.reference, text: d.text, context: d.context, figures: d.figures ?? [], questions: d.questions ?? [], answers: d.answers ?? [] } as DiscussionDay)
           : null,
       };
     },

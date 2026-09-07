@@ -71,6 +71,13 @@ const SYSTEM =
   "each other and the mentor — not yes/no, not a quiz. The first gets at what the verse means; the second at how it " +
   "hits their own life this week. Specific to the passage and the theme, and quick — this is a five-minute meeting.\n\n" +
 
+  "WHO IS IN THE PASSAGE: name every real person the verse or the questions refer to — David, Paul, Peter, " +
+  "Gideon, Ruth — and give ONE sentence saying who they were. Assume the room has never heard of them. Plain " +
+  "words, no dates, no genealogy: what they did and what happened to them, told the way you would tell a " +
+  "12-year-old. If the passage names nobody — a proverb, a psalm with no named figure — return an empty list; " +
+  "never pad it. God, Jesus and the Holy Spirit do NOT go in this list, and neither does a group such as " +
+  "'the Israelites'. Only named people, and never more than three.\n\n" +
+
   "ANSWERS: exactly TWO per day, pairing one-to-one with the questions in the same order — answer 1 is for " +
   "question 1. This is the mentor's private guidance: a solid, biblically grounded model answer the mentor can read " +
   "or paraphrase if the room goes quiet or heads somewhere off. Two to four sentences. Anchor them in the same " +
@@ -80,7 +87,7 @@ const SYSTEM =
   "OUTPUT: valid JSON only. No prose before or after, no markdown fences.\n" +
   "{\n" +
   '  "days": [\n' +
-  '    { "ref": "Psalm 139:13-16", "context": "2-3 short sentences on what this passage says and how it speaks to the theme.", "questions": ["two open-ended discussion questions"], "answers": ["a model answer for each question, same order"] }\n' +
+  '    { "ref": "Psalm 139:13-16", "context": "2-3 short sentences on what this passage says and how it speaks to the theme.", "figures": [{ "name": "David", "who": "one sentence on who this person was" }], "questions": ["two open-ended discussion questions"], "answers": ["a model answer for each question, same order"] }\n' +
   "  ]\n" +
   "}\n" +
   "Return EXACTLY five days, in Monday-to-Friday order.\n\n" +
@@ -126,6 +133,19 @@ const fetchEsv = async (ref: string, key: string): Promise<string | null> => {
   } catch {
     return null;
   }
+};
+
+// The named people, kept to three and to one clean sentence each. Anything
+// missing a name or a description is dropped rather than shown half-blank.
+const figureList = (v: unknown): Array<{ name: string; who: string }> => {
+  if (!Array.isArray(v)) return [];
+  return v
+    .map((f) => ({
+      name: String((f as { name?: unknown })?.name ?? "").trim(),
+      who: String((f as { who?: unknown })?.who ?? "").trim(),
+    }))
+    .filter((f) => f.name && f.who)
+    .slice(0, 3);
 };
 
 const strArray = (v: unknown, n: number): string[] => {
@@ -174,7 +194,7 @@ Deno.serve(async (req: Request) => {
     const textBlock = response.content.find((b: { type: string }) => b.type === "text");
     const parsed = parseJson((textBlock as { text?: string })?.text ?? "");
 
-    const rawDays: Array<{ ref?: string; context?: string; questions?: unknown; answers?: unknown }> =
+    const rawDays: Array<{ ref?: string; context?: string; figures?: unknown; questions?: unknown; answers?: unknown }> =
       Array.isArray(parsed?.days) ? parsed.days : [];
 
     // Look the verses up in parallel; drop anything the ESV API can't resolve
@@ -190,6 +210,7 @@ Deno.serve(async (req: Request) => {
           ref,
           esv_text,
           context: String(d?.context ?? "").trim(),
+          figures: figureList(d?.figures),
           questions: strArray(d?.questions, 2),
           answers: strArray(d?.answers, 2),
         };
