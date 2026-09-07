@@ -1005,9 +1005,29 @@ const PracticeBoard = () => {
                               className="w-full rounded-lg bg-black/60 border border-white/15 px-3 py-2 text-lg text-white outline-none focus:border-white/40"
                             />
                           ) : b.detail?.trim() ? (
-                            <p className="text-[1em] leading-snug text-white whitespace-pre-line">
-                              {b.detail}
-                            </p>
+                            /* One bullet per line. A coach types a drill per
+                               line, and from the floor a list of bullets reads
+                               as separate jobs where a wrapped paragraph reads
+                               as one. Sized in em so the fit pass scales it. */
+                            <ul className="text-[1em] leading-snug text-white space-y-0.5">
+                              {b.detail
+                                .split("\n")
+                                .map((line) => line.trim())
+                                .filter(Boolean)
+                                .map((line, li) => (
+                                  <li key={li} className="flex items-start gap-[0.5em]">
+                                    <span
+                                      className="shrink-0 rounded-full mt-[0.55em]"
+                                      style={{
+                                        width: "0.3em",
+                                        height: "0.3em",
+                                        backgroundColor: g.accent,
+                                      }}
+                                    />
+                                    <span className="flex-1">{line}</span>
+                                  </li>
+                                ))}
+                            </ul>
                           ) : (
                             <p className="text-white/25 italic text-[0.85em]">
                               Coach&apos;s call
