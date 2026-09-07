@@ -15,7 +15,7 @@ import {
   Star, Bus, UserCheck, Radio, PhoneOff, AlertTriangle, FileText,
   UtensilsCrossed, HandCoins, Database, MessageSquare, Mail, Receipt,
   ScrollText, ClipboardCheck, LayoutDashboard, Archive, Gauge, MapPin, Sparkles, Dumbbell, Smile, Scale,
-  BookOpenCheck, HeartHandshake, Monitor,
+  BookOpenCheck, HeartHandshake, Monitor, Ticket,
 } from "lucide-react";
 
 export interface PillarTile {
@@ -190,6 +190,16 @@ export const SALES_MARKETING_TILES: PillarTile[] = [
     icon: Mail,
     href: "/admin/sales-marketing/bulk-outreach",
     permKey: "sales_marketing_bulk_outreach",
+  },
+  {
+    title: "Raffle",
+    description: "Youth ticket sales & fundraising campaigns",
+    icon: Ticket,
+    href: "/admin/sales-marketing/raffle",
+    permKey: "sales_marketing_raffle",
+    children: [
+      { title: "Raffle Intelligence Board", href: "/admin/sales-marketing/raffle-intelligence", icon: BarChart3 },
+    ],
   },
   {
     title: "Invoice / Quote Generator",

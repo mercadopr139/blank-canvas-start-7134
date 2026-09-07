@@ -1,6 +1,6 @@
 import { useMemo } from "react";
 import { useNavigate } from "react-router-dom";
-import { Plus } from "lucide-react";
+import { Plus, Ticket } from "lucide-react";
 import AdminSectionLayout, { SectionCard } from "@/components/admin/AdminSectionLayout";
 import { Button } from "@/components/ui/button";
 import { useStaffPermissions } from "@/hooks/useStaffPermissions";
@@ -28,15 +28,27 @@ const AdminSalesMarketing = () => {
     [permLoading, hasPermission]
   );
 
-  const addRevenueAction = (
-    <Button
-      size="sm"
-      className="w-full bg-green-600 hover:bg-green-500 text-white text-sm font-medium"
-      onClick={() => navigate("/admin/sales-marketing/revenue?new=1")}
-    >
-      <Plus className="w-4 h-4 mr-1.5" />
-      Add Revenue
-    </Button>
+  // Quick launches, the way Operations stacks its check-in buttons: the two
+  // things somebody opens this section to do standing up.
+  const sidebarActions = (
+    <div className="flex flex-col gap-2 w-full">
+      <Button
+        size="sm"
+        className="w-full bg-green-600 hover:bg-green-500 text-white text-sm font-medium"
+        onClick={() => navigate("/admin/sales-marketing/revenue?new=1")}
+      >
+        <Plus className="w-4 h-4 mr-1.5" />
+        Add Revenue
+      </Button>
+      <Button
+        size="sm"
+        className="w-full bg-[#bf0f3e] hover:bg-[#bf0f3e]/80 text-white text-sm font-medium"
+        onClick={() => navigate("/admin/sales-marketing/raffle")}
+      >
+        <Ticket className="w-4 h-4 mr-1.5" />
+        Raffle Check-In
+      </Button>
+    </div>
   );
 
   return (
@@ -49,7 +61,7 @@ const AdminSalesMarketing = () => {
       cards={sidebarCards}
       backHref="/admin/dashboard"
       storageKey="nla_sm_custom_cards"
-      sidebarAction={addRevenueAction}
+      sidebarAction={sidebarActions}
     />
   );
 };
