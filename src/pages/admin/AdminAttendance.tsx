@@ -300,16 +300,15 @@ const AdminAttendance = () => {
   // link, so "All" gives complete, unduplicated numbers through the Sept
   // re-registration transition (a single-year view can't show kids who checked
   // in under last year's registration).
-  // Open on "Auto — follows the month". A kid who re-registered has a row per
-  // program year, so "All years" counted them once per year — inflating the
-  // calendar tiles, demographic cards and Bald Eagle totals with cross-year
-  // duplicates. But a FIXED "year in session" default had the opposite failure:
-  // on Sept 1 it flipped to the new cohort and every prior month's tiles went
-  // blank (their check-ins live on last year's registrations). Auto resolves
-  // the cohort from the month on screen — May → 2025-26, July/Aug → 2025-26
-  // (off-season, year not over), Sept → 2026-27 — so each month counts exactly
-  // the one cohort that owns it. Picking a specific year still overrides it.
-  const [programYearFilter, setProgramYearFilter] = useState<string>("__auto__");
+  // There is deliberately NO program-year selector on this page. The month on
+  // screen decides the year (Sept 1 rule): May → 2025-26, July/Aug → 2025-26
+  // (off-season, year not over), Sept → 2026-27. Two earlier designs failed:
+  // "All years" counted a re-registered kid once per year (inflated tiles and
+  // demographic cards), and a fixed "year in session" default flipped on
+  // Sept 1 and blanked every prior month (its check-ins live on last year's
+  // registrations). A manual override would just let the page drift out of
+  // sync with the month again — so the year is shown beside the month instead,
+  // and last year's averages sit on the Season/Off-Season tiles for comparison.
   const { data: allRegistrations = [] } = useQuery({
     queryKey: ["registrations-attendance-full"],
     queryFn: () =>
@@ -321,24 +320,6 @@ const AdminAttendance = () => {
           .range(from, to)
       ),
   });
-  // Distinct program years across all registrations, for the dropdown.
-  const availableProgramYears = useMemo(() => {
-    const years = new Set<string>();
-    allRegistrations.forEach((r) => { if (r.program_year) years.add(r.program_year); });
-    return [...years].sort().reverse(); // newest first
-  }, [allRegistrations]);
-  // Never leave the filter pointed at a year with no cohort (which shows a blank
-  // dropdown + all-zero tiles). If the default/selected year has no tagged
-  // registrations, fall back to the in-session attendance year, then the
-  // newest year that actually has data.
-  useEffect(() => {
-    if (availableProgramYears.length === 0) return;
-    if (programYearFilter === "__auto__" || programYearFilter === "__all__" || availableProgramYears.includes(programYearFilter)) return;
-    const attendanceYear = getCurrentAttendanceYear();
-    setProgramYearFilter(
-      availableProgramYears.includes(attendanceYear) ? attendanceYear : availableProgramYears[0]
-    );
-  }, [availableProgramYears, programYearFilter]);
   // Who a manual check-in may be recorded against. A check-in is for TODAY, so
   // last year's registration is never a valid target — a kid who re-registered
   // has a row per program year, and picking the old one files attendance
@@ -353,15 +334,14 @@ const AdminAttendance = () => {
     return allRegistrations.filter((r) => r.program_year === currentYear);
   }, [allRegistrations]);
 
-  // The program year actually in force for the page. "Auto" derives it from
-  // the calendar month being viewed via the Sept 1 rule in programYear.ts.
+  // The program year in force for the page — the one that owns the calendar
+  // month being viewed (Sept 1 rule in programYear.ts).
   const effectiveProgramYear = useMemo(
-    () => (programYearFilter === "__auto__" ? getCurrentAttendanceYear(calendarMonth) : programYearFilter),
-    [programYearFilter, calendarMonth]
+    () => getCurrentAttendanceYear(calendarMonth),
+    [calendarMonth]
   );
 
   const registrations = useMemo(() => {
-    if (effectiveProgramYear === "__all__") return allRegistrations;
     // Defensive: if the Phase B migration hasn't been applied yet, no row
     // will have program_year set. Treat the filter as a no-op so the page
     // (calendar tile counts, demographic cards, etc.) doesn't go blank.
@@ -515,11 +495,55 @@ const AdminAttendance = () => {
   // beside a Month Avg of 32. Bounded Sept 1 → Aug 31 so a past year stays a
   // past year. Falls back to the in-session year when the dropdown is on
   // "All years" (no single year to describe).
-  const ytdYear = /^\d{4}-\d{4}$/.test(effectiveProgramYear)
-    ? effectiveProgramYear
-    : getCurrentAttendanceYear(calendarMonth);
+  const ytdYear = effectiveProgramYear;
   const YTD_START = `${ytdYear.slice(0, 4)}-09-01`;
   const YTD_END = `${ytdYear.slice(5, 9)}-08-31`;
+
+  // Last year's window, for the "last year" comparison on the Season and
+  // Off-Season tiles. Same bounds logic, one program year earlier. Read-only;
+  // nothing here feeds the calendar or the cohort.
+  const prevYtdYear = `${parseInt(ytdYear.slice(0, 4), 10) - 1}-${parseInt(ytdYear.slice(0, 4), 10)}`;
+  const PREV_START = `${prevYtdYear.slice(0, 4)}-09-01`;
+  const PREV_END = `${prevYtdYear.slice(5, 9)}-08-31`;
+
+  const { data: prevYtdAttendance = [] } = useQuery({
+    queryKey: ["attendance-records-prev-year", PREV_START],
+    queryFn: async () => {
+      const pageSize = 1000;
+      let from = 0;
+      const all: AttendanceRecord[] = [];
+      while (true) {
+        const { data, error } = await supabase
+          .from("attendance_records")
+          .select("id, registration_id, check_in_date, check_in_at, program_source, is_manual")
+          .eq("program_source", "NLA")
+          .gte("check_in_date", PREV_START)
+          .lte("check_in_date", PREV_END)
+          .order("check_in_date", { ascending: true })
+          .range(from, from + pageSize - 1);
+        if (error) throw error;
+        const rows = (data || []) as AttendanceRecord[];
+        all.push(...rows);
+        if (rows.length < pageSize) break;
+        from += pageSize;
+      }
+      return all;
+    },
+  });
+
+  const { data: prevYtdPracticeDays = [] } = useQuery({
+    queryKey: ["practice-days-prev-year", PREV_START],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("practice_days")
+        .select("id, date, is_practice_day")
+        .gte("date", PREV_START)
+        .lte("date", PREV_END)
+        .limit(10000);
+      if (error) throw error;
+      return (data || []) as PracticeDay[];
+    },
+  });
 
   const { data: ytdAttendance = [] } = useQuery({
     queryKey: ["attendance-records-ytd", YTD_START],
@@ -1170,6 +1194,29 @@ const AdminAttendance = () => {
   const ytdPracticeAttendance = useMemo(
     () => ytdAttendance.filter((a) => isPracticeDay(a.check_in_date, ytdPracticeDayMap)),
     [ytdAttendance, ytdPracticeDayMap, isPracticeDay]
+  );
+
+  // Same two steps for last year, feeding only the "last year" comparison.
+  const prevYtdPracticeDayMap = useMemo(() => {
+    const m: Record<string, boolean> = {};
+    prevYtdPracticeDays.forEach((p) => { m[p.date] = p.is_practice_day; });
+    return m;
+  }, [prevYtdPracticeDays]);
+  const prevYtdPracticeAttendance = useMemo(
+    () => prevYtdAttendance.filter((a) => isPracticeDay(a.check_in_date, prevYtdPracticeDayMap)),
+    [prevYtdAttendance, prevYtdPracticeDayMap, isPracticeDay]
+  );
+  const avgPerDay = (recs: AttendanceRecord[]): number | null => {
+    const days = new Set(recs.map((a) => a.check_in_date));
+    return days.size > 0 ? Math.round(recs.length / days.size) : null;
+  };
+  const prevSeasonAvg = useMemo<number | null>(
+    () => avgPerDay(prevYtdPracticeAttendance.filter((a) => { const mm = a.check_in_date.slice(5, 7); return mm !== "07" && mm !== "08"; })),
+    [prevYtdPracticeAttendance]
+  );
+  const prevOffSeasonAvg = useMemo<number | null>(
+    () => avgPerDay(prevYtdPracticeAttendance.filter((a) => { const mm = a.check_in_date.slice(5, 7); return mm === "07" || mm === "08"; })),
+    [prevYtdPracticeAttendance]
   );
 
   /* ───── STAT BOX: Year Avg → avg per green-practice day this program year ───── */
@@ -1976,29 +2023,6 @@ const AdminAttendance = () => {
           <h2 className="text-xl font-bold text-white flex items-center gap-2">
             <Activity className="w-5 h-5 text-red-400" /> Attendance Intelligence
           </h2>
-          {/* Program-year filter — scopes the registrations underpinning the
-              calendar tiles and every demographic card on this page (Race,
-              Single Parent, Bald Eagles, etc.). Defaults to Auto, which
-              follows the month on screen (Sept 1 rule in programYear.ts). */}
-          {availableProgramYears.length > 0 && (
-            <div className="flex items-center gap-2">
-              <span className="text-[10px] uppercase tracking-wider text-white/40 font-semibold">Program Year</span>
-              <Select value={programYearFilter} onValueChange={setProgramYearFilter}>
-                <SelectTrigger className="h-8 w-44 bg-white/5 border-white/15 text-white text-xs">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="__auto__">
-                    Auto — follows the month ({shortProgramYear(effectiveProgramYear)})
-                  </SelectItem>
-                  {availableProgramYears.map((y) => (
-                    <SelectItem key={y} value={y}>{shortProgramYear(y)}{y === getCurrentAttendanceYear() ? " (current)" : ""}</SelectItem>
-                  ))}
-                  <SelectItem value="__all__">All years</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          )}
         </div>
 
         {/* Key Insight Cards */}
@@ -2049,6 +2073,7 @@ const AdminAttendance = () => {
               <p className="text-[10px] uppercase tracking-wider text-green-400/80">Season Avg</p>
               <p className="text-3xl font-bold mt-1 text-green-300">{seasonAvg ?? "—"}</p>
               <p className="text-[10px] text-white/30">Sept–Jun {shortProgramYear(ytdYear)} · per practice day</p>
+              <p className="text-[10px] text-white/45 mt-1">last year ({shortProgramYear(prevYtdYear)}): <span className="font-semibold text-white/70">{prevSeasonAvg ?? "—"}</span></p>
             </CardContent>
           </Card>
           <Card className="bg-amber-500/[0.06] border-amber-500/25 text-white">
@@ -2056,6 +2081,7 @@ const AdminAttendance = () => {
               <p className="text-[10px] uppercase tracking-wider text-amber-400/80">Off-Season Avg</p>
               <p className="text-3xl font-bold mt-1 text-amber-300">{offSeasonAvg ?? "—"}</p>
               <p className="text-[10px] text-white/30">Jul–Aug {shortProgramYear(ytdYear)} · per practice day</p>
+              <p className="text-[10px] text-white/45 mt-1">last year ({shortProgramYear(prevYtdYear)}): <span className="font-semibold text-white/70">{prevOffSeasonAvg ?? "—"}</span></p>
             </CardContent>
           </Card>
         </div>
@@ -2100,11 +2126,19 @@ const AdminAttendance = () => {
               <Button variant="ghost" size="icon" className="text-white/60 hover:text-white hover:bg-white/10" onClick={() => setCalendarMonth((m) => subMonths(m, 1))}>
                 <ChevronLeft className="w-5 h-5" />
               </Button>
-              <div className="flex items-center gap-2">
-                <h3 className="text-lg font-semibold tracking-wide">{format(calendarMonth, "MMMM yyyy")}</h3>
-                {viewedMonthIsOffSeason && (
-                  <Badge className="bg-amber-500/15 text-amber-300 border-amber-500/30 text-[10px]">Off-Season</Badge>
-                )}
+              <div className="flex flex-col items-center gap-0.5">
+                <div className="flex items-center gap-2">
+                  <h3 className="text-lg font-semibold tracking-wide">{format(calendarMonth, "MMMM yyyy")}</h3>
+                  {viewedMonthIsOffSeason && (
+                    <Badge className="bg-amber-500/15 text-amber-300 border-amber-500/30 text-[10px]">Off-Season</Badge>
+                  )}
+                </div>
+                {/* Which cohort this month's numbers describe — decided by the
+                    month itself, so it can never drift out of sync. */}
+                <p className="text-[11px] text-white/45">
+                  Program year <span className="text-white/75 font-semibold">{shortProgramYear(effectiveProgramYear)}</span>
+                  {" · "}Sept {effectiveProgramYear.slice(0, 4)} – Aug {effectiveProgramYear.slice(5, 9)}
+                </p>
               </div>
               <Button variant="ghost" size="icon" className="text-white/60 hover:text-white hover:bg-white/10" onClick={() => setCalendarMonth((m) => addMonths(m, 1))}>
                 <ChevronRight className="w-5 h-5" />
