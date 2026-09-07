@@ -158,6 +158,21 @@ const PracticeBoard = () => {
     },
   });
 
+  // A one-off start time for this date — a holiday, an early finish. Absent
+  // almost always, in which case the standing 5:15 stands.
+  const { data: dayStart } = useQuery({
+    queryKey: ["board-day-start", dateForWeekday(weekStart, weekday)],
+    refetchInterval: 60_000,
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("practice_day_start_times" as never)
+        .select("start_time")
+        .eq("practice_date", dateForWeekday(weekStart, weekday))
+        .maybeSingle();
+      return (data as unknown as { start_time: string } | null) ?? null;
+    },
+  });
+
   // Announcements that stay up all night, distinct from the meeting agenda.
   const { data: reminderRows = [] } = useQuery({
     queryKey: ["board-reminders", week?.id],
@@ -306,6 +321,32 @@ const PracticeBoard = () => {
     onError: (e: Error) => toast.error(e.message || "Couldn't save that."),
   });
 
+  const saveDayStart = useMutation({
+    mutationFn: async (time: string | null) => {
+      const iso = dateForWeekday(weekStart, day.n);
+      if (!time) {
+        const { error } = await supabase
+          .from("practice_day_start_times" as never)
+          .delete()
+          .eq("practice_date", iso);
+        if (error) throw error;
+        return;
+      }
+      const { error } = await supabase
+        .from("practice_day_start_times" as never)
+        .upsert(
+          { practice_date: iso, start_time: time } as never,
+          { onConflict: "practice_date" } as never
+        );
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["board-day-start"] });
+      toast.success("Start time updated for today");
+    },
+    onError: (e) => toast.error(e.message || "Couldn't set that time."),
+  });
+
   const removeBlock = useMutation({
     mutationFn: async (id: string) => {
       const { error } = await supabase
@@ -321,12 +362,17 @@ const PracticeBoard = () => {
   const day = days.find((d) => d.n === weekday) ?? days[0];
   const dayDate = new Date(`${dateForWeekday(weekStart, day.n)}T12:00:00`);
   const points = meeting.find((m) => m.weekday === day.n)?.points ?? [];
-  const sp = spiritual.find((s) => s.weekday === day.n);
+  // A paused template row keeps its place in the template but must not
+  // reach the wall — Smile Lab is not running for a few weeks.
+  const sp = spiritual.find((s) => s.weekday === day.n && s.is_active !== false);
   const weekReminders = reminderRows.find((r) => r.weekday === day.n)?.items ?? [];
   const standingToday = standing
     .filter((r) => r.weekday === day.n)
     .map((r) => r.text);
-  const startTime = settings?.start_time ?? "17:15:00";
+  const defaultStart = settings?.start_time ?? "17:15:00";
+  // The day's own time wins where one is set; otherwise the standing default.
+  const startTime = dayStart?.start_time ?? defaultStart;
+  const startIsOverridden = !!dayStart?.start_time;
   const meetingLeader = settings?.meeting_leader ?? "";
 
   const move = (dir: -1 | 1) => {
@@ -443,6 +489,45 @@ const PracticeBoard = () => {
       <DailyDutiesBoard open={dutiesOpen} onClose={() => setDutiesOpen(false)} />
       <VerseDiscussion day={verseDiscussion} onClose={() => setVerseDiscussion(null)} />
 
+      {/* Practice starts at 5:15 — except on a holiday. Sits in Edit tonight
+          because that is where you are standing when you realise. It is set
+          against the DATE, so it can never leak into next week. */}
+      {editing && (
+        <div className="flex items-center justify-center gap-3 px-6 py-2.5 border-b border-white/10 bg-white/[0.03] flex-wrap">
+          <span className="text-[11px] uppercase tracking-[0.15em] text-white/40 font-semibold">
+            {day.long} starts at
+          </span>
+          {/* A native time input only opens its picker from the small clock
+              icon at the right edge, which nobody finds first time. showPicker()
+              makes the whole box the target. */}
+          <input
+            type="time"
+            value={startTime.slice(0, 5)}
+            onChange={(e) => e.target.value && saveDayStart.mutate(e.target.value)}
+            onClick={(e) => {
+              try {
+                (e.currentTarget as HTMLInputElement & { showPicker?: () => void })
+                  .showPicker?.();
+              } catch {
+                // Older browsers just use the icon — no worse than before.
+              }
+            }}
+            className="cursor-pointer rounded-lg bg-black border border-white/20 px-3 py-1.5 text-base font-bold text-white outline-none focus:border-white/50 hover:border-white/40"
+          />
+          {startIsOverridden ? (
+            <button
+              type="button"
+              onClick={() => saveDayStart.mutate(null)}
+              className="text-xs text-white/45 hover:text-white underline"
+            >
+              back to {formatStartTime(defaultStart)}
+            </button>
+          ) : (
+            <span className="text-xs text-white/30">the usual time</span>
+          )}
+        </div>
+      )}
+
       {/* Admin-only week preview — lets you prep on a Sunday and see next week
           on the board before Monday. The public/TV view never renders this, so
           the wall stays locked to the live week and keeps auto-rolling. */}
@@ -515,7 +600,9 @@ const PracticeBoard = () => {
           >
             {/* Verse of the Day is the flexible (widest) column — verses run
                 longer than the notes on either side of it. */}
-            <div className="grid grid-cols-1 md:grid-cols-[minmax(0,11rem)_minmax(0,13rem)_minmax(0,1fr)_minmax(0,13rem)] gap-3 md:gap-5">
+            {/* First column is wide enough for "Everybody · together" on one
+                line — at 11rem the nowrap ran under the divider. */}
+            <div className="grid grid-cols-1 md:grid-cols-[minmax(0,14rem)_minmax(0,13rem)_minmax(0,1fr)_minmax(0,13rem)] gap-3 md:gap-5">
               {/* Same shape as the spiritual band under the columns — eyebrow,
                   name, who leads it — because it is the other thing the whole
                   academy does together. */}
@@ -523,7 +610,7 @@ const PracticeBoard = () => {
                 <Users className="w-4 h-4 mt-0.5 shrink-0" style={{ color: TOGETHER_GRAY }} />
                 <div>
                   <p
-                    className="text-[10px] md:text-[11px] font-bold uppercase tracking-[0.2em] opacity-70"
+                    className="text-[10px] md:text-[11px] font-bold uppercase tracking-[0.2em] opacity-70 whitespace-nowrap"
                     style={{ color: TOGETHER_GRAY }}
                   >
                     Everybody · together
@@ -533,7 +620,9 @@ const PracticeBoard = () => {
                     style={{ color: TOGETHER_GRAY }}
                   >
                     Team Meeting
-                    <span className="ml-2 text-[11px] md:text-xs font-medium opacity-60">
+                    {/* nowrap so it never breaks into "5" and "min" when the
+                        column is narrow */}
+                    <span className="ml-2 text-[11px] md:text-xs font-medium opacity-60 whitespace-nowrap">
                       5 min
                     </span>
                   </h2>

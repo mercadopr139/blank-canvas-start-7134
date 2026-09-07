@@ -67,6 +67,14 @@ export const groupAccent = (g: PracticeGroup) =>
  */
 export const TOGETHER_GRAY = "#a1a1aa";
 
+/**
+ * "This differs from the template" — a week-only rename, or drift the sync can
+ * put back. Violet because every other colour here already means something:
+ * red / gold / light blue are the three groups, grey is everybody-together and
+ * teal is Smile Lab. Amber read as Non-Battle Team's gold and was confusing.
+ */
+export const OFF_TEMPLATE_VIOLET = "#a78bfa";
+
 /** Teal only for Smile Lab; the shared grey for everything else. */
 export const spiritualAccent = (label: string) =>
   /smile\s*lab/i.test(label) ? SPIRITUAL_TEAL : TOGETHER_GRAY;
@@ -182,12 +190,16 @@ export interface TemplateBlock {
   weekday: number;
   position: number;
   category: string;
+  /** False = paused: kept in the template but skipped when starting a week. */
+  is_active?: boolean;
 }
 
 export interface SpiritualDay {
   weekday: number;
   label: string;
   leader: string | null;
+  /** False = paused: kept in the template but hidden on the board. */
+  is_active?: boolean;
 }
 
 export interface PracticeWeek {
@@ -205,6 +217,11 @@ export interface PracticeBlock {
   position: number;
   /** Snapshotted from the template so a template change never rewrites history. */
   category: string;
+  /**
+   * True when this column was renamed for THIS WEEK only. Marks a deliberate
+   * one-off so the template sync leaves it alone instead of "correcting" it.
+   */
+  category_overridden?: boolean;
   detail: string | null;
 }
 
