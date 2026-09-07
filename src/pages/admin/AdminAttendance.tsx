@@ -1072,6 +1072,14 @@ const AdminAttendance = () => {
     return m;
   }, [registrations]);
 
+  // Every registration, any year — needed to put a name to a check-in that
+  // landed on a different program year's record (see undercountByDay).
+  const allRegMap = useMemo(() => {
+    const m: Record<string, Registration> = {};
+    allRegistrations.forEach((r) => (m[r.id] = r));
+    return m;
+  }, [allRegistrations]);
+
   // Map each registration to its cross-year identity (its link id, or itself).
   // Built from ALL registrations so a kid's identity resolves even when the
   // page is filtered to a single program year. Used to count kids ONCE.
@@ -1830,27 +1838,111 @@ const AdminAttendance = () => {
     return map;
   }, [filteredCalendarAttendance, identityById]);
 
-  // Transition undercount: at the start of a new program year, kids often
-  // check in on LAST year's registration before they re-register. Those
-  // check-ins are real, but they fall outside the viewed cohort, so the tile's
-  // number (current-year kids only) reads lower than who was actually here.
+  // Transition undercount: around the program-year boundary a check-in can land
+  // on a registration from a DIFFERENT year than the one that owns the month
+  // being viewed. Those check-ins are real, but they fall outside the viewed
+  // cohort, so the tile's number reads lower than who was actually here.
+  //
+  // It happens in BOTH directions, and which one depends on the month:
+  //   - September on: stragglers still check in on last year's registration
+  //     because they haven't re-registered yet.
+  //   - August (the re-registration window): kids who re-registered EARLY get
+  //     matched to next year's record, which August's cohort doesn't contain.
+  // So we read each stray registration's own program_year rather than assuming
+  // a direction — the tooltip was telling coaches the wrong story in August.
+  //
   // We DON'T change the count (the identity math is deliberately untouched) —
   // we just flag those days amber and surface the true check-in total, so a
   // coach can explain "6 shown, ~23 actually attended" to a donor on the spot.
   const undercountByDay = useMemo(() => {
-    const offCohort: Record<string, Set<string>> = {};
+    // Only meaningful on the unfiltered view. Under "Bald Eagles" or a single
+    // program, everyone outside that slice looks off-cohort, and the maths
+    // would quietly turn into "all youth" — the opposite of what the filter
+    // was asked for.
+    if (calendarFilter !== "all" || calendarProgramFilter !== "all") return {};
+
+    const yearById: Record<string, string | null> = {};
+    allRegistrations.forEach((r) => { yearById[r.id] = r.program_year; });
+
+    // Compared against the YEAR cohort, never the UI filter.
+    const yearRegIds = new Set(registrations.map((r) => r.id));
+
+    // The identities already counted in the tile, per day, so a youth who
+    // checked in on BOTH years' records the same day is not counted twice. The
+    // stray total has to be distinct YOUTH, not distinct registrations —
+    // anything else inflates a number that ends up in front of a funder.
+    const countedIdentities: Record<string, Set<string>> = {};
     calendarAttendance.forEach((a) => {
-      if (!calendarRegIds.has(a.registration_id)) {
-        (offCohort[a.check_in_date] ||= new Set()).add(a.registration_id);
+      if (yearRegIds.has(a.registration_id)) {
+        (countedIdentities[a.check_in_date] ||= new Set())
+          .add(identityById[a.registration_id] || a.registration_id);
       }
     });
-    const out: Record<string, { shown: number; missing: number; actual: number }> = {};
-    Object.entries(offCohort).forEach(([d, regs]) => {
+
+    // Stray check-ins, keyed by identity, holding the registration that carries
+    // the program year we'll name in the message.
+    const offCohort: Record<string, Map<string, string>> = {};
+    calendarAttendance.forEach((a) => {
+      if (yearRegIds.has(a.registration_id)) return;
+      const identity = identityById[a.registration_id] || a.registration_id;
+      if (countedIdentities[a.check_in_date]?.has(identity)) return;
+      const day = (offCohort[a.check_in_date] ||= new Map());
+      if (!day.has(identity)) day.set(identity, a.registration_id);
+    });
+
+    const out: Record<
+      string,
+      { shown: number; missing: number; actual: number; byYear: { year: string; count: number }[] }
+    > = {};
+    Object.entries(offCohort).forEach(([d, byIdentity]) => {
       const shown = dailyCounts[d] || 0;
-      out[d] = { shown, missing: regs.size, actual: shown + regs.size };
+      // Group the strays by the program year they actually belong to, biggest
+      // group first, so the message can name it instead of guessing.
+      const counts: Record<string, number> = {};
+      byIdentity.forEach((regId) => {
+        const y = yearById[regId] || "unknown";
+        counts[y] = (counts[y] || 0) + 1;
+      });
+      const byYear = Object.entries(counts)
+        .map(([year, count]) => ({ year, count }))
+        .sort((a, b) => b.count - a.count);
+      out[d] = {
+        shown,
+        missing: byIdentity.size,
+        actual: shown + byIdentity.size,
+        byYear,
+      };
     });
     return out;
-  }, [calendarAttendance, calendarRegIds, dailyCounts]);
+  }, [
+    allRegistrations,
+    registrations,
+    calendarAttendance,
+    calendarFilter,
+    calendarProgramFilter,
+    dailyCounts,
+    identityById,
+  ]);
+
+  // Plain-English tooltip for an amber day. Names the years involved, because
+  // "last year's registration" is only true on one side of the boundary.
+  const undercountMessage = useCallback(
+    (u: { shown: number; missing: number; actual: number; byYear: { year: string; count: number }[] }) => {
+      const parts = u.byYear.map(({ year, count }) =>
+        year === "unknown"
+          ? `${count} on a registration with no program year set`
+          : `${count} on their ${shortProgramYear(year)} registration`
+      );
+      const strays =
+        parts.length === 1 ? parts[0] : `${parts.slice(0, -1).join(", ")} and ${parts[parts.length - 1]}`;
+      return (
+        `${u.actual} youth checked in — ${u.shown} on ${shortProgramYear(effectiveProgramYear)} ` +
+        `registrations, plus ${strays}. Only the ${u.shown} count toward ` +
+        `${shortProgramYear(effectiveProgramYear)} totals.`
+      );
+    },
+    [effectiveProgramYear]
+  );
 
   const hasUndercountDays = useMemo(() => Object.keys(undercountByDay).length > 0, [undercountByDay]);
 
@@ -1866,14 +1958,21 @@ const AdminAttendance = () => {
     const evtSource = isEventDay(selectedDay)
       ? eventAttendanceMonth.filter((a) => a.check_in_date === selectedDay)
       : [];
-    const nlaSource = filteredCalendarAttendance.filter((a) => a.check_in_date === selectedDay);
+    // On an amber day the tile now shows everyone who checked in, including the
+    // youth sitting on another year's registration — so the list behind it has
+    // to show them too, or the number won't reconcile with the names. Only when
+    // the view is unfiltered; a filtered view means the tile is a subset by
+    // design and the stray youth don't belong in it.
+    const nlaSource = undercountByDay[selectedDay]
+      ? calendarAttendance.filter((a) => a.check_in_date === selectedDay)
+      : filteredCalendarAttendance.filter((a) => a.check_in_date === selectedDay);
     const all = [...excSource, ...evtSource, ...nlaSource]
-      .map((a) => ({ ...a, reg: regMap[a.registration_id] }))
+      .map((a) => ({ ...a, reg: regMap[a.registration_id] || allRegMap[a.registration_id] }))
       .filter((a) => a.reg);
     if (!daySearch.trim()) return all;
     const q = daySearch.toLowerCase();
     return all.filter((a) => `${a.reg.child_first_name} ${a.reg.child_last_name}`.toLowerCase().includes(q));
-  }, [selectedDay, filteredCalendarAttendance, excursionAttendanceMonth, eventAttendanceMonth, isExcursionDay, isEventDay, regMap, daySearch]);
+  }, [selectedDay, filteredCalendarAttendance, calendarAttendance, undercountByDay, excursionAttendanceMonth, eventAttendanceMonth, isExcursionDay, isEventDay, regMap, allRegMap, daySearch]);
 
   const calendarDays = useMemo(() => {
     const monthStart = startOfMonth(calendarMonth);
@@ -2118,7 +2217,7 @@ const AdminAttendance = () => {
               <div className="mb-4 flex items-start gap-2 rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2.5 text-sm text-amber-200">
                 <span className="text-base leading-none mt-0.5">⚠️</span>
                 <span>
-                  <strong>Amber days:</strong> some youth checked in on last year&apos;s registration before re-registering for the new program year, so the number counts only re-registered youth — <strong>actual attendance was higher.</strong> Hover a day for its true check-in total.
+                  <strong>Amber days</strong> show <strong>everyone who actually checked in</strong>. Some of them were on a registration from a program year other than {shortProgramYear(effectiveProgramYear)} — they either hadn&apos;t re-registered yet or re-registered early — so the number is higher than the {shortProgramYear(effectiveProgramYear)} cohort figure used for grant reporting. Hover a day for the split.
                 </span>
               </div>
             )}
@@ -2169,8 +2268,14 @@ const AdminAttendance = () => {
                 // Practice and excursion are tracked separately. On an
                 // excursion day the tile shows BOTH — a green practice count and
                 // a purple excursion count — so neither metric is diluted.
-                const practiceCount = dailyCounts[dateStr] || 0;
                 const under = undercountByDay[dateStr];
+                // On an amber day the circle carries the TRUE headcount, not
+                // the cohort subset — a funder looking at the board should see
+                // how many youth were actually in the gym. Amber stays as the
+                // flag that some of them were on another year's registration,
+                // and the hover spells the split out. The cohort figure the
+                // grant maths uses (dailyCounts) is untouched.
+                const practiceCount = under ? under.actual : dailyCounts[dateStr] || 0;
                 const excursionCount = (excursionDailyCounts as Record<string, number>)[dateStr] || 0;
                 const eventCount = (eventDailyCounts as Record<string, number>)[dateStr] || 0;
                 const count = excursionOnly ? excursionCount : practiceCount;
@@ -2222,7 +2327,7 @@ const AdminAttendance = () => {
                         // Each add-on keeps its own number so nothing dilutes.
                         <div className="flex items-center gap-1">
                           <span
-                            title={under ? `~${under.actual} youth actually checked in that day — ${under.missing} on last year's registration before re-registering` : undefined}
+                            title={under ? undercountMessage(under) : undefined}
                             className={`w-6 h-6 sm:w-7 sm:h-7 rounded-full flex items-center justify-center text-xs sm:text-sm font-bold ${
                             under && practiceCount > 0
                               ? "bg-amber-500/20 border border-amber-500/50 text-amber-400"
@@ -2247,7 +2352,7 @@ const AdminAttendance = () => {
                         </div>
                       ) : count > 0 ? (
                         <span
-                          title={under && isPrac ? `~${under.actual} youth actually checked in that day — ${under.missing} on last year's registration before re-registering` : undefined}
+                          title={under && isPrac ? undercountMessage(under) : undefined}
                           className={`w-8 h-8 sm:w-9 sm:h-9 rounded-full flex items-center justify-center text-sm sm:text-base font-bold ${
                           under && isPrac
                             ? "bg-amber-500/20 border border-amber-500/50 text-amber-400"
