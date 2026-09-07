@@ -970,7 +970,28 @@ const PracticeBoard = () => {
                     {gb.length === 0 && !editing ? (
                       <p className="text-white/25 italic text-[0.85em]">Nothing scheduled</p>
                     ) : (
-                      gb.map((b) => (
+                      gb.map((b) => {
+                        // Weights day: the workout is one tap away, shown over
+                        // the board rather than on another page, so the board is
+                        // never navigated away from.
+                        //
+                        // Battle Team and Littles only — Non-Battle Team is
+                        // getting its own thing, so pointing them at the S&C
+                        // session would send them to the wrong workout.
+                        const showPrep =
+                          isWeightsBlock(b.category) && g.key !== "non_battle_team";
+                        const prepButton = (
+                          <button
+                            type="button"
+                            onClick={() => setWorkoutOpen(true)}
+                            className="inline-flex items-center gap-1.5 rounded-lg border px-2.5 py-1 text-[0.7em] font-bold transition-colors hover:bg-white/10 shrink-0"
+                            style={{ borderColor: `${g.accent}77`, color: g.accent }}
+                          >
+                            <Dumbbell className="w-4 h-4" />
+                            Workout Prep
+                          </button>
+                        );
+                        return (
                         <div key={b.id}>
                           <div className="flex items-start justify-between gap-2">
                             <p
@@ -1004,57 +1025,50 @@ const PracticeBoard = () => {
                               rows={2}
                               className="w-full rounded-lg bg-black/60 border border-white/15 px-3 py-2 text-lg text-white outline-none focus:border-white/40"
                             />
-                          ) : b.detail?.trim() ? (
-                            /* One bullet per line. A coach types a drill per
-                               line, and from the floor a list of bullets reads
-                               as separate jobs where a wrapped paragraph reads
-                               as one. Sized in em so the fit pass scales it. */
-                            <ul className="text-[1em] leading-snug text-white space-y-0.5">
-                              {b.detail
-                                .split("\n")
-                                .map((line) => line.trim())
-                                .filter(Boolean)
-                                .map((line, li) => (
-                                  <li key={li} className="flex items-start gap-[0.5em]">
-                                    <span
-                                      className="shrink-0 rounded-full mt-[0.55em]"
-                                      style={{
-                                        width: "0.3em",
-                                        height: "0.3em",
-                                        backgroundColor: g.accent,
-                                      }}
-                                    />
-                                    <span className="flex-1">{line}</span>
-                                  </li>
-                                ))}
-                            </ul>
                           ) : (
-                            <p className="text-white/25 italic text-[0.85em]">
-                              Coach&apos;s call
-                            </p>
+                            /* The drills and the Workout Prep button share a
+                               line — the button belongs beside "Bench", not
+                               stacked under it eating a row of the column. */
+                            <div className="flex items-start gap-x-3 gap-y-1 flex-wrap">
+                              {b.detail?.trim() ? (
+                                /* One bullet per line. A coach types a drill per
+                                   line, and from the floor a list of bullets reads
+                                   as separate jobs where a wrapped paragraph reads
+                                   as one. Sized in em so the fit pass scales it. */
+                                <ul className="text-[1em] leading-snug text-white space-y-0.5">
+                                  {b.detail
+                                    .split("\n")
+                                    .map((line) => line.trim())
+                                    .filter(Boolean)
+                                    .map((line, li) => (
+                                      <li key={li} className="flex items-start gap-[0.5em]">
+                                        <span
+                                          className="shrink-0 rounded-full mt-[0.55em]"
+                                          style={{
+                                            width: "0.3em",
+                                            height: "0.3em",
+                                            backgroundColor: g.accent,
+                                          }}
+                                        />
+                                        <span className="flex-1">{line}</span>
+                                      </li>
+                                    ))}
+                                </ul>
+                              ) : (
+                                <p className="text-white/25 italic text-[0.85em]">
+                                  Coach&apos;s call
+                                </p>
+                              )}
+                              {showPrep && prepButton}
+                            </div>
                           )}
 
-                          {/* Weights day: the workout is one tap away, shown
-                              over the board rather than on another page, so
-                              the board is never navigated away from.
-
-                              Battle Team and Littles only — Non-Battle Team is
-                              getting its own thing, so pointing them at the S&C
-                              session would send them to the wrong workout. */}
-                          {isWeightsBlock(b.category) &&
-                            g.key !== "non_battle_team" && (
-                            <button
-                              type="button"
-                              onClick={() => setWorkoutOpen(true)}
-                              className="mt-1.5 inline-flex items-center gap-1.5 rounded-lg border px-2.5 py-1 text-[0.7em] font-bold transition-colors hover:bg-white/10"
-                              style={{ borderColor: `${g.accent}77`, color: g.accent }}
-                            >
-                              <Dumbbell className="w-4 h-4" />
-                              Workout Prep
-                            </button>
-                          )}
+                          {/* While editing the textarea takes the full width, so
+                              the button drops beneath it. */}
+                          {editing && showPrep && <div className="mt-1.5">{prepButton}</div>}
                         </div>
-                      ))
+                        );
+                      })
                     )}
 
                     {/* Ad-hoc additions live in this week only — never the
