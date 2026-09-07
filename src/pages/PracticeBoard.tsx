@@ -424,6 +424,20 @@ const PracticeBoard = () => {
     };
   }, [editing, fitColumns, blocks, weekday, week?.id, isFullscreen, countdownOpen]);
 
+  // Entering or leaving fullscreen resizes the board a beat AFTER the event
+  // fires, so the re-fit above measures the old screen height and picks a size
+  // that then clips — the plan comes back cut off until someone refreshes.
+  // Measure again once the browser has actually settled.
+  useEffect(() => {
+    if (editing) return;
+    const frame = requestAnimationFrame(fitColumns);
+    const timers = [150, 500].map((ms) => setTimeout(fitColumns, ms));
+    return () => {
+      cancelAnimationFrame(frame);
+      timers.forEach(clearTimeout);
+    };
+  }, [isFullscreen, editing, fitColumns]);
+
   // Arrow keys, for whoever is standing at the TV.
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -433,6 +447,42 @@ const PracticeBoard = () => {
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   });
+
+  // The day and its arrows. With the countdown running the header has four
+  // controls on the right and runs out of room on the wall TV, so the day drops
+  // down and shares the countdown's line instead of being squeezed.
+  const dayDropped = countdownOpen && !!week;
+  const dayNav = (
+    <div className="flex items-center gap-4">
+      <Button
+        variant="ghost" size="icon"
+        onClick={() => move(-1)}
+        className="text-white/30 hover:text-white h-9 w-9"
+        aria-label="Previous day"
+      >
+        <ChevronLeft className="w-5 h-5" />
+      </Button>
+      <div>
+        <h1 className="text-3xl md:text-4xl font-black tracking-tight uppercase">
+          {day.long}
+        </h1>
+        <p className="text-white/40 text-sm">
+          {dayDate.toLocaleDateString(undefined, { month: "long", day: "numeric" })}
+          {day.n === todayWeekday() && (
+            <span className="ml-2 text-white/70">· Today</span>
+          )}
+        </p>
+      </div>
+      <Button
+        variant="ghost" size="icon"
+        onClick={() => move(1)}
+        className="text-white/30 hover:text-white h-9 w-9"
+        aria-label="Next day"
+      >
+        <ChevronRight className="w-5 h-5" />
+      </Button>
+    </div>
+  );
 
   return (
     <div className="h-screen overflow-hidden bg-black text-white flex flex-col">
@@ -451,33 +501,7 @@ const PracticeBoard = () => {
           >
             <ArrowLeft className="w-5 h-5" />
           </Button>
-          <Button
-            variant="ghost" size="icon"
-            onClick={() => move(-1)}
-            className="text-white/30 hover:text-white h-9 w-9"
-            aria-label="Previous day"
-          >
-            <ChevronLeft className="w-5 h-5" />
-          </Button>
-          <div>
-            <h1 className="text-3xl md:text-4xl font-black tracking-tight uppercase">
-              {day.long}
-            </h1>
-            <p className="text-white/40 text-sm">
-              {dayDate.toLocaleDateString(undefined, { month: "long", day: "numeric" })}
-              {day.n === todayWeekday() && (
-                <span className="ml-2 text-white/70">· Today</span>
-              )}
-            </p>
-          </div>
-          <Button
-            variant="ghost" size="icon"
-            onClick={() => move(1)}
-            className="text-white/30 hover:text-white h-9 w-9"
-            aria-label="Next day"
-          >
-            <ChevronRight className="w-5 h-5" />
-          </Button>
+          {!dayDropped && dayNav}
         </div>
 
         <div className="flex items-center gap-3 flex-wrap">
@@ -627,7 +651,8 @@ const PracticeBoard = () => {
           {/* Logo removed to hand its space to the group tiles. The live
               countdown, when running, sits on its own slim row on the right. */}
           {countdownOpen && (
-            <div className="flex justify-end shrink-0">
+            <div className="flex items-center justify-between gap-4 shrink-0">
+              {dayNav}
               <CountdownBar startTime={startTime} onClose={() => setCountdownOpen(false)} />
             </div>
           )}
