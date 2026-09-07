@@ -43,7 +43,7 @@ interface VerseDay {
 }
 
 const emptyDay = (weekday: number): VerseDay => ({
-  weekday, reference: "", text: "", context: "", figures: [], questions: ["", ""], answers: ["", ""],
+  weekday, reference: "", text: "", context: "", figures: [], questions: [""], answers: [""],
 });
 
 const VerseOfTheWeekAdmin = ({ season = "in_season" }: { season?: SeasonMode }) => {
@@ -54,6 +54,7 @@ const VerseOfTheWeekAdmin = ({ season = "in_season" }: { season?: SeasonMode }) 
   const [published, setPublished] = useState(false);
   const [generating, setGenerating] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [regenDay, setRegenDay] = useState<number | null>(null);
   const [dirty, setDirty] = useState(false);
 
   // Load whatever is already saved for the week being viewed.
@@ -92,8 +93,8 @@ const VerseOfTheWeekAdmin = ({ season = "in_season" }: { season?: SeasonMode }) 
           text: row.text ?? "",
           context: row.context ?? "",
           figures: Array.isArray(row.figures) ? (row.figures as VerseFigure[]) : [],
-          questions: [...(Array.isArray(row.questions) ? (row.questions as string[]) : []), "", ""].slice(0, 2),
-          answers: [...(Array.isArray(row.answers) ? (row.answers as string[]) : []), "", ""].slice(0, 2),
+          questions: [...(Array.isArray(row.questions) ? (row.questions as string[]) : []), ""].slice(0, 1),
+          answers: [...(Array.isArray(row.answers) ? (row.answers as string[]) : []), ""].slice(0, 1),
         };
       })
     );
@@ -133,8 +134,8 @@ const VerseOfTheWeekAdmin = ({ season = "in_season" }: { season?: SeasonMode }) 
             text: r.esv_text ?? "",
             context: r.context ?? "",
             figures: Array.isArray(r.figures) ? r.figures : [],
-            questions: [...(r.questions ?? []), "", ""].slice(0, 2),
-            answers: [...(r.answers ?? []), "", ""].slice(0, 2),
+            questions: [...(r.questions ?? []), ""].slice(0, 1),
+            answers: [...(r.answers ?? []), ""].slice(0, 1),
           };
         })
       );
@@ -144,6 +145,58 @@ const VerseOfTheWeekAdmin = ({ season = "in_season" }: { season?: SeasonMode }) 
       toast.error((e as Error)?.message ?? "Generation failed. Try again.");
     } finally {
       setGenerating(false);
+    }
+  };
+
+  // Replace ONE day. The other four are left exactly as they are — including a
+  // day the room has already heard, which must never change underneath them.
+  // Nothing is written until Save, same as every other edit on this tab.
+  const regenerateDay = async (weekday: number) => {
+    if (theme.trim().length < 3) {
+      toast.error("Type a theme for the week first.");
+      return;
+    }
+    const label = DAYS.find((x) => x.n === weekday)?.label ?? "";
+    setRegenDay(weekday);
+    try {
+      const { data, error } = await supabase.functions.invoke("verse-week", {
+        body: {
+          theme: theme.trim(),
+          dayLabel: label,
+          // Every reference currently in the week, so the replacement is not one
+          // of the other four days over again.
+          exclude: days.map((x) => x.reference).filter(Boolean),
+        },
+      });
+      if (error) throw error;
+      const r = (data?.days ?? [])[0] as
+        | { ref: string; esv_text: string; context: string; figures: VerseFigure[]; questions: string[]; answers: string[] }
+        | undefined;
+      if (!r) {
+        toast.error(data?.error ?? "Nothing came back. Try again.");
+        return;
+      }
+      setDays((prev) =>
+        prev.map((x) =>
+          x.weekday === weekday
+            ? {
+                weekday,
+                reference: r.ref ?? "",
+                text: r.esv_text ?? "",
+                context: r.context ?? "",
+                figures: Array.isArray(r.figures) ? r.figures : [],
+                questions: [...(r.questions ?? []), ""].slice(0, 1),
+                answers: [...(r.answers ?? []), ""].slice(0, 1),
+              }
+            : x
+        )
+      );
+      setDirty(true);
+      toast.success(`${label} swapped to ${r.ref} — review, then Save.`);
+    } catch (e) {
+      toast.error((e as Error)?.message ?? "Couldn't get a new verse. Try again.");
+    } finally {
+      setRegenDay(null);
     }
   };
 
@@ -283,7 +336,7 @@ const VerseOfTheWeekAdmin = ({ season = "in_season" }: { season?: SeasonMode }) 
           )}
         </div>
         <p className="text-xs text-neutral-500">
-          Five verses (Mon–Fri) on this theme, real ESV text, with questions for ages 11–19 and mentor answers. Review and edit anything below, then Save.
+          Five verses (Mon–Fri) on this theme, real ESV text, each with one discussion question aimed at a teenager’s own week, plus a short script the mentor reads out loud afterwards. Review and edit anything below, then Save.
         </p>
       </div>
 
@@ -308,6 +361,27 @@ const VerseOfTheWeekAdmin = ({ season = "in_season" }: { season?: SeasonMode }) 
                     placeholder="Reference"
                     className="max-w-[220px] h-8 bg-neutral-800 border-neutral-700 text-white text-sm font-semibold"
                   />
+                  {/* Swap one day without touching the rest of the week — the
+                      coach doesn't like Wednesday, or Monday has already been
+                      read to the room and must not change under them. */}
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => regenerateDay(d.weekday)}
+                    disabled={regenDay !== null || generating || theme.trim().length < 3}
+                    title={
+                      theme.trim().length < 3
+                        ? "Type a theme first"
+                        : `New verse for ${label} only`
+                    }
+                    className="ml-auto h-8 text-neutral-400 hover:text-white hover:bg-white/5 text-xs"
+                  >
+                    {regenDay === d.weekday ? (
+                      <><Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" /> Finding one…</>
+                    ) : (
+                      <><RefreshCw className="w-3.5 h-3.5 mr-1.5" /> New verse</>
+                    )}
+                  </Button>
                 </div>
                 {d.text && (
                   <p className="text-sm text-white/70 italic leading-relaxed mb-3">&ldquo;{d.text}&rdquo;</p>
@@ -348,23 +422,21 @@ const VerseOfTheWeekAdmin = ({ season = "in_season" }: { season?: SeasonMode }) 
                     )}
                   </div>
                   <div className="space-y-2">
-                    {[0, 1].map((i) => (
-                      <div key={i} className="grid grid-cols-1 gap-1">
-                        <Input
-                          value={d.questions[i] ?? ""}
-                          onChange={(e) => patchList(d.weekday, "questions", i, e.target.value)}
-                          placeholder={`Question ${i + 1}`}
-                          className="h-8 bg-neutral-800 border-neutral-700 text-white text-sm"
-                        />
-                        <Textarea
-                          value={d.answers[i] ?? ""}
-                          onChange={(e) => patchList(d.weekday, "answers", i, e.target.value)}
-                          placeholder={`Mentor answer ${i + 1}`}
-                          rows={2}
-                          className="bg-black/40 border-neutral-800 text-white/80 text-xs"
-                        />
-                      </div>
-                    ))}
+                    <div className="grid grid-cols-1 gap-1">
+                      <Input
+                        value={d.questions[0] ?? ""}
+                        onChange={(e) => patchList(d.weekday, "questions", 0, e.target.value)}
+                        placeholder="Question"
+                        className="h-8 bg-neutral-800 border-neutral-700 text-white text-sm"
+                      />
+                      <Textarea
+                        value={d.answers[0] ?? ""}
+                        onChange={(e) => patchList(d.weekday, "answers", 0, e.target.value)}
+                        placeholder="Read this out loud"
+                        rows={3}
+                        className="bg-black/40 border-neutral-800 text-white/80 text-xs"
+                      />
+                    </div>
                   </div>
                 </div>
               </div>

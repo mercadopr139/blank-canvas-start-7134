@@ -3,8 +3,12 @@
 // A coach types a theme for the week ("youth struggling with identity") when
 // building the practice plan. This returns FIVE passages — one per practice
 // day, Monday to Friday — that walk the academy through that theme together,
-// each with short context, three discussion questions written for an 11–19
-// mixed room, and a model answer for each question the mentor can lean on.
+// each with short context, a one-line introduction to anyone the passage names,
+// and ONE discussion question. The question is deliberately about the youth’s
+// own life rather than the text: a comprehension question turns a gym into a
+// classroom, where only the confident kids speak. With it comes a short script
+// the mentor reads out loud to close the discussion — the actual words, not
+// notes about what to say.
 //
 // Same split of responsibility as scripture-coach:
 //   1. Claude chooses the passage REFERENCES and writes context/questions/answers.
@@ -30,7 +34,7 @@ const json = (body: unknown, status = 200) =>
   });
 
 // ── The theological lane (same as Scripture Coach) ───────────────────
-const SYSTEM =
+const SYSTEM_HEAD =
   "You help the youth mentors at No Limits Boxing Academy, a Christian non-profit boxing academy, disciple their " +
   "youth through scripture. Each week the academy takes ONE theme and, at the start of practice, gathers for a short " +
   "team meeting where a mentor opens the day's verse and leads a brief discussion in front of the whole room.\n\n" +
@@ -51,10 +55,22 @@ const SYSTEM =
   "  more than they need a rule.\n" +
   "- Reflect these men's approach; never fabricate quotations from them or anyone else.\n\n" +
 
-  "THE WEEK: choose FIVE DISTINCT passages, one for each day Monday through Friday, that together walk the room " +
-  "through the theme — opening it up early in the week and moving toward the gospel and a lived response by Friday. " +
-  "No passage repeats.\n\n" +
+  "";
 
+// The scope of the ask. A whole week is an arc — open the theme on Monday, land
+// on the gospel by Friday. A single day is a REPLACEMENT: it has to stand on its
+// own inside a week already written, which is a genuinely different instruction.
+const scopeSection = (single: boolean, dayLabel: string) =>
+  single
+    ? `ONE DAY ONLY: you are replacing the passage for ${dayLabel} in a week that is already written. Choose ` +
+      "ONE passage that fits the theme and stands on its own that day — it does not need to open or close an arc. " +
+      "The coach rejected what was there, so take a genuinely different angle on the theme rather than a " +
+      "near-synonym of anything already in use.\n\n"
+    : "THE WEEK: choose FIVE DISTINCT passages, one for each day Monday through Friday, that together walk the " +
+      "room through the theme — opening it up early in the week and moving toward the gospel and a lived " +
+      "response by Friday. No passage repeats.\n\n";
+
+const SYSTEM_BODY =
   "LENGTH IS CRITICAL: this opens a five-minute team meeting, not a Bible study. Each verse must be SHORT — a " +
   "SINGLE verse that is ONE sentence whenever possible. Only if a single verse genuinely cannot stand alone may you " +
   "use two short verses, and never more. A long, multi-sentence passage is wrong for this even if the content fits — " +
@@ -67,9 +83,19 @@ const SYSTEM =
   "  follows and a 19-year-old is not talked down to.\n" +
   "- Never condescending. Teenagers detect it instantly and stop listening.\n\n" +
 
-  "QUESTIONS: exactly TWO per day. They are open-ended discussion questions that get the YOUNG PEOPLE talking to " +
-  "each other and the mentor — not yes/no, not a quiz. The first gets at what the verse means; the second at how it " +
-  "hits their own life this week. Specific to the passage and the theme, and quick — this is a five-minute meeting.\n\n" +
+  "THE QUESTION: exactly ONE per day. It is the entire discussion, so it has to earn its place.\n" +
+  "Write it so a teenager answers out of THEIR OWN LIFE, not out of Bible knowledge. Do NOT ask what the passage " +
+  "means, what a word means, or what the person in it did — the context already covered that, and a comprehension " +
+  "question turns the room into a classroom where only the confident kids speak.\n" +
+  "Instead, find the pressure, fear, choice or relationship in the verse and ask about where THAT shows up in a " +
+  "13-to-19-year-old's week: school, the gym, their phone, their friends, their family, money, who they are when " +
+  "nobody is watching, what they do after they lose. Same truth, their lens.\n" +
+  "- Concrete beats abstract. 'Where do you feel like you have to pretend?' beats 'What does authenticity mean?'\n" +
+  "- A 13-year-old can answer it and a 19-year-old still finds it worth answering.\n" +
+  "- Open. Never yes/no, never a right answer they can guess, never a question with 'God' or 'Jesus' as the obvious " +
+  "  one-word reply.\n" +
+  "- No church vocabulary in the question itself.\n" +
+  "- ONE sentence. It gets read aloud to a room of eighty.\n\n" +
 
   "WHO IS IN THE PASSAGE: name every real person the verse or the questions refer to — David, Paul, Peter, " +
   "Gideon, Ruth — and give ONE sentence saying who they were. Assume the room has never heard of them. Plain " +
@@ -78,26 +104,47 @@ const SYSTEM =
   "never pad it. God, Jesus and the Holy Spirit do NOT go in this list, and neither does a group such as " +
   "'the Israelites'. Only named people, and never more than three.\n\n" +
 
-  "ANSWERS: exactly TWO per day, pairing one-to-one with the questions in the same order — answer 1 is for " +
-  "question 1. This is the mentor's private guidance: a solid, biblically grounded model answer the mentor can read " +
-  "or paraphrase if the room goes quiet or heads somewhere off. Two to four sentences. Anchor them in the same " +
-  "theology as everything else — honest about what the text says, unmistakably kind, gospel-centered. Write them as " +
-  "something a wise, warm pastor would actually say.\n\n" +
+  "WHAT THE MENTOR READS OUT LOUD: exactly ONE per day, to close the discussion after the youth have answered " +
+  "the question.\n" +
+  "This is a SCRIPT, not a note. The mentor reads it word for word off a screen, standing in front of eighty " +
+  "young people, so write the actual words he says — not advice about what to say. Never describe the youth in " +
+  "the third person ('let them be specific', 'encourage them to...'). Speak TO the room, as 'you'.\n" +
+  "- Spoken English, not written English. Short sentences. Contractions. The way a man talks, not the way an " +
+  "  essay reads.\n" +
+  "- Three to five sentences. Long enough to land, short enough to hold a gym.\n" +
+  "- Name honestly what they are probably carrying, then bring it to what the verse actually says, then leave " +
+  "  them with one thing that is true whether or not they feel it today.\n" +
+  "- No church vocabulary they would have to be taught. If a weighty word is unavoidable, say it and then say " +
+  "  what it means in the same breath.\n" +
+  "- Never a lecture, never scolding, and never sentimental. These are children who have heard adults perform " +
+  "  sincerity before and can tell.\n" +
+  "- The gospel is the destination, not a slogan tacked on the end.\n" +
+  "Anchor it in the same theology as everything else — honest about what the text says, unmistakably kind, " +
+  "gospel-centered. If you would be embarrassed to say it out loud to a room of teenagers, rewrite it.\n\n" +
 
   "OUTPUT: valid JSON only. No prose before or after, no markdown fences.\n" +
   "{\n" +
   '  "days": [\n' +
-  '    { "ref": "Psalm 139:13-16", "context": "2-3 short sentences on what this passage says and how it speaks to the theme.", "figures": [{ "name": "David", "who": "one sentence on who this person was" }], "questions": ["two open-ended discussion questions"], "answers": ["a model answer for each question, same order"] }\n' +
+  '    { "ref": "Psalm 139:13-16", "context": "2-3 short sentences on what this passage says and how it speaks to the theme.", "figures": [{ "name": "David", "who": "one sentence on who this person was" }], "questions": ["the one life-application question"], "answers": ["the words the mentor reads out loud"] }\n' +
   "  ]\n" +
   "}\n" +
-  "Return EXACTLY five days, in Monday-to-Friday order.\n\n" +
+  "";
 
-  "CAPITALISATION: every question and answer starts with a capital letter.\n\n" +
+const countLine = (single: boolean) =>
+  single
+    ? "Return EXACTLY ONE day in the array.\n\n"
+    : "Return EXACTLY five days, in Monday-to-Friday order.\n\n";
+
+const SYSTEM_RULES =
+  "CAPITALISATION: the question and the read-aloud each start with a capital letter.\n\n" +
 
   "REFERENCE FORMAT is critical — it is sent to a Bible API verbatim. Use standard English book names and normal " +
   "punctuation: 'John 3:16', 'Galatians 5:13', 'Philippians 2:3', 'Romans 8:1'. Never abbreviate the book, never " +
   "use a dash other than a hyphen, never cite a whole chapter. Prefer a single-verse reference (e.g. 'Mark 9:35'); " +
   "use a two-verse range only when unavoidable, never more.";
+
+const systemFor = (single: boolean, dayLabel: string) =>
+  SYSTEM_HEAD + scopeSection(single, dayLabel) + SYSTEM_BODY + countLine(single) + SYSTEM_RULES;
 
 // Strip fences and pull the outermost JSON object — same defensive parse the
 // coach functions use.
@@ -168,6 +215,11 @@ Deno.serve(async (req: Request) => {
     // References to avoid — used when regenerating so a new week (or day)
     // doesn't repeat passages the coach has already seen.
     const exclude: string[] = Array.isArray(body?.exclude) ? body.exclude.slice(0, 40) : [];
+    // Replacing a single day: the coach didn't like Wednesday and wants another
+    // one, without disturbing the four days that are fine — or the day the room
+    // has already heard.
+    const dayLabel = String(body?.dayLabel ?? "").trim();
+    const single = !!dayLabel;
 
     if (theme.length < 3) {
       return json({ error: "Tell me the theme for the week." }, 400);
@@ -178,15 +230,18 @@ Deno.serve(async (req: Request) => {
     const userPrompt =
       `The theme for this week is:\n"${theme}"\n\n` +
       (exclude.length
-        ? "Do NOT use any of these references — they have already been used:\n" +
+        ? "Do NOT use any of these references — they are already in use this week:\n" +
           exclude.map((r) => `- ${r}`).join("\n") + "\n\n"
         : "") +
-      "Return ONLY the JSON shape described, with exactly five days (Monday to Friday).";
+      (single
+        ? `Return ONLY the JSON shape described, with exactly one day — the replacement for ${dayLabel}.`
+        : "Return ONLY the JSON shape described, with exactly five days (Monday to Friday).");
 
     const response = await anthropic.messages.create({
       model: MODEL,
-      max_tokens: 6000,
-      system: SYSTEM,
+      // One day needs a fraction of the room a full week does.
+      max_tokens: single ? 1500 : 6000,
+      system: systemFor(single, dayLabel),
       messages: [{ role: "user", content: userPrompt }],
       output_config: { effort: "low" },
     } as never);
@@ -201,7 +256,7 @@ Deno.serve(async (req: Request) => {
     // rather than showing an empty verse. Text from Crossway; the rest is the
     // model's, carried through.
     const withText = await Promise.all(
-      rawDays.slice(0, 5).map(async (d) => {
+      rawDays.slice(0, single ? 1 : 5).map(async (d) => {
         const ref = String(d?.ref ?? "").trim();
         if (!ref) return null;
         const esv_text = await fetchEsv(ref, ESV_API_KEY);
@@ -211,8 +266,8 @@ Deno.serve(async (req: Request) => {
           esv_text,
           context: String(d?.context ?? "").trim(),
           figures: figureList(d?.figures),
-          questions: strArray(d?.questions, 2),
-          answers: strArray(d?.answers, 2),
+          questions: strArray(d?.questions, 1),
+          answers: strArray(d?.answers, 1),
         };
       })
     );

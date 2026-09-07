@@ -1,11 +1,11 @@
 // Verse discussion — the pop-up the mentor opens on the board during the team
 // meeting. Progressive reveal so the room moves at the mentor's pace:
-//   verse  →  [Context]  →  [Questions]  →  per-question [Guidance] (mentor only).
-// The guidance (model answers) stays hidden until the mentor taps it, so the
-// kids wrestle with the question before an answer is on the wall.
+//   verse  →  [Context]  →  [Question]  →  [Read this out loud].
+// The closing script stays hidden until the mentor taps it, so the kids wrestle
+// with the question before an answer is on the wall.
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { X, BookOpen, MessageCircle, Lock, ChevronDown, User, Eye, EyeOff } from "lucide-react";
+import { X, BookOpen, MessageCircle, Megaphone, ChevronDown, User, Eye, EyeOff } from "lucide-react";
 
 export interface DiscussionFigure {
   name: string;
@@ -181,24 +181,24 @@ const VerseDiscussion = ({ day, onClose }: { day: DiscussionDay | null; onClose:
                           </button>
                         </div>
                       </div>
-                      {/* The guidance sits on its own gray shelf and stays
-                          quieter than the question. It's the mentor's prompt,
-                          not the room's reading — it should never compete with
-                          the question above it for the wall's attention. */}
+                      {/* The script the mentor reads to the room once the youth
+                          have answered. Still behind a tap — the point is that
+                          they wrestle with the question before an answer is on
+                          the wall — but sized to be read aloud, not skimmed. */}
                       {answer && (
                         <div className="bg-neutral-900/80">
                           <button
                             onClick={() => setOpenAnswer((p) => ({ ...p, [i]: !p[i] }))}
-                            className="w-full flex items-center justify-between px-5 md:px-6 py-2.5 border-t border-white/[0.06] text-white/35 hover:text-white/60 transition-colors"
+                            className="w-full flex items-center justify-between px-5 md:px-6 py-2.5 border-t border-white/[0.06] text-white/40 hover:text-white/70 transition-colors"
                           >
-                            <span className="inline-flex items-center gap-2 text-xs font-semibold">
-                              <Lock className="w-3.5 h-3.5" /> {open ? "Hide" : "Guidance"} <span className="text-white/20 font-normal">(mentor only)</span>
+                            <span className="inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-wider">
+                              <Megaphone className="w-3.5 h-3.5" /> {open ? "Hide" : "Read this out loud"}
                             </span>
                             <ChevronDown className={`w-3.5 h-3.5 transition-transform ${open ? "rotate-180" : ""}`} />
                           </button>
                           {open && (
-                            <div className="px-5 md:px-6 pb-4 pt-0.5 animate-in fade-in duration-200">
-                              <p className="text-sm md:text-base leading-relaxed text-white/45">{answer}</p>
+                            <div className="px-5 md:px-6 pb-5 pt-1 animate-in fade-in duration-200">
+                              <p className="text-lg md:text-2xl leading-relaxed text-white/80">{answer}</p>
                             </div>
                           )}
                         </div>
