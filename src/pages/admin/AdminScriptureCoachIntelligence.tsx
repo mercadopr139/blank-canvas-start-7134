@@ -237,7 +237,7 @@ const AdminScriptureCoachIntelligence = () => {
           <BookOpen className="w-8 h-8 text-neutral-700 mx-auto mb-3" />
           <p className="text-neutral-400 text-sm">
             {sessions.length === 0
-              ? "No sessions yet. Start one from Scripture Coach."
+              ? "No sessions yet. Start one from Spiritual Development."
               : "Nothing matches that filter."}
           </p>
           {filter !== "all" && sessions.length > 0 && (

@@ -96,8 +96,8 @@ export const OPERATIONS_TILES: PillarTile[] = [
     href: "/admin/operations/meal-tracker",
     permKey: "operations_meal_tracker",
     children: [
-      { title: "Meal Setup", href: "/admin/operations/meal-tracker", icon: UtensilsCrossed },
       { title: "Meal Intelligence", href: "/admin/operations/meal-reports", icon: BarChart3 },
+      { title: "Meal Setup", href: "/admin/operations/meal-tracker", icon: UtensilsCrossed },
     ],
   },
   {
@@ -132,18 +132,18 @@ export const OPERATIONS_TILES: PillarTile[] = [
     ],
   },
   {
-    title: "Scripture Coach",
+    title: "Spiritual Development",
     description: "Scripture & talking points for a youth conversation",
     icon: BookOpenCheck,
     href: "/admin/operations/scripture-coach",
     permKey: "operations_scripture_coach",
     children: [
-      { title: "New Session", href: "/admin/operations/scripture-coach", icon: BookOpenCheck },
       {
         title: "Spiritual Coach Intelligence",
         href: "/admin/operations/scripture-coach-intelligence",
         icon: HeartHandshake,
       },
+      { title: "New Session", href: "/admin/operations/scripture-coach", icon: BookOpenCheck },
     ],
   },
 ];
@@ -248,7 +248,7 @@ export const FINANCE_TILES: PillarTile[] = [
 export const OPERATIONS_EXTRA_SUBS: { key: string; label: string }[] = [
   {
     key: "operations_scripture_coach_reviewer",
-    label: "Scripture Coach — Reviewer (can sign off sessions)",
+    label: "Spiritual Development — Reviewer (can sign off sessions)",
   },
 ];
 

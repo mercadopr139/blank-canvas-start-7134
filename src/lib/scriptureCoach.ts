@@ -204,7 +204,7 @@ export const buildSessionPdf = (session: ScriptureSession): jsPDF => {
   doc.text("No Limits Boxing Academy", margin, 40);
   doc.setFont("helvetica", "normal");
   doc.setFontSize(11);
-  doc.text("Scripture Coach — Session Report", margin, 62);
+  doc.text("Spiritual Development — Session Report", margin, 62);
   y = 122;
 
   // ── Who / when ──
