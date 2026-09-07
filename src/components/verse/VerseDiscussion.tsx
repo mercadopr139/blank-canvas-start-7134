@@ -5,7 +5,7 @@
 // kids wrestle with the question before an answer is on the wall.
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { X, BookOpen, MessageCircle, Lock, ChevronDown, User } from "lucide-react";
+import { X, BookOpen, MessageCircle, Lock, ChevronDown, User, Eye, EyeOff } from "lucide-react";
 
 export interface DiscussionFigure {
   name: string;
@@ -27,12 +27,14 @@ const VerseDiscussion = ({ day, onClose }: { day: DiscussionDay | null; onClose:
   const [showContext, setShowContext] = useState(false);
   const [showQuestions, setShowQuestions] = useState(false);
   const [openAnswer, setOpenAnswer] = useState<Record<number, boolean>>({});
+  const [hiddenQ, setHiddenQ] = useState<Record<number, boolean>>({});
 
   useEffect(() => {
     // Fresh reveal each time it opens.
     setShowContext(false);
     setShowQuestions(false);
     setOpenAnswer({});
+    setHiddenQ({});
   }, [day]);
 
   useEffect(() => {
@@ -142,6 +144,27 @@ const VerseDiscussion = ({ day, onClose }: { day: DiscussionDay | null; onClose:
                 {questions.map((q, i) => {
                   const answer = day.answers[i]?.trim();
                   const open = !!openAnswer[i];
+                  const hidden = !!hiddenQ[i];
+
+                  // Put away, a question keeps only its number, so the room has
+                  // one prompt in front of it and the mentor can bring the other
+                  // one back with a tap.
+                  if (hidden) {
+                    return (
+                      <div key={i} className="space-y-4">
+                        <button
+                          onClick={() => setHiddenQ((p) => ({ ...p, [i]: false }))}
+                          className="w-full flex items-center gap-3 rounded-2xl border border-white/[0.06] bg-white/[0.015] px-5 py-3 text-left text-white/30 hover:text-white/60 hover:border-white/15 transition-colors"
+                        >
+                          <span className="text-lg font-black" style={{ color: TEAL, opacity: 0.5 }}>{i + 1}</span>
+                          <span className="text-sm font-semibold flex-1">Question {i + 1}</span>
+                          <Eye className="w-4 h-4" />
+                        </button>
+                        {i === verseAgainAfter && verseAgain}
+                      </div>
+                    );
+                  }
+
                   return (
                     <div key={i} className="space-y-4">
                     <div className="rounded-2xl border border-white/10 bg-white/[0.03] overflow-hidden">
@@ -149,6 +172,13 @@ const VerseDiscussion = ({ day, onClose }: { day: DiscussionDay | null; onClose:
                         <div className="flex items-start gap-4">
                           <span className="text-2xl md:text-3xl font-black" style={{ color: TEAL }}>{i + 1}</span>
                           <p className="text-xl md:text-3xl leading-snug text-white font-medium flex-1">{q}</p>
+                          <button
+                            onClick={() => setHiddenQ((p) => ({ ...p, [i]: true }))}
+                            className="shrink-0 text-white/20 hover:text-white/60 transition-colors p-1 -m-1"
+                            title={`Put question ${i + 1} away`}
+                          >
+                            <EyeOff className="w-5 h-5" />
+                          </button>
                         </div>
                       </div>
                       {/* The guidance sits on its own gray shelf and stays
