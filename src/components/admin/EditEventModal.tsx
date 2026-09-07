@@ -108,7 +108,7 @@ const EditEventModal = ({ event, onClose, onSaved, onRequestDelete }: Props) => 
       <DialogContent className="bg-neutral-900 border-white/10 text-white max-w-lg max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <Sparkles className="w-4 h-4 text-yellow-400" />
+            <Sparkles className="w-4 h-4 text-blue-400" />
             {isNew ? "Add Event" : "Edit Event"}
           </DialogTitle>
         </DialogHeader>
@@ -134,7 +134,7 @@ const EditEventModal = ({ event, onClose, onSaved, onRequestDelete }: Props) => 
           <div>
             <div className="flex items-center justify-between mb-1">
               <Label className="flex items-center gap-1.5 text-white/70">
-                <StickyNote className="w-3.5 h-3.5 text-yellow-300" /> Overview
+                <StickyNote className="w-3.5 h-3.5 text-blue-300" /> Overview
               </Label>
               <div className="flex gap-1">
                 {NOTE_EMOJI.map((em) => (
@@ -190,9 +190,9 @@ const EditEventModal = ({ event, onClose, onSaved, onRequestDelete }: Props) => 
           </div>
 
           {/* The situational switch: does this event feed attendance numbers? */}
-          <div className="flex items-start justify-between gap-3 rounded-lg border border-yellow-500/25 bg-yellow-500/[0.06] px-3 py-3">
+          <div className="flex items-start justify-between gap-3 rounded-lg border border-blue-500/25 bg-blue-500/[0.06] px-3 py-3">
             <div>
-              <p className="text-sm font-medium text-yellow-200">Count attendance for this event</p>
+              <p className="text-sm font-medium text-blue-200">Count attendance for this event</p>
               <p className="text-xs text-white/50 mt-0.5">
                 On = youth who check in at this event count toward your attendance numbers. Off = narrative only.
               </p>
@@ -200,7 +200,7 @@ const EditEventModal = ({ event, onClose, onSaved, onRequestDelete }: Props) => 
             <Switch
               checked={draft.count_attendance}
               onCheckedChange={(v) => setDraft({ ...draft, count_attendance: v })}
-              className="mt-0.5 data-[state=checked]:bg-yellow-500"
+              className="mt-0.5 data-[state=checked]:bg-blue-500"
             />
           </div>
 
@@ -218,7 +218,7 @@ const EditEventModal = ({ event, onClose, onSaved, onRequestDelete }: Props) => 
               <Button variant="outline" onClick={onClose} className="border-white/15 bg-transparent text-white/80 hover:bg-white/5">
                 Cancel
               </Button>
-              <Button onClick={save} disabled={saving} className="bg-yellow-500 hover:bg-yellow-400 text-black font-semibold">
+              <Button onClick={save} disabled={saving} className="bg-blue-500 hover:bg-blue-400 text-white font-semibold">
                 {saving ? <Loader2 className="w-4 h-4 mr-1.5 animate-spin" /> : <Save className="w-4 h-4 mr-1.5" />}
                 {isNew ? "Add Event" : "Save"}
               </Button>

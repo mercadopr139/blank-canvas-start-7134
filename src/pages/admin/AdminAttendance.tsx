@@ -300,15 +300,16 @@ const AdminAttendance = () => {
   // link, so "All" gives complete, unduplicated numbers through the Sept
   // re-registration transition (a single-year view can't show kids who checked
   // in under last year's registration).
-  // Open on the year in session, not All Years. A kid who re-registered has a
-  // row per program year, so All Years counted them once per year — inflating
-  // the calendar tiles, demographic cards and Bald Eagle totals with cross-year
-  // duplicates. "All years" is still in the dropdown for anyone who wants it;
-  // it just isn't what the page assumes you meant. The effect below moves this
-  // on if the current year has no cohort yet.
-  const [programYearFilter, setProgramYearFilter] = useState<string>(() =>
-    getCurrentAttendanceYear()
-  );
+  // Open on "Auto — follows the month". A kid who re-registered has a row per
+  // program year, so "All years" counted them once per year — inflating the
+  // calendar tiles, demographic cards and Bald Eagle totals with cross-year
+  // duplicates. But a FIXED "year in session" default had the opposite failure:
+  // on Sept 1 it flipped to the new cohort and every prior month's tiles went
+  // blank (their check-ins live on last year's registrations). Auto resolves
+  // the cohort from the month on screen — May → 2025-26, July/Aug → 2025-26
+  // (off-season, year not over), Sept → 2026-27 — so each month counts exactly
+  // the one cohort that owns it. Picking a specific year still overrides it.
+  const [programYearFilter, setProgramYearFilter] = useState<string>("__auto__");
   const { data: allRegistrations = [] } = useQuery({
     queryKey: ["registrations-attendance-full"],
     queryFn: () =>
@@ -332,7 +333,7 @@ const AdminAttendance = () => {
   // newest year that actually has data.
   useEffect(() => {
     if (availableProgramYears.length === 0) return;
-    if (programYearFilter === "__all__" || availableProgramYears.includes(programYearFilter)) return;
+    if (programYearFilter === "__auto__" || programYearFilter === "__all__" || availableProgramYears.includes(programYearFilter)) return;
     const attendanceYear = getCurrentAttendanceYear();
     setProgramYearFilter(
       availableProgramYears.includes(attendanceYear) ? attendanceYear : availableProgramYears[0]
@@ -352,15 +353,22 @@ const AdminAttendance = () => {
     return allRegistrations.filter((r) => r.program_year === currentYear);
   }, [allRegistrations]);
 
+  // The program year actually in force for the page. "Auto" derives it from
+  // the calendar month being viewed via the Sept 1 rule in programYear.ts.
+  const effectiveProgramYear = useMemo(
+    () => (programYearFilter === "__auto__" ? getCurrentAttendanceYear(calendarMonth) : programYearFilter),
+    [programYearFilter, calendarMonth]
+  );
+
   const registrations = useMemo(() => {
-    if (programYearFilter === "__all__") return allRegistrations;
+    if (effectiveProgramYear === "__all__") return allRegistrations;
     // Defensive: if the Phase B migration hasn't been applied yet, no row
     // will have program_year set. Treat the filter as a no-op so the page
     // (calendar tile counts, demographic cards, etc.) doesn't go blank.
     const anyTagged = allRegistrations.some((r) => r.program_year);
     if (!anyTagged) return allRegistrations;
-    return allRegistrations.filter((r) => r.program_year === programYearFilter);
-  }, [allRegistrations, programYearFilter]);
+    return allRegistrations.filter((r) => r.program_year === effectiveProgramYear);
+  }, [allRegistrations, effectiveProgramYear]);
 
   /* ───── Is viewing current month? ───── */
   const isCurrentMonth = isSameMonth(calendarMonth, now);
@@ -499,12 +507,19 @@ const AdminAttendance = () => {
   // calendar emojis and the chart correlation panel read from that single
   // source so the calendar and chart never disagree on the day's weather.)
 
-  // "Year Avg" is anchored to the CURRENT program year (Sept 1 → today), not a
-  // fixed launch date — so after each Sept 1 the average resets to the new
-  // program year instead of blending two years into one misleading number.
-  // (Data only exists from the March 9, 2026 launch, so this reads identically
-  // until the first Sept 1 rollover, then correctly starts fresh.)
-  const YTD_START = `${getCurrentAttendanceYear().slice(0, 4)}-09-01`;
+  // The program year the "year" tiles (Season / Off-Season / Avg Arrival Year)
+  // describe is the one that OWNS the month on screen — the same rule the
+  // calendar uses — so paging to August 2026 shows 2025-26's real off-season
+  // number, and September shows 2026-27 starting fresh. Anchoring these to
+  // TODAY's year instead made every prior-year month read "Off-Season 0" right
+  // beside a Month Avg of 32. Bounded Sept 1 → Aug 31 so a past year stays a
+  // past year. Falls back to the in-session year when the dropdown is on
+  // "All years" (no single year to describe).
+  const ytdYear = /^\d{4}-\d{4}$/.test(effectiveProgramYear)
+    ? effectiveProgramYear
+    : getCurrentAttendanceYear(calendarMonth);
+  const YTD_START = `${ytdYear.slice(0, 4)}-09-01`;
+  const YTD_END = `${ytdYear.slice(5, 9)}-08-31`;
 
   const { data: ytdAttendance = [] } = useQuery({
     queryKey: ["attendance-records-ytd", YTD_START],
@@ -519,6 +534,7 @@ const AdminAttendance = () => {
           .select("id, registration_id, check_in_date, check_in_at, program_source, is_manual")
           .eq("program_source", "NLA")
           .gte("check_in_date", YTD_START)
+          .lte("check_in_date", YTD_END)
           .order("check_in_date", { ascending: true })
           .range(from, from + pageSize - 1);
         if (error) throw error;
@@ -538,6 +554,7 @@ const AdminAttendance = () => {
         .from("practice_days")
         .select("id, date, is_practice_day")
         .gte("date", YTD_START)
+        .lte("date", YTD_END)
         .limit(10000);
       if (error) throw error;
       return (data || []) as PracticeDay[];
@@ -551,6 +568,7 @@ const AdminAttendance = () => {
         .from("excursions")
         .select("date")
         .gte("date", YTD_START)
+        .lte("date", YTD_END)
         .limit(10000);
       if (error) throw error;
       return data || [];
@@ -1165,21 +1183,23 @@ const AdminAttendance = () => {
      off-season (the tail of the year). Keeping them separate stops summer
      from diluting the Sept–June season number. Derived purely from the
      check_in_date month (07/08 = off-season) — no stored flag. */
-  const seasonAvg = useMemo(() => {
+  // null (rendered "—") when that stretch of the year hasn't happened yet —
+  // a new year's off-season is July, not a misleading "0".
+  const seasonAvg = useMemo<number | null>(() => {
     const recs = ytdPracticeAttendance.filter((a) => {
       const mm = a.check_in_date.slice(5, 7);
       return mm !== "07" && mm !== "08";
     });
     const days = new Set(recs.map((a) => a.check_in_date));
-    return days.size > 0 ? Math.round(recs.length / days.size) : 0;
+    return days.size > 0 ? Math.round(recs.length / days.size) : null;
   }, [ytdPracticeAttendance]);
-  const offSeasonAvg = useMemo(() => {
+  const offSeasonAvg = useMemo<number | null>(() => {
     const recs = ytdPracticeAttendance.filter((a) => {
       const mm = a.check_in_date.slice(5, 7);
       return mm === "07" || mm === "08";
     });
     const days = new Set(recs.map((a) => a.check_in_date));
-    return days.size > 0 ? Math.round(recs.length / days.size) : 0;
+    return days.size > 0 ? Math.round(recs.length / days.size) : null;
   }, [ytdPracticeAttendance]);
   // July (5→6 0-indexed) or August (7) is the summer off-season.
   const viewedMonthIsOffSeason = calendarMonth.getMonth() === 6 || calendarMonth.getMonth() === 7;
@@ -1763,6 +1783,30 @@ const AdminAttendance = () => {
     return map;
   }, [filteredCalendarAttendance, identityById]);
 
+  // Transition undercount: at the start of a new program year, kids often
+  // check in on LAST year's registration before they re-register. Those
+  // check-ins are real, but they fall outside the viewed cohort, so the tile's
+  // number (current-year kids only) reads lower than who was actually here.
+  // We DON'T change the count (the identity math is deliberately untouched) —
+  // we just flag those days amber and surface the true check-in total, so a
+  // coach can explain "6 shown, ~23 actually attended" to a donor on the spot.
+  const undercountByDay = useMemo(() => {
+    const offCohort: Record<string, Set<string>> = {};
+    calendarAttendance.forEach((a) => {
+      if (!calendarRegIds.has(a.registration_id)) {
+        (offCohort[a.check_in_date] ||= new Set()).add(a.registration_id);
+      }
+    });
+    const out: Record<string, { shown: number; missing: number; actual: number }> = {};
+    Object.entries(offCohort).forEach(([d, regs]) => {
+      const shown = dailyCounts[d] || 0;
+      out[d] = { shown, missing: regs.size, actual: shown + regs.size };
+    });
+    return out;
+  }, [calendarAttendance, calendarRegIds, dailyCounts]);
+
+  const hasUndercountDays = useMemo(() => Object.keys(undercountByDay).length > 0, [undercountByDay]);
+
   const daySignIns = useMemo(() => {
     if (!selectedDay) return [];
     // A day can carry both practice (NLA) sign-ins and an excursion roster.
@@ -1932,10 +1976,10 @@ const AdminAttendance = () => {
           <h2 className="text-xl font-bold text-white flex items-center gap-2">
             <Activity className="w-5 h-5 text-red-400" /> Attendance Intelligence
           </h2>
-          {/* Program-year filter — scopes the registrations underpinning
-              every demographic card on this page (Race, Single Parent,
-              Bald Eagles, etc.). Defaults to the current program year
-              per programYear.ts; flips automatically on Aug 1. */}
+          {/* Program-year filter — scopes the registrations underpinning the
+              calendar tiles and every demographic card on this page (Race,
+              Single Parent, Bald Eagles, etc.). Defaults to Auto, which
+              follows the month on screen (Sept 1 rule in programYear.ts). */}
           {availableProgramYears.length > 0 && (
             <div className="flex items-center gap-2">
               <span className="text-[10px] uppercase tracking-wider text-white/40 font-semibold">Program Year</span>
@@ -1944,6 +1988,9 @@ const AdminAttendance = () => {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
+                  <SelectItem value="__auto__">
+                    Auto — follows the month ({shortProgramYear(effectiveProgramYear)})
+                  </SelectItem>
                   {availableProgramYears.map((y) => (
                     <SelectItem key={y} value={y}>{shortProgramYear(y)}{y === getCurrentAttendanceYear() ? " (current)" : ""}</SelectItem>
                   ))}
@@ -1994,21 +2041,21 @@ const AdminAttendance = () => {
                 <Clock className="w-4 h-4 text-white/40" />
                 {avgArrivalYear || "—"}
               </p>
-              <p className="text-[10px] text-white/30">per practice day since 3/9</p>
+              <p className="text-[10px] text-white/30">per practice day since {format(parseISO(YTD_START), "M/d/yy")}</p>
             </CardContent>
           </Card>
           <Card className="bg-green-500/[0.06] border-green-500/25 text-white">
             <CardContent className="pt-4 pb-3 text-center">
               <p className="text-[10px] uppercase tracking-wider text-green-400/80">Season Avg</p>
-              <p className="text-3xl font-bold mt-1 text-green-300">{seasonAvg}</p>
-              <p className="text-[10px] text-white/30">Sept–Jun · per practice day</p>
+              <p className="text-3xl font-bold mt-1 text-green-300">{seasonAvg ?? "—"}</p>
+              <p className="text-[10px] text-white/30">Sept–Jun {shortProgramYear(ytdYear)} · per practice day</p>
             </CardContent>
           </Card>
           <Card className="bg-amber-500/[0.06] border-amber-500/25 text-white">
             <CardContent className="pt-4 pb-3 text-center">
               <p className="text-[10px] uppercase tracking-wider text-amber-400/80">Off-Season Avg</p>
-              <p className="text-3xl font-bold mt-1 text-amber-300">{offSeasonAvg}</p>
-              <p className="text-[10px] text-white/30">Jul–Aug · per practice day</p>
+              <p className="text-3xl font-bold mt-1 text-amber-300">{offSeasonAvg ?? "—"}</p>
+              <p className="text-[10px] text-white/30">Jul–Aug {shortProgramYear(ytdYear)} · per practice day</p>
             </CardContent>
           </Card>
         </div>
@@ -2041,6 +2088,14 @@ const AdminAttendance = () => {
             </div>
           </CardHeader>
           <CardContent>
+            {hasUndercountDays && (
+              <div className="mb-4 flex items-start gap-2 rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2.5 text-sm text-amber-200">
+                <span className="text-base leading-none mt-0.5">⚠️</span>
+                <span>
+                  <strong>Amber days:</strong> some youth checked in on last year&apos;s registration before re-registering for the new program year, so the number counts only re-registered youth — <strong>actual attendance was higher.</strong> Hover a day for its true check-in total.
+                </span>
+              </div>
+            )}
             <div className="flex items-center justify-between mb-4">
               <Button variant="ghost" size="icon" className="text-white/60 hover:text-white hover:bg-white/10" onClick={() => setCalendarMonth((m) => subMonths(m, 1))}>
                 <ChevronLeft className="w-5 h-5" />
@@ -2081,6 +2136,7 @@ const AdminAttendance = () => {
                 // excursion day the tile shows BOTH — a green practice count and
                 // a purple excursion count — so neither metric is diluted.
                 const practiceCount = dailyCounts[dateStr] || 0;
+                const under = undercountByDay[dateStr];
                 const excursionCount = (excursionDailyCounts as Record<string, number>)[dateStr] || 0;
                 const eventCount = (eventDailyCounts as Record<string, number>)[dateStr] || 0;
                 const count = excursionOnly ? excursionCount : practiceCount;
@@ -2128,11 +2184,15 @@ const AdminAttendance = () => {
 
                       {(isExc || isEvt) ? (
                         // Overlay day — a row of circles: green practice, plus a
-                        // purple excursion count and/or a yellow event count.
+                        // purple excursion count and/or a blue event count.
                         // Each add-on keeps its own number so nothing dilutes.
                         <div className="flex items-center gap-1">
-                          <span className={`w-6 h-6 sm:w-7 sm:h-7 rounded-full flex items-center justify-center text-xs sm:text-sm font-bold ${
-                            practiceCount > 0
+                          <span
+                            title={under ? `~${under.actual} youth actually checked in that day — ${under.missing} on last year's registration before re-registering` : undefined}
+                            className={`w-6 h-6 sm:w-7 sm:h-7 rounded-full flex items-center justify-center text-xs sm:text-sm font-bold ${
+                            under && practiceCount > 0
+                              ? "bg-amber-500/20 border border-amber-500/50 text-amber-400"
+                              : practiceCount > 0
                               ? "bg-green-500/20 border border-green-500/40 text-green-400"
                               : "bg-white/[0.03] border border-white/[0.06] text-white/20"
                           }`}>{practiceCount}</span>
@@ -2146,14 +2206,18 @@ const AdminAttendance = () => {
                           {isEvt && (
                             <span className={`w-6 h-6 sm:w-7 sm:h-7 rounded-full flex items-center justify-center text-xs sm:text-sm font-bold ${
                               eventCount > 0
-                                ? "bg-yellow-500/20 border border-yellow-400/40 text-yellow-300"
-                                : "bg-yellow-500/[0.03] border border-yellow-400/[0.08] text-yellow-300/30"
+                                ? "bg-blue-500/20 border border-blue-400/40 text-blue-300"
+                                : "bg-blue-500/[0.03] border border-blue-400/[0.08] text-blue-300/30"
                             }`}>{eventCount}</span>
                           )}
                         </div>
                       ) : count > 0 ? (
-                        <span className={`w-8 h-8 sm:w-9 sm:h-9 rounded-full flex items-center justify-center text-sm sm:text-base font-bold ${
-                          isPrac
+                        <span
+                          title={under && isPrac ? `~${under.actual} youth actually checked in that day — ${under.missing} on last year's registration before re-registering` : undefined}
+                          className={`w-8 h-8 sm:w-9 sm:h-9 rounded-full flex items-center justify-center text-sm sm:text-base font-bold ${
+                          under && isPrac
+                            ? "bg-amber-500/20 border border-amber-500/50 text-amber-400"
+                            : isPrac
                             ? "bg-green-500/20 border border-green-500/40 text-green-400"
                             : "bg-red-500/20 border border-red-500/40 text-red-400"
                         }`}>{count}</span>
@@ -2222,12 +2286,13 @@ const AdminAttendance = () => {
                         title="Excursion scheduled"
                       />
                     )}
-                    {/* Event overlay marker — yellow dot, bottom-left, so it
+                    {/* Event overlay marker — blue dot, bottom-left, so it
                         can sit alongside the purple excursion dot and the
-                        green/red practice dot without overlapping. */}
+                        green/red practice dot without overlapping. Blue (not
+                        yellow) so it never reads as an amber undercount day. */}
                     {isEvt && (
                       <span
-                        className="absolute bottom-0.5 left-0.5 w-2.5 h-2.5 rounded-full bg-yellow-400 border border-yellow-200 shadow-[0_0_4px_rgba(250,204,21,0.6)] z-10 pointer-events-none"
+                        className="absolute bottom-0.5 left-0.5 w-2.5 h-2.5 rounded-full bg-blue-400 border border-blue-200 shadow-[0_0_4px_rgba(59,130,246,0.6)] z-10 pointer-events-none"
                         title="Event scheduled"
                       />
                     )}
@@ -2297,9 +2362,9 @@ const AdminAttendance = () => {
                   className="w-full text-left px-3 py-2 text-sm flex items-center gap-2 hover:bg-white/10 transition-colors text-white/70"
                   onClick={() => openEventEditor(contextMenuDay.dateStr)}
                 >
-                  <span className="w-3 h-3 rounded-full bg-yellow-400 inline-block" />
+                  <span className="w-3 h-3 rounded-full bg-blue-400 inline-block" />
                   {isEventDay(contextMenuDay.dateStr) ? "Edit Event" : "Add Event"}
-                  {isEventDay(contextMenuDay.dateStr) && <span className="ml-auto text-yellow-400">✓</span>}
+                  {isEventDay(contextMenuDay.dateStr) && <span className="ml-auto text-blue-400">✓</span>}
                 </button>
                 {isEventDay(contextMenuDay.dateStr) && (
                   <button
@@ -2332,7 +2397,7 @@ const AdminAttendance = () => {
                 <span className="text-xs text-white/50">Excursion (can overlay a practice day)</span>
               </div>
               <div className="flex items-center gap-1.5">
-                <span className="w-3 h-3 rounded-full bg-yellow-400" />
+                <span className="w-3 h-3 rounded-full bg-blue-400" />
                 <span className="text-xs text-white/50">Event (on-site, can overlay any day)</span>
               </div>
               <span className="text-[10px] text-white/30 ml-auto">Click a day → add/edit excursion or event • Click dot → practice ↔ non-practice</span>
@@ -3263,7 +3328,7 @@ const AdminAttendance = () => {
                       {isEventDay(selectedDay) && (
                         <button
                           onClick={() => setManualAddTarget("event")}
-                          className={`text-xs font-semibold px-2.5 py-1 rounded-md border transition-colors ${manualAddTarget === "event" ? "bg-yellow-500/20 border-yellow-400/40 text-yellow-200" : "border-white/15 text-white/50 hover:bg-white/5"}`}
+                          className={`text-xs font-semibold px-2.5 py-1 rounded-md border transition-colors ${manualAddTarget === "event" ? "bg-blue-500/20 border-blue-400/40 text-blue-200" : "border-white/15 text-white/50 hover:bg-white/5"}`}
                         >
                           Event
                         </button>
@@ -3401,7 +3466,7 @@ const AdminAttendance = () => {
                     </Badge>
                   )}
                   {isEventDay(selectedDay) && (
-                    <Badge className="bg-yellow-500/15 text-yellow-200 border-yellow-400/30 flex-shrink-0">
+                    <Badge className="bg-blue-500/15 text-blue-200 border-blue-400/30 flex-shrink-0">
                       {daySignIns.filter((s) => s.program_source === "Event").length} Event
                     </Badge>
                   )}
@@ -3434,7 +3499,7 @@ const AdminAttendance = () => {
                   <div className="flex flex-col gap-1.5">
                     <button
                       onClick={() => { const d = selectedDay; setSelectedDay(null); openEventEditor(d); }}
-                      className="inline-flex items-center justify-center gap-1.5 min-w-[9rem] text-xs font-semibold px-3 py-1.5 rounded-md border border-yellow-400/40 bg-yellow-500/10 text-yellow-200 hover:bg-yellow-500/20 transition-colors"
+                      className="inline-flex items-center justify-center gap-1.5 min-w-[9rem] text-xs font-semibold px-3 py-1.5 rounded-md border border-blue-400/40 bg-blue-500/10 text-blue-200 hover:bg-blue-500/20 transition-colors"
                     >
                       <Sparkles className="w-3.5 h-3.5" />
                       {isEventDay(selectedDay) ? "Edit Event" : "Add Event"}
@@ -3461,7 +3526,7 @@ const AdminAttendance = () => {
                   const groups = [
                     { key: "NLA", label: "Practice", dot: "bg-green-500", text: "text-green-400", show: isPracticeDay(selectedDay, calPracticeDayMap) },
                     { key: "Excursion", label: "Excursion", dot: "bg-purple-500", text: "text-purple-300", show: isExcursionDay(selectedDay) },
-                    { key: "Event", label: "Event", dot: "bg-yellow-400", text: "text-yellow-200", show: isEventDay(selectedDay) },
+                    { key: "Event", label: "Event", dot: "bg-blue-400", text: "text-blue-200", show: isEventDay(selectedDay) },
                   ];
                   const visible = groups.filter((g) => g.show || daySignIns.some((s) => s.program_source === g.key));
                   if (visible.length === 0) {
