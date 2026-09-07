@@ -8,7 +8,7 @@
 // that happens and what everyone is looking at while it happens.
 //
 // Plan: docs/PRACTICE_PLAN_PLAN.md
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef, useCallback, useLayoutEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import nlaLogoWhite from "@/assets/nla-logo-white.png";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -74,6 +74,31 @@ const PracticeBoard = () => {
     document.addEventListener("fullscreenchange", sync);
     return () => document.removeEventListener("fullscreenchange", sync);
   }, []);
+  // Fit the three group columns to the height available instead of letting
+  // them scroll. With 80 youth sitting in front of the board, anything that
+  // needs scrolling is effectively invisible — the whole night has to be
+  // readable at a glance. One shared size across all three columns, because
+  // three different text sizes side by side looks broken.
+  const colRefs = useRef<(HTMLDivElement | null)[]>([]);
+  const fitColumns = useCallback(() => {
+    const els = colRefs.current.filter(Boolean) as HTMLDivElement[];
+    if (!els.length) return;
+    const MAX = 22;
+    const MIN = 9;
+    const apply = (px: number) =>
+      els.forEach((el) => {
+        el.style.fontSize = `${px}px`;
+      });
+    // Overflowing by a pixel or two is rounding, not a real overflow.
+    const fits = () => els.every((el) => el.scrollHeight <= el.clientHeight + 2);
+    let px = MAX;
+    apply(px);
+    while (px > MIN && !fits()) {
+      px -= 1;
+      apply(px);
+    }
+  }, []);
+
   const [pointDraft, setPointDraft] = useState("");
   const [reminderDraft, setReminderDraft] = useState("");
 
@@ -380,6 +405,24 @@ const PracticeBoard = () => {
     const next = days[(i + dir + days.length) % days.length];
     setWeekday(next.n);
   };
+
+  // Re-fit whenever the content, the day or the window changes. Runs before
+  // paint so the board never flashes at the wrong size. Skipped while editing,
+  // where the textareas want a stable, comfortable size.
+  useLayoutEffect(() => {
+    if (editing) {
+      colRefs.current.forEach((el) => el && (el.style.fontSize = ""));
+      return;
+    }
+    fitColumns();
+    const ro = new ResizeObserver(() => fitColumns());
+    colRefs.current.forEach((el) => el && ro.observe(el));
+    window.addEventListener("resize", fitColumns);
+    return () => {
+      ro.disconnect();
+      window.removeEventListener("resize", fitColumns);
+    };
+  }, [editing, fitColumns, blocks, weekday, week?.id, isFullscreen, countdownOpen]);
 
   // Arrow keys, for whoever is standing at the TV.
   useEffect(() => {
@@ -870,7 +913,7 @@ const PracticeBoard = () => {
               under the meeting banner and each column scrolls inside itself, so
               the plan is always on screen and never pushes the tiles off. */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:flex-1 md:min-h-0 md:grid-rows-1">
-            {GROUPS.map((g) => {
+            {GROUPS.map((g, gi) => {
               const gb = blocks
                 .filter((b) => b.group === g.key && b.weekday === day.n)
                 .sort((a, b) => a.position - b.position);
@@ -893,15 +936,20 @@ const PracticeBoard = () => {
                       {g.blurb}
                     </p>
                   </div>
-                  <div className="p-4 space-y-4 flex-1 md:overflow-y-auto">
+                  <div
+                    ref={(el) => {
+                      colRefs.current[gi] = el;
+                    }}
+                    className="p-4 space-y-4 flex-1 min-h-0 overflow-hidden"
+                  >
                     {gb.length === 0 && !editing ? (
-                      <p className="text-white/25 italic">Nothing scheduled</p>
+                      <p className="text-white/25 italic text-[0.85em]">Nothing scheduled</p>
                     ) : (
                       gb.map((b) => (
                         <div key={b.id}>
                           <div className="flex items-start justify-between gap-2">
                             <p
-                              className="text-xs md:text-sm font-bold uppercase tracking-[0.15em] mb-1.5"
+                              className="text-[0.62em] font-bold uppercase tracking-[0.15em] mb-1"
                               style={{ color: blockAccent(b.category, g.accent) }}
                             >
                               {b.category}
@@ -932,23 +980,28 @@ const PracticeBoard = () => {
                               className="w-full rounded-lg bg-black/60 border border-white/15 px-3 py-2 text-lg text-white outline-none focus:border-white/40"
                             />
                           ) : b.detail?.trim() ? (
-                            <p className="text-base md:text-lg leading-snug text-white whitespace-pre-line">
+                            <p className="text-[1em] leading-snug text-white whitespace-pre-line">
                               {b.detail}
                             </p>
                           ) : (
-                            <p className="text-white/25 italic text-base">
+                            <p className="text-white/25 italic text-[0.85em]">
                               Coach&apos;s call
                             </p>
                           )}
 
                           {/* Weights day: the workout is one tap away, shown
                               over the board rather than on another page, so
-                              the board is never navigated away from. */}
-                          {isWeightsBlock(b.category) && (
+                              the board is never navigated away from.
+
+                              Battle Team and Littles only — Non-Battle Team is
+                              getting its own thing, so pointing them at the S&C
+                              session would send them to the wrong workout. */}
+                          {isWeightsBlock(b.category) &&
+                            g.key !== "non_battle_team" && (
                             <button
                               type="button"
                               onClick={() => setWorkoutOpen(true)}
-                              className="mt-2 inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-sm font-bold transition-colors hover:bg-white/10"
+                              className="mt-1.5 inline-flex items-center gap-1.5 rounded-lg border px-2.5 py-1 text-[0.7em] font-bold transition-colors hover:bg-white/10"
                               style={{ borderColor: `${g.accent}77`, color: g.accent }}
                             >
                               <Dumbbell className="w-4 h-4" />

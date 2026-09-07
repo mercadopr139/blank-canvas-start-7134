@@ -16,10 +16,11 @@ import {
 } from "@/components/ui/select";
 import {
   Plus, Trash2, Pencil, Check, X, ChevronUp, ChevronDown, Eye, EyeOff,
-  BarChart3, ClipboardList, Loader2,
+  BarChart3, ClipboardList, Loader2, FileDown,
 } from "lucide-react";
 import { toast } from "sonner";
 import { mondayOf, addDays } from "@/lib/practicePlan";
+import { generateDutyReportPdf } from "@/lib/generateDutyReportPdf";
 import {
   DutyJob, DUTY_ZONES, DUTY_CATEGORIES, groupJobsByZone, zoneStyle, headshotUrl,
 } from "@/lib/dailyDuties";
@@ -342,6 +343,26 @@ const DutyReport = () => {
             <Input type="date" value={customTo} onChange={(e) => setCustomTo(e.target.value)} className="bg-neutral-800 border-neutral-700 text-white h-10 w-[150px]" />
           </div>
         )}
+
+        {/* These are the fundable numbers — they should leave the screen
+            without anybody retyping them into a grant application. */}
+        <Button
+          onClick={() =>
+            generateDutyReportPdf({
+              periodLabel: label,
+              from,
+              to,
+              totalJobs: totals.jobs,
+              totalYouth: totals.youth,
+              byCategory: totals.byCategory,
+              perYouth,
+            })
+          }
+          disabled={!ready || rows.length === 0}
+          className="ml-auto bg-[#bf0f3e] hover:bg-[#bf0f3e]/85 text-white font-semibold"
+        >
+          <FileDown className="w-4 h-4 mr-1.5" /> Download PDF
+        </Button>
       </div>
 
       {/* Summary */}
