@@ -15,7 +15,7 @@ import {
   Star, Bus, UserCheck, Radio, PhoneOff, AlertTriangle, FileText,
   UtensilsCrossed, HandCoins, Database, MessageSquare, Mail, Receipt,
   ScrollText, ClipboardCheck, LayoutDashboard, Archive, Gauge, MapPin, Sparkles, Dumbbell, Smile, Scale,
-  BookOpenCheck, HeartHandshake, Monitor, Ticket,
+  BookOpenCheck, HeartHandshake, Monitor, Ticket, Flame,
 } from "lucide-react";
 
 export interface PillarTile {
@@ -110,6 +110,7 @@ export const OPERATIONS_TILES: PillarTile[] = [
     children: [
       { title: "Workout Board", href: "/strength-coach", icon: Dumbbell, external: true },
       { title: "S&C Intelligence", href: "/strength-coach/intelligence", icon: BarChart3, external: true },
+      { title: "75 Hard", href: "/hard-75", icon: Flame, external: true },
     ],
   },
   {

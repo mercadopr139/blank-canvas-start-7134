@@ -62,6 +62,8 @@ import ExcursionCheckIn from "./pages/ExcursionCheckIn";
 import ExcursionCoach from "./pages/ExcursionCoach";
 import StrengthCoach from "./pages/StrengthCoach";
 import StrengthIntelligence from "./pages/StrengthIntelligence";
+import Hard75 from "./pages/Hard75";
+import Hard75Invite from "./pages/Hard75Invite";
 import AdminExcursionSignups from "./pages/admin/AdminExcursionSignups";
 import AdminSmileLabAttendance from "./pages/admin/AdminSmileLabAttendance";
 import AdminCallOuts from "./pages/admin/AdminCallOuts";
@@ -175,6 +177,11 @@ const App = () => (
             <Route path="/practice-board" element={<PracticeBoard />} />
             <Route path="/strength-coach" element={<StrengthCoach />} />
             <Route path="/strength-coach/intelligence" element={<StrengthIntelligence />} />
+            <Route path="/hard-75" element={<ProtectedRoute><Hard75 /></ProtectedRoute>} />
+            {/* The participant's private link. Deliberately NOT behind auth — the
+                token in the URL and the PIN are the credential, and everything it
+                can do goes through the hard75-access edge function. */}
+            <Route path="/75/:token" element={<Hard75Invite />} />
             <Route path="/call-out" element={<CallOut />} />
             <Route path="/meal-check-in" element={<MealCheckIn />} />
             <Route path="/approvals/invoice/:token" element={<InvoiceApproval />} />
