@@ -163,19 +163,17 @@ const Hard75 = () => {
               <span className="font-semibold">{run?.participant}</span>
             )}
             <Button
-              variant="ghost" size="icon"
+              variant="outline"
               onClick={() => setInviting(true)}
-              title="Send someone a private link"
-              aria-label="Send someone a private link"
-              className="text-white/40 hover:text-white h-9 w-9"
+              className="h-9 bg-transparent border-white/15 text-white/70 hover:text-white text-xs font-semibold"
             >
-              <Link2 className="w-4 h-4" />
+              <Link2 className="w-4 h-4 mr-1.5" /> Invite someone
             </Button>
             <Button
               variant="ghost" size="icon"
               onClick={() => setStarting(true)}
-              title="Set one up yourself"
-              aria-label="Set one up yourself"
+              title="Set one up here, without a link"
+              aria-label="Set one up here, without a link"
               className="text-white/40 hover:text-white h-9 w-9"
             >
               <UserPlus className="w-4 h-4" />
@@ -204,17 +202,10 @@ const Hard75 = () => {
       {isLoading ? (
         <p className="text-white/40 text-center py-20">Loading…</p>
       ) : !run ? (
-        <div className="space-y-3">
-          <StartRun ownerId={user?.id ?? null} onStarted={refreshAll} />
-          <div className="max-w-md mx-auto px-4 pb-12 text-center">
-            <button
-              onClick={() => setInviting(true)}
-              className="text-sm font-semibold text-white/40 hover:text-white inline-flex items-center gap-1.5"
-            >
-              <Link2 className="w-4 h-4" /> Or send someone a private link instead
-            </button>
-          </div>
-        </div>
+        <FirstChoice
+          onInvite={() => setInviting(true)}
+          onSelf={() => setStarting(true)}
+        />
       ) : (
         <div className="px-4 md:px-8 py-5 max-w-6xl mx-auto space-y-5">
           {run.status === "failed" ? (
@@ -692,5 +683,66 @@ const InviteDialog = ({
     </Dialog>
   );
 };
+
+/* ───── The very first screen ─────
+   It used to be a name field, which reads as "what is YOUR name" — so a coach
+   setting somebody else up ends up creating a run for himself. Ask which it is
+   before asking anything else. */
+
+const FirstChoice = ({
+  onInvite, onSelf,
+}: {
+  onInvite: () => void;
+  onSelf: () => void;
+}) => (
+  <div className="max-w-lg mx-auto px-4 py-14 space-y-6">
+    <div className="text-center">
+      <div
+        className="w-14 h-14 rounded-2xl grid place-items-center mx-auto mb-3"
+        style={{ backgroundColor: `${STRENGTH_COLOR}22` }}
+      >
+        <Flame className="w-7 h-7" style={{ color: STRENGTH_COLOR }} />
+      </div>
+      <h2 className="text-2xl font-bold">75 Hard</h2>
+      <p className="text-white/40 text-sm mt-1">
+        Two workouts a day, one outdoors. Gallon of water. Ten pages. Diet held. A photo. Every day for
+        seventy-five days.
+      </p>
+    </div>
+
+    <div className="space-y-3">
+      <button
+        onClick={onInvite}
+        className="w-full text-left rounded-2xl border border-white/15 bg-white/[0.03] hover:bg-white/[0.06] hover:border-white/30 transition-colors p-5"
+      >
+        <div className="flex items-start gap-3">
+          <Link2 className="w-5 h-5 mt-0.5 shrink-0" style={{ color: STRENGTH_COLOR }} />
+          <div>
+            <p className="font-bold">Someone else is doing it</p>
+            <p className="text-sm text-white/45 mt-0.5">
+              Get a private link to send them. They set their own PIN and fill in their own details — no
+              account, and no way into anything else here. You still see everything.
+            </p>
+          </div>
+        </div>
+      </button>
+
+      <button
+        onClick={onSelf}
+        className="w-full text-left rounded-2xl border border-white/10 bg-white/[0.02] hover:bg-white/[0.05] hover:border-white/25 transition-colors p-5"
+      >
+        <div className="flex items-start gap-3">
+          <UserPlus className="w-5 h-5 mt-0.5 text-white/40 shrink-0" />
+          <div>
+            <p className="font-bold">I&rsquo;m doing it</p>
+            <p className="text-sm text-white/45 mt-0.5">
+              Set it up here and track it from this screen.
+            </p>
+          </div>
+        </div>
+      </button>
+    </div>
+  </div>
+);
 
 export default Hard75;
