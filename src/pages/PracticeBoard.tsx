@@ -17,7 +17,7 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import {
-  ArrowLeft, ChevronLeft, ChevronRight, Timer, X, Users, Megaphone,
+  ArrowLeft, ChevronLeft, ChevronRight, ChevronUp, ChevronDown, Timer, X, Users, Megaphone,
   Pencil, Check, Trash2, Plus, Dumbbell, Sparkles, Maximize, Minimize,
 } from "lucide-react";
 import DailyDutiesBoard from "@/components/duties/DailyDutiesBoard";
@@ -383,6 +383,38 @@ const PracticeBoard = () => {
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["board-blocks", week?.id] }),
     onError: (e: Error) => toast.error(e.message || "Couldn't remove that."),
+  });
+
+  /**
+   * Move one block up or down within its group's day.
+   *
+   * Positions are rewritten for the whole column rather than swapping a pair,
+   * because stored positions are not guaranteed contiguous — blocks get added,
+   * removed and carried over from last week, so gaps and ties are normal. Laying
+   * the whole list down as 0..n-1 makes the order true whatever state it was in.
+   */
+  const moveBlock = useMutation({
+    mutationFn: async ({ id, dir }: { id: string; dir: -1 | 1 }) => {
+      const column = blocks
+        .filter((b) => b.weekday === weekday)
+        .filter((b) => b.group === blocks.find((x) => x.id === id)?.group)
+        .sort((a, b) => a.position - b.position);
+
+      const from = column.findIndex((b) => b.id === id);
+      const to = from + dir;
+      if (from < 0 || to < 0 || to >= column.length) return;
+
+      const reordered = [...column];
+      [reordered[from], reordered[to]] = [reordered[to], reordered[from]];
+
+      await Promise.all(
+        reordered.map((b, i) =>
+          supabase.from("practice_blocks" as never).update({ position: i } as never).eq("id", b.id)
+        )
+      );
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["board-blocks", week?.id] }),
+    onError: (e: Error) => toast.error(e.message || "Couldn't move that."),
   });
 
   const day = days.find((d) => d.n === weekday) ?? days[0];
@@ -971,16 +1003,23 @@ const PracticeBoard = () => {
                     {gb.length === 0 && !editing ? (
                       <p className="text-white/25 italic text-[0.85em]">Nothing scheduled</p>
                     ) : (
-                      gb.map((b) => {
+                      gb.map((b, bi) => {
                         // Weights day: the workout is one tap away, shown over
                         // the board rather than on another page, so the board is
                         // never navigated away from.
                         //
-                        // Battle Team and Littles only — Non-Battle Team is
-                        // getting its own thing, so pointing them at the S&C
-                        // session would send them to the wrong workout.
+                        // BATTLE TEAM ONLY. This button opens the Battle Team's
+                        // 5×5 barbell session, so it must never appear for
+                        // anyone else: the Non-Battle Team has its own board,
+                        // and the Littles are ten-year-olds who have no business
+                        // being pointed at a barbell programme.
+                        //
+                        // It used to exclude Non-Battle by name while allowing
+                        // everyone else, which meant the Littles column — titled
+                        // "Strength" — matched the weights test and offered the
+                        // button. Named groups in, not named groups out.
                         const showPrep =
-                          isWeightsBlock(b.category) && g.key !== "non_battle_team";
+                          isWeightsBlock(b.category) && g.key === "battle_team";
                         const prepButton = (
                           <button
                             type="button"
@@ -1002,6 +1041,32 @@ const PracticeBoard = () => {
                               {b.category}
                             </p>
                             {editing && (
+                              <span className="flex items-center gap-1 shrink-0">
+                                {/* Arrows rather than drag: this is a wall-
+                                    mounted screen operated with a finger, and
+                                    dragging a small target on a touch TV is a
+                                    fight. Disabled at the ends so the buttons
+                                    tell you where the block already is. */}
+                                <button
+                                  type="button"
+                                  onClick={() => moveBlock.mutate({ id: b.id, dir: -1 })}
+                                  disabled={bi === 0 || moveBlock.isPending}
+                                  className="text-white/25 hover:text-white disabled:opacity-20 disabled:hover:text-white/25"
+                                  aria-label={`Move ${b.category} up`}
+                                  title="Move up"
+                                >
+                                  <ChevronUp className="w-4 h-4" />
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => moveBlock.mutate({ id: b.id, dir: 1 })}
+                                  disabled={bi === gb.length - 1 || moveBlock.isPending}
+                                  className="text-white/25 hover:text-white disabled:opacity-20 disabled:hover:text-white/25"
+                                  aria-label={`Move ${b.category} down`}
+                                  title="Move down"
+                                >
+                                  <ChevronDown className="w-4 h-4" />
+                                </button>
                               <button
                                 type="button"
                                 onClick={() => removeBlock.mutate(b.id)}
@@ -1011,6 +1076,7 @@ const PracticeBoard = () => {
                               >
                                 <Trash2 className="w-4 h-4" />
                               </button>
+                              </span>
                             )}
                           </div>
                           {editing ? (
