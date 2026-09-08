@@ -30,6 +30,7 @@ import {
   dateForWeekday, blockAccent, PracticeGroup, PracticeSettings, PracticeWeek, PracticeBlock,
   TemplateBlock, SpiritualDay, MeetingPoints, SeasonMode, formatStartTime,
 } from "@/lib/practicePlan";
+import { handleIndentKey } from "@/lib/indentTextarea";
 
 const AdminPracticePlan = () => {
   const qc = useQueryClient();
@@ -974,7 +975,8 @@ const BlockEditor = ({
           const v = e.target.value.trim() || null;
           if (v !== (block.detail || null)) onSave(block.id, v);
         }}
-        placeholder="What are we doing?"
+        onKeyDown={handleIndentKey}
+        placeholder="What are we doing?  —  Tab to indent"
         className="min-h-[68px] text-sm bg-neutral-950 border-neutral-800 text-white"
       />
     </div>

@@ -29,6 +29,7 @@ import {
   PracticeSettings, PracticeWeek, PracticeBlock, SpiritualDay, MeetingPoints,
   SeasonMode,
 } from "@/lib/practicePlan";
+import { handleIndentKey } from "@/lib/indentTextarea";
 
 const PracticeBoard = () => {
   const navigate = useNavigate();
@@ -1021,7 +1022,8 @@ const PracticeBoard = () => {
                                 if (v !== (b.detail || null))
                                   saveDetail.mutate({ id: b.id, detail: v });
                               }}
-                              placeholder="What are we doing?"
+                              onKeyDown={handleIndentKey}
+                              placeholder="What are we doing?  —  Tab to indent"
                               rows={2}
                               className="w-full rounded-lg bg-black/60 border border-white/15 px-3 py-2 text-lg text-white outline-none focus:border-white/40"
                             />
@@ -1034,23 +1036,48 @@ const PracticeBoard = () => {
                                 /* One bullet per line. A coach types a drill per
                                    line, and from the floor a list of bullets reads
                                    as separate jobs where a wrapped paragraph reads
-                                   as one. Sized in em so the fit pass scales it. */
+                                   as one. Sized in em so the fit pass scales it.
+
+                                   Start a line with a dash (or just indent it)
+                                   and it nests under the line above — so "If
+                                   you're not coming to sparring…" owns the three
+                                   drills beneath it instead of reading as a
+                                   fourth instruction.
+
+                                   A dash is offered because leading spaces are
+                                   invisible in a textarea: a coach cannot see
+                                   whether the convention took. */
                                 <ul className="text-[1em] leading-snug text-white space-y-0.5">
                                   {b.detail
                                     .split("\n")
-                                    .map((line) => line.trim())
-                                    .filter(Boolean)
-                                    .map((line, li) => (
-                                      <li key={li} className="flex items-start gap-[0.5em]">
+                                    .map((raw) => ({
+                                      nested: /^([ \t]+|\s*[-*>•])/.test(raw),
+                                      // Strip the marker itself — it did its job.
+                                      text: raw.trim().replace(/^[-*>•]\s*/, ""),
+                                    }))
+                                    .filter((l) => l.text)
+                                    .map((l, li) => (
+                                      <li
+                                        key={li}
+                                        className="flex items-start gap-[0.5em]"
+                                        style={l.nested ? { marginLeft: "1.15em" } : undefined}
+                                      >
                                         <span
                                           className="shrink-0 rounded-full mt-[0.55em]"
                                           style={{
-                                            width: "0.3em",
-                                            height: "0.3em",
+                                            width: l.nested ? "0.2em" : "0.3em",
+                                            height: l.nested ? "0.2em" : "0.3em",
+                                            marginTop: l.nested ? "0.6em" : "0.55em",
                                             backgroundColor: g.accent,
+                                            opacity: l.nested ? 0.55 : 1,
                                           }}
                                         />
-                                        <span className="flex-1">{line}</span>
+                                        <span
+                                          className="flex-1"
+                                          style={l.nested ? { opacity: 0.85 } : undefined}
+                                        >
+                                          {l.text}
+                                        </span>
                                       </li>
                                     ))}
                                 </ul>
