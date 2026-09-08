@@ -2,7 +2,7 @@
 //
 // This is the screen Chrissy stands in front of. The column that matters is
 // Balance: everything else is working out how it got there.
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -20,7 +20,7 @@ import {
 } from "@/components/ui/select";
 import {
   ArrowLeft, Plus, Loader2, Search, ChevronDown, Printer, DollarSign,
-  Undo2, Banknote, Trophy, AlertTriangle,
+  Undo2, Banknote, Trophy, AlertTriangle, Pencil, Trash2, Lock,
 } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -57,6 +57,14 @@ const RaffleLedger = ({
   const [returningFor, setReturningFor] = useState<string | null>(null);
   const [payingFor, setPayingFor] = useState<string | null>(null);
   const [winnerLookup, setWinnerLookup] = useState("");
+
+  const [editBatch, setEditBatch] = useState<RaffleBatch | null>(null);
+  const [editReturn, setEditReturn] = useState<RaffleReturn | null>(null);
+  const [editPayment, setEditPayment] = useState<RafflePayment | null>(null);
+  // Nothing here is recoverable, so every deletion goes through one confirm
+  // that spells out the consequence rather than asking "are you sure".
+  const [confirm, setConfirm] = useState<ConfirmSpec | null>(null);
+  const [removing, setRemoving] = useState(false);
 
   // The campaign’s rate card, built once and passed to every calculation so
   // the ledger, the dialogs and the slip can never disagree about a price.
@@ -195,6 +203,11 @@ const RaffleLedger = ({
     const b = batchHolding(batches, n);
     return b ? { name: nameById[b.registration_id] || "Unknown youth", batch: b } : "none";
   }, [winnerLookup, batches, nameById]);
+
+  const remove = async (table: string, id: string) => {
+    const { error } = await supabase.from(table as never).delete().eq("id", id);
+    if (error) throw error;
+  };
 
   /* ───── Mutations ───── */
   const postToRevenue = useMutation({
@@ -418,39 +431,65 @@ const RaffleLedger = ({
                     <div className="grid gap-3 md:grid-cols-3">
                       <DetailList title="Issued">
                         {r.batches.map((b) => (
-                          <li key={b.id} className="flex items-center justify-between gap-2">
+                          <li key={b.id} className="flex items-center justify-between gap-2 group/row">
                             <span>
                               {formatRange(b)}
                               <span className="text-neutral-600"> · {ticketsIn(b)}</span>
                               {b.book_label && <span className="text-neutral-600"> · {b.book_label}</span>}
                             </span>
-                            <button
-                              onClick={() =>
-                                generateRaffleSlipPdf({
-                                  campaignName: campaign.name,
-                                  youthName: r.name,
-                                  range: formatRange(b),
-                                  count: ticketsIn(b),
-                                  pricing,
-                                  dueDate: b.due_date || campaign.due_date,
-                                  prize: campaign.prize,
-                                  issuedOn: b.issued_on,
-                                })
-                              }
-                              className="text-neutral-500 hover:text-white shrink-0"
-                              title="Print hand-off slip"
-                            >
-                              <Printer className="w-3.5 h-3.5" />
-                            </button>
+                            <span className="flex items-center gap-1.5 shrink-0">
+                              <RowAction
+                                icon={Printer}
+                                label="Print hand-off slip"
+                                onClick={() =>
+                                  generateRaffleSlipPdf({
+                                    campaignName: campaign.name,
+                                    youthName: r.name,
+                                    range: formatRange(b),
+                                    count: ticketsIn(b),
+                                    pricing,
+                                    dueDate: b.due_date || campaign.due_date,
+                                    prize: campaign.prize,
+                                    issuedOn: b.issued_on,
+                                  })
+                                }
+                              />
+                              <RowAction icon={Pencil} label="Edit these tickets" onClick={() => setEditBatch(b)} />
+                              <RowAction
+                                icon={Trash2}
+                                label="Delete these tickets"
+                                danger
+                                onClick={() => setConfirm({
+                                  title: `Delete tickets ${formatRange(b)}?`,
+                                  body: `${ticketsIn(b)} tickets issued to ${r.name}, and anything logged as returned against them. The numbers become free to issue again. Payments are not affected.`,
+                                  run: () => remove("raffle_batches", b.id),
+                                })}
+                              />
+                            </span>
                           </li>
                         ))}
                       </DetailList>
 
                       <DetailList title="Came back" empty="Nothing returned">
                         {r.returns.map((x) => (
-                          <li key={x.id}>
-                            {formatRange(x)}
-                            <span className="text-neutral-600"> · {x.returned_on}</span>
+                          <li key={x.id} className="flex items-center justify-between gap-2">
+                            <span>
+                              {formatRange(x)}
+                              <span className="text-neutral-600"> · {x.returned_on}</span>
+                            </span>
+                            <span className="flex items-center gap-1.5 shrink-0">
+                              <RowAction icon={Pencil} label="Edit this return" onClick={() => setEditReturn(x)} />
+                              <RowAction
+                                icon={Trash2}
+                                label="Delete this return"
+                                danger
+                                onClick={() => setConfirm({
+                                  title: `Delete return ${formatRange(x)}?`,
+                                  body: `Those stubs go back to being out with ${r.name}, so their balance rises again.`,
+                                  run: () => remove("raffle_returns", x.id),
+                                })}
+                              />
+                            </span>
                           </li>
                         ))}
                       </DetailList>
@@ -460,8 +499,31 @@ const RaffleLedger = ({
                           <li key={p.id} className="flex items-center gap-1.5">
                             <span className="font-semibold text-white">{money(Number(p.amount))}</span>
                             <span className="text-neutral-600">{p.paid_on} · {p.method}</span>
-                            {p.revenue_id && (
-                              <span className="text-emerald-500/70 text-[10px] uppercase tracking-wide">posted</span>
+                            {p.revenue_id ? (
+                              // Posted money is in the revenue ledger. Editing or
+                              // deleting it here would leave a Fundraising row
+                              // with nothing behind it and two sets of books that
+                              // quietly disagree — so it locks.
+                              <span
+                                className="text-emerald-500/70 text-[10px] uppercase tracking-wide inline-flex items-center gap-1 ml-auto"
+                                title="Already in the revenue ledger — reverse it in Revenue to change it"
+                              >
+                                <Lock className="w-3 h-3" /> posted
+                              </span>
+                            ) : (
+                              <span className="flex items-center gap-1.5 shrink-0 ml-auto">
+                                <RowAction icon={Pencil} label="Edit this payment" onClick={() => setEditPayment(p)} />
+                                <RowAction
+                                  icon={Trash2}
+                                  label="Delete this payment"
+                                  danger
+                                  onClick={() => setConfirm({
+                                    title: `Delete the ${money(Number(p.amount))} payment?`,
+                                    body: `Recorded ${p.paid_on} from ${r.name}. Their balance goes back up by ${money(Number(p.amount))}.`,
+                                    run: () => remove("raffle_payments", p.id),
+                                  })}
+                                />
+                              </span>
                             )}
                           </li>
                         ))}
@@ -498,11 +560,93 @@ const RaffleLedger = ({
         rows={rows}
         onDone={invalidate}
       />
+
+      <EditBatchDialog
+        batch={editBatch}
+        onClose={() => setEditBatch(null)}
+        pricing={pricing}
+        batches={batches}
+        onDone={invalidate}
+      />
+      <EditReturnDialog
+        entry={editReturn}
+        batch={batches.find((b) => b.id === editReturn?.batch_id) ?? null}
+        onClose={() => setEditReturn(null)}
+        onDone={invalidate}
+      />
+      <EditPaymentDialog
+        payment={editPayment}
+        onClose={() => setEditPayment(null)}
+        pricing={pricing}
+        onDone={invalidate}
+      />
+
+      {/* One confirm for every deletion, saying what actually happens rather
+          than asking whether you're sure. */}
+      <Dialog open={!!confirm} onOpenChange={(o) => { if (!o) setConfirm(null); }}>
+        <DialogContent className="bg-neutral-900 border-neutral-800 text-white max-w-md">
+          <DialogHeader>
+            <DialogTitle>{confirm?.title}</DialogTitle>
+            <DialogDescription className="text-neutral-400">{confirm?.body}</DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => setConfirm(null)} className="text-neutral-400 hover:text-white">
+              Cancel
+            </Button>
+            <Button
+              onClick={async () => {
+                if (!confirm) return;
+                setRemoving(true);
+                try {
+                  await confirm.run();
+                  invalidate();
+                  toast.success("Deleted.");
+                  setConfirm(null);
+                } catch (e) {
+                  toast.error((e as Error)?.message ?? "Couldn't delete that.");
+                } finally {
+                  setRemoving(false);
+                }
+              }}
+              disabled={removing}
+              className="bg-red-600 hover:bg-red-500 text-white font-bold"
+            >
+              {removing ? <Loader2 className="w-4 h-4 animate-spin" /> : "Delete"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
 
 /* ───── Small pieces ───── */
+
+interface ConfirmSpec {
+  title: string;
+  body: string;
+  run: () => Promise<void>;
+}
+
+const RowAction = ({
+  icon: Icon, label, onClick, danger,
+}: {
+  icon: typeof Pencil;
+  label: string;
+  onClick: () => void;
+  danger?: boolean;
+}) => (
+  <button
+    onClick={onClick}
+    title={label}
+    aria-label={label}
+    className={`shrink-0 transition-colors ${
+      danger ? "text-neutral-600 hover:text-red-400" : "text-neutral-500 hover:text-white"
+    }`}
+  >
+    <Icon className="w-3.5 h-3.5" />
+  </button>
+);
 
 const Stat = ({ label, value, accent }: { label: string; value: string; accent?: string }) => (
   <div className="rounded-xl border border-neutral-800 bg-neutral-900 px-3 py-2.5">
@@ -973,6 +1117,385 @@ const PaymentDialog = ({
             className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold"
           >
             {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : "Record payment"}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+};
+
+/* ───── Fixing a mistake ─────
+   Tickets get keyed against the wrong numbers, a payment gets typed as $100
+   instead of $10. Without these the only fix is delete and re-enter, which
+   loses the date it actually happened. */
+
+const EditBatchDialog = ({
+  batch, onClose, pricing, batches, onDone,
+}: {
+  batch: RaffleBatch | null;
+  onClose: () => void;
+  pricing: Pricing;
+  batches: RaffleBatch[];
+  onDone: () => void;
+}) => {
+  const [range, setRange] = useState("");
+  const [book, setBook] = useState("");
+  const [due, setDue] = useState("");
+  const [issuedOn, setIssuedOn] = useState("");
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    if (!batch) return;
+    setRange(formatRange(batch).replace("–", "-"));
+    setBook(batch.book_label ?? "");
+    setDue(batch.due_date ?? "");
+    setIssuedOn(batch.issued_on);
+  }, [batch]);
+
+  const parsed = parseRange(range);
+  // Every other batch in the campaign — this one may of course overlap itself.
+  const clash = parsed
+    ? batches.find(
+        (b) => b.id !== batch?.id && parsed.range_start <= b.range_end && parsed.range_end >= b.range_start
+      )
+    : undefined;
+
+  const submit = async () => {
+    if (!batch || !parsed) return;
+    setSaving(true);
+    const { error } = await supabase
+      .from("raffle_batches" as never)
+      .update({
+        range_start: parsed.range_start,
+        range_end: parsed.range_end,
+        book_label: book.trim() || null,
+        due_date: due || null,
+        issued_on: issuedOn,
+      } as never)
+      .eq("id", batch.id);
+    setSaving(false);
+    if (error) {
+      toast.error(
+        error.message.includes("no_overlap")
+          ? "Those tickets are already issued to another youth."
+          : error.message.includes("outside this batch")
+          ? "Some returned stubs would fall outside the new range. Delete those returns first."
+          : error.message
+      );
+      return;
+    }
+    toast.success("Tickets updated.");
+    onDone();
+    onClose();
+  };
+
+  const count = parsed ? parsed.range_end - parsed.range_start + 1 : 0;
+
+  return (
+    <Dialog open={!!batch} onOpenChange={(o) => { if (!o) onClose(); }}>
+      <DialogContent className="bg-neutral-900 border-neutral-800 text-white max-w-md">
+        <DialogHeader>
+          <DialogTitle>Edit issued tickets</DialogTitle>
+          <DialogDescription className="text-neutral-500">
+            To move these to a different youth, delete them and issue again.
+          </DialogDescription>
+        </DialogHeader>
+
+        <div className="space-y-3">
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <Label className="text-xs text-neutral-400">Ticket numbers</Label>
+              <Input
+                value={range}
+                onChange={(e) => setRange(e.target.value)}
+                placeholder="101-150"
+                className="mt-1 bg-neutral-800 border-neutral-700 text-white"
+              />
+              {range.trim() && !parsed && (
+                <p className="text-xs text-amber-400 mt-1">Try something like 101-150.</p>
+              )}
+              {parsed && !clash && (
+                <p className="text-xs text-neutral-500 mt-1">
+                  {count} tickets · {money(priceFor(count, pricing))} to collect
+                </p>
+              )}
+              {clash && (
+                <p className="text-xs text-amber-400 mt-1 flex items-start gap-1">
+                  <AlertTriangle className="w-3.5 h-3.5 shrink-0 mt-px" />
+                  Overlaps {formatRange(clash)}, already issued.
+                </p>
+              )}
+            </div>
+            <div>
+              <Label className="text-xs text-neutral-400">Book</Label>
+              <Input
+                value={book}
+                onChange={(e) => setBook(e.target.value)}
+                placeholder="Book 3"
+                className="mt-1 bg-neutral-800 border-neutral-700 text-white"
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <Label className="text-xs text-neutral-400">Issued on</Label>
+              <Input
+                type="date"
+                value={issuedOn}
+                onChange={(e) => setIssuedOn(e.target.value)}
+                className="mt-1 bg-neutral-800 border-neutral-700 text-white"
+              />
+            </div>
+            <div>
+              <Label className="text-xs text-neutral-400">Money due back</Label>
+              <Input
+                type="date"
+                value={due}
+                onChange={(e) => setDue(e.target.value)}
+                className="mt-1 bg-neutral-800 border-neutral-700 text-white"
+              />
+            </div>
+          </div>
+        </div>
+
+        <DialogFooter>
+          <Button variant="ghost" onClick={onClose} className="text-neutral-400 hover:text-white">Cancel</Button>
+          <Button
+            onClick={submit}
+            disabled={!parsed || !!clash || saving}
+            className="bg-white text-black hover:bg-white/90 font-bold"
+          >
+            {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : "Save"}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+};
+
+const EditReturnDialog = ({
+  entry, batch, onClose, onDone,
+}: {
+  entry: RaffleReturn | null;
+  batch: RaffleBatch | null;
+  onClose: () => void;
+  onDone: () => void;
+}) => {
+  const [range, setRange] = useState("");
+  const [returnedOn, setReturnedOn] = useState("");
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    if (!entry) return;
+    setRange(formatRange(entry).replace("–", "-"));
+    setReturnedOn(entry.returned_on);
+  }, [entry]);
+
+  const parsed = parseRange(range);
+  const outsideBatch =
+    parsed && batch && (parsed.range_start < batch.range_start || parsed.range_end > batch.range_end);
+
+  const submit = async () => {
+    if (!entry || !parsed) return;
+    setSaving(true);
+    const { error } = await supabase
+      .from("raffle_returns" as never)
+      .update({
+        range_start: parsed.range_start,
+        range_end: parsed.range_end,
+        returned_on: returnedOn,
+      } as never)
+      .eq("id", entry.id);
+    setSaving(false);
+    if (error) {
+      toast.error(
+        error.message.includes("no_overlap")
+          ? "Those stubs are already recorded as returned."
+          : error.message
+      );
+      return;
+    }
+    toast.success("Return updated.");
+    onDone();
+    onClose();
+  };
+
+  return (
+    <Dialog open={!!entry} onOpenChange={(o) => { if (!o) onClose(); }}>
+      <DialogContent className="bg-neutral-900 border-neutral-800 text-white max-w-md">
+        <DialogHeader>
+          <DialogTitle>Edit returned stubs</DialogTitle>
+          {batch && (
+            <DialogDescription className="text-neutral-500">
+              From the book {formatRange(batch)}
+            </DialogDescription>
+          )}
+        </DialogHeader>
+
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <Label className="text-xs text-neutral-400">Ticket numbers</Label>
+            <Input
+              value={range}
+              onChange={(e) => setRange(e.target.value)}
+              className="mt-1 bg-neutral-800 border-neutral-700 text-white"
+            />
+            {range.trim() && !parsed && (
+              <p className="text-xs text-amber-400 mt-1">Try something like 141-150.</p>
+            )}
+            {outsideBatch && batch && (
+              <p className="text-xs text-amber-400 mt-1">Outside this book ({formatRange(batch)}).</p>
+            )}
+          </div>
+          <div>
+            <Label className="text-xs text-neutral-400">Returned on</Label>
+            <Input
+              type="date"
+              value={returnedOn}
+              onChange={(e) => setReturnedOn(e.target.value)}
+              className="mt-1 bg-neutral-800 border-neutral-700 text-white"
+            />
+          </div>
+        </div>
+
+        <DialogFooter>
+          <Button variant="ghost" onClick={onClose} className="text-neutral-400 hover:text-white">Cancel</Button>
+          <Button
+            onClick={submit}
+            disabled={!parsed || !!outsideBatch || saving}
+            className="bg-white text-black hover:bg-white/90 font-bold"
+          >
+            {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : "Save"}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+};
+
+const EditPaymentDialog = ({
+  payment, onClose, pricing, onDone,
+}: {
+  payment: RafflePayment | null;
+  onClose: () => void;
+  pricing: Pricing;
+  onDone: () => void;
+}) => {
+  const [amount, setAmount] = useState("");
+  const [tickets, setTickets] = useState("");
+  const [method, setMethod] = useState("Cash");
+  const [paidOn, setPaidOn] = useState("");
+  const [notes, setNotes] = useState("");
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    if (!payment) return;
+    setAmount(String(payment.amount));
+    setTickets(payment.tickets_covered != null ? String(payment.tickets_covered) : "");
+    setMethod(payment.method);
+    setPaidOn(payment.paid_on);
+    setNotes(payment.notes ?? "");
+  }, [payment]);
+
+  const value = Number(amount);
+  const covered = Number(tickets);
+  const suggested = value > 0 ? inferTickets(value, pricing) : 0;
+
+  const submit = async () => {
+    if (!payment || !(value > 0)) return;
+    setSaving(true);
+    const { error } = await supabase
+      .from("raffle_payments" as never)
+      .update({
+        amount: value,
+        tickets_covered: covered > 0 ? covered : suggested || null,
+        method,
+        paid_on: paidOn,
+        notes: notes.trim() || null,
+      } as never)
+      .eq("id", payment.id);
+    setSaving(false);
+    if (error) { toast.error(error.message); return; }
+    toast.success("Payment updated.");
+    onDone();
+    onClose();
+  };
+
+  return (
+    <Dialog open={!!payment} onOpenChange={(o) => { if (!o) onClose(); }}>
+      <DialogContent className="bg-neutral-900 border-neutral-800 text-white max-w-md">
+        <DialogHeader>
+          <DialogTitle>Edit payment</DialogTitle>
+        </DialogHeader>
+
+        <div className="space-y-3">
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <Label className="text-xs text-neutral-400">Amount</Label>
+              <Input
+                type="number" min="0" step="0.01"
+                value={amount}
+                onChange={(e) => setAmount(e.target.value)}
+                className="mt-1 bg-neutral-800 border-neutral-700 text-white"
+              />
+            </div>
+            <div>
+              <Label className="text-xs text-neutral-400">Method</Label>
+              <Select value={method} onValueChange={setMethod}>
+                <SelectTrigger className="mt-1 bg-neutral-800 border-neutral-700 text-white">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent className="bg-neutral-900 border-neutral-700 text-white">
+                  {PAYMENT_METHODS.map((m) => (
+                    <SelectItem key={m} value={m}>{m}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <Label className="text-xs text-neutral-400">Tickets this covers</Label>
+              <Input
+                type="number" min="1" step="1"
+                value={tickets}
+                onChange={(e) => setTickets(e.target.value)}
+                placeholder={suggested ? String(suggested) : "—"}
+                className="mt-1 bg-neutral-800 border-neutral-700 text-white"
+              />
+            </div>
+            <div>
+              <Label className="text-xs text-neutral-400">Date</Label>
+              <Input
+                type="date"
+                value={paidOn}
+                onChange={(e) => setPaidOn(e.target.value)}
+                className="mt-1 bg-neutral-800 border-neutral-700 text-white"
+              />
+            </div>
+          </div>
+
+          <div>
+            <Label className="text-xs text-neutral-400">Notes</Label>
+            <Textarea
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+              rows={2}
+              className="mt-1 bg-neutral-800 border-neutral-700 text-white"
+            />
+          </div>
+        </div>
+
+        <DialogFooter>
+          <Button variant="ghost" onClick={onClose} className="text-neutral-400 hover:text-white">Cancel</Button>
+          <Button
+            onClick={submit}
+            disabled={!(value > 0) || saving}
+            className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold"
+          >
+            {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : "Save"}
           </Button>
         </DialogFooter>
       </DialogContent>

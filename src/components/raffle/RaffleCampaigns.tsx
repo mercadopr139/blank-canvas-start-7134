@@ -9,10 +9,10 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import {
-  Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription,
 } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Ticket, Pencil, Trophy, Loader2, ArrowRight } from "lucide-react";
+import { Plus, Ticket, Pencil, Trophy, Loader2, ArrowRight, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { RaffleCampaign, money, describePricing } from "@/lib/raffle";
 
@@ -141,6 +141,26 @@ const RaffleCampaigns = ({ onOpen }: { onOpen: (c: RaffleCampaign) => void }) =>
   const bundleHalfDone =
     (form.bundle_qty !== "" || form.bundle_price !== "") && !bundleOk;
 
+  // Deleting a campaign takes every ticket, return and payment under it. That
+  // is not a thing to do by mis-clicking, so the name has to be typed.
+  const [deleting, setDeleting] = useState<RaffleCampaign | null>(null);
+  const [confirmName, setConfirmName] = useState("");
+
+  const destroy = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from("raffle_campaigns" as never).delete().eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["raffle-campaigns"] });
+      qc.invalidateQueries({ queryKey: ["raffle-campaign-raised"] });
+      setDeleting(null);
+      setConfirmName("");
+      toast.success("Campaign deleted.");
+    },
+    onError: (e: Error) => toast.error(e.message || "Couldn't delete that."),
+  });
+
   const canSave =
     form.name.trim().length > 1 && Number(form.ticket_price) >= 0 && !bundleHalfDone;
 
@@ -193,14 +213,24 @@ const RaffleCampaigns = ({ onOpen }: { onOpen: (c: RaffleCampaign) => void }) =>
                       {c.draw_date && ` · drawn ${c.draw_date}`}
                     </p>
                   </div>
-                  <Button
-                    variant="ghost" size="icon"
-                    onClick={() => openEdit(c)}
-                    className="text-neutral-500 hover:text-white h-8 w-8 shrink-0"
-                    aria-label={`Edit ${c.name}`}
-                  >
-                    <Pencil className="w-4 h-4" />
-                  </Button>
+                  <div className="flex items-center shrink-0">
+                    <Button
+                      variant="ghost" size="icon"
+                      onClick={() => openEdit(c)}
+                      className="text-neutral-500 hover:text-white h-8 w-8"
+                      aria-label={`Edit ${c.name}`}
+                    >
+                      <Pencil className="w-4 h-4" />
+                    </Button>
+                    <Button
+                      variant="ghost" size="icon"
+                      onClick={() => { setDeleting(c); setConfirmName(""); }}
+                      className="text-neutral-600 hover:text-red-400 h-8 w-8"
+                      aria-label={`Delete ${c.name}`}
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </Button>
+                  </div>
                 </div>
 
                 {c.prize && (
@@ -246,6 +276,47 @@ const RaffleCampaigns = ({ onOpen }: { onOpen: (c: RaffleCampaign) => void }) =>
           })}
         </div>
       )}
+
+      <Dialog open={!!deleting} onOpenChange={(o) => { if (!o) { setDeleting(null); setConfirmName(""); } }}>
+        <DialogContent className="bg-neutral-900 border-neutral-800 text-white max-w-md">
+          <DialogHeader>
+            <DialogTitle>Delete {deleting?.name}?</DialogTitle>
+            <DialogDescription className="text-neutral-400">
+              This takes every ticket issued, every stub returned and every payment recorded under this campaign
+              with it, for every youth. Money already posted to the revenue ledger stays there — reverse it in
+              Revenue if you need to.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div>
+            <Label className="text-xs text-neutral-400">
+              Type <span className="text-white font-semibold">{deleting?.name}</span> to confirm
+            </Label>
+            <Input
+              value={confirmName}
+              onChange={(e) => setConfirmName(e.target.value)}
+              className="mt-1 bg-neutral-800 border-neutral-700 text-white"
+            />
+          </div>
+
+          <DialogFooter>
+            <Button
+              variant="ghost"
+              onClick={() => { setDeleting(null); setConfirmName(""); }}
+              className="text-neutral-400 hover:text-white"
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={() => deleting && destroy.mutate(deleting.id)}
+              disabled={confirmName.trim() !== deleting?.name || destroy.isPending}
+              className="bg-red-600 hover:bg-red-500 text-white font-bold"
+            >
+              {destroy.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : "Delete campaign"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={creating} onOpenChange={setCreating}>
         <DialogContent className="bg-neutral-900 border-neutral-800 text-white max-w-lg">
