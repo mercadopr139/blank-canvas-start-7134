@@ -145,6 +145,21 @@ describe("cardio", () => {
     expect(buildCardio(11).focus).not.toBe("Hard");
   });
 
+  it("never states a duration longer than the 45 the timer counts", () => {
+    // A session that reads "60 minutes" against a 45-minute clock is simply
+    // wrong, and it shipped once. It does not get to ship again.
+    for (let d = 1; d <= HARD75_LENGTH; d++) {
+      const w = buildCardio(d);
+      const text = [w.title, ...w.blocks.map((b) => `${b.name} ${b.detail}`)].join(" ");
+      for (const m of text.matchAll(/(d+)s*min/gi)) {
+        expect(
+          Number(m[1]),
+          `day ${d} ("${w.title}") says ${m[0]}`
+        ).toBeLessThanOrEqual(45);
+      }
+    }
+  });
+
   it("offers an outdoor option most days, since the program demands one", () => {
     const outdoorDays = Array.from({ length: 12 }, (_, i) => i + 1).filter(
       (d) => buildCardio(d).outdoor

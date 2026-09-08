@@ -324,7 +324,11 @@ const AB_SETS: WorkoutBlock[][] = [
 /* ───── Cardio ─────
    Deliberately arranged against the strength rotation so a hard cardio session
    never lands on a heavy leg day: quads and posterior days get low-impact or
-   easy work, and the hard intervals sit on the mobility day. */
+   easy work, and the hard intervals sit on the mobility day.
+
+   EVERY session lasts 45 minutes, warm-up and cool-down included. That is what
+   the program asks for and what the timer counts down, so a workout that says
+   sixty is simply wrong. There is a test that fails the build over it. */
 
 const CARDIO_BY_SLOT: Array<Omit<Workout, "kind">> = [
   {
@@ -355,11 +359,11 @@ const CARDIO_BY_SLOT: Array<Omit<Workout, "kind">> = [
     notes: "Deliberately low-impact — this sits on quad day.",
   },
   {
-    title: "Long effort",
+    title: "Steady distance",
     focus: "Aerobic base",
     outdoor: true,
     blocks: [
-      { name: "60 minutes outdoors", detail: "Run, ruck or fast walk. Steady throughout." },
+      { name: "45 minutes outdoors", detail: "Run, ruck or fast walk. Steady the whole way — cover ground, don’t race it." },
     ],
   },
   {
@@ -377,7 +381,7 @@ const CARDIO_BY_SLOT: Array<Omit<Workout, "kind">> = [
     outdoor: true,
     blocks: [
       { name: "Warm-up", detail: "12 minutes easy" },
-      { name: "10 × 20 second hill sprint", detail: "Walk down for recovery." },
+      { name: "10 × 20 second hill sprint", detail: "Walk back down. About 23 minutes all in." },
       { name: "Cool-down", detail: "10 minutes easy" },
     ],
     notes: "The hard one lands on mobility day, when nothing heavy is being lifted.",

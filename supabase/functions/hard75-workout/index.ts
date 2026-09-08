@@ -30,6 +30,11 @@ const SYSTEM =
   "wrong here. Respect the athlete's age: recovery at 45 is not recovery at 22, and the programme has to still " +
   "be working in week ten.\n\n" +
 
+  "FORTY-FIVE MINUTES. Every session is exactly 45 minutes, warm-up and cool-down included. The app runs a " +
+  "45-minute countdown against it, so a session that says sixty is wrong however good it is. Any durations you " +
+  "write must add up to 45 or less, and the work must be finishable in that time by someone taking sensible " +
+  "rest between sets.\n\n" +
+
   "EQUIPMENT: assume a full commercial gym, but give EVERY movement a home/firehouse substitute using only " +
   "dumbbells, bands, a bench, a pull-up bar or bodyweight. A shift away from the gym must cost the equipment, " +
   "never the session.\n\n" +
@@ -110,7 +115,8 @@ Deno.serve(async (req: Request) => {
             `Phase: ${focus}. Use ${sets} sets of ${reps} on the compounds and 3 sets of ${accessoryReps} on ` +
             `the accessories. Finish with core work.\n`
         : `Write the CARDIO session. Intended character: ${title} — ${focus}.\n` +
-          "Do not make it harder than that character calls for; it is scheduled against a strength day.\n") +
+          "Do not make it harder than that character calls for; it is scheduled against a strength day. " +
+          "It must total 45 minutes including warm-up and cool-down.\n") +
       (avoid.length
         ? `\nHe has just rejected this session, so choose different movements:\n- ${avoid.join("\n- ")}\n`
         : "") +
