@@ -65,6 +65,7 @@ import StrengthIntelligence from "./pages/StrengthIntelligence";
 import Hard75 from "./pages/Hard75";
 import NbtBoard from "./pages/NbtBoard";
 import AdminNbtBoard from "./pages/admin/AdminNbtBoard";
+import AdminNbtIntelligence from "./pages/admin/AdminNbtIntelligence";
 import Hard75Invite from "./pages/Hard75Invite";
 import AdminExcursionSignups from "./pages/admin/AdminExcursionSignups";
 import AdminSmileLabAttendance from "./pages/admin/AdminSmileLabAttendance";
@@ -267,6 +268,7 @@ const App = () => (
               <Route path="practice-plan" element={<AdminPracticePlan />} />
               <Route path="daily-duties" element={<AdminDailyDuties />} />
               <Route path="nbt-board" element={<AdminNbtBoard />} />
+              <Route path="nbt-intelligence" element={<AdminNbtIntelligence />} />
               <Route path="scripture-coach" element={<AdminScriptureCoach />} />
               <Route path="scripture-coach-intelligence" element={<AdminScriptureCoachIntelligence />} />
             </Route>

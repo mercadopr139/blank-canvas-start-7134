@@ -175,7 +175,7 @@ const StrengthIntelligence = () => {
               <TrendingUp className="h-6 w-6" />
             </div>
             <div>
-              <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight">S&amp;C Intelligence</h1>
+              <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight">Battle Team S&amp;C Intelligence</h1>
               <p className="text-white/50 text-sm">Every athlete's progress — pull up a name to show them their program.</p>
             </div>
           </div>

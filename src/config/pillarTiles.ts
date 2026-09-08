@@ -109,8 +109,9 @@ export const OPERATIONS_TILES: PillarTile[] = [
     permKey: "operations_strength_conditioning",
     children: [
       { title: "Battle Team S&C Board", href: "/strength-coach", icon: Dumbbell, external: true },
-      { title: "S&C Intelligence", href: "/strength-coach/intelligence", icon: BarChart3, external: true },
+      { title: "Battle Team Intelligence", href: "/strength-coach/intelligence", icon: BarChart3, external: true },
       { title: "NBT S&C Board", href: "/admin/operations/nbt-board", icon: Dumbbell },
+      { title: "NBT Intelligence", href: "/admin/operations/nbt-intelligence", icon: BarChart3 },
       { title: "75 Hard", href: "/hard-75", icon: Flame, external: true },
     ],
   },
