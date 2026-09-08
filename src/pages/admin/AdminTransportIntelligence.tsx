@@ -6,7 +6,12 @@ import { format, startOfMonth, differenceInYears, parseISO } from "date-fns";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { RefreshCw, FileText, Bus, Users, DollarSign, ArrowUpRight, ArrowDownRight, UserCheck } from "lucide-react";
-import { getCurrentAttendanceYear, programYearRange, shortProgramYear } from "@/lib/programYear";
+import {
+  getCurrentAttendanceYear, programYearRange, shortProgramYear, nextProgramYear,
+} from "@/lib/programYear";
+import {
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from "@/components/ui/select";
 import { isBelowPoverty } from "@/lib/demographics";
 import { fetchAllRows } from "@/lib/fetchAllRows";
 
@@ -15,7 +20,11 @@ const ZONES = ["Woodbine", "Wildwood"] as const;
 type ZoneKey = (typeof ZONES)[number];
 const ZONE_ACCENT: Record<ZoneKey, string> = { Woodbine: "#E0A400", Wildwood: "#8C1D3F" };
 
-type Window = "month" | "year" | "all";
+// A reporting period is either this calendar month or one program year.
+// "All-time" used to be an option and has been removed on purpose: nobody
+// reports on it, and sooner or later somebody reads a number off it and puts it
+// in a grant application as though it were a year.
+type Period = "month" | string; // "month" | "2025-2026" | "2026-2027" | …
 
 /* ── per-zone rolled-up stats ── */
 type Breakdown = { label: string; count: number }[];
@@ -41,19 +50,56 @@ const sortBreakdown = (rec: Record<string, number>): Breakdown =>
 // Poverty rule lives in one place (@/lib/demographics) so every Intelligence
 // screen and the printed report agree — see isBelowPoverty.
 
-function windowRange(w: Window): [Date, Date] {
+function windowRange(period: Period): [Date, Date] {
   const now = new Date();
-  if (w === "month") return [startOfMonth(now), now];
-  if (w === "all") return [new Date(2020, 0, 1), now];
+  if (period === "month") return [startOfMonth(now), now];
   // In-session attendance year (flips Sept 1), not the sign-up year (flips
   // Aug 1) — otherwise Aug 1–31 points at next season's future window and
   // shows "no completed trips".
-  return programYearRange(getCurrentAttendanceYear()); // program year
+  return programYearRange(period);
+}
+
+/** The program year a period reports on, used to match registrations to it. */
+const periodYear = (period: Period) =>
+  period === "month" ? getCurrentAttendanceYear() : period;
+
+/**
+ * Which program years to offer — derived from the ride data rather than hard
+ * coded, so next September's year appears on its own and nobody has to
+ * remember to add it.
+ */
+async function availableYears(): Promise<string[]> {
+  const { data } = await supabase
+    .from("runs")
+    .select("started_at")
+    .eq("status", "completed")
+    .order("started_at", { ascending: true })
+    .limit(1);
+
+  const current = getCurrentAttendanceYear();
+  const first = data?.[0]?.started_at;
+  if (!first) return [current];
+
+  const years: string[] = [];
+  let tag = getCurrentAttendanceYear(new Date(first));
+  // Walk forward to today. Bounded so a bad date can never spin forever.
+  for (let i = 0; i < 30 && tag !== current; i++) {
+    years.push(tag);
+    tag = nextProgramYear(tag);
+  }
+  years.push(current);
+  return years.reverse(); // newest first
 }
 
 /* ── data fetch + per-zone computation ── */
-async function buildIntelligence(w: Window) {
-  const [start, end] = windowRange(w);
+async function buildIntelligence(period: Period) {
+  const [start, end] = windowRange(period);
+  const year = periodYear(period);
+  // Ages are reported as of the END of the period, capped at today. Computing
+  // them from today would describe last season's riders with this season's
+  // ages — a 14-year-old driven all last year would appear in the 2025-26
+  // breakdown as 15.
+  const asOf = end.getTime() > Date.now() ? new Date() : end;
   const ds = format(start, "yyyy-MM-dd");
   const de = format(end, "yyyy-MM-dd");
 
@@ -83,11 +129,31 @@ async function buildIntelligence(w: Window) {
   const regs = (await fetchAllRows((from, to) =>
     supabase
       .from("youth_registrations")
-      .select("child_first_name, child_last_name, child_date_of_birth, child_sex, child_race_ethnicity, household_income_range, free_or_reduced_lunch")
+      .select("child_first_name, child_last_name, child_date_of_birth, child_sex, child_race_ethnicity, household_income_range, free_or_reduced_lunch, program_year")
       .range(from, to)
   )) as any[];
-  const regByName = new Map<string, any>();
-  regs.forEach((r) => regByName.set(`${(r.child_first_name || "").toLowerCase()}|${(r.child_last_name || "").toLowerCase()}`, r));
+
+  // Riders are matched to registrations BY NAME, and a youth has one
+  // registration per program year. This used to keep whichever row happened to
+  // load last, so the poverty figure could be computed from a different year's
+  // paperwork than the year on screen — income and free/reduced lunch are
+  // exactly the fields that change year to year. Now every registration for a
+  // name is kept and the one for the year being viewed wins, falling back to
+  // their most recent.
+  const regsByName = new Map<string, any[]>();
+  regs.forEach((r) => {
+    const key = `${(r.child_first_name || "").toLowerCase()}|${(r.child_last_name || "").toLowerCase()}`;
+    if (!regsByName.has(key)) regsByName.set(key, []);
+    regsByName.get(key)!.push(r);
+  });
+  const regForYear = (key: string) => {
+    const list = regsByName.get(key);
+    if (!list?.length) return null;
+    return (
+      list.find((r) => r.program_year === year) ??
+      [...list].sort((a, b) => String(b.program_year ?? "").localeCompare(String(a.program_year ?? "")))[0]
+    );
+  };
 
   // run id → youth count per zone, so each trip can be attributed to ONE primary
   // zone (the zone most of its riders came from). That single-assignment is what
@@ -102,7 +168,7 @@ async function buildIntelligence(w: Window) {
     const rec = runZoneCounts.get(a.run_id)!;
     rec[zone] = (rec[zone] || 0) + 1;
     if (!youthById.has(a.youth_id)) {
-      const reg = regByName.get(`${(a.youth?.first_name || "").toLowerCase()}|${(a.youth?.last_name || "").toLowerCase()}`);
+      const reg = regForYear(`${(a.youth?.first_name || "").toLowerCase()}|${(a.youth?.last_name || "").toLowerCase()}`);
       youthById.set(a.youth_id, { zone, reg: reg || null });
     }
   });
@@ -167,7 +233,7 @@ async function buildIntelligence(w: Window) {
     // them so the poverty % divides by "assessed," not by all youth served.
     targets.forEach((a) => a.matched.add(youthId));
     if (reg.child_date_of_birth) {
-      const age = differenceInYears(new Date(), parseISO(reg.child_date_of_birth));
+      const age = differenceInYears(asOf, parseISO(reg.child_date_of_birth));
       if (age >= 0 && age < 30) targets.forEach((a) => { a.age[String(age)] = (a.age[String(age)] || 0) + 1; });
     }
     if (reg.child_sex) targets.forEach((a) => { a.gender[reg.child_sex] = (a.gender[reg.child_sex] || 0) + 1; });
@@ -287,19 +353,29 @@ const ZoneColumn = ({ name, stats }: { name: ZoneKey; stats: ZoneStats }) => (
 /* ── page ── */
 export default function AdminTransportIntelligence() {
   const navigate = useNavigate();
-  const [win, setWin] = useState<Window>("year");
+  // Defaults to the program year in session, which is what anyone opening this
+  // page wants nine times in ten.
+  const [period, setPeriod] = useState<Period>(() => getCurrentAttendanceYear());
+
+  const { data: years = [] } = useQuery({
+    queryKey: ["transport-intelligence-years"],
+    queryFn: availableYears,
+    staleTime: 60 * 60 * 1000,
+  });
 
   const { data, isLoading, isFetching, refetch } = useQuery({
-    queryKey: ["transport-intelligence", win],
-    queryFn: () => buildIntelligence(win),
+    queryKey: ["transport-intelligence", period],
+    queryFn: () => buildIntelligence(period),
     staleTime: 60_000,
   });
 
-  const windowLabel = useMemo(() => {
-    if (win === "month") return format(new Date(), "MMMM yyyy");
-    if (win === "all") return "All-time";
-    return `Program Year ${shortProgramYear(getCurrentAttendanceYear())}`;
-  }, [win]);
+  const windowLabel = useMemo(
+    () =>
+      period === "month"
+        ? format(new Date(), "MMMM yyyy")
+        : `Program Year ${shortProgramYear(period)}`,
+    [period]
+  );
 
   const combined = data?.Combined;
 
@@ -312,17 +388,20 @@ export default function AdminTransportIntelligence() {
           <p className="text-white/50 text-sm mt-1">Live snapshot of who we serve — Woodbine and Wildwood, side by side.</p>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
-          <div className="flex rounded-lg border border-white/10 overflow-hidden">
-            {([["month", "This Month"], ["year", "Program Year"], ["all", "All-Time"]] as [Window, string][]).map(([k, label]) => (
-              <button
-                key={k}
-                onClick={() => setWin(k)}
-                className={`px-3 py-1.5 text-xs font-medium transition-colors ${win === k ? "bg-[#CC0000] text-white" : "text-white/60 hover:text-white hover:bg-white/5"}`}
-              >
-                {label}
-              </button>
-            ))}
-          </div>
+          {/* One control, one answer to "what period am I looking at". */}
+          <Select value={period} onValueChange={setPeriod}>
+            <SelectTrigger className="h-9 w-[190px] bg-zinc-900 border-white/15 text-white text-sm">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent className="bg-zinc-900 border-white/15 text-white">
+              {years.map((y) => (
+                <SelectItem key={y} value={y}>
+                  Program Year {shortProgramYear(y)}
+                </SelectItem>
+              ))}
+              <SelectItem value="month">This Month</SelectItem>
+            </SelectContent>
+          </Select>
           <Button size="sm" variant="outline" onClick={() => refetch()} disabled={isFetching} className="border-white/15 text-white hover:bg-white/10 gap-1.5">
             <RefreshCw className={`w-3.5 h-3.5 ${isFetching ? "animate-spin" : ""}`} /> Refresh
           </Button>

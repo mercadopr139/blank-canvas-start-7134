@@ -1,4 +1,4 @@
-// Shared types and helpers for Scripture Coach + Spiritual Coach Intelligence.
+// Shared types and helpers for Scripture Coach + Scripture Coach Intelligence.
 // Plan: docs/SCRIPTURE_COACH_PLAN.md
 import jsPDF from "jspdf";
 

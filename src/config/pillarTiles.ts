@@ -140,7 +140,7 @@ export const OPERATIONS_TILES: PillarTile[] = [
     permKey: "operations_scripture_coach",
     children: [
       {
-        title: "Spiritual Coach Intelligence",
+        title: "Scripture Coach Intelligence",
         href: "/admin/operations/scripture-coach-intelligence",
         icon: HeartHandshake,
       },

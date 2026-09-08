@@ -1,4 +1,4 @@
-// Spiritual Coach Intelligence — every saved Scripture Coach session, and the
+// Scripture Coach Intelligence — every saved Scripture Coach session, and the
 // supervision workflow around it.
 //
 // A session is a record of a real conversation with a child, so it doesn't
@@ -190,7 +190,7 @@ const AdminScriptureCoachIntelligence = () => {
     <div className="p-4 md:p-8 space-y-6 max-w-5xl mx-auto text-white">
       <div className="flex items-start justify-between gap-4 flex-wrap">
         <div>
-          <h2 className="text-xl font-bold text-white">Spiritual Coach Intelligence</h2>
+          <h2 className="text-xl font-bold text-white">Scripture Coach Intelligence</h2>
           <p className="text-sm text-neutral-400 mt-1">
             Every conversation, and what still needs attention.
           </p>
