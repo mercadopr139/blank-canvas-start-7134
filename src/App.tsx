@@ -63,6 +63,8 @@ import ExcursionCoach from "./pages/ExcursionCoach";
 import StrengthCoach from "./pages/StrengthCoach";
 import StrengthIntelligence from "./pages/StrengthIntelligence";
 import Hard75 from "./pages/Hard75";
+import NbtBoard from "./pages/NbtBoard";
+import AdminNbtBoard from "./pages/admin/AdminNbtBoard";
 import Hard75Invite from "./pages/Hard75Invite";
 import AdminExcursionSignups from "./pages/admin/AdminExcursionSignups";
 import AdminSmileLabAttendance from "./pages/admin/AdminSmileLabAttendance";
@@ -178,6 +180,8 @@ const App = () => (
             <Route path="/strength-coach" element={<StrengthCoach />} />
             <Route path="/strength-coach/intelligence" element={<StrengthIntelligence />} />
             <Route path="/hard-75" element={<ProtectedRoute><Hard75 /></ProtectedRoute>} />
+            {/* The gym screen. No login, like the Battle Team board. */}
+            <Route path="/nbt-board" element={<NbtBoard />} />
             {/* The participant's private link. Deliberately NOT behind auth — the
                 token in the URL and the PIN are the credential, and everything it
                 can do goes through the hard75-access edge function. */}
@@ -262,6 +266,7 @@ const App = () => (
               <Route path="meal-reports" element={<AdminMealReports />} />
               <Route path="practice-plan" element={<AdminPracticePlan />} />
               <Route path="daily-duties" element={<AdminDailyDuties />} />
+              <Route path="nbt-board" element={<AdminNbtBoard />} />
               <Route path="scripture-coach" element={<AdminScriptureCoach />} />
               <Route path="scripture-coach-intelligence" element={<AdminScriptureCoachIntelligence />} />
             </Route>
