@@ -3,7 +3,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { ChevronLeft, ChevronRight, Dumbbell, Lock, Unlock, RefreshCw, Sparkles, Wand2, CalendarDays, History, Search, Plus, Trash2, X, Pencil, ClipboardList, TrendingUp, PlayCircle } from "lucide-react";
+import { ChevronLeft, ChevronRight, Dumbbell, Lock, Unlock, RefreshCw, Sparkles, Wand2, CalendarDays, History, Search, Plus, Trash2, X, Pencil, ClipboardList, TrendingUp, PlayCircle, Monitor } from "lucide-react";
 
 // Strength & Conditioning Coach — Phase 1. One screen the onsite coach opens on the
 // gym board: generate the week (Mon Bench · Wed Squat · Fri Deadlift), review each
@@ -12,50 +12,11 @@ import { ChevronLeft, ChevronRight, Dumbbell, Lock, Unlock, RefreshCw, Sparkles,
 
 const NLA_RED = "#bf0f3e";
 
-type DayKey = "monday" | "wednesday" | "friday";
-
-interface Accessory {
-  name: string; sets: string; equipment: string; targets: string;
-  howTo?: string; scale?: string; rest?: string;
-}
-interface DayWorkout {
-  focus: string;
-  estMinutes?: number;
-  warmup?: { name: string; detail: string }[];
-  main?: { lift: string; scheme: string; guidance?: string; cues?: string[]; rest?: string };
-  accessories?: Accessory[];
-  finisher?: { name: string; detail: string } | null;
-  coachNotes?: string;
-}
-interface WeekRow {
-  id: string;
-  week_start: string;
-  status: "draft" | "locked";
-  days: Partial<Record<DayKey, DayWorkout>>;
-  locked_at: string | null;
-}
-
-const DAYS: { key: DayKey; label: string; lift: string; weekday: number }[] = [
-  { key: "monday", label: "Monday", lift: "Bench Press", weekday: 1 },
-  { key: "wednesday", label: "Wednesday", lift: "Back Squat", weekday: 3 },
-  { key: "friday", label: "Friday", lift: "Deadlift", weekday: 5 },
-];
-
-const toMonday = (d: Date): Date => {
-  const x = new Date(d);
-  const day = x.getDay(); // 0 Sun .. 6 Sat
-  x.setDate(x.getDate() + (day === 0 ? -6 : 1 - day));
-  x.setHours(0, 0, 0, 0);
-  return x;
-};
-const isoDate = (d: Date): string =>
-  `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-const addDays = (d: Date, n: number): Date => { const x = new Date(d); x.setDate(x.getDate() + n); return x; };
-const prettyRange = (mondayISO: string): string => {
-  const m = new Date(mondayISO + "T00:00:00");
-  const opt: Intl.DateTimeFormatOptions = { month: "short", day: "numeric" };
-  return `${m.toLocaleDateString(undefined, opt)} – ${addDays(m, 4).toLocaleDateString(undefined, opt)}`;
-};
+// The week's shape and the date helpers live in src/lib/strength.ts now, shared
+// with the gym screen at /strength-board so the two can never disagree.
+import {
+  DAYS, type DayKey, type DayWorkout, type WeekRow, toMonday, isoDate, addDays, prettyRange,
+} from "@/lib/strength";
 
 const StrengthCoach = () => {
   const queryClient = useQueryClient();
@@ -212,10 +173,18 @@ const StrengthCoach = () => {
               <History className="h-4 w-4" /> History
             </button>
           </div>
-          <button onClick={() => navigate("/strength-coach/intelligence")}
-            className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-sm font-semibold bg-white/5 hover:bg-white/10 border border-white/15">
-            <TrendingUp className="h-4 w-4" /> <span className="hidden sm:inline">S&amp;C Intelligence</span>
-          </button>
+          <div className="flex items-center gap-2">
+            {/* The wall view. This page is the coach's desk; that one is what
+                the crew reads from across the gym. */}
+            <button onClick={() => navigate("/strength-board")}
+              className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-sm font-semibold bg-white/5 hover:bg-white/10 border border-white/15">
+              <Monitor className="h-4 w-4" /> <span className="hidden sm:inline">Open gym board</span>
+            </button>
+            <button onClick={() => navigate("/strength-coach/intelligence")}
+              className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-sm font-semibold bg-white/5 hover:bg-white/10 border border-white/15">
+              <TrendingUp className="h-4 w-4" /> <span className="hidden sm:inline">S&amp;C Intelligence</span>
+            </button>
+          </div>
         </div>
 
         {view === "history" ? (

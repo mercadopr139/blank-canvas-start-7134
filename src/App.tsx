@@ -61,6 +61,7 @@ import AdminScriptureCoachIntelligence from "./pages/admin/AdminScriptureCoachIn
 import ExcursionCheckIn from "./pages/ExcursionCheckIn";
 import ExcursionCoach from "./pages/ExcursionCoach";
 import StrengthCoach from "./pages/StrengthCoach";
+import StrengthBoard from "./pages/StrengthBoard";
 import StrengthIntelligence from "./pages/StrengthIntelligence";
 import Hard75 from "./pages/Hard75";
 import NbtBoard from "./pages/NbtBoard";
@@ -180,6 +181,8 @@ const App = () => (
             <Route path="/practice-board" element={<PracticeBoard />} />
             <Route path="/strength-coach" element={<StrengthCoach />} />
             <Route path="/strength-coach/intelligence" element={<StrengthIntelligence />} />
+            {/* The Battle Team's gym screen. No login, like the coach's page above. */}
+            <Route path="/strength-board" element={<StrengthBoard />} />
             <Route path="/hard-75" element={<ProtectedRoute><Hard75 /></ProtectedRoute>} />
             {/* The gym screen. No login, like the Battle Team board. */}
             <Route path="/nbt-board" element={<NbtBoard />} />

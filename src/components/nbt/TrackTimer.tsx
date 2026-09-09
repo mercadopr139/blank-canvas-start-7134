@@ -1,13 +1,18 @@
-// One track's clock for the conditioning block.
+// A block's clock for the gym screen.
 //
-// Three of these sit side by side on the gym screen, one per track, each in
+// On the NBT board three of these sit side by side, one per track, each in
 // its track's colour, because the tracks do not start together — Alpha may
-// still be racking a bar while Charlie is already on the floor. A coach taps
-// Start on the one that is beginning. The colour is what tells three clocks
-// apart from across the room.
+// still be racking a bar while Charlie is already on the floor. On the Battle
+// Team board there is one, for the session. A coach taps Start as the block
+// begins. The colour is what tells three clocks apart from across the room.
 //
-// Counts down to the minutes the generator gave the block, then keeps going in
-// red — overtime is information, not a failure, and boxing is waiting.
+// Counts down to the minutes it was given, then keeps going in red — overtime
+// is information, not a failure, and boxing is waiting.
+//
+// It can be set by hand. Nobody remembers to press Start every time, and a
+// coach who realises six minutes in should not have to pretend it is 20:00:
+// the −1 / +1 buttons move the clock a minute at a time, before, during or
+// after. That is an adjustment to the TOTAL, so the progress bar stays honest.
 //
 // Kept in localStorage rather than the database: the screen is a TV with no
 // login, and the only thing that has to survive is a refresh mid-session.
@@ -18,16 +23,20 @@ import { elapsedOf, formatClock } from "@/lib/nbt";
 interface Clock {
   seconds: number;
   startedAt: string | null;
+  /** Seconds added to (or taken off) the block by hand. */
+  adjust: number;
 }
 
-const BLANK: Clock = { seconds: 0, startedAt: null };
+const BLANK: Clock = { seconds: 0, startedAt: null, adjust: 0 };
 
 const read = (key: string): Clock => {
   try {
     const raw = localStorage.getItem(key);
     if (raw) {
       const c = JSON.parse(raw);
-      if (typeof c?.seconds === "number") return { seconds: c.seconds, startedAt: c.startedAt ?? null };
+      if (typeof c?.seconds === "number") {
+        return { seconds: c.seconds, startedAt: c.startedAt ?? null, adjust: Number(c.adjust) || 0 };
+      }
     }
   } catch {
     /* no storage — the clock just will not survive a refresh */
@@ -54,7 +63,7 @@ const TrackTimer = ({
   const [clock, setClock] = useState<Clock>(() => read(storageKey));
   useEffect(() => { setClock(read(storageKey)); }, [storageKey]);
 
-  // Ticks only while running — three idle clocks should cost the TV nothing.
+  // Ticks only while running — idle clocks should cost the TV nothing.
   const [, tick] = useState(0);
   useEffect(() => {
     if (!clock.startedAt) return;
@@ -62,7 +71,9 @@ const TrackTimer = ({
     return () => window.clearInterval(id);
   }, [clock.startedAt]);
 
-  const total = Math.max(1, minutes) * 60;
+  const base = Math.max(1, minutes) * 60;
+  // Never let the block be nudged below a minute.
+  const total = Math.max(60, base + clock.adjust);
   const elapsed = elapsedOf(clock.seconds, clock.startedAt);
   const left = total - elapsed;
   const over = left < 0;
@@ -70,9 +81,11 @@ const TrackTimer = ({
   const pct = Math.min(100, (elapsed / total) * 100);
 
   const set = (c: Clock) => { setClock(c); write(storageKey, c); };
-  const start = () => set({ seconds: clock.seconds, startedAt: new Date().toISOString() });
-  const pause = () => set({ seconds: elapsed, startedAt: null });
+  const start = () => set({ ...clock, startedAt: new Date().toISOString() });
+  const pause = () => set({ ...clock, seconds: elapsed, startedAt: null });
   const reset = () => set(BLANK);
+  const nudge = (delta: number) =>
+    set({ ...clock, adjust: Math.max(60 - base, clock.adjust + delta) });
 
   const tone = over ? "#f87171" : color;
 
@@ -92,6 +105,23 @@ const TrackTimer = ({
         </p>
 
         <div className="ml-auto flex items-center gap-[0.3em] shrink-0">
+          {/* Set by hand — forgot to press Start, or the block needs longer. */}
+          <button
+            onClick={() => nudge(-60)}
+            title="A minute less on the clock"
+            aria-label="A minute less on the clock"
+            className="h-[2.2em] px-[0.6em] rounded-lg text-[0.75em] font-bold text-white/45 hover:text-white bg-white/[0.06] hover:bg-white/10 transition-colors tabular-nums"
+          >
+            −1 min
+          </button>
+          <button
+            onClick={() => nudge(60)}
+            title="A minute more on the clock"
+            aria-label="A minute more on the clock"
+            className="h-[2.2em] px-[0.6em] rounded-lg text-[0.75em] font-bold text-white/45 hover:text-white bg-white/[0.06] hover:bg-white/10 transition-colors tabular-nums"
+          >
+            +1 min
+          </button>
           <button
             onClick={running ? pause : start}
             className="h-[2.2em] px-[1em] rounded-lg font-black text-[0.85em] text-black transition-opacity hover:opacity-90"
@@ -106,7 +136,7 @@ const TrackTimer = ({
               </span>
             )}
           </button>
-          {elapsed > 0 && !running && (
+          {(elapsed > 0 || clock.adjust !== 0) && !running && (
             <button
               onClick={reset}
               title="Reset"
