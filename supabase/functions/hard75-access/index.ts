@@ -196,7 +196,7 @@ Deno.serve(async (req: Request) => {
         const allowed = [
           "strength_done", "cardio_done", "outdoor_done",
           "water_done", "reading_done", "diet_done",
-          "photo_path", "notes", "strength", "cardio",
+          "photo_path", "weight_lb", "notes", "strength", "cardio",
           "strength_seconds", "strength_started_at",
           "cardio_seconds", "cardio_started_at",
         ];

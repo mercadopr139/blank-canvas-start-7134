@@ -250,6 +250,7 @@ const Hard75 = () => {
           {api && (
             <Hard75DaySheet
               day={days.find((d) => d.id === openDay) ?? null}
+              days={days}
               run={run}
               api={api}
               onClose={() => setOpenDay(null)}

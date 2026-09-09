@@ -19,15 +19,17 @@ import { format } from "date-fns";
 import { toast } from "sonner";
 import {
   Hard75Run, Hard75Day, Workout, WorkoutBlock, CHECKLIST, ChecklistKey, doneCount,
-  STRENGTH_COLOR, CARDIO_COLOR, MOBILITY_COLOR, isMobilityDay, phaseFor,
+  STRENGTH_COLOR, CARDIO_COLOR, MOBILITY_COLOR, isMobilityDay, phaseFor, weightTrend,
 } from "@/lib/hard75";
 import { Hard75Api } from "@/lib/hard75Api";
 import SessionTimer from "@/components/hard75/SessionTimer";
 
 const Hard75DaySheet = ({
-  day, run, api, onClose,
+  day, days, run, api, onClose,
 }: {
   day: Hard75Day | null;
+  /** The whole run, so the weight can be shown against day one. */
+  days: Hard75Day[];
   run: Hard75Run;
   api: Hard75Api;
   onClose: () => void;
@@ -35,6 +37,7 @@ const Hard75DaySheet = ({
   const [busy, setBusy] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
   const [journal, setJournal] = useState<string | null>(null);
+  const [weight, setWeight] = useState<string | null>(null);
   const [savedFlash, setSavedFlash] = useState(false);
   const [editing, setEditing] = useState<"strength" | "cardio" | null>(null);
   const [clearing, setClearing] = useState(false);
@@ -130,6 +133,15 @@ const Hard75DaySheet = ({
     toast.success(`Day ${day.day_number} cleared.`);
   };
 
+  const saveWeight = async () => {
+    if (!day || weight === null) return;
+    const raw = weight.trim();
+    const value = raw === "" ? null : Number(raw);
+    if (value !== null && (!Number.isFinite(value) || value <= 0)) return;
+    if (value === (day.weight_lb ?? null)) return;
+    await patch({ weight_lb: value });
+  };
+
   const saveJournal = async () => {
     if (!day || journal === null) return;
     if (journal.trim() === (day.notes ?? "").trim()) return;
@@ -140,9 +152,21 @@ const Hard75DaySheet = ({
 
   if (!day) return null;
   const done = doneCount(day);
+  const trend = weightTrend(days);
 
   return (
-    <Dialog open onOpenChange={(o) => { if (!o) { saveJournal(); setJournal(null); onClose(); } }}>
+    <Dialog
+      open
+      onOpenChange={(o) => {
+        if (!o) {
+          saveJournal();
+          saveWeight();
+          setJournal(null);
+          setWeight(null);
+          onClose();
+        }
+      }}
+    >
       <DialogContent className="bg-neutral-950 border-neutral-800 text-white max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-baseline gap-3 flex-wrap">
@@ -220,6 +244,44 @@ const Hard75DaySheet = ({
                   </button>
                 );
               })}
+            </div>
+          </div>
+
+          {/* Today's weight, above the photo — the scale and the mirror on the
+              same morning. Optional: the programme never asks for it, so a day
+              without one is a day without one, not a zero. */}
+          <div>
+            <div className="flex items-center gap-2 mb-2">
+              <p className="text-[11px] uppercase tracking-[0.15em] text-white/35 font-semibold">
+                Today&apos;s weight
+              </p>
+              {trend && (
+                <span
+                  className={`text-[11px] font-bold tabular-nums ${
+                    trend.change < 0
+                      ? "text-emerald-400"
+                      : trend.change > 0
+                      ? "text-amber-400"
+                      : "text-white/35"
+                  }`}
+                >
+                  {trend.change > 0 ? "+" : ""}{trend.change} lb since day one
+                </span>
+              )}
+            </div>
+            <div className="flex items-center gap-2">
+              <Input
+                type="number"
+                inputMode="decimal"
+                step="0.1"
+                min="0"
+                value={weight ?? (day.weight_lb != null ? String(day.weight_lb) : "")}
+                onChange={(e) => setWeight(e.target.value)}
+                onBlur={saveWeight}
+                placeholder="—"
+                className="w-32 h-11 text-lg bg-neutral-900 border-neutral-800 text-white"
+              />
+              <span className="text-sm text-white/40">lb</span>
             </div>
           </div>
 

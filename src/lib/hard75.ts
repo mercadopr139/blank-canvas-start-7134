@@ -63,6 +63,8 @@ export interface Hard75Day {
   reading_done: boolean;
   diet_done: boolean;
   photo_path: string | null;
+  /** Pounds. Null on any day it was not weighed — the programme does not ask for it. */
+  weight_lb: number | null;
   notes: string | null;
   completed_at: string | null;
   /** Accumulated seconds, NOT counting a stretch that is running right now. */
@@ -483,6 +485,36 @@ export const formatClock = (totalSeconds: number) => {
 
 /** Whole minutes, for the record of how long a session actually took. */
 export const minutesOf = (seconds: number) => Math.round((seconds || 0) / 60);
+
+/* ───── Weight ─────
+   A number on its own says nothing; the change since day one is the whole
+   reason for writing it down every morning. */
+
+export interface WeightTrend {
+  first: number;
+  latest: number;
+  change: number;
+  entries: number;
+}
+
+/** Null until there are at least two weigh-ins to compare. */
+export const weightTrend = (
+  days: Pick<Hard75Day, "day_number" | "weight_lb">[]
+): WeightTrend | null => {
+  const logged = days
+    .filter((d) => d.weight_lb != null)
+    .sort((a, b) => a.day_number - b.day_number);
+  if (logged.length < 2) return null;
+  const first = Number(logged[0].weight_lb);
+  const latest = Number(logged[logged.length - 1].weight_lb);
+  return {
+    first,
+    latest,
+    // Rounded to a decimal: floats turn 184.6 - 190.2 into -5.600000000000023.
+    change: Math.round((latest - first) * 10) / 10,
+    entries: logged.length,
+  };
+};
 
 /* ───── Status ───── */
 

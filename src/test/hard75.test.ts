@@ -25,6 +25,7 @@ import {
   remainingSeconds,
   formatClock,
   minutesOf,
+  weightTrend,
 } from "@/lib/hard75";
 
 /** A day with every box ticked, then override what the test cares about. */
@@ -319,5 +320,40 @@ describe("session timers", () => {
     expect(minutesOf(2700)).toBe(45);
     expect(minutesOf(2729)).toBe(45);
     expect(minutesOf(0)).toBe(0);
+  });
+});
+
+describe("weight", () => {
+  const w = (day_number: number, weight_lb: number | null) => ({ day_number, weight_lb });
+
+  it("waits for a second weigh-in before claiming a trend", () => {
+    expect(weightTrend([])).toBeNull();
+    expect(weightTrend([w(1, 190.2)])).toBeNull();
+  });
+
+  it("compares the first weigh-in to the latest", () => {
+    const t = weightTrend([w(1, 190.2), w(14, 187.0), w(30, 184.6)])!;
+    expect(t.first).toBe(190.2);
+    expect(t.latest).toBe(184.6);
+    expect(t.change).toBe(-5.6); // not -5.600000000000023
+    expect(t.entries).toBe(3);
+  });
+
+  it("skips the days he did not weigh in", () => {
+    // The programme does not require a weigh-in, so gaps are normal and must
+    // not be read as zero.
+    const t = weightTrend([w(1, 190), w(2, null), w(3, null), w(4, 188)])!;
+    expect(t.entries).toBe(2);
+    expect(t.change).toBe(-2);
+  });
+
+  it("does not care what order the days arrive in", () => {
+    const t = weightTrend([w(30, 184.6), w(1, 190.2)])!;
+    expect(t.first).toBe(190.2);
+    expect(t.latest).toBe(184.6);
+  });
+
+  it("reports a gain as a gain", () => {
+    expect(weightTrend([w(1, 180), w(20, 184.5)])!.change).toBe(4.5);
   });
 });
