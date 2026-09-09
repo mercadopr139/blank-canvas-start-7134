@@ -235,12 +235,19 @@ const Hard75DaySheet = ({
                 <Camera className={`w-4 h-4 ${day.photo_path ? "text-emerald-400" : "text-white/40"}`} />
               )}
               <span className="text-sm text-white/70">
-                {day.photo_path ? "Photo saved — tap to replace" : "Take or choose today's photo"}
+                {day.photo_path ? "Photo saved — tap to replace" : "Upload today's photo"}
               </span>
+              {/* No `capture` attribute on purpose.
+                  It used to say capture="environment", which forced the phone
+                  straight into the REAR camera with no way to reach the photo
+                  library — a rear-facing forced camera is close to the worst
+                  possible choice for a daily progress selfie.
+                  Plain accept="image/*" hands over to the OS picker instead, so
+                  he can shoot it with whatever camera app he likes and upload
+                  it, or take one there and then. His phone, his choice. */}
               <input
                 type="file"
                 accept="image/*"
-                capture="environment"
                 className="hidden"
                 onChange={(e) => {
                   const f = e.target.files?.[0];
