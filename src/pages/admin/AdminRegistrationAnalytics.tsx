@@ -570,7 +570,18 @@ const AdminRegistrationAnalytics = () => {
             </div>
 
             {/* Where our youth come from — geographic map, above the ranked bar chart */}
-            <YouthDistrictMap youth={registrations.map((r: any) => ({ latitude: r.latitude, longitude: r.longitude, child_school_district: r.child_school_district }))} />
+            {/* The same filtered, deduped cohort every other stat reads — so the
+                map's "N of M located" and its couldn't-locate list agree. */}
+            <YouthDistrictMap youth={registrations.map((r: any) => ({
+              id: r.id,
+              latitude: r.latitude,
+              longitude: r.longitude,
+              child_school_district: r.child_school_district,
+              child_first_name: r.child_first_name,
+              child_last_name: r.child_last_name,
+              child_primary_address: r.child_primary_address,
+              geocoded_at: r.geocoded_at,
+            }))} />
 
             {/* School District - full width */}
             <Card className="bg-white/5 border-white/10">

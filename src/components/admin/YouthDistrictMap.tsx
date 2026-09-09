@@ -156,7 +156,17 @@ function buildGeometry() {
   return { munPaths, munIndex, P };
 }
 
-type YouthPoint = { latitude: number | null; longitude: number | null; child_school_district: string | null };
+type YouthPoint = {
+  latitude: number | null;
+  longitude: number | null;
+  child_school_district: string | null;
+  // Optional: with these, the couldn't-locate panel can name the registration.
+  id?: string;
+  child_first_name?: string | null;
+  child_last_name?: string | null;
+  child_primary_address?: string | null;
+  geocoded_at?: string | null;
+};
 
 export function YouthDistrictMap({ youth: youthProp }: { youth?: YouthPoint[] } = {}) {
   const queryClient = useQueryClient();
@@ -168,7 +178,9 @@ export function YouthDistrictMap({ youth: youthProp }: { youth?: YouthPoint[] } 
     queryKey: ["youth-district-map"],
     enabled: !youthProp,
     queryFn: async () => {
-      const { data, error } = await supabase.from("youth_registrations").select("latitude, longitude, child_school_district");
+      const { data, error } = await supabase
+        .from("youth_registrations")
+        .select("id, latitude, longitude, child_school_district, child_first_name, child_last_name, child_primary_address, geocoded_at");
       if (error) throw error;
       // latitude/longitude were added by migration after types.ts was generated.
       return data as unknown as YouthPoint[];
@@ -176,24 +188,24 @@ export function YouthDistrictMap({ youth: youthProp }: { youth?: YouthPoint[] } 
   });
   const youth = youthProp ?? fetched ?? [];
 
-  // The ones the geocoders gave up on. Named, so a person can fix the
+  // The ones the geocoders gave up on, named so a person can fix the
   // registration — a PO box, an email typed into the address field, a street
-  // with no town. Its own small query, because the map's youth arrive from
-  // the parent filtered down to three fields and no names.
-  const { data: unlocated = [] } = useQuery({
-    queryKey: ["youth-unlocated"],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("youth_registrations")
-        .select("id, child_first_name, child_last_name, child_primary_address")
-        .is("latitude", null)
-        .not("geocoded_at", "is", null)
-        .not("child_primary_address", "is", null)
-        .order("child_last_name");
-      if (error) throw error;
-      return data as { id: string; child_first_name: string | null; child_last_name: string | null; child_primary_address: string | null }[];
-    },
-  });
+  // with no town. Derived from the SAME cohort the map counts: the first
+  // version ran its own query over the whole table and reported 68 against a
+  // map that said 59, because it was counting other years and duplicates.
+  // Only youth the map would actually plot count — a homeschooler with no
+  // district is not "unlocated", just off-map by design.
+  const unlocated = useMemo(
+    () =>
+      youth
+        .filter((y) => {
+          if (!y.geocoded_at || typeof y.latitude === "number" || !(y.child_primary_address ?? "").trim()) return false;
+          const map = DISTRICT_MAP[y.child_school_district || "Other"] || { g: "home" as GroupKey, mun: null };
+          return !!map.mun && !GROUPS[map.g].offMap;
+        })
+        .sort((a, b) => (a.child_last_name ?? "").localeCompare(b.child_last_name ?? "")),
+    [youth]
+  );
 
   const { munPaths, munIndex, P } = useMemo(buildGeometry, []);
 
@@ -277,7 +289,6 @@ export function YouthDistrictMap({ youth: youthProp }: { youth?: YouthPoint[] } 
       }
       await queryClient.invalidateQueries({ queryKey: ["youth-registrations-analytics"] });
       await queryClient.invalidateQueries({ queryKey: ["youth-district-map"] });
-      await queryClient.invalidateQueries({ queryKey: ["youth-unlocated"] });
       toast.success(
         missed > 0
           ? `${matched} located · ${missed} couldn't be — they're listed under the map.`
