@@ -268,3 +268,14 @@ export const readableLines = (lines: string[]): CircuitLine[] => {
   const stations = out.filter((l) => l.kind === "station");
   return [...rounds, ...stations];
 };
+
+/* ───── The strength block is a window, not a number ─────
+   Three or four athletes share one rack and alternate sets, so the lift
+   block cannot be "10 min" the way it is for one person alone — it is ten
+   if the group keeps swapping, fifteen if it does not. The board shows the
+   window and says which end to aim for. The generator still plans against
+   the low end so the 40-minute cap holds. */
+export const LIFT_WINDOW = { min: 10, max: 15 } as const;
+export const LIFT_WINDOW_LABEL = `${LIFT_WINDOW.min}–${LIFT_WINDOW.max} min`;
+/** Read from the floor by a kid waiting for a bar. Encouraging, not nagging. */
+export const LIFT_REMINDER = "Keep it moving — share the rack, swap in the second a set ends.";

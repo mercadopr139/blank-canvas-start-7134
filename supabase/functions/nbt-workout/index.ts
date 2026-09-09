@@ -132,8 +132,11 @@ const SYSTEM =
   "them total 40 or less:\n" +
   "1) PREP, ~5 min — a short dynamic warm-up tied to the day's training and easy to run with a group. No long " +
   "   static stretching, no corrective circuits.\n" +
-  "2) LEARN + LIFT, 8–10 min — ONE primary movement, explained and demonstrated fast, with Charlie/Bravo/Alpha " +
-  "   versions and sets/reps. Quality reps. Never to failure. On a day whose point is athleticism, teach one " +
+  "2) LEARN + LIFT, 10 min with a HARD STOP at 15 — ONE primary movement, explained and demonstrated fast, with " +
+  "   Charlie/Bravo/Alpha versions and sets/reps. Quality reps. Never to failure. RACKS ARE SHARED: three or four " +
+  "   athletes take turns on one bar or one pair of dumbbells, alternating sets while the others rest. Write the " +
+  "   dose for a GROUP taking turns to finish inside ten minutes, not for one athlete alone — 4 × 5 shared four " +
+  "   ways is sixteen sets on that rack. State the lift block as 10 minutes. On a day whose point is athleticism, teach one " +
   "   technical element instead. Monday and Thursday are the only days with a runway, so sprint and shuttle " +
   "   mechanics — posture, acceleration, deceleration, landing — belong there. On TUESDAY the technical " +
   "   element must not travel: rowing stroke, bike cadence, rope technique, landing mechanics on the " +

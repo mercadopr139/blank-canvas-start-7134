@@ -16,7 +16,7 @@ import TrackTimer from "@/components/nbt/TrackTimer";
 import {
   DAYS, DayKey, TRACKS, TRACK_META, NbtDay, NbtWeek, NbtBlock,
   toDateString, mondayOf, firstOfMonth, dateOfDay, todayDayKey, weekInBlock,
-  minutesOf, totalMinutes, readableLines,
+  minutesOf, totalMinutes, readableLines, LIFT_WINDOW_LABEL, LIFT_REMINDER,
 } from "@/lib/nbt";
 import NbtLogSheet from "@/components/nbt/NbtLogSheet";
 
@@ -309,7 +309,7 @@ const NbtBoard = () => {
                         chip beside it rather than under it as more prose. */}
                     <div className="p-[0.8em]">
                       <TrackLabel color={m.color}>
-                        Strength · {minutesOf(day).lift} min{day.lift.pattern ? ` · ${day.lift.pattern}` : ""}
+                        Strength · {LIFT_WINDOW_LABEL}{day.lift.pattern ? ` · ${day.lift.pattern}` : ""}
                       </TrackLabel>
                       <div className="flex items-start justify-between gap-[0.6em] mt-[0.3em]">
                         <p className="text-[1.45em] font-bold leading-tight">{lift?.name}</p>
@@ -322,6 +322,12 @@ const NbtBoard = () => {
                           </span>
                         )}
                       </div>
+                      {/* Three or four kids share this rack. The window above
+                          is ten if they keep swapping and fifteen if they
+                          don't; this line is what makes it ten. */}
+                      <p className="mt-[0.4em] text-[0.68em] font-semibold leading-snug" style={{ color: `${m.color}cc` }}>
+                        {LIFT_REMINDER}
+                      </p>
                     </div>
 
                     {work.length > 0 && (
