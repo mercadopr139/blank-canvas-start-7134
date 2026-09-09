@@ -65,14 +65,17 @@ const kmBetween = (a: { lat: number; lng: number }, b: { lat: number; lng: numbe
 };
 
 type Point = { lat: number; lng: number };
+/** Nominatim told us to slow down. Not an answer about the address at all. */
+const RATE_LIMITED = Symbol("rate-limited");
 
 /** OpenStreetMap. Reads the form's own strings, and most typed ones. */
-async function nominatim(address: string): Promise<Point | null> {
+async function nominatim(address: string): Promise<Point | null | typeof RATE_LIMITED> {
   const url =
     `https://nominatim.openstreetmap.org/search?format=json&countrycodes=us&limit=1` +
     `&viewbox=${VIEWBOX}&q=${encodeURIComponent(address.trim())}`;
   try {
     const res = await fetch(url, { headers: { "User-Agent": USER_AGENT, "Accept-Language": "en" } });
+    if (res.status === 429 || res.status === 503) return RATE_LIMITED;
     if (!res.ok) return null;
     const data = await res.json();
     const m = data?.[0];
@@ -137,20 +140,35 @@ Deno.serve(async (req) => {
 
     // Anything without coordinates, never-tried first, then earlier failures —
     // so a click always makes progress and a past failure is not forever.
-    const { data: rows } = await service
+    // Never-tried first, from any year. Then earlier failures, THIS program
+    // year before older ones -- the map on the dashboard shows this year, and a
+    // click should improve what the coach is looking at before it tidies history.
+    const { data: fresh } = await service
       .from("youth_registrations")
       .select("id, child_primary_address")
-      .is("latitude", null)
+      .is("latitude", null).is("geocoded_at", null)
       .not("child_primary_address", "is", null)
-      .order("geocoded_at", { ascending: true, nullsFirst: true })
       .limit(BATCH);
+    let rows = fresh ?? [];
+    if (rows.length < BATCH) {
+      const { data: retry } = await service
+        .from("youth_registrations")
+        .select("id, child_primary_address")
+        .is("latitude", null).not("geocoded_at", "is", null)
+        .not("child_primary_address", "is", null)
+        .order("program_year", { ascending: false })
+        .order("geocoded_at", { ascending: true })
+        .limit(BATCH - rows.length);
+      rows = rows.concat(retry ?? []);
+    }
 
-    const list = (rows ?? []).filter((r: { child_primary_address?: string }) => (r.child_primary_address ?? "").trim().length > 0);
+    const list = rows.filter((r: { child_primary_address?: string }) => (r.child_primary_address ?? "").trim().length > 0);
 
     const deadline = Date.now() + TIME_BUDGET_MS;
     let matched = 0;
     let skipped = 0;
     let processed = 0;
+    let rateLimited = false;
     for (const r of list as Array<{ id: string; child_primary_address: string }>) {
       // Out of time: return what is done. The rest is still there for the next call.
       if (Date.now() > deadline) break;
@@ -161,8 +179,16 @@ Deno.serve(async (req) => {
       if (hopeless(address)) {
         skipped++;
       } else {
-        let coords = await nominatim(address);
+        const first = await nominatim(address);
+        if (first === RATE_LIMITED) {
+          // Leave this row untouched -- it is not a failure -- and stop here.
+          // The next click will pick it up once Nominatim has cooled off.
+          processed--;
+          rateLimited = true;
+          break;
+        }
         await sleep(NOMINATIM_GAP_MS);
+        let coords: Point | null = first;
         if (!coords) coords = await census(address);
         if (coords) {
           patch.latitude = coords.lat;
@@ -185,6 +211,7 @@ Deno.serve(async (req) => {
       matched,
       unmatched: processed - matched,
       skipped,
+      rateLimited,
       remaining: remaining ?? 0,
     });
   } catch (e) {
