@@ -170,10 +170,30 @@ export function YouthDistrictMap({ youth: youthProp }: { youth?: YouthPoint[] } 
     queryFn: async () => {
       const { data, error } = await supabase.from("youth_registrations").select("latitude, longitude, child_school_district");
       if (error) throw error;
-      return data as YouthPoint[];
+      // latitude/longitude were added by migration after types.ts was generated.
+      return data as unknown as YouthPoint[];
     },
   });
   const youth = youthProp ?? fetched ?? [];
+
+  // The ones the geocoders gave up on. Named, so a person can fix the
+  // registration — a PO box, an email typed into the address field, a street
+  // with no town. Its own small query, because the map's youth arrive from
+  // the parent filtered down to three fields and no names.
+  const { data: unlocated = [] } = useQuery({
+    queryKey: ["youth-unlocated"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("youth_registrations")
+        .select("id, child_first_name, child_last_name, child_primary_address")
+        .is("latitude", null)
+        .not("geocoded_at", "is", null)
+        .not("child_primary_address", "is", null)
+        .order("child_last_name");
+      if (error) throw error;
+      return data as { id: string; child_first_name: string | null; child_last_name: string | null; child_primary_address: string | null }[];
+    },
+  });
 
   const { munPaths, munIndex, P } = useMemo(buildGeometry, []);
 
@@ -245,16 +265,24 @@ export function YouthDistrictMap({ youth: youthProp }: { youth?: YouthPoint[] } 
   const locateAddresses = async () => {
     setGeo({ running: true, done: 0, remaining: 0 });
     try {
+      let matched = 0, missed = 0;
       for (let guard = 0; guard < 60; guard++) {
         const { data, error } = await supabase.functions.invoke("geocode-youth", { body: {} });
         if (error) throw error;
         if (data?.error) throw new Error(data.error);
+        matched += data.matched || 0;
+        missed += data.unmatched || 0;
         setGeo((g) => ({ running: true, done: (g?.done || 0) + (data.processed || 0), remaining: data.remaining || 0 }));
         if ((data.remaining || 0) <= 0 || (data.processed || 0) === 0) break;
       }
       await queryClient.invalidateQueries({ queryKey: ["youth-registrations-analytics"] });
       await queryClient.invalidateQueries({ queryKey: ["youth-district-map"] });
-      toast.success("Addresses located.");
+      await queryClient.invalidateQueries({ queryKey: ["youth-unlocated"] });
+      toast.success(
+        missed > 0
+          ? `${matched} located · ${missed} couldn't be — they're listed under the map.`
+          : `${matched} located.`
+      );
     } catch (e: any) {
       toast.error(e?.message || "Geocoding failed.");
     } finally {
@@ -297,6 +325,30 @@ export function YouthDistrictMap({ youth: youthProp }: { youth?: YouthPoint[] } 
             {geo?.running ? `Locating… ${geo.done} done · ${geo.remaining} left` : "Locate addresses"}
           </button>
         </div>
+
+        {/* The addresses no geocoder can read. Not a failure of the map — a
+            registration to correct. Names, because that is how you find it. */}
+        {unlocated.length > 0 && (
+          <details className="mb-4 rounded-xl border border-amber-400/20 bg-amber-500/[0.06]">
+            <summary className="cursor-pointer select-none px-4 py-2.5 text-xs font-semibold text-amber-200/90">
+              {unlocated.length} {unlocated.length === 1 ? "address" : "addresses"} couldn't be located — fix these on the registration
+            </summary>
+            <ul className="px-4 pb-3 space-y-1.5">
+              {unlocated.map((u) => (
+                <li key={u.id} className="text-xs flex items-baseline gap-2 flex-wrap">
+                  <span className="font-semibold text-white/85 whitespace-nowrap">
+                    {[u.child_first_name, u.child_last_name].filter(Boolean).join(" ") || "Unnamed"}
+                  </span>
+                  <span className="text-white/45 break-all">{u.child_primary_address}</span>
+                </li>
+              ))}
+            </ul>
+            <p className="px-4 pb-3 text-[11px] text-white/35">
+              Usually a PO box, an email typed in the address field, or a street with no town. Once the
+              address is corrected, press "Locate addresses" again.
+            </p>
+          </details>
+        )}
 
         {/* District (branded) vs Street (real, zoomable) view */}
         <div className="inline-flex rounded-lg border border-white/10 bg-white/5 p-0.5 mb-3">
