@@ -15,7 +15,7 @@ import Header from "@/components/layout/Header";
 import Footer from "@/components/layout/Footer";
 import SummerBreakBanner from "@/components/sections/SummerBreakBanner";
 import WaiverSection from "@/components/registration/WaiverSection";
-import { getProgramYearForRegistration } from "@/lib/programYear";
+import { getProgramYearForRegistration, shortProgramYear } from "@/lib/programYear";
 import { DEFAULT_WAIVERS } from "@/components/registration/waiverTexts";
 import ChildPrimaryAddressField from "@/components/registration/ChildPrimaryAddressField";
 import nlaLogo from "@/assets/nla-logo.png";
@@ -691,7 +691,15 @@ const Register = () => {
           <CardContent className="pt-8 pb-8">
             <div className="text-center mb-8">
               <img src={nlaLogo} alt="No Limits Academy" className="w-20 h-20 mx-auto mb-4 object-contain" />
-              <h1 className="text-2xl font-bold mb-2">2025-26 Registration</h1>
+              {/* Derived from the SAME function that tags the submission a few
+                  hundred lines below, so the heading and the year the record is
+                  actually filed under can never disagree. It was a hardcoded
+                  "2025-26" and spent five weeks telling people the wrong year
+                  while quietly filing them under the right one. Rolls over on
+                  1 August by itself — see programYear.ts. */}
+              <h1 className="text-2xl font-bold mb-2">
+                {shortProgramYear(getProgramYearForRegistration())} Registration
+              </h1>
               <p className="text-muted-foreground text-sm">Must complete before participation at No Limits Academy.</p>
             </div>
 

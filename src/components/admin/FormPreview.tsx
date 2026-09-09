@@ -5,6 +5,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Checkbox } from "@/components/ui/checkbox";
 
 import { Card, CardContent } from "@/components/ui/card";
+import { getProgramYearForRegistration, shortProgramYear } from "@/lib/programYear";
 import { RichText } from "@/components/ui/rich-text";
 import { Upload } from "lucide-react";
 import nlaLogo from "@/assets/nla-logo.png";
@@ -203,7 +204,11 @@ const FormPreview = ({ fields }: { fields: FormField[] }) => {
       <CardContent className="pt-8 pb-8">
         <div className="text-center mb-8">
           <img src={nlaLogo} alt="No Limits Academy" className="w-20 h-20 mx-auto mb-4 object-contain" />
-          <h1 className="text-2xl font-bold mb-2">2025-26 Registration</h1>
+          {/* Same derivation as the live form, so the preview cannot show a
+              different year from the thing it is previewing. */}
+          <h1 className="text-2xl font-bold mb-2">
+            {shortProgramYear(getProgramYearForRegistration())} Registration
+          </h1>
           <p className="text-muted-foreground text-sm">Must complete before participation at No Limits Academy.</p>
         </div>
         <div className="space-y-6">
