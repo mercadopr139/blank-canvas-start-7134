@@ -16,9 +16,10 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import {
-  DAYS, DayKey, TRACKS, TRACK_META, Track, NbtBlock, NbtWeek, NbtDay,
+  DAYS, DayKey, TRACKS, TRACK_META, Track, NbtBlock, NbtWeek, NbtDay, NbtLog,
   toDateString, firstOfMonth, monthLabel, mondaysInMonth, dateOfDay,
 } from "@/lib/nbt";
+import { priorWeekBriefs, roomReport, carryOver } from "@/lib/nbtCoaching";
 import NbtLevels from "@/components/nbt/NbtLevels";
 import NbtEditDay from "@/components/nbt/NbtEditDay";
 
@@ -58,6 +59,42 @@ const AdminNbtBoard = () => {
     },
   });
 
+  /**
+   * The block before this one, and every log the programme has.
+   *
+   * Both exist so the generator can stop working blind. Without the previous
+   * block each month restarted from a clean slate; without the logs the model
+   * progressed on the calendar while the rules told it mastery earns
+   * progression. Neither is used for display — only as context for the AI.
+   */
+  const { data: history } = useQuery({
+    queryKey: ["nbt-history", month],
+    queryFn: async () => {
+      const prevMonth = shiftMonth(month, -1);
+      const { data: prevBlock } = await supabase
+        .from("nbt_blocks" as never)
+        .select("id")
+        .eq("month_start", prevMonth)
+        .maybeSingle();
+      let prevWeeks: NbtWeek[] = [];
+      if (prevBlock) {
+        const { data: pw } = await supabase
+          .from("nbt_weeks" as never)
+          .select("*")
+          .eq("block_id", (prevBlock as unknown as { id: string }).id)
+          .order("week_in_block");
+        prevWeeks = (pw as unknown as NbtWeek[]) || [];
+      }
+      // Enough history for a three-session window on each of the three days.
+      const { data: logs } = await supabase
+        .from("nbt_logs" as never)
+        .select("*")
+        .order("workout_date", { ascending: false })
+        .limit(400);
+      return { prevWeeks, logs: (logs as unknown as NbtLog[]) || [] };
+    },
+  });
+
   const block = data?.block ?? null;
   const weeks = useMemo(() => data?.weeks ?? [], [data]);
   const mondays = useMemo(() => mondaysInMonth(month), [month]);
@@ -87,18 +124,19 @@ const AdminNbtBoard = () => {
     attempt = 0,
     only?: { track: Track; keepDay: NbtDay }
   ): Promise<NbtDay> => {
-    const priorWeeks = prior
-      .filter((w) => w.week_in_block < weekNo && w.days?.[dayKey])
-      .map((w) => ({
-        week: w.week_in_block,
-        lift: w.days[dayKey]?.lift?.alpha?.name,
-        work: w.days[dayKey]?.work?.title,
-      }));
+    // All three tracks of every earlier week in this block, not Alpha alone.
+    const priorWeeks = priorWeekBriefs(prior, dayKey, weekNo);
+    // Anonymised medians of what the room managed. Names never leave the app.
+    const room = roomReport(history?.logs ?? [], dayKey, toDateString(new Date()));
+    // Where last month finished, so week 1 continues rather than resets.
+    const carry = weekNo === 1 ? carryOver(history?.prevWeeks ?? [], dayKey) : null;
 
     try {
       const { data: res, error } = await supabase.functions.invoke("nbt-workout", {
         body: {
           dayKey, weekInBlock: weekNo, blockFocus, priorWeeks,
+          ...(room ? { room } : {}),
+          ...(carry ? { carryOver: carry } : {}),
           ...(only ? { onlyTrack: only.track, keepDay: only.keepDay } : {}),
         },
       });

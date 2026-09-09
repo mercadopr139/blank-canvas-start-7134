@@ -108,6 +108,28 @@ const SYSTEM =
   "technique, reps, sets, a little load, range of motion, less assistance, a slightly harder variation, more " +
   "distance, longer intervals, shorter rest. Mastery earns progression, not the calendar.\n\n" +
 
+  "EVIDENCE, WHEN THERE IS ANY: you may be given an anonymised summary of what the room actually managed on " +
+  "this day recently — how many athletes trained each track, the movement most of them logged, median top " +
+  "weight, median reps completed, and whether the circuit result is rising or falling. Use it like this:\n" +
+  "- A track that completed the work prescribed and whose circuit result is holding or rising has earned ONE " +
+  "  progression: a rep, a set, a little load, slightly less assistance, slightly shorter rest.\n" +
+  "- A track whose reps fell short of what was prescribed, or whose circuit result went backwards, has NOT. " +
+  "  Hold the movement and the dose. Progress technique, range of motion or control instead of load.\n" +
+  "- The number of athletes on each track tells you where the room is. If most of them are Charlie, Charlie's " +
+  "  version is the main event and gets your best writing — not a lighter afterthought.\n" +
+  "- A track with nobody in it is still written in full. Somebody will be there next week.\n" +
+  "- If the summary is marked THIN, or you are given none at all, you have no evidence. Progress conservatively " +
+  "  on the calendar and do not pretend to be responding to anything.\n" +
+  "NEVER name an athlete, quote an individual's numbers, or write a line that reads as a reply to one person. " +
+  "You are given medians precisely so that no youth can be singled out on a screen the whole gym reads.\n\n" +
+
+  "BLOCKS CONTINUE, THEY DO NOT RESET: you may be told where the previous month finished on this day. Week 1 of " +
+  "a new block is a CONTINUATION, not a clean slate. Keep the same movement PATTERN. Either take the same " +
+  "exercise a step further, or move up the progression the three tracks describe. Change the exercise itself " +
+  "only when the pattern has already been trained for six weeks or more, or when the month's coaching emphasis " +
+  "demands it — and even then the pattern stays. NEVER drop a track back to a variation it had already " +
+  "outgrown. Strength does not restart on the first of the month.\n\n" +
+
   "LANGUAGE: these are developing young people, not miniature professionals. Never write anything designed to " +
   "shame or prove toughness — no 'don't be weak', 'man up', 'no pain no gain'. Encourage effort, teachability, " +
   "consistency, quality and intelligent pacing. Never tell an athlete to push through pain, dizziness or illness.\n\n" +
@@ -176,26 +198,99 @@ Deno.serve(async (req: Request) => {
     const blockFocus = String(body?.blockFocus ?? "").trim();
     // The same day from earlier weeks of THIS block. This is what turns a pile
     // of weeks into a programme.
-    const priorWeeks: Array<{ week: number; lift?: string; work?: string }> =
-      Array.isArray(body?.priorWeeks) ? body.priorWeeks.slice(0, 5) : [];
+    //
+    // All three tracks, not just Alpha. Anchoring continuity to Alpha alone left
+    // Charlie's month a fresh guess every week — backwards, since the beginners
+    // are the group that most needs the repetition. `lift` is the old
+    // Alpha-only field, still read so a cached client cannot lose continuity.
+    const priorWeeks: Array<{
+      week: number; pattern?: string;
+      charlie?: string; bravo?: string; alpha?: string;
+      work?: string; lift?: string;
+    }> = Array.isArray(body?.priorWeeks) ? body.priorWeeks.slice(0, 5) : [];
+    // Anonymised counts and medians of what the room actually managed. Never a
+    // name — see src/lib/nbtCoaching.ts, which builds it.
+    const room = body?.room ?? null;
+    // Where the previous month's block finished on this day.
+    const carry = body?.carryOver ?? null;
     // A coach asking for something different about this one specific day.
     const instruction = String(body?.instruction ?? "").trim();
     // Set when only one of the three tracks is being rewritten.
     const onlyTrack = String(body?.onlyTrack ?? "").trim().toLowerCase();
     const keepDay = body?.keepDay ?? null;
 
+    // Every track spelled out, so "keep the same movement" means all three.
+    const weekLines = priorWeeks
+      .map((p) =>
+        `- Week ${p.week} — pattern: ${p.pattern || "?"}\n` +
+        `    Charlie: ${p.charlie ?? p.lift ?? "?"}\n` +
+        `    Bravo:   ${p.bravo ?? "?"}\n` +
+        `    Alpha:   ${p.alpha ?? p.lift ?? "?"}\n` +
+        `    Work:    ${p.work ?? "?"}`
+      )
+      .join("\n");
+
+    // Week 1 used to be told it was choosing from nothing. It is only choosing
+    // from nothing when there is genuinely no previous block behind it.
+    const opening = carry
+      ? "This is week 1 of a NEW block, continuing from the last one. Here is where the previous block " +
+        `finished on this day (week beginning ${carry.weekStart}):\n` +
+        `- Pattern: ${carry.pattern || "?"} — trained ${carry.weeksOnPattern || 1} week(s) in a row\n` +
+        `    Charlie: ${carry.charlie ?? "?"}\n` +
+        `    Bravo:   ${carry.bravo ?? "?"}\n` +
+        `    Alpha:   ${carry.alpha ?? "?"}\n` +
+        `    Work:    ${carry.work ?? "?"}\n\n` +
+        "CONTINUE from there. Same pattern. Take each track one honest step on from where it ended — do not " +
+        "restart the month at the beginning of the progression, and do not hand a track a variation it had " +
+        "already outgrown." +
+        (Number(carry.weeksOnPattern) >= 6
+          ? " This pattern has now run six weeks or more, so you MAY change the primary exercise this month — " +
+            "but keep the pattern and keep each track at the level it reached."
+          : " It is too early to change the primary exercise; keep it and keep progressing it.") +
+        "\n"
+      : "This is week 1 of the block and there is no previous block to continue from, so you are choosing the " +
+        "primary movement the rest of the month will build on. Pick something you can progress for four weeks, " +
+        "not something that will need replacing.\n";
+
     const continuity =
       priorWeeks.length === 0
-        ? "This is week 1 of the block, so you are choosing the primary movement the rest of the month will " +
-          "build on. Pick something you can progress for four weeks, not something that will need replacing.\n"
-        : "Earlier weeks of THIS block, same day:\n" +
-          priorWeeks
-            .map((p) => `- Week ${p.week}: lift = ${p.lift ?? "?"}; work = ${p.work ?? "?"}`)
-            .join("\n") +
-          "\n\nKEEP THE SAME PRIMARY MOVEMENT PATTERN and, where it still fits, the same primary exercises. " +
-          "Progress ONE or TWO variables only — a rep, a set, a little more distance, slightly less assistance, " +
-          "slightly shorter rest. Do NOT swap the lift for something new just to look different. The conditioning " +
-          "may vary more than the lift, but the progression must be visible to an athlete.\n";
+        ? opening
+        : "Earlier weeks of THIS block, same day — ALL THREE TRACKS:\n" +
+          weekLines +
+          "\n\nKEEP THE SAME PRIMARY MOVEMENT PATTERN and, where it still fits, the same primary exercises — " +
+          "for Charlie and Bravo as strictly as for Alpha. Progress ONE or TWO variables only: a rep, a set, a " +
+          "little more distance, slightly less assistance, slightly shorter rest. Do NOT swap a lift for " +
+          "something new just to look different, and do NOT leave one track's progression to chance while " +
+          "carefully progressing another. The conditioning may vary more than the lift, but the progression " +
+          "must be visible to an athlete in every track.\n";
+
+    // What the room actually managed. Medians and counts only.
+    const trackLine = (name: string, t: Record<string, unknown> | undefined) => {
+      if (!t || !Number(t.athletes)) return `    ${name}: nobody logged`;
+      const bits = [
+        `${t.athletes} athlete(s)`,
+        t.lift ? `mostly ${t.lift}` : null,
+        t.medianTopWeight != null ? `median top weight ${t.medianTopWeight} lb` : null,
+        t.medianReps != null ? `median ${t.medianReps} total reps` : null,
+        t.medianWork != null ? `median circuit ${t.medianWork} ${t.unit ?? ""}`.trim() : null,
+      ].filter(Boolean);
+      return `    ${name}: ${bits.join(", ")}`;
+    };
+
+    const evidence = room
+      ? `\nWHAT THE ROOM ACTUALLY DID on this day, across its last ${room.sessions} session(s) ` +
+        `(most recent ${room.lastDate}), ${room.athletes} athlete(s) in total:\n` +
+        trackLine("Charlie", room.byTrack?.charlie) + "\n" +
+        trackLine("Bravo", room.byTrack?.bravo) + "\n" +
+        trackLine("Alpha", room.byTrack?.alpha) + "\n" +
+        (room.workTrend
+          ? `    Circuit result across those sessions: ${room.workTrend}.\n`
+          : "    Circuit results are not comparable across those sessions.\n") +
+        (room.thin
+          ? "    THIN — too few athletes to autoregulate from. Progress conservatively on the calendar and do " +
+            "not write as though you are responding to this.\n"
+          : "    Use this to decide who has earned a progression and who has not.\n")
+      : "";
 
     // Rewriting ONE track. The other two go over unchanged and must come back
     // unchanged — otherwise a regenerated Charlie ends up squatting while Alpha
@@ -218,6 +313,7 @@ Deno.serve(async (req: Request) => {
       (blockFocus ? ` The month's coaching emphasis is: "${blockFocus}".` : "") +
       "\n\n" +
       (trackBrief || continuity) +
+      evidence +
       (instruction ? `\nThe coach asks specifically: ${instruction}\n` : "") +
       "\nReturn ONLY the JSON shape described.";
 
