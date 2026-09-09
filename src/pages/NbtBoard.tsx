@@ -66,11 +66,16 @@ const NbtBoard = () => {
     <div className="min-h-screen bg-black text-white flex flex-col">
       {/* Header */}
       <header className="flex items-center gap-3 px-5 md:px-8 py-3 border-b border-white/10 flex-wrap">
+        {/* Back to the board this screen was opened from, not up to Operations.
+            The coach's side has "Open gym board", so the two now round-trip:
+            landing on the Operations hub meant finding the NBT board again by
+            hand every time. */}
         <Button
           variant="ghost" size="icon"
-          onClick={() => navigate("/admin/operations")}
+          onClick={() => navigate("/admin/operations/nbt-board")}
           className="text-white/25 hover:text-white hover:bg-white/5 h-9 w-9"
-          aria-label="Back to Operations"
+          aria-label="Back to the NBT S&C Board"
+          title="Back to the NBT S&C Board"
         >
           <ArrowLeft className="w-5 h-5" />
         </Button>
