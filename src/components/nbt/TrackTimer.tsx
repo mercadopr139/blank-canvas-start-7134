@@ -76,31 +76,33 @@ const TrackTimer = ({
 
   const tone = over ? "#f87171" : color;
 
+  // Sized in em throughout: the tile this sits in is shrunk to fit the wall
+  // TV by changing one font-size, and the clock has to shrink with it.
   return (
     <div
-      className="mt-2 rounded-xl px-3 py-2"
+      className="mt-[0.4em] rounded-xl px-[0.6em] py-[0.4em]"
       style={{ backgroundColor: `${tone}14`, border: `1px solid ${tone}33` }}
     >
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-[0.6em]">
         <p
-          className={`text-4xl md:text-5xl font-black tabular-nums leading-none ${over ? "animate-pulse" : ""}`}
+          className={`text-[2.2em] font-black tabular-nums leading-none ${over ? "animate-pulse" : ""}`}
           style={{ color: running || over ? tone : "rgba(255,255,255,0.7)" }}
         >
           {over && "+"}{formatClock(left)}
         </p>
 
-        <div className="ml-auto flex items-center gap-1.5 shrink-0">
+        <div className="ml-auto flex items-center gap-[0.3em] shrink-0">
           <button
             onClick={running ? pause : start}
-            className="h-11 px-5 rounded-lg font-black text-base text-black transition-opacity hover:opacity-90"
+            className="h-[2.2em] px-[1em] rounded-lg font-black text-[0.85em] text-black transition-opacity hover:opacity-90"
             style={{ backgroundColor: tone }}
             aria-label={running ? "Pause" : elapsed > 0 ? "Resume" : "Start"}
           >
             {running ? (
-              <span className="inline-flex items-center gap-1.5"><Pause className="w-5 h-5" /> Pause</span>
+              <span className="inline-flex items-center gap-[0.4em]"><Pause className="w-[1.1em] h-[1.1em]" /> Pause</span>
             ) : (
-              <span className="inline-flex items-center gap-1.5">
-                <Play className="w-5 h-5" /> {elapsed > 0 ? "Resume" : "Start"}
+              <span className="inline-flex items-center gap-[0.4em]">
+                <Play className="w-[1.1em] h-[1.1em]" /> {elapsed > 0 ? "Resume" : "Start"}
               </span>
             )}
           </button>
@@ -109,15 +111,15 @@ const TrackTimer = ({
               onClick={reset}
               title="Reset"
               aria-label="Reset"
-              className="h-11 w-11 grid place-items-center rounded-lg text-white/35 hover:text-white/80 transition-colors"
+              className="h-[2.2em] w-[2.2em] grid place-items-center rounded-lg text-white/35 hover:text-white/80 transition-colors"
             >
-              <RotateCcw className="w-5 h-5" />
+              <RotateCcw className="w-[1em] h-[1em]" />
             </button>
           )}
         </div>
       </div>
 
-      <div className="mt-2 h-1.5 rounded-full bg-white/[0.08] overflow-hidden">
+      <div className="mt-[0.4em] h-[0.3em] rounded-full bg-white/[0.08] overflow-hidden">
         <div
           className="h-full rounded-full transition-[width] duration-1000 ease-linear"
           style={{ width: `${pct}%`, backgroundColor: tone }}

@@ -4,12 +4,14 @@
 // prose, three tracks side by side. Charlie is presented exactly as prominently
 // as Alpha, because a beginner should never be able to tell they have been
 // given "the lesser workout".
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Dumbbell, ChevronLeft, ChevronRight, ClipboardList } from "lucide-react";
+import {
+  ArrowLeft, Dumbbell, ChevronLeft, ChevronRight, ClipboardList, Maximize, Minimize,
+} from "lucide-react";
 import TrackTimer from "@/components/nbt/TrackTimer";
 import {
   DAYS, DayKey, TRACKS, TRACK_META, NbtDay, NbtWeek, NbtBlock,
@@ -63,8 +65,76 @@ const NbtBoard = () => {
     return () => window.removeEventListener("keydown", onKey);
   }, [dayKey]);
 
+  /* ───── The wall-TV specs, lifted from the Practice Board ─────
+     That board is the one that already reads well on the Newline screen with
+     the youth in front of it, so this one follows it exactly: the page never
+     scrolls, fullscreen reclaims the browser chrome, and the three tracks
+     shrink their text until everything fits the height available. */
+
+  // Fullscreen hides the tabs, the address bar and the Android nav bar.
+  const [isFullscreen, setIsFullscreen] = useState(false);
+  const toggleFullscreen = () => {
+    if (!document.fullscreenElement) {
+      document.documentElement.requestFullscreen?.().catch(() => {});
+    } else {
+      document.exitFullscreen?.().catch(() => {});
+    }
+  };
+  useEffect(() => {
+    const sync = () => setIsFullscreen(!!document.fullscreenElement);
+    document.addEventListener("fullscreenchange", sync);
+    return () => document.removeEventListener("fullscreenchange", sync);
+  }, []);
+
+  // Fit the three track tiles to the height available instead of letting them
+  // scroll. With the room in front of the board, anything that needs scrolling
+  // is invisible. One shared size across all three, because three different
+  // text sizes side by side looks broken. Everything inside a tile is sized in
+  // em, so one number scales the lift, the clock and the circuit together.
+  const colRefs = useRef<(HTMLDivElement | null)[]>([]);
+  const fitColumns = useCallback(() => {
+    const els = colRefs.current.filter(Boolean) as HTMLDivElement[];
+    if (!els.length) return;
+    const MAX = 24;
+    const MIN = 10;
+    const apply = (px: number) => els.forEach((el) => { el.style.fontSize = `${px}px`; });
+    // Overflowing by a pixel or two is rounding, not a real overflow.
+    const fits = () => els.every((el) => el.scrollHeight <= el.clientHeight + 2);
+    let px = MAX;
+    apply(px);
+    while (px > MIN && !fits()) {
+      px -= 1;
+      apply(px);
+    }
+  }, []);
+
+  // Re-fit whenever the content, the day or the window changes. Runs before
+  // paint so the board never flashes at the wrong size.
+  useLayoutEffect(() => {
+    fitColumns();
+    const ro = new ResizeObserver(() => fitColumns());
+    colRefs.current.forEach((el) => el && ro.observe(el));
+    window.addEventListener("resize", fitColumns);
+    return () => {
+      ro.disconnect();
+      window.removeEventListener("resize", fitColumns);
+    };
+  }, [fitColumns, day, dayKey, weekStart, isFullscreen]);
+
+  // Entering or leaving fullscreen resizes the board a beat AFTER the event
+  // fires, so the re-fit above measures the old height and picks a size that
+  // then clips. Measure again once the browser has actually settled.
+  useEffect(() => {
+    const frame = requestAnimationFrame(fitColumns);
+    const timers = [150, 500].map((ms) => setTimeout(fitColumns, ms));
+    return () => {
+      cancelAnimationFrame(frame);
+      timers.forEach(clearTimeout);
+    };
+  }, [isFullscreen, fitColumns]);
+
   return (
-    <div className="min-h-screen bg-black text-white flex flex-col">
+    <div className="h-screen overflow-hidden bg-black text-white flex flex-col">
       {/* Header */}
       <header className="flex items-center gap-3 px-5 md:px-8 py-3 border-b border-white/10 flex-wrap">
         {/* Back to the board this screen was opened from, not up to Operations.
@@ -106,6 +176,16 @@ const NbtBoard = () => {
             aria-label="Next week"
           >
             <ChevronRight className="w-5 h-5" />
+          </Button>
+          {/* Fullscreen — the biggest space win on the wall TV. */}
+          <Button
+            onClick={toggleFullscreen}
+            variant="ghost" size="icon"
+            className="ml-1 text-white/40 hover:text-white hover:bg-white/10 h-9 w-9"
+            aria-label={isFullscreen ? "Exit fullscreen" : "Fullscreen"}
+            title={isFullscreen ? "Exit fullscreen" : "Fullscreen"}
+          >
+            {isFullscreen ? <Minimize className="w-5 h-5" /> : <Maximize className="w-5 h-5" />}
           </Button>
           <Button
             onClick={() => setLogging(true)}
@@ -158,15 +238,17 @@ const NbtBoard = () => {
           </div>
         </div>
       ) : (
-        <main className="flex-1 min-h-0 flex flex-col px-4 md:px-8 py-5 gap-5 overflow-y-auto">
-          {/* Today's focus, and the name of the circuit under it — the circuit
-              is shared by all three tracks, so it is said once here rather than
-              repeated in a footer panel. */}
-          <div className="text-center">
+        /* Fills the screen between the header and the foot, and scrolls INSIDE
+           itself only on a phone — on the wall it never page-scrolls. */
+        <main className="flex-1 min-h-0 flex flex-col px-4 md:px-6 py-3 gap-3 overflow-y-auto md:overflow-hidden">
+          {/* Today's focus on one line, the circuit's name and the length
+              beside it — the circuit is shared by all three tracks, so it is
+              said once here rather than repeated in each tile. */}
+          <div className="flex items-baseline justify-between gap-4 flex-wrap shrink-0">
             {day.focus && (
-              <p className="text-3xl md:text-5xl font-black tracking-tight leading-tight">{day.focus}</p>
+              <p className="text-2xl md:text-3xl font-black tracking-tight leading-tight">{day.focus}</p>
             )}
-            <p className="text-sm md:text-base text-white/35 mt-1.5">
+            <p className="text-sm md:text-base text-white/35">
               {day.work.title}
               {day.work.title && day.work.emphasis ? " · " : ""}
               {day.work.emphasis}
@@ -175,38 +257,39 @@ const NbtBoard = () => {
             </p>
           </div>
 
-          {/* Prep — one card per movement, numbered. As a single wrapping line
-              a warm-up is unreadable: a kid can't tell where one exercise ends
-              and the next begins, and a group can't be walked through it. */}
+          {/* Prep — one card per movement, numbered, in a single strip. As one
+              wrapping line a warm-up is unreadable: a kid can't tell where one
+              exercise ends and the next begins. */}
           {day.prep.length > 0 && (
-            <section>
+            <section className="shrink-0">
               <SectionLabel>Prep · {minutesOf(day).prep} min</SectionLabel>
-              <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
+              <div className="grid gap-2 grid-cols-2 md:grid-cols-5">
                 {day.prep.map((p, i) => (
                   <div
                     key={i}
-                    className="rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2.5 flex items-start gap-2.5"
+                    className="rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2 flex items-start gap-2.5"
                   >
                     <span className="w-6 h-6 rounded-lg bg-white/10 grid place-items-center text-xs font-black text-white/50 shrink-0">
                       {i + 1}
                     </span>
-                    <span className="text-base md:text-lg leading-snug text-white/85">{p}</span>
+                    <span className="text-sm md:text-base leading-snug text-white/85">{p}</span>
                   </div>
                 ))}
               </div>
             </section>
           )}
 
-          {/* The three tracks, equal width and equal weight. */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {TRACKS.map((t) => {
+          {/* The three tracks, equal width and equal weight. This row takes
+              whatever height is left and the tiles fit themselves to it. */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 flex-1 md:min-h-0">
+            {TRACKS.map((t, ti) => {
               const m = TRACK_META[t];
               const lift = day.lift[t];
               const work = day.work[t];
               return (
                 <section
                   key={t}
-                  className="rounded-2xl border-2 overflow-hidden flex flex-col"
+                  className="rounded-2xl border-2 overflow-hidden flex flex-col md:min-h-0"
                   style={{ borderColor: `${m.color}55` }}
                 >
                   <div className="px-4 py-2.5" style={{ backgroundColor: `${m.color}1f` }}>
@@ -215,19 +298,24 @@ const NbtBoard = () => {
                     </h2>
                   </div>
 
-                  <div className="flex-1 flex flex-col">
+                  {/* Everything below is sized in em against this div, which is
+                      the one fitColumns resizes. */}
+                  <div
+                    ref={(el) => { colRefs.current[ti] = el; }}
+                    className="flex-1 min-h-0 overflow-hidden flex flex-col"
+                  >
                     {/* Strength: the movement is what they read, the dose is
                         secondary — so the name is big and the sets sit in a
                         chip beside it rather than under it as more prose. */}
-                    <div className="px-4 pt-4 pb-4">
+                    <div className="p-[0.8em]">
                       <TrackLabel color={m.color}>
                         Strength · {minutesOf(day).lift} min{day.lift.pattern ? ` · ${day.lift.pattern}` : ""}
                       </TrackLabel>
-                      <div className="flex items-start justify-between gap-3 mt-1.5">
-                        <p className="text-2xl md:text-3xl font-bold leading-tight">{lift?.name}</p>
+                      <div className="flex items-start justify-between gap-[0.6em] mt-[0.3em]">
+                        <p className="text-[1.45em] font-bold leading-tight">{lift?.name}</p>
                         {lift?.detail && (
                           <span
-                            className="shrink-0 rounded-lg px-2.5 py-1 text-base md:text-lg font-black tabular-nums"
+                            className="shrink-0 rounded-lg px-[0.5em] py-[0.2em] text-[0.95em] font-black tabular-nums"
                             style={{ backgroundColor: `${m.color}22`, color: m.color }}
                           >
                             {lift.detail}
@@ -239,7 +327,7 @@ const NbtBoard = () => {
                     {work.length > 0 && (
                       <>
                         <div className="h-px" style={{ backgroundColor: `${m.color}33` }} />
-                        <div className="px-4 pt-4 pb-4 flex-1">
+                        <div className="p-[0.8em] flex-1">
                           <TrackLabel color={m.color}>
                             Conditioning · {minutesOf(day).work} min{day.work.emphasis ? ` · ${day.work.emphasis}` : ""}
                           </TrackLabel>
@@ -257,23 +345,23 @@ const NbtBoard = () => {
                               complete line. A dot per line, and real space
                               between them — four rows of identical text is a
                               wall; the dots give the eye somewhere to land. */}
-                          <ul className="mt-3 space-y-2.5">
+                          <ul className="mt-[0.6em] space-y-[0.45em]">
                             {readableLines(work).map((line, i) =>
                               line.kind === "rounds" ? (
                                 <li
                                   key={i}
-                                  className="text-sm md:text-base font-black uppercase tracking-wide"
+                                  className="text-[0.7em] font-black uppercase tracking-wide"
                                   style={{ color: m.color }}
                                 >
                                   {line.text}
                                 </li>
                               ) : (
-                                <li key={i} className="flex items-start gap-2.5">
+                                <li key={i} className="flex items-start gap-[0.5em]">
                                   <span
-                                    className="w-1.5 h-1.5 rounded-full shrink-0 mt-2.5"
+                                    className="w-[0.3em] h-[0.3em] rounded-full shrink-0 mt-[0.5em]"
                                     style={{ backgroundColor: m.color }}
                                   />
-                                  <span className="text-lg md:text-xl leading-snug text-white/90">{line.text}</span>
+                                  <span className="text-[1em] leading-snug text-white/90">{line.text}</span>
                                 </li>
                               )
                             )}
@@ -288,7 +376,7 @@ const NbtBoard = () => {
           </div>
 
           {/* Cues and the transition out, side by side at the foot. */}
-          <div className="grid gap-4 md:grid-cols-2">
+          <div className="grid gap-4 md:grid-cols-2 shrink-0">
             {day.lift.cues.length > 0 && (
               <section>
                 <SectionLabel>Cues</SectionLabel>
@@ -350,10 +438,10 @@ const SectionLabel = ({ children }: { children: React.ReactNode }) => (
   </p>
 );
 
-/** The same, tinted to its track, inside a column. */
+/** The same, tinted to its track, inside a column — in em, so it scales with the tile. */
 const TrackLabel = ({ color, children }: { color: string; children: React.ReactNode }) => (
   <p
-    className="text-[11px] uppercase tracking-[0.18em] font-bold"
+    className="text-[0.55em] uppercase tracking-[0.18em] font-bold"
     style={{ color: `${color}cc` }}
   >
     {children}
