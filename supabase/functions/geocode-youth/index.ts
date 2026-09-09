@@ -33,9 +33,13 @@ const corsHeaders = {
 const SUPER_ADMIN_EMAIL = "joshmercado@nolimitsboxingacademy.org";
 
 // Nominatim's usage policy is one request a second with a real User-Agent, and
-// the lookups run one after another to honour it. Forty at ~1.5 s each keeps a
-// batch well inside the function's wall-clock limit; the client loops for more.
+// the lookups run one after another to honour it. That makes a batch slow, and
+// the first version learned the hard way that forty addresses (~70 s) outlives
+// the edge gateway: the rows were saved as it went, but the response never
+// arrived and the button spun forever. So the batch is TIME-BOXED -- it stops
+// after forty seconds, returns what it finished, and the client loops for more.
 const BATCH = 40;
+const TIME_BUDGET_MS = 40_000;
 const NOMINATIM_GAP_MS = 1100;
 const USER_AGENT = "NLA-youth-map/1.0 (joshmercado@nolimitsboxingacademy.org)";
 
@@ -143,9 +147,14 @@ Deno.serve(async (req) => {
 
     const list = (rows ?? []).filter((r: { child_primary_address?: string }) => (r.child_primary_address ?? "").trim().length > 0);
 
+    const deadline = Date.now() + TIME_BUDGET_MS;
     let matched = 0;
     let skipped = 0;
+    let processed = 0;
     for (const r of list as Array<{ id: string; child_primary_address: string }>) {
+      // Out of time: return what is done. The rest is still there for the next call.
+      if (Date.now() > deadline) break;
+      processed++;
       const address = r.child_primary_address;
       const patch: Record<string, unknown> = { geocoded_at: new Date().toISOString() };
 
@@ -172,9 +181,9 @@ Deno.serve(async (req) => {
       .is("latitude", null).is("geocoded_at", null).not("child_primary_address", "is", null);
 
     return json({
-      processed: list.length,
+      processed,
       matched,
-      unmatched: list.length - matched,
+      unmatched: processed - matched,
       skipped,
       remaining: remaining ?? 0,
     });
