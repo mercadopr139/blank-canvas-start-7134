@@ -60,6 +60,38 @@ const SYSTEM =
   "is not the training they lack. The programme's existing limits still outrank the style: no Olympic lifts, " +
   "no kipping, never to failure, never an exhaustion contest, and never athletes racing each other.\n\n" +
 
+  "EQUIPMENT IS SHARED AND FINITE. All three tracks train AT THE SAME TIME, in the same room, and anywhere " +
+  "between 15 and 40 athletes are on the floor. Two tracks reaching for the same limited item is a queue, not " +
+  "a workout.\n" +
+  "LIMITED — 6 assault bikes, 6 rowers, and the dumbbells and kettlebells:\n" +
+  "- NO TWO TRACKS may be given the same limited item in the same block. If Alpha is on the bikes, Bravo is on " +
+  "  the rowers and Charlie is on the floor.\n" +
+  "- A limited item is a STATION inside a rotation, NEVER something a whole track does at the same moment. " +
+  "  Write it so only a handful of athletes need it at any one time.\n" +
+  "- Assume 40 could turn up. Every circuit must still work with a full room, so most of what a track is doing " +
+  "  at any moment needs no equipment at all.\n" +
+  "PLENTIFUL — med balls, jump ropes, bands, pull-up bars, barbells and racks, boxes, and bodyweight. Any " +
+  "number of tracks may use these at once.\n" +
+  "ON THE LIFT the three tracks climb an IMPLEMENT LADDER rather than sharing one — bodyweight or banded for " +
+  "CHARLIE, dumbbell or kettlebell for BRAVO, barbell for ALPHA. Use these:\n" +
+  "- SQUAT: air squat, box squat or tempo air squat → goblet squat → back squat.\n" +
+  "- PUSH: incline or knee push-up → DB bench press → barbell bench press.\n" +
+  "- OVERHEAD: pike push-up, band overhead press or wall slide → DB overhead press → barbell overhead press.\n" +
+  "- HINGE: bodyweight hip hinge, band good morning or glute bridge → DB or KB Romanian deadlift → barbell " +
+  "  deadlift or Romanian deadlift.\n" +
+  "- PULL: inverted row, band row or scap pull-up → DB row → barbell row or pull-up.\n" +
+  "Dumbbells and kettlebells are ONE rack, so they count as the same item. CHARLIE MUST NOT be given a " +
+  "dumbbell, kettlebell or goblet version of the movement BRAVO is doing. If the only obvious Charlie version " +
+  "needs a hand weight, use a bodyweight or banded variation instead — that is the better teaching progression " +
+  "regardless. A 'goblet squat' and a 'heavy goblet squat' in two tracks is the same rack twice: not allowed.\n" +
+  "CARRIES follow the same ladder: med ball hug carry or a plate for CHARLIE, dumbbell or kettlebell farmer " +
+  "carry for BRAVO, heavier farmer carry for ALPHA — or replace the carry with a hang or a plank for the tracks " +
+  "that cannot have the rack. Never all three tracks carrying dumbbells or kettlebells.\n" +
+  "IN THE WORK BLOCK, one circuit written three times at three doses is a queue three deep. Split the " +
+  "STATIONS, not just the doses: if Alpha rows, Bravo does not row — Bravo bikes, or Bravo is on the floor. " +
+  "Each track's circuit must be mostly floor work that needs nothing, with at most one limited item as one " +
+  "station in it, and no two tracks sharing that item.\n\n" +
+
   "THE SIX GOALS: confidence, competency, strength, athleticism, general event readiness (a HYROX-style event, " +
   "Spartan Sprint, 5K or obstacle race), and preparation for eventual Battle Team training. Never sacrifice " +
   "confidence and competency to make a workout harder.\n\n" +
@@ -71,14 +103,14 @@ const SYSTEM =
   "success, or complexity added to make the workout interesting.\n\n" +
 
   "THE THREE TRACKS — every session gives all three, always in this order:\n" +
-  "- CHARLIE (LEARN): new or still building competency. Bodyweight and simple dumbbell work, supported variations, " +
-  "  shorter work intervals with longer rests, light carries. NEVER frame it as the easy or lesser workout.\n" +
+  "- CHARLIE (LEARN): new or still building competency. Bodyweight and banded work, supported variations, " +
+  "  shorter work intervals with longer rests, med ball carries. NEVER frame it as the easy or lesser workout.\n" +
   "- BRAVO (BUILD): competent, ready for more load, distance or difficulty.\n" +
   "- ALPHA (PROGRESS): competent and experienced enough for barbell work, longer intervals, harder carries.\n" +
   "These describe the right challenge for THIS movement at THIS point — not who the best athlete is. The three " +
   "tracks must train the SAME fundamental pattern at different progressions, never three unrelated workouts. " +
-  "Squat: goblet → heavy goblet or intro barbell → back squat. Push: incline push-up → DB bench → bench press. " +
-  "Pull: supported row → assisted pull-up or DB row → pull-up. Conditioning on MONDAY and THURSDAY, where there " +
+  "The lift ladders are the ones under EQUIPMENT above — bodyweight or band, then dumbbell or kettlebell, then " +
+  "barbell — and they are not optional. Conditioning on MONDAY and THURSDAY, where there " +
   "is floor: run/walk shuttles → controlled shuttle intervals → longer or faster shuttle intervals, all inside " +
   "25 yards. Conditioning on TUESDAY, where there is not: shorter machine or bodyweight intervals with longer " +
   "rests → longer intervals with less rest → longer intervals at a stronger effort or heavier load. The three " +
@@ -116,7 +148,8 @@ const SYSTEM =
 
   "MOVEMENT COMPLEXITY: light equipment does not make a movement beginner-friendly. Ballistic kettlebell work — " +
   "swings, cleans, snatches, Turkish get-ups — only when athletes have been specifically taught it. NEVER use the " +
-  "kettlebell swing as the default beginner hinge; use dumbbell RDL progressions. No Olympic lifts. Complexity " +
+  "kettlebell swing as the default beginner hinge; Charlie hinges with bodyweight and bands, Bravo with a " +
+  "dumbbell RDL. No Olympic lifts. Complexity " +
   "needs a training reason.\n\n" +
 
   "CONDITIONING: prefer movements that stay safe and understandable under fatigue — burpees, jump rope, " +
@@ -173,8 +206,8 @@ const SYSTEM =
   '  "prep": ["3-5 short warm-up lines"],\n' +
   '  "lift": {\n' +
   '    "pattern": "Squat",\n' +
-  '    "charlie": { "name": "Goblet Squat", "detail": "3 × 8" },\n' +
-  '    "bravo":   { "name": "Heavy Goblet Squat", "detail": "4 × 6" },\n' +
+  '    "charlie": { "name": "Box Squat", "detail": "3 × 8" },\n' +
+  '    "bravo":   { "name": "Goblet Squat", "detail": "4 × 6" },\n' +
   '    "alpha":   { "name": "Back Squat", "detail": "4 × 5" },\n' +
   '    "cues": ["one or two short coaching cues"]\n' +
   "  },\n" +
@@ -207,7 +240,11 @@ const parseJson = (raw: string) => {
   if (s.startsWith("```")) s = s.replace(/^```(?:json)?/i, "").replace(/```$/i, "").trim();
 
   const start = s.indexOf("{");
-  if (start === -1) throw new Error("The AI did not return usable JSON.");
+  if (start === -1) {
+    // Show what came back instead. "Not JSON" on its own is undiagnosable.
+    const peek = s.slice(0, 200).replace(/\s+/g, " ").trim();
+    throw new Error(`The AI did not return usable JSON. It said: "${peek || "(nothing)"}"`);
+  }
 
   let depth = 0;
   let inString = false;
@@ -293,6 +330,9 @@ Deno.serve(async (req: Request) => {
     const carry = body?.carryOver ?? null;
     // A coach asking for something different about this one specific day.
     const instruction = String(body?.instruction ?? "").trim();
+    // Why the previous attempt was thrown away. Retrying with the identical
+    // prompt just reproduces the same mistake, so the reason comes back in.
+    const retryNote = String(body?.retryNote ?? "").trim();
     // Set when only one of the three tracks is being rewritten.
     const onlyTrack = String(body?.onlyTrack ?? "").trim().toLowerCase();
     const keepDay = body?.keepDay ?? null;
@@ -393,18 +433,44 @@ Deno.serve(async (req: Request) => {
       (trackBrief || continuity) +
       evidence +
       (instruction ? `\nThe coach asks specifically: ${instruction}\n` : "") +
+      (retryNote
+        ? `\nYOUR PREVIOUS ATTEMPT WAS REJECTED: ${retryNote}\nFix exactly that. Keep everything else about ` +
+          "the session as you would have written it.\n"
+        : "") +
       "\nReturn ONLY the JSON shape described.";
 
     const anthropic = new Anthropic({ apiKey: ANTHROPIC_API_KEY });
     const response = await anthropic.messages.create({
       model: MODEL,
-      max_tokens: 4000,
+      // Sonnet 5 thinks before it answers, and the thinking is charged
+      // against max_tokens. Left unbounded it can spend the whole budget
+      // deliberating over three tracks, a 40-minute cap and a room with no
+      // floor -- and return nothing at all (stop_reason: max_tokens, one
+      // thinking block, no text). Thursday did exactly that, every time.
+      // Sonnet 5 does not take a token budget for thinking; it takes an
+      // effort level, and "adaptive" lets it think as much as that effort
+      // warrants. Medium keeps the deliberation that helps with the
+      // constraints without letting it run the reply out of room, and
+      // 9000 leaves plenty either way.
+      max_tokens: 9000,
+      thinking: { type: "adaptive" },
+      output_config: { effort: "medium" },
       system: SYSTEM,
       messages: [{ role: "user", content: userPrompt }],
     } as never);
 
     const textBlock = response.content.find((b: { type: string }) => b.type === "text");
-    const parsed = parseJson((textBlock as { text?: string })?.text ?? "");
+    const text = (textBlock as { text?: string })?.text ?? "";
+    if (!text.trim()) {
+      // An empty reply is a different failure from a malformed one, and the
+      // stop reason is the only clue to which. Say it, so nobody has to guess.
+      const r = response as { stop_reason?: string; content?: Array<{ type: string }> };
+      const kinds = (r.content ?? []).map((b) => b.type).join(", ") || "none";
+      throw new Error(
+        `The AI sent back nothing (stop reason: ${r.stop_reason ?? "unknown"}; blocks: ${kinds}). Try again.`
+      );
+    }
+    const parsed = parseJson(text);
 
     // The model states its own times and is held to them. 40 is the ceiling
     // because boxing starts straight afterwards, and overrunning costs the

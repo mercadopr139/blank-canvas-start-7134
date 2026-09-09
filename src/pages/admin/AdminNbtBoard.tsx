@@ -19,7 +19,7 @@ import {
   DAYS, DayKey, TRACKS, TRACK_META, Track, NbtBlock, NbtWeek, NbtDay, NbtLog,
   toDateString, firstOfMonth, monthLabel, mondaysInMonth, dateOfDay,
 } from "@/lib/nbt";
-import { priorWeekBriefs, roomReport, carryOver, spaceViolation } from "@/lib/nbtCoaching";
+import { priorWeekBriefs, roomReport, carryOver, dayProblem } from "@/lib/nbtCoaching";
 import NbtLevels from "@/components/nbt/NbtLevels";
 import NbtEditDay from "@/components/nbt/NbtEditDay";
 
@@ -122,7 +122,9 @@ const AdminNbtBoard = () => {
     dayKey: DayKey,
     prior: NbtWeek[],
     attempt = 0,
-    only?: { track: Track; keepDay: NbtDay }
+    only?: { track: Track; keepDay: NbtDay },
+    /** Why the last attempt was thrown away, so the next one can fix it. */
+    retryNote?: string
   ): Promise<NbtDay> => {
     // All three tracks of every earlier week in this block, not Alpha alone.
     const priorWeeks = priorWeekBriefs(prior, dayKey, weekNo);
@@ -138,21 +140,27 @@ const AdminNbtBoard = () => {
           ...(room ? { room } : {}),
           ...(carry ? { carryOver: carry } : {}),
           ...(only ? { onlyTrack: only.track, keepDay: only.keepDay } : {}),
+          ...(retryNote ? { retryNote } : {}),
         },
       });
       if (error) throw error;
       if (!res?.day) throw new Error(res?.error ?? "Nothing came back.");
-      // The room is a hard limit, and a prompt rule can be ignored silently. A
-      // session that cannot physically be done in the space is refused here and
-      // the retry above asks for another — better than putting it on the screen.
-      const wrongRoom = spaceViolation(res.day as NbtDay, dayKey, only?.track);
-      if (wrongRoom) throw new Error(wrongRoom);
+      // The room and the equipment are hard limits, and a prompt rule can be
+      // ignored silently. A session that cannot physically be run — nowhere to
+      // do it, or two tracks queueing for the same six bikes — is refused here
+      // rather than put on the screen.
+      const problem = dayProblem(res.day as NbtDay, dayKey, only?.track);
+      if (problem) throw new Error(problem);
       return res.day as NbtDay;
     } catch (e) {
       if (attempt >= 2) throw e;
-      // Busy responses are transient; wait and go again.
+      // Busy responses are transient; wait and go again. A rejection is not
+      // transient, so the reason goes back with the retry — asking again with
+      // the identical prompt would only reproduce the same mistake.
       await new Promise((r) => setTimeout(r, 1500 * (attempt + 1)));
-      return generateDay(blockFocus, weekNo, dayKey, prior, attempt + 1, only);
+      return generateDay(
+        blockFocus, weekNo, dayKey, prior, attempt + 1, only, (e as Error)?.message
+      );
     }
   };
 

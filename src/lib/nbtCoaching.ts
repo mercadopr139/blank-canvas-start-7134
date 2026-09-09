@@ -308,7 +308,83 @@ export const spaceViolation = (day: NbtDay, dayKey: DayKey, only?: Track): strin
   return null;
 };
 
-/* ───── 4. Where the last block finished ───── */
+/* ───── 4. Shared equipment ─────
+   All three tracks train at the same time in the same room, with anywhere
+   between 15 and 40 athletes on the floor. There are 6 assault bikes, 6 rowers,
+   and a finite number of dumbbells and kettlebells — so two tracks sent to the
+   same one is a queue, not a workout.
+
+   Only unambiguous collisions are refused. A guard that fires on a maybe would
+   fail whole months and leave a coach with nothing, which is worse than one
+   shared dumbbell. */
+
+// Dumbbells and kettlebells are one resource, not two: they live on the same
+// rack, they serve the same job here, and a goblet squat will take whichever is
+// free. Counting them separately would let two tracks "share" the rack legally.
+export const LIMITED = ["bike", "rower", "handWeight"] as const;
+export type LimitedItem = (typeof LIMITED)[number];
+
+const ITEM_LABEL: Record<LimitedItem, string> = {
+  bike: "the assault bikes",
+  rower: "the rowers",
+  handWeight: "the dumbbells and kettlebells",
+};
+
+const ITEM_PATTERNS: Record<LimitedItem, RegExp> = {
+  bike: /\b(?:assault |air |echo |stationary )?bikes?\b/i,
+  // "Row 500m" is the machine. "DB row", "inverted row" and "seated row" are
+  // pulling exercises and must not be mistaken for it, so the bare word only
+  // counts when a distance, a calorie count, a time or a pace word follows it
+  // ON THE SAME LINE — the lookahead stops at a newline, or a "DB row" three
+  // lines above a "2 min rest" would be read as the erg.
+  rower: /\b(?:rowers?|row erg|ergs?)\b|\brow(?:ing)?\b(?=[^.;\n]*(?:\b\d+\s*(?:m|meters?|metres?|cals?|calories?|sec|secs|seconds?|min|mins|minutes?)\b|\bpace\b))/i,
+  // Named implements, plus the movements that cannot be done without one — a
+  // goblet squat never says "dumbbell" but it still empties the rack.
+  handWeight: /\b(?:dumbbells?|dbs?|kettlebells?|kbs?|goblet|farmer'?s?|suitcase)\b/i,
+};
+
+/** What one track is actually holding: its own lift and its own circuit. */
+const trackEquipmentText = (day: NbtDay, track: Track) =>
+  [
+    day.lift?.[track]?.name ?? "",
+    day.lift?.[track]?.detail ?? "",
+    ...(day.work?.[track] ?? []),
+  ].join(" \n ");
+
+/**
+ * Which two tracks have been sent to the same limited item, or null.
+ *
+ * Checked on the whole day even when only one track is being rewritten: the
+ * new track has to fit around the two that are staying, which is precisely the
+ * thing being asked.
+ */
+export const equipmentClash = (day: NbtDay): string | null => {
+  const text = {} as Record<Track, string>;
+  TRACKS.forEach((t) => { text[t] = trackEquipmentText(day, t); });
+
+  for (const item of LIMITED) {
+    const users = TRACKS.filter((t) => ITEM_PATTERNS[item].test(text[t]));
+    if (users.length > 1) {
+      const names = users.map((t) => t[0].toUpperCase() + t.slice(1));
+      const both = names.length === 2 ? "are both" : "are all";
+      // Read by a coach in a toast AND fed back to the model on retry, so it
+      // has to say how to fix it, not just that it is wrong.
+      return (
+        `${names.join(", ").replace(/, ([^,]*)$/, " and $1")} ${both} on ${ITEM_LABEL[item]} at the same ` +
+        "time, and there are not enough to go round. Give each track a different station: one on the bikes, " +
+        "one on the rowers, one on the floor with med balls, rope and bodyweight — and only one track on the " +
+        "dumbbell and kettlebell rack."
+      );
+    }
+  }
+  return null;
+};
+
+/** Everything wrong with a generated day, or null. The room, then the kit. */
+export const dayProblem = (day: NbtDay, dayKey: DayKey, only?: Track): string | null =>
+  spaceViolation(day, dayKey, only) ?? equipmentClash(day);
+
+/* ───── 5. Where the last block finished ───── */
 
 export interface CarryOver {
   weekStart: string;
