@@ -71,14 +71,17 @@ const SYSTEM =
 
   "THE THREE TRACKS — every session gives all three, always in this order:\n" +
   "- CHARLIE (LEARN): new or still building competency. Bodyweight and simple dumbbell work, supported variations, " +
-  "  run/walk intervals, light carries. NEVER frame it as the easy or lesser workout.\n" +
+  "  shorter work intervals with longer rests, light carries. NEVER frame it as the easy or lesser workout.\n" +
   "- BRAVO (BUILD): competent, ready for more load, distance or difficulty.\n" +
   "- ALPHA (PROGRESS): competent and experienced enough for barbell work, longer intervals, harder carries.\n" +
   "These describe the right challenge for THIS movement at THIS point — not who the best athlete is. The three " +
   "tracks must train the SAME fundamental pattern at different progressions, never three unrelated workouts. " +
   "Squat: goblet → heavy goblet or intro barbell → back squat. Push: incline push-up → DB bench → bench press. " +
-  "Pull: supported row → assisted pull-up or DB row → pull-up. Run: run/walk → controlled intervals → longer or " +
-  "faster intervals.\n\n" +
+  "Pull: supported row → assisted pull-up or DB row → pull-up. Conditioning on MONDAY and THURSDAY, where there " +
+  "is floor: run/walk shuttles → controlled shuttle intervals → longer or faster shuttle intervals, all inside " +
+  "25 yards. Conditioning on TUESDAY, where there is not: shorter machine or bodyweight intervals with longer " +
+  "rests → longer intervals with less rest → longer intervals at a stronger effort or heavier load. The three " +
+  "tracks differ by dose and difficulty, never by who gets to run.\n\n" +
 
   "THE DAY — 40 MINUTES AT THE ABSOLUTE MOST, warm-up and reset included. They box straight afterwards, so " +
   "overrunning costs the session that actually matters. State the minutes you intend for each block, and make " +
@@ -185,13 +188,56 @@ const SYSTEM =
   '  "reset": ["2-3 short transition lines"]\n' +
   "}";
 
+/**
+ * Pull the JSON object out of a model reply.
+ *
+ * The old version took the LAST closing brace in the string, which is right
+ * only when the reply is complete. On a reply cut off part way — the model runs
+ * out of tokens mid-array — the last brace is an inner one, so it sliced a
+ * fragment and threw a baffling "Expected ',' or '}' at position 1653". Every
+ * retry then hit the same wall and a day silently refused to rewrite.
+ *
+ * So: walk from the first brace, tracking string state and depth, and take the
+ * brace that actually closes it. If it never closes, say plainly that the reply
+ * was cut off rather than blaming the JSON.
+ */
 const parseJson = (raw: string) => {
   let s = raw.trim();
   if (s.startsWith("```")) s = s.replace(/^```(?:json)?/i, "").replace(/```$/i, "").trim();
+
   const start = s.indexOf("{");
-  const end = s.lastIndexOf("}");
-  if (start === -1 || end === -1) throw new Error("The AI did not return usable JSON.");
-  return JSON.parse(s.slice(start, end + 1));
+  if (start === -1) throw new Error("The AI did not return usable JSON.");
+
+  let depth = 0;
+  let inString = false;
+  let escaped = false;
+  let end = -1;
+  for (let i = start; i < s.length; i++) {
+    const c = s[i];
+    if (escaped) { escaped = false; continue; }
+    if (c === "\\") { escaped = true; continue; }
+    if (c === '"') { inString = !inString; continue; }
+    if (inString) continue;
+    if (c === "{") depth += 1;
+    else if (c === "}") {
+      depth -= 1;
+      if (depth === 0) { end = i; break; }
+    }
+  }
+  if (end === -1) {
+    throw new Error("The AI's answer was cut off before it finished. Try again.");
+  }
+
+  // Trailing commas before a close are common and harmless to remove.
+  const body = s.slice(start, end + 1).replace(/,(\s*[}\]])/g, "$1");
+  try {
+    return JSON.parse(body);
+  } catch (e) {
+    // Give the coach something they can actually report, not a byte offset.
+    const at = Number(/position (\d+)/.exec((e as Error).message)?.[1] ?? -1);
+    const near = at >= 0 ? ` near: ${body.slice(Math.max(0, at - 60), at + 60)}` : "";
+    throw new Error(`The AI returned malformed JSON.${near}`);
+  }
 };
 
 const strArray = (v: unknown, max = 8): string[] =>
@@ -351,7 +397,7 @@ Deno.serve(async (req: Request) => {
     const anthropic = new Anthropic({ apiKey: ANTHROPIC_API_KEY });
     const response = await anthropic.messages.create({
       model: MODEL,
-      max_tokens: 2000,
+      max_tokens: 4000,
       system: SYSTEM,
       messages: [{ role: "user", content: userPrompt }],
     } as never);
