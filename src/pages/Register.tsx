@@ -17,7 +17,8 @@ import SummerBreakBanner from "@/components/sections/SummerBreakBanner";
 import WaiverSection from "@/components/registration/WaiverSection";
 import { getProgramYearForRegistration, shortProgramYear } from "@/lib/programYear";
 import { DEFAULT_WAIVERS } from "@/components/registration/waiverTexts";
-import ChildPrimaryAddressField from "@/components/registration/ChildPrimaryAddressField";
+import ChildPrimaryAddressField, { type AddressPin } from "@/components/registration/ChildPrimaryAddressField";
+import { addressProblem } from "@/lib/address";
 import nlaLogo from "@/assets/nla-logo.png";
 import { digitsOnly, formatPhoneDisplay, toE164, isValidPhone } from "@/lib/validators";
 
@@ -93,13 +94,19 @@ const Register = () => {
         .eq("is_active", true)
         .order("sort_order", { ascending: true });
       if (error) throw error;
-      return data as FormFieldDef[];
+      // `condition` is jsonb in the generated types and a shaped object here.
+      return data as unknown as FormFieldDef[];
     },
   });
 
   const handleInputChange = (key: string, value: string) => {
     setFormValues(prev => ({ ...prev, [key]: value }));
   };
+
+  // The map pin for the child's address, when the parent picked it from the
+  // suggestions. Saved with the registration so it never needs geocoding.
+  // Null when they typed past the list — the geocoder handles those later.
+  const [addressPin, setAddressPin] = useState<AddressPin | null>(null);
 
   // Waivers come from the DB (field_type 'waiver', ordered after the questions)
   // once they've been set up in the Registration Form Editor; otherwise fall back to
@@ -193,6 +200,13 @@ const Register = () => {
     }
 
     if (!formFields) return "Form not loaded";
+
+    // The address has to be somewhere a child can live. A season of the
+    // district map taught us what gets typed otherwise: an email, a PO box,
+    // "Elemental 2". The field says the same thing underneath as they type;
+    // this is the door.
+    const badAddress = addressProblem(formValues["child_primary_address"]);
+    if (badAddress) return badAddress;
 
     for (const field of formFields) {
       if (!field.required || !field.is_active) continue;
@@ -327,6 +341,10 @@ const Register = () => {
         child_phone: formValues["child_phone"] ? (toE164(formValues["child_phone"]) || formValues["child_phone"].trim()) : null,
         parent_email: (formValues["parent_email"] || "").trim(),
         child_primary_address: (formValues["child_primary_address"] || "").trim(),
+        // A picked address arrives with its pin; a typed one is geocoded later.
+        latitude: addressPin?.lat ?? null,
+        longitude: addressPin?.lng ?? null,
+        geocoded_at: addressPin ? new Date().toISOString() : null,
         child_school_district: formValues["child_school_district"] as any,
         child_grade_level: formValues["child_grade_level"] && formValues["child_grade_level"] !== "not_applicable" ? parseInt(formValues["child_grade_level"]) : null,
         child_boxing_program: formValues["child_boxing_program"] as any,
@@ -565,6 +583,7 @@ const Register = () => {
             <ChildPrimaryAddressField
               value={val}
               onChange={v => handleInputChange(field.field_key, v)}
+              onLocate={setAddressPin}
               className="mt-2"
             />
           </div>
