@@ -349,11 +349,11 @@ const StrengthBoard = () => {
                   {day.accessories?.length ? (
                     <ul className="space-y-[0.7em]">
                       {day.accessories.map((a, i) => (
-                        /* The demo video beside each movement — the same one
-                           the coach's page shows, sized in em so it shrinks
-                           with the column. Tap to play; the board stays
-                           underneath. */
-                        <li key={i} className="grid grid-cols-[1fr_9em] gap-[0.7em] items-start">
+                        /* The demo video under each movement's text, centred —
+                           the same one the coach's page shows, sized in em so
+                           it shrinks with the column. Tap and it plays right
+                           there at that size; nothing covers the workout. */
+                        <li key={i}>
                           <div className="min-w-0">
                             <div className="flex items-start justify-between gap-[0.6em]">
                               <p className="text-[1.15em] font-bold leading-tight">{a.name}</p>
@@ -377,7 +377,9 @@ const StrengthBoard = () => {
                               </p>
                             ) : null}
                           </div>
-                          <ExerciseVideo name={a.name} compact />
+                          <div className="mx-auto mt-[0.6em] w-[14em] max-w-full">
+                            <ExerciseVideo name={a.name} compact inline />
+                          </div>
                         </li>
                       ))}
                     </ul>
