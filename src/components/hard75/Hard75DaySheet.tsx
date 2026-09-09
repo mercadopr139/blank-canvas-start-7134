@@ -13,7 +13,7 @@ import {
 } from "@/components/ui/dialog";
 import {
   Loader2, RefreshCw, Check, Camera, Dumbbell, HeartPulse, Home, BookOpen,
-  Pencil, Trash2, Plus, X, Eraser,
+  Pencil, Trash2, Plus, X, Eraser, NotebookPen,
 } from "lucide-react";
 import { format } from "date-fns";
 import { toast } from "sonner";
@@ -125,6 +125,7 @@ const Hard75DaySheet = ({
       strength_done: false, cardio_done: false, outdoor_done: false,
       water_done: false, reading_done: false, diet_done: false,
       photo_path: null, notes: null, completed_at: null,
+      strength_override: null, cardio_override: null,
       strength_seconds: 0, strength_started_at: null,
       cardio_seconds: 0, cardio_started_at: null,
     });
@@ -188,6 +189,8 @@ const Hard75DaySheet = ({
             busy={busy === "strength"}
             onRegenerate={() => regenerate("strength")}
             onEdit={() => setEditing("strength")}
+            override={day.strength_override}
+            onOverride={(t) => patch({ strength_override: t })}
             timer={{
               seconds: day.strength_seconds ?? 0,
               startedAt: day.strength_started_at,
@@ -202,6 +205,8 @@ const Hard75DaySheet = ({
             busy={busy === "cardio"}
             onRegenerate={() => regenerate("cardio")}
             onEdit={() => setEditing("cardio")}
+            override={day.cardio_override}
+            onOverride={(t) => patch({ cardio_override: t })}
             timer={{
               seconds: day.cardio_seconds ?? 0,
               startedAt: day.cardio_started_at,
@@ -387,8 +392,8 @@ const Hard75DaySheet = ({
             <DialogHeader>
               <DialogTitle>Clear day {day.day_number}?</DialogTitle>
               <DialogDescription className="text-white/50">
-                Unticks all six boxes and removes the photo and the journal entry. The workouts stay —
-                they are part of the plan, not something you entered.
+                Unticks all six boxes and removes the photo, the journal entry and any "what I actually
+                did" note. The planned workouts stay — they are part of the plan, not something you entered.
               </DialogDescription>
             </DialogHeader>
             <DialogFooter>
@@ -407,7 +412,7 @@ const Hard75DaySheet = ({
 };
 
 const WorkoutCard = ({
-  workout, color, icon: Icon, busy, onRegenerate, onEdit, timer,
+  workout, color, icon: Icon, busy, onRegenerate, onEdit, override, onOverride, timer,
 }: {
   workout: Workout | null;
   color: string;
@@ -415,6 +420,9 @@ const WorkoutCard = ({
   busy: boolean;
   onRegenerate: () => void;
   onEdit: () => void;
+  /** What he actually did, when it was not this. */
+  override: string | null;
+  onOverride: (text: string | null) => Promise<void>;
   timer: {
     seconds: number;
     startedAt: string | null;
@@ -422,6 +430,12 @@ const WorkoutCard = ({
   };
 }) => {
   const [showHome, setShowHome] = useState(false);
+  // When a session was overridden the plan is tucked away, not thrown away.
+  const [showPlan, setShowPlan] = useState(false);
+  const [writing, setWriting] = useState(false);
+  const [draft, setDraft] = useState("");
+  const overridden = !!override?.trim();
+
   if (!workout?.blocks?.length) return null;
 
   return (
@@ -432,32 +446,107 @@ const WorkoutCard = ({
       >
         <Icon className="w-4 h-4 shrink-0" style={{ color }} />
         <div className="min-w-0">
-          <p className="font-bold leading-tight" style={{ color }}>{workout.title}</p>
+          <p className="font-bold leading-tight" style={{ color }}>
+            {overridden ? "Did something else" : workout.title}
+          </p>
           <p className="text-[11px] text-white/35">
-            {workout.focus}
-            {workout.outdoor && " · outdoors"}
+            {overridden ? `Planned: ${workout.title}` : workout.focus}
+            {!overridden && workout.outdoor && " · outdoors"}
           </p>
         </div>
         <div className="ml-auto flex items-center gap-3 shrink-0">
+          {/* Three buttons, three different jobs: Edit fixes the plan, New
+              workout replaces the plan, Overrode records what actually
+              happened without touching either. */}
           <button
-            onClick={onEdit}
-            title="Edit this workout by hand"
+            onClick={() => { setDraft(override ?? ""); setWriting(true); }}
+            title="Record the workout you actually did"
             className="text-white/35 hover:text-white text-xs font-semibold inline-flex items-center gap-1.5"
           >
-            <Pencil className="w-3.5 h-3.5" /> Edit
+            <NotebookPen className="w-3.5 h-3.5" /> {overridden ? "Edit note" : "Overrode"}
           </button>
-          <button
-            onClick={onRegenerate}
-            disabled={busy}
-            title="Write a different workout for this day only"
-            className="text-white/35 hover:text-white text-xs font-semibold inline-flex items-center gap-1.5"
-          >
-            {busy ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <RefreshCw className="w-3.5 h-3.5" />}
-            New workout
-          </button>
+          {!overridden && (
+            <>
+              <button
+                onClick={onEdit}
+                title="Edit this workout by hand"
+                className="text-white/35 hover:text-white text-xs font-semibold inline-flex items-center gap-1.5"
+              >
+                <Pencil className="w-3.5 h-3.5" /> Edit
+              </button>
+              <button
+                onClick={onRegenerate}
+                disabled={busy}
+                title="Write a different workout for this day only"
+                className="text-white/35 hover:text-white text-xs font-semibold inline-flex items-center gap-1.5"
+              >
+                {busy ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <RefreshCw className="w-3.5 h-3.5" />}
+                New workout
+              </button>
+            </>
+          )}
         </div>
       </div>
 
+      {/* The notebook. Free text on purpose — a session done somewhere else
+          does not fit a sets-and-reps form, and forcing it into one is how
+          people stop writing anything down. */}
+      {writing && (
+        <div className="px-4 pt-3 pb-3 border-b border-white/[0.06] bg-black/30">
+          <p className="text-[11px] uppercase tracking-[0.15em] text-white/35 font-semibold mb-2">
+            What did you actually do?
+          </p>
+          <Textarea
+            value={draft}
+            onChange={(e) => setDraft(e.target.value)}
+            rows={4}
+            autoFocus
+            placeholder="Firehouse gym — 5 rounds of 10 pull-ups, 20 push-ups, 30 air squats. 28 min."
+            className="bg-neutral-900 border-neutral-800 text-white text-[15px] leading-relaxed"
+          />
+          <div className="flex items-center gap-2 mt-2">
+            <Button
+              onClick={async () => { await onOverride(draft.trim() || null); setWriting(false); }}
+              className="h-9 font-bold text-black"
+              style={{ backgroundColor: color }}
+            >
+              Save
+            </Button>
+            <Button
+              variant="ghost"
+              onClick={() => setWriting(false)}
+              className="h-9 text-white/40 hover:text-white"
+            >
+              Cancel
+            </Button>
+            {overridden && (
+              <Button
+                variant="ghost"
+                onClick={async () => { await onOverride(null); setWriting(false); }}
+                className="h-9 ml-auto text-white/30 hover:text-amber-400"
+                title="Drop the note and go back to the planned workout"
+              >
+                Back to the plan
+              </Button>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* What he did, where the plan would have been. */}
+      {overridden && !writing && (
+        <div className="px-4 pt-4 pb-3">
+          <p className="text-lg leading-relaxed text-white/90 whitespace-pre-line">{override}</p>
+          <button
+            onClick={() => setShowPlan((p) => !p)}
+            className="mt-3 text-xs font-semibold text-white/30 hover:text-white/70 transition-colors"
+          >
+            {showPlan ? "Hide the plan" : "What was planned?"}
+          </button>
+        </div>
+      )}
+
+      {(!overridden || showPlan) && (
       <ul className="p-4 space-y-2">
         {workout.blocks.map((b, i) => (
           <li key={i} className="flex items-baseline justify-between gap-3">
@@ -474,8 +563,9 @@ const WorkoutCard = ({
           </li>
         ))}
       </ul>
+      )}
 
-      {workout.notes && (
+      {!overridden && workout.notes && (
         <p className="px-4 pb-3 text-xs text-white/40 italic">{workout.notes}</p>
       )}
 
@@ -492,7 +582,7 @@ const WorkoutCard = ({
       {/* A shift at the firehouse should cost the gym, not the session. The
           label has to say what appears, not ask a question — the first time
           anyone read "No gym today?" they had to press it to find out. */}
-      {workout.blocks.some((b) => b.home) && (
+      {(!overridden || showPlan) && workout.blocks.some((b) => b.home) && (
         <button
           onClick={() => setShowHome((s) => !s)}
           className="w-full px-4 py-2 border-t border-white/[0.06] text-xs font-semibold text-white/35 hover:text-white/70 transition-colors text-left inline-flex items-center gap-1.5"

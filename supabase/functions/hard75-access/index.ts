@@ -197,6 +197,7 @@ Deno.serve(async (req: Request) => {
           "strength_done", "cardio_done", "outdoor_done",
           "water_done", "reading_done", "diet_done",
           "photo_path", "weight_lb", "notes", "strength", "cardio",
+          "strength_override", "cardio_override",
           "strength_seconds", "strength_started_at",
           "cardio_seconds", "cardio_started_at",
         ];

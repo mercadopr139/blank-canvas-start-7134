@@ -65,6 +65,9 @@ export interface Hard75Day {
   photo_path: string | null;
   /** Pounds. Null on any day it was not weighed — the programme does not ask for it. */
   weight_lb: number | null;
+  /** What was actually done, when it was not the plan. The plan stays put. */
+  strength_override: string | null;
+  cardio_override: string | null;
   notes: string | null;
   completed_at: string | null;
   /** Accumulated seconds, NOT counting a stretch that is running right now. */
