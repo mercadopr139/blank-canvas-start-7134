@@ -7,11 +7,12 @@
 // their text until everything fits the height available.
 //
 // One clock, for the session — the Battle Team's whole block is twenty
-// minutes, warm-up to finisher.
+// minutes, warm-up to finisher. It sits at the foot of the bar, bigger than
+// the text around it.
 //
-// No demo videos here on purpose. They live on the coach's page, one tap from
-// the exercise; on a wall they are thumbnails nobody can tap and height the
-// workout wants.
+// The demo videos are here too, beside each extra-work movement, the same
+// ones the coach's page shows. The screen is a touch display, so a kid can
+// tap one and the board stays underneath the player.
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
@@ -21,6 +22,7 @@ import {
   ArrowLeft, ChevronLeft, ChevronRight, ClipboardList, Dumbbell, Maximize, Minimize,
 } from "lucide-react";
 import TrackTimer from "@/components/nbt/TrackTimer";
+import ExerciseVideo from "@/components/strength/ExerciseVideo";
 import {
   DAYS, type DayKey, type WeekRow, SESSION_MINUTES, addDays, isoDate, toMonday, prettyRange,
 } from "@/lib/strength";
@@ -233,20 +235,15 @@ const StrengthBoard = () => {
         /* Fills the screen between the header and the foot, and scrolls INSIDE
            itself only on a phone — on the wall it never page-scrolls. */
         <main className="flex-1 min-h-0 flex flex-col px-4 md:px-6 py-3 gap-3 overflow-y-auto md:overflow-hidden">
-          {/* The lift on the left, the session clock on the right. The clock is
-              not inside an em-scaled column, so it gets its own fixed size. */}
-          <div className="flex items-center justify-between gap-6 flex-wrap shrink-0">
+          {/* The lift, and how long the whole thing should take. */}
+          <div className="flex items-baseline justify-between gap-6 flex-wrap shrink-0">
             <div className="min-w-0">
               <p className="text-[11px] md:text-xs uppercase tracking-[0.2em] text-white/45 font-bold">Main lift</p>
               <p className="text-2xl md:text-4xl font-black tracking-tight leading-tight">{day.focus}</p>
             </div>
-            <div className="text-[15px] md:text-[17px] w-full sm:w-auto sm:min-w-[24em]">
-              <TrackTimer
-                storageKey={`bt-timer:${weekStart}:${dayKey}`}
-                minutes={SESSION_MINUTES}
-                color={NLA_RED}
-              />
-            </div>
+            <p className="text-sm md:text-base text-white/35">
+              <span className="text-white/50 font-semibold">~{day.estMinutes ?? SESSION_MINUTES} min</span>
+            </p>
           </div>
 
           {/* Two columns that take whatever height is left and fit themselves
@@ -320,6 +317,17 @@ const StrengthBoard = () => {
                     </div>
                   </>
                 ) : null}
+
+                {/* The session clock, at the foot of the bar and bigger than
+                    the text around it — twenty minutes, warm-up to finisher.
+                    Inside the column so it scales with it. */}
+                <div className="mt-auto px-[0.8em] pb-[0.8em] text-[1.3em]">
+                  <TrackTimer
+                    storageKey={`bt-timer:${weekStart}:${dayKey}`}
+                    minutes={SESSION_MINUTES}
+                    color={NLA_RED}
+                  />
+                </div>
               </div>
             </section>
 
@@ -341,25 +349,35 @@ const StrengthBoard = () => {
                   {day.accessories?.length ? (
                     <ul className="space-y-[0.7em]">
                       {day.accessories.map((a, i) => (
-                        <li key={i}>
-                          <div className="flex items-start justify-between gap-[0.6em]">
-                            <p className="text-[1.15em] font-bold leading-tight">{a.name}</p>
-                            <span
-                              className="shrink-0 rounded-lg px-[0.5em] py-[0.15em] text-[0.9em] font-black tabular-nums whitespace-nowrap"
-                              style={{ backgroundColor: `${EXTRA}22`, color: EXTRA }}
-                            >
-                              {a.sets}
-                            </span>
-                          </div>
-                          <p className="text-[0.65em] uppercase tracking-[0.12em] text-white/40 mt-[0.15em]">
-                            {a.equipment}{a.targets ? ` · ${a.targets}` : ""}
-                            {a.rest ? ` · rest ${a.rest}` : ""}
-                          </p>
-                          {a.scale ? (
-                            <p className="text-[0.75em] leading-snug mt-[0.25em]" style={{ color: `${EXTRA}cc` }}>
-                              ⚖ {a.scale}
+                        /* The demo video beside each movement — the same one
+                           the coach's page shows, sized in em so it shrinks
+                           with the column. Tap to play; the board stays
+                           underneath. */
+                        <li key={i} className="grid grid-cols-[1fr_9em] gap-[0.7em] items-start">
+                          <div className="min-w-0">
+                            <div className="flex items-start justify-between gap-[0.6em]">
+                              <p className="text-[1.15em] font-bold leading-tight">{a.name}</p>
+                              <span
+                                className="shrink-0 rounded-lg px-[0.5em] py-[0.15em] text-[0.9em] font-black tabular-nums whitespace-nowrap"
+                                style={{ backgroundColor: `${EXTRA}22`, color: EXTRA }}
+                              >
+                                {a.sets}
+                              </span>
+                            </div>
+                            <p className="text-[0.65em] uppercase tracking-[0.12em] text-white/40 mt-[0.15em]">
+                              {a.equipment}{a.targets ? ` · ${a.targets}` : ""}
+                              {a.rest ? ` · rest ${a.rest}` : ""}
                             </p>
-                          ) : null}
+                            {a.howTo ? (
+                              <p className="text-[0.8em] leading-snug text-white/75 mt-[0.3em]">{a.howTo}</p>
+                            ) : null}
+                            {a.scale ? (
+                              <p className="text-[0.75em] leading-snug mt-[0.25em]" style={{ color: `${EXTRA}cc` }}>
+                                ⚖ {a.scale}
+                              </p>
+                            ) : null}
+                          </div>
+                          <ExerciseVideo name={a.name} compact />
                         </li>
                       ))}
                     </ul>
