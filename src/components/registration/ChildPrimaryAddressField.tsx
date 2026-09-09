@@ -54,8 +54,11 @@ export default function ChildPrimaryAddressField({
     clearTimeout(debounceRef.current);
     debounceRef.current = setTimeout(async () => {
       try {
+        // Biased to South Jersey (a viewbox, not a hard bound) so "301 north
+        // vineyard" finds the Cape May Court House one before the parent has
+        // typed the town — a family in Delaware or Bucks County still gets theirs.
         const res = await fetch(
-          `https://nominatim.openstreetmap.org/search?format=json&countrycodes=us&limit=5&q=${encodeURIComponent(query)}`,
+          `https://nominatim.openstreetmap.org/search?format=json&countrycodes=us&limit=5&viewbox=-75.7,40.4,-73.9,38.7&q=${encodeURIComponent(query)}`,
           { headers: { "Accept-Language": "en" } }
         );
         const data: NominatimResult[] = await res.json();
