@@ -49,9 +49,10 @@ const SYSTEM =
   "  sensible volume in one session and pair them with work that does not decelerate.\n" +
   "- TUESDAY is in the BOXING FACILITY, half the size, with NO ROOM TO RUN AT ALL. Not a length, not a jog, " +
   "  not a lap, not a shuttle, not a single yard. Tuesday conditioning happens ON THE SPOT. Available there: " +
-  "  6 bikes, 6 rowers, 2 ski ergs, jump ropes, med balls, bands, pull-up bars, dumbbells, kettlebells, and " +
-  "  bodyweight movements — air squats, burpees, lunges, step-ups, push-ups, core. Fourteen machines is enough " +
-  "  for a station rotation or two waves, but NEVER assume the whole room is on a machine at once.\n\n" +
+  "  6 bikes, 6 rowers, jump ropes, med balls, bands, pull-up bars, dumbbells, kettlebells, and bodyweight " +
+  "  movements — air squats, burpees, lunges, step-ups, push-ups, core. There are NO ski ergs; never program " +
+  "  one. Twelve machines is enough for a station rotation or two waves, but NEVER assume the whole room is " +
+  "  on a machine at once.\n\n" +
 
   "TUESDAY'S CONDITIONING STYLE: standard gym and CrossFit-style work — familiar movements repeated in rounds " +
   "or intervals, couplets and triplets a whole room can run together. It must genuinely raise heart rates. Do " +
@@ -92,7 +93,7 @@ const SYSTEM =
   "   versions and sets/reps. Quality reps. Never to failure. On a day whose point is athleticism, teach one " +
   "   technical element instead. Monday and Thursday are the only days with a runway, so sprint and shuttle " +
   "   mechanics — posture, acceleration, deceleration, landing — belong there. On TUESDAY the technical " +
-  "   element must not travel: rowing or ski stroke, bike cadence, rope technique, landing mechanics on the " +
+  "   element must not travel: rowing stroke, bike cadence, rope technique, landing mechanics on the " +
   "   spot, carry position, step-up form, overhead position.\n" +
   "3) WORK, 15–20 min — a circuit, intervals or metcon developing work capacity and event readiness. Challenging " +
   "   but NOT an exhaustion contest. They should finish worked, proud, tired, and able to start bag work after a " +
@@ -119,7 +120,7 @@ const SYSTEM =
   "needs a training reason.\n\n" +
 
   "CONDITIONING: prefer movements that stay safe and understandable under fatigue — burpees, jump rope, " +
-  "bikes, rowers, ski ergs, carries, sleds, med balls, bodyweight and simple dumbbell work, step-ups, lunges, " +
+  "bikes, rowers, carries, sleds, med balls, bodyweight and simple dumbbell work, step-ups, lunges, " +
   "core, box jumps when appropriate, hangs, push/pull stations, and — ON MONDAY AND THURSDAY ONLY — running " +
   "and shuttles within the 25-yard court. NEVER program bear crawls: this academy uses them for " +
   "discipline, not conditioning. Avoid maximal lifts, technical lifts under fatigue, high-rep heavy barbell work, " +
