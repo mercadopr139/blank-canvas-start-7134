@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { NbtDay, NbtLog, NbtWeek, Track } from "@/lib/nbt";
 import {
-  priorWeekBrief, priorWeekBriefs, roomReport, carryOver, spaceViolation, equipmentClash, dayProblem, THIN_ROOM,
+  priorWeekBrief, priorWeekBriefs, roomReport, carryOver, spaceViolation, equipmentClash, liftRepeated, dayProblem, THIN_ROOM,
 } from "@/lib/nbtCoaching";
 
 const day = (pattern: string, c: string, b: string, a: string, work = "Engine"): NbtDay => ({
@@ -471,5 +471,113 @@ describe("equipmentClash — the rowing machine versus the rowing exercise", () 
     const msg = equipmentClash(d)!;
     expect(msg).toMatch(/Alpha, Bravo and Charlie are all/);
     expect(msg).toMatch(/different station/i);
+  });
+});
+
+describe("liftRepeated — the circuit never repeats the lift", () => {
+  const build = (lift: Record<Track, string>, work: Record<Track, string[]>): NbtDay => {
+    const d = day("Hinge", lift.charlie, lift.bravo, lift.alpha);
+    return {
+      ...d,
+      lift: {
+        ...d.lift,
+        charlie: { name: lift.charlie, detail: "3 × 8" },
+        bravo: { name: lift.bravo, detail: "4 × 6" },
+        alpha: { name: lift.alpha, detail: "4 × 5" },
+      },
+      work: { ...d.work, ...work },
+    };
+  };
+  const hinge = { charlie: "Bodyweight Hip Hinge", bravo: "DB Romanian Deadlift", alpha: "Barbell RDL" };
+
+  it("refuses the same movement with a different weight in front of it", () => {
+    const d = build(hinge, {
+      charlie: ["Hip bridges x15"],
+      bravo: ["Light DB Romanian deadlifts x12", "Burpees"],
+      alpha: ["Swings x15"],
+    });
+    expect(liftRepeated(d)).toMatch(/Bravo/);
+  });
+
+  it("knows RDL and Romanian deadlift are the same thing", () => {
+    const d = build(hinge, {
+      charlie: ["Hip bridges x15"],
+      bravo: ["Burpees"],
+      alpha: ["Romanian deadlift x10, light bar"],
+    });
+    expect(liftRepeated(d)).toMatch(/Alpha/);
+  });
+
+  it("allows a different movement in the same pattern", () => {
+    const d = build(hinge, {
+      charlie: ["Hip bridges x15", "Band good mornings x12"],
+      bravo: ["Single-leg KB deadlift x8 each", "Med ball ground-to-overhead x10"],
+      alpha: ["KB swings x15", "Hip bridge x20"],
+    });
+    expect(liftRepeated(d)).toBeNull();
+  });
+
+  it("is per track — Charlie's lift does not police Bravo's circuit", () => {
+    const d = build(
+      { charlie: "Air Squat", bravo: "Goblet Squat", alpha: "Back Squat" },
+      { charlie: ["Step-ups x10", "Wall sit 30s"], bravo: ["Air squats x15"], alpha: ["Jump squats x10"] }
+    );
+    expect(liftRepeated(d)).toBeNull();
+  });
+
+  it("does refuse a track repeating its own bodyweight lift", () => {
+    const d = build(
+      { charlie: "Tempo Air Squat", bravo: "Goblet Squat", alpha: "Back Squat" },
+      { charlie: ["10 air squats"], bravo: ["Step-ups"], alpha: ["Lunges"] }
+    );
+    expect(liftRepeated(d)).toMatch(/Charlie/);
+  });
+
+  it("does not read 'back squat' as a repeat of 'air squat'", () => {
+    const d = build(
+      { charlie: "Air Squat", bravo: "Goblet Squat", alpha: "Back Squat" },
+      { charlie: ["Lunges"], bravo: ["Step-ups"], alpha: ["12 air squats, own pace"] }
+    );
+    expect(liftRepeated(d)).toBeNull();
+  });
+
+  it("checks each half of a combined lift", () => {
+    const d = build(
+      { charlie: "Hip Hinge + Inverted Row", bravo: "DB RDL + DB Row", alpha: "Barbell RDL + Pull-Up" },
+      { charlie: ["Hip bridges"], bravo: ["Burpees"], alpha: ["Pull-ups x5", "Swings"] }
+    );
+    expect(liftRepeated(d)).toMatch(/Alpha/);
+  });
+
+  it("does not mistake the rowing machine for the rowing exercise", () => {
+    const d = build(
+      { charlie: "Inverted Row", bravo: "DB Row", alpha: "Barbell Row" },
+      { charlie: ["Row 200m easy"], bravo: ["Row 250m"], alpha: ["Burpees"] }
+    );
+    expect(liftRepeated(d)).toBeNull();
+  });
+
+  it("handles plurals and hyphens", () => {
+    const d = build(
+      { charlie: "Incline Push-up", bravo: "DB Bench Press", alpha: "Barbell Bench Press" },
+      { charlie: ["10 pushups"], bravo: ["Med ball chest pass"], alpha: ["Dips"] }
+    );
+    expect(liftRepeated(d)).toMatch(/Charlie/);
+  });
+
+  it("tells the model what to do instead", () => {
+    const d = build(hinge, { charlie: ["Hip hinge x12"], bravo: ["Burpees"], alpha: ["Swings"] });
+    expect(liftRepeated(d)).toMatch(/different, simpler movement/);
+  });
+});
+
+describe("dayProblem — order of checks", () => {
+  it("reaches the repeat check once room and kit are fine", () => {
+    const d = day("Hinge", "Hip Hinge", "DB RDL", "Barbell RDL");
+    const bad: NbtDay = {
+      ...d,
+      work: { ...d.work, charlie: ["Burpees"], bravo: ["Row 250m"], alpha: ["RDL x10", "Bike 45s"] },
+    };
+    expect(dayProblem(bad, "thursday")).toMatch(/repeats its lift/);
   });
 });

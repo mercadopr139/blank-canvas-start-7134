@@ -380,9 +380,113 @@ export const equipmentClash = (day: NbtDay): string | null => {
   return null;
 };
 
-/** Everything wrong with a generated day, or null. The room, then the kit. */
+/* ───── 5. The conditioning never repeats the lift ─────
+   The lift block is quality reps under load; the work block is the same
+   PATTERN under fatigue with a different, simpler movement. A track that just
+   did 4 × 8 Romanian deadlift does not do Romanian deadlifts again tired and
+   sloppy in its circuit — it does hip bridges, swings, single-leg deadlifts.
+
+   Per track. Charlie's air-squat lift means Charlie's circuit has no air
+   squats; Bravo's still may. */
+
+/**
+ * Words that describe HOW a movement is loaded or positioned, not WHAT it is.
+ * Stripped before comparing, so "Heavy Goblet Squat" and "goblet squat" and
+ * "Goblet squats (moderate DB)" are all the same movement.
+ */
+const MODIFIERS = new Set([
+  "barbell", "bb", "dumbbell", "dumbbells", "db", "kettlebell", "kettlebells", "kb",
+  "band", "banded", "bodyweight", "bw", "weighted", "loaded",
+  "heavy", "heavier", "light", "lighter", "moderate", "medium",
+  "standing", "seated", "kneeling", "half", "tall", "tempo", "paused", "pause", "slow",
+  "supported", "assisted", "elevated", "strict",
+  // Angles and regressions of the same movement, not different movements.
+  "incline", "decline", "knee", "wall",
+]);
+
+/** Spellings that mean the same movement. Applied after lowercasing. */
+const ALIASES: Array<[RegExp, string]> = [
+  [/\brdls?\b/g, "romanian deadlift"],
+  [/\bohp\b/g, "overhead press"],
+  [/\bpush[\s-]?ups?\b/g, "push up"],
+  [/\bpull[\s-]?ups?\b/g, "pull up"],
+  [/\bchin[\s-]?ups?\b/g, "chin up"],
+  [/\bstep[\s-]?ups?\b/g, "step up"],
+  [/\bsit[\s-]?ups?\b/g, "sit up"],
+  [/\bsl\b/g, "single leg"],
+  [/\bsingle[\s-]leg\b/g, "single leg"],
+  [/\bone[\s-]leg\b/g, "single leg"],
+  [/\b1[\s-]leg\b/g, "single leg"],
+];
+
+/** Lowercase, aliases applied, hyphens to spaces, simple plurals dropped. */
+const normalise = (s: string) => {
+  let t = s.toLowerCase().replace(/[()\[\],:;/]/g, " ").replace(/[-–—]/g, " ");
+  ALIASES.forEach(([re, to]) => { t = t.replace(re, to); });
+  return t
+    .split(/\s+/)
+    .filter(Boolean)
+    .map((w) => (w.length > 3 && w.endsWith("s") && !w.endsWith("ss") ? w.slice(0, -1) : w))
+    .join(" ");
+};
+
+/**
+ * The movement(s) a lift actually is, with the loading stripped off.
+ *
+ * "Barbell RDL + Barbell Row" is two movements; "Heavy Goblet Squat" is one,
+ * "goblet squat". Anything that strips down to nothing — a lift called just
+ * "Heavy" — is ignored rather than matched against everything.
+ */
+const coreMovements = (liftName: string): string[] =>
+  liftName
+    .split(/\s*[+&]\s*|\s+or\s+/i)
+    .map((part) =>
+      normalise(part)
+        .split(" ")
+        .filter((w) => !MODIFIERS.has(w))
+        .join(" ")
+        .trim()
+    )
+    .filter((m) => m.length > 0);
+
+const escapeRe = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
+/**
+ * Which track's circuit repeats its own lift, or null.
+ *
+ * A bare "row" is the one movement that is also the name of a machine, so a
+ * rowing-exercise lift is not counted as repeated by "Row 250m" — the rower
+ * pattern above already knows how to tell them apart.
+ */
+export const liftRepeated = (day: NbtDay): string | null => {
+  for (const t of TRACKS) {
+    const lift = day.lift?.[t]?.name ?? "";
+    if (!lift) continue;
+    const lines = day.work?.[t] ?? [];
+    for (const movement of coreMovements(lift)) {
+      const re = new RegExp(`\\b${escapeRe(movement)}\\b`);
+      const hit = lines.find((line) => {
+        if (!re.test(normalise(line))) return false;
+        // The rowing machine is not the rowing exercise.
+        if (movement === "row" && ITEM_PATTERNS.rower.test(line)) return false;
+        return true;
+      });
+      if (hit) {
+        const name = t[0].toUpperCase() + t.slice(1);
+        return (
+          `${name}'s circuit repeats its lift: the lift is "${lift}" and the circuit says "${hit.trim()}". ` +
+          "Keep the same movement pattern in the circuit but use a different, simpler movement — the lift is " +
+          "for quality reps under load, the circuit is the pattern under fatigue."
+        );
+      }
+    }
+  }
+  return null;
+};
+
+/** Everything wrong with a generated day, or null. The room, the kit, then the repeat. */
 export const dayProblem = (day: NbtDay, dayKey: DayKey, only?: Track): string | null =>
-  spaceViolation(day, dayKey, only) ?? equipmentClash(day);
+  spaceViolation(day, dayKey, only) ?? equipmentClash(day) ?? liftRepeated(day);
 
 /* ───── 5. Where the last block finished ───── */
 

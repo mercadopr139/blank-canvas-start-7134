@@ -93,6 +93,16 @@ const SYSTEM =
   "Each track's circuit must be mostly floor work that needs nothing, with at most one limited item as one " +
   "station in it, and no two tracks sharing that item.\n\n" +
 
+  "THE CONDITIONING NEVER REPEATS THE LIFT. The lift block is quality reps under load; the work block is the " +
+  "same PATTERN under fatigue with a different, simpler movement. A track that just did 4 × 8 Romanian " +
+  "deadlift does not do Romanian deadlifts again in its circuit — it does hip bridges, single-leg deadlifts, " +
+  "a light med ball or dumbbell ground-to-overhead, or kettlebell swings for Bravo and Alpha (never as " +
+  "Charlie's hinge). Squat day: the lift is a goblet squat, so the circuit uses step-ups, lunges, wall sits, " +
+  "jump squats, not goblet squats. Push day: bench in the lift, so push-ups, med ball chest pass or dips in " +
+  "the circuit, not bench. This is per track — Charlie's air-squat lift means CHARLIE's circuit has no air " +
+  "squats; Bravo's may. Same name, same movement, or the same movement with a different weight in front of " +
+  "it, all count as a repeat. Ground-to-overhead is light — med ball or a light dumbbell, never a barbell.\n\n" +
+
   "THE SIX GOALS: confidence, competency, strength, athleticism, general event readiness (a HYROX-style event, " +
   "Spartan Sprint, 5K or obstacle race), and preparation for eventual Battle Team training. Never sacrifice " +
   "confidence and competency to make a workout harder.\n\n" +
