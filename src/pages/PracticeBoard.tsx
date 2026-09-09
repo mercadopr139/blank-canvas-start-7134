@@ -680,7 +680,11 @@ const PracticeBoard = () => {
         /* Fills the screen between the header and the pinned countdown banner,
            and scrolls INSIDE itself only if a plan is unusually long — so the
            board never page-scrolls and the countdown stays in view at the foot. */
-        <main className="flex-1 min-h-0 flex flex-col px-6 py-3 gap-3 overflow-y-auto md:overflow-hidden">
+        {/* On the wall this never scrolls: the columns fit themselves to the
+            height. While editing the fit is off and the textareas want their
+            natural size, so the page has to be allowed to scroll -- otherwise
+            a long column is clipped with no way to reach the lower blocks. */}
+        <main className={`flex-1 min-h-0 flex flex-col px-6 py-3 gap-3 overflow-y-auto ${editing ? "" : "md:overflow-hidden"}`}>
           {/* Logo removed to hand its space to the group tiles. The live
               countdown, when running, sits on its own slim row on the right. */}
           {countdownOpen && (
@@ -998,7 +1002,7 @@ const PracticeBoard = () => {
                     ref={(el) => {
                       colRefs.current[gi] = el;
                     }}
-                    className="p-4 space-y-4 flex-1 min-h-0 overflow-hidden"
+                    className={`p-4 space-y-4 flex-1 min-h-0 ${editing ? "overflow-y-auto" : "overflow-hidden"}`}
                   >
                     {gb.length === 0 && !editing ? (
                       <p className="text-white/25 italic text-[0.85em]">Nothing scheduled</p>
