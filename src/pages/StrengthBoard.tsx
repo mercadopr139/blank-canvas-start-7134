@@ -267,7 +267,7 @@ const StrengthBoard = () => {
                 {day.warmup?.length ? (
                   <div className="p-[0.8em]">
                     <ColLabel color={NLA_RED}>Warm-up ramp</ColLabel>
-                    <ul className="mt-[0.3em] space-y-[0.25em]">
+                    <ul className="mt-[0.5em] space-y-[0.45em]">
                       {day.warmup.map((w, i) => (
                         <li key={i} className="flex items-baseline gap-[0.5em] text-[0.85em] leading-snug">
                           <span className="w-[1.3em] h-[1.3em] rounded-md bg-white/10 grid place-items-center text-[0.7em] font-black text-white/50 shrink-0">
@@ -300,10 +300,10 @@ const StrengthBoard = () => {
                         </span>
                       </div>
                       {day.main.guidance ? (
-                        <p className="mt-[0.5em] text-[0.85em] leading-snug text-white/75">{day.main.guidance}</p>
+                        <p className="mt-[0.8em] text-[0.85em] leading-relaxed text-white/75">{day.main.guidance}</p>
                       ) : null}
                       {day.main.cues?.length ? (
-                        <div className="mt-[0.6em] flex flex-wrap gap-[0.35em]">
+                        <div className="mt-[0.9em] flex flex-wrap gap-[0.45em]">
                           {day.main.cues.map((c, i) => (
                             <span
                               key={i}
@@ -347,7 +347,7 @@ const StrengthBoard = () => {
               >
                 <div className="p-[0.8em] flex-1">
                   {day.accessories?.length ? (
-                    <ul className="space-y-[0.7em]">
+                    <ul className="space-y-[1.4em]">
                       {day.accessories.map((a, i) => (
                         /* The demo video under each movement's text, centred —
                            the same one the coach's page shows, sized in em so
@@ -364,20 +364,20 @@ const StrengthBoard = () => {
                                 {a.sets}
                               </span>
                             </div>
-                            <p className="text-[0.65em] uppercase tracking-[0.12em] text-white/40 mt-[0.15em]">
+                            <p className="text-[0.65em] uppercase tracking-[0.12em] text-white/40 mt-[0.45em]">
                               {a.equipment}{a.targets ? ` · ${a.targets}` : ""}
                               {a.rest ? ` · rest ${a.rest}` : ""}
                             </p>
                             {a.howTo ? (
-                              <p className="text-[0.8em] leading-snug text-white/75 mt-[0.3em]">{a.howTo}</p>
+                              <p className="text-[0.8em] leading-relaxed text-white/75 mt-[0.8em]">{a.howTo}</p>
                             ) : null}
                             {a.scale ? (
-                              <p className="text-[0.75em] leading-snug mt-[0.25em]" style={{ color: `${EXTRA}cc` }}>
+                              <p className="text-[0.75em] leading-relaxed mt-[0.7em]" style={{ color: `${EXTRA}cc` }}>
                                 ⚖ {a.scale}
                               </p>
                             ) : null}
                           </div>
-                          <div className="mx-auto mt-[0.6em] w-[14em] max-w-full">
+                          <div className="mx-auto mt-[1.2em] w-[14em] max-w-full">
                             <ExerciseVideo name={a.name} compact inline />
                           </div>
                         </li>
