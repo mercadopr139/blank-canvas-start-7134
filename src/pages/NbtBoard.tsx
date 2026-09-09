@@ -381,40 +381,25 @@ const NbtBoard = () => {
             })}
           </div>
 
-          {/* Cues and the transition out, side by side at the foot. */}
-          <div className="grid gap-4 md:grid-cols-2 shrink-0">
-            {day.lift.cues.length > 0 && (
-              <section>
-                <SectionLabel>Cues</SectionLabel>
-                <div className="flex flex-wrap gap-2">
-                  {day.lift.cues.map((c, i) => (
-                    <span
-                      key={i}
-                      className="rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2 text-base md:text-lg text-white/85"
-                    >
-                      {c}
-                    </span>
-                  ))}
-                </div>
-              </section>
-            )}
-
-            {day.reset.length > 0 && (
-              <section>
-                <SectionLabel>Reset · {minutesOf(day).reset} min · boxing next</SectionLabel>
-                <div className="flex flex-wrap gap-2">
-                  {day.reset.map((r, i) => (
-                    <span
-                      key={i}
-                      className="rounded-xl border border-white/[0.06] px-3 py-2 text-base md:text-lg text-white/55"
-                    >
-                      {r}
-                    </span>
-                  ))}
-                </div>
-              </section>
-            )}
-          </div>
+          {/* The cues at the foot — the coach calls these out. The reset lines
+              ("rack the weights, water, gloves on") are still generated and
+              still count toward the 40 minutes, but they are not shown: the
+              room knows how to glove up, and the tiles want the height. */}
+          {day.lift.cues.length > 0 && (
+            <section className="shrink-0">
+              <SectionLabel>Cues</SectionLabel>
+              <div className="flex flex-wrap gap-2">
+                {day.lift.cues.map((c, i) => (
+                  <span
+                    key={i}
+                    className="rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2 text-base md:text-lg text-white/85"
+                  >
+                    {c}
+                  </span>
+                ))}
+              </div>
+            </section>
+          )}
         </main>
       )}
 
