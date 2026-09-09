@@ -198,7 +198,117 @@ export const roomReport = (
   };
 };
 
-/* ───── 3. Where the last block finished ───── */
+/* ───── 3. The room ─────
+   Monday and Thursday are in the Performance Center, on a basketball court of
+   75 × 50 ft — so the longest straight line is 25 yards and there is no outdoor
+   option. Tuesday is in the boxing facility, half the size, with no room to run
+   at all.
+
+   The generator is told all of this, but a prompt rule can be ignored silently
+   and a session that cannot physically be done is worse than no session. So the
+   day is read back and refused, which feeds the retry the caller already has. */
+
+export interface Facility {
+  name: string;
+  /** Whether there is floor to cover at all. */
+  canRun: boolean;
+  /** Longest single run, in yards. 0 where running is impossible. */
+  maxYards: number;
+}
+
+export const FACILITY: Record<DayKey, Facility> = {
+  monday: { name: "Performance Center", canRun: true, maxYards: 25 },
+  tuesday: { name: "boxing facility", canRun: false, maxYards: 0 },
+  thursday: { name: "Performance Center", canRun: true, maxYards: 25 },
+};
+
+/**
+ * Anything that needs floor to cover.
+ *
+ * "running clock" and "run through" are excluded deliberately — both are normal
+ * gym language for something done standing still, and refusing them would fail
+ * good Tuesday sessions.
+ */
+const TRAVELS = /\b(?:jogs?|jogging|laps?|shuttles?|suicides?)\b|\brun(?:s|ning)?\b(?!\s+(?:clock|through))/i;
+
+/** A run word, for the days where running is allowed but bounded. */
+const RUN_WORD = /\b(?:runs?|running|jogs?|jogging|sprints?)\b/i;
+const LAPS = /\blaps?\b/i;
+
+const YARDS_PER: Record<string, number> = { m: 1.09361, yd: 1, mi: 1760 };
+
+/** Every distance on a line, converted to yards. */
+const distancesInYards = (line: string): number[] => {
+  const out: number[] = [];
+  const re = /(\d+(?:\.\d+)?)\s*(meters?|metres?|yards?|yds?|miles?|m|yd|mi)\b/gi;
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(line)) !== null) {
+    const unit = m[2].toLowerCase();
+    const key = unit.startsWith("mi") ? "mi" : unit.startsWith("y") ? "yd" : "m";
+    out.push(Number(m[1]) * YARDS_PER[key]);
+  }
+  return out;
+};
+
+/**
+ * Every line of a day a coach or athlete would actually read.
+ *
+ * Narrowed to one track when only that track is being rewritten: a day written
+ * before these rules existed still has running in the tracks nobody touched,
+ * and refusing a good new Charlie because of an old Alpha would make the day
+ * impossible to fix one track at a time.
+ */
+const linesOf = (day: NbtDay, only?: Track): string[] => {
+  const tracks = only ? [only] : (["charlie", "bravo", "alpha"] as Track[]);
+  const perTrack = tracks.flatMap((t) => [
+    day.lift?.[t]?.name ?? "",
+    day.lift?.[t]?.detail ?? "",
+    ...(day.work?.[t] ?? []),
+  ]);
+  if (only) return perTrack;
+  return [
+    day.focus ?? "",
+    ...(day.prep ?? []),
+    day.lift?.pattern ?? "",
+    ...perTrack,
+    ...(day.lift?.cues ?? []),
+    day.work?.title ?? "",
+    day.work?.emphasis ?? "",
+    ...(day.reset ?? []),
+  ];
+};
+
+/**
+ * Why this session cannot be done in the room it is scheduled for, or null.
+ *
+ * The message is written to be read by a coach in a toast, not parsed.
+ */
+export const spaceViolation = (day: NbtDay, dayKey: DayKey, only?: Track): string | null => {
+  const room = FACILITY[dayKey];
+  if (!room) return null;
+  const lines = linesOf(day, only).filter(Boolean);
+
+  if (!room.canRun) {
+    const bad = lines.find((l) => TRAVELS.test(l));
+    return bad
+      ? `There is no room to run in the ${room.name}, but the session says "${bad.trim()}".`
+      : null;
+  }
+
+  for (const line of lines) {
+    if (LAPS.test(line)) {
+      return `The court is ${room.maxYards} yards end to end, so there are no laps to run — the session says "${line.trim()}".`;
+    }
+    if (!RUN_WORD.test(line)) continue;
+    const tooFar = distancesInYards(line).find((y) => y > room.maxYards);
+    if (tooFar != null) {
+      return `The court only allows ${room.maxYards} yards in one direction, but the session says "${line.trim()}".`;
+    }
+  }
+  return null;
+};
+
+/* ───── 4. Where the last block finished ───── */
 
 export interface CarryOver {
   weekStart: string;

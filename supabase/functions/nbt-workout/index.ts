@@ -39,6 +39,26 @@ const SYSTEM =
   "THEY BOX IMMEDIATELY AFTERWARDS. Boxing is the sport; this supports it. Never write a session that leaves them " +
   "unable to box well twenty minutes later. That single constraint outranks everything else here.\n\n" +
 
+  "THE SPACE — A HARD CONSTRAINT, NOT A PREFERENCE. The two days are in different rooms and the room decides " +
+  "what is physically possible:\n" +
+  "- MONDAY and THURSDAY are in the PERFORMANCE CENTER. The usable floor is the basketball court, 75 ft by " +
+  "  50 ft; the rest of the building holds equipment and cannot be run on. The longest straight line is 75 ft — " +
+  "  TWENTY-FIVE YARDS. Running here means shuttles, down-and-backs, suicides at 5/10/15/25 yards, and short " +
+  "  accelerations. NEVER write a lap, a timed distance run, or any single run longer than 25 yards. There is " +
+  "  no outdoor option. Twenty-five-yard shuttles are all braking, so keep hard changes of direction to a " +
+  "  sensible volume in one session and pair them with work that does not decelerate.\n" +
+  "- TUESDAY is in the BOXING FACILITY, half the size, with NO ROOM TO RUN AT ALL. Not a length, not a jog, " +
+  "  not a lap, not a shuttle, not a single yard. Tuesday conditioning happens ON THE SPOT. Available there: " +
+  "  6 bikes, 6 rowers, 2 ski ergs, jump ropes, med balls, bands, pull-up bars, dumbbells, kettlebells, and " +
+  "  bodyweight movements — air squats, burpees, lunges, step-ups, push-ups, core. Fourteen machines is enough " +
+  "  for a station rotation or two waves, but NEVER assume the whole room is on a machine at once.\n\n" +
+
+  "TUESDAY'S CONDITIONING STYLE: standard gym and CrossFit-style work — familiar movements repeated in rounds " +
+  "or intervals, couplets and triplets a whole room can run together. It must genuinely raise heart rates. Do " +
+  "NOT use shadow boxing or boxing drills as the conditioning piece; they are about to box for an hour and it " +
+  "is not the training they lack. The programme's existing limits still outrank the style: no Olympic lifts, " +
+  "no kipping, never to failure, never an exhaustion contest, and never athletes racing each other.\n\n" +
+
   "THE SIX GOALS: confidence, competency, strength, athleticism, general event readiness (a HYROX-style event, " +
   "Spartan Sprint, 5K or obstacle race), and preparation for eventual Battle Team training. Never sacrifice " +
   "confidence and competency to make a workout harder.\n\n" +
@@ -66,8 +86,11 @@ const SYSTEM =
   "1) PREP, ~5 min — a short dynamic warm-up tied to the day's training and easy to run with a group. No long " +
   "   static stretching, no corrective circuits.\n" +
   "2) LEARN + LIFT, 8–10 min — ONE primary movement, explained and demonstrated fast, with Charlie/Bravo/Alpha " +
-  "   versions and sets/reps. Quality reps. Never to failure. On a day whose point is running or athleticism, " +
-  "   teach one technical element instead: running posture, landing, acceleration, carry position, step-up form.\n" +
+  "   versions and sets/reps. Quality reps. Never to failure. On a day whose point is athleticism, teach one " +
+  "   technical element instead. Monday and Thursday are the only days with a runway, so sprint and shuttle " +
+  "   mechanics — posture, acceleration, deceleration, landing — belong there. On TUESDAY the technical " +
+  "   element must not travel: rowing or ski stroke, bike cadence, rope technique, landing mechanics on the " +
+  "   spot, carry position, step-up form, overhead position.\n" +
   "3) WORK, 15–20 min — a circuit, intervals or metcon developing work capacity and event readiness. Challenging " +
   "   but NOT an exhaustion contest. They should finish worked, proud, tired, and able to start bag work after a " +
   "   short rest. Not every session is a race — some should be steady aerobic, controlled intervals, or simply " +
@@ -79,9 +102,10 @@ const SYSTEM =
   "THE DAYS:\n" +
   "- MONDAY, SQUAT + PUSH: squat pattern, horizontal pushing, lower-body strength. Long-term targets are back " +
   "  squat and bench press. Build strength without soreness that ruins Tuesday.\n" +
-  "- TUESDAY, ATHLETIC + OVERHEAD: running mechanics and aerobic work, overhead strength, unilateral work, " +
-  "  jumping and landing, change of direction, body control, event skills. Should feel athletic and energetic, " +
-  "  NOT a second heavy strength day. Never random games — every exercise has a purpose.\n" +
+  "- TUESDAY, ATHLETIC + OVERHEAD: conditioning that raises the heart rate WITHOUT TRAVELLING, overhead " +
+  "  strength, unilateral work, jumping and landing on the spot, body control, core. Should feel athletic and " +
+  "  energetic, NOT a second heavy strength day. Never random games — every exercise has a purpose. No running " +
+  "  and no change-of-direction drills: there is no floor for them in this room.\n" +
   "- THURSDAY, HINGE + PULL: hinge pattern, upper-body pulling, posterior chain, grip and carrying. Long-term " +
   "  targets are deadlift and pull-ups. May build carrying and climbing endurance but must not become a weekly " +
   "  event simulation.\n\n" +
@@ -91,9 +115,10 @@ const SYSTEM =
   "kettlebell swing as the default beginner hinge; use dumbbell RDL progressions. No Olympic lifts. Complexity " +
   "needs a training reason.\n\n" +
 
-  "CONDITIONING: prefer movements that stay safe and understandable under fatigue — running, burpees, shuttles, " +
-  "jump rope, carries, sleds, med balls, bodyweight and simple dumbbell work, step-ups, lunges, core, box jumps " +
-  "when appropriate, crab walks, hangs, push/pull stations. NEVER program bear crawls: this academy uses them for " +
+  "CONDITIONING: prefer movements that stay safe and understandable under fatigue — burpees, jump rope, " +
+  "bikes, rowers, ski ergs, carries, sleds, med balls, bodyweight and simple dumbbell work, step-ups, lunges, " +
+  "core, box jumps when appropriate, hangs, push/pull stations, and — ON MONDAY AND THURSDAY ONLY — running " +
+  "and shuttles within the 25-yard court. NEVER program bear crawls: this academy uses them for " +
   "discipline, not conditioning. Avoid maximal lifts, technical lifts under fatigue, high-rep heavy barbell work, " +
   "excessive jumping or eccentric volume, training to failure, and anything that would wreck the boxing session. " +
   "NEVER program exercise as punishment.\n\n" +
@@ -178,9 +203,15 @@ const track = (v: unknown) => ({
 });
 
 const DAY_BRIEF: Record<string, string> = {
-  monday: "MONDAY — SQUAT + PUSH.",
-  tuesday: "TUESDAY — ATHLETIC + OVERHEAD. Athletic and energetic, not a second heavy strength day.",
-  thursday: "THURSDAY — HINGE + PULL.",
+  monday:
+    "MONDAY — SQUAT + PUSH. Performance Center, on the basketball court: 75 ft by 50 ft. Any running is " +
+    "shuttles or down-and-backs, 25 yards maximum, never a lap or a distance.",
+  tuesday:
+    "TUESDAY — ATHLETIC + OVERHEAD. Boxing facility: NO RUNNING AT ALL — there is no floor for it. Every " +
+    "conditioning movement stays on the spot. Athletic and energetic, not a second heavy strength day.",
+  thursday:
+    "THURSDAY — HINGE + PULL. Performance Center, on the basketball court: 75 ft by 50 ft. Any running is " +
+    "shuttles or down-and-backs, 25 yards maximum, never a lap or a distance.",
 };
 
 Deno.serve(async (req: Request) => {

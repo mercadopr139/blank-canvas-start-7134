@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { NbtDay, NbtLog, NbtWeek, Track } from "@/lib/nbt";
 import {
-  priorWeekBrief, priorWeekBriefs, roomReport, carryOver, THIN_ROOM,
+  priorWeekBrief, priorWeekBriefs, roomReport, carryOver, spaceViolation, THIN_ROOM,
 } from "@/lib/nbtCoaching";
 
 const day = (pattern: string, c: string, b: string, a: string, work = "Engine"): NbtDay => ({
@@ -195,5 +195,81 @@ describe("carryOver — a month is not a reset", () => {
   it("is null when there is no previous block", () => {
     expect(carryOver([], "monday")).toBeNull();
     expect(carryOver(prev, "thursday")).toBeNull();
+  });
+});
+
+describe("spaceViolation — the room is a hard limit", () => {
+  const withWork = (lines: string[]): NbtDay => {
+    const d = day("Squat", "Goblet Squat", "Heavy Goblet", "Back Squat");
+    return { ...d, work: { ...d.work, charlie: lines, bravo: lines, alpha: lines } };
+  };
+
+  describe("Tuesday — boxing facility, no floor at all", () => {
+    it("refuses a run", () => {
+      expect(spaceViolation(withWork(["Run 200m"]), "tuesday")).toMatch(/no room to run/i);
+    });
+
+    it("refuses a jog, a lap, a shuttle and a suicide", () => {
+      ["Easy jog 3 min", "2 laps of the gym", "10 shuttles", "Suicides x4"].forEach((line) => {
+        expect(spaceViolation(withWork([line]), "tuesday")).not.toBeNull();
+      });
+    });
+
+    it("refuses running hidden in the warm-up rather than the circuit", () => {
+      const d = { ...withWork(["10 burpees"]), prep: ["Two easy laps to warm up"] };
+      expect(spaceViolation(d, "tuesday")).not.toBeNull();
+    });
+
+    it("allows the conditioning that actually fits the room", () => {
+      const lines = [
+        "Row 500m", "Bike 90 seconds hard", "Ski erg 250m", "40 double-unders",
+        "15 air squats", "10 burpees", "Med ball slams x12", "KB goblet carry",
+      ];
+      expect(spaceViolation(withWork(lines), "tuesday")).toBeNull();
+    });
+
+    it("does not trip over gym language that stands still", () => {
+      expect(spaceViolation(withWork(["12 minute running clock"]), "tuesday")).toBeNull();
+      expect(spaceViolation(withWork(["Run through the movement slowly"]), "tuesday")).toBeNull();
+    });
+  });
+
+  describe("Monday and Thursday — 25 yards on the court", () => {
+    it("allows a shuttle inside the court", () => {
+      expect(spaceViolation(withWork(["6 x 25 yard shuttle"]), "monday")).toBeNull();
+      expect(spaceViolation(withWork(["5-10-15-25 yard suicide"]), "thursday")).toBeNull();
+    });
+
+    it("refuses a distance the court cannot hold", () => {
+      expect(spaceViolation(withWork(["Run 400m"]), "monday")).toMatch(/25 yards/);
+      expect(spaceViolation(withWork(["Run 1 mile"]), "thursday")).not.toBeNull();
+      expect(spaceViolation(withWork(["Sprint 50 yards"]), "monday")).not.toBeNull();
+    });
+
+    it("refuses laps outright — there is nothing to lap", () => {
+      expect(spaceViolation(withWork(["3 laps of the court"]), "monday")).toMatch(/laps/i);
+    });
+
+    it("lets a machine distance through, since it covers no floor", () => {
+      expect(spaceViolation(withWork(["Row 500m"]), "monday")).toBeNull();
+    });
+
+    it("reads every part of the day, not just the circuit", () => {
+      const d = { ...withWork(["10 burpees"]), reset: ["Cool down with 2 laps"] };
+      expect(spaceViolation(d, "monday")).not.toBeNull();
+    });
+  });
+});
+
+describe("spaceViolation — rewriting one track of an old day", () => {
+  it("judges only the track being rewritten, so a legacy day can be fixed piece by piece", () => {
+    const d = day("Squat", "Goblet Squat", "Heavy Goblet", "Back Squat");
+    const legacy: NbtDay = {
+      ...d,
+      work: { ...d.work, charlie: ["30 seconds bike"], bravo: ["Run 400m"], alpha: ["Run 800m"] },
+    };
+    expect(spaceViolation(legacy, "tuesday", "charlie")).toBeNull();
+    expect(spaceViolation(legacy, "tuesday", "bravo")).not.toBeNull();
+    expect(spaceViolation(legacy, "tuesday")).not.toBeNull();
   });
 });

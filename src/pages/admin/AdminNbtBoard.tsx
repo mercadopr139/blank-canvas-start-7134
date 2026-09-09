@@ -19,7 +19,7 @@ import {
   DAYS, DayKey, TRACKS, TRACK_META, Track, NbtBlock, NbtWeek, NbtDay, NbtLog,
   toDateString, firstOfMonth, monthLabel, mondaysInMonth, dateOfDay,
 } from "@/lib/nbt";
-import { priorWeekBriefs, roomReport, carryOver } from "@/lib/nbtCoaching";
+import { priorWeekBriefs, roomReport, carryOver, spaceViolation } from "@/lib/nbtCoaching";
 import NbtLevels from "@/components/nbt/NbtLevels";
 import NbtEditDay from "@/components/nbt/NbtEditDay";
 
@@ -142,6 +142,11 @@ const AdminNbtBoard = () => {
       });
       if (error) throw error;
       if (!res?.day) throw new Error(res?.error ?? "Nothing came back.");
+      // The room is a hard limit, and a prompt rule can be ignored silently. A
+      // session that cannot physically be done in the space is refused here and
+      // the retry above asks for another — better than putting it on the screen.
+      const wrongRoom = spaceViolation(res.day as NbtDay, dayKey, only?.track);
+      if (wrongRoom) throw new Error(wrongRoom);
       return res.day as NbtDay;
     } catch (e) {
       if (attempt >= 2) throw e;
