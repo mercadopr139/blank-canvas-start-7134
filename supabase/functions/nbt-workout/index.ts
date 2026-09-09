@@ -13,6 +13,7 @@
 // Athletes are middle- and high-schoolers who pick their own loads. The AI
 // never prescribes pounds and never asks for a max.
 import Anthropic from "https://esm.sh/@anthropic-ai/sdk@0.63.0";
+import { thinking, textOf, extractJson } from "../_shared/claude.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -222,62 +223,6 @@ const SYSTEM =
   '  "reset": ["2-3 short transition lines"]\n' +
   "}";
 
-/**
- * Pull the JSON object out of a model reply.
- *
- * The old version took the LAST closing brace in the string, which is right
- * only when the reply is complete. On a reply cut off part way — the model runs
- * out of tokens mid-array — the last brace is an inner one, so it sliced a
- * fragment and threw a baffling "Expected ',' or '}' at position 1653". Every
- * retry then hit the same wall and a day silently refused to rewrite.
- *
- * So: walk from the first brace, tracking string state and depth, and take the
- * brace that actually closes it. If it never closes, say plainly that the reply
- * was cut off rather than blaming the JSON.
- */
-const parseJson = (raw: string) => {
-  let s = raw.trim();
-  if (s.startsWith("```")) s = s.replace(/^```(?:json)?/i, "").replace(/```$/i, "").trim();
-
-  const start = s.indexOf("{");
-  if (start === -1) {
-    // Show what came back instead. "Not JSON" on its own is undiagnosable.
-    const peek = s.slice(0, 200).replace(/\s+/g, " ").trim();
-    throw new Error(`The AI did not return usable JSON. It said: "${peek || "(nothing)"}"`);
-  }
-
-  let depth = 0;
-  let inString = false;
-  let escaped = false;
-  let end = -1;
-  for (let i = start; i < s.length; i++) {
-    const c = s[i];
-    if (escaped) { escaped = false; continue; }
-    if (c === "\\") { escaped = true; continue; }
-    if (c === '"') { inString = !inString; continue; }
-    if (inString) continue;
-    if (c === "{") depth += 1;
-    else if (c === "}") {
-      depth -= 1;
-      if (depth === 0) { end = i; break; }
-    }
-  }
-  if (end === -1) {
-    throw new Error("The AI's answer was cut off before it finished. Try again.");
-  }
-
-  // Trailing commas before a close are common and harmless to remove.
-  const body = s.slice(start, end + 1).replace(/,(\s*[}\]])/g, "$1");
-  try {
-    return JSON.parse(body);
-  } catch (e) {
-    // Give the coach something they can actually report, not a byte offset.
-    const at = Number(/position (\d+)/.exec((e as Error).message)?.[1] ?? -1);
-    const near = at >= 0 ? ` near: ${body.slice(Math.max(0, at - 60), at + 60)}` : "";
-    throw new Error(`The AI returned malformed JSON.${near}`);
-  }
-};
-
 const strArray = (v: unknown, max = 8): string[] =>
   (Array.isArray(v) ? v : []).map((x) => String(x).trim()).filter(Boolean).slice(0, max);
 
@@ -442,35 +387,17 @@ Deno.serve(async (req: Request) => {
     const anthropic = new Anthropic({ apiKey: ANTHROPIC_API_KEY });
     const response = await anthropic.messages.create({
       model: MODEL,
-      // Sonnet 5 thinks before it answers, and the thinking is charged
-      // against max_tokens. Left unbounded it can spend the whole budget
-      // deliberating over three tracks, a 40-minute cap and a room with no
-      // floor -- and return nothing at all (stop_reason: max_tokens, one
-      // thinking block, no text). Thursday did exactly that, every time.
-      // Sonnet 5 does not take a token budget for thinking; it takes an
-      // effort level, and "adaptive" lets it think as much as that effort
-      // warrants. Medium keeps the deliberation that helps with the
-      // constraints without letting it run the reply out of room, and
-      // 9000 leaves plenty either way.
+      // Thinking is charged against this, and three tracks under a 40-minute
+      // cap in a room with no floor is a lot to think about. Thursday used to
+      // spend the whole budget deliberating and return nothing -- see
+      // _shared/claude.ts. 9000 leaves room for both.
       max_tokens: 9000,
-      thinking: { type: "adaptive" },
-      output_config: { effort: "medium" },
       system: SYSTEM,
       messages: [{ role: "user", content: userPrompt }],
+      ...thinking("medium"),
     } as never);
 
-    const textBlock = response.content.find((b: { type: string }) => b.type === "text");
-    const text = (textBlock as { text?: string })?.text ?? "";
-    if (!text.trim()) {
-      // An empty reply is a different failure from a malformed one, and the
-      // stop reason is the only clue to which. Say it, so nobody has to guess.
-      const r = response as { stop_reason?: string; content?: Array<{ type: string }> };
-      const kinds = (r.content ?? []).map((b) => b.type).join(", ") || "none";
-      throw new Error(
-        `The AI sent back nothing (stop reason: ${r.stop_reason ?? "unknown"}; blocks: ${kinds}). Try again.`
-      );
-    }
-    const parsed = parseJson(text);
+    const parsed = extractJson(textOf(response));
 
     // The model states its own times and is held to them. 40 is the ceiling
     // because boxing starts straight afterwards, and overrunning costs the

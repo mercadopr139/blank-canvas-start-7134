@@ -6,6 +6,7 @@
 // and doesn't want it. Same body part, same place in the progression, different
 // session, and nothing else on the calendar moves.
 import Anthropic from "https://esm.sh/@anthropic-ai/sdk@0.63.0";
+import { thinking, textOf, extractJson } from "../_shared/claude.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -65,15 +66,6 @@ const SYSTEM =
   '  "notes": "optional, one sentence, omit if there is nothing worth saying"\n' +
   "}";
 
-const parseJson = (raw: string) => {
-  let s = raw.trim();
-  if (s.startsWith("```")) s = s.replace(/^```(?:json)?/i, "").replace(/```$/i, "").trim();
-  const start = s.indexOf("{");
-  const end = s.lastIndexOf("}");
-  if (start === -1 || end === -1) throw new Error("The AI did not return usable JSON.");
-  return JSON.parse(s.slice(start, end + 1));
-};
-
 Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
@@ -125,14 +117,16 @@ Deno.serve(async (req: Request) => {
     const anthropic = new Anthropic({ apiKey: ANTHROPIC_API_KEY });
     const response = await anthropic.messages.create({
       model: MODEL,
-      max_tokens: 1500,
+      // Thinking is charged against this. 1500 was enough for the answer alone
+      // and not always for the thinking in front of it — Rob would press "New
+      // workout" and get nothing back. See _shared/claude.ts.
+      max_tokens: 6000,
       system: SYSTEM,
       messages: [{ role: "user", content: userPrompt }],
-      output_config: { effort: "low" },
+      ...thinking("low"),
     } as never);
 
-    const textBlock = response.content.find((b: { type: string }) => b.type === "text");
-    const parsed = parseJson((textBlock as { text?: string })?.text ?? "");
+    const parsed = extractJson(textOf(response));
 
     const blocks = (Array.isArray(parsed?.blocks) ? parsed.blocks : [])
       .map((b: { name?: unknown; detail?: unknown; home?: unknown }) => ({

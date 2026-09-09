@@ -12,6 +12,7 @@
 // pounds. Technique-first, warm up always, no maxing/1RM. The Anthropic key stays
 // server-side. No DB writes — the client persists what it gets back.
 import Anthropic from "https://esm.sh/@anthropic-ai/sdk@0.63.0";
+import { thinking, textOf, extractJson } from "../_shared/claude.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -116,17 +117,6 @@ const historyBlock = (history: any): string => {
   return out;
 };
 
-// Pull the first balanced JSON object out of the model's reply, tolerating stray
-// prose or code fences even though we asked for none.
-const parseJson = (raw: string): any => {
-  let s = raw.trim();
-  if (s.startsWith("```")) s = s.replace(/^```(?:json)?/i, "").replace(/```$/i, "").trim();
-  const start = s.indexOf("{");
-  const end = s.lastIndexOf("}");
-  if (start === -1 || end === -1 || end < start) throw new Error("No JSON found in AI response");
-  return JSON.parse(s.slice(start, end + 1));
-};
-
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
@@ -151,7 +141,7 @@ Deno.serve(async (req) => {
         `Revise it with this instruction from the coach: "${instruction}"\n\n` +
         `Keep the day's main lift and its scheme unless the instruction explicitly says otherwise. ` +
         `Return ONLY { "day": DAY }.`;
-      maxTokens = 2000;
+      maxTokens = 8000; // thinking is charged against this too — see _shared/claude.ts
     } else {
       const { dayKey, weekStart, history } = body;
       if (!dayKey) return json({ error: "dayKey is required to generate a day." }, 400);
@@ -159,7 +149,7 @@ Deno.serve(async (req) => {
         `Build the ${dayLabel(dayKey)} workout${weekStart ? ` for the week of Monday ${weekStart}` : ""}.\n\n` +
         historyBlock(history) +
         `\nReturn ONLY { "day": DAY }.`;
-      maxTokens = 2000;
+      maxTokens = 8000; // thinking is charged against this too — see _shared/claude.ts
     }
 
     const response = await anthropic.messages.create({
@@ -167,14 +157,10 @@ Deno.serve(async (req) => {
       max_tokens: maxTokens,
       system: SYSTEM,
       messages: [{ role: "user", content: userContent }],
-    });
+      ...thinking("medium"),
+    } as never);
 
-    const raw = response.content
-      .filter((b: any) => b.type === "text")
-      .map((b: any) => b.text)
-      .join("\n");
-
-    const parsed = parseJson(raw);
+    const parsed = extractJson(textOf(response));
     return json(parsed);
   } catch (e) {
     console.error("strength-coach error:", e);

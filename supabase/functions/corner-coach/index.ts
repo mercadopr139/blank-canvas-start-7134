@@ -15,6 +15,7 @@
 //   - SQL runs through a read-only RPC; writes are impossible even if the model
 //     tried. The Anthropic key never leaves the server.
 import Anthropic from "https://esm.sh/@anthropic-ai/sdk@0.63.0";
+import { thinking, textOf } from "../_shared/claude.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.94.0";
 
 const corsHeaders = {
@@ -154,15 +155,20 @@ async function runReportLoop(
     const lastStep = i === REPORT_MAX_STEPS - 1;
     const response = await anthropic.messages.create({
       model: MODEL,
-      max_tokens: 8000, // room for a full table without truncating the tool call
+      // Room for a full table without truncating the tool call, plus the
+      // thinking that is charged against the same budget — _shared/claude.ts.
+      max_tokens: 12000,
       system,
       tools: [runSqlTool, emitReportTool],
       tool_choice: lastStep ? { type: "tool", name: "emit_report" } : { type: "auto" },
       messages,
-    });
+      ...thinking("medium"),
+    } as never);
 
     if (response.stop_reason !== "tool_use") {
-      const text = response.content.filter((b: any) => b.type === "text").map((b: any) => b.text).join("\n").trim();
+      // textOf throws on an empty reply — better than returning a report
+      // whose narrative is "" and letting the user think the data was empty.
+      const text = textOf(response as never);
       return { report: { title: "Report", period_label: "", stats: [], narrative: text, table: null }, steps };
     }
 

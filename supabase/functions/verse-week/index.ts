@@ -17,6 +17,7 @@
 //
 // Both keys stay server-side.
 import Anthropic from "https://esm.sh/@anthropic-ai/sdk@0.63.0";
+import { thinking, textOf, extractJson } from "../_shared/claude.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -146,17 +147,6 @@ const SYSTEM_RULES =
 const systemFor = (single: boolean, dayLabel: string) =>
   SYSTEM_HEAD + scopeSection(single, dayLabel) + SYSTEM_BODY + countLine(single) + SYSTEM_RULES;
 
-// Strip fences and pull the outermost JSON object — same defensive parse the
-// coach functions use.
-const parseJson = (raw: string) => {
-  let s = raw.trim();
-  if (s.startsWith("```")) s = s.replace(/^```(?:json)?/i, "").replace(/```$/i, "").trim();
-  const start = s.indexOf("{");
-  const end = s.lastIndexOf("}");
-  if (start === -1 || end === -1) throw new Error("The AI did not return usable JSON.");
-  return JSON.parse(s.slice(start, end + 1));
-};
-
 // Fetch one passage's text from Crossway. Returns null when the reference
 // cannot be resolved, so a bad pick is dropped rather than shown blank.
 const fetchEsv = async (ref: string, key: string): Promise<string | null> => {
@@ -239,15 +229,15 @@ Deno.serve(async (req: Request) => {
 
     const response = await anthropic.messages.create({
       model: MODEL,
-      // One day needs a fraction of the room a full week does.
-      max_tokens: single ? 1500 : 6000,
+      // One day needs a fraction of the room a full week does — but thinking
+      // is charged against this too, so neither is as small as the answer.
+      max_tokens: single ? 6000 : 12000,
       system: systemFor(single, dayLabel),
       messages: [{ role: "user", content: userPrompt }],
-      output_config: { effort: "low" },
+      ...thinking("low"),
     } as never);
 
-    const textBlock = response.content.find((b: { type: string }) => b.type === "text");
-    const parsed = parseJson((textBlock as { text?: string })?.text ?? "");
+    const parsed = extractJson(textOf(response));
 
     const rawDays: Array<{ ref?: string; context?: string; figures?: unknown; questions?: unknown; answers?: unknown }> =
       Array.isArray(parsed?.days) ? parsed.days : [];

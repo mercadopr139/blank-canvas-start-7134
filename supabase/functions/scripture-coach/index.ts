@@ -19,6 +19,7 @@
 //
 // Both keys stay server-side.
 import Anthropic from "https://esm.sh/@anthropic-ai/sdk@0.63.0";
+import { thinking, textOf, extractJson } from "../_shared/claude.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -103,17 +104,6 @@ const SYSTEM =
   "never use a dash other than a hyphen, never cite a whole chapter. Keep each passage to roughly 1–8 verses so it " +
   "can be read aloud in under a minute.";
 
-// Strip fences and pull the outermost JSON object — same defensive parse the
-// other coach functions use.
-const parseJson = (raw: string) => {
-  let s = raw.trim();
-  if (s.startsWith("```")) s = s.replace(/^```(?:json)?/i, "").replace(/```$/i, "").trim();
-  const start = s.indexOf("{");
-  const end = s.lastIndexOf("}");
-  if (start === -1 || end === -1) throw new Error("The AI did not return usable JSON.");
-  return JSON.parse(s.slice(start, end + 1));
-};
-
 // Fetch one passage's text from Crossway. Returns null when the reference
 // cannot be resolved, so a bad pick is dropped rather than shown blank.
 const fetchEsv = async (ref: string, key: string): Promise<string | null> => {
@@ -196,13 +186,13 @@ Deno.serve(async (req: Request) => {
     const ask = async (userPrompt: string) => {
       const response = await anthropic.messages.create({
         model: MODEL,
-        max_tokens: 4000,
+        // Thinking is charged against this as well as the answer.
+        max_tokens: 8000,
         system: SYSTEM,
         messages: [{ role: "user", content: userPrompt }],
-        output_config: { effort: "low" },
+        ...thinking("low"),
       } as never);
-      const textBlock = response.content.find((b: { type: string }) => b.type === "text");
-      return parseJson((textBlock as { text?: string })?.text ?? "");
+      return extractJson(textOf(response));
     };
 
     const passagesPrompt =

@@ -6,6 +6,7 @@
 // Access: any authenticated admin (a user_roles row with role='admin'), or the
 // super-admin. The Anthropic key stays server-side. No DB writes.
 import Anthropic from "https://esm.sh/@anthropic-ai/sdk@0.63.0";
+import { thinking, textOf } from "../_shared/claude.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.94.0";
 
 const corsHeaders = {
@@ -134,18 +135,15 @@ Deno.serve(async (req) => {
 
     const response = await anthropic.messages.create({
       model: MODEL,
-      max_tokens: 1200,
+      // Thinking is charged against this. 1200 fit the narrative and not
+      // always the thinking before it — see _shared/claude.ts.
+      max_tokens: 6000,
       system: SYSTEM,
       messages: [{ role: "user", content: userContent }],
-    });
+      ...thinking("medium"),
+    } as never);
 
-    const narrative = response.content
-      .filter((b: any) => b.type === "text")
-      .map((b: any) => b.text)
-      .join("\n")
-      .trim();
-
-    return json({ narrative });
+    return json({ narrative: textOf(response) });
   } catch (e) {
     console.error("excursion-report error:", e);
     if (e instanceof Anthropic.RateLimitError) {

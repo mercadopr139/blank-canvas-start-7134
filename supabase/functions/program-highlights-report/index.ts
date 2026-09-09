@@ -8,6 +8,7 @@
 // authenticated admin, or the super-admin. Anthropic key stays server-side.
 // No DB writes.
 import Anthropic from "https://esm.sh/@anthropic-ai/sdk@0.63.0";
+import { thinking, textOf } from "../_shared/claude.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.94.0";
 
 const corsHeaders = {
@@ -113,8 +114,10 @@ Deno.serve(async (req) => {
     // the number of activities. Scale max_tokens to fit them all (was a fixed
     // 4000 that truncated ~10-activity reports mid-sentence). Cap at ~14k: this
     // is a non-streaming call, and above ~16k the SDK risks an HTTP timeout.
+    // The base is 5000 rather than 3000 because the model's thinking is
+    // charged against the same budget — see _shared/claude.ts.
     const nHighlights = Array.isArray(body.highlights) ? body.highlights.length : 6;
-    const maxTokens = Math.min(14000, 3000 + nHighlights * 1100);
+    const maxTokens = Math.min(14000, 5000 + nHighlights * 1100);
 
     let userContent: string;
     if (mode === "revise") {
@@ -136,15 +139,10 @@ Deno.serve(async (req) => {
       max_tokens: maxTokens,
       system: SYSTEM,
       messages: [{ role: "user", content: userContent }],
-    });
+      ...thinking("medium"),
+    } as never);
 
-    const narrative = response.content
-      .filter((b: any) => b.type === "text")
-      .map((b: any) => b.text)
-      .join("\n")
-      .trim();
-
-    return json({ narrative });
+    return json({ narrative: textOf(response) });
   } catch (e) {
     console.error("program-highlights-report error:", e);
     if (e instanceof Anthropic.RateLimitError) {
