@@ -4,6 +4,7 @@ import {
   dateOfDay, todayDayKey, blankSets, heaviestSet, totalReps, hasLogged,
   movementFor, workFor, NbtDay,
   SESSION_CAP_MINUTES, DEFAULT_MINUTES, minutesOf, totalMinutes, withinCap,
+  readableLines, formatClock, elapsedOf,
 } from "@/lib/nbt";
 
 describe("dates", () => {
@@ -181,5 +182,42 @@ describe("session length", () => {
     // A partially stated day keeps the defaults for whatever is missing.
     expect(minutesOf(withMinutes({ work: 15 })).work).toBe(15);
     expect(minutesOf(withMinutes({ work: 15 })).prep).toBe(DEFAULT_MINUTES.prep);
+  });
+});
+
+describe("readableLines — what the screen actually shows", () => {
+  it("joins a heading with nothing on it to the line beneath", () => {
+    const out = readableLines(["Bike station:", ":30 strong effort", "Jump rope :30"]);
+    expect(out.map((l) => l.text)).toEqual(["Bike station — 30 sec strong effort", "Jump rope 30 sec"]);
+  });
+
+  it("hoists the rounds line to the top wherever it was written", () => {
+    const out = readableLines(["Row 250m", "Jump rope 30 sec", "Rest 45 sec, repeat 4 rounds"]);
+    expect(out[0]).toEqual({ text: "Rest 45 sec, repeat 4 rounds", kind: "rounds" });
+    expect(out.slice(1).every((l) => l.kind === "station")).toBe(true);
+  });
+
+  it("leaves a well-written circuit alone", () => {
+    const lines = ["4 rounds — rest 45 sec between rounds", "Assault bike — 30 sec — strong", "Jump rope — 30 sec — steady"];
+    expect(readableLines(lines).map((l) => l.text)).toEqual(lines);
+  });
+
+  it("drops blank lines", () => {
+    expect(readableLines(["", "Burpees x10", "  "]).length).toBe(1);
+  });
+});
+
+describe("the board's clock", () => {
+  it("formats m:ss of the magnitude", () => {
+    expect(formatClock(1200)).toBe("20:00");
+    expect(formatClock(59)).toBe("0:59");
+    expect(formatClock(-75)).toBe("1:15");
+  });
+
+  it("adds the live stretch only while running", () => {
+    const start = new Date("2026-09-09T18:00:00Z").toISOString();
+    const now = new Date("2026-09-09T18:00:30Z").getTime();
+    expect(elapsedOf(100, null, now)).toBe(100);
+    expect(elapsedOf(100, start, now)).toBe(130);
   });
 });

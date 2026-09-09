@@ -10,10 +10,11 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, Dumbbell, ChevronLeft, ChevronRight, ClipboardList } from "lucide-react";
+import TrackTimer from "@/components/nbt/TrackTimer";
 import {
   DAYS, DayKey, TRACKS, TRACK_META, NbtDay, NbtWeek, NbtBlock,
   toDateString, mondayOf, firstOfMonth, dateOfDay, todayDayKey, weekInBlock,
-  minutesOf, totalMinutes,
+  minutesOf, totalMinutes, readableLines,
 } from "@/lib/nbt";
 import NbtLogSheet from "@/components/nbt/NbtLogSheet";
 
@@ -242,19 +243,40 @@ const NbtBoard = () => {
                           <TrackLabel color={m.color}>
                             Conditioning · {minutesOf(day).work} min{day.work.emphasis ? ` · ${day.work.emphasis}` : ""}
                           </TrackLabel>
-                          {/* A dot per line, and real space between them. Four
-                              rows of identical text is a wall; the dots give the
-                              eye somewhere to land. */}
-                          <ul className="mt-2 space-y-2.5">
-                            {work.map((line, i) => (
-                              <li key={i} className="flex items-start gap-2.5">
-                                <span
-                                  className="w-1.5 h-1.5 rounded-full shrink-0 mt-2.5"
-                                  style={{ backgroundColor: m.color }}
-                                />
-                                <span className="text-lg md:text-xl leading-snug text-white/90">{line}</span>
-                              </li>
-                            ))}
+
+                          {/* Each track has its own clock, in its own colour,
+                              because the tracks do not start together. */}
+                          <TrackTimer
+                            storageKey={`nbt-timer:${weekStart}:${dayKey}:${t}`}
+                            minutes={minutesOf(day).work}
+                            color={m.color}
+                          />
+
+                          {/* The structure line ("4 rounds — rest 45 sec") reads
+                              as a header; every station underneath is one
+                              complete line. A dot per line, and real space
+                              between them — four rows of identical text is a
+                              wall; the dots give the eye somewhere to land. */}
+                          <ul className="mt-3 space-y-2.5">
+                            {readableLines(work).map((line, i) =>
+                              line.kind === "rounds" ? (
+                                <li
+                                  key={i}
+                                  className="text-sm md:text-base font-black uppercase tracking-wide"
+                                  style={{ color: m.color }}
+                                >
+                                  {line.text}
+                                </li>
+                              ) : (
+                                <li key={i} className="flex items-start gap-2.5">
+                                  <span
+                                    className="w-1.5 h-1.5 rounded-full shrink-0 mt-2.5"
+                                    style={{ backgroundColor: m.color }}
+                                  />
+                                  <span className="text-lg md:text-xl leading-snug text-white/90">{line.text}</span>
+                                </li>
+                              )
+                            )}
                           </ul>
                         </div>
                       </>

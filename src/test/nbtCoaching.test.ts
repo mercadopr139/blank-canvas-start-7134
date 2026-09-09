@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { NbtDay, NbtLog, NbtWeek, Track } from "@/lib/nbt";
 import {
-  priorWeekBrief, priorWeekBriefs, roomReport, carryOver, spaceViolation, equipmentClash, liftRepeated, dayProblem, THIN_ROOM,
+  priorWeekBrief, priorWeekBriefs, roomReport, carryOver, spaceViolation, equipmentClash, liftRepeated, unreadableLine, dayProblem, THIN_ROOM,
 } from "@/lib/nbtCoaching";
 
 const day = (pattern: string, c: string, b: string, a: string, work = "Engine"): NbtDay => ({
@@ -579,5 +579,34 @@ describe("dayProblem — order of checks", () => {
       work: { ...d.work, charlie: ["Burpees"], bravo: ["Row 250m"], alpha: ["RDL x10", "Bike 45s"] },
     };
     expect(dayProblem(bad, "thursday")).toMatch(/repeats its lift/);
+  });
+});
+
+describe("unreadableLine — every line stands on its own", () => {
+  const build = (work: Record<Track, string[]>): NbtDay => {
+    const d = day("Squat", "Air Squat", "Goblet Squat", "Back Squat");
+    return { ...d, work: { ...d.work, ...work } };
+  };
+  const fine = ["4 rounds — rest 45 sec", "Jump rope — 30 sec — steady"];
+
+  it("refuses a heading with nothing on it", () => {
+    expect(unreadableLine(build({ alpha: ["Bike station:", "30 sec strong"], bravo: fine, charlie: fine }))).toMatch(/heading/);
+  });
+
+  it("refuses a line that opens with a time and no movement", () => {
+    expect(unreadableLine(build({ alpha: [":30 strong effort"], bravo: fine, charlie: fine }))).toMatch(/starts with a time/);
+    expect(unreadableLine(build({ alpha: fine, bravo: ["250m controlled pace"], charlie: fine }))).toMatch(/Bravo/);
+  });
+
+  it("allows a structure line that begins with a time", () => {
+    expect(unreadableLine(build({ alpha: ["12 min AMRAP", "Burpees — 10"], bravo: fine, charlie: fine }))).toBeNull();
+  });
+
+  it("allows a shuttle written as a distance-named movement", () => {
+    expect(unreadableLine(build({ alpha: ["15-yard shuttle × 2 — strong"], bravo: fine, charlie: fine }))).toBeNull();
+  });
+
+  it("says how to write it instead", () => {
+    expect(unreadableLine(build({ alpha: ["Rower:"], bravo: fine, charlie: fine }))).toMatch(/Assault bike — 30 sec/);
   });
 });

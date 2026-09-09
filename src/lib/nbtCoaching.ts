@@ -12,7 +12,9 @@
 // PRIVACY: roomReport deliberately returns counts and medians and never a name,
 // a registration id, or an individual's numbers. nbt_logs names children; the
 // generator is an outbound AI call and has no business knowing who anyone is.
-import { DayKey, NbtDay, NbtLog, NbtWeek, Track, TRACKS, heaviestSet, totalReps } from "@/lib/nbt";
+import {
+  DayKey, NbtDay, NbtLog, NbtWeek, Track, TRACKS, heaviestSet, totalReps, isRoundsLine,
+} from "@/lib/nbt";
 
 /* ───── 1. Earlier weeks of this block ───── */
 
@@ -484,9 +486,42 @@ export const liftRepeated = (day: NbtDay): string | null => {
   return null;
 };
 
-/** Everything wrong with a generated day, or null. The room, the kit, then the repeat. */
+/* ───── 6. Lines a youth can read ─────
+   Every circuit line must stand on its own: the movement, then the time or
+   reps, then the effort. A heading with nothing on it ("Bike station:") or a
+   line that opens with a time and no movement (":30 strong effort") is half a
+   line, and half-lines are what the room asks a hundred questions about. */
+
+const HEADER_LINE = /:\s*$/;
+/** A line whose first thing is a duration, a distance or a calorie count. */
+const TIME_FIRST =
+  /^\s*(?::\d{1,2}\b|\d+(?:\.\d+)?\s*(?:s|sec|secs|seconds?|min|mins|minutes?|m|meters?|metres?|cal|cals|calories?)\b)/i;
+
+export const unreadableLine = (day: NbtDay): string | null => {
+  for (const t of TRACKS) {
+    const name = t[0].toUpperCase() + t.slice(1);
+    for (const line of day.work?.[t] ?? []) {
+      if (HEADER_LINE.test(line)) {
+        return (
+          `${name}'s circuit has a heading with nothing on it: "${line.trim()}". Every line must be complete on ` +
+          "its own — the movement, then the time or reps, then the effort, all on ONE line. " +
+          'Write it like "Assault bike — 30 sec — strong but repeatable".'
+        );
+      }
+      if (TIME_FIRST.test(line) && !isRoundsLine(line)) {
+        return (
+          `${name}'s circuit has a line that starts with a time and no movement: "${line.trim()}". Put the ` +
+          'movement first, then the time, then the effort, on one line: "Row — 250 m — controlled pace".'
+        );
+      }
+    }
+  }
+  return null;
+};
+
+/** Everything wrong with a generated day, or null. The room, the kit, the repeat, then the reading. */
 export const dayProblem = (day: NbtDay, dayKey: DayKey, only?: Track): string | null =>
-  spaceViolation(day, dayKey, only) ?? equipmentClash(day) ?? liftRepeated(day);
+  spaceViolation(day, dayKey, only) ?? equipmentClash(day) ?? liftRepeated(day) ?? unreadableLine(day);
 
 /* ───── 5. Where the last block finished ───── */
 

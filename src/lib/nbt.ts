@@ -212,3 +212,59 @@ export const movementFor = (day: NbtDay | undefined, track: Track): TrackMovemen
 
 export const workFor = (day: NbtDay | undefined, track: Track): string[] =>
   day?.work?.[track] ?? [];
+
+/* ───── The board's clock ─────
+   Generic on purpose: the conditioning block is whatever the generator said it
+   is, not a fixed 45 like the 75 Hard timer. */
+
+/** Seconds run so far: what was banked, plus the live stretch if running. */
+export const elapsedOf = (seconds: number, startedAt: string | null, now = Date.now()) =>
+  seconds + (startedAt ? Math.max(0, Math.floor((now - new Date(startedAt).getTime()) / 1000)) : 0);
+
+/** m:ss, of the magnitude — the caller decides whether to show a sign. */
+export const formatClock = (totalSeconds: number) => {
+  const t = Math.abs(Math.floor(totalSeconds));
+  return `${Math.floor(t / 60)}:${String(t % 60).padStart(2, "0")}`;
+};
+
+/* ───── Circuit lines a youth can read ─────
+   A line on the gym screen is read by a fourteen-year-old from across the
+   room. "Bike station:" on one line and ":30 strong effort" on the next is two
+   half-lines, and the room asks a hundred questions. */
+
+export interface CircuitLine {
+  text: string;
+  /** The structure line ("4 rounds — rest 45 sec") reads as a header, not a bullet. */
+  kind: "rounds" | "station";
+}
+
+/** Does this line describe the shape of the circuit rather than a station? */
+export const isRoundsLine = (line: string) => /\b\d+\s*rounds?\b|\bamrap\b|\bemom\b/i.test(line);
+
+/**
+ * The lines as they should be read, whatever shape they were written in.
+ *
+ * Days written before the one-line rule existed have headings with nothing on
+ * them followed by the detail on the next line; those are joined here so the
+ * board reads properly without rebuilding the month. A bare ":30" becomes
+ * "30 sec". The structure line is hoisted to the top wherever it was written,
+ * because "repeat 4 rounds" is the first thing to know, not the last.
+ */
+export const readableLines = (lines: string[]): CircuitLine[] => {
+  const out: CircuitLine[] = [];
+  for (let i = 0; i < lines.length; i++) {
+    let text = (lines[i] ?? "").trim();
+    if (!text) continue;
+    while (/:\s*$/.test(text) && i + 1 < lines.length) {
+      const next = (lines[i + 1] ?? "").trim();
+      text = `${text.replace(/:\s*$/, "")} — ${next}`;
+      i++;
+    }
+    // A bare ":30" is gym shorthand nobody under twenty reads first time.
+    text = text.replace(/(^|\s):(\d{1,2})\b/g, (_, pre: string, n: string) => `${pre}${n} sec`);
+    out.push({ text, kind: isRoundsLine(text) ? "rounds" : "station" });
+  }
+  const rounds = out.filter((l) => l.kind === "rounds");
+  const stations = out.filter((l) => l.kind === "station");
+  return [...rounds, ...stations];
+};

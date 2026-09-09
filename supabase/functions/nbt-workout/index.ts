@@ -210,6 +210,16 @@ const SYSTEM =
   "BOARD VOICE: this goes on a screen read from across a gym. Short exercise names, sets, reps, time, distance, " +
   "and only essential cues. No paragraphs of coaching theory.\n\n" +
 
+  "CIRCUIT LINES — WRITTEN FOR A FOURTEEN-YEAR-OLD READING A SCREEN FROM ACROSS THE ROOM. Each track's circuit " +
+  "is a list of lines and EVERY LINE MUST STAND ON ITS OWN. The first line is the structure: '4 rounds — rest " +
+  "45 sec between rounds', or '12 min AMRAP'. Every line after it is ONE station, complete: the movement first, " +
+  "then the time or reps or distance, then the effort or cue, on the same line, separated by dashes. " +
+  "'Assault bike — 30 sec — strong but repeatable'. 'Row — 250 m — controlled pace'. '15-yard shuttle × 2 — " +
+  "strong but repeatable'. 'Jump rope — 30 sec — steady bounce, step-hop if learning'. NEVER a heading with " +
+  "nothing on it ('Bike station:'). NEVER a line that opens with a time or a number and no movement (':30 " +
+  "strong effort', '250m controlled pace'). NEVER a station split across two lines. If a youth reads one line " +
+  "they must know exactly what to do, for how long, and how hard. Six lines at most per track.\n\n" +
+
   "OUTPUT: valid JSON only, no prose and no markdown fences.\n" +
   "{\n" +
   '  "focus": "short emphasis for the day, e.g. Own the basics",\n' +
@@ -225,9 +235,9 @@ const SYSTEM =
   '  "work": {\n' +
   '    "emphasis": "one of: steady aerobic | intervals | strength-endurance | carries | grip | obstacle prep",\n' +
   '    "title": "short name for the circuit",\n' +
-  '    "charlie": ["lines of the circuit for this track"],\n' +
-  '    "bravo":   ["lines of the circuit for this track"],\n' +
-  '    "alpha":   ["lines of the circuit for this track"],\n' +
+  '    "charlie": ["4 rounds — rest 60 sec between rounds", "Jump rope — 30 sec — easy steady bounce", "Med ball hug carry — 15 yd down and back — steady", "Push-up — 8 reps — incline if needed"],\n' +
+  '    "bravo":   ["4 rounds — rest 45 sec between rounds", "Row — 250 m — controlled pace", "10-yard shuttle × 2 — strong but repeatable", "Jump rope — 30 sec — steady"],\n' +
+  '    "alpha":   ["4 rounds — rest 45 sec between rounds", "Assault bike — 30 sec — strong but repeatable", "15-yard shuttle × 2 — strong but repeatable", "Jump rope — 30 sec — fast singles"],\n' +
   '    "result_unit": "one of: rounds | minutes | seconds | meters | reps — what the athletes write down"\n' +
   "  },\n" +
   '  "reset": ["2-3 short transition lines"]\n' +
