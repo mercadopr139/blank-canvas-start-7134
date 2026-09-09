@@ -358,7 +358,9 @@ const AdminScriptureCoach = () => {
       <div className="p-4 md:p-8 space-y-6 max-w-5xl mx-auto text-white">
         <div className="flex flex-col items-center text-center pt-4">
           <OpenBible />
-          <h2 className="text-2xl font-bold text-white mt-4">Spiritual Development</h2>
+          {/* The tool is Scripture Coach. Spiritual Development is the programme
+              it serves, and keeps that name on the public site and the report. */}
+          <h2 className="text-2xl font-bold text-white mt-4">Scripture Coach</h2>
           <p className="text-sm text-neutral-400 mt-1.5">
             Who are you sitting down with?
           </p>

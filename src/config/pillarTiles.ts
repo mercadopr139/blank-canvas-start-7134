@@ -135,7 +135,7 @@ export const OPERATIONS_TILES: PillarTile[] = [
     ],
   },
   {
-    title: "Spiritual Development",
+    title: "Scripture Coach",
     description: "Scripture & talking points for a youth conversation",
     icon: BookOpenCheck,
     href: "/admin/operations/scripture-coach",
