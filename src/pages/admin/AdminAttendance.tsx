@@ -1068,7 +1068,18 @@ const AdminAttendance = () => {
   /* ───── Derived Data ───── */
   const regMap = useMemo(() => {
     const m: Record<string, Registration> = {};
-    registrations.forEach((r) => (m[r.id] = r));
+    registrations.forEach((r) => {
+      m[r.id] = r;
+      // Every check-in is resolved to the kid's cross-year identity before it
+      // reaches these tiles, and for a re-registered kid that identity is the
+      // shared link id — usually LAST year's record. This map only holds the
+      // viewed year, so the lookup missed and the kid silently vanished from
+      // boy/girl, district, race and single-parent while still counting in the
+      // poverty denominator: 13 shown of 24 present. Key the viewed-year
+      // registration under its identity too, and the lookup lands.
+      const identity = r.youth_link_id || r.id;
+      if (!m[identity] || m[identity].program_year !== r.program_year) m[identity] = r;
+    });
     return m;
   }, [registrations]);
 
