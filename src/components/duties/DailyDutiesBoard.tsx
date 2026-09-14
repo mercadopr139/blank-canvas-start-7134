@@ -13,7 +13,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { X, Search, Plus, UserPlus, Sparkles, Check, Loader2 } from "lucide-react";
 import {
-  DutyJob, DutyAssignee, CheckedInYouth, groupJobsByZone, zoneStyle, headshotUrl, SPECIAL_ZONE,
+  DutyJob, DutyAssignee, CheckedInYouth, groupJobsByZone, zoneStyle, headshotUrl, SPECIAL_ZONE, TRASH_ZONE,
 } from "@/lib/dailyDuties";
 
 const rpc = (name: string, args?: Record<string, unknown>) =>
@@ -89,7 +89,11 @@ const DailyDutiesBoard = ({ open, onClose }: { open: boolean; onClose: () => voi
   }, [assignees]);
 
   // Special projects are drawn under the Trash Day tile, not in the columns.
-  const zones = useMemo(() => groupJobsByZone(jobs.filter((j) => j.zone !== SPECIAL_ZONE)), [jobs]);
+  const zones = useMemo(
+    () => groupJobsByZone(jobs.filter((j) => j.zone !== SPECIAL_ZONE && j.zone !== TRASH_ZONE)),
+    [jobs]
+  );
+  const trashJobs = useMemo(() => jobs.filter((j) => j.zone === TRASH_ZONE), [jobs]);
   const specials = useMemo(
     () => jobs.filter((j) => j.zone === SPECIAL_ZONE).sort((a, b) => a.sort_order - b.sort_order),
     [jobs]
@@ -130,6 +134,10 @@ const DailyDutiesBoard = ({ open, onClose }: { open: boolean; onClose: () => voi
   const today = new Date().toLocaleDateString("en-US", {
     weekday: "long", month: "long", day: "numeric", timeZone: "America/New_York",
   });
+  // Trash goes out Thursday night; special projects are a school-week thing.
+  const weekday = new Date().toLocaleDateString("en-US", { weekday: "long", timeZone: "America/New_York" });
+  const isThursday = weekday === "Thursday";
+  const isSchoolNight = weekday !== "Saturday" && weekday !== "Sunday";
 
   return (
     <div className="fixed inset-0 z-50 bg-black/95 backdrop-blur-sm flex flex-col animate-in fade-in duration-200">
@@ -224,16 +232,56 @@ const DailyDutiesBoard = ({ open, onClose }: { open: boolean; onClose: () => voi
           </div>
         )}
 
-        {/* ── Trash Day — every night, big, red, at the foot of the board. ── */}
-        <div className="mt-4 rounded-2xl border-2 border-red-500/60 bg-red-600/20 px-5 py-4 text-center">
-          <p className="text-3xl md:text-5xl font-black tracking-tight text-red-300 uppercase">Trash Day!</p>
-          <p className="mt-1 text-lg md:text-2xl font-bold text-white/90">
-            Be sure to take the trash cans to the curb!
-          </p>
-        </div>
+        {/* ── Trash Day — Thursdays only, big, red, at the foot of the board.
+            A real job: Add puts a kid on it, and the name sits under the
+            headline where the whole room can see whose it is. ── */}
+        {isThursday && trashJobs.map((job) => {
+          const people = byJob.get(job.id) ?? [];
+          return (
+            <div key={job.id} className="mt-4 rounded-2xl border-2 border-red-500/60 bg-red-600/20 px-5 py-4">
+              <div className="flex items-center justify-between gap-4 flex-wrap">
+                <div>
+                  <p className="text-3xl md:text-5xl font-black tracking-tight text-red-300 uppercase">Trash Day!</p>
+                  <p className="mt-1 text-lg md:text-2xl font-bold text-white/90">
+                    Be sure to take the trash cans to the curb!
+                  </p>
+                </div>
+                <Button
+                  onClick={() => setAssigningJob(job)}
+                  className="h-11 rounded-xl bg-red-500 hover:bg-red-400 text-white font-black px-5 text-base"
+                >
+                  <Plus className="w-5 h-5 mr-1" /> Add
+                </Button>
+              </div>
+              {people.length > 0 && (
+                <div className="flex flex-wrap gap-2 mt-3">
+                  {people.map((p) => (
+                    <span
+                      key={p.registration_id}
+                      className="inline-flex items-center gap-1.5 rounded-full bg-white/[0.1] border border-white/15 pl-1 pr-2 py-1"
+                    >
+                      <Avatar url={p.child_headshot_url} name={p.child_first_name} size="w-7 h-7 text-xs" />
+                      <span className="text-base font-bold text-white">
+                        {p.child_first_name} {p.child_last_name[0]}.
+                      </span>
+                      <button
+                        onClick={() => unassign.mutate({ jobId: job.id, regId: p.registration_id })}
+                        className="text-white/50 hover:text-rose-300 transition-colors"
+                        aria-label={`Remove ${p.child_first_name}`}
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    </span>
+                  ))}
+                </div>
+              )}
+            </div>
+          );
+        })}
 
         {/* ── Special Projects — one-offs Josh or Chrissy add on the spot. Each
             one is a job like any other: Add puts a kid on it, Done retires it. ── */}
+        {isSchoolNight && (
         <section className="mt-4 rounded-2xl border border-amber-400/30 bg-amber-500/[0.06] px-4 py-3">
           <div className="flex items-center justify-between gap-3 flex-wrap">
             <h3 className="text-lg md:text-xl font-black uppercase tracking-wide text-amber-200">Special Projects</h3>
@@ -314,6 +362,7 @@ const DailyDutiesBoard = ({ open, onClose }: { open: boolean; onClose: () => voi
             </div>
           )}
         </section>
+        )}
       </div>
 
       {assigningJob && (

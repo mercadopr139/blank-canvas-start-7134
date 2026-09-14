@@ -73,6 +73,10 @@ export const DUTY_CATEGORIES = ["Floors", "Equipment", "Bathrooms", "Reset", "Ot
 // "Done" retires one (is_active = false) instead of deleting its history.
 export const SPECIAL_ZONE = "Special Projects";
 
+// Thursday's job. Seeded once (migration 20260914130000) so it has an id to
+// assign youth to; the board draws it as the big red tile, Thursdays only.
+export const TRASH_ZONE = "Trash Day";
+
 // Group jobs by zone, preserving DUTY_ZONES order first, then any extras, and
 // sort_order within each zone.
 export function groupJobsByZone(jobs: DutyJob[]): { zone: string; jobs: DutyJob[] }[] {
