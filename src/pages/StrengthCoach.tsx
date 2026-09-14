@@ -254,10 +254,18 @@ const StrengthCoach = () => {
                   <Lock className="h-4 w-4" /> Lock the week
                 </button>
               )}
-              <button onClick={generateWeek} disabled={generating}
-                className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-semibold bg-white/5 hover:bg-white/10 border border-white/15 disabled:opacity-60">
-                <RefreshCw className={`h-4 w-4 ${generating ? "animate-spin" : ""}`} /> {generating ? "Regenerating…" : "Regenerate week"}
-              </button>
+              {/* One day at a time. The main lifts never change, so there is
+                  nothing a whole-week rewrite fixes that this does not -- and
+                  it used to throw away two days the coach was happy with.
+                  Hidden while locked: unlock first, like Revise. */}
+              {!locked && (
+                <button onClick={regenerateDay} disabled={regeneratingDay || generating}
+                  title={`Write a fresh ${selectedMeta.label} and leave the other two days alone`}
+                  className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-semibold bg-white/5 hover:bg-white/10 border border-white/15 disabled:opacity-60">
+                  <RefreshCw className={`h-4 w-4 ${regeneratingDay ? "animate-spin" : ""}`} />
+                  {regeneratingDay ? "Rewriting…" : `Regenerate ${selectedMeta.label}`}
+                </button>
+              )}
               <span className={`text-xs font-semibold px-3 py-1.5 rounded-full border ${locked ? "bg-emerald-500/15 border-emerald-400/30 text-emerald-300" : "bg-amber-500/15 border-amber-400/30 text-amber-300"}`}>
                 {locked ? "🔒 Locked" : "✏️ Draft"}
               </span>
@@ -312,17 +320,9 @@ const StrengthCoach = () => {
             {/* Revise this day — only while unlocked */}
             {!locked && (
               <div className="mt-4 rounded-xl border border-white/10 bg-neutral-900/50 p-4">
-                <div className="flex items-center justify-between gap-3 mb-2 flex-wrap">
-                  <label className="text-sm font-semibold text-white/80 flex items-center gap-2">
-                    <Wand2 className="h-4 w-4" /> Revise {selectedMeta.label}
-                  </label>
-                  <button onClick={regenerateDay} disabled={regeneratingDay || generating}
-                    title={`Write a fresh ${selectedMeta.label} and leave the other two days alone`}
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-white/5 hover:bg-white/10 border border-white/15 disabled:opacity-60">
-                    <RefreshCw className={`h-3.5 w-3.5 ${regeneratingDay ? "animate-spin" : ""}`} />
-                    {regeneratingDay ? "Rewriting…" : `Regenerate ${selectedMeta.label} only`}
-                  </button>
-                </div>
+                <label className="text-sm font-semibold text-white/80 flex items-center gap-2 mb-2">
+                  <Wand2 className="h-4 w-4" /> Revise {selectedMeta.label}
+                </label>
                 <div className="flex flex-col sm:flex-row gap-2">
                   <input value={reviseText} onChange={(e) => setReviseText(e.target.value)}
                     onKeyDown={(e) => { if (e.key === "Enter") reviseDay(); }}
