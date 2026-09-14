@@ -161,10 +161,18 @@ Deno.serve(async (req) => {
     // ignored silently -- Monday came back with bench press as its extra work
     // -- so the day is read back and, on a repeat, asked for again with the
     // reason attached. Two tries, then an honest error rather than a bad day.
+    // Each day's main lift and the disguises it comes back in. A floor press
+    // is a bench press lying on the floor; an RDL is a deadlift.
     const dayKey: string = body.dayKey ?? "";
-    const mainWord = dayKey === "monday" ? "bench" : dayKey === "wednesday" ? "squat" : dayKey === "friday" ? "deadlift" : "";
+    const MAIN: Record<string, { word: string; re: RegExp }> = {
+      monday: { word: "bench", re: /\bbench|floor press|chest press|close[\s-]?grip|incline press|decline press/i },
+      wednesday: { word: "squat", re: /\bsquat/i },
+      friday: { word: "deadlift", re: /\bdeadlift|\brdls?\b|romanian|trap[\s-]?bar|hex[\s-]?bar/i },
+    };
+    const main = MAIN[dayKey];
+    const mainWord = main?.word ?? "";
     const repeatsMain = (day: { accessories?: Array<{ name?: string }> } | undefined) =>
-      !!mainWord && (day?.accessories ?? []).some((a) => new RegExp(`\\b${mainWord}`, "i").test(a?.name ?? ""));
+      !!main && (day?.accessories ?? []).some((a) => main.re.test(a?.name ?? ""));
 
     let parsed: { day?: { accessories?: Array<{ name?: string }> } } = {};
     let note = "";
