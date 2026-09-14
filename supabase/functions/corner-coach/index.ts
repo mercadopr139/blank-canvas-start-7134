@@ -29,7 +29,7 @@ const MODEL = "claude-sonnet-5";
 // and the tool loop auto-retries if a query errors. Swap back to MODEL here
 // if accuracy on complex multi-table questions ever slips.
 const CHAT_MODEL = "claude-haiku-4-5-20251001";
-const SUPER_ADMIN_EMAIL = "joshmercado@nolimitsboxingacademy.org";
+import { isSuperAdmin } from "../_shared/superAdmins.ts";
 const MAX_STEPS = 8; // safety cap on the chat tool-use loop
 const REPORT_MAX_STEPS = 12; // reports may need more queries for a full picture
 
@@ -210,7 +210,7 @@ Deno.serve(async (req) => {
     if (claimsError || !claimsData?.claims) return json({ error: "Unauthorized" }, 401);
 
     const email = String(claimsData.claims.email ?? "").toLowerCase();
-    if (email !== SUPER_ADMIN_EMAIL) {
+    if (!isSuperAdmin(email)) {
       return json({ error: "This assistant is restricted to the account owner." }, 403);
     }
 

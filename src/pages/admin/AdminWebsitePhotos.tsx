@@ -5,7 +5,7 @@ import { toast } from "sonner";
 import { normalizeImageForUpload, compressImageForUpload } from "@/lib/imageUpload";
 import { useAuth } from "@/contexts/AuthContext";
 
-const SUPER_ADMIN_EMAIL = "joshmercado@nolimitsboxingacademy.org";
+import { isSuperAdminEmail } from "@/lib/superAdmins";
 import { useStaffPermissions } from "@/hooks/useStaffPermissions";
 import EventBannerEditor from "@/components/admin/EventBannerEditor";
 import { useSiteImages, type SiteImageRow } from "@/hooks/useSiteImages";
@@ -493,7 +493,7 @@ const AdminWebsitePhotos = () => {
   const { hasPermission, loading: permLoading } = useStaffPermissions();
   const { byGroup, refetch, isLoading, rows } = useSiteImages();
   const { user } = useAuth();
-  const isSuperAdmin = user?.email?.toLowerCase() === SUPER_ADMIN_EMAIL;
+  const isSuperAdmin = isSuperAdminEmail(user?.email);
   const [optimize, setOptimize] = useState<{ running: boolean; done: number; total: number } | null>(null);
 
   // One-time cleanup: shrink already-uploaded photos (stored full-size) so the

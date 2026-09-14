@@ -30,7 +30,7 @@ const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
-const SUPER_ADMIN_EMAIL = "joshmercado@nolimitsboxingacademy.org";
+import { isSuperAdmin } from "../_shared/superAdmins.ts";
 
 // Nominatim's usage policy is one request a second with a real User-Agent, and
 // the lookups run one after another to honour it. That makes a batch slow, and
@@ -125,7 +125,7 @@ Deno.serve(async (req) => {
 
     const service = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
 
-    let isAdmin = email === SUPER_ADMIN_EMAIL;
+    let isAdmin = isSuperAdmin(email);
     if (!isAdmin && uid) {
       const { data: role } = await service.from("user_roles").select("role").eq("user_id", uid).eq("role", "admin").maybeSingle();
       isAdmin = !!role;

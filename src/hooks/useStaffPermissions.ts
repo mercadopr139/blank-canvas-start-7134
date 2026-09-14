@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 
-const SUPER_ADMIN_EMAIL = "joshmercado@nolimitsboxingacademy.org";
+import { isSuperAdminEmail } from "@/lib/superAdmins";
 
 // Permission keys are now arbitrary strings. The full list is no longer
 // hardcoded — it comes from a combination of:
@@ -47,7 +47,7 @@ export function useStaffPermissions() {
     }
 
     const email = user.email?.toLowerCase();
-    if (email === SUPER_ADMIN_EMAIL) {
+    if (isSuperAdminEmail(email)) {
       // Super admin bypasses every permission gate; we don't bother loading
       // the staff_permissions row set, since hasPermission() short-circuits.
       setIsSuperAdmin(true);

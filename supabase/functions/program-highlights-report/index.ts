@@ -17,7 +17,7 @@ const corsHeaders = {
 };
 
 const MODEL = "claude-sonnet-5";
-const SUPER_ADMIN_EMAIL = "joshmercado@nolimitsboxingacademy.org";
+import { isSuperAdmin } from "../_shared/superAdmins.ts";
 
 const json = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), {
@@ -92,7 +92,7 @@ Deno.serve(async (req) => {
     const email = String(claimsData.claims.email ?? "").toLowerCase();
     const uid = String(claimsData.claims.sub ?? "");
 
-    let isAdmin = email === SUPER_ADMIN_EMAIL;
+    let isAdmin = isSuperAdmin(email);
     if (!isAdmin && uid) {
       const service = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
       const { data: role } = await service

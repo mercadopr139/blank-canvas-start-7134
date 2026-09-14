@@ -37,7 +37,7 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { ArrowLeft, Plus, Shield, UserCog, Pencil, ShieldCheck } from "lucide-react";
 
-const SUPER_ADMIN_EMAIL = "joshmercado@nolimitsboxingacademy.org";
+import { isSuperAdminEmail } from "@/lib/superAdmins";
 
 // ─────────────────────────────────────────────────────────────────────────
 // Types
@@ -379,8 +379,7 @@ export default function AdminStaffManagement() {
         ) : (
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {staff.map((member) => {
-              const isMemberSuperAdmin =
-                member.email?.toLowerCase() === SUPER_ADMIN_EMAIL;
+              const isMemberSuperAdmin = isSuperAdminEmail(member.email);
               return (
               <Card
                 key={member.id}

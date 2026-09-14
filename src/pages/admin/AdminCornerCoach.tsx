@@ -9,7 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { ArrowLeft, Send, Sparkles, ChevronDown, ChevronRight, Loader2, Database, Pin, Archive, Trash2, Plus, FileDown, Search, X } from "lucide-react";
 import CornerCoachReportSheet, { type ReportSource, type SavedReport } from "@/components/admin/CornerCoachReportSheet";
 
-const SUPER_ADMIN_EMAIL = "joshmercado@nolimitsboxingacademy.org";
+import { isSuperAdminEmail } from "@/lib/superAdmins";
 
 type Step = { sql: string; rowCount: number | null; error?: string; rows?: any[] };
 type Msg = {
@@ -110,7 +110,7 @@ const AdminCornerCoach = () => {
     : [];
 
   // Extra guard on top of the server-side super-admin check.
-  if (user && user.email?.toLowerCase() !== SUPER_ADMIN_EMAIL) {
+  if (user && !isSuperAdminEmail(user.email)) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-black text-center px-6">
         <div>
