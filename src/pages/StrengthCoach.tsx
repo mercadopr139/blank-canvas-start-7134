@@ -101,6 +101,40 @@ const StrengthCoach = () => {
     }
   };
 
+  // Rewrite ONE day and leave the other two exactly as they are. "Regenerate
+  // week" throws away a Wednesday and Friday the coach was happy with to fix a
+  // Monday; this fixes the Monday.
+  const [regeneratingDay, setRegeneratingDay] = useState(false);
+  const regenerateDay = async () => {
+    if (!week) return;
+    setRegeneratingDay(true);
+    try {
+      const { data: hist } = await (supabase.from("strength_weeks" as never) as any)
+        .select("week_start, days").lt("week_start", weekStart)
+        .order("week_start", { ascending: false }).limit(3);
+      const { data, error } = await supabase.functions.invoke("strength-coach", {
+        body: { mode: "generate", dayKey: selectedDay, weekStart, history: hist ?? [] },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      if (!data?.day?.focus) throw new Error("The coach came back empty — try again.");
+
+      const nextDays = { ...days, [selectedDay]: data.day };
+      const { error: upErr } = await (supabase.from("strength_weeks" as never) as any)
+        .update({ days: nextDays }).eq("id", week.id);
+      if (upErr) throw upErr;
+
+      setReviseText("");
+      await refetch();
+      queryClient.invalidateQueries({ queryKey: ["strength-history"] });
+      toast.success(`${selectedMeta.label} rewritten — Wednesday and Friday untouched.`);
+    } catch (e: any) {
+      toast.error(e?.message || "Couldn't rewrite that day.");
+    } finally {
+      setRegeneratingDay(false);
+    }
+  };
+
   const reviseDay = async () => {
     if (!week || !current || !reviseText.trim()) return;
     setRevising(true);
@@ -278,9 +312,17 @@ const StrengthCoach = () => {
             {/* Revise this day — only while unlocked */}
             {!locked && (
               <div className="mt-4 rounded-xl border border-white/10 bg-neutral-900/50 p-4">
-                <label className="text-sm font-semibold text-white/80 flex items-center gap-2 mb-2">
-                  <Wand2 className="h-4 w-4" /> Revise {DAYS.find((d) => d.key === selectedDay)?.label}
-                </label>
+                <div className="flex items-center justify-between gap-3 mb-2 flex-wrap">
+                  <label className="text-sm font-semibold text-white/80 flex items-center gap-2">
+                    <Wand2 className="h-4 w-4" /> Revise {selectedMeta.label}
+                  </label>
+                  <button onClick={regenerateDay} disabled={regeneratingDay || generating}
+                    title={`Write a fresh ${selectedMeta.label} and leave the other two days alone`}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-white/5 hover:bg-white/10 border border-white/15 disabled:opacity-60">
+                    <RefreshCw className={`h-3.5 w-3.5 ${regeneratingDay ? "animate-spin" : ""}`} />
+                    {regeneratingDay ? "Rewriting…" : `Regenerate ${selectedMeta.label} only`}
+                  </button>
+                </div>
                 <div className="flex flex-col sm:flex-row gap-2">
                   <input value={reviseText} onChange={(e) => setReviseText(e.target.value)}
                     onKeyDown={(e) => { if (e.key === "Enter") reviseDay(); }}

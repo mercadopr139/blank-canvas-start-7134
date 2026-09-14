@@ -57,7 +57,12 @@ const SYSTEM =
   "   triceps/shoulders/upper back; squat → quads/glutes/core; deadlift → posterior chain/back/grip/core). Use ONLY this equipment: " +
   "   dumbbells, benches, pull-up bars, medicine balls with the crossfit targets on the rig, and kettlebells. VARY it from recent " +
   "   weeks (see history) so training stays fresh. Just ONE accessory — 5 sets is plenty of volume and keeps the session inside 20 " +
-  "   minutes. The accessories array must contain exactly ONE item. ALWAYS set finisher to null.\n\n" +
+  "   minutes. The accessories array must contain exactly ONE item. ALWAYS set finisher to null.\n" +
+  "   THE ACCESSORY IS NEVER THE DAY'S MAIN LIFT IN ANY FORM. They just did five sets of it. On bench day the accessory is not a " +
+  "   bench press of any kind — not dumbbell, incline, floor, close-grip or paused; it is push-ups, dumbbell flyes, dips, a " +
+  "   dumbbell overhead press, a row. On squat day it is not a squat — not goblet, front, box or split; it is lunges, step-ups, " +
+  "   glute bridges, wall sits. On deadlift day it is not a deadlift — not Romanian, single-leg, trap bar or kettlebell; it is " +
+  "   swings, hip bridges, rows, farmer carries, hangs. Same muscles, DIFFERENT movement.\n\n" +
 
   "BUILT-IN MODIFICATIONS: Every accessory MUST carry an inline scale so a coach can adjust on the fly for an injured or weaker " +
   "athlete — phrase it as a natural part of the move (an easier option AND a harder option), not a separate 'modifications' section.\n\n" +
@@ -152,15 +157,35 @@ Deno.serve(async (req) => {
       maxTokens = 8000; // thinking is charged against this too — see _shared/claude.ts
     }
 
-    const response = await anthropic.messages.create({
-      model: MODEL,
-      max_tokens: maxTokens,
-      system: SYSTEM,
-      messages: [{ role: "user", content: userContent }],
-      ...thinking("medium"),
-    } as never);
+    // The accessory must not be the main lift again. A prompt rule can be
+    // ignored silently -- Monday came back with bench press as its extra work
+    // -- so the day is read back and, on a repeat, asked for again with the
+    // reason attached. Two tries, then an honest error rather than a bad day.
+    const dayKey: string = body.dayKey ?? "";
+    const mainWord = dayKey === "monday" ? "bench" : dayKey === "wednesday" ? "squat" : dayKey === "friday" ? "deadlift" : "";
+    const repeatsMain = (day: { accessories?: Array<{ name?: string }> } | undefined) =>
+      !!mainWord && (day?.accessories ?? []).some((a) => new RegExp(`\\b${mainWord}`, "i").test(a?.name ?? ""));
 
-    const parsed = extractJson(textOf(response));
+    let parsed: { day?: { accessories?: Array<{ name?: string }> } } = {};
+    let note = "";
+    for (let attempt = 0; attempt < 2; attempt++) {
+      const response = await anthropic.messages.create({
+        model: MODEL,
+        max_tokens: maxTokens,
+        system: SYSTEM,
+        messages: [{ role: "user", content: userContent + note }],
+        ...thinking("medium"),
+      } as never);
+      parsed = extractJson(textOf(response));
+      if (!repeatsMain(parsed.day)) break;
+      const bad = (parsed.day?.accessories ?? []).map((a) => a?.name).filter(Boolean).join(", ");
+      note =
+        `\n\nYOUR PREVIOUS ATTEMPT WAS REJECTED: the accessory "${bad}" is the day's main lift again. ` +
+        `They just did five sets of it. Choose a DIFFERENT movement for the same muscles. Everything else can stay.`;
+    }
+    if (repeatsMain(parsed.day)) {
+      return json({ error: `The coach kept offering ${mainWord} as the extra work. Try again.` }, 502);
+    }
     return json(parsed);
   } catch (e) {
     console.error("strength-coach error:", e);
