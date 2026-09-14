@@ -620,13 +620,18 @@ export default function AdminInvoiceQuoteGenerator() {
               {form.lineItems.map((item, idx) => (
                 <div
                   key={idx}
-                  className="grid grid-cols-[1fr_70px_100px_110px_36px] gap-2 px-3 py-2 border-b border-white/[0.06] last:border-b-0 items-center"
+                  className="grid grid-cols-[1fr_70px_100px_110px_36px] gap-2 px-3 py-2 border-b border-white/[0.06] last:border-b-0 items-start"
                 >
-                  <Input
+                  {/* Multi-line on purpose. The first line is the item; Enter
+                      adds detail beneath it -- the dates a programme runs, what
+                      the rate covers. On the PDF the first line prints bold and
+                      the rest smaller and grey under it. Grows a row per line. */}
+                  <Textarea
                     value={item.description}
                     onChange={(e) => updateLine(idx, { description: e.target.value })}
-                    placeholder="e.g. Hawk Squad Program — Daily Rate"
-                    className="bg-white/5 border-white/10 text-white text-sm h-8"
+                    rows={Math.max(1, item.description.split("\n").length)}
+                    placeholder={"e.g. BAM Program\nFridays, Sept 12 – May 29 (28 program days)"}
+                    className="bg-white/5 border-white/10 text-white text-sm min-h-8 py-1.5 leading-snug resize-none"
                   />
                   <Input
                     type="number"

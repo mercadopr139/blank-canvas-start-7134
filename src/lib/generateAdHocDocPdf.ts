@@ -218,6 +218,46 @@ export function generateAdHocDocPdf(data: AdHocDocData): jsPDF {
       3: { cellWidth: 40, halign: "right" as const },
     },
     margin: { left: marginL, right: marginR },
+    // A description can run to several lines: the item on the first, detail
+    // beneath -- "BAM Program" then the Fridays it covers. The row height is
+    // measured from the full text as normal; the drawing is ours, so the first
+    // line comes out bold and the detail smaller and grey, the way an invoice
+    // from a real firm reads rather than a wall of equal lines.
+    willDrawCell: (data) => {
+      if (data.section === "body" && data.column.index === 0 && typeof data.cell.raw === "string" && data.cell.raw.includes("\n")) {
+        data.cell.text = [];
+      }
+    },
+    didDrawCell: (data) => {
+      if (data.section !== "body" || data.column.index !== 0) return;
+      const raw = data.cell.raw;
+      if (typeof raw !== "string" || !raw.includes("\n")) return;
+      const [title, ...rest] = raw.split("\n");
+      const pad = data.cell.padding("left");
+      const width = data.cell.width - data.cell.padding("horizontal");
+      let ty = data.cell.y + data.cell.padding("top") + 2.6;
+      const x = data.cell.x + pad;
+
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(7.5);
+      doc.setTextColor(...BRAND_DARK);
+      for (const line of doc.splitTextToSize(title, width) as string[]) {
+        doc.text(line, x, ty);
+        ty += 3.4;
+      }
+
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(7);
+      doc.setTextColor(110, 110, 110);
+      for (const detail of rest) {
+        if (!detail.trim()) { ty += 1.6; continue; }
+        for (const line of doc.splitTextToSize(detail, width) as string[]) {
+          doc.text(line, x, ty);
+          ty += 3.2;
+        }
+      }
+      doc.setTextColor(...BRAND_DARK);
+    },
   });
 
   y = (doc as any).lastAutoTable.finalY + 4;
