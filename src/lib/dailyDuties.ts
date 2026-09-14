@@ -66,6 +66,13 @@ export const zoneStyle = (zone: string): ZoneStyle =>
 // Report categories, in the order they should show on a funder report.
 export const DUTY_CATEGORIES = ["Floors", "Equipment", "Bathrooms", "Reset", "Other"] as const;
 
+// One-off jobs — "clean the vans", "wipe the top of the bag rigs" — added on
+// the board itself by Josh or Chrissy. They live in duty_jobs under this zone
+// so they get the same Add-a-youth button and show in the reports, but the
+// board draws them under the Trash Day tile rather than in the columns, and
+// "Done" retires one (is_active = false) instead of deleting its history.
+export const SPECIAL_ZONE = "Special Projects";
+
 // Group jobs by zone, preserving DUTY_ZONES order first, then any extras, and
 // sort_order within each zone.
 export function groupJobsByZone(jobs: DutyJob[]): { zone: string; jobs: DutyJob[] }[] {

@@ -8,11 +8,12 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { X, Search, Plus, UserPlus, Sparkles, Check, Loader2 } from "lucide-react";
 import {
-  DutyJob, DutyAssignee, CheckedInYouth, groupJobsByZone, zoneStyle, headshotUrl,
+  DutyJob, DutyAssignee, CheckedInYouth, groupJobsByZone, zoneStyle, headshotUrl, SPECIAL_ZONE,
 } from "@/lib/dailyDuties";
 
 const rpc = (name: string, args?: Record<string, unknown>) =>
@@ -35,6 +36,11 @@ const Avatar = ({ url, name, size }: { url: string | null; name: string; size: s
 const DailyDutiesBoard = ({ open, onClose }: { open: boolean; onClose: () => void }) => {
   const qc = useQueryClient();
   const [assigningJob, setAssigningJob] = useState<DutyJob | null>(null);
+  // Only a signed-in admin -- Josh or Chrissy at the TV -- can add or finish a
+  // special project. The kids see the list; the RLS on duty_jobs is admin-only
+  // for writes anyway, so this is about not showing a button that would fail.
+  const { isAdmin } = useAuth();
+  const [newProject, setNewProject] = useState("");
 
   // Close on Escape (unless the search panel is up — that handles its own).
   useEffect(() => {
@@ -82,7 +88,33 @@ const DailyDutiesBoard = ({ open, onClose }: { open: boolean; onClose: () => voi
     return map;
   }, [assignees]);
 
-  const zones = useMemo(() => groupJobsByZone(jobs), [jobs]);
+  // Special projects are drawn under the Trash Day tile, not in the columns.
+  const zones = useMemo(() => groupJobsByZone(jobs.filter((j) => j.zone !== SPECIAL_ZONE)), [jobs]);
+  const specials = useMemo(
+    () => jobs.filter((j) => j.zone === SPECIAL_ZONE).sort((a, b) => a.sort_order - b.sort_order),
+    [jobs]
+  );
+
+  const addProject = useMutation({
+    mutationFn: async (label: string) => {
+      const { error } = await (supabase.from("duty_jobs" as never) as never as {
+        insert: (v: unknown) => Promise<{ error: unknown }>;
+      }).insert({ zone: SPECIAL_ZONE, label, category: "Other", sort_order: Date.now() % 32000 });
+      if (error) throw error as Error;
+    },
+    onSuccess: () => { setNewProject(""); qc.invalidateQueries({ queryKey: ["duty-jobs"] }); },
+  });
+
+  // Done = retired, not deleted: last night's assignments stay in history.
+  const finishProject = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await (supabase.from("duty_jobs" as never) as never as {
+        update: (v: unknown) => { eq: (k: string, v: string) => Promise<{ error: unknown }> };
+      }).update({ is_active: false }).eq("id", id);
+      if (error) throw error as Error;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["duty-jobs"] }),
+  });
   const totalAssigned = assignees.length;
 
   const unassign = useMutation({
@@ -191,6 +223,97 @@ const DailyDutiesBoard = ({ open, onClose }: { open: boolean; onClose: () => voi
             })}
           </div>
         )}
+
+        {/* ── Trash Day — every night, big, red, at the foot of the board. ── */}
+        <div className="mt-4 rounded-2xl border-2 border-red-500/60 bg-red-600/20 px-5 py-4 text-center">
+          <p className="text-3xl md:text-5xl font-black tracking-tight text-red-300 uppercase">Trash Day!</p>
+          <p className="mt-1 text-lg md:text-2xl font-bold text-white/90">
+            Be sure to take the trash cans to the curb!
+          </p>
+        </div>
+
+        {/* ── Special Projects — one-offs Josh or Chrissy add on the spot. Each
+            one is a job like any other: Add puts a kid on it, Done retires it. ── */}
+        <section className="mt-4 rounded-2xl border border-amber-400/30 bg-amber-500/[0.06] px-4 py-3">
+          <div className="flex items-center justify-between gap-3 flex-wrap">
+            <h3 className="text-lg md:text-xl font-black uppercase tracking-wide text-amber-200">Special Projects</h3>
+            {isAdmin && (
+              <form
+                className="flex items-center gap-2"
+                onSubmit={(e) => { e.preventDefault(); const v = newProject.trim(); if (v) addProject.mutate(v); }}
+              >
+                <Input
+                  value={newProject}
+                  onChange={(e) => setNewProject(e.target.value)}
+                  placeholder="Clean the vans · wipe the top of the bag rigs"
+                  className="h-9 w-64 md:w-80 bg-black/40 border-amber-400/30 text-white placeholder:text-white/30"
+                />
+                <Button type="submit" size="sm" disabled={!newProject.trim() || addProject.isPending}
+                  className="h-9 rounded-lg bg-amber-400 hover:bg-amber-300 text-black font-bold px-3">
+                  {addProject.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <><Plus className="w-4 h-4 mr-1" /> Add</>}
+                </Button>
+              </form>
+            )}
+          </div>
+
+          {specials.length === 0 ? (
+            <p className="mt-2 text-white/35 text-sm">Nothing special tonight.</p>
+          ) : (
+            <div className="mt-2 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+              {specials.map((job) => {
+                const people = byJob.get(job.id) ?? [];
+                return (
+                  <div key={job.id} className="rounded-lg border border-amber-400/25 bg-white/[0.03] px-3 py-2">
+                    <div className="flex items-center justify-between gap-2">
+                      <p className="font-semibold text-white/90 leading-tight text-[15px]">{job.label}</p>
+                      <div className="flex items-center gap-1 flex-shrink-0">
+                        <Button
+                          onClick={() => setAssigningJob(job)}
+                          size="sm"
+                          className="h-7 rounded-lg bg-white/10 hover:bg-white/20 text-white font-semibold px-2 text-xs"
+                        >
+                          <Plus className="w-3.5 h-3.5 mr-0.5" /> Add
+                        </Button>
+                        {isAdmin && (
+                          <Button
+                            onClick={() => finishProject.mutate(job.id)}
+                            size="sm"
+                            title="Done — take it off the board"
+                            className="h-7 rounded-lg bg-emerald-500/20 hover:bg-emerald-500/35 text-emerald-200 font-semibold px-2 text-xs"
+                          >
+                            <Check className="w-3.5 h-3.5 mr-0.5" /> Done
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+                    {people.length > 0 && (
+                      <div className="flex flex-wrap gap-1 mt-1.5">
+                        {people.map((p) => (
+                          <span
+                            key={p.registration_id}
+                            className="inline-flex items-center gap-1 rounded-full bg-white/[0.07] border border-white/10 pl-0.5 pr-1 py-0.5"
+                          >
+                            <Avatar url={p.child_headshot_url} name={p.child_first_name} size="w-5 h-5 text-[10px]" />
+                            <span className="text-[11px] font-medium text-white/90">
+                              {p.child_first_name} {p.child_last_name[0]}.
+                            </span>
+                            <button
+                              onClick={() => unassign.mutate({ jobId: job.id, regId: p.registration_id })}
+                              className="text-white/40 hover:text-rose-300 transition-colors"
+                              aria-label={`Remove ${p.child_first_name}`}
+                            >
+                              <X className="w-3 h-3" />
+                            </button>
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </section>
       </div>
 
       {assigningJob && (
