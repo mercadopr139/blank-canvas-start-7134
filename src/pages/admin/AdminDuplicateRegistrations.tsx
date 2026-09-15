@@ -521,11 +521,14 @@ export default function AdminDuplicateRegistrations() {
                   <Button
                     size="sm"
                     onClick={handleLink}
-                    disabled={linking}
-                    className="bg-sky-600 hover:bg-sky-700 text-white font-bold gap-1.5"
-                    title="Same kid across different years — keep both, count once"
+                    disabled={linking || !activeGroup.crossYear}
+                    className="bg-sky-600 hover:bg-sky-700 text-white font-bold gap-1.5 disabled:opacity-40"
+                    title={activeGroup.crossYear
+                      ? "Same kid across different years — keep both, count once"
+                      : "These are the same program year — that is a duplicate, not a re-registration. Merge it; linking would leave both records and the approval loop."}
                   >
-                    <Link2 className="w-4 h-4" /> {linking ? "Linking…" : "Link (same kid)"}
+                    <Link2 className="w-4 h-4" />
+                    {linking ? "Linking…" : activeGroup.crossYear ? "Link (same kid)" : "Link unavailable — same year"}
                   </Button>
                   <Button
                     size="sm"
