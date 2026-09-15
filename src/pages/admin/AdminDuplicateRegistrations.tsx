@@ -31,6 +31,9 @@ interface DupeRow {
   // 'possible' = same first+last name but the birthday differs/is missing —
   //              likely the same kid with a mistyped DOB, but verify first.
   match_type?: "strong" | "possible";
+  // Which program year the row belongs to. A group spanning two years is the
+  // same kid re-registered -- Link it, never Merge it.
+  program_year?: string | null;
 }
 
 interface MergeResult {
@@ -135,7 +138,11 @@ export default function AdminDuplicateRegistrations() {
       // "Possible" = clustered only by matching name, with a differing/missing
       // birthday. These need a closer look before merging.
       const possible = groupRows.some((r) => r.match_type === "possible");
-      return { key, ckey: canonicalKey(sorted), firstName: top.child_first_name.trim(), lastName: top.child_last_name.trim(), dob: top.child_date_of_birth, parentName, possible, rows: sorted };
+      // Two program years in one group = a re-registration, not a duplicate.
+      // Merge on these deleted last year's record and its history on
+      // 2026-09-02; the page now says so and refuses.
+      const crossYear = new Set(groupRows.map((r) => r.program_year ?? "")).size > 1;
+      return { key, ckey: canonicalKey(sorted), firstName: top.child_first_name.trim(), lastName: top.child_last_name.trim(), dob: top.child_date_of_birth, parentName, possible, crossYear, rows: sorted };
     });
     // Sort groups by impact (rows with attendance first, then by name).
     arr.sort((a, b) => {
@@ -318,6 +325,11 @@ export default function AdminDuplicateRegistrations() {
                           Possible · birthday differs
                         </Badge>
                       )}
+                      {g.crossYear && (
+                        <Badge className="bg-sky-500/15 text-sky-300 border-sky-400/30 text-[10px]">
+                          Across program years · Link, don't merge
+                        </Badge>
+                      )}
                     </p>
                     <p className="text-white/40 text-xs mt-0.5">
                       Born {formatDate(g.dob)}{g.parentName ? ` · Parent: ${g.parentName}` : ""}
@@ -441,6 +453,8 @@ export default function AdminDuplicateRegistrations() {
                               is what confirms they're the same kid. */}
                           <p className="text-sm font-semibold text-white truncate">{r.child_first_name} {r.child_last_name}</p>
                           <p className="text-[11px] text-white/50">
+                            {r.program_year ? <span className="font-semibold text-sky-300">{r.program_year}</span> : null}
+                            {r.program_year ? " · " : ""}
                             Born {formatDate(r.child_date_of_birth)}
                             {(r.parent_first_name || r.parent_last_name) ? ` · Parent: ${`${r.parent_first_name ?? ""} ${r.parent_last_name ?? ""}`.trim()}` : ""}
                           </p>
@@ -516,9 +530,13 @@ export default function AdminDuplicateRegistrations() {
                   <Button
                     size="sm"
                     onClick={() => setConfirmOpen(true)}
-                    className="bg-purple-600 hover:bg-purple-700 text-white font-bold"
+                    disabled={activeGroup.crossYear}
+                    title={activeGroup.crossYear
+                      ? "These records are from different program years — that is a re-registration. Use Link (same kid); merging would delete last year's record and its history."
+                      : undefined}
+                    className="bg-purple-600 hover:bg-purple-700 text-white font-bold disabled:opacity-40"
                   >
-                    Preview Merge
+                    {activeGroup.crossYear ? "Merge unavailable — different years" : "Preview Merge"}
                   </Button>
                 </div>
               </div>
