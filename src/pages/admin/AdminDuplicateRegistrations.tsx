@@ -64,7 +64,7 @@ export default function AdminDuplicateRegistrations() {
   const [linking, setLinking] = useState(false);
   const [lastResult, setLastResult] = useState<{ name: string; result: MergeResult } | null>(null);
 
-  const { data: rows = [], isLoading, refetch } = useQuery({
+  const { data: rows = [], isLoading, isError, error, refetch } = useQuery({
     queryKey: ["admin-duplicate-registrations"],
     queryFn: async () => {
       const { data, error } = await supabase.rpc("admin_get_duplicate_registrations");
@@ -269,6 +269,18 @@ export default function AdminDuplicateRegistrations() {
       {/* Groups list */}
       {isLoading ? (
         <p className="text-center text-white/40 py-10">Loading…</p>
+      ) : isError ? (
+        /* Never let a failed lookup read as "all clear". For twelve days the
+           detector threw and this page said no duplicates to everyone. */
+        <Card className="bg-rose-500/10 border-rose-400/30 text-white">
+          <CardContent className="p-6 flex items-center gap-3">
+            <AlertTriangle className="w-6 h-6 text-rose-300 shrink-0" />
+            <p className="text-sm">
+              Couldn't check for duplicates — this is an error, not an all-clear.{" "}
+              <span className="text-white/60">{(error as Error)?.message}</span>
+            </p>
+          </CardContent>
+        </Card>
       ) : visibleGroups.length === 0 ? (
         <Card className="bg-emerald-500/10 border-emerald-400/30 text-white">
           <CardContent className="p-6 flex items-center gap-3">
