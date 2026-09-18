@@ -1,6 +1,13 @@
 // Nightly 8 PM Eastern email listing Bald Eagles who didn't show up
-// today and didn't submit a call-out either. Matches the in-app red
-// banner alert logic exactly:
+// today and didn't submit a call-out either. It and the in-app red banner
+// (AdminAttendance.tsx, baldEagleNoShows) apply the SAME rules and must never
+// disagree -- for a while they did: the banner listed re-registered Eagles
+// who had checked in, and this email went out on non-practice weekdays the
+// banner correctly stayed quiet on. The rules, in both places:
+//   - Only on a practice day: a weekday, unless practice_days says otherwise,
+//     and never on an excursion day.
+//   - Check-ins and call-outs are matched by the kid's cross-year IDENTITY
+//     (youth_link_id, else id), not the raw registration id.
 //   - Eagles are filtered to Active (bald_eagle_active = true) AND to the
 //     current program year, so a returning Eagle isn't counted twice.
 //   - Today's attendance_records and today's callouts are subtracted.
@@ -28,6 +35,7 @@ const FROM_ADDRESS = "No Limits Academy <joshmercado@nolimitsboxingacademy.org>"
 
 type EagleRow = {
   id: string;
+  youth_link_id: string | null;
   child_first_name: string;
   child_last_name: string;
   child_boxing_program: string | null;
@@ -156,6 +164,26 @@ Deno.serve(async (req) => {
       }
     }
 
+    // The banner stays quiet on a day marked non-practice on the attendance
+    // calendar (a holiday, a closure) and on an excursion day; so does this.
+    // Cron only -- a manual "Run now" for a chosen date is an admin asking.
+    if (isCron) {
+      const { data: pd } = await supabase
+        .from("practice_days").select("is_practice_day").eq("date", todayEastern).maybeSingle();
+      if (pd && pd.is_practice_day === false) {
+        return new Response(JSON.stringify({ sent: false, reason: "not a practice day" }), {
+          status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      const { count: trips } = await supabase
+        .from("excursions").select("id", { count: "exact", head: true }).eq("date", todayEastern);
+      if ((trips ?? 0) > 0) {
+        return new Response(JSON.stringify({ sent: false, reason: "excursion day" }), {
+          status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+    }
+
     // 1. Active Bald Eagles — current program year only.
     //
     // A kid has one registration row per year, and Eagle status now
@@ -174,7 +202,7 @@ Deno.serve(async (req) => {
 
     const { data: eaglesRaw, error: eaglesErr } = await supabase
       .from("youth_registrations")
-      .select("id, child_first_name, child_last_name, child_boxing_program")
+      .select("id, youth_link_id, child_first_name, child_last_name, child_boxing_program")
       .eq("is_bald_eagle", true)
       .eq("bald_eagle_active", true)
       .eq("program_year", programYear)
@@ -188,36 +216,49 @@ Deno.serve(async (req) => {
       });
     }
 
-    // 2. Today's attendance — only their registration_ids
-    const eagleIds = eagles.map((e) => e.id);
+    // 2 + 3. Today's check-ins and call-outs, resolved to each kid's IDENTITY.
+    // A re-registered Eagle has a registration per year, linked by
+    // youth_link_id; a check-in or call-out on either one is the same kid.
     const { data: attendance, error: attErr } = await supabase
       .from("attendance_records")
       .select("registration_id")
-      .eq("check_in_date", todayEastern)
-      .in("registration_id", eagleIds);
+      .eq("check_in_date", todayEastern);
     if (attErr) throw attErr;
-    const checkedIn = new Set((attendance || []).map((a: { registration_id: string }) => a.registration_id));
 
-    // 3. Today's call-outs. Prefer the bulletproof registration_id link
-    // saved on new rows (form now stores the picked youth's reg id).
-    // Fall back to case-insensitive name match for legacy rows that
-    // pre-date that column — those land in calledOutNames.
+    // Call-outs: the form stores the youth's registration id; older rows only
+    // have a typed name, matched case-insensitively.
     const { data: callouts, error: coErr } = await supabase
       .from("callouts")
       .select("registration_id, first_name, last_name")
       .eq("date", todayEastern);
     if (coErr) throw coErr;
+
+    const touched = Array.from(new Set([
+      ...(attendance || []).map((x: { registration_id: string }) => x.registration_id),
+      ...((callouts || []) as CalloutRow[]).map((c) => c.registration_id).filter((v): v is string => !!v),
+    ]));
+    const identityById = new Map<string, string>();
+    if (touched.length > 0) {
+      const { data: regs, error: regErr } = await supabase
+        .from("youth_registrations").select("id, youth_link_id").in("id", touched);
+      if (regErr) throw regErr;
+      (regs || []).forEach((r: { id: string; youth_link_id: string | null }) => identityById.set(r.id, r.youth_link_id || r.id));
+    }
+    const identityOf = (id: string) => identityById.get(id) || id;
+
+    const checkedIn = new Set((attendance || []).map((x: { registration_id: string }) => identityOf(x.registration_id)));
     const calledOutIds = new Set<string>();
     const calledOutNames = new Set<string>();
     for (const c of (callouts || []) as CalloutRow[]) {
-      if (c.registration_id) calledOutIds.add(c.registration_id);
+      if (c.registration_id) calledOutIds.add(identityOf(c.registration_id));
       else calledOutNames.add(`${c.first_name.toLowerCase().trim()}|${c.last_name.toLowerCase().trim()}`);
     }
 
     // 4. No-shows = active eagles not in any of the three sets
     const noShows = eagles.filter((e) => {
-      if (checkedIn.has(e.id)) return false;
-      if (calledOutIds.has(e.id)) return false;
+      const identity = e.youth_link_id || e.id;
+      if (checkedIn.has(identity)) return false;
+      if (calledOutIds.has(identity)) return false;
       const nameKey = `${e.child_first_name.toLowerCase().trim()}|${e.child_last_name.toLowerCase().trim()}`;
       if (calledOutNames.has(nameKey)) return false;
       return true;

@@ -1789,9 +1789,9 @@ const AdminAttendance = () => {
     queryFn: async () => {
       const { data } = await supabase
         .from("callouts" as any)
-        .select("first_name, last_name")
+        .select("registration_id, first_name, last_name")
         .eq("date", todayStr);
-      return (data || []) as unknown as { first_name: string; last_name: string }[];
+      return (data || []) as unknown as { registration_id: string | null; first_name: string; last_name: string }[];
     },
   });
 
@@ -1813,13 +1813,29 @@ const AdminAttendance = () => {
     const todayCheckedInIds = new Set(
       calendarAttendance.filter((a) => a.check_in_date === todayStr).map((a) => identityById[a.registration_id] || a.registration_id)
     );
-    const calledOutNames = new Set(
-      todayCallouts.map((c) => `${c.first_name.toLowerCase()}|${c.last_name.toLowerCase()}`)
-    );
+    // Same three tests, in the same order, as the 8 PM email
+    // (report-bald-eagle-no-shows) -- the two must never disagree.
+    //
+    // The check-in set above holds each kid's cross-year IDENTITY, so the
+    // Eagle has to be looked up by identity too. It was looked up by its own
+    // registration id, which for a re-registered Eagle is a different id, so
+    // the banner listed kids who were standing in the gym: on 2026-09-17 it
+    // showed 19 names against the email's 7, and the extra 12 had all
+    // checked in.
+    const calledOutIds = new Set<string>();
+    const calledOutNames = new Set<string>();
+    todayCallouts.forEach((c) => {
+      // The call-out form stores the youth's registration id; older rows only
+      // have a typed name.
+      if (c.registration_id) calledOutIds.add(identityById[c.registration_id] || c.registration_id);
+      else calledOutNames.add(`${c.first_name.toLowerCase().trim()}|${c.last_name.toLowerCase().trim()}`);
+    });
 
     return activeBaldEagles.filter((r) => {
-      if (todayCheckedInIds.has(r.id)) return false;
-      if (calledOutNames.has(`${r.child_first_name.toLowerCase()}|${r.child_last_name.toLowerCase()}`)) return false;
+      const identity = identityById[r.id] || r.id;
+      if (todayCheckedInIds.has(identity)) return false;
+      if (calledOutIds.has(identity)) return false;
+      if (calledOutNames.has(`${r.child_first_name.toLowerCase().trim()}|${r.child_last_name.toLowerCase().trim()}`)) return false;
       return true;
     });
   }, [activeBaldEagles, calendarAttendance, todayCallouts, todayStr, todayIsPracticeForAlert, todayIsExcursionForAlert]);
