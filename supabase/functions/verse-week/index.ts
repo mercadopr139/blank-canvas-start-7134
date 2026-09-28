@@ -211,6 +211,65 @@ Deno.serve(async (req: Request) => {
     const dayLabel = String(body?.dayLabel ?? "").trim();
     const single = !!dayLabel;
 
+    // Rewrite one PART of a day the coach otherwise likes. The verse, its
+    // context and the named figures stay exactly as they are; no ESV lookup.
+    //   "question"  — a new question from the same verse, and a new read-aloud
+    //                 to close it. The two are a pair: the read-aloud answers
+    //                 the question, so they are never rewritten separately.
+    //   "readaloud" — the coach wrote (or tweaked) the question by hand; write
+    //                 the read-aloud that closes THAT question.
+    const part = String(body?.part ?? "").trim();
+    if (part === "question" || part === "readaloud") {
+      const day = body?.day ?? {};
+      const ref = String(day?.ref ?? "").trim();
+      const esvText = String(day?.esv_text ?? "").trim();
+      const context = String(day?.context ?? "").trim();
+      const figures = figureList(day?.figures);
+      const question = String(day?.question ?? "").trim();
+      if (!ref || !esvText) return json({ error: "That day needs a verse before part of it can be rewritten." }, 400);
+      if (part === "readaloud" && !question) return json({ error: "Write the question first, then I can write what to read out loud." }, 400);
+
+      const dayBlock =
+        `The week's theme: "${theme || "(not given)"}"\n` +
+        `The verse for this day, which does NOT change: ${ref} — "${esvText}"\n` +
+        (context ? `Its context, already on the board: ${context}\n` : "") +
+        (figures.length ? `People named on the board: ${figures.map((f) => f.name).join(", ")}\n` : "");
+
+      const ask =
+        part === "question"
+          ? dayBlock +
+            `\nThe current question is:\n"${question}"\n\n` +
+            "The coach wants a DIFFERENT question from this same verse. Do not repeat it and do not rephrase it — " +
+            "find another pressure, fear, choice or relationship in the verse and ask about where that shows up in " +
+            "their week. Then write the read-aloud that closes YOUR new question, following every rule for both.\n\n" +
+            'Return ONLY: { "question": "...", "answer": "..." }'
+          : dayBlock +
+            `\nThe coach has written the question in their own words:\n"${question}"\n\n` +
+            "Write the read-aloud that closes THAT question — the one the coach wrote, not one you would prefer. " +
+            "Pick up the exact pressure the question names, bring it to what the verse says, and leave them with " +
+            "one thing that is true. Follow every rule for the read-aloud.\n\n" +
+            'Return ONLY: { "answer": "..." }';
+
+      const partRules =
+        "OUTPUT: valid JSON only. No prose before or after, no markdown fences. The keys are exactly the ones asked " +
+        "for below and nothing else.\n" +
+        "CAPITALISATION: the question and the read-aloud each start with a capital letter.\n\n";
+
+      const anthropic = new Anthropic({ apiKey: ANTHROPIC_API_KEY });
+      const response = await anthropic.messages.create({
+        model: MODEL,
+        max_tokens: 6000,
+        system: SYSTEM_HEAD + SYSTEM_BODY + partRules,
+        messages: [{ role: "user", content: ask }],
+        ...thinking("low"),
+      } as never);
+      const parsed = extractJson(textOf(response));
+      const outQuestion = part === "question" ? String(parsed?.question ?? "").trim() : question;
+      const outAnswer = String(parsed?.answer ?? "").trim();
+      if (!outQuestion || !outAnswer) return json({ error: "The AI came back empty. Try again." }, 502);
+      return json({ question: outQuestion, answer: outAnswer });
+    }
+
     if (theme.length < 3) {
       return json({ error: "Tell me the theme for the week." }, 400);
     }

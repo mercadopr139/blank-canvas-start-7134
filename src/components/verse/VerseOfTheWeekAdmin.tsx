@@ -12,7 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import {
-  ChevronLeft, ChevronRight, Sparkles, Loader2, Save, RefreshCw, BookOpen, Eye, EyeOff,
+  ChevronLeft, ChevronRight, Sparkles, Loader2, Save, RefreshCw, BookOpen, Eye, EyeOff, Wand2,
 } from "lucide-react";
 import { toast } from "sonner";
 import { mondayOf, addDays, formatWeekRange, SeasonMode } from "@/lib/practicePlan";
@@ -51,6 +51,11 @@ const VerseOfTheWeekAdmin = ({ season = "in_season" }: { season?: SeasonMode }) 
   const [weekStart, setWeekStart] = useState<string>(() => mondayOf());
   const [theme, setTheme] = useState("");
   const [days, setDays] = useState<VerseDay[]>(DAYS.map((d) => emptyDay(d.n)));
+  // Rewriting one part of a day: which day, and which part, is in flight.
+  const [partBusy, setPartBusy] = useState<{ weekday: number; part: "question" | "readaloud" } | null>(null);
+  // Days whose question was edited by hand since its read-aloud was written --
+  // the two are a pair, and this is what lights the Rewrite button.
+  const [staleReadAloud, setStaleReadAloud] = useState<Set<number>>(new Set());
   const [published, setPublished] = useState(false);
   const [generating, setGenerating] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -151,6 +156,46 @@ const VerseOfTheWeekAdmin = ({ season = "in_season" }: { season?: SeasonMode }) 
   // Replace ONE day. The other four are left exactly as they are — including a
   // day the room has already heard, which must never change underneath them.
   // Nothing is written until Save, same as every other edit on this tab.
+  // Rewrite one part of a day the coach otherwise likes. The verse, context
+  // and figures stay. "question" brings a new question AND a new read-aloud
+  // (they are a pair); "readaloud" writes the closing script for a question
+  // the coach wrote or tweaked by hand. Nothing is written until Save.
+  const rewritePart = async (weekday: number, part: "question" | "readaloud") => {
+    const d = days.find((x) => x.weekday === weekday);
+    if (!d) return;
+    if (!d.reference || !d.text) { toast.error("That day needs a verse first."); return; }
+    if (part === "readaloud" && !(d.questions[0] ?? "").trim()) { toast.error("Write the question first."); return; }
+    setPartBusy({ weekday, part });
+    try {
+      const { data, error } = await supabase.functions.invoke("verse-week", {
+        body: {
+          theme: theme.trim(),
+          part,
+          day: { ref: d.reference, esv_text: d.text, context: d.context, figures: d.figures, question: d.questions[0] ?? "" },
+        },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      const q = String(data?.question ?? "").trim();
+      const a = String(data?.answer ?? "").trim();
+      if (!a) throw new Error("Nothing came back. Try again.");
+      setDays((prev) =>
+        prev.map((x) => (x.weekday === weekday ? { ...x, questions: [q || (x.questions[0] ?? "")], answers: [a] } : x))
+      );
+      setStaleReadAloud((prev) => { const next = new Set(prev); next.delete(weekday); return next; });
+      setDirty(true);
+      toast.success(
+        part === "question"
+          ? "New question and read-aloud — review, then Save."
+          : "Read-aloud rewritten for your question — review, then Save."
+      );
+    } catch (e) {
+      toast.error((e as Error)?.message ?? "Couldn't rewrite that. Try again.");
+    } finally {
+      setPartBusy(null);
+    }
+  };
+
   const regenerateDay = async (weekday: number) => {
     if (theme.trim().length < 3) {
       toast.error("Type a theme for the week first.");
@@ -425,10 +470,44 @@ const VerseOfTheWeekAdmin = ({ season = "in_season" }: { season?: SeasonMode }) 
                     <div className="grid grid-cols-1 gap-1">
                       <Input
                         value={d.questions[0] ?? ""}
-                        onChange={(e) => patchList(d.weekday, "questions", 0, e.target.value)}
+                        onChange={(e) => {
+                          patchList(d.weekday, "questions", 0, e.target.value);
+                          // The read-aloud was written for the old wording.
+                          setStaleReadAloud((prev) => new Set(prev).add(d.weekday));
+                        }}
                         placeholder="Question"
                         className="h-8 bg-neutral-800 border-neutral-700 text-white text-sm"
                       />
+                      {/* Two ways to change the question without losing the verse:
+                          let the AI ask something else (and close it), or tweak the
+                          wording yourself and have the closing script rewritten to
+                          match. The second lights up once the question has changed. */}
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <Button
+                          variant="ghost" size="sm"
+                          onClick={() => rewritePart(d.weekday, "question")}
+                          disabled={partBusy !== null || regenDay !== null || generating || !d.text}
+                          title="A different question from this same verse, with a read-aloud to close it"
+                          className="h-7 px-2 text-neutral-400 hover:text-white hover:bg-white/5 text-xs"
+                        >
+                          {partBusy?.weekday === d.weekday && partBusy.part === "question"
+                            ? <><Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" /> Asking…</>
+                            : <><RefreshCw className="w-3.5 h-3.5 mr-1.5" /> New question</>}
+                        </Button>
+                        <Button
+                          variant="ghost" size="sm"
+                          onClick={() => rewritePart(d.weekday, "readaloud")}
+                          disabled={partBusy !== null || regenDay !== null || generating || !staleReadAloud.has(d.weekday)}
+                          title={staleReadAloud.has(d.weekday)
+                            ? "Write the read-aloud that closes the question as you have worded it"
+                            : "Edit the question first, then this writes a read-aloud to match"}
+                          className={"h-7 px-2 text-xs hover:bg-white/5 " + (staleReadAloud.has(d.weekday) ? "text-amber-300 hover:text-amber-200" : "text-neutral-500")}
+                        >
+                          {partBusy?.weekday === d.weekday && partBusy.part === "readaloud"
+                            ? <><Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" /> Writing…</>
+                            : <><Wand2 className="w-3.5 h-3.5 mr-1.5" /> Rewrite read-aloud to match</>}
+                        </Button>
+                      </div>
                       <Textarea
                         value={d.answers[0] ?? ""}
                         onChange={(e) => patchList(d.weekday, "answers", 0, e.target.value)}
