@@ -288,8 +288,10 @@ const AdminFormBuilder = ({
   const { data: dbFields, isLoading } = useQuery({
     queryKey: ["form-fields", table],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("registration_form_fields")
+      // The table this editor was opened for -- NLA's or Hawk Squad's. Loading
+      // one and publishing to the other would replace the Hawk fields with
+      // NLA's, so this must be the same `table` every write below uses.
+      const { data, error } = await (supabase.from(table as never) as any)
         .select("*")
         .order("sort_order", { ascending: true });
       if (error) throw error;
@@ -308,6 +310,9 @@ const AdminFormBuilder = ({
   // rows (ordered after the questions) so they show up here and can be edited.
   // Idempotent: the has-waivers guard + unique field_key prevent duplicates.
   useEffect(() => {
+    // NLA only: Hawk Squad's waivers were seeded by its migration and its
+    // table must never receive NLA's.
+    if (table !== "registration_form_fields") return;
     if (!dbFields || dbFields.some((f) => f.field_type === "waiver")) return;
     const maxSort = dbFields.reduce((m, f) => Math.max(m, f.sort_order), 0);
     const rows = DEFAULT_WAIVERS.map((w, i) => ({
@@ -319,7 +324,7 @@ const AdminFormBuilder = ({
     (supabase.from(table as never) as any).insert(rows).then(({ error }) => {
       if (!error) queryClient.invalidateQueries({ queryKey: ["form-fields", table] });
     });
-  }, [dbFields, queryClient]);
+  }, [dbFields, queryClient, table]);
 
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
@@ -378,6 +383,14 @@ const AdminFormBuilder = ({
       const { data: existing } = await (supabase.from(table as never) as any).select("id");
       const existingIds = new Set<string>(((existing || []) as { id: string }[]).map((e) => e.id));
       const currentIds = new Set(fields.map(f => f.id));
+
+      // A publish replaces the table with what is on screen. If what is on
+      // screen shares no rows with the table, it came from somewhere else
+      // (another form's fields, a stale tab) and publishing would wipe this
+      // form. Refuse rather than delete.
+      if (existingIds.size > 0 && ![...currentIds].some((id) => existingIds.has(id))) {
+        throw new Error("These fields don't belong to this form. Reload the page and try again.");
+      }
 
       // Delete removed fields
       const toDelete = [...existingIds].filter(id => !currentIds.has(id));
