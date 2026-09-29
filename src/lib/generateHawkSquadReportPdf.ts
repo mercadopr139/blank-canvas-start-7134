@@ -1,44 +1,130 @@
 import jsPDF from "jspdf";
+import { HAWK_BRAND, type HawkPeriodStats, type HawkBreakdown } from "@/lib/hawkSquad";
 
-// Simple narrative PDF for the Hawk Squad grant report.
-export function generateHawkSquadReportPdf(narrative: string, periodLabel: string) {
+// The printed Hawk Squad report, in Hawk Squad's own green and gold.
+//
+// Letterhead: a deep green band with the wordmark and tagline, a gold rule
+// under it. For a letter, the school's address and the date follow, as on the
+// mid-year report Josh sends Cape May Tech. Then the body as the writer
+// returned it (a letter already carries its salutation and sign-off), and a
+// "By the numbers" panel with the period's figures and who the students are.
+
+export interface HawkReportPdfOptions {
+  format: "letter" | "narrative";
+  period: string;
+  stats: HawkPeriodStats;
+  breakdown: HawkBreakdown;
+  /** Data-URL of the hawk logo, when one is bundled. */
+  logoDataUrl?: string | null;
+}
+
+const hex = (h: string): [number, number, number] => [parseInt(h.slice(1, 3), 16), parseInt(h.slice(3, 5), 16), parseInt(h.slice(5, 7), 16)];
+
+export function generateHawkSquadReportPdf(narrative: string, opts: HawkReportPdfOptions) {
   const doc = new jsPDF({ unit: "pt", format: "letter" });
-  const pageWidth = doc.internal.pageSize.getWidth();
-  const pageHeight = doc.internal.pageSize.getHeight();
+  const W = doc.internal.pageSize.getWidth();
+  const H = doc.internal.pageSize.getHeight();
   const margin = 56;
-  const maxWidth = pageWidth - margin * 2;
-  let y = 64;
+  const maxWidth = W - margin * 2;
+  const green = hex(HAWK_BRAND.green), gold = hex(HAWK_BRAND.gold);
 
-  doc.setFont("helvetica", "bold");
-  doc.setFontSize(18);
-  doc.text("Hawk Squad", pageWidth / 2, y, { align: "center" });
-  y += 22;
-  doc.setFontSize(12);
-  doc.setFont("helvetica", "normal");
-  doc.setTextColor(90);
-  doc.text("No Limits Boxing Academy × Cape May County Technical High School", pageWidth / 2, y, { align: "center" });
-  y += 24;
+  // ── Letterhead ──
+  const bandH = 96;
+  doc.setFillColor(...green); doc.rect(0, 0, W, bandH, "F");
+  doc.setFillColor(...gold); doc.rect(0, bandH, W, 6, "F");
+  let x = margin;
+  if (opts.logoDataUrl) {
+    try { doc.addImage(opts.logoDataUrl, "PNG", margin, 14, 68, 68); x = margin + 82; } catch { /* no logo, wordmark only */ }
+  }
+  doc.setFont("helvetica", "bold"); doc.setFontSize(30); doc.setTextColor(...gold);
+  doc.text(HAWK_BRAND.wordmark, x, 48);
+  doc.setFontSize(9); doc.setTextColor(255, 255, 255); doc.setFont("helvetica", "normal");
+  doc.text(HAWK_BRAND.sub, x + 1, 62);
+  doc.setFont("helvetica", "bolditalic"); doc.setFontSize(11);
+  doc.text(HAWK_BRAND.tagline, x, 82);
+  // Report title at the right.
+  doc.setFont("helvetica", "normal"); doc.setFontSize(11); doc.setTextColor(255, 255, 255);
+  doc.text(opts.format === "letter" ? "Hawk Squad Report" : "Hawk Squad Grant Narrative", W - margin, 40, { align: "right" });
+  doc.setFontSize(10); doc.setTextColor(...gold);
+  doc.text(opts.period, W - margin, 56, { align: "right" });
+
+  let y = bandH + 40;
   doc.setTextColor(0);
-  doc.setFontSize(11);
-  if (periodLabel) { doc.text(periodLabel, pageWidth / 2, y, { align: "center" }); y += 26; }
 
-  doc.setFontSize(11.5);
+  // ── Letter header: the school's address and today's date ──
+  if (opts.format === "letter") {
+    doc.setFont("helvetica", "normal"); doc.setFontSize(11);
+    [HAWK_BRAND.school.name, HAWK_BRAND.school.street, HAWK_BRAND.school.cityLine].forEach((l) => { doc.text(l, margin, y); y += 15; });
+    y += 4;
+    doc.text(new Date().toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" }), margin, y);
+    y += 26;
+  }
+
+  // ── Body ──
+  const newPage = () => { doc.addPage(); y = 64; };
+  doc.setFont("helvetica", "normal"); doc.setFontSize(11.5);
   const paragraphs = (narrative || "").split(/\n{2,}/);
   for (const para of paragraphs) {
-    const lines = doc.splitTextToSize(para.trim(), maxWidth) as string[];
+    // Short lines (salutation, "Sincerely," and the signature) keep their line breaks.
+    const lines = para.split("\n").flatMap((l) => doc.splitTextToSize(l.trim(), maxWidth) as string[]);
     for (const line of lines) {
-      if (y > pageHeight - margin) { doc.addPage(); y = 64; }
+      if (y > H - margin - 20) newPage();
       doc.text(line, margin, y);
       y += 16;
     }
     y += 8;
   }
 
-  const generated = new Date().toLocaleDateString(undefined, { year: "numeric", month: "long", day: "numeric" });
-  if (y > pageHeight - margin) { doc.addPage(); y = 64; }
-  doc.setFontSize(9);
-  doc.setTextColor(140);
-  doc.text(`No Limits Boxing Academy — generated ${generated}`, margin, pageHeight - 40);
+  // ── By the numbers ──
+  const s = opts.stats;
+  const tiles: [string, string][] = [
+    ["Sessions held", `${s.sessionsHeld}${s.sessionsPlanned ? ` of ${s.sessionsPlanned} planned` : ""}`],
+    ["Check-ins", String(s.checkIns)],
+    ["Students reached", String(s.students)],
+    ["Average per session", String(s.avgPerSession)],
+    ["Rode the bus", `${s.bus} check-ins`],
+    ["Dismissed from NLA", `${s.dismissed} check-ins`],
+  ];
+  const breakdownLines: string[] = [];
+  for (const [label, counts] of Object.entries(opts.breakdown)) {
+    const parts = Object.entries(counts).filter(([, n]) => n > 0).sort((a, b) => b[1] - a[1]).map(([k, n]) => `${k} (${n})`);
+    if (parts.length) breakdownLines.push(`${label}: ${parts.join(", ")}`);
+  }
+  const wrapped = breakdownLines.flatMap((l) => doc.splitTextToSize(l, maxWidth - 32) as string[]);
+  const panelH = 34 + Math.ceil(tiles.length / 3) * 38 + (wrapped.length ? 14 + wrapped.length * 13 : 0) + 16;
+  if (y + panelH > H - margin) newPage();
 
-  doc.save(`HawkSquad_GrantReport_${periodLabel ? periodLabel.replace(/[^\w]+/g, "-") : "report"}.pdf`);
+  doc.setFillColor(...green); doc.roundedRect(margin, y, maxWidth, panelH, 8, 8, "F");
+  doc.setFillColor(...gold); doc.rect(margin, y + 30, maxWidth, 2, "F");
+  doc.setFont("helvetica", "bold"); doc.setFontSize(11); doc.setTextColor(...gold);
+  doc.text(`BY THE NUMBERS · ${opts.period.toUpperCase()}`, margin + 16, y + 20);
+  const colW = (maxWidth - 32) / 3;
+  tiles.forEach(([label, value], i) => {
+    const cx = margin + 16 + (i % 3) * colW;
+    const cy = y + 54 + Math.floor(i / 3) * 38;
+    doc.setFont("helvetica", "bold"); doc.setFontSize(16); doc.setTextColor(255, 255, 255);
+    doc.text(value, cx, cy);
+    doc.setFont("helvetica", "normal"); doc.setFontSize(8.5); doc.setTextColor(...gold);
+    doc.text(label.toUpperCase(), cx, cy + 12);
+  });
+  if (wrapped.length) {
+    let by = y + 54 + Math.ceil(tiles.length / 3) * 38 + 6;
+    doc.setFont("helvetica", "normal"); doc.setFontSize(9.5); doc.setTextColor(255, 255, 255);
+    for (const l of wrapped) { doc.text(l, margin + 16, by); by += 13; }
+  }
+  y += panelH + 20;
+
+  // ── Footer on every page ──
+  const pages = doc.getNumberOfPages();
+  for (let p = 1; p <= pages; p++) {
+    doc.setPage(p);
+    doc.setFillColor(...green); doc.rect(0, H - 28, W, 28, "F");
+    doc.setFillColor(...gold); doc.rect(0, H - 30, W, 2, "F");
+    doc.setFont("helvetica", "normal"); doc.setFontSize(8.5); doc.setTextColor(255, 255, 255);
+    doc.text(`Hawk Squad at No Limits Academy · ${HAWK_BRAND.tagline}`, margin, H - 11);
+    doc.text(`${p} / ${pages}`, W - margin, H - 11, { align: "right" });
+  }
+
+  const kind = opts.format === "letter" ? "Report" : "GrantNarrative";
+  doc.save(`HawkSquad_${kind}_${opts.period ? opts.period.replace(/[^\w]+/g, "-") : "report"}.pdf`);
 }

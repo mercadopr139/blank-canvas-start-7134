@@ -136,6 +136,26 @@ export const isHawkPracticeDay = (date: string, overrides: Record<string, boolea
   return (HAWK_DEFAULT_WEEKDAYS as readonly number[]).includes(dow);
 };
 
+/* ───── Brand ───── */
+
+// Hawk Squad's own look, from its flyers and the mid-year report: deep green,
+// gold, white, the hawk, and the tagline. Used by the printed report.
+export const HAWK_BRAND = {
+  green: "#0f4c2f",
+  greenDark: "#083620",
+  gold: "#f2c230",
+  white: "#ffffff",
+  tagline: "The Ultimate Afterschool Experience",
+  wordmark: "HAWK SQUAD",
+  sub: "AT NO LIMITS ACADEMY",
+  school: {
+    name: "Cape May County Technical High School",
+    street: "188 Crest Haven Rd",
+    cityLine: "Cape May Court House, NJ 08210",
+  },
+  signer: { name: "Josh Mercado", org: "No Limits Academy" },
+} as const;
+
 /* ───── Intelligence ───── */
 
 export interface HawkPeriodStats {
