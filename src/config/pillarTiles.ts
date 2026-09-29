@@ -15,7 +15,7 @@ import {
   Star, Bus, UserCheck, Radio, PhoneOff, AlertTriangle, FileText,
   UtensilsCrossed, HandCoins, Database, MessageSquare, Mail, Receipt,
   ScrollText, ClipboardCheck, LayoutDashboard, Archive, Gauge, MapPin, Sparkles, Dumbbell, Smile, Scale,
-  BookOpenCheck, HeartHandshake, Monitor, Ticket, Flame, Bird } from "lucide-react";
+  BookOpenCheck, HeartHandshake, Monitor, Ticket, Flame, Bird, Layers } from "lucide-react";
 
 export interface PillarTile {
   title: string;
@@ -71,6 +71,7 @@ export const OPERATIONS_TILES: PillarTile[] = [
       { title: "Attendance Reports", href: "/admin/operations/attendance-reports", icon: FileBarChart },
       { title: "Call-Outs", href: "/admin/operations/callouts", icon: PhoneOff },
       { title: "Smile Lab Intelligence", href: "/admin/operations/smile-lab-attendance", icon: Smile },
+      { title: "Youth Served (all programs)", href: "/admin/operations/youth-served", icon: Layers },
     ],
   },
   {

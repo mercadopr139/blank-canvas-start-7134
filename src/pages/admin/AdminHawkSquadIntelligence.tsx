@@ -3,16 +3,16 @@
 // The numbers a funder asks for, over a period you pick: sessions held,
 // check-ins, distinct students, average per session, bus vs dismissed, and
 // who the students are (grade, CTE programme, sex, race, lunch status). Then
-// each student's attendance, and the one deliberate cross-programme figure:
-// youth served by No Limits across NLA and Hawk Squad with nobody counted
-// twice. The grant report button writes a narrative from what is on screen.
+// each student's attendance. Hawk Squad only: the cross-programme youth
+// served figure lives on its own page under Attendance. The grant report
+// button writes a narrative from what is on screen.
 import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { format, startOfMonth, endOfMonth, subMonths } from "date-fns";
-import { CalendarDays, Activity, Users, Star, Bus, DoorOpen, Sparkles, Layers } from "lucide-react";
+import { CalendarDays, Activity, Users, Star, Bus, DoorOpen, Sparkles } from "lucide-react";
 import HawkSquadGrantReportSheet from "@/components/admin/HawkSquadGrantReportSheet";
 import { getCurrentAttendanceYear, programYearRange, shortProgramYear } from "@/lib/programYear";
 import {
@@ -46,9 +46,6 @@ const rangeFor = (key: PresetKey, customFrom: string, customTo: string): { from:
   }
   return { from: iso(startOfMonth(now)), to: iso(endOfMonth(now)), label: format(now, "MMMM yyyy") };
 };
-
-const rpc = (name: string, args?: Record<string, unknown>) =>
-  (supabase.rpc as unknown as (n: string, a?: Record<string, unknown>) => Promise<{ data: unknown; error: { message: string } | null }>)(name, args);
 
 interface RawRow {
   registration_id: string; check_in_date: string; going_home: "bus" | "dismissed";
@@ -90,17 +87,6 @@ const AdminHawkSquadIntelligence = () => {
     },
   });
 
-  // Youth served across both programmes, nobody counted twice. Admin-only RPC.
-  const served = useQuery({
-    queryKey: ["hawk-youth-served", from, to],
-    queryFn: async () => {
-      const { data, error } = await rpc("hawk_squad_youth_served", { _from: from, _to: to });
-      if (error) throw new Error(error.message);
-      const row = (data as Array<{ nla_youth: number; hawk_youth: number; in_both: number; combined: number; in_both_names: string[] }>)?.[0];
-      return row ?? { nla_youth: 0, hawk_youth: 0, in_both: 0, combined: 0, in_both_names: [] };
-    },
-  });
-
   const stats = useMemo(() => hawkPeriodStats(rows, from, to, overrides, hawkTodayET()), [rows, from, to, overrides]);
   const breakdown = useMemo(() => hawkBreakdown(rows), [rows]);
 
@@ -124,7 +110,7 @@ const AdminHawkSquadIntelligence = () => {
       <div className="flex items-start justify-between gap-4 flex-wrap">
         <div>
           <h2 className="text-2xl font-bold">Hawk Squad — Intelligence</h2>
-          <p className="text-neutral-400 text-sm mt-1">Reach, attendance, and who the students are, for the period you pick.</p>
+          <p className="text-neutral-400 text-sm mt-1">Hawk Squad only — reach, attendance, and who the students are, for the period you pick.</p>
         </div>
         <Button onClick={() => setReportOpen(true)} disabled={stats.checkIns === 0} className="bg-green-600 hover:bg-green-500 text-black font-semibold gap-2">
           <Sparkles className="h-4 w-4" /> Grant report
@@ -194,38 +180,6 @@ const AdminHawkSquadIntelligence = () => {
         </Card>
 
         <div className="space-y-6">
-          {/* Youth served across programmes */}
-          <Card className="bg-white/[0.03] border-white/10 text-white">
-            <CardContent className="p-4">
-              <p className="font-bold flex items-center gap-2"><Layers className="h-4 w-4 text-green-400" /> Youth served across programs</p>
-              <p className="text-xs text-white/40 mt-0.5 mb-3">Everyone who checked in to NLA or Hawk Squad in this period. A student in both is counted once.</p>
-              {served.isError ? (
-                <p className="text-rose-300 text-sm">Couldn't count: {(served.error as Error)?.message}</p>
-              ) : served.isLoading ? (
-                <p className="text-white/40 text-sm">Counting…</p>
-              ) : served.data && (
-                <>
-                  <div className="grid grid-cols-4 gap-2 text-center">
-                    {[
-                      { l: "NLA", v: served.data.nla_youth },
-                      { l: "Hawk Squad", v: served.data.hawk_youth },
-                      { l: "In both", v: served.data.in_both },
-                      { l: "Total served", v: served.data.combined, hi: true },
-                    ].map((t) => (
-                      <div key={t.l} className={`rounded-lg border p-2 ${t.hi ? "border-green-400/40 bg-green-500/10" : "border-white/10"}`}>
-                        <p className="text-2xl font-black tabular-nums" style={t.hi ? { color: GREEN } : undefined}>{t.v}</p>
-                        <p className="text-[10px] uppercase tracking-wider text-white/40">{t.l}</p>
-                      </div>
-                    ))}
-                  </div>
-                  {served.data.in_both_names.length > 0 && (
-                    <p className="text-xs text-white/45 mt-3">In both: {served.data.in_both_names.join(", ")}</p>
-                  )}
-                </>
-              )}
-            </CardContent>
-          </Card>
-
           {/* Each student */}
           <Card className="bg-white/[0.03] border-white/10 text-white">
             <CardContent className="p-4">
