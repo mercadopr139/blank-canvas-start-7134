@@ -373,7 +373,7 @@ const AdminFormBuilder = ({
     try {
       // Get existing field IDs from DB
       const { data: existing } = await (supabase.from(table as never) as any).select("id");
-      const existingIds = new Set((existing || []).map(e => e.id));
+      const existingIds = new Set<string>(((existing || []) as { id: string }[]).map((e) => e.id));
       const currentIds = new Set(fields.map(f => f.id));
 
       // Delete removed fields
