@@ -45,7 +45,9 @@ import AdminEventsIntelligence from "./pages/admin/AdminEventsIntelligence";
 import AdminProgramHighlights from "./pages/admin/AdminProgramHighlights";
 import AdminFormBuilder from "./pages/admin/AdminFormBuilder";
 import AdminHawkSquadRegistrations from "./pages/admin/AdminHawkSquadRegistrations";
+import AdminHawkSquadAttendance from "./pages/admin/AdminHawkSquadAttendance";
 import HawkSquadRegister from "./pages/HawkSquadRegister";
+import HawkSquadCheckIn from "./pages/HawkSquadCheckIn";
 import AdminForms from "./pages/admin/AdminForms";
 import AdminFormEditor from "./pages/admin/AdminFormEditor";
 import PublicForm from "./pages/PublicForm";
@@ -187,6 +189,8 @@ const App = () => (
             <Route path="/strength-board" element={<StrengthBoard />} />
             {/* Hawk Squad's public registration form — parents, no account. */}
             <Route path="/hawk-squad/register" element={<HawkSquadRegister />} />
+            {/* Hawk Squad's kiosk — the same device as the NLA kiosk, no login. */}
+            <Route path="/check-in/hawk-squad" element={<HawkSquadCheckIn />} />
             <Route path="/hard-75" element={<ProtectedRoute><Hard75 /></ProtectedRoute>} />
             {/* The gym screen. No login, like the Battle Team board. */}
             <Route path="/nbt-board" element={<NbtBoard />} />
@@ -261,6 +265,7 @@ const App = () => (
               <Route path="form-builder" element={<AdminFormBuilder />} />
               {/* Hawk Squad — its own programme, its own tables. */}
               <Route path="hawk-squad/registrations" element={<AdminHawkSquadRegistrations />} />
+              <Route path="hawk-squad/attendance" element={<AdminHawkSquadAttendance />} />
               <Route path="hawk-squad/form-builder" element={<AdminFormBuilder table="hawk_squad_form_fields" title="Hawk Squad Form Editor" />} />
               <Route path="forms" element={<AdminForms />} />
               <Route path="forms/:id" element={<AdminFormEditor />} />

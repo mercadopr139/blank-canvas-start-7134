@@ -104,3 +104,46 @@ export const hawkSignatureUrl = (path: string | null | undefined): string | null
 /** Can this student be dismissed from NLA rather than ride the bus? */
 export const canBeDismissed = (r: Pick<HawkRegistration, "dismissal_waiver_signed_at">) =>
   !!r.dismissal_waiver_signed_at;
+
+/* ───── Attendance ───── */
+
+export type GoingHome = "bus" | "dismissed";
+
+export interface HawkAttendance {
+  id: string;
+  registration_id: string;
+  check_in_at: string;
+  check_in_date: string;
+  going_home: GoingHome;
+  is_manual: boolean;
+  note: string | null;
+}
+
+/** Today's date as the gym sees it — America/New_York, YYYY-MM-DD. */
+export const hawkTodayET = (now = new Date()) =>
+  now.toLocaleDateString("en-CA", { timeZone: "America/New_York" });
+
+/** Hawk Squad runs Tuesday and Thursday unless the calendar says otherwise. */
+export const HAWK_DEFAULT_WEEKDAYS = [2, 4] as const;
+
+/**
+ * Is this a Hawk Squad day? An override row wins; otherwise Tue/Thu.
+ * `date` is YYYY-MM-DD; weekday is read at noon so no timezone can shift it.
+ */
+export const isHawkPracticeDay = (date: string, overrides: Record<string, boolean>): boolean => {
+  if (date in overrides) return overrides[date];
+  const dow = new Date(`${date}T12:00:00`).getDay();
+  return (HAWK_DEFAULT_WEEKDAYS as readonly number[]).includes(dow);
+};
+
+/** Every date in a month, as YYYY-MM-DD, for the calendar. */
+export const datesInMonth = (year: number, month0: number): string[] => {
+  const out: string[] = [];
+  const d = new Date(year, month0, 1, 12);
+  while (d.getMonth() === month0) {
+    const p = (n: number) => String(n).padStart(2, "0");
+    out.push(`${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`);
+    d.setDate(d.getDate() + 1);
+  }
+  return out;
+};
