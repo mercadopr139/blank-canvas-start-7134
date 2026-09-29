@@ -15,8 +15,7 @@ import {
   Star, Bus, UserCheck, Radio, PhoneOff, AlertTriangle, FileText,
   UtensilsCrossed, HandCoins, Database, MessageSquare, Mail, Receipt,
   ScrollText, ClipboardCheck, LayoutDashboard, Archive, Gauge, MapPin, Sparkles, Dumbbell, Smile, Scale,
-  BookOpenCheck, HeartHandshake, Monitor, Ticket, Flame,
-} from "lucide-react";
+  BookOpenCheck, HeartHandshake, Monitor, Ticket, Flame, Bird } from "lucide-react";
 
 export interface PillarTile {
   title: string;
@@ -113,6 +112,20 @@ export const OPERATIONS_TILES: PillarTile[] = [
       { title: "NBT S&C Board", href: "/admin/operations/nbt-board", icon: Dumbbell },
       { title: "NBT Intelligence", href: "/admin/operations/nbt-intelligence", icon: BarChart3 },
       { title: "75 Hard", href: "/hard-75", icon: Flame, external: true },
+    ],
+  },
+  {
+    // A separate programme -- Cape May Tech students, two afternoons a week --
+    // in its own tables, so nothing NLA reports can pick it up by accident.
+    title: "Hawk Squad",
+    description: "Cape May Tech students — registration, check-in, attendance",
+    icon: Bird,
+    href: "/admin/operations/hawk-squad/registrations",
+    permKey: "operations_hawk_squad",
+    children: [
+      { title: "Registrations", href: "/admin/operations/hawk-squad/registrations", icon: Users },
+      { title: "Form Editor", href: "/admin/operations/hawk-squad/form-builder", icon: Settings2 },
+      { title: "Registration Form", href: "/hawk-squad/register", icon: ClipboardList, external: true },
     ],
   },
   {

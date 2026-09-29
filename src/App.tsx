@@ -44,6 +44,8 @@ import AdminExcursionIntelligence from "./pages/admin/AdminExcursionIntelligence
 import AdminEventsIntelligence from "./pages/admin/AdminEventsIntelligence";
 import AdminProgramHighlights from "./pages/admin/AdminProgramHighlights";
 import AdminFormBuilder from "./pages/admin/AdminFormBuilder";
+import AdminHawkSquadRegistrations from "./pages/admin/AdminHawkSquadRegistrations";
+import HawkSquadRegister from "./pages/HawkSquadRegister";
 import AdminForms from "./pages/admin/AdminForms";
 import AdminFormEditor from "./pages/admin/AdminFormEditor";
 import PublicForm from "./pages/PublicForm";
@@ -183,6 +185,8 @@ const App = () => (
             <Route path="/strength-coach/intelligence" element={<StrengthIntelligence />} />
             {/* The Battle Team's gym screen. No login, like the coach's page above. */}
             <Route path="/strength-board" element={<StrengthBoard />} />
+            {/* Hawk Squad's public registration form — parents, no account. */}
+            <Route path="/hawk-squad/register" element={<HawkSquadRegister />} />
             <Route path="/hard-75" element={<ProtectedRoute><Hard75 /></ProtectedRoute>} />
             {/* The gym screen. No login, like the Battle Team board. */}
             <Route path="/nbt-board" element={<NbtBoard />} />
@@ -255,6 +259,9 @@ const App = () => (
               <Route path="program-highlights" element={<AdminProgramHighlights />} />
               <Route path="attendance-reports" element={<AdminAttendanceReports />} />
               <Route path="form-builder" element={<AdminFormBuilder />} />
+              {/* Hawk Squad — its own programme, its own tables. */}
+              <Route path="hawk-squad/registrations" element={<AdminHawkSquadRegistrations />} />
+              <Route path="hawk-squad/form-builder" element={<AdminFormBuilder table="hawk_squad_form_fields" title="Hawk Squad Form Editor" />} />
               <Route path="forms" element={<AdminForms />} />
               <Route path="forms/:id" element={<AdminFormEditor />} />
               <Route path="smile-lab-attendance" element={<AdminSmileLabAttendance />} />

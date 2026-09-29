@@ -67,7 +67,7 @@ const AdminOperations = () => {
       </Button>
       <Button
         size="sm"
-        className="w-full bg-green-600 hover:bg-green-500 text-white text-sm font-medium"
+        className="w-full bg-blue-600 hover:bg-blue-500 text-white text-sm font-medium"
         onClick={() => navigate("/weigh-in")}
       >
         <Scale className="w-4 h-4 mr-1.5" />

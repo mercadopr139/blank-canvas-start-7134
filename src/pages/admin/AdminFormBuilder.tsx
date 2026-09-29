@@ -261,7 +261,14 @@ const FieldEditorDialog = ({
 };
 
 /* ─── Main Form Builder ─── */
-const AdminFormBuilder = () => {
+// The same editor serves two forms. NLA's is the default; Hawk Squad's lives
+// in its own fields table and is reached through its own route.
+export type FieldsTable = "registration_form_fields" | "hawk_squad_form_fields";
+
+const AdminFormBuilder = ({
+  table = "registration_form_fields",
+  title = "Registration Form Editor",
+}: { table?: FieldsTable; title?: string } = {}) => {
   const queryClient = useQueryClient();
   const [fields, setFields] = useState<FormField[]>([]);
   const [editingField, setEditingField] = useState<FormField | null>(null);
@@ -276,7 +283,7 @@ const AdminFormBuilder = () => {
   );
 
   const { data: dbFields, isLoading } = useQuery({
-    queryKey: ["form-fields"],
+    queryKey: ["form-fields", table],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("registration_form_fields")
@@ -306,8 +313,8 @@ const AdminFormBuilder = () => {
       sort_order: maxSort + (i + 1) * 10, is_active: true, is_core: false,
       db_column: null, default_value: w.body, section: "Waivers",
     }));
-    supabase.from("registration_form_fields").insert(rows).then(({ error }) => {
-      if (!error) queryClient.invalidateQueries({ queryKey: ["form-fields"] });
+    (supabase.from(table as never) as any).insert(rows).then(({ error }) => {
+      if (!error) queryClient.invalidateQueries({ queryKey: ["form-fields", table] });
     });
   }, [dbFields, queryClient]);
 
@@ -365,14 +372,14 @@ const AdminFormBuilder = () => {
     setIsSaving(true);
     try {
       // Get existing field IDs from DB
-      const { data: existing } = await supabase.from("registration_form_fields").select("id");
+      const { data: existing } = await (supabase.from(table as never) as any).select("id");
       const existingIds = new Set((existing || []).map(e => e.id));
       const currentIds = new Set(fields.map(f => f.id));
 
       // Delete removed fields
       const toDelete = [...existingIds].filter(id => !currentIds.has(id));
       if (toDelete.length > 0) {
-        await supabase.from("registration_form_fields").delete().in("id", toDelete);
+        await (supabase.from(table as never) as any).delete().in("id", toDelete);
       }
 
       // Upsert all current fields
@@ -385,13 +392,13 @@ const AdminFormBuilder = () => {
         };
 
         if (existingIds.has(id)) {
-          await supabase.from("registration_form_fields").update(payload).eq("id", id);
+          await (supabase.from(table as never) as any).update(payload).eq("id", id);
         } else {
-          await supabase.from("registration_form_fields").insert({ id, ...payload });
+          await (supabase.from(table as never) as any).insert({ id, ...payload });
         }
       }
 
-      queryClient.invalidateQueries({ queryKey: ["form-fields"] });
+      queryClient.invalidateQueries({ queryKey: ["form-fields", table] });
       setHasChanges(false);
       toast.success("Form published successfully! The live registration form is now updated.");
     } catch (err: any) {
@@ -415,7 +422,7 @@ const AdminFormBuilder = () => {
       {/* Header bar */}
       <div className="border-b border-white/10 px-4 py-3 flex items-center justify-between sticky top-0 bg-black z-10">
         <div className="flex items-center gap-3">
-          <h2 className="text-base font-semibold">Registration Form Editor</h2>
+          <h2 className="text-base font-semibold">{title}</h2>
           {hasChanges && (
             <Badge className="bg-amber-500/15 text-amber-400 border-amber-500/30 text-xs">Unsaved Changes</Badge>
           )}
