@@ -21,6 +21,7 @@ import ChildPrimaryAddressField, { type AddressPin } from "@/components/registra
 import { addressProblem } from "@/lib/address";
 import nlaLogo from "@/assets/nla-logo.png";
 import { digitsOnly, formatPhoneDisplay, toE164, isValidPhone } from "@/lib/validators";
+import { problemFieldKey, focusProblemField } from "@/lib/validationFocus";
 
 type FormFieldDef = {
   id: string;
@@ -82,7 +83,6 @@ const Register = () => {
   const [honeypot, setHoneypot] = useState(""); // Spam protection
   const [waiverSigs, setWaiverSigs] = useState<Record<string, Blob | null>>({});
   const [waiverAcks, setWaiverAcks] = useState<Record<string, boolean>>({});
-  const [waiverNames, setWaiverNames] = useState<Record<string, string>>({});
 
   // Fetch form fields from DB
   const { data: formFields, isLoading: fieldsLoading } = useQuery({
@@ -246,9 +246,8 @@ const Register = () => {
 
     // Waiver validations (dynamic — one per active waiver)
     for (const w of waivers) {
-      if (!waiverAcks[w.field_key]) return "Please acknowledge all waivers by checking the boxes.";
+      if (!waiverAcks[w.field_key]) return `Please check the box to acknowledge the waiver: ${w.title}`;
       if (!waiverSigs[w.field_key]) return `Please sign all waivers. Missing: ${w.title}`;
-      if (!waiverNames[w.field_key]?.trim()) return `Please type your name for all waiver signatures.`;
     }
     if (!formValues["final_signature_name"]?.trim()) return "Please type your name in the final confirmation box.";
 
@@ -261,6 +260,9 @@ const Register = () => {
     const validationError = validateForm();
     if (validationError) {
       toast({ title: "Validation Error", description: validationError, variant: "destructive" });
+      // Take them to the field the message is about; on a long form the
+      // toast alone reads as "the form is broken".
+      focusProblemField(problemFieldKey(validationError, formFields || [], waivers));
       return;
     }
 
@@ -276,7 +278,7 @@ const Register = () => {
       // Upload every waiver's signature and build the flexible waivers_data store.
       const waiverEntries = await Promise.all(waivers.map(async (w) => {
         const path = await uploadSignature(waiverSigs[w.field_key]!, w.field_key);
-        return [w.field_key, { title: w.title, name: (waiverNames[w.field_key] || "").trim(), signaturePath: path }] as const;
+        return [w.field_key, { title: w.title, name: (formValues["final_signature_name"] || "").trim(), signaturePath: path }] as const;
       }));
       const waiversData = Object.fromEntries(waiverEntries);
       const headshotUrl = await uploadHeadshot(childHeadshot!);
@@ -754,16 +756,16 @@ const Register = () => {
 
                 {/* Dynamic fields from DB — a field with a show-if condition
                     (e.g. inhaler info) only renders when its condition is met. */}
-                {questionFields.filter((f) => conditionMet(f.condition, formValues)).map(renderDynamicField)}
+                {questionFields.filter((f) => conditionMet(f.condition, formValues)).map((f) => (
+                  <div key={f.id} data-field-key={f.field_key}>{renderDynamicField(f)}</div>
+                ))}
 
                 {/* === WAIVERS (admin-editable via the Registration Form Editor; falls back to bundled defaults) === */}
                 {waivers.map((w) => (
-                  <div key={w.field_key} className="border-t pt-6">
+                  <div key={w.field_key} data-field-key={w.field_key} className="border-t pt-6">
                     <WaiverSection
                       title={w.title}
                       text={w.body}
-                      nameValue={waiverNames[w.field_key] || ""}
-                      onNameChange={(v) => setWaiverNames((prev) => ({ ...prev, [w.field_key]: v }))}
                       onSignatureChange={(blob) => setWaiverSigs((prev) => ({ ...prev, [w.field_key]: blob }))}
                       acknowledged={waiverAcks[w.field_key] || false}
                       onAcknowledgeChange={(v) => setWaiverAcks((prev) => ({ ...prev, [w.field_key]: v }))}
@@ -772,7 +774,7 @@ const Register = () => {
                 ))}
 
                 {/* Final typed name */}
-                <div className="border-t pt-6">
+                <div className="border-t pt-6" data-field-key="final_signature_name">
                   <Label htmlFor="final_signature_name" className="text-base font-medium">
                     Please TYPE the FIRST and LAST name used in the Signatures above. <span className="text-destructive">*</span>
                   </Label>
