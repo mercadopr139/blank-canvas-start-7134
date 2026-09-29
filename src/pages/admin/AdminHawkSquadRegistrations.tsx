@@ -277,6 +277,33 @@ const RegistrationDialog = ({
   });
   const set = (k: keyof typeof d, v: string) => setD((p) => ({ ...p, [k]: v }));
   const photo = hawkPhotoUrl(r.child_headshot_url);
+
+  // The drop-down lists come from the same place the registration form's do:
+  // the Hawk Squad form fields. Edit the CTE list in the Form Editor and this
+  // dialog follows. The constants in hawkSquad.ts are only the fallback.
+  const { data: formOptions = {} } = useQuery({
+    queryKey: ["hawk-form-options"],
+    queryFn: async (): Promise<Record<string, string[]>> => {
+      const { data } = await (supabase.from("hawk_squad_form_fields" as never) as never as {
+        select: (s: string) => { in: (k: string, v: string[]) => Promise<{ data: unknown }> };
+      }).select("field_key, options").in("field_key", ["grade_level", "cte_program", "child_sex", "child_race_ethnicity", "free_or_reduced_lunch"]);
+      const out: Record<string, string[]> = {};
+      for (const row of (data as Array<{ field_key: string; options: unknown }>) ?? []) {
+        let raw = row.options;
+        if (typeof raw === "string") { try { raw = JSON.parse(raw); } catch { raw = null; } }
+        if (Array.isArray(raw)) {
+          out[row.field_key] = raw.map((o) => (typeof o === "string" ? o : String((o as { value?: string; label?: string })?.value ?? (o as { label?: string })?.label ?? ""))).filter(Boolean);
+        }
+      }
+      return out;
+    },
+  });
+  const optionsFor = (k: keyof typeof d, fallback: readonly string[]): string[] => {
+    const fromForm = formOptions[k as string];
+    const list = fromForm?.length ? fromForm : [...fallback];
+    const cur = d[k];
+    return cur && !list.includes(cur) ? [...list, cur] : list; // keep an old answer selectable
+  };
   const waivers = Object.entries(r.waivers_data ?? {});
 
   const field = (label: string, k: keyof typeof d, type: "text" | "date" | "textarea" = "text") => (
@@ -325,12 +352,12 @@ const RegistrationDialog = ({
           <section className="grid gap-3 sm:grid-cols-2">
             {field("First name", "child_first_name")}
             {field("Last name", "child_last_name")}
-            {pick("Grade", "grade_level", HAWK_GRADES)}
-            {pick("CTE program", "cte_program", HAWK_CTE_PROGRAMS)}
-            {pick("Sex", "child_sex", HAWK_SEX)}
+            {pick("Grade", "grade_level", optionsFor("grade_level", HAWK_GRADES))}
+            {pick("CTE program", "cte_program", optionsFor("cte_program", HAWK_CTE_PROGRAMS))}
+            {pick("Sex", "child_sex", optionsFor("child_sex", HAWK_SEX))}
             {field("Date of birth", "child_date_of_birth", "date")}
-            {pick("Race / ethnicity", "child_race_ethnicity", HAWK_RACE)}
-            {pick("Free or reduced lunch", "free_or_reduced_lunch", ["Yes", "No"])}
+            {pick("Race / ethnicity", "child_race_ethnicity", optionsFor("child_race_ethnicity", HAWK_RACE))}
+            {pick("Free or reduced lunch", "free_or_reduced_lunch", optionsFor("free_or_reduced_lunch", ["Yes", "No"]))}
             <div className="sm:col-span-2">{field("Address", "child_primary_address")}</div>
           </section>
 

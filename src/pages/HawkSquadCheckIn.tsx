@@ -68,6 +68,9 @@ const HawkSquadCheckIn = () => {
     const t = setTimeout(async () => {
       setLoading(true);
       const { data, error } = await rpc("search_hawk_squad_youth", { _search: search.trim() });
+      // A failed search must not look like "no match": say so, so a coach
+      // knows the screen is the problem, not the spelling.
+      setError(error ? "The search isn't working right now. Please see a coach." : null);
       setResults(error ? [] : ((data as Student[]) ?? []));
       setLoading(false);
     }, 300);
@@ -107,7 +110,7 @@ const HawkSquadCheckIn = () => {
 
   const undo = async (s: Student) => {
     const { error } = await rpc("hawk_squad_kiosk_undo", { _registration_id: s.id });
-    if (error) return;
+    if (error) { setError("Couldn't undo that check-in. Please see a coach."); return; }
     setTodayIds((prev) => { const n = new Set(prev); n.delete(s.id); return n; });
   };
 
