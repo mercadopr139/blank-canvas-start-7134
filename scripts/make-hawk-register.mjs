@@ -162,7 +162,11 @@ if (doneStart < 0 || doneEnd < 0 || doneEnd < doneStart) { console.error("MISS s
 s = s.slice(0, doneStart) +
 `              <div className="space-y-3">
                 <h1 className="text-3xl font-bold text-foreground">Welcome to HAWK SQUAD!</h1>
-                <p className="text-xl text-foreground">See you Tuesdays &amp; Thursdays immediately after school!</p>
+                <p className="text-xl text-foreground">See you Tuesdays &amp; Thursdays immediately afterschool!</p>
+                <p className="text-base text-muted-foreground pt-2">
+                  If you have any questions, please email{" "}
+                  <a href="mailto:chrissycasiello@nolimitsboxingacademy.org" className="font-medium text-foreground underline">chrissycasiello@nolimitsboxingacademy.org</a>.
+                </p>
               </div>
 ` + s.slice(doneEnd);
 console.log("ok submitted screen");
