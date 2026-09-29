@@ -123,6 +123,7 @@ export const OPERATIONS_TILES: PillarTile[] = [
     href: "/admin/operations/hawk-squad/registrations",
     permKey: "operations_hawk_squad",
     children: [
+      { title: "Hawk Squad Intelligence", href: "/admin/operations/hawk-squad/intelligence", icon: BarChart3 },
       { title: "Registrations", href: "/admin/operations/hawk-squad/registrations", icon: Users },
       { title: "Attendance", href: "/admin/operations/hawk-squad/attendance", icon: ClipboardList },
       { title: "Form Editor", href: "/admin/operations/hawk-squad/form-builder", icon: Settings2 },

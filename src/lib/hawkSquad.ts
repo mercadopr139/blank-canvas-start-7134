@@ -136,6 +136,90 @@ export const isHawkPracticeDay = (date: string, overrides: Record<string, boolea
   return (HAWK_DEFAULT_WEEKDAYS as readonly number[]).includes(dow);
 };
 
+/* ───── Intelligence ───── */
+
+export interface HawkPeriodStats {
+  sessionsHeld: number;     // dates with at least one check-in
+  sessionsPlanned: number;  // Hawk Squad days in the period, up to today
+  checkIns: number;
+  students: number;         // distinct people (cross-year identity)
+  avgPerSession: number;
+  bus: number;
+  dismissed: number;
+}
+
+/** label → { bucket → count }, over distinct students. */
+export type HawkBreakdown = Record<string, Record<string, number>>;
+
+export interface HawkIntelRow {
+  registration_id: string;
+  check_in_date: string;
+  going_home: GoingHome;
+  reg: {
+    id: string;
+    youth_link_id: string | null;
+    child_first_name: string;
+    child_last_name: string;
+    child_headshot_url: string | null;
+    grade_level: string | null;
+    cte_program: string | null;
+    child_sex: string | null;
+    child_race_ethnicity: string | null;
+    free_or_reduced_lunch: string | null;
+  } | null;
+}
+
+export const hawkIdentity = (r: HawkIntelRow) => r.reg?.youth_link_id ?? r.registration_id;
+
+/** Every date between two YYYY-MM-DD dates, inclusive. */
+export const datesBetween = (from: string, to: string): string[] => {
+  const out: string[] = [];
+  const d = new Date(`${from}T12:00:00`);
+  const end = new Date(`${to}T12:00:00`);
+  const p = (n: number) => String(n).padStart(2, "0");
+  while (d <= end) {
+    out.push(`${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`);
+    d.setDate(d.getDate() + 1);
+  }
+  return out;
+};
+
+/** The period's headline figures. */
+export const hawkPeriodStats = (
+  rows: HawkIntelRow[], from: string, to: string, overrides: Record<string, boolean>, today = hawkTodayET(),
+): HawkPeriodStats => {
+  const sessionsHeld = new Set(rows.map((r) => r.check_in_date)).size;
+  const sessionsPlanned = datesBetween(from, to).filter((d) => d <= today && isHawkPracticeDay(d, overrides)).length;
+  const students = new Set(rows.map(hawkIdentity)).size;
+  return {
+    sessionsHeld,
+    sessionsPlanned,
+    checkIns: rows.length,
+    students,
+    avgPerSession: sessionsHeld ? Math.round((rows.length / sessionsHeld) * 10) / 10 : 0,
+    bus: rows.filter((r) => r.going_home === "bus").length,
+    dismissed: rows.filter((r) => r.going_home === "dismissed").length,
+  };
+};
+
+/** Demographics over distinct students. A student's latest row wins. */
+export const hawkBreakdown = (rows: HawkIntelRow[]): HawkBreakdown => {
+  const latest = new Map<string, HawkIntelRow>();
+  [...rows].sort((a, b) => a.check_in_date.localeCompare(b.check_in_date)).forEach((r) => latest.set(hawkIdentity(r), r));
+  const tally = (pick: (r: HawkIntelRow) => string | null | undefined) => {
+    const m: Record<string, number> = {};
+    latest.forEach((r) => { const k = (pick(r) ?? "").trim() || "Not given"; m[k] = (m[k] ?? 0) + 1; });
+    return m;
+  };
+  return {
+    Grade: tally((r) => r.reg?.grade_level),
+    "CTE program": tally((r) => r.reg?.cte_program),
+    Sex: tally((r) => r.reg?.child_sex),
+    "Race / ethnicity": tally((r) => r.reg?.child_race_ethnicity),
+    "Free or reduced lunch": tally((r) => r.reg?.free_or_reduced_lunch),
+  };
+};
+
 /** Every date in a month, as YYYY-MM-DD, for the calendar. */
 export const datesInMonth = (year: number, month0: number): string[] => {
   const out: string[] = [];
