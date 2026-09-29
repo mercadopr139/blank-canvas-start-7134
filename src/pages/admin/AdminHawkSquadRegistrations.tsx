@@ -26,7 +26,7 @@ import {
   HAWK_GRADES, HAWK_CTE_PROGRAMS, HAWK_SEX, HAWK_RACE, HAWK_DISMISSAL_WAIVER_KEY,
   type HawkRegistration, hawkPhotoUrl, hawkSignatureUrl,
 } from "@/lib/hawkSquad";
-import { formatPhoneDisplay } from "@/lib/validators";
+import { e164ToDisplay } from "@/lib/validators";
 
 const table = () => supabase.from("hawk_squad_registrations" as never) as never as {
   select: (s: string) => {
@@ -120,13 +120,13 @@ const AdminHawkSquadRegistrations = () => {
           </p>
           <p className="text-xs text-white/45 truncate">
             {r.cte_program || "No CTE program"} · {[r.parent_first_name, r.parent_last_name].filter(Boolean).join(" ") || "No parent name"}
-            {r.parent_phone ? ` · ${formatPhoneDisplay(r.parent_phone)}` : ""}
+            {r.parent_phone ? ` · ${e164ToDisplay(r.parent_phone)}` : ""}
           </p>
         </div>
         <div className="flex items-center gap-1.5 shrink-0">
           {r.dismissal_waiver_signed_at ? (
-            <Badge className="bg-sky-500/15 text-sky-300 border-sky-400/30 text-[10px]" title="Dismissal waiver on file">
-              <Bus className="w-3 h-3 mr-1" /> Bus or dismissed
+            <Badge className="bg-sky-500/15 text-sky-300 border-sky-400/30 text-[10px]" title="Dismissal waiver on file — may be dismissed directly from NLA instead of riding the bus">
+              <Bus className="w-3 h-3 mr-1" /> Bus or dismissed from NLA
             </Badge>
           ) : (
             <Badge className="bg-white/5 text-white/50 border-white/10 text-[10px]" title="No dismissal waiver — bus only">
