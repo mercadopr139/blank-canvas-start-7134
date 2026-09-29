@@ -530,7 +530,7 @@ const AdminFormBuilder = ({
             <DialogTitle>Form Preview</DialogTitle>
           </DialogHeader>
           <ScrollArea className="flex-1">
-            <FormPreview fields={fields.filter(f => f.is_active)} />
+            <FormPreview fields={fields.filter(f => f.is_active)} program={table === "hawk_squad_form_fields" ? "hawk" : "nla"} />
           </ScrollArea>
         </DialogContent>
       </Dialog>

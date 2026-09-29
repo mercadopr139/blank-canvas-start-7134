@@ -27,7 +27,10 @@ type FormField = {
   section: string | null;
 };
 
-const FormPreview = ({ fields }: { fields: FormField[] }) => {
+// `program` decides the framing: NLA's heading on the default background,
+// or Hawk Squad's heading on Hawk Squad green -- the same as the live forms.
+const FormPreview = ({ fields, program = "nla" }: { fields: FormField[]; program?: "nla" | "hawk" }) => {
+  const hawk = program === "hawk";
   const sorted = [...fields].sort((a, b) => a.sort_order - b.sort_order);
 
   const parseOptions = (opts: any): string[] => {
@@ -200,16 +203,16 @@ const FormPreview = ({ fields }: { fields: FormField[] }) => {
   };
 
   return (
-    <Card className="shadow-lg">
-      <CardContent className="pt-8 pb-8">
+    <Card className={hawk ? "shadow-lg bg-[#0f4c2f] border-0" : "shadow-lg"}>
+      <CardContent className={hawk ? "pt-8 pb-8 m-3 rounded-lg bg-background" : "pt-8 pb-8"}>
         <div className="text-center mb-8">
           <img src={nlaLogo} alt="No Limits Academy" className="w-20 h-20 mx-auto mb-4 object-contain" />
           {/* Same derivation as the live form, so the preview cannot show a
               different year from the thing it is previewing. */}
           <h1 className="text-2xl font-bold mb-2">
-            {shortProgramYear(getProgramYearForRegistration())} Registration
+            {shortProgramYear(getProgramYearForRegistration())} {hawk ? "Hawk Squad " : ""}Registration
           </h1>
-          <p className="text-muted-foreground text-sm">Must complete before participation at No Limits Academy.</p>
+          <p className="text-muted-foreground text-sm">Must complete before participation {hawk ? "in Hawk Squad " : ""}at No Limits Academy.</p>
         </div>
         <div className="space-y-6">
           {sorted.map(renderField)}
