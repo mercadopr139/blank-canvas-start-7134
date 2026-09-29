@@ -153,6 +153,18 @@ must(
   "waiver required prop"
 );
 
+// ── The submitted screen: a welcome, not NLA's practice hours. ──
+const doneStart = s.indexOf('              <div className="space-y-2">\n                <h1 className="text-3xl font-bold text-foreground">Registration Submitted</h1>');
+const doneEnd = s.indexOf('              <div className="pt-4">\n                <Button onClick={() => navigate("/")}');
+if (doneStart < 0 || doneEnd < 0 || doneEnd < doneStart) { console.error("MISS submitted screen span"); process.exit(1); }
+s = s.slice(0, doneStart) +
+`              <div className="space-y-3">
+                <h1 className="text-3xl font-bold text-foreground">Welcome to HAWK SQUAD!</h1>
+                <p className="text-xl text-foreground">See you Tuesdays &amp; Thursdays immediately after school!</p>
+              </div>
+` + s.slice(doneEnd);
+console.log("ok submitted screen");
+
 // ── Header comment ──
 s = s.replace(/^/, `// Hawk Squad registration -- the public form at /hawk-squad/register.
 //
