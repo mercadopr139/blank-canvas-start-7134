@@ -165,6 +165,10 @@ s = s.slice(0, doneStart) +
 ` + s.slice(doneEnd);
 console.log("ok submitted screen");
 
+// ── Hawk Squad green behind the form (both the form and the submitted screen). ──
+mustAll('<div className="min-h-screen flex flex-col bg-background">',
+        '<div className="min-h-screen flex flex-col bg-[#0f4c2f]">', "green background");
+
 // ── Header comment ──
 s = s.replace(/^/, `// Hawk Squad registration -- the public form at /hawk-squad/register.
 //

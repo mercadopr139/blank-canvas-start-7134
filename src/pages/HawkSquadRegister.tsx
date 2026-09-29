@@ -616,7 +616,7 @@ const HawkSquadRegister = () => {
 
   if (isSubmitted) {
     return (
-      <div className="min-h-screen flex flex-col bg-background">
+      <div className="min-h-screen flex flex-col bg-[#0f4c2f]">
         <Header />
         <main className="flex-1 container max-w-2xl mx-auto px-4 py-12">
           <Card className="border-2 border-primary/20 shadow-lg">
@@ -644,7 +644,7 @@ const HawkSquadRegister = () => {
   }
 
   return (
-    <div className="min-h-screen flex flex-col bg-background">
+    <div className="min-h-screen flex flex-col bg-[#0f4c2f]">
       <Header />
       <main className="flex-1 container mx-auto px-4 py-8 max-w-xl">
         <Card className="shadow-lg">
