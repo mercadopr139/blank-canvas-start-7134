@@ -228,8 +228,11 @@ const FieldEditorDialog = ({
               <Input value={draft.default_value || ""} onChange={e => setDraft({ ...draft, default_value: e.target.value || null })} className="mt-1" />
             </div>
 
-            <div className="flex items-center justify-between">
-              <Label>Required</Label>
+            <div className="flex items-center justify-between rounded-lg border border-border bg-muted/30 px-4 py-3 mt-2">
+              <div>
+                <Label>Required</Label>
+                <p className="text-xs text-muted-foreground">Parents can't submit without answering.</p>
+              </div>
               <Switch checked={draft.required} onCheckedChange={v => setDraft({ ...draft, required: v })} />
             </div>
 
@@ -251,7 +254,7 @@ const FieldEditorDialog = ({
             </>)}
           </div>
         </ScrollArea>
-        <DialogFooter>
+        <DialogFooter className="mt-4 pt-4 border-t border-border">
           <Button variant="outline" onClick={onClose}>Cancel</Button>
           <Button onClick={() => onSave(draft)}>Save Changes</Button>
         </DialogFooter>
