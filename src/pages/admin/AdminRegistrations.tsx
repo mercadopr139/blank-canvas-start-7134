@@ -240,7 +240,7 @@ const AdminRegistrations = () => {
   };
 
   const hasMedicalAlerts = (reg: any) => {
-    return isMedicalConcern(reg.allergies) || isMedicalConcern(reg.asthma_inhaler_info) || reg.custom_fields_data?.has_asthma === "Yes";
+    return isMedicalConcern(reg.allergies) || isMedicalConcern(reg.asthma_inhaler_info) || reg.custom_fields_data?.has_asthma === "Yes" || reg.custom_fields_data?.has_allergies === "Yes";
   };
 
 
@@ -1263,7 +1263,7 @@ const RegistrationDetail = ({ registration: reg, onApprovalChange }: { registrat
         </CardContent>
       </Card>
 
-      {(isMedicalConcern(reg.allergies) || isMedicalConcern(reg.asthma_inhaler_info) || reg.custom_fields_data?.has_asthma === "Yes") && (
+      {(isMedicalConcern(reg.allergies) || isMedicalConcern(reg.asthma_inhaler_info) || reg.custom_fields_data?.has_asthma === "Yes" || reg.custom_fields_data?.has_allergies === "Yes") && (
         <Card className="border-destructive bg-destructive/5">
           <CardHeader className="pb-2">
             <CardTitle className="text-destructive flex items-center gap-2 text-base">
@@ -1313,7 +1313,7 @@ const RegistrationDetail = ({ registration: reg, onApprovalChange }: { registrat
       </Section>
 
       <Section title="Medical & Notes">
-        <InfoRow label="Allergies" value={reg.allergies || "None reported"} />
+        <InfoRow label="Allergies" value={reg.allergies || (reg.custom_fields_data?.has_allergies === "No" ? "None" : "None reported")} />
         <InfoRow label="Asthma / Inhaler" value={reg.asthma_inhaler_info || "None reported"} />
         <InfoRow label="Important Notes" value={reg.important_child_notes || "None"} />
       </Section>

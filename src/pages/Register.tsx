@@ -362,7 +362,10 @@ const Register = () => {
         siblings_breakdown: siblingsVal || null,
         household_income_range: formValues["household_income_range"] as any,
         free_or_reduced_lunch: (formValues["free_or_reduced_lunch"] as any) || null,
-        allergies: (formValues["allergies"] || "").trim() || null,
+        // Only null the list when they explicitly answered "No" to allergies
+        // (same rule as the inhaler below), so a form without the Yes/No
+        // question still saves whatever was typed.
+        allergies: formValues["has_allergies"] === "No" ? null : ((formValues["allergies"] || "").trim() || null),
         // Only save inhaler info when they answered Yes to asthma (the field is
         // hidden otherwise), so a "No" child never carries stale inhaler text.
         // Only null it out when they explicitly answered "No". If the has_asthma
