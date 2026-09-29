@@ -13,6 +13,37 @@ const LOGO_URL = "https://rkdkmzjontaufbyjbcku.supabase.co/storage/v1/object/pub
 const PRIMARY_EMAIL = "chrissycasiello@nolimitsboxingacademy.org";
 const CC_EMAIL = "joshmercado@nolimitsboxingacademy.org";
 const DASHBOARD_URL = "https://www.nolimitsboxingacademy.org/admin/operations/registrations";
+const HAWK_DASHBOARD_URL = "https://www.nolimitsboxingacademy.org/admin/operations/hawk-squad/registrations";
+
+// Hawk Squad registrations arrive through the same function (the Hawk form
+// sends child_boxing_program = "Hawk Squad"). They get their own look -- a
+// green header that says HAWK SQUAD in white -- so Josh and Chrissy can tell
+// at a glance which programme a registration is for, and the button goes to
+// the Hawk Squad list rather than NLA's.
+const isHawkSquad = (reg: RegistrationData) => (reg.child_boxing_program || "").trim().toLowerCase() === "hawk squad";
+
+interface Theme {
+  headerBg: string; headerText: string; banner: string | null; heading: string; intro: string;
+  button: string; buttonBg: string; url: string; footer: string; subject: string;
+}
+const themeFor = (reg: RegistrationData, childName: string): Theme =>
+  isHawkSquad(reg)
+    ? {
+        headerBg: "#15803d", headerText: "#dcfce7", banner: "HAWK SQUAD",
+        heading: "New Hawk Squad Registration",
+        intro: "A new Hawk Squad student is awaiting your review and approval.",
+        button: "Review Hawk Squad Registration →", buttonBg: "#15803d", url: HAWK_DASHBOARD_URL,
+        footer: "Hawk Squad · No Limits Academy × Cape May Tech",
+        subject: `New Hawk Squad Registration – ${childName}`,
+      }
+    : {
+        headerBg: "#111111", headerText: "#9ca3af", banner: null,
+        heading: "New Registration",
+        intro: "A new youth registration is awaiting your review and approval.",
+        button: "Review Registration →", buttonBg: "#111", url: DASHBOARD_URL,
+        footer: "No Limits Academy · Cape May County, NJ",
+        subject: theme.subject,
+      };
 
 interface RegistrationData {
   child_first_name: string;
@@ -63,6 +94,10 @@ function renderEmailHtml(reg: RegistrationData): string {
   const phone = escapeHtml(reg.parent_phone);
   const email = escapeHtml(reg.parent_email);
   const submissionDate = escapeHtml(reg.submission_date);
+  const t = themeFor(reg, `${reg.child_first_name} ${reg.child_last_name}`);
+  const bannerBlock = t.banner
+    ? `<p style="color:#ffffff;font-size:26px;font-weight:800;letter-spacing:4px;margin:0 0 8px 0;font-family:Arial,Helvetica,sans-serif;">${t.banner}</p>`
+    : "";
 
   const resolvedHeadshot = resolveHeadshotUrl(reg.child_headshot_url);
   const headshotBlock = resolvedHeadshot
@@ -80,15 +115,16 @@ function renderEmailHtml(reg: RegistrationData): string {
       <table role="presentation" width="600" cellpadding="0" cellspacing="0" style="background-color:#ffffff;border-radius:16px;overflow:hidden;box-shadow:0 8px 30px rgba(0,0,0,0.06);">
         
         <!-- Header -->
-        <tr><td style="background-color:#111111;padding:32px 32px 28px 32px;text-align:center;">
+        <tr><td style="background-color:${t.headerBg};padding:32px 32px 28px 32px;text-align:center;">
           <img src="${LOGO_URL}" alt="NLA" style="height:56px;margin-bottom:10px;" />
-          <p style="color:#9ca3af;font-size:12px;margin:0;font-style:italic;letter-spacing:0.3px;">Through boxing, we develop children personally, professionally, &amp; spiritually.</p>
+          ${bannerBlock}
+          <p style="color:${t.headerText};font-size:12px;margin:0;font-style:italic;letter-spacing:0.3px;">Through boxing, we develop children personally, professionally, &amp; spiritually.</p>
         </td></tr>
 
         <!-- Body -->
         <tr><td style="padding:36px 36px 28px 36px;">
-          <h1 style="color:#111;font-size:24px;margin:0 0 6px 0;font-weight:700;">New Registration</h1>
-          <p style="color:#6b7280;font-size:14px;margin:0 0 28px 0;line-height:1.5;">A new youth registration is awaiting your review and approval.</p>
+          <h1 style="color:#111;font-size:24px;margin:0 0 6px 0;font-weight:700;">${t.heading}</h1>
+          <p style="color:#6b7280;font-size:14px;margin:0 0 28px 0;line-height:1.5;">${t.intro}</p>
 
           ${headshotBlock}
 
@@ -142,8 +178,8 @@ function renderEmailHtml(reg: RegistrationData): string {
           <!-- CTA Button -->
           <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
             <tr><td style="padding:32px 0 0 0;text-align:center;">
-              <a href="${DASHBOARD_URL}" style="display:inline-block;background-color:#111;color:#ffffff;font-size:14px;font-weight:600;padding:14px 36px;border-radius:10px;text-decoration:none;letter-spacing:0.3px;">
-                Review Registration →
+              <a href="${t.url}" style="display:inline-block;background-color:${t.buttonBg};color:#ffffff;font-size:14px;font-weight:600;padding:14px 36px;border-radius:10px;text-decoration:none;letter-spacing:0.3px;">
+                ${t.button}
               </a>
             </td></tr>
           </table>
@@ -151,7 +187,7 @@ function renderEmailHtml(reg: RegistrationData): string {
 
         <!-- Footer -->
         <tr><td style="padding:24px 36px;background-color:#fafafa;border-top:1px solid #eee;text-align:center;">
-          <p style="color:#b0b0b0;font-size:11px;margin:0;letter-spacing:0.2px;">No Limits Academy · Cape May County, NJ</p>
+          <p style="color:#b0b0b0;font-size:11px;margin:0;letter-spacing:0.2px;">${t.footer}</p>
         </td></tr>
 
       </table>
@@ -188,6 +224,7 @@ Deno.serve(async (req) => {
     }
 
     const childName = `${registration.child_first_name} ${registration.child_last_name}`;
+    const theme = themeFor(registration, childName);
 
     const { error } = await resend.emails.send({
       from: "NLA Notifications <joshmercado@nolimitsboxingacademy.org>",
@@ -195,7 +232,7 @@ Deno.serve(async (req) => {
       cc: [CC_EMAIL],
       subject: `New Youth Registration – ${childName}`,
       html: renderEmailHtml(registration),
-      text: `New youth registration submitted.\n\nChild: ${childName}\nProgram: ${registration.child_boxing_program}\nDistrict: ${registration.child_school_district}\nParent: ${registration.parent_first_name} ${registration.parent_last_name}\nPhone: ${registration.parent_phone}\nEmail: ${registration.parent_email}\nSubmitted: ${registration.submission_date}\n\nReview at: ${DASHBOARD_URL}`,
+      text: `${theme.heading} submitted.\n\nChild: ${childName}\nProgram: ${registration.child_boxing_program}\nDistrict: ${registration.child_school_district}\nParent: ${registration.parent_first_name} ${registration.parent_last_name}\nPhone: ${registration.parent_phone}\nEmail: ${registration.parent_email}\nSubmitted: ${registration.submission_date}\n\nReview at: ${theme.url}`,
     });
 
     if (error) {
