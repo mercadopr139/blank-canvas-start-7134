@@ -72,6 +72,7 @@ export interface HawkRegistration {
   parent_phone: string | null;
   parent_email: string | null;
   free_or_reduced_lunch: string | null;
+  has_allergies: boolean | null;
   allergies: string | null;
   has_asthma: boolean | null;
   asthma_inhaler_info: string | null;

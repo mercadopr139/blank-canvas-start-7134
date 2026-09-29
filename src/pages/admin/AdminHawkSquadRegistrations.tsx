@@ -415,7 +415,15 @@ const RegistrationDialog = ({
           </section>
 
           <section className="grid gap-3">
-            {field("Allergies", "allergies", "textarea")}
+            <div>
+              <Label className="text-[11px] uppercase tracking-wide text-neutral-500">
+                Allergies · {r.has_allergies === true ? "Yes" : r.has_allergies === false ? "No" : "not answered"}
+              </Label>
+              {r.has_allergies !== false && (
+                <Textarea value={d.allergies} onChange={(e) => set("allergies", e.target.value)} rows={2}
+                  placeholder="Allergies and how severe" className="mt-1 bg-neutral-800 border-neutral-700 text-white text-sm" />
+              )}
+            </div>
             <div>
               <Label className="text-[11px] uppercase tracking-wide text-neutral-500">
                 Asthma · {r.has_asthma === true ? "Yes" : r.has_asthma === false ? "No" : "not answered"}

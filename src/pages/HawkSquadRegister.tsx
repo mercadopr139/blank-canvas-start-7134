@@ -333,7 +333,9 @@ const HawkSquadRegister = () => {
         parent_phone: toE164(formValues["parent_phone"] || "") || (formValues["parent_phone"] || "").trim(),
         parent_email: (formValues["parent_email"] || "").trim(),
         free_or_reduced_lunch: formValues["free_or_reduced_lunch"] || null,
-        allergies: (formValues["allergies"] || "").trim() || null,
+        has_allergies: formValues["has_allergies"] === "Yes" ? true : formValues["has_allergies"] === "No" ? false : null,
+        // The list only when they answered Yes -- the field is hidden otherwise.
+        allergies: formValues["has_allergies"] === "Yes" ? ((formValues["allergies"] || "").trim() || null) : null,
         has_asthma: formValues["has_asthma"] === "Yes" ? true : formValues["has_asthma"] === "No" ? false : null,
         // Inhaler details only when they answered Yes -- the field is hidden otherwise.
         asthma_inhaler_info: formValues["has_asthma"] === "Yes" ? ((formValues["asthma_inhaler_info"] || "").trim() || null) : null,
