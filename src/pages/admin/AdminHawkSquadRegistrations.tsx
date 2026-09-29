@@ -26,7 +26,7 @@ import {
   HAWK_GRADES, HAWK_CTE_PROGRAMS, HAWK_SEX, HAWK_RACE, HAWK_DISMISSAL_WAIVER_KEY,
   type HawkRegistration, hawkPhotoUrl, hawkSignatureUrl, hawkPossibleDuplicates,
 } from "@/lib/hawkSquad";
-import { AlertTriangle } from "lucide-react";
+import { AlertTriangle, Trash2 } from "lucide-react";
 import { e164ToDisplay } from "@/lib/validators";
 
 const table = () => supabase.from("hawk_squad_registrations" as never) as never as {
@@ -34,6 +34,7 @@ const table = () => supabase.from("hawk_squad_registrations" as never) as never 
     order: (k: string, o: { ascending: boolean }) => Promise<{ data: unknown; error: unknown }>;
   };
   update: (v: Record<string, unknown>) => { eq: (k: string, v: string) => Promise<{ error: unknown }> };
+  delete: () => { eq: (k: string, v: string) => Promise<{ error: unknown }> };
 };
 
 const fmtDate = (iso: string | null | undefined) => {
@@ -90,6 +91,34 @@ const AdminHawkSquadRegistrations = () => {
   const waiting = inYear.filter((r) => !r.approved_for_attendance);
   const approved = inYear.filter((r) => r.approved_for_attendance);
   const open = rows.find((r) => r.id === openId) ?? null;
+
+  // Delete for good: the registration, its check-ins (the database cascades),
+  // and its photo and signature files. Archive is the reversible option; this
+  // is for a test entry or a registration that should never have existed.
+  const remove = async (r: HawkRegistration) => {
+    const name = `${r.child_first_name} ${r.child_last_name}`;
+    if (!window.confirm(`Delete ${name}'s Hawk Squad registration for good?
+
+This also deletes every check-in recorded for it and cannot be undone. Use Archive instead if you might need it back.`)) return;
+    setBusyId(r.id);
+    try {
+      // Files first, best effort: a missing file must not block the delete.
+      if (r.child_headshot_url) {
+        await supabase.storage.from("youth-photos").remove([r.child_headshot_url.replace(/^youth-photos\//, "")]);
+      }
+      const sigs = Object.values(r.waivers_data ?? {}).map((w) => w?.signaturePath).filter((p): p is string => !!p);
+      if (sigs.length) await supabase.storage.from("registration-signatures").remove(sigs);
+      const { error } = await table().delete().eq("id", r.id);
+      if (error) throw error as Error;
+      setOpenId(null);
+      await qc.invalidateQueries({ queryKey: ["hawk-squad-registrations"] });
+      toast.success(`${name}'s registration was deleted.`);
+    } catch (e) {
+      toast.error((e as Error)?.message ?? "Couldn't delete that.");
+    } finally {
+      setBusyId(null);
+    }
+  };
 
   const patch = async (id: string, values: Record<string, unknown>, done: string) => {
     setBusyId(id);
@@ -256,6 +285,7 @@ const AdminHawkSquadRegistrations = () => {
           busy={busyId === open.id}
           onClose={() => setOpenId(null)}
           onSave={(values, done) => patch(open.id, values, done)}
+          onDelete={() => remove(open)}
         />
       )}
     </div>
@@ -264,12 +294,14 @@ const AdminHawkSquadRegistrations = () => {
 
 /* ───── The full record ───── */
 const RegistrationDialog = ({
-  r, busy, onClose, onSave,
+  r,
+  onDelete, busy, onClose, onSave,
 }: {
   r: HawkRegistration;
   busy: boolean;
   onClose: () => void;
   onSave: (values: Record<string, unknown>, done: string) => Promise<void>;
+  onDelete: () => Promise<void>;
 }) => {
   const [d, setD] = useState({
     child_first_name: r.child_first_name ?? "",
@@ -452,6 +484,9 @@ const RegistrationDialog = ({
               <Archive className="w-4 h-4 mr-1.5" /> Archive
             </Button>
           )}
+          <Button variant="ghost" disabled={busy} className="text-white/40 hover:text-rose-300" title="Delete for good — cannot be undone" onClick={onDelete}>
+            <Trash2 className="w-4 h-4 mr-1.5" /> Delete
+          </Button>
           <Button variant="ghost" onClick={onClose} className="text-white/60 hover:text-white">Close</Button>
           <Button disabled={busy} className="font-bold text-white" style={{ backgroundColor: "#16a34a" }}
             onClick={() => onSave(
