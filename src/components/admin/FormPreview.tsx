@@ -1,4 +1,5 @@
 import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -25,6 +26,14 @@ type FormField = {
   db_column: string | null;
   default_value: string | null;
   section: string | null;
+  // Show-if, as the live form reads it (e.g. inhaler info when has_asthma = Yes).
+  condition?: { field: string; op?: string; value?: string } | string | null;
+};
+
+const conditionOf = (f: FormField): { field: string; op?: string; value?: string } | null => {
+  if (!f.condition) return null;
+  if (typeof f.condition === "string") { try { return JSON.parse(f.condition); } catch { return null; } }
+  return f.condition;
 };
 
 // `program` decides the framing: NLA's heading on the default background,
@@ -32,6 +41,7 @@ type FormField = {
 const FormPreview = ({ fields, program = "nla" }: { fields: FormField[]; program?: "nla" | "hawk" }) => {
   const hawk = program === "hawk";
   const sorted = [...fields].sort((a, b) => a.sort_order - b.sort_order);
+  const labelOf = (key: string) => fields.find((x) => x.field_key === key)?.label ?? key;
 
   const parseOptions = (opts: any): string[] => {
     if (!opts) return [];
@@ -187,9 +197,16 @@ const FormPreview = ({ fields, program = "nla" }: { fields: FormField[]; program
       case "waiver":
         return (
           <div key={field.id} className="border-t pt-4">
-            <h3 className="text-lg font-semibold">{field.label}</h3>
+            {field.help_text && (
+              <p className="text-sm font-medium text-amber-700 bg-amber-50 border border-amber-200 rounded-md px-3 py-2 mb-3">{field.help_text}</p>
+            )}
+            <h3 className="text-lg font-semibold">
+              {field.label}{!field.required && <span className="ml-2 text-sm font-normal text-muted-foreground">(optional)</span>}
+            </h3>
             <RichText html={field.default_value} className="text-sm text-muted-foreground max-h-40 overflow-auto border rounded p-2 mt-2 block" />
-            <p className="text-xs text-muted-foreground mt-2">☑ Acknowledgement + typed name + drawn signature required</p>
+            <p className="text-xs text-muted-foreground mt-2">
+              ☑ "I have read and agree" box + drawn signature{field.required ? " required" : " (only if the parent chooses to sign)"}. The name is typed once at the end.
+            </p>
           </div>
         );
       default:
@@ -200,6 +217,18 @@ const FormPreview = ({ fields, program = "nla" }: { fields: FormField[]; program
           </div>
         );
     }
+  };
+
+  const renderWithRule = (field: FormField) => {
+    const c = conditionOf(field);
+    if (!c?.field) return renderField(field);
+    const rule = c.op === "neq" ? `is not "${c.value ?? ""}"` : c.op === "answered" ? "is answered" : `is "${c.value ?? ""}"`;
+    return (
+      <div key={field.id} className="rounded-md border border-dashed border-amber-300 bg-amber-50/40 p-3">
+        <p className="text-[11px] font-medium text-amber-700 mb-2">Only shown when "{labelOf(c.field)}" {rule}</p>
+        {renderField(field)}
+      </div>
+    );
   };
 
   return (
@@ -215,9 +244,19 @@ const FormPreview = ({ fields, program = "nla" }: { fields: FormField[]; program
           <p className="text-muted-foreground text-sm">Must complete before participation {hawk ? "in Hawk Squad " : ""}at No Limits Academy.</p>
         </div>
         <div className="space-y-6">
-          {sorted.map(renderField)}
-          <div className="border-t pt-6 text-center text-sm text-muted-foreground">
-            <p>— Waivers & Signatures section follows below —</p>
+          <div>
+            <Label className="text-base font-medium">Today's Date <span className="text-destructive">*</span></Label>
+            <Input type="date" value={new Date().toISOString().split("T")[0]} disabled className="mt-2 bg-muted" />
+          </div>
+          {sorted.map(renderWithRule)}
+          <div className="border-t pt-6">
+            <Label className="text-base font-medium">
+              Please TYPE the FIRST and LAST name used in the Signatures above. <span className="text-destructive">*</span>
+            </Label>
+            <Input className="mt-2" disabled />
+          </div>
+          <div className="pt-2">
+            <Button type="button" size="lg" disabled className="w-full">Submit</Button>
           </div>
         </div>
       </CardContent>
