@@ -42,7 +42,7 @@ const themeFor = (reg: RegistrationData, childName: string): Theme =>
         intro: "A new youth registration is awaiting your review and approval.",
         button: "Review Registration →", buttonBg: "#111", url: DASHBOARD_URL,
         footer: "No Limits Academy · Cape May County, NJ",
-        subject: theme.subject,
+        subject: `New Youth Registration – ${childName}`,
       };
 
 interface RegistrationData {
@@ -230,7 +230,7 @@ Deno.serve(async (req) => {
       from: "NLA Notifications <joshmercado@nolimitsboxingacademy.org>",
       to: [PRIMARY_EMAIL],
       cc: [CC_EMAIL],
-      subject: `New Youth Registration – ${childName}`,
+      subject: theme.subject,
       html: renderEmailHtml(registration),
       text: `${theme.heading} submitted.\n\nChild: ${childName}\nProgram: ${registration.child_boxing_program}\nDistrict: ${registration.child_school_district}\nParent: ${registration.parent_first_name} ${registration.parent_last_name}\nPhone: ${registration.parent_phone}\nEmail: ${registration.parent_email}\nSubmitted: ${registration.submission_date}\n\nReview at: ${theme.url}`,
     });
