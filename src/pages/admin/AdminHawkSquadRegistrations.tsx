@@ -125,7 +125,7 @@ const AdminHawkSquadRegistrations = () => {
         </div>
         <div className="flex items-center gap-1.5 shrink-0">
           {r.dismissal_waiver_signed_at ? (
-            <Badge className="bg-sky-500/15 text-sky-300 border-sky-400/30 text-[10px]" title="Dismissal waiver on file — may be dismissed directly from NLA instead of riding the bus">
+            <Badge className="bg-amber-500/15 text-amber-300 border-amber-400/30 text-[10px]" title="Dismissal waiver on file — may be dismissed directly from NLA instead of riding the bus">
               <Bus className="w-3 h-3 mr-1" /> Bus or dismiss from NLA
             </Badge>
           ) : (
