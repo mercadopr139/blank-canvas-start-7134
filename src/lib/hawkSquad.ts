@@ -136,6 +136,35 @@ export const isHawkPracticeDay = (date: string, overrides: Record<string, boolea
   return (HAWK_DEFAULT_WEEKDAYS as readonly number[]).includes(dow);
 };
 
+/* ───── Duplicates ───── */
+
+type StudentLike = {
+  id: string; child_first_name: string | null; child_last_name: string | null; child_date_of_birth: string | null;
+  parent_phone: string | null; parent_email: string | null; program_year: string | null; archived_at: string | null;
+};
+
+const squash = (s: string | null | undefined) => (s ?? "").toLowerCase().replace(/[^a-z0-9]/g, "");
+const digits = (s: string | null | undefined) => (s ?? "").replace(/\D/g, "");
+
+/**
+ * Are two registrations clearly the same student? Same first and last name
+ * with spacing and punctuation stripped, plus a shared birthday, parent phone
+ * or parent email. The same rule the database guard uses when approving.
+ */
+export const isSameHawkStudent = (a: StudentLike, b: StudentLike): boolean => {
+  if (a.id === b.id) return false;
+  if (!squash(a.child_first_name) || squash(a.child_first_name) !== squash(b.child_first_name)) return false;
+  if (squash(a.child_last_name) !== squash(b.child_last_name)) return false;
+  const dob = !!a.child_date_of_birth && a.child_date_of_birth === b.child_date_of_birth;
+  const phone = !!digits(a.parent_phone) && digits(a.parent_phone) === digits(b.parent_phone);
+  const email = !!a.parent_email?.trim() && a.parent_email.trim().toLowerCase() === (b.parent_email ?? "").trim().toLowerCase();
+  return dob || phone || email;
+};
+
+/** Other live registrations in the same year that look like the same student. */
+export const hawkPossibleDuplicates = <T extends StudentLike>(r: T, all: T[]): T[] =>
+  all.filter((o) => !o.archived_at && o.program_year === r.program_year && isSameHawkStudent(r, o));
+
 /* ───── Brand ───── */
 
 // Hawk Squad's own look, from its flyers and the mid-year report: deep green,

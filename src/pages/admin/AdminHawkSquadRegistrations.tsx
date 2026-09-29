@@ -24,8 +24,9 @@ import {
 import { getProgramYearForRegistration, shortProgramYear } from "@/lib/programYear";
 import {
   HAWK_GRADES, HAWK_CTE_PROGRAMS, HAWK_SEX, HAWK_RACE, HAWK_DISMISSAL_WAIVER_KEY,
-  type HawkRegistration, hawkPhotoUrl, hawkSignatureUrl,
+  type HawkRegistration, hawkPhotoUrl, hawkSignatureUrl, hawkPossibleDuplicates,
 } from "@/lib/hawkSquad";
+import { AlertTriangle } from "lucide-react";
 import { e164ToDisplay } from "@/lib/validators";
 
 const table = () => supabase.from("hawk_squad_registrations" as never) as never as {
@@ -107,6 +108,10 @@ const AdminHawkSquadRegistrations = () => {
   const Row = ({ r }: { r: HawkRegistration }) => {
     const photo = hawkPhotoUrl(r.child_headshot_url);
     const age = ageOn(r.child_date_of_birth);
+    // Another live registration this year that looks like the same student.
+    // Review before approving: approving this one moves that one back to
+    // waiting (the database guard), so the student has one attendable record.
+    const dups = hawkPossibleDuplicates(r, rows);
     return (
       <div className="flex items-center gap-3 px-4 py-3 border-b border-white/[0.06] last:border-b-0">
         <div className="w-10 h-10 rounded-full overflow-hidden bg-white/10 shrink-0 ring-1 ring-white/15">
@@ -122,6 +127,12 @@ const AdminHawkSquadRegistrations = () => {
             {r.cte_program || "No CTE program"} · {[r.parent_first_name, r.parent_last_name].filter(Boolean).join(" ") || "No parent name"}
             {r.parent_phone ? ` · ${e164ToDisplay(r.parent_phone)}` : ""}
           </p>
+          {dups.length > 0 && (
+            <p className="mt-1 text-[11px] text-amber-300 flex items-center gap-1">
+              <AlertTriangle className="w-3 h-3 shrink-0" />
+              Possible duplicate of {dups.map((d) => `${d.child_first_name} ${d.child_last_name} (${d.approved_for_attendance ? "approved" : "waiting"}, submitted ${fmtDate(d.submission_date ?? d.created_at ?? "")})`).join("; ")} — review before approving.
+            </p>
+          )}
         </div>
         <div className="flex items-center gap-1.5 shrink-0">
           {r.dismissal_waiver_signed_at ? (
@@ -146,7 +157,10 @@ const AdminHawkSquadRegistrations = () => {
             ) : (
               <Button size="sm" disabled={busyId === r.id}
                 className="h-8 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold"
-                onClick={() => patch(r.id, { approved_for_attendance: true }, `${r.child_first_name} approved.`)}>
+                onClick={() => patch(r.id, { approved_for_attendance: true },
+                  dups.some((d) => d.approved_for_attendance)
+                    ? `${r.child_first_name} approved. The other approved record for this student was moved back to waiting.`
+                    : `${r.child_first_name} approved.`)}>
                 {busyId === r.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <><Check className="w-3.5 h-3.5 mr-1" /> Approve</>}
               </Button>
             )

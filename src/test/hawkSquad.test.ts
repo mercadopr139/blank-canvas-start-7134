@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 import {
   isHawkPracticeDay, datesInMonth, canBeDismissed, hawkTodayET, datesBetween, hawkPeriodStats, hawkBreakdown, type HawkIntelRow,
+  isSameHawkStudent, hawkPossibleDuplicates,
 } from "@/lib/hawkSquad";
 
 const reg = (id: string, over: Partial<NonNullable<HawkIntelRow["reg"]>> = {}): NonNullable<HawkIntelRow["reg"]> => ({
@@ -67,6 +68,27 @@ describe("Hawk Squad practice days", () => {
     expect(sept[0]).toBe("2026-09-01");
     expect(sept[29]).toBe("2026-09-30");
     expect(datesInMonth(2026, 1).length).toBe(28);
+  });
+});
+
+describe("Hawk Squad duplicates", () => {
+  const base = { program_year: "2026-2027", archived_at: null, child_date_of_birth: "2010-04-02", parent_phone: "+16095551234", parent_email: "p@x.com" };
+  const luka = { id: "1", child_first_name: "Luka", child_last_name: "Mercado", ...base };
+  it("matches the same name with a shared birthday, even with spacing differences", () => {
+    const again = { id: "2", child_first_name: "luka", child_last_name: "Mer cado", ...base, parent_phone: null, parent_email: null };
+    expect(isSameHawkStudent(luka, again)).toBe(true);
+  });
+  it("does not match twins or a namesake with different contact details", () => {
+    const twin = { id: "3", child_first_name: "Nico", child_last_name: "Mercado", ...base };
+    const namesake = { id: "4", child_first_name: "Luka", child_last_name: "Mercado", ...base, child_date_of_birth: "2011-01-01", parent_phone: "+16095550000", parent_email: "other@x.com" };
+    expect(isSameHawkStudent(luka, twin)).toBe(false);
+    expect(isSameHawkStudent(luka, namesake)).toBe(false);
+  });
+  it("only flags live registrations in the same year", () => {
+    const lastYear = { id: "5", child_first_name: "Luka", child_last_name: "Mercado", ...base, program_year: "2025-2026" };
+    const archived = { id: "6", child_first_name: "Luka", child_last_name: "Mercado", ...base, archived_at: "2026-09-01T00:00:00Z" };
+    const live = { id: "7", child_first_name: "Luka", child_last_name: "Mercado", ...base };
+    expect(hawkPossibleDuplicates(luka, [luka, lastYear, archived, live]).map((d) => d.id)).toEqual(["7"]);
   });
 });
 
