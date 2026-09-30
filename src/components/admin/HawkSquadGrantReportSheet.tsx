@@ -19,11 +19,12 @@ interface Props {
   period: string;
   stats: HawkPeriodStats;
   breakdown: HawkBreakdown;
+  moments: Array<{ week: string; notes: string }>;
 }
 
 type Format = "letter" | "narrative";
 
-const HawkSquadGrantReportSheet = ({ open, onClose, period, stats, breakdown }: Props) => {
+const HawkSquadGrantReportSheet = ({ open, onClose, period, stats, breakdown, moments }: Props) => {
   const [format, setFormat] = useState<Format>("letter");
   const [recipient, setRecipient] = useState("");
   const [highlights, setHighlights] = useState("");
@@ -35,7 +36,7 @@ const HawkSquadGrantReportSheet = ({ open, onClose, period, stats, breakdown }: 
 
   useEffect(() => { if (!open) { setNarrative(""); setReviseText(""); } }, [open]);
 
-  const context = { period, stats, breakdown, highlights, format, recipient };
+  const context = { period, stats, breakdown, highlights, format, recipient, moments };
 
   const generate = async () => {
     if (stats.checkIns === 0) { toast.error("No check-ins in this period yet."); return; }
@@ -131,12 +132,16 @@ const HawkSquadGrantReportSheet = ({ open, onClose, period, stats, breakdown }: 
                   {breakdownRows.map(([l, v]) => <p key={l}><span className="text-white/45">{l}:</span> {v}</p>)}
                 </div>
               )}
+              <div className="mt-2 pt-2 border-t border-white/10 text-xs">
+                <span className="text-white/45">Weekly Standout Moments in this period:</span>{" "}
+                <span className={moments.length ? "font-semibold" : "text-amber-300"}>{moments.length ? `${moments.length} week${moments.length === 1 ? "" : "s"}` : "none yet — the report will stick to the figures"}</span>
+              </div>
               <p className="text-[11px] text-white/35 mt-2">Change the period on the Intelligence page to change these.</p>
             </div>
 
             {/* Highlights */}
             <label className="block text-sm text-white/60">
-              Key highlights &amp; special moments <span className="text-white/35">(one per line — a student's win, a teacher's call, what the group did)</span>
+              Anything else to feature? <span className="text-white/35">(optional — the weekly moments above are already included)</span>
               <Textarea value={highlights} onChange={(e) => setHighlights(e.target.value)} rows={5}
                 placeholder={"Ms. Chin called to say Marcus's behavior has turned around\nThe group ran the mile together on the 14th\nTwo students asked to join the 5:15 evening program"}
                 className="mt-1.5 bg-white/5 border-white/15 text-white text-sm" />

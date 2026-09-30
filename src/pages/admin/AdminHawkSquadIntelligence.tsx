@@ -8,6 +8,7 @@
 // button writes a narrative from what is on screen.
 import { useMemo, useState } from "react";
 import AdminHawkSquadAttendance from "@/pages/admin/AdminHawkSquadAttendance";
+import HawkSquadWeeklyMoments from "@/components/admin/HawkSquadWeeklyMoments";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -17,7 +18,7 @@ import { CalendarDays, Activity, Users, Star, Bus, DoorOpen, Sparkles } from "lu
 import HawkSquadGrantReportSheet from "@/components/admin/HawkSquadGrantReportSheet";
 import { getCurrentAttendanceYear, programYearRange, shortProgramYear } from "@/lib/programYear";
 import {
-  type HawkIntelRow, hawkTodayET, hawkPhotoUrl, hawkIdentity, hawkPeriodStats, hawkBreakdown,
+  type HawkIntelRow, type HawkWeeklyMoments, hawkTodayET, hawkPhotoUrl, hawkIdentity, hawkPeriodStats, hawkBreakdown, hawkWeekStart, hawkWeekLabel,
 } from "@/lib/hawkSquad";
 
 const GREEN = "#22c55e";
@@ -85,6 +86,20 @@ const AdminHawkSquadIntelligence = () => {
       const m: Record<string, boolean> = {};
       ((data as Array<{ date: string; is_practice_day: boolean }>) ?? []).forEach((r) => { m[r.date] = r.is_practice_day; });
       return m;
+    },
+  });
+
+  // Weekly Standout Moments whose week touches the period: the report's nuggets.
+  const { data: moments = [] } = useQuery({
+    queryKey: ["hawk-moments-period", from, to],
+    queryFn: async (): Promise<Array<{ week: string; notes: string }>> => {
+      const { data, error } = await (supabase.from("hawk_squad_weekly_moments" as never) as never as {
+        select: (s: string) => { gte: (k: string, v: string) => { lte: (k: string, v: string) => { order: (k: string, o: { ascending: boolean }) => Promise<{ data: unknown; error: { message: string } | null }> } } };
+      }).select("week_start, notes").gte("week_start", hawkWeekStart(from)).lte("week_start", to).order("week_start", { ascending: true });
+      if (error) throw new Error(error.message);
+      return ((data as Pick<HawkWeeklyMoments, "week_start" | "notes">[]) ?? [])
+        .filter((m) => m.notes.trim())
+        .map((m) => ({ week: hawkWeekLabel(m.week_start), notes: m.notes.trim() }));
     },
   });
 
@@ -213,6 +228,8 @@ const AdminHawkSquadIntelligence = () => {
         </div>
       </div>
 
+      <HawkSquadWeeklyMoments />
+
       {/* Day by day, on the same page as the numbers, like NLA's Attendance
           Intelligence: scroll down for the calendar and the day's roster. */}
       <section id="attendance" className="pt-8 mt-2 border-t border-white/10 space-y-2">
@@ -220,7 +237,7 @@ const AdminHawkSquadIntelligence = () => {
         <AdminHawkSquadAttendance embedded />
       </section>
 
-      <HawkSquadGrantReportSheet open={reportOpen} onClose={() => setReportOpen(false)} period={label} stats={stats} breakdown={breakdown} />
+      <HawkSquadGrantReportSheet open={reportOpen} onClose={() => setReportOpen(false)} period={label} stats={stats} breakdown={breakdown} moments={moments} />
     </div>
   );
 };

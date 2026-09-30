@@ -137,6 +137,44 @@ export const isHawkPracticeDay = (date: string, overrides: Record<string, boolea
   return (HAWK_DEFAULT_WEEKDAYS as readonly number[]).includes(dow);
 };
 
+/* ───── Weekly Standout Moments ───── */
+
+export interface HawkWeeklyMoments {
+  id: string;
+  week_start: string; // the Monday
+  notes: string;
+  author_email: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+const addDaysYmd = (ymd: string, n: number) => {
+  const d = new Date(`${ymd}T12:00:00`); d.setDate(d.getDate() + n);
+  const p = (x: number) => String(x).padStart(2, "0");
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
+};
+
+/** The Monday of the week holding this date. */
+export const hawkWeekStart = (ymd: string) => addDaysYmd(ymd, -((new Date(`${ymd}T12:00:00`).getDay() + 6) % 7));
+
+/**
+ * The week whose moments are due: Friday through Sunday that is this week;
+ * Monday through Thursday it is last week, still open until it is written.
+ * Same rule the reminder email uses.
+ */
+export const hawkMomentsTargetWeek = (today: string) => {
+  const dow = new Date(`${today}T12:00:00`).getDay();
+  const monday = hawkWeekStart(today);
+  return dow === 5 || dow === 6 || dow === 0 ? monday : addDaysYmd(monday, -7);
+};
+
+/** "Sep 28 – Oct 4, 2026" */
+export const hawkWeekLabel = (weekStart: string) => {
+  const a = new Date(`${weekStart}T12:00:00`), b = new Date(`${addDaysYmd(weekStart, 6)}T12:00:00`);
+  const md = (d: Date) => d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+  return `${md(a)} – ${md(b)}, ${b.getFullYear()}`;
+};
+
 /* ───── Duplicates ───── */
 
 type StudentLike = {

@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import {
   isHawkPracticeDay, datesInMonth, canBeDismissed, hawkTodayET, datesBetween, hawkPeriodStats, hawkBreakdown, type HawkIntelRow,
-  isSameHawkStudent, hawkPossibleDuplicates,
+  isSameHawkStudent, hawkPossibleDuplicates, hawkWeekStart, hawkMomentsTargetWeek, hawkWeekLabel,
 } from "@/lib/hawkSquad";
 
 const reg = (id: string, over: Partial<NonNullable<HawkIntelRow["reg"]>> = {}): NonNullable<HawkIntelRow["reg"]> => ({
@@ -89,6 +89,24 @@ describe("Hawk Squad duplicates", () => {
     const archived = { id: "6", child_first_name: "Luka", child_last_name: "Mercado", ...base, archived_at: "2026-09-01T00:00:00Z" };
     const live = { id: "7", child_first_name: "Luka", child_last_name: "Mercado", ...base };
     expect(hawkPossibleDuplicates(luka, [luka, lastYear, archived, live]).map((d) => d.id)).toEqual(["7"]);
+  });
+});
+
+describe("Weekly Standout Moments weeks", () => {
+  it("keys a week by its Monday", () => {
+    expect(hawkWeekStart("2026-09-28")).toBe("2026-09-28"); // Mon
+    expect(hawkWeekStart("2026-10-01")).toBe("2026-09-28"); // Thu
+    expect(hawkWeekStart("2026-10-04")).toBe("2026-09-28"); // Sun
+  });
+  it("is due for this week from Friday, and last week until Thursday", () => {
+    expect(hawkMomentsTargetWeek("2026-10-02")).toBe("2026-09-28"); // Fri → this week
+    expect(hawkMomentsTargetWeek("2026-10-04")).toBe("2026-09-28"); // Sun → this week
+    expect(hawkMomentsTargetWeek("2026-10-05")).toBe("2026-09-28"); // Mon → last week
+    expect(hawkMomentsTargetWeek("2026-10-08")).toBe("2026-09-28"); // Thu → last week
+    expect(hawkMomentsTargetWeek("2026-10-09")).toBe("2026-10-05"); // Fri → new week
+  });
+  it("labels a week readably", () => {
+    expect(hawkWeekLabel("2026-09-28")).toBe("Sep 28 – Oct 4, 2026");
   });
 });
 

@@ -50,7 +50,8 @@ const RULES =
   "- Base every figure, name, and story ONLY on the facts and highlights provided. Never invent numbers, names, activities, or outcomes. If a highlight names a student, keep the name and the win intact — those real stories are the most persuasive part.\n" +
   "- Weave the period's figures in naturally (sessions held, check-ins, distinct students, average per session, how students got home) and, where it helps, who the students are (grades, CTE programmes). Do not list every demographic; pick what tells the story.\n" +
   "- Solutions- and partnership-oriented ALWAYS; never disparage the school, families, or other organizations.\n" +
-  "- Plain prose paragraphs. No headings, bullet points, tables, or markdown.\n";
+  "- Plain prose paragraphs. No headings, bullet points, tables, or markdown.\n" +
+  "- ONE PAGE. At most 350 words. Every sentence earns its place; cut anything that is only decoration.\n";
 
 const LETTER_FORMAT =
   "FORMAT: a letter to Cape May Tech. Start with the salutation on its own line (e.g. 'Dear Kristen,' if a recipient is named, otherwise 'To Cape May Tech Administration:'). " +
@@ -84,11 +85,18 @@ const breakdownBlock = (b: Breakdown | undefined): string => {
   return out;
 };
 
+const momentsBlock = (m: unknown): string => {
+  const list = Array.isArray(m) ? (m as Array<{ week?: string; notes?: string }>).filter((x) => x?.notes?.trim()) : [];
+  if (!list.length) return "No Weekly Standout Moments were written for this period. Write from the figures and the programme facts alone; do not invent activities or stories.\n";
+  return "Weekly Standout Moments, in the coach's own words (these are the story — use them, quote them where it helps):\n" +
+    list.map((x) => `• Week of ${x.week}: ${x.notes!.trim()}`).join("\n") + "\n";
+};
+
 const highlightsBlock = (h: unknown): string => {
   const t = typeof h === "string" ? h.trim() : "";
   return t
-    ? `Key highlights and special moments from the director (feature these):\n${t}\n`
-    : "No highlights were given for this period; write from the figures and the programme facts alone, and keep it honest.\n";
+    ? `Extra notes from the director (feature these too):\n${t}\n`
+    : "";
 };
 
 Deno.serve(async (req) => {
@@ -131,7 +139,7 @@ Deno.serve(async (req) => {
       (format === "letter" ? LETTER_FORMAT : NARRATIVE_FORMAT);
 
     const facts = (b: typeof body) =>
-      `${statsBlock(b.stats)}${breakdownBlock(b.breakdown)}${highlightsBlock(b.highlights ?? b.notes)}` +
+      `${statsBlock(b.stats)}${breakdownBlock(b.breakdown)}${momentsBlock(b.moments)}${highlightsBlock(b.highlights ?? b.notes)}` +
       (format === "letter" && recipient ? `The letter is addressed to: ${recipient}\n` : "");
 
     let userContent: string;
