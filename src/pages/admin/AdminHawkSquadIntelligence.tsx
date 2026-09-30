@@ -7,6 +7,9 @@
 // served figure lives on its own page under Attendance. The grant report
 // button writes a narrative from what is on screen.
 import { useMemo, useState } from "react";
+import { useSearchParams } from "react-router-dom";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import AdminHawkSquadAttendance from "@/pages/admin/AdminHawkSquadAttendance";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -57,6 +60,9 @@ const AdminHawkSquadIntelligence = () => {
   const [customFrom, setCustomFrom] = useState("");
   const [customTo, setCustomTo] = useState("");
   const [reportOpen, setReportOpen] = useState(false);
+  const [searchParams, setSearchParams] = useSearchParams();
+  const tab = searchParams.get("tab") === "attendance" ? "attendance" : "intelligence";
+  const setTab = (t: string) => setSearchParams(t === "attendance" ? { tab: "attendance" } : {}, { replace: true });
   const { from, to, label } = useMemo(() => rangeFor(preset, customFrom, customTo), [preset, customFrom, customTo]);
 
   const { data: rows = [], isLoading, isError, error } = useQuery({
@@ -110,13 +116,26 @@ const AdminHawkSquadIntelligence = () => {
       <div className="flex items-start justify-between gap-4 flex-wrap">
         <div>
           <h2 className="text-2xl font-bold">Hawk Squad — Intelligence</h2>
-          <p className="text-neutral-400 text-sm mt-1">Hawk Squad only — reach, attendance, and who the students are, for the period you pick.</p>
+          <p className="text-neutral-400 text-sm mt-1">Hawk Squad only — the numbers for a period, and the day-by-day attendance behind them.</p>
         </div>
-        <Button onClick={() => setReportOpen(true)} disabled={stats.checkIns === 0} className="bg-green-600 hover:bg-green-500 text-black font-semibold gap-2">
-          <Sparkles className="h-4 w-4" /> Grant report
-        </Button>
+        {tab === "intelligence" && (
+          <Button onClick={() => setReportOpen(true)} disabled={stats.checkIns === 0} className="bg-green-600 hover:bg-green-500 text-black font-semibold gap-2">
+            <Sparkles className="h-4 w-4" /> Grant report
+          </Button>
+        )}
       </div>
 
+      <Tabs value={tab} onValueChange={setTab}>
+        <TabsList className="bg-white/5 border border-white/10 gap-1">
+          <TabsTrigger value="intelligence" className="text-white/70 hover:text-white data-[state=active]:bg-green-500 data-[state=active]:text-black font-semibold">Intelligence</TabsTrigger>
+          <TabsTrigger value="attendance" className="text-white/70 hover:text-white data-[state=active]:bg-green-500 data-[state=active]:text-black font-semibold">Attendance</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="attendance" className="mt-5">
+          <AdminHawkSquadAttendance embedded />
+        </TabsContent>
+
+        <TabsContent value="intelligence" className="mt-5 space-y-6">
       {/* Period */}
       <div className="flex flex-wrap items-center gap-2">
         {PRESETS.map((p) => (
@@ -211,6 +230,9 @@ const AdminHawkSquadIntelligence = () => {
           </Card>
         </div>
       </div>
+
+        </TabsContent>
+      </Tabs>
 
       <HawkSquadGrantReportSheet open={reportOpen} onClose={() => setReportOpen(false)} period={label} stats={stats} breakdown={breakdown} />
     </div>

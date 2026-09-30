@@ -45,7 +45,6 @@ import AdminEventsIntelligence from "./pages/admin/AdminEventsIntelligence";
 import AdminProgramHighlights from "./pages/admin/AdminProgramHighlights";
 import AdminFormBuilder from "./pages/admin/AdminFormBuilder";
 import AdminHawkSquadRegistrations from "./pages/admin/AdminHawkSquadRegistrations";
-import AdminHawkSquadAttendance from "./pages/admin/AdminHawkSquadAttendance";
 import AdminHawkSquadIntelligence from "./pages/admin/AdminHawkSquadIntelligence";
 import AdminYouthServed from "./pages/admin/AdminYouthServed";
 import HawkSquadRegister from "./pages/HawkSquadRegister";
@@ -267,7 +266,7 @@ const App = () => (
               <Route path="form-builder" element={<AdminFormBuilder />} />
               {/* Hawk Squad — its own programme, its own tables. */}
               <Route path="hawk-squad/registrations" element={<AdminHawkSquadRegistrations />} />
-              <Route path="hawk-squad/attendance" element={<AdminHawkSquadAttendance />} />
+              <Route path="hawk-squad/attendance" element={<Navigate to="/admin/operations/hawk-squad/intelligence?tab=attendance" replace />} />
               <Route path="hawk-squad/intelligence" element={<AdminHawkSquadIntelligence />} />
               <Route path="youth-served" element={<AdminYouthServed />} />
               <Route path="hawk-squad/form-builder" element={<AdminFormBuilder table="hawk_squad_form_fields" title="Hawk Squad Form Editor" />} />

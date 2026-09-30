@@ -63,7 +63,9 @@ const monthLabel = (y: number, m0: number) =>
 const timeET = (iso: string) =>
   new Date(iso).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", timeZone: "America/New_York" });
 
-const AdminHawkSquadAttendance = () => {
+// `embedded`: rendered as a tab inside Hawk Squad Intelligence, so no page
+// padding and no page title of its own.
+const AdminHawkSquadAttendance = ({ embedded = false }: { embedded?: boolean } = {}) => {
   const qc = useQueryClient();
   const today = hawkTodayET();
   const [ym, setYm] = useState(() => ({ y: Number(today.slice(0, 4)), m0: Number(today.slice(5, 7)) - 1 }));
@@ -164,10 +166,10 @@ const AdminHawkSquadAttendance = () => {
   const cells: (string | null)[] = [...Array(lead).fill(null), ...dates];
 
   return (
-    <div className="p-4 md:p-8 space-y-6 max-w-6xl mx-auto text-white">
+    <div className={embedded ? "space-y-6 text-white" : "p-4 md:p-8 space-y-6 max-w-6xl mx-auto text-white"}>
       <div className="flex items-start justify-between gap-4 flex-wrap">
         <div>
-          <h2 className="text-2xl font-bold">Hawk Squad — Attendance</h2>
+          {!embedded && <h2 className="text-2xl font-bold">Hawk Squad — Attendance</h2>}
           <p className="text-neutral-400 text-sm mt-1">
             Tap a day to see who came. Click the dot on a date to switch a day on or off — Tuesday and Thursday by default.
           </p>
