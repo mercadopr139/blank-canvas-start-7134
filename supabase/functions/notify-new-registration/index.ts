@@ -14,6 +14,7 @@ const PRIMARY_EMAIL = "chrissycasiello@nolimitsboxingacademy.org";
 const CC_EMAIL = "joshmercado@nolimitsboxingacademy.org";
 const DASHBOARD_URL = "https://www.nolimitsboxingacademy.org/admin/operations/registrations";
 const HAWK_DASHBOARD_URL = "https://www.nolimitsboxingacademy.org/admin/operations/hawk-squad/registrations";
+const BAM_DASHBOARD_URL = "https://www.nolimitsboxingacademy.org/admin/operations/bam/registrations";
 
 // Hawk Squad registrations arrive through the same function (the Hawk form
 // sends child_boxing_program = "Hawk Squad"). They get their own look -- a
@@ -21,13 +22,23 @@ const HAWK_DASHBOARD_URL = "https://www.nolimitsboxingacademy.org/admin/operatio
 // at a glance which programme a registration is for, and the button goes to
 // the Hawk Squad list rather than NLA's.
 const isHawkSquad = (reg: RegistrationData) => (reg.child_boxing_program || "").trim().toLowerCase() === "hawk squad";
+const isBam = (reg: RegistrationData) => (reg.child_boxing_program || "").trim().toLowerCase() === "bam";
 
 interface Theme {
   headerBg: string; headerText: string; banner: string | null; heading: string; intro: string;
   button: string; buttonBg: string; url: string; footer: string; subject: string;
 }
 const themeFor = (reg: RegistrationData, childName: string): Theme =>
-  isHawkSquad(reg)
+  isBam(reg)
+    ? {
+        headerBg: "#374151", headerText: "#d1d5db", banner: "BAM",
+        heading: "New BAM Registration",
+        intro: "A new BAM student is awaiting your review and approval.",
+        button: "Review BAM Registration →", buttonBg: "#374151", url: BAM_DASHBOARD_URL,
+        footer: "BAM · Body and Mind · No Limits Academy × Cape May County Special Services",
+        subject: `New BAM Registration – ${childName}`,
+      }
+    : isHawkSquad(reg)
     ? {
         headerBg: "#15803d", headerText: "#dcfce7", banner: "HAWK SQUAD",
         heading: "New Hawk Squad Registration",

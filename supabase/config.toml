@@ -47,5 +47,5 @@ verify_jwt = false
 
 [functions.report-bald-eagle-no-shows]
 verify_jwt = false
-[functions.hawk-squad-moments-reminder]
+[functions.program-moments-reminder]
 verify_jwt = false

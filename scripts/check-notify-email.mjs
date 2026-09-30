@@ -34,4 +34,12 @@ check("nla header still black", n.includes("background-color:#111111;padding:32p
 check("nla has no banner", !n.includes("HAWK SQUAD"));
 check("nla button unchanged", n.includes('href="https://www.nolimitsboxingacademy.org/admin/operations/registrations"'));
 check("nla subject unchanged", m.themeFor(nla, "Luka Mercado").subject === "New Youth Registration – Luka Mercado");
+
+const bam = { ...base, child_boxing_program: "BAM", child_school_district: "Cape May County Special Services" };
+const b = m.renderEmailHtml(bam);
+check("bam header is slate gray", b.includes("background-color:#374151;padding:32px"));
+check("bam banner", b.includes('font-family:Arial,Helvetica,sans-serif;">BAM</p>'));
+check("bam heading", b.includes("New BAM Registration</h1>"));
+check("bam button goes to bam list", b.includes('href="https://www.nolimitsboxingacademy.org/admin/operations/bam/registrations"'));
+check("bam subject", m.themeFor(bam, "Luka Mercado").subject === "New BAM Registration – Luka Mercado");
 process.exit(fails ? 1 : 0);

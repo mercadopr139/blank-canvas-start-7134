@@ -44,11 +44,13 @@ import AdminExcursionIntelligence from "./pages/admin/AdminExcursionIntelligence
 import AdminEventsIntelligence from "./pages/admin/AdminEventsIntelligence";
 import AdminProgramHighlights from "./pages/admin/AdminProgramHighlights";
 import AdminFormBuilder from "./pages/admin/AdminFormBuilder";
-import AdminHawkSquadRegistrations from "./pages/admin/AdminHawkSquadRegistrations";
-import AdminHawkSquadIntelligence from "./pages/admin/AdminHawkSquadIntelligence";
+import AdminProgramRegistrations from "./pages/admin/AdminProgramRegistrations";
+import AdminProgramIntelligence from "./pages/admin/AdminProgramIntelligence";
 import AdminYouthServed from "./pages/admin/AdminYouthServed";
 import HawkSquadRegister from "./pages/HawkSquadRegister";
-import HawkSquadCheckIn from "./pages/HawkSquadCheckIn";
+import BamRegister from "./pages/BamRegister";
+import ProgramCheckIn from "./pages/ProgramCheckIn";
+import { PROGRAMS } from "./lib/programs";
 import AdminForms from "./pages/admin/AdminForms";
 import AdminFormEditor from "./pages/admin/AdminFormEditor";
 import PublicForm from "./pages/PublicForm";
@@ -188,10 +190,12 @@ const App = () => (
             <Route path="/strength-coach/intelligence" element={<StrengthIntelligence />} />
             {/* The Battle Team's gym screen. No login, like the coach's page above. */}
             <Route path="/strength-board" element={<StrengthBoard />} />
-            {/* Hawk Squad's public registration form — parents, no account. */}
+            {/* The partner programs' public registration forms — parents, no account. */}
             <Route path="/hawk-squad/register" element={<HawkSquadRegister />} />
-            {/* Hawk Squad's kiosk — the same device as the NLA kiosk, no login. */}
-            <Route path="/check-in/hawk-squad" element={<HawkSquadCheckIn />} />
+            <Route path="/bam/register" element={<BamRegister />} />
+            {/* Their kiosks — the same device as the NLA kiosk, no login. */}
+            <Route path="/check-in/hawk-squad" element={<ProgramCheckIn program={PROGRAMS.hawk} />} />
+            <Route path="/check-in/bam" element={<ProgramCheckIn program={PROGRAMS.bam} />} />
             <Route path="/hard-75" element={<ProtectedRoute><Hard75 /></ProtectedRoute>} />
             {/* The gym screen. No login, like the Battle Team board. */}
             <Route path="/nbt-board" element={<NbtBoard />} />
@@ -264,12 +268,15 @@ const App = () => (
               <Route path="program-highlights" element={<AdminProgramHighlights />} />
               <Route path="attendance-reports" element={<AdminAttendanceReports />} />
               <Route path="form-builder" element={<AdminFormBuilder />} />
-              {/* Hawk Squad — its own programme, its own tables. */}
-              <Route path="hawk-squad/registrations" element={<AdminHawkSquadRegistrations />} />
+              {/* The partner programs — each its own tables, the same pages. */}
+              <Route path="hawk-squad/registrations" element={<AdminProgramRegistrations program={PROGRAMS.hawk} />} />
               <Route path="hawk-squad/attendance" element={<Navigate to="/admin/operations/hawk-squad/intelligence#attendance" replace />} />
-              <Route path="hawk-squad/intelligence" element={<AdminHawkSquadIntelligence />} />
-              <Route path="youth-served" element={<AdminYouthServed />} />
+              <Route path="hawk-squad/intelligence" element={<AdminProgramIntelligence program={PROGRAMS.hawk} />} />
               <Route path="hawk-squad/form-builder" element={<AdminFormBuilder table="hawk_squad_form_fields" title="Hawk Squad Form Editor" />} />
+              <Route path="bam/registrations" element={<AdminProgramRegistrations program={PROGRAMS.bam} />} />
+              <Route path="bam/intelligence" element={<AdminProgramIntelligence program={PROGRAMS.bam} />} />
+              <Route path="bam/form-builder" element={<AdminFormBuilder table="bam_form_fields" title="BAM Form Editor" />} />
+              <Route path="youth-served" element={<AdminYouthServed />} />
               <Route path="forms" element={<AdminForms />} />
               <Route path="forms/:id" element={<AdminFormEditor />} />
               <Route path="smile-lab-attendance" element={<AdminSmileLabAttendance />} />

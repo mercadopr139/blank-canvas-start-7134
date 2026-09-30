@@ -44,6 +44,15 @@ describe("Hawk Squad intelligence", () => {
     expect(b["CTE program"]).toEqual({ "Not given": 3 });
   });
 
+  it("leaves the CTE row out for a program without the question", () => {
+    expect("CTE program" in hawkBreakdown(rows, { cte: false })).toBe(false);
+  });
+
+  it("counts planned sessions on a program's own days", () => {
+    // Fridays only: Oct 2 in the range, up to Oct 4.
+    expect(hawkPeriodStats(rows, "2026-09-28", "2026-10-04", {}, "2026-10-04", [5]).sessionsPlanned).toBe(1);
+  });
+
   it("lists every date in a range inclusive", () => {
     expect(datesBetween("2026-09-29", "2026-10-02")).toEqual(["2026-09-29", "2026-09-30", "2026-10-01", "2026-10-02"]);
   });
@@ -104,6 +113,12 @@ describe("Weekly Standout Moments weeks", () => {
     expect(hawkMomentsTargetWeek("2026-10-05")).toBe("2026-09-28"); // Mon → last week
     expect(hawkMomentsTargetWeek("2026-10-08")).toBe("2026-09-28"); // Thu → last week
     expect(hawkMomentsTargetWeek("2026-10-09")).toBe("2026-10-05"); // Fri → new week
+  });
+  it("for a Friday program (due from Monday) it is always the week that just ended", () => {
+    expect(hawkMomentsTargetWeek("2026-10-12", 1)).toBe("2026-10-05"); // Mon
+    expect(hawkMomentsTargetWeek("2026-10-16", 1)).toBe("2026-10-05"); // Fri
+    expect(hawkMomentsTargetWeek("2026-10-18", 1)).toBe("2026-10-05"); // Sun
+    expect(hawkMomentsTargetWeek("2026-10-19", 1)).toBe("2026-10-12"); // next Mon
   });
   it("labels a week readably", () => {
     expect(hawkWeekLabel("2026-09-28")).toBe("Sep 28 – Oct 4, 2026");

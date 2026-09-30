@@ -1,11 +1,12 @@
-// Hawk Squad check-in — the kiosk at /check-in/hawk-squad.
+// A partner program's check-in — the kiosk at /check-in/<program>.
 //
 // A screen with no login, on the same device as the NLA kiosk. Same shape as
 // the Smile Lab kiosk the kids already know: type your name, tap SIGN IN, a
-// big green YOU'RE IN. Everything it reads comes through narrow functions that
-// return only approved, current-year Hawk Squad students and today's roster;
-// the check-in itself is an insert-only policy on hawk_squad_attendance. It
-// cannot read a registration, and it never touches an NLA table.
+// big YOU'RE IN in the program's colour. Everything it reads comes through
+// narrow functions that return only approved, current-year students of that
+// program and today's roster; the check-in itself is an insert-only policy on
+// the program's attendance table. It cannot read a registration, and it never
+// touches an NLA table.
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -15,8 +16,7 @@ import { Button } from "@/components/ui/button";
 import { Search, CheckCircle2, Users, ArrowLeft, Eye, X, Undo2 } from "lucide-react";
 import nlaLogo from "@/assets/nla-logo-white.png";
 import { hawkPhotoUrl, hawkTodayET } from "@/lib/hawkSquad";
-
-const GREEN = "#22c55e";
+import type { ProgramConfig } from "@/lib/programs";
 
 interface Student {
   id: string;
@@ -29,7 +29,8 @@ interface Student {
 const rpc = (name: string, args?: Record<string, unknown>) =>
   (supabase.rpc as unknown as (n: string, a?: Record<string, unknown>) => Promise<{ data: unknown; error: unknown }>)(name, args);
 
-const HawkSquadCheckIn = () => {
+const ProgramCheckIn = ({ program }: { program: ProgramConfig }) => {
+  const GREEN = program.brand.ui;
   const navigate = useNavigate();
   const goBack = () => { if (window.history.length > 1) navigate(-1); else navigate("/"); };
 
@@ -51,10 +52,10 @@ const HawkSquadCheckIn = () => {
   // writing during a session, and a 30-second catch-up covers a coach's
   // manual add from the office.
   const fetchToday = useCallback(async () => {
-    const { data } = await rpc("hawk_squad_today_roster");
+    const { data } = await rpc(program.rpc.today);
     const rows = (data as Array<{ registration_id: string }> | null) ?? [];
     setTodayIds(new Set(rows.map((r) => r.registration_id)));
-  }, []);
+  }, [program.rpc.today]);
   useEffect(() => {
     fetchToday();
     const id = window.setInterval(fetchToday, 30_000);
@@ -67,7 +68,7 @@ const HawkSquadCheckIn = () => {
     if (search.trim().length < 2) { setResults([]); return; }
     const t = setTimeout(async () => {
       setLoading(true);
-      const { data, error } = await rpc("search_hawk_squad_youth", { _search: search.trim() });
+      const { data, error } = await rpc(program.rpc.search, { _search: search.trim() });
       // A failed search must not look like "no match": say so, so a coach
       // knows the screen is the problem, not the spelling.
       setError(error ? "The search isn't working right now. Please see a coach." : null);
@@ -75,13 +76,13 @@ const HawkSquadCheckIn = () => {
       setLoading(false);
     }, 300);
     return () => clearTimeout(t);
-  }, [search]);
+  }, [search, program.rpc.search]);
 
   const signIn = async (s: Student) => {
     setError(null);
     setCheckedIn(null);
     setAlreadyIn(null);
-    const { error: insertError } = await (supabase.from("hawk_squad_attendance" as never) as never as {
+    const { error: insertError } = await (supabase.from(program.tables.attendance as never) as never as {
       insert: (v: unknown) => Promise<{ error: { code?: string; message: string } | null }>;
     }).insert({ registration_id: s.id, check_in_date: hawkTodayET() });
 
@@ -109,13 +110,13 @@ const HawkSquadCheckIn = () => {
   };
 
   const undo = async (s: Student) => {
-    const { error } = await rpc("hawk_squad_kiosk_undo", { _registration_id: s.id });
+    const { error } = await rpc(program.rpc.undo, { _registration_id: s.id });
     if (error) { setError("Couldn't undo that check-in. Please see a coach."); return; }
     setTodayIds((prev) => { const n = new Set(prev); n.delete(s.id); return n; });
   };
 
   const openRoster = async () => {
-    const { data } = await rpc("hawk_squad_kiosk_roster");
+    const { data } = await rpc(program.rpc.roster);
     setRoster(((data as Student[]) ?? []));
     setShowRoster(true);
   };
@@ -140,7 +141,7 @@ const HawkSquadCheckIn = () => {
             <CheckCircle2 className="w-32 h-32 md:w-40 md:h-40 mx-auto mb-6 animate-bounce" style={{ color: GREEN }} />
             <h2 className="text-6xl md:text-8xl font-black mb-3 tracking-tight" style={{ color: GREEN }}>YOU'RE IN!</h2>
             <p className="text-3xl md:text-5xl text-white/90 font-bold">{checkedInName}</p>
-            <p className="text-lg md:text-xl text-white/50 mt-4">Hawk Squad · {new Date().toLocaleDateString("en-US", { weekday: "long", timeZone: "America/New_York" })}</p>
+            <p className="text-lg md:text-xl text-white/50 mt-4">{program.name} · {new Date().toLocaleDateString("en-US", { weekday: "long", timeZone: "America/New_York" })}</p>
           </div>
         </div>
       )}
@@ -153,10 +154,10 @@ const HawkSquadCheckIn = () => {
         <img src={nlaLogo} alt="No Limits Academy" className={`mx-auto transition-all duration-500 ${idle ? "h-24 md:h-32 mb-6" : "h-14 md:h-18 mb-4"}`} />
 
         <h1 className={`font-black tracking-tight text-center transition-all duration-500 ${idle ? "text-3xl md:text-5xl mb-1" : "text-2xl md:text-3xl mb-1"}`}>
-          <span style={{ color: GREEN }}>Hawk Squad</span> Check-In
+          <span style={{ color: GREEN }}>{program.name}</span> Check-In
         </h1>
         <p className={`text-center text-white/45 font-semibold transition-all duration-500 ${idle ? "text-lg md:text-xl mb-4" : "text-sm md:text-base mb-3"}`}>
-          Cape May Tech · No Limits Academy
+          {program.partner} · No Limits Academy
         </p>
 
         <div className={`flex items-center gap-2.5 rounded-full border px-5 py-2 mb-6 transition-all duration-300 ${pulse ? "scale-110" : ""}`}
@@ -169,7 +170,7 @@ const HawkSquadCheckIn = () => {
         {idle && (
           <Button onClick={openRoster}
             className="mb-6 text-white font-bold text-base sm:text-lg px-6 py-4 rounded-xl shadow-lg transition-all active:scale-95"
-            style={{ backgroundColor: "#15803d" }}>
+            style={{ backgroundColor: program.brand.uiDark }}>
             <Eye className="w-5 h-5 mr-2" /> Browse by Photo
           </Button>
         )}
@@ -197,7 +198,7 @@ const HawkSquadCheckIn = () => {
               <div className="text-center py-8 px-4">
                 <p className="text-white/50 text-lg">No match found</p>
                 <p className="text-white/60 text-sm mt-3 max-w-md mx-auto leading-relaxed">
-                  Double-check the spelling. If you haven't <strong className="text-white/80">registered for Hawk Squad this year</strong>,
+                  Double-check the spelling. If you haven't <strong className="text-white/80">registered for {program.name} this year</strong>,
                   or your registration hasn't been approved yet, please see a coach.
                 </p>
               </div>
@@ -206,7 +207,7 @@ const HawkSquadCheckIn = () => {
               const inToday = todayIds.has(s.id);
               return (
                 <Card key={s.id}
-                  className={`bg-white/[0.04] border-2 border-white/10 text-white transition-all duration-300 hover:bg-white/[0.07] animate-in slide-in-from-bottom-4 fade-in ${checkedIn === s.id ? "bg-green-500/10" : ""} ${alreadyIn === s.id ? "border-orange-500 bg-orange-500/10" : ""}`}
+                  className={`bg-white/[0.04] border-2 border-white/10 text-white transition-all duration-300 hover:bg-white/[0.07] animate-in slide-in-from-bottom-4 fade-in ${checkedIn === s.id ? "bg-white/[0.08]" : ""} ${alreadyIn === s.id ? "border-orange-500 bg-orange-500/10" : ""}`}
                   style={{ animationDelay: `${i * 80}ms`, animationFillMode: "both", ...(checkedIn === s.id ? { borderColor: GREEN } : {}) }}>
                   <CardContent className="flex items-center gap-5 md:gap-6 p-5 md:p-6">
                     <div className="w-16 h-16 md:w-20 md:h-20 rounded-full bg-white/10 flex items-center justify-center overflow-hidden flex-shrink-0 ring-2" style={{ boxShadow: `0 0 0 2px ${GREEN}33` }}>
@@ -270,7 +271,7 @@ const HawkSquadCheckIn = () => {
                   return (
                     <button key={s.id}
                       onClick={() => (inToday ? undo(s) : signIn(s))}
-                      className={`rounded-xl border-2 p-2 text-center transition-all active:scale-95 ${inToday ? "bg-green-500/10" : "border-white/10 bg-white/[0.03] hover:bg-white/[0.07]"}`}
+                      className={`rounded-xl border-2 p-2 text-center transition-all active:scale-95 ${inToday ? "bg-white/[0.08]" : "border-white/10 bg-white/[0.03] hover:bg-white/[0.07]"}`}
                       style={inToday ? { borderColor: GREEN } : undefined}>
                       <div className="aspect-square rounded-lg overflow-hidden bg-white/10 mb-1.5 relative">
                         {hawkPhotoUrl(s.child_headshot_url)
@@ -297,4 +298,4 @@ const HawkSquadCheckIn = () => {
   );
 };
 
-export default HawkSquadCheckIn;
+export default ProgramCheckIn;

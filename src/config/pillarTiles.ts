@@ -15,7 +15,7 @@ import {
   Star, Bus, UserCheck, Radio, PhoneOff, AlertTriangle, FileText,
   UtensilsCrossed, HandCoins, Database, MessageSquare, Mail, Receipt,
   ScrollText, ClipboardCheck, LayoutDashboard, Archive, Gauge, MapPin, Sparkles, Dumbbell, Smile, Scale,
-  BookOpenCheck, HeartHandshake, Monitor, Ticket, Flame, Bird, Layers } from "lucide-react";
+  BookOpenCheck, HeartHandshake, Monitor, Ticket, Flame, Bird, Layers, Brain } from "lucide-react";
 
 export interface PillarTile {
   title: string;
@@ -128,6 +128,21 @@ export const OPERATIONS_TILES: PillarTile[] = [
       { title: "Registrations", href: "/admin/operations/hawk-squad/registrations", icon: Users },
       { title: "Form Editor", href: "/admin/operations/hawk-squad/form-builder", icon: Settings2 },
       { title: "Registration Form", href: "/hawk-squad/register", icon: ClipboardList, external: true },
+    ],
+  },
+  {
+    // BAM -- Body and Mind -- the Friday behavior incentive with Cape May
+    // County Special Services. Its own tables, the same pages as Hawk Squad.
+    title: "BAM",
+    description: "Body and Mind — Friday behavior incentive with Special Services",
+    icon: Brain,
+    href: "/admin/operations/bam/registrations",
+    permKey: "operations_bam",
+    children: [
+      { title: "BAM Intelligence", href: "/admin/operations/bam/intelligence", icon: BarChart3 },
+      { title: "Registrations", href: "/admin/operations/bam/registrations", icon: Users },
+      { title: "Form Editor", href: "/admin/operations/bam/form-builder", icon: Settings2 },
+      { title: "Registration Form", href: "/bam/register", icon: ClipboardList, external: true },
     ],
   },
   {

@@ -1,7 +1,7 @@
-// Hawk Squad report — a letter to Cape May Tech or a grant narrative, written
-// from the period's figures, who the students are, and the highlights Josh
-// adds. Before anything is generated the sheet shows exactly what the writer
-// will be given, so the numbers in the report are never a surprise.
+// A program's report — a letter to the school partner or a grant narrative,
+// written from the period's figures, who the students are, the Weekly
+// Standout Moments and anything Josh adds. Before anything is generated the
+// sheet shows exactly what the writer will be given.
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -10,10 +10,12 @@ import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Loader2, Sparkles, Wand2, Copy, Check, FileDown, Mail, FileText } from "lucide-react";
 import { toast } from "sonner";
-import { generateHawkSquadReportPdf } from "@/lib/generateHawkSquadReportPdf";
-import { HAWK_BRAND, type HawkPeriodStats, type HawkBreakdown } from "@/lib/hawkSquad";
+import { generateProgramReportPdf } from "@/lib/generateProgramReportPdf";
+import type { HawkPeriodStats, HawkBreakdown } from "@/lib/hawkSquad";
+import type { ProgramConfig } from "@/lib/programs";
 
 interface Props {
+  program: ProgramConfig;
   open: boolean;
   onClose: () => void;
   period: string;
@@ -24,7 +26,7 @@ interface Props {
 
 type Format = "letter" | "narrative";
 
-const HawkSquadGrantReportSheet = ({ open, onClose, period, stats, breakdown, moments }: Props) => {
+const ProgramReportSheet = ({ program, open, onClose, period, stats, breakdown, moments }: Props) => {
   const [format, setFormat] = useState<Format>("letter");
   const [recipient, setRecipient] = useState("");
   const [highlights, setHighlights] = useState("");
@@ -36,13 +38,13 @@ const HawkSquadGrantReportSheet = ({ open, onClose, period, stats, breakdown, mo
 
   useEffect(() => { if (!open) { setNarrative(""); setReviseText(""); } }, [open]);
 
-  const context = { period, stats, breakdown, highlights, format, recipient, moments };
+  const context = { program: program.key, period, stats, breakdown, highlights, format, recipient, moments };
 
   const generate = async () => {
     if (stats.checkIns === 0) { toast.error("No check-ins in this period yet."); return; }
     setGenerating(true);
     try {
-      const { data, error } = await supabase.functions.invoke("hawk-squad-report", { body: { mode: "generate", ...context } });
+      const { data, error } = await supabase.functions.invoke("program-report", { body: { mode: "generate", ...context } });
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
       setNarrative((data?.narrative as string) || "");
@@ -57,7 +59,7 @@ const HawkSquadGrantReportSheet = ({ open, onClose, period, stats, breakdown, mo
     if (!narrative || !reviseText.trim()) return;
     setRevising(true);
     try {
-      const { data, error } = await supabase.functions.invoke("hawk-squad-report", {
+      const { data, error } = await supabase.functions.invoke("program-report", {
         body: { mode: "revise", narrative, instruction: reviseText.trim(), ...context },
       });
       if (error) throw error;
@@ -77,7 +79,9 @@ const HawkSquadGrantReportSheet = ({ open, onClose, period, stats, breakdown, mo
     setTimeout(() => setCopied(false), 1500);
   };
 
-  const gold = HAWK_BRAND.gold;
+  const gold = program.brand.accent;
+  const green = program.brand.primary;
+  const onGold = program.brand.onAccent;
   const breakdownRows = Object.entries(breakdown)
     .map(([label, counts]) => [label, Object.entries(counts).filter(([, n]) => n > 0).sort((a, b) => b[1] - a[1]).map(([k, n]) => `${k} (${n})`).join(", ")] as const)
     .filter(([, v]) => v);
@@ -87,7 +91,7 @@ const HawkSquadGrantReportSheet = ({ open, onClose, period, stats, breakdown, mo
       <DialogContent className="bg-[#0b0f1a] border-white/10 text-white max-w-2xl max-h-[92vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <span className="rounded px-2 py-0.5 text-xs font-black tracking-widest" style={{ backgroundColor: HAWK_BRAND.green, color: gold }}>HAWK SQUAD</span>
+            <span className="rounded px-2 py-0.5 text-xs font-black tracking-widest" style={{ backgroundColor: green, color: gold }}>{program.brand.wordmark}</span>
             Report
           </DialogTitle>
         </DialogHeader>
@@ -97,7 +101,7 @@ const HawkSquadGrantReportSheet = ({ open, onClose, period, stats, breakdown, mo
             {/* Format */}
             <div className="grid grid-cols-2 gap-2">
               {([
-                { key: "letter", label: "Letter to Cape May Tech", sub: "Like the mid-year report — letterhead, address, signed by Josh", Icon: Mail },
+                { key: "letter", label: `Letter to ${program.partner}`, sub: "Letterhead, address, signed by Josh", Icon: Mail },
                 { key: "narrative", label: "Grant narrative", sub: "Paragraphs for a funder, no salutation", Icon: FileText },
               ] as const).map(({ key, label, sub, Icon }) => (
                 <button key={key} onClick={() => setFormat(key)}
@@ -109,14 +113,14 @@ const HawkSquadGrantReportSheet = ({ open, onClose, period, stats, breakdown, mo
             </div>
             {format === "letter" && (
               <label className="block text-sm text-white/60">
-                Addressed to <span className="text-white/35">(optional — e.g. Kristen; otherwise "To Cape May Tech Administration")</span>
-                <Input value={recipient} onChange={(e) => setRecipient(e.target.value)} placeholder="Name, title"
+                Addressed to <span className="text-white/35">(optional — otherwise "{program.letter.defaultSalutation}")</span>
+                <Input value={recipient} onChange={(e) => setRecipient(e.target.value)} placeholder={program.letter.contact ? `${program.letter.contact}, ${program.letter.contactTitle}` : "Name, title"}
                   className="mt-1.5 bg-white/5 border-white/15 text-white text-sm" />
               </label>
             )}
 
             {/* What the writer will be given */}
-            <div className="rounded-lg border p-3 text-sm" style={{ borderColor: `${gold}55`, backgroundColor: `${HAWK_BRAND.green}33` }}>
+            <div className="rounded-lg border p-3 text-sm" style={{ borderColor: `${gold}55`, backgroundColor: `${green}33` }}>
               <p className="text-[10px] uppercase tracking-wider mb-2" style={{ color: gold }}>What the report will use · {period}</p>
               <div className="grid grid-cols-3 gap-x-3 gap-y-1.5 text-xs">
                 {[
@@ -148,7 +152,7 @@ const HawkSquadGrantReportSheet = ({ open, onClose, period, stats, breakdown, mo
             </label>
 
             <div className="py-2 text-center">
-              <Button onClick={generate} disabled={generating} className="font-bold gap-2" style={{ backgroundColor: HAWK_BRAND.green, color: gold }}>
+              <Button onClick={generate} disabled={generating} className="font-bold gap-2" style={{ backgroundColor: gold, color: onGold }}>
                 {generating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Wand2 className="h-4 w-4" />}
                 {generating ? "Writing…" : format === "letter" ? "Write the letter" : "Write the narrative"}
               </Button>
@@ -164,7 +168,7 @@ const HawkSquadGrantReportSheet = ({ open, onClose, period, stats, breakdown, mo
                 onKeyDown={(e) => { if (e.key === "Enter") revise(); }}
                 placeholder="Tweak it — e.g. make it shorter · lean on the partnership · mention the evening program more"
                 className="flex-1 rounded-lg bg-white/5 border border-white/15 px-3 py-2.5 text-sm text-white placeholder:text-white/30 focus:outline-none focus:border-white/30" />
-              <Button onClick={revise} disabled={revising || !reviseText.trim()} className="font-bold gap-2" style={{ backgroundColor: HAWK_BRAND.green, color: gold }}>
+              <Button onClick={revise} disabled={revising || !reviseText.trim()} className="font-bold gap-2" style={{ backgroundColor: gold, color: onGold }}>
                 {revising ? <Loader2 className="h-4 w-4 animate-spin" /> : <Wand2 className="h-4 w-4" />} Revise
               </Button>
             </div>
@@ -173,7 +177,7 @@ const HawkSquadGrantReportSheet = ({ open, onClose, period, stats, breakdown, mo
               <Button variant="outline" onClick={copy} className="gap-2 bg-transparent border-white/20 text-white/80">
                 {copied ? <Check className="h-4 w-4 text-emerald-400" /> : <Copy className="h-4 w-4" />} {copied ? "Copied" : "Copy"}
               </Button>
-              <Button variant="outline" onClick={() => generateHawkSquadReportPdf(narrative, { format, period, stats, breakdown })} className="gap-2 bg-transparent border-white/20 text-white/80">
+              <Button variant="outline" onClick={() => generateProgramReportPdf(narrative, { program, format, period, stats, breakdown })} className="gap-2 bg-transparent border-white/20 text-white/80">
                 <FileDown className="h-4 w-4" /> Download branded PDF
               </Button>
               <Button variant="ghost" onClick={() => setNarrative("")} className="gap-2 text-white/50 hover:text-white ml-auto">
@@ -187,4 +191,4 @@ const HawkSquadGrantReportSheet = ({ open, onClose, period, stats, breakdown, mo
   );
 };
 
-export default HawkSquadGrantReportSheet;
+export default ProgramReportSheet;

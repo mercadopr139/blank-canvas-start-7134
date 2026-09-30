@@ -1,4 +1,4 @@
-// Hawk Squad registration -- the public form at /hawk-squad/register.
+// BAM registration -- the public form at /bam/register.
 //
 // GENERATED from the NLA form (Register.tsx) by scripts/make-program-register.mjs
 // rather than written twice: the NLA form already does the things a good form
@@ -82,7 +82,7 @@ const parseOptions = (opts: any): string[] => {
   try { return JSON.parse(opts); } catch { return []; }
 };
 
-const HawkSquadRegister = () => {
+const BamRegister = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -96,10 +96,10 @@ const HawkSquadRegister = () => {
 
   // Fetch form fields from DB
   const { data: formFields, isLoading: fieldsLoading } = useQuery({
-    queryKey: ["hawk-squad-form-fields"],
+    queryKey: ["bam-form-fields"],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from("hawk_squad_form_fields" as never)
+        .from("bam_form_fields" as never)
         .select("*")
         .eq("is_active", true)
         .order("sort_order", { ascending: true });
@@ -132,7 +132,7 @@ const HawkSquadRegister = () => {
   }));
 
   const uploadSignature = async (blob: Blob, prefix: string): Promise<string> => {
-    const fileName = `hawk-squad/${prefix}_${Date.now()}_${Math.random().toString(36).substring(7)}.png`;
+    const fileName = `bam/${prefix}_${Date.now()}_${Math.random().toString(36).substring(7)}.png`;
     const { data, error } = await supabase.storage
       .from("registration-signatures")
       .upload(fileName, blob, { contentType: "image/png" });
@@ -151,7 +151,7 @@ const HawkSquadRegister = () => {
   };
 
   const uploadHeadshot = async (file: File): Promise<string> => {
-    const fileName = `hawk-squad/headshot_${Date.now()}_${Math.random().toString(36).substring(7)}.${file.name.split('.').pop()}`;
+    const fileName = `bam/headshot_${Date.now()}_${Math.random().toString(36).substring(7)}.${file.name.split('.').pop()}`;
     const { data, error } = await supabase.storage
       .from("youth-photos")
       .upload(fileName, file, { contentType: file.type });
@@ -182,7 +182,7 @@ const HawkSquadRegister = () => {
       // (the Alexander boys, 2026-09-14). Same name plus ANY of birthday,
       // parent email or parent phone is the same kid.
       const { data, error } = await (supabase.rpc as unknown as (n: string, a: Record<string, unknown>) => Promise<{ data: unknown; error: unknown }>)(
-        "hawk_squad_same_year_matches",
+        "bam_same_year_matches",
         { _last_name: childLast, _program_year: currentPY }
       );
 
@@ -313,7 +313,7 @@ const HawkSquadRegister = () => {
         }
       }
 
-      const { error } = await (supabase.from("hawk_squad_registrations" as never) as any).insert({
+      const { error } = await (supabase.from("bam_registrations" as never) as any).insert({
         submission_date: new Date().toISOString().split("T")[0],
         // Same program-year rules as NLA: rolls over 1 August by itself.
         program_year: getProgramYearForRegistration(),
@@ -342,9 +342,8 @@ const HawkSquadRegister = () => {
         asthma_inhaler_info: formValues["has_asthma"] === "Yes" ? ((formValues["asthma_inhaler_info"] || "").trim() || null) : null,
         important_child_notes: (formValues["important_child_notes"] || "").trim() || null,
         waivers_data: waiversData,
-        // The optional dismissal waiver: signed or not is what the attendance
-        // board reads to decide whether "Dismissed" is even offered.
-        dismissal_waiver_signed_at: waiversData["hawk_dismissal"] ? new Date().toISOString() : null,
+        // No dismissal choice in this program: the school moves the students.
+        dismissal_waiver_signed_at: null,
         child_headshot_url: headshotUrl,
         final_signature_name: (formValues["final_signature_name"] || "").trim(),
         custom_fields_data: Object.keys(customData).length > 0 ? customData : null,
@@ -352,7 +351,7 @@ const HawkSquadRegister = () => {
 
       if (error) throw error;
       setIsSubmitted(true);
-      toast({ title: "Registration Submitted!", description: "Thank you for registering for Hawk Squad." });
+      toast({ title: "Registration Submitted!", description: "Thank you for registering for BAM." });
 
       // Send admin notification email (fire-and-forget, don't block user)
       try {
@@ -361,8 +360,8 @@ const HawkSquadRegister = () => {
             child_first_name: (formValues["child_first_name"] || "").trim(),
             child_last_name: (formValues["child_last_name"] || "").trim(),
             child_date_of_birth: formValues["child_date_of_birth"],
-            child_boxing_program: "Hawk Squad",
-            child_school_district: "Cape May Tech",
+            child_boxing_program: "BAM",
+            child_school_district: "Cape May County Special Services",
             parent_first_name: (formValues["parent_first_name"] || "").trim(),
             parent_last_name: (formValues["parent_last_name"] || "").trim(),
             parent_phone: toE164(formValues["parent_phone"] || "") || (formValues["parent_phone"] || "").trim(),
@@ -619,7 +618,7 @@ const HawkSquadRegister = () => {
 
   if (isSubmitted) {
     return (
-      <div className="min-h-screen flex flex-col bg-[#0f4c2f]">
+      <div className="min-h-screen flex flex-col bg-[#374151]">
         <Header />
         <main className="flex-1 container max-w-2xl mx-auto px-4 py-12">
           <Card className="border-2 border-primary/20 shadow-lg">
@@ -630,8 +629,8 @@ const HawkSquadRegister = () => {
                 </div>
               </div>
               <div className="space-y-3">
-                <h1 className="text-3xl font-bold text-foreground">Welcome to HAWK SQUAD!</h1>
-                <p className="text-xl text-foreground">See you Tuesdays &amp; Thursdays immediately afterschool!</p>
+                <h1 className="text-3xl font-bold text-foreground">Welcome to BAM!</h1>
+                <p className="text-xl text-foreground">Keep up the great week &mdash; we&rsquo;ll see you Friday!</p>
                 <p className="text-base text-muted-foreground pt-2">
                   If you have any questions, please email{" "}
                   <a href="mailto:chrissycasiello@nolimitsboxingacademy.org" className="font-medium text-foreground underline">chrissycasiello@nolimitsboxingacademy.org</a>.
@@ -651,7 +650,7 @@ const HawkSquadRegister = () => {
   }
 
   return (
-    <div className="min-h-screen flex flex-col bg-[#0f4c2f]">
+    <div className="min-h-screen flex flex-col bg-[#374151]">
       <Header />
       <main className="flex-1 container mx-auto px-4 py-8 max-w-xl">
         <Card className="shadow-lg">
@@ -665,9 +664,9 @@ const HawkSquadRegister = () => {
                   while quietly filing them under the right one. Rolls over on
                   1 August by itself — see programYear.ts. */}
               <h1 className="text-2xl font-bold mb-2">
-                {shortProgramYear(getProgramYearForRegistration())} Hawk Squad Registration
+                {shortProgramYear(getProgramYearForRegistration())} BAM Registration
               </h1>
-              <p className="text-muted-foreground text-sm">Must complete before participation in Hawk Squad at No Limits Academy.</p>
+              <p className="text-muted-foreground text-sm">Must complete before participation in BAM at No Limits Academy.</p>
             </div>
 
             {fieldsLoading ? (
@@ -749,4 +748,4 @@ const HawkSquadRegister = () => {
   );
 };
 
-export default HawkSquadRegister;
+export default BamRegister;

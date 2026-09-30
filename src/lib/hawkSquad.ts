@@ -131,10 +131,12 @@ export const HAWK_DEFAULT_WEEKDAYS = [2, 4] as const;
  * Is this a Hawk Squad day? An override row wins; otherwise Tue/Thu.
  * `date` is YYYY-MM-DD; weekday is read at noon so no timezone can shift it.
  */
-export const isHawkPracticeDay = (date: string, overrides: Record<string, boolean>): boolean => {
+export const isHawkPracticeDay = (
+  date: string, overrides: Record<string, boolean>, weekdays: readonly number[] = HAWK_DEFAULT_WEEKDAYS,
+): boolean => {
   if (date in overrides) return overrides[date];
   const dow = new Date(`${date}T12:00:00`).getDay();
-  return (HAWK_DEFAULT_WEEKDAYS as readonly number[]).includes(dow);
+  return weekdays.includes(dow);
 };
 
 /* ───── Weekly Standout Moments ───── */
@@ -165,9 +167,11 @@ export const hawkWeekStart = (ymd: string) => addDaysYmd(ymd, -((new Date(`${ymd
  * Monday through Thursday it is last week, still open until it is written.
  * Same rule the reminder email uses.
  */
-export const hawkMomentsTargetWeek = (today: string) => {
+export const hawkMomentsTargetWeek = (today: string, dueFrom: 5 | 1 = 5) => {
   const dow = new Date(`${today}T12:00:00`).getDay();
   const monday = hawkWeekStart(today);
+  // Due from Monday (the session was Friday): always the week that just ended.
+  if (dueFrom === 1) return addDaysYmd(monday, -7);
   return dow === 5 || dow === 6 || dow === 0 ? monday : addDaysYmd(monday, -7);
 };
 
@@ -278,9 +282,10 @@ export const datesBetween = (from: string, to: string): string[] => {
 /** The period's headline figures. */
 export const hawkPeriodStats = (
   rows: HawkIntelRow[], from: string, to: string, overrides: Record<string, boolean>, today = hawkTodayET(),
+  weekdays: readonly number[] = HAWK_DEFAULT_WEEKDAYS,
 ): HawkPeriodStats => {
   const sessionsHeld = new Set(rows.map((r) => r.check_in_date)).size;
-  const sessionsPlanned = datesBetween(from, to).filter((d) => d <= today && isHawkPracticeDay(d, overrides)).length;
+  const sessionsPlanned = datesBetween(from, to).filter((d) => d <= today && isHawkPracticeDay(d, overrides, weekdays)).length;
   const students = new Set(rows.map(hawkIdentity)).size;
   return {
     sessionsHeld,
@@ -294,7 +299,8 @@ export const hawkPeriodStats = (
 };
 
 /** Demographics over distinct students. A student's latest row wins. */
-export const hawkBreakdown = (rows: HawkIntelRow[]): HawkBreakdown => {
+export const hawkBreakdown = (rows: HawkIntelRow[], opts: { cte?: boolean } = {}): HawkBreakdown => {
+  const includeCte = opts.cte ?? true;
   const latest = new Map<string, HawkIntelRow>();
   [...rows].sort((a, b) => a.check_in_date.localeCompare(b.check_in_date)).forEach((r) => latest.set(hawkIdentity(r), r));
   const tally = (pick: (r: HawkIntelRow) => string | null | undefined) => {
@@ -304,7 +310,7 @@ export const hawkBreakdown = (rows: HawkIntelRow[]): HawkBreakdown => {
   };
   return {
     Grade: tally((r) => r.reg?.grade_level),
-    "CTE program": tally((r) => r.reg?.cte_program),
+    ...(includeCte ? { "CTE program": tally((r) => r.reg?.cte_program) } : {}),
     Sex: tally((r) => r.reg?.child_sex),
     "Race / ethnicity": tally((r) => r.reg?.child_race_ethnicity),
     "Free or reduced lunch": tally((r) => r.reg?.free_or_reduced_lunch),

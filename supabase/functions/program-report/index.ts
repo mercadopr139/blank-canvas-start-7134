@@ -1,7 +1,8 @@
-// hawk-squad-report — writes a Hawk Squad report from the period's attendance
-// figures, demographics, and the director's highlights. Two formats:
-//   - "letter":    a letter to Cape May Tech administration (the mid-year
-//                  report Josh sends the school's point of contact).
+// program-report — writes a partner program's report (Hawk Squad or BAM)
+// from the period's attendance figures, demographics, Weekly Standout
+// Moments and the director's notes. Two formats:
+//   - "letter":    a letter to the school partner (the report Josh sends the
+//                  school's point of contact).
 //   - "narrative": a grant-ready narrative for a funder.
 // Two modes: "generate" (fresh) and "revise" (rewrite per an instruction).
 //
@@ -22,10 +23,11 @@ const MODEL = "claude-sonnet-5";
 const json = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), { status, headers: { ...corsHeaders, "Content-Type": "application/json" } });
 
-// What Hawk Squad is. Taken from the 2026 mid-year report to Cape May Tech
-// and the programme's own flyers, so the writer describes the real programme
-// and not a guess at one. Facts only; the period's figures come in the request.
-const PROGRAM_FACTS =
+// What each program is. Hawk Squad's facts come from the 2026 mid-year
+// report to Cape May Tech and the programme's flyers; BAM's from Josh's own
+// description. The writer describes the real programme and not a guess at
+// one. Facts only; the period's figures come in the request.
+const HAWK_FACTS =
   "ABOUT HAWK SQUAD (established facts — use freely, never contradict):\n" +
   "- Hawk Squad is a partnership between Cape May County Technical High School (CMT, 'Cape May Tech') and No Limits Academy (NLA), a youth boxing non-profit in Cape May County, NJ. It launched on September 19, 2022.\n" +
   "- Tagline: 'The Ultimate Afterschool Experience.' Branding is Hawk Squad green and gold, with the hawk.\n" +
@@ -36,6 +38,20 @@ const PROGRAM_FACTS =
   "- Coach Chrissy Casiello and Coach Josh Mercado stay in regular contact with CMT faculty and administration, sharing what each side needs to know so students are supported holistically.\n" +
   "- The partnership reflects New Jersey Department of Education guidance encouraging schools to work with local, off-site partners to support students beyond the classroom.\n" +
   "- CMT students are also welcome in NLA's evening programme, which starts at 5:15 p.m. and provides dinner five days a week along with academic support, mentorship, physical training, and a safe, supervised setting.\n";
+
+const BAM_FACTS =
+  "ABOUT BAM (established facts — use freely, never contradict):\n" +
+  "- BAM, short for Body and Mind, is a behavior incentive program established between No Limits Academy (NLA), a youth boxing non-profit in Cape May County, NJ, and Cape May County Special Services School District (Cape May County High School and Ocean Academy).\n" +
+  "- It is designed to provide a positive outlet for students facing significant disciplinary and behavioral challenges. Students in grades 5 through 12 earn a Friday visit to NLA's facility by going the school week without a disciplinary infraction.\n" +
+  "- It runs on Fridays during the school day for the ten-month school year. The school provides transportation to and from NLA.\n" +
+  "- During their time at NLA, students engage in workouts, connect with mentors, and enjoy the amenities of the facility -- a supportive, uplifting environment.\n" +
+  "- NLA is proud of this program: it rewards a good week with something worth earning, and it puts students in front of adults who are glad to see them.\n";
+
+type ProgramInfo = { name: string; partner: string; facts: string; defaultSalutation: string };
+const PROGRAM_INFO: Record<string, ProgramInfo> = {
+  hawk: { name: "Hawk Squad", partner: "Cape May Tech", facts: HAWK_FACTS, defaultSalutation: "To Cape May Tech Administration:" },
+  bam: { name: "BAM", partner: "Cape May County Special Services", facts: BAM_FACTS, defaultSalutation: "Dear Ms. Bowers," },
+};
 
 const HOUSE_VOICE =
   "\nHOUSE VOICE (use this EXACT voice — consistency matters):\n" +
@@ -53,9 +69,9 @@ const RULES =
   "- Plain prose paragraphs. No headings, bullet points, tables, or markdown.\n" +
   "- ONE PAGE. At most 350 words. Every sentence earns its place; cut anything that is only decoration.\n";
 
-const LETTER_FORMAT =
-  "FORMAT: a letter to Cape May Tech. Start with the salutation on its own line (e.g. 'Dear Kristen,' if a recipient is named, otherwise 'To Cape May Tech Administration:'). " +
-  "Then 3–5 paragraphs: (1) the partnership and what the period showed; (2) what a Hawk Squad afternoon looks like; (3) the collaboration between NLA staff and CMT faculty, with any highlight or special moment provided; (4) the period's figures and the evening programme; (5) gratitude and looking forward. " +
+const letterFormat = (P: ProgramInfo) =>
+  `FORMAT: a letter to ${P.partner}. Start with the salutation on its own line (a greeting to the named recipient if one is given, otherwise '${P.defaultSalutation}'). ` +
+  `Then 3–5 short paragraphs: (1) the partnership and what the period showed; (2) what a ${P.name} session looks like; (3) the collaboration between NLA staff and the school, with the standout moments provided; (4) the period's figures; (5) gratitude and looking forward. ` +
   "End with 'Sincerely,' then 'Josh Mercado' then 'No Limits Academy' on separate lines. Do not write the address block or the date — the letterhead carries those.";
 
 const NARRATIVE_FORMAT =
@@ -130,13 +146,14 @@ Deno.serve(async (req) => {
     const body = await req.json();
     const mode: string = body.mode ?? "generate";
     const format: "letter" | "narrative" = body.format === "letter" ? "letter" : "narrative";
+    const P = PROGRAM_INFO[String(body.program ?? "hawk")] ?? PROGRAM_INFO.hawk;
     const recipient = typeof body.recipient === "string" ? body.recipient.trim() : "";
     const anthropic = new Anthropic({ apiKey: ANTHROPIC_API_KEY });
 
     const system =
       "You are the writing voice of Josh Mercado, Program Director of No Limits Boxing Academy.\n" +
-      PROGRAM_FACTS + RULES + HOUSE_VOICE +
-      (format === "letter" ? LETTER_FORMAT : NARRATIVE_FORMAT);
+      P.facts + RULES + HOUSE_VOICE +
+      (format === "letter" ? letterFormat(P) : NARRATIVE_FORMAT);
 
     const facts = (b: typeof body) =>
       `${statsBlock(b.stats)}${breakdownBlock(b.breakdown)}${momentsBlock(b.moments)}${highlightsBlock(b.highlights ?? b.notes)}` +
@@ -147,12 +164,12 @@ Deno.serve(async (req) => {
       const { narrative, instruction, period } = body;
       if (!narrative || !instruction) return json({ error: "A narrative and an instruction are required." }, 400);
       userContent =
-        `Here is the current Hawk Squad ${format}:\n\n${narrative}\n\n` +
+        `Here is the current ${P.name} ${format}:\n\n${narrative}\n\n` +
         `Facts (for accuracy) — period ${period ?? ""}:\n${facts(body)}\n` +
         `Revise it with this instruction: ${instruction}\n\nReturn ONLY the revised ${format}.`;
     } else {
       userContent =
-        `Write the Hawk Squad ${format} for the period ${body.period ?? "(unspecified)"}.\n\n${facts(body)}`;
+        `Write the ${P.name} ${format} for the period ${body.period ?? "(unspecified)"}.\n\n${facts(body)}`;
     }
 
     const response = await anthropic.messages.create({
@@ -166,7 +183,7 @@ Deno.serve(async (req) => {
 
     return json({ narrative: textOf(response) });
   } catch (e) {
-    console.error("hawk-squad-report error:", e);
+    console.error("program-report error:", e);
     if (e instanceof Anthropic.RateLimitError) return json({ error: "The AI is busy right now — try again in a moment." }, 429);
     if (e instanceof Anthropic.APIError) return json({ error: `AI service error: ${e.message}` }, e.status ?? 500);
     return json({ error: e instanceof Error ? e.message : "Unknown error" }, 500);

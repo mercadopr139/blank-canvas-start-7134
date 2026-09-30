@@ -41,7 +41,7 @@ const rangeFor = (key: PresetKey, customFrom: string, customTo: string): { from:
   return { from: iso(startOfMonth(now)), to: iso(endOfMonth(now)), label: format(now, "MMMM yyyy") };
 };
 
-interface Served { nla_youth: number; hawk_youth: number; in_both: number; combined: number; in_both_names: string[] }
+interface Served { nla_youth: number; hawk_youth: number; bam_youth: number; in_both: number; combined: number; in_both_names: string[] }
 
 const AdminYouthServed = () => {
   const [preset, setPreset] = useState<PresetKey>("year");
@@ -53,10 +53,10 @@ const AdminYouthServed = () => {
     queryKey: ["youth-served", from, to],
     queryFn: async (): Promise<Served> => {
       const { data, error } = await (supabase.rpc as unknown as (n: string, a: Record<string, unknown>) => Promise<{ data: unknown; error: { message: string } | null }>)(
-        "hawk_squad_youth_served", { _from: from, _to: to },
+        "youth_served_all_programs", { _from: from, _to: to },
       );
       if (error) throw new Error(error.message);
-      return (data as Served[])?.[0] ?? { nla_youth: 0, hawk_youth: 0, in_both: 0, combined: 0, in_both_names: [] };
+      return (data as Served[])?.[0] ?? { nla_youth: 0, hawk_youth: 0, bam_youth: 0, in_both: 0, combined: 0, in_both_names: [] };
     },
   });
 
@@ -65,7 +65,7 @@ const AdminYouthServed = () => {
       <div>
         <h2 className="text-2xl font-bold flex items-center gap-2"><Layers className="h-6 w-6 text-emerald-400" /> Youth Served — all programs</h2>
         <p className="text-neutral-400 text-sm mt-1">
-          Everyone who checked in to the NLA program or Hawk Squad in the period. A youth in both is counted once.
+          Everyone who checked in to the NLA program, Hawk Squad or BAM in the period. A youth in more than one is counted once.
         </p>
       </div>
 
@@ -97,11 +97,12 @@ const AdminYouthServed = () => {
             <p className="text-white/40 text-sm">Counting…</p>
           ) : served.data && (
             <>
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-center">
+              <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 text-center">
                 {[
                   { l: "NLA program", v: served.data.nla_youth, sub: "checked in at NLA" },
                   { l: "Hawk Squad", v: served.data.hawk_youth, sub: "checked in to Hawk Squad" },
-                  { l: "In both", v: served.data.in_both, sub: "counted once" },
+                  { l: "BAM", v: served.data.bam_youth, sub: "checked in to BAM" },
+                  { l: "In more than one", v: served.data.in_both, sub: "counted once" },
                   { l: "Total youth served", v: served.data.combined, sub: "all of No Limits", hi: true },
                 ].map((t) => (
                   <div key={t.l} className={`rounded-xl border p-4 ${t.hi ? "border-emerald-400/40 bg-emerald-500/10" : "border-white/10"}`}>
@@ -112,10 +113,10 @@ const AdminYouthServed = () => {
                 ))}
               </div>
               {served.data.in_both_names.length > 0 && (
-                <p className="text-sm text-white/50 mt-4">In both programs: <span className="text-white/80">{served.data.in_both_names.join(", ")}</span></p>
+                <p className="text-sm text-white/50 mt-4">In more than one program: <span className="text-white/80">{served.data.in_both_names.join(", ")}</span></p>
               )}
               <p className="text-[11px] text-white/30 mt-4">
-                Counted as people, not registrations: a youth who re-registered across years is one youth. A Hawk Squad student is matched to an NLA boxer by first name, last name and date of birth.
+                Counted as people, not registrations: a youth who re-registered across years is one youth. Across programs, students are matched by first name, last name and date of birth.
               </p>
             </>
           )}

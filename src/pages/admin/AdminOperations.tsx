@@ -1,6 +1,6 @@
 import { useMemo } from "react";
 import { useNavigate } from "react-router-dom";
-import { Star, LogIn, UtensilsCrossed, MapPin, Smile, Scale, Bird } from "lucide-react";
+import { Star, LogIn, UtensilsCrossed, MapPin, Smile, Scale, Bird, Brain } from "lucide-react";
 import AdminSectionLayout, { SectionCard } from "@/components/admin/AdminSectionLayout";
 import { Button } from "@/components/ui/button";
 import { useStaffPermissions } from "@/hooks/useStaffPermissions";
@@ -72,6 +72,14 @@ const AdminOperations = () => {
       >
         <Bird className="w-4 h-4 mr-1.5" />
         Hawk Squad Check-In
+      </Button>
+      <Button
+        size="sm"
+        className="w-full bg-gray-500 hover:bg-gray-400 text-white text-sm font-medium"
+        onClick={() => navigate("/check-in/bam")}
+      >
+        <Brain className="w-4 h-4 mr-1.5" />
+        BAM Check-In
       </Button>
       <Button
         size="sm"

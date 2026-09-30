@@ -266,7 +266,7 @@ const FieldEditorDialog = ({
 /* ─── Main Form Builder ─── */
 // The same editor serves two forms. NLA's is the default; Hawk Squad's lives
 // in its own fields table and is reached through its own route.
-export type FieldsTable = "registration_form_fields" | "hawk_squad_form_fields";
+export type FieldsTable = "registration_form_fields" | "hawk_squad_form_fields" | "bam_form_fields";
 
 const AdminFormBuilder = ({
   table = "registration_form_fields",
@@ -530,7 +530,7 @@ const AdminFormBuilder = ({
             <DialogTitle>Form Preview</DialogTitle>
           </DialogHeader>
           <ScrollArea className="flex-1">
-            <FormPreview fields={fields.filter(f => f.is_active)} program={table === "hawk_squad_form_fields" ? "hawk" : "nla"} />
+            <FormPreview fields={fields.filter(f => f.is_active)} program={table === "hawk_squad_form_fields" ? "hawk" : table === "bam_form_fields" ? "bam" : "nla"} />
           </ScrollArea>
         </DialogContent>
       </Dialog>

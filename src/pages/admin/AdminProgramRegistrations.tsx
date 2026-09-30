@@ -1,6 +1,6 @@
-// Hawk Squad — Registrations.
+// A program's Registrations.
 //
-// The admin side of the public form at /hawk-squad/register: every student
+// The admin side of the public form at /<program>/register: every student
 // registered for a program year, who is waiting for approval, approve and
 // archive, and the full record with photo and signatures. Own tables, so
 // nothing here can touch or be touched by NLA.
@@ -23,13 +23,14 @@ import {
 } from "lucide-react";
 import { getProgramYearForRegistration, shortProgramYear } from "@/lib/programYear";
 import {
-  HAWK_GRADES, HAWK_CTE_PROGRAMS, HAWK_SEX, HAWK_RACE, HAWK_DISMISSAL_WAIVER_KEY,
+  HAWK_CTE_PROGRAMS, HAWK_SEX, HAWK_RACE,
   type HawkRegistration, hawkPhotoUrl, hawkSignatureUrl, hawkPossibleDuplicates,
 } from "@/lib/hawkSquad";
+import type { ProgramConfig } from "@/lib/programs";
 import { AlertTriangle, Trash2 } from "lucide-react";
 import { e164ToDisplay } from "@/lib/validators";
 
-const table = () => supabase.from("hawk_squad_registrations" as never) as never as {
+const tableFor = (name: string) => supabase.from(name as never) as never as {
   select: (s: string) => {
     order: (k: string, o: { ascending: boolean }) => Promise<{ data: unknown; error: unknown }>;
   };
@@ -52,7 +53,8 @@ const ageOn = (dob: string | null, on = new Date()) => {
   return a;
 };
 
-const AdminHawkSquadRegistrations = () => {
+const AdminProgramRegistrations = ({ program }: { program: ProgramConfig }) => {
+  const table = () => tableFor(program.tables.registrations);
   const qc = useQueryClient();
   const [year, setYear] = useState<string>(() => getProgramYearForRegistration());
   const [search, setSearch] = useState("");
@@ -61,7 +63,7 @@ const AdminHawkSquadRegistrations = () => {
   const [busyId, setBusyId] = useState<string | null>(null);
 
   const { data: rows = [], isLoading, isError, error } = useQuery({
-    queryKey: ["hawk-squad-registrations"],
+    queryKey: ["program-registrations", program.key],
     queryFn: async () => {
       const { data, error } = await table().select("*").order("created_at", { ascending: false });
       if (error) throw error as Error;
@@ -97,7 +99,7 @@ const AdminHawkSquadRegistrations = () => {
   // is for a test entry or a registration that should never have existed.
   const remove = async (r: HawkRegistration) => {
     const name = `${r.child_first_name} ${r.child_last_name}`;
-    if (!window.confirm(`Delete ${name}'s Hawk Squad registration for good?
+    if (!window.confirm(`Delete ${name}'s ${program.name} registration for good?
 
 This also deletes every check-in recorded for it and cannot be undone. Use Archive instead if you might need it back.`)) return;
     setBusyId(r.id);
@@ -111,7 +113,7 @@ This also deletes every check-in recorded for it and cannot be undone. Use Archi
       const { error } = await table().delete().eq("id", r.id);
       if (error) throw error as Error;
       setOpenId(null);
-      await qc.invalidateQueries({ queryKey: ["hawk-squad-registrations"] });
+      await qc.invalidateQueries({ queryKey: ["program-registrations", program.key] });
       toast.success(`${name}'s registration was deleted.`);
     } catch (e) {
       toast.error((e as Error)?.message ?? "Couldn't delete that.");
@@ -125,7 +127,7 @@ This also deletes every check-in recorded for it and cannot be undone. Use Archi
     try {
       const { error } = await table().update({ ...values, updated_at: new Date().toISOString() }).eq("id", id);
       if (error) throw error as Error;
-      await qc.invalidateQueries({ queryKey: ["hawk-squad-registrations"] });
+      await qc.invalidateQueries({ queryKey: ["program-registrations", program.key] });
       toast.success(done);
     } catch (e) {
       toast.error((e as Error)?.message ?? "Couldn't save that.");
@@ -153,7 +155,7 @@ This also deletes every check-in recorded for it and cannot be undone. Use Archi
             {r.grade_level && <span className="ml-2 text-xs text-white/40">{r.grade_level}</span>}
           </p>
           <p className="text-xs text-white/45 truncate">
-            {r.cte_program || "No CTE program"} · {[r.parent_first_name, r.parent_last_name].filter(Boolean).join(" ") || "No parent name"}
+            {program.hasCte && `${r.cte_program || "No CTE program"} · `}{[r.parent_first_name, r.parent_last_name].filter(Boolean).join(" ") || "No parent name"}
             {r.parent_phone ? ` · ${e164ToDisplay(r.parent_phone)}` : ""}
           </p>
           {dups.length > 0 && (
@@ -164,7 +166,7 @@ This also deletes every check-in recorded for it and cannot be undone. Use Archi
           )}
         </div>
         <div className="flex items-center gap-1.5 shrink-0">
-          {r.dismissal_waiver_signed_at ? (
+          {!program.hasGoingHome ? null : r.dismissal_waiver_signed_at ? (
             <Badge className="bg-amber-500/15 text-amber-300 border-amber-400/30 text-[10px]" title="Dismissal waiver on file — may be dismissed directly from NLA instead of riding the bus">
               <Bus className="w-3 h-3 mr-1" /> Bus or dismiss from NLA
             </Badge>
@@ -203,12 +205,12 @@ This also deletes every check-in recorded for it and cannot be undone. Use Archi
     <div className="p-4 md:p-8 space-y-6 max-w-6xl mx-auto text-white">
       <div className="flex items-start justify-between gap-4 flex-wrap">
         <div>
-          <h2 className="text-2xl font-bold">Hawk Squad — Registrations</h2>
+          <h2 className="text-2xl font-bold">{program.name} — Registrations</h2>
           <p className="text-neutral-400 text-sm mt-1">
-            Every student registered for Hawk Squad. Approve them here and they appear on the Hawk Squad check-in.
+            Every student registered for {program.name}. Approve them here and they appear on the {program.name} check-in.
           </p>
         </div>
-        <Button variant="outline" onClick={() => window.open("/hawk-squad/register", "_blank")}
+        <Button variant="outline" onClick={() => window.open(`/${program.slug}/register`, "_blank")}
           className="bg-transparent border-neutral-700 text-neutral-300 hover:text-white">
           <ExternalLink className="w-4 h-4 mr-1.5" /> Open registration form
         </Button>
@@ -230,7 +232,7 @@ This also deletes every check-in recorded for it and cannot be undone. Use Archi
         <div className="relative flex-1 min-w-[220px] max-w-md">
           <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-white/30" />
           <Input value={search} onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search by student, parent, email or CTE program…"
+            placeholder={program.hasCte ? "Search by student, parent, email or CTE program…" : "Search by student, parent or email…"}
             className="pl-9 bg-neutral-900 border-neutral-700 text-white" />
         </div>
         <Button variant="ghost" size="sm" onClick={() => setShowArchived((v) => !v)}
@@ -243,7 +245,7 @@ This also deletes every check-in recorded for it and cannot be undone. Use Archi
         <p className="text-white/40 py-16 text-center">Loading…</p>
       ) : isError ? (
         <Card className="bg-rose-500/10 border-rose-400/30 text-white">
-          <CardContent className="p-5 text-sm">Couldn't load Hawk Squad registrations: {(error as Error)?.message}</CardContent>
+          <CardContent className="p-5 text-sm">Couldn't load {program.name} registrations: {(error as Error)?.message}</CardContent>
         </Card>
       ) : (
         <>
@@ -281,6 +283,7 @@ This also deletes every check-in recorded for it and cannot be undone. Use Archi
 
       {open && (
         <RegistrationDialog
+          program={program}
           r={open}
           busy={busyId === open.id}
           onClose={() => setOpenId(null)}
@@ -294,9 +297,10 @@ This also deletes every check-in recorded for it and cannot be undone. Use Archi
 
 /* ───── The full record ───── */
 const RegistrationDialog = ({
-  r,
+  program, r,
   onDelete, busy, onClose, onSave,
 }: {
+  program: ProgramConfig;
   r: HawkRegistration;
   busy: boolean;
   onClose: () => void;
@@ -328,9 +332,9 @@ const RegistrationDialog = ({
   // the Hawk Squad form fields. Edit the CTE list in the Form Editor and this
   // dialog follows. The constants in hawkSquad.ts are only the fallback.
   const { data: formOptions = {} } = useQuery({
-    queryKey: ["hawk-form-options"],
+    queryKey: ["program-form-options", program.key],
     queryFn: async (): Promise<Record<string, string[]>> => {
-      const { data } = await (supabase.from("hawk_squad_form_fields" as never) as never as {
+      const { data } = await (supabase.from(program.tables.fields as never) as never as {
         select: (s: string) => { in: (k: string, v: string[]) => Promise<{ data: unknown }> };
       }).select("field_key, options").in("field_key", ["grade_level", "cte_program", "child_sex", "child_race_ethnicity", "free_or_reduced_lunch"]);
       const out: Record<string, string[]> = {};
@@ -391,15 +395,15 @@ const RegistrationDialog = ({
               </p>
             </div>
           </DialogTitle>
-          <DialogDescription className="sr-only">Hawk Squad registration</DialogDescription>
+          <DialogDescription className="sr-only">{program.name} registration</DialogDescription>
         </DialogHeader>
 
         <div className="space-y-5">
           <section className="grid gap-3 sm:grid-cols-2">
             {field("First name", "child_first_name")}
             {field("Last name", "child_last_name")}
-            {pick("Grade", "grade_level", optionsFor("grade_level", HAWK_GRADES))}
-            {pick("CTE program", "cte_program", optionsFor("cte_program", HAWK_CTE_PROGRAMS))}
+            {pick("Grade", "grade_level", optionsFor("grade_level", program.grades))}
+            {program.hasCte && pick("CTE program", "cte_program", optionsFor("cte_program", HAWK_CTE_PROGRAMS))}
             {pick("Sex", "child_sex", optionsFor("child_sex", HAWK_SEX))}
             {field("Date of birth", "child_date_of_birth", "date")}
             {pick("Race / ethnicity", "child_race_ethnicity", optionsFor("child_race_ethnicity", HAWK_RACE))}
@@ -454,6 +458,7 @@ const RegistrationDialog = ({
                 </div>
               ))}
               {/* The optional one, stated either way, with a way to record it later. */}
+              {program.hasGoingHome && (
               <div className="flex items-center justify-between gap-3 px-3 py-2 text-sm bg-white/[0.02]">
                 <span className="text-white/85 flex items-center gap-2">
                   <Bus className="w-4 h-4 text-sky-300" /> Dismissal waiver
@@ -472,9 +477,10 @@ const RegistrationDialog = ({
                   </span>
                 )}
               </div>
+              )}
             </div>
             {r.final_signature_name && <p className="text-xs text-white/35 mt-1.5">Signed as: {r.final_signature_name}</p>}
-            {!waivers.some(([k]) => k === HAWK_DISMISSAL_WAIVER_KEY) && r.dismissal_waiver_signed_at && (
+            {program.dismissalWaiverKey && !waivers.some(([k]) => k === program.dismissalWaiverKey) && r.dismissal_waiver_signed_at && (
               <p className="text-xs text-white/35 mt-1">Dismissal waiver was recorded by staff, not signed on the form.</p>
             )}
           </section>
@@ -513,4 +519,4 @@ const RegistrationDialog = ({
   );
 };
 
-export default AdminHawkSquadRegistrations;
+export default AdminProgramRegistrations;

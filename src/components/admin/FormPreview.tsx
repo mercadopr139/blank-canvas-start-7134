@@ -37,9 +37,15 @@ const conditionOf = (f: FormField): { field: string; op?: string; value?: string
 };
 
 // `program` decides the framing: NLA's heading on the default background,
-// or Hawk Squad's heading on Hawk Squad green -- the same as the live forms.
-const FormPreview = ({ fields, program = "nla" }: { fields: FormField[]; program?: "nla" | "hawk" }) => {
-  const hawk = program === "hawk";
+// or a partner program's heading on its own colour -- the same as the live forms.
+const FRAMES = {
+  nla: { name: "", bg: "", inWord: "" },
+  hawk: { name: "Hawk Squad ", bg: "bg-[#0f4c2f]", inWord: "in Hawk Squad " },
+  bam: { name: "BAM ", bg: "bg-[#374151]", inWord: "in BAM " },
+} as const;
+const FormPreview = ({ fields, program = "nla" }: { fields: FormField[]; program?: keyof typeof FRAMES }) => {
+  const frame = FRAMES[program];
+  const hawk = program !== "nla";
   const sorted = [...fields].sort((a, b) => a.sort_order - b.sort_order);
   const labelOf = (key: string) => fields.find((x) => x.field_key === key)?.label ?? key;
 
@@ -232,16 +238,16 @@ const FormPreview = ({ fields, program = "nla" }: { fields: FormField[]; program
   };
 
   return (
-    <Card className={hawk ? "shadow-lg bg-[#0f4c2f] border-0" : "shadow-lg"}>
+    <Card className={hawk ? `shadow-lg ${frame.bg} border-0` : "shadow-lg"}>
       <CardContent className={hawk ? "pt-8 pb-8 m-3 rounded-lg bg-background" : "pt-8 pb-8"}>
         <div className="text-center mb-8">
           <img src={nlaLogo} alt="No Limits Academy" className="w-20 h-20 mx-auto mb-4 object-contain" />
           {/* Same derivation as the live form, so the preview cannot show a
               different year from the thing it is previewing. */}
           <h1 className="text-2xl font-bold mb-2">
-            {shortProgramYear(getProgramYearForRegistration())} {hawk ? "Hawk Squad " : ""}Registration
+            {shortProgramYear(getProgramYearForRegistration())} {frame.name}Registration
           </h1>
-          <p className="text-muted-foreground text-sm">Must complete before participation {hawk ? "in Hawk Squad " : ""}at No Limits Academy.</p>
+          <p className="text-muted-foreground text-sm">Must complete before participation {frame.inWord}at No Limits Academy.</p>
         </div>
         <div className="space-y-6">
           <div>
