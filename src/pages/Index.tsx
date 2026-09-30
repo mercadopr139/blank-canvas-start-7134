@@ -76,18 +76,23 @@ const Index = () => {
 
             {/* Hawk Squad: a quiet line for Cape May Tech families, kept
                 under the Bulletin Board so it never competes with it. */}
-            <div className="mt-8 pt-5 border-t border-primary-foreground/15 w-full max-w-xs">
-              <p className="text-sm text-primary-foreground/80">
-                Cape May Tech student?{" "}
-                <Link
-                  to="/hawk-squad/register"
-                  className="inline-flex items-center gap-1.5 font-medium text-primary-foreground underline underline-offset-4 decoration-primary-foreground/40 transition-colors hover:text-white hover:decoration-[#f2c230]"
-                >
-                  <Bird className="h-4 w-4" />
-                  Register for Hawk Squad here
-                </Link>
-              </p>
-            </div>
+            <Link
+              to="/hawk-squad/register"
+              className="group mt-8 w-full max-w-sm rounded-xl border border-[#f2c230]/60 bg-[#0f4c2f] px-5 py-4 text-left shadow-md transition-all hover:bg-[#12603a] hover:border-[#f2c230] hover:shadow-lg"
+            >
+              <div className="flex items-center gap-3">
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#f2c230]">
+                  <Bird className="h-5 w-5 text-[#0f4c2f]" />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-[#f2c230]">Hawk Squad</p>
+                  <p className="text-sm font-semibold text-white">
+                    Cape May Tech student? Register for Hawk Squad here
+                    <span className="ml-1 inline-block transition-transform group-hover:translate-x-0.5">→</span>
+                  </p>
+                </div>
+              </div>
+            </Link>
         </section>
       </main>
 
