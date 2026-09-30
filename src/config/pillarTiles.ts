@@ -31,6 +31,9 @@ export interface PillarTile {
 }
 
 export const OPERATIONS_TILES: PillarTile[] = [
+  // Ordered in four clusters, top to bottom: running NLA day to day,
+  // coaching tools, the partner programs, then setup. Reordered 2026-09-30;
+  // nothing removed or merged.
   {
     title: "Registration",
     description: "Youth registration management",
@@ -51,13 +54,6 @@ export const OPERATIONS_TILES: PillarTile[] = [
     ],
   },
   {
-    title: "Forms & Waivers",
-    description: "Build standalone forms & collect responses",
-    icon: FileText,
-    href: "/admin/operations/forms",
-    permKey: "operations_forms",
-  },
-  {
     title: "Attendance",
     description: "Attendance tracking & reports",
     icon: CalendarCheck,
@@ -65,13 +61,13 @@ export const OPERATIONS_TILES: PillarTile[] = [
     permKey: "operations_attendance",
     children: [
       { title: "Attendance Intelligence", href: "/admin/operations/attendance", icon: CalendarCheck },
+      { title: "Youth Served (all programs)", href: "/admin/operations/youth-served", icon: Layers },
       { title: "Program Highlights", href: "/admin/operations/program-highlights", icon: Sparkles },
       { title: "Excursion Intelligence", href: "/admin/operations/excursion-intelligence", icon: MapPin },
       { title: "Events Intelligence", href: "/admin/operations/events-intelligence", icon: Sparkles },
       { title: "Attendance Reports", href: "/admin/operations/attendance-reports", icon: FileBarChart },
       { title: "Call-Outs", href: "/admin/operations/callouts", icon: PhoneOff },
       { title: "Smile Lab Intelligence", href: "/admin/operations/smile-lab-attendance", icon: Smile },
-      { title: "Youth Served (all programs)", href: "/admin/operations/youth-served", icon: Layers },
     ],
   },
   {
@@ -101,6 +97,18 @@ export const OPERATIONS_TILES: PillarTile[] = [
     ],
   },
   {
+    title: "Practice Plan",
+    description: "The weekly plan and the gym board",
+    icon: ClipboardList,
+    href: "/admin/operations/practice-plan",
+    permKey: "operations_practice_plan",
+    children: [
+      { title: "Weekly Plan", href: "/admin/operations/practice-plan", icon: ClipboardList },
+      { title: "Daily Duties Intelligence", href: "/admin/operations/daily-duties", icon: Sparkles },
+      { title: "Gym Board", href: "/practice-board", icon: Monitor, external: true },
+    ],
+  },
+  {
     title: "Strength & Conditioning",
     description: "AI workout board — bench, squat, deadlift",
     icon: Dumbbell,
@@ -113,6 +121,28 @@ export const OPERATIONS_TILES: PillarTile[] = [
       { title: "NBT S&C Board", href: "/admin/operations/nbt-board", icon: Dumbbell },
       { title: "NBT Intelligence", href: "/admin/operations/nbt-intelligence", icon: BarChart3 },
       { title: "75 Hard", href: "/hard-75", icon: Flame, external: true },
+    ],
+  },
+  {
+    title: "Weight Watchers",
+    description: "Weekly weigh-ins & weight tracking",
+    icon: Scale,
+    href: "/admin/operations/weight-watchers",
+    permKey: "operations_weight_watchers",
+  },
+  {
+    title: "Scripture Coach",
+    description: "Scripture & talking points for a youth conversation",
+    icon: BookOpenCheck,
+    href: "/admin/operations/scripture-coach",
+    permKey: "operations_scripture_coach",
+    children: [
+      {
+        title: "Scripture Coach Intelligence",
+        href: "/admin/operations/scripture-coach-intelligence",
+        icon: HeartHandshake,
+      },
+      { title: "New Session", href: "/admin/operations/scripture-coach", icon: BookOpenCheck },
     ],
   },
   {
@@ -146,38 +176,11 @@ export const OPERATIONS_TILES: PillarTile[] = [
     ],
   },
   {
-    title: "Weight Watchers",
-    description: "Weekly weigh-ins & weight tracking",
-    icon: Scale,
-    href: "/admin/operations/weight-watchers",
-    permKey: "operations_weight_watchers",
-  },
-  {
-    title: "Practice Plan",
-    description: "The weekly plan and the gym board",
-    icon: ClipboardList,
-    href: "/admin/operations/practice-plan",
-    permKey: "operations_practice_plan",
-    children: [
-      { title: "Weekly Plan", href: "/admin/operations/practice-plan", icon: ClipboardList },
-      { title: "Daily Duties Intelligence", href: "/admin/operations/daily-duties", icon: Sparkles },
-      { title: "Gym Board", href: "/practice-board", icon: Monitor, external: true },
-    ],
-  },
-  {
-    title: "Scripture Coach",
-    description: "Scripture & talking points for a youth conversation",
-    icon: BookOpenCheck,
-    href: "/admin/operations/scripture-coach",
-    permKey: "operations_scripture_coach",
-    children: [
-      {
-        title: "Scripture Coach Intelligence",
-        href: "/admin/operations/scripture-coach-intelligence",
-        icon: HeartHandshake,
-      },
-      { title: "New Session", href: "/admin/operations/scripture-coach", icon: BookOpenCheck },
-    ],
+    title: "Forms & Waivers",
+    description: "Build standalone forms & collect responses",
+    icon: FileText,
+    href: "/admin/operations/forms",
+    permKey: "operations_forms",
   },
 ];
 

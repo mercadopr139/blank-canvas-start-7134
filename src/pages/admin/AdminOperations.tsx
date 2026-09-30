@@ -43,14 +43,6 @@ const AdminOperations = () => {
       </Button>
       <Button
         size="sm"
-        className="w-full bg-teal-500 hover:bg-teal-400 text-white text-sm font-medium"
-        onClick={() => navigate("/check-in/smile-lab")}
-      >
-        <Smile className="w-4 h-4 mr-1.5" />
-        Smile Lab Check-In
-      </Button>
-      <Button
-        size="sm"
         className="w-full bg-amber-600 hover:bg-amber-500 text-white text-sm font-medium"
         onClick={() => navigate("/meal-check-in")}
       >
@@ -59,11 +51,11 @@ const AdminOperations = () => {
       </Button>
       <Button
         size="sm"
-        className="w-full bg-purple-600 hover:bg-purple-500 text-white text-sm font-medium"
-        onClick={() => navigate("/excursion-check-in")}
+        className="w-full bg-teal-500 hover:bg-teal-400 text-white text-sm font-medium"
+        onClick={() => navigate("/check-in/smile-lab")}
       >
-        <MapPin className="w-4 h-4 mr-1.5" />
-        Excursion Check-In
+        <Smile className="w-4 h-4 mr-1.5" />
+        Smile Lab Check-In
       </Button>
       <Button
         size="sm"
@@ -88,6 +80,14 @@ const AdminOperations = () => {
       >
         <Scale className="w-4 h-4 mr-1.5" />
         Weight Watchers
+      </Button>
+      <Button
+        size="sm"
+        className="w-full bg-purple-600 hover:bg-purple-500 text-white text-sm font-medium"
+        onClick={() => navigate("/excursion-check-in")}
+      >
+        <MapPin className="w-4 h-4 mr-1.5" />
+        Excursion Check-In
       </Button>
     </div>
   );
