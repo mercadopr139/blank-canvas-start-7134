@@ -15,7 +15,7 @@ import ImpactSection from "@/components/sections/ImpactSection";
 import AwardsSection from "@/components/sections/AwardsSection";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { MessageCircle, Users } from "lucide-react";
+import { MessageCircle, Users, Bird } from "lucide-react";
 import ContactModal from "@/components/contact/ContactModal";
 const Index = () => {
   const [scheduleOpen, setScheduleOpen] = useState(false);
@@ -73,6 +73,21 @@ const Index = () => {
               </Link>
             </Button>
             <p className="mt-2 text-xs text-primary-foreground/70">Password Protected</p>
+
+            {/* Hawk Squad: a quiet line for Cape May Tech families, kept
+                under the Bulletin Board so it never competes with it. */}
+            <div className="mt-8 pt-5 border-t border-primary-foreground/15 w-full max-w-xs">
+              <p className="text-sm text-primary-foreground/80">
+                Cape May Tech student?{" "}
+                <Link
+                  to="/hawk-squad/register"
+                  className="inline-flex items-center gap-1.5 font-medium text-primary-foreground underline underline-offset-4 decoration-primary-foreground/40 transition-colors hover:text-white hover:decoration-[#f2c230]"
+                >
+                  <Bird className="h-4 w-4" />
+                  Register for Hawk Squad here
+                </Link>
+              </p>
+            </div>
         </section>
       </main>
 
