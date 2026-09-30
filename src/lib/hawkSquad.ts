@@ -154,6 +154,9 @@ const addDaysYmd = (ymd: string, n: number) => {
   return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
 };
 
+/** The first week Weekly Standout Moments are expected (its Monday). Hawk Squad's first day is Tue Oct 6, 2026. */
+export const HAWK_MOMENTS_START = "2026-10-05";
+
 /** The Monday of the week holding this date. */
 export const hawkWeekStart = (ymd: string) => addDaysYmd(ymd, -((new Date(`${ymd}T12:00:00`).getDay() + 6) % 7));
 

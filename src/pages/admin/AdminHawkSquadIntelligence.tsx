@@ -133,6 +133,9 @@ const AdminHawkSquadIntelligence = () => {
         </Button>
       </div>
 
+      {/* ── By the numbers ── */}
+      <SectionLabel tag="By the numbers" title="Reach and who the students are" tone="gold" />
+
       {/* Period */}
       <div className="flex flex-wrap items-center gap-2">
         {PRESETS.map((p) => (
@@ -228,19 +231,29 @@ const AdminHawkSquadIntelligence = () => {
         </div>
       </div>
 
-      <HawkSquadWeeklyMoments />
-
-      {/* Day by day, on the same page as the numbers, like NLA's Attendance
-          Intelligence: scroll down for the calendar and the day's roster. */}
-      <section id="attendance" className="pt-8 mt-2 border-t border-white/10 space-y-2">
-        <h3 className="text-xl font-bold">Attendance</h3>
+      {/* ── Day by day: the calendar and the day's roster, like NLA's Attendance Intelligence. ── */}
+      <section id="attendance" className="rounded-2xl border border-white/10 bg-white/[0.025] p-4 md:p-6 space-y-3 scroll-mt-6">
+        <SectionLabel tag="Day by day" title="Attendance" tone="green" />
         <AdminHawkSquadAttendance embedded />
       </section>
+
+      {/* ── In the coaches' words: the nuggets the report is built from. Last, on Hawk green. ── */}
+      <HawkSquadWeeklyMoments />
 
       <HawkSquadGrantReportSheet open={reportOpen} onClose={() => setReportOpen(false)} period={label} stats={stats} breakdown={breakdown} moments={moments} />
     </div>
   );
 };
+
+// A small tag and a title that mark where one band of the page ends and the
+// next begins: gold for the numbers, green for the day-by-day, and the
+// moments section carries its own on Hawk green.
+const SectionLabel = ({ tag, title, tone }: { tag: string; title: string; tone: "gold" | "green" }) => (
+  <div className="flex items-center gap-3">
+    <span className={`rounded-full px-2.5 py-0.5 text-[10px] font-black uppercase tracking-[0.2em] ${tone === "gold" ? "bg-[#f2c230] text-[#0f4c2f]" : "bg-[#0f4c2f] text-[#f2c230] ring-1 ring-[#f2c230]/40"}`}>{tag}</span>
+    <h3 className="text-lg font-bold">{title}</h3>
+  </div>
+);
 
 const Stat = ({ icon, label, value, sub }: { icon: React.ReactNode; label: string; value: number; sub?: string }) => (
   <div className="rounded-xl border border-white/10 bg-white/[0.03] p-3">

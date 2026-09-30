@@ -21,6 +21,8 @@ const TO = "chrissycasiello@nolimitsboxingacademy.org";
 const FROM = "No Limits Academy <joshmercado@nolimitsboxingacademy.org>";
 const PAGE = "https://www.nolimitsboxingacademy.org/admin/operations/hawk-squad/intelligence";
 const GREEN = "#0f4c2f", GOLD = "#f2c230";
+// Hawk Squad's first day is Tue Oct 6, 2026: no reminders for earlier weeks.
+const START_WEEK = "2026-10-05";
 
 const json = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), { status, headers: { ...corsHeaders, "Content-Type": "application/json" } });
@@ -110,6 +112,7 @@ Deno.serve(async (req) => {
     const today = todayET();
     const week = targetWeek(today);
     const weekEnd = addDays(week, 6);
+    if (week < START_WEEK) return json({ sent: false, reason: "before the first week", week });
 
     // Already written? Then nothing to send.
     const { data: entry } = await service.from("hawk_squad_weekly_moments").select("notes").eq("week_start", week).maybeSingle();

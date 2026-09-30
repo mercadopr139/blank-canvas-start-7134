@@ -12,7 +12,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { Sparkles, Save, Pencil, Trash2, ChevronLeft, ChevronRight, Loader2 } from "lucide-react";
-import { type HawkWeeklyMoments, hawkTodayET, hawkWeekStart, hawkMomentsTargetWeek, hawkWeekLabel } from "@/lib/hawkSquad";
+import { type HawkWeeklyMoments, hawkTodayET, hawkWeekStart, hawkMomentsTargetWeek, hawkWeekLabel, HAWK_MOMENTS_START } from "@/lib/hawkSquad";
 
 const tbl = () => supabase.from("hawk_squad_weekly_moments" as never) as never as {
   select: (s: string) => { order: (k: string, o: { ascending: boolean }) => Promise<{ data: unknown; error: { message: string } | null }> };
@@ -30,9 +30,12 @@ const HawkSquadWeeklyMoments = () => {
   const { user } = useAuth();
   const [params] = useSearchParams();
   const today = hawkTodayET();
+  // Nothing is due before the programme's first week; until then the box
+  // simply opens on that first week.
   const due = hawkMomentsTargetWeek(today);
+  const dueActive = due >= HAWK_MOMENTS_START;
   const fromLink = params.get("moments");
-  const [week, setWeek] = useState<string>(fromLink && /^\d{4}-\d{2}-\d{2}$/.test(fromLink) ? hawkWeekStart(fromLink) : due);
+  const [week, setWeek] = useState<string>(fromLink && /^\d{4}-\d{2}-\d{2}$/.test(fromLink) ? hawkWeekStart(fromLink) : (dueActive ? due : HAWK_MOMENTS_START));
   const [notes, setNotes] = useState("");
   const [saving, setSaving] = useState(false);
 
@@ -75,21 +78,25 @@ const HawkSquadWeeklyMoments = () => {
     toast.success("Deleted.");
   };
 
-  const isDue = week === due;
-  const dueWritten = !!entries.find((e) => e.week_start === due && e.notes.trim());
+  const isDue = dueActive && week === due;
+  const dueWritten = !dueActive || !!entries.find((e) => e.week_start === due && e.notes.trim());
 
   return (
-    <section id="moments" className="pt-8 mt-2 border-t border-white/10 space-y-4 scroll-mt-6">
+    <section id="moments" className="rounded-2xl border border-[#f2c230]/40 bg-gradient-to-br from-[#0f4c2f] to-[#083620] p-4 md:p-6 space-y-4 scroll-mt-6 shadow-lg">
       <div>
-        <h3 className="text-xl font-bold flex items-center gap-2"><Sparkles className="h-5 w-5 text-[#f2c230]" /> Weekly Standout Moments</h3>
-        <p className="text-neutral-400 text-sm mt-1">
+        <div className="flex items-center gap-3">
+          <span className="rounded-full bg-[#f2c230] px-2.5 py-0.5 text-[10px] font-black uppercase tracking-[0.2em] text-[#0f4c2f]">In the coaches' words</span>
+          <h3 className="text-lg font-bold flex items-center gap-2"><Sparkles className="h-5 w-5 text-[#f2c230]" /> Weekly Standout Moments</h3>
+        </div>
+        <p className="text-white/60 text-sm mt-2">
           A few sentences a week — what the kids did, what they enjoyed, anything that made you smile. The grant report weaves these in.
-          {!dueWritten && <span className="text-amber-300"> This week's is still waiting; Chrissy gets a reminder at 8 AM until it is written.</span>}
+          {!dueWritten && <span className="text-[#f2c230]"> This week's is still waiting; Chrissy gets a reminder at 8 AM until it is written.</span>}
+          {!dueActive && <span className="text-white/45"> Starts the week of {hawkWeekLabel(HAWK_MOMENTS_START)}.</span>}
         </p>
       </div>
 
       {/* The box */}
-      <Card className="bg-white/[0.03] border-white/10 text-white" style={{ borderColor: isDue && !current?.notes ? "#f2c23066" : undefined }}>
+      <Card className="bg-black/25 border-white/10 text-white" style={{ borderColor: isDue && !current?.notes ? "#f2c23099" : undefined }}>
         <CardContent className="p-4 space-y-3">
           <div className="flex items-center justify-between gap-2 flex-wrap">
             <div className="flex items-center gap-1">
@@ -103,7 +110,7 @@ const HawkSquadWeeklyMoments = () => {
             placeholder={"e.g. Friendly game of dodgeball Tuesday and pizza from Domino's after. Thursday a few of the kids helped each other get ready for the SAT prep class."}
             className="bg-neutral-900 border-neutral-700 text-white text-sm leading-relaxed" />
           <div className="flex justify-end">
-            <Button onClick={save} disabled={saving || !dirty || !notes.trim()} className="font-bold gap-2" style={{ backgroundColor: "#0f4c2f", color: "#f2c230" }}>
+            <Button onClick={save} disabled={saving || !dirty || !notes.trim()} className="font-bold gap-2 hover:opacity-90" style={{ backgroundColor: "#f2c230", color: "#0f4c2f" }}>
               {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />} {current ? "Save changes" : "Save"}
             </Button>
           </div>
@@ -111,7 +118,7 @@ const HawkSquadWeeklyMoments = () => {
       </Card>
 
       {/* Every entry */}
-      <Card className="bg-white/[0.03] border-white/10 text-white">
+      <Card className="bg-black/25 border-white/10 text-white">
         <CardContent className="p-0">
           {isLoading ? <p className="p-4 text-white/40 text-sm">Loading…</p>
           : isError ? <p className="p-4 text-rose-300 text-sm">Couldn't load: {(error as Error)?.message}</p>
