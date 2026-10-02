@@ -6,6 +6,7 @@ const awards = [
   `Cape Assist — Partner in Prevention Award`,
   `Cape May County NAACP Freedom Fund — Recognition of Educator Award`,
   `Cape May County Chamber of Commerce — Non-Profit of the Year Award`,
+  `Caring For Kids — Community Impact Award`,
   `Middle Township City Council — "Middle Matters" Civic Recognition Award`,
   `United States House of Representatives — Congressional Proclamation of Recognition`,
   `USA Boxing's Mid-Atlantic Association — George Hill Humanitarian Award`,
@@ -35,13 +36,13 @@ const AwardsSection = () => {
             <div className="rounded-xl overflow-hidden border border-white/10 shadow-2xl shadow-black/50 aspect-[5/2] md:aspect-[3/1]">
               <img
                 src={georgeHillAward}
-                alt="No Limits Academy receives the USA Boxing George Hill Humanitarian Award at Middle Township"
+                alt="No Limits Academy receives the Middle Matters Civic Recognition Award from Middle Township City Council"
                 className="w-full h-full object-cover"
                 style={{ objectPosition: "50% 64%" }}
               />
             </div>
             <figcaption className="mt-3 text-center text-xs text-white/50">
-              No Limits Academy honored at Middle Township — accepting the USA Boxing George Hill Humanitarian Award.
+              No Limits Academy honored by Middle Township City Council — accepting the &ldquo;Middle Matters&rdquo; Civic Recognition Award.
             </figcaption>
           </figure>
 
