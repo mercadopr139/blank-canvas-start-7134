@@ -68,7 +68,7 @@ const timeET = (iso: string) =>
 const AdminProgramAttendance = ({ program, embedded = false }: { program: ProgramConfig; embedded?: boolean }) => {
   const att = () => attFor(program.tables.attendance);
   const days = () => daysFor(program.tables.practiceDays);
-  const isDay = (d: string, o: Record<string, boolean>) => isHawkPracticeDay(d, o, program.defaultWeekdays);
+  const isDay = (d: string, o: Record<string, boolean>) => isHawkPracticeDay(d, o, program.defaultWeekdays, program.scheduleDates);
   const qc = useQueryClient();
   const today = hawkTodayET();
   const [ym, setYm] = useState(() => ({ y: Number(today.slice(0, 4)), m0: Number(today.slice(5, 7)) - 1 }));
@@ -136,6 +136,8 @@ const AdminProgramAttendance = ({ program, embedded = false }: { program: Progra
     const next = !isDay(date, overrides);
     const { error } = await days().upsert({ date, is_practice_day: next }, { onConflict: "date" });
     if (error) { toast.error(error.message); return; }
+    // Flip the dot immediately; the refetch below confirms it from the database.
+    qc.setQueryData<Record<string, boolean>>(["program-practice-days", program.key, first], (prev) => ({ ...(prev ?? {}), [date]: next }));
     refresh();
     toast.success(next ? `${date} is a ${program.name} day.` : `${date} is off.`);
   };
@@ -168,8 +170,8 @@ const AdminProgramAttendance = ({ program, embedded = false }: { program: Progra
     toast.success(`${s.child_first_name} added for ${selected}.`);
   };
 
-  // Calendar cells: pad to Monday-first weeks.
-  const lead = (new Date(`${first}T12:00:00`).getDay() + 6) % 7;
+  // Calendar cells: pad to Sunday-first weeks.
+  const lead = new Date(`${first}T12:00:00`).getDay();
   const cells: (string | null)[] = [...Array(lead).fill(null), ...dates];
 
   return (
@@ -219,7 +221,7 @@ const AdminProgramAttendance = ({ program, embedded = false }: { program: Progra
               </Button>
             </div>
             <div className="grid grid-cols-7 gap-1 text-center text-[10px] uppercase tracking-wider text-white/35 mb-1">
-              {["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].map((d) => <div key={d}>{d}</div>)}
+              {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((d) => <div key={d}>{d}</div>)}
             </div>
             <div className="grid grid-cols-7 gap-1">
               {cells.map((d, i) => {

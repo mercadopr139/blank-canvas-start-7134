@@ -132,7 +132,7 @@ Deno.serve(async (req) => {
     let failed = 0;
     const skippedNoEmail = (supporters || []).length - eligible.length;
     const skippedOptOut = supporter_ids.length - (supporters || []).length;
-    const today = new Date().toISOString().split("T")[0];
+    const today = new Date().toLocaleDateString("en-CA", { timeZone: "America/New_York" }); // the gym's date, not UTC
 
     // Drive the From display name off the chosen sender address so the
     // recipient sees a real person's name (e.g. "Josh Mercado") rather than

@@ -15,7 +15,7 @@ import Header from "@/components/layout/Header";
 import Footer from "@/components/layout/Footer";
 import SummerBreakBanner from "@/components/sections/SummerBreakBanner";
 import WaiverSection from "@/components/registration/WaiverSection";
-import { getProgramYearForRegistration, shortProgramYear } from "@/lib/programYear";
+import { getProgramYearForRegistration, shortProgramYear, todayNY } from "@/lib/programYear";
 import { DEFAULT_WAIVERS } from "@/components/registration/waiverTexts";
 import ChildPrimaryAddressField, { type AddressPin } from "@/components/registration/ChildPrimaryAddressField";
 import { addressProblem } from "@/lib/address";
@@ -333,7 +333,7 @@ const Register = () => {
       }
 
       const { error } = await (supabase.from("youth_registrations") as any).insert({
-        submission_date: new Date().toISOString().split("T")[0],
+        submission_date: todayNY(),
         // Tag the row with the current program year. Date-driven so the
         // Aug 1 cutover happens automatically — see programYear.ts.
         program_year: getProgramYearForRegistration(),
@@ -396,7 +396,7 @@ const Register = () => {
             parent_last_name: (formValues["parent_last_name"] || "").trim(),
             parent_phone: toE164(formValues["parent_phone"] || "") || (formValues["parent_phone"] || "").trim(),
             parent_email: (formValues["parent_email"] || "").trim(),
-            submission_date: new Date().toISOString().split("T")[0],
+            submission_date: todayNY(),
             child_headshot_url: headshotUrl || null,
           },
         });
@@ -754,7 +754,7 @@ const Register = () => {
                 {/* Today's Date */}
                 <div>
                   <Label className="text-base font-medium">Today's Date <span className="text-destructive">*</span></Label>
-                  <Input type="date" value={new Date().toISOString().split('T')[0]} disabled className="mt-2 bg-muted" />
+                  <Input type="date" value={todayNY()} disabled className="mt-2 bg-muted" />
                 </div>
 
                 {/* Dynamic fields from DB — a field with a show-if condition

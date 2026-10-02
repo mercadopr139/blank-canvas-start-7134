@@ -25,8 +25,10 @@ import { useToast } from "@/hooks/use-toast";
 import { CheckCircle2, Loader2, Upload } from "lucide-react";
 import Header from "@/components/layout/Header";
 import Footer from "@/components/layout/Footer";
+import ProgramScheduleCard from "@/components/registration/ProgramScheduleCard";
+import { PROGRAMS } from "@/lib/programs";
 import WaiverSection from "@/components/registration/WaiverSection";
-import { getProgramYearForRegistration, shortProgramYear } from "@/lib/programYear";
+import { getProgramYearForRegistration, shortProgramYear, todayNY } from "@/lib/programYear";
 import ChildPrimaryAddressField, { type AddressPin } from "@/components/registration/ChildPrimaryAddressField";
 import { addressProblem } from "@/lib/address";
 import nlaLogo from "@/assets/nla-logo.png";
@@ -314,7 +316,7 @@ const HawkSquadRegister = () => {
       }
 
       const { error } = await (supabase.from("hawk_squad_registrations" as never) as any).insert({
-        submission_date: new Date().toISOString().split("T")[0],
+        submission_date: todayNY(),
         // Same program-year rules as NLA: rolls over 1 August by itself.
         program_year: getProgramYearForRegistration(),
         child_first_name: (formValues["child_first_name"] || "").trim(),
@@ -367,7 +369,7 @@ const HawkSquadRegister = () => {
             parent_last_name: (formValues["parent_last_name"] || "").trim(),
             parent_phone: toE164(formValues["parent_phone"] || "") || (formValues["parent_phone"] || "").trim(),
             parent_email: (formValues["parent_email"] || "").trim(),
-            submission_date: new Date().toISOString().split("T")[0],
+            submission_date: todayNY(),
             child_headshot_url: headshotUrl || null,
           },
         });
@@ -631,12 +633,14 @@ const HawkSquadRegister = () => {
               </div>
               <div className="space-y-3">
                 <h1 className="text-3xl font-bold text-foreground">Welcome to HAWK SQUAD!</h1>
-                <p className="text-xl text-foreground">See you Tuesdays &amp; Thursdays immediately afterschool!</p>
-                <p className="text-base text-muted-foreground pt-2">
-                  If you have any questions, please email{" "}
-                  <a href="mailto:chrissycasiello@nolimitsboxingacademy.org" className="font-medium text-foreground underline">chrissycasiello@nolimitsboxingacademy.org</a>.
-                </p>
+                <p className="text-xl text-foreground">You&rsquo;re registered! See you immediately afterschool on these days:</p>
               </div>
+              {/* The published schedule, from programs.ts -- renders nothing for a program without one. */}
+              <ProgramScheduleCard program={PROGRAMS.hawk} />
+              <p className="text-base text-muted-foreground">
+                If you have any questions, please email{" "}
+                <a href="mailto:chrissycasiello@nolimitsboxingacademy.org" className="font-medium text-foreground underline">chrissycasiello@nolimitsboxingacademy.org</a>.
+              </p>
               <div className="pt-4">
                 <Button onClick={() => navigate("/")} size="lg" className="min-w-48">
                   Return to Home
@@ -692,7 +696,7 @@ const HawkSquadRegister = () => {
                 {/* Today's Date */}
                 <div>
                   <Label className="text-base font-medium">Today's Date <span className="text-destructive">*</span></Label>
-                  <Input type="date" value={new Date().toISOString().split('T')[0]} disabled className="mt-2 bg-muted" />
+                  <Input type="date" value={todayNY()} disabled className="mt-2 bg-muted" />
                 </div>
 
                 {/* Dynamic fields from DB — a field with a show-if condition

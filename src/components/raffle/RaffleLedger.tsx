@@ -6,7 +6,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
-import { getCurrentAttendanceYear } from "@/lib/programYear";
+import { getCurrentAttendanceYear, todayNY } from "@/lib/programYear";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -217,7 +217,7 @@ const RaffleLedger = ({
       const { data, error } = await supabase
         .from("revenue")
         .insert({
-          date: new Date().toISOString().slice(0, 10),
+          date: todayNY(),
           amount: Number(unpostedTotal.toFixed(2)),
           revenue_type: "Fundraising",
           payment_method: "Cash",
@@ -983,7 +983,7 @@ const PaymentDialog = ({
   const [amount, setAmount] = useState("");
   const [tickets, setTickets] = useState("");
   const [method, setMethod] = useState<string>("Cash");
-  const [paidOn, setPaidOn] = useState(new Date().toISOString().slice(0, 10));
+  const [paidOn, setPaidOn] = useState(todayNY());
   const [notes, setNotes] = useState("");
   const [saving, setSaving] = useState(false);
 

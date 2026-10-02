@@ -18,6 +18,7 @@ const PROGRAMS = {
     fields: "hawk_squad_form_fields",
     regs: "hawk_squad_registrations",
     sameYear: "hawk_squad_same_year_matches",
+    key: "hawk",
     prefix: "hawk-squad",
     name: "Hawk Squad",
     programLabel: "Hawk Squad",
@@ -25,7 +26,7 @@ const PROGRAMS = {
     dismissalKey: "hawk_dismissal",
     bg: "#0f4c2f",
     submittedTitle: "Welcome to HAWK SQUAD!",
-    submittedLine: "See you Tuesdays &amp; Thursdays immediately afterschool!",
+    submittedLine: "You&rsquo;re registered! See you immediately afterschool on these days:",
   },
   bam: {
     out: "src/pages/BamRegister.tsx",
@@ -33,6 +34,7 @@ const PROGRAMS = {
     fields: "bam_form_fields",
     regs: "bam_registrations",
     sameYear: "bam_same_year_matches",
+    key: "bam",
     prefix: "bam",
     name: "BAM",
     programLabel: "BAM",
@@ -125,7 +127,7 @@ const build = (p) => {
     : `        // No dismissal choice in this program: the school moves the students.\n        dismissal_waiver_signed_at: null,\n`;
   const insert =
 `      const { error } = await (supabase.from("${p.regs}" as never) as any).insert({
-        submission_date: new Date().toISOString().split("T")[0],
+        submission_date: todayNY(),
         // Same program-year rules as NLA: rolls over 1 August by itself.
         program_year: getProgramYearForRegistration(),
         child_first_name: (formValues["child_first_name"] || "").trim(),
@@ -193,12 +195,19 @@ ${dismissal}        child_headshot_url: headshotUrl,
 `              <div className="space-y-3">
                 <h1 className="text-3xl font-bold text-foreground">${p.submittedTitle}</h1>
                 <p className="text-xl text-foreground">${p.submittedLine}</p>
-                <p className="text-base text-muted-foreground pt-2">
-                  If you have any questions, please email{" "}
-                  <a href="mailto:chrissycasiello@nolimitsboxingacademy.org" className="font-medium text-foreground underline">chrissycasiello@nolimitsboxingacademy.org</a>.
-                </p>
               </div>
+              {/* The published schedule, from programs.ts -- renders nothing for a program without one. */}
+              <ProgramScheduleCard program={PROGRAMS.${p.key}} />
+              <p className="text-base text-muted-foreground">
+                If you have any questions, please email{" "}
+                <a href="mailto:chrissycasiello@nolimitsboxingacademy.org" className="font-medium text-foreground underline">chrissycasiello@nolimitsboxingacademy.org</a>.
+              </p>
 ` + s.slice(doneEnd);
+  // The schedule card and the program map it reads from.
+  s = s.replace(
+    'import Footer from "@/components/layout/Footer";',
+    'import Footer from "@/components/layout/Footer";\nimport ProgramScheduleCard from "@/components/registration/ProgramScheduleCard";\nimport { PROGRAMS } from "@/lib/programs";',
+  );
 
   // ── The program's colour behind the form (both the form and the submitted screen). ──
   mustAll('<div className="min-h-screen flex flex-col bg-background">',

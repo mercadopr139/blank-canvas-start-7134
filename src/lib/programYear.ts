@@ -110,3 +110,13 @@ export function isArchiveWindowOpen(today: Date = new Date()): boolean {
   const month = today.getMonth(); // 0-indexed: Aug=7, Sep=8
   return month === 7 || month === 8;
 }
+
+/**
+ * Today as the gym sees it — America/New_York, "YYYY-MM-DD". Use this for any
+ * date stamped on a record. `new Date().toISOString()` is UTC and flips to
+ * tomorrow at 8 PM Eastern, which filed late-evening sign-ups under the next
+ * day.
+ */
+export function todayNY(now: Date = new Date()): string {
+  return now.toLocaleDateString("en-CA", { timeZone: "America/New_York" });
+}

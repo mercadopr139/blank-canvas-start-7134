@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import { todayNY } from "@/lib/programYear";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -215,7 +216,7 @@ export function FormRenderer({
       if (f.field_type === "phone" && values[f.field_key] && String(values[f.field_key]).replace(/\D/g, "").length !== 10) {
         return `Enter a complete 10-digit phone number for: ${f.label}`;
       }
-      if (f.field_type === "dob" && values[f.field_key] && String(values[f.field_key]) > new Date().toISOString().slice(0, 10)) {
+      if (f.field_type === "dob" && values[f.field_key] && String(values[f.field_key]) > todayNY()) {
         return `Date of birth can’t be in the future: ${f.label}`;
       }
     }
@@ -402,7 +403,7 @@ export function FormRenderer({
         );
       }
       case "dob": {
-        const maxDay = new Date().toISOString().slice(0, 10);
+        const maxDay = todayNY();
         const age = ageFromDob(values[key] as string);
         return (
           <div key={f.id}>

@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
+import { todayNY } from "@/lib/programYear";
 import { useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { fetchAllRows } from "@/lib/fetchAllRows";
@@ -58,7 +59,7 @@ const CURRENT_YEAR = new Date().getFullYear();
 const emptyForm = {
   supporter_id: "" as string,
   supporter_email: "",
-  date: new Date().toISOString().slice(0, 10),
+  date: todayNY(),
   amount: "",
   revenue_type: "Donation",
   payment_method: "",

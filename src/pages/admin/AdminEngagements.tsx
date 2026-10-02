@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
+import { todayNY } from "@/lib/programYear";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -39,7 +40,7 @@ interface EngagementRow {
 
 const emptyForm = {
   supporter_id: "",
-  date: new Date().toISOString().slice(0, 10),
+  date: todayNY(),
   engagement_type: "Call" as string,
   outcome: "" as string,
   follow_up_needed: false,
@@ -146,7 +147,7 @@ const AdminEngagements = () => {
 
   // ── Bulk Postcard state ────────────────────────────────────────────────
   const [postcardOpen, setPostcardOpen] = useState(false);
-  const [postcardDate, setPostcardDate] = useState(new Date().toISOString().slice(0, 10));
+  const [postcardDate, setPostcardDate] = useState(todayNY());
   const [postcardSummary, setPostcardSummary] = useState("");
   const [postcardLoggedBy, setPostcardLoggedBy] = useState("");
   const [postcardSaving, setPostcardSaving] = useState(false);

@@ -9,14 +9,14 @@ import {
 } from "@/components/ui/alert-dialog";
 import { ShieldCheck, ShieldOff, Clock } from "lucide-react";
 import { toast } from "sonner";
-import { getCurrentAttendanceYear, nextProgramYear, shortProgramYear } from "@/lib/programYear";
+import { getCurrentAttendanceYear, nextProgramYear, shortProgramYear, todayNY } from "@/lib/programYear";
 
 type Settings = { enforce_current_year_from: string | null };
 
 // The upcoming program year's Sept 1 — the natural moment to switch on.
 const upcoming = nextProgramYear(getCurrentAttendanceYear());
 const defaultStart = `${parseInt(upcoming.slice(0, 4), 10)}-09-01`;
-const todayStr = () => new Date().toISOString().slice(0, 10);
+const todayStr = () => todayNY();
 
 export default function KioskGateControl() {
   const qc = useQueryClient();

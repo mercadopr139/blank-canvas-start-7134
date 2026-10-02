@@ -30,6 +30,10 @@ export interface ProgramConfig {
   defaultWeekdays: readonly number[];
   /** "Tuesday and Thursday by default" -- shown on the attendance calendar. */
   scheduleLine: string;
+  /** Preset session dates (YYYY-MM-DD) baked into the app -- the published schedule. A calendar click still overrides any of them. */
+  scheduleDates?: readonly string[];
+  /** Season labels for the schedule shown after registering: each season runs up to and including `through`. */
+  scheduleSeasons?: readonly { name: string; through: string }[];
   tables: { fields: string; registrations: string; attendance: string; practiceDays: string; moments: string };
   rpc: { search: string; roster: string; today: string; undo: string; sameYear: string };
   /** Folder prefix for photos and signatures in the shared buckets. */
@@ -102,8 +106,26 @@ export const HAWK_SQUAD: ProgramConfig = {
   partner: "Cape May Tech",
   description: "Cape May Tech students — registration, check-in, attendance",
   permKey: "operations_hawk_squad",
-  defaultWeekdays: [2, 4],
-  scheduleLine: "Tuesday and Thursday by default",
+  // None by default: the calendar is the schedule. The 2026-27 dates are seeded
+  // in hawk_squad_practice_days and a coach flips any day on the admin calendar.
+  defaultWeekdays: [],
+  scheduleLine: "The 2026-27 schedule, preset — click any day to change it",
+  // Cape May Tech 2026-27. Fall is Tue/Wed/Thu plus three Mondays; Winter & Spring is Tue/Thu through Mar 11.
+  // Oct 1 was the contracted first day but the school cancelled it, so it is left out on purpose.
+  scheduleDates: [
+    "2026-10-06", "2026-10-07", "2026-10-08", "2026-10-13", "2026-10-14", "2026-10-15",
+    "2026-10-20", "2026-10-21", "2026-10-22", "2026-10-27", "2026-10-28", "2026-10-29",
+    "2026-11-02", "2026-11-03", "2026-11-10", "2026-11-11", "2026-11-12",
+    "2026-11-16", "2026-11-18", "2026-11-19", "2026-11-23", "2026-11-24",
+    "2026-12-01", "2026-12-03", "2026-12-08", "2026-12-10", "2026-12-15", "2026-12-17", "2026-12-22",
+    "2027-01-05", "2027-01-07", "2027-01-12", "2027-01-14", "2027-01-19", "2027-01-21", "2027-01-26", "2027-01-28",
+    "2027-02-02", "2027-02-04", "2027-02-09", "2027-02-11", "2027-02-16", "2027-02-18", "2027-02-23", "2027-02-25",
+    "2027-03-02", "2027-03-04", "2027-03-09", "2027-03-11",
+  ],
+  scheduleSeasons: [
+    { name: "Fall", through: "2026-11-30" },
+    { name: "Winter & Spring", through: "2027-03-31" },
+  ],
   tables: {
     fields: "hawk_squad_form_fields",
     registrations: "hawk_squad_registrations",
@@ -152,7 +174,7 @@ export const HAWK_SQUAD: ProgramConfig = {
     addressLines: ["Cape May County Technical High School", "188 Crest Haven Rd", "Cape May Court House, NJ 08210"],
     defaultSalutation: "To Cape May Tech Administration:",
   },
-  submitted: { title: "Welcome to HAWK SQUAD!", line: "See you Tuesdays & Thursdays immediately afterschool!" },
+  submitted: { title: "Welcome to HAWK SQUAD!", line: "See you immediately afterschool on Hawk Squad days!" },
 };
 
 export const BAM: ProgramConfig = {

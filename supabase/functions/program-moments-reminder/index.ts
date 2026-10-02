@@ -46,6 +46,7 @@ const json = (body: unknown, status = 200) =>
 const todayET = () => new Date().toLocaleDateString("en-CA", { timeZone: "America/New_York" });
 const addDays = (ymd: string, n: number) => {
   const d = new Date(`${ymd}T12:00:00Z`); d.setUTCDate(d.getUTCDate() + n);
+  // eslint-disable-next-line no-restricted-syntax -- pure UTC-noon date arithmetic on a YYYY-MM-DD string; no "today" involved
   return d.toISOString().slice(0, 10);
 };
 /** The Monday of the week holding this date. */

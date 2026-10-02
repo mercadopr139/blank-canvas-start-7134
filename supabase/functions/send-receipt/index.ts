@@ -649,7 +649,7 @@ EIN: 84-3998071 | 501(c)(3) Nonprofit`;
     });
 
     // Auto-create Engagement record (deduplicate by checking for existing)
-    const today = new Date().toISOString().split("T")[0];
+    const today = new Date().toLocaleDateString("en-CA", { timeZone: "America/New_York" }); // the gym's date, not UTC
     const { data: existingEng } = await supabase
       .from("engagements")
       .select("id")

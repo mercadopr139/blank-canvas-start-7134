@@ -6,7 +6,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Checkbox } from "@/components/ui/checkbox";
 
 import { Card, CardContent } from "@/components/ui/card";
-import { getProgramYearForRegistration, shortProgramYear } from "@/lib/programYear";
+import { getProgramYearForRegistration, shortProgramYear, todayNY } from "@/lib/programYear";
 import { RichText } from "@/components/ui/rich-text";
 import { Upload } from "lucide-react";
 import nlaLogo from "@/assets/nla-logo.png";
@@ -252,7 +252,7 @@ const FormPreview = ({ fields, program = "nla" }: { fields: FormField[]; program
         <div className="space-y-6">
           <div>
             <Label className="text-base font-medium">Today's Date <span className="text-destructive">*</span></Label>
-            <Input type="date" value={new Date().toISOString().split("T")[0]} disabled className="mt-2 bg-muted" />
+            <Input type="date" value={todayNY()} disabled className="mt-2 bg-muted" />
           </div>
           {sorted.map(renderWithRule)}
           <div className="border-t pt-6">

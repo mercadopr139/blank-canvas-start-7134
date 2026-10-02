@@ -71,6 +71,28 @@ describe("Hawk Squad practice days", () => {
     expect(isHawkPracticeDay("2026-09-30", { "2026-09-30": true })).toBe(true);   // Wednesday on
   });
 
+  it("with no default weekdays, only days on the calendar are sessions (Hawk Squad)", () => {
+    const cal = { "2026-10-07": true, "2026-11-02": true, "2026-10-01": false };
+    expect(isHawkPracticeDay("2026-10-07", cal, [])).toBe(true);  // Wed, on the sheet
+    expect(isHawkPracticeDay("2026-11-02", cal, [])).toBe(true);  // Mon, on the sheet
+    expect(isHawkPracticeDay("2026-10-06", cal, [])).toBe(false); // a Tuesday NOT on the calendar does not count
+    expect(isHawkPracticeDay("2027-03-16", cal, [])).toBe(false); // nothing after the season end
+  });
+
+  it("preset schedule dates count as sessions, and a click still overrides one", () => {
+    const preset = ["2026-10-06", "2026-10-07"];
+    expect(isHawkPracticeDay("2026-10-07", {}, [], preset)).toBe(true);                       // Wed, on the sheet
+    expect(isHawkPracticeDay("2026-10-07", { "2026-10-07": false }, [], preset)).toBe(false); // clicked off
+    expect(isHawkPracticeDay("2026-10-01", {}, [], preset)).toBe(false);                      // not on the sheet
+    expect(hawkPeriodStats([], "2026-10-05", "2026-10-11", {}, "2026-10-11", [], preset).sessionsPlanned).toBe(2);
+  });
+
+  it("counts only calendar days as planned when there are no default weekdays", () => {
+    const cal = { "2026-10-06": true, "2026-10-07": true, "2026-10-08": true };
+    expect(hawkPeriodStats([], "2026-10-05", "2026-10-11", cal, "2026-10-11", []).sessionsPlanned).toBe(3);
+    expect(hawkPeriodStats([], "2026-10-05", "2026-10-11", cal, "2026-10-06", []).sessionsPlanned).toBe(1);
+  });
+
   it("lists every date in a month once", () => {
     const sept = datesInMonth(2026, 8);
     expect(sept.length).toBe(30);

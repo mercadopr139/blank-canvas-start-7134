@@ -54,3 +54,14 @@ A full operational platform for **No Limits Boxing Academy** — a non-profit bo
 - Dark theme throughout — `bg-black`, `bg-neutral-900`, `bg-neutral-800` are the standard backgrounds
 - Shadcn components are in `src/components/ui/` — treat as read-only, don't modify them directly
 - All custom admin components follow naming: `Admin[Feature].tsx` for pages, `[Feature]Modal.tsx` or `[Feature]Sheet.tsx` for overlays
+
+## Dates & Timezone (enforced)
+
+Every calendar date on this site — anything stamped on a record, compared to "today", or shown as today's date — is **America/New_York**, never UTC. `new Date().toISOString()` is UTC and rolls to tomorrow at 8 PM Eastern; it once filed evening registrations, meal check-ins and receipts under the next day (fixed site-wide 2026-10-02).
+
+- **Client code:** use `todayNY()` from `src/lib/programYear.ts` for today's date.
+- **Edge functions (Deno):** `new Date().toLocaleDateString("en-CA", { timeZone: "America/New_York" })`.
+- **Any other date** (month end, a parsed birthday, day arithmetic): build `YYYY-MM-DD` from local getters or pure string math — never from `toISOString()`.
+- Full ISO timestamps (`created_at`, `geocoded_at`, `signed_at`) are fine as `toISOString()` — the rule is about *calendar dates*, not instants.
+- An ESLint rule (`no-restricted-syntax` in `eslint.config.js`) fails the build on `toISOString().split/slice/substring`. Don't disable it without a one-line reason.
+- The partner-program registration forms (`HawkSquadRegister.tsx`, `BamRegister.tsx`) are generated from `Register.tsx` by `scripts/make-program-register.mjs` — fix the master and re-run; never hand-edit the outputs.

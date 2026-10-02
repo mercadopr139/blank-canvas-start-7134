@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
+import { todayNY } from "@/lib/programYear";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -24,7 +25,7 @@ interface EngagementRecord {
 }
 
 const emptyForm = {
-  date: new Date().toISOString().slice(0, 10),
+  date: todayNY(),
   engagement_type: "Call" as string,
   outcome: "" as string,
   follow_up_needed: false,

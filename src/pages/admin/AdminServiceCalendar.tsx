@@ -22,7 +22,10 @@ import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import ServiceEntryModal from "@/components/admin/ServiceEntryModal";
-import { ArrowLeft, Calendar, ChevronLeft, ChevronRight, FileText, Trash2 } from "lucide-react";
+import { Textarea } from "@/components/ui/textarea";
+import { programForClient, OVERRIDE_PREFIX, isOverrideNote } from "@/lib/billingPrograms";
+import { isHawkPracticeDay } from "@/lib/hawkSquad";
+import { ArrowLeft, Calendar, ChevronLeft, ChevronRight, FileText, Trash2, Users, Sparkles, AlertTriangle } from "lucide-react";
 import {
   format,
   startOfMonth,
@@ -39,6 +42,14 @@ type Client = Tables<"clients">;
 type ServiceLog = Tables<"service_logs">;
 
 const WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+
+// A month of rows from a partner program's table (hawk_squad_* / bam_*). Those
+// tables sit outside the generated types, so the builder is typed by hand —
+// same approach the program attendance page uses.
+const monthRows = <T,>(table: string, cols: string, dateCol: string, from: string, to: string): Promise<{ data: T[] | null }> =>
+  (supabase.from(table as never) as never as {
+    select: (c: string) => { gte: (c: string, v: string) => { lte: (c: string, v: string) => Promise<{ data: T[] | null }> } };
+  }).select(cols).gte(dateCol, from).lte(dateCol, to);
 
 // Format currency helper
 const formatCurrency = (amount: number) => {
@@ -63,6 +74,12 @@ export default function AdminServiceCalendar() {
   const [existingLogsForDate, setExistingLogsForDate] = useState<ServiceLog[]>([]);
   const [showClearConfirm, setShowClearConfirm] = useState(false);
   const [isClearing, setIsClearing] = useState(false);
+  // Attendance overlay (only when the client is a partner program).
+  const [attendanceByDate, setAttendanceByDate] = useState<Record<string, number>>({});
+  const [practiceOverrides, setPracticeOverrides] = useState<Record<string, boolean>>({});
+  const [filling, setFilling] = useState(false);
+  const [overrideFor, setOverrideFor] = useState<string | null>(null);
+  const [overrideReason, setOverrideReason] = useState("");
 
   const { toast } = useToast();
   const { signOut } = useAuth();
@@ -163,6 +180,14 @@ export default function AdminServiceCalendar() {
     const dateStr = format(date, "yyyy-MM-dd");
     const existingLogs = serviceLogsByDate[dateStr] || [];
 
+    // A partner-program day with no check-ins: billing it is an override,
+    // so ask for the reason instead of opening the normal entry window.
+    if (canAutoFill && existingLogs.length === 0 && attendedOn(dateStr) === 0) {
+      setOverrideReason("");
+      setOverrideFor(dateStr);
+      return;
+    }
+
     setSelectedDate(date);
     setExistingLogsForDate(existingLogs);
     setEditingLog(null); // Start in "add new" mode
@@ -185,6 +210,88 @@ export default function AdminServiceCalendar() {
   };
 
   const selectedClient = clients.find((c) => c.id === selectedClientId);
+
+  // ── Attendance overlay ─────────────────────────────────────────────────
+  // When the client is a partner program (Cape May Tech → Hawk Squad, Special
+  // Services → BAM), lay that program's real check-ins over the billing
+  // calendar so a day nobody came can't be invoiced by accident, and a day
+  // they did come can't be missed. Billing without attendance is still
+  // allowed — a school cancellation you still charge for — but only on
+  // purpose, with a reason kept on the entry.
+  const linkedProgram = programForClient(selectedClient?.client_name);
+  const monthStartStr = format(startOfMonth(currentMonth), "yyyy-MM-dd");
+  const monthEndStr = format(endOfMonth(currentMonth), "yyyy-MM-dd");
+
+  useEffect(() => {
+    if (!linkedProgram) { setAttendanceByDate({}); setPracticeOverrides({}); return; }
+    let cancelled = false;
+    (async () => {
+      const [att, days] = await Promise.all([
+        monthRows<{ check_in_date: string }>(linkedProgram.tables.attendance, "check_in_date", "check_in_date", monthStartStr, monthEndStr),
+        monthRows<{ date: string; is_practice_day: boolean }>(linkedProgram.tables.practiceDays, "date, is_practice_day", "date", monthStartStr, monthEndStr),
+      ]);
+      if (cancelled) return;
+      const counts: Record<string, number> = {};
+      (att.data ?? []).forEach((r) => { counts[r.check_in_date] = (counts[r.check_in_date] ?? 0) + 1; });
+      const ov: Record<string, boolean> = {};
+      (days.data ?? []).forEach((r) => { ov[r.date] = r.is_practice_day; });
+      setAttendanceByDate(counts);
+      setPracticeOverrides(ov);
+    })();
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- keyed on the program, not the config object
+  }, [linkedProgram?.key, monthStartStr, monthEndStr]);
+
+  const attendedOn = (d: string) => attendanceByDate[d] ?? 0;
+  const scheduledOn = (d: string) =>
+    !!linkedProgram && isHawkPracticeDay(d, practiceOverrides, linkedProgram.defaultWeekdays, linkedProgram.scheduleDates);
+
+  // Auto-fill and override write per-day entries at the client's default
+  // rate — the same row the entry modal writes. An hourly client needs hours
+  // typed in, so those keep the modal.
+  const canAutoFill = !!linkedProgram && !!selectedClient && (selectedClient.rate_type ?? "per_day") !== "per_hour";
+  const unbilledAttended = useMemo(
+    () => Object.keys(attendanceByDate).filter((d) => (attendanceByDate[d] ?? 0) > 0 && !(serviceLogsByDate[d]?.length)).sort(),
+    [attendanceByDate, serviceLogsByDate],
+  );
+  const billedDays = Object.keys(serviceLogsByDate).length;
+  const attendedDays = Object.values(attendanceByDate).filter((n) => n > 0).length;
+  const overrideDays = Object.values(serviceLogsByDate).filter((logs) => logs.some((l) => isOverrideNote(l.notes))).length;
+
+  const entryFor = (dateStr: string, notes: string) => ({
+    client_id: selectedClient!.id,
+    service_date: dateStr,
+    billing_method: "per_day",
+    hours: null,
+    flat_amount: selectedClient!.rate_amount ?? 0,
+    line_total: selectedClient!.rate_amount ?? 0,
+    service_type: selectedClient!.service_description_default || "Service",
+    notes,
+  });
+
+  const fillFromAttendance = async () => {
+    if (!canAutoFill || unbilledAttended.length === 0) return;
+    setFilling(true);
+    const rows = unbilledAttended.map((d) =>
+      entryFor(d, `From attendance: ${attendanceByDate[d]} ${attendanceByDate[d] === 1 ? "student" : "students"} checked in`));
+    const { error } = await supabase.from("service_logs").insert(rows);
+    setFilling(false);
+    if (error) { toast({ title: "Could not add service days", description: error.message, variant: "destructive" }); return; }
+    toast({ title: `Added ${rows.length} service ${rows.length === 1 ? "day" : "days"} from attendance` });
+    refreshLogs();
+  };
+
+  const confirmOverride = async () => {
+    if (!overrideFor || !selectedClient) return;
+    const reason = overrideReason.trim();
+    if (!reason) { toast({ title: "Add a short reason for billing this day", variant: "destructive" }); return; }
+    const { error } = await supabase.from("service_logs").insert([entryFor(overrideFor, `${OVERRIDE_PREFIX} ${reason}`)]);
+    if (error) { toast({ title: "Could not add the day", description: error.message, variant: "destructive" }); return; }
+    toast({ title: `${format(new Date(`${overrideFor}T12:00:00`), "MMM d")} billed by override` });
+    setOverrideFor(null);
+    setOverrideReason("");
+    refreshLogs();
+  };
 
   const handleBack = () => {
     navigate("/admin/finance");
@@ -299,8 +406,27 @@ export default function AdminServiceCalendar() {
             <div className="flex items-center gap-4">
               <div className="text-sm text-white/50">
                 <span className="font-medium text-white">{serviceLogs.length}</span> service days this month
+                {linkedProgram && (
+                  <div className="text-xs text-white/45 mt-0.5">
+                    Checked against <span className="text-white/70">{linkedProgram.name}</span> attendance · {billedDays} billed · {attendedDays} attended
+                    {overrideDays > 0 && <> · <span className="text-amber-300">{overrideDays} override</span></>}
+                    {unbilledAttended.length > 0 && <> · <span className="text-emerald-300">{unbilledAttended.length} unbilled</span></>}
+                  </div>
+                )}
               </div>
               <div className="flex items-center gap-2">
+                {canAutoFill && (
+                  <Button
+                    variant="outline"
+                    onClick={fillFromAttendance}
+                    disabled={filling || unbilledAttended.length === 0}
+                    title={unbilledAttended.length === 0 ? "Every attended day this month is already billed" : `Add ${unbilledAttended.length} attended ${unbilledAttended.length === 1 ? "day" : "days"} as service days`}
+                    className="border-emerald-500/40 text-emerald-200 hover:bg-emerald-500/10 hover:text-emerald-100"
+                  >
+                    <Sparkles className="w-4 h-4 mr-2" />
+                    Fill from attendance{unbilledAttended.length > 0 && ` (${unbilledAttended.length})`}
+                  </Button>
+                )}
                 {serviceLogs.length > 0 && (
                     <Button
                     variant="outline"
@@ -374,20 +500,38 @@ export default function AdminServiceCalendar() {
                   // Calculate total for the day
                   const dayTotal = logsForDay.reduce((sum, log) => sum + (log.line_total || 0), 0);
                   const entryCount = logsForDay.length;
+                  // Attendance overlay for a partner-program client: green =
+                  // kids came, amber = a program day nobody came, dim = not a
+                  // program day. Billed days keep the sky look on top.
+                  const attended = linkedProgram ? attendedOn(dateStr) : 0;
+                  const scheduled = linkedProgram ? scheduledOn(dateStr) : false;
+                  const overridden = isServiceDay && logsForDay.some((l) => isOverrideNote(l.notes));
+                  const look = isServiceDay
+                    ? "bg-sky-300 text-black border-sky-300 hover:bg-sky-300/90"
+                    : !linkedProgram
+                      ? "bg-white/5 hover:bg-white/10 border-white/10 text-white"
+                      : attended > 0
+                        ? "bg-emerald-500/15 border-emerald-500/50 text-emerald-100 hover:bg-emerald-500/25"
+                        : scheduled
+                          ? "bg-amber-500/10 border-amber-500/40 text-amber-200 hover:bg-amber-500/20"
+                          : "bg-white/[0.02] border-white/[0.06] text-white/30 hover:bg-white/5";
+                  const hint = !linkedProgram ? undefined
+                    : isServiceDay ? (overridden ? "Billed by override" : "Billed")
+                    : attended > 0 ? `${attended} checked in — not billed yet`
+                    : scheduled ? `${linkedProgram.name} day with no check-ins — click to bill it by override`
+                    : `Not a ${linkedProgram.name} day`;
 
                   return (
                     <button
                       key={dateStr}
                       onClick={() => handleDateClick(day)}
                       disabled={loading}
+                      title={hint}
                       className={`
                         aspect-square rounded-lg border text-sm font-medium transition-all
-                        flex flex-col items-center justify-center gap-0.5
+                        flex flex-col items-center justify-center gap-0.5 relative
                         ${!isCurrentMonth ? "opacity-50" : ""}
-                        ${isServiceDay
-                          ? "bg-sky-300 text-black border-sky-300 hover:bg-sky-300/90"
-                          : "bg-white/5 hover:bg-white/10 border-white/10 text-white"
-                        }
+                        ${look}
                         ${loading ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}
                       `}
                     >
@@ -398,18 +542,69 @@ export default function AdminServiceCalendar() {
                           {entryCount > 1 && ` (${entryCount})`}
                         </span>
                       )}
+                      {linkedProgram && attended > 0 && (
+                        <span className={`text-[10px] leading-tight inline-flex items-center gap-0.5 ${isServiceDay ? "text-black/70" : "text-emerald-300"}`}>
+                          <Users className="w-3 h-3" /> {attended}{!isServiceDay && " · unbilled"}
+                        </span>
+                      )}
+                      {linkedProgram && !isServiceDay && attended === 0 && scheduled && (
+                        <span className="text-[10px] leading-tight text-amber-300/90">no check-ins</span>
+                      )}
+                      {overridden && (
+                        <span className="absolute top-1 right-1 text-[9px] font-bold uppercase tracking-wide rounded px-1 bg-amber-400 text-black">override</span>
+                      )}
                     </button>
                   );
                 })}
               </div>
 
-              <p className="text-xs text-white/50 mt-4 text-center">
-                Click a date to add or edit a service entry
-              </p>
+              {linkedProgram ? (
+                <div className="mt-4 flex flex-wrap items-center justify-center gap-x-4 gap-y-1 text-xs text-white/50">
+                  <span className="inline-flex items-center gap-1.5"><span className="w-3 h-3 rounded bg-sky-300 inline-block" /> billed</span>
+                  <span className="inline-flex items-center gap-1.5"><span className="w-3 h-3 rounded bg-emerald-500/40 border border-emerald-500/60 inline-block" /> attended, not billed</span>
+                  <span className="inline-flex items-center gap-1.5"><span className="w-3 h-3 rounded bg-amber-500/20 border border-amber-500/50 inline-block" /> {linkedProgram.name} day, no check-ins</span>
+                  <span className="inline-flex items-center gap-1.5"><span className="w-3 h-3 rounded bg-white/[0.04] border border-white/10 inline-block" /> not a program day</span>
+                  <span className="w-full text-center text-white/35">Click a day to add or edit an entry. A day with no check-ins asks for a reason before it is billed.</span>
+                </div>
+              ) : (
+                <p className="text-xs text-white/50 mt-4 text-center">
+                  Click a date to add or edit a service entry
+                </p>
+              )}
             </>
           )}
         </div>
       </main>
+
+      {/* Override: bill a partner-program day that has no attendance */}
+      <AlertDialog open={!!overrideFor} onOpenChange={(open) => { if (!open) { setOverrideFor(null); setOverrideReason(""); } }}>
+        <AlertDialogContent className="bg-neutral-900 border-white/10 text-white">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <AlertTriangle className="w-5 h-5 text-amber-400" />
+              Bill {overrideFor ? format(new Date(`${overrideFor}T12:00:00`), "EEEE, MMMM d") : ""} without attendance?
+            </AlertDialogTitle>
+            <AlertDialogDescription className="text-white/60">
+              No {linkedProgram?.name} check-ins were recorded that day. If the school cancelled but the day is still
+              owed under the contract, say why and it will be billed with an &ldquo;override&rdquo; mark on the entry.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <Textarea
+            value={overrideReason}
+            onChange={(e) => setOverrideReason(e.target.value)}
+            placeholder="e.g. School cancelled on short notice — contracted day"
+            rows={3}
+            className="bg-black/40 border-white/15 text-white"
+            autoFocus
+          />
+          <AlertDialogFooter>
+            <AlertDialogCancel className="bg-transparent border-white/15 text-white hover:bg-white/10 hover:text-white">Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={(e) => { e.preventDefault(); confirmOverride(); }} className="bg-amber-500 text-black hover:bg-amber-400 font-semibold">
+              Bill this day
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {/* Service Entry Modal */}
       {selectedClient && selectedDate && (

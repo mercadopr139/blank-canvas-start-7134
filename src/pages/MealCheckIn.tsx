@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from "react";
+import { todayNY } from "@/lib/programYear";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Undo2, Shield, Send, CheckCircle2, Plus, UtensilsCrossed, X, Pencil } from "lucide-react";
@@ -47,7 +48,7 @@ const MealCheckIn = () => {
   const [showSuccess, setShowSuccess] = useState(false);
 
   const loadToday = useCallback(async () => {
-    const today = new Date().toISOString().split("T")[0];
+    const today = todayNY();
     const { data } = await supabase
       .from("meal_events")
       .select("id, meal_count, is_closed, event_date, donor_name")
@@ -152,7 +153,7 @@ const MealCheckIn = () => {
   const handleStartService = async () => {
     if (setupFoodItems.length === 0 || creating) return;
     setCreating(true);
-    const today = new Date().toISOString().split("T")[0];
+    const today = todayNY();
     const { data: ev, error } = await supabase
       .from("meal_events")
       .insert({ event_date: today, donor_name: setupDonor.trim() || null })

@@ -1,4 +1,5 @@
 import { useState, useMemo } from "react";
+import { todayNY } from "@/lib/programYear";
 import { supabase } from "@/integrations/supabase/client";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -112,7 +113,8 @@ function normalizeDate(val: string): string | null {
   // Try JS Date parse as last resort
   const parsed = new Date(v);
   if (!isNaN(parsed.getTime())) {
-    return parsed.toISOString().split("T")[0];
+    // Local y/m/d, never toISOString(): that is UTC and can land a birthday on the wrong day.
+    return `${parsed.getFullYear()}-${String(parsed.getMonth() + 1).padStart(2, "0")}-${String(parsed.getDate()).padStart(2, "0")}`;
   }
   return null;
 }
@@ -517,7 +519,7 @@ const YouthImportModal = ({ open, onOpenChange, existingRegistrations, onImportC
   const buildInsertData = (data: Record<string, string>) => {
     const rec: Record<string, any> = {
       approved_for_attendance: true,
-      submission_date: new Date().toISOString().split("T")[0],
+      submission_date: todayNY(),
       // Required defaults for waiver fields
       medical_consent_name: "Imported from Monday.com",
       medical_consent_signature_url: "",

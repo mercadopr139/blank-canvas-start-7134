@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { todayNY } from "@/lib/programYear";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -19,7 +20,7 @@ const AdminCSBGSubmissions = () => {
   const [invoiceNum, setInvoiceNum] = useState("");
   const [month, setMonth] = useState(now.getMonth() + 1);
   const [year, setYear] = useState(now.getFullYear());
-  const [subDate, setSubDate] = useState(new Date().toISOString().split("T")[0]);
+  const [subDate, setSubDate] = useState(todayNY());
   const [amount, setAmount] = useState("");
   const [method, setMethod] = useState("Email");
   const [notes, setNotes] = useState("");

@@ -101,7 +101,7 @@ const AdminProgramIntelligence = ({ program }: { program: ProgramConfig }) => {
     },
   });
 
-  const stats = useMemo(() => hawkPeriodStats(rows, from, to, overrides, hawkTodayET(), program.defaultWeekdays), [rows, from, to, overrides, program.defaultWeekdays]);
+  const stats = useMemo(() => hawkPeriodStats(rows, from, to, overrides, hawkTodayET(), program.defaultWeekdays, program.scheduleDates), [rows, from, to, overrides, program.defaultWeekdays, program.scheduleDates]);
   const breakdown = useMemo(() => hawkBreakdown(rows, { cte: program.hasCte }), [rows, program.hasCte]);
 
   // Per student: sessions attended out of sessions held, and how they went home.

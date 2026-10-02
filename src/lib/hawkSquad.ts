@@ -124,7 +124,7 @@ export interface HawkAttendance {
 export const hawkTodayET = (now = new Date()) =>
   now.toLocaleDateString("en-CA", { timeZone: "America/New_York" });
 
-/** Hawk Squad runs Tuesday and Thursday unless the calendar says otherwise. */
+/** Library default only. Hawk Squad itself passes [] (the calendar is its schedule); BAM passes Fridays. */
 export const HAWK_DEFAULT_WEEKDAYS = [2, 4] as const;
 
 /**
@@ -133,8 +133,10 @@ export const HAWK_DEFAULT_WEEKDAYS = [2, 4] as const;
  */
 export const isHawkPracticeDay = (
   date: string, overrides: Record<string, boolean>, weekdays: readonly number[] = HAWK_DEFAULT_WEEKDAYS,
+  scheduleDates: readonly string[] = [],
 ): boolean => {
   if (date in overrides) return overrides[date];
+  if (scheduleDates.includes(date)) return true;
   const dow = new Date(`${date}T12:00:00`).getDay();
   return weekdays.includes(dow);
 };
@@ -156,7 +158,7 @@ const addDaysYmd = (ymd: string, n: number) => {
   return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
 };
 
-/** The first week Weekly Standout Moments are expected (its Monday). Hawk Squad's first day is Tue Oct 6, 2026. */
+/** The first week Weekly Standout Moments are expected (its Monday). Oct 1, 2026 was the contracted first day but the school cancelled it; the first session held is Tue Oct 6. */
 export const HAWK_MOMENTS_START = "2026-10-05";
 
 /** The Monday of the week holding this date. */
@@ -282,10 +284,10 @@ export const datesBetween = (from: string, to: string): string[] => {
 /** The period's headline figures. */
 export const hawkPeriodStats = (
   rows: HawkIntelRow[], from: string, to: string, overrides: Record<string, boolean>, today = hawkTodayET(),
-  weekdays: readonly number[] = HAWK_DEFAULT_WEEKDAYS,
+  weekdays: readonly number[] = HAWK_DEFAULT_WEEKDAYS, scheduleDates: readonly string[] = [],
 ): HawkPeriodStats => {
   const sessionsHeld = new Set(rows.map((r) => r.check_in_date)).size;
-  const sessionsPlanned = datesBetween(from, to).filter((d) => d <= today && isHawkPracticeDay(d, overrides, weekdays)).length;
+  const sessionsPlanned = datesBetween(from, to).filter((d) => d <= today && isHawkPracticeDay(d, overrides, weekdays, scheduleDates)).length;
   const students = new Set(rows.map(hawkIdentity)).size;
   return {
     sessionsHeld,

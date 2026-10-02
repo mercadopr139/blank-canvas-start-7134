@@ -233,7 +233,8 @@ export default function AdminInvoices() {
     const year = parseInt(searchParams.get("year") ?? selectedYear);
 
     const startDate = `${year}-${String(month).padStart(2, "0")}-01`;
-    const endDate = new Date(year, month, 0).toISOString().split("T")[0];
+    const lastDay = new Date(year, month, 0).getDate(); // day-of-month, no UTC round-trip
+    const endDate = `${year}-${String(month).padStart(2, "0")}-${String(lastDay).padStart(2, "0")}`;
 
     const { data: logs, error: logsError } = await supabase
       .from("service_logs")
@@ -427,7 +428,8 @@ export default function AdminInvoices() {
     const year = invoice.invoice_year;
 
     const startDate = `${year}-${String(month).padStart(2, "0")}-01`;
-    const endDate = new Date(year, month, 0).toISOString().split("T")[0];
+    const lastDay = new Date(year, month, 0).getDate(); // day-of-month, no UTC round-trip
+    const endDate = `${year}-${String(month).padStart(2, "0")}-${String(lastDay).padStart(2, "0")}`;
     const {
       data: logs,
       error: logsError

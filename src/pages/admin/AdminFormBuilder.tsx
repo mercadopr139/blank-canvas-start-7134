@@ -195,6 +195,14 @@ const FieldEditorDialog = ({
 
             {draft.field_type === "waiver" && (
               <div>
+                <Label>Note Above the Waiver (optional)</Label>
+                <p className="text-xs text-muted-foreground mb-1">Shown in a highlighted box above the signature &mdash; e.g. the dismissal waiver&apos;s &ldquo;OPTIONAL. Sign this only if&hellip;&rdquo; note. Leave blank for none.</p>
+                <Textarea value={draft.help_text || ""} onChange={e => setDraft({ ...draft, help_text: e.target.value || null })} className="mt-1" rows={3} />
+              </div>
+            )}
+
+            {draft.field_type === "waiver" && (
+              <div>
                 <Label>Waiver Text</Label>
                 <p className="text-xs text-muted-foreground mb-1">The full legal text parents read and sign below. Select words and use B / I / U to format.</p>
                 <RichTextEditor
