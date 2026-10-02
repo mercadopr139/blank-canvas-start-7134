@@ -14,7 +14,7 @@
 // ones the coach's page shows. The screen is a touch display, so a kid can
 // tap one and the board stays underneath the player.
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -23,6 +23,9 @@ import {
 } from "lucide-react";
 import TrackTimer from "@/components/nbt/TrackTimer";
 import ExerciseVideo from "@/components/strength/ExerciseVideo";
+import { PrepStrip } from "@/components/practice/PrepStrip";
+import { equipmentItems } from "@/lib/practicePlan";
+import { fetchLiftNote } from "@/lib/liftNote";
 import {
   DAYS, type DayKey, type WeekRow, SESSION_MINUTES, addDays, isoDate, toMonday, prettyRange,
 } from "@/lib/strength";
@@ -33,8 +36,18 @@ const EXTRA = "#f0a500";
 
 const StrengthBoard = () => {
   const navigate = useNavigate();
+  // Opened from the Gym Board? `?day=monday&from=practice` lands on that day
+  // and turns the back arrow into "back to the Gym Board", so the two round-trip.
+  const [params] = useSearchParams();
+  const fromPractice = params.get("from") === "practice";
+  const linkedDay = DAYS.find((d) => d.key === params.get("day"))?.key ?? null;
+  const linkedWeek = /^\d{4}-\d{2}-\d{2}$/.test(params.get("week") ?? "") ? params.get("week")! : null;
+  // Where to land when going back to the Gym Board: the night it was left on.
+  const backToBoard = `/practice-board?${linkedWeek ? `week=${linkedWeek}&` : ""}${params.get("wd") ? `wd=${params.get("wd")}` : ""}`;
   const todayMonday = useMemo(() => toMonday(new Date()), []);
-  const [weekMonday, setWeekMonday] = useState<Date>(todayMonday);
+  const [weekMonday, setWeekMonday] = useState<Date>(
+    () => (linkedWeek ? toMonday(new Date(`${linkedWeek}T12:00:00`)) : todayMonday),
+  );
   const weekStart = isoDate(weekMonday);
   const isCurrentWeek = weekStart === isoDate(todayMonday);
 
@@ -46,8 +59,8 @@ const StrengthBoard = () => {
     }
     return "monday";
   }, [isCurrentWeek]);
-  const [dayKey, setDayKey] = useState<DayKey>(defaultDay);
-  useEffect(() => { setDayKey(defaultDay); }, [defaultDay, weekStart]);
+  const [dayKey, setDayKey] = useState<DayKey>(linkedDay ?? defaultDay);
+  useEffect(() => { setDayKey(linkedDay ?? defaultDay); }, [defaultDay, weekStart, linkedDay]);
 
   const { data: week, isLoading } = useQuery({
     queryKey: ["strength-week", weekStart],
@@ -63,6 +76,24 @@ const StrengthBoard = () => {
 
   const day = week?.days?.[dayKey];
   const meta = DAYS.find((d) => d.key === dayKey)!;
+
+  // The coach's note from the Practice Plan's Strength block for this night.
+  const { data: liftNote } = useQuery({
+    queryKey: ["lift-note", weekStart, meta.weekday, "battle_team"],
+    refetchInterval: 60_000,
+    queryFn: () => fetchLiftNote(weekStart, meta.weekday, "battle_team"),
+  });
+  const equipment = useMemo(
+    () => (day
+      ? equipmentItems([
+          day.main?.lift,
+          ...(day.warmup ?? []).map((w) => w.name),
+          ...(day.accessories ?? []).flatMap((a) => [a.name, a.equipment]),
+          day.finisher?.name,
+        ])
+      : []),
+    [day],
+  );
 
   // Arrow keys, for whoever is standing at the TV.
   useEffect(() => {
@@ -132,20 +163,30 @@ const StrengthBoard = () => {
   }, [isFullscreen, fitColumns]);
 
   return (
-    <div className="h-screen overflow-hidden bg-black text-white flex flex-col">
+    /* Charcoal, not black, with the team's colour cast: the Gym Board is
+       black, so the moment a kid taps in the whole screen reads "a different
+       place". Labelled the same way the Gym Board is. (Josh, 2026-10-02.) */
+    <div
+      className="h-screen overflow-hidden text-white flex flex-col"
+      style={{ background: `linear-gradient(180deg, ${NLA_RED}14, transparent 40%), #1c1c1e` }}
+    >
       {/* Header */}
       <header className="flex items-center gap-3 px-5 md:px-8 py-3 border-b border-white/10 flex-wrap">
         <Button
-          variant="ghost" size="icon"
-          onClick={() => navigate("/strength-coach")}
-          className="text-white/25 hover:text-white hover:bg-white/5 h-9 w-9"
-          aria-label="Back to the S&C Coach"
-          title="Back to the S&C Coach"
+          variant="ghost"
+          onClick={() => navigate(fromPractice ? backToBoard : "/strength-coach")}
+          className="text-white/50 hover:text-white hover:bg-white/5 h-9 px-2 -ml-2"
+          aria-label={fromPractice ? "Back to the Practice Plan" : "Back to the S&C Coach"}
+          title={fromPractice ? "Back to the Practice Plan" : "Back to the S&C Coach"}
         >
           <ArrowLeft className="w-5 h-5" />
+          {fromPractice && <span className="ml-1 text-sm font-semibold">Practice Plan</span>}
         </Button>
         <Dumbbell className="w-5 h-5" style={{ color: NLA_RED }} />
         <div className="min-w-0">
+          <p className="text-[10px] font-bold uppercase tracking-[0.25em] leading-none mb-0.5" style={{ color: NLA_RED }}>
+            Workout Plan · Battle Team
+          </p>
           <h1 className="text-lg md:text-xl font-black tracking-tight uppercase">Battle Team</h1>
           <p className="text-[11px] text-white/35">
             {prettyRange(weekStart)}{isCurrentWeek ? " · this week" : ""}
@@ -235,6 +276,9 @@ const StrengthBoard = () => {
         /* Fills the screen between the header and the foot, and scrolls INSIDE
            itself only on a phone — on the wall it never page-scrolls. */
         <main className="flex-1 min-h-0 flex flex-col px-4 md:px-6 py-3 gap-3 overflow-y-auto md:overflow-hidden">
+          {/* What to drag out first, and the coach's note from the plan. */}
+          <PrepStrip equipment={equipment} note={liftNote} accent={NLA_RED} />
+
           {/* The lift, and how long the whole thing should take. */}
           <div className="flex items-baseline justify-between gap-6 flex-wrap shrink-0">
             <div className="min-w-0">

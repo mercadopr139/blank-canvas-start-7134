@@ -5,7 +5,7 @@
 // builds a whole month at once, feeding each week the earlier weeks of the same
 // block, and the coach reviews before any of it reaches the gym screen.
 import { useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -33,6 +33,9 @@ const AdminNbtBoard = () => {
   const navigate = useNavigate();
   const qc = useQueryClient();
   const [month, setMonth] = useState(() => firstOfMonth(toDateString(new Date())));
+  // Opened from the Practice Plan's S&C tab: offer the way back.
+  const [params] = useSearchParams();
+  const fromPlan = params.get("from") === "practice-plan";
   const [focus, setFocus] = useState("");
   const [busy, setBusy] = useState<string | null>(null);
   // Persistent, unlike a toast — a twelve-call build should say where it is.
@@ -97,6 +100,8 @@ const AdminNbtBoard = () => {
 
   const block = data?.block ?? null;
   const weeks = useMemo(() => data?.weeks ?? [], [data]);
+  // NBT locks a month at a time, so the month on screen is what's live.
+  const thisWeekLocked = data?.block?.status === "locked";
   const mondays = useMemo(() => mondaysInMonth(month), [month]);
   const refresh = () => qc.invalidateQueries({ queryKey: ["nbt-block", month] });
 
@@ -309,6 +314,15 @@ const AdminNbtBoard = () => {
 
   return (
     <div className="p-4 md:p-8 space-y-6 max-w-6xl mx-auto text-white">
+      {fromPlan && (
+        <button
+          type="button"
+          onClick={() => navigate("/admin/operations/practice-plan")}
+          className="inline-flex items-center gap-1.5 text-sm text-neutral-400 hover:text-white"
+        >
+          <ChevronLeft className="h-4 w-4" /> Practice Plan
+        </button>
+      )}
       <div className="flex items-start justify-between gap-4 flex-wrap">
         <div>
           <h2 className="text-2xl font-bold">NBT S&amp;C Board</h2>
@@ -316,10 +330,14 @@ const AdminNbtBoard = () => {
             Monday, Tuesday and Thursday for the Non-Battle Team — three tracks, one month at a time.
           </p>
         </div>
+        {/* Green once this week is locked: it's on the wall for everyone. */}
         <Button
           variant="outline"
           onClick={() => navigate("/nbt-board")}
-          className="bg-transparent border-neutral-700 text-neutral-300 hover:text-white"
+          title={thisWeekLocked ? "Live on the gym board" : "This month is still a draft — lock it to put it on the board"}
+          className={thisWeekLocked
+            ? "bg-emerald-600 hover:bg-emerald-500 border-emerald-500 text-white hover:text-white"
+            : "bg-transparent border-neutral-700 text-neutral-300 hover:text-white"}
         >
           <Monitor className="w-4 h-4 mr-1.5" /> Open gym board
         </Button>

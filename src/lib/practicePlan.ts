@@ -30,7 +30,7 @@ export const GROUPS: {
   {
     key: "battle_team",
     label: "Battle Team",
-    blurb: "Preparing For Competition",
+    blurb: "Preparing for Boxing Competition",
     accent: "#bf0f3e",
   },
   {
@@ -38,7 +38,7 @@ export const GROUPS: {
     label: "Non-Battle Team",
     // The point Josh made on the whiteboard: these kids compete too, just not
     // always in the ring.
-    blurb: "Boxing 101 · 5K, Obstacles, CrossFit",
+    blurb: "Boxing Basics & Preparing for Athletic Competition",
     // Gold rather than a second blue — Littles are already light blue, and two
     // blues side by side read as one group from across the gym.
     accent: "#f0a500",
@@ -46,7 +46,7 @@ export const GROUPS: {
   {
     key: "littles",
     label: "Littles",
-    blurb: "Boxing 101 & Soccer",
+    blurb: "Boxing Basics & Fitness Fun",
     accent: "#3da5e8",
   },
 ];
@@ -85,22 +85,112 @@ export const spiritualAccent = (label: string) =>
  * into, and it should look like it on the board too.
  */
 export const blockAccent = (category: string, fallback: string) =>
-  /smile\s*lab/i.test(category) ? SPIRITUAL_TEAL : fallback;
+  /smile\s*lab|bible/i.test(category) ? SPIRITUAL_TEAL : fallback;
 
 /**
- * One-tap blocks a coach can drop onto a single group's day from the board.
- * These live in the WEEK, not the template — added on the night, gone next
- * week unless added again.
+ * The kinds of block a session is made of — the one-tap options wherever a
+ * block is added: the weekly template, the week editor, and the board on the
+ * night. Anything else can still be typed in. (Josh, 2026-10-02.)
  */
+/**
+ * Thursday's Bible study (Josh, 2026-10-02): Battle Team + Non-Battle Team,
+ * boys and girls separately, each with a leader. The Littles keep going with
+ * whatever they're doing — their Bible study is the Verse of the Day up top.
+ * The time is part of the name so it's retyped, never coded.
+ */
+export const BIBLE_STUDY_BLOCK = "Bible Study · 6:30";
+export const isBibleStudyBlock = (category: string) => /bible/i.test(category);
+
 export const QUICK_BLOCKS = [
-  "Run",
-  "Sparring",
-  "Conditioning",
-  "Weights",
   "Boxing",
-  "Bag Work",
-  "Pad Work",
+  "Strength",
+  "Conditioning",
+  "S&C",
+  "Rec",
+  "Split",
+  BIBLE_STUDY_BLOCK,
 ];
+
+/* ───── Split block ─────
+ * One group doing two things at once — Tuesday's Battle Team: some coach the
+ * Junior Boxers (7–10), the rest run. A Split block is two lanes side by side,
+ * each with a name, who's in it, and its own drills. Both lanes live in the
+ * block's ordinary `detail` text (a "## Lane | who" line opens each lane), so
+ * nothing in the database changes and a week already written is untouched.
+ */
+export const isSplitBlock = (category: string) => /^split\b/i.test(category.trim());
+
+export interface SplitLane {
+  title: string;
+  who: string;
+  text: string;
+}
+
+/** Lane names start with a capital — "Coaching Juniors" — and the rest stays as typed. */
+export const capFirst = (s: string) => {
+  const t = s.trim();
+  return t ? t[0].toUpperCase() + t.slice(1) : t;
+};
+
+export const DEFAULT_SPLIT_LANES: readonly SplitLane[] = [
+  { title: "Coaching Juniors", who: "", text: "Boxing stations" },
+  { title: "Cardio", who: "", text: "" },
+];
+
+/** Bible study lanes: boys and girls, each with its leader and topic. */
+export const DEFAULT_BIBLE_LANES: readonly SplitLane[] = [
+  { title: "Boys", who: "", text: "" },
+  { title: "Girls", who: "", text: "" },
+];
+
+/** Any block that is two lanes rather than one box of drills. */
+export const hasLanes = (category: string) => isSplitBlock(category) || isBibleStudyBlock(category);
+/** The lane names a block starts with before anyone types. */
+export const laneDefaults = (category: string): readonly SplitLane[] =>
+  isBibleStudyBlock(category) ? DEFAULT_BIBLE_LANES : DEFAULT_SPLIT_LANES;
+
+export const parseSplit = (
+  detail: string | null | undefined,
+  defaults: readonly SplitLane[] = DEFAULT_SPLIT_LANES,
+): SplitLane[] => {
+  const lanes: SplitLane[] = [];
+  let cur: SplitLane | null = null;
+  for (const raw of (detail ?? "").split("\n")) {
+    const m = raw.match(/^##\s*(.*?)\s*(?:\|\s*(.*))?$/);
+    if (m) {
+      cur = { title: m[1].trim(), who: (m[2] ?? "").trim(), text: "" };
+      lanes.push(cur);
+      continue;
+    }
+    if (!raw.trim() && !cur) continue;
+    // Plain text with no lane header (typed before the slot became a Split,
+    // or in a box that doesn't know lanes) is lane 1's drills under the
+    // default name — never a nameless lane.
+    if (!cur) { cur = { ...defaults[0], text: "" }; lanes.push(cur); }
+    cur.text += (cur.text ? "\n" : "") + raw;
+  }
+  while (lanes.length < 2) lanes.push({ ...defaults[lanes.length] });
+  return lanes.slice(0, 2).map((l) => ({ ...l, text: l.text.trim() }));
+};
+
+export const serializeSplit = (
+  lanes: SplitLane[],
+  defaults: readonly SplitLane[] = DEFAULT_SPLIT_LANES,
+): string | null => {
+  const untouched = lanes.every(
+    (l, i) =>
+      l.title.trim() === defaults[i]?.title &&
+      !l.who.trim() &&
+      l.text.trim() === (defaults[i]?.text ?? "")
+  );
+  if (untouched) return null;
+  return lanes
+    .map((l) => `## ${l.title.trim()}${l.who.trim() ? ` | ${l.who.trim()}` : ""}\n${l.text.trim()}`)
+    .join("\n");
+};
+
+/** The lane that is the Junior Boxers' session — what the Junior strip on the board prints. */
+export const isJuniorsLane = (lane: SplitLane) => /junior/i.test(lane.title);
 
 /**
  * What has to be dragged out before the lift starts.
@@ -176,6 +266,23 @@ export const WEEKDAYS = [
 export const daysFor = (season: SeasonMode) =>
   season === "off_season" ? WEEKDAYS.filter((d) => d.n <= 4) : WEEKDAYS;
 
+/** All seven days — the week picker offers these; the template only knows Mon–Fri. */
+export const ALL_WEEKDAYS = [
+  ...WEEKDAYS,
+  { n: 6, short: "Sat", long: "Saturday" },
+  { n: 7, short: "Sun", long: "Sunday" },
+];
+
+/**
+ * The days a particular week actually practices. A week carries its days in
+ * the blocks it was started with (the picker decides them, Sat/Sun included),
+ * so no extra column is needed; before a week exists, fall back to the season.
+ */
+export const daysForWeek = (blocks: { weekday: number }[], season: SeasonMode) => {
+  const present = new Set(blocks.map((b) => b.weekday));
+  return present.size ? ALL_WEEKDAYS.filter((d) => present.has(d.n)) : daysFor(season);
+};
+
 export interface PracticeSettings {
   season: SeasonMode;
   /** Who runs the five-minute team meeting. */
@@ -207,6 +314,8 @@ export interface PracticeWeek {
   week_start: string;
   status: WeekStatus;
   published_at: string | null;
+  /** This week's own wrap-up lines, by weekday. Absent = the template's. */
+  wrapups?: Wrapups | null;
 }
 
 export interface PracticeBlock {
@@ -313,4 +422,52 @@ export const formatStartTime = (startTime: string) => {
   const d = new Date();
   d.setHours(h || 0, m || 0, 0, 0);
   return d.toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" });
+};
+
+/**
+ * Bible study is one study for Battle Team and Non-Battle Team, so when it
+ * sits in both columns the same night, a change to either box is a change to
+ * both. Returns every id the save should write — the block itself plus any
+ * other Bible Study block on the same weekday of the same week.
+ */
+export const bibleStudySiblings = (
+  blocks: { id: string; weekday: number; category: string }[],
+  id: string,
+): string[] => {
+  const me = blocks.find((b) => b.id === id);
+  if (!me || !isBibleStudyBlock(me.category)) return [id];
+  return blocks
+    .filter((b) => b.weekday === me.weekday && isBibleStudyBlock(b.category))
+    .map((b) => b.id);
+};
+
+/** A plan block that is the night's lifting — Strength, S&C, Weights. */
+export const isWeightsBlock = (category: string) => /weight|strength|s\s*&\s*c/i.test(category);
+
+/** Just the kit names, for a strip of chips: "Kettlebells · Dumbbells". */
+export const equipmentItems = (exercises: (string | null | undefined)[]): string[] =>
+  equipmentFor(exercises.filter((e): e is string => !!e)).map((e) => e.item);
+
+/* ───── Wrap-up for one night of one week ─────
+ * The Template's Wrap-up row is the standing pattern; a week can say
+ * something else for a single night (practice_weeks.wrapups, keyed by
+ * weekday). The override wins and is always live; otherwise the template row
+ * stands, paused or not. The same rule on the board and in the editor.
+ */
+export interface WrapupOverride {
+  label: string;
+  leader: string | null;
+}
+export type Wrapups = Record<string, WrapupOverride>;
+
+export const wrapupFor = (
+  week: { wrapups?: Wrapups | null } | null | undefined,
+  weekday: number,
+  templateRow: SpiritualDay | null | undefined,
+): (SpiritualDay & { overridden: boolean }) | null => {
+  const o = week?.wrapups?.[String(weekday)];
+  if (o && o.label.trim()) {
+    return { weekday, label: o.label.trim(), leader: o.leader?.trim() || null, is_active: true, overridden: true };
+  }
+  return templateRow ? { ...templateRow, overridden: false } : null;
 };

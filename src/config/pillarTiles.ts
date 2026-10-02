@@ -96,29 +96,23 @@ export const OPERATIONS_TILES: PillarTile[] = [
       { title: "Meal Setup", href: "/admin/operations/meal-tracker", icon: UtensilsCrossed },
     ],
   },
+  // One place in the building: the Gym Board on the wall. Everything that
+  // ends up on it is planned here — the practice plan and both teams' S&C.
+  // "Board" is the wall; the pages below are plans. Each plan page has its
+  // own green "Open gym board" button, so the wall needs no sidebar link.
+  // (Josh, 2026-10-02.)
   {
-    title: "Practice Plan",
-    description: "The weekly plan and the gym board",
-    icon: ClipboardList,
+    title: "Gym Board",
+    description: "The practice plan and the S&C plans behind the gym board",
+    icon: Monitor,
     href: "/admin/operations/practice-plan",
     permKey: "operations_practice_plan",
     children: [
-      { title: "Weekly Plan", href: "/admin/operations/practice-plan", icon: ClipboardList },
+      { title: "Practice Plan", href: "/admin/operations/practice-plan", icon: ClipboardList },
       { title: "Daily Duties Intelligence", href: "/admin/operations/daily-duties", icon: Sparkles },
-      { title: "Gym Board", href: "/practice-board", icon: Monitor, external: true },
-    ],
-  },
-  {
-    title: "Strength & Conditioning",
-    description: "AI workout board — bench, squat, deadlift",
-    icon: Dumbbell,
-    href: "/strength-coach",
-    external: true,
-    permKey: "operations_strength_conditioning",
-    children: [
-      { title: "Battle Team S&C Board", href: "/strength-coach", icon: Dumbbell, external: true },
+      { title: "Battle Team S&C", href: "/strength-coach", icon: Dumbbell, external: true },
       { title: "Battle Team Intelligence", href: "/strength-coach/intelligence", icon: BarChart3, external: true },
-      { title: "NBT S&C Board", href: "/admin/operations/nbt-board", icon: Dumbbell },
+      { title: "NBT S&C", href: "/admin/operations/nbt-board", icon: Dumbbell },
       { title: "NBT Intelligence", href: "/admin/operations/nbt-intelligence", icon: BarChart3 },
       { title: "75 Hard", href: "/hard-75", icon: Flame, external: true },
     ],

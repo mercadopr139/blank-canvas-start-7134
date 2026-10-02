@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { ChevronLeft, ChevronRight, Dumbbell, Lock, Unlock, RefreshCw, Sparkles, Wand2, CalendarDays, History, Search, Plus, Trash2, X, Pencil, ClipboardList, TrendingUp, Monitor } from "lucide-react";
@@ -22,6 +22,9 @@ import ExerciseVideo from "@/components/strength/ExerciseVideo";
 const StrengthCoach = () => {
   const queryClient = useQueryClient();
   const navigate = useNavigate();
+  // Opened from the Practice Plan's S&C tab: the back button goes home there.
+  const [params] = useSearchParams();
+  const fromPlan = params.get("from") === "practice-plan";
   const todayMonday = useMemo(() => toMonday(new Date()), []);
   const [weekMonday, setWeekMonday] = useState<Date>(todayMonday);
   const [view, setView] = useState<"week" | "history">("week");
@@ -177,10 +180,10 @@ const StrengthCoach = () => {
   return (
     <div className="min-h-screen bg-black text-white">
       <div className="max-w-5xl mx-auto px-4 py-6 sm:py-8">
-        {/* Back to admin */}
-        <button onClick={() => navigate("/admin/operations")}
+        {/* Back to admin — or to the Practice Plan when that's where we came from */}
+        <button onClick={() => navigate(fromPlan ? "/admin/operations/practice-plan" : "/admin/operations")}
           className="inline-flex items-center gap-1.5 text-sm text-white/50 hover:text-white mb-4">
-          <ChevronLeft className="h-4 w-4" /> Operations
+          <ChevronLeft className="h-4 w-4" /> {fromPlan ? "Practice Plan" : "Operations"}
         </button>
 
         {/* Header */}
@@ -211,8 +214,13 @@ const StrengthCoach = () => {
           <div className="flex items-center gap-2">
             {/* The wall view. This page is the coach's desk; that one is what
                 the crew reads from across the gym. */}
+            {/* Green once the week is locked: that's the signal it's on the
+                wall for everyone. Grey while it's still a draft. */}
             <button onClick={() => navigate("/strength-board")}
-              className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-sm font-semibold bg-white/5 hover:bg-white/10 border border-white/15">
+              title={locked ? "Live on the gym board" : "Draft — lock the week to put it on the board"}
+              className={locked
+                ? "inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-sm font-semibold bg-emerald-600 hover:bg-emerald-500 border border-emerald-500 text-white"
+                : "inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-sm font-semibold bg-white/5 hover:bg-white/10 border border-white/15"}>
               <Monitor className="h-4 w-4" /> <span className="hidden sm:inline">Open gym board</span>
             </button>
             <button onClick={() => navigate("/strength-coach/intelligence")}

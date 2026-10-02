@@ -9,7 +9,7 @@
 //
 // Plan: docs/PRACTICE_PLAN_PLAN.md
 import { useState, useEffect, useMemo, useRef, useCallback, useLayoutEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import nlaLogoWhite from "@/assets/nla-logo-white.png";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/contexts/AuthContext";
@@ -24,12 +24,15 @@ import DailyDutiesBoard from "@/components/duties/DailyDutiesBoard";
 import VerseDiscussion, { DiscussionDay, DiscussionFigure } from "@/components/verse/VerseDiscussion";
 import {
   NLA_RED, TOGETHER_GRAY, GROUPS, QUICK_BLOCKS, PracticeGroup, blockAccent, spiritualAccent,
-  daysFor, mondayOf, dateForWeekday, todayWeekday, addDays, formatWeekRange,
-  msUntilStart, countdownParts, formatStartTime, equipmentFor,
+  daysForWeek, mondayOf, dateForWeekday, todayWeekday, addDays, formatWeekRange,
+  msUntilStart, countdownParts, formatStartTime,
   PracticeSettings, PracticeWeek, PracticeBlock, SpiritualDay, MeetingPoints,
   SeasonMode,
 } from "@/lib/practicePlan";
 import { handleIndentKey } from "@/lib/indentTextarea";
+import { SplitLanesEditor, SplitLanesView } from "@/components/practice/SplitLanes";
+import { isSplitBlock, parseSplit, isJuniorsLane, hasLanes, isBibleStudyBlock, laneDefaults, bibleStudySiblings, isWeightsBlock, wrapupFor } from "@/lib/practicePlan";
+import { DAYS as NBT_DAYS } from "@/lib/nbt";
 
 const PracticeBoard = () => {
   const navigate = useNavigate();
@@ -38,25 +41,34 @@ const PracticeBoard = () => {
   const [editing, setEditing] = useState(false);
   // Admin-only override to preview another week; null = follow the live week,
   // so the TV keeps auto-rolling to today's week (recomputed every render).
-  const [weekOverride, setWeekOverride] = useState<string | null>(null);
+  // Coming back from a Workout Plan: `?week=2026-10-05&wd=1` reopens the
+  // board on the week and day it was left on, instead of jumping to today.
+  const [params] = useSearchParams();
+  const linkedWeek = /^\d{4}-\d{2}-\d{2}$/.test(params.get("week") ?? "") ? params.get("week") : null;
+  const linkedDay = Number(params.get("wd"));
+  const hasLinkedDay = Number.isInteger(linkedDay) && linkedDay >= 1 && linkedDay <= 7;
+  const [weekOverride, setWeekOverride] = useState<string | null>(
+    () => (linkedWeek && linkedWeek !== mondayOf() ? linkedWeek : null),
+  );
   const weekStart = weekOverride ?? mondayOf();
   const isCurrentWeek = weekStart === mondayOf();
-  // Open on today. Outside the training week (weekend), show Monday.
-  const defaultWeekday = () => {
-    const t = todayWeekday();
-    return t >= 1 && t <= 5 ? t : 1;
-  };
-  const [weekday, setWeekday] = useState(defaultWeekday);
+  // Open on today. If today isn't one of the week's days (a weekend with no
+  // session), the effect below moves to the week's first day once the days
+  // are known. A hand-picked day is left alone.
+  const defaultWeekday = () => todayWeekday();
+  const [weekday, setWeekday] = useState(() => (hasLinkedDay ? linkedDay : defaultWeekday()));
+  const userPicked = useRef(hasLinkedDay);
   const shiftWeek = (dir: number) => {
     setWeekOverride(addDays(weekStart, dir * 7));
+    userPicked.current = false;
     setWeekday(1);
   };
   const backToThisWeek = () => {
     setWeekOverride(null);
+    userPicked.current = false;
     setWeekday(defaultWeekday());
   };
   const [countdownOpen, setCountdownOpen] = useState(false);
-  const [workoutOpen, setWorkoutOpen] = useState(false);
   const [dutiesOpen, setDutiesOpen] = useState(false);
   const [verseDiscussion, setVerseDiscussion] = useState<DiscussionDay | null>(null);
 
@@ -118,7 +130,6 @@ const PracticeBoard = () => {
     },
   });
   const season: SeasonMode = settings?.season ?? "in_season";
-  const days = useMemo(() => daysFor(season), [season]);
 
   const { data: week } = useQuery({
     queryKey: ["board-week", weekStart],
@@ -249,7 +260,7 @@ const PracticeBoard = () => {
         .eq("week_start", weekStart)
         .maybeSingle();
       const week = (wk as unknown as { theme: string; is_published: boolean } | null) ?? null;
-      if (!week?.is_published) return { published: false, day: null as DiscussionDay | null };
+      if (!week?.is_published) return { published: false, theme: null as string | null, day: null as DiscussionDay | null };
       const { data: dayRow } = await supabase
         .from("board_verse_days" as never)
         .select("reference, text, context, figures, questions, answers")
@@ -261,6 +272,7 @@ const PracticeBoard = () => {
         | null;
       return {
         published: true,
+        theme: (week.theme ?? "").trim() || null,
         day: d
           ? ({ reference: d.reference, text: d.text, context: d.context, figures: d.figures ?? [], questions: d.questions ?? [], answers: d.answers ?? [] } as DiscussionDay)
           : null,
@@ -270,29 +282,17 @@ const PracticeBoard = () => {
 
   // This week's S&C workouts, so a weights block can show what to set up
   // without anybody leaving the board.
-  const { data: strengthWeek } = useQuery({
-    queryKey: ["board-strength", weekStart],
-    refetchInterval: 60_000,
-    queryFn: async () => {
-      const { data } = await supabase
-        .from("strength_weeks" as never)
-        .select("days")
-        .eq("week_start", weekStart)
-        .maybeSingle();
-      return (data as unknown as { days: Record<string, StrengthDay> })?.days ?? {};
-    },
-  });
-
   // ── Editing from the board ──
   // A coach standing at the TV can change tonight without walking back to a
   // laptop. Only ever offered to a signed-in admin; the board is anonymous for
   // everyone else, and RLS refuses anon writes regardless of what the UI shows.
   const saveDetail = useMutation({
     mutationFn: async ({ id, detail }: { id: string; detail: string | null }) => {
+      // A Bible Study box in both team columns is one study: write both.
       const { error } = await supabase
         .from("practice_blocks" as never)
         .update({ detail } as never)
-        .eq("id", id);
+        .in("id", bibleStudySiblings(blocks, id));
       if (error) throw error;
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["board-blocks", week?.id] }),
@@ -417,12 +417,72 @@ const PracticeBoard = () => {
     onError: (e: Error) => toast.error(e.message || "Couldn't move that."),
   });
 
+  // The week's own days (Sat/Sun included when the week was started with
+  // them); the season's default days until the week's blocks arrive.
+  const days = useMemo(() => daysForWeek(blocks, season), [blocks, season]);
+  // Land on today when the week has it; otherwise its first day. Never
+  // overrides a day someone tapped.
+  useEffect(() => {
+    if (userPicked.current || days.length === 0) return;
+    const t = todayWeekday();
+    const preferred = isCurrentWeek && days.some((d) => d.n === t) ? t : days[0].n;
+    if (preferred !== weekday) setWeekday(preferred);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- re-evaluate only when the week's days change
+  }, [days, isCurrentWeek]);
+
   const day = days.find((d) => d.n === weekday) ?? days[0];
   const dayDate = new Date(`${dateForWeekday(weekStart, day.n)}T12:00:00`);
+  const nbtDayKey = NBT_DAYS.find((d) => d.weekday === day.n)?.key ?? null;
+
+  // Tonight's duties, for the Eat up · Clean up band: how many jobs have
+  // someone on them. Assignments are only ever "today", so the count only
+  // means something when the board is showing tonight.
+  const isTonight = isCurrentWeek && day.n === todayWeekday();
+  const { data: dutyProgress } = useQuery({
+    queryKey: ["board-duty-progress"],
+    enabled: isTonight,
+    refetchInterval: 60_000,
+    queryFn: async () => {
+      const [jobsRes, assignedRes] = await Promise.all([
+        supabase.from("duty_jobs" as never).select("id").eq("is_active", true),
+        supabase.rpc("get_todays_duty_assignments" as never),
+      ]);
+      const total = ((jobsRes.data ?? []) as unknown[]).length;
+      const done = new Set(
+        ((assignedRes.data ?? []) as unknown as { job_id: string }[]).map((r) => r.job_id)
+      ).size;
+      return { total, done };
+    },
+  });
+  // The Junior Boxers (7–10) aren't one of the three tiles, but on a night a
+  // group splits to coach them, that lane IS their session — print it as a
+  // strip under the tiles, from the same text, so it can never disagree.
+  const juniorLanes = useMemo(
+    () => blocks
+      .filter((b) => b.weekday === day.n && isSplitBlock(b.category))
+      .flatMap((b) => parseSplit(b.detail).filter(isJuniorsLane).map((lane) => ({ lane, group: b.group }))),
+    [blocks, day.n],
+  );
+  // Thursday's Bible study: one block in the plan (Battle Team or Non-Battle
+  // Team, whichever carries it), printed once as a strip under the tiles with
+  // its boys and girls lanes. The Littles aren't in it — the Verse of the Day
+  // up top is theirs — so their column just says to keep going.
+  const bibleBlock = useMemo(
+    () => blocks.find((b) => b.weekday === day.n && isBibleStudyBlock(b.category)) ?? null,
+    [blocks, day.n],
+  );
+  const bibleLanes = useMemo(
+    () => (bibleBlock ? parseSplit(bibleBlock.detail, laneDefaults(bibleBlock.category)) : []),
+    [bibleBlock],
+  );
+  // One study, two rooms: the topic typed on the block wins; otherwise the
+  // week's published Bible topic from the banner, so verse and study agree.
+  const bibleTopic = bibleLanes[0]?.text.trim() || themed?.theme || "";
   const points = meeting.find((m) => m.weekday === day.n)?.points ?? [];
   // A paused template row keeps its place in the template but must not
   // reach the wall — Smile Lab is not running for a few weeks.
-  const sp = spiritual.find((s) => s.weekday === day.n && s.is_active !== false);
+  // This week's own line for the night wins; else the template's, unless paused.
+  const sp = wrapupFor(week, day.n, spiritual.find((s) => s.weekday === day.n && s.is_active !== false));
   const weekReminders = reminderRows.find((r) => r.weekday === day.n)?.items ?? [];
   const standingToday = standing
     .filter((r) => r.weekday === day.n)
@@ -436,6 +496,7 @@ const PracticeBoard = () => {
   const move = (dir: -1 | 1) => {
     const i = days.findIndex((d) => d.n === day.n);
     const next = days[(i + dir + days.length) % days.length];
+    userPicked.current = true;
     setWeekday(next.n);
   };
 
@@ -496,6 +557,11 @@ const PracticeBoard = () => {
         <ChevronLeft className="w-5 h-5" />
       </Button>
       <div>
+        {/* The same small tag the Workout Plans wear, so one spot on every
+            screen says which plan this is. */}
+        <p className="text-[10px] font-bold uppercase tracking-[0.25em] leading-none mb-1 text-white/45">
+          Practice Plan
+        </p>
         <h1 className="text-3xl md:text-4xl font-black tracking-tight uppercase">
           {day.long}
         </h1>
@@ -707,7 +773,7 @@ const PracticeBoard = () => {
                 longer than the notes on either side of it. */}
             {/* First column is wide enough for "Everybody · together" on one
                 line — at 11rem the nowrap ran under the divider. */}
-            <div className="grid grid-cols-1 md:grid-cols-[minmax(0,14rem)_minmax(0,13rem)_minmax(0,1fr)_minmax(0,13rem)] gap-3 md:gap-5">
+            <div className="grid board-banner-grid gap-3 md:gap-5">
               {/* Same shape as the spiritual band under the columns — eyebrow,
                   name, who leads it — because it is the other thing the whole
                   academy does together. */}
@@ -720,24 +786,37 @@ const PracticeBoard = () => {
                   >
                     Everybody · together
                   </p>
-                  <h2
-                    className="text-sm md:text-base font-bold leading-tight"
-                    style={{ color: TOGETHER_GRAY }}
-                  >
-                    Team Meeting
-                    {/* nowrap so it never breaks into "5" and "min" when the
-                        column is narrow */}
-                    <span className="ml-2 text-[11px] md:text-xs font-medium opacity-60 whitespace-nowrap">
-                      5 min
-                    </span>
-                  </h2>
-                  {meetingLeader && (
-                    <p
-                      className="text-[11px] md:text-xs font-medium opacity-75"
+                  {day.n === 2 ? (
+                    /* Tuesday is Junior Boxers night — the room is split, so
+                       there is no whole-academy meeting. Say so plainly. */
+                    <h2
+                      className="text-sm md:text-base font-bold leading-tight"
                       style={{ color: TOGETHER_GRAY }}
                     >
-                      with {meetingLeader}
-                    </p>
+                      No team meeting on Tuesdays
+                    </h2>
+                  ) : (
+                    <>
+                      <h2
+                        className="text-sm md:text-base font-bold leading-tight"
+                        style={{ color: TOGETHER_GRAY }}
+                      >
+                        Team Meeting
+                        {/* nowrap so it never breaks into "5" and "min" when the
+                            column is narrow */}
+                        <span className="ml-2 text-[11px] md:text-xs font-medium opacity-60 whitespace-nowrap">
+                          5 min
+                        </span>
+                      </h2>
+                      {meetingLeader && (
+                        <p
+                          className="text-[11px] md:text-xs font-medium opacity-75"
+                          style={{ color: TOGETHER_GRAY }}
+                        >
+                          with {meetingLeader}
+                        </p>
+                      )}
+                    </>
                   )}
                 </div>
               </div>
@@ -823,7 +902,7 @@ const PracticeBoard = () => {
                   return (
                     <button
                       onClick={() => setVerseDiscussion(themedDay)}
-                      className="md:border-l md:pl-7 text-left w-full group"
+                      className="md:border-l md:pl-7 text-left w-full group md:order-last"
                       style={{ borderColor: `${TOGETHER_GRAY}33` }}
                     >
                       <p className="text-[10px] md:text-[11px] font-bold uppercase tracking-[0.2em] opacity-70 mb-2 flex items-center gap-1.5" style={{ color: TOGETHER_GRAY }}>
@@ -845,7 +924,7 @@ const PracticeBoard = () => {
                   return (
                     <button
                       onClick={() => navigate("/admin/operations/practice-plan")}
-                      className="md:border-l md:pl-7 text-left w-full"
+                      className="md:border-l md:pl-7 text-left w-full md:order-last"
                       style={{ borderColor: `${TOGETHER_GRAY}33` }}
                     >
                       <p className="text-[10px] md:text-[11px] font-bold uppercase tracking-[0.2em] opacity-70 mb-2" style={{ color: TOGETHER_GRAY }}>
@@ -859,7 +938,7 @@ const PracticeBoard = () => {
                 }
                 if (verse) {
                   return (
-                    <div className="md:border-l md:pl-7" style={{ borderColor: `${TOGETHER_GRAY}33` }}>
+                    <div className="md:border-l md:pl-7 md:order-last" style={{ borderColor: `${TOGETHER_GRAY}33` }}>
                       <p className="text-[10px] md:text-[11px] font-bold uppercase tracking-[0.2em] opacity-70 mb-2" style={{ color: TOGETHER_GRAY }}>
                         Verse of the day
                       </p>
@@ -971,6 +1050,57 @@ const PracticeBoard = () => {
             </div>
           </section>
 
+          {/* Junior Boxers strip — above the three tiles, only on a night a
+              group is coaching them. Teal so it pops: the night as a timeline,
+              practice → 6:00 → home, or aftercare in one of the two labs. */}
+          {juniorLanes.map(({ lane, group }, i) => {
+            const coachedBy = lane.who.trim() || GROUPS.find((x) => x.key === group)?.label || "";
+            const lines = lane.text.split("\n").map((s) => s.trim().replace(/^[-*>•]\s*/, "")).filter(Boolean);
+            return (
+              <section
+                key={i}
+                className="shrink-0 rounded-xl border px-4 py-2 flex items-start gap-5"
+                style={{ borderColor: "#14b8a6aa", background: "#14b8a61f", boxShadow: "0 0 24px #14b8a622" }}
+              >
+                <div className="shrink-0 min-w-[11rem]">
+                  <p className="text-[10px] font-bold uppercase tracking-[0.2em]" style={{ color: "#5eead4" }}>
+                    Junior Boxers · ages 7–10
+                  </p>
+                  <p className="text-xs leading-snug" style={{ color: "#99f6e4" }}>coached by {coachedBy}</p>
+                </div>
+                {/* Three stops a kid can read left to right: practice → home,
+                    or aftercare. One accent (teal) for the times and labels,
+                    plain white for the words — nothing else competes. */}
+                <div className="flex-1 flex items-stretch gap-2 flex-wrap text-sm leading-snug">
+                  <div className="rounded-lg border border-white/15 bg-white/[0.04] px-3 py-1 min-w-0">
+                    <p className="text-[9px] font-bold uppercase tracking-[0.2em]" style={{ color: "#5eead4" }}>
+                      {formatStartTime(startTime)} · Practice
+                    </p>
+                    {/* Juniors' practice is boxing stations unless the lane says otherwise. */}
+                    <p className="text-white/90 truncate">{lines.length ? lines.join(" · ") : "Boxing stations"}</p>
+                  </div>
+                  <span className="self-center text-white/35 text-lg" aria-hidden="true">→</span>
+                  <div className="rounded-lg border border-white/15 bg-white/[0.04] px-3 py-1">
+                    <p className="text-[9px] font-bold uppercase tracking-[0.2em]" style={{ color: "#5eead4" }}>6:00</p>
+                    <p className="text-white/90">Go home</p>
+                  </div>
+                  <span className="self-center text-white/40 text-[11px] uppercase tracking-wider">or</span>
+                  <div className="rounded-lg border border-white/15 bg-white/[0.04] px-3 py-1">
+                    <p className="text-[9px] font-bold uppercase tracking-[0.2em]" style={{ color: "#5eead4" }}>Aftercare</p>
+                    <p className="text-white/90">
+                      Smile Lab <span className="text-white/40 mx-1">⇄</span> Character Lab
+                    </p>
+                  </div>
+                  <span className="self-center text-white/35 text-lg" aria-hidden="true">→</span>
+                  <div className="rounded-lg border border-white/15 bg-white/[0.04] px-3 py-1">
+                    <p className="text-[9px] font-bold uppercase tracking-[0.2em]" style={{ color: "#5eead4" }}>Then</p>
+                    <p className="text-white/90">Dinner</p>
+                  </div>
+                </div>
+              </section>
+            );
+          })}
+
           {/* Three groups, side by side. On the wall they fill the space left
               under the meeting banner and each column scrolls inside itself, so
               the plan is always on screen and never pushes the tiles off. */}
@@ -1022,17 +1152,30 @@ const PracticeBoard = () => {
                         // everyone else, which meant the Littles column — titled
                         // "Strength" — matched the weights test and offered the
                         // button. Named groups in, not named groups out.
+                        // Non-Battle Team gets the same button on the days NBT
+                        // trains (Mon / Tue / Thu), opening their S&C instead.
+                        const isNbtLift =
+                          isWeightsBlock(b.category) && g.key === "non_battle_team" && !!nbtDayKey;
                         const showPrep =
-                          isWeightsBlock(b.category) && g.key === "battle_team";
+                          (isWeightsBlock(b.category) && g.key === "battle_team") || isNbtLift;
+                        // One tap opens that team's full Workout Plan — the
+                        // same page the wall shows — with its prep line on top,
+                        // and its back arrow returns here. (Josh, 2026-10-02.)
+                        // The week and day ride along so the wall opens on
+                        // the same night, and "back" lands exactly here.
+                        const here = `week=${weekStart}&wd=${day.n}`;
+                        const workoutHref = isNbtLift
+                          ? `/nbt-board?day=${nbtDayKey}&from=practice&${here}`
+                          : `/strength-board?from=practice&${here}${STRENGTH_DAY_KEY[day.n] ? `&day=${STRENGTH_DAY_KEY[day.n]}` : ""}`;
                         const prepButton = (
                           <button
                             type="button"
-                            onClick={() => setWorkoutOpen(true)}
+                            onClick={() => navigate(workoutHref)}
                             className="inline-flex items-center gap-1.5 rounded-lg border px-2.5 py-1 text-[0.7em] font-bold transition-colors hover:bg-white/10 shrink-0"
                             style={{ borderColor: `${g.accent}77`, color: g.accent }}
                           >
                             <Dumbbell className="w-4 h-4" />
-                            Workout Prep
+                            Workout Plan
                           </button>
                         );
                         return (
@@ -1083,7 +1226,24 @@ const PracticeBoard = () => {
                               </span>
                             )}
                           </div>
-                          {editing ? (
+                          {hasLanes(b.category) && editing ? (
+                            <SplitLanesEditor
+                              key={`${b.id}-${b.detail ?? ""}`}
+                              detail={b.detail}
+                              category={b.category}
+                              accent={blockAccent(b.category, g.accent)}
+                              dark
+                              onSave={(v) => saveDetail.mutate({ id: b.id, detail: v })}
+                            />
+                          ) : isBibleStudyBlock(b.category) ? (
+                            /* The lanes print once, in the strip under the
+                               tiles — the tile just holds the slot's place. */
+                            <p className="text-[0.85em] leading-snug" style={{ color: "#99f6e4" }}>
+                              Boys &amp; Girls separated · see below ↓
+                            </p>
+                          ) : isSplitBlock(b.category) ? (
+                            <SplitLanesView detail={b.detail} accent={g.accent} />
+                          ) : editing ? (
                             <textarea
                               key={`${b.id}-${b.detail ?? ""}`}
                               defaultValue={b.detail ?? ""}
@@ -1093,7 +1253,6 @@ const PracticeBoard = () => {
                                   saveDetail.mutate({ id: b.id, detail: v });
                               }}
                               onKeyDown={handleIndentKey}
-                              placeholder="What are we doing?  —  Tab to indent"
                               rows={2}
                               className="w-full rounded-lg bg-black/60 border border-white/15 px-3 py-2 text-lg text-white outline-none focus:border-white/40"
                             />
@@ -1168,6 +1327,24 @@ const PracticeBoard = () => {
                       })
                     )}
 
+                    {/* Bible study is one study for both teams but lives as
+                        one block in one column. The other team's tile mirrors
+                        the slot so both read the same way; the strip below
+                        carries the detail. */}
+                    {bibleBlock && bibleBlock.group !== g.key && g.key !== "littles" && (
+                      <div>
+                        <p
+                          className="text-[0.62em] font-bold uppercase tracking-[0.15em] mb-1"
+                          style={{ color: blockAccent(bibleBlock.category, g.accent) }}
+                        >
+                          {bibleBlock.category}
+                        </p>
+                        <p className="text-[0.85em] leading-snug" style={{ color: "#99f6e4" }}>
+                          Boys &amp; Girls separated · see below ↓
+                        </p>
+                      </div>
+                    )}
+
                     {/* Ad-hoc additions live in this week only — never the
                         template — so "add a run tonight" doesn't become a
                         standing Tuesday run forever. */}
@@ -1181,60 +1358,96 @@ const PracticeBoard = () => {
                     )}
                   </div>
 
-                  {/* The same teal footer on all three columns. Because the
-                      cards are equal height it reads as one unbroken band
-                      running under the whole board — which is the point: this
-                      is the one thing every group does together. */}
-                  {sp && (
-                    <div
-                      className="border-t px-4 py-2 shrink-0"
-                      style={{
-                        borderColor: `${spiritualAccent(sp.label)}55`,
-                        background: `${spiritualAccent(sp.label)}14`,
-                      }}
+                  {/* Eat up · Clean up — the close of the night, as one band
+                      under all three tiles. The verse is covered up top in the
+                      meeting, so the foot of the board is the end: eat, clean,
+                      assign the jobs. One tap opens Daily Duties. The Spiritual
+                      template still exists; it just no longer draws here. */}
+                  <button
+                    type="button"
+                    onClick={() => setDutiesOpen(true)}
+                    className="border-t px-4 py-2 shrink-0 text-left w-full hover:bg-white/[0.05] transition-colors"
+                    style={{ borderColor: `${TOGETHER_GRAY}55`, background: `${TOGETHER_GRAY}14` }}
+                    title="Open Daily Duties"
+                  >
+                    <p
+                      className="text-[9px] md:text-[10px] font-bold uppercase tracking-[0.2em] opacity-70"
+                      style={{ color: TOGETHER_GRAY }}
                     >
-                      <p
-                        className="text-[9px] md:text-[10px] font-bold uppercase tracking-[0.2em] opacity-70"
-                        style={{ color: spiritualAccent(sp.label) }}
-                      >
-                        Everybody · together
-                      </p>
-                      <p
-                        className="text-sm md:text-base font-bold leading-tight"
-                        style={{ color: spiritualAccent(sp.label) }}
-                      >
-                        {sp.label}
-                        {sp.leader && (
-                          <span className="ml-2 text-[11px] md:text-xs font-medium opacity-70">
-                            with {sp.leader}
-                          </span>
-                        )}
-                      </p>
-                    </div>
-                  )}
+                      Nightly Wrap Up
+                    </p>
+                    <p
+                      className="text-sm md:text-base font-bold leading-tight flex items-center gap-2"
+                      style={{ color: TOGETHER_GRAY }}
+                    >
+                      {/* The Template's Wrap-up row for this weekday; the
+                          default when none is set or the day is paused. */}
+                      {sp?.label?.trim() || "Eat up · Clean up"}
+                      {sp?.leader?.trim() && (
+                        <span className="text-[11px] md:text-xs font-medium opacity-70">with {sp.leader}</span>
+                      )}
+                      {g.key === "non_battle_team" ? (
+                        <span className="text-[11px] md:text-xs font-medium opacity-70">
+                          {!isTonight
+                            ? "· tap to assign the jobs"
+                            : !dutyProgress
+                              ? ""
+                              : dutyProgress.total > 0 && dutyProgress.done >= dutyProgress.total
+                                ? "· all jobs assigned ✓"
+                                : `· ${dutyProgress.done} of ${dutyProgress.total} jobs assigned`}
+                        </span>
+                      ) : (
+                        <Sparkles className="w-3.5 h-3.5 opacity-50" />
+                      )}
+                    </p>
+                  </button>
                 </section>
               );
             })}
           </div>
 
-        </main>
-      )}
+          {/* Bible study strip — under the tiles, only on a night the plan
+              carries one. Teal like the Junior strip: the same three columns
+              as the tiles, so the Littles' note sits under the Littles. */}
+          {bibleBlock && (
+            <section
+              className="shrink-0 rounded-xl border px-4 py-2 grid grid-cols-1 md:grid-cols-3 gap-4"
+              style={{ borderColor: "#14b8a6aa", background: "#14b8a61f", boxShadow: "0 0 24px #14b8a622" }}
+            >
+              {/* One study across both teams: the name once, then a single
+                  "Boys & Girls · separated" cell with whatever was typed on
+                  the block (or the week's published Bible topic). */}
+              <div className="md:col-span-2 min-w-0 flex items-start gap-4">
+                <div className="shrink-0 min-w-[7.5rem]">
+                  <p className="text-[10px] font-bold uppercase tracking-[0.2em]" style={{ color: "#5eead4" }}>
+                    {bibleBlock.category}
+                  </p>
+                  <p className="text-xs leading-snug" style={{ color: "#99f6e4" }}>Battle Team + Non-Battle Team</p>
+                </div>
+                <div className="flex-1 min-w-0 rounded-lg border border-white/15 bg-white/[0.04] px-3 py-1">
+                  <p className="text-[9px] font-bold uppercase tracking-[0.2em]" style={{ color: "#5eead4" }}>
+                    Boys &amp; Girls · separated
+                  </p>
+                  {bibleTopic && (
+                    <p className="text-white/90 text-sm leading-snug">{bibleTopic}</p>
+                  )}
+                </div>
+              </div>
+              <div className="min-w-0 rounded-lg border border-white/10 px-3 py-1 self-start">
+                <p className="text-[9px] font-bold uppercase tracking-[0.2em] text-white/40">Littles</p>
+                <p className="text-white/60 text-sm leading-snug">Keep going with the plan above</p>
+              </div>
+            </section>
+          )}
 
-      {workoutOpen && (
-        <WorkoutPrepPanel
-          workout={
-            (strengthWeek?.[STRENGTH_DAY_KEY[day.n]] as StrengthDay | undefined) ?? null
-          }
-          dayLabel={day.long}
-          onClose={() => setWorkoutOpen(false)}
-        />
+        </main>
       )}
 
       <footer className="px-6 py-3 border-t border-white/10 flex items-center justify-center gap-2">
         {days.map((d) => (
           <button
             key={d.n}
-            onClick={() => setWeekday(d.n)}
+            onClick={() => { userPicked.current = true; setWeekday(d.n); }}
             className={`px-3 py-1.5 rounded-lg text-sm font-semibold transition-colors ${
               d.n === day.n
                 ? "bg-white/15 text-white"
@@ -1256,151 +1469,6 @@ const STRENGTH_DAY_KEY: Record<number, string> = {
   5: "friday",
 };
 
-export interface StrengthDay {
-  focus?: string;
-  estMinutes?: number;
-  warmup?: { name: string; detail: string }[];
-  main?: { lift: string; scheme: string; guidance?: string; cues?: string[]; rest?: string };
-  accessories?: { name: string; scheme?: string; howTo?: string; scale?: string; rest?: string }[];
-  coachNotes?: string;
-}
-
-const isWeightsBlock = (category: string) => /weight|strength/i.test(category);
-
-/**
- * Workout Prep — what has to be carried out before the lift starts.
- *
- * Deliberately NOT the workout. The athletes already know the day's lift, and
- * the S&C board has the full session. What they don't know until they look is
- * what tonight's extra work needs dragged out of the racks. So this answers
- * exactly that question and nothing else, and it closes on a tap, leaving the
- * board exactly as it was.
- */
-const WorkoutPrepPanel = ({
-  workout, dayLabel, onClose,
-}: {
-  workout: StrengthDay | null;
-  dayLabel: string;
-  onClose: () => void;
-}) => {
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose();
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [onClose]);
-
-  const exercises = [
-    workout?.main?.lift ?? "",
-    ...(workout?.accessories ?? []).map((a) => a.name),
-    ...(workout?.warmup ?? []).map((w) => w.name),
-  ].filter(Boolean);
-  const needs = equipmentFor(exercises);
-
-  const extras = (workout?.accessories ?? []).map((a) => a.name).filter(Boolean);
-
-  return (
-    <div
-      className="fixed inset-0 z-50 bg-black/85 backdrop-blur-sm flex items-center justify-center p-4 md:p-8"
-      onClick={onClose}
-    >
-      <div
-        className="relative w-full max-w-2xl max-h-full overflow-y-auto rounded-2xl border border-white/15 bg-neutral-950 p-6 md:p-8"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <button
-          type="button"
-          onClick={onClose}
-          className="absolute top-4 right-4 text-white/40 hover:text-white p-1.5"
-          aria-label="Close"
-        >
-          <X className="w-6 h-6" />
-        </button>
-
-        <div className="flex items-center gap-3">
-          <Dumbbell className="w-6 h-6" style={{ color: NLA_RED }} />
-          <h2 className="text-2xl md:text-3xl font-black uppercase tracking-tight">
-            Workout Prep
-          </h2>
-        </div>
-        <p className="text-white/45 text-sm md:text-base mt-1">
-          {dayLabel}
-          {workout?.main?.lift ? ` · ${workout.main.lift}` : ""}
-        </p>
-
-        {!workout ? (
-          <p className="mt-8 text-white/40 text-lg">
-            No S&amp;C workout posted for {dayLabel.toLowerCase()} yet — nothing
-            to set out.
-          </p>
-        ) : needs.length === 0 ? (
-          <p className="mt-8 text-white/40 text-lg">
-            Nothing to carry out tonight — bodyweight only.
-          </p>
-        ) : (
-          <>
-            <p className="mt-7 mb-3 text-xs font-bold uppercase tracking-[0.2em] text-white/40">
-              Set these out
-            </p>
-            <ul className="space-y-2.5">
-              {needs.map((n) => (
-                <li
-                  key={n.item}
-                  className="flex items-baseline gap-3 rounded-xl border border-white/10 bg-white/[0.03] px-4 py-3"
-                >
-                  <span
-                    className="w-2 h-2 rounded-full shrink-0 translate-y-[-2px]"
-                    style={{ backgroundColor: NLA_RED }}
-                  />
-                  <span className="text-2xl md:text-3xl font-black text-white">
-                    {n.item}
-                  </span>
-                  <span className="text-white/35 text-sm md:text-base ml-auto text-right">
-                    {n.forWhat.join(" · ")}
-                  </span>
-                </li>
-              ))}
-            </ul>
-
-            {/* The bit that actually changes week to week. */}
-            {extras.length > 0 && (
-              <p className="mt-5 text-white/45 text-sm md:text-base">
-                <span className="font-bold text-white/70">Extra work:</span>{" "}
-                {extras.join(" · ")}
-              </p>
-            )}
-          </>
-        )}
-
-        <div className="mt-8 flex gap-2 flex-wrap">
-          <Button
-            onClick={onClose}
-            className="text-white font-bold"
-            style={{ backgroundColor: NLA_RED }}
-          >
-            Back to the board
-          </Button>
-          <Button
-            variant="outline"
-            onClick={() => window.open("/strength-coach", "_blank")}
-            className="bg-transparent border-white/20 text-white/70 hover:bg-white/5 hover:text-white"
-          >
-            Full workout
-          </Button>
-        </div>
-      </div>
-    </div>
-  );
-};
-
-
-/**
- * Drop an extra block onto one group's day from the board — "add a run for the
- * Battle Team tonight". Quick picks for the things that actually get added on
- * the night, and a free-text box for anything else.
- *
- * These are week-only. The template is untouched, so tonight's run does not
- * become a standing Monday run forever.
- */
 const AddBlock = ({
   accent, onAdd,
 }: {

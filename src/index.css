@@ -306,3 +306,16 @@
 .ProseMirror:focus {
   outline: none;
 }
+
+/* Gym Board — the "Everybody · Together" banner. Plain CSS rather than a
+   Tailwind arbitrary class so the column layout never depends on the JIT
+   picking the class up: four columns from md up, Verse of the Day last and
+   widest (it runs longest), stacked below md. */
+.board-banner-grid {
+  grid-template-columns: minmax(0, 1fr);
+}
+@media (min-width: 768px) {
+  .board-banner-grid {
+    grid-template-columns: minmax(0, 14rem) minmax(0, 13rem) minmax(0, 13rem) minmax(0, 1fr);
+  }
+}

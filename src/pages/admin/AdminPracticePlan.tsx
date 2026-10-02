@@ -18,24 +18,41 @@ import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription,
+  AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import {
   ChevronLeft, ChevronRight, Plus, Loader2, Send, Monitor, Users,
-  X, Sparkles, CalendarDays, Trash2, Pencil, Check, RefreshCw, Eye, EyeOff,
+  X, Sparkles, CalendarDays, Trash2, Pencil, Check, RefreshCw, Eye, EyeOff, GripVertical, Dumbbell,
 } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import {
+  DndContext, closestCenter, PointerSensor, KeyboardSensor, useSensor, useSensors, type DragEndEvent,
+} from "@dnd-kit/core";
+import {
+  SortableContext, arrayMove, rectSortingStrategy, sortableKeyboardCoordinates, useSortable,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 import { toast } from "sonner";
 import VerseOfTheWeekAdmin from "@/components/verse/VerseOfTheWeekAdmin";
 import {
-  NLA_RED, TOGETHER_GRAY, OFF_TEMPLATE_VIOLET, GROUPS, WEEKDAYS, QUICK_BLOCKS, spiritualAccent, daysFor, mondayOf, addDays, formatWeekRange,
+  NLA_RED, TOGETHER_GRAY, OFF_TEMPLATE_VIOLET, GROUPS, WEEKDAYS, QUICK_BLOCKS, spiritualAccent, daysFor, daysForWeek, ALL_WEEKDAYS, mondayOf, addDays, formatWeekRange,
   dateForWeekday, blockAccent, PracticeGroup, PracticeSettings, PracticeWeek, PracticeBlock,
   TemplateBlock, SpiritualDay, MeetingPoints, SeasonMode, formatStartTime,
 } from "@/lib/practicePlan";
 import { handleIndentKey } from "@/lib/indentTextarea";
+import { SplitLanesEditor } from "@/components/practice/SplitLanes";
+import { hasLanes, bibleStudySiblings, wrapupFor, type Wrapups } from "@/lib/practicePlan";
 
 const AdminPracticePlan = () => {
   const qc = useQueryClient();
   const { user } = useAuth();
   const [weekStart, setWeekStart] = useState<string>(() => mondayOf());
+  const navigate = useNavigate();
   const [copyLastWeek, setCopyLastWeek] = useState(true);
 
   // ── Settings ──
@@ -55,7 +72,9 @@ const AdminPracticePlan = () => {
     },
   });
   const season: SeasonMode = settings?.season ?? "in_season";
-  const days = useMemo(() => daysFor(season), [season]);
+  // Start-week wizard (Phase 1: which days). Steps 2–3 (S&C, verse) follow.
+  const [wizardOpen, setWizardOpen] = useState(false);
+  const [chosenDays, setChosenDays] = useState<number[]>([]);
 
   // ── Template ──
   const { data: template = [] } = useQuery({
@@ -112,6 +131,10 @@ const AdminPracticePlan = () => {
     },
   });
 
+  // The week's days come from the week itself (the picker decided them, Sat/Sun
+  // included); before a week exists, the season's default days.
+  const days = useMemo(() => daysForWeek(blocks, season), [blocks, season]);
+
   const { data: meeting = [] } = useQuery({
     queryKey: ["practice-meeting", week?.id],
     enabled: !!week?.id,
@@ -146,7 +169,7 @@ const AdminPracticePlan = () => {
 
   // ── Start a new week from the template ──
   const startWeek = useMutation({
-    mutationFn: async () => {
+    mutationFn: async ({ weekdays }: { weekdays: number[] }) => {
       const { data: created, error } = await supabase
         .from("practice_weeks" as never)
         .insert({ week_start: weekStart, created_by: user?.id ?? null } as never)
@@ -160,9 +183,9 @@ const AdminPracticePlan = () => {
       const prior = new Map(
         lastWeekBlocks.map((b) => [`${b.group}|${b.weekday}|${b.position}`, b.detail])
       );
-      const rows = template
+      const rows: Array<Record<string, unknown>> = template
         .filter((t) => t.is_active !== false)
-        .filter((t) => days.some((d) => d.n === t.weekday))
+        .filter((t) => weekdays.includes(t.weekday))
         .map((t) => ({
           week_id: newWeek.id,
           group: t.group,
@@ -173,6 +196,16 @@ const AdminPracticePlan = () => {
             ? prior.get(`${t.group}|${t.weekday}|${t.position}`) ?? null
             : null,
         }));
+      // A chosen day the template doesn't know (a Saturday session) gets one
+      // open slot per group to write into. Flagged as added-for-this-week so
+      // the template sync never treats it as drift.
+      const templated = new Set(rows.map((r) => r.weekday as number));
+      weekdays.filter((d) => !templated.has(d)).forEach((weekday) => {
+        GROUPS.forEach((g) => rows.push({
+          week_id: newWeek.id, group: g.key, weekday, position: 0,
+          category: "Practice", detail: null, category_overridden: true,
+        }));
+      });
       if (rows.length) {
         const { error: bErr } = await supabase
           .from("practice_blocks" as never)
@@ -183,6 +216,7 @@ const AdminPracticePlan = () => {
     },
     onSuccess: () => {
       toast.success("New week started");
+      setWizardOpen(false);
       qc.invalidateQueries({ queryKey: ["practice-week", weekStart] });
       qc.invalidateQueries({ queryKey: ["practice-blocks"] });
     },
@@ -263,10 +297,11 @@ const AdminPracticePlan = () => {
 
   const saveBlock = useMutation({
     mutationFn: async ({ id, detail }: { id: string; detail: string | null }) => {
+      // A Bible Study box in both team columns is one study: write both.
       const { error } = await supabase
         .from("practice_blocks" as never)
         .update({ detail } as never)
-        .eq("id", id);
+        .in("id", bibleStudySiblings(blocks, id));
       if (error) throw error;
       // Remember the drill so it can be offered back later. The library builds
       // itself out of what actually gets used.
@@ -315,6 +350,61 @@ const AdminPracticePlan = () => {
       qc.invalidateQueries({ queryKey: ["practice-week", weekStart] });
     },
     onError: (e: Error) => toast.error(e.message || "Couldn't publish."),
+  });
+
+  // One night's wrap-up for this week only. Null = back to the template.
+  const saveWrapup = useMutation({
+    mutationFn: async ({ weekday, value }: { weekday: number; value: { label: string; leader: string | null } | null }) => {
+      const next: Wrapups = { ...(week?.wrapups ?? {}) };
+      if (value) next[String(weekday)] = value; else delete next[String(weekday)];
+      const { error } = await supabase
+        .from("practice_weeks" as never)
+        .update({ wrapups: next } as never)
+        .eq("id", week!.id);
+      if (error) throw error;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["practice-week", weekStart] }),
+    onError: (e: Error) => toast.error(e.message || "Couldn't save the wrap-up."),
+  });
+
+  // Restart the week: wipe it and go back to "Start this week". Deleting the
+  // week row cascades to its blocks, meeting points and special reminders —
+  // and nothing else. The Verse of the Week, both S&C plans, Daily Duties and
+  // the template are keyed on their own and are left exactly as they were.
+  // (Josh, 2026-10-02.)
+  const restartWeek = useMutation({
+    mutationFn: async () => {
+      const { error } = await supabase
+        .from("practice_weeks" as never)
+        .delete()
+        .eq("id", week!.id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success("Week wiped — start it fresh below.");
+      qc.invalidateQueries({ queryKey: ["practice-week", weekStart] });
+      qc.invalidateQueries({ queryKey: ["practice-blocks"] });
+      qc.invalidateQueries({ queryKey: ["practice-meeting"] });
+      qc.invalidateQueries({ queryKey: ["practice-reminders"] });
+    },
+    onError: (e: Error) => toast.error(e.message || "Couldn't restart the week."),
+  });
+
+  // The standing start time — what the board counts down to. A single day's
+  // exception (a holiday) is set on the board itself, against the date.
+  const setStartTime = useMutation({
+    mutationFn: async (start_time: string) => {
+      const { error } = await supabase
+        .from("practice_settings" as never)
+        .update({ start_time } as never)
+        .eq("id", true);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["practice-settings"] });
+      toast.success("Practice start time updated");
+    },
+    onError: (e: Error) => toast.error(e.message || "Couldn't update the start time."),
   });
 
   const setSeason = useMutation({
@@ -440,11 +530,16 @@ const AdminPracticePlan = () => {
           </p>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
+          {/* Green once the week is published: that's the signal it's on the
+              wall for everyone. Grey while it's still a draft. */}
           <Button
             variant="outline"
             size="sm"
             onClick={() => window.open("/practice-board", "_blank")}
-            className="bg-transparent border-neutral-700 text-neutral-300 hover:bg-white/5 hover:text-white"
+            title={week?.status === "published" ? "Live on the gym board" : "Draft — publish to put it on the board"}
+            className={week?.status === "published"
+              ? "bg-emerald-600 hover:bg-emerald-500 border-emerald-500 text-white hover:text-white"
+              : "bg-transparent border-neutral-700 text-neutral-300 hover:bg-white/5 hover:text-white"}
           >
             <Monitor className="w-4 h-4 mr-1.5" /> Open gym board
           </Button>
@@ -471,6 +566,80 @@ const AdminPracticePlan = () => {
         </div>
       </div>
 
+      {/* ── Start-week wizard. Step 1: which days. (S&C and the verse are the
+          next two steps of the same flow — coming in the following revisions.) ── */}
+      <Dialog open={wizardOpen} onOpenChange={setWizardOpen}>
+        <DialogContent className="bg-neutral-950 border-neutral-800 text-white sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="text-white">Start the week of {formatWeekRange(weekStart, season)}</DialogTitle>
+            <DialogDescription className="text-neutral-400">
+              <span className="text-[11px] font-bold uppercase tracking-wider text-neutral-500">Step 1 of 3 · Practice days</span>
+              <br />Which days are we practicing this week? Tap to switch a day on or off.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="grid grid-cols-7 gap-1.5">
+            {ALL_WEEKDAYS.map((d) => {
+              const on = chosenDays.includes(d.n);
+              const weekend = d.n >= 6;
+              return (
+                <button
+                  key={d.n}
+                  type="button"
+                  onClick={() => setChosenDays((prev) => on ? prev.filter((n) => n !== d.n) : [...prev, d.n].sort((a, b) => a - b))}
+                  className={`rounded-lg border py-3 text-sm font-bold transition-colors ${
+                    on
+                      ? "border-transparent text-white"
+                      : "border-neutral-800 bg-neutral-900 text-neutral-500 hover:text-neutral-300"
+                  }`}
+                  style={on ? { backgroundColor: NLA_RED } : undefined}
+                  title={weekend && !on ? "Add a weekend session — you'll write it in by hand" : undefined}
+                >
+                  {d.short}
+                </button>
+              );
+            })}
+          </div>
+          <p className="text-xs text-neutral-500 -mt-1">
+            {chosenDays.length === 0
+              ? "Pick at least one day."
+              : `${chosenDays.length} ${chosenDays.length === 1 ? "day" : "days"} · ${chosenDays.map((n) => ALL_WEEKDAYS.find((d) => d.n === n)?.short).join(", ")}`}
+            {chosenDays.some((n) => n >= 6) && " · weekend days start as one open slot per group"}
+          </p>
+
+          {lastWeekBlocks.length > 0 && (
+            <label className="inline-flex items-center gap-2.5 cursor-pointer rounded-lg border border-neutral-800 bg-neutral-900 px-3.5 py-2.5">
+              <input
+                type="checkbox"
+                checked={copyLastWeek}
+                onChange={(e) => setCopyLastWeek(e.target.checked)}
+                className="w-4 h-4 accent-[#bf0f3e]"
+              />
+              <span className="text-sm text-neutral-200">Start from last week&apos;s drills</span>
+              <span className="text-[11px] text-neutral-500">— keep or clear each one</span>
+            </label>
+          )}
+
+          <div className="flex items-center gap-2 text-[11px] text-neutral-600">
+            <span className="rounded-full border border-neutral-800 px-2 py-0.5">2 · S&C days</span>
+            <span className="rounded-full border border-neutral-800 px-2 py-0.5">3 · Bible topic</span>
+            <span>— next revisions; for now they stay on their own tabs.</span>
+          </div>
+
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => setWizardOpen(false)} className="text-neutral-400 hover:text-white">Cancel</Button>
+            <Button
+              onClick={() => startWeek.mutate({ weekdays: chosenDays })}
+              disabled={startWeek.isPending || chosenDays.length === 0}
+              className="text-white font-bold"
+              style={{ backgroundColor: NLA_RED }}
+            >
+              {startWeek.isPending ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Creating…</> : <><Plus className="w-4 h-4 mr-2" /> Create week</>}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       <Tabs defaultValue="week">
         {/* The default inactive tab is near-invisible on this dark
             surface — lift it so both options are readable. */}
@@ -492,6 +661,12 @@ const AdminPracticePlan = () => {
             className="px-5 h-9 text-sm font-semibold text-neutral-300 hover:text-white data-[state=active]:bg-white data-[state=active]:text-black"
           >
             Verse of the Week
+          </TabsTrigger>
+          <TabsTrigger
+            value="sc"
+            className="px-5 h-9 text-sm font-semibold text-neutral-300 hover:text-white data-[state=active]:bg-white data-[state=active]:text-black"
+          >
+            S&amp;C
           </TabsTrigger>
         </TabsList>
 
@@ -557,6 +732,49 @@ const AdminPracticePlan = () => {
                     {filledCount} of {blocks.length} drills filled
                   </span>
                 </div>
+                {/* Wipe and start over. Confirmed first, and it says what
+                    goes and what stays so nobody fears for the verse or S&C. */}
+                <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                    <Button
+                      variant="ghost" size="sm"
+                      className="text-neutral-500 hover:text-red-400 text-xs"
+                    >
+                      <RefreshCw className="w-3.5 h-3.5 mr-1" /> Restart week
+                    </Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent className="bg-neutral-900 border-neutral-800 text-white">
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>Restart {formatWeekRange(weekStart, season)}?</AlertDialogTitle>
+                      <AlertDialogDescription asChild>
+                        <div className="text-neutral-400 text-sm space-y-2">
+                          <p>
+                            This wipes the week's practice plan — every drill, the meeting points and the
+                            special reminders — and takes it off the gym board. You'll start it again from
+                            the template.
+                          </p>
+                          <p>
+                            <span className="text-neutral-200 font-semibold">Untouched:</span> the Verse of the
+                            Week, Battle Team S&amp;C, NBT S&amp;C, Daily Duties and the template.
+                          </p>
+                        </div>
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel className="bg-transparent border-neutral-700 text-neutral-300 hover:text-white hover:bg-white/5">
+                        Keep it
+                      </AlertDialogCancel>
+                      <AlertDialogAction
+                        onClick={() => restartWeek.mutate()}
+                        disabled={restartWeek.isPending}
+                        className="text-white"
+                        style={{ backgroundColor: NLA_RED }}
+                      >
+                        Wipe and restart
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
               </div>
             )}
           </div>
@@ -567,10 +785,7 @@ const AdminPracticePlan = () => {
             <StartWeekCard
               weekStart={weekStart}
               season={season}
-              hasLastWeek={lastWeekBlocks.length > 0}
-              copyLastWeek={copyLastWeek}
-              setCopyLastWeek={setCopyLastWeek}
-              onStart={() => startWeek.mutate()}
+              onStart={() => { setChosenDays(daysFor(season).map((d) => d.n)); setWizardOpen(true); }}
               starting={startWeek.isPending}
             />
           ) : (
@@ -618,7 +833,8 @@ const AdminPracticePlan = () => {
                   key={d.n}
                   day={d}
                   dateISO={dateForWeekday(weekStart, d.n)}
-                  spiritual={spiritual.find((s) => s.weekday === d.n) ?? null}
+                  spiritual={wrapupFor(week, d.n, spiritual.find((s) => s.weekday === d.n))}
+                  onWrapup={(value) => saveWrapup.mutate({ weekday: d.n, value })}
                   points={pointsFor(d.n)}
                   onPoints={(points) => saveMeeting.mutate({ weekday: d.n, points })}
                   blocksFor={(g) => blocksFor(d.n, g)}
@@ -643,6 +859,7 @@ const AdminPracticePlan = () => {
             spiritual={spiritual}
             season={season}
             startTime={settings?.start_time ?? "17:15:00"}
+            onStartTime={(t) => setStartTime.mutate(t)}
             onSeason={(s) => setSeason.mutate(s)}
           />
         </TabsContent>
@@ -651,6 +868,49 @@ const AdminPracticePlan = () => {
         <TabsContent value="verse" className="mt-4">
           <VerseOfTheWeekAdmin season={season} />
         </TabsContent>
+
+        {/* ── S&C ──
+            The two lift boards are their own pages and stay that way; this
+            tab is the door to them so the whole week is finished from here.
+            `from=practice-plan` brings their back buttons home. (Josh, 2026-10-02.) */}
+        <TabsContent value="sc" className="mt-4 space-y-4">
+          <p className="text-sm text-neutral-400">
+            Finish the week's lifting here. Each board opens on its own page and brings you back.
+          </p>
+          <div className="grid sm:grid-cols-2 gap-4">
+            <button
+              type="button"
+              onClick={() => navigate("/strength-coach?from=practice-plan")}
+              className="text-left rounded-xl border p-5 hover:bg-white/[0.04] transition-colors"
+              style={{ borderColor: `${NLA_RED}66` }}
+            >
+              <div className="flex items-center gap-3 mb-2">
+                <div className="h-10 w-10 rounded-lg grid place-items-center" style={{ background: NLA_RED }}>
+                  <Dumbbell className="h-5 w-5 text-white" />
+                </div>
+                <p className="text-lg font-bold text-white">Battle Team S&amp;C</p>
+              </div>
+              <p className="text-sm text-neutral-400">Bench · Squat · Deadlift — the week's lifts for the crew.</p>
+            </button>
+            <button
+              type="button"
+              onClick={() => navigate("/admin/operations/nbt-board?from=practice-plan")}
+              className="text-left rounded-xl border p-5 hover:bg-white/[0.04] transition-colors"
+              style={{ borderColor: `${GROUPS.find((g) => g.key === "non_battle_team")?.accent ?? "#f0a500"}66` }}
+            >
+              <div className="flex items-center gap-3 mb-2">
+                <div
+                  className="h-10 w-10 rounded-lg grid place-items-center"
+                  style={{ background: GROUPS.find((g) => g.key === "non_battle_team")?.accent ?? "#f0a500" }}
+                >
+                  <Dumbbell className="h-5 w-5 text-black" />
+                </div>
+                <p className="text-lg font-bold text-white">NBT S&amp;C</p>
+              </div>
+              <p className="text-sm text-neutral-400">Monday · Tuesday · Thursday — three tracks, one month at a time.</p>
+            </button>
+          </div>
+        </TabsContent>
       </Tabs>
     </div>
   );
@@ -658,13 +918,10 @@ const AdminPracticePlan = () => {
 
 // ── Start of week ────────────────────────────────────────────────────
 const StartWeekCard = ({
-  weekStart, season, hasLastWeek, copyLastWeek, setCopyLastWeek, onStart, starting,
+  weekStart, season, onStart, starting,
 }: {
   weekStart: string;
   season: SeasonMode;
-  hasLastWeek: boolean;
-  copyLastWeek: boolean;
-  setCopyLastWeek: (v: boolean) => void;
   onStart: () => void;
   starting: boolean;
 }) => (
@@ -674,25 +931,10 @@ const StartWeekCard = ({
       No plan yet for {formatWeekRange(weekStart, season)}
     </h3>
     <p className="text-sm text-neutral-400 mt-1.5 max-w-md mx-auto">
-      Start the week and every slot comes up on the template&apos;s skeleton —
-      {season === "off_season" ? " Monday to Thursday" : " Monday to Friday"}, three
-      groups a day.
+      Pick the days you&apos;re practicing and every slot comes up on the
+      template&apos;s skeleton — three groups a day. Saturdays and Sundays get
+      an open slot to write into.
     </p>
-
-    {hasLastWeek && (
-      <label className="mt-5 inline-flex items-center gap-2.5 cursor-pointer rounded-lg border border-neutral-700 bg-neutral-950 px-3.5 py-2.5">
-        <input
-          type="checkbox"
-          checked={copyLastWeek}
-          onChange={(e) => setCopyLastWeek(e.target.checked)}
-          className="w-4 h-4 accent-[#bf0f3e]"
-        />
-        <span className="text-sm text-neutral-200">
-          Start from last week&apos;s drills
-        </span>
-        <span className="text-[11px] text-neutral-500">— keep or clear each one</span>
-      </label>
-    )}
 
     <div className="mt-6">
       <Button
@@ -713,12 +955,13 @@ const StartWeekCard = ({
 
 // ── One day ──────────────────────────────────────────────────────────
 const DayCard = ({
-  day, dateISO, spiritual, points, onPoints, blocksFor, onSaveBlock,
+  day, dateISO, spiritual, onWrapup, points, onPoints, blocksFor, onSaveBlock,
   template, onRename, onReset, onRemove, onAddWeekBlock,
 }: {
   day: { n: number; short: string; long: string };
   dateISO: string;
-  spiritual: SpiritualDay | null;
+  spiritual: (SpiritualDay & { overridden: boolean }) | null;
+  onWrapup: (value: { label: string; leader: string | null } | null) => void;
   points: string[];
   onPoints: (points: string[]) => void;
   blocksFor: (g: PracticeGroup) => PracticeBlock[];
@@ -732,6 +975,20 @@ const DayCard = ({
   const [draft, setDraft] = useState("");
   const date = new Date(`${dateISO}T12:00:00`);
   const dayNumber = day.n;
+  // The wrap-up pill opens a small editor for THIS night of THIS week.
+  const [wrapOpen, setWrapOpen] = useState(false);
+  const [wrapLabel, setWrapLabel] = useState("");
+  const [wrapLeader, setWrapLeader] = useState("");
+  const openWrap = () => {
+    setWrapLabel(spiritual?.label ?? "Eat up · Clean up");
+    setWrapLeader(spiritual?.leader ?? "");
+    setWrapOpen(true);
+  };
+  const saveWrap = () => {
+    const label = wrapLabel.trim() || "Eat up · Clean up";
+    onWrapup({ label, leader: wrapLeader.trim() || null });
+    setWrapOpen(false);
+  };
 
   return (
     <div className="rounded-xl border border-neutral-800 bg-neutral-900 overflow-hidden">
@@ -745,30 +1002,70 @@ const DayCard = ({
         {/* A paused slot is hidden on the gym board, so it must not look live
             here either — but it stays visible, dimmed and labelled, so the
             week explains why the board has nothing on that day. */}
-        {spiritual && (
-          <Badge
-            className={`bg-black text-[11px] font-semibold ${
-              spiritual.is_active === false ? "opacity-40" : ""
-            }`}
-            style={{
-              color: spiritual.is_active === false
-                ? TOGETHER_GRAY
-                : spiritualAccent(spiritual.label),
-              borderColor: spiritual.is_active === false
-                ? TOGETHER_GRAY
-                : spiritualAccent(spiritual.label),
-            }}
-          >
-            <Sparkles className="w-3 h-3 mr-1" />
-            <span className={spiritual.is_active === false ? "line-through" : ""}>
-              {spiritual.label}
-              {spiritual.leader ? ` — ${spiritual.leader}` : ""}
-            </span>
-            {spiritual.is_active === false && (
-              <span className="ml-1.5 no-underline">· paused</span>
-            )}
-          </Badge>
-        )}
+        {/* Tap to change this night's wrap-up for this week only. The
+            template keeps the standing pattern; "Back to template" undoes. */}
+        <Popover open={wrapOpen} onOpenChange={(o) => (o ? openWrap() : setWrapOpen(false))}>
+          <PopoverTrigger asChild>
+            <button type="button" className="rounded-full" title="Change this night's wrap-up for this week">
+              <Badge
+                className={`bg-black text-[11px] font-semibold cursor-pointer hover:bg-white/10 ${
+                  spiritual?.is_active === false ? "opacity-40" : ""
+                }`}
+                style={{
+                  color: spiritual?.is_active === false
+                    ? TOGETHER_GRAY
+                    : spiritualAccent(spiritual?.label ?? ""),
+                  borderColor: spiritual?.is_active === false
+                    ? TOGETHER_GRAY
+                    : spiritualAccent(spiritual?.label ?? ""),
+                }}
+              >
+                <Sparkles className="w-3 h-3 mr-1" />
+                <span className={spiritual?.is_active === false ? "line-through" : ""}>
+                  {spiritual?.label || "Eat up · Clean up"}
+                  {spiritual?.leader ? ` — ${spiritual.leader}` : ""}
+                </span>
+                {spiritual?.is_active === false && (
+                  <span className="ml-1.5 no-underline">· paused</span>
+                )}
+                {spiritual?.overridden && (
+                  <span className="ml-1.5" style={{ color: OFF_TEMPLATE_VIOLET }}>· this week</span>
+                )}
+                <Pencil className="w-2.5 h-2.5 ml-1.5 opacity-50" />
+              </Badge>
+            </button>
+          </PopoverTrigger>
+          <PopoverContent align="end" className="w-72 bg-neutral-900 border-neutral-700 text-white p-3 space-y-2">
+            <p className="text-xs font-semibold text-neutral-300">{day.long}&apos;s wrap-up · this week only</p>
+            <Input
+              value={wrapLabel}
+              onChange={(e) => setWrapLabel(e.target.value)}
+              onKeyDown={(e) => { if (e.key === "Enter") saveWrap(); }}
+              className="h-9 bg-neutral-950 border-neutral-700 text-white text-sm"
+            />
+            <Input
+              value={wrapLeader}
+              onChange={(e) => setWrapLeader(e.target.value)}
+              onKeyDown={(e) => { if (e.key === "Enter") saveWrap(); }}
+              placeholder="Who leads it (optional)"
+              className="h-9 bg-neutral-950 border-neutral-700 text-white text-sm"
+            />
+            <div className="flex items-center justify-between gap-2 pt-1">
+              {spiritual?.overridden ? (
+                <Button
+                  variant="ghost" size="sm"
+                  onClick={() => { onWrapup(null); setWrapOpen(false); }}
+                  className="text-xs text-neutral-400 hover:text-white px-2"
+                >
+                  Back to template
+                </Button>
+              ) : <span />}
+              <Button size="sm" onClick={saveWrap} className="text-white" style={{ backgroundColor: NLA_RED }}>
+                <Check className="w-3.5 h-3.5 mr-1" /> Save
+              </Button>
+            </div>
+          </PopoverContent>
+        </Popover>
       </div>
 
       {/* The five minutes that open practice */}
@@ -927,7 +1224,8 @@ const BlockEditor = ({
         )}
 
         <div className="flex items-center gap-2 shrink-0">
-          {block.detail?.trim() && (
+          {/* Lanes each have their own box, so no column-level Clear. */}
+          {block.detail?.trim() && !hasLanes(block.category) && (
             <button
               type="button"
               onClick={() => onSave(block.id, null)}
@@ -968,17 +1266,27 @@ const BlockEditor = ({
         </div>
       )}
 
-      <Textarea
-        key={`${block.id}-${block.detail ?? ""}`}
-        defaultValue={block.detail ?? ""}
-        onBlur={(e) => {
-          const v = e.target.value.trim() || null;
-          if (v !== (block.detail || null)) onSave(block.id, v);
-        }}
-        onKeyDown={handleIndentKey}
-        placeholder="What are we doing?  —  Tab to indent"
-        className="min-h-[68px] text-sm bg-neutral-950 border-neutral-800 text-white"
-      />
+      {hasLanes(block.category) ? (
+        /* Two lanes — a group doing two things at once, or Bible study's boys / girls. */
+        <SplitLanesEditor
+          key={`${block.id}-${block.detail ?? ""}`}
+          detail={block.detail}
+          category={block.category}
+          accent={accent}
+          onSave={(v) => onSave(block.id, v)}
+        />
+      ) : (
+        <Textarea
+          key={`${block.id}-${block.detail ?? ""}`}
+          defaultValue={block.detail ?? ""}
+          onBlur={(e) => {
+            const v = e.target.value.trim() || null;
+            if (v !== (block.detail || null)) onSave(block.id, v);
+          }}
+          onKeyDown={handleIndentKey}
+          className="min-h-[68px] text-sm bg-neutral-950 border-neutral-800 text-white"
+        />
+      )}
     </div>
   );
 };
@@ -1059,14 +1367,109 @@ const AddTemplateBlock = ({
 };
 
 // ── Template ─────────────────────────────────────────────────────────
+// ── Template cell: the chips for one group's day, drag to reorder ────────
+// Each cell is its own small drag context, so a chip can only move within
+// its own group and day — Monday's Battle Team order is Monday's Battle Team
+// order. Grab the handle (or the chip itself) and drop it where it goes.
+const SortableTemplateChip = ({
+  block, accent, onToggle, onRemove,
+}: {
+  block: TemplateBlock;
+  accent: string;
+  onToggle: (t: TemplateBlock) => void;
+  onRemove: (id: string) => void;
+}) => {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: block.id });
+  const paused = block.is_active === false;
+  return (
+    <span
+      ref={setNodeRef}
+      style={{
+        transform: CSS.Transform.toString(transform),
+        transition,
+        opacity: isDragging ? 0.5 : paused ? 0.4 : 1,
+        borderColor: `${accent}55`,
+        color: blockAccent(block.category, accent),
+      }}
+      className={`inline-flex items-center gap-1 rounded-md border pl-1 pr-2 py-0.5 text-xs select-none ${
+        paused ? "line-through" : ""
+      } ${isDragging ? "shadow-lg" : ""}`}
+    >
+      <button
+        type="button"
+        {...attributes}
+        {...listeners}
+        className="cursor-grab active:cursor-grabbing text-neutral-600 hover:text-neutral-300 no-underline touch-none"
+        title="Drag to reorder"
+        aria-label={`Reorder ${block.category}`}
+      >
+        <GripVertical className="w-3 h-3" />
+      </button>
+      {block.category}
+      <button
+        type="button"
+        onClick={() => onToggle(block)}
+        className="text-neutral-500 hover:text-white no-underline"
+        title={paused ? "Bring it back" : "Pause — keeps it, stops using it"}
+      >
+        {paused ? <Eye className="w-3 h-3" /> : <EyeOff className="w-3 h-3" />}
+      </button>
+      <button
+        type="button"
+        onClick={() => onRemove(block.id)}
+        className="text-neutral-500 hover:text-red-400 no-underline"
+        aria-label={`Remove ${block.category}`}
+      >
+        <X className="w-3 h-3" />
+      </button>
+    </span>
+  );
+};
+
+const TemplateCellChips = ({
+  cells, accent, onToggle, onRemove, onReorder,
+}: {
+  cells: TemplateBlock[];
+  accent: string;
+  onToggle: (t: TemplateBlock) => void;
+  onRemove: (id: string) => void;
+  onReorder: (ordered: TemplateBlock[]) => void;
+}) => {
+  // A small distance threshold so a plain click on the pause/remove buttons
+  // never starts a drag.
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 4 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
+  );
+  const ordered = [...cells].sort((a, b) => a.position - b.position);
+  const onDragEnd = (e: DragEndEvent) => {
+    const { active, over } = e;
+    if (!over || active.id === over.id) return;
+    const from = ordered.findIndex((t) => t.id === active.id);
+    const to = ordered.findIndex((t) => t.id === over.id);
+    if (from < 0 || to < 0) return;
+    onReorder(arrayMove(ordered, from, to));
+  };
+  return (
+    <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={onDragEnd}>
+      <SortableContext items={ordered.map((t) => t.id)} strategy={rectSortingStrategy}>
+        {ordered.map((t) => (
+          <SortableTemplateChip key={t.id} block={t} accent={accent} onToggle={onToggle} onRemove={onRemove} />
+        ))}
+      </SortableContext>
+    </DndContext>
+  );
+};
+
 const TemplateView = ({
-  template, spiritual, season, startTime, onSeason,
+  template, spiritual, season, startTime, onSeason, onStartTime,
 }: {
   template: TemplateBlock[];
   spiritual: SpiritualDay[];
   season: SeasonMode;
   startTime: string;
   onSeason: (s: SeasonMode) => void;
+  onStartTime: (t: string) => void;
 }) => {
   const qc = useQueryClient();
   const [editing, setEditing] = useState(false);
@@ -1116,13 +1519,41 @@ const TemplateView = ({
     else refresh();
   };
 
+  // Drag-to-reorder within one group's day: the new order becomes positions
+  // 0..n. Only this cell's rows are touched. Weeks already written keep their
+  // own order (a template change never rewrites history); the drift banner on
+  // This Week offers to pull it in.
+  const onReorderTemplate = async (ordered: TemplateBlock[]) => {
+    // (group, weekday, position) is unique in the database, so a straight swap
+    // collides for an instant — A takes 0 while B still holds 0. Park every
+    // chip in a high temporary position first, then settle them in order.
+    const setPos = async (id: string, position: number) => {
+      const { error } = await supabase
+        .from("practice_template_blocks" as never)
+        .update({ position } as never)
+        .eq("id", id);
+      if (error) throw new Error(error.message);
+    };
+    try {
+      for (let i = 0; i < ordered.length; i++) await setPos(ordered[i].id, 1000 + i);
+      for (let i = 0; i < ordered.length; i++) await setPos(ordered[i].id, i);
+      refresh();
+    } catch (e) {
+      toast.error((e as Error).message || "Couldn't reorder.");
+      refresh(); // show whatever state the rows are actually in
+    }
+  };
+
   const onSaveSpiritual = async (
     weekday: number, label: string, leader: string | null
   ) => {
-    if (!label.trim()) return;
+    // Clearing the box means "back to the default" — save that, don't ignore
+    // it. (It used to return early on an empty label, so a cleared day kept
+    // its old text and looked like it hadn't saved.)
+    const value = label.trim() || "Eat up · Clean up";
     const { error } = await supabase
       .from("practice_spiritual_template" as never)
-      .upsert({ weekday, label: label.trim(), leader } as never, {
+      .upsert({ weekday, label: value, leader } as never, {
         onConflict: "weekday",
       } as never);
     if (error) toast.error(error.message);
@@ -1156,9 +1587,17 @@ const TemplateView = ({
             What the gym board counts down to.
           </p>
         </div>
-        <Badge className="bg-neutral-800 text-neutral-200 border-neutral-700 text-sm px-3 py-1">
-          {formatStartTime(startTime)}
-        </Badge>
+        {/* Two start times the academy actually uses. The board, the countdown
+            and the Junior strip all follow this. */}
+        <Select value={startTime} onValueChange={onStartTime}>
+          <SelectTrigger className="w-36 h-10 bg-neutral-800 border-neutral-700 text-white font-semibold">
+            <SelectValue>{formatStartTime(startTime)}</SelectValue>
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="17:15:00">5:15 PM</SelectItem>
+            <SelectItem value="18:15:00">6:15 PM</SelectItem>
+          </SelectContent>
+        </Select>
       </div>
 
       <div className="rounded-xl border border-neutral-800 bg-neutral-900 overflow-hidden">
@@ -1215,8 +1654,9 @@ const TemplateView = ({
                 <th
                   className="text-left px-4 py-2 text-[11px] uppercase tracking-wider font-semibold"
                   style={{ color: TOGETHER_GRAY }}
+                  title="The band at the foot of the gym board. Eat up · Clean up unless a day says otherwise."
                 >
-                  Spiritual
+                  Wrap-up
                 </th>
               </tr>
             </thead>
@@ -1249,43 +1689,13 @@ const TemplateView = ({
                             )
                           ) : (
                             <div className="flex flex-wrap gap-1.5 items-center">
-                              {cells.map((t) => {
-                                const paused = t.is_active === false;
-                                return (
-                                  <span
-                                    key={t.id}
-                                    className={`inline-flex items-center gap-1 rounded-md border px-2 py-0.5 text-xs ${
-                                      paused ? "opacity-40 line-through" : ""
-                                    }`}
-                                    style={{
-                                      borderColor: `${g.accent}55`,
-                                      color: blockAccent(t.category, g.accent),
-                                    }}
-                                  >
-                                    {t.category}
-                                    <button
-                                      type="button"
-                                      onClick={() => onToggleTemplate(t)}
-                                      className="text-neutral-500 hover:text-white no-underline"
-                                      title={paused ? "Bring it back" : "Pause — keeps it, stops using it"}
-                                    >
-                                      {paused ? (
-                                        <Eye className="w-3 h-3" />
-                                      ) : (
-                                        <EyeOff className="w-3 h-3" />
-                                      )}
-                                    </button>
-                                    <button
-                                      type="button"
-                                      onClick={() => onRemoveTemplate(t.id)}
-                                      className="text-neutral-500 hover:text-red-400 no-underline"
-                                      aria-label={`Remove ${t.category}`}
-                                    >
-                                      <X className="w-3 h-3" />
-                                    </button>
-                                  </span>
-                                );
-                              })}
+                              <TemplateCellChips
+                                cells={cells}
+                                accent={g.accent}
+                                onToggle={onToggleTemplate}
+                                onRemove={onRemoveTemplate}
+                                onReorder={onReorderTemplate}
+                              />
                               <AddTemplateBlock
                                 accent={g.accent}
                                 onAdd={(category) =>
@@ -1302,7 +1712,7 @@ const TemplateView = ({
                       style={{ color: spiritualAccent(sp?.label ?? "") }}
                     >
                       {!editing ? (
-                        sp ? `${sp.label}${sp.leader ? ` — ${sp.leader}` : ""}` : "—"
+                        sp?.label?.trim() ? `${sp.label}${sp.leader ? ` — ${sp.leader}` : ""}` : "Eat up · Clean up"
                       ) : (
                         <div
                           className={`space-y-1.5 min-w-[190px] ${
@@ -1327,7 +1737,7 @@ const TemplateView = ({
                             onBlur={(e) =>
                               onSaveSpiritual(d.n, e.target.value.trim(), sp?.leader ?? null)
                             }
-                            placeholder="e.g. Chew on this…"
+                            placeholder="Eat up · Clean up"
                             className="h-7 text-xs bg-neutral-950 border-neutral-800 text-white"
                           />
                           <Input

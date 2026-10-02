@@ -5,7 +5,7 @@
 // as Alpha, because a beginner should never be able to tell they have been
 // given "the lesser workout".
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -19,13 +19,25 @@ import {
   minutesOf, totalMinutes, readableLines, LIFT_WINDOW_LABEL, LIFT_REMINDER,
 } from "@/lib/nbt";
 import NbtLogSheet from "@/components/nbt/NbtLogSheet";
+import { PrepStrip } from "@/components/practice/PrepStrip";
+import { equipmentItems } from "@/lib/practicePlan";
+import { fetchLiftNote } from "@/lib/liftNote";
 
 const NbtBoard = () => {
   const navigate = useNavigate();
+  // Opened from the Gym Board? `?day=tuesday&from=practice` lands on that day and
+  // turns the back arrow into "back to the Gym Board", so the two round-trip.
+  const [params] = useSearchParams();
+  const fromPractice = params.get("from") === "practice";
+  const dayParam = params.get("day");
+  const linkedDay = DAYS.find((d) => d.key === dayParam)?.key ?? null;
+  const linkedWeek = /^\d{4}-\d{2}-\d{2}$/.test(params.get("week") ?? "") ? params.get("week")! : null;
+  // Where to land when going back to the Gym Board: the night it was left on.
+  const backToBoard = `/practice-board?${linkedWeek ? `week=${linkedWeek}&` : ""}${params.get("wd") ? `wd=${params.get("wd")}` : ""}`;
   const today = toDateString(new Date());
-  const [weekStart, setWeekStart] = useState(() => mondayOf(today));
+  const [weekStart, setWeekStart] = useState(() => (linkedWeek ? mondayOf(linkedWeek) : mondayOf(today)));
   // Land on today when today is a training day; otherwise open on Monday.
-  const [dayKey, setDayKey] = useState<DayKey>(() => todayDayKey(today) ?? "monday");
+  const [dayKey, setDayKey] = useState<DayKey>(() => linkedDay ?? todayDayKey(today) ?? "monday");
   const [logging, setLogging] = useState(false);
 
   const { data, isLoading } = useQuery({
@@ -52,6 +64,24 @@ const NbtBoard = () => {
   const block = data?.block ?? null;
   const day: NbtDay | undefined = week?.days?.[dayKey];
   const meta = DAYS.find((d) => d.key === dayKey)!;
+
+  // The coach's note from the Practice Plan's S&C block for this night.
+  const { data: liftNote } = useQuery({
+    queryKey: ["lift-note", weekStart, meta.weekday, "non_battle_team"],
+    refetchInterval: 60_000,
+    queryFn: () => fetchLiftNote(weekStart, meta.weekday, "non_battle_team"),
+  });
+  const equipment = useMemo(
+    () => (day
+      ? equipmentItems([
+          ...day.prep,
+          ...TRACKS.map((t) => day.lift[t]?.name),
+          ...TRACKS.flatMap((t) => day.work[t] ?? []),
+          ...day.reset,
+        ])
+      : []),
+    [day],
+  );
   const date = dateOfDay(weekStart, dayKey);
 
   // Arrow keys, for whoever is standing at the screen.
@@ -134,7 +164,12 @@ const NbtBoard = () => {
   }, [isFullscreen, fitColumns]);
 
   return (
-    <div className="h-screen overflow-hidden bg-black text-white flex flex-col">
+    /* Charcoal with the team's gold cast — the Gym Board is black, so this
+       reads as a different place the moment a kid taps in. */
+    <div
+      className="h-screen overflow-hidden text-white flex flex-col"
+      style={{ background: `linear-gradient(180deg, ${TRACK_META.alpha.color}14, transparent 40%), #1c1c1e` }}
+    >
       {/* Header */}
       <header className="flex items-center gap-3 px-5 md:px-8 py-3 border-b border-white/10 flex-wrap">
         {/* Back to the board this screen was opened from, not up to Operations.
@@ -142,16 +177,20 @@ const NbtBoard = () => {
             landing on the Operations hub meant finding the NBT board again by
             hand every time. */}
         <Button
-          variant="ghost" size="icon"
-          onClick={() => navigate("/admin/operations/nbt-board")}
-          className="text-white/25 hover:text-white hover:bg-white/5 h-9 w-9"
-          aria-label="Back to the NBT S&C Board"
-          title="Back to the NBT S&C Board"
+          variant="ghost"
+          onClick={() => navigate(fromPractice ? backToBoard : "/admin/operations/nbt-board")}
+          className="text-white/50 hover:text-white hover:bg-white/5 h-9 px-2 -ml-2"
+          aria-label={fromPractice ? "Back to the Practice Plan" : "Back to the NBT S&C Board"}
+          title={fromPractice ? "Back to the Practice Plan" : "Back to the NBT S&C Board"}
         >
           <ArrowLeft className="w-5 h-5" />
+          {fromPractice && <span className="ml-1 text-sm font-semibold">Practice Plan</span>}
         </Button>
         <Dumbbell className="w-5 h-5" style={{ color: TRACK_META.alpha.color }} />
         <div className="min-w-0">
+          <p className="text-[10px] font-bold uppercase tracking-[0.25em] leading-none mb-0.5" style={{ color: TRACK_META.alpha.color }}>
+            Workout Plan · NBT
+          </p>
           <h1 className="text-lg md:text-xl font-black tracking-tight uppercase">Non-Battle Team</h1>
           <p className="text-[11px] text-white/35">
             {block?.focus ? `${block.focus} · ` : ""}
@@ -256,6 +295,9 @@ const NbtBoard = () => {
               <span className="text-white/50 font-semibold">{totalMinutes(day)} min</span>
             </p>
           </div>
+
+          {/* What to drag out first, and the coach's note from the plan. */}
+          <PrepStrip equipment={equipment} note={liftNote} accent="#f0a500" />
 
           {/* Prep — one card per movement, numbered, in a single strip. As one
               wrapping line a warm-up is unreadable: a kid can't tell where one
