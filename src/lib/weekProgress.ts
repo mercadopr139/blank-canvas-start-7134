@@ -29,25 +29,25 @@ export const weekSteps = (i: WeekProgressInput): WeekStep[] => {
   const plan: WeekStep = !i.plan
     ? { key: "plan", title: "Practice Plan", status: "Not started", state: "todo" }
     : i.plan.status === "published"
-      ? { key: "plan", title: "Practice Plan", status: "On the gym board", state: "done" }
+      ? { key: "plan", title: "Practice Plan", status: "Live on Gym Board", state: "done" }
       : { key: "plan", title: "Practice Plan", status: `${i.plan.filled} of ${i.plan.total} drills · draft`, state: "doing" };
 
   const verse: WeekStep = !i.verse || !i.verse.theme?.trim()
     ? { key: "verse", title: "Verse of the Week", status: "No theme yet", state: "todo" }
     : i.verse.is_published
-      ? { key: "verse", title: "Verse of the Week", status: "On the gym board", state: "done" }
-      : { key: "verse", title: "Verse of the Week", status: "Theme set · not on the board yet", state: "doing" };
+      ? { key: "verse", title: "Verse of the Week", status: "Live on Gym Board", state: "done" }
+      : { key: "verse", title: "Verse of the Week", status: "Theme set · not live yet", state: "doing" };
 
   const battle: WeekStep = !i.battle || i.battle.days === 0
-    ? { key: "battle", title: "Battle Team Workout Plan", status: "Not built", state: "todo" }
+    ? { key: "battle", title: "BT Workout Plan", status: "Not built", state: "todo" }
     : i.battle.status === "locked"
-      ? { key: "battle", title: "Battle Team Workout Plan", status: "On the gym board", state: "done" }
-      : { key: "battle", title: "Battle Team Workout Plan", status: `${i.battle.days} of 3 days · draft`, state: "doing" };
+      ? { key: "battle", title: "BT Workout Plan", status: "Live on Gym Board", state: "done" }
+      : { key: "battle", title: "BT Workout Plan", status: `${i.battle.days} of 3 days · draft`, state: "doing" };
 
   const nbt: WeekStep = !i.nbt || !i.nbt.built
     ? { key: "nbt", title: "NBT Workout Plan", status: "Not built", state: "todo" }
     : i.nbt.locked
-      ? { key: "nbt", title: "NBT Workout Plan", status: "On the gym board", state: "done" }
+      ? { key: "nbt", title: "NBT Workout Plan", status: "Live on Gym Board", state: "done" }
       : { key: "nbt", title: "NBT Workout Plan", status: "Built · draft", state: "doing" };
 
   return [plan, verse, battle, nbt];

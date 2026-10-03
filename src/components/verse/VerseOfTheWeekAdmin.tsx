@@ -15,6 +15,7 @@ import {
   ChevronLeft, ChevronRight, Sparkles, Loader2, Save, RefreshCw, BookOpen, Eye, EyeOff, Wand2,
 } from "lucide-react";
 import { toast } from "sonner";
+import { LiveSwitch } from "@/components/practice/LiveSwitch";
 import { mondayOf, addDays, formatWeekRange, SeasonMode } from "@/lib/practicePlan";
 
 const DAYS: { n: number; label: string }[] = [
@@ -46,9 +47,10 @@ const emptyDay = (weekday: number): VerseDay => ({
   weekday, reference: "", text: "", context: "", figures: [], questions: [""], answers: [""],
 });
 
-const VerseOfTheWeekAdmin = ({ season = "in_season" }: { season?: SeasonMode }) => {
+// The week is the Practice Plan page's week — picked once at the top of the
+// page, followed here. (Josh, 2026-10-03.)
+const VerseOfTheWeekAdmin = ({ season = "in_season", weekStart }: { season?: SeasonMode; weekStart: string }) => {
   const qc = useQueryClient();
-  const [weekStart, setWeekStart] = useState<string>(() => mondayOf());
   const [theme, setTheme] = useState("");
   const [days, setDays] = useState<VerseDay[]>(DAYS.map((d) => emptyDay(d.n)));
   // Rewriting one part of a day: which day, and which part, is in flight.
@@ -108,7 +110,6 @@ const VerseOfTheWeekAdmin = ({ season = "in_season" }: { season?: SeasonMode }) 
 
   const hasContent = days.some((d) => d.reference.trim() && d.text.trim());
 
-  const shiftWeek = (dir: number) => setWeekStart(addDays(weekStart, dir * 7));
 
   const generate = async (regenerate = false) => {
     if (theme.trim().length < 3) {
@@ -272,16 +273,20 @@ const VerseOfTheWeekAdmin = ({ season = "in_season" }: { season?: SeasonMode }) 
     setDirty(true);
   };
 
-  const save = async () => {
+  // `live` overrides the published flag for this save — the Live switch
+  // flips and saves in one tap. (A click event is not a boolean, so the
+  // plain Save button still saves whatever the switch currently says.)
+  const save = async (live?: unknown) => {
+    const publishNow = typeof live === "boolean" ? live : published;
     if (!hasContent) {
-      toast.error("Generate the week before saving.");
+      toast.error("Build the week before saving.");
       return;
     }
     setSaving(true);
     try {
       const { error: wkErr } = await supabase
         .from("board_verse_weeks" as never)
-        .upsert({ week_start: weekStart, theme: theme.trim(), is_published: published, updated_at: new Date().toISOString() } as never, { onConflict: "week_start" } as never);
+        .upsert({ week_start: weekStart, theme: theme.trim(), is_published: publishNow, updated_at: new Date().toISOString() } as never, { onConflict: "week_start" } as never);
       if (wkErr) throw wkErr;
 
       // Replace the week's days wholesale — simplest correct save.
@@ -306,6 +311,8 @@ const VerseOfTheWeekAdmin = ({ season = "in_season" }: { season?: SeasonMode }) 
       setDirty(false);
       qc.invalidateQueries({ queryKey: ["verse-week", weekStart] });
       qc.invalidateQueries({ queryKey: ["board-verse-week"] });
+      // The Practice Plan's progress strip follows the verse too.
+      qc.invalidateQueries({ queryKey: ["week-progress"] });
       toast.success(published ? "Saved — live on the board." : "Saved as draft.");
     } catch (e) {
       toast.error((e as Error)?.message ?? "Save failed. Try again.");
@@ -320,29 +327,17 @@ const VerseOfTheWeekAdmin = ({ season = "in_season" }: { season?: SeasonMode }) 
     <div className="space-y-4">
       {/* Week nav + status */}
       <div className="flex items-center justify-between gap-3 flex-wrap rounded-xl border border-neutral-800 bg-neutral-900 p-3">
+        <p className="font-bold text-white">
+          {formatWeekRange(weekStart, season)}
+          <span className="text-neutral-500 font-normal text-xs ml-2">{isThisWeek ? "this week" : "the verse"}</span>
+        </p>
         <div className="flex items-center gap-2">
-          <Button variant="ghost" size="icon" onClick={() => shiftWeek(-1)} className="text-neutral-400 hover:text-white h-8 w-8" aria-label="Previous week">
-            <ChevronLeft className="w-4 h-4" />
-          </Button>
-          <div className="text-center min-w-[190px]">
-            <p className="font-bold text-white">{formatWeekRange(weekStart, season)}</p>
-            <p className="text-[11px] text-neutral-500">{isThisWeek ? "This week" : "Upcoming"}</p>
-          </div>
-          <Button variant="ghost" size="icon" onClick={() => shiftWeek(1)} className="text-neutral-400 hover:text-white h-8 w-8" aria-label="Next week">
-            <ChevronRight className="w-4 h-4" />
-          </Button>
-        </div>
-        <div className="flex items-center gap-2">
-          <button
-            onClick={() => { setPublished((p) => !p); setDirty(true); }}
-            className={`inline-flex items-center gap-1.5 rounded-lg border px-3 h-9 text-sm font-semibold transition-colors ${
-              published ? "border-emerald-500/50 bg-emerald-500/10 text-emerald-300" : "border-neutral-700 text-neutral-300 hover:text-white"
-            }`}
-            title="Whether this week shows on the gym board"
-          >
-            {published ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
-            {published ? "On the board" : "Draft"}
-          </button>
+          <LiveSwitch
+            live={published}
+            pending={saving}
+            what="the verse"
+            onChange={(next) => { setPublished(next); void save(next); }}
+          />
           <Button onClick={save} disabled={saving || !dirty} className="bg-white text-black hover:bg-white/90 font-bold">
             {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <><Save className="w-4 h-4 mr-1.5" /> Save</>}
           </Button>
@@ -372,7 +367,7 @@ const VerseOfTheWeekAdmin = ({ season = "in_season" }: { season?: SeasonMode }) 
           />
           <Button onClick={() => generate(false)} disabled={generating} className="text-white font-bold" style={{ backgroundColor: "#bf0f3e" }}>
             {generating ? <Loader2 className="w-4 h-4 animate-spin mr-1.5" /> : <Sparkles className="w-4 h-4 mr-1.5" />}
-            {hasContent ? "Generate again" : "Generate week"}
+            {hasContent ? "Rebuild" : "Build this week"}
           </Button>
           {hasContent && (
             <Button onClick={() => generate(true)} disabled={generating} variant="outline" className="border-neutral-700 text-neutral-300 hover:text-white bg-transparent" title="New verses, avoiding the current ones">
@@ -390,7 +385,8 @@ const VerseOfTheWeekAdmin = ({ season = "in_season" }: { season?: SeasonMode }) 
       ) : !hasContent ? (
         <div className="text-center py-12 text-neutral-600">
           <BookOpen className="w-10 h-10 mx-auto mb-3 opacity-40" />
-          <p>No verses for this week yet. Type a theme and hit <span className="text-white/70 font-medium">Generate week</span>.</p>
+          <p className="font-bold text-neutral-300">Not written yet</p>
+          <p className="mt-1">Type a theme and hit <span className="text-white/70 font-medium">Build this week</span>.</p>
         </div>
       ) : (
         <div className="space-y-3">

@@ -5,10 +5,11 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { ChevronLeft, ChevronRight, Dumbbell, Lock, Unlock, RefreshCw, Sparkles, Wand2, CalendarDays, History, Search, Plus, Trash2, X, Pencil, ClipboardList, TrendingUp, Monitor } from "lucide-react";
 
-// Strength & Conditioning Coach — Phase 1. One screen the onsite coach opens on the
-// gym board: generate the week (Mon Bench · Wed Squat · Fri Deadlift), review each
-// day big and glanceable, revise any day in plain English, then lock the week.
+// Battle Team Workout Plan — the coach's page. Build the week (Mon Bench · Wed
+// Squat · Fri Deadlift), review every day on one card the way the NBT page
+// does, revise any day in plain English, then lock the week to the wall.
 // The AI never prescribes weights — athletes (13–18) self-select their loads.
+// Strength only: there is no conditioning on this page, by design.
 
 const NLA_RED = "#bf0f3e";
 
@@ -18,15 +19,37 @@ import {
   DAYS, type DayKey, type DayWorkout, type WeekRow, toMonday, isoDate, addDays, prettyRange,
 } from "@/lib/strength";
 import ExerciseVideo from "@/components/strength/ExerciseVideo";
+import { LiveSwitch } from "@/components/practice/LiveSwitch";
 
-const StrengthCoach = () => {
+/**
+ * The Battle Team week builder. Runs in two places with one set of rules:
+ * on its own page (the sidebar's Battle Team Workout Plan, with header,
+ * History and its own week arrows) and inside the Practice Plan's BT tab
+ * (`embedded`, where the page's week picker owns the week). (Josh, 2026-10-03.)
+ */
+export const BattleTeamWeek = ({
+  weekStart: controlledWeek, onWeekChange, embedded = false,
+}: {
+  weekStart?: string;
+  onWeekChange?: (weekStart: string) => void;
+  embedded?: boolean;
+}) => {
   const queryClient = useQueryClient();
   const navigate = useNavigate();
-  // Opened from the Practice Plan's S&C tab: the back button goes home there.
+  // Opened from the Practice Plan: the back button goes home there, on the
+  // same week. (Josh, 2026-10-03.)
   const [params] = useSearchParams();
   const fromPlan = params.get("from") === "practice-plan";
+  const linkedWeek = /^\d{4}-\d{2}-\d{2}$/.test(params.get("week") ?? "") ? params.get("week")! : null;
   const todayMonday = useMemo(() => toMonday(new Date()), []);
-  const [weekMonday, setWeekMonday] = useState<Date>(todayMonday);
+  const [ownWeekMonday, setOwnWeekMonday] = useState<Date>(() => (linkedWeek ? toMonday(new Date(linkedWeek + "T12:00:00")) : todayMonday));
+  // The Practice Plan's week wins when it gives one; otherwise this page keeps its own.
+  const weekMonday = controlledWeek ? toMonday(new Date(controlledWeek + "T12:00:00")) : ownWeekMonday;
+  const setWeekMonday = (next: Date | ((w: Date) => Date)) => {
+    const d = typeof next === "function" ? next(weekMonday) : next;
+    if (onWeekChange) onWeekChange(isoDate(toMonday(d)));
+    else setOwnWeekMonday(toMonday(d));
+  };
   const [view, setView] = useState<"week" | "history">("week");
   const weekStart = isoDate(weekMonday);
   const isCurrentWeek = weekStart === isoDate(todayMonday);
@@ -43,8 +66,7 @@ const StrengthCoach = () => {
   useEffect(() => { setSelectedDay(defaultDay); }, [defaultDay, weekStart]);
 
   const [generating, setGenerating] = useState(false);
-  const [revising, setRevising] = useState(false);
-  const [reviseText, setReviseText] = useState("");
+  const [reviseTexts, setReviseTexts] = useState<Partial<Record<DayKey, string>>>({});
 
   const { data: week, refetch, isLoading } = useQuery({
     queryKey: ["strength-week", weekStart],
@@ -63,7 +85,7 @@ const StrengthCoach = () => {
   const selectedMeta = DAYS.find((d) => d.key === selectedDay)!;
   const workoutDate = isoDate(addDays(weekMonday, selectedMeta.weekday - 1));
 
-  const shiftWeek = (n: number) => { setReviseText(""); setWeekMonday((w) => addDays(w, n * 7)); };
+  const shiftWeek = (n: number) => { setReviseTexts({}); setWeekMonday((w) => addDays(w, n * 7)); };
 
   const generateWeek = async () => {
     setGenerating(true);
@@ -104,65 +126,67 @@ const StrengthCoach = () => {
     }
   };
 
-  // Rewrite ONE day and leave the other two exactly as they are. "Regenerate
-  // week" throws away a Wednesday and Friday the coach was happy with to fix a
-  // Monday; this fixes the Monday.
-  const [regeneratingDay, setRegeneratingDay] = useState(false);
-  const regenerateDay = async () => {
+  // Rewrite ONE day and leave the other two exactly as they are.
+  const [regeneratingDay, setRegeneratingDay] = useState<DayKey | null>(null);
+  const regenerateDay = async (dayKey: DayKey) => {
     if (!week) return;
-    setRegeneratingDay(true);
+    setRegeneratingDay(dayKey);
     try {
       const { data: hist } = await (supabase.from("strength_weeks" as never) as any)
         .select("week_start, days").lt("week_start", weekStart)
         .order("week_start", { ascending: false }).limit(3);
       const { data, error } = await supabase.functions.invoke("strength-coach", {
-        body: { mode: "generate", dayKey: selectedDay, weekStart, history: hist ?? [] },
+        body: { mode: "generate", dayKey, weekStart, history: hist ?? [] },
       });
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
       if (!data?.day?.focus) throw new Error("The coach came back empty — try again.");
 
-      const nextDays = { ...days, [selectedDay]: data.day };
+      const nextDays = { ...days, [dayKey]: data.day };
       const { error: upErr } = await (supabase.from("strength_weeks" as never) as any)
         .update({ days: nextDays }).eq("id", week.id);
       if (upErr) throw upErr;
 
-      setReviseText("");
+      setReviseTexts((t) => ({ ...t, [dayKey]: "" }));
       await refetch();
       queryClient.invalidateQueries({ queryKey: ["strength-history"] });
-      toast.success(`${selectedMeta.label} rewritten — Wednesday and Friday untouched.`);
+      toast.success(`${DAYS.find((d) => d.key === dayKey)?.label} rewritten — the other days untouched.`);
     } catch (e: any) {
       toast.error(e?.message || "Couldn't rewrite that day.");
     } finally {
-      setRegeneratingDay(false);
+      setRegeneratingDay(null);
     }
   };
 
-  const reviseDay = async () => {
-    if (!week || !current || !reviseText.trim()) return;
-    setRevising(true);
+  // Revise ONE day with a plain-English note.
+  const [revisingDay, setRevisingDay] = useState<DayKey | null>(null);
+  const reviseDay = async (dayKey: DayKey) => {
+    const target = days[dayKey];
+    const text = (reviseTexts[dayKey] ?? "").trim();
+    if (!week || !target || !text) return;
+    setRevisingDay(dayKey);
     try {
       const { data, error } = await supabase.functions.invoke("strength-coach", {
-        body: { mode: "revise", dayKey: selectedDay, day: current, instruction: reviseText.trim() },
+        body: { mode: "revise", dayKey, day: target, instruction: text },
       });
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
       const newDay = data?.day;
       if (!newDay?.focus) throw new Error("The coach came back empty — try again.");
 
-      const nextDays = { ...days, [selectedDay]: newDay };
+      const nextDays = { ...days, [dayKey]: newDay };
       const { error: upErr } = await (supabase.from("strength_weeks" as never) as any)
         .update({ days: nextDays }).eq("id", week.id);
       if (upErr) throw upErr;
 
-      setReviseText("");
+      setReviseTexts((t) => ({ ...t, [dayKey]: "" }));
       await refetch();
       queryClient.invalidateQueries({ queryKey: ["strength-history"] });
-      toast.success(`${DAYS.find((d) => d.key === selectedDay)?.label} updated.`);
+      toast.success(`${DAYS.find((d) => d.key === dayKey)?.label} updated.`);
     } catch (e: any) {
       toast.error(e?.message || "Couldn't revise that day.");
     } finally {
-      setRevising(false);
+      setRevisingDay(null);
     }
   };
 
@@ -174,31 +198,40 @@ const StrengthCoach = () => {
     if (error) { toast.error("Couldn't update the lock."); return; }
     await refetch();
     queryClient.invalidateQueries({ queryKey: ["strength-history"] });
-    toast.success(lock ? "Week locked — it's live on the board." : "Week unlocked for edits.");
+    toast.success(lock ? "Live on the Gym Board." : "Off the Gym Board — edit away.");
   };
 
   return (
-    <div className="min-h-screen bg-black text-white">
-      <div className="max-w-5xl mx-auto px-4 py-6 sm:py-8">
-        {/* Back to admin — or to the Practice Plan when that's where we came from */}
-        <button onClick={() => navigate(fromPlan ? "/admin/operations/practice-plan" : "/admin/operations")}
-          className="inline-flex items-center gap-1.5 text-sm text-white/50 hover:text-white mb-4">
-          <ChevronLeft className="h-4 w-4" /> {fromPlan ? "Practice Plan" : "Operations"}
-        </button>
+    <div className={embedded ? "text-white" : "min-h-screen bg-black text-white"}>
+      <div className={embedded ? "" : "max-w-5xl mx-auto px-4 py-6 sm:py-8"}>
+        {!embedded && (
+          <>
+            {/* Back to admin — or to the Practice Plan when that's where we came from */}
+            <button onClick={() => navigate(fromPlan ? `/admin/operations/practice-plan?week=${weekStart}&tab=bt` : "/admin/operations")}
+              className="inline-flex items-center gap-1.5 text-sm text-white/50 hover:text-white mb-4">
+              <ChevronLeft className="h-4 w-4" /> {fromPlan ? "Practice Plan" : "Operations"}
+            </button>
 
-        {/* Header */}
-        <div className="flex items-center gap-3 mb-6">
-          <div className="h-11 w-11 rounded-xl grid place-items-center" style={{ background: NLA_RED }}>
-            <Dumbbell className="h-6 w-6" />
-          </div>
-          <div>
-            <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight">Strength &amp; Conditioning</h1>
-            <p className="text-white/50 text-sm">Bench · Squat · Deadlift — built for the crew, locked to the board.</p>
-          </div>
-        </div>
+            {/* Header */}
+            <div className="flex items-center gap-3 mb-6">
+              <div className="h-11 w-11 rounded-xl grid place-items-center" style={{ background: NLA_RED }}>
+                <Dumbbell className="h-6 w-6" />
+              </div>
+              <div>
+                <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight">Battle Team Workout Plan</h1>
+                <p className="text-white/50 text-sm">Bench · Squat · Deadlift — built one week at a time, locked to the gym board.</p>
+              </div>
+            </div>
+          </>
+        )}
 
-        {/* View toggle + jump to Intelligence */}
+        {/* View toggle (standalone) + the wall and Intelligence */}
         <div className="flex items-center justify-between gap-3 mb-5">
+          {embedded ? (
+            <p className="text-sm text-white/50">
+              <span className="font-bold text-white">Battle Team Workout Plan</span> · Bench · Squat · Deadlift
+            </p>
+          ) : (
           <div className="inline-flex rounded-xl border border-white/10 bg-neutral-900/60 p-1">
             <button onClick={() => setView("week")}
               className={`inline-flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-semibold transition-colors ${view === "week" ? "text-white" : "text-white/50 hover:text-white/80"}`}
@@ -211,6 +244,7 @@ const StrengthCoach = () => {
               <History className="h-4 w-4" /> History
             </button>
           </div>
+          )}
           <div className="flex items-center gap-2">
             {/* The wall view. This page is the coach's desk; that one is what
                 the crew reads from across the gym. */}
@@ -225,7 +259,7 @@ const StrengthCoach = () => {
             </button>
             <button onClick={() => navigate("/strength-coach/intelligence")}
               className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-sm font-semibold bg-white/5 hover:bg-white/10 border border-white/15">
-              <TrendingUp className="h-4 w-4" /> <span className="hidden sm:inline">S&amp;C Intelligence</span>
+              <TrendingUp className="h-4 w-4" /> <span className="hidden sm:inline">Intelligence</span>
             </button>
           </div>
         </div>
@@ -233,118 +267,99 @@ const StrengthCoach = () => {
         {view === "history" ? (
           <HistoryList
             currentWeekStart={isoDate(todayMonday)}
-            onOpen={(ws) => { setWeekMonday(new Date(ws + "T00:00:00")); setReviseText(""); setView("week"); }}
+            onOpen={(ws) => { setWeekMonday(new Date(ws + "T00:00:00")); setReviseTexts({}); setView("week"); }}
           />
         ) : (
         <>
-        {/* Week nav + status */}
-        <div className="flex items-center justify-between gap-3 mb-5">
-          <div className="flex items-center gap-2">
-            <button onClick={() => shiftWeek(-1)} className="h-9 w-9 grid place-items-center rounded-lg bg-white/5 hover:bg-white/10 border border-white/10">
-              <ChevronLeft className="h-5 w-5" />
-            </button>
-            <div className="text-center min-w-[9rem]">
-              <div className="font-semibold">{prettyRange(weekStart)}</div>
-              <div className="text-[11px] text-white/40">{isCurrentWeek ? "This week" : "Week of " + weekStart}</div>
+        {/* The week as one card, three days across — the same bones as the
+            NBT Workout Plan page, so a coach reads both the same way. */}
+        <div className="rounded-xl border border-white/10 bg-neutral-900/60 p-4">
+          <div className="flex items-center justify-between gap-3 flex-wrap mb-3">
+            <div className="flex items-center gap-2">
+              {!embedded && (
+                <button onClick={() => shiftWeek(-1)} className="h-9 w-9 grid place-items-center rounded-lg bg-white/5 hover:bg-white/10 border border-white/10" aria-label="Previous week">
+                  <ChevronLeft className="h-5 w-5" />
+                </button>
+              )}
+              <div className={embedded ? "text-left" : "text-center min-w-[9rem]"}>
+                <div className="font-bold">{prettyRange(weekStart)}</div>
+                <div className="text-[11px] text-white/40">{isCurrentWeek ? "This week" : "Week of " + weekStart}</div>
+              </div>
+              {!embedded && (
+                <button onClick={() => shiftWeek(1)} className="h-9 w-9 grid place-items-center rounded-lg bg-white/5 hover:bg-white/10 border border-white/10" aria-label="Next week">
+                  <ChevronRight className="h-5 w-5" />
+                </button>
+              )}
             </div>
-            <button onClick={() => shiftWeek(1)} className="h-9 w-9 grid place-items-center rounded-lg bg-white/5 hover:bg-white/10 border border-white/10">
-              <ChevronRight className="h-5 w-5" />
-            </button>
+            {hasWeek && (
+              <div className="flex items-center gap-2 flex-wrap justify-end">
+                <span className={`text-[11px] font-semibold px-2.5 py-1 rounded-full border ${locked ? "bg-emerald-500/15 border-emerald-400/30 text-emerald-300" : "bg-amber-500/15 border-amber-400/30 text-amber-300"}`}>
+                  {locked ? "Live on Gym Board" : "Draft"}
+                </span>
+                <button onClick={generateWeek} disabled={generating || locked}
+                  title={locked ? "Unlock the week to rebuild it" : "Throw this week away and write all three days again"}
+                  className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-semibold bg-white/5 hover:bg-white/10 border border-white/15 disabled:opacity-50">
+                  <RefreshCw className={`h-4 w-4 ${generating ? "animate-spin" : ""}`} /> Rebuild
+                </button>
+                <LiveSwitch live={locked} onChange={(next) => setLocked(next)} what="the Battle Team week" />
+              </div>
+            )}
           </div>
-          {hasWeek && (
-            <div className="flex items-center gap-2 flex-wrap justify-end">
-              {locked ? (
-                <button onClick={() => setLocked(false)} className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-semibold bg-white/5 hover:bg-white/10 border border-white/15">
-                  <Unlock className="h-4 w-4" /> Unlock to edit
-                </button>
-              ) : (
-                <button onClick={() => setLocked(true)} className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-semibold text-white" style={{ background: NLA_RED }}>
-                  <Lock className="h-4 w-4" /> Lock the week
-                </button>
-              )}
-              {/* One day at a time. The main lifts never change, so there is
-                  nothing a whole-week rewrite fixes that this does not -- and
-                  it used to throw away two days the coach was happy with.
-                  Hidden while locked: unlock first, like Revise. */}
-              {!locked && (
-                <button onClick={regenerateDay} disabled={regeneratingDay || generating}
-                  title={`Write a fresh ${selectedMeta.label} and leave the other two days alone`}
-                  className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-semibold bg-white/5 hover:bg-white/10 border border-white/15 disabled:opacity-60">
-                  <RefreshCw className={`h-4 w-4 ${regeneratingDay ? "animate-spin" : ""}`} />
-                  {regeneratingDay ? "Rewriting…" : `Regenerate ${selectedMeta.label}`}
-                </button>
-              )}
-              <span className={`text-xs font-semibold px-3 py-1.5 rounded-full border ${locked ? "bg-emerald-500/15 border-emerald-400/30 text-emerald-300" : "bg-amber-500/15 border-amber-400/30 text-amber-300"}`}>
-                {locked ? "🔒 Locked" : "✏️ Draft"}
-              </span>
+
+          {isLoading ? (
+            <div className="text-white/40 py-16 text-center">Loading…</div>
+          ) : !hasWeek ? (
+            <div className="rounded-lg border border-white/10 bg-black/30 p-8 text-center">
+              <Sparkles className="h-8 w-8 mx-auto mb-3 text-white/30" />
+              <p className="font-bold mb-1">Not written yet</p>
+              <p className="text-white/50 text-sm mb-5 max-w-md mx-auto">
+                Monday bench, Wednesday squat, Friday deadlift — three days, warm-ups, extra work and scaling, in one go.
+              </p>
+              <button onClick={generateWeek} disabled={generating}
+                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg font-semibold text-white disabled:opacity-60"
+                style={{ background: NLA_RED }}>
+                {generating ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
+                {generating ? "Building the week…" : "Build this week"}
+              </button>
+            </div>
+          ) : (
+            <div className="grid gap-3 md:grid-cols-3">
+              {DAYS.map((d) => (
+                <DayCard
+                  key={d.key}
+                  meta={d}
+                  day={days[d.key]}
+                  locked={locked}
+                  isToday={isCurrentWeek && d.weekday === new Date().getDay()}
+                  rewriting={regeneratingDay === d.key}
+                  revising={revisingDay === d.key}
+                  busy={regeneratingDay !== null || revisingDay !== null || generating}
+                  reviseText={reviseTexts[d.key] ?? ""}
+                  onReviseText={(v) => setReviseTexts((t) => ({ ...t, [d.key]: v }))}
+                  onRewrite={() => regenerateDay(d.key)}
+                  onRevise={() => reviseDay(d.key)}
+                />
+              ))}
             </div>
           )}
         </div>
 
-        {isLoading ? (
-          <div className="text-white/40 py-20 text-center">Loading…</div>
-        ) : !hasWeek ? (
-          /* Empty state — generate the week */
-          <div className="rounded-2xl border border-white/10 bg-neutral-900/60 p-10 text-center">
-            <Sparkles className="h-10 w-10 mx-auto mb-4 text-white/30" />
-            <h2 className="text-xl font-bold mb-1">No workout for this week yet</h2>
-            <p className="text-white/50 mb-6 max-w-md mx-auto">
-              Generate all three days at once — Monday bench, Wednesday squat, Friday deadlift — with warm-ups, extra work and built-in scaling.
-            </p>
-            <button onClick={generateWeek} disabled={generating}
-              className="inline-flex items-center gap-2 px-6 py-3 rounded-xl font-semibold text-white disabled:opacity-60"
-              style={{ background: NLA_RED }}>
-              {generating ? <RefreshCw className="h-5 w-5 animate-spin" /> : <Wand2 className="h-5 w-5" />}
-              {generating ? "Building the week…" : "Generate this week"}
-            </button>
-          </div>
-        ) : (
-          <>
-            {/* Day tabs */}
-            <div className="grid grid-cols-3 gap-2 mb-4">
+        {/* Working-set logging — main lift only, per athlete. Pick the day. */}
+        {hasWeek && (
+          <div className="mt-5">
+            <div className="flex items-center gap-2 mb-3 flex-wrap">
+              <span className="text-[11px] uppercase tracking-widest text-white/40 font-bold">Log sets for</span>
               {DAYS.map((d) => {
                 const active = d.key === selectedDay;
-                const isToday = isCurrentWeek && d.weekday === new Date().getDay();
                 return (
-                  <button key={d.key} onClick={() => { setSelectedDay(d.key); setReviseText(""); }}
-                    className={`rounded-xl px-3 py-2.5 text-left border transition-colors ${active ? "border-white/20" : "border-white/10 bg-white/5 hover:bg-white/10"}`}
+                  <button key={d.key} onClick={() => setSelectedDay(d.key)}
+                    className={`px-3 py-1.5 rounded-lg text-sm font-semibold border transition-colors ${active ? "border-transparent text-white" : "border-white/10 bg-white/5 text-white/60 hover:text-white"}`}
                     style={active ? { background: NLA_RED } : undefined}>
-                    <div className="text-[11px] uppercase tracking-wide opacity-70 flex items-center gap-1">
-                      {d.label}{isToday && <span className="text-[9px] font-bold px-1 rounded bg-white/25">TODAY</span>}
-                    </div>
-                    <div className="font-bold leading-tight">{d.lift}</div>
+                    {d.label}
                   </button>
                 );
               })}
             </div>
-
-            {/* Big board — selected day */}
-            {current ? <BoardDay day={current} /> : (
-              <div className="rounded-2xl border border-white/10 bg-neutral-900/60 p-8 text-center text-white/40">
-                Nothing for this day.
-              </div>
-            )}
-
-            {/* Revise this day — only while unlocked */}
-            {!locked && (
-              <div className="mt-4 rounded-xl border border-white/10 bg-neutral-900/50 p-4">
-                <label className="text-sm font-semibold text-white/80 flex items-center gap-2 mb-2">
-                  <Wand2 className="h-4 w-4" /> Revise {selectedMeta.label}
-                </label>
-                <div className="flex flex-col sm:flex-row gap-2">
-                  <input value={reviseText} onChange={(e) => setReviseText(e.target.value)}
-                    onKeyDown={(e) => { if (e.key === "Enter") reviseDay(); }}
-                    placeholder="e.g. keep it under 15 min · swap in kettlebells · go easier on shoulders"
-                    className="flex-1 rounded-lg bg-white/5 border border-white/15 px-3 py-2.5 text-sm placeholder:text-white/30 focus:outline-none focus:border-white/30" />
-                  <button onClick={reviseDay} disabled={revising || !reviseText.trim()}
-                    className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg font-semibold text-white disabled:opacity-50" style={{ background: NLA_RED }}>
-                    {revising ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Wand2 className="h-4 w-4" />} Revise
-                  </button>
-                </div>
-              </div>
-            )}
-
-            {/* Working-set logging — scroll down; main lift only, per athlete */}
             {current && (
               <WorkingSetLog
                 weekStart={weekStart}
@@ -353,7 +368,7 @@ const StrengthCoach = () => {
                 lift={current.main?.lift || current.focus}
               />
             )}
-          </>
+          </div>
         )}
         </>
         )}
@@ -362,96 +377,120 @@ const StrengthCoach = () => {
   );
 };
 
-// The glanceable board view of a single day.
-const BoardDay = ({ day }: { day: DayWorkout }) => (
-  <div className="rounded-2xl border border-white/10 bg-neutral-900/60 overflow-hidden">
-    <div className="px-5 sm:px-7 py-5 border-b border-white/10 flex items-end justify-between gap-3" style={{ background: "linear-gradient(90deg, rgba(191,15,62,0.25), transparent)" }}>
+/** The sidebar's Battle Team Workout Plan page: the builder with its own header and week arrows. */
+const StrengthCoach = () => <BattleTeamWeek />;
+
+// One day, the whole session, on the review card: the bar, the extra work with
+// its demo video, the finisher — and the coach-only extras (guidance, cues,
+// how-tos, scaling) in grey underneath, which the wall deliberately leaves off.
+const DayCard = ({
+  meta, day, locked, isToday, rewriting, revising, busy, reviseText, onReviseText, onRewrite, onRevise,
+}: {
+  meta: (typeof DAYS)[number];
+  day: DayWorkout | undefined;
+  locked: boolean;
+  isToday: boolean;
+  rewriting: boolean;
+  revising: boolean;
+  busy: boolean;
+  reviseText: string;
+  onReviseText: (v: string) => void;
+  onRewrite: () => void;
+  onRevise: () => void;
+}) => (
+  <div className="rounded-lg border border-white/10 bg-black/30 p-3">
+    <div className="flex items-start justify-between gap-2 mb-2">
       <div>
-        <div className="text-[11px] uppercase tracking-widest text-white/40">Main lift</div>
-        <h2 className="text-3xl sm:text-4xl font-extrabold tracking-tight">{day.focus}</h2>
+        <p className="text-xs font-bold uppercase tracking-wide text-white/80">
+          {meta.label}{isToday && <span className="ml-1.5 text-[9px] font-bold px-1 rounded bg-white/20">TODAY</span>}
+        </p>
+        <p className="text-[11px] text-white/45">{meta.lift}</p>
       </div>
-      {day.estMinutes ? <div className="text-right text-white/50 text-sm">~{day.estMinutes} min</div> : null}
+      {!locked && (
+        <button onClick={onRewrite} disabled={busy} title={`Rewrite the whole ${meta.label}`}
+          className="text-white/40 hover:text-white disabled:opacity-30 shrink-0">
+          <RefreshCw className={`w-3.5 h-3.5 ${rewriting ? "animate-spin" : ""}`} />
+        </button>
+      )}
     </div>
 
-    <div className="p-5 sm:p-7 space-y-6">
-      {/* Warm-up */}
-      {day.warmup?.length ? (
-        <Section label="Warm-up ramp">
-          <ul className="space-y-1.5">
-            {day.warmup.map((w, i) => (
-              <li key={i} className="flex gap-2 text-white/80"><span className="text-white/30">→</span>
-                <span><span className="font-semibold text-white">{w.name}</span> — {w.detail}</span></li>
-            ))}
-          </ul>
-        </Section>
-      ) : null}
+    {!day ? (
+      <p className="text-xs text-white/40 italic">Not written</p>
+    ) : (
+      <div className="space-y-3">
+        {day.focus && <p className="text-sm text-white">{day.focus}</p>}
 
-      {/* Main lift */}
-      {day.main ? (
-        <Section label="Working sets">
-          <div className="rounded-xl bg-white/5 border border-white/10 p-4">
-            <div className="flex items-baseline justify-between gap-3 flex-wrap">
-              <div className="text-2xl sm:text-3xl font-extrabold">{day.main.lift}</div>
-              <div className="text-2xl sm:text-3xl font-extrabold" style={{ color: NLA_RED }}>{day.main.scheme}</div>
-            </div>
-            {day.main.guidance ? <p className="text-white/70 mt-2 text-sm">{day.main.guidance}</p> : null}
-            {day.main.cues?.length ? (
-              <div className="mt-3 flex flex-wrap gap-1.5">
-                {day.main.cues.map((c, i) => (
-                  <span key={i} className="text-xs px-2 py-1 rounded-md bg-white/10 text-white/80">{c}</span>
-                ))}
-              </div>
-            ) : null}
-            {day.main.rest ? <div className="text-[11px] text-white/40 mt-2">Rest {day.main.rest}</div> : null}
+        {/* The bar */}
+        {day.main && (
+          <div className="rounded-md border p-2 space-y-1" style={{ borderColor: `${NLA_RED}55` }}>
+            <p className="text-xs font-bold" style={{ color: NLA_RED }}>The bar</p>
+            <p className="text-xs text-white leading-snug">
+              <span className="text-[10px] font-bold uppercase tracking-wide text-white/45 mr-1.5">Lift</span>
+              <span className="font-semibold">{day.main.lift}</span>
+              <span className="text-white/60"> · {day.main.scheme}</span>
+            </p>
           </div>
-        </Section>
-      ) : null}
+        )}
 
-      {/* Extra Work */}
-      {day.accessories?.length ? (
-        <Section label="Extra Work">
-          <div className="space-y-3">
+        {/* Extra work, each with its demo */}
+        {day.accessories?.length ? (
+          <div className="rounded-md border p-2 space-y-2" style={{ borderColor: "#fb718555" }}>
+            <p className="text-xs font-bold" style={{ color: "#fb7185" }}>Extra work</p>
             {day.accessories.map((a, i) => (
-              <div key={i} className="rounded-xl bg-white/5 border border-white/10 p-4 grid gap-4 sm:grid-cols-[1fr_300px] items-start">
-                <div>
-                  <div className="flex items-baseline justify-between gap-2">
-                    <div className="font-bold text-lg">{a.name}</div>
-                    <div className="font-bold whitespace-nowrap" style={{ color: NLA_RED }}>{a.sets}</div>
-                  </div>
-                  <div className="text-[11px] text-white/40 mt-0.5">{a.equipment}{a.targets ? ` · ${a.targets}` : ""}</div>
-                  {a.howTo ? <p className="text-sm text-white/70 mt-2">{a.howTo}</p> : null}
-                  {a.scale ? <p className="text-xs text-amber-200/80 mt-2">⚖ {a.scale}</p> : null}
-                  {a.rest ? <div className="text-[11px] text-white/40 mt-1">Rest {a.rest}</div> : null}
+              <div key={i}>
+                <p className="text-xs text-white leading-snug flex items-baseline justify-between gap-2">
+                  <span className="font-semibold">{a.name}</span>
+                  <span className="text-white/60 whitespace-nowrap">{a.sets}</span>
+                </p>
+                <div className="mt-1">
+                  <ExerciseVideo name={a.name} compact inline />
                 </div>
-                <ExerciseVideo name={a.name} />
               </div>
             ))}
+            {day.finisher && (
+              <p className="text-xs text-white/80 leading-snug pt-1 border-t border-white/10">
+                <span className="text-[10px] font-bold uppercase tracking-wide text-white/45 mr-1.5">Finisher</span>
+                <span className="font-semibold text-white">{day.finisher.name}</span>
+                {day.finisher.detail ? <span className="text-white/60"> — {day.finisher.detail}</span> : null}
+              </p>
+            )}
           </div>
-        </Section>
-      ) : null}
+        ) : null}
 
-      {/* Finisher */}
-      {day.finisher ? (
-        <Section label="Finisher">
-          <div className="rounded-xl bg-white/5 border border-white/10 p-4">
-            <span className="font-semibold">{day.finisher.name}</span> — <span className="text-white/70">{day.finisher.detail}</span>
-          </div>
-        </Section>
-      ) : null}
-
-      {day.coachNotes ? (
-        <div className="text-sm text-white/50 border-t border-white/10 pt-4">
-          <span className="font-semibold text-white/70">Coach note:</span> {day.coachNotes}
+        {/* Coach-only: what the wall deliberately leaves off. */}
+        <div className="text-[11px] text-white/45 space-y-1 pt-1 border-t border-white/10">
+          {day.warmup?.length ? (
+            <p><span className="font-bold uppercase tracking-wide text-[10px] mr-1.5">Warm-up</span>{day.warmup.map((w) => (w.detail ? `${w.name} — ${w.detail}` : w.name)).join("  ·  ")}</p>
+          ) : null}
+          {day.main?.guidance ? <p><span className="font-bold uppercase tracking-wide text-[10px] mr-1.5">Guidance</span>{day.main.guidance}</p> : null}
+          {day.main?.cues?.length ? <p><span className="font-bold uppercase tracking-wide text-[10px] mr-1.5">Cues</span>{day.main.cues.join("  ·  ")}</p> : null}
+          {day.main?.rest ? <p><span className="font-bold uppercase tracking-wide text-[10px] mr-1.5">Rest</span>{day.main.rest}</p> : null}
+          {day.accessories?.some((a) => a.howTo || a.scale) ? (
+            <div className="space-y-0.5">
+              {day.accessories.map((a, i) => (a.howTo || a.scale) ? (
+                <p key={i}><span className="font-bold uppercase tracking-wide text-[10px] mr-1.5">{a.name}</span>{a.howTo ?? ""}{a.scale ? ` · ⚖ ${a.scale}` : ""}</p>
+              ) : null)}
+            </div>
+          ) : null}
+          {day.estMinutes ? <p><span className="font-bold uppercase tracking-wide text-[10px] mr-1.5">Minutes</span>~{day.estMinutes}</p> : null}
+          {day.coachNotes ? <p><span className="font-bold uppercase tracking-wide text-[10px] mr-1.5">Note</span>{day.coachNotes}</p> : null}
         </div>
-      ) : null}
-    </div>
-  </div>
-);
 
-const Section = ({ label, children }: { label: string; children: React.ReactNode }) => (
-  <div>
-    <div className="text-[11px] uppercase tracking-widest text-white/40 mb-2">{label}</div>
-    {children}
+        {/* Revise this day in plain English — while unlocked. */}
+        {!locked && (
+          <div className="flex gap-1.5 pt-1">
+            <input value={reviseText} onChange={(e) => onReviseText(e.target.value)}
+              onKeyDown={(e) => { if (e.key === "Enter") onRevise(); }}
+              placeholder="Revise — e.g. go easier on shoulders"
+              className="flex-1 min-w-0 rounded-md bg-white/5 border border-white/15 px-2.5 py-1.5 text-xs placeholder:text-white/30 focus:outline-none focus:border-white/30" />
+            <button onClick={onRevise} disabled={busy || !reviseText.trim()}
+              className="inline-flex items-center justify-center gap-1 px-2.5 py-1.5 rounded-md text-xs font-semibold text-white disabled:opacity-50 shrink-0" style={{ background: NLA_RED }}>
+              {revising ? <RefreshCw className="h-3.5 w-3.5 animate-spin" /> : <Wand2 className="h-3.5 w-3.5" />} Revise
+            </button>
+          </div>
+        )}
+      </div>
+    )}
   </div>
 );
 

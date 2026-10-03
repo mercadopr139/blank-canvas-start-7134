@@ -3,8 +3,7 @@
 // Reads the verse, Battle Team and NBT state itself; the practice plan's
 // state comes from the page, which already has it.
 import { useQuery } from "@tanstack/react-query";
-import { useNavigate } from "react-router-dom";
-import { Check, ChevronRight } from "lucide-react";
+import { Check } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { weekSteps, weekReady, type WeekStep } from "@/lib/weekProgress";
 
@@ -20,12 +19,12 @@ export const WeekProgress = ({
   weekStart: string;
   plan: { status: string; filled: number; total: number } | null;
   /** Switch the page to one of its own tabs. */
-  onTab: (tab: "week" | "verse") => void;
+  onTab: (tab: "week" | "verse" | "bt" | "nbt") => void;
 }) => {
-  const navigate = useNavigate();
 
   const { data: verse = null } = useQuery({
     queryKey: ["week-progress", "verse", weekStart],
+    refetchInterval: 15_000,
     queryFn: async () => {
       const { data } = await supabase
         .from("board_verse_weeks" as never)
@@ -38,6 +37,7 @@ export const WeekProgress = ({
 
   const { data: battle = null } = useQuery({
     queryKey: ["week-progress", "battle", weekStart],
+    refetchInterval: 15_000,
     queryFn: async () => {
       const { data } = await supabase
         .from("strength_weeks" as never)
@@ -52,6 +52,7 @@ export const WeekProgress = ({
   // NBT: built = this week's row has all three days; locked = the week is locked.
   const { data: nbt = null } = useQuery({
     queryKey: ["week-progress", "nbt", weekStart],
+    refetchInterval: 15_000,
     queryFn: async () => {
       const { data: wk } = await supabase
         .from("nbt_weeks" as never)
@@ -70,8 +71,8 @@ export const WeekProgress = ({
   const go = (s: WeekStep) => {
     if (s.key === "plan") onTab("week");
     else if (s.key === "verse") onTab("verse");
-    else if (s.key === "battle") navigate("/strength-coach?from=practice-plan");
-    else navigate(`/admin/operations/nbt-board?from=practice-plan&week=${weekStart}`);
+    else if (s.key === "battle") onTab("bt");
+    else onTab("nbt");
   };
 
   return (
@@ -98,11 +99,10 @@ export const WeekProgress = ({
             <span className="block text-sm font-semibold leading-tight">{s.title}</span>
             <span className="block text-[11px] opacity-80 leading-tight">{s.status}</span>
           </span>
-          {s.key !== "plan" && s.key !== "verse" && <ChevronRight className="w-3.5 h-3.5 opacity-50 shrink-0" />}
         </button>
       ))}
       <p className={`ml-auto text-sm font-semibold ${ready ? "text-emerald-300" : "text-neutral-500"}`}>
-        {ready ? "Everything is on the Gym Board ✓" : `${steps.filter((s) => s.state === "done").length} of 4 done`}
+        {ready ? "Practice plan is set for the week! ✓" : `${steps.filter((s) => s.state === "done").length} of 4 done`}
       </p>
     </div>
   );

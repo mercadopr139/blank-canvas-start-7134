@@ -29,7 +29,7 @@ import {
   ChevronLeft, ChevronRight, Plus, Loader2, Send, Monitor, Users,
   X, Sparkles, CalendarDays, Trash2, Pencil, Check, RefreshCw, Eye, EyeOff, GripVertical, Dumbbell,
 } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import {
   DndContext, closestCenter, PointerSensor, KeyboardSensor, useSensor, useSensors, type DragEndEvent,
 } from "@dnd-kit/core";
@@ -40,6 +40,10 @@ import { CSS } from "@dnd-kit/utilities";
 import { toast } from "sonner";
 import VerseOfTheWeekAdmin from "@/components/verse/VerseOfTheWeekAdmin";
 import { WeekProgress } from "@/components/practice/WeekProgress";
+import { WeekPicker } from "@/components/practice/WeekPicker";
+import { LiveSwitch } from "@/components/practice/LiveSwitch";
+import { BattleTeamWeek } from "@/pages/StrengthCoach";
+import { NbtWeekBuilder } from "@/pages/admin/AdminNbtBoard";
 import {
   NLA_RED, TOGETHER_GRAY, OFF_TEMPLATE_VIOLET, GROUPS, WEEKDAYS, QUICK_BLOCKS, spiritualAccent, daysFor, daysForWeek, ALL_WEEKDAYS, mondayOf, addDays, formatWeekRange,
   dateForWeekday, blockAccent, PracticeGroup, PracticeSettings, PracticeWeek, PracticeBlock,
@@ -52,12 +56,17 @@ import { hasLanes, bibleStudySiblings, wrapupFor, type Wrapups } from "@/lib/pra
 const AdminPracticePlan = () => {
   const qc = useQueryClient();
   const { user } = useAuth();
-  const [weekStart, setWeekStart] = useState<string>(() => mondayOf());
+  // Coming back from a Workout Plan: open on the week and tab it was left
+  // from, not on today. The Practice Plan is the main page; the week you
+  // picked here follows you out and back. (Josh, 2026-10-03.)
+  const [params] = useSearchParams();
+  const linkedWeek = /^\d{4}-\d{2}-\d{2}$/.test(params.get("week") ?? "") ? params.get("week")! : null;
+  const [weekStart, setWeekStart] = useState<string>(() => linkedWeek ?? mondayOf());
   const navigate = useNavigate();
   // Controlled so the progress strip can jump to a tab. Switching tabs also
   // refreshes the strip, so publishing the verse shows up the moment you
   // come back.
-  const [tab, setTab] = useState<string>("week");
+  const [tab, setTab] = useState<string>(() => (["week", "template", "verse", "bt", "nbt"].includes(params.get("tab") ?? "") ? params.get("tab")! : "week"));
   const switchTab = (t: string) => {
     setTab(t);
     qc.invalidateQueries({ queryKey: ["week-progress"] });
@@ -179,13 +188,27 @@ const AdminPracticePlan = () => {
   // ── Start a new week from the template ──
   const startWeek = useMutation({
     mutationFn: async ({ weekdays }: { weekdays: number[] }) => {
-      const { data: created, error } = await supabase
+      // Reuse the week row if one already exists (a first try whose drills
+      // failed), so "Create week" can never collide with itself. A fresh row
+      // is remembered so it can be removed if the drills below fail — nobody
+      // is left with an empty week they cannot start.
+      const { data: existing } = await supabase
         .from("practice_weeks" as never)
-        .insert({ week_start: weekStart, created_by: user?.id ?? null } as never)
-        .select()
-        .single();
-      if (error) throw error;
-      const newWeek = created as unknown as PracticeWeek;
+        .select("*")
+        .eq("week_start", weekStart)
+        .maybeSingle();
+      let newWeek = (existing as unknown as PracticeWeek | null) ?? null;
+      let fresh = false;
+      if (!newWeek) {
+        const { data: created, error } = await supabase
+          .from("practice_weeks" as never)
+          .insert({ week_start: weekStart, created_by: user?.id ?? null } as never)
+          .select()
+          .single();
+        if (error) throw error;
+        newWeek = created as unknown as PracticeWeek;
+        fresh = true;
+      }
 
       // Carry last week's drill forward into the matching slot when asked —
       // most weeks are small edits on the last one.
@@ -216,10 +239,14 @@ const AdminPracticePlan = () => {
         }));
       });
       if (rows.length) {
+        // Slots already there (a retry) are left alone rather than duplicated.
         const { error: bErr } = await supabase
           .from("practice_blocks" as never)
-          .insert(rows as never);
-        if (bErr) throw bErr;
+          .upsert(rows as never, { onConflict: "week_id,group,weekday,position", ignoreDuplicates: true } as never);
+        if (bErr) {
+          if (fresh) await supabase.from("practice_weeks" as never).delete().eq("id", newWeek.id);
+          throw new Error(`Couldn't write the week's drills: ${bErr.message}`);
+        }
       }
       return newWeek;
     },
@@ -374,6 +401,28 @@ const AdminPracticePlan = () => {
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["practice-week", weekStart] }),
     onError: (e: Error) => toast.error(e.message || "Couldn't save the wrap-up."),
+  });
+
+  // Reset the ENTIRE week — all four steps — so it can be planned fresh:
+  // the practice plan (its drills, meeting points, reminders and wrap-ups),
+  // the Verse of the Week, the Battle Team week and the NBT week. Each is its
+  // own table, so each is cleared on its own; the template and every other
+  // week are untouched. Battle Team weeks can't be deleted by policy, so that
+  // one is emptied back to "not written" instead. (Josh, 2026-10-03.)
+  const resetEntireWeek = useMutation({
+    mutationFn: async () => {
+      const fail = (what: string, e: { message: string } | null) => { if (e) throw new Error(`${what}: ${e.message}`); };
+      fail("Practice plan", (await supabase.from("practice_weeks" as never).delete().eq("week_start", weekStart)).error);
+      fail("Verse days", (await supabase.from("board_verse_days" as never).delete().eq("week_start", weekStart)).error);
+      fail("Verse of the Week", (await supabase.from("board_verse_weeks" as never).delete().eq("week_start", weekStart)).error);
+      fail("Battle Team", (await supabase.from("strength_weeks" as never).update({ days: {}, status: "draft", locked_at: null } as never).eq("week_start", weekStart)).error);
+      fail("NBT", (await supabase.from("nbt_weeks" as never).delete().eq("week_start", weekStart)).error);
+    },
+    onSuccess: () => {
+      toast.success(`${formatWeekRange(weekStart, season)} is clear — plan it fresh.`);
+      qc.invalidateQueries();
+    },
+    onError: (e: Error) => toast.error(e.message || "Couldn't reset the week."),
   });
 
   // Restart the week: wipe it and go back to "Start this week". Deleting the
@@ -553,41 +602,28 @@ const AdminPracticePlan = () => {
             <Monitor className="w-4 h-4 mr-1.5" /> Open gym board
           </Button>
           {week && (
-            <Button
-              size="sm"
-              onClick={() => publish.mutate()}
-              disabled={publish.isPending}
-              className={
-                week.status === "published"
-                  ? "bg-neutral-800 hover:bg-neutral-700 text-white"
-                  : "text-white font-semibold"
-              }
-              style={week.status === "published" ? undefined : { backgroundColor: NLA_RED }}
-            >
-              {publish.isPending ? (
-                <Loader2 className="w-4 h-4 mr-1.5 animate-spin" />
-              ) : (
-                <Send className="w-4 h-4 mr-1.5" />
-              )}
-              {week.status === "published" ? "Unpublish" : "Publish to board"}
-            </Button>
+            <LiveSwitch
+              live={week.status === "published"}
+              onChange={() => publish.mutate()}
+              pending={publish.isPending}
+              what="the practice plan"
+            />
           )}
         </div>
       </div>
 
-      {/* ── Start-week wizard. Step 1: which days. (S&C and the verse are the
-          next two steps of the same flow — coming in the following revisions.) ── */}
+      {/* ── Start the week: pick the days. The verse and the lift plans have
+          their own tabs and the progress strip, so this window is just the days. ── */}
       <Dialog open={wizardOpen} onOpenChange={setWizardOpen}>
-        <DialogContent className="bg-neutral-950 border-neutral-800 text-white sm:max-w-lg">
-          <DialogHeader>
+        <DialogContent className="bg-neutral-950 border-neutral-800 text-white sm:max-w-lg p-7 gap-6">
+          <DialogHeader className="space-y-2">
             <DialogTitle className="text-white">Start the week of {formatWeekRange(weekStart, season)}</DialogTitle>
             <DialogDescription className="text-neutral-400">
-              <span className="text-[11px] font-bold uppercase tracking-wider text-neutral-500">Step 1 of 3 · Practice days</span>
-              <br />Which days are we practicing this week? Tap to switch a day on or off.
+              Which days are we practicing this week? Tap to switch a day on or off.
             </DialogDescription>
           </DialogHeader>
 
-          <div className="grid grid-cols-7 gap-1.5">
+          <div className="grid grid-cols-7 gap-2 mt-3">
             {ALL_WEEKDAYS.map((d) => {
               const on = chosenDays.includes(d.n);
               const weekend = d.n >= 6;
@@ -609,15 +645,14 @@ const AdminPracticePlan = () => {
               );
             })}
           </div>
-          <p className="text-xs text-neutral-500 -mt-1">
-            {chosenDays.length === 0
-              ? "Pick at least one day."
-              : `${chosenDays.length} ${chosenDays.length === 1 ? "day" : "days"} · ${chosenDays.map((n) => ALL_WEEKDAYS.find((d) => d.n === n)?.short).join(", ")}`}
-            {chosenDays.some((n) => n >= 6) && " · weekend days start as one open slot per group"}
-          </p>
+          {(chosenDays.length === 0 || chosenDays.some((n) => n >= 6)) && (
+            <p className="text-sm text-neutral-400 rounded-lg border border-neutral-800 bg-neutral-900/60 px-3.5 py-2 mt-4">
+              {chosenDays.length === 0 ? "Pick at least one day." : "Saturday and Sunday start as one open slot per group — you write those in by hand."}
+            </p>
+          )}
 
           {lastWeekBlocks.length > 0 && (
-            <label className="inline-flex items-center gap-2.5 cursor-pointer rounded-lg border border-neutral-800 bg-neutral-900 px-3.5 py-2.5">
+            <label className="inline-flex items-center gap-2.5 cursor-pointer rounded-lg border border-neutral-800 bg-neutral-900 px-3.5 py-2.5 mt-4">
               <input
                 type="checkbox"
                 checked={copyLastWeek}
@@ -629,13 +664,7 @@ const AdminPracticePlan = () => {
             </label>
           )}
 
-          <div className="flex items-center gap-2 text-[11px] text-neutral-600">
-            <span className="rounded-full border border-neutral-800 px-2 py-0.5">2 · S&C days</span>
-            <span className="rounded-full border border-neutral-800 px-2 py-0.5">3 · Bible topic</span>
-            <span>— next revisions; for now they stay on their own tabs.</span>
-          </div>
-
-          <DialogFooter>
+          <DialogFooter className="mt-4">
             <Button variant="ghost" onClick={() => setWizardOpen(false)} className="text-neutral-400 hover:text-white">Cancel</Button>
             <Button
               onClick={() => startWeek.mutate({ weekdays: chosenDays })}
@@ -649,6 +678,52 @@ const AdminPracticePlan = () => {
         </DialogContent>
       </Dialog>
 
+      {/* The one week picker — every tab and both Workout Plans follow it. */}
+      <WeekPicker
+        weekStart={weekStart}
+        season={season}
+        onChange={setWeekStart}
+        action={
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <Button variant="ghost" size="sm" className="text-neutral-500 hover:text-red-400 text-xs">
+                <RefreshCw className="w-3.5 h-3.5 mr-1" /> Reset entire week
+              </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent className="bg-neutral-900 border-neutral-800 text-white">
+              <AlertDialogHeader>
+                <AlertDialogTitle>Reset all of {formatWeekRange(weekStart, season)}?</AlertDialogTitle>
+                <AlertDialogDescription asChild>
+                  <div className="text-neutral-400 text-sm space-y-2">
+                    <p>
+                      This clears every step of the week and takes it off the gym board: the practice plan (drills,
+                      meeting points, reminders, wrap-ups), the Verse of the Week, the Battle Team week and the NBT week.
+                    </p>
+                    <p>
+                      <span className="text-neutral-200 font-semibold">Untouched:</span> the template, Daily Duties, and
+                      every other week.
+                    </p>
+                  </div>
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel className="bg-transparent border-neutral-700 text-neutral-300 hover:text-white hover:bg-white/5">
+                  Keep it
+                </AlertDialogCancel>
+                <AlertDialogAction
+                  onClick={() => resetEntireWeek.mutate()}
+                  disabled={resetEntireWeek.isPending}
+                  className="text-white"
+                  style={{ backgroundColor: NLA_RED }}
+                >
+                  Reset the whole week
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+        }
+      />
+
       {/* The week's four jobs — done means on the wall. */}
       <WeekProgress
         weekStart={weekStart}
@@ -659,18 +734,13 @@ const AdminPracticePlan = () => {
       <Tabs value={tab} onValueChange={switchTab}>
         {/* The default inactive tab is near-invisible on this dark
             surface — lift it so both options are readable. */}
+        <div className="flex flex-col items-start">
         <TabsList className="bg-neutral-900 border border-neutral-800 h-11 p-1 gap-1">
           <TabsTrigger
             value="week"
             className="px-5 h-9 text-sm font-semibold text-neutral-300 hover:text-white data-[state=active]:bg-white data-[state=active]:text-black"
           >
-            This Week
-          </TabsTrigger>
-          <TabsTrigger
-            value="template"
-            className="px-5 h-9 text-sm font-semibold text-neutral-300 hover:text-white data-[state=active]:bg-white data-[state=active]:text-black"
-          >
-            Template
+            Practice Plan
           </TabsTrigger>
           <TabsTrigger
             value="verse"
@@ -679,51 +749,36 @@ const AdminPracticePlan = () => {
             Verse of the Week
           </TabsTrigger>
           <TabsTrigger
-            value="sc"
+            value="bt"
             className="px-5 h-9 text-sm font-semibold text-neutral-300 hover:text-white data-[state=active]:bg-white data-[state=active]:text-black"
           >
-            S&amp;C
+            BT Workout Plan
+          </TabsTrigger>
+          <TabsTrigger
+            value="nbt"
+            className="px-5 h-9 text-sm font-semibold text-neutral-300 hover:text-white data-[state=active]:bg-white data-[state=active]:text-black"
+          >
+            NBT Workout Plan
           </TabsTrigger>
         </TabsList>
+        {/* Template: the standing pattern behind every week. Rarely touched,
+            so it sits quietly under the Practice Plan tab. */}
+        <button
+          type="button"
+          onClick={() => switchTab("template")}
+          className={`mt-1.5 ml-1 text-xs inline-flex items-center gap-1 ${tab === "template" ? "text-white font-semibold" : "text-neutral-500 hover:text-neutral-300"}`}
+        >
+          <Pencil className="w-3 h-3" /> Edit Template
+        </button>
+        </div>
 
         {/* ── The week ── */}
         <TabsContent value="week" className="space-y-4 mt-4">
           <div className="flex items-center justify-between gap-3 flex-wrap rounded-xl border border-neutral-800 bg-neutral-900 p-3">
-            <div className="flex items-center gap-2">
-              <Button
-                variant="ghost" size="icon"
-                onClick={() => setWeekStart(addDays(weekStart, -7))}
-                className="text-neutral-400 hover:text-white h-8 w-8"
-                aria-label="Previous week"
-              >
-                <ChevronLeft className="w-4 h-4" />
-              </Button>
-              <div className="text-center min-w-[190px]">
-                <p className="text-white font-semibold text-sm">
-                  {formatWeekRange(weekStart, season)}
-                </p>
-                <p className="text-[11px] text-neutral-500">
-                  {isThisWeek ? "This week" : weekStart}
-                </p>
-              </div>
-              <Button
-                variant="ghost" size="icon"
-                onClick={() => setWeekStart(addDays(weekStart, 7))}
-                className="text-neutral-400 hover:text-white h-8 w-8"
-                aria-label="Next week"
-              >
-                <ChevronRight className="w-4 h-4" />
-              </Button>
-              {!isThisWeek && (
-                <Button
-                  variant="ghost" size="sm"
-                  onClick={() => setWeekStart(mondayOf())}
-                  className="text-neutral-400 hover:text-white text-xs"
-                >
-                  Today
-                </Button>
-              )}
-            </div>
+            <p className="text-sm font-semibold text-white">
+              {formatWeekRange(weekStart, season)}
+              <span className="text-neutral-500 font-normal text-xs ml-2">{isThisWeek ? "this week" : "the practice plan"}</span>
+            </p>
 
             {week && (
               <div className="flex items-center gap-2">
@@ -734,7 +789,7 @@ const AdminPracticePlan = () => {
                       : "bg-amber-500/15 text-amber-400 border-amber-500/30"
                   }
                 >
-                  {week.status === "published" ? "Published" : "Draft"}
+                  {week.status === "published" ? "Live on Gym Board" : "Draft"}
                 </Badge>
                 {/* A completeness meter, worded so it can't read as a date. */}
                 <div className="flex items-center gap-2">
@@ -880,53 +935,21 @@ const AdminPracticePlan = () => {
           />
         </TabsContent>
 
-        {/* ── Verse of the Week ── */}
-        <TabsContent value="verse" className="mt-4">
-          <VerseOfTheWeekAdmin season={season} />
+        {/* ── BT Workout Plan — the same builder as the sidebar page, on this week ── */}
+        <TabsContent value="bt" className="mt-4">
+          <BattleTeamWeek weekStart={weekStart} onWeekChange={setWeekStart} embedded />
         </TabsContent>
 
-        {/* ── S&C ──
-            The two lift boards are their own pages and stay that way; this
-            tab is the door to them so the whole week is finished from here.
-            `from=practice-plan` brings their back buttons home. (Josh, 2026-10-02.) */}
-        <TabsContent value="sc" className="mt-4 space-y-4">
-          <p className="text-sm text-neutral-400">
-            Finish the week's lifting here. Each board opens on its own page and brings you back.
-          </p>
-          <div className="grid sm:grid-cols-2 gap-4">
-            <button
-              type="button"
-              onClick={() => navigate("/strength-coach?from=practice-plan")}
-              className="text-left rounded-xl border p-5 hover:bg-white/[0.04] transition-colors"
-              style={{ borderColor: `${NLA_RED}66` }}
-            >
-              <div className="flex items-center gap-3 mb-2">
-                <div className="h-10 w-10 rounded-lg grid place-items-center" style={{ background: NLA_RED }}>
-                  <Dumbbell className="h-5 w-5 text-white" />
-                </div>
-                <p className="text-lg font-bold text-white">Battle Team Workout Plan</p>
-              </div>
-              <p className="text-sm text-neutral-400">Bench · Squat · Deadlift — the week's lifts for the crew.</p>
-            </button>
-            <button
-              type="button"
-              onClick={() => navigate(`/admin/operations/nbt-board?from=practice-plan&week=${weekStart}`)}
-              className="text-left rounded-xl border p-5 hover:bg-white/[0.04] transition-colors"
-              style={{ borderColor: `${GROUPS.find((g) => g.key === "non_battle_team")?.accent ?? "#f0a500"}66` }}
-            >
-              <div className="flex items-center gap-3 mb-2">
-                <div
-                  className="h-10 w-10 rounded-lg grid place-items-center"
-                  style={{ background: GROUPS.find((g) => g.key === "non_battle_team")?.accent ?? "#f0a500" }}
-                >
-                  <Dumbbell className="h-5 w-5 text-black" />
-                </div>
-                <p className="text-lg font-bold text-white">NBT Workout Plan</p>
-              </div>
-              <p className="text-sm text-neutral-400">Monday · Tuesday · Thursday — Bravo and Alpha, built and locked one week at a time.</p>
-            </button>
-          </div>
+        {/* ── NBT Workout Plan — the same builder as the sidebar page, on this week ── */}
+        <TabsContent value="nbt" className="mt-4">
+          <NbtWeekBuilder weekStart={weekStart} onWeekChange={setWeekStart} embedded />
         </TabsContent>
+
+        {/* ── Verse of the Week ── */}
+        <TabsContent value="verse" className="mt-4">
+          <VerseOfTheWeekAdmin season={season} weekStart={weekStart} />
+        </TabsContent>
+
       </Tabs>
     </div>
   );
@@ -944,7 +967,7 @@ const StartWeekCard = ({
   <div className="rounded-xl border border-neutral-800 bg-neutral-900 p-8 text-center">
     <CalendarDays className="w-8 h-8 mx-auto mb-3" style={{ color: NLA_RED }} />
     <h3 className="text-lg font-bold text-white">
-      No plan yet for {formatWeekRange(weekStart, season)}
+      Not written yet — {formatWeekRange(weekStart, season)}
     </h3>
     <p className="text-sm text-neutral-400 mt-1.5 max-w-md mx-auto">
       Pick the days you&apos;re practicing and every slot comes up on the
@@ -962,7 +985,7 @@ const StartWeekCard = ({
         {starting ? (
           <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Starting…</>
         ) : (
-          <><Plus className="w-4 h-4 mr-2" /> Start new week</>
+          <><Sparkles className="w-4 h-4 mr-2" /> Build this week</>
         )}
       </Button>
     </div>

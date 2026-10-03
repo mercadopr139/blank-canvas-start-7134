@@ -11,7 +11,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import {
-  ArrowLeft, Dumbbell, ChevronLeft, ChevronRight, ClipboardList, Maximize, Minimize, Pencil, Check,
+  ArrowLeft, Dumbbell, ChevronLeft, ChevronRight, Maximize, Minimize, Pencil, Check,
 } from "lucide-react";
 import { NbtEditTonight } from "@/components/nbt/NbtEditTonight";
 import { VerseOfTheDayStrip } from "@/components/verse/VerseOfTheDayStrip";
@@ -22,7 +22,6 @@ import {
   toDateString, mondayOf, firstOfMonth, dateOfDay, todayDayKey, weekInBlock,
   SESSION_CAP_MINUTES, readableLines, NBT_AMBER,
 } from "@/lib/nbt";
-import NbtLogSheet from "@/components/nbt/NbtLogSheet";
 import { PrepStrip } from "@/components/practice/PrepStrip";
 import { equipmentItems } from "@/lib/practicePlan";
 import { fetchLiftNote } from "@/lib/liftNote";
@@ -42,7 +41,6 @@ const NbtBoard = () => {
   const [weekStart, setWeekStart] = useState(() => (linkedWeek ? mondayOf(linkedWeek) : mondayOf(today)));
   // Land on today when today is a training day; otherwise open on Monday.
   const [dayKey, setDayKey] = useState<DayKey>(() => linkedDay ?? todayDayKey(today) ?? "monday");
-  const [logging, setLogging] = useState(false);
   // Edit tonight — a signed-in coach fixes the plan where the kids read it.
   const [editing, setEditing] = useState(false);
   const qc = useQueryClient();
@@ -141,7 +139,9 @@ const NbtBoard = () => {
     const MIN = 10;
     const apply = (px: number) => els.forEach((el) => { el.style.fontSize = `${px}px`; });
     // Overflowing by a pixel or two is rounding, not a real overflow.
-    const fits = () => els.every((el) => el.scrollHeight <= el.clientHeight + 2);
+    // Height AND width: a clock row that runs off the side of the tile is as
+    // much a miss as a list that runs off the bottom.
+    const fits = () => els.every((el) => el.scrollHeight <= el.clientHeight + 2 && el.scrollWidth <= el.clientWidth + 2);
     let px = MAX;
     apply(px);
     while (px > MIN && !fits()) {
@@ -256,14 +256,6 @@ const NbtBoard = () => {
               {editing ? <><Check className="w-4 h-4 mr-1.5" /> Done editing</> : <><Pencil className="w-4 h-4 mr-1.5" /> Edit tonight</>}
             </Button>
           )}
-          <Button
-            onClick={() => setLogging(true)}
-            disabled={!day}
-            className="ml-2 font-bold text-white"
-            style={{ backgroundColor: NBT_AMBER }}
-          >
-            <ClipboardList className="w-4 h-4 mr-1.5" /> Log it
-          </Button>
         </div>
       </header>
 
@@ -439,14 +431,6 @@ const NbtBoard = () => {
         </main>
       )}
 
-      <NbtLogSheet
-        open={logging}
-        onClose={() => setLogging(false)}
-        day={day}
-        dayKey={dayKey}
-        date={date}
-        weekId={week?.id ?? null}
-      />
     </div>
   );
 };

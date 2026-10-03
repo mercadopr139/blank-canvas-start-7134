@@ -97,10 +97,11 @@ export const OPERATIONS_TILES: PillarTile[] = [
     ],
   },
   // One place in the building: the Gym Board on the wall. Everything that
-  // ends up on it is planned here — the practice plan and both teams' S&C.
-  // "Board" is the wall; the pages below are plans. Each plan page has its
-  // own green "Open gym board" button, so the wall needs no sidebar link.
-  // (Josh, 2026-10-02.)
+  // ends up on it is planned inside Practice Plan — the drills, the verse and
+  // both teams' Workout Plans are tabs there, so they need no sidebar lines of
+  // their own. Battle Team Intelligence reads what the kids actually logged,
+  // which is a different job, so it stays. NBT doesn't log on the wall, so its
+  // Intelligence page has no sidebar line. (Josh, 2026-10-03.)
   {
     title: "Gym Board",
     description: "The practice plan and the S&C plans behind the gym board",
@@ -110,10 +111,7 @@ export const OPERATIONS_TILES: PillarTile[] = [
     children: [
       { title: "Practice Plan", href: "/admin/operations/practice-plan", icon: ClipboardList },
       { title: "Daily Duties Intelligence", href: "/admin/operations/daily-duties", icon: Sparkles },
-      { title: "Battle Team Workout Plan", href: "/strength-coach", icon: Dumbbell, external: true },
       { title: "Battle Team Intelligence", href: "/strength-coach/intelligence", icon: BarChart3, external: true },
-      { title: "NBT Workout Plan", href: "/admin/operations/nbt-board", icon: Dumbbell },
-      { title: "NBT Intelligence", href: "/admin/operations/nbt-intelligence", icon: BarChart3 },
       { title: "75 Hard", href: "/hard-75", icon: Flame, external: true },
     ],
   },

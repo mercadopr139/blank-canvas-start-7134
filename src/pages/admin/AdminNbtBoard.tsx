@@ -17,29 +17,53 @@ import {
 import { toast } from "sonner";
 import {
   DAYS, DayKey, TRACKS, TRACK_META, Track, NbtBlock, NbtWeek, NbtDay, NbtLog,
-  toDateString, firstOfMonth, monthLabel, mondaysInMonth, dateOfDay, mondayOf, NBT_AMBER,
+  toDateString, firstOfMonth, monthLabel, mondaysInMonth, dateOfDay, mondayOf, addDays, NBT_AMBER,
   readableLines, minutesOf, totalMinutes,
 } from "@/lib/nbt";
 import { priorWeekBriefs, roomReport, carryOver, dayProblem } from "@/lib/nbtCoaching";
 import { AlertTriangle } from "lucide-react";
 import { roomBrief } from "@/lib/nbtRooms";
+import { LiveSwitch } from "@/components/practice/LiveSwitch";
 import NbtEditDay from "@/components/nbt/NbtEditDay";
 
+/** The first of the month n months away — for the previous block's weeks. */
 const shiftMonth = (monthStart: string, n: number) => {
   const d = new Date(`${monthStart}T12:00:00`);
-  d.setMonth(d.getMonth() + n);
+  d.setMonth(d.getMonth() + n, 1);
   return firstOfMonth(toDateString(d));
 };
 
-const AdminNbtBoard = () => {
+/**
+ * The NBT week builder. Runs in two places with one set of rules: on its own
+ * page (the sidebar's NBT Workout Plan, with header and week arrows) and
+ * inside the Practice Plan's NBT tab (`embedded`, where the page's week
+ * picker owns the week). (Josh, 2026-10-03.)
+ */
+export const NbtWeekBuilder = ({
+  weekStart: controlledWeek, onWeekChange, embedded = false,
+}: {
+  weekStart?: string;
+  onWeekChange?: (weekStart: string) => void;
+  embedded?: boolean;
+}) => {
   const navigate = useNavigate();
   const qc = useQueryClient();
-  // Opened from the Practice Plan's S&C tab: offer the way back, and open on
-  // the month that week belongs to.
+  // Opened from the Practice Plan: offer the way back, and open on that week.
   const [params] = useSearchParams();
   const fromPlan = params.get("from") === "practice-plan";
   const linkedWeek = /^\d{4}-\d{2}-\d{2}$/.test(params.get("week") ?? "") ? params.get("week")! : null;
-  const [month, setMonth] = useState(() => firstOfMonth(linkedWeek ?? toDateString(new Date())));
+  // Week by week, like the Battle Team page and the Practice Plan. The month
+  // block is derived — a week belongs to the month its Monday is in — and
+  // stays the thread for the emphasis and the continuity. (Josh, 2026-10-03.)
+  const [ownWeekStart, setOwnWeekStart] = useState(() => mondayOf(linkedWeek ?? toDateString(new Date())));
+  // The Practice Plan's week wins when it gives one; otherwise this page keeps its own.
+  const weekStart = controlledWeek ? mondayOf(controlledWeek) : ownWeekStart;
+  const setWeekStart = (next: string | ((w: string) => string)) => {
+    const w = typeof next === "function" ? next(weekStart) : next;
+    if (onWeekChange) onWeekChange(w);
+    else setOwnWeekStart(w);
+  };
+  const month = firstOfMonth(weekStart);
   const thisWeekStart = mondayOf(toDateString(new Date()));
   const [focus, setFocus] = useState("");
   const [busy, setBusy] = useState<string | null>(null);
@@ -108,16 +132,6 @@ const AdminNbtBoard = () => {
   const thisWeekLocked = weeks.some((w) => w.week_start === thisWeekStart && w.status === "locked");
   const mondays = useMemo(() => mondaysInMonth(month), [month]);
   const refresh = () => qc.invalidateQueries({ queryKey: ["nbt-block", month] });
-
-  // A week only counts as written when all three days are there.
-  const missing = useMemo(
-    () =>
-      mondays.filter((m) => {
-        const w = weeks.find((x) => x.week_start === m);
-        return !w || !DAYS.every((d) => w.days?.[d.key]);
-      }).length,
-    [mondays, weeks]
-  );
 
   /**
    * One day, generated with the earlier weeks of this block as context.
@@ -259,51 +273,7 @@ const AdminNbtBoard = () => {
     if (error) toast.error(error.message);
     else {
       refresh();
-      toast.success(lock ? `Week ${w.week_in_block} is on the gym board.` : `Week ${w.week_in_block} is off the board for edits.`);
-    }
-  };
-
-  /**
-   * The whole month, one week after another — the weeks are sequential
-   * because week 2 has to see week 1. `rebuild` redoes every week; otherwise
-   * only the missing ones get written. A week that fails does NOT abandon the
-   * rest — it is reported at the end and can be filled in with another click.
-   */
-  const buildMonth = async (rebuild = false) => {
-    setBusy("month");
-    setProgress(null);
-    const failed: number[] = [];
-    try {
-      const b = await ensureBlock();
-      const built: NbtWeek[] = rebuild ? [] : [...weeks];
-      for (let i = 0; i < mondays.length; i++) {
-        const weekNo = i + 1;
-        const existing = weeks.find((w) => w.week_start === mondays[i]);
-        const complete = existing && DAYS.every((d) => existing.days?.[d.key]);
-        if (!rebuild && complete) continue;
-        setProgress(`Writing week ${weekNo} of ${mondays.length}…`);
-        try {
-          const savedWeek = await writeWeek(b, weekNo, built.filter((w) => w.week_in_block < weekNo));
-          const at = built.findIndex((w) => w.week_start === savedWeek.week_start);
-          if (at >= 0) built[at] = savedWeek;
-          else built.push(savedWeek);
-        } catch {
-          failed.push(weekNo);
-        }
-      }
-      refresh();
-      if (failed.length === 0) {
-        toast.success(`${monthLabel(month)} is written. Lock each week when it's ready for the wall.`);
-      } else {
-        toast.error(
-          `Week${failed.length > 1 ? "s" : ""} ${failed.join(", ")} didn't come back. Click build again to fill them in.`
-        );
-      }
-    } catch (e) {
-      toast.error((e as Error)?.message ?? "Couldn't build the month.");
-    } finally {
-      setBusy(null);
-      setProgress(null);
+      toast.success(lock ? `Week ${w.week_in_block} is live on the Gym Board.` : `Week ${w.week_in_block} is off the Gym Board — edit away.`);
     }
   };
 
@@ -368,23 +338,29 @@ const AdminNbtBoard = () => {
   };
 
   return (
-    <div className="p-4 md:p-8 space-y-6 max-w-6xl mx-auto text-white">
-      {fromPlan && (
+    <div className={embedded ? "space-y-5 text-white" : "p-4 md:p-8 space-y-6 max-w-6xl mx-auto text-white"}>
+      {!embedded && fromPlan && (
         <button
           type="button"
-          onClick={() => navigate("/admin/operations/practice-plan")}
+          onClick={() => navigate(`/admin/operations/practice-plan?week=${weekStart}&tab=nbt`)}
           className="inline-flex items-center gap-1.5 text-sm text-neutral-400 hover:text-white"
         >
           <ChevronLeft className="h-4 w-4" /> Practice Plan
         </button>
       )}
       <div className="flex items-start justify-between gap-4 flex-wrap">
+        {embedded ? (
+          <p className="text-sm text-neutral-400 self-center">
+            <span className="font-bold text-white">NBT Workout Plan</span> · Monday · Tuesday · Thursday · Bravo and Alpha
+          </p>
+        ) : (
         <div>
           <h2 className="text-2xl font-bold">NBT Workout Plan</h2>
           <p className="text-neutral-400 text-sm mt-1">
             Monday, Tuesday and Thursday for the Non-Battle Team — Bravo and Alpha, one week at a time, each week seeing the last.
           </p>
         </div>
+        )}
         {/* Green once this week is locked: it's on the wall for everyone. */}
         <Button
           variant="outline"
@@ -398,79 +374,54 @@ const AdminNbtBoard = () => {
         </Button>
       </div>
 
-          {/* Month nav + focus */}
+          {/* Week nav + the month's emphasis */}
           <div className="rounded-xl border border-neutral-800 bg-neutral-900 p-4 space-y-3">
-            <div className="flex items-center justify-between gap-2">
-              <Button
-                variant="ghost" size="icon"
-                onClick={() => setMonth((m) => shiftMonth(m, -1))}
-                className="text-neutral-400 hover:text-white h-8 w-8"
-                aria-label="Previous month"
-              >
-                <ChevronLeft className="w-4 h-4" />
-              </Button>
-              <div className="text-center">
-                <p className="font-bold">{monthLabel(month)}</p>
+            <div className={`flex items-center gap-2 ${embedded ? "" : "justify-between"}`}>
+              {!embedded && (
+                <Button
+                  variant="ghost" size="icon"
+                  onClick={() => setWeekStart((w) => addDays(w, -7))}
+                  className="text-neutral-400 hover:text-white h-8 w-8"
+                  aria-label="Previous week"
+                >
+                  <ChevronLeft className="w-4 h-4" />
+                </Button>
+              )}
+              <div className={embedded ? "text-left" : "text-center"}>
+                <p className="font-bold">Week of {weekStart}</p>
                 <p className="text-[11px] text-neutral-500">
-                  {mondays.length} training weeks
-                  {block ? ` · ${mondays.length - missing} written` : " · not started"}
+                  {weekStart === thisWeekStart ? "This week · " : ""}
+                  {monthLabel(month)} · week {mondays.indexOf(weekStart) + 1} of {mondays.length}
                 </p>
               </div>
-              <Button
-                variant="ghost" size="icon"
-                onClick={() => setMonth((m) => shiftMonth(m, 1))}
-                className="text-neutral-400 hover:text-white h-8 w-8"
-                aria-label="Next month"
-              >
-                <ChevronRight className="w-4 h-4" />
-              </Button>
+              {!embedded && (
+                <Button
+                  variant="ghost" size="icon"
+                  onClick={() => setWeekStart((w) => addDays(w, 7))}
+                  className="text-neutral-400 hover:text-white h-8 w-8"
+                  aria-label="Next week"
+                >
+                  <ChevronRight className="w-4 h-4" />
+                </Button>
+              )}
             </div>
 
             <div>
-              <Label className="text-xs text-neutral-400">This month&apos;s emphasis</Label>
-              <div className="flex gap-2 mt-1 flex-wrap">
-                <Input
-                  value={focus || block?.focus || ""}
-                  onChange={(e) => setFocus(e.target.value)}
-                  placeholder="Own the basics · Pace yourself · Quality before weight"
-                  className="flex-1 min-w-[220px] bg-neutral-800 border-neutral-700 text-white"
-                />
-                {missing > 0 && (
-                  <Button
-                    variant="outline"
-                    onClick={() => buildMonth(false)}
-                    disabled={busy !== null}
-                    className="bg-transparent border-neutral-700 text-neutral-300 hover:text-white"
-                    title="Write every week of the month that isn't written yet, in order"
-                  >
-                    {busy === "month" ? (
-                      <Loader2 className="w-4 h-4 animate-spin mr-1.5" />
-                    ) : (
-                      <Sparkles className="w-4 h-4 mr-1.5" />
-                    )}
-                    {weeks.length > 0 ? `Write the missing ${missing} week${missing > 1 ? "s" : ""}` : "Build the whole month"}
-                  </Button>
-                )}
-                {weeks.length > 0 && (
-                  <Button
-                    variant="outline"
-                    onClick={() => buildMonth(true)}
-                    disabled={busy !== null}
-                    className="bg-transparent border-neutral-700 text-neutral-300 hover:text-white"
-                    title="Throw away this month and write it again from scratch"
-                  >
-                    <RefreshCw className="w-4 h-4 mr-1.5" /> Start over
-                  </Button>
-                )}
-              </div>
+              <Label className="text-xs text-neutral-400">{monthLabel(month)}&apos;s emphasis</Label>
+              <Input
+                value={focus || block?.focus || ""}
+                onChange={(e) => setFocus(e.target.value)}
+                placeholder="Own the basics · Pace yourself · Quality before weight"
+                className="mt-1 bg-neutral-800 border-neutral-700 text-white"
+              />
               {progress ? (
                 <p className="text-[11px] text-neutral-300 mt-1.5 flex items-center gap-1.5">
                   <Loader2 className="w-3 h-3 animate-spin" /> {progress} This takes a minute or two.
                 </p>
               ) : (
                 <p className="text-[11px] text-neutral-500 mt-1.5">
-                  Build a week below. Each week sees the ones before it, so the movements hold across the
-                  month and only the challenge changes. Lock a week to put it on the gym board.
+                  One line for the whole month. Each week sees the ones before it, so the movements hold
+                  across the month and only the challenge changes. Lock a week to put it on the gym board.
                 </p>
               )}
             </div>
@@ -480,8 +431,8 @@ const AdminNbtBoard = () => {
             <p className="text-neutral-500 py-10 text-center">Loading…</p>
           ) : (
             <div className="space-y-4">
-              {mondays.map((monday, i) => {
-                const weekNo = i + 1;
+              {[weekStart].map((monday) => {
+                const weekNo = mondays.indexOf(monday) + 1;
                 const w = weeks.find((x) => x.week_start === monday);
                 const isThisWeek = monday === thisWeekStart;
                 const isLinked = monday === linkedWeek;
@@ -499,7 +450,7 @@ const AdminNbtBoard = () => {
                           {monday} — {dateOfDay(monday, "thursday")}
                           {isThisWeek ? " · this week" : ""}
                         </span>
-                        <span className="block text-sm font-normal text-neutral-500 mt-0.5">Not written yet.</span>
+                        <span className="block text-sm font-normal text-neutral-500 mt-0.5">Not written yet</span>
                       </p>
                       <Button
                         onClick={() => buildWeek(weekNo)}
@@ -512,7 +463,7 @@ const AdminNbtBoard = () => {
                         ) : (
                           <Sparkles className="w-4 h-4 mr-1.5" />
                         )}
-                        Build week {weekNo}
+                        Build this week
                       </Button>
                     </div>
                   );
@@ -546,13 +497,13 @@ const AdminNbtBoard = () => {
                             : "bg-amber-500/15 border-amber-400/30 text-amber-300"
                         }`}
                       >
-                        {locked ? "On the gym board" : "Draft"}
+                        {locked ? "Live on Gym Board" : "Draft"}
                       </span>
                       <Button
                         variant="outline" size="sm"
                         onClick={() => buildWeek(weekNo)}
                         disabled={busy !== null || locked}
-                        title={locked ? "Unlock the week to rebuild it" : "Throw this week away and write it again"}
+                        title={locked ? "Take the week off the Gym Board to rebuild it" : "Throw this week away and write it again"}
                         className="bg-transparent border-neutral-700 text-neutral-300 hover:text-white"
                       >
                         {busy === `week-${weekNo}` ? (
@@ -562,16 +513,7 @@ const AdminNbtBoard = () => {
                         )}
                         Rebuild
                       </Button>
-                      <Button
-                        size="sm"
-                        onClick={() => toggleLock(w)}
-                        disabled={busy !== null}
-                        className={locked ? "bg-neutral-800 text-white hover:bg-neutral-700" : "text-white font-bold"}
-                        style={locked ? undefined : { backgroundColor: "#bf0f3e" }}
-                      >
-                        {locked ? <Unlock className="w-3.5 h-3.5 mr-1.5" /> : <Lock className="w-3.5 h-3.5 mr-1.5" />}
-                        {locked ? "Unlock to edit" : "Lock the week"}
-                      </Button>
+                      <LiveSwitch live={locked} onChange={() => toggleLock(w)} pending={busy !== null} what="the NBT week" />
                     </div>
                   </div>
                   {stale.length > 0 && (
@@ -746,5 +688,8 @@ const AdminNbtBoard = () => {
     </div>
   );
 };
+
+/** The sidebar's NBT Workout Plan page: the builder with its own header and week arrows. */
+const AdminNbtBoard = () => <NbtWeekBuilder />;
 
 export default AdminNbtBoard;

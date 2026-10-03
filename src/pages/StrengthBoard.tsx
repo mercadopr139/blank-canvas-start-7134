@@ -140,7 +140,9 @@ const StrengthBoard = () => {
     const MAX = 24;
     const MIN = 10;
     const apply = (px: number) => els.forEach((el) => { el.style.fontSize = `${px}px`; });
-    const fits = () => els.every((el) => el.scrollHeight <= el.clientHeight + 2);
+    // Height AND width: a clock row that runs off the side of the tile is as
+    // much a miss as a list that runs off the bottom.
+    const fits = () => els.every((el) => el.scrollHeight <= el.clientHeight + 2 && el.scrollWidth <= el.clientWidth + 2);
     let px = MAX;
     apply(px);
     while (px > MIN && !fits()) {
@@ -361,7 +363,7 @@ const StrengthBoard = () => {
                 {/* The session clock, at the foot of the bar and bigger than
                     the text around it — twenty minutes, warm-up to finisher.
                     Inside the column so it scales with it. */}
-                <div className="mt-auto px-[0.8em] pb-[0.8em] text-[1.3em]">
+                <div className="mt-auto px-[0.8em] pb-[0.8em] text-[1em]">
                   <TrackTimer
                     storageKey={`bt-timer:${weekStart}:${dayKey}`}
                     minutes={SESSION_MINUTES}
