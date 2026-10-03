@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { LiveSwitch } from "@/components/practice/LiveSwitch";
+import { Monitor, Sparkles as SparkIcon } from "lucide-react";
 import { mondayOf, addDays, formatWeekRange, SeasonMode } from "@/lib/practicePlan";
 
 const DAYS: { n: number; label: string }[] = [
@@ -325,45 +326,54 @@ const VerseOfTheWeekAdmin = ({ season = "in_season", weekStart }: { season?: Sea
 
   return (
     <div className="space-y-4">
-      {/* Week nav + status */}
-      <div className="flex items-center justify-between gap-3 flex-wrap rounded-xl border border-neutral-800 bg-neutral-900 p-3">
-        <p className="font-bold text-white">
-          {formatWeekRange(weekStart, season)}
-          <span className="text-neutral-500 font-normal text-xs ml-2">{isThisWeek ? "this week" : "the verse"}</span>
+      {/* Title line — the same shape as the BT and NBT tabs. */}
+      <div className="flex items-center justify-between gap-3 flex-wrap">
+        <p className="text-sm text-neutral-400">
+          <span className="font-bold text-white">Verse of the Week</span> · Monday – Friday · one verse a night, tap to discuss on the wall
         </p>
-        <div className="flex items-center gap-2">
-          <LiveSwitch
-            live={published}
-            pending={saving}
-            what="the verse"
-            onChange={(next) => { setPublished(next); void save(next); }}
-          />
-          <Button onClick={save} disabled={saving || !dirty} className="bg-white text-black hover:bg-white/90 font-bold">
-            {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <><Save className="w-4 h-4 mr-1.5" /> Save</>}
-          </Button>
-        </div>
+        <Button
+          variant="outline"
+          onClick={() => window.open("/practice-board", "_blank")}
+          title={published ? "Live on the gym board" : "Draft — put it on the board for the kids to see it"}
+          className={published
+            ? "bg-emerald-600 hover:bg-emerald-500 border-emerald-500 text-white hover:text-white"
+            : "bg-transparent border-neutral-700 text-neutral-300 hover:text-white"}
+        >
+          <Monitor className="w-4 h-4 mr-1.5" /> Open gym board
+        </Button>
       </div>
 
-      {/* Draft warning — the #1 gotcha: a saved draft never reaches the board. */}
-      {hasContent && !published && (
-        <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-2.5 text-sm text-amber-200 flex items-center gap-2">
-          <EyeOff className="w-4 h-4 shrink-0" />
-          <span>
-            This week is a <strong>Draft</strong> — it won&apos;t show on the gym board until you switch the toggle to{" "}
-            <strong>On the board</strong> and hit Save.
-          </span>
-        </div>
-      )}
-
-      {/* Theme + generate */}
+      {/* The week card: dates on the left, status and the switch on the right. */}
       <div className="rounded-xl border border-neutral-800 bg-neutral-900 p-4 space-y-3">
-        <label className="text-xs uppercase tracking-wide text-neutral-500 font-semibold">Theme for the week</label>
-        <div className="flex gap-2 flex-wrap">
+        <div className="flex items-center justify-between gap-3 flex-wrap">
+          <div>
+            <p className="font-bold text-lg text-white">{formatWeekRange(weekStart, season)}</p>
+            <p className="text-[11px] text-neutral-500">{isThisWeek ? "This week" : `Week of ${weekStart}`}</p>
+          </div>
+          {/* Nothing to save or show until the verses exist — same as BT and NBT. */}
+          {hasContent && (
+            <div className="flex items-center gap-2 flex-wrap">
+              <Button onClick={save} disabled={saving || !dirty} variant="outline" size="sm" className="bg-transparent border-neutral-700 text-neutral-300 hover:text-white">
+                {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <><Save className="w-4 h-4 mr-1.5" /> Save</>}
+              </Button>
+              <LiveSwitch
+                live={published}
+                pending={saving}
+                what="the verse"
+                onChange={(next) => { setPublished(next); void save(next); }}
+              />
+            </div>
+          )}
+        </div>
+
+        {/* Theme + build */}
+        <div className="flex items-center gap-3 flex-wrap">
+          <label className="text-xs text-neutral-400 shrink-0">Theme</label>
           <Input
             value={theme}
             onChange={(e) => { setTheme(e.target.value); setDirty(true); }}
             placeholder="e.g. Youth struggling with identity"
-            className="flex-1 min-w-[240px] bg-neutral-800 border-neutral-700 text-white"
+            className="flex-1 min-w-[240px] h-9 bg-neutral-800 border-neutral-700 text-white text-sm"
           />
           <Button onClick={() => generate(false)} disabled={generating} className="text-white font-bold" style={{ backgroundColor: "#bf0f3e" }}>
             {generating ? <Loader2 className="w-4 h-4 animate-spin mr-1.5" /> : <Sparkles className="w-4 h-4 mr-1.5" />}
@@ -375,18 +385,30 @@ const VerseOfTheWeekAdmin = ({ season = "in_season", weekStart }: { season?: Sea
             </Button>
           )}
         </div>
-        <p className="text-xs text-neutral-500">
+        <p className="text-[11px] text-neutral-500">
           Five verses (Mon–Fri) on this theme, real ESV text, each with one discussion question aimed at a teenager’s own week, plus a short script the mentor reads out loud afterwards. Review and edit anything below, then Save.
         </p>
       </div>
 
+      {/* Draft warning — the #1 gotcha: a saved draft never reaches the board. */}
+      {hasContent && !published && (
+        <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-2.5 text-sm text-amber-200 flex items-center gap-2">
+          <EyeOff className="w-4 h-4 shrink-0" />
+          <span>
+            This week is a <strong>Draft</strong> — the kids won&apos;t see it until you tap <strong>Put on Gym Board</strong>.
+          </span>
+        </div>
+      )}
+
       {isFetching && !hasContent ? (
         <p className="text-neutral-500 py-8 text-center">Loading…</p>
       ) : !hasContent ? (
-        <div className="text-center py-12 text-neutral-600">
-          <BookOpen className="w-10 h-10 mx-auto mb-3 opacity-40" />
-          <p className="font-bold text-neutral-300">Not written yet</p>
-          <p className="mt-1">Type a theme and hit <span className="text-white/70 font-medium">Build this week</span>.</p>
+        <div className="rounded-xl border border-neutral-800 bg-neutral-900 p-8 text-center">
+          <SparkIcon className="h-8 w-8 mx-auto mb-3 text-white/30" />
+          <p className="font-bold mb-1 text-white">Not written yet</p>
+          <p className="text-neutral-400 text-sm max-w-md mx-auto">
+            Type a theme above and hit Build this week — five verses, Monday to Friday, each with its question and the mentor&apos;s script.
+          </p>
         </div>
       ) : (
         <div className="space-y-3">

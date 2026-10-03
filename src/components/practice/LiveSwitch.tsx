@@ -1,7 +1,9 @@
 // The one switch for "is this on the Gym Board?" — the same words on every
 // step of the week: the practice plan, the verse, the Battle Team week and
 // the NBT week. Not live: a red "Put on Gym Board". Live: a green "Live on
-// Gym Board ✓" that, tapped, asks before taking the plan off the wall.
+// Gym Board ✓" that, tapped, asks before taking the plan off the wall. The
+// quiet state is a red outline on black so it never competes with the solid
+// red "Build this week"; the green is the moment that pops.
 // Underneath, each step still stores what it always did (published, locked);
 // only the words on screen are shared. (Josh, 2026-10-03.)
 import { Loader2, Send, Check } from "lucide-react";
@@ -26,7 +28,14 @@ export const LiveSwitch = ({
 }) => {
   if (!live) {
     return (
-      <Button size={size} onClick={() => onChange(true)} disabled={pending} className="text-white font-semibold" style={{ backgroundColor: NLA_RED }}>
+      <Button
+        size={size}
+        variant="outline"
+        onClick={() => onChange(true)}
+        disabled={pending}
+        className="bg-black font-semibold hover:bg-white/5"
+        style={{ borderColor: NLA_RED, color: NLA_RED }}
+      >
         {pending ? <Loader2 className="w-4 h-4 mr-1.5 animate-spin" /> : <Send className="w-4 h-4 mr-1.5" />}
         Put on Gym Board
       </Button>
@@ -35,15 +44,17 @@ export const LiveSwitch = ({
   return (
     <AlertDialog>
       <AlertDialogTrigger asChild>
-        <Button
-          size={size}
+        {/* The green pill is the status AND the control: tap it to take the
+            plan off the wall. One thing on screen, not a badge plus a button. */}
+        <button
+          type="button"
           disabled={pending}
-          className="bg-emerald-600 hover:bg-emerald-500 text-white font-semibold border border-emerald-500"
+          className="inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] font-semibold bg-emerald-500/15 border-emerald-400/30 text-emerald-300 hover:bg-emerald-500/25 disabled:opacity-60"
           title="Live on the Gym Board — tap to take it off"
         >
-          {pending ? <Loader2 className="w-4 h-4 mr-1.5 animate-spin" /> : <Check className="w-4 h-4 mr-1.5" />}
+          {pending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />}
           Live on Gym Board
-        </Button>
+        </button>
       </AlertDialogTrigger>
       <AlertDialogContent className="bg-neutral-900 border-neutral-800 text-white">
         <AlertDialogHeader>

@@ -587,29 +587,6 @@ const AdminPracticePlan = () => {
             The week behind the gym board.
           </p>
         </div>
-        <div className="flex items-center gap-2 flex-wrap">
-          {/* Green once the week is published: that's the signal it's on the
-              wall for everyone. Grey while it's still a draft. */}
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => window.open("/practice-board", "_blank")}
-            title={week?.status === "published" ? "Live on the gym board" : "Draft — publish to put it on the board"}
-            className={week?.status === "published"
-              ? "bg-emerald-600 hover:bg-emerald-500 border-emerald-500 text-white hover:text-white"
-              : "bg-transparent border-neutral-700 text-neutral-300 hover:bg-white/5 hover:text-white"}
-          >
-            <Monitor className="w-4 h-4 mr-1.5" /> Open gym board
-          </Button>
-          {week && (
-            <LiveSwitch
-              live={week.status === "published"}
-              onChange={() => publish.mutate()}
-              pending={publish.isPending}
-              what="the practice plan"
-            />
-          )}
-        </div>
       </div>
 
       {/* ── Start the week: pick the days. The verse and the lift plans have
@@ -774,23 +751,33 @@ const AdminPracticePlan = () => {
 
         {/* ── The week ── */}
         <TabsContent value="week" className="space-y-4 mt-4">
-          <div className="flex items-center justify-between gap-3 flex-wrap rounded-xl border border-neutral-800 bg-neutral-900 p-3">
-            <p className="text-sm font-semibold text-white">
-              {formatWeekRange(weekStart, season)}
-              <span className="text-neutral-500 font-normal text-xs ml-2">{isThisWeek ? "this week" : "the practice plan"}</span>
+          {/* Title line — the same shape as the BT and NBT tabs. */}
+          <div className="flex items-center justify-between gap-3 flex-wrap">
+            <p className="text-sm text-neutral-400">
+              <span className="font-bold text-white">Practice Plan</span> · Battle Team · Non-Battle Team · Littles
             </p>
+            <Button
+              variant="outline"
+              onClick={() => window.open("/practice-board", "_blank")}
+              title={week?.status === "published" ? "Live on the gym board" : "Draft — put it on the board for the kids to see it"}
+              className={week?.status === "published"
+                ? "bg-emerald-600 hover:bg-emerald-500 border-emerald-500 text-white hover:text-white"
+                : "bg-transparent border-neutral-700 text-neutral-300 hover:bg-white/5 hover:text-white"}
+            >
+              <Monitor className="w-4 h-4 mr-1.5" /> Open gym board
+            </Button>
+          </div>
+
+          {/* The week card: dates on the left, status and the switch on the right, the days inside. */}
+          <div className="rounded-xl border border-neutral-800 bg-neutral-900 p-4 space-y-4">
+          <div className="flex items-center justify-between gap-3 flex-wrap">
+            <div>
+              <p className="font-bold text-lg text-white">{formatWeekRange(weekStart, season)}</p>
+              <p className="text-[11px] text-neutral-500">{isThisWeek ? "This week" : `Week of ${weekStart}`}</p>
+            </div>
 
             {week && (
-              <div className="flex items-center gap-2">
-                <Badge
-                  className={
-                    week.status === "published"
-                      ? "bg-green-500/15 text-green-400 border-green-500/30"
-                      : "bg-amber-500/15 text-amber-400 border-amber-500/30"
-                  }
-                >
-                  {week.status === "published" ? "Live on Gym Board" : "Draft"}
-                </Badge>
+              <div className="flex items-center gap-2 flex-wrap">
                 {/* A completeness meter, worded so it can't read as a date. */}
                 <div className="flex items-center gap-2">
                   <div className="h-1.5 w-16 rounded-full bg-neutral-800 overflow-hidden" aria-hidden>
@@ -846,6 +833,12 @@ const AdminPracticePlan = () => {
                     </AlertDialogFooter>
                   </AlertDialogContent>
                 </AlertDialog>
+                <LiveSwitch
+                  live={week.status === "published"}
+                  onChange={() => publish.mutate()}
+                  pending={publish.isPending}
+                  what="the practice plan"
+                />
               </div>
             )}
           </div>
@@ -921,6 +914,7 @@ const AdminPracticePlan = () => {
               ))}
             </div>
           )}
+          </div>
         </TabsContent>
 
         {/* ── The template ── */}
@@ -964,22 +958,19 @@ const StartWeekCard = ({
   onStart: () => void;
   starting: boolean;
 }) => (
-  <div className="rounded-xl border border-neutral-800 bg-neutral-900 p-8 text-center">
-    <CalendarDays className="w-8 h-8 mx-auto mb-3" style={{ color: NLA_RED }} />
-    <h3 className="text-lg font-bold text-white">
-      Not written yet — {formatWeekRange(weekStart, season)}
-    </h3>
-    <p className="text-sm text-neutral-400 mt-1.5 max-w-md mx-auto">
-      Pick the days you&apos;re practicing and every slot comes up on the
-      template&apos;s skeleton — three groups a day. Saturdays and Sundays get
-      an open slot to write into.
+  <div className="rounded-lg border border-neutral-800 bg-black/30 p-8 text-center">
+    <Sparkles className="h-8 w-8 mx-auto mb-3 text-white/30" />
+    <p className="font-bold mb-1 text-white">Not written yet</p>
+    <p className="text-sm text-neutral-400 max-w-md mx-auto">
+      Pick the days you&apos;re practicing and every slot comes up from the template —
+      three groups a day. Saturdays and Sundays get an open slot to write into.
     </p>
 
-    <div className="mt-6">
+    <div className="mt-5">
       <Button
         onClick={onStart}
         disabled={starting}
-        className="h-11 px-6 text-white font-bold"
+        className="text-white font-bold"
         style={{ backgroundColor: NLA_RED }}
       >
         {starting ? (

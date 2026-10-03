@@ -293,9 +293,6 @@ export const BattleTeamWeek = ({
             </div>
             {hasWeek && (
               <div className="flex items-center gap-2 flex-wrap justify-end">
-                <span className={`text-[11px] font-semibold px-2.5 py-1 rounded-full border ${locked ? "bg-emerald-500/15 border-emerald-400/30 text-emerald-300" : "bg-amber-500/15 border-amber-400/30 text-amber-300"}`}>
-                  {locked ? "Live on Gym Board" : "Draft"}
-                </span>
                 <button onClick={generateWeek} disabled={generating || locked}
                   title={locked ? "Unlock the week to rebuild it" : "Throw this week away and write all three days again"}
                   className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-semibold bg-white/5 hover:bg-white/10 border border-white/15 disabled:opacity-50">

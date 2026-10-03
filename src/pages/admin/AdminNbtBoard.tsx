@@ -23,6 +23,7 @@ import {
 import { priorWeekBriefs, roomReport, carryOver, dayProblem } from "@/lib/nbtCoaching";
 import { AlertTriangle } from "lucide-react";
 import { roomBrief } from "@/lib/nbtRooms";
+import { prettyRange } from "@/lib/strength";
 import { LiveSwitch } from "@/components/practice/LiveSwitch";
 import NbtEditDay from "@/components/nbt/NbtEditDay";
 
@@ -388,10 +389,9 @@ export const NbtWeekBuilder = ({
                 </Button>
               )}
               <div className={embedded ? "text-left" : "text-center"}>
-                <p className="font-bold">Week of {weekStart}</p>
+                <p className="font-bold text-lg">{prettyRange(weekStart)}</p>
                 <p className="text-[11px] text-neutral-500">
-                  {weekStart === thisWeekStart ? "This week · " : ""}
-                  {monthLabel(month)} · week {mondays.indexOf(weekStart) + 1} of {mondays.length}
+                  {weekStart === thisWeekStart ? "This week" : `Week of ${weekStart}`}
                 </p>
               </div>
               {!embedded && (
@@ -406,25 +406,25 @@ export const NbtWeekBuilder = ({
               )}
             </div>
 
-            <div>
-              <Label className="text-xs text-neutral-400">{monthLabel(month)}&apos;s emphasis</Label>
+            <div className="flex items-center gap-3 flex-wrap">
+              <Label className="text-xs text-neutral-400 shrink-0">{monthLabel(month).replace(/ \d{4}$/, "")}&apos;s emphasis</Label>
               <Input
                 value={focus || block?.focus || ""}
                 onChange={(e) => setFocus(e.target.value)}
                 placeholder="Own the basics · Pace yourself · Quality before weight"
-                className="mt-1 bg-neutral-800 border-neutral-700 text-white"
+                className="flex-1 min-w-[240px] h-9 bg-neutral-800 border-neutral-700 text-white text-sm"
               />
-              {progress ? (
-                <p className="text-[11px] text-neutral-300 mt-1.5 flex items-center gap-1.5">
-                  <Loader2 className="w-3 h-3 animate-spin" /> {progress} This takes a minute or two.
-                </p>
-              ) : (
-                <p className="text-[11px] text-neutral-500 mt-1.5">
-                  One line for the whole month. Each week sees the ones before it, so the movements hold
-                  across the month and only the challenge changes. Lock a week to put it on the gym board.
-                </p>
-              )}
             </div>
+            {progress ? (
+              <p className="text-[11px] text-neutral-300 flex items-center gap-1.5">
+                <Loader2 className="w-3 h-3 animate-spin" /> {progress} This takes a minute or two.
+              </p>
+            ) : (
+              <p className="text-[11px] text-neutral-500">
+                One line for the whole month. Each week sees the ones before it, so the movements hold
+                across the month and only the challenge changes.
+              </p>
+            )}
           </div>
 
           {isLoading ? (
@@ -440,17 +440,12 @@ export const NbtWeekBuilder = ({
                   return (
                     <div
                       key={monday}
-                      className={`rounded-xl border bg-neutral-900 p-4 flex items-center justify-between gap-4 flex-wrap ${
-                        isLinked ? "border-white/30" : "border-neutral-800"
-                      }`}
+                      className={`rounded-xl border bg-neutral-900 p-8 text-center ${isLinked ? "border-white/30" : "border-neutral-800"}`}
                     >
-                      <p className="font-bold">
-                        Week {weekNo}
-                        <span className="text-neutral-500 font-normal text-sm ml-2">
-                          {monday} — {dateOfDay(monday, "thursday")}
-                          {isThisWeek ? " · this week" : ""}
-                        </span>
-                        <span className="block text-sm font-normal text-neutral-500 mt-0.5">Not written yet</span>
+                      <Sparkles className="h-8 w-8 mx-auto mb-3 text-white/30" />
+                      <p className="font-bold mb-1">Not written yet</p>
+                      <p className="text-neutral-400 text-sm mb-5 max-w-md mx-auto">
+                        Monday squat and push, Tuesday athletic and overhead, Thursday hinge and pull — Alpha and Bravo, in one go.
                       </p>
                       <Button
                         onClick={() => buildWeek(weekNo)}
@@ -483,22 +478,12 @@ export const NbtWeekBuilder = ({
                 >
                   <div className="flex items-center justify-between gap-3 flex-wrap mb-3">
                     <p className="font-bold">
-                      Week {w.week_in_block}
+                      {prettyRange(w.week_start)}
                       <span className="text-neutral-500 font-normal text-sm ml-2">
-                        {w.week_start} — {dateOfDay(w.week_start, "thursday")}
-                        {isThisWeek ? " · this week" : ""}
+                        {isThisWeek ? "this week" : "Mon · Tue · Thu"}
                       </span>
                     </p>
                     <div className="flex items-center gap-2">
-                      <span
-                        className={`text-[11px] font-semibold px-2.5 py-1 rounded-full border ${
-                          locked
-                            ? "bg-emerald-500/15 border-emerald-400/30 text-emerald-300"
-                            : "bg-amber-500/15 border-amber-400/30 text-amber-300"
-                        }`}
-                      >
-                        {locked ? "Live on Gym Board" : "Draft"}
-                      </span>
                       <Button
                         variant="outline" size="sm"
                         onClick={() => buildWeek(weekNo)}
