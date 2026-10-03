@@ -11,7 +11,7 @@ import { ChevronLeft, ChevronRight, ChevronDown, Check } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { addDays, mondayOf, formatWeekRange, type SeasonMode } from "@/lib/practicePlan";
+import { addDays, mondayOf, planningWeekOf, formatWeekRange, type SeasonMode } from "@/lib/practicePlan";
 
 const WEEKS_BACK = 8;
 const WEEKS_AHEAD = 4;
@@ -36,7 +36,8 @@ export const WeekPicker = ({
   action?: React.ReactNode;
 }) => {
   const [open, setOpen] = useState(false);
-  const today = mondayOf();
+  const today = mondayOf();          // the calendar week, for the labels
+  const home = planningWeekOf();     // where Today lands: next week from Saturday on
   const isPast = weekStart < today;
 
   // The weeks on offer, newest first, with the practice plan's state of each.
@@ -106,8 +107,8 @@ export const WeekPicker = ({
         <Button variant="ghost" size="icon" onClick={() => onChange(addDays(weekStart, 7))} className="text-neutral-400 hover:text-white h-8 w-8" aria-label="Next week">
           <ChevronRight className="w-4 h-4" />
         </Button>
-        {weekStart !== today && (
-          <Button variant="ghost" size="sm" onClick={() => onChange(today)} className="text-neutral-400 hover:text-white text-xs">
+        {weekStart !== home && (
+          <Button variant="ghost" size="sm" onClick={() => onChange(home)} className="text-neutral-400 hover:text-white text-xs" title={home === today ? "This week" : "The week ahead — it is the weekend"}>
             Today
           </Button>
         )}

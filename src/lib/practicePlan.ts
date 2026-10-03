@@ -471,3 +471,17 @@ export const wrapupFor = (
   }
   return templateRow ? { ...templateRow, overridden: false } : null;
 };
+
+/**
+ * The week a coach is PLANNING. Monday to Friday that is this week; on
+ * Saturday and Sunday this week is over, so it is the week ahead. The Gym
+ * Board on the wall does not use this — it keeps showing the current week
+ * until Monday, so a weekend session still reads the right plan. (Josh, 2026-10-03.)
+ */
+export const planningWeekOf = (date: Date = new Date()): string => {
+  const d = new Date(date);
+  d.setHours(12, 0, 0, 0);
+  const dow = d.getDay(); // 0 = Sunday, 6 = Saturday
+  if (dow === 6 || dow === 0) d.setDate(d.getDate() + (dow === 6 ? 2 : 1));
+  return mondayOf(d);
+};

@@ -51,7 +51,7 @@ import {
 } from "@/lib/practicePlan";
 import { handleIndentKey } from "@/lib/indentTextarea";
 import { SplitLanesEditor } from "@/components/practice/SplitLanes";
-import { hasLanes, bibleStudySiblings, wrapupFor, type Wrapups } from "@/lib/practicePlan";
+import { hasLanes, bibleStudySiblings, wrapupFor, planningWeekOf, type Wrapups } from "@/lib/practicePlan";
 
 const AdminPracticePlan = () => {
   const qc = useQueryClient();
@@ -61,7 +61,7 @@ const AdminPracticePlan = () => {
   // picked here follows you out and back. (Josh, 2026-10-03.)
   const [params] = useSearchParams();
   const linkedWeek = /^\d{4}-\d{2}-\d{2}$/.test(params.get("week") ?? "") ? params.get("week")! : null;
-  const [weekStart, setWeekStart] = useState<string>(() => linkedWeek ?? mondayOf());
+  const [weekStart, setWeekStart] = useState<string>(() => linkedWeek ?? planningWeekOf());
   const navigate = useNavigate();
   // Controlled so the progress strip can jump to a tab. Switching tabs also
   // refreshes the strip, so publishing the verse shows up the moment you

@@ -40,3 +40,16 @@ describe("The week's four jobs", () => {
     expect(steps.map((s) => s.state)).toEqual(["todo", "todo", "todo", "todo"]);
   });
 });
+
+describe("The planning week", () => {
+  it("is this week Monday to Friday, and next week from Saturday", async () => {
+    const { planningWeekOf, mondayOf } = await import("@/lib/practicePlan");
+    const wed = new Date("2026-09-30T10:00:00");
+    const sat = new Date("2026-10-03T09:00:00");
+    const sun = new Date("2026-10-04T20:00:00");
+    expect(planningWeekOf(wed)).toBe(mondayOf(wed));
+    expect(planningWeekOf(wed)).toBe("2026-09-28");
+    expect(planningWeekOf(sat)).toBe("2026-10-05");
+    expect(planningWeekOf(sun)).toBe("2026-10-05");
+  });
+});
