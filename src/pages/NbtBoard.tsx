@@ -14,12 +14,13 @@ import {
   ArrowLeft, Dumbbell, ChevronLeft, ChevronRight, ClipboardList, Maximize, Minimize, Pencil, Check,
 } from "lucide-react";
 import { NbtEditTonight } from "@/components/nbt/NbtEditTonight";
+import { VerseOfTheDayStrip } from "@/components/verse/VerseOfTheDayStrip";
 import { todayNY } from "@/lib/programYear";
 import TrackTimer from "@/components/nbt/TrackTimer";
 import {
   DAYS, DayKey, TRACKS, TRACK_META, NbtDay, NbtWeek, NbtBlock,
   toDateString, mondayOf, firstOfMonth, dateOfDay, todayDayKey, weekInBlock,
-  minutesOf, readableLines, NBT_AMBER,
+  SESSION_CAP_MINUTES, readableLines, NBT_AMBER,
 } from "@/lib/nbt";
 import NbtLogSheet from "@/components/nbt/NbtLogSheet";
 import { PrepStrip } from "@/components/practice/PrepStrip";
@@ -182,7 +183,10 @@ const NbtBoard = () => {
       style={{ background: `linear-gradient(180deg, ${NBT_AMBER}14, transparent 40%), #1c1c1e` }}
     >
       {/* Header */}
-      <header className="flex items-center gap-3 px-5 md:px-8 py-3 border-b border-white/10 flex-wrap">
+      <header
+        className="flex items-center gap-3 px-5 md:px-8 py-3 border-b flex-wrap"
+        style={{ background: `linear-gradient(90deg, ${NBT_AMBER}3d, ${NBT_AMBER}14)`, borderColor: `${NBT_AMBER}66` }}
+      >
         {/* Back to the board this screen was opened from, not up to Operations.
             The coach's side has "Open gym board", so the two now round-trip:
             landing on the Operations hub meant finding the NBT board again by
@@ -204,7 +208,7 @@ const NbtBoard = () => {
             {isDraft && week && <span className="ml-2 text-amber-300">· Draft · not on the board yet</span>}
             {day?.editedOn === todayNY() && <span className="ml-2 text-white/60">· Changed tonight</span>}
           </p>
-          <h1 className="text-lg md:text-xl font-black tracking-tight uppercase">Non-Battle Team</h1>
+          <h1 className="text-lg md:text-xl font-black tracking-tight uppercase text-white">Non-Battle Team</h1>
           <p className="text-[11px] text-white/35">
             {block?.focus ? `${block.focus} · ` : ""}
             Week {week ? weekInBlock(firstOfMonth(weekStart), weekStart) : "—"}
@@ -275,6 +279,7 @@ const NbtBoard = () => {
               className={`flex-1 px-3 py-2.5 text-left transition-colors border-r border-white/[0.06] last:border-r-0 ${
                 on ? "bg-white/[0.07]" : "hover:bg-white/[0.03]"
               }`}
+              style={on ? { boxShadow: `inset 0 -3px 0 ${NBT_AMBER}` } : undefined}
             >
               <p className={`text-sm md:text-base font-black uppercase tracking-wide ${on ? "text-white" : "text-white/35"}`}>
                 {d.label}
@@ -319,17 +324,11 @@ const NbtBoard = () => {
               things only: what to drag out, the lift, the work. The focus
               sentence, the minutes, the cues and the rack reminders stay on
               the coach's plan page. (Josh, 2026-10-03.) */}
-          <PrepStrip equipment={equipment} note={liftNote} accent={NBT_AMBER} />
+          {/* Tuesday has no team meeting, so the verse opens the night here.
+              Same verse and the same discussion pop-up as the Gym Board. */}
+          {dayKey === "tuesday" && <VerseOfTheDayStrip weekStart={weekStart} weekday={2} />}
 
-          {/* The warm-up as one quiet line, not a row of cards. */}
-          {day.prep.length > 0 && (
-            <p className="shrink-0 text-sm md:text-base text-white/60 leading-snug">
-              <span className="font-bold uppercase tracking-[0.18em] text-[11px] md:text-xs mr-2" style={{ color: NBT_AMBER }}>
-                Warm-up
-              </span>
-              {day.prep.join("  ·  ")}
-            </p>
-          )}
+          <PrepStrip equipment={equipment} note={liftNote} accent={NBT_AMBER} />
 
           {/* The two tracks, equal width and equal weight. This row takes
               whatever height is left and the tiles fit themselves to it. */}
@@ -341,11 +340,15 @@ const NbtBoard = () => {
               return (
                 <section
                   key={t}
-                  className="rounded-2xl border-2 overflow-hidden flex flex-col md:min-h-0"
-                  style={{ borderColor: `${m.color}66` }}
+                  className="rounded-2xl border border-white/10 bg-white/[0.03] overflow-hidden flex flex-col md:min-h-0"
                 >
-                  <div className="px-4 py-2" style={{ backgroundColor: `${m.color}22` }}>
-                    <h2 className="text-xl md:text-2xl font-black uppercase tracking-[0.15em]" style={{ color: m.color }}>
+                  {/* The one place the colour is solid: a kid finds their lane
+                      by this bar from across the room. */}
+                  <div className="px-4 py-2" style={{ backgroundColor: m.color }}>
+                    <h2
+                      className="text-xl md:text-2xl font-black uppercase tracking-[0.2em]"
+                      style={{ color: "#0a0a0a" }}
+                    >
                       {m.label}
                     </h2>
                   </div>
@@ -359,25 +362,27 @@ const NbtBoard = () => {
                     {/* The lift: the name is what they read, the dose sits
                         beside it in a chip. */}
                     <div className="px-[0.9em] pt-[0.8em] pb-[0.6em]">
-                      <TrackLabel color={m.color}>Lift{day.lift.pattern ? ` · ${day.lift.pattern}` : ""}</TrackLabel>
-                      <div className="flex items-start justify-between gap-[0.6em] mt-[0.25em]">
-                        <p className="text-[1.5em] font-bold leading-tight">{lift?.name}</p>
-                        {lift?.detail && (
-                          <span
-                            className="shrink-0 rounded-lg px-[0.55em] py-[0.2em] text-[1em] font-black tabular-nums"
-                            style={{ backgroundColor: `${m.color}26`, color: m.color }}
-                          >
-                            {lift.detail}
-                          </span>
-                        )}
-                      </div>
+                      <TrackLabel color="#ffffff">Lift</TrackLabel>
+                      {/* The name gets the whole width; the dose sits under it
+                          and wraps, so a long note from the generator never
+                          squeezes "Back Squat / Bench Press" into one word a
+                          line or runs off the tile. */}
+                      <p className="text-[1.45em] font-bold leading-tight mt-[0.25em]">{lift?.name}</p>
+                      {lift?.detail && (
+                        <p
+                          className="inline-block mt-[0.4em] rounded-lg px-[0.55em] py-[0.25em] text-[0.95em] font-black leading-snug"
+                          style={{ backgroundColor: `${m.color}26`, color: m.color }}
+                        >
+                          {lift.detail}
+                        </p>
+                      )}
                     </div>
 
                     {work.length > 0 && (
                       <>
-                        <div className="h-px mx-[0.9em]" style={{ backgroundColor: `${m.color}40` }} />
+                        <div className="h-px mx-[0.9em] bg-white/10" />
                         <div className="px-[0.9em] pt-[0.6em] pb-[0.8em] flex-1 flex flex-col">
-                          <TrackLabel color={m.color}>Work</TrackLabel>
+                          <TrackLabel color="#ffffff">Work</TrackLabel>
 
                           {/* The structure line ("4 rounds — rest 45 sec") reads
                               as a header; every station underneath is one
@@ -406,12 +411,20 @@ const NbtBoard = () => {
                           </ul>
 
                           {/* Each track has its own clock, in its own colour,
-                              because the tracks do not start together. Under
-                              the work, out of the way of the reading. */}
+                              because the tracks do not start together — Alpha
+                              is often into the work while Bravo is still on
+                              the bar. It counts the WHOLE session, prep to
+                              reset — the 40-minute block, always: when it
+                              hits zero, you box.
+                              (Josh, 2026-10-03.) Under the work, out of the
+                              way of the reading. */}
                           <div className="mt-auto pt-[0.6em]">
+                            <p className="text-[0.55em] uppercase tracking-[0.18em] font-bold mb-[0.3em] text-white/45">
+                              {m.label}&apos;s session · {SESSION_CAP_MINUTES} min
+                            </p>
                             <TrackTimer
                               storageKey={`nbt-timer:${weekStart}:${dayKey}:${t}`}
-                              minutes={minutesOf(day).work}
+                              minutes={SESSION_CAP_MINUTES}
                               color={m.color}
                             />
                           </div>
@@ -448,7 +461,7 @@ const addWeek = (weekStart: string, n: number) => {
 const TrackLabel = ({ color, children }: { color: string; children: React.ReactNode }) => (
   <p
     className="text-[0.55em] uppercase tracking-[0.18em] font-bold"
-    style={{ color: `${color}cc` }}
+    style={{ color: `${color}73` }}
   >
     {children}
   </p>

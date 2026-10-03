@@ -52,7 +52,8 @@ export const ROOMS: Record<RoomKey, Room> = {
       one("bike", "the assault bikes", 6),
       one("rower", "the rowers", 6),
       one("skier", "the ski ergs", 2),
-      one("sled", "the push sled", 1),
+      // There is one push sled. One sled does not work for a group, so it is
+      // not in the inventory on purpose (Josh, 2026-10-03) — writing it is refused.
       one("box", "the plyo boxes", 4),
       plenty("wallBall", "the wall-ball targets"),
       plenty("barbell", "barbells and plates"),
@@ -96,8 +97,6 @@ export const kitIn = (room: Room, key: KitKey): Kit | undefined => room.kit.find
 /** Kit that moves between rooms during prep, so a day may ask for it to be brought over. */
 export const MOVABLE: KitKey[] = ["box", "handWeight"];
 
-/** The sled's turf, for the generator: 35 ft, so pushes are up-and-back. */
-export const SLED_TURF_FEET = 35;
 
 /**
  * How a line of a session names each item. The movements that cannot be done
@@ -146,7 +145,7 @@ export const roomBrief = (dayKey: DayKey): string => {
   const lines = [
     `THE ROOM TODAY: the ${room.name}. ` +
       (room.canRun
-        ? `Running is shuttles and down-and-backs inside ${room.maxYards} yards only.`
+        ? `The floor is the basketball court: 75 ft baseline to baseline, 56 ft sideline to sideline. Say every floor distance in court — baseline to baseline (75 ft), baseline to baseline and back (150 ft), sideline to sideline (56 ft), sideline to sideline and back (112 ft) — never in metres, yards or feet. Nothing longer than one court length (${room.maxYards} yards); never a lap.`
         : "No running of any kind — every movement stays on the spot."),
     scarce.length
       ? "SCARCE — one track per block, never both at once: " +
@@ -159,7 +158,7 @@ export const roomBrief = (dayKey: DayKey): string => {
     plentyKit.length ? "PLENTY — anyone, any time: " + plentyKit.map((k) => k.label).join(", ") + "." : "",
     absent.length ? "NOT IN THIS ROOM — never write them: " + absent.join(", ") + "." : "",
     "Plyo boxes, dumbbells and kettlebells can be carried over from the other room during prep; say so in the prep when a session needs them.",
-    kitIn(room, "sled") ? `The sled runs on ${SLED_TURF_FEET} ft of turf: pushes are up-and-back, one athlete at a time.` : "",
+    "Never a sled or prowler push: there is one sled and it does not work for a group.",
   ];
   return lines.filter(Boolean).join("\n");
 };

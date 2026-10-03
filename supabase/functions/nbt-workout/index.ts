@@ -43,16 +43,24 @@ const SYSTEM =
   "THE SPACE — A HARD CONSTRAINT, NOT A PREFERENCE. The days are in different rooms and the room decides " +
   "what is physically possible. The exact room and its inventory for THIS day come with every request under " +
   "THE ROOM TODAY — read it first and obey it over anything general here:\n" +
-  "- MONDAY and THURSDAY are in the PERFORMANCE CENTER. The usable floor is the basketball court, 75 ft by " +
-  "  50 ft; the rest of the building holds equipment and cannot be run on. The longest straight line is 75 ft — " +
-  "  TWENTY-FIVE YARDS. Running here means shuttles, down-and-backs, suicides at 5/10/15/25 yards, and short " +
-  "  accelerations. NEVER write a lap, a timed distance run, or any single run longer than 25 yards. There is " +
-  "  no outdoor option. Twenty-five-yard shuttles are all braking, so keep hard changes of direction to a " +
-  "  sensible volume in one session and pair them with work that does not decelerate. The machines — bikes, " +
-  "  rowers, ski ergs, the push sled on its turf — are HERE, and belong in the work block as stations.\n" +
+  "- MONDAY and THURSDAY are in the PERFORMANCE CENTER. The usable floor is the basketball court, 75 ft " +
+  "  baseline to baseline and 56 ft sideline to sideline; the rest of the building holds equipment and cannot " +
+  "  be run on. The longest straight line is one court length — 75 ft, TWENTY-FIVE YARDS. NEVER write a lap, " +
+  "  a timed distance run, or any single run longer than the court. There is no outdoor option.\n" +
+  "  SAY DISTANCE IN COURT, NEVER IN METERS, YARDS OR FEET, for anything done on the floor — carries, " +
+  "  walks, lunges, shuttles, sprints, bear crawls. The only four distances: 'baseline to baseline' (75 ft), " +
+  "  'baseline to baseline and back' (150 ft), 'sideline to sideline' (56 ft), 'sideline to sideline and " +
+  "  back' (112 ft). Multiply with × for more: 'baseline to baseline and back × 2'. 'Overhead carry 20 m' is " +
+  "  wrong; 'overhead carry — baseline to baseline' is right. A kid can see a baseline; nobody can see 20 " +
+  "  metres. Rower, " +
+  "  bike and ski erg lines keep their metres, calories or seconds, because that is what the machine shows. " +
+  "  Court lengths are all braking, so keep hard changes of direction to a sensible volume in one session " +
+  "  and pair them with work that does not decelerate. The machines — bikes, " +
+  "  rowers, ski ergs — are HERE, and belong in the work block as stations. NEVER a sled push: there is " +
+  "  one sled and it does not work for a group.\n" +
   "- TUESDAY is in the BOXING FACILITY, half the size, with NO ROOM TO RUN AT ALL. Not a length, not a jog, " +
   "  not a lap, not a shuttle, not a single yard. Tuesday conditioning happens ON THE SPOT. There are NO " +
-  "  machines in this room — no bikes, no rowers, no ski ergs, no sled; they are in the other building with " +
+  "  machines in this room — no bikes, no rowers, no ski ergs; they are in the other building with " +
   "  the Junior Boxers. Tuesday's conditioning is jump rope, wall balls, med balls, bands, pull-up bars, " +
   "  dumbbells, kettlebells and bodyweight — air squats, burpees, lunges, step-ups, push-ups, core — in " +
   "  rounds and intervals. PLYOMETRICS are a Tuesday option, once or twice a month, in the lift block as the " +
@@ -71,12 +79,12 @@ const SYSTEM =
   "EQUIPMENT IS SHARED AND FINITE. Both tracks train AT THE SAME TIME, in the same room, and anywhere " +
   "between 15 and 40 athletes are on the floor. Two tracks reaching for the same scarce item is a queue, not " +
   "a workout. THE ROOM TODAY (sent with the request) lists exactly what is in the room and how many:\n" +
-  "- SCARCE means it has a count — racks, benches, bikes, rowers, ski ergs, the sled, the plyo boxes. A " +
+  "- SCARCE means it has a count — racks, benches, bikes, rowers, ski ergs, the plyo boxes. A " +
   "  scarce item belongs to ONE TRACK PER BLOCK: both tracks lift at the same time, and both do the work " +
   "  block at the same time, so the other track gets a version of the same pattern that needs none of it. " +
   "  If Alpha back squats in the racks, Bravo goblet squats on the floor. If Alpha bench presses on the " +
   "  benches, Bravo floor presses or does push-ups — NOT dumbbell bench press on the same three benches. " +
-  "  If Alpha has the rowers in its circuit, Bravo has the bikes, the ski ergs, the sled, or the floor.\n" +
+  "  If Alpha has the rowers in its circuit, Bravo has the bikes, the ski ergs, or the floor.\n" +
   "- The room may say an item has ENOUGH FOR BOTH TRACKS AT ONCE (the boxing facility's six racks and six " +
   "  benches). Then both may lift on it, in small groups taking turns.\n" +
   "- A scarce item is a STATION inside a rotation, NEVER something a whole track does at the same moment. " +
@@ -101,8 +109,8 @@ const SYSTEM =
   "CARRIES follow the same ladder: dumbbell or kettlebell farmer carry for BRAVO, heavier farmer carry or a " +
   "plate carry for ALPHA. There are plenty of dumbbells and kettlebells, so both may carry at once.\n" +
   "IN THE WORK BLOCK, one circuit written twice at two doses on the same scarce station is a queue two deep. " +
-  "Split the STATIONS, not just the doses: if Alpha rows, Bravo does not row — Bravo bikes, skis, pushes the " +
-  "sled, or is on the floor. Each track's circuit must be mostly floor work that needs nothing, with at most " +
+  "Split the STATIONS, not just the doses: if Alpha rows, Bravo does not row — Bravo bikes, skis, or is on " +
+  "the floor. Each track's circuit must be mostly floor work that needs nothing, with at most " +
   "one scarce item as one station in it, and no two tracks sharing that item.\n\n" +
 
   "THE CONDITIONING NEVER REPEATS THE LIFT. The lift block is quality reps under load; the work block is the " +
@@ -179,7 +187,7 @@ const SYSTEM =
   "needs a training reason.\n\n" +
 
   "CONDITIONING: prefer movements that stay safe and understandable under fatigue — burpees, jump rope, " +
-  "bikes, rowers, carries, sleds, med balls, bodyweight and simple dumbbell work, step-ups, lunges, " +
+  "bikes, rowers, carries, med balls, bodyweight and simple dumbbell work, step-ups, lunges, " +
   "core, box jumps when appropriate, hangs, push/pull stations, and — ON MONDAY AND THURSDAY ONLY — running " +
   "and shuttles within the 25-yard court. NEVER program bear crawls: this academy uses them for " +
   "discipline, not conditioning. Avoid maximal lifts, technical lifts under fatigue, high-rep heavy barbell work, " +
@@ -266,17 +274,19 @@ const track = (v: unknown) => ({
 
 const DAY_BRIEF: Record<string, string> = {
   monday:
-    "MONDAY — SQUAT + PUSH. Performance Center, on the basketball court: 75 ft by 50 ft. Any running is " +
-    "shuttles or down-and-backs, 25 yards maximum, never a lap or a distance. Bikes, rowers, ski ergs and " +
-    "the sled are here for the work block.",
+    "MONDAY — SQUAT + PUSH. Performance Center, on the basketball court: 75 ft baseline to baseline, 56 ft " +
+    "sideline to sideline. Floor distances are said in court — baseline to baseline (75 ft), baseline to " +
+    "baseline and back (150 ft), sideline to sideline (56 ft), sideline to sideline and back (112 ft) — never " +
+    "in metres, yards or feet. Never a lap. Bikes, rowers and ski ergs are here for the work block. No sled.",
   tuesday:
     "TUESDAY — ATHLETIC + OVERHEAD. Boxing facility: NO RUNNING AT ALL — there is no floor for it, and NO " +
-    "machines — no bikes, no rowers, no ski ergs, no sled. Every conditioning movement stays on the spot. " +
+    "machines — no bikes, no rowers, no ski ergs. Every conditioning movement stays on the spot. " +
     "Athletic and energetic, not a second heavy strength day. Plyometrics are an option here.",
   thursday:
-    "THURSDAY — HINGE + PULL. Performance Center, on the basketball court: 75 ft by 50 ft. Any running is " +
-    "shuttles or down-and-backs, 25 yards maximum, never a lap or a distance. Bikes, rowers, ski ergs and " +
-    "the sled are here for the work block.",
+    "THURSDAY — HINGE + PULL. Performance Center, on the basketball court: 75 ft baseline to baseline, 56 ft " +
+    "sideline to sideline. Floor distances are said in court — baseline to baseline (75 ft), baseline to " +
+    "baseline and back (150 ft), sideline to sideline (56 ft), sideline to sideline and back (112 ft) — never " +
+    "in metres, yards or feet. Never a lap. Bikes, rowers and ski ergs are here for the work block. No sled.",
 };
 
 Deno.serve(async (req: Request) => {
@@ -318,6 +328,8 @@ Deno.serve(async (req: Request) => {
     const retryNote = String(body?.retryNote ?? "").trim();
     // Set when only one of the two tracks is being rewritten.
     const onlyTrack = String(body?.onlyTrack ?? "").trim().toLowerCase();
+    // Narrower still: just that track's lift, or just its work block.
+    const onlyBlock = ["lift", "work"].includes(String(body?.onlyBlock ?? "")) ? String(body.onlyBlock) : "";
     const keepDay = body?.keepDay ?? null;
 
     // Every track spelled out, so "keep the same movement" means both.
@@ -400,9 +412,12 @@ Deno.serve(async (req: Request) => {
           "back to me with EVERYTHING else byte-for-byte unchanged: focus, prep, reset, lift pattern, cues, " +
           "work title, work emphasis, result unit, and the track you are not rewriting.\n" +
           `Here is the current day:\n${JSON.stringify(keepDay)}\n` +
-          `Change ONLY the "${onlyTrack}" entries inside lift and work. The new version must remain a ` +
-          "progression of the SAME movement pattern as the other two tracks — a different exercise or a " +
-          "different dose at that level, never a different pattern.\n"
+          (onlyBlock
+            ? `Change ONLY the "${onlyTrack}" entry inside "${onlyBlock}" — ${onlyBlock === "lift" ? "the lift and its dose" : "the work-block lines"}. ` +
+              `Leave "${onlyTrack}"'s ${onlyBlock === "lift" ? "work block" : "lift"} exactly as it is too. `
+            : `Change ONLY the "${onlyTrack}" entries inside lift and work. `) +
+          "The new version must remain a progression of the SAME movement pattern as the other track — a " +
+          "different exercise or a different dose at that level, never a different pattern.\n"
         : "";
 
     const userPrompt =

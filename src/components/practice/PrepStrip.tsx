@@ -11,8 +11,7 @@ export const PrepStrip = ({
   if (!equipment.length && !note) return null;
   return (
     <div
-      className="shrink-0 rounded-xl border px-4 py-2 flex items-start gap-4 flex-wrap"
-      style={{ borderColor: `${accent}55`, background: `${accent}12` }}
+      className="shrink-0 rounded-xl border border-white/10 bg-white/[0.03] px-4 py-2 flex items-start gap-4 flex-wrap"
     >
       <p className="text-[10px] font-bold uppercase tracking-[0.2em] self-center" style={{ color: accent }}>
         Prep · drag out first

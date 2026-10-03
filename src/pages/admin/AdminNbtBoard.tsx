@@ -18,8 +18,10 @@ import { toast } from "sonner";
 import {
   DAYS, DayKey, TRACKS, TRACK_META, Track, NbtBlock, NbtWeek, NbtDay, NbtLog,
   toDateString, firstOfMonth, monthLabel, mondaysInMonth, dateOfDay, mondayOf, NBT_AMBER,
+  readableLines, minutesOf, totalMinutes,
 } from "@/lib/nbt";
 import { priorWeekBriefs, roomReport, carryOver, dayProblem } from "@/lib/nbtCoaching";
+import { AlertTriangle } from "lucide-react";
 import { roomBrief } from "@/lib/nbtRooms";
 import NbtEditDay from "@/components/nbt/NbtEditDay";
 
@@ -129,7 +131,7 @@ const AdminNbtBoard = () => {
     dayKey: DayKey,
     prior: NbtWeek[],
     attempt = 0,
-    only?: { track: Track; keepDay: NbtDay },
+    only?: { track: Track; keepDay: NbtDay; block?: "lift" | "work" },
     /** Why the last attempt was thrown away, so the next one can fix it. */
     retryNote?: string
   ): Promise<NbtDay> => {
@@ -147,7 +149,7 @@ const AdminNbtBoard = () => {
           dayKey, weekInBlock: weekNo, blockFocus, priorWeeks, roomKit: roomBrief(dayKey),
           ...(room ? { room } : {}),
           ...(carry ? { carryOver: carry } : {}),
-          ...(only ? { onlyTrack: only.track, keepDay: only.keepDay } : {}),
+          ...(only ? { onlyTrack: only.track, keepDay: only.keepDay, ...(only.block ? { onlyBlock: only.block } : {}) } : {}),
           ...(retryNote ? { retryNote } : {}),
         },
       });
@@ -318,10 +320,15 @@ const AdminNbtBoard = () => {
    * Rewrite ONE track of a day, handing the model the other two so the three
    * stay progressions of the same pattern rather than drifting apart.
    */
-  const regenerateTrack = async (week: NbtWeek, dayKey: DayKey, track: Track) => {
+  /**
+   * Rewrite one track — or just its lift, or just its work block. Whatever
+   * was not asked for is put back from what we sent, so a model that ignores
+   * the instruction still cannot disturb it. (Josh, 2026-10-03.)
+   */
+  const regenerateTrack = async (week: NbtWeek, dayKey: DayKey, track: Track, blockPart?: "lift" | "work") => {
     const current = week.days?.[dayKey];
     if (!current) return;
-    setBusy(`${week.id}-${dayKey}-${track}`);
+    setBusy(`${week.id}-${dayKey}-${track}${blockPart ? `-${blockPart}` : ""}`);
     try {
       const day = await generateDay(
         block?.focus ?? "",
@@ -329,17 +336,16 @@ const AdminNbtBoard = () => {
         dayKey,
         weeks,
         0,
-        { track, keepDay: current }
+        { track, keepDay: current, block: blockPart }
       );
-      // Belt and braces: the other two tracks are restored from what we sent,
-      // so a model that ignores the instruction still cannot disturb them.
       const merged: NbtDay = {
         ...current,
-        lift: { ...current.lift, [track]: day.lift[track] },
-        work: { ...current.work, [track]: day.work[track] },
+        lift: blockPart === "work" ? current.lift : { ...current.lift, [track]: day.lift[track] },
+        work: blockPart === "lift" ? current.work : { ...current.work, [track]: day.work[track] },
       };
       await saveDay(week, dayKey, merged);
-      toast.success(`${TRACK_META[track].label} rewritten.`);
+      const what = blockPart === "lift" ? "lift" : blockPart === "work" ? "work" : "track";
+      toast.success(`${TRACK_META[track].label}'s ${what} rewritten.`);
     } catch (e) {
       toast.error((e as Error)?.message ?? "Couldn’t rewrite that track.");
     } finally {
@@ -512,6 +518,13 @@ const AdminNbtBoard = () => {
                   );
                 }
                 const locked = w.status === "locked";
+                // A week written before the current room rules — the sled,
+                // the court language, the kit — is caught here, not on the
+                // wall. The checks only run when a day is generated, so a
+                // stored week needs a rebuild to pick the rules up.
+                const stale = DAYS
+                  .map((d) => ({ d, problem: w.days?.[d.key] ? dayProblem(w.days[d.key]!, d.key) : null }))
+                  .filter((x) => x.problem);
                 return (
                 <div
                   key={w.id}
@@ -561,6 +574,18 @@ const AdminNbtBoard = () => {
                       </Button>
                     </div>
                   </div>
+                  {stale.length > 0 && (
+                    <div className="mb-3 rounded-lg border border-amber-400/40 bg-amber-500/10 p-3 text-sm">
+                      <p className="font-semibold text-amber-200 flex items-center gap-1.5">
+                        <AlertTriangle className="w-4 h-4" /> Written before the current room rules — rebuild this week.
+                      </p>
+                      <ul className="mt-1 space-y-0.5 text-amber-100/80 text-xs">
+                        {stale.map(({ d, problem }) => (
+                          <li key={d.key}><span className="font-semibold">{d.label}:</span> {problem}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
                   <div className="grid gap-3 md:grid-cols-3">
                     {DAYS.map((d) => {
                       const day = w.days?.[d.key];
@@ -601,41 +626,95 @@ const AdminNbtBoard = () => {
                           {!day ? (
                             <p className="text-xs text-neutral-600 italic">Not written</p>
                           ) : (
-                            <div className="space-y-1.5">
+                            /* The whole session, in the order the kids read it,
+                               so the week is reviewed and approved from here. */
+                            <div className="space-y-3">
                               {day.focus && <p className="text-sm text-white">{day.focus}</p>}
-                              <p className="text-[11px] text-neutral-500 uppercase tracking-wide">
-                                Strength · {day.lift.pattern}
-                              </p>
-                              {TRACKS.map((t) => (
-                                <p key={t} className="text-xs flex items-start gap-1.5 group/track">
-                                  <span style={{ color: TRACK_META[t].color }} className="font-bold shrink-0">
-                                    {TRACK_META[t].label}
-                                  </span>
-                                  <span className="text-neutral-400 flex-1">
-                                    {day.lift[t].name} · {day.lift[t].detail}
-                                  </span>
-                                  {/* Rewrite just this track. The other two are
-                                      sent along and put back untouched. */}
-                                  <button
-                                    onClick={() => regenerateTrack(w, d.key, t)}
-                                    disabled={busy !== null}
-                                    title={`Rewrite only ${TRACK_META[t].label}`}
-                                    className="text-neutral-700 hover:text-white shrink-0 mt-0.5"
-                                  >
-                                    {busy === `${w.id}-${d.key}-${t}` ? (
-                                      <Loader2 className="w-3 h-3 animate-spin" />
-                                    ) : (
-                                      <RefreshCw className="w-3 h-3" />
+
+
+                              {TRACKS.map((t) => {
+                                const m = TRACK_META[t];
+                                return (
+                                  <div key={t} className="rounded-md border p-2 space-y-1.5" style={{ borderColor: `${m.color}44` }}>
+                                    <div className="flex items-start justify-between gap-2">
+                                      <p className="text-xs font-bold" style={{ color: m.color }}>{m.label}</p>
+                                      {/* Rewrite the whole track, just its lift, or just
+                                          its work. Whatever isn't asked for is put back. */}
+                                      <div className="flex items-center gap-1 shrink-0">
+                                        {([
+                                          ["lift", "Lift"],
+                                          ["work", "Work"],
+                                          [undefined, "Both"],
+                                        ] as const).map(([part, label]) => {
+                                          const key = `${w.id}-${d.key}-${t}${part ? `-${part}` : ""}`;
+                                          return (
+                                            <button
+                                              key={label}
+                                              onClick={() => regenerateTrack(w, d.key, t, part)}
+                                              disabled={busy !== null}
+                                              title={part ? `Rewrite only ${m.label}'s ${part}` : `Rewrite all of ${m.label}`}
+                                              className="inline-flex items-center gap-1 rounded border border-neutral-800 px-1.5 py-0.5 text-[10px] font-semibold text-neutral-500 hover:text-white hover:border-neutral-600 disabled:opacity-40"
+                                            >
+                                              {busy === key ? <Loader2 className="w-3 h-3 animate-spin" /> : <RefreshCw className="w-3 h-3" />}
+                                              {label}
+                                            </button>
+                                          );
+                                        })}
+                                      </div>
+                                    </div>
+                                    <p className="text-xs text-white leading-snug">
+                                      <span className="text-[10px] font-bold uppercase tracking-wide text-neutral-500 mr-1.5">Lift</span>
+                                      <span className="font-semibold">{day.lift[t].name}</span>
+                                      {day.lift[t].detail && <span className="text-neutral-400"> · {day.lift[t].detail}</span>}
+                                    </p>
+                                    {(day.work[t] ?? []).length > 0 && (
+                                      <div>
+                                        <p className="text-[10px] font-bold uppercase tracking-wide text-neutral-500">Work</p>
+                                        <ul className="mt-0.5 space-y-0.5">
+                                          {readableLines(day.work[t]).map((line, k) =>
+                                            line.kind === "rounds" ? (
+                                              <li key={k} className="text-[11px] font-bold uppercase tracking-wide" style={{ color: m.color }}>
+                                                {line.text}
+                                              </li>
+                                            ) : (
+                                              <li key={k} className="text-xs text-neutral-300 flex items-start gap-1.5">
+                                                <span className="w-1 h-1 rounded-full shrink-0 mt-[0.45em]" style={{ backgroundColor: m.color }} />
+                                                <span>{line.text}</span>
+                                              </li>
+                                            )
+                                          )}
+                                        </ul>
+                                      </div>
                                     )}
-                                  </button>
-                                </p>
-                              ))}
-                              {day.work.title && (
-                                <p className="text-[11px] text-neutral-500 pt-1">
-                                  Conditioning: {day.work.title}
+                                  </div>
+                                );
+                              })}
+
+                              {/* Coach-only: what the wall deliberately leaves off. */}
+                              <div className="text-[11px] text-neutral-500 space-y-1 pt-1 border-t border-neutral-800">
+                                <p>
+                                  <span className="font-bold uppercase tracking-wide text-[10px] mr-1.5">Pattern</span>
+                                  {day.lift.pattern || "—"}
+                                  {day.work.title ? ` · ${day.work.title}` : ""}
                                   {day.work.emphasis ? ` (${day.work.emphasis})` : ""}
                                 </p>
-                              )}
+                                <p>
+                                  <span className="font-bold uppercase tracking-wide text-[10px] mr-1.5">Minutes</span>
+                                  prep {minutesOf(day).prep} · lift {minutesOf(day).lift} · work {minutesOf(day).work} · reset {minutesOf(day).reset} · {totalMinutes(day)} total
+                                </p>
+                                {day.lift.cues.length > 0 && (
+                                  <p>
+                                    <span className="font-bold uppercase tracking-wide text-[10px] mr-1.5">Cues</span>
+                                    {day.lift.cues.join("  ·  ")}
+                                  </p>
+                                )}
+                                {day.reset.length > 0 && (
+                                  <p>
+                                    <span className="font-bold uppercase tracking-wide text-[10px] mr-1.5">Reset</span>
+                                    {day.reset.join("  ·  ")}
+                                  </p>
+                                )}
+                              </div>
                             </div>
                           )}
                         </div>

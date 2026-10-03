@@ -510,11 +510,38 @@ export const unreadableLine = (day: NbtDay): string | null => {
   return null;
 };
 
-/** Everything wrong with a generated day, or null. The room, the kit, the repeat, then the reading. */
+/* ───── 4b. On the court, distance is said in court ─────
+   A kid can see a baseline; nobody can see 20 metres. On Performance Center
+   days a carry, walk, lunge or shuttle is written "baseline to baseline",
+   "sideline to sideline", "half court and back" — never a number of metres
+   or yards. Machine lines (rower, bike, ski erg) keep their metres, because
+   that is what the screen on the machine shows. (Josh, 2026-10-03.) */
+
+const FLOOR_DISTANCE = /\b\d+(?:\.\d+)?\s*(?:m|meters?|metres?|yards?|yds?|ft|feet)\b/i;
+const MACHINE_LINE = /\b(?:rowers?|row ergs?|ski ?ergs?|skiers?|bikes?)\b|\brow(?:ing)?\b/i;
+
+export const courtLanguage = (day: NbtDay, dayKey: DayKey, only?: Track): string | null => {
+  if (!roomFor(dayKey).canRun) return null;
+  const tracks = only ? [only] : [...TRACKS];
+  for (const t of tracks) {
+    const lines = [day.lift?.[t]?.name ?? "", day.lift?.[t]?.detail ?? "", ...(day.work?.[t] ?? [])];
+    const bad = lines.find((l) => FLOOR_DISTANCE.test(l) && !MACHINE_LINE.test(l));
+    if (bad) {
+      return (
+        `On the court, say distance in court, not in metres or yards — ${trackName(t)}'s session says "${bad.trim()}". ` +
+        "Write it as baseline to baseline (75 ft), baseline to baseline and back (150 ft), sideline to sideline (56 ft), or sideline to sideline and back (112 ft)."
+      );
+    }
+  }
+  return null;
+};
+
+/** Everything wrong with a generated day, or null. The room, the kit, the court, the repeat, then the reading. */
 export const dayProblem = (day: NbtDay, dayKey: DayKey, only?: Track): string | null =>
   spaceViolation(day, dayKey, only) ??
   missingKit(day, dayKey, only) ??
   equipmentClash(day, dayKey) ??
+  courtLanguage(day, dayKey, only) ??
   liftRepeated(day) ??
   unreadableLine(day);
 

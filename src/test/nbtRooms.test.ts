@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { ROOMS, roomFor, kitIn, absentKit, roomBrief, KIT_PATTERNS } from "@/lib/nbtRooms";
-import { equipmentClash, missingKit, dayProblem } from "@/lib/nbtCoaching";
+import { equipmentClash, missingKit, dayProblem, courtLanguage } from "@/lib/nbtCoaching";
 import type { NbtDay } from "@/lib/nbt";
 
 const day = (bravoLift: string, alphaLift: string, bravoWork: string[], alphaWork: string[]): NbtDay => ({
@@ -28,7 +28,8 @@ describe("The two rooms", () => {
     expect(kitIn(pc, "rack")).toMatchObject({ count: 3, shared: false });
     expect(kitIn(pc, "bench")).toMatchObject({ count: 3, shared: false });
     expect(kitIn(pc, "skier")).toMatchObject({ count: 2, shared: false });
-    expect(kitIn(pc, "sled")).toMatchObject({ count: 1, shared: false });
+    // One sled does not work for a group: it is deliberately not in the room.
+    expect(kitIn(pc, "sled")).toBeUndefined();
     expect(kitIn(pc, "box")).toMatchObject({ count: 4, shared: false });
     expect(kitIn(pc, "barbell")).toMatchObject({ count: "plenty" });
     expect(kitIn(pc, "handWeight")).toMatchObject({ count: "plenty" });
@@ -37,7 +38,7 @@ describe("The two rooms", () => {
     expect(kitIn(bf, "rack")).toMatchObject({ count: 6, shared: true });
     expect(kitIn(bf, "bench")).toMatchObject({ count: 6, shared: true });
     expect(absentKit(bf).sort()).toEqual(["bike", "rower", "skier", "sled"]);
-    expect(absentKit(pc)).toEqual([]);
+    expect(absentKit(pc)).toEqual(["sled"]);
   });
 
   it("describe themselves for the generator from the same inventory", () => {
@@ -47,8 +48,11 @@ describe("The two rooms", () => {
     expect(tue).toMatch(/ENOUGH FOR BOTH TRACKS.*squat racks \(6\)/);
     const mon = roomBrief("monday");
     expect(mon).toMatch(/SCARCE.*squat racks \(3\).*benches \(3\).*assault bikes \(6\)/);
-    expect(mon).toMatch(/35 ft of turf/);
-    expect(mon).not.toMatch(/NOT IN THIS ROOM/);
+    expect(mon).toMatch(/75 ft baseline to baseline, 56 ft sideline to sideline/);
+    expect(mon).toMatch(/never in metres, yards or feet/);
+    expect(mon).toMatch(/baseline to baseline and back \(150 ft\).*sideline to sideline and back \(112 ft\)/);
+    expect(mon).toMatch(/Never a sled/);
+    expect(mon).toMatch(/NOT IN THIS ROOM.*the sled/);
   });
 
   it("recognise the movements that need an item even when it is not named", () => {
@@ -92,10 +96,14 @@ describe("Scarce kit belongs to one track per block", () => {
     expect(equipmentClash(d, "monday")).toBeNull();
   });
 
-  it("keeps the machines one-track-per-block, and knows the ski ergs and the sled", () => {
+  it("keeps the machines one-track-per-block, and knows the ski ergs", () => {
     expect(equipmentClash(day("Goblet Squat", "Back Squat", ["Ski erg 30 sec"], ["Ski erg 45 sec"]), "monday")).toMatch(/ski ergs/);
-    expect(equipmentClash(day("Goblet Squat", "Back Squat", ["Sled push up and back"], ["Prowler push"]), "thursday")).toMatch(/push sled/);
     expect(equipmentClash(day("Goblet Squat", "Back Squat", ["Bike 45 sec"], ["Row 250m"]), "monday")).toBeNull();
+  });
+
+  it("refuses a sled push anywhere — one sled does not work for a group", () => {
+    expect(missingKit(day("Goblet Squat", "Back Squat", [], ["Sled push 35 ft up and back"]), "thursday")).toMatch(/no sleds.*Alpha/);
+    expect(missingKit(day("Goblet Squat", "Back Squat", ["Prowler push"], []), "monday")).toMatch(/no sleds/);
   });
 
   it("no longer treats dumbbells and kettlebells as scarce", () => {
@@ -132,5 +140,29 @@ describe("Kit the room does not have", () => {
   it("is reported by dayProblem ahead of a clash", () => {
     const d = day("DB Press", "Barbell Press", ["Bike 45 sec"], ["Bike 60 sec"]);
     expect(dayProblem(d, "tuesday")).toMatch(/no bikes/);
+  });
+});
+
+describe("On the court, distance is said in court", () => {
+  it("refuses metres or yards for a carry, walk or shuttle on Monday and Thursday", () => {
+    expect(courtLanguage(day("Goblet Squat", "Back Squat", [], ["Overhead carry 20m"]), "monday")).toMatch(/say distance in court.*Alpha.*Overhead carry 20m/);
+    expect(courtLanguage(day("Goblet Squat", "Back Squat", ["Walking lunge 15 yards"], []), "thursday")).toMatch(/Bravo/);
+    expect(courtLanguage(day("Goblet Squat", "Back Squat", ["Bear crawl 30 ft"], []), "monday")).not.toBeNull();
+  });
+
+  it("accepts the court's own words", () => {
+    const d = day("Goblet Squat", "Back Squat",
+      ["Farmer carry — baseline to baseline", "Half court and back × 2 — strong but repeatable"],
+      ["Overhead carry — sideline to sideline", "Full court and back — controlled"]);
+    expect(courtLanguage(d, "monday")).toBeNull();
+    expect(dayProblem(d, "thursday")).toBeNull();
+  });
+
+  it("leaves machine lines alone — the rower shows metres", () => {
+    expect(courtLanguage(day("Goblet Squat", "Back Squat", ["Row 250m — controlled pace"], ["Bike 45 sec"]), "monday")).toBeNull();
+  });
+
+  it("does not apply on Tuesday, where there is no court", () => {
+    expect(courtLanguage(day("DB Press", "Barbell Press", ["Farmer carry 20m"], []), "tuesday")).toBeNull();
   });
 });
