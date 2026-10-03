@@ -1,9 +1,8 @@
-import { useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { Plus, Ticket } from "lucide-react";
-import AdminSectionLayout, { SectionCard } from "@/components/admin/AdminSectionLayout";
+import AdminSectionLayout from "@/components/admin/AdminSectionLayout";
 import { Button } from "@/components/ui/button";
-import { useStaffPermissions } from "@/hooks/useStaffPermissions";
+import { useSidebarCards } from "@/hooks/useSidebarCards";
 import { SALES_MARKETING_TILES } from "@/config/pillarTiles";
 
 // Blank index – main panel is empty until a sidebar item is selected
@@ -11,22 +10,9 @@ export const AdminSalesMarketingIndex = () => null;
 
 const AdminSalesMarketing = () => {
   const navigate = useNavigate();
-  const { hasPermission, loading: permLoading } = useStaffPermissions();
-
-  // Sidebar items respect the per-item sub-permissions in
-  // staff_permissions. While perms load, show everything to avoid flash.
-  const sidebarCards = useMemo<SectionCard[]>(
-    () =>
-      SALES_MARKETING_TILES
-        .filter((t) => permLoading || !t.permKey || hasPermission(t.permKey))
-        .map((t) => ({
-          title: t.title,
-          description: t.description,
-          href: t.href,
-          icon: t.icon,
-        })),
-    [permLoading, hasPermission]
-  );
+  // Every line shows; the ones this person cannot open are shaded and locked.
+  // This sidebar is flat: Raffle opens the raffle itself, as it always has.
+  const sidebarCards = useSidebarCards(SALES_MARKETING_TILES, { flat: true });
 
   // Quick launches, the way Operations stacks its check-in buttons: the two
   // things somebody opens this section to do standing up.

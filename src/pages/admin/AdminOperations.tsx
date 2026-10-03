@@ -1,9 +1,8 @@
-import { useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { Star, LogIn, UtensilsCrossed, MapPin, Smile, Scale, Bird, Brain } from "lucide-react";
-import AdminSectionLayout, { SectionCard } from "@/components/admin/AdminSectionLayout";
+import AdminSectionLayout from "@/components/admin/AdminSectionLayout";
 import { Button } from "@/components/ui/button";
-import { useStaffPermissions } from "@/hooks/useStaffPermissions";
+import { useSidebarCards } from "@/hooks/useSidebarCards";
 import { OPERATIONS_TILES } from "@/config/pillarTiles";
 
 // Blank index – main panel is empty until a sidebar item is selected
@@ -11,25 +10,8 @@ export const AdminOperationsIndex = () => null;
 
 const AdminOperations = () => {
   const navigate = useNavigate();
-  const { hasPermission, loading: permLoading } = useStaffPermissions();
-
-  // Hide sidebar tiles whose permission key the user doesn't have. While
-  // permissions are loading, render everything so there's no flash of
-  // empty UI; once loaded, the actual gate kicks in.
-  const sidebarCards = useMemo<SectionCard[]>(
-    () =>
-      OPERATIONS_TILES
-        .filter((t) => permLoading || !t.permKey || hasPermission(t.permKey))
-        .map((t) => ({
-          title: t.title,
-          description: t.description,
-          href: t.href,
-          icon: t.icon,
-          external: t.external,
-          children: t.children,
-        })),
-    [permLoading, hasPermission]
-  );
+  // Every line shows; the ones this person cannot open are shaded and locked.
+  const sidebarCards = useSidebarCards(OPERATIONS_TILES);
 
   const checkInActions = (
     <div className="flex flex-col gap-2 w-full">

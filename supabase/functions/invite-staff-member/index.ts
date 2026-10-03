@@ -1,4 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { isAccessManager } from "../_shared/superAdmins.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -40,16 +41,11 @@ Deno.serve(async (req) => {
     const callerId = claimsData.claims.sub;
     const adminClient = createClient(supabaseUrl, serviceRoleKey);
 
-    // Check caller is admin
-    const { data: roleData } = await adminClient
-      .from("user_roles")
-      .select("role")
-      .eq("user_id", callerId)
-      .eq("role", "admin")
-      .maybeSingle();
-
-    if (!roleData) {
-      return new Response(JSON.stringify({ error: "Forbidden: Admin access required" }), {
+    // Adding a person is an access change, so it belongs to the access
+    // manager alone, whatever role the caller holds.
+    const callerEmail = String(claimsData.claims.email ?? "").toLowerCase();
+    if (!isAccessManager(callerEmail)) {
+      return new Response(JSON.stringify({ error: "Only the access manager can add staff." }), {
         status: 403,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
@@ -95,7 +91,16 @@ Deno.serve(async (req) => {
           .eq("user_id", userId)
           .maybeSingle();
 
-        if (existingProfile) {
+        // A card that is still on Staff Management: nothing to add. A card
+        // that was removed falls through and is brought back below.
+        const { data: liveProfile } = await adminClient
+          .from("staff_profiles")
+          .select("id")
+          .eq("user_id", userId)
+          .is("removed_at", null)
+          .maybeSingle();
+
+        if (existingProfile && liveProfile) {
           return new Response(JSON.stringify({
             already_exists: true,
             user_id: userId,
@@ -114,25 +119,35 @@ Deno.serve(async (req) => {
       userId = invitedUser.user.id;
     }
 
-    // Create staff profile
+    // Create the staff card. Adding back someone who was removed also lifts
+    // the block on their login and puts the card back on the page.
+    await adminClient.auth.admin.updateUserById(userId, { ban_duration: "none" });
     await adminClient.from("staff_profiles").upsert({
       user_id: userId,
       full_name: full_name.trim(),
       email: normalizedEmail,
       job_title: job_title.trim(),
+      status: "active",
+      removed_at: null,
     }, { onConflict: "user_id" });
 
-    // Initialize permissions (all false by default)
-    const permKeys = ["driver_checkin", "operations", "sales_marketing", "finance", "pd_signals", "settings"];
-    const inserts = permKeys.map((key) => ({
-      user_id: userId,
-      permission_key: key,
-      granted: false,
-    }));
-    
-    for (const perm of inserts) {
-      await adminClient.from("staff_permissions").upsert(perm, { onConflict: "user_id,permission_key" });
+    // A new person starts with every box unchecked. Most boxes are off simply
+    // by having no row; the two team tools were open to everyone before they
+    // had boxes, so they are switched off here by name. Rows that already
+    // exist (a login that was given a card later) are left as they are.
+    for (const key of ["app_message_board", "app_agenda"]) {
+      await adminClient.from("staff_permissions").upsert(
+        { user_id: userId, permission_key: key, granted: false },
+        { onConflict: "user_id,permission_key", ignoreDuplicates: true },
+      );
     }
+
+    await adminClient.from("access_log").insert({
+      actor_email: callerEmail,
+      action: inviteError ? "add_card" : "invite",
+      target_email: normalizedEmail,
+      detail: { user_id: userId, full_name: full_name.trim(), job_title: job_title.trim() },
+    });
 
     // Assign admin role
     await adminClient.from("user_roles").upsert({ user_id: userId, role: "admin" }, { onConflict: "user_id,role" });

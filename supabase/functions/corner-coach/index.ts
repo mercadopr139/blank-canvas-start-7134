@@ -210,8 +210,22 @@ Deno.serve(async (req) => {
     if (claimsError || !claimsData?.claims) return json({ error: "Unauthorized" }, 401);
 
     const email = String(claimsData.claims.email ?? "").toLowerCase();
-    if (!isSuperAdmin(email)) {
-      return json({ error: "This assistant is restricted to the account owner." }, 403);
+    // Open to a Super Admin, to an Admin (the access_admin switch in Staff
+    // Management), and to anyone whose Corner Coach box is checked. The
+    // caller reads only their own rows here, and only the access manager can
+    // write them, so nobody can grant this to themselves.
+    let allowed = isSuperAdmin(email);
+    if (!allowed) {
+      const { data: grants } = await supabase
+        .from("staff_permissions")
+        .select("permission_key")
+        .eq("user_id", String(claimsData.claims.sub))
+        .eq("granted", true)
+        .in("permission_key", ["access_admin", "app_corner_coach"]);
+      allowed = (grants?.length ?? 0) > 0;
+    }
+    if (!allowed) {
+      return json({ error: "You do not have access to Corner Coach." }, 403);
     }
 
     const body = await req.json();

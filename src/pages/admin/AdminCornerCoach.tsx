@@ -9,7 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { ArrowLeft, Send, Sparkles, ChevronDown, ChevronRight, Loader2, Database, Pin, Archive, Trash2, Plus, FileDown, Search, X } from "lucide-react";
 import CornerCoachReportSheet, { type ReportSource, type SavedReport } from "@/components/admin/CornerCoachReportSheet";
 
-import { isSuperAdminEmail } from "@/lib/superAdmins";
+import { useStaffPermissions } from "@/hooks/useStaffPermissions";
 
 type Step = { sql: string; rowCount: number | null; error?: string; rows?: any[] };
 type Msg = {
@@ -59,6 +59,7 @@ const formatWhen = (iso: string) =>
 const AdminCornerCoach = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { hasPermission, loading: permLoading } = useStaffPermissions();
   const queryClient = useQueryClient();
   const [messages, setMessages] = useState<Msg[]>([]);
   const [input, setInput] = useState("");
@@ -109,13 +110,13 @@ const AdminCornerCoach = () => {
     ? history.filter((h) => h.question.toLowerCase().includes(q) || (h.answer ?? "").toLowerCase().includes(q))
     : [];
 
-  // Extra guard on top of the server-side super-admin check.
-  if (user && !isSuperAdminEmail(user.email)) {
+  // Extra guard on top of the server-side check and the door.
+  if (user && !permLoading && !hasPermission("app_corner_coach")) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-black text-center px-6">
         <div>
           <h1 className="text-2xl font-bold text-white mb-2">Not available</h1>
-          <p className="text-zinc-400">Corner Coach is restricted to the account owner.</p>
+          <p className="text-zinc-400">You don't have access to Corner Coach. Ask Josh if you need it.</p>
           <Button variant="outline" className="mt-6 border-white/10 text-zinc-300" onClick={() => navigate("/admin/dashboard")}>
             Back to dashboard
           </Button>

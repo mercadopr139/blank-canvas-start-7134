@@ -19,7 +19,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [loading, setLoading] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
 
+  // Ask the database the same question its own rules ask: has_role() is
+  // false for someone who was deactivated or removed in Staff Management, so
+  // the screens and the data agree. The direct read is the fallback if the
+  // function cannot be reached.
   const checkAdminRole = async (userId: string) => {
+    const { data: active, error: rpcError } = await supabase.rpc("has_role", { _user_id: userId, _role: "admin" });
+    if (!rpcError) return active === true;
+
     const { data, error } = await supabase
       .from("user_roles")
       .select("role")

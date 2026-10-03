@@ -1,28 +1,13 @@
 import { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useStaffPermissions } from "@/hooks/useStaffPermissions";
-import { taskManagerPermKey, type PillarSub } from "@/lib/permissions";
-import {
-  OPERATIONS_TILES,
-  SALES_MARKETING_TILES,
-  FINANCE_TILES,
-  OPERATIONS_EXTRA_SUBS,
-  pillarSubsFromTiles,
-} from "@/config/pillarTiles";
-
-// Sub-permission groups for Operations / Sales / Finance — derived directly
-// from the same tile configs the pillar pages render. Adding a tile with a
-// permKey there automatically gives it a checkbox here. No registry to keep
-// in sync.
-const OPERATIONS_SUBS: PillarSub[] = [
-  ...pillarSubsFromTiles(OPERATIONS_TILES),
-  ...OPERATIONS_EXTRA_SUBS,
-];
-const SALES_MARKETING_SUBS: PillarSub[] = pillarSubsFromTiles(SALES_MARKETING_TILES);
-const FINANCE_SUBS: PillarSub[] = pillarSubsFromTiles(FINANCE_TILES);
+import { taskManagerPermKey, ADMIN_LEVEL_KEY, isExplicitOnlyKey } from "@/lib/permissions";
+import { Switch } from "@/components/ui/switch";
+import { canOpen } from "@/lib/access";
+import { ACCESS_CARD, COMMAND_CENTER_LINES, type AccessLine, type AccessPillar, type AccessSection } from "@/config/accessCard";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -35,9 +20,11 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
-import { ArrowLeft, Plus, Shield, UserCog, Pencil, ShieldCheck } from "lucide-react";
+import { ArrowLeft, Plus, Shield, UserCog, Pencil, ShieldCheck, Trash2, AlertTriangle, ChevronDown, Eye } from "lucide-react";
+import { setViewAs } from "@/lib/viewAs";
+import { SHARED_PASSWORD_TOOLS } from "@/config/appRegistry";
 
-import { isSuperAdminEmail } from "@/lib/superAdmins";
+import { isSuperAdminEmail, isAccessManagerEmail } from "@/lib/superAdmins";
 
 // ─────────────────────────────────────────────────────────────────────────
 // Types
@@ -52,7 +39,31 @@ interface StaffMember {
   email: string;
   job_title: string;
   status: string;
+  /** Set when the person was removed. The row stays so their name still shows on what they wrote. */
+  removed_at?: string | null;
 }
+
+/** One login, as the manage-access function reports it. */
+interface AccessAccount {
+  user_id: string;
+  email: string;
+  roles: string[];
+  has_card: boolean;
+  removed: boolean;
+  on_allowlist: boolean;
+  last_sign_in_at: string | null;
+  created_at: string;
+  blocked: boolean;
+}
+interface AccessList { accounts: AccessAccount[]; allowlist_without_login: string[] }
+
+/** Who is about to be removed. A login has a user_id; an allowlist-only email does not. */
+type RemoveTarget = { name: string; email: string; user_id: string | null };
+
+const fmtSignIn = (iso: string | null) =>
+  iso
+    ? new Date(iso).toLocaleDateString("en-US", { timeZone: "America/New_York", month: "short", day: "numeric", year: "numeric" })
+    : null;
 
 type StaffPerms = Record<string, boolean>;
 
@@ -68,7 +79,7 @@ type TaskManagerRow = {
 export default function AdminStaffManagement() {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { canAccessSettings, isSuperAdmin, loading: permLoading } = useStaffPermissions();
+  const { canManageAccess, isSuperAdmin, loading: permLoading } = useStaffPermissions();
 
   const [staff, setStaff] = useState<StaffMember[]>([]);
   const [staffPerms, setStaffPerms] = useState<Record<string, StaffPerms>>({});
@@ -77,6 +88,38 @@ export default function AdminStaffManagement() {
   const [editTarget, setEditTarget] = useState<StaffMember | null>(null);
   const [form, setForm] = useState({ full_name: "", display_name: "", email: "", job_title: "" });
   const [saving, setSaving] = useState(false);
+  // Set when the Add window is giving a card to a login that already exists.
+  const [linkingEmail, setLinkingEmail] = useState<string | null>(null);
+  // Which pillars are folded open on which card ("userId:pillar").
+  const [openPillars, setOpenPillars] = useState<Record<string, boolean>>({});
+  const [removeTarget, setRemoveTarget] = useState<RemoveTarget | null>(null);
+  const [removing, setRemoving] = useState(false);
+  const queryClient = useQueryClient();
+
+  // Every login that exists, from the server. Staff cards only cover people
+  // added through this page; this also shows accounts that never got a card,
+  // and when each person last signed in.
+  const access = useQuery({
+    queryKey: ["access-accounts"],
+    enabled: canManageAccess,
+    queryFn: async (): Promise<AccessList> => {
+      const { data, error } = await supabase.functions.invoke("manage-access", { body: { action: "list" } });
+      if (error) throw new Error(error.message);
+      if (data?.error) throw new Error(data.error);
+      return data as AccessList;
+    },
+  });
+  const accountById = useMemo(() => {
+    const m = new Map<string, AccessAccount>();
+    (access.data?.accounts ?? []).forEach((a) => m.set(a.user_id, a));
+    return m;
+  }, [access.data]);
+  // Logins that can still get in but have no staff card to manage them from.
+  const uncarded = useMemo(
+    () => (access.data?.accounts ?? []).filter((a) => !a.has_card && !a.blocked && (a.roles.length > 0 || a.on_allowlist)),
+    [access.data],
+  );
+  const waitingEmails = access.data?.allowlist_without_login ?? [];
 
   // Task managers come from the DB so the checkbox set updates automatically
   // whenever a new task manager (HC, JS, etc.) is added.
@@ -93,10 +136,10 @@ export default function AdminStaffManagement() {
   });
 
   useEffect(() => {
-    if (!permLoading && !canAccessSettings()) {
+    if (!permLoading && !canManageAccess) {
       navigate("/admin/dashboard", { replace: true });
     }
-  }, [permLoading, canAccessSettings, navigate]);
+  }, [permLoading, canManageAccess, navigate]);
 
   const fetchStaff = async () => {
     const { data: profiles } = await supabase
@@ -104,8 +147,9 @@ export default function AdminStaffManagement() {
       .select("*")
       .order("full_name");
     if (profiles) {
-      setStaff(profiles as StaffMember[]);
-      const userIds = profiles.map((p: any) => p.user_id);
+      const current = (profiles as unknown as StaffMember[]).filter((p) => !p.removed_at);
+      setStaff(current);
+      const userIds = current.map((p) => p.user_id);
       if (userIds.length > 0) {
         const { data: perms } = await supabase
           .from("staff_permissions")
@@ -164,10 +208,11 @@ export default function AdminStaffManagement() {
         return;
       }
 
-      toast({ title: res.data?.message || "Staff member added successfully" });
+      toast({ title: linkingEmail ? "Staff card added" : (res.data?.message || "Staff member added successfully") });
       setAddOpen(false);
       setForm({ full_name: "", display_name: "", email: "", job_title: "" });
       fetchStaff();
+      queryClient.invalidateQueries({ queryKey: ["access-accounts"] });
     } catch {
       toast({ title: "An error occurred", variant: "destructive" });
     }
@@ -177,7 +222,7 @@ export default function AdminStaffManagement() {
   const handleEdit = async () => {
     if (!editTarget) return;
     setSaving(true);
-    await supabase
+    const { error } = await supabase
       .from("staff_profiles")
       .update({
         full_name: form.full_name.trim(),
@@ -185,17 +230,51 @@ export default function AdminStaffManagement() {
         job_title: form.job_title.trim(),
       })
       .eq("id", editTarget.id);
+    setSaving(false);
+    if (error) {
+      toast({ title: "Couldn't save", description: error.message, variant: "destructive" });
+      return;
+    }
     toast({ title: "Staff member updated" });
     setEditTarget(null);
     fetchStaff();
-    setSaving(false);
   };
 
   const toggleStatus = async (member: StaffMember) => {
     const newStatus = member.status === "active" ? "inactive" : "active";
-    await supabase.from("staff_profiles").update({ status: newStatus }).eq("id", member.id);
-    toast({ title: `Staff member ${newStatus === "active" ? "activated" : "deactivated"}` });
+    const { error } = await supabase.from("staff_profiles").update({ status: newStatus }).eq("id", member.id);
+    if (error) {
+      toast({ title: "Couldn't save", description: error.message, variant: "destructive" });
+      return;
+    }
+    toast({
+      title: `${member.full_name} ${newStatus === "active" ? "activated" : "deactivated"}`,
+      description: newStatus === "active"
+        ? "They can sign in to the back end again, with the same boxes as before."
+        : "They are locked out of the back end until you activate them. Nothing is deleted.",
+    });
     fetchStaff();
+  };
+
+  // Take a person out for good: role, checkboxes, allowlist, login. What they
+  // wrote stays, with their name on it.
+  const handleRemove = async () => {
+    if (!removeTarget) return;
+    setRemoving(true);
+    const { data, error } = await supabase.functions.invoke("manage-access", {
+      body: removeTarget.user_id
+        ? { action: "remove", user_id: removeTarget.user_id }
+        : { action: "remove", email: removeTarget.email },
+    });
+    setRemoving(false);
+    if (error || data?.error) {
+      toast({ title: "Couldn't remove", description: data?.error || error?.message, variant: "destructive" });
+      return;
+    }
+    toast({ title: `${removeTarget.name} removed`, description: "Their login is blocked and all access is gone." });
+    setRemoveTarget(null);
+    fetchStaff();
+    queryClient.invalidateQueries({ queryKey: ["access-accounts"] });
   };
 
   const setPermission = async (userId: string, key: string, value: boolean) => {
@@ -212,113 +291,121 @@ export default function AdminStaffManagement() {
         { user_id: userId, permission_key: key, granted: value },
         { onConflict: "user_id,permission_key" }
       );
-    if (!error) {
-      setStaffPerms((prev) => ({
-        ...prev,
-        [userId]: { ...prev[userId], [key]: value },
-      }));
+    if (error) {
+      // Nothing was saved, so the box stays as it was.
+      toast({ title: "Couldn't save that change", description: error.message, variant: "destructive" });
+      return;
     }
+    setStaffPerms((prev) => ({
+      ...prev,
+      [userId]: { ...prev[userId], [key]: value },
+    }));
   };
 
-  // Toggle a parent pillar checkbox. When the parent is being unchecked,
-  // also revoke every sub-permission for that pillar so there's no
-  // orphaned "I'm checked but my parent isn't" state. Re-checking the
-  // parent leaves sub-permissions where they are (admin re-grants what
-  // they want).
-  const togglePillar = async (
-    userId: string,
-    parentKey: string,
-    subs: PillarSub[],
-    next: boolean
-  ) => {
-    await setPermission(userId, parentKey, next);
-    if (!next) {
-      await Promise.all(
-        subs.map((s) => {
-          if (staffPerms[userId]?.[s.key]) {
-            return setPermission(userId, s.key, false);
-          }
-          return Promise.resolve();
-        })
+  // The Admin switch. Turning it on also writes the Website Photos row,
+  // because the database checks that one by its own key.
+  const setAdminLevel = async (userId: string, next: boolean) => {
+    await setPermission(userId, ADMIN_LEVEL_KEY, next);
+    if (next) await setPermission(userId, "manage_website_photos", true);
+  };
+
+  // Several boxes in one save, for a section's "all" box.
+  const setMany = async (userId: string, keys: string[], value: boolean) => {
+    if (keys.length === 0) return;
+    const { error } = await supabase
+      .from("staff_permissions")
+      .upsert(
+        keys.map((k) => ({ user_id: userId, permission_key: k, granted: value })),
+        { onConflict: "user_id,permission_key" }
       );
+    if (error) {
+      toast({ title: "Couldn't save that change", description: error.message, variant: "destructive" });
+      return;
     }
+    setStaffPerms((prev) => ({
+      ...prev,
+      [userId]: { ...prev[userId], ...Object.fromEntries(keys.map((k) => [k, value])) },
+    }));
   };
 
-  // Building blocks — render a single checkbox row. When `superAdminMode`
-  // is on (the card belongs to the super-admin), every box renders checked
-  // and disabled so the UI matches reality (super-admin bypasses all gates
-  // at runtime regardless of staff_permissions rows).
-  const Check = ({
-    userId,
-    permKey,
-    label,
-    indent = false,
-    disabled = false,
-    superAdminMode = false,
-  }: {
+  // What a line shows for a person: its own setting once it has one;
+  // until then, whatever the old one-box-per-section setting granted.
+  // Asked of the same rule the sidebars and the door use, so the card can
+  // never show something different from what the person actually gets.
+  const lineOn = (userId: string, line: AccessLine) =>
+    canOpen(line.key, { isSuperAdmin: false, permissions: staffPerms[userId] ?? {} });
+
+  // `full` = the person is a Super Admin or an Admin: every line is on and
+  // locked, apart from the explicit-only ones (Task Managers, the reviewer).
+  const Line = ({ userId, line, full, indent = false }: {
     userId: string;
-    permKey: string;
-    label: string;
+    line: AccessLine & { defaultOn?: boolean };
+    full: boolean;
     indent?: boolean;
-    disabled?: boolean;
-    superAdminMode?: boolean;
   }) => {
-    const checked = superAdminMode ? true : (staffPerms[userId]?.[permKey] ?? false);
-    const isDisabled = disabled || superAdminMode;
+    const locked = full && !isExplicitOnlyKey(line.key);
+    const checked = locked ? true : lineOn(userId, line);
     return (
-      <label
-        className={`flex items-center gap-2 text-sm ${
-          indent ? "ml-6" : ""
-        } ${isDisabled ? "opacity-40 cursor-not-allowed" : "cursor-pointer"}`}
-      >
+      <label className={`flex items-center gap-2 text-sm ${indent ? "ml-6" : ""} ${locked ? "opacity-40 cursor-not-allowed" : "cursor-pointer"}`}>
         <Checkbox
           checked={checked}
-          onCheckedChange={(v) => !superAdminMode && setPermission(userId, permKey, !!v)}
-          disabled={isDisabled}
+          onCheckedChange={(v) => !locked && setPermission(userId, line.key, !!v)}
+          disabled={locked}
         />
-        <span className={indent ? "text-white/70 text-[13px]" : ""}>{label}</span>
+        <span className={checked ? "text-white" : "text-white/45"}>{line.label}</span>
       </label>
     );
   };
 
-  // Pillar block — parent checkbox + indented sub-checkboxes. Sub-checkboxes
-  // appear when the parent is granted, OR when this is the super-admin's
-  // card (where everything renders as on).
-  const Pillar = ({
-    userId,
-    parentKey,
-    parentLabel,
-    subs,
-    superAdminMode = false,
-  }: {
-    userId: string;
-    parentKey: string;
-    parentLabel: string;
-    subs: PillarSub[];
-    superAdminMode?: boolean;
-  }) => {
-    const parentOn = superAdminMode ? true : (staffPerms[userId]?.[parentKey] ?? false);
+  // A sidebar heading with its lines. The heading's box is a shortcut for
+  // "all of these"; it is not a permission of its own.
+  const Section = ({ userId, section, full }: { userId: string; section: AccessSection; full: boolean }) => {
+    if (!section.title) {
+      return <>{section.lines.map((l) => <Line key={l.key} userId={userId} line={l} full={full} />)}</>;
+    }
+    const pickable = section.lines.filter((l) => !isExplicitOnlyKey(l.key));
+    const onCount = full ? pickable.length : pickable.filter((l) => lineOn(userId, l)).length;
+    const all = pickable.length > 0 && onCount === pickable.length;
     return (
       <div className="space-y-1.5">
-        <label className={`flex items-center gap-2 text-sm font-medium ${superAdminMode ? "opacity-40 cursor-not-allowed" : "cursor-pointer"}`}>
+        <label className={`flex items-center gap-2 text-sm font-semibold ${full ? "opacity-40 cursor-not-allowed" : "cursor-pointer"}`}>
           <Checkbox
-            checked={parentOn}
-            onCheckedChange={(v) => !superAdminMode && togglePillar(userId, parentKey, subs, !!v)}
-            disabled={superAdminMode}
+            checked={all ? true : onCount > 0 ? "indeterminate" : false}
+            onCheckedChange={() => !full && setMany(userId, pickable.map((l) => l.key), !all)}
+            disabled={full}
           />
-          {parentLabel}
+          {section.title}
+          <span className="text-[11px] font-normal text-white/35">{onCount} of {pickable.length}</span>
         </label>
-        {parentOn && (
-          <div className="space-y-1.5">
-            {subs.map((s) => (
-              <Check
-                key={s.key}
-                userId={userId}
-                permKey={s.key}
-                label={s.label}
-                indent
-                superAdminMode={superAdminMode}
-              />
+        {section.lines.map((l) => <Line key={l.key} userId={userId} line={l} full={full} indent />)}
+      </div>
+    );
+  };
+
+  // One pillar (Operations / Sales & Marketing / Finance): folds away, and
+  // says how many of its lines are open.
+  const PillarBlock = ({ userId, pillar, full }: { userId: string; pillar: AccessPillar; full: boolean }) => {
+    const lines = pillar.sections.flatMap((sec) => sec.lines).filter((l) => !isExplicitOnlyKey(l.key));
+    const onCount = full ? lines.length : lines.filter((l) => lineOn(userId, l)).length;
+    const id = `${userId}:${pillar.id}`;
+    const open = openPillars[id] ?? !full;
+    return (
+      <div className="rounded-lg border border-white/10">
+        <button
+          type="button"
+          onClick={() => setOpenPillars((p) => ({ ...p, [id]: !open }))}
+          className="w-full flex items-center gap-2 px-3 py-2 text-left"
+        >
+          <ChevronDown className={`w-4 h-4 text-white/40 transition-transform ${open ? "" : "-rotate-90"}`} />
+          <span className="text-sm font-bold">{pillar.title}</span>
+          <span className={`ml-auto text-[11px] tabular-nums ${onCount === 0 ? "text-white/30" : "text-white/60"}`}>
+            {onCount} of {lines.length} open
+          </span>
+        </button>
+        {open && (
+          <div className="px-3 pb-3 pt-1 space-y-3 border-t border-white/10">
+            {pillar.sections.map((sec) => (
+              <Section key={sec.title ?? sec.lines[0]?.key} userId={userId} section={sec} full={full} />
             ))}
           </div>
         )}
@@ -362,6 +449,7 @@ export default function AdminStaffManagement() {
           <Button
             onClick={() => {
               setForm({ full_name: "", display_name: "", email: "", job_title: "" });
+              setLinkingEmail(null);
               setAddOpen(true);
             }}
             className="bg-[#bf0f3e] hover:bg-[#a00d35]"
@@ -380,6 +468,7 @@ export default function AdminStaffManagement() {
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {staff.map((member) => {
               const isMemberSuperAdmin = isSuperAdminEmail(member.email);
+              const isMemberAdmin = !isMemberSuperAdmin && (staffPerms[member.user_id]?.[ADMIN_LEVEL_KEY] ?? false);
               return (
               <Card
                 key={member.id}
@@ -406,9 +495,22 @@ export default function AdminStaffManagement() {
                             Super Admin
                           </span>
                         )}
+                        {isMemberAdmin && (
+                          <span className="inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full bg-sky-400/15 border border-sky-400/40 text-sky-300 font-semibold">
+                            <ShieldCheck className="w-3 h-3" />
+                            Admin
+                          </span>
+                        )}
                       </div>
                       <p className="text-sm text-white/50">{member.job_title}</p>
                       <p className="text-xs text-white/30 mt-1">{member.email}</p>
+                      {access.data && (
+                        <p className="text-[11px] text-white/30 mt-0.5">
+                          {fmtSignIn(accountById.get(member.user_id)?.last_sign_in_at ?? null)
+                            ? `Last signed in ${fmtSignIn(accountById.get(member.user_id)?.last_sign_in_at ?? null)}`
+                            : "Never signed in"}
+                        </p>
+                      )}
                     </div>
                     <div className="flex items-center gap-2">
                       <span
@@ -451,64 +553,89 @@ export default function AdminStaffManagement() {
                       </p>
                     )}
 
+                    {!isMemberSuperAdmin && (
+                      <label className={`flex items-start gap-3 rounded-lg border px-3 py-2.5 mb-4 cursor-pointer ${isMemberAdmin ? "border-sky-400/40 bg-sky-400/[0.06]" : "border-white/10 bg-white/[0.02]"}`}>
+                        <Switch
+                          checked={isMemberAdmin}
+                          onCheckedChange={(v) => setAdminLevel(member.user_id, !!v)}
+                          className="mt-0.5"
+                        />
+                        <span>
+                          <span className="block text-sm font-semibold">Admin</span>
+                          <span className="block text-[11px] text-white/45 leading-snug">
+                            {isMemberAdmin
+                              ? "Every app is open, including new ones as they are built. Task Managers and the reviewer box stay your choice below."
+                              : "Off: this person opens only the boxes checked below. Turn on to open every app in one click."}
+                          </span>
+                        </span>
+                      </label>
+                    )}
+
                     <div className="space-y-4">
-                      {/* Task managers — one row per task_managers entry */}
+                      {/* Command Center: the tiles outside the three pillars. */}
+                      <div className="space-y-1.5">
+                        <p className="text-[10px] uppercase tracking-wider text-white/40 mb-1">Command Center</p>
+                        {COMMAND_CENTER_LINES.map((l) => (
+                          <Line key={l.key} userId={member.user_id} line={l} full={isMemberSuperAdmin || isMemberAdmin} />
+                        ))}
+                      </div>
+
+                      {/* Task Managers: personal, so they stay a per-person
+                          choice even for an Admin. Only a Super Admin has all. */}
                       {taskManagerChecks.length > 0 && (
                         <div className="space-y-1.5">
+                          <p className="text-[10px] uppercase tracking-wider text-white/40 mb-1">Task Managers</p>
                           {taskManagerChecks.map((tm) => (
-                            <Check
+                            <label
                               key={tm.permKey}
-                              userId={member.user_id}
-                              permKey={tm.permKey}
-                              label={tm.label}
-                              superAdminMode={isMemberSuperAdmin}
-                            />
+                              className={`flex items-center gap-2 text-sm ${isMemberSuperAdmin ? "opacity-40 cursor-not-allowed" : "cursor-pointer"}`}
+                            >
+                              <Checkbox
+                                checked={isMemberSuperAdmin ? true : (staffPerms[member.user_id]?.[tm.permKey] ?? false)}
+                                onCheckedChange={(v) => !isMemberSuperAdmin && setPermission(member.user_id, tm.permKey, !!v)}
+                                disabled={isMemberSuperAdmin}
+                              />
+                              <span>{tm.label}</span>
+                            </label>
                           ))}
                         </div>
                       )}
 
-                      {/* Pillars with grouped sub-permissions */}
-                      <Pillar
-                        userId={member.user_id}
-                        parentKey="operations"
-                        parentLabel="Operations"
-                        subs={OPERATIONS_SUBS}
-                        superAdminMode={isMemberSuperAdmin}
-                      />
-                      <Pillar
-                        userId={member.user_id}
-                        parentKey="sales_marketing"
-                        parentLabel="Sales & Marketing"
-                        subs={SALES_MARKETING_SUBS}
-                        superAdminMode={isMemberSuperAdmin}
-                      />
-                      <Pillar
-                        userId={member.user_id}
-                        parentKey="finance"
-                        parentLabel="Finance"
-                        subs={FINANCE_SUBS}
-                        superAdminMode={isMemberSuperAdmin}
-                      />
-
-                      {/* Website Photos — lets a staffer manage public-site photos */}
-                      <Check
-                        userId={member.user_id}
-                        permKey="manage_website_photos"
-                        label="Website Photos"
-                        superAdminMode={isMemberSuperAdmin}
-                      />
-
-                      {/* Settings — super-admin gated for granting */}
-                      <Check
-                        userId={member.user_id}
-                        permKey="settings"
-                        label="Settings"
-                        disabled={!isSuperAdmin}
-                        superAdminMode={isMemberSuperAdmin}
-                      />
+                      {/* The three pillars, line for line as their sidebars show them. */}
+                      {ACCESS_CARD.map((pillar) => (
+                        <PillarBlock
+                          key={pillar.id}
+                          userId={member.user_id}
+                          pillar={pillar}
+                          full={isMemberSuperAdmin || isMemberAdmin}
+                        />
+                      ))}
                     </div>
                   </div>
-                  <div className="mt-3 flex justify-end">
+                  <div className="mt-3 flex flex-wrap justify-end gap-2">
+                    {!isAccessManagerEmail(member.email) && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="text-xs border-amber-400/40 text-amber-300 bg-transparent hover:bg-amber-400/10 hover:text-amber-200 mr-auto"
+                        onClick={() => {
+                          setViewAs({ user_id: member.user_id, name: member.full_name, email: member.email });
+                          navigate("/admin/dashboard");
+                        }}
+                      >
+                        <Eye className="w-3.5 h-3.5 mr-1.5" /> View as
+                      </Button>
+                    )}
+                    {!isAccessManagerEmail(member.email) && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="text-xs border-red-500/40 text-red-300 bg-transparent hover:bg-red-500/10 hover:text-red-200"
+                        onClick={() => setRemoveTarget({ name: member.full_name, email: member.email, user_id: member.user_id })}
+                      >
+                        <Trash2 className="w-3.5 h-3.5 mr-1.5" /> Remove
+                      </Button>
+                    )}
                     <Button
                       variant="outline"
                       size="sm"
@@ -524,15 +651,128 @@ export default function AdminStaffManagement() {
             })}
           </div>
         )}
+        {/* Logins that never got a staff card. They were made with the old
+            Invite Admin button, so they could not be seen or managed here. */}
+        {access.isError && (
+          <p className="mt-8 text-sm text-rose-300">Couldn't load the list of logins: {(access.error as Error)?.message}</p>
+        )}
+        {(uncarded.length > 0 || waitingEmails.length > 0) && (
+          <section className="mt-10">
+            <h2 className="text-sm font-bold flex items-center gap-2 text-amber-300">
+              <AlertTriangle className="w-4 h-4" /> Logins without a staff card
+            </h2>
+            <p className="text-xs text-white/40 mt-1 mb-3">
+              These can get into the back end but were never added as staff, so they have no card above. Add a staff card to manage one like everyone else.
+            </p>
+            <div className="rounded-xl border border-amber-400/20 divide-y divide-white/10">
+              {uncarded.map((a) => (
+                <div key={a.user_id} className="flex flex-wrap items-center gap-3 px-4 py-3">
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-semibold truncate">{a.email}</p>
+                    <p className="text-[11px] text-white/40">
+                      {a.roles.includes("admin") ? "Full admin access" : a.roles.length ? a.roles.join(", ") : "On the sign-up allowlist"}
+                      {" · "}
+                      {fmtSignIn(a.last_sign_in_at) ? `last signed in ${fmtSignIn(a.last_sign_in_at)}` : "never signed in"}
+                    </p>
+                  </div>
+                  <Button
+                    size="sm"
+                    className="text-xs bg-[#bf0f3e] hover:bg-[#a00d35]"
+                    onClick={() => {
+                      setForm({ full_name: "", display_name: "", email: a.email, job_title: "" });
+                      setLinkingEmail(a.email);
+                      setAddOpen(true);
+                    }}
+                  >
+                    <Plus className="w-3.5 h-3.5 mr-1.5" /> Add staff card
+                  </Button>
+                  {!isAccessManagerEmail(a.email) && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="text-xs border-red-500/40 text-red-300 bg-transparent hover:bg-red-500/10 hover:text-red-200"
+                      onClick={() => setRemoveTarget({ name: a.email, email: a.email, user_id: a.user_id })}
+                    >
+                      <Trash2 className="w-3.5 h-3.5 mr-1.5" /> Remove
+                    </Button>
+                  )}
+                </div>
+              ))}
+              {waitingEmails.map((email) => (
+                <div key={email} className="flex flex-wrap items-center gap-3 px-4 py-3">
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-semibold truncate">{email}</p>
+                    <p className="text-[11px] text-white/40">No login yet · would become a full admin the moment they sign up</p>
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="text-xs border-red-500/40 text-red-300 bg-transparent hover:bg-red-500/10 hover:text-red-200"
+                    onClick={() => setRemoveTarget({ name: email, email, user_id: null })}
+                  >
+                    <Trash2 className="w-3.5 h-3.5 mr-1.5" /> Remove
+                  </Button>
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
+        {/* The rest of the blueprint: tools that run on a shared password or
+            a PIN rather than a personal login, so no box here controls them. */}
+        <section className="mt-10">
+          <h2 className="text-sm font-bold text-white/70">Kiosks, wall boards and shared-password tools</h2>
+          <p className="text-xs text-white/40 mt-1 mb-3">
+            These do not use a personal login, so the boxes above do not control them. They are listed so this page shows everything that exists.
+          </p>
+          <div className="rounded-xl border border-white/10 grid sm:grid-cols-2 lg:grid-cols-3">
+            {SHARED_PASSWORD_TOOLS.map((t) => (
+              <div key={t.route} className="px-4 py-2.5 border-b border-white/5">
+                <p className="text-sm text-white/80">{t.label}</p>
+                <p className="text-[11px] text-white/35">{t.how}</p>
+              </div>
+            ))}
+          </div>
+        </section>
       </main>
+
+      {/* Remove — says exactly what happens before it happens. */}
+      <Dialog open={!!removeTarget} onOpenChange={(open) => !open && !removing && setRemoveTarget(null)}>
+        <DialogContent className="bg-[#1a1a2e] border-white/10 text-white">
+          <DialogHeader>
+            <DialogTitle>Remove {removeTarget?.name}?</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3 text-sm text-white/70">
+            <p className="text-white/40 text-xs">{removeTarget?.email}</p>
+            <ul className="list-disc pl-5 space-y-1">
+              <li>Their login is blocked. They cannot sign in again.</li>
+              <li>All access is taken away at once: admin role, every checkbox, the sign-up allowlist.</li>
+              <li>They leave this page and the staff pickers.</li>
+              <li>Nothing they wrote is deleted. Their name stays on past messages, notes and sessions.</li>
+            </ul>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setRemoveTarget(null)} disabled={removing} className="border-white/20 text-white bg-transparent">
+              Cancel
+            </Button>
+            <Button onClick={handleRemove} disabled={removing} className="bg-red-600 hover:bg-red-700">
+              {removing ? "Removing…" : "Remove for good"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Add Dialog */}
       <Dialog open={addOpen} onOpenChange={setAddOpen}>
         <DialogContent className="bg-[#1a1a2e] border-white/10 text-white">
           <DialogHeader>
-            <DialogTitle>Add Staff Member</DialogTitle>
+            <DialogTitle>{linkingEmail ? "Add staff card" : "Add Staff Member"}</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
+            {linkingEmail && (
+              <p className="text-xs text-white/50">
+                This login already exists. Nothing is emailed and the password stays the same; this only gives it a card on this page.
+              </p>
+            )}
             <div>
               <label className="text-sm text-white/60">Full Name</label>
               <Input
@@ -561,7 +801,8 @@ export default function AdminStaffManagement() {
                 value={form.email}
                 onChange={(e) => setForm({ ...form, email: e.target.value })}
                 placeholder="name@nolimitsboxingacademy.org"
-                className="bg-white/10 border-white/20 text-white"
+                disabled={!!linkingEmail}
+                className={linkingEmail ? "bg-white/5 border-white/10 text-white/40" : "bg-white/10 border-white/20 text-white"}
               />
             </div>
             <div>
@@ -586,7 +827,7 @@ export default function AdminStaffManagement() {
               disabled={saving}
               className="bg-[#bf0f3e] hover:bg-[#a00d35]"
             >
-              {saving ? "Inviting…" : "Add & Send Invite"}
+              {linkingEmail ? (saving ? "Adding…" : "Add staff card") : (saving ? "Inviting…" : "Add & Send Invite")}
             </Button>
           </DialogFooter>
         </DialogContent>

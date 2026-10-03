@@ -28,6 +28,21 @@ export const TOP_LEVEL_PILLAR_LABELS: Record<TopLevelPillarKey, string> = {
   settings: "Settings",
 };
 
+// The Admin level: one switch in Staff Management that opens every app, so a
+// full-access person is one click rather than forty checkboxes. Stored as an
+// ordinary staff_permissions row, which only the access manager can write.
+export const ADMIN_LEVEL_KEY = "access_admin";
+
+// What the Admin level does NOT open. These stay a deliberate, per-person
+// choice even for an Admin:
+//   task_manager_*   a workbench is personal to its owner
+//   settings         Staff Management belongs to the access manager alone
+//   ..._reviewer     signing off Scripture Coach sessions is a named duty
+export const isExplicitOnlyKey = (key: string) =>
+  key.startsWith("task_manager_") ||
+  key === "settings" ||
+  key === "operations_scripture_coach_reviewer";
+
 // Helper: build the task manager permission key for a given task manager.
 // The dashboard's HREF_PERM_MAP and the staff management UI both use this
 // so the convention stays in sync.

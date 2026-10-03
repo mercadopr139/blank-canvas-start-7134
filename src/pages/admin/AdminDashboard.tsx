@@ -13,7 +13,6 @@ import { useToast } from "@/hooks/use-toast";
 import { LogOut, Hammer, BadgeDollarSign, Lightbulb, ArrowLeft, Lock, Plus, Pencil, GripVertical, KeyRound, LayoutGrid, ChevronRight, MessageSquare, Trash2, Sparkles, Image as ImageIcon } from "lucide-react";
 import { icons } from "lucide-react";
 import UpcomingEventsWidget from "@/components/admin/UpcomingEventsWidget";
-import InviteAdminModal from "@/components/admin/InviteAdminModal";
 import DashboardTileModal, { type DashboardTile } from "@/components/admin/DashboardTileModal";
 import AddWorkbenchModal from "@/components/admin/AddWorkbenchModal";
 import PoweredByQuiktech from "@/components/admin/PoweredByQuiktech";
@@ -272,7 +271,7 @@ const AdminDashboard = () => {
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const { hasPermission, loading: permLoading, isSuperAdmin } = useStaffPermissions();
+  const { hasPermission, hasPillar, loading: permLoading, isSuperAdmin, canManageAccess } = useStaffPermissions();
   const { toast } = useToast();
   const [showChangePassword, setShowChangePassword] = useState(false);
   const [oldPassword, setOldPassword] = useState("");
@@ -559,6 +558,15 @@ const AdminDashboard = () => {
 
   const isTileAllowed = (tile: DashboardTile) => {
     if (tile.href === "__upcoming_events__") return true;
+    // Staff Management belongs to the one person who may change access.
+    if (tile.href === "/admin/staff") return canManageAccess;
+    if (permLoading) return true;
+    // A pillar shows as open once the person can open any line inside it.
+    if (tile.href === "/admin/operations") return hasPillar("operations");
+    if (tile.href === "/admin/sales-marketing") return hasPillar("sales_marketing");
+    if (tile.href === "/admin/finance") return hasPillar("finance");
+    if (tile.href === "/admin/message-board") return hasPermission("app_message_board");
+    if (tile.href === "/admin/agenda") return hasPermission("app_agenda");
     const permKey = resolvePermKey(tile.href);
     if (!permKey) return true;
     return permLoading || hasPermission(permKey);
@@ -589,7 +597,6 @@ const AdminDashboard = () => {
             </div>
           </div>
           <div className="flex items-center gap-2">
-            <InviteAdminModal />
             <Button variant="outline" onClick={() => setShowChangePassword(true)} className="border-white/10 text-zinc-300 bg-transparent hover:bg-white/5 hover:text-white text-xs h-9">
               <KeyRound className="w-3.5 h-3.5 mr-1.5" />
               Change Password
@@ -643,7 +650,7 @@ const AdminDashboard = () => {
         {/* ── Hero pillar cards ── */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 lg:gap-8 mb-10 sm:mb-12">
           {pillars.map((p) => {
-            const allowed = permLoading || hasPermission(p.permKey);
+            const allowed = permLoading || hasPillar(p.permKey);
             return (
               <Tooltip key={p.title}>
                 <TooltipTrigger asChild>
@@ -724,7 +731,7 @@ const AdminDashboard = () => {
               as a true notification, not permanent chrome. NLA red with a
               pulsing dot to pull the eye. Clicks straight to the board,
               where unread conversations already float to the top. */}
-          {unreadMessages > 0 && (
+          {unreadMessages > 0 && hasPermission("app_message_board") && (
             <button
               type="button"
               onClick={() => navigate("/admin/message-board")}
@@ -764,7 +771,7 @@ const AdminDashboard = () => {
               <ChevronRight className="w-4 h-4 ml-2 text-zinc-600 group-hover:text-zinc-400 transition-colors" />
             </button>
 
-            {isSuperAdmin && (
+            {hasPermission("app_corner_coach") && (
               <button
                 type="button"
                 onClick={() => navigate("/admin/corner-coach")}
@@ -853,6 +860,9 @@ const AdminDashboard = () => {
                 swallow the click. Replaces the previous generic "Add Tile"
                 button since adding a workbench is the only common reason
                 anyone needs to create a new tile. */}
+            {/* A new workbench grants its owner access, so only the person
+                who may change access can add one. */}
+            {canManageAccess && (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 mt-4">
               <button
                 type="button"
@@ -863,6 +873,7 @@ const AdminDashboard = () => {
                 <span className="text-xs font-medium">Add Workbench</span>
               </button>
             </div>
+            )}
           </div>
         )}
         </>

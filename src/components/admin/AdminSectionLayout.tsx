@@ -1,9 +1,11 @@
 import { useState, type ReactNode } from "react";
 import { useNavigate, useLocation, Outlet } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Menu, X, ExternalLink, ChevronDown } from "lucide-react";
+import { ArrowLeft, Menu, X, ExternalLink, ChevronDown, Lock } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import PoweredByQuiktech from "@/components/admin/PoweredByQuiktech";
+import { LockedPanel } from "@/components/admin/AppDoor";
+import { useDoor } from "@/hooks/useDoor";
 
 export interface SectionCard {
   title: string;
@@ -11,7 +13,9 @@ export interface SectionCard {
   href: string;
   icon: LucideIcon;
   external?: boolean;
-  children?: { title: string; href: string; icon: LucideIcon; external?: boolean }[];
+  /** The person cannot open this line: it shows shaded and does not respond. */
+  locked?: boolean;
+  children?: { title: string; href: string; icon: LucideIcon; external?: boolean; locked?: boolean }[];
 }
 
 interface AdminSectionLayoutProps {
@@ -84,6 +88,7 @@ const AdminSectionLayout = ({
   const navigate = useNavigate();
   const location = useLocation();
   const ac = accentClasses[accent] ?? accentClasses.sky;
+  const door = useDoor();
 
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>({});
@@ -101,6 +106,7 @@ const AdminSectionLayout = ({
   };
 
   const handleCardClick = (card: SectionCard) => {
+    if (card.locked) return;
     setSidebarOpen(false);
     if (card.external) {
       window.open(card.href, "_blank");
@@ -128,7 +134,7 @@ const AdminSectionLayout = ({
                 <button
                   onClick={() => toggleGroup(card.title)}
                   className={`w-full text-left px-4 py-2.5 flex items-center gap-3 transition-colors
-                    ${childActive ? `${ac.link} font-medium` : "text-white/70 hover:text-white hover:bg-white/5"}`}
+                    ${childActive ? `${ac.link} font-medium` : card.locked ? "text-white/25 hover:bg-white/5" : "text-white/70 hover:text-white hover:bg-white/5"}`}
                 >
                   <card.icon className={`w-4 h-4 flex-shrink-0 ${childActive ? ac.icon : ""}`} />
                   <span className="text-sm leading-tight break-words flex-1">{card.title}</span>
@@ -139,6 +145,21 @@ const AdminSectionLayout = ({
                   <div className="ml-4 border-l border-white/10">
                     {card.children.map((child) => {
                       const active = isActive(child.href);
+                      if (child.locked) {
+                        return (
+                          <div key={child.href} className="relative flex items-center">
+                            <div
+                              className="flex-1 px-4 py-2 flex items-center gap-3 min-w-0 text-white/25 cursor-not-allowed select-none"
+                              title="Locked. Ask Josh if you need access."
+                              aria-disabled="true"
+                            >
+                              <child.icon className="w-3.5 h-3.5 flex-shrink-0" />
+                              <span className="text-xs leading-tight break-words">{child.title}</span>
+                              <Lock className="w-3 h-3 ml-auto flex-shrink-0" />
+                            </div>
+                          </div>
+                        );
+                      }
                       return (
                         <div
                           key={child.href}
@@ -164,6 +185,21 @@ const AdminSectionLayout = ({
           }
 
           const active = isActive(card.href);
+          if (card.locked) {
+            return (
+              <div key={card.href + card.title} className="relative flex items-center">
+                <div
+                  className="flex-1 px-4 py-2.5 flex items-center gap-3 min-w-0 text-white/25 cursor-not-allowed select-none"
+                  title="Locked. Ask Josh if you need access."
+                  aria-disabled="true"
+                >
+                  <card.icon className="w-4 h-4 flex-shrink-0" />
+                  <span className="text-sm leading-tight break-words">{card.title}</span>
+                  <Lock className="w-3 h-3 ml-auto flex-shrink-0" />
+                </div>
+              </div>
+            );
+          }
           return (
             <div
               key={card.href + card.title}
@@ -228,7 +264,8 @@ const AdminSectionLayout = ({
         )}
 
         <main className="flex-1 overflow-y-auto overflow-x-hidden flex flex-col">
-          <Outlet />
+          {/* The door: a typed address gets the same answer as the menu. */}
+          {door.loading ? null : door.allowed ? <Outlet /> : <LockedPanel label={door.label} />}
           <PoweredByQuiktech size="lg" />
         </main>
       </div>

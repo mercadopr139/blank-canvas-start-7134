@@ -3,6 +3,7 @@
 // Caller must be an authenticated admin.
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
+import { isAccessManager } from "../_shared/superAdmins.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -92,6 +93,14 @@ Deno.serve(async (req) => {
     if (userErr || !userData.user) {
       return new Response(JSON.stringify({ error: "Not authenticated" }), {
         status: 401,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // A copy of every table is the one thing an Admin does not get.
+    if (!isAccessManager(userData.user.email)) {
+      return new Response(JSON.stringify({ error: "Only the access manager can export all data." }), {
+        status: 403,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }

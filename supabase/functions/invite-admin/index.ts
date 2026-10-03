@@ -1,4 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { isAccessManager } from "../_shared/superAdmins.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -40,6 +41,14 @@ Deno.serve(async (req) => {
     }
 
     const callerId = claimsData.claims.sub;
+
+    // Creating a login is an access change: the access manager only.
+    if (!isAccessManager(String(claimsData.claims.email ?? ""))) {
+      return new Response(JSON.stringify({ error: "Only the access manager can create a login." }), {
+        status: 403,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
 
     // Check if caller is admin using service role
     const adminClient = createClient(supabaseUrl, serviceRoleKey);

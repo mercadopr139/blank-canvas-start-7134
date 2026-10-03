@@ -1,4 +1,6 @@
 import { Outlet, NavLink, useLocation, Navigate } from "react-router-dom";
+import { LockedPanel } from "@/components/admin/AppDoor";
+import { useDoor } from "@/hooks/useDoor";
 import { useAuth } from "@/contexts/AuthContext";
 import { Users, Baby, Radio, LogOut, AlertTriangle } from "lucide-react";
 import { useIncidentCount } from "./TransportIncidents";
@@ -15,6 +17,7 @@ export default function TransportAdminLayout() {
   const { user, isAdmin, loading, signOut } = useAuth();
   const location = useLocation();
   const newIncidentCount = useIncidentCount();
+  const door = useDoor();
 
   if (loading) {
     return (
@@ -80,7 +83,7 @@ export default function TransportAdminLayout() {
 
       {/* Main Content */}
       <main className="flex-1 flex flex-col min-h-screen pb-20 md:pb-0">
-        <Outlet />
+        {door.loading ? null : door.allowed ? <Outlet /> : <LockedPanel label={door.label} />}
       </main>
 
       {/* Mobile Bottom Nav */}

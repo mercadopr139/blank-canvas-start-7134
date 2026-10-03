@@ -7,6 +7,7 @@ import { useEffect } from "react";
 import ScrollToTop from "./components/ScrollToTop";
 import { AuthProvider } from "./contexts/AuthContext";
 import ProtectedRoute from "./components/admin/ProtectedRoute";
+import ViewAsBanner from "./components/admin/ViewAsBanner";
 import { supabase } from "./integrations/supabase/client";
 import Index from "./pages/Index";
 import Programs from "./pages/Programs";
@@ -159,6 +160,7 @@ const App = () => (
         <Sonner />
         <BrowserRouter>
           <ScrollToTop />
+          <ViewAsBanner />
           <PasswordRecoveryRedirect />
           <Routes>
             {/* Public Routes */}

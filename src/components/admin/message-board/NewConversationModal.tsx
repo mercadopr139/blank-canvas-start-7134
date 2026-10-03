@@ -33,6 +33,7 @@ const NewConversationModal = ({ open, onClose, currentUserId, onCreated }: Props
       const { data, error } = await supabase
         .from("staff_profiles")
         .select("id, user_id, full_name, display_name, job_title, task_manager_type")
+        .eq("status", "active")
         .order("full_name", { ascending: true });
       if (error) throw error;
       return ((data || []) as StaffProfile[]).filter((s) => s.user_id !== currentUserId);
