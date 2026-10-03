@@ -15,12 +15,15 @@
 // tap one and the board stays underneath the player.
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import {
-  ArrowLeft, ChevronLeft, ChevronRight, ClipboardList, Dumbbell, Maximize, Minimize,
+  ArrowLeft, ChevronLeft, ChevronRight, ClipboardList, Dumbbell, Maximize, Minimize, Pencil, Check,
 } from "lucide-react";
+import { StrengthEditTonight } from "@/components/strength/StrengthEditTonight";
+import { todayNY } from "@/lib/programYear";
 import TrackTimer from "@/components/nbt/TrackTimer";
 import ExerciseVideo from "@/components/strength/ExerciseVideo";
 import { PrepStrip } from "@/components/practice/PrepStrip";
@@ -77,6 +80,10 @@ const StrengthBoard = () => {
 
   const day = week?.days?.[dayKey];
   const meta = DAYS.find((d) => d.key === dayKey)!;
+  // Edit tonight — a signed-in coach fixes the plan where the kids read it.
+  const { isAdmin } = useAuth();
+  const [editing, setEditing] = useState(false);
+  const qc = useQueryClient();
 
   // The coach's note from the Practice Plan's Strength block for this night.
   const { data: liftNote } = useQuery({
@@ -187,6 +194,7 @@ const StrengthBoard = () => {
         <div className="min-w-0">
           <p className="text-[10px] font-bold uppercase tracking-[0.25em] leading-none mb-0.5" style={{ color: NLA_RED }}>
             Workout Plan · Battle Team
+            {day?.editedOn === todayNY() && <span className="ml-2 text-white/60">· Changed tonight</span>}
           </p>
           <h1 className="text-lg md:text-xl font-black tracking-tight uppercase">Battle Team</h1>
           <p className="text-[11px] text-white/35">
@@ -222,6 +230,19 @@ const StrengthBoard = () => {
           >
             {isFullscreen ? <Minimize className="w-5 h-5" /> : <Maximize className="w-5 h-5" />}
           </Button>
+          {isAdmin && week && day && (
+            <Button
+              variant="outline"
+              onClick={() => setEditing((e) => !e)}
+              className={
+                editing
+                  ? "ml-2 bg-white/10 border-white/30 text-white font-bold"
+                  : "ml-2 bg-transparent border-white/20 text-white/60 hover:bg-white/5 hover:text-white"
+              }
+            >
+              {editing ? <><Check className="w-4 h-4 mr-1.5" /> Done editing</> : <><Pencil className="w-4 h-4 mr-1.5" /> Edit tonight</>}
+            </Button>
+          )}
           {/* Logging lives on the coach's page, under the day. */}
           <Button
             onClick={() => navigate("/strength-coach")}
@@ -273,6 +294,14 @@ const StrengthBoard = () => {
             </Button>
           </div>
         </div>
+      ) : editing && week ? (
+        <StrengthEditTonight
+          key={`${week.id}-${dayKey}`}
+          week={week}
+          dayKey={dayKey}
+          day={day}
+          onSaved={() => qc.invalidateQueries({ queryKey: ["strength-week", weekStart] })}
+        />
       ) : (
         /* Fills the screen between the header and the foot, and scrolls INSIDE
            itself only on a phone — on the wall it never page-scrolls. */

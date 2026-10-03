@@ -86,6 +86,8 @@ export interface NbtDay {
     result_unit: ResultUnit | string;
   };
   reset: string[];
+  /** The date (America/New_York) a coach changed this day on the wall, if ever. */
+  editedOn?: string;
 }
 
 export const minutesOf = (day: NbtDay | undefined): SessionMinutes => ({

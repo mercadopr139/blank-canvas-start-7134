@@ -24,6 +24,8 @@ export interface DayWorkout {
   accessories?: Accessory[];
   finisher?: { name: string; detail: string } | null;
   coachNotes?: string;
+  /** The date (America/New_York) a coach changed this day on the wall, if ever. */
+  editedOn?: string;
 }
 
 export interface WeekRow {

@@ -6,13 +6,15 @@
 // given "the lesser workout".
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import {
-  ArrowLeft, Dumbbell, ChevronLeft, ChevronRight, ClipboardList, Maximize, Minimize,
+  ArrowLeft, Dumbbell, ChevronLeft, ChevronRight, ClipboardList, Maximize, Minimize, Pencil, Check,
 } from "lucide-react";
+import { NbtEditTonight } from "@/components/nbt/NbtEditTonight";
+import { todayNY } from "@/lib/programYear";
 import TrackTimer from "@/components/nbt/TrackTimer";
 import {
   DAYS, DayKey, TRACKS, TRACK_META, NbtDay, NbtWeek, NbtBlock,
@@ -40,6 +42,9 @@ const NbtBoard = () => {
   // Land on today when today is a training day; otherwise open on Monday.
   const [dayKey, setDayKey] = useState<DayKey>(() => linkedDay ?? todayDayKey(today) ?? "monday");
   const [logging, setLogging] = useState(false);
+  // Edit tonight — a signed-in coach fixes the plan where the kids read it.
+  const [editing, setEditing] = useState(false);
+  const qc = useQueryClient();
 
   const { data, isLoading } = useQuery({
     queryKey: ["nbt-week", weekStart],
@@ -197,6 +202,7 @@ const NbtBoard = () => {
           <p className="text-[10px] font-bold uppercase tracking-[0.25em] leading-none mb-0.5" style={{ color: NBT_AMBER }}>
             Workout Plan · NBT
             {isDraft && week && <span className="ml-2 text-amber-300">· Draft · not on the board yet</span>}
+            {day?.editedOn === todayNY() && <span className="ml-2 text-white/60">· Changed tonight</span>}
           </p>
           <h1 className="text-lg md:text-xl font-black tracking-tight uppercase">Non-Battle Team</h1>
           <p className="text-[11px] text-white/35">
@@ -233,6 +239,19 @@ const NbtBoard = () => {
           >
             {isFullscreen ? <Minimize className="w-5 h-5" /> : <Maximize className="w-5 h-5" />}
           </Button>
+          {isAdmin && week && day && (
+            <Button
+              variant="outline"
+              onClick={() => setEditing((e) => !e)}
+              className={
+                editing
+                  ? "ml-2 bg-white/10 border-white/30 text-white font-bold"
+                  : "ml-2 bg-transparent border-white/20 text-white/60 hover:bg-white/5 hover:text-white"
+              }
+            >
+              {editing ? <><Check className="w-4 h-4 mr-1.5" /> Done editing</> : <><Pencil className="w-4 h-4 mr-1.5" /> Edit tonight</>}
+            </Button>
+          )}
           <Button
             onClick={() => setLogging(true)}
             disabled={!day}
@@ -283,6 +302,15 @@ const NbtBoard = () => {
             </Button>
           </div>
         </div>
+      ) : editing && week ? (
+        <NbtEditTonight
+          key={`${week.id}-${dayKey}`}
+          week={week}
+          block={block}
+          dayKey={dayKey}
+          day={day}
+          onSaved={() => qc.invalidateQueries({ queryKey: ["nbt-week", weekStart] })}
+        />
       ) : (
         /* Fills the screen between the header and the foot, and scrolls INSIDE
            itself only on a phone — on the wall it never page-scrolls. */
