@@ -14,7 +14,7 @@ import {
 import { Search, Loader2, Check, Minus, Plus, ArrowLeft } from "lucide-react";
 import { toast } from "sonner";
 import {
-  NbtDay, DayKey, Track, TRACKS, TRACK_META, NbtLogSet, blankSets, ResultUnit,
+  NbtDay, DayKey, Track, TRACKS, TRACK_META, NbtLogSet, blankSets, ResultUnit, asTrack,
 } from "@/lib/nbt";
 
 interface Youth {
@@ -37,7 +37,7 @@ const NbtLogSheet = ({
   const [results, setResults] = useState<Youth[]>([]);
   const [searching, setSearching] = useState(false);
   const [youth, setYouth] = useState<Youth | null>(null);
-  const [track, setTrack] = useState<Track>("charlie");
+  const [track, setTrack] = useState<Track>("bravo");
   const [sets, setSets] = useState<NbtLogSet[]>(blankSets(3));
   const [result, setResult] = useState("");
   const [saving, setSaving] = useState(false);
@@ -60,16 +60,17 @@ const NbtLogSheet = ({
     return () => clearTimeout(t);
   }, [search, youth]);
 
-  // Their assigned track is pre-selected, and anything they already logged today
-  // comes back — so a second visit edits rather than duplicates.
+  // Anything they already logged today comes back — so a second visit edits
+  // rather than duplicates — and the track they logged last time is
+  // pre-selected. (Assigned levels were retired 2026-10-03; the kid picks.)
   const pick = async (y: Youth) => {
     setYouth(y);
-    const [{ data: level }, { data: existing }] = await Promise.all([
-      supabase.from("nbt_athlete_levels" as never).select("level").eq("registration_id", y.id).maybeSingle(),
+    const [{ data: existing }, { data: lastLog }] = await Promise.all([
       supabase.from("nbt_logs" as never).select("*").eq("workout_date", date).eq("registration_id", y.id).maybeSingle(),
+      supabase.from("nbt_logs" as never).select("level").eq("registration_id", y.id).order("workout_date", { ascending: false }).limit(1).maybeSingle(),
     ]);
     const prior = existing as unknown as { level: Track; sets: NbtLogSet[]; work_result: number | null } | null;
-    setTrack(prior?.level ?? ((level as unknown as { level: Track })?.level ?? "charlie"));
+    setTrack(asTrack(prior?.level ?? (lastLog as unknown as { level: string } | null)?.level));
     setSets(prior?.sets?.length ? prior.sets : blankSets(3));
     setResult(prior?.work_result != null ? String(prior.work_result) : "");
   };

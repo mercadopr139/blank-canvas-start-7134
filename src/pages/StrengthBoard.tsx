@@ -31,8 +31,9 @@ import {
 } from "@/lib/strength";
 
 const NLA_RED = "#bf0f3e";
-/** The extra work, in the amber the NBT board uses for Bravo — "build". */
-const EXTRA = "#f0a500";
+/** The extra work, a lighter rose so the column reads apart from the bar
+    while the whole page stays Battle Team red. Amber belongs to NBT. */
+const EXTRA = "#fb7185";
 
 const StrengthBoard = () => {
   const navigate = useNavigate();
@@ -279,17 +280,9 @@ const StrengthBoard = () => {
           {/* What to drag out first, and the coach's note from the plan. */}
           <PrepStrip equipment={equipment} note={liftNote} accent={NLA_RED} />
 
-          {/* The lift, and how long the whole thing should take. */}
-          <div className="flex items-baseline justify-between gap-6 flex-wrap shrink-0">
-            <div className="min-w-0">
-              <p className="text-[11px] md:text-xs uppercase tracking-[0.2em] text-white/45 font-bold">Main lift</p>
-              <p className="text-2xl md:text-4xl font-black tracking-tight leading-tight">{day.focus}</p>
-            </div>
-            <p className="text-sm md:text-base text-white/35">
-              <span className="text-white/50 font-semibold">~{day.estMinutes ?? SESSION_MINUTES} min</span>
-            </p>
-          </div>
-
+          {/* Kids read this from across the room, so the wall carries the
+              prep, the bar and the extra work — names and doses. Guidance,
+              cues, how-tos and scaling stay on the coach's page. (Josh, 2026-10-03.) */}
           {/* Two columns that take whatever height is left and fit themselves
               to it: the bar on the left, the extra work on the right. */}
           <div className="grid grid-cols-1 md:grid-cols-[1fr_1.15fr] gap-4 flex-1 md:min-h-0">
@@ -307,57 +300,31 @@ const StrengthBoard = () => {
                 ref={(el) => { colRefs.current[0] = el; }}
                 className="flex-1 min-h-0 overflow-hidden flex flex-col"
               >
-                {/* Warm-up ramp, numbered — it is how the bar gets loaded. */}
+                {/* The warm-up ramp as one quiet line — it is how the bar gets loaded. */}
                 {day.warmup?.length ? (
-                  <div className="p-[0.8em]">
-                    <ColLabel color={NLA_RED}>Warm-up ramp</ColLabel>
-                    <ul className="mt-[0.5em] space-y-[0.45em]">
-                      {day.warmup.map((w, i) => (
-                        <li key={i} className="flex items-baseline gap-[0.5em] text-[0.85em] leading-snug">
-                          <span className="w-[1.3em] h-[1.3em] rounded-md bg-white/10 grid place-items-center text-[0.7em] font-black text-white/50 shrink-0">
-                            {i + 1}
-                          </span>
-                          <span className="text-white/85">
-                            <span className="font-semibold text-white">{w.name}</span>
-                            {w.detail ? <span className="text-white/60"> — {w.detail}</span> : null}
-                          </span>
-                        </li>
-                      ))}
-                    </ul>
+                  <div className="px-[0.9em] pt-[0.8em]">
+                    <ColLabel color={NLA_RED}>Warm-up</ColLabel>
+                    <p className="mt-[0.25em] text-[0.85em] leading-snug text-white/70">
+                      {day.warmup.map((w) => (w.detail ? `${w.name} — ${w.detail}` : w.name)).join("  ·  ")}
+                    </p>
                   </div>
                 ) : null}
 
                 {day.main ? (
                   <>
-                    <div className="h-px" style={{ backgroundColor: `${NLA_RED}33` }} />
-                    <div className="p-[0.8em] flex-1">
+                    <div className="px-[0.9em] pt-[0.7em] flex-1">
                       <ColLabel color={NLA_RED}>
-                        The lift{day.main.rest ? ` · rest ${day.main.rest}` : ""}
+                        Lift{day.main.rest ? ` · rest ${day.main.rest}` : ""}
                       </ColLabel>
                       <div className="flex items-start justify-between gap-[0.6em] mt-[0.3em]">
-                        <p className="text-[1.5em] font-bold leading-tight">{day.main.lift}</p>
+                        <p className="text-[1.6em] font-bold leading-tight">{day.main.lift}</p>
                         <span
-                          className="shrink-0 rounded-lg px-[0.5em] py-[0.2em] text-[1.1em] font-black tabular-nums"
-                          style={{ backgroundColor: `${NLA_RED}22`, color: NLA_RED }}
+                          className="shrink-0 rounded-lg px-[0.55em] py-[0.2em] text-[1.1em] font-black tabular-nums"
+                          style={{ backgroundColor: `${NLA_RED}26`, color: NLA_RED }}
                         >
                           {day.main.scheme}
                         </span>
                       </div>
-                      {day.main.guidance ? (
-                        <p className="mt-[0.8em] text-[0.85em] leading-relaxed text-white/75">{day.main.guidance}</p>
-                      ) : null}
-                      {day.main.cues?.length ? (
-                        <div className="mt-[0.9em] flex flex-wrap gap-[0.45em]">
-                          {day.main.cues.map((c, i) => (
-                            <span
-                              key={i}
-                              className="rounded-lg border border-white/10 bg-white/[0.04] px-[0.6em] py-[0.3em] text-[0.8em] text-white/85"
-                            >
-                              {c}
-                            </span>
-                          ))}
-                        </div>
-                      ) : null}
                     </div>
                   </>
                 ) : null}
@@ -408,20 +375,8 @@ const StrengthBoard = () => {
                                 {a.sets}
                               </span>
                             </div>
-                            <p className="text-[0.65em] uppercase tracking-[0.12em] text-white/40 mt-[0.45em]">
-                              {a.equipment}{a.targets ? ` · ${a.targets}` : ""}
-                              {a.rest ? ` · rest ${a.rest}` : ""}
-                            </p>
-                            {a.howTo ? (
-                              <p className="text-[0.8em] leading-relaxed text-white/75 mt-[0.8em]">{a.howTo}</p>
-                            ) : null}
-                            {a.scale ? (
-                              <p className="text-[0.75em] leading-relaxed mt-[0.7em]" style={{ color: `${EXTRA}cc` }}>
-                                ⚖ {a.scale}
-                              </p>
-                            ) : null}
                           </div>
-                          <div className="mx-auto mt-[1.2em] w-[14em] max-w-full">
+                          <div className="mx-auto mt-[0.8em] w-[12em] max-w-full">
                             <ExerciseVideo name={a.name} compact inline />
                           </div>
                         </li>
@@ -445,12 +400,6 @@ const StrengthBoard = () => {
             </section>
           </div>
 
-          {/* The coach's note at the foot — for the coach, so it stays quiet. */}
-          {day.coachNotes ? (
-            <p className="shrink-0 text-sm md:text-base text-white/45">
-              <span className="font-bold text-white/60">Coach note:</span> {day.coachNotes}
-            </p>
-          ) : null}
         </main>
       )}
     </div>

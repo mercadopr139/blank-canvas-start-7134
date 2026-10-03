@@ -7,10 +7,10 @@
 //
 // This programme is measured on what it is for — competency, work capacity and
 // showing up — so the headline is track movement, not weight on a bar.
-import { NbtLog, Track, TRACKS, heaviestSet } from "@/lib/nbt";
+import { NbtLog, Track, TRACKS, heaviestSet, asTrack } from "@/lib/nbt";
 
 /** The ladder, in order, so a move can be read as up or down. */
-const RANK: Record<Track, number> = { charlie: 0, bravo: 1, alpha: 2 };
+const RANK: Record<Track, number> = { bravo: 1, alpha: 2 };
 
 export interface TrackMove {
   from: Track;
@@ -71,15 +71,18 @@ const daysBetween = (from: string, to: string) =>
  *
  * Track moves are read from the sessions themselves rather than from whatever
  * level they are assigned today — the log records what they ACTUALLY trained,
- * so a youth who moved up in week three still shows as Charlie in week one.
+ * so a youth who moved up in week three still shows as Bravo in week one.
  */
 export const athleteIntel = (
   registrationId: string,
   logs: NbtLog[],
   today: string
 ): AthleteIntel | null => {
-  const mine = [...logs]
+  // Rows logged before the third track was retired still say "charlie";
+  // read them as Bravo so the ladder and the counts stay whole.
+  const mine = logs
     .filter((l) => l.registration_id === registrationId)
+    .map((l) => ({ ...l, level: asTrack(l.level) }))
     .sort((a, b) => (a.workout_date < b.workout_date ? -1 : 1));
   if (mine.length === 0) return null;
 
@@ -143,7 +146,7 @@ export const allAthletes = (logs: NbtLog[], today: string): AthleteIntel[] => {
 export const SLIPPING_DAYS = 14;
 
 export const overview = (athletes: AthleteIntel[]): NbtOverview => {
-  const byLevel: Record<Track, number> = { charlie: 0, bravo: 0, alpha: 0 };
+  const byLevel: Record<Track, number> = { bravo: 0, alpha: 0 };
   athletes.forEach((a) => { byLevel[a.currentLevel] += 1; });
   return {
     athletes: athletes.length,

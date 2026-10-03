@@ -40,20 +40,27 @@ const SYSTEM =
   "THEY BOX IMMEDIATELY AFTERWARDS. Boxing is the sport; this supports it. Never write a session that leaves them " +
   "unable to box well twenty minutes later. That single constraint outranks everything else here.\n\n" +
 
-  "THE SPACE — A HARD CONSTRAINT, NOT A PREFERENCE. The two days are in different rooms and the room decides " +
-  "what is physically possible:\n" +
+  "THE SPACE — A HARD CONSTRAINT, NOT A PREFERENCE. The days are in different rooms and the room decides " +
+  "what is physically possible. The exact room and its inventory for THIS day come with every request under " +
+  "THE ROOM TODAY — read it first and obey it over anything general here:\n" +
   "- MONDAY and THURSDAY are in the PERFORMANCE CENTER. The usable floor is the basketball court, 75 ft by " +
   "  50 ft; the rest of the building holds equipment and cannot be run on. The longest straight line is 75 ft — " +
   "  TWENTY-FIVE YARDS. Running here means shuttles, down-and-backs, suicides at 5/10/15/25 yards, and short " +
   "  accelerations. NEVER write a lap, a timed distance run, or any single run longer than 25 yards. There is " +
   "  no outdoor option. Twenty-five-yard shuttles are all braking, so keep hard changes of direction to a " +
-  "  sensible volume in one session and pair them with work that does not decelerate.\n" +
+  "  sensible volume in one session and pair them with work that does not decelerate. The machines — bikes, " +
+  "  rowers, ski ergs, the push sled on its turf — are HERE, and belong in the work block as stations.\n" +
   "- TUESDAY is in the BOXING FACILITY, half the size, with NO ROOM TO RUN AT ALL. Not a length, not a jog, " +
-  "  not a lap, not a shuttle, not a single yard. Tuesday conditioning happens ON THE SPOT. Available there: " +
-  "  6 bikes, 6 rowers, jump ropes, med balls, bands, pull-up bars, dumbbells, kettlebells, and bodyweight " +
-  "  movements — air squats, burpees, lunges, step-ups, push-ups, core. There are NO ski ergs; never program " +
-  "  one. Twelve machines is enough for a station rotation or two waves, but NEVER assume the whole room is " +
-  "  on a machine at once.\n\n" +
+  "  not a lap, not a shuttle, not a single yard. Tuesday conditioning happens ON THE SPOT. There are NO " +
+  "  machines in this room — no bikes, no rowers, no ski ergs, no sled; they are in the other building with " +
+  "  the Junior Boxers. Tuesday's conditioning is jump rope, wall balls, med balls, bands, pull-up bars, " +
+  "  dumbbells, kettlebells and bodyweight — air squats, burpees, lunges, step-ups, push-ups, core — in " +
+  "  rounds and intervals. PLYOMETRICS are a Tuesday option, once or twice a month, in the lift block as the " +
+  "  technical element: box jumps and step-offs, squat jumps, split-squat jumps, tuck jumps, rope " +
+  "  variations, med ball slams and chest passes — all on the spot, never broad jumps or bounding. Low " +
+  "  reps, full rest, quality landings: it is a skill, not conditioning, and never goes inside a circuit " +
+  "  where tired kids land badly. Bravo lower boxes, step-offs and two-foot landings; Alpha higher boxes " +
+  "  and single-leg landings.\n\n" +
 
   "TUESDAY'S CONDITIONING STYLE: standard gym and CrossFit-style work — familiar movements repeated in rounds " +
   "or intervals, couplets and triplets a whole room can run together. It must genuinely raise heart rates. Do " +
@@ -61,46 +68,51 @@ const SYSTEM =
   "is not the training they lack. The programme's existing limits still outrank the style: no Olympic lifts, " +
   "no kipping, never to failure, never an exhaustion contest, and never athletes racing each other.\n\n" +
 
-  "EQUIPMENT IS SHARED AND FINITE. All three tracks train AT THE SAME TIME, in the same room, and anywhere " +
-  "between 15 and 40 athletes are on the floor. Two tracks reaching for the same limited item is a queue, not " +
-  "a workout.\n" +
-  "LIMITED — 6 assault bikes, 6 rowers, and the dumbbells and kettlebells:\n" +
-  "- NO TWO TRACKS may be given the same limited item in the same block. If Alpha is on the bikes, Bravo is on " +
-  "  the rowers and Charlie is on the floor.\n" +
-  "- A limited item is a STATION inside a rotation, NEVER something a whole track does at the same moment. " +
-  "  Write it so only a handful of athletes need it at any one time.\n" +
+  "EQUIPMENT IS SHARED AND FINITE. Both tracks train AT THE SAME TIME, in the same room, and anywhere " +
+  "between 15 and 40 athletes are on the floor. Two tracks reaching for the same scarce item is a queue, not " +
+  "a workout. THE ROOM TODAY (sent with the request) lists exactly what is in the room and how many:\n" +
+  "- SCARCE means it has a count — racks, benches, bikes, rowers, ski ergs, the sled, the plyo boxes. A " +
+  "  scarce item belongs to ONE TRACK PER BLOCK: both tracks lift at the same time, and both do the work " +
+  "  block at the same time, so the other track gets a version of the same pattern that needs none of it. " +
+  "  If Alpha back squats in the racks, Bravo goblet squats on the floor. If Alpha bench presses on the " +
+  "  benches, Bravo floor presses or does push-ups — NOT dumbbell bench press on the same three benches. " +
+  "  If Alpha has the rowers in its circuit, Bravo has the bikes, the ski ergs, the sled, or the floor.\n" +
+  "- The room may say an item has ENOUGH FOR BOTH TRACKS AT ONCE (the boxing facility's six racks and six " +
+  "  benches). Then both may lift on it, in small groups taking turns.\n" +
+  "- A scarce item is a STATION inside a rotation, NEVER something a whole track does at the same moment. " +
+  "  Write it so only a handful of athletes need it at any one time. Four plyo boxes is a station of four.\n" +
   "- Assume 40 could turn up. Every circuit must still work with a full room, so most of what a track is doing " +
   "  at any moment needs no equipment at all.\n" +
-  "PLENTIFUL — med balls, jump ropes, bands, pull-up bars, barbells and racks, boxes, and bodyweight. Any " +
-  "number of tracks may use these at once.\n" +
-  "ON THE LIFT the three tracks climb an IMPLEMENT LADDER rather than sharing one — bodyweight or banded for " +
-  "CHARLIE, dumbbell or kettlebell for BRAVO, barbell for ALPHA. Use these:\n" +
+  "- BARBELLS AND PLATES ARE PLENTIFUL; it is the RACKS that are scarce. Floor barbell work — deadlifts, " +
+  "  Romanian deadlifts, barbell rows, floor press, landmine press — needs no rack, so both tracks may be on " +
+  "  barbells at once when the pattern allows. Squats and bench press need the racks and benches.\n" +
+  "- PLENTIFUL — dumbbells and kettlebells, wall-ball targets, med balls, jump ropes, bands, pull-up bars, " +
+  "  barbells and plates, and bodyweight. Any number of tracks may use these at once.\n" +
+  "- Anything the room says is NOT IN THIS ROOM is never written for that day.\n" +
+  "ON THE LIFT the two tracks climb an IMPLEMENT LADDER rather than sharing one — dumbbell or kettlebell for " +
+  "BRAVO, barbell for ALPHA. The bodyweight or banded rung is the scale-down a coach gives a Bravo athlete still " +
+  "learning the pattern; mention it in Bravo's detail when it matters, never as a third track. Use these:\n" +
   "- SQUAT: air squat, box squat or tempo air squat → goblet squat → back squat.\n" +
   "- PUSH: incline or knee push-up → DB bench press → barbell bench press.\n" +
   "- OVERHEAD: pike push-up, band overhead press or wall slide → DB overhead press → barbell overhead press.\n" +
   "- HINGE: bodyweight hip hinge, band good morning or glute bridge → DB or KB Romanian deadlift → barbell " +
   "  deadlift or Romanian deadlift.\n" +
   "- PULL: inverted row, band row or scap pull-up → DB row → barbell row or pull-up.\n" +
-  "Dumbbells and kettlebells are ONE rack, so they count as the same item. CHARLIE MUST NOT be given a " +
-  "dumbbell, kettlebell or goblet version of the movement BRAVO is doing. If the only obvious Charlie version " +
-  "needs a hand weight, use a bodyweight or banded variation instead — that is the better teaching progression " +
-  "regardless. A 'goblet squat' and a 'heavy goblet squat' in two tracks is the same rack twice: not allowed.\n" +
-  "CARRIES follow the same ladder: med ball hug carry or a plate for CHARLIE, dumbbell or kettlebell farmer " +
-  "carry for BRAVO, heavier farmer carry for ALPHA — or replace the carry with a hang or a plank for the tracks " +
-  "that cannot have the rack. Never all three tracks carrying dumbbells or kettlebells.\n" +
-  "IN THE WORK BLOCK, one circuit written three times at three doses is a queue three deep. Split the " +
-  "STATIONS, not just the doses: if Alpha rows, Bravo does not row — Bravo bikes, or Bravo is on the floor. " +
-  "Each track's circuit must be mostly floor work that needs nothing, with at most one limited item as one " +
-  "station in it, and no two tracks sharing that item.\n\n" +
+  "CARRIES follow the same ladder: dumbbell or kettlebell farmer carry for BRAVO, heavier farmer carry or a " +
+  "plate carry for ALPHA. There are plenty of dumbbells and kettlebells, so both may carry at once.\n" +
+  "IN THE WORK BLOCK, one circuit written twice at two doses on the same scarce station is a queue two deep. " +
+  "Split the STATIONS, not just the doses: if Alpha rows, Bravo does not row — Bravo bikes, skis, pushes the " +
+  "sled, or is on the floor. Each track's circuit must be mostly floor work that needs nothing, with at most " +
+  "one scarce item as one station in it, and no two tracks sharing that item.\n\n" +
 
   "THE CONDITIONING NEVER REPEATS THE LIFT. The lift block is quality reps under load; the work block is the " +
   "same PATTERN under fatigue with a different, simpler movement. A track that just did 4 × 8 Romanian " +
   "deadlift does not do Romanian deadlifts again in its circuit — it does hip bridges, single-leg deadlifts, " +
-  "a light med ball or dumbbell ground-to-overhead, or kettlebell swings for Bravo and Alpha (never as " +
-  "Charlie's hinge). Squat day: the lift is a goblet squat, so the circuit uses step-ups, lunges, wall sits, " +
+  "a light med ball or dumbbell ground-to-overhead, or kettlebell swings. Squat day: the lift is a goblet " +
+  "squat, so the circuit uses step-ups, lunges, wall sits, " +
   "jump squats, not goblet squats. Push day: bench in the lift, so push-ups, med ball chest pass or dips in " +
-  "the circuit, not bench. This is per track — Charlie's air-squat lift means CHARLIE's circuit has no air " +
-  "squats; Bravo's may. Same name, same movement, or the same movement with a different weight in front of " +
+  "the circuit, not bench. This is per track — Bravo's goblet-squat lift means BRAVO's circuit has no goblet " +
+  "squats; Alpha's may. Same name, same movement, or the same movement with a different weight in front of " +
   "it, all count as a repeat. Ground-to-overhead is light — med ball or a light dumbbell, never a barbell.\n\n" +
 
   "THE SIX GOALS: confidence, competency, strength, athleticism, general event readiness (a HYROX-style event, " +
@@ -113,10 +125,10 @@ const SYSTEM =
   "sequences they must memorise, repeated failure, anything that embarrasses a beginner, exhaustion presented as " +
   "success, or complexity added to make the workout interesting.\n\n" +
 
-  "THE THREE TRACKS — every session gives all three, always in this order:\n" +
-  "- CHARLIE (LEARN): new or still building competency. Bodyweight and banded work, supported variations, " +
-  "  shorter work intervals with longer rests, med ball carries. NEVER frame it as the easy or lesser workout.\n" +
-  "- BRAVO (BUILD): competent, ready for more load, distance or difficulty.\n" +
+  "THE TWO TRACKS — every session gives both, always in this order:\n" +
+  "- BRAVO (BUILD): competent or still building competency, training with dumbbells, kettlebells, bands and " +
+  "  bodyweight. Shorter work intervals with longer rests where it helps. NEVER frame it as the easy or lesser " +
+  "  workout.\n" +
   "- ALPHA (PROGRESS): competent and experienced enough for barbell work, longer intervals, harder carries.\n" +
   "These describe the right challenge for THIS movement at THIS point — not who the best athlete is. The three " +
   "tracks must train the SAME fundamental pattern at different progressions, never three unrelated workouts. " +
@@ -133,7 +145,7 @@ const SYSTEM =
   "1) PREP, ~5 min — a short dynamic warm-up tied to the day's training and easy to run with a group. No long " +
   "   static stretching, no corrective circuits.\n" +
   "2) LEARN + LIFT, 10 min with a HARD STOP at 15 — ONE primary movement, explained and demonstrated fast, with " +
-  "   Charlie/Bravo/Alpha versions and sets/reps. Quality reps. Never to failure. RACKS ARE SHARED: three or four " +
+  "   Bravo/Alpha versions and sets/reps. Quality reps. Never to failure. RACKS ARE SHARED: three or four " +
   "   athletes take turns on one bar or one pair of dumbbells, alternating sets while the others rest. Write the " +
   "   dose for a GROUP taking turns to finish inside ten minutes, not for one athlete alone — 4 × 5 shared four " +
   "   ways is sixteen sets on that rack. State the lift block as 10 minutes. On a day whose point is athleticism, teach one " +
@@ -162,8 +174,8 @@ const SYSTEM =
 
   "MOVEMENT COMPLEXITY: light equipment does not make a movement beginner-friendly. Ballistic kettlebell work — " +
   "swings, cleans, snatches, Turkish get-ups — only when athletes have been specifically taught it. NEVER use the " +
-  "kettlebell swing as the default beginner hinge; Charlie hinges with bodyweight and bands, Bravo with a " +
-  "dumbbell RDL. No Olympic lifts. Complexity " +
+  "kettlebell swing as the default beginner hinge; Bravo hinges with a dumbbell RDL, and with bodyweight or " +
+  "bands while still learning it. No Olympic lifts. Complexity " +
   "needs a training reason.\n\n" +
 
   "CONDITIONING: prefer movements that stay safe and understandable under fatigue — burpees, jump rope, " +
@@ -191,7 +203,7 @@ const SYSTEM =
   "  progression: a rep, a set, a little load, slightly less assistance, slightly shorter rest.\n" +
   "- A track whose reps fell short of what was prescribed, or whose circuit result went backwards, has NOT. " +
   "  Hold the movement and the dose. Progress technique, range of motion or control instead of load.\n" +
-  "- The number of athletes on each track tells you where the room is. If most of them are Charlie, Charlie's " +
+  "- The number of athletes on each track tells you where the room is. If most of them are Bravo, Bravo's " +
   "  version is the main event and gets your best writing — not a lighter afterthought.\n" +
   "- A track with nobody in it is still written in full. Somebody will be there next week.\n" +
   "- If the summary is marked THIN, or you are given none at all, you have no evidence. Progress conservatively " +
@@ -230,7 +242,6 @@ const SYSTEM =
   '  "prep": ["3-5 short warm-up lines"],\n' +
   '  "lift": {\n' +
   '    "pattern": "Squat",\n' +
-  '    "charlie": { "name": "Box Squat", "detail": "3 × 8" },\n' +
   '    "bravo":   { "name": "Goblet Squat", "detail": "4 × 6" },\n' +
   '    "alpha":   { "name": "Back Squat", "detail": "4 × 5" },\n' +
   '    "cues": ["one or two short coaching cues"]\n' +
@@ -238,7 +249,6 @@ const SYSTEM =
   '  "work": {\n' +
   '    "emphasis": "one of: steady aerobic | intervals | strength-endurance | carries | grip | obstacle prep",\n' +
   '    "title": "short name for the circuit",\n' +
-  '    "charlie": ["4 rounds — rest 60 sec between rounds", "Jump rope — 30 sec — easy steady bounce", "Med ball hug carry — 15 yd down and back — steady", "Push-up — 8 reps — incline if needed"],\n' +
   '    "bravo":   ["4 rounds — rest 45 sec between rounds", "Row — 250 m — controlled pace", "10-yard shuttle × 2 — strong but repeatable", "Jump rope — 30 sec — steady"],\n' +
   '    "alpha":   ["4 rounds — rest 45 sec between rounds", "Assault bike — 30 sec — strong but repeatable", "15-yard shuttle × 2 — strong but repeatable", "Jump rope — 30 sec — fast singles"],\n' +
   '    "result_unit": "one of: rounds | minutes | seconds | meters | reps — what the athletes write down"\n' +
@@ -257,13 +267,16 @@ const track = (v: unknown) => ({
 const DAY_BRIEF: Record<string, string> = {
   monday:
     "MONDAY — SQUAT + PUSH. Performance Center, on the basketball court: 75 ft by 50 ft. Any running is " +
-    "shuttles or down-and-backs, 25 yards maximum, never a lap or a distance.",
+    "shuttles or down-and-backs, 25 yards maximum, never a lap or a distance. Bikes, rowers, ski ergs and " +
+    "the sled are here for the work block.",
   tuesday:
-    "TUESDAY — ATHLETIC + OVERHEAD. Boxing facility: NO RUNNING AT ALL — there is no floor for it. Every " +
-    "conditioning movement stays on the spot. Athletic and energetic, not a second heavy strength day.",
+    "TUESDAY — ATHLETIC + OVERHEAD. Boxing facility: NO RUNNING AT ALL — there is no floor for it, and NO " +
+    "machines — no bikes, no rowers, no ski ergs, no sled. Every conditioning movement stays on the spot. " +
+    "Athletic and energetic, not a second heavy strength day. Plyometrics are an option here.",
   thursday:
     "THURSDAY — HINGE + PULL. Performance Center, on the basketball court: 75 ft by 50 ft. Any running is " +
-    "shuttles or down-and-backs, 25 yards maximum, never a lap or a distance.",
+    "shuttles or down-and-backs, 25 yards maximum, never a lap or a distance. Bikes, rowers, ski ergs and " +
+    "the sled are here for the work block.",
 };
 
 Deno.serve(async (req: Request) => {
@@ -279,16 +292,18 @@ Deno.serve(async (req: Request) => {
 
     const weekInBlock = Number(body?.weekInBlock) || 1;
     const blockFocus = String(body?.blockFocus ?? "").trim();
+    // The room and its inventory, from the client's single source of truth.
+    const roomKit = String(body?.roomKit ?? "").trim();
     // The same day from earlier weeks of THIS block. This is what turns a pile
     // of weeks into a programme.
     //
-    // All three tracks, not just Alpha. Anchoring continuity to Alpha alone left
-    // Charlie's month a fresh guess every week — backwards, since the beginners
-    // are the group that most needs the repetition. `lift` is the old
-    // Alpha-only field, still read so a cached client cannot lose continuity.
+    // Both tracks, not just Alpha. Anchoring continuity to Alpha alone left
+    // Bravo's month a fresh guess every week — backwards, since the newer
+    // athletes are the group that most needs the repetition. `lift` is the
+    // old Alpha-only field, still read so a cached client cannot lose continuity.
     const priorWeeks: Array<{
       week: number; pattern?: string;
-      charlie?: string; bravo?: string; alpha?: string;
+      bravo?: string; alpha?: string;
       work?: string; lift?: string;
     }> = Array.isArray(body?.priorWeeks) ? body.priorWeeks.slice(0, 5) : [];
     // Anonymised counts and medians of what the room actually managed. Never a
@@ -301,15 +316,14 @@ Deno.serve(async (req: Request) => {
     // Why the previous attempt was thrown away. Retrying with the identical
     // prompt just reproduces the same mistake, so the reason comes back in.
     const retryNote = String(body?.retryNote ?? "").trim();
-    // Set when only one of the three tracks is being rewritten.
+    // Set when only one of the two tracks is being rewritten.
     const onlyTrack = String(body?.onlyTrack ?? "").trim().toLowerCase();
     const keepDay = body?.keepDay ?? null;
 
-    // Every track spelled out, so "keep the same movement" means all three.
+    // Every track spelled out, so "keep the same movement" means both.
     const weekLines = priorWeeks
       .map((p) =>
         `- Week ${p.week} — pattern: ${p.pattern || "?"}\n` +
-        `    Charlie: ${p.charlie ?? p.lift ?? "?"}\n` +
         `    Bravo:   ${p.bravo ?? "?"}\n` +
         `    Alpha:   ${p.alpha ?? p.lift ?? "?"}\n` +
         `    Work:    ${p.work ?? "?"}`
@@ -322,7 +336,6 @@ Deno.serve(async (req: Request) => {
       ? "This is week 1 of a NEW block, continuing from the last one. Here is where the previous block " +
         `finished on this day (week beginning ${carry.weekStart}):\n` +
         `- Pattern: ${carry.pattern || "?"} — trained ${carry.weeksOnPattern || 1} week(s) in a row\n` +
-        `    Charlie: ${carry.charlie ?? "?"}\n` +
         `    Bravo:   ${carry.bravo ?? "?"}\n` +
         `    Alpha:   ${carry.alpha ?? "?"}\n` +
         `    Work:    ${carry.work ?? "?"}\n\n` +
@@ -341,10 +354,10 @@ Deno.serve(async (req: Request) => {
     const continuity =
       priorWeeks.length === 0
         ? opening
-        : "Earlier weeks of THIS block, same day — ALL THREE TRACKS:\n" +
+        : "Earlier weeks of THIS block, same day — BOTH TRACKS:\n" +
           weekLines +
           "\n\nKEEP THE SAME PRIMARY MOVEMENT PATTERN and, where it still fits, the same primary exercises — " +
-          "for Charlie and Bravo as strictly as for Alpha. Progress ONE or TWO variables only: a rep, a set, a " +
+          "for Bravo as strictly as for Alpha. Progress ONE or TWO variables only: a rep, a set, a " +
           "little more distance, slightly less assistance, slightly shorter rest. Do NOT swap a lift for " +
           "something new just to look different, and do NOT leave one track's progression to chance while " +
           "carefully progressing another. The conditioning may vary more than the lift, but the progression " +
@@ -366,7 +379,6 @@ Deno.serve(async (req: Request) => {
     const evidence = room
       ? `\nWHAT THE ROOM ACTUALLY DID on this day, across its last ${room.sessions} session(s) ` +
         `(most recent ${room.lastDate}), ${room.athletes} athlete(s) in total:\n` +
-        trackLine("Charlie", room.byTrack?.charlie) + "\n" +
         trackLine("Bravo", room.byTrack?.bravo) + "\n" +
         trackLine("Alpha", room.byTrack?.alpha) + "\n" +
         (room.workTrend
@@ -378,15 +390,15 @@ Deno.serve(async (req: Request) => {
           : "    Use this to decide who has earned a progression and who has not.\n")
       : "";
 
-    // Rewriting ONE track. The other two go over unchanged and must come back
-    // unchanged — otherwise a regenerated Charlie ends up squatting while Alpha
-    // benches, which is the "three unrelated workouts" the rules forbid.
+    // Rewriting ONE track. The other goes over unchanged and must come back
+    // unchanged — otherwise a regenerated Bravo ends up squatting while Alpha
+    // benches, which is the "unrelated workouts" the rules forbid.
     const trackBrief =
       onlyTrack && keepDay
         ? `\nREWRITE ONE TRACK ONLY: ${onlyTrack.toUpperCase()}.\n` +
           `This day already exists and the coach wants a different ${onlyTrack} version. Return the whole day ` +
           "back to me with EVERYTHING else byte-for-byte unchanged: focus, prep, reset, lift pattern, cues, " +
-          "work title, work emphasis, result unit, and the two tracks you are not rewriting.\n" +
+          "work title, work emphasis, result unit, and the track you are not rewriting.\n" +
           `Here is the current day:\n${JSON.stringify(keepDay)}\n` +
           `Change ONLY the "${onlyTrack}" entries inside lift and work. The new version must remain a ` +
           "progression of the SAME movement pattern as the other two tracks — a different exercise or a " +
@@ -395,6 +407,7 @@ Deno.serve(async (req: Request) => {
 
     const userPrompt =
       `${DAY_BRIEF[dayKey]}\n` +
+      (roomKit ? `${roomKit}\n` : "") +
       `Week ${weekInBlock} of this month's block.` +
       (blockFocus ? ` The month's coaching emphasis is: "${blockFocus}".` : "") +
       "\n\n" +
@@ -452,7 +465,6 @@ Deno.serve(async (req: Request) => {
       prep: strArray(parsed?.prep, 6),
       lift: {
         pattern: String(parsed?.lift?.pattern ?? "").trim(),
-        charlie: track(parsed?.lift?.charlie),
         bravo: track(parsed?.lift?.bravo),
         alpha: track(parsed?.lift?.alpha),
         cues: strArray(parsed?.lift?.cues, 3),
@@ -460,7 +472,6 @@ Deno.serve(async (req: Request) => {
       work: {
         emphasis: String(work?.emphasis ?? "").trim(),
         title: String(work?.title ?? "").trim(),
-        charlie: strArray(work?.charlie, 8),
         bravo: strArray(work?.bravo, 8),
         alpha: strArray(work?.alpha, 8),
         result_unit: String(work?.result_unit ?? "rounds").trim().toLowerCase(),
@@ -469,8 +480,8 @@ Deno.serve(async (req: Request) => {
       minutes,
     };
 
-    if (!day.lift.charlie.name || !day.lift.bravo.name || !day.lift.alpha.name) {
-      return json({ error: "The AI missed one of the three tracks. Try again." }, 502);
+    if (!day.lift.bravo.name || !day.lift.alpha.name) {
+      return json({ error: "The AI missed one of the two tracks. Try again." }, 502);
     }
 
     return json({ day });

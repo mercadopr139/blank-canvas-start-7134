@@ -4,18 +4,32 @@
 // be tested. Getting that wrong would break the continuity the whole programme
 // rests on.
 
-// Display order, everywhere the three tracks are shown together. The tracks
-// still get equal width and equal weight on the board — a beginner should not be
-// able to tell they have been handed “the lesser workout”.
-export const TRACKS = ["alpha", "bravo", "charlie"] as const;
+// Display order, everywhere the two tracks are shown together. Both get equal
+// width and equal weight on the board — nobody should be able to tell they
+// have been handed “the lesser workout”.
+//
+// Charlie (the old third "learn" track) was retired 2026-10-03 (Josh). Days
+// written before then still carry a charlie key; it is read, never shown, and
+// an athlete still filed as charlie is treated as Bravo.
+export const TRACKS = ["alpha", "bravo"] as const;
 export type Track = (typeof TRACKS)[number];
 
-/** How each track is presented. Charlie is LEARN, never "the easy one". */
+/** The Non-Battle Team's own colour — the page frame on the wall and in admin. */
+export const NBT_AMBER = "#f0a500";
+
+/**
+ * How each track is presented. Violet and lime belong to no other group on
+ * the wall — not Battle Team red, NBT amber, Littles blue or Bible teal — so
+ * a kid can tell the two apart without confusing them with anything else.
+ * (Josh, 2026-10-03.)
+ */
 export const TRACK_META: Record<Track, { label: string; word: string; color: string }> = {
-  charlie: { label: "Charlie", word: "Learn", color: "#38bdf8" },
-  bravo: { label: "Bravo", word: "Build", color: "#f0a500" },
-  alpha: { label: "Alpha", word: "Progress", color: "#bf0f3e" },
+  bravo: { label: "Bravo", word: "Build", color: "#a3e635" },
+  alpha: { label: "Alpha", word: "Progress", color: "#a78bfa" },
 };
+
+/** Any stored level, including the retired "charlie", as one of today's tracks. */
+export const asTrack = (level: string | null | undefined): Track => (level === "alpha" ? "alpha" : "bravo");
 
 export const DAYS = [
   { key: "monday", label: "Monday", title: "Squat + Push", weekday: 1 },
@@ -56,7 +70,8 @@ export interface NbtDay {
   prep: string[];
   lift: {
     pattern: string;
-    charlie: TrackMovement;
+    /** Retired track — present on days written before 2026-10-03 only. */
+    charlie?: TrackMovement;
     bravo: TrackMovement;
     alpha: TrackMovement;
     cues: string[];
@@ -64,7 +79,8 @@ export interface NbtDay {
   work: {
     emphasis: string;
     title: string;
-    charlie: string[];
+    /** Retired track — present on days written before 2026-10-03 only. */
+    charlie?: string[];
     bravo: string[];
     alpha: string[];
     result_unit: ResultUnit | string;
@@ -99,6 +115,9 @@ export interface NbtWeek {
   week_start: string;
   week_in_block: number;
   days: Partial<Record<DayKey, NbtDay>>;
+  /** draft = still being worked on; locked = on the gym board. Per week since 2026-10-03. */
+  status?: "draft" | "locked";
+  locked_at?: string | null;
 }
 
 export interface NbtLogSet {

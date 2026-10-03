@@ -31,15 +31,15 @@ describe("one athlete", () => {
     // The whole reason the level is copied onto each log: moving up in week
     // three must not rewrite week one.
     const a = athleteIntel("kid-1", [
-      log({ workout_date: "2026-09-07", level: "charlie" }),
-      log({ workout_date: "2026-09-14", level: "charlie" }),
-      log({ workout_date: "2026-09-21", level: "bravo" }),
+      log({ workout_date: "2026-09-07", level: "bravo" }),
+      log({ workout_date: "2026-09-14", level: "bravo" }),
+      log({ workout_date: "2026-09-21", level: "alpha" }),
     ], TODAY)!;
 
-    expect(a.startLevel).toBe("charlie");
-    expect(a.currentLevel).toBe("bravo");
+    expect(a.startLevel).toBe("bravo");
+    expect(a.currentLevel).toBe("alpha");
     expect(a.moves).toHaveLength(1);
-    expect(a.moves[0]).toMatchObject({ from: "charlie", to: "bravo", up: true });
+    expect(a.moves[0]).toMatchObject({ from: "bravo", to: "alpha", up: true });
   });
 
   it("records a move back down as a move, not as progress", () => {
@@ -52,12 +52,12 @@ describe("one athlete", () => {
 
   it("does not care what order the logs arrive in", () => {
     const a = athleteIntel("kid-1", [
-      log({ workout_date: "2026-09-21", level: "bravo" }),
-      log({ workout_date: "2026-09-07", level: "charlie" }),
+      log({ workout_date: "2026-09-21", level: "alpha" }),
+      log({ workout_date: "2026-09-07", level: "bravo" }),
     ], TODAY)!;
     expect(a.firstDate).toBe("2026-09-07");
-    expect(a.startLevel).toBe("charlie");
-    expect(a.currentLevel).toBe("bravo");
+    expect(a.startLevel).toBe("bravo");
+    expect(a.currentLevel).toBe("alpha");
   });
 
   it("counts the days since they last showed up", () => {
@@ -71,12 +71,12 @@ describe("one athlete", () => {
 describe("the overview", () => {
   const logs = [
     // Moved up.
-    log({ registration_id: "a", athlete_name: "A", workout_date: "2026-09-07", level: "charlie" }),
-    log({ registration_id: "a", athlete_name: "A", workout_date: "2026-09-28", level: "bravo" }),
+    log({ registration_id: "a", athlete_name: "A", workout_date: "2026-09-07", level: "bravo" }),
+    log({ registration_id: "a", athlete_name: "A", workout_date: "2026-09-28", level: "alpha" }),
     // Stayed put, and recently.
-    log({ registration_id: "b", athlete_name: "B", workout_date: "2026-09-28", level: "alpha" }),
+    log({ registration_id: "b", athlete_name: "B", workout_date: "2026-09-28", level: "bravo" }),
     // Stopped coming a month ago.
-    log({ registration_id: "c", athlete_name: "C", workout_date: "2026-09-01", level: "charlie" }),
+    log({ registration_id: "c", athlete_name: "C", workout_date: "2026-09-01", level: "bravo" }),
   ];
 
   it("counts athletes, sessions and who moved up", () => {
@@ -88,8 +88,8 @@ describe("the overview", () => {
 
   it("groups by where each athlete is NOW", () => {
     const o = overview(allAthletes(logs, TODAY));
-    // A finished on bravo, B on alpha, C on charlie.
-    expect(o.byLevel).toEqual({ charlie: 1, bravo: 1, alpha: 1 });
+    // A finished on alpha; B and C are still on bravo.
+    expect(o.byLevel).toEqual({ bravo: 2, alpha: 1 });
   });
 
   it("flags the youth who has quietly stopped coming", () => {
@@ -164,10 +164,24 @@ describe("trends", () => {
 
   it("ignores bodyweight sessions when trending weight", () => {
     const bw = athleteIntel("kid-1", [
-      log({ workout_date: "2026-09-07", level: "charlie", lift: "Push-up", sets: [{ set: 1, weight: null, reps: 12 }] }),
-      log({ workout_date: "2026-09-14", level: "charlie", lift: "Push-up", sets: [{ set: 1, weight: null, reps: 15 }] }),
+      log({ workout_date: "2026-09-07", level: "bravo", lift: "Push-up", sets: [{ set: 1, weight: null, reps: 12 }] }),
+      log({ workout_date: "2026-09-14", level: "bravo", lift: "Push-up", sets: [{ set: 1, weight: null, reps: 15 }] }),
     ], TODAY)!;
     // No weight was ever lifted, so there is no weight trend to report.
     expect(liftTrend(bw, "Push-up")).toBeNull();
+  });
+});
+
+describe("Rows logged on the retired Charlie track", () => {
+  it("count as Bravo so the ladder and the totals stay whole", () => {
+    const legacy = {
+      id: "x", week_id: null, workout_date: "2026-09-07", day_key: "monday" as const,
+      registration_id: "z", athlete_name: "Z", level: "charlie" as unknown as "bravo",
+      lift: "Goblet Squat", sets: [], work_result: null, work_unit: null, notes: null,
+    };
+    const a = athleteIntel("z", [legacy, { ...legacy, id: "y", workout_date: "2026-09-14", level: "alpha" }], "2026-09-20")!;
+    expect(a.startLevel).toBe("bravo");
+    expect(a.moves[0]).toMatchObject({ from: "bravo", to: "alpha", up: true });
+    expect(overview([a]).byLevel).toEqual({ bravo: 0, alpha: 1 });
   });
 });

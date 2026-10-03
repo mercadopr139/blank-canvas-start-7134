@@ -110,9 +110,9 @@ export const OPERATIONS_TILES: PillarTile[] = [
     children: [
       { title: "Practice Plan", href: "/admin/operations/practice-plan", icon: ClipboardList },
       { title: "Daily Duties Intelligence", href: "/admin/operations/daily-duties", icon: Sparkles },
-      { title: "Battle Team S&C", href: "/strength-coach", icon: Dumbbell, external: true },
+      { title: "Battle Team Workout Plan", href: "/strength-coach", icon: Dumbbell, external: true },
       { title: "Battle Team Intelligence", href: "/strength-coach/intelligence", icon: BarChart3, external: true },
-      { title: "NBT S&C", href: "/admin/operations/nbt-board", icon: Dumbbell },
+      { title: "NBT Workout Plan", href: "/admin/operations/nbt-board", icon: Dumbbell },
       { title: "NBT Intelligence", href: "/admin/operations/nbt-intelligence", icon: BarChart3 },
       { title: "75 Hard", href: "/hard-75", icon: Flame, external: true },
     ],

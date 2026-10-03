@@ -39,6 +39,7 @@ import {
 import { CSS } from "@dnd-kit/utilities";
 import { toast } from "sonner";
 import VerseOfTheWeekAdmin from "@/components/verse/VerseOfTheWeekAdmin";
+import { WeekProgress } from "@/components/practice/WeekProgress";
 import {
   NLA_RED, TOGETHER_GRAY, OFF_TEMPLATE_VIOLET, GROUPS, WEEKDAYS, QUICK_BLOCKS, spiritualAccent, daysFor, daysForWeek, ALL_WEEKDAYS, mondayOf, addDays, formatWeekRange,
   dateForWeekday, blockAccent, PracticeGroup, PracticeSettings, PracticeWeek, PracticeBlock,
@@ -53,6 +54,14 @@ const AdminPracticePlan = () => {
   const { user } = useAuth();
   const [weekStart, setWeekStart] = useState<string>(() => mondayOf());
   const navigate = useNavigate();
+  // Controlled so the progress strip can jump to a tab. Switching tabs also
+  // refreshes the strip, so publishing the verse shows up the moment you
+  // come back.
+  const [tab, setTab] = useState<string>("week");
+  const switchTab = (t: string) => {
+    setTab(t);
+    qc.invalidateQueries({ queryKey: ["week-progress"] });
+  };
   const [copyLastWeek, setCopyLastWeek] = useState(true);
 
   // ── Settings ──
@@ -640,7 +649,14 @@ const AdminPracticePlan = () => {
         </DialogContent>
       </Dialog>
 
-      <Tabs defaultValue="week">
+      {/* The week's four jobs — done means on the wall. */}
+      <WeekProgress
+        weekStart={weekStart}
+        plan={week ? { status: week.status, filled: filledCount, total: blocks.length } : null}
+        onTab={switchTab}
+      />
+
+      <Tabs value={tab} onValueChange={switchTab}>
         {/* The default inactive tab is near-invisible on this dark
             surface — lift it so both options are readable. */}
         <TabsList className="bg-neutral-900 border border-neutral-800 h-11 p-1 gap-1">
@@ -888,13 +904,13 @@ const AdminPracticePlan = () => {
                 <div className="h-10 w-10 rounded-lg grid place-items-center" style={{ background: NLA_RED }}>
                   <Dumbbell className="h-5 w-5 text-white" />
                 </div>
-                <p className="text-lg font-bold text-white">Battle Team S&amp;C</p>
+                <p className="text-lg font-bold text-white">Battle Team Workout Plan</p>
               </div>
               <p className="text-sm text-neutral-400">Bench · Squat · Deadlift — the week's lifts for the crew.</p>
             </button>
             <button
               type="button"
-              onClick={() => navigate("/admin/operations/nbt-board?from=practice-plan")}
+              onClick={() => navigate(`/admin/operations/nbt-board?from=practice-plan&week=${weekStart}`)}
               className="text-left rounded-xl border p-5 hover:bg-white/[0.04] transition-colors"
               style={{ borderColor: `${GROUPS.find((g) => g.key === "non_battle_team")?.accent ?? "#f0a500"}66` }}
             >
@@ -905,9 +921,9 @@ const AdminPracticePlan = () => {
                 >
                   <Dumbbell className="h-5 w-5 text-black" />
                 </div>
-                <p className="text-lg font-bold text-white">NBT S&amp;C</p>
+                <p className="text-lg font-bold text-white">NBT Workout Plan</p>
               </div>
-              <p className="text-sm text-neutral-400">Monday · Tuesday · Thursday — three tracks, one month at a time.</p>
+              <p className="text-sm text-neutral-400">Monday · Tuesday · Thursday — Bravo and Alpha, built and locked one week at a time.</p>
             </button>
           </div>
         </TabsContent>

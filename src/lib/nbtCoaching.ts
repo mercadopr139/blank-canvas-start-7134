@@ -15,6 +15,7 @@
 import {
   DayKey, NbtDay, NbtLog, NbtWeek, Track, TRACKS, heaviestSet, totalReps, isRoundsLine,
 } from "@/lib/nbt";
+import { roomFor, absentKit, KIT_PATTERNS, trackName, type Room } from "@/lib/nbtRooms";
 
 /* ───── 1. Earlier weeks of this block ───── */
 
@@ -22,7 +23,6 @@ export interface PriorWeekBrief {
   week: number;
   pattern: string;
   /** "Goblet Squat — 3 × 8", per track, so continuity is not anchored to Alpha. */
-  charlie: string;
   bravo: string;
   alpha: string;
   work: string;
@@ -37,9 +37,9 @@ const movementLine = (day: NbtDay | undefined, track: Track) => {
 /**
  * A week of this block, described for the model.
  *
- * All three tracks, not just Alpha. Sending Alpha alone made Charlie's month a
- * fresh guess every week, which is exactly backwards: the beginners are the
- * group that needs the repetition most.
+ * Both tracks, not just Alpha. Sending Alpha alone made Bravo's month a
+ * fresh guess every week, which is exactly backwards: the newer athletes are
+ * the group that needs the repetition most.
  */
 export const priorWeekBrief = (week: NbtWeek, dayKey: DayKey): PriorWeekBrief | null => {
   const day = week.days?.[dayKey];
@@ -48,7 +48,6 @@ export const priorWeekBrief = (week: NbtWeek, dayKey: DayKey): PriorWeekBrief | 
   return {
     week: week.week_in_block,
     pattern: day.lift?.pattern ?? "",
-    charlie: movementLine(day, "charlie"),
     bravo: movementLine(day, "bravo"),
     alpha: movementLine(day, "alpha"),
     work: work || "—",
@@ -201,27 +200,13 @@ export const roomReport = (
 };
 
 /* ───── 3. The room ─────
-   Monday and Thursday are in the Performance Center, on a basketball court of
-   75 × 50 ft — so the longest straight line is 25 yards and there is no outdoor
-   option. Tuesday is in the boxing facility, half the size, with no room to run
-   at all.
-
-   The generator is told all of this, but a prompt rule can be ignored silently
-   and a session that cannot physically be done is worse than no session. So the
-   day is read back and refused, which feeds the retry the caller already has. */
-
-export interface Facility {
-  name: string;
-  /** Whether there is floor to cover at all. */
-  canRun: boolean;
-  /** Longest single run, in yards. 0 where running is impossible. */
-  maxYards: number;
-}
-
+   Which room a day is in, and what that room allows, lives in nbtRooms.ts.
+   Re-exported here so older callers and tests keep one name for it. */
+export type Facility = Room;
 export const FACILITY: Record<DayKey, Facility> = {
-  monday: { name: "Performance Center", canRun: true, maxYards: 25 },
-  tuesday: { name: "boxing facility", canRun: false, maxYards: 0 },
-  thursday: { name: "Performance Center", canRun: true, maxYards: 25 },
+  monday: roomFor("monday"),
+  tuesday: roomFor("tuesday"),
+  thursday: roomFor("thursday"),
 };
 
 /**
@@ -257,11 +242,11 @@ const distancesInYards = (line: string): number[] => {
  *
  * Narrowed to one track when only that track is being rewritten: a day written
  * before these rules existed still has running in the tracks nobody touched,
- * and refusing a good new Charlie because of an old Alpha would make the day
+ * and refusing a good new Bravo because of an old Alpha would make the day
  * impossible to fix one track at a time.
  */
 const linesOf = (day: NbtDay, only?: Track): string[] => {
-  const tracks = only ? [only] : (["charlie", "bravo", "alpha"] as Track[]);
+  const tracks = only ? [only] : (["bravo", "alpha"] as Track[]);
   const perTrack = tracks.flatMap((t) => [
     day.lift?.[t]?.name ?? "",
     day.lift?.[t]?.detail ?? "",
@@ -311,75 +296,81 @@ export const spaceViolation = (day: NbtDay, dayKey: DayKey, only?: Track): strin
 };
 
 /* ───── 4. Shared equipment ─────
-   All three tracks train at the same time in the same room, with anywhere
-   between 15 and 40 athletes on the floor. There are 6 assault bikes, 6 rowers,
-   and a finite number of dumbbells and kettlebells — so two tracks sent to the
-   same one is a queue, not a workout.
+   Both tracks train at the same time in the same room, with anywhere between
+   15 and 40 athletes on the floor. Anything the room has a COUNT of is scarce,
+   and a scarce item belongs to one track per block — both tracks lift at the
+   same time, and both do the work block at the same time. An item the room
+   does not have at all is a refusal, not a queue. The inventory, and which
+   items the room has enough of for both, is nbtRooms.ts.
 
    Only unambiguous collisions are refused. A guard that fires on a maybe would
    fail whole months and leave a coach with nothing, which is worse than one
-   shared dumbbell. */
+   shared bench. */
 
-// Dumbbells and kettlebells are one resource, not two: they live on the same
-// rack, they serve the same job here, and a goblet squat will take whichever is
-// free. Counting them separately would let two tracks "share" the rack legally.
-export const LIMITED = ["bike", "rower", "handWeight"] as const;
-export type LimitedItem = (typeof LIMITED)[number];
+const liftText = (day: NbtDay, track: Track) =>
+  [day.lift?.[track]?.name ?? "", day.lift?.[track]?.detail ?? ""].join(" \n ");
+const workText = (day: NbtDay, track: Track) => (day.work?.[track] ?? []).join(" \n ");
 
-const ITEM_LABEL: Record<LimitedItem, string> = {
-  bike: "the assault bikes",
-  rower: "the rowers",
-  handWeight: "the dumbbells and kettlebells",
-};
-
-const ITEM_PATTERNS: Record<LimitedItem, RegExp> = {
-  bike: /\b(?:assault |air |echo |stationary )?bikes?\b/i,
-  // "Row 500m" is the machine. "DB row", "inverted row" and "seated row" are
-  // pulling exercises and must not be mistaken for it, so the bare word only
-  // counts when a distance, a calorie count, a time or a pace word follows it
-  // ON THE SAME LINE — the lookahead stops at a newline, or a "DB row" three
-  // lines above a "2 min rest" would be read as the erg.
-  rower: /\b(?:rowers?|row erg|ergs?)\b|\brow(?:ing)?\b(?=[^.;\n]*(?:\b\d+\s*(?:m|meters?|metres?|cals?|calories?|sec|secs|seconds?|min|mins|minutes?)\b|\bpace\b))/i,
-  // Named implements, plus the movements that cannot be done without one — a
-  // goblet squat never says "dumbbell" but it still empties the rack.
-  handWeight: /\b(?:dumbbells?|dbs?|kettlebells?|kbs?|goblet|farmer'?s?|suitcase)\b/i,
-};
-
-/** What one track is actually holding: its own lift and its own circuit. */
-const trackEquipmentText = (day: NbtDay, track: Track) =>
-  [
-    day.lift?.[track]?.name ?? "",
-    day.lift?.[track]?.detail ?? "",
-    ...(day.work?.[track] ?? []),
-  ].join(" \n ");
+const bothNames = (users: Track[]) => users.map(trackName).join(" and ");
 
 /**
- * Which two tracks have been sent to the same limited item, or null.
+ * Which scarce item both tracks have been sent to in the same block, or null.
  *
  * Checked on the whole day even when only one track is being rewritten: the
- * new track has to fit around the two that are staying, which is precisely the
- * thing being asked.
+ * new track has to fit around the one that is staying, which is precisely the
+ * thing being asked. Defaults to the Performance Center's rules when no day
+ * is given, which is the stricter room.
  */
-export const equipmentClash = (day: NbtDay): string | null => {
-  const text = {} as Record<Track, string>;
-  TRACKS.forEach((t) => { text[t] = trackEquipmentText(day, t); });
-
-  for (const item of LIMITED) {
-    const users = TRACKS.filter((t) => ITEM_PATTERNS[item].test(text[t]));
-    if (users.length > 1) {
-      const names = users.map((t) => t[0].toUpperCase() + t.slice(1));
-      const both = names.length === 2 ? "are both" : "are all";
-      // Read by a coach in a toast AND fed back to the model on retry, so it
-      // has to say how to fix it, not just that it is wrong.
-      return (
-        `${names.join(", ").replace(/, ([^,]*)$/, " and $1")} ${both} on ${ITEM_LABEL[item]} at the same ` +
-        "time, and there are not enough to go round. Give each track a different station: one on the bikes, " +
-        "one on the rowers, one on the floor with med balls, rope and bodyweight — and only one track on the " +
-        "dumbbell and kettlebell rack."
-      );
+export const equipmentClash = (day: NbtDay, dayKey: DayKey = "monday"): string | null => {
+  const room = roomFor(dayKey);
+  for (const kit of room.kit) {
+    if (kit.shared) continue;
+    const re = KIT_PATTERNS[kit.key];
+    for (const [block, textOf] of [["lift", liftText], ["work", workText]] as const) {
+      const users = TRACKS.filter((t) => re.test(textOf(day, t)));
+      if (users.length > 1) {
+        // Read by a coach in a toast AND fed back to the model on retry, so it
+        // has to say how to fix it, not just that it is wrong.
+        return (
+          `${bothNames(users)} are both on ${kit.label} in the ${block} block, and the ${room.name} only has ${kit.count}. ` +
+          "A scarce item belongs to one track per block: give the other track a version of the same " +
+          "pattern that needs none of it — the floor, a different machine, bodyweight, bands, med balls, " +
+          "wall balls, or dumbbells and kettlebells, which there are plenty of."
+        );
+      }
     }
   }
   return null;
+};
+
+/**
+ * Kit the room does not have, named anywhere in a track's session, or null.
+ * Tuesday's bikes and rowers are the usual culprit: they live in the
+ * Performance Center with the Junior Boxers.
+ */
+export const missingKit = (day: NbtDay, dayKey: DayKey, only?: Track): string | null => {
+  const room = roomFor(dayKey);
+  const tracks = only ? [only] : [...TRACKS];
+  for (const key of absentKit(room)) {
+    const re = KIT_PATTERNS[key];
+    for (const t of tracks) {
+      const lines = [day.lift?.[t]?.name ?? "", day.lift?.[t]?.detail ?? "", ...(day.work?.[t] ?? [])];
+      const bad = lines.find((l) => re.test(l));
+      if (bad) {
+        return (
+          `There are no ${KIT_WORDS[key]} in the ${room.name}, but ${trackName(t)}'s session says "${bad.trim()}". ` +
+          "Use only what this room has."
+        );
+      }
+    }
+  }
+  return null;
+};
+
+const KIT_WORDS: Record<string, string> = {
+  rack: "squat racks", bench: "benches", bike: "bikes", rower: "rowers", skier: "ski ergs", sled: "sleds",
+  box: "plyo boxes", wallBall: "wall-ball targets", barbell: "barbells", handWeight: "dumbbells or kettlebells",
+  rope: "jump ropes", medBall: "med balls", band: "bands", pullupBar: "pull-up bars",
 };
 
 /* ───── 5. The conditioning never repeats the lift ─────
@@ -388,8 +379,8 @@ export const equipmentClash = (day: NbtDay): string | null => {
    did 4 × 8 Romanian deadlift does not do Romanian deadlifts again tired and
    sloppy in its circuit — it does hip bridges, swings, single-leg deadlifts.
 
-   Per track. Charlie's air-squat lift means Charlie's circuit has no air
-   squats; Bravo's still may. */
+   Per track. Bravo's goblet-squat lift means Bravo's circuit has no goblet
+   squats; Alpha's still may. */
 
 /**
  * Words that describe HOW a movement is loaded or positioned, not WHAT it is.
@@ -470,7 +461,7 @@ export const liftRepeated = (day: NbtDay): string | null => {
       const hit = lines.find((line) => {
         if (!re.test(normalise(line))) return false;
         // The rowing machine is not the rowing exercise.
-        if (movement === "row" && ITEM_PATTERNS.rower.test(line)) return false;
+        if (movement === "row" && KIT_PATTERNS.rower.test(line)) return false;
         return true;
       });
       if (hit) {
@@ -521,14 +512,17 @@ export const unreadableLine = (day: NbtDay): string | null => {
 
 /** Everything wrong with a generated day, or null. The room, the kit, the repeat, then the reading. */
 export const dayProblem = (day: NbtDay, dayKey: DayKey, only?: Track): string | null =>
-  spaceViolation(day, dayKey, only) ?? equipmentClash(day) ?? liftRepeated(day) ?? unreadableLine(day);
+  spaceViolation(day, dayKey, only) ??
+  missingKit(day, dayKey, only) ??
+  equipmentClash(day, dayKey) ??
+  liftRepeated(day) ??
+  unreadableLine(day);
 
 /* ───── 5. Where the last block finished ───── */
 
 export interface CarryOver {
   weekStart: string;
   pattern: string;
-  charlie: string;
   bravo: string;
   alpha: string;
   work: string;
@@ -564,7 +558,6 @@ export const carryOver = (prevWeeks: NbtWeek[], dayKey: DayKey): CarryOver | nul
   return {
     weekStart: last.week_start,
     pattern: brief.pattern,
-    charlie: brief.charlie,
     bravo: brief.bravo,
     alpha: brief.alpha,
     work: brief.work,

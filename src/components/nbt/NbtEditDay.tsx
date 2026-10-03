@@ -140,7 +140,7 @@ const NbtEditDay = ({
                 className="h-9 bg-neutral-900 border-neutral-800 text-white text-sm"
               />
             </div>
-            <div className="grid gap-2 md:grid-cols-3">
+            <div className="grid gap-2 md:grid-cols-2">
               {TRACKS.map((t) => (
                 <div key={t}>
                   <p className="text-xs font-bold mb-1" style={{ color: TRACK_META[t].color }}>

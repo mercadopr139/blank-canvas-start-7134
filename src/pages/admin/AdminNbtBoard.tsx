@@ -12,15 +12,15 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
-  ChevronLeft, ChevronRight, Sparkles, Loader2, Monitor, Users, Dumbbell, RefreshCw, Pencil,
+  ChevronLeft, ChevronRight, Sparkles, Loader2, Monitor, Dumbbell, RefreshCw, Pencil, Lock, Unlock,
 } from "lucide-react";
 import { toast } from "sonner";
 import {
   DAYS, DayKey, TRACKS, TRACK_META, Track, NbtBlock, NbtWeek, NbtDay, NbtLog,
-  toDateString, firstOfMonth, monthLabel, mondaysInMonth, dateOfDay,
+  toDateString, firstOfMonth, monthLabel, mondaysInMonth, dateOfDay, mondayOf, NBT_AMBER,
 } from "@/lib/nbt";
 import { priorWeekBriefs, roomReport, carryOver, dayProblem } from "@/lib/nbtCoaching";
-import NbtLevels from "@/components/nbt/NbtLevels";
+import { roomBrief } from "@/lib/nbtRooms";
 import NbtEditDay from "@/components/nbt/NbtEditDay";
 
 const shiftMonth = (monthStart: string, n: number) => {
@@ -32,15 +32,17 @@ const shiftMonth = (monthStart: string, n: number) => {
 const AdminNbtBoard = () => {
   const navigate = useNavigate();
   const qc = useQueryClient();
-  const [month, setMonth] = useState(() => firstOfMonth(toDateString(new Date())));
-  // Opened from the Practice Plan's S&C tab: offer the way back.
+  // Opened from the Practice Plan's S&C tab: offer the way back, and open on
+  // the month that week belongs to.
   const [params] = useSearchParams();
   const fromPlan = params.get("from") === "practice-plan";
+  const linkedWeek = /^\d{4}-\d{2}-\d{2}$/.test(params.get("week") ?? "") ? params.get("week")! : null;
+  const [month, setMonth] = useState(() => firstOfMonth(linkedWeek ?? toDateString(new Date())));
+  const thisWeekStart = mondayOf(toDateString(new Date()));
   const [focus, setFocus] = useState("");
   const [busy, setBusy] = useState<string | null>(null);
   // Persistent, unlike a toast — a twelve-call build should say where it is.
   const [progress, setProgress] = useState<string | null>(null);
-  const [tab, setTab] = useState<"plan" | "levels">("plan");
   const [editing, setEditing] = useState<{ week: NbtWeek; dayKey: DayKey } | null>(null);
 
   const { data, isLoading } = useQuery({
@@ -100,8 +102,8 @@ const AdminNbtBoard = () => {
 
   const block = data?.block ?? null;
   const weeks = useMemo(() => data?.weeks ?? [], [data]);
-  // NBT locks a month at a time, so the month on screen is what's live.
-  const thisWeekLocked = data?.block?.status === "locked";
+  // Green once this week's row is locked: that's what the wall shows.
+  const thisWeekLocked = weeks.some((w) => w.week_start === thisWeekStart && w.status === "locked");
   const mondays = useMemo(() => mondaysInMonth(month), [month]);
   const refresh = () => qc.invalidateQueries({ queryKey: ["nbt-block", month] });
 
@@ -141,7 +143,8 @@ const AdminNbtBoard = () => {
     try {
       const { data: res, error } = await supabase.functions.invoke("nbt-workout", {
         body: {
-          dayKey, weekInBlock: weekNo, blockFocus, priorWeeks,
+          // The room and its kit, from the one inventory the checks also read.
+          dayKey, weekInBlock: weekNo, blockFocus, priorWeeks, roomKit: roomBrief(dayKey),
           ...(room ? { room } : {}),
           ...(carry ? { carryOver: carry } : {}),
           ...(only ? { onlyTrack: only.track, keepDay: only.keepDay } : {}),
@@ -179,59 +182,106 @@ const AdminNbtBoard = () => {
    * A week that fails does NOT abandon the rest — it is reported at the end and
    * can be filled in with another click.
    */
+  /** The month's block row — made on first use so a week has a thread to belong to. */
+  const ensureBlock = async (): Promise<NbtBlock> => {
+    let b = block;
+    if (!b) {
+      const { data: created, error } = await supabase
+        .from("nbt_blocks" as never)
+        .insert({ month_start: month, focus: focus.trim() || null } as never)
+        .select("*")
+        .single();
+      if (error) throw error;
+      b = created as unknown as NbtBlock;
+    } else if (focus.trim() && focus.trim() !== b.focus) {
+      await supabase.from("nbt_blocks" as never).update({ focus: focus.trim() } as never).eq("id", b.id);
+    }
+    return b;
+  };
+
+  /**
+   * Write ONE week — three days, in parallel — with every earlier week of the
+   * block as context, so the movements hold and only the challenge changes.
+   * A built or rebuilt week lands as a draft; the coach locks it to put it on
+   * the wall. (Josh, 2026-10-03: per week, like everything else.)
+   */
+  const writeWeek = async (b: NbtBlock, weekNo: number, context: NbtWeek[]): Promise<NbtWeek> => {
+    const blockFocus = focus.trim() || b.focus || "";
+    const [monday, tuesday, thursday] = await Promise.all(
+      DAYS.map((d) => generateDay(blockFocus, weekNo, d.key, context))
+    );
+    const { data: saved, error } = await supabase
+      .from("nbt_weeks" as never)
+      .upsert(
+        {
+          block_id: b.id,
+          week_start: mondays[weekNo - 1],
+          week_in_block: weekNo,
+          days: { monday, tuesday, thursday },
+          status: "draft",
+          locked_at: null,
+        } as never,
+        { onConflict: "week_start" } as never
+      )
+      .select("*")
+      .single();
+    if (error) throw error;
+    return saved as unknown as NbtWeek;
+  };
+
+  const buildWeek = async (weekNo: number) => {
+    setBusy(`week-${weekNo}`);
+    setProgress(`Writing week ${weekNo}…`);
+    try {
+      const b = await ensureBlock();
+      // Earlier weeks of this block are the context; this week is replaced.
+      const context = weeks.filter((w) => w.week_in_block < weekNo);
+      await writeWeek(b, weekNo, context);
+      refresh();
+      toast.success(`Week ${weekNo} is written. Lock it when it's ready for the wall.`);
+    } catch (e) {
+      toast.error((e as Error)?.message ?? "Couldn't build that week.");
+    } finally {
+      setBusy(null);
+      setProgress(null);
+    }
+  };
+
+  /** On the wall, or off it. The wall shows locked weeks only. */
+  const toggleLock = async (w: NbtWeek) => {
+    const lock = w.status !== "locked";
+    const { error } = await supabase
+      .from("nbt_weeks" as never)
+      .update({ status: lock ? "locked" : "draft", locked_at: lock ? new Date().toISOString() : null } as never)
+      .eq("id", w.id);
+    if (error) toast.error(error.message);
+    else {
+      refresh();
+      toast.success(lock ? `Week ${w.week_in_block} is on the gym board.` : `Week ${w.week_in_block} is off the board for edits.`);
+    }
+  };
+
+  /**
+   * The whole month, one week after another — the weeks are sequential
+   * because week 2 has to see week 1. `rebuild` redoes every week; otherwise
+   * only the missing ones get written. A week that fails does NOT abandon the
+   * rest — it is reported at the end and can be filled in with another click.
+   */
   const buildMonth = async (rebuild = false) => {
     setBusy("month");
     setProgress(null);
     const failed: number[] = [];
     try {
-      let b = block;
-      if (!b) {
-        const { data: created, error } = await supabase
-          .from("nbt_blocks" as never)
-          .insert({ month_start: month, focus: focus.trim() || null } as never)
-          .select("*")
-          .single();
-        if (error) throw error;
-        b = created as unknown as NbtBlock;
-      } else if (focus.trim() && focus.trim() !== b.focus) {
-        await supabase.from("nbt_blocks" as never).update({ focus: focus.trim() } as never).eq("id", b.id);
-      }
-
-      // Weeks already written stay as context for the ones that follow, so
-      // continuity holds even when only the back half is being filled in.
+      const b = await ensureBlock();
       const built: NbtWeek[] = rebuild ? [] : [...weeks];
-      const blockFocus = focus.trim() || b.focus || "";
-
       for (let i = 0; i < mondays.length; i++) {
         const weekNo = i + 1;
         const existing = weeks.find((w) => w.week_start === mondays[i]);
         const complete = existing && DAYS.every((d) => existing.days?.[d.key]);
         if (!rebuild && complete) continue;
-
         setProgress(`Writing week ${weekNo} of ${mondays.length}…`);
         try {
-          // The three days of a week are independent, so they go in parallel;
-          // the WEEKS are sequential, because week 2 has to see week 1.
-          const [monday, tuesday, thursday] = await Promise.all(
-            DAYS.map((d) => generateDay(blockFocus, weekNo, d.key, built))
-          );
-
-          const { data: saved, error } = await supabase
-            .from("nbt_weeks" as never)
-            .upsert(
-              {
-                block_id: b.id,
-                week_start: mondays[i],
-                week_in_block: weekNo,
-                days: { monday, tuesday, thursday },
-              } as never,
-              { onConflict: "week_start" } as never
-            )
-            .select("*")
-            .single();
-          if (error) throw error;
-
-          const savedWeek = saved as unknown as NbtWeek;
+          const savedWeek = await writeWeek(b, weekNo, built.filter((w) => w.week_in_block < weekNo));
           const at = built.findIndex((w) => w.week_start === savedWeek.week_start);
           if (at >= 0) built[at] = savedWeek;
           else built.push(savedWeek);
@@ -239,10 +289,9 @@ const AdminNbtBoard = () => {
           failed.push(weekNo);
         }
       }
-
       refresh();
       if (failed.length === 0) {
-        toast.success(`${monthLabel(month)} is written.`);
+        toast.success(`${monthLabel(month)} is written. Lock each week when it's ready for the wall.`);
       } else {
         toast.error(
           `Week${failed.length > 1 ? "s" : ""} ${failed.join(", ")} didn't come back. Click build again to fill them in.`
@@ -325,16 +374,16 @@ const AdminNbtBoard = () => {
       )}
       <div className="flex items-start justify-between gap-4 flex-wrap">
         <div>
-          <h2 className="text-2xl font-bold">NBT S&amp;C Board</h2>
+          <h2 className="text-2xl font-bold">NBT Workout Plan</h2>
           <p className="text-neutral-400 text-sm mt-1">
-            Monday, Tuesday and Thursday for the Non-Battle Team — three tracks, one month at a time.
+            Monday, Tuesday and Thursday for the Non-Battle Team — Bravo and Alpha, one week at a time, each week seeing the last.
           </p>
         </div>
         {/* Green once this week is locked: it's on the wall for everyone. */}
         <Button
           variant="outline"
           onClick={() => navigate("/nbt-board")}
-          title={thisWeekLocked ? "Live on the gym board" : "This month is still a draft — lock it to put it on the board"}
+          title={thisWeekLocked ? "Live on the gym board" : "This week is still a draft — lock it to put it on the board"}
           className={thisWeekLocked
             ? "bg-emerald-600 hover:bg-emerald-500 border-emerald-500 text-white hover:text-white"
             : "bg-transparent border-neutral-700 text-neutral-300 hover:text-white"}
@@ -343,15 +392,6 @@ const AdminNbtBoard = () => {
         </Button>
       </div>
 
-      <div className="flex items-center gap-2">
-        <TabBtn active={tab === "plan"} onClick={() => setTab("plan")} icon={Dumbbell}>The month</TabBtn>
-        <TabBtn active={tab === "levels"} onClick={() => setTab("levels")} icon={Users}>Athlete levels</TabBtn>
-      </div>
-
-      {tab === "levels" ? (
-        <NbtLevels />
-      ) : (
-        <>
           {/* Month nav + focus */}
           <div className="rounded-xl border border-neutral-800 bg-neutral-900 p-4 space-y-3">
             <div className="flex items-center justify-between gap-2">
@@ -389,21 +429,22 @@ const AdminNbtBoard = () => {
                   placeholder="Own the basics · Pace yourself · Quality before weight"
                   className="flex-1 min-w-[220px] bg-neutral-800 border-neutral-700 text-white"
                 />
-                <Button
-                  onClick={() => buildMonth(false)}
-                  disabled={busy !== null}
-                  className="text-white font-bold"
-                  style={{ backgroundColor: TRACK_META.alpha.color }}
-                >
-                  {busy === "month" ? (
-                    <Loader2 className="w-4 h-4 animate-spin mr-1.5" />
-                  ) : (
-                    <Sparkles className="w-4 h-4 mr-1.5" />
-                  )}
-                  {missing > 0 && weeks.length > 0
-                    ? `Write the missing ${missing} week${missing > 1 ? "s" : ""}`
-                    : "Build the month"}
-                </Button>
+                {missing > 0 && (
+                  <Button
+                    variant="outline"
+                    onClick={() => buildMonth(false)}
+                    disabled={busy !== null}
+                    className="bg-transparent border-neutral-700 text-neutral-300 hover:text-white"
+                    title="Write every week of the month that isn't written yet, in order"
+                  >
+                    {busy === "month" ? (
+                      <Loader2 className="w-4 h-4 animate-spin mr-1.5" />
+                    ) : (
+                      <Sparkles className="w-4 h-4 mr-1.5" />
+                    )}
+                    {weeks.length > 0 ? `Write the missing ${missing} week${missing > 1 ? "s" : ""}` : "Build the whole month"}
+                  </Button>
+                )}
                 {weeks.length > 0 && (
                   <Button
                     variant="outline"
@@ -422,8 +463,8 @@ const AdminNbtBoard = () => {
                 </p>
               ) : (
                 <p className="text-[11px] text-neutral-500 mt-1.5">
-                  Weeks are written in order, each one seeing the last — so the movements hold across the
-                  month and only the challenge changes.
+                  Build a week below. Each week sees the ones before it, so the movements hold across the
+                  month and only the challenge changes. Lock a week to put it on the gym board.
                 </p>
               )}
             </div>
@@ -431,22 +472,95 @@ const AdminNbtBoard = () => {
 
           {isLoading ? (
             <p className="text-neutral-500 py-10 text-center">Loading…</p>
-          ) : weeks.length === 0 ? (
-            <div className="text-center py-14 text-neutral-600">
-              <Dumbbell className="w-10 h-10 mx-auto mb-3 opacity-40" />
-              <p>Nothing for {monthLabel(month)} yet.</p>
-              <p className="text-sm mt-1">Type an emphasis and build it.</p>
-            </div>
           ) : (
             <div className="space-y-4">
-              {weeks.map((w) => (
-                <div key={w.id} className="rounded-xl border border-neutral-800 bg-neutral-900 p-4">
-                  <p className="font-bold mb-3">
-                    Week {w.week_in_block}
-                    <span className="text-neutral-500 font-normal text-sm ml-2">
-                      {w.week_start} — {dateOfDay(w.week_start, "thursday")}
-                    </span>
-                  </p>
+              {mondays.map((monday, i) => {
+                const weekNo = i + 1;
+                const w = weeks.find((x) => x.week_start === monday);
+                const isThisWeek = monday === thisWeekStart;
+                const isLinked = monday === linkedWeek;
+                if (!w) {
+                  return (
+                    <div
+                      key={monday}
+                      className={`rounded-xl border bg-neutral-900 p-4 flex items-center justify-between gap-4 flex-wrap ${
+                        isLinked ? "border-white/30" : "border-neutral-800"
+                      }`}
+                    >
+                      <p className="font-bold">
+                        Week {weekNo}
+                        <span className="text-neutral-500 font-normal text-sm ml-2">
+                          {monday} — {dateOfDay(monday, "thursday")}
+                          {isThisWeek ? " · this week" : ""}
+                        </span>
+                        <span className="block text-sm font-normal text-neutral-500 mt-0.5">Not written yet.</span>
+                      </p>
+                      <Button
+                        onClick={() => buildWeek(weekNo)}
+                        disabled={busy !== null}
+                        className="text-black font-bold"
+                        style={{ backgroundColor: NBT_AMBER }}
+                      >
+                        {busy === `week-${weekNo}` ? (
+                          <Loader2 className="w-4 h-4 animate-spin mr-1.5" />
+                        ) : (
+                          <Sparkles className="w-4 h-4 mr-1.5" />
+                        )}
+                        Build week {weekNo}
+                      </Button>
+                    </div>
+                  );
+                }
+                const locked = w.status === "locked";
+                return (
+                <div
+                  key={w.id}
+                  className={`rounded-xl border bg-neutral-900 p-4 ${isLinked ? "border-white/30" : "border-neutral-800"}`}
+                >
+                  <div className="flex items-center justify-between gap-3 flex-wrap mb-3">
+                    <p className="font-bold">
+                      Week {w.week_in_block}
+                      <span className="text-neutral-500 font-normal text-sm ml-2">
+                        {w.week_start} — {dateOfDay(w.week_start, "thursday")}
+                        {isThisWeek ? " · this week" : ""}
+                      </span>
+                    </p>
+                    <div className="flex items-center gap-2">
+                      <span
+                        className={`text-[11px] font-semibold px-2.5 py-1 rounded-full border ${
+                          locked
+                            ? "bg-emerald-500/15 border-emerald-400/30 text-emerald-300"
+                            : "bg-amber-500/15 border-amber-400/30 text-amber-300"
+                        }`}
+                      >
+                        {locked ? "On the gym board" : "Draft"}
+                      </span>
+                      <Button
+                        variant="outline" size="sm"
+                        onClick={() => buildWeek(weekNo)}
+                        disabled={busy !== null || locked}
+                        title={locked ? "Unlock the week to rebuild it" : "Throw this week away and write it again"}
+                        className="bg-transparent border-neutral-700 text-neutral-300 hover:text-white"
+                      >
+                        {busy === `week-${weekNo}` ? (
+                          <Loader2 className="w-3.5 h-3.5 animate-spin mr-1.5" />
+                        ) : (
+                          <RefreshCw className="w-3.5 h-3.5 mr-1.5" />
+                        )}
+                        Rebuild
+                      </Button>
+                      <Button
+                        size="sm"
+                        onClick={() => toggleLock(w)}
+                        disabled={busy !== null}
+                        className={locked ? "bg-neutral-800 text-white hover:bg-neutral-700" : "text-white font-bold"}
+                        style={locked ? undefined : { backgroundColor: "#bf0f3e" }}
+                      >
+                        {locked ? <Unlock className="w-3.5 h-3.5 mr-1.5" /> : <Lock className="w-3.5 h-3.5 mr-1.5" />}
+                        {locked ? "Unlock to edit" : "Lock the week"}
+                      </Button>
+                    </div>
+                  </div>
                   <div className="grid gap-3 md:grid-cols-3">
                     {DAYS.map((d) => {
                       const day = w.days?.[d.key];
@@ -529,11 +643,10 @@ const AdminNbtBoard = () => {
                     })}
                   </div>
                 </div>
-              ))}
+                );
+              })}
             </div>
           )}
-        </>
-      )}
 
       <NbtEditDay
         day={editing ? editing.week.days?.[editing.dayKey] ?? null : null}
@@ -554,23 +667,5 @@ const AdminNbtBoard = () => {
     </div>
   );
 };
-
-const TabBtn = ({
-  active, onClick, icon: Icon, children,
-}: {
-  active: boolean;
-  onClick: () => void;
-  icon: typeof Dumbbell;
-  children: React.ReactNode;
-}) => (
-  <button
-    onClick={onClick}
-    className={`h-9 px-4 rounded-lg text-sm font-semibold border inline-flex items-center gap-1.5 transition-colors ${
-      active ? "border-white/30 bg-white/10 text-white" : "border-neutral-800 text-neutral-400 hover:text-white"
-    }`}
-  >
-    <Icon className="w-4 h-4" /> {children}
-  </button>
-);
 
 export default AdminNbtBoard;

@@ -2,9 +2,9 @@
 //
 // On the NBT board three of these sit side by side, one per track, each in
 // its track's colour, because the tracks do not start together — Alpha may
-// still be racking a bar while Charlie is already on the floor. On the Battle
+// still be racking a bar while Bravo is already on the floor. On the Battle
 // Team board there is one, for the session. A coach taps Start as the block
-// begins. The colour is what tells three clocks apart from across the room.
+// begins. The colour is what tells the clocks apart from across the room.
 //
 // Counts down to the minutes it was given, then keeps going in red — overtime
 // is information, not a failure, and boxing is waiting.

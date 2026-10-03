@@ -2,7 +2,7 @@ import { describe, it, expect } from "vitest";
 import {
   TRACKS, DAYS, mondayOf, addDays, firstOfMonth, mondaysInMonth, weekInBlock,
   dateOfDay, todayDayKey, blankSets, heaviestSet, totalReps, hasLogged,
-  movementFor, workFor, NbtDay,
+  movementFor, workFor, asTrack, NbtDay,
   SESSION_CAP_MINUTES, DEFAULT_MINUTES, minutesOf, totalMinutes, withinCap,
   readableLines, formatClock, elapsedOf,
 } from "@/lib/nbt";
@@ -122,7 +122,6 @@ describe("reading a day", () => {
     prep: ["Jog", "Leg swings"],
     lift: {
       pattern: "Squat",
-      charlie: { name: "Goblet Squat", detail: "3 × 8" },
       bravo: { name: "Heavy Goblet Squat", detail: "4 × 6" },
       alpha: { name: "Back Squat", detail: "4 × 5" },
       cues: ["Chest up"],
@@ -130,7 +129,6 @@ describe("reading a day", () => {
     work: {
       emphasis: "intervals",
       title: "Five rounds",
-      charlie: ["200m run", "5 step-ups"],
       bravo: ["400m run", "10 step-ups"],
       alpha: ["600m run", "15 step-ups"],
       result_unit: "rounds",
@@ -140,10 +138,19 @@ describe("reading a day", () => {
 
   it("gives every track the same pattern at its own progression", () => {
     TRACKS.forEach((t) => expect(movementFor(day, t)?.name).toBeTruthy());
-    expect(movementFor(day, "charlie")?.name).toBe("Goblet Squat");
+    expect(movementFor(day, "bravo")?.name).toBe("Heavy Goblet Squat");
     expect(movementFor(day, "alpha")?.name).toBe("Back Squat");
-    // Three progressions of one pattern, not three unrelated workouts.
+    // Two progressions of one pattern, not two unrelated workouts.
     expect(day.lift.pattern).toBe("Squat");
+  });
+
+  it("files an athlete still stored as the retired Charlie track under Bravo", () => {
+    // Charlie was retired 2026-10-03. Anyone whose row still says charlie is a
+    // Bravo athlete now; Alpha is the only level that stays what it was.
+    expect(asTrack("charlie")).toBe("bravo");
+    expect(asTrack("bravo")).toBe("bravo");
+    expect(asTrack("alpha")).toBe("alpha");
+    expect(asTrack(null)).toBe("bravo");
   });
 
   it("gives every track its own version of the circuit", () => {
