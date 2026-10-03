@@ -7,7 +7,14 @@ import { useStaffPermissions } from "@/hooks/useStaffPermissions";
 import { taskManagerPermKey, ADMIN_LEVEL_KEY, isExplicitOnlyKey } from "@/lib/permissions";
 import { Switch } from "@/components/ui/switch";
 import { canOpen } from "@/lib/access";
-import { ACCESS_CARD, COMMAND_CENTER_LINES, type AccessLine, type AccessPillar, type AccessSection } from "@/config/accessCard";
+import { ACCESS_CARD, COMMAND_CENTER_LINES, allCardLines, type AccessLine, type AccessPillar, type AccessSection } from "@/config/accessCard";
+
+// Which cards are folded down to their header, remembered in this browser so
+// the page opens the way it was left.
+const HIDDEN_CARDS_KEY = "nla_staff_cards_hidden";
+const readHiddenCards = (): Record<string, boolean> => {
+  try { return JSON.parse(localStorage.getItem(HIDDEN_CARDS_KEY) || "{}") || {}; } catch { return {}; }
+};
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -92,6 +99,14 @@ export default function AdminStaffManagement() {
   const [linkingEmail, setLinkingEmail] = useState<string | null>(null);
   // Which pillars are folded open on which card ("userId:pillar").
   const [openPillars, setOpenPillars] = useState<Record<string, boolean>>({});
+  // Cards folded down to name, level and a one-line summary.
+  const [hiddenCards, setHiddenCards] = useState<Record<string, boolean>>(readHiddenCards);
+  const saveHidden = (next: Record<string, boolean>) => {
+    setHiddenCards(next);
+    try { localStorage.setItem(HIDDEN_CARDS_KEY, JSON.stringify(next)); } catch { /* still folds for this visit */ }
+  };
+  const allHidden = staff.length > 0 && staff.every((m) => hiddenCards[m.user_id]);
+  const setAllHidden = (hide: boolean) => saveHidden(Object.fromEntries(staff.map((m) => [m.user_id, hide])));
   const [removeTarget, setRemoveTarget] = useState<RemoveTarget | null>(null);
   const [removing, setRemoving] = useState(false);
   const queryClient = useQueryClient();
@@ -446,16 +461,28 @@ export default function AdminStaffManagement() {
               <p className="text-sm text-white/50">Manage team access and permissions</p>
             </div>
           </div>
-          <Button
-            onClick={() => {
-              setForm({ full_name: "", display_name: "", email: "", job_title: "" });
-              setLinkingEmail(null);
-              setAddOpen(true);
-            }}
-            className="bg-[#bf0f3e] hover:bg-[#a00d35]"
-          >
-            <Plus className="w-4 h-4 mr-2" /> Add Staff
-          </Button>
+          <div className="flex items-center gap-2">
+            {staff.length > 0 && (
+              <Button
+                variant="outline"
+                onClick={() => setAllHidden(!allHidden)}
+                className="border-white/20 text-white bg-transparent hover:bg-white/10"
+              >
+                <ChevronDown className={`w-4 h-4 mr-2 transition-transform ${allHidden ? "" : "rotate-180"}`} />
+                {allHidden ? "Show all" : "Hide all"}
+              </Button>
+            )}
+            <Button
+              onClick={() => {
+                setForm({ full_name: "", display_name: "", email: "", job_title: "" });
+                setLinkingEmail(null);
+                setAddOpen(true);
+              }}
+              className="bg-[#bf0f3e] hover:bg-[#a00d35]"
+            >
+              <Plus className="w-4 h-4 mr-2" /> Add Staff
+            </Button>
+          </div>
         </div>
       </header>
 
@@ -465,10 +492,17 @@ export default function AdminStaffManagement() {
             No staff members yet. Click "Add Staff" to get started.
           </p>
         ) : (
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
             {staff.map((member) => {
               const isMemberSuperAdmin = isSuperAdminEmail(member.email);
               const isMemberAdmin = !isMemberSuperAdmin && (staffPerms[member.user_id]?.[ADMIN_LEVEL_KEY] ?? false);
+              const cardHidden = hiddenCards[member.user_id] ?? false;
+              const openLines = allCardLines().filter((l) => !isExplicitOnlyKey(l.key) && lineOn(member.user_id, l)).length;
+              const totalLines = allCardLines().filter((l) => !isExplicitOnlyKey(l.key)).length;
+              const myTaskManagers = taskManagerChecks.filter((tm) => staffPerms[member.user_id]?.[tm.permKey]).map((tm) => tm.label);
+              const summary = isMemberSuperAdmin
+                ? "Everything, including every Task Manager"
+                : `${isMemberAdmin ? "Every app open" : `${openLines} of ${totalLines} lines open`}${myTaskManagers.length ? ` · ${myTaskManagers.join(", ")}` : ""}`;
               return (
               <Card
                 key={member.id}
@@ -538,9 +572,23 @@ export default function AdminStaffManagement() {
                       >
                         <Pencil className="w-3.5 h-3.5" />
                       </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-8 px-2 text-xs text-white/60 hover:text-white"
+                        onClick={() => saveHidden({ ...hiddenCards, [member.user_id]: !cardHidden })}
+                        title={cardHidden ? "Show this person's access" : "Hide this person's access"}
+                      >
+                        {cardHidden ? "Show" : "Hide"}
+                        <ChevronDown className={`w-3.5 h-3.5 ml-1 transition-transform ${cardHidden ? "" : "rotate-180"}`} />
+                      </Button>
                     </div>
                   </div>
+                  {cardHidden && (
+                    <p className="text-xs text-white/45 mt-2">{summary}</p>
+                  )}
                 </CardHeader>
+                {!cardHidden && (
                 <CardContent>
                   <div className="border-t border-white/10 pt-3">
                     <p className="text-xs text-white/40 mb-3 flex items-center gap-1">
@@ -646,6 +694,7 @@ export default function AdminStaffManagement() {
                     </Button>
                   </div>
                 </CardContent>
+                )}
               </Card>
               );
             })}
