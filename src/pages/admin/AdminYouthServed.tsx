@@ -13,6 +13,28 @@ import { Card, CardContent } from "@/components/ui/card";
 import { format, startOfMonth, endOfMonth, subMonths } from "date-fns";
 import { Layers } from "lucide-react";
 import { getCurrentAttendanceYear, programYearRange, shortProgramYear } from "@/lib/programYear";
+import ProgramDemographics from "@/components/admin/ProgramDemographics";
+import type { HawkBreakdown } from "@/lib/hawkSquad";
+
+// The same green as the page's headline tile.
+const GREEN = "#34d399";
+
+/** One row per distinct youth served, from youth_served_demographics(). */
+interface DemoRow { person: string; child_sex: string | null; child_race_ethnicity: string | null; free_or_reduced_lunch: string | null }
+
+/** Tally the rows into the shape the demographics card reads. */
+const tallyDemographics = (rows: DemoRow[]): HawkBreakdown => {
+  const tally = (pick: (r: DemoRow) => string | null) => {
+    const m: Record<string, number> = {};
+    rows.forEach((r) => { const k = (pick(r) ?? "").trim() || "Not given"; m[k] = (m[k] ?? 0) + 1; });
+    return m;
+  };
+  return {
+    Sex: tally((r) => r.child_sex),
+    "Race / ethnicity": tally((r) => r.child_race_ethnicity),
+    "Free or reduced lunch": tally((r) => r.free_or_reduced_lunch),
+  };
+};
 
 const iso = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 const fmtDay = (d: string) => format(new Date(d + "T00:00:00"), "MMM d, yyyy");
@@ -59,6 +81,21 @@ const AdminYouthServed = () => {
       return (data as Served[])?.[0] ?? { nla_youth: 0, hawk_youth: 0, bam_youth: 0, in_both: 0, combined: 0, in_both_names: [] };
     },
   });
+
+  // Who those distinct youth are. Same identity rules as the count above,
+  // done in the database, so the two always describe the same people.
+  const demo = useQuery({
+    queryKey: ["youth-served-demographics", from, to],
+    queryFn: async (): Promise<DemoRow[]> => {
+      const { data, error } = await (supabase.rpc as unknown as (n: string, a: Record<string, unknown>) => Promise<{ data: unknown; error: { message: string } | null }>)(
+        "youth_served_demographics", { _from: from, _to: to },
+      );
+      if (error) throw new Error(error.message);
+      return (data as DemoRow[]) ?? [];
+    },
+  });
+  const breakdown = useMemo(() => tallyDemographics(demo.data ?? []), [demo.data]);
+  const demoTotal = demo.data?.length ?? 0;
 
   return (
     <div className="p-4 md:p-8 space-y-6 max-w-4xl mx-auto text-white">
@@ -119,6 +156,25 @@ const AdminYouthServed = () => {
                 Counted as people, not registrations: a youth who re-registered across years is one youth. Across programs, students are matched by first name, last name and date of birth.
               </p>
             </>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Who the youth are: the same distinct people as the total above. */}
+      <Card className="bg-white/[0.03] border-white/10 text-white">
+        <CardContent className="p-5 space-y-4">
+          <div>
+            <p className="font-bold">Who the youth are <span className="text-white/40 font-normal text-sm">· {demoTotal} distinct</span></p>
+            <p className="text-[11px] text-white/35 mt-0.5">Every youth served in the period, counted once across all programs. Each percent is out of {demoTotal || "the"} distinct youth.</p>
+          </div>
+          {demo.isError ? (
+            <p className="text-rose-300 text-sm">Couldn't load: {(demo.error as Error)?.message}</p>
+          ) : demo.isLoading ? (
+            <p className="text-white/40 text-sm">Loading…</p>
+          ) : demoTotal === 0 ? (
+            <p className="text-white/35 text-sm">No check-ins in this period.</p>
+          ) : (
+            <ProgramDemographics breakdown={breakdown} total={demoTotal} color={GREEN} />
           )}
         </CardContent>
       </Card>

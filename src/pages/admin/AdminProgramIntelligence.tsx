@@ -10,6 +10,7 @@
 import { useMemo, useState } from "react";
 import AdminProgramAttendance from "@/pages/admin/AdminProgramAttendance";
 import ProgramWeeklyMoments from "@/components/admin/ProgramWeeklyMoments";
+import ProgramDemographics from "@/components/admin/ProgramDemographics";
 import type { ProgramConfig } from "@/lib/programs";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -188,25 +189,7 @@ const AdminProgramIntelligence = ({ program }: { program: ProgramConfig }) => {
           <CardContent className="p-4 space-y-4">
             <p className="font-bold">Who the students are <span className="text-white/40 font-normal text-sm">· {stats.students} distinct</span></p>
             {stats.students === 0 ? <p className="text-white/35 text-sm">No check-ins in this period.</p> : (
-              Object.entries(breakdown).map(([title, counts]) => {
-                const entries = Object.entries(counts).sort((a, b) => b[1] - a[1]);
-                return (
-                  <div key={title}>
-                    <p className="text-[10px] uppercase tracking-wider text-white/40 mb-1.5">{title}</p>
-                    <div className="space-y-1">
-                      {entries.map(([k, n]) => (
-                        <div key={k} className="flex items-center gap-2 text-sm">
-                          <span className="w-40 truncate text-white/75" title={k}>{k}</span>
-                          <div className="flex-1 h-2 rounded bg-white/5 overflow-hidden">
-                            <div className="h-full rounded" style={{ width: `${pct(n, stats.students)}%`, backgroundColor: GREEN }} />
-                          </div>
-                          <span className="w-14 text-right tabular-nums text-white/60">{n} <span className="text-white/30">({pct(n, stats.students)}%)</span></span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                );
-              })
+              <ProgramDemographics breakdown={breakdown} total={stats.students} color={GREEN} />
             )}
           </CardContent>
         </Card>

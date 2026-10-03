@@ -54,8 +54,8 @@ export const OPERATIONS_TILES: PillarTile[] = [
     ],
   },
   {
-    title: "Attendance",
-    description: "Attendance tracking & reports",
+    title: "Youth Programs",
+    description: "Attendance, intelligence & reports across every program",
     icon: CalendarCheck,
     href: "/admin/operations/attendance-group",
     permKey: "operations_attendance",
