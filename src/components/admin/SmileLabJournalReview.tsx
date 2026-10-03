@@ -65,7 +65,7 @@ const SmileLabJournalReview = ({ onEdit }: { onEdit?: (date: string) => void }) 
             )}
             {s.sharing_note?.trim() && (
               <div className="rounded-lg bg-white/5 p-3">
-                <div className="text-xs font-semibold text-yellow-300 mb-1">😊 Life Lab (Coach Chrissy)</div>
+                <div className="text-xs font-semibold text-rose-300 mb-1">😊 Life Lab (Coach Chrissy)</div>
                 <p className="text-sm text-white/80 whitespace-pre-wrap">{s.sharing_note}</p>
               </div>
             )}

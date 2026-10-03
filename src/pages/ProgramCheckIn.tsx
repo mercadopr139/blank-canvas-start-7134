@@ -84,7 +84,10 @@ const ProgramCheckIn = ({ program }: { program: ProgramConfig }) => {
     setAlreadyIn(null);
     const { error: insertError } = await (supabase.from(program.tables.attendance as never) as never as {
       insert: (v: unknown) => Promise<{ error: { code?: string; message: string } | null }>;
-    }).insert({ registration_id: s.id, check_in_date: hawkTodayET() });
+    }).insert({
+      registration_id: s.id, check_in_date: hawkTodayET(),
+      ...(program.attendanceFilter ? { [program.attendanceFilter.column]: program.attendanceFilter.value } : {}),
+    });
 
     if (insertError) {
       if (insertError.code === "23505" || /duplicate/i.test(insertError.message)) {

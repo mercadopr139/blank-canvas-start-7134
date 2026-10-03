@@ -18,10 +18,17 @@ import { Card, CardContent } from "@/components/ui/card";
 import { format, startOfMonth, endOfMonth, subMonths } from "date-fns";
 import { CalendarDays, Activity, Users, Star, Bus, DoorOpen, Sparkles } from "lucide-react";
 import ProgramReportSheet from "@/components/admin/ProgramReportSheet";
+import SmileLabGrantReportSheet from "@/components/admin/SmileLabGrantReportSheet";
+import SmileLabJournalTab from "@/components/admin/SmileLabJournalTab";
 import { getCurrentAttendanceYear, programYearRange, shortProgramYear } from "@/lib/programYear";
 import {
   type HawkIntelRow, type HawkWeeklyMoments, hawkTodayET, hawkPhotoUrl, hawkIdentity, hawkPeriodStats, hawkBreakdown, hawkWeekStart, hawkWeekLabel,
 } from "@/lib/hawkSquad";
+
+const DEFAULT_INTEL_COLUMNS = "id, youth_link_id, child_first_name, child_last_name, child_headshot_url, grade_level, cte_program, child_sex, child_race_ethnicity, free_or_reduced_lunch";
+type Q = PromiseLike<{ data: unknown; error: { message: string } | null }> & {
+  gte: (k: string, v: string) => Q; lte: (k: string, v: string) => Q; eq: (k: string, v: string) => Q;
+};
 
 const iso = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 const fmtDay = (d: string) => format(new Date(d + "T00:00:00"), "MMM d, yyyy");
@@ -52,7 +59,12 @@ const rangeFor = (key: PresetKey, customFrom: string, customTo: string): { from:
 
 const AdminProgramIntelligence = ({ program }: { program: ProgramConfig }) => {
   const GREEN = program.brand.ui;
-  const [preset, setPreset] = useState<PresetKey>("this-month");
+  const [preset, setPreset] = useState<PresetKey>(program.defaultPeriod ?? "this-month");
+  // The program's default period is the first tab, so what you land on is what you see first.
+  const presets = useMemo(() => {
+    const d = program.defaultPeriod ?? "this-month";
+    return [...PRESETS].sort((a, b) => (a.key === d ? -1 : b.key === d ? 1 : 0));
+  }, [program.defaultPeriod]);
   const [customFrom, setCustomFrom] = useState("");
   const [customTo, setCustomTo] = useState("");
   const [reportOpen, setReportOpen] = useState(false);
@@ -61,11 +73,13 @@ const AdminProgramIntelligence = ({ program }: { program: ProgramConfig }) => {
   const { data: rows = [], isLoading, isError, error } = useQuery({
     queryKey: ["program-intel", program.key, from, to],
     queryFn: async (): Promise<HawkIntelRow[]> => {
-      const { data, error } = await (supabase.from(program.tables.attendance as never) as never as {
-        select: (s: string) => { gte: (k: string, v: string) => { lte: (k: string, v: string) => Promise<{ data: unknown; error: { message: string } | null }> } };
-      })
-        .select(`registration_id, check_in_date, going_home, ${program.tables.registrations}(id, youth_link_id, child_first_name, child_last_name, child_headshot_url, grade_level, cte_program, child_sex, child_race_ethnicity, free_or_reduced_lunch)`)
+      const cols = program.registrationColumns?.intel ?? DEFAULT_INTEL_COLUMNS;
+      let q = (supabase.from(program.tables.attendance as never) as never as { select: (s: string) => Q })
+        .select(`registration_id, check_in_date${program.hasGoingHome ? ", going_home" : ""}, ${program.tables.registrations}(${cols})`)
         .gte("check_in_date", from).lte("check_in_date", to);
+      // A program on a shared table only sees its own rows.
+      if (program.attendanceFilter) q = q.eq(program.attendanceFilter.column, program.attendanceFilter.value);
+      const { data, error } = await q;
       if (error) throw new Error(error.message);
       return ((data as Array<Record<string, unknown>>) ?? []).map((r) => ({
         registration_id: r.registration_id as string, check_in_date: r.check_in_date as string,
@@ -90,6 +104,7 @@ const AdminProgramIntelligence = ({ program }: { program: ProgramConfig }) => {
   // Weekly Standout Moments whose week touches the period: the report's nuggets.
   const { data: moments = [] } = useQuery({
     queryKey: ["program-moments-period", program.key, from, to],
+    enabled: !!program.tables.moments,
     queryFn: async (): Promise<Array<{ week: string; notes: string }>> => {
       const { data, error } = await (supabase.from(program.tables.moments as never) as never as {
         select: (s: string) => { gte: (k: string, v: string) => { lte: (k: string, v: string) => { order: (k: string, o: { ascending: boolean }) => Promise<{ data: unknown; error: { message: string } | null }> } } };
@@ -102,7 +117,7 @@ const AdminProgramIntelligence = ({ program }: { program: ProgramConfig }) => {
   });
 
   const stats = useMemo(() => hawkPeriodStats(rows, from, to, overrides, hawkTodayET(), program.defaultWeekdays, program.scheduleDates), [rows, from, to, overrides, program.defaultWeekdays, program.scheduleDates]);
-  const breakdown = useMemo(() => hawkBreakdown(rows, { cte: program.hasCte }), [rows, program.hasCte]);
+  const breakdown = useMemo(() => hawkBreakdown(rows, { cte: program.hasCte, grade: program.grades.length > 0 }), [rows, program.hasCte, program.grades.length]);
 
   // Per student: sessions attended out of sessions held, and how they went home.
   const students = useMemo(() => {
@@ -136,7 +151,7 @@ const AdminProgramIntelligence = ({ program }: { program: ProgramConfig }) => {
 
       {/* Period */}
       <div className="flex flex-wrap items-center gap-2">
-        {PRESETS.map((p) => (
+        {presets.map((p) => (
           <button key={p.key} onClick={() => setPreset(p.key)}
             className={`text-sm px-3 py-1.5 rounded-lg border ${preset === p.key ? `${program.tw.chipActive} font-semibold` : "bg-white/5 border-white/15 text-white/70 hover:text-white"}`}>
             {p.label}
@@ -235,10 +250,22 @@ const AdminProgramIntelligence = ({ program }: { program: ProgramConfig }) => {
         <AdminProgramAttendance program={program} embedded />
       </section>
 
-      {/* ── In the coaches' words: the nuggets the report is built from. Last, on the program's colour. ── */}
-      <ProgramWeeklyMoments program={program} />
+      {/* ── In the coaches' words: the nuggets the report is built from. Last, on the program's colour.
+          Juniors keeps its Tuesday journal (Smile Lab · Life Lab notes, highlights, photos) here instead. ── */}
+      {program.journal === "juniors" ? (
+        <section className="rounded-2xl border border-white/10 bg-white/[0.025] p-4 md:p-6 space-y-3">
+          <SectionLabel program={program} tag="Tuesday journal" title="Smile Lab · Life Lab · standout moments · photos" tone="primary" />
+          <SmileLabJournalTab />
+        </section>
+      ) : (
+        <ProgramWeeklyMoments program={program} />
+      )}
 
-      <ProgramReportSheet program={program} open={reportOpen} onClose={() => setReportOpen(false)} period={label} stats={stats} breakdown={breakdown} moments={moments} />
+      {program.reportSheet === "smile-lab" ? (
+        <SmileLabGrantReportSheet open={reportOpen} onClose={() => setReportOpen(false)} initialRange={{ from, to }} />
+      ) : (
+        <ProgramReportSheet program={program} open={reportOpen} onClose={() => setReportOpen(false)} period={label} stats={stats} breakdown={breakdown} moments={moments} />
+      )}
     </div>
   );
 };

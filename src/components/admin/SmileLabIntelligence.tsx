@@ -148,7 +148,7 @@ const DayDetail = ({ date, onClose }: { date: string; onClose: () => void }) => 
             <div><div className="text-xs font-semibold text-teal-300 mb-0.5">🦷 Smile Lab (Coach Jaime)</div><p className="text-sm text-white/80 whitespace-pre-wrap">{notes.caring_note}</p></div>
           )}
           {notes?.sharing_note?.trim() && (
-            <div><div className="text-xs font-semibold text-yellow-300 mb-0.5">😊 Life Lab (Coach Chrissy)</div><p className="text-sm text-white/80 whitespace-pre-wrap">{notes.sharing_note}</p></div>
+            <div><div className="text-xs font-semibold text-rose-300 mb-0.5">😊 Life Lab (Coach Chrissy)</div><p className="text-sm text-white/80 whitespace-pre-wrap">{notes.sharing_note}</p></div>
           )}
           {notes?.highlights?.length ? (
             <div><div className="text-xs font-semibold text-white/50 mb-0.5">⭐ Standout Moments</div>

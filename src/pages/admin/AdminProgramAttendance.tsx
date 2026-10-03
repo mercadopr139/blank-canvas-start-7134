@@ -43,10 +43,13 @@ interface Student {
   child_headshot_url: string | null;
 }
 
+type AttQ = PromiseLike<{ data: unknown; error: unknown }> & {
+  gte: (k: string, v: string) => AttQ; lte: (k: string, v: string) => AttQ; eq: (k: string, v: string) => AttQ;
+  order: (k: string, o: { ascending: boolean }) => AttQ;
+};
+const DEFAULT_DAY_COLUMNS = "child_first_name, child_last_name, child_headshot_url, dismissal_waiver_signed_at, grade_level";
 const attFor = (name: string) => supabase.from(name as never) as never as {
-  select: (s: string) => {
-    gte: (k: string, v: string) => { lte: (k: string, v: string) => { order: (k: string, o: { ascending: boolean }) => Promise<{ data: unknown; error: unknown }> } };
-  };
+  select: (s: string) => AttQ;
   insert: (v: unknown) => Promise<{ error: { message: string } | null }>;
   update: (v: unknown) => { eq: (k: string, v: string) => Promise<{ error: { message: string } | null }> };
   delete: () => { eq: (k: string, v: string) => Promise<{ error: { message: string } | null }> };
@@ -94,10 +97,12 @@ const AdminProgramAttendance = ({ program, embedded = false }: { program: Progra
   const { data: rows = [], isLoading, isError, error } = useQuery({
     queryKey: ["program-attendance", program.key, first],
     queryFn: async () => {
-      const { data, error } = await att()
-        .select(`id, registration_id, check_in_at, check_in_date, going_home, is_manual, ${program.tables.registrations}(child_first_name, child_last_name, child_headshot_url, dismissal_waiver_signed_at, grade_level)`)
-        .gte("check_in_date", first).lte("check_in_date", last)
-        .order("check_in_at", { ascending: true });
+      const cols = program.registrationColumns?.day ?? DEFAULT_DAY_COLUMNS;
+      let q = att()
+        .select(`id, registration_id, check_in_at, check_in_date${program.hasGoingHome ? ", going_home" : ""}, is_manual, ${program.tables.registrations}(${cols})`)
+        .gte("check_in_date", first).lte("check_in_date", last);
+      if (program.attendanceFilter) q = q.eq(program.attendanceFilter.column, program.attendanceFilter.value);
+      const { data, error } = await q.order("check_in_at", { ascending: true });
       if (error) throw error as Error;
       // The embedded registration comes back under the table's name.
       return ((data as Array<Record<string, unknown>>) ?? []).map((r) => ({
@@ -160,7 +165,10 @@ const AdminProgramAttendance = ({ program, embedded = false }: { program: Progra
   };
 
   const addStudent = async (s: Student) => {
-    const { error } = await att().insert({ registration_id: s.id, check_in_date: selected, is_manual: true });
+    const { error } = await att().insert({
+      registration_id: s.id, check_in_date: selected, is_manual: true,
+      ...(program.attendanceFilter ? { [program.attendanceFilter.column]: program.attendanceFilter.value } : {}),
+    });
     if (error) {
       toast.error(/duplicate/i.test(error.message) ? `${s.child_first_name} is already checked in that day.` : error.message);
       return;

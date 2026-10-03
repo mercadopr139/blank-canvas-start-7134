@@ -10,7 +10,7 @@
 // Nothing here counts toward NLA registration. The one place the programs
 // meet NLA is the Youth Served (all programs) page.
 
-export type ProgramKey = "hawk" | "bam";
+export type ProgramKey = "hawk" | "bam" | "juniors";
 
 export interface ProgramConfig {
   key: ProgramKey;
@@ -34,7 +34,25 @@ export interface ProgramConfig {
   scheduleDates?: readonly string[];
   /** Season labels for the schedule shown after registering: each season runs up to and including `through`. */
   scheduleSeasons?: readonly { name: string; through: string }[];
+  /** Empty strings mean "this program has no such table" (Juniors has no form and no weekly moments). */
   tables: { fields: string; registrations: string; attendance: string; practiceDays: string; moments: string };
+  /**
+   * A program whose rows live in a SHARED table (Juniors Aftercare's check-ins
+   * are attendance_records stamped program_source = 'Smile Lab'). Every read
+   * adds this filter and every kiosk/manual check-in writes it.
+   */
+  attendanceFilter?: { column: string; value: string };
+  /**
+   * The registration columns each page joins. The defaults are the Hawk Squad
+   * / BAM shape; a program on youth_registrations has fewer.
+   */
+  registrationColumns?: { intel: string; day: string };
+  /** Instead of Weekly Standout Moments: the Tuesday journal (Smile Lab · Life Lab notes, highlights, photos). */
+  journal?: "juniors";
+  /** Instead of the generic program report: the Delta Dental Smile Lab grant narrative. */
+  reportSheet?: "smile-lab";
+  /** Which period Intelligence opens on. Monthly-reporting programs open on the month; Juniors on the year. */
+  defaultPeriod?: "this-month" | "year";
   rpc: { search: string; roster: string; today: string; undo: string; sameYear: string };
   /** Folder prefix for photos and signatures in the shared buckets. */
   storagePrefix: string;
@@ -239,6 +257,84 @@ export const BAM: ProgramConfig = {
   submitted: { title: "Welcome to BAM!", line: "Keep up the great week — we'll see you Friday!" },
 };
 
-export const PROGRAMS: Record<ProgramKey, ProgramConfig> = { hawk: HAWK_SQUAD, bam: BAM };
+/**
+ * Juniors Aftercare — the Tuesday aftercare for Junior Boxers (7–10), where
+ * the kids rotate through Smile Lab (Coach Jaime) and Life Lab (Coach Chrissy).
+ * It gets the Hawk Squad / BAM screens, but its data stays where it always
+ * was: the youth come from NLA registration (extended_program = 'Smile Lab')
+ * and check-ins are attendance_records with program_source = 'Smile Lab'.
+ * (Josh, 2026-10-03.)
+ */
+export const JUNIORS_AFTERCARE: ProgramConfig = {
+  key: "juniors",
+  name: "Juniors Aftercare",
+  fullName: "Juniors Aftercare — Smile Lab · Life Lab",
+  slug: "aftercare",
+  partner: "Junior Boxing (ages 7–10) · Tuesdays 6:00–7:00 PM",
+  description: "Tuesday aftercare for Junior Boxers — Smile Lab and Life Lab",
+  permKey: "operations_practice_plan",
+  defaultWeekdays: [2],
+  scheduleLine: "Tuesdays by default — click any day to change it",
+  tables: {
+    fields: "",
+    registrations: "youth_registrations",
+    attendance: "attendance_records",
+    practiceDays: "juniors_aftercare_practice_days",
+    moments: "",
+  },
+  rpc: {
+    search: "search_smile_lab_youth",
+    roster: "get_smile_lab_roster",
+    today: "juniors_aftercare_today_roster",
+    undo: "juniors_aftercare_kiosk_undo",
+    sameYear: "",
+  },
+  attendanceFilter: { column: "program_source", value: "Smile Lab" },
+  registrationColumns: {
+    intel: "id, child_first_name, child_last_name, child_headshot_url, child_sex, child_race_ethnicity, free_or_reduced_lunch",
+    day: "child_first_name, child_last_name, child_headshot_url",
+  },
+  journal: "juniors",
+  reportSheet: "smile-lab",
+  defaultPeriod: "year",
+  storagePrefix: "juniors-aftercare",
+  grades: [],
+  hasCte: false,
+  hasGoingHome: false,
+  dismissalWaiverKey: null,
+  momentsStart: "2026-09-29",
+  momentsDueFrom: 1,
+  brand: {
+    primary: "#0f766e",
+    primaryDark: "#115e59",
+    accent: "#5eead4",
+    onAccent: "#042f2e",
+    ui: "#14b8a6",
+    uiDark: "#0f766e",
+    wordmark: "JUNIORS AFTERCARE",
+    sub: "SMILE LAB · LIFE LAB · AT NO LIMITS ACADEMY",
+    tagline: "Tuesdays after Junior Boxing",
+    formBg: "#0f766e",
+  },
+  tw: {
+    button: "bg-teal-500 hover:bg-teal-400 text-black",
+    chipActive: "bg-teal-500 text-black border-teal-500",
+    calSelected: "border-teal-400/70 bg-teal-500/10",
+    calToday: "text-teal-300",
+    dotOn: "bg-teal-500 border-teal-400",
+    sidebarButton: "bg-teal-500 hover:bg-teal-400",
+  },
+  letter: {
+    org: "No Limits Academy",
+    contact: "",
+    contactTitle: "",
+    addressLines: ["No Limits Academy"],
+    defaultSalutation: "To whom it may concern:",
+  },
+  submitted: { title: "Welcome to Juniors Aftercare!", line: "See you Tuesday after Junior Boxing!" },
+};
+
+export const PROGRAMS: Record<ProgramKey, ProgramConfig> = { hawk: HAWK_SQUAD, bam: BAM, juniors: JUNIORS_AFTERCARE };
+/** The programs with their own registration form and sidebar group. Juniors has neither. */
 export const PROGRAM_LIST: ProgramConfig[] = [HAWK_SQUAD, BAM];
 export const programBySlug = (slug: string) => PROGRAM_LIST.find((p) => p.slug === slug) ?? null;

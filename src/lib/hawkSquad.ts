@@ -301,8 +301,9 @@ export const hawkPeriodStats = (
 };
 
 /** Demographics over distinct students. A student's latest row wins. */
-export const hawkBreakdown = (rows: HawkIntelRow[], opts: { cte?: boolean } = {}): HawkBreakdown => {
+export const hawkBreakdown = (rows: HawkIntelRow[], opts: { cte?: boolean; grade?: boolean } = {}): HawkBreakdown => {
   const includeCte = opts.cte ?? true;
+  const includeGrade = opts.grade ?? true;
   const latest = new Map<string, HawkIntelRow>();
   [...rows].sort((a, b) => a.check_in_date.localeCompare(b.check_in_date)).forEach((r) => latest.set(hawkIdentity(r), r));
   const tally = (pick: (r: HawkIntelRow) => string | null | undefined) => {
@@ -311,7 +312,7 @@ export const hawkBreakdown = (rows: HawkIntelRow[], opts: { cte?: boolean } = {}
     return m;
   };
   return {
-    Grade: tally((r) => r.reg?.grade_level),
+    ...(includeGrade ? { Grade: tally((r) => r.reg?.grade_level) } : {}),
     ...(includeCte ? { "CTE program": tally((r) => r.reg?.cte_program) } : {}),
     Sex: tally((r) => r.reg?.child_sex),
     "Race / ethnicity": tally((r) => r.reg?.child_race_ethnicity),

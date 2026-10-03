@@ -7,13 +7,20 @@ import { format, startOfMonth, endOfMonth, subMonths } from "date-fns";
 import { Loader2, Sparkles, Wand2, Copy, Check, FileDown } from "lucide-react";
 import { toast } from "sonner";
 import { generateSmileLabReportPdf } from "@/lib/generateSmileLabReportPdf";
+import { getCurrentAttendanceYear, programYearRange, shortProgramYear } from "@/lib/programYear";
 
-interface Props { open: boolean; onClose: () => void }
+interface Props {
+  open: boolean;
+  onClose: () => void;
+  /** The period the Intelligence page is showing; the sheet opens on it so the report matches the screen. */
+  initialRange?: { from: string; to: string };
+}
 
 const iso = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 
-type PresetKey = "this-month" | "last-month" | "last-3" | "all" | "custom";
+type PresetKey = "year" | "this-month" | "last-month" | "last-3" | "all" | "custom";
 const PRESETS: { key: PresetKey; label: string }[] = [
+  { key: "year", label: `Program year ${shortProgramYear(getCurrentAttendanceYear())}` },
   { key: "this-month", label: "This month" },
   { key: "last-month", label: "Last month" },
   { key: "last-3", label: "Last 3 months" },
@@ -30,16 +37,30 @@ const rangeFor = (key: PresetKey, customFrom: string, customTo: string): { from:
     const to = customTo || iso(now);
     return { from, to, label: `${fmtDay(from)} – ${fmtDay(to)}` };
   }
+  if (key === "year") {
+    const year = getCurrentAttendanceYear();
+    const [s, e] = programYearRange(year);
+    return { from: iso(s), to: iso(e), label: `Program year ${shortProgramYear(year)}` };
+  }
   if (key === "last-month") { const m = subMonths(now, 1); return { from: iso(startOfMonth(m)), to: iso(endOfMonth(m)), label: format(m, "MMMM yyyy") }; }
   if (key === "last-3") { return { from: iso(startOfMonth(subMonths(now, 2))), to: iso(endOfMonth(now)), label: `${format(subMonths(now, 2), "MMM")} – ${format(now, "MMM yyyy")}` }; }
   if (key === "all") { return { from: "2020-01-01", to: iso(now), label: "All time" }; }
   return { from: iso(startOfMonth(now)), to: iso(endOfMonth(now)), label: format(now, "MMMM yyyy") };
 };
 
-const SmileLabGrantReportSheet = ({ open, onClose }: Props) => {
-  const [preset, setPreset] = useState<PresetKey>("this-month");
+const SmileLabGrantReportSheet = ({ open, onClose, initialRange }: Props) => {
+  const [preset, setPreset] = useState<PresetKey>("year");
   const [customFrom, setCustomFrom] = useState("");
   const [customTo, setCustomTo] = useState("");
+  // Open on the period the page is showing, as a custom range the coach can
+  // still change before generating.
+  const initialFrom = initialRange?.from, initialTo = initialRange?.to;
+  useEffect(() => {
+    if (!open || !initialFrom || !initialTo) return;
+    setPreset("custom");
+    setCustomFrom(initialFrom);
+    setCustomTo(initialTo);
+  }, [open, initialFrom, initialTo]);
   const [narrative, setNarrative] = useState("");
   const [generating, setGenerating] = useState(false);
   const [revising, setRevising] = useState(false);
