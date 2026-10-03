@@ -250,14 +250,14 @@ export const BattleTeamWeek = ({
                 the crew reads from across the gym. */}
             {/* Green once the week is locked: that's the signal it's on the
                 wall for everyone. Grey while it's still a draft. */}
-            <button onClick={() => navigate("/strength-board")}
+            <button onClick={() => navigate(`/strength-board?week=${weekStart}&from=plan`)}
               title={locked ? "Live on the gym board" : "Draft — lock the week to put it on the board"}
               className={locked
                 ? "inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-sm font-semibold bg-emerald-600 hover:bg-emerald-500 border border-emerald-500 text-white"
                 : "inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-sm font-semibold bg-white/5 hover:bg-white/10 border border-white/15"}>
               <Monitor className="h-4 w-4" /> <span className="hidden sm:inline">Open gym board</span>
             </button>
-            <button onClick={() => navigate("/strength-coach/intelligence")}
+            <button onClick={() => navigate(`/strength-coach/intelligence?from=${embedded ? "plan" : "coach"}&week=${weekStart}`)}
               className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-sm font-semibold bg-white/5 hover:bg-white/10 border border-white/15">
               <TrendingUp className="h-4 w-4" /> <span className="hidden sm:inline">Intelligence</span>
             </button>

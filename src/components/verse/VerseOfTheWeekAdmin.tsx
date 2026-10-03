@@ -333,7 +333,7 @@ const VerseOfTheWeekAdmin = ({ season = "in_season", weekStart }: { season?: Sea
         </p>
         <Button
           variant="outline"
-          onClick={() => window.open("/practice-board", "_blank")}
+          onClick={() => window.open(`/practice-board?week=${weekStart}`, "_blank")}
           title={published ? "Live on the gym board" : "Draft — put it on the board for the kids to see it"}
           className={published
             ? "bg-emerald-600 hover:bg-emerald-500 border-emerald-500 text-white hover:text-white"

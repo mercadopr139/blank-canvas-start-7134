@@ -403,6 +403,45 @@ const AdminPracticePlan = () => {
     onError: (e: Error) => toast.error(e.message || "Couldn't save the wrap-up."),
   });
 
+  // Special reminders, per night — the same rows the board's banner shows.
+  const { data: reminderRows = [] } = useQuery({
+    queryKey: ["practice-reminders", week?.id],
+    enabled: !!week?.id,
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("practice_reminders" as never)
+        .select("weekday, items")
+        .eq("week_id", week!.id);
+      return (data || []) as unknown as { weekday: number; items: string[] }[];
+    },
+  });
+  const remindersFor = (weekday: number) => reminderRows.find((r) => r.weekday === weekday)?.items ?? [];
+  const saveReminders = useMutation({
+    mutationFn: async ({ weekday, items }: { weekday: number; items: string[] }) => {
+      const { error } = await supabase
+        .from("practice_reminders" as never)
+        .upsert({ week_id: week!.id, weekday, items } as never, { onConflict: "week_id,weekday" } as never);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["practice-reminders", week?.id] });
+      qc.invalidateQueries({ queryKey: ["board-reminders"] });
+    },
+    onError: (e: Error) => toast.error(e.message || "Couldn't save that reminder."),
+  });
+
+  // The week's verses, read-only here — they're written on the Verse tab.
+  const { data: verseDays = [] } = useQuery({
+    queryKey: ["practice-verse-days", weekStart],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("board_verse_days" as never)
+        .select("weekday, reference, text")
+        .eq("week_start", weekStart);
+      return (data || []) as unknown as { weekday: number; reference: string; text: string }[];
+    },
+  });
+
   // Reset the ENTIRE week — all four steps — so it can be planned fresh:
   // the practice plan (its drills, meeting points, reminders and wrap-ups),
   // the Verse of the Week, the Battle Team week and the NBT week. Each is its
@@ -758,7 +797,7 @@ const AdminPracticePlan = () => {
             </p>
             <Button
               variant="outline"
-              onClick={() => window.open("/practice-board", "_blank")}
+              onClick={() => window.open(`/practice-board?week=${weekStart}`, "_blank")}
               title={week?.status === "published" ? "Live on the gym board" : "Draft — put it on the board for the kids to see it"}
               className={week?.status === "published"
                 ? "bg-emerald-600 hover:bg-emerald-500 border-emerald-500 text-white hover:text-white"
@@ -901,6 +940,9 @@ const AdminPracticePlan = () => {
                   onWrapup={(value) => saveWrapup.mutate({ weekday: d.n, value })}
                   points={pointsFor(d.n)}
                   onPoints={(points) => saveMeeting.mutate({ weekday: d.n, points })}
+                  reminders={remindersFor(d.n)}
+                  onReminders={(items) => saveReminders.mutate({ weekday: d.n, items })}
+                  verse={verseDays.find((v) => v.weekday === d.n) ?? null}
                   blocksFor={(g) => blocksFor(d.n, g)}
                   onSaveBlock={(id, detail) => saveBlock.mutate({ id, detail })}
                   template={template}
@@ -985,7 +1027,7 @@ const StartWeekCard = ({
 
 // ── One day ──────────────────────────────────────────────────────────
 const DayCard = ({
-  day, dateISO, spiritual, onWrapup, points, onPoints, blocksFor, onSaveBlock,
+  day, dateISO, spiritual, onWrapup, points, onPoints, reminders, onReminders, verse, blocksFor, onSaveBlock,
   template, onRename, onReset, onRemove, onAddWeekBlock,
 }: {
   day: { n: number; short: string; long: string };
@@ -994,6 +1036,9 @@ const DayCard = ({
   onWrapup: (value: { label: string; leader: string | null } | null) => void;
   points: string[];
   onPoints: (points: string[]) => void;
+  reminders: string[];
+  onReminders: (items: string[]) => void;
+  verse: { reference: string; text: string } | null;
   blocksFor: (g: PracticeGroup) => PracticeBlock[];
   onSaveBlock: (id: string, detail: string | null) => void;
   template: TemplateBlock[];
@@ -1003,6 +1048,7 @@ const DayCard = ({
   onAddWeekBlock: (g: PracticeGroup, weekday: number, category: string) => void;
 }) => {
   const [draft, setDraft] = useState("");
+  const [reminderDraft, setReminderDraft] = useState("");
   const date = new Date(`${dateISO}T12:00:00`);
   const dayNumber = day.n;
   // The wrap-up pill opens a small editor for THIS night of THIS week.
@@ -1032,6 +1078,173 @@ const DayCard = ({
         {/* A paused slot is hidden on the gym board, so it must not look live
             here either — but it stays visible, dimmed and labelled, so the
             week explains why the board has nothing on that day. */}
+      </div>
+
+      {/* The banner, as the board shows it: team meeting · special reminders · verse. */}
+      <div className="grid grid-cols-1 md:grid-cols-3 divide-y md:divide-y-0 md:divide-x divide-neutral-800 border-b border-neutral-800 bg-neutral-950/40">
+      <div className="px-4 py-3">
+        <div className="flex items-center gap-2 mb-2">
+          <Users className="w-3.5 h-3.5" style={{ color: TOGETHER_GRAY }} />
+          <p className="text-[11px] uppercase tracking-[0.15em] text-neutral-400 font-semibold">
+            Team meeting · 5 min
+          </p>
+        </div>
+        <ul className="space-y-1.5 mb-2">
+          {points.map((p, i) => (
+            <li key={i} className="flex items-start gap-2 group/pt">
+              <span className="w-1.5 h-1.5 rounded-full bg-neutral-600 mt-2 shrink-0" />
+              <span className="flex-1 text-sm text-neutral-200">{p}</span>
+              <button
+                type="button"
+                onClick={() => onPoints(points.filter((_, x) => x !== i))}
+                className="opacity-0 group-hover/pt:opacity-100 text-neutral-500 hover:text-red-400 transition-opacity"
+                aria-label="Remove point"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            </li>
+          ))}
+        </ul>
+        <div className="flex gap-2">
+          <Input
+            value={draft}
+            onChange={(e) => setDraft(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && draft.trim()) {
+                onPoints([...points, draft.trim()]);
+                setDraft("");
+              }
+            }}
+            placeholder="Add a discussion point…"
+            className="h-8 text-sm bg-neutral-900 border-neutral-800 text-white"
+          />
+          <Button
+            size="sm"
+            variant="outline"
+            disabled={!draft.trim()}
+            onClick={() => {
+              onPoints([...points, draft.trim()]);
+              setDraft("");
+            }}
+            className="h-8 bg-transparent border-neutral-700 text-neutral-300 hover:bg-white/5 hover:text-white"
+          >
+            Add
+          </Button>
+        </div>
+      </div>
+
+      {/* Special reminders — the same list the board's banner shows. */}
+      <div className="px-4 py-3">
+        <p className="text-[11px] uppercase tracking-[0.15em] text-neutral-400 font-semibold mb-2">Special reminders</p>
+        <ul className="space-y-1.5 mb-2">
+          {reminders.map((r, i) => (
+            <li key={i} className="flex items-start gap-2 group/rm">
+              <span className="w-1.5 h-1.5 rounded-full bg-neutral-600 mt-2 shrink-0" />
+              <span className="flex-1 text-sm text-neutral-200">{r}</span>
+              <button
+                type="button"
+                onClick={() => onReminders(reminders.filter((_, x) => x !== i))}
+                className="opacity-0 group-hover/rm:opacity-100 text-neutral-500 hover:text-red-400 transition-opacity"
+                aria-label="Remove reminder"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            </li>
+          ))}
+          {reminders.length === 0 && <li className="text-sm text-neutral-600 italic">Nothing special tonight.</li>}
+        </ul>
+        <div className="flex gap-2">
+          <Input
+            value={reminderDraft}
+            onChange={(e) => setReminderDraft(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && reminderDraft.trim()) {
+                onReminders([...reminders, reminderDraft.trim()]);
+                setReminderDraft("");
+              }
+            }}
+            className="h-8 text-sm bg-neutral-900 border-neutral-800 text-white"
+          />
+          <Button
+            size="sm"
+            variant="outline"
+            disabled={!reminderDraft.trim()}
+            onClick={() => {
+              onReminders([...reminders, reminderDraft.trim()]);
+              setReminderDraft("");
+            }}
+            className="h-8 bg-transparent border-neutral-700 text-neutral-300 hover:bg-white/5 hover:text-white"
+          >
+            Add
+          </Button>
+        </div>
+      </div>
+
+      {/* Verse of the day — read here, written on the Verse tab. */}
+      <div className="px-4 py-3">
+        <p className="text-[11px] uppercase tracking-[0.15em] text-neutral-400 font-semibold mb-2">Verse of the day</p>
+        {verse ? (
+          <>
+            <p className="text-sm text-neutral-200 leading-relaxed">&ldquo;{verse.text}&rdquo;</p>
+            <p className="text-xs font-semibold text-neutral-500 mt-1.5">&mdash; {verse.reference}</p>
+          </>
+        ) : (
+          <p className="text-sm text-neutral-600 italic">Set on the Verse of the Week tab.</p>
+        )}
+      </div>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-3 divide-y md:divide-y-0 md:divide-x divide-neutral-800">
+        {GROUPS.map((g) => {
+          const gb = blocksFor(g.key);
+          return (
+            <div key={g.key} className="p-4 space-y-3 group/col">
+              <div>
+                <p className="text-sm font-bold" style={{ color: g.accent }}>
+                  {g.label}
+                </p>
+                <p className="text-[10px] text-neutral-600">{g.blurb}</p>
+              </div>
+              {gb.length === 0 ? (
+                <p className="text-xs text-neutral-600 italic">Nothing scheduled</p>
+              ) : (
+                gb.map((b) => (
+                  <BlockEditor
+                    key={b.id}
+                    block={b}
+                    accent={g.accent}
+                    templateCategory={
+                      template.find(
+                        (t) =>
+                          t.group === b.group &&
+                          t.weekday === b.weekday &&
+                          t.position === b.position
+                      )?.category
+                    }
+                    onSave={onSaveBlock}
+                    onRename={onRename}
+                    onReset={() => onReset(b)}
+                    onRemove={() => onRemove(b.id)}
+                  />
+                ))
+              )}
+              <AddTemplateBlock
+                accent={g.accent}
+                label="Add a column this week"
+                onAdd={(category) =>
+                  onAddWeekBlock(g.key, dayNumber, category)
+                }
+              />
+            </div>
+          );
+        })}
+      </div>
+
+      {/* The foot of the night, as the board shows it — one band under all three. */}
+      <div className="px-4 py-2.5 border-t border-neutral-800 flex items-center justify-between gap-3 flex-wrap" style={{ background: `${TOGETHER_GRAY}14` }}>
+        <p className="text-[10px] font-bold uppercase tracking-[0.2em] opacity-70" style={{ color: TOGETHER_GRAY }}>
+          Nightly Wrap Up
+        </p>
         {/* Tap to change this night's wrap-up for this week only. The
             template keeps the standing pattern; "Back to template" undoes. */}
         <Popover open={wrapOpen} onOpenChange={(o) => (o ? openWrap() : setWrapOpen(false))}>
@@ -1096,104 +1309,6 @@ const DayCard = ({
             </div>
           </PopoverContent>
         </Popover>
-      </div>
-
-      {/* The five minutes that open practice */}
-      <div className="px-4 py-3 border-b border-neutral-800 bg-neutral-950/40">
-        <div className="flex items-center gap-2 mb-2">
-          <Users className="w-3.5 h-3.5" style={{ color: TOGETHER_GRAY }} />
-          <p className="text-[11px] uppercase tracking-[0.15em] text-neutral-400 font-semibold">
-            Team meeting · 5 min
-          </p>
-        </div>
-        <ul className="space-y-1.5 mb-2">
-          {points.map((p, i) => (
-            <li key={i} className="flex items-start gap-2 group/pt">
-              <span className="w-1.5 h-1.5 rounded-full bg-neutral-600 mt-2 shrink-0" />
-              <span className="flex-1 text-sm text-neutral-200">{p}</span>
-              <button
-                type="button"
-                onClick={() => onPoints(points.filter((_, x) => x !== i))}
-                className="opacity-0 group-hover/pt:opacity-100 text-neutral-500 hover:text-red-400 transition-opacity"
-                aria-label="Remove point"
-              >
-                <X className="w-3.5 h-3.5" />
-              </button>
-            </li>
-          ))}
-        </ul>
-        <div className="flex gap-2">
-          <Input
-            value={draft}
-            onChange={(e) => setDraft(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter" && draft.trim()) {
-                onPoints([...points, draft.trim()]);
-                setDraft("");
-              }
-            }}
-            placeholder="Add a discussion point…"
-            className="h-8 text-sm bg-neutral-900 border-neutral-800 text-white"
-          />
-          <Button
-            size="sm"
-            variant="outline"
-            disabled={!draft.trim()}
-            onClick={() => {
-              onPoints([...points, draft.trim()]);
-              setDraft("");
-            }}
-            className="h-8 bg-transparent border-neutral-700 text-neutral-300 hover:bg-white/5 hover:text-white"
-          >
-            Add
-          </Button>
-        </div>
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-3 divide-y md:divide-y-0 md:divide-x divide-neutral-800">
-        {GROUPS.map((g) => {
-          const gb = blocksFor(g.key);
-          return (
-            <div key={g.key} className="p-4 space-y-3 group/col">
-              <div>
-                <p className="text-sm font-bold" style={{ color: g.accent }}>
-                  {g.label}
-                </p>
-                <p className="text-[10px] text-neutral-600">{g.blurb}</p>
-              </div>
-              {gb.length === 0 ? (
-                <p className="text-xs text-neutral-600 italic">Nothing scheduled</p>
-              ) : (
-                gb.map((b) => (
-                  <BlockEditor
-                    key={b.id}
-                    block={b}
-                    accent={g.accent}
-                    templateCategory={
-                      template.find(
-                        (t) =>
-                          t.group === b.group &&
-                          t.weekday === b.weekday &&
-                          t.position === b.position
-                      )?.category
-                    }
-                    onSave={onSaveBlock}
-                    onRename={onRename}
-                    onReset={() => onReset(b)}
-                    onRemove={() => onRemove(b.id)}
-                  />
-                ))
-              )}
-              <AddTemplateBlock
-                accent={g.accent}
-                label="Add a column this week"
-                onAdd={(category) =>
-                  onAddWeekBlock(g.key, dayNumber, category)
-                }
-              />
-            </div>
-          );
-        })}
       </div>
     </div>
   );

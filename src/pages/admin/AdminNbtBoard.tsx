@@ -129,8 +129,8 @@ export const NbtWeekBuilder = ({
 
   const block = data?.block ?? null;
   const weeks = useMemo(() => data?.weeks ?? [], [data]);
-  // Green once this week's row is locked: that's what the wall shows.
-  const thisWeekLocked = weeks.some((w) => w.week_start === thisWeekStart && w.status === "locked");
+  // Green once the week ON SCREEN is live — not today's week.
+  const thisWeekLocked = weeks.some((w) => w.week_start === weekStart && w.status === "locked");
   const mondays = useMemo(() => mondaysInMonth(month), [month]);
   const refresh = () => qc.invalidateQueries({ queryKey: ["nbt-block", month] });
 
@@ -365,7 +365,7 @@ export const NbtWeekBuilder = ({
         {/* Green once this week is locked: it's on the wall for everyone. */}
         <Button
           variant="outline"
-          onClick={() => navigate("/nbt-board")}
+          onClick={() => navigate(`/nbt-board?week=${weekStart}&from=plan`)}
           title={thisWeekLocked ? "Live on the gym board" : "This week is still a draft — lock it to put it on the board"}
           className={thisWeekLocked
             ? "bg-emerald-600 hover:bg-emerald-500 border-emerald-500 text-white hover:text-white"

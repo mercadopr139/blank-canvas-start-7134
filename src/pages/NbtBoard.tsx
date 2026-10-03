@@ -32,6 +32,8 @@ const NbtBoard = () => {
   // turns the back arrow into "back to the Gym Board", so the two round-trip.
   const [params] = useSearchParams();
   const fromPractice = params.get("from") === "practice";
+  // Opened from the Practice Plan's NBT tab: the back arrow goes home there, same week.
+  const fromPlan = params.get("from") === "plan";
   const dayParam = params.get("day");
   const linkedDay = DAYS.find((d) => d.key === dayParam)?.key ?? null;
   const linkedWeek = /^\d{4}-\d{2}-\d{2}$/.test(params.get("week") ?? "") ? params.get("week")! : null;
@@ -193,13 +195,13 @@ const NbtBoard = () => {
             hand every time. */}
         <Button
           variant="ghost"
-          onClick={() => navigate(fromPractice ? backToBoard : "/admin/operations/nbt-board")}
+          onClick={() => navigate(fromPractice ? backToBoard : fromPlan ? `/admin/operations/practice-plan?week=${weekStart}&tab=nbt` : "/admin/operations/nbt-board")}
           className="text-white/50 hover:text-white hover:bg-white/5 h-9 px-2 -ml-2"
-          aria-label={fromPractice ? "Back to the Practice Plan" : "Back to the NBT S&C Board"}
-          title={fromPractice ? "Back to the Practice Plan" : "Back to the NBT S&C Board"}
+          aria-label={fromPractice ? "Back to the Gym Board" : "Back to the Practice Plan"}
+          title={fromPractice ? "Back to the Gym Board" : "Back to the Practice Plan"}
         >
           <ArrowLeft className="w-5 h-5" />
-          {fromPractice && <span className="ml-1 text-sm font-semibold">Practice Plan</span>}
+          {(fromPractice || fromPlan) && <span className="ml-1 text-sm font-semibold">{fromPractice ? "Gym Board" : "Practice Plan"}</span>}
         </Button>
         <Dumbbell className="w-5 h-5" style={{ color: NBT_AMBER }} />
         <div className="min-w-0">
