@@ -2,7 +2,7 @@
 //
 // The board and the admin editor both lean on this so a zone always looks the
 // same everywhere. Colors echo the paper sheet (Boxing Gym pink/red,
-// Performance Center blue, Bathrooms purple, Smile Lab teal, Entire Gym
+// Performance Center blue, Bathrooms purple, Teen Center teal, Entire Gym
 // gold) but are tuned to read on the black Gym Board TV.
 
 export interface DutyJob {
@@ -46,7 +46,7 @@ export const DUTY_ZONES: ZoneStyle[] = [
   { name: "Boxing Gym",         border: "border-rose-500/30",   headerBg: "bg-rose-500/15",   headerText: "text-rose-200",   dot: "bg-rose-400" },
   { name: "Performance Center", border: "border-sky-500/30",    headerBg: "bg-sky-500/15",    headerText: "text-sky-200",    dot: "bg-sky-400" },
   { name: "Bathrooms",          border: "border-violet-500/30", headerBg: "bg-violet-500/15", headerText: "text-violet-200", dot: "bg-violet-400" },
-  { name: "Smile Lab",          border: "border-teal-500/30",   headerBg: "bg-teal-500/15",   headerText: "text-teal-200",   dot: "bg-teal-400" },
+  { name: "Teen Center",        border: "border-teal-500/30",   headerBg: "bg-teal-500/15",   headerText: "text-teal-200",   dot: "bg-teal-400" },
   { name: "Entire Gym",         border: "border-amber-500/30",  headerBg: "bg-amber-500/15",  headerText: "text-amber-200",  dot: "bg-amber-400" },
 ];
 

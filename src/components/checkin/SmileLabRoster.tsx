@@ -152,7 +152,7 @@ const SmileLabRoster = ({ onCheckIn, onUndo, onClose, checkedInIds }: SmileLabRo
         <div className="flex items-center justify-between gap-3 mb-3">
           <div className="min-w-0">
             <h2 className="text-lg sm:text-xl font-bold text-white truncate">
-              <span style={{ color: '#2dd4bf' }}>Smile Lab</span> Roster
+              <span style={{ color: '#2dd4bf' }}>Juniors Aftercare</span> Roster
             </h2>
             <p className="text-white/40 text-xs sm:text-sm">
               {checkedCount} of {roster.length} checked in

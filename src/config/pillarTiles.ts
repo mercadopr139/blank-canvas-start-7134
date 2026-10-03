@@ -67,7 +67,7 @@ export const OPERATIONS_TILES: PillarTile[] = [
       { title: "Events Intelligence", href: "/admin/operations/events-intelligence", icon: Sparkles },
       { title: "Attendance Reports", href: "/admin/operations/attendance-reports", icon: FileBarChart },
       { title: "Call-Outs", href: "/admin/operations/callouts", icon: PhoneOff },
-      { title: "Smile Lab Intelligence", href: "/admin/operations/smile-lab-attendance", icon: Smile },
+      { title: "Juniors Aftercare Intelligence", href: "/admin/operations/smile-lab-attendance", icon: Smile },
     ],
   },
   {

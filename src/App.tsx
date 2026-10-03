@@ -179,9 +179,10 @@ const App = () => (
             <Route path="/supporters" element={<Supporters />} />
             <Route path="/check-in" element={<CheckIn />} />
             <Route path="/weigh-in" element={<WeighIn />} />
-            <Route path="/check-in/smile-lab" element={<SmileLabCheckIn />} />
+            <Route path="/check-in/aftercare" element={<SmileLabCheckIn />} />
+            <Route path="/check-in/smile-lab" element={<Navigate to="/check-in/aftercare" replace />} />
             <Route path="/smile-lab" element={<SmileLabBoard />} />
-            <Route path="/check-in/lil-champs-corner" element={<Navigate to="/check-in/smile-lab" replace />} />
+            <Route path="/check-in/lil-champs-corner" element={<Navigate to="/check-in/aftercare" replace />} />
             <Route path="/excursion-check-in" element={<ExcursionCheckIn />} />
             <Route path="/excursion-coach" element={<ExcursionCoach />} />
             {/* The gym board — a TV in the room, no login. */}

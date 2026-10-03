@@ -32,8 +32,8 @@ const juniorScheduleBlocks = [{
   description: <>Foundational boxing instruction focused on movement, coordination, and confidence, with Senior Boxing youth assisting as part of their service and leadership responsibilities. Junior Boxing concludes at 6:00 PM, with parent pick-up permitted at that time. <span className="font-bold">Optional aftercare</span> programming is available but not required.</>
 }, {
   time: "6:00pm–7:00pm",
-  title: "Smile Lab",
-  description: "Our Tuesday aftercare: age-appropriate reflection and values-based discussion where kids rotate between two Smile Lab experiences—caring for their own smile (oral health & hygiene) and sharing their smile (character & everyday skills like kindness, gratitude, and confidence). Smile Lab strengthens core life skills—hygiene, responsibility, kindness, and respect—while encouraging youth to be good stewards of their community.",
+  title: "Juniors Aftercare",
+  description: "Our complimentary Tuesday aftercare for Junior Boxers (ages 7–10). Kids rotate between two programs: Smile Lab with Coach Jaime (oral health & hygiene, in partnership with Delta Dental) and Life Lab with Coach Chrissy (life skills like manners, gratitude, kindness, and confidence). Together they strengthen core habits—hygiene, responsibility, kindness, and respect—while encouraging youth to be good stewards of their community.",
   optional: true
 }, {
   time: "7:00pm–7:15pm",
@@ -99,7 +99,7 @@ const DailyRhythmSection = ({
                 <Pause className="w-4 h-4 text-amber-400 mt-0.5 shrink-0" />
                 <div className="text-sm text-foreground/85 leading-snug space-y-1">
                   <p className="font-semibold text-foreground">Junior Boxing returns {SUMMER_BREAK_COPY.juniorReturn}.</p>
-                  <p>The Tuesday rhythm below is the school-year schedule—Junior Boxing and its Smile Lab aftercare resume then.</p>
+                  <p>The Tuesday rhythm below is the school-year schedule—Junior Boxing and its Juniors Aftercare resume then.</p>
                 </div>
               </div>
             )}

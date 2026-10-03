@@ -62,7 +62,7 @@ export function generateSmileLabAttendancePdf(
   // Title
   doc.setFont("helvetica", "bold");
   doc.setFontSize(16);
-  doc.text("Smile Lab — Attendance Report", pageWidth / 2, y, { align: "center" });
+  doc.text("Juniors Aftercare — Attendance Report", pageWidth / 2, y, { align: "center" });
   y += 20;
 
   doc.setFont("helvetica", "normal");
@@ -88,7 +88,7 @@ export function generateSmileLabAttendancePdf(
     String(calculateAge(r.child_date_of_birth)),
     r.check_in_date,
     format(new Date(r.check_in_at), "h:mm a"),
-    r.is_manual ? "Manual" : "Smile Lab",
+    r.is_manual ? "Manual" : "Juniors Aftercare",
   ]);
 
   autoTable(doc, {

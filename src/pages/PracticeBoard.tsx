@@ -480,7 +480,7 @@ const PracticeBoard = () => {
   const bibleTopic = bibleLanes[0]?.text.trim() || themed?.theme || "";
   const points = meeting.find((m) => m.weekday === day.n)?.points ?? [];
   // A paused template row keeps its place in the template but must not
-  // reach the wall — Smile Lab is not running for a few weeks.
+  // reach the wall — Juniors Aftercare is not running for a few weeks.
   // This week's own line for the night wins; else the template's, unless paused.
   const sp = wrapupFor(week, day.n, spiritual.find((s) => s.weekday === day.n && s.is_active !== false));
   const weekReminders = reminderRows.find((r) => r.weekday === day.n)?.items ?? [];
@@ -1088,7 +1088,7 @@ const PracticeBoard = () => {
                   <div className="rounded-lg border border-white/15 bg-white/[0.04] px-3 py-1">
                     <p className="text-[9px] font-bold uppercase tracking-[0.2em]" style={{ color: "#5eead4" }}>Aftercare</p>
                     <p className="text-white/90">
-                      Smile Lab <span className="text-white/40 mx-1">⇄</span> Character Lab
+                      Smile Lab <span className="text-white/40 mx-1">⇄</span> Life Lab
                     </p>
                   </div>
                   <span className="self-center text-white/35 text-lg" aria-hidden="true">→</span>

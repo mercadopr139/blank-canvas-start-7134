@@ -4,7 +4,7 @@ import { normalizeImageForUpload } from "@/lib/imageUpload";
 import { toast } from "sonner";
 import { ChevronLeft, ChevronRight, Users, ImagePlus, Trash2, Loader2 } from "lucide-react";
 
-// The Smile Lab session journal editor — shared by the public Board (coaches on
+// The Juniors Aftercare session journal editor — shared by the public Board (coaches on
 // the gym screen) and the admin Journal tab. Date-controlled by the parent so an
 // "edit" action elsewhere can jump the editor to a given session. Autosaves.
 
@@ -150,7 +150,7 @@ const SmileLabSessionEditor = ({ date, onDateChange, showDateNav = true, onSaved
           <span className="ml-auto text-2xl font-extrabold" style={{ color: TEAL }}>{attendees.length}</span>
         </div>
         {attendees.length === 0 ? (
-          <p className="text-sm text-white/40">No check-ins for this date. Kids sign in on the Smile Lab kiosk.</p>
+          <p className="text-sm text-white/40">No check-ins for this date. Kids sign in on the Juniors Aftercare kiosk.</p>
         ) : (
           <div className="flex flex-wrap gap-1.5">
             {attendees.map((a, i) => (
@@ -163,13 +163,13 @@ const SmileLabSessionEditor = ({ date, onDateChange, showDateNav = true, onSaved
       {/* Station notes */}
       <div className="grid md:grid-cols-2 gap-4 mb-5">
         <div className="rounded-2xl border border-white/10 bg-neutral-900/60 p-4">
-          <label className="flex items-center gap-2 font-bold mb-2">🦷 Caring for Your Smile <span className="text-xs text-white/40 font-normal">— Coach Jaime</span></label>
+          <label className="flex items-center gap-2 font-bold mb-2">🦷 Smile Lab <span className="text-xs text-white/40 font-normal">· Coach Jaime</span></label>
           <textarea value={caring} onChange={(e) => setCaring(dirty(e.target.value))} rows={6}
             placeholder="What did we cover today? Brushing, flossing, nutrition, hygiene, habits… how did it go?"
             className="w-full rounded-lg bg-white/5 border border-white/15 px-3 py-2.5 text-sm text-white placeholder:text-white/30 focus:outline-none focus:border-white/30 resize-y min-h-[130px]" />
         </div>
         <div className="rounded-2xl border border-white/10 bg-neutral-900/60 p-4">
-          <label className="flex items-center gap-2 font-bold mb-2">😊 Sharing Your Smile <span className="text-xs text-white/40 font-normal">— Coach Chrissy</span></label>
+          <label className="flex items-center gap-2 font-bold mb-2">😊 Life Lab <span className="text-xs text-white/40 font-normal">· Coach Chrissy</span></label>
           <textarea value={sharing} onChange={(e) => setSharing(dirty(e.target.value))} rows={6}
             placeholder="What did we practice today? Manners, gratitude, kindness, handling bullying, serving others…"
             className="w-full rounded-lg bg-white/5 border border-white/15 px-3 py-2.5 text-sm text-white placeholder:text-white/30 focus:outline-none focus:border-white/30 resize-y min-h-[130px]" />

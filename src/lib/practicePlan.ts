@@ -8,8 +8,8 @@ export const NLA_RED = "#bf0f3e";
  * editor and template alike. The point is that the kids learn the colour:
  * teal means the spiritual side of the week, whatever screen it's on.
  *
- * This is exactly the teal of the Smile Lab Check-In button (`bg-teal-500`),
- * so Smile Lab reads as the same thing wherever a kid meets it.
+ * This is exactly the teal of the Juniors Aftercare Check-In button (`bg-teal-500`),
+ * so the aftercare (Smile Lab / Life Lab) reads as the same thing wherever a kid meets it.
  */
 export const SPIRITUAL_TEAL = "#14b8a6";
 
@@ -63,7 +63,7 @@ export const groupAccent = (g: PracticeGroup) =>
  * so the room reads them as the same kind of thing: everybody together, not
  * one of the three groups.
  *
- * Teal stays reserved for Smile Lab alone.
+ * Teal stays reserved for Juniors Aftercare (Smile Lab / Life Lab) alone.
  */
 export const TOGETHER_GRAY = "#a1a1aa";
 
@@ -71,21 +71,21 @@ export const TOGETHER_GRAY = "#a1a1aa";
  * "This differs from the template" — a week-only rename, or drift the sync can
  * put back. Violet because every other colour here already means something:
  * red / gold / light blue are the three groups, grey is everybody-together and
- * teal is Smile Lab. Amber read as Non-Battle Team's gold and was confusing.
+ * teal is Juniors Aftercare. Amber read as Non-Battle Team's gold and was confusing.
  */
 export const OFF_TEMPLATE_VIOLET = "#a78bfa";
 
-/** Teal only for Smile Lab; the shared grey for everything else. */
+/** Teal only for Juniors Aftercare (Smile Lab / Life Lab); the shared grey for everything else. */
 export const spiritualAccent = (label: string) =>
-  /smile\s*lab/i.test(label) ? SPIRITUAL_TEAL : TOGETHER_GRAY;
+  /smile\s*lab|life\s*lab|aftercare/i.test(label) ? SPIRITUAL_TEAL : TOGETHER_GRAY;
 
 /**
- * A block normally wears its group's colour — except Smile Lab, which keeps
+ * A block normally wears its group's colour — except Juniors Aftercare (Smile Lab / Life Lab), which keeps
  * its own teal wherever it appears. It is the same programme the kids check
  * into, and it should look like it on the board too.
  */
 export const blockAccent = (category: string, fallback: string) =>
-  /smile\s*lab|bible/i.test(category) ? SPIRITUAL_TEAL : fallback;
+  /smile\s*lab|life\s*lab|aftercare|bible/i.test(category) ? SPIRITUAL_TEAL : fallback;
 
 /**
  * The kinds of block a session is made of — the one-tap options wherever a

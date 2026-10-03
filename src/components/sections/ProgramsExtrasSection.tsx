@@ -26,10 +26,10 @@ const ProgramsExtrasSection = () => {
   const videoId = (galleryKey: string) => resolveGroup(videoGroupKey(galleryKey))[0]?.videoId;
   const items: ProgramItem[] = [{
     id: "smile-lab",
-    title: "Smile Lab",
+    title: "Juniors Aftercare",
     subtitle: "Junior Boxers Only",
     ageRange: "7–10 years old",
-    blurb: "Smile Lab is our complimentary aftercare for Junior Boxing participants (ages 7–10), every Tuesday from 6:00–7:00 PM. Built on one belief—a healthy smile is about more than healthy teeth—kids rotate between two experiences: Caring for Your Smile (oral health & hygiene) and Sharing Your Smile (character & everyday skills like kindness, gratitude, and confidence). In partnership with Delta Dental, Smile Lab helps kids take care of themselves and care about others—both healthy habits.",
+    blurb: "Juniors Aftercare is our complimentary aftercare for Junior Boxing participants (ages 7–10), every Tuesday from 6:00–7:00 PM. Kids rotate between two programs: Smile Lab with Coach Jaime (oral health & hygiene—brushing, flossing, nutrition, and daily habits—in partnership with Delta Dental) and Life Lab with Coach Chrissy (life skills like manners, gratitude, kindness, and confidence). Together they help kids take care of themselves and care about others—both healthy habits.",
     images: resolveGroup("programs.smile-lab"),
     videoId: videoId("programs.smile-lab"),
     buttonLabel: "Back to Programs"
@@ -47,7 +47,7 @@ const ProgramsExtrasSection = () => {
     title: "NJ4S Lil' Champs' Corner",
     subtitle: "Junior Boxers Only",
     ageRange: "7–10 years old",
-    blurb: "Lil' Champs' Corner was part of Double Punch Tuesday—our Junior Boxing program followed by optional aftercare. After training, youth participated in age-appropriate education programming through our NJ4S partnership with Acenda, building life skills like routines, hygiene, and habits that translate into confidence and responsibility. This chapter of our story has since evolved into Smile Lab.",
+    blurb: "Lil' Champs' Corner was part of Double Punch Tuesday—our Junior Boxing program followed by optional aftercare. After training, youth participated in age-appropriate education programming through our NJ4S partnership with Acenda, building life skills like routines, hygiene, and habits that translate into confidence and responsibility. This chapter of our story has since evolved into Juniors Aftercare.",
     images: resolveGroup("programs.lil-champs"),
     videoId: videoId("programs.lil-champs"),
     buttonLabel: "Back to Programs"
@@ -196,9 +196,10 @@ const ProgramsExtrasSection = () => {
                 *{openItem.policyText}
               </p>}
 
-            {/* Delta Dental Logo for Smile Lab */}
-            {openItem?.id === "smile-lab" && <div className="flex justify-center my-4">
-                <img src={single("programs.smile-lab-logo")} alt="Delta Dental Logo" className="h-20 w-auto border-none" />
+            {/* Delta Dental logo — Smile Lab partner (inside Juniors Aftercare) */}
+            {openItem?.id === "smile-lab" && <div className="flex flex-col items-center my-4 gap-2">
+                <img src={single("programs.smile-lab-logo")} alt="Delta Dental — Smile Lab partner" className="h-20 w-auto border-none" />
+                <p className="text-xs text-muted-foreground">Delta Dental — Smile Lab partner</p>
               </div>}
 
             {/* NJ4S Logo for Lil' Champs (video handled by the shared player below) */}

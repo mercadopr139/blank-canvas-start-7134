@@ -118,7 +118,7 @@ const CONTENT_GROUPS: SiteImageGroup[] = [
   // ── Extended Programs · galleries ──
   {
     key: "programs.smile-lab",
-    label: "Smile Lab — photo gallery",
+    label: "Juniors Aftercare — photo gallery",
     section: "Extended Programs",
     kind: "gallery",
     defaults: [

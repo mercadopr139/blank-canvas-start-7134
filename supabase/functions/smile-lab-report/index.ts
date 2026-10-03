@@ -1,5 +1,6 @@
-// smile-lab-report — writes a grant-ready narrative for the Smile Lab aftercare
-// program from the coaches' weekly journals + attendance. Two modes:
+// smile-lab-report — writes a grant-ready narrative for Smile Lab (Delta Dental's
+// grant; one of the two programs inside the Juniors Aftercare Tuesday program)
+// from the coaches' weekly journals + attendance. Two modes:
 //   - "generate": fresh narrative from the journals + stats for a period.
 //   - "revise":   rewrite an existing narrative per an instruction.
 //
@@ -29,9 +30,9 @@ const HOUSE_VOICE =
 
 const SYSTEM =
   "You are the Program Director's writing voice for No Limits Boxing Academy, a youth boxing non-profit in Cape May County, NJ. " +
-  "Write a grant-ready narrative about SMILE LAB — a complimentary Tuesday aftercare program for the academy's Junior Boxing participants (ages 7–10). " +
-  "Smile Lab's belief: a healthy smile is more than healthy teeth. Kids rotate between two experiences: 'Caring for Your Smile' (Coach Jaime — oral " +
-  "health & hygiene: brushing, flossing, nutrition, daily habits) and 'Sharing Your Smile' (Coach Chrissy — character & everyday skills: manners, " +
+  "Write a grant-ready narrative about SMILE LAB — one of the two programs inside Juniors Aftercare, the academy's complimentary Tuesday aftercare for its Junior Boxing participants (ages 7–10). " +
+  "Smile Lab's belief: a healthy smile is more than healthy teeth. In Juniors Aftercare the kids rotate between two experiences: 'Smile Lab' (Coach Jaime — oral " +
+  "health & hygiene: brushing, flossing, nutrition, daily habits) and 'Life Lab' (Coach Chrissy — life skills: manners, " +
   "gratitude, kindness, handling bullying, confidence, serving others, faith & character). The two reinforce each other: caring for yourself and " +
   "caring about others are both healthy habits.\n" +
   "Rules:\n" +
@@ -56,8 +57,8 @@ const journalsBlock = (arr: any): string => {
   let out = "Weekly journals (the coaches' own notes):\n";
   for (const j of list) {
     out += `\n• ${j.date}:\n`;
-    if (j.caring?.trim()) out += `  Caring for Your Smile (Jaime): ${j.caring.trim()}\n`;
-    if (j.sharing?.trim()) out += `  Sharing Your Smile (Chrissy): ${j.sharing.trim()}\n`;
+    if (j.caring?.trim()) out += `  Smile Lab (Jaime): ${j.caring.trim()}\n`;
+    if (j.sharing?.trim()) out += `  Life Lab (Chrissy): ${j.sharing.trim()}\n`;
     const st = Array.isArray(j.standouts) ? j.standouts.filter((x: string) => x && x.trim()) : [];
     if (st.length) out += `  Standout moments: ${st.map((x: string) => `"${x}"`).join("; ")}\n`;
   }

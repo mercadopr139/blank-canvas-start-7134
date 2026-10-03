@@ -52,10 +52,10 @@ const AdminOperations = () => {
       <Button
         size="sm"
         className="w-full bg-teal-500 hover:bg-teal-400 text-white text-sm font-medium"
-        onClick={() => navigate("/check-in/smile-lab")}
+        onClick={() => navigate("/check-in/aftercare")}
       >
         <Smile className="w-4 h-4 mr-1.5" />
-        Smile Lab Check-In
+        Juniors Aftercare Check-In
       </Button>
       <Button
         size="sm"

@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { ArrowLeft, Smile } from "lucide-react";
 import SmileLabSessionEditor, { todayNY } from "@/components/smilelab/SmileLabSessionEditor";
 
-// Smile Lab Board — the coaches' journaling screen, opened on the gym board with
+// Juniors Aftercare Board — the coaches' journaling screen, opened on the gym board with
 // no login. Thin wrapper: branding header + the shared session editor.
 
 const TEAL = "#2dd4bf";
@@ -25,7 +25,7 @@ const SmileLabBoard = () => {
             <Smile className="h-6 w-6 text-black" />
           </div>
           <div>
-            <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight">Smile Lab Board</h1>
+            <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight">Juniors Aftercare Board</h1>
             <p className="text-sm">
               <span style={{ color: TEAL }}>Healthy Smiles</span>
               <span className="text-white/30"> · </span>

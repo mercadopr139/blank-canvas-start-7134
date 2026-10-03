@@ -57,7 +57,7 @@ const AdminSmileLabAttendance = () => {
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
   const [allSmileLabYouth, setAllSmileLabYouth] = useState<SearchResult[]>([]);
 
-  // Load all Smile Lab youth when modal opens
+  // Load all Juniors Aftercare youth when modal opens
   useEffect(() => {
     if (!addOpen) return;
     const fetchAll = async () => {
@@ -117,7 +117,7 @@ const AdminSmileLabAttendance = () => {
       const age = calculateAge(r.child_date_of_birth);
       const date = r.check_in_date;
       const time = format(new Date(r.check_in_at), "h:mm a");
-      return `"${name}",${age},${date},${time},Smile Lab`;
+      return `"${name}",${age},${date},${time},Juniors Aftercare`;
     });
     const csv = [header, ...rows].join("\n");
     const blob = new Blob([csv], { type: "text/csv" });
@@ -193,7 +193,7 @@ const AdminSmileLabAttendance = () => {
 
   return (
     <div className="space-y-4 md:space-y-6">
-      <h2 className="text-xl md:text-2xl font-bold text-white">Smile Lab Intelligence</h2>
+      <h2 className="text-xl md:text-2xl font-bold text-white">Juniors Aftercare Intelligence</h2>
 
       <Tabs defaultValue="intelligence">
         <TabsList className="bg-white/5 border border-white/10 gap-1">
@@ -273,7 +273,7 @@ const AdminSmileLabAttendance = () => {
                       )}
                     </div>
                     <div className="flex items-center gap-2">
-                      <span className="text-xs px-2 py-0.5 rounded-full" style={{ backgroundColor: 'rgba(45,212,191,0.15)', color: '#2dd4bf' }}>Smile Lab</span>
+                      <span className="text-xs px-2 py-0.5 rounded-full" style={{ backgroundColor: 'rgba(45,212,191,0.15)', color: '#2dd4bf' }}>Juniors Aftercare</span>
                       <button onClick={() => setDeleteConfirmId(r.id)} className="text-white/30 hover:text-red-400 transition-colors">
                           <Trash2 className="w-3.5 h-3.5" />
                         </button>
@@ -315,7 +315,7 @@ const AdminSmileLabAttendance = () => {
                       <TableCell className="text-white/70">{r.check_in_date}</TableCell>
                       <TableCell className={r.is_manual ? "text-amber-400" : "text-white/70"}>{format(new Date(r.check_in_at), "h:mm a")}</TableCell>
                       <TableCell>
-                        <span className="text-xs px-2 py-0.5 rounded-full" style={{ backgroundColor: 'rgba(45,212,191,0.15)', color: '#2dd4bf' }}>Smile Lab</span>
+                        <span className="text-xs px-2 py-0.5 rounded-full" style={{ backgroundColor: 'rgba(45,212,191,0.15)', color: '#2dd4bf' }}>Juniors Aftercare</span>
                       </TableCell>
                       <TableCell>
                         <button onClick={() => setDeleteConfirmId(r.id)} className="text-white/30 hover:text-red-400 transition-colors">
@@ -344,7 +344,7 @@ const AdminSmileLabAttendance = () => {
             <DialogTitle>Add Youth Check-In</DialogTitle>
           </DialogHeader>
           <p className="text-white/50 text-sm">
-            {addSearch.trim() ? "Select a youth to add a manual check-in" : "Browse all Smile Lab youth or search by name"}
+            {addSearch.trim() ? "Select a youth to add a manual check-in" : "Browse all Juniors Aftercare youth or search by name"}
             {dateFilter ? ` for ${dateFilter}` : " for today"}.
           </p>
           <div className="relative">

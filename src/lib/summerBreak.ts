@@ -14,7 +14,7 @@ const SUMMER_END   = new Date(2026, 8, 28); // September 28, 2026
 
 // Senior Boxing is on the regular season schedule (Mon–Fri, 5:15–7:15pm).
 // The window below now serves one purpose: flag that Junior Boxing and its
-// Smile Lab aftercare (Tuesdays) haven't resumed yet — they return Sept 29.
+// Juniors Aftercare (Tuesdays) hasn't resumed yet — they return Sept 29.
 export const SUMMER_BREAK_COPY = {
   seniorSchedule: "Monday–Friday, 5:15pm–7:15pm",
   juniorReturn: "Tuesday, September 29",

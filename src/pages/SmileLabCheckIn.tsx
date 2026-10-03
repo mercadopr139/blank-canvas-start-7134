@@ -268,7 +268,7 @@ const SmileLabCheckIn = () => {
         <h1 className={`font-black tracking-tight text-center transition-all duration-500 ${
         isIdle ? "text-3xl md:text-5xl mb-1" : "text-2xl md:text-3xl mb-1"}`
         }>
-          <span style={{ color: '#2dd4bf' }}>Smile Lab</span> Check-In 😊
+          <span style={{ color: '#2dd4bf' }}>Juniors Aftercare</span> Check-In 😊
         </h1>
         <p className={`text-center font-semibold transition-all duration-500 ${
         isIdle ? "text-lg md:text-xl mb-4" : "text-sm md:text-base mb-3"}`
@@ -373,7 +373,7 @@ const SmileLabCheckIn = () => {
                   }
                     {alreadyIn === y.id &&
                   <span className="text-orange-400 text-sm md:text-base font-semibold text-center">
-                        Already checked in for<br />Smile Lab today ✓
+                        Already checked in for<br />Juniors Aftercare today ✓
                       </span>
                   }
                     {!checkedIn && !alreadyIn &&
