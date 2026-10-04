@@ -74,6 +74,36 @@ const fmtSignIn = (iso: string | null) =>
 
 type StaffPerms = Record<string, boolean>;
 
+/**
+ * Call the manage-access function and return its answer, or throw with the
+ * reason it gave. Without this the page only ever said "non-2xx status code",
+ * which hides the one thing worth knowing: why it refused.
+ */
+const callManageAccess = async <T,>(body: Record<string, unknown>): Promise<T> => {
+  const { data, error } = await supabase.functions.invoke("manage-access", { body });
+  if (error) {
+    let reason = error.message;
+    let status = 0;
+    try {
+      const res = (error as { context?: Response }).context;
+      if (res) {
+        status = res.status;
+        const said = await res.clone().json();
+        if (said?.error) reason = said.error;
+      }
+    } catch { /* keep the generic message */ }
+    // 401 / 403 here almost always means this browser is signed in as
+    // someone else: an invite or reset link opened in the same browser
+    // replaces the login in every tab.
+    if (status === 401 || status === 403) {
+      reason += " This browser may be signed in as someone else. Sign out, sign back in as yourself, and try again.";
+    }
+    throw new Error(reason);
+  }
+  if (data?.error) throw new Error(data.error);
+  return data as T;
+};
+
 type TaskManagerRow = {
   key: string;
   display_name: string;
@@ -117,12 +147,7 @@ export default function AdminStaffManagement() {
   const access = useQuery({
     queryKey: ["access-accounts"],
     enabled: canManageAccess,
-    queryFn: async (): Promise<AccessList> => {
-      const { data, error } = await supabase.functions.invoke("manage-access", { body: { action: "list" } });
-      if (error) throw new Error(error.message);
-      if (data?.error) throw new Error(data.error);
-      return data as AccessList;
-    },
+    queryFn: () => callManageAccess<AccessList>({ action: "list" }),
   });
   const accountById = useMemo(() => {
     const m = new Map<string, AccessAccount>();
@@ -276,16 +301,18 @@ export default function AdminStaffManagement() {
   const handleRemove = async () => {
     if (!removeTarget) return;
     setRemoving(true);
-    const { data, error } = await supabase.functions.invoke("manage-access", {
-      body: removeTarget.user_id
-        ? { action: "remove", user_id: removeTarget.user_id }
-        : { action: "remove", email: removeTarget.email },
-    });
-    setRemoving(false);
-    if (error || data?.error) {
-      toast({ title: "Couldn't remove", description: data?.error || error?.message, variant: "destructive" });
+    try {
+      await callManageAccess(
+        removeTarget.user_id
+          ? { action: "remove", user_id: removeTarget.user_id }
+          : { action: "remove", email: removeTarget.email },
+      );
+    } catch (e) {
+      setRemoving(false);
+      toast({ title: "Couldn't remove", description: (e as Error).message, variant: "destructive" });
       return;
     }
+    setRemoving(false);
     toast({ title: `${removeTarget.name} removed`, description: "Their login is blocked and all access is gone." });
     setRemoveTarget(null);
     fetchStaff();
