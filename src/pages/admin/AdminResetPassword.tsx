@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { KeyRound } from "lucide-react";
+import { ARRIVED_BY_INVITE } from "@/lib/inviteArrival";
 
 const AdminResetPassword = () => {
   const [password, setPassword] = useState("");
@@ -49,14 +50,19 @@ const AdminResetPassword = () => {
       toast({ title: "Error", description: error.message, variant: "destructive" });
       return;
     }
-    toast({ title: "Password updated", description: "You can now log in with your new password." });
+    toast({
+      title: ARRIVED_BY_INVITE ? "Password set" : "Password updated",
+      description: ARRIVED_BY_INVITE
+        ? "You're in. Next time, sign in with your email and this password."
+        : "You can now log in with your new password.",
+    });
     navigate("/admin/login", { replace: true });
   };
 
   if (!ready) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-black">
-        <div className="text-white/50 text-sm">Verifying reset link…</div>
+        <div className="text-white/50 text-sm">{ARRIVED_BY_INVITE ? "Opening your invite…" : "Verifying reset link…"}</div>
       </div>
     );
   }
@@ -68,9 +74,11 @@ const AdminResetPassword = () => {
           <div className="mx-auto mb-4 w-12 h-12 bg-white/10 rounded-full flex items-center justify-center">
             <KeyRound className="w-6 h-6 text-white" />
           </div>
-          <CardTitle className="text-2xl text-white">Set New Password</CardTitle>
+          <CardTitle className="text-2xl text-white">{ARRIVED_BY_INVITE ? "Welcome. Set your password" : "Set New Password"}</CardTitle>
           <CardDescription className="text-white/50">
-            Choose a strong password for your admin account
+            {ARRIVED_BY_INVITE
+              ? "Choose a password for your No Limits staff login. You will use it with your email each time you sign in."
+              : "Choose a strong password for your account"}
           </CardDescription>
         </CardHeader>
         <CardContent>

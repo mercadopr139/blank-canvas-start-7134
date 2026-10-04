@@ -8,6 +8,7 @@ import ScrollToTop from "./components/ScrollToTop";
 import { AuthProvider } from "./contexts/AuthContext";
 import ProtectedRoute from "./components/admin/ProtectedRoute";
 import ViewAsBanner from "./components/admin/ViewAsBanner";
+import { ARRIVED_BY_INVITE } from "./lib/inviteArrival";
 import { supabase } from "./integrations/supabase/client";
 import Index from "./pages/Index";
 import Programs from "./pages/Programs";
@@ -128,6 +129,14 @@ const queryClient = new QueryClient();
 const PasswordRecoveryRedirect = () => {
   const navigate = useNavigate();
   useEffect(() => {
+    // A new person arriving from their invite email is signed in by the link
+    // but has no password yet. Take them straight to setting one. Wait for
+    // the auth client to finish reading the link first: moving to another
+    // address any sooner would throw the link's token away.
+    if (ARRIVED_BY_INVITE) {
+      supabase.auth.getSession().then(() => navigate("/admin/reset-password", { replace: true }));
+    }
+
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
       if (event === "PASSWORD_RECOVERY") {
         navigate("/admin/reset-password", { replace: true });

@@ -29,6 +29,25 @@ const AdminLogin = () => {
     }
   }, [user, isAdmin, loading, navigate]);
 
+  // Sends the reset email. The link in it lands on the set-password screen.
+  const handleForgot = async () => {
+    const address = email.trim().toLowerCase();
+    if (!address) {
+      toast({ title: "Type your email first", description: "Enter your email above, then click Forgot password.", variant: "destructive" });
+      return;
+    }
+    setIsLoading(true);
+    const { error } = await supabase.auth.resetPasswordForEmail(address);
+    setIsLoading(false);
+    if (error) {
+      toast({ title: "Couldn't send the email", description: error.message, variant: "destructive" });
+      return;
+    }
+    // The same message whether or not the address has a login, so this
+    // screen cannot be used to find out who does.
+    toast({ title: "Check your email", description: "If that address has a staff login, a link to set a new password is on its way." });
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
@@ -117,6 +136,14 @@ const AdminLogin = () => {
             <Button type="submit" className="w-full" disabled={isLoading}>
               {isLoading ? "Signing in..." : "Sign In"}
             </Button>
+            <button
+              type="button"
+              onClick={handleForgot}
+              disabled={isLoading}
+              className="block w-full text-center text-xs text-white/50 hover:text-white disabled:opacity-50"
+            >
+              Forgot password?
+            </button>
           </form>
         </CardContent>
       </Card>
