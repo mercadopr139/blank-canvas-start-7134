@@ -15,12 +15,6 @@ export interface AccessLine {
   /** The permission key this checkbox writes. */
   key: string;
   label: string;
-  /**
-   * The old one-box-per-section key this line used to live under. Until a
-   * line has been set on its own, it shows what the section box granted, so
-   * nobody's access moves on the day the card changes.
-   */
-  legacyKey?: string;
 }
 
 export interface AccessSection {
@@ -50,7 +44,7 @@ const sectionsFromTiles = (tiles: PillarTile[]): AccessSection[] =>
       const key = keyForMenuHref(href);
       if (!key || seen.has(key)) return;
       seen.add(key);
-      lines.push({ key, label, legacyKey: tile.permKey });
+      lines.push({ key, label });
     };
 
     if (tile.children?.length) {
@@ -59,7 +53,7 @@ const sectionsFromTiles = (tiles: PillarTile[]): AccessSection[] =>
       const own = keyForMenuHref(tile.href);
       if (own && !seen.has(own)) {
         seen.add(own);
-        lines.unshift({ key: own, label: tile.title, legacyKey: tile.permKey });
+        lines.unshift({ key: own, label: tile.title });
       }
       (EXTRA_LINES[tile.title] ?? []).forEach((l) => lines.push(l));
       return { title: tile.title, lines };
@@ -75,14 +69,10 @@ export const ACCESS_CARD: AccessPillar[] = [
   { id: "finance", title: "Finance", sections: sectionsFromTiles(FINANCE_TILES) },
 ];
 
-/**
- * The Command Center tiles that are not Task Managers. Message Board and the
- * Weekly Agenda were open to every admin before they had boxes, so they read
- * as on until someone sets them.
- */
-export const COMMAND_CENTER_LINES: (AccessLine & { defaultOn?: boolean })[] = [
-  { key: "app_message_board", label: "Message Board", defaultOn: true },
-  { key: "app_agenda", label: "Weekly Agenda", defaultOn: true },
+/** The Command Center tiles that are not Task Managers. */
+export const COMMAND_CENTER_LINES: AccessLine[] = [
+  { key: "app_message_board", label: "Message Board" },
+  { key: "app_agenda", label: "Weekly Agenda" },
   { key: "manage_website_photos", label: "Website Photos" },
   { key: "app_corner_coach", label: "Corner Coach" },
 ];

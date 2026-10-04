@@ -11,7 +11,7 @@ import {
   APPS, APP_GROUPS, NOT_APPS, TASK_MANAGER_ROUTES, SHARED_PASSWORD_TOOLS, MENU_LINKS,
   ownerOfPath, taskManagerForPath, keyForMenuHref,
 } from "@/config/appRegistry";
-import { ACCESS_CARD, allCardLines } from "@/config/accessCard";
+import { ACCESS_CARD, COMMAND_CENTER_LINES, allCardLines } from "@/config/accessCard";
 import { OPERATIONS_TILES, SALES_MARKETING_TILES, FINANCE_TILES } from "@/config/pillarTiles";
 
 /** Every route in App.tsx as a full address, nested ones joined to their parent. */
@@ -83,6 +83,15 @@ describe("the master app list", () => {
     expect(missing, `Sidebar lines missing from the Staff Management card:\n${missing.join("\n")}`).toEqual([]);
     expect(ACCESS_CARD.map((p) => p.title)).toEqual(["Operations", "Sales & Marketing", "Finance"]);
     MENU_LINKS.forEach((l) => expect(routes).toContain(l.href));
+  });
+
+  it("puts every app on the Staff Management card: no page without a box", () => {
+    // Every app in the master list must have a checkbox somewhere on the card:
+    // a sidebar line, or a Command Center tile. Staff Management itself is the
+    // one exception; it belongs to the access manager and is never granted.
+    const boxes = new Set([...allCardLines().map((l) => l.key), ...COMMAND_CENTER_LINES.map((l) => l.key)]);
+    const noBox = APPS.filter((app) => app.tier !== "super" && !boxes.has(app.key)).map((app) => app.label);
+    expect(noBox, "Apps with no checkbox in Staff Management: " + noBox.join(", ")).toEqual([]);
   });
 
   it("lists shared-password tools that really exist", () => {

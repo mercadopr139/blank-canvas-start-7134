@@ -60,31 +60,24 @@ describe("who can open what", () => {
     expect(youth.children!.length).toBe(8);
   });
 
-  it("a person with nothing checked gets the team tools and no apps", () => {
+  it("a person with nothing checked opens nothing", () => {
     expect(allCardLines().filter((l) => canOpen(l.key, nobody))).toEqual([]);
-    // Message Board and the Agenda were open to all before they had boxes.
-    expect(canOpen("app_message_board", nobody)).toBe(true);
-    expect(canOpen("app_agenda", nobody)).toBe(true);
-    expect(canOpen("app_corner_coach", nobody)).toBe(false);
-    expect(canOpen("manage_website_photos", nobody)).toBe(false);
+    COMMAND_CENTER_LINES.forEach((l) => expect(canOpen(l.key, nobody), l.label).toBe(false));
   });
 
-  it("an explicit box beats the old section box, both ways", () => {
-    // The old one-box-per-section grant still carries its lines...
-    const old: Who = { isSuperAdmin: false, permissions: { operations_attendance: true } };
-    expect(canOpen("app_callouts", old)).toBe(true);
-    expect(canOpen("app_registrations", old)).toBe(false);
-    // ...until a line is set on its own.
-    const trimmed: Who = { isSuperAdmin: false, permissions: { operations_attendance: true, app_callouts: false } };
-    expect(canOpen("app_callouts", trimmed)).toBe(false);
-    expect(canOpen("app_attendance_intelligence", trimmed)).toBe(true);
-    // Unchecking Message Board takes it away.
-    expect(canOpen("app_message_board", { isSuperAdmin: false, permissions: { app_message_board: false } })).toBe(false);
+  it("a Staff person cannot hold an app the database has not opened to Staff", () => {
+    // Even with the box checked, Billing stays locked until it is made ready.
+    const eager: Who = { isSuperAdmin: false, permissions: { app_billing: true, app_message_board: true, task_manager_PC: true } };
+    expect(canOpen("app_billing", eager)).toBe(false);
+    expect(canOpen("app_message_board", eager)).toBe(false);
+    expect(canOpen("task_manager_PC", eager)).toBe(false);
+    expect(canOpenPillar("finance", eager)).toBe(false);
   });
 
-  it("turning Admin off falls back to the hand-checked boxes", () => {
-    const off: Who = { isSuperAdmin: false, permissions: { access_admin: false, app_billing: true } };
-    expect(canOpen("app_billing", off)).toBe(true);
+  it("turning Admin off makes the person Staff: only Staff-ready boxes remain", () => {
+    const off: Who = { isSuperAdmin: false, permissions: { access_admin: false, app_billing: true, app_juniors_aftercare: true } };
+    expect(canOpen("app_juniors_aftercare", off)).toBe(true);
+    expect(canOpen("app_billing", off)).toBe(false);
     expect(canOpen("app_document_vault", off)).toBe(false);
   });
 });

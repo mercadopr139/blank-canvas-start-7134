@@ -29,7 +29,7 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { ArrowLeft, Plus, Shield, UserCog, Pencil, ShieldCheck, Trash2, AlertTriangle, ChevronDown, Eye } from "lucide-react";
 import { setViewAs } from "@/lib/viewAs";
-import { SHARED_PASSWORD_TOOLS } from "@/config/appRegistry";
+import { SHARED_PASSWORD_TOOLS, isStaffReadyKey } from "@/config/appRegistry";
 
 import { isSuperAdminEmail, isAccessManagerEmail } from "@/lib/superAdmins";
 
@@ -354,12 +354,16 @@ export default function AdminStaffManagement() {
   // locked, apart from the explicit-only ones (Task Managers, the reviewer).
   const Line = ({ userId, line, full, indent = false }: {
     userId: string;
-    line: AccessLine & { defaultOn?: boolean };
+    line: AccessLine;
     full: boolean;
     indent?: boolean;
   }) => {
-    const locked = full && !isExplicitOnlyKey(line.key);
-    const checked = locked ? true : lineOn(userId, line);
+    const lockedOn = full && !isExplicitOnlyKey(line.key);
+    // For a Staff person, an app the database has not opened to Staff yet
+    // cannot be checked. It still shows, so the card stays the full blueprint.
+    const adminsOnly = !full && !isStaffReadyKey(line.key);
+    const locked = lockedOn || adminsOnly;
+    const checked = lockedOn ? true : adminsOnly ? false : lineOn(userId, line);
     return (
       <label className={`flex items-center gap-2 text-sm ${indent ? "ml-6" : ""} ${locked ? "opacity-40 cursor-not-allowed" : "cursor-pointer"}`}>
         <Checkbox
@@ -368,6 +372,7 @@ export default function AdminStaffManagement() {
           disabled={locked}
         />
         <span className={checked ? "text-white" : "text-white/45"}>{line.label}</span>
+        {adminsOnly && <span className="text-[10px] text-white/50 border border-white/15 rounded px-1 leading-4">Admins only</span>}
       </label>
     );
   };
@@ -378,19 +383,22 @@ export default function AdminStaffManagement() {
     if (!section.title) {
       return <>{section.lines.map((l) => <Line key={l.key} userId={userId} line={l} full={full} />)}</>;
     }
-    const pickable = section.lines.filter((l) => !isExplicitOnlyKey(l.key));
+    const countable = section.lines.filter((l) => !isExplicitOnlyKey(l.key));
+    // What the heading box can switch: for Staff, only lines open to Staff.
+    const pickable = full ? countable : countable.filter((l) => isStaffReadyKey(l.key));
     const onCount = full ? pickable.length : pickable.filter((l) => lineOn(userId, l)).length;
     const all = pickable.length > 0 && onCount === pickable.length;
+    const headingOff = full || pickable.length === 0;
     return (
       <div className="space-y-1.5">
-        <label className={`flex items-center gap-2 text-sm font-semibold ${full ? "opacity-40 cursor-not-allowed" : "cursor-pointer"}`}>
+        <label className={`flex items-center gap-2 text-sm font-semibold ${headingOff ? "opacity-40 cursor-not-allowed" : "cursor-pointer"}`}>
           <Checkbox
             checked={all ? true : onCount > 0 ? "indeterminate" : false}
-            onCheckedChange={() => !full && setMany(userId, pickable.map((l) => l.key), !all)}
-            disabled={full}
+            onCheckedChange={() => !headingOff && setMany(userId, pickable.map((l) => l.key), !all)}
+            disabled={headingOff}
           />
           {section.title}
-          <span className="text-[11px] font-normal text-white/35">{onCount} of {pickable.length}</span>
+          <span className="text-[11px] font-normal text-white/35">{onCount} of {countable.length}</span>
         </label>
         {section.lines.map((l) => <Line key={l.key} userId={userId} line={l} full={full} indent />)}
       </div>
@@ -497,7 +505,7 @@ export default function AdminStaffManagement() {
               const isMemberSuperAdmin = isSuperAdminEmail(member.email);
               const isMemberAdmin = !isMemberSuperAdmin && (staffPerms[member.user_id]?.[ADMIN_LEVEL_KEY] ?? false);
               const cardHidden = hiddenCards[member.user_id] ?? false;
-              const openLines = allCardLines().filter((l) => !isExplicitOnlyKey(l.key) && lineOn(member.user_id, l)).length;
+              const openLines = allCardLines().filter((l) => !isExplicitOnlyKey(l.key) && isStaffReadyKey(l.key) && lineOn(member.user_id, l)).length;
               const totalLines = allCardLines().filter((l) => !isExplicitOnlyKey(l.key)).length;
               const myTaskManagers = taskManagerChecks.filter((tm) => staffPerms[member.user_id]?.[tm.permKey]).map((tm) => tm.label);
               const summary = isMemberSuperAdmin
@@ -613,7 +621,7 @@ export default function AdminStaffManagement() {
                           <span className="block text-[11px] text-white/45 leading-snug">
                             {isMemberAdmin
                               ? "Every app is open, including new ones as they are built. Task Managers and the reviewer box stay your choice below."
-                              : "Off: this person opens only the boxes checked below. Turn on to open every app in one click."}
+                              : "Off: this person is Staff and opens only the boxes checked below. Boxes marked Admins only are not open to Staff yet."}
                           </span>
                         </span>
                       </label>
@@ -633,19 +641,25 @@ export default function AdminStaffManagement() {
                       {taskManagerChecks.length > 0 && (
                         <div className="space-y-1.5">
                           <p className="text-[10px] uppercase tracking-wider text-white/40 mb-1">Task Managers</p>
-                          {taskManagerChecks.map((tm) => (
+                          {taskManagerChecks.map((tm) => {
+                            // A Task Manager needs the Admin switch; Staff cannot hold one yet.
+                            const tmAdminsOnly = !isMemberSuperAdmin && !isMemberAdmin;
+                            const tmLocked = isMemberSuperAdmin || tmAdminsOnly;
+                            return (
                             <label
                               key={tm.permKey}
-                              className={`flex items-center gap-2 text-sm ${isMemberSuperAdmin ? "opacity-40 cursor-not-allowed" : "cursor-pointer"}`}
+                              className={`flex items-center gap-2 text-sm ${tmLocked ? "opacity-40 cursor-not-allowed" : "cursor-pointer"}`}
                             >
                               <Checkbox
-                                checked={isMemberSuperAdmin ? true : (staffPerms[member.user_id]?.[tm.permKey] ?? false)}
-                                onCheckedChange={(v) => !isMemberSuperAdmin && setPermission(member.user_id, tm.permKey, !!v)}
-                                disabled={isMemberSuperAdmin}
+                                checked={isMemberSuperAdmin ? true : tmAdminsOnly ? false : (staffPerms[member.user_id]?.[tm.permKey] ?? false)}
+                                onCheckedChange={(v) => !tmLocked && setPermission(member.user_id, tm.permKey, !!v)}
+                                disabled={tmLocked}
                               />
                               <span>{tm.label}</span>
+                              {tmAdminsOnly && <span className="text-[10px] text-white/50 border border-white/15 rounded px-1 leading-4">Admins only</span>}
                             </label>
-                          ))}
+                            );
+                          })}
                         </div>
                       )}
 
@@ -817,6 +831,11 @@ export default function AdminStaffManagement() {
             <DialogTitle>{linkingEmail ? "Add staff card" : "Add Staff Member"}</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
+            {!linkingEmail && (
+              <p className="text-xs text-white/50">
+                They get an email to set a password. They start as Staff with nothing checked: check their apps on their card, or turn on Admin.
+              </p>
+            )}
             {linkingEmail && (
               <p className="text-xs text-white/50">
                 This login already exists. Nothing is emailed and the password stays the same; this only gives it a card on this page.

@@ -3,15 +3,20 @@
 // Staff Management card itself. If they ever disagreed, a box would say one
 // thing and the back end would do another.
 //
-// In order:
+// It mirrors what the database enforces (has_role / has_app, migration
+// 20261004090000), so a screen never opens a page the database then refuses
+// to fill, and never hides one it would have served.
+//
 //   1. A Super Admin opens everything.
-//   2. An Admin opens everything except the explicit-only lines (Task
-//      Managers, the Scripture Coach reviewer duty).
-//   3. Otherwise the line's own box decides, once it has been set.
-//   4. A line that has never been set shows what the old one-box-per-section
-//      setting granted, so nobody's access moved on the day the card changed.
+//   2. An Admin (the Admin switch) opens everything except the explicit-only
+//      lines: Task Managers and the Scripture Coach reviewer duty, which stay
+//      a per-person box.
+//   3. Anyone else is Staff. They open a line only if its box is checked AND
+//      the database has been opened to Staff for that app (staffReady in the
+//      master list). Everything else is locked.
 import { ADMIN_LEVEL_KEY, isExplicitOnlyKey } from "@/lib/permissions";
-import { ACCESS_CARD, COMMAND_CENTER_LINES, allCardLines } from "@/config/accessCard";
+import { ACCESS_CARD } from "@/config/accessCard";
+import { isStaffReadyKey } from "@/config/appRegistry";
 
 export interface Who {
   isSuperAdmin: boolean;
@@ -19,18 +24,12 @@ export interface Who {
   permissions: Record<string, boolean>;
 }
 
-const FALLBACK = new Map<string, { legacyKey?: string; defaultOn?: boolean }>();
-allCardLines().forEach((l) => FALLBACK.set(l.key, { legacyKey: l.legacyKey }));
-COMMAND_CENTER_LINES.forEach((l) => FALLBACK.set(l.key, { defaultOn: l.defaultOn }));
-
 export const canOpen = (key: string, who: Who): boolean => {
   if (who.isSuperAdmin) return true;
-  if (who.permissions[ADMIN_LEVEL_KEY] === true && !isExplicitOnlyKey(key)) return true;
-  const own = who.permissions[key];
-  if (own !== undefined) return own;
-  const fallback = FALLBACK.get(key);
-  if (fallback?.legacyKey) return who.permissions[fallback.legacyKey] === true;
-  return fallback?.defaultOn ?? false;
+  const isAdmin = who.permissions[ADMIN_LEVEL_KEY] === true;
+  if (isAdmin && !isExplicitOnlyKey(key)) return true;
+  if (!isAdmin && !isStaffReadyKey(key)) return false;
+  return who.permissions[key] === true;
 };
 
 export type PillarId = "operations" | "sales_marketing" | "finance";

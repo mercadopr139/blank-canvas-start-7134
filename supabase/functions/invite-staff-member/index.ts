@@ -61,10 +61,9 @@ Deno.serve(async (req) => {
 
     const normalizedEmail = email.toLowerCase().trim();
 
-    // Add to allowlist if not already there
-    await adminClient
-      .from("admin_allowlist")
-      .upsert({ email: normalizedEmail, added_by: callerId }, { onConflict: "email" });
+    // A new person is Staff: no role, no boxes. Access is given on their card
+    // in Staff Management, and the Admin switch there is the only way to the
+    // admin role (the database keeps the two in step).
 
     // Try to invite the user
     const { data: invitedUser, error: inviteError } = await adminClient.auth.admin.inviteUserByEmail(normalizedEmail);
@@ -148,9 +147,6 @@ Deno.serve(async (req) => {
       target_email: normalizedEmail,
       detail: { user_id: userId, full_name: full_name.trim(), job_title: job_title.trim() },
     });
-
-    // Assign admin role
-    await adminClient.from("user_roles").upsert({ user_id: userId, role: "admin" }, { onConflict: "user_id,role" });
 
     const wasInvited = !inviteError;
     return new Response(JSON.stringify({

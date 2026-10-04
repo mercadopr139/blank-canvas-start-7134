@@ -150,10 +150,12 @@ describe("Chrissy: an Admin, no longer a Super Admin", () => {
     expect(await lands("/admin/staff")).toBe("Staff Management is locked");
   });
 
-  it("falls back to hand-checked boxes when her Admin switch is turned off", async () => {
-    session.boxes = { chrissy: { access_admin: false, app_billing: true } };
-    expect(await lands("/admin/finance/billing")).toBe("PAGE:billing");
+  it("becomes Staff when her Admin switch is turned off: only Staff-ready boxes open", async () => {
+    session.boxes = { chrissy: { access_admin: false, app_billing: true, app_juniors_aftercare: true, task_manager_PC: true } };
+    expect(await lands("/admin/operations/smile-lab-attendance")).toBe("PAGE:juniors");
+    expect(await lands("/admin/finance/billing")).toBe("Billing is locked");
     expect(await lands("/admin/operations/attendance")).toBe("Attendance Intelligence is locked");
+    expect(await lands("/admin/task-manager/PC")).toBe("This Task Manager is locked");
   });
 });
 

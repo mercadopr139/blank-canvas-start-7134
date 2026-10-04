@@ -23,7 +23,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   // false for someone who was deactivated or removed in Staff Management, so
   // the screens and the data agree. The direct read is the fallback if the
   // function cannot be reached.
+  //
+  // `isAdmin` means "may come into the back end": an Admin, or a Staff person
+  // with an active card. What they can open once inside is decided app by
+  // app, by the door on each page and by the database.
   const checkAdminRole = async (userId: string) => {
+    const enter = await (supabase.rpc as unknown as (fn: string) => Promise<{ data: unknown; error: unknown }>)("can_enter_backend");
+    if (!enter.error) return enter.data === true;
+
     const { data: active, error: rpcError } = await supabase.rpc("has_role", { _user_id: userId, _role: "admin" });
     if (!rpcError) return active === true;
 

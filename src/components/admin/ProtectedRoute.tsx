@@ -34,7 +34,7 @@ const ProtectedRoute = ({ children, requireAdmin = false }: ProtectedRouteProps)
       <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="text-center">
           <h1 className="text-2xl font-bold text-foreground mb-2">Access Denied</h1>
-          <p className="text-muted-foreground">You do not have admin privileges.</p>
+          <p className="text-muted-foreground">This login does not have access to the back end. Ask Josh if you need it.</p>
         </div>
       </div>
     );

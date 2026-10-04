@@ -41,6 +41,14 @@ export interface AppEntry {
    */
   routes: string[];
   tier?: AppTier;
+  /**
+   * The database has rules that let a Staff person (no Admin switch) use this
+   * app, limited to this app's data. Until an app is marked ready, its box is
+   * for Admins only: checking it for a Staff person would open a page the
+   * database then refuses to fill. Opening one more app to Staff means writing
+   * its database rules (see migration 20261004090000) and setting this flag.
+   */
+  staffReady?: boolean;
   /** One line on what data the app opens, shown under the checkbox. */
   opens?: string;
 }
@@ -105,7 +113,7 @@ export const APPS: AppEntry[] = [
   { key: "app_events_intelligence", label: "Events Intelligence", group: "Youth Programs", routes: [`${OPS}/events-intelligence`] },
   { key: "app_attendance_reports", label: "Attendance Reports", group: "Youth Programs", routes: [`${OPS}/attendance-reports`] },
   { key: "app_callouts", label: "Call-Outs", group: "Youth Programs", routes: [`${OPS}/callouts`] },
-  { key: "app_juniors_aftercare", label: "Juniors Aftercare Intelligence", group: "Youth Programs", routes: [`${OPS}/smile-lab-attendance`, `${OPS}/lil-champs-attendance`], opens: "Juniors Aftercare youth only: attendance, journal, photos, grant report" },
+  { key: "app_juniors_aftercare", label: "Juniors Aftercare Intelligence", group: "Youth Programs", routes: [`${OPS}/smile-lab-attendance`, `${OPS}/lil-champs-attendance`], staffReady: true, opens: "Juniors Aftercare youth only: attendance, journal, photos, grant report" },
 
   // ── Operations · Transportation ───────────────────────────────────────
   { key: "app_transport_intelligence", label: "Transportation Intelligence", group: "Transportation", routes: [`${OPS}/transportation/intelligence`] },
@@ -288,6 +296,16 @@ export const ownerOfPath = (pathname: string): PathOwner => {
 };
 
 export const appByKey = (key: string) => APPS.find((a) => a.key === key);
+
+const STAFF_READY = new Set<string>([
+  ...APPS.filter((a) => a.staffReady).map((a) => a.key),
+  // Menu links open pages outside the admin side, which carry their own
+  // password or are public, so there is no admin data behind them to guard.
+  ...MENU_LINKS.map((l) => l.key),
+]);
+
+/** Can this box be given to a Staff person, or is it for Admins only for now? */
+export const isStaffReadyKey = (key: string) => STAFF_READY.has(key);
 
 /**
  * The checkbox key behind a sidebar line, whatever it opens: the app that

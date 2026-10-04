@@ -91,7 +91,14 @@ Deno.serve(async (req) => {
       const { data: role } = await service.from("user_roles").select("role").eq("user_id", uid).eq("role", "admin").maybeSingle();
       isAdmin = !!role;
     }
-    if (!isAdmin) return json({ error: "Admin access required." }, 403);
+    // A Staff person with the Juniors Aftercare box may write its report too.
+    // The question goes to the database as the caller, so it is their own
+    // box that answers, and a deactivated person gets no.
+    if (!isAdmin) {
+      const { data: hasBox } = await supabase.rpc("has_app", { _key: "app_juniors_aftercare" });
+      isAdmin = hasBox === true;
+    }
+    if (!isAdmin) return json({ error: "You do not have access to Juniors Aftercare." }, 403);
 
     const body = await req.json();
     const mode: string = body.mode ?? "generate";
