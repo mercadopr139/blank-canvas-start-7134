@@ -166,7 +166,7 @@ const JuniorsSessionBoard = ({ open = true, onClose, standalone = false }: { ope
       <div ref={outerRef} className="flex-1 overflow-hidden px-4 md:px-6 py-3">
       <div ref={innerRef} className="space-y-4">
         {/* ── The line-up ── */}
-        <section>
+        <section className="rounded-2xl border p-3" style={{ borderColor: `${GOLD}55`, backgroundImage: `linear-gradient(135deg, ${GOLD}1f, ${GOLD}05)` }}>
           <div className="flex items-center gap-2 mb-2">
             <span className="rounded-full px-2.5 py-0.5 text-[10px] font-black uppercase tracking-[0.2em] text-black" style={{ backgroundColor: GOLD }}>Tonight's line-up</span>
             <p className="text-white/40 text-xs">Coaches: tap a role to fill or change it</p>
@@ -176,15 +176,16 @@ const JuniorsSessionBoard = ({ open = true, onClose, standalone = false }: { ope
           ) : (
             <div className="grid gap-3 lg:grid-cols-[3fr_5fr]">
               {roleGroups.map((g) => (
-                <div key={g.label} className="rounded-2xl border border-white/10 bg-white/[0.03] p-2.5">
-                  <p className="text-[10px] uppercase tracking-wider text-white/45 font-bold mb-1.5 px-1">{g.label}</p>
+                <div key={g.label} className="rounded-xl border p-2.5" style={{ borderColor: `${GOLD}33`, backgroundColor: "rgba(0,0,0,0.35)" }}>
+                  <p className="text-[10px] uppercase tracking-[0.18em] font-black mb-1.5 px-1" style={{ color: GOLD }}>{g.label}</p>
                   <div className="grid gap-2" style={{ gridTemplateColumns: `repeat(${Math.min(g.roles.length, 5)}, minmax(0, 1fr))` }}>
                     {g.roles.map((r) => {
                       const who = byRole.get(r.id);
                       return (
                         <button key={r.id} onClick={() => setFilling(r)}
-                          className={`text-left rounded-xl border p-2 flex items-center gap-2 min-h-[58px] transition-colors active:scale-[0.98] ${who ? "border-white/15 bg-white/[0.05] hover:bg-white/[0.09]" : "border-dashed border-white/20 bg-transparent hover:bg-white/[0.04]"}`}>
-                          <div className="w-9 h-9 rounded-full overflow-hidden bg-white/10 shrink-0 ring-2 ring-white/10 flex items-center justify-center">
+                          className={`text-left rounded-xl border p-2 flex items-center gap-2 min-h-[58px] transition-colors active:scale-[0.98] ${who ? "border-white/15 bg-white/[0.06] hover:bg-white/[0.1]" : "border-dashed bg-transparent hover:bg-white/[0.04]"}`}
+                          style={who ? undefined : { borderColor: `${GOLD}40` }}>
+                          <div className="w-9 h-9 rounded-full overflow-hidden bg-white/10 shrink-0 ring-2 flex items-center justify-center" style={{ boxShadow: `0 0 0 2px ${who ? GOLD : "rgba(255,255,255,0.12)"}` }}>
                             {who && youthPhotoUrl(who.child_headshot_url)
                               ? <img src={youthPhotoUrl(who.child_headshot_url)!} alt="" className="w-full h-full object-cover" />
                               : who
@@ -217,9 +218,9 @@ const JuniorsSessionBoard = ({ open = true, onClose, standalone = false }: { ope
           {isError ? <p className="text-rose-300 text-sm">Couldn't load the checklist: {(error as Error)?.message}</p>
           : groups.length === 0 ? <p className="text-white/35 text-sm">No tasks set up yet. Add them under Practice Plan → Juniors Session.</p>
           : (
-            <div className="columns-1 md:columns-2 xl:columns-3 2xl:columns-4 gap-3">
+            <div className="flex flex-wrap gap-3 items-start">
               {groups.map(({ category, tasks: ts }) => (
-                <div key={category.id} className="break-inside-avoid mb-3 rounded-2xl border border-white/10 bg-white/[0.03] overflow-hidden">
+                <div key={category.id} className="rounded-2xl border border-white/10 bg-white/[0.03] overflow-hidden min-w-[300px]" style={{ flex: `${Math.max(ts.length, 4)} 1 0` }}>
                   <div className="flex items-center justify-between px-3 py-1.5 border-b border-white/10 bg-white/[0.03]">
                     <p className="font-black text-sm uppercase tracking-wider">{category.title}</p>
                     <div className="flex items-center gap-2">
@@ -231,11 +232,11 @@ const JuniorsSessionBoard = ({ open = true, onClose, standalone = false }: { ope
                       )}
                     </div>
                   </div>
-                  <div className="divide-y divide-white/[0.06]">
+                  <div className={ts.length > 8 ? "columns-1 lg:columns-2 gap-0" : ""}>
                     {ts.map((t) => {
                       const c = doneByTask.get(t.id);
                       return (
-                        <div key={t.id} className={`flex items-center gap-2.5 px-2.5 py-1.5 ${c ? "bg-emerald-500/[0.06]" : ""}`}>
+                        <div key={t.id} className={`break-inside-avoid flex items-center gap-2.5 px-2.5 py-1.5 border-b border-white/[0.06] ${c ? "bg-emerald-500/[0.06]" : ""}`}>
                           <button onClick={() => tap(t)}
                             className={`w-8 h-8 rounded-lg border-2 flex items-center justify-center shrink-0 transition-all active:scale-95 ${c ? "border-emerald-400 bg-emerald-500 text-black" : "border-white/30 hover:border-white/60"}`}
                             aria-label={c ? "Mark not done" : "Mark done"}>
