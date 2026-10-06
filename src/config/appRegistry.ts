@@ -132,6 +132,7 @@ export const APPS: AppEntry[] = [
   // builder and its intelligence page ride on the same box.
   { key: "app_practice_plan", label: "Practice Plan", group: "Gym Board", routes: [`${OPS}/practice-plan`, `${OPS}/nbt-board`, `${OPS}/nbt-intelligence`], opens: "The week's plan, verse and both Workout Plans" },
   { key: "app_daily_duties", label: "Daily Duties Intelligence", group: "Gym Board", routes: [`${OPS}/daily-duties`] },
+  { key: "app_juniors_session", label: "Juniors Session", group: "Gym Board", routes: [`${OPS}/juniors-session`], opens: "Tuesday's line-up and the setup checklist" },
 
   // ── Operations · single-page sections ─────────────────────────────────
   { key: "app_weight_watchers", label: "Weight Watchers", group: "Weight Watchers", routes: [`${OPS}/weight-watchers`] },

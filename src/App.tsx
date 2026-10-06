@@ -49,6 +49,8 @@ import AdminFormBuilder from "./pages/admin/AdminFormBuilder";
 import AdminProgramRegistrations from "./pages/admin/AdminProgramRegistrations";
 import AdminProgramIntelligence from "./pages/admin/AdminProgramIntelligence";
 import AdminYouthServed from "./pages/admin/AdminYouthServed";
+import AdminJuniorsSession from "./pages/admin/AdminJuniorsSession";
+import JuniorsSession from "./pages/JuniorsSession";
 import HawkSquadRegister from "./pages/HawkSquadRegister";
 import BamRegister from "./pages/BamRegister";
 import ProgramCheckIn from "./pages/ProgramCheckIn";
@@ -196,6 +198,8 @@ const App = () => (
             <Route path="/excursion-coach" element={<ExcursionCoach />} />
             {/* The gym board — a TV in the room, no login. */}
             <Route path="/practice-board" element={<PracticeBoard />} />
+            {/* The Juniors Session board on its own, for a tablet by the front desk. No login. */}
+            <Route path="/juniors-session" element={<JuniorsSession />} />
             <Route path="/strength-coach" element={<StrengthCoach />} />
             <Route path="/strength-coach/intelligence" element={<StrengthIntelligence />} />
             {/* The Battle Team's gym screen. No login, like the coach's page above. */}
@@ -302,6 +306,7 @@ const App = () => (
               <Route path="meal-reports" element={<AdminMealReports />} />
               <Route path="practice-plan" element={<AdminPracticePlan />} />
               <Route path="daily-duties" element={<AdminDailyDuties />} />
+              <Route path="juniors-session" element={<AdminJuniorsSession />} />
               <Route path="nbt-board" element={<AdminNbtBoard />} />
               <Route path="nbt-intelligence" element={<AdminNbtIntelligence />} />
               <Route path="scripture-coach" element={<AdminScriptureCoach />} />

@@ -19,8 +19,10 @@ import { Button } from "@/components/ui/button";
 import {
   ArrowLeft, ChevronLeft, ChevronRight, ChevronUp, ChevronDown, Timer, X, Users, Megaphone,
   Pencil, Check, Trash2, Plus, Dumbbell, Sparkles, Maximize, Minimize,
+  ClipboardCheck,
 } from "lucide-react";
 import DailyDutiesBoard from "@/components/duties/DailyDutiesBoard";
+import JuniorsSessionBoard from "@/components/juniors/JuniorsSessionBoard";
 import VerseDiscussion, { DiscussionDay, DiscussionFigure } from "@/components/verse/VerseDiscussion";
 import {
   NLA_RED, TOGETHER_GRAY, GROUPS, QUICK_BLOCKS, PracticeGroup, blockAccent, spiritualAccent,
@@ -70,6 +72,9 @@ const PracticeBoard = () => {
   };
   const [countdownOpen, setCountdownOpen] = useState(false);
   const [dutiesOpen, setDutiesOpen] = useState(false);
+  const [juniorsOpen, setJuniorsOpen] = useState(false);
+  // Junior Boxers practice on Tuesdays; the Juniors board only shows that day.
+  const isTuesdayToday = new Date().toLocaleDateString("en-US", { weekday: "long", timeZone: "America/New_York" }) === "Tuesday";
   const [verseDiscussion, setVerseDiscussion] = useState<DiscussionDay | null>(null);
 
   // Fullscreen: on the gym TV this hides the browser tabs, address bar and the
@@ -634,6 +639,16 @@ const PracticeBoard = () => {
               )}
             </Button>
           )}
+          {/* Juniors practice on Tuesdays: the line-up and the setup checklist, only that day. */}
+          {isTuesdayToday && (
+            <Button
+              onClick={() => setJuniorsOpen(true)}
+              className="bg-neutral-800 hover:bg-neutral-700 text-white font-bold"
+            >
+              <ClipboardCheck className="w-4 h-4 mr-2" />
+              Juniors
+            </Button>
+          )}
           <Button
             onClick={() => setDutiesOpen(true)}
             className="bg-neutral-800 hover:bg-neutral-700 text-white font-bold"
@@ -653,6 +668,7 @@ const PracticeBoard = () => {
       </header>
 
       <DailyDutiesBoard open={dutiesOpen} onClose={() => setDutiesOpen(false)} />
+      <JuniorsSessionBoard open={juniorsOpen} onClose={() => setJuniorsOpen(false)} />
       <VerseDiscussion day={verseDiscussion} onClose={() => setVerseDiscussion(null)} />
 
       {/* Practice starts at 5:15 — except on a holiday. Sits in Edit tonight

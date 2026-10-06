@@ -1,0 +1,105 @@
+// Juniors Session — the Tuesday line-up and the setup checklist.
+//
+// Junior Boxers practice on Tuesdays. The senior boxers set the building up
+// and a few of them hold a role for the session. The admin fills the line-up
+// before practice from the whole roster; the seniors tick the checklist on
+// the gym board. Both are kept per date.
+
+export interface JuniorsRole {
+  id: string;
+  title: string;
+  group_label: string;   // "Coaching" | "Blue Stools"
+  location: string | null;
+  sort_order: number;
+  is_active: boolean;
+}
+
+export interface JuniorsLineupRow {
+  role_id: string;
+  registration_id: string;
+  child_first_name: string;
+  child_last_name: string;
+  child_headshot_url: string | null;
+}
+
+export interface JuniorsCategory {
+  id: string;
+  title: string;
+  photo_url: string | null;
+  sort_order: number;
+  is_active: boolean;
+}
+
+export interface JuniorsTask {
+  id: string;
+  category_id: string;
+  title: string;
+  details: string | null;
+  photo_url: string | null;
+  starred: boolean;
+  sort_order: number;
+  is_active: boolean;
+}
+
+export interface JuniorsCompletion {
+  task_id: string;
+  done_at: string;
+  child_first_name: string | null;
+  child_last_name: string | null;
+}
+
+/** Today in New Jersey, YYYY-MM-DD. */
+export const juniorsTodayET = (now = new Date()) => now.toLocaleDateString("en-CA", { timeZone: "America/New_York" });
+
+/** Is this date a Tuesday? `ymd` read at noon so no timezone can shift it. */
+export const isTuesday = (ymd: string) => new Date(`${ymd}T12:00:00`).getDay() === 2;
+
+/** The Tuesday of the week holding `ymd` if it is still ahead (or today); otherwise next week's. */
+export const nextTuesday = (ymd: string) => {
+  const d = new Date(`${ymd}T12:00:00`);
+  const diff = (2 - d.getDay() + 7) % 7;
+  d.setDate(d.getDate() + diff);
+  const p = (n: number) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
+};
+
+/** The last `n` Tuesdays on or before `ymd`, most recent first. */
+export const recentTuesdays = (ymd: string, n: number): string[] => {
+  const d = new Date(`${ymd}T12:00:00`);
+  d.setDate(d.getDate() - ((d.getDay() - 2 + 7) % 7));
+  const out: string[] = [];
+  const p = (x: number) => String(x).padStart(2, "0");
+  for (let i = 0; i < n; i++) {
+    out.push(`${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`);
+    d.setDate(d.getDate() - 7);
+  }
+  return out;
+};
+
+/** Tasks in board order: starred first, then by sort order. */
+export const orderTasks = (tasks: JuniorsTask[]) =>
+  [...tasks].sort((a, b) => Number(b.starred) - Number(a.starred) || a.sort_order - b.sort_order || a.title.localeCompare(b.title));
+
+/** Tasks grouped under their category, both in order, empty categories dropped. */
+export const groupTasks = (categories: JuniorsCategory[], tasks: JuniorsTask[]) =>
+  [...categories]
+    .sort((a, b) => a.sort_order - b.sort_order)
+    .map((c) => ({ category: c, tasks: orderTasks(tasks.filter((t) => t.category_id === c.id)) }))
+    .filter((g) => g.tasks.length > 0);
+
+/** The roles grouped by their label, in order. */
+export const groupRoles = (roles: JuniorsRole[]) => {
+  const groups = new Map<string, JuniorsRole[]>();
+  [...roles].sort((a, b) => a.sort_order - b.sort_order).forEach((r) => {
+    groups.set(r.group_label, [...(groups.get(r.group_label) ?? []), r]);
+  });
+  return [...groups.entries()].map(([label, items]) => ({ label, roles: items }));
+};
+
+/** Public URL of a youth headshot in the youth-photos bucket. */
+export const youthPhotoUrl = (path: string | null | undefined): string | null => {
+  if (!path) return null;
+  if (path.startsWith("http")) return path;
+  const clean = path.startsWith("youth-photos/") ? path.slice("youth-photos/".length) : path;
+  return `${import.meta.env.VITE_SUPABASE_URL}/storage/v1/object/public/youth-photos/${clean}`;
+};
