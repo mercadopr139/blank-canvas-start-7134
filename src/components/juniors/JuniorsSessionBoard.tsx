@@ -37,6 +37,7 @@ const JuniorsSessionBoard = ({ open = true, onClose, standalone = false }: { ope
   const today = juniorsTodayET();
   const [photo, setPhoto] = useState<{ url: string; title: string } | null>(null);
   const [naming, setNaming] = useState<JuniorsTask | null>(null);
+  const [filling, setFilling] = useState<JuniorsRole | null>(null);
 
   useEffect(() => {
     if (!open || !onClose) return;
@@ -75,6 +76,17 @@ const JuniorsSessionBoard = ({ open = true, onClose, standalone = false }: { ope
   const allDone = total > 0 && done === total;
 
   const refresh = () => qc.invalidateQueries({ queryKey: ["juniors-completions", today] });
+  const refreshLineup = () => qc.invalidateQueries({ queryKey: ["juniors-lineup", today] });
+
+  // Filling a role from the board: a youth from the roster or a typed adult.
+  const fillRole = async (role: JuniorsRole, y: CheckedInYouth | null, name?: string) => {
+    const { error } = await rpc("juniors_assign_role", { _role_id: role.id, _registration_id: y?.id ?? null, _person_name: y ? null : (name ?? "").trim() || null });
+    if (!error) { refreshLineup(); setFilling(null); }
+  };
+  const clearRole = async (role: JuniorsRole) => {
+    const { error } = await rpc("juniors_clear_role", { _role_id: role.id });
+    if (!error) { refreshLineup(); setFilling(null); }
+  };
 
   const check = async (t: JuniorsTask, who?: CheckedInYouth) => {
     const { error } = await rpc("juniors_check_task", { _task_id: t.id, _registration_id: who?.id ?? null });
@@ -128,7 +140,7 @@ const JuniorsSessionBoard = ({ open = true, onClose, standalone = false }: { ope
         <section>
           <div className="flex items-center gap-2 mb-3">
             <span className="rounded-full px-2.5 py-0.5 text-[10px] font-black uppercase tracking-[0.2em] text-black" style={{ backgroundColor: GOLD }}>Tonight's line-up</span>
-            <p className="text-white/40 text-xs">Filled by the coaches before practice</p>
+            <p className="text-white/40 text-xs">Coaches: tap a role to fill or change it</p>
           </div>
           {roleGroups.length === 0 ? (
             <p className="text-white/35 text-sm">No roles set up yet.</p>
@@ -141,7 +153,8 @@ const JuniorsSessionBoard = ({ open = true, onClose, standalone = false }: { ope
                     {g.roles.map((r) => {
                       const who = byRole.get(r.id);
                       return (
-                        <div key={r.id} className={`rounded-xl border p-3 flex items-center gap-3 min-h-[76px] ${who ? "border-white/15 bg-white/[0.05]" : "border-dashed border-white/20 bg-transparent"}`}>
+                        <button key={r.id} onClick={() => setFilling(r)}
+                          className={`text-left rounded-xl border p-3 flex items-center gap-3 min-h-[76px] transition-colors active:scale-[0.98] ${who ? "border-white/15 bg-white/[0.05] hover:bg-white/[0.09]" : "border-dashed border-white/20 bg-transparent hover:bg-white/[0.04]"}`}>
                           <div className="w-12 h-12 rounded-full overflow-hidden bg-white/10 shrink-0 ring-2 ring-white/10 flex items-center justify-center">
                             {who && youthPhotoUrl(who.child_headshot_url)
                               ? <img src={youthPhotoUrl(who.child_headshot_url)!} alt="" className="w-full h-full object-cover" />
@@ -156,7 +169,7 @@ const JuniorsSessionBoard = ({ open = true, onClose, standalone = false }: { ope
                               {who ? lineupName(who) : "Open"}
                             </p>
                           </div>
-                        </div>
+                        </button>
                       );
                     })}
                   </div>
@@ -226,6 +239,18 @@ const JuniorsSessionBoard = ({ open = true, onClose, standalone = false }: { ope
         </section>
       </div>
 
+      {/* A coach filling a role from the board: the roster, or a typed adult. */}
+      {filling && (
+        <RolePicker
+          role={filling}
+          current={byRole.get(filling.id) ?? null}
+          onPickYouth={(y) => fillRole(filling, y)}
+          onPickName={(n) => fillRole(filling, null, n)}
+          onClear={() => clearRole(filling)}
+          onClose={() => setFilling(null)}
+        />
+      )}
+
       {/* Who did it: the seniors checked in today, like Daily Duties. Skip is fine. */}
       {naming && (
         <NamePicker
@@ -248,6 +273,70 @@ const JuniorsSessionBoard = ({ open = true, onClose, standalone = false }: { ope
           </div>
         </div>
       )}
+    </div>
+  );
+};
+
+// Fill a role from the board. The youth list is the kiosk search: approved,
+// current year, whole roster -- the kids have not signed in yet.
+const RolePicker = ({ role, current, onPickYouth, onPickName, onClear, onClose }: {
+  role: JuniorsRole; current: JuniorsLineupRow | null;
+  onPickYouth: (y: CheckedInYouth) => void; onPickName: (name: string) => void; onClear: () => void; onClose: () => void;
+}) => {
+  const [search, setSearch] = useState("");
+  const [name, setName] = useState("");
+  const [results, setResults] = useState<CheckedInYouth[]>([]);
+  const isCoach = role.group_label === "Coaching";
+  useEffect(() => {
+    if (search.trim().length < 2) { setResults([]); return; }
+    const t = setTimeout(async () => {
+      const { data, error } = await rpc("search_kiosk_youth", { _search: search.trim() });
+      setResults(error ? [] : ((data as CheckedInYouth[]) ?? []));
+    }, 250);
+    return () => clearTimeout(t);
+  }, [search]);
+  return (
+    <div className="fixed inset-0 z-[60] bg-black/80 flex items-start justify-center p-4 md:pt-20 animate-in fade-in duration-150" onClick={onClose}>
+      <div className="w-full max-w-lg bg-neutral-950 border border-white/15 rounded-2xl shadow-2xl overflow-hidden" onClick={(e) => e.stopPropagation()}>
+        <div className="px-5 py-4 border-b border-white/10 flex items-center justify-between gap-3">
+          <div>
+            <p className="text-xs uppercase tracking-wide font-bold text-white/45">{role.group_label}{role.location ? ` · ${role.location}` : ""}</p>
+            <p className="font-bold text-white text-lg leading-tight">{role.title}</p>
+            {current && <p className="text-xs text-white/45 mt-0.5">Now: {lineupName(current)}</p>}
+          </div>
+          <button onClick={onClose} className="text-white/60 hover:text-white"><X className="w-6 h-6" /></button>
+        </div>
+        <div className="p-4 space-y-3">
+          <div className="flex items-center gap-2">
+            <Input value={name} onChange={(e) => setName(e.target.value)} autoFocus={isCoach}
+              onKeyDown={(e) => { if (e.key === "Enter" && name.trim()) onPickName(name); }}
+              placeholder="Type a coach's name (an adult)…" className="h-11 bg-neutral-900 border-neutral-700 text-white" />
+            <Button onClick={() => onPickName(name)} disabled={!name.trim()} className="h-11 text-white font-bold" style={{ backgroundColor: NLA_RED }}>Assign</Button>
+          </div>
+          <p className="text-[11px] uppercase tracking-wider text-white/35">or a youth from the roster</p>
+          <div className="relative">
+            <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-white/30" />
+            <Input value={search} onChange={(e) => setSearch(e.target.value)} autoFocus={!isCoach} placeholder="Search by name"
+              className="pl-9 h-11 bg-neutral-900 border-neutral-700 text-white" />
+          </div>
+          <div className="max-h-60 overflow-y-auto space-y-1">
+            {results.map((y) => (
+              <button key={y.id} onClick={() => onPickYouth(y)} className="w-full flex items-center gap-3 rounded-lg px-2 py-2 text-left hover:bg-white/10">
+                <span className="w-9 h-9 rounded-full overflow-hidden bg-white/10 shrink-0">
+                  {youthPhotoUrl(y.child_headshot_url) && <img src={youthPhotoUrl(y.child_headshot_url)!} alt="" className="w-full h-full object-cover" />}
+                </span>
+                <span className="font-semibold">{y.child_first_name} {y.child_last_name}</span>
+              </button>
+            ))}
+            {search.trim().length >= 2 && results.length === 0 && <p className="text-white/35 text-sm px-2 py-3">Nobody on the roster by that name.</p>}
+          </div>
+          {current && (
+            <div className="flex justify-end pt-1">
+              <Button variant="ghost" onClick={onClear} className="text-white/50 hover:text-rose-300"><X className="w-4 h-4 mr-1" /> Clear this role</Button>
+            </div>
+          )}
+        </div>
+      </div>
     </div>
   );
 };
