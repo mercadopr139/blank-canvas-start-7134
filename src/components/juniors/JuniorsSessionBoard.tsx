@@ -36,7 +36,6 @@ const JuniorsSessionBoard = ({ open = true, onClose, standalone = false }: { ope
   const navigate = useNavigate();
   const today = juniorsTodayET();
   const [photo, setPhoto] = useState<{ url: string; title: string } | null>(null);
-  const [naming, setNaming] = useState<JuniorsTask | null>(null);
   const [filling, setFilling] = useState<JuniorsRole | null>(null);
 
   // Escape closes the photo first, then the board.
@@ -93,18 +92,16 @@ const JuniorsSessionBoard = ({ open = true, onClose, standalone = false }: { ope
     if (!error) { refreshLineup(); setFilling(null); }
   };
 
-  const check = async (t: JuniorsTask, who?: CheckedInYouth) => {
-    const { error } = await rpc("juniors_check_task", { _task_id: t.id, _registration_id: who?.id ?? null });
+  const check = async (t: JuniorsTask) => {
+    const { error } = await rpc("juniors_check_task", { _task_id: t.id, _registration_id: null });
     if (!error) refresh();
   };
   const uncheck = async (t: JuniorsTask) => {
     const { error } = await rpc("juniors_uncheck_task", { _task_id: t.id });
     if (!error) refresh();
   };
-  const tap = (t: JuniorsTask) => {
-    if (doneByTask.has(t.id)) { uncheck(t); return; }
-    setNaming(t); // name first; "Skip" checks it without one
-  };
+  // One tap: done. Tap again: not done. No questions asked.
+  const tap = (t: JuniorsTask) => (doneByTask.has(t.id) ? uncheck(t) : check(t));
 
   if (!open) return null;
 
@@ -188,7 +185,7 @@ const JuniorsSessionBoard = ({ open = true, onClose, standalone = false }: { ope
         <section>
           <div className="flex items-center gap-2 mb-3">
             <span className="rounded-full px-2.5 py-0.5 text-[10px] font-black uppercase tracking-[0.2em] text-white" style={{ backgroundColor: NLA_RED }}>Setup checklist</span>
-            <p className="text-white/40 text-xs">Tap a task when it is done. Tap a photo to see the proper set-up.</p>
+            <p className="text-white/40 text-xs">Tap the box when a task is done. Tap a photo to see the proper set-up.</p>
           </div>
           {isError ? <p className="text-rose-300 text-sm">Couldn't load the checklist: {(error as Error)?.message}</p>
           : groups.length === 0 ? <p className="text-white/35 text-sm">No tasks set up yet. Add them under Practice Plan → Juniors Session.</p>
@@ -253,16 +250,6 @@ const JuniorsSessionBoard = ({ open = true, onClose, standalone = false }: { ope
           onPickName={(n) => fillRole(filling, null, n)}
           onClear={() => clearRole(filling)}
           onClose={() => setFilling(null)}
-        />
-      )}
-
-      {/* Who did it: the seniors checked in today, like Daily Duties. Skip is fine. */}
-      {naming && (
-        <NamePicker
-          task={naming}
-          onPick={(y) => { check(naming, y); setNaming(null); }}
-          onSkip={() => { check(naming); setNaming(null); }}
-          onClose={() => setNaming(null)}
         />
       )}
 
@@ -345,51 +332,6 @@ const RolePicker = ({ role, current, onPickYouth, onPickName, onClear, onClose }
               <Button variant="ghost" onClick={onClear} className="text-white/50 hover:text-rose-300"><X className="w-4 h-4 mr-1" /> Clear this role</Button>
             </div>
           )}
-        </div>
-      </div>
-    </div>
-  );
-};
-
-const NamePicker = ({ task, onPick, onSkip, onClose }: { task: JuniorsTask; onPick: (y: CheckedInYouth) => void; onSkip: () => void; onClose: () => void }) => {
-  const [search, setSearch] = useState("");
-  const [results, setResults] = useState<CheckedInYouth[]>([]);
-  useEffect(() => {
-    if (search.trim().length < 2) { setResults([]); return; }
-    const t = setTimeout(async () => {
-      const { data, error } = await rpc("search_checked_in_youth", { _search: search.trim() });
-      setResults(error ? [] : ((data as CheckedInYouth[]) ?? []));
-    }, 250);
-    return () => clearTimeout(t);
-  }, [search]);
-  return (
-    <div className="fixed inset-0 z-[60] bg-black/80 flex items-start justify-center p-4 md:pt-20 animate-in fade-in duration-150" onClick={onClose}>
-      <div className="w-full max-w-lg bg-neutral-950 border border-white/15 rounded-2xl shadow-2xl overflow-hidden" onClick={(e) => e.stopPropagation()}>
-        <div className="px-5 py-4 border-b border-white/10">
-          <p className="text-xs uppercase tracking-wide font-bold text-white/45">Who did it?</p>
-          <p className="font-bold text-white leading-tight">{task.title}</p>
-        </div>
-        <div className="p-4 space-y-3">
-          <div className="relative">
-            <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-white/30" />
-            <Input value={search} onChange={(e) => setSearch(e.target.value)} autoFocus placeholder="Type your name (checked in today)"
-              className="pl-9 h-11 bg-neutral-900 border-neutral-700 text-white" />
-          </div>
-          <div className="max-h-60 overflow-y-auto space-y-1">
-            {results.map((y) => (
-              <button key={y.id} onClick={() => onPick(y)} className="w-full flex items-center gap-3 rounded-lg px-2 py-2 text-left hover:bg-white/10">
-                <span className="w-9 h-9 rounded-full overflow-hidden bg-white/10 shrink-0">
-                  {youthPhotoUrl(y.child_headshot_url) && <img src={youthPhotoUrl(y.child_headshot_url)!} alt="" className="w-full h-full object-cover" />}
-                </span>
-                <span className="font-semibold">{y.child_first_name} {y.child_last_name}</span>
-              </button>
-            ))}
-            {search.trim().length >= 2 && results.length === 0 && <p className="text-white/35 text-sm px-2 py-3">Nobody checked in by that name yet.</p>}
-          </div>
-          <div className="flex justify-between pt-1">
-            <Button variant="ghost" onClick={onClose} className="text-white/50 hover:text-white">Cancel</Button>
-            <Button onClick={onSkip} className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold"><Check className="w-4 h-4 mr-1.5" /> Mark done without a name</Button>
-          </div>
         </div>
       </div>
     </div>
