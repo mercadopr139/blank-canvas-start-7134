@@ -8,7 +8,7 @@
 //
 // `standalone` renders it as a page (a tablet by the front desk) rather than
 // an overlay with a Done button.
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -37,6 +37,21 @@ const JuniorsSessionBoard = ({ open = true, onClose, standalone = false }: { ope
   const today = juniorsTodayET();
   const [photo, setPhoto] = useState<{ url: string; title: string } | null>(null);
   const [filling, setFilling] = useState<JuniorsRole | null>(null);
+
+  // A TV board never scrolls: anything below the fold is invisible to the
+  // room. The content is packed tight, then zoomed down until the whole
+  // line-up and every task fit the screen. Same idea as the NBT board.
+  const outerRef = useRef<HTMLDivElement | null>(null);
+  const innerRef = useRef<HTMLDivElement | null>(null);
+  const fit = useCallback(() => {
+    const outer = outerRef.current, inner = innerRef.current;
+    if (!outer || !inner) return;
+    const style = inner.style as CSSStyleDeclaration & { zoom?: string };
+    let zoom = 1;
+    style.zoom = "1";
+    const fits = () => outer.scrollHeight <= outer.clientHeight + 2 && outer.scrollWidth <= outer.clientWidth + 2;
+    while (zoom > 0.45 && !fits()) { zoom -= 0.02; style.zoom = zoom.toFixed(2); }
+  }, []);
 
   // Escape closes the photo first, then the board.
   useEffect(() => {
@@ -103,12 +118,23 @@ const JuniorsSessionBoard = ({ open = true, onClose, standalone = false }: { ope
   // One tap: done. Tap again: not done. No questions asked.
   const tap = (t: JuniorsTask) => (doneByTask.has(t.id) ? uncheck(t) : check(t));
 
+  // Re-fit before paint whenever the content or the window changes.
+  useLayoutEffect(() => {
+    if (!open) return;
+    fit();
+    const ro = new ResizeObserver(() => fit());
+    if (outerRef.current) ro.observe(outerRef.current);
+    window.addEventListener("resize", fit);
+    const timers = [150, 600].map((ms) => setTimeout(fit, ms)); // images and fonts settle a beat later
+    return () => { ro.disconnect(); window.removeEventListener("resize", fit); timers.forEach(clearTimeout); };
+  }, [open, fit, groups, roleGroups, lineup, completions]);
+
   if (!open) return null;
 
   const dateLabel = new Date(`${today}T12:00:00`).toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" });
 
   return (
-    <div className={`${standalone ? "min-h-screen" : "fixed inset-0 z-50 backdrop-blur-sm animate-in fade-in duration-200"} bg-black/95 text-white flex flex-col`}>
+    <div className={`${standalone ? "h-screen overflow-hidden" : "fixed inset-0 z-50 backdrop-blur-sm animate-in fade-in duration-200"} bg-black/95 text-white flex flex-col`}>
       {/* Header */}
       <div className="flex items-center justify-between px-6 md:px-10 py-4 border-b border-white/10 flex-shrink-0">
         <div className="flex items-center gap-3">
@@ -137,37 +163,38 @@ const JuniorsSessionBoard = ({ open = true, onClose, standalone = false }: { ope
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto px-4 md:px-8 py-5 space-y-7">
+      <div ref={outerRef} className="flex-1 overflow-hidden px-4 md:px-6 py-3">
+      <div ref={innerRef} className="space-y-4">
         {/* ── The line-up ── */}
         <section>
-          <div className="flex items-center gap-2 mb-3">
+          <div className="flex items-center gap-2 mb-2">
             <span className="rounded-full px-2.5 py-0.5 text-[10px] font-black uppercase tracking-[0.2em] text-black" style={{ backgroundColor: GOLD }}>Tonight's line-up</span>
             <p className="text-white/40 text-xs">Coaches: tap a role to fill or change it</p>
           </div>
           {roleGroups.length === 0 ? (
             <p className="text-white/35 text-sm">No roles set up yet.</p>
           ) : (
-            <div className="grid gap-4 lg:grid-cols-2">
+            <div className="grid gap-3 lg:grid-cols-[3fr_5fr]">
               {roleGroups.map((g) => (
-                <div key={g.label} className="rounded-2xl border border-white/10 bg-white/[0.03] p-3">
-                  <p className="text-[11px] uppercase tracking-wider text-white/45 font-bold mb-2 px-1">{g.label}</p>
-                  <div className={`grid gap-2 ${g.roles.length > 3 ? "sm:grid-cols-2 xl:grid-cols-3" : "sm:grid-cols-3"}`}>
+                <div key={g.label} className="rounded-2xl border border-white/10 bg-white/[0.03] p-2.5">
+                  <p className="text-[10px] uppercase tracking-wider text-white/45 font-bold mb-1.5 px-1">{g.label}</p>
+                  <div className="grid gap-2" style={{ gridTemplateColumns: `repeat(${Math.min(g.roles.length, 5)}, minmax(0, 1fr))` }}>
                     {g.roles.map((r) => {
                       const who = byRole.get(r.id);
                       return (
                         <button key={r.id} onClick={() => setFilling(r)}
-                          className={`text-left rounded-xl border p-3 flex items-center gap-3 min-h-[76px] transition-colors active:scale-[0.98] ${who ? "border-white/15 bg-white/[0.05] hover:bg-white/[0.09]" : "border-dashed border-white/20 bg-transparent hover:bg-white/[0.04]"}`}>
-                          <div className="w-12 h-12 rounded-full overflow-hidden bg-white/10 shrink-0 ring-2 ring-white/10 flex items-center justify-center">
+                          className={`text-left rounded-xl border p-2 flex items-center gap-2 min-h-[58px] transition-colors active:scale-[0.98] ${who ? "border-white/15 bg-white/[0.05] hover:bg-white/[0.09]" : "border-dashed border-white/20 bg-transparent hover:bg-white/[0.04]"}`}>
+                          <div className="w-9 h-9 rounded-full overflow-hidden bg-white/10 shrink-0 ring-2 ring-white/10 flex items-center justify-center">
                             {who && youthPhotoUrl(who.child_headshot_url)
                               ? <img src={youthPhotoUrl(who.child_headshot_url)!} alt="" className="w-full h-full object-cover" />
                               : who
-                              ? <span className="text-sm font-black text-white/70">{initials(lineupName(who))}</span>
-                              : <Users className="w-5 h-5 text-white/25" />}
+                              ? <span className="text-xs font-black text-white/70">{initials(lineupName(who))}</span>
+                              : <Users className="w-4 h-4 text-white/25" />}
                           </div>
                           <div className="min-w-0">
-                            <p className="text-[11px] uppercase tracking-wide text-white/45 font-semibold leading-tight">{r.title}</p>
-                            {r.location && <p className="text-[10px] text-white/30">{r.location}</p>}
-                            <p className={`font-bold leading-tight mt-0.5 ${who ? "text-white text-base md:text-lg" : "text-white/30 text-sm"}`}>
+                            <p className="text-[10px] uppercase tracking-wide text-white/45 font-semibold leading-tight truncate">{r.title}</p>
+                            {r.location && <p className="text-[10px] text-white/30 truncate">{r.location}</p>}
+                            <p className={`font-bold leading-tight mt-0.5 truncate ${who ? "text-white text-sm md:text-base" : "text-white/30 text-xs"}`}>
                               {who ? lineupName(who) : "Open"}
                             </p>
                           </div>
@@ -183,17 +210,17 @@ const JuniorsSessionBoard = ({ open = true, onClose, standalone = false }: { ope
 
         {/* ── The checklist ── */}
         <section>
-          <div className="flex items-center gap-2 mb-3">
+          <div className="flex items-center gap-2 mb-2">
             <span className="rounded-full px-2.5 py-0.5 text-[10px] font-black uppercase tracking-[0.2em] text-white" style={{ backgroundColor: NLA_RED }}>Setup checklist</span>
             <p className="text-white/40 text-xs">Tap the box when a task is done. Tap a photo to see the proper set-up.</p>
           </div>
           {isError ? <p className="text-rose-300 text-sm">Couldn't load the checklist: {(error as Error)?.message}</p>
           : groups.length === 0 ? <p className="text-white/35 text-sm">No tasks set up yet. Add them under Practice Plan → Juniors Session.</p>
           : (
-            <div className="columns-1 md:columns-2 xl:columns-3 gap-4">
+            <div className="columns-1 md:columns-2 xl:columns-3 2xl:columns-4 gap-3">
               {groups.map(({ category, tasks: ts }) => (
-                <div key={category.id} className="break-inside-avoid mb-4 rounded-2xl border border-white/10 bg-white/[0.03] overflow-hidden">
-                  <div className="flex items-center justify-between px-4 py-2.5 border-b border-white/10 bg-white/[0.03]">
+                <div key={category.id} className="break-inside-avoid mb-3 rounded-2xl border border-white/10 bg-white/[0.03] overflow-hidden">
+                  <div className="flex items-center justify-between px-3 py-1.5 border-b border-white/10 bg-white/[0.03]">
                     <p className="font-black text-sm uppercase tracking-wider">{category.title}</p>
                     <div className="flex items-center gap-2">
                       <span className="text-xs text-white/40 tabular-nums">{ts.filter((t) => doneByTask.has(t.id)).length}/{ts.length}</span>
@@ -208,14 +235,14 @@ const JuniorsSessionBoard = ({ open = true, onClose, standalone = false }: { ope
                     {ts.map((t) => {
                       const c = doneByTask.get(t.id);
                       return (
-                        <div key={t.id} className={`flex items-center gap-3 px-3 py-2.5 ${c ? "bg-emerald-500/[0.06]" : ""}`}>
+                        <div key={t.id} className={`flex items-center gap-2.5 px-2.5 py-1.5 ${c ? "bg-emerald-500/[0.06]" : ""}`}>
                           <button onClick={() => tap(t)}
-                            className={`w-9 h-9 rounded-lg border-2 flex items-center justify-center shrink-0 transition-all active:scale-95 ${c ? "border-emerald-400 bg-emerald-500 text-black" : "border-white/30 hover:border-white/60"}`}
+                            className={`w-8 h-8 rounded-lg border-2 flex items-center justify-center shrink-0 transition-all active:scale-95 ${c ? "border-emerald-400 bg-emerald-500 text-black" : "border-white/30 hover:border-white/60"}`}
                             aria-label={c ? "Mark not done" : "Mark done"}>
                             {c && <Check className="w-5 h-5" strokeWidth={3} />}
                           </button>
                           <div className="min-w-0 flex-1">
-                            <p className={`text-sm md:text-base leading-snug ${c ? "text-white/50 line-through" : "text-white"}`}>
+                            <p className={`text-sm leading-snug ${c ? "text-white/40 line-through" : "text-white"}`}>
                               {t.starred && <Star className="inline w-4 h-4 mr-1 -mt-0.5" style={{ color: GOLD, fill: GOLD }} />}
                               {t.title}
                             </p>
@@ -226,7 +253,7 @@ const JuniorsSessionBoard = ({ open = true, onClose, standalone = false }: { ope
                             </p>}
                           </div>
                           {t.photo_url && (
-                            <button onClick={() => setPhoto({ url: t.photo_url!, title: t.title })} className="w-12 h-12 rounded-lg overflow-hidden shrink-0 ring-1 ring-white/15 hover:ring-white/40">
+                            <button onClick={() => setPhoto({ url: t.photo_url!, title: t.title })} className="w-10 h-10 rounded-lg overflow-hidden shrink-0 ring-1 ring-white/15 hover:ring-white/40">
                               <img src={t.photo_url} alt="" className="w-full h-full object-cover" />
                             </button>
                           )}
@@ -239,6 +266,7 @@ const JuniorsSessionBoard = ({ open = true, onClose, standalone = false }: { ope
             </div>
           )}
         </section>
+      </div>
       </div>
 
       {/* A coach filling a role from the board: the roster, or a typed adult. */}
