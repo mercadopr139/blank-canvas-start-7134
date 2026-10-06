@@ -39,12 +39,17 @@ const JuniorsSessionBoard = ({ open = true, onClose, standalone = false }: { ope
   const [naming, setNaming] = useState<JuniorsTask | null>(null);
   const [filling, setFilling] = useState<JuniorsRole | null>(null);
 
+  // Escape closes the photo first, then the board.
   useEffect(() => {
-    if (!open || !onClose) return;
-    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
+    if (!open) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== "Escape") return;
+      if (photo) { setPhoto(null); return; }
+      onClose?.();
+    };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [open, onClose]);
+  }, [open, onClose, photo]);
 
   const { data: roles = [] } = useQuery({
     queryKey: ["juniors-roles"], enabled: open,
@@ -261,15 +266,20 @@ const JuniorsSessionBoard = ({ open = true, onClose, standalone = false }: { ope
         />
       )}
 
-      {/* The proper set-up, full screen. */}
+      {/* The proper set-up: a pop-up that always shows the whole photo. Tap
+          outside it, the Close button, or Escape to get back. */}
       {photo && (
-        <div className="fixed inset-0 z-[70] bg-black/95 flex flex-col animate-in fade-in duration-150" onClick={() => setPhoto(null)}>
-          <div className="flex items-center justify-between px-6 py-4">
-            <p className="font-bold text-lg">{photo.title}</p>
-            <Button variant="ghost" className="text-white/70 hover:text-white hover:bg-white/10"><X className="w-5 h-5 mr-1" /> Close</Button>
-          </div>
-          <div className="flex-1 flex items-center justify-center p-4">
-            <img src={photo.url} alt={photo.title} className="max-h-full max-w-full rounded-xl object-contain shadow-2xl" />
+        <div className="fixed inset-0 z-[70] bg-black/85 backdrop-blur-sm flex items-center justify-center p-4 md:p-8 animate-in fade-in duration-150" onClick={() => setPhoto(null)}>
+          <div className="relative max-w-[92vw] max-h-[92vh] rounded-2xl bg-neutral-950 border border-white/15 shadow-2xl overflow-hidden flex flex-col" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between gap-4 px-4 py-3 border-b border-white/10 shrink-0">
+              <p className="font-bold text-base md:text-lg truncate">{photo.title}</p>
+              <Button onClick={() => setPhoto(null)} className="h-10 px-4 font-bold text-white shrink-0" style={{ backgroundColor: NLA_RED }}>
+                <X className="w-5 h-5 mr-1.5" /> Close
+              </Button>
+            </div>
+            <div className="min-h-0 flex items-center justify-center bg-black">
+              <img src={photo.url} alt={photo.title} className="block object-contain" style={{ maxWidth: "92vw", maxHeight: "calc(92vh - 64px)" }} />
+            </div>
           </div>
         </div>
       )}
