@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { isTuesday, nextTuesday, recentTuesdays, orderTasks, groupTasks, groupRoles, lineupName, initials, type JuniorsTask } from "@/lib/juniors";
+import { isTuesday, nextTuesday, recentTuesdays, orderTasks, groupTasks, groupRoles, lineupName, initials, placeTask, type JuniorsTask } from "@/lib/juniors";
 
 describe("Juniors line-up names", () => {
   it("prefers a typed adult, else the youth's full name", () => {
@@ -29,6 +29,31 @@ describe("Juniors session dates", () => {
   it("lists recent Tuesdays most recent first", () => {
     expect(recentTuesdays("2026-10-08", 3)).toEqual(["2026-10-06", "2026-09-29", "2026-09-22"]);
     expect(recentTuesdays("2026-10-06", 1)).toEqual(["2026-10-06"]);
+  });
+});
+
+describe("Juniors checklist drag and drop", () => {
+  const list = [task("a", "c1", 10), task("b", "c1", 20), task("c", "c1", 30), task("x", "c2", 10)];
+  const order = (l: JuniorsTask[], cat: string) => l.filter((t) => t.category_id === cat).sort((a, b) => a.sort_order - b.sort_order).map((t) => t.id);
+
+  it("moves a task down within its category and renumbers", () => {
+    const next = placeTask(list, list[0], "c1", 2);
+    expect(order(next, "c1")).toEqual(["b", "c", "a"]);
+    expect(next.find((t) => t.id === "a")!.sort_order).toBe(30);
+  });
+  it("moves a task into another category at a slot", () => {
+    const next = placeTask(list, list[2], "c2", 0);
+    expect(order(next, "c1")).toEqual(["a", "b"]);
+    expect(order(next, "c2")).toEqual(["c", "x"]);
+  });
+  it("drops into an empty category", () => {
+    const next = placeTask(list, list[1], "c3", 0);
+    expect(order(next, "c3")).toEqual(["b"]);
+    expect(next.find((t) => t.id === "b")!.category_id).toBe("c3");
+    expect(next.length).toBe(list.length);
+  });
+  it("clamps an out-of-range slot to the end", () => {
+    expect(order(placeTask(list, list[0], "c1", 99), "c1")).toEqual(["b", "c", "a"]);
   });
 });
 

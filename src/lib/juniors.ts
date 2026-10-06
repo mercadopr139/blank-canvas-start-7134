@@ -85,6 +85,23 @@ export const recentTuesdays = (ymd: string, n: number): string[] => {
   return out;
 };
 
+const inCategory = (list: JuniorsTask[], catId: string) =>
+  list.filter((t) => t.category_id === catId).sort((a, b) => a.sort_order - b.sort_order);
+
+/**
+ * The list with `moving` placed at `index` in `catId` (any category, empty
+ * or not), that category renumbered 10, 20, 30… Pure; the editor persists
+ * only the rows whose category or position changed.
+ */
+export const placeTask = (list: JuniorsTask[], moving: JuniorsTask, catId: string, index: number): JuniorsTask[] => {
+  const rest = list.filter((t) => t.id !== moving.id);
+  const siblings = inCategory(rest, catId);
+  const at = Math.max(0, Math.min(index, siblings.length));
+  const ordered = [...siblings.slice(0, at), { ...moving, category_id: catId }, ...siblings.slice(at)];
+  const renumbered = ordered.map((t, i) => ({ ...t, category_id: catId, sort_order: (i + 1) * 10 }));
+  return [...rest.filter((t) => t.category_id !== catId), ...renumbered];
+};
+
 /** Tasks in board order: starred first, then by sort order. */
 export const orderTasks = (tasks: JuniorsTask[]) =>
   [...tasks].sort((a, b) => Number(b.starred) - Number(a.starred) || a.sort_order - b.sort_order || a.title.localeCompare(b.title));

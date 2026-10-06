@@ -19,6 +19,7 @@ import {
   Star, Plus, Trash2, ArrowUp, ArrowDown, Camera, X, Monitor, Copy, Search, Users, Check, Loader2,
 } from "lucide-react";
 import { getCurrentAttendanceYear } from "@/lib/programYear";
+import JuniorsChecklistEditor from "@/components/juniors/JuniorsChecklistEditor";
 import {
   type JuniorsRole, type JuniorsLineupRow, type JuniorsCategory, type JuniorsTask, type JuniorsCompletion,
   juniorsTodayET, nextTuesday, recentTuesdays, groupTasks, groupRoles, youthPhotoUrl, lineupName, initials,
@@ -74,7 +75,7 @@ const AdminJuniorsSession = () => {
           ))}
         </TabsList>
         <TabsContent value="lineup" className="mt-5"><Lineup roles={roles.filter((r) => r.is_active)} today={today} /></TabsContent>
-        <TabsContent value="checklist" className="mt-5"><Checklist categories={categories} tasks={tasks} onChange={refreshAll} /></TabsContent>
+        <TabsContent value="checklist" className="mt-5"><JuniorsChecklistEditor categories={categories} tasks={tasks} onChange={refreshAll} /></TabsContent>
         <TabsContent value="roles" className="mt-5"><Roles roles={roles} onChange={refreshAll} /></TabsContent>
         <TabsContent value="history" className="mt-5"><History roles={roles} tasks={tasks} today={today} /></TabsContent>
       </Tabs>
@@ -223,129 +224,6 @@ const Lineup = ({ roles, today }: { roles: JuniorsRole[]; today: string }) => {
           </div>
         </div>
       )}
-    </div>
-  );
-};
-
-/* ───── Checklist editor ───── */
-const Checklist = ({ categories, tasks, onChange }: { categories: JuniorsCategory[]; tasks: JuniorsTask[]; onChange: () => void }) => {
-  const [newCat, setNewCat] = useState("");
-  const [newTask, setNewTask] = useState<Record<string, string>>({});
-  const [uploading, setUploading] = useState<string | null>(null);
-
-  const addCategory = async () => {
-    if (!newCat.trim()) return;
-    const sort = Math.max(0, ...categories.map((c) => c.sort_order)) + 10;
-    const { error } = await tbl("juniors_categories").insert({ title: newCat.trim(), sort_order: sort });
-    if (error) { toast.error(error.message); return; }
-    setNewCat(""); onChange();
-  };
-  const addTask = async (c: JuniorsCategory) => {
-    const title = (newTask[c.id] ?? "").trim();
-    if (!title) return;
-    const sort = Math.max(0, ...tasks.filter((t) => t.category_id === c.id).map((t) => t.sort_order)) + 10;
-    const { error } = await tbl("juniors_tasks").insert({ category_id: c.id, title, sort_order: sort });
-    if (error) { toast.error(error.message); return; }
-    setNewTask((p) => ({ ...p, [c.id]: "" })); onChange();
-  };
-  const patch = async (table: string, id: string, v: Record<string, unknown>) => {
-    const { error } = await tbl(table).update(v).eq("id", id);
-    if (error) { toast.error(error.message); return; }
-    onChange();
-  };
-  const remove = async (table: string, id: string, label: string) => {
-    if (!window.confirm(`Delete "${label}"? Use the switch to hide it instead if it might come back.`)) return;
-    const { error } = await tbl(table).delete().eq("id", id);
-    if (error) { toast.error(error.message); return; }
-    onChange();
-  };
-  // Move within siblings by swapping sort orders.
-  const move = async (table: string, items: { id: string; sort_order: number }[], id: string, dir: -1 | 1) => {
-    const sorted = [...items].sort((a, b) => a.sort_order - b.sort_order);
-    const i = sorted.findIndex((x) => x.id === id);
-    const j = i + dir;
-    if (i < 0 || j < 0 || j >= sorted.length) return;
-    const a = sorted[i], b = sorted[j];
-    const sa = a.sort_order === b.sort_order ? b.sort_order + dir : b.sort_order;
-    const sb = a.sort_order === b.sort_order ? a.sort_order : a.sort_order;
-    await tbl(table).update({ sort_order: sa }).eq("id", a.id);
-    await tbl(table).update({ sort_order: sb }).eq("id", b.id);
-    onChange();
-  };
-  const upload = async (table: string, id: string, file: File) => {
-    setUploading(id);
-    const ext = (file.name.split(".").pop() || "jpg").toLowerCase();
-    const path = `juniors/${table === "juniors_tasks" ? "task" : "category"}_${id}_${Date.now()}.${ext}`;
-    const { error } = await supabase.storage.from("site-images").upload(path, file, { upsert: true, contentType: file.type || undefined });
-    if (error) { setUploading(null); toast.error(error.message); return; }
-    const url = supabase.storage.from("site-images").getPublicUrl(path).data.publicUrl;
-    await patch(table, id, { photo_url: url });
-    setUploading(null);
-    toast.success("Photo added.");
-  };
-
-  const PhotoButton = ({ table, row }: { table: string; row: { id: string; photo_url: string | null } }) => (
-    <label className="inline-flex items-center gap-1 text-xs text-white/50 hover:text-white cursor-pointer" title={row.photo_url ? "Replace photo" : "Add a photo of the proper set-up"}>
-      {uploading === row.id ? <Loader2 className="w-4 h-4 animate-spin" /> : row.photo_url ? <img src={row.photo_url} alt="" className="w-8 h-8 rounded object-cover ring-1 ring-white/20" /> : <Camera className="w-4 h-4" />}
-      <input type="file" accept="image/*" capture="environment" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) upload(table, row.id, f); e.currentTarget.value = ""; }} />
-      {row.photo_url && <button type="button" className="text-white/30 hover:text-rose-300" title="Remove photo" onClick={(e) => { e.preventDefault(); patch(table, row.id, { photo_url: null }); }}><X className="w-3 h-3" /></button>}
-    </label>
-  );
-
-  const sortedCats = [...categories].sort((a, b) => a.sort_order - b.sort_order);
-  return (
-    <div className="space-y-4">
-      <p className="text-xs text-white/40">Starred tasks sit at the top of their category on the board. A photo shows the kids the proper set-up. The switch hides a task without deleting it.</p>
-      {sortedCats.map((c) => {
-        const ts = tasks.filter((t) => t.category_id === c.id).sort((a, b) => a.sort_order - b.sort_order);
-        return (
-          <Card key={c.id} className={`bg-white/[0.03] border-white/10 text-white ${c.is_active ? "" : "opacity-60"}`}>
-            <CardContent className="p-4 space-y-3">
-              <div className="flex items-center gap-2">
-                <Input defaultValue={c.title} onBlur={(e) => e.target.value.trim() && e.target.value !== c.title && patch("juniors_categories", c.id, { title: e.target.value.trim() })}
-                  className="h-9 bg-transparent border-transparent hover:border-neutral-700 focus:border-neutral-600 text-white font-black uppercase tracking-wider max-w-xs" />
-                <PhotoButton table="juniors_categories" row={c} />
-                <div className="ml-auto flex items-center gap-1">
-                  <Button size="icon" variant="ghost" className="h-8 w-8 text-white/40 hover:text-white" onClick={() => move("juniors_categories", sortedCats, c.id, -1)}><ArrowUp className="w-4 h-4" /></Button>
-                  <Button size="icon" variant="ghost" className="h-8 w-8 text-white/40 hover:text-white" onClick={() => move("juniors_categories", sortedCats, c.id, 1)}><ArrowDown className="w-4 h-4" /></Button>
-                  <Switch checked={c.is_active} onCheckedChange={(v) => patch("juniors_categories", c.id, { is_active: v })} />
-                  <Button size="icon" variant="ghost" className="h-8 w-8 text-white/30 hover:text-rose-300" onClick={() => remove("juniors_categories", c.id, c.title)}><Trash2 className="w-4 h-4" /></Button>
-                </div>
-              </div>
-              <div className="divide-y divide-white/[0.06] rounded-lg border border-white/10">
-                {ts.map((t) => (
-                  <div key={t.id} className={`flex items-center gap-2 px-3 py-2 ${t.is_active ? "" : "opacity-50"}`}>
-                    <button onClick={() => patch("juniors_tasks", t.id, { starred: !t.starred })} title={t.starred ? "Unstar" : "Star as important"} className="shrink-0">
-                      <Star className="w-4 h-4" style={t.starred ? { color: GOLD, fill: GOLD } : { color: "rgba(255,255,255,0.25)" }} />
-                    </button>
-                    <div className="flex-1 min-w-0">
-                      <Input defaultValue={t.title} onBlur={(e) => e.target.value.trim() && e.target.value !== t.title && patch("juniors_tasks", t.id, { title: e.target.value.trim() })}
-                        className="h-8 bg-transparent border-transparent hover:border-neutral-700 focus:border-neutral-600 text-white text-sm" />
-                      <Textarea defaultValue={t.details ?? ""} placeholder="Optional detail shown under the task" rows={1}
-                        onBlur={(e) => (e.target.value.trim() || null) !== (t.details ?? null) && patch("juniors_tasks", t.id, { details: e.target.value.trim() || null })}
-                        className="mt-0.5 min-h-0 h-7 py-1 bg-transparent border-transparent hover:border-neutral-700 focus:border-neutral-600 text-white/60 text-xs resize-none" />
-                    </div>
-                    <PhotoButton table="juniors_tasks" row={t} />
-                    <Button size="icon" variant="ghost" className="h-7 w-7 text-white/40 hover:text-white" onClick={() => move("juniors_tasks", ts, t.id, -1)}><ArrowUp className="w-3.5 h-3.5" /></Button>
-                    <Button size="icon" variant="ghost" className="h-7 w-7 text-white/40 hover:text-white" onClick={() => move("juniors_tasks", ts, t.id, 1)}><ArrowDown className="w-3.5 h-3.5" /></Button>
-                    <Switch checked={t.is_active} onCheckedChange={(v) => patch("juniors_tasks", t.id, { is_active: v })} />
-                    <Button size="icon" variant="ghost" className="h-7 w-7 text-white/30 hover:text-rose-300" onClick={() => remove("juniors_tasks", t.id, t.title)}><Trash2 className="w-3.5 h-3.5" /></Button>
-                  </div>
-                ))}
-                <div className="flex items-center gap-2 px-3 py-2">
-                  <Plus className="w-4 h-4 text-white/30" />
-                  <Input value={newTask[c.id] ?? ""} onChange={(e) => setNewTask((p) => ({ ...p, [c.id]: e.target.value }))} onKeyDown={(e) => { if (e.key === "Enter") addTask(c); }}
-                    placeholder="Add a task and press Enter" className="h-8 bg-transparent border-transparent hover:border-neutral-700 focus:border-neutral-600 text-white text-sm" />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        );
-      })}
-      <div className="flex items-center gap-2">
-        <Input value={newCat} onChange={(e) => setNewCat(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") addCategory(); }} placeholder="New category…" className="h-9 max-w-xs bg-neutral-900 border-neutral-700 text-white" />
-        <Button onClick={addCategory} disabled={!newCat.trim()} className="h-9 text-white font-bold" style={{ backgroundColor: NLA_RED }}><Plus className="w-4 h-4 mr-1" /> Category</Button>
-      </div>
     </div>
   );
 };
