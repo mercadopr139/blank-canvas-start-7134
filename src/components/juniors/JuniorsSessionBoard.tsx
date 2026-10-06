@@ -17,7 +17,7 @@ import { Input } from "@/components/ui/input";
 import { X, Star, Check, Camera, Search, ArrowLeft, Users, ClipboardCheck } from "lucide-react";
 import {
   type JuniorsRole, type JuniorsLineupRow, type JuniorsCategory, type JuniorsTask, type JuniorsCompletion,
-  juniorsTodayET, groupTasks, groupRoles, youthPhotoUrl,
+  juniorsTodayET, groupTasks, groupRoles, youthPhotoUrl, lineupName, initials,
 } from "@/lib/juniors";
 
 const NLA_RED = "#bf0f3e";
@@ -145,13 +145,15 @@ const JuniorsSessionBoard = ({ open = true, onClose, standalone = false }: { ope
                           <div className="w-12 h-12 rounded-full overflow-hidden bg-white/10 shrink-0 ring-2 ring-white/10 flex items-center justify-center">
                             {who && youthPhotoUrl(who.child_headshot_url)
                               ? <img src={youthPhotoUrl(who.child_headshot_url)!} alt="" className="w-full h-full object-cover" />
+                              : who
+                              ? <span className="text-sm font-black text-white/70">{initials(lineupName(who))}</span>
                               : <Users className="w-5 h-5 text-white/25" />}
                           </div>
                           <div className="min-w-0">
                             <p className="text-[11px] uppercase tracking-wide text-white/45 font-semibold leading-tight">{r.title}</p>
                             {r.location && <p className="text-[10px] text-white/30">{r.location}</p>}
                             <p className={`font-bold leading-tight mt-0.5 ${who ? "text-white text-base md:text-lg" : "text-white/30 text-sm"}`}>
-                              {who ? `${who.child_first_name} ${who.child_last_name}` : "Open"}
+                              {who ? lineupName(who) : "Open"}
                             </p>
                           </div>
                         </div>

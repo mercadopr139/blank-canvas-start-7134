@@ -21,7 +21,7 @@ import {
 import { getCurrentAttendanceYear } from "@/lib/programYear";
 import {
   type JuniorsRole, type JuniorsLineupRow, type JuniorsCategory, type JuniorsTask, type JuniorsCompletion,
-  juniorsTodayET, nextTuesday, recentTuesdays, groupTasks, groupRoles, youthPhotoUrl,
+  juniorsTodayET, nextTuesday, recentTuesdays, groupTasks, groupRoles, youthPhotoUrl, lineupName, initials,
 } from "@/lib/juniors";
 
 const GOLD = "#f2c230";
@@ -88,6 +88,7 @@ const Lineup = ({ roles, today }: { roles: JuniorsRole[]; today: string }) => {
   const [date, setDate] = useState(nextTuesday(today));
   const [picking, setPicking] = useState<JuniorsRole | null>(null);
   const [search, setSearch] = useState("");
+  const [adultName, setAdultName] = useState("");
 
   const { data: lineup = [] } = useQuery({
     queryKey: ["juniors-lineup-admin", date],
@@ -109,11 +110,18 @@ const Lineup = ({ roles, today }: { roles: JuniorsRole[]; today: string }) => {
   const byRole = useMemo(() => new Map(lineup.map((l) => [l.role_id, l])), [lineup]);
   const refresh = () => { qc.invalidateQueries({ queryKey: ["juniors-lineup-admin", date] }); qc.invalidateQueries({ queryKey: ["juniors-lineup", date] }); };
 
-  const assign = async (role: JuniorsRole, y: Youth) => {
-    const { error } = await tbl("juniors_role_assignments").upsert({ role_id: role.id, session_date: date, registration_id: y.id }, { onConflict: "role_id,session_date" });
+  // A role is held by a youth from the roster OR an adult typed by name (the
+  // head coaches are adults, not registered youth).
+  const assign = async (role: JuniorsRole, y: Youth | null, name?: string) => {
+    const person_name = (name ?? "").trim() || null;
+    if (!y && !person_name) return;
+    const { error } = await tbl("juniors_role_assignments").upsert(
+      { role_id: role.id, session_date: date, registration_id: y?.id ?? null, person_name: y ? null : person_name },
+      { onConflict: "role_id,session_date" },
+    );
     if (error) { toast.error(error.message); return; }
-    setPicking(null); setSearch(""); refresh();
-    toast.success(`${y.child_first_name} — ${role.title}`);
+    setPicking(null); setSearch(""); setAdultName(""); refresh();
+    toast.success(`${y ? y.child_first_name : person_name} — ${role.title}`);
   };
   const clear = async (role: JuniorsRole) => {
     const { data, error } = await tbl("juniors_role_assignments").select("id").eq("role_id", role.id);
@@ -134,7 +142,7 @@ const Lineup = ({ roles, today }: { roles: JuniorsRole[]; today: string }) => {
     if (error) { toast.error(error.message); return; }
     const rows = (data as JuniorsLineupRow[]) ?? [];
     if (!rows.length) { toast.error(`Nothing filled on ${fmtDay(prev)}.`); return; }
-    const { error: upError } = await tbl("juniors_role_assignments").upsert(rows.map((r) => ({ role_id: r.role_id, session_date: date, registration_id: r.registration_id })), { onConflict: "role_id,session_date" });
+    const { error: upError } = await tbl("juniors_role_assignments").upsert(rows.map((r) => ({ role_id: r.role_id, session_date: date, registration_id: r.registration_id, person_name: r.person_name })), { onConflict: "role_id,session_date" });
     if (upError) { toast.error(upError.message); return; }
     refresh(); toast.success(`Copied ${rows.length} from ${fmtDay(prev)}.`);
   };
@@ -163,11 +171,11 @@ const Lineup = ({ roles, today }: { roles: JuniorsRole[]; today: string }) => {
                 return (
                   <div key={r.id} className={`rounded-xl border p-3 flex items-center gap-3 ${who ? "border-white/15 bg-white/[0.05]" : "border-dashed border-white/20"}`}>
                     <div className="w-11 h-11 rounded-full overflow-hidden bg-white/10 shrink-0 flex items-center justify-center">
-                      {who && youthPhotoUrl(who.child_headshot_url) ? <img src={youthPhotoUrl(who.child_headshot_url)!} alt="" className="w-full h-full object-cover" /> : <Users className="w-5 h-5 text-white/25" />}
+                      {who && youthPhotoUrl(who.child_headshot_url) ? <img src={youthPhotoUrl(who.child_headshot_url)!} alt="" className="w-full h-full object-cover" /> : who ? <span className="text-xs font-black text-white/70">{initials(lineupName(who))}</span> : <Users className="w-5 h-5 text-white/25" />}
                     </div>
                     <div className="min-w-0 flex-1">
                       <p className="text-[11px] uppercase tracking-wide text-white/45 font-semibold">{r.title}{r.location ? ` · ${r.location}` : ""}</p>
-                      <p className={`font-bold truncate ${who ? "" : "text-white/30"}`}>{who ? `${who.child_first_name} ${who.child_last_name}` : "Open"}</p>
+                      <p className={`font-bold truncate ${who ? "" : "text-white/30"}`}>{who ? lineupName(who) : "Open"}</p>
                     </div>
                     <div className="flex gap-1">
                       <Button size="sm" variant="ghost" className="h-8 px-2 text-white/60 hover:text-white" onClick={() => { setPicking(r); setSearch(""); }}>{who ? "Change" : "Pick"}</Button>
@@ -189,9 +197,17 @@ const Lineup = ({ roles, today }: { roles: JuniorsRole[]; today: string }) => {
               <p className="font-bold text-lg">{picking.title}</p>
             </div>
             <div className="p-4 space-y-3">
+              {/* An adult coach: type the name. */}
+              <div className="flex items-center gap-2">
+                <Input value={adultName} onChange={(e) => setAdultName(e.target.value)} autoFocus={picking.group_label === "Coaching"}
+                  onKeyDown={(e) => { if (e.key === "Enter") assign(picking, null, adultName); }}
+                  placeholder="Type a coach's name (an adult)…" className="h-10 bg-neutral-900 border-neutral-700 text-white" />
+                <Button onClick={() => assign(picking, null, adultName)} disabled={!adultName.trim()} className="h-10 text-white font-bold" style={{ backgroundColor: NLA_RED }}>Assign</Button>
+              </div>
+              <p className="text-[11px] uppercase tracking-wider text-white/35 pt-1">or a youth from the roster</p>
               <div className="relative">
                 <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-white/30" />
-                <Input value={search} onChange={(e) => setSearch(e.target.value)} autoFocus placeholder="Search the roster…" className="pl-9 h-10 bg-neutral-900 border-neutral-700 text-white" />
+                <Input value={search} onChange={(e) => setSearch(e.target.value)} autoFocus={picking.group_label !== "Coaching"} placeholder="Search the roster…" className="pl-9 h-10 bg-neutral-900 border-neutral-700 text-white" />
               </div>
               <div className="max-h-72 overflow-y-auto space-y-1">
                 {matches.map((y) => (
@@ -419,7 +435,7 @@ const History = ({ roles, tasks, today }: { roles: JuniorsRole[]; tasks: Juniors
                   {done === 0 ? "No setup recorded" : done >= activeTasks ? <>All set{last && ` by ${last.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", timeZone: "America/New_York" })}`}<Check className="inline w-3 h-3 ml-1" /></> : `${done} of ${activeTasks} done`}
                 </span>
                 <p className="text-xs text-white/45 flex-1 min-w-[200px]">
-                  {h?.lineup.length ? h.lineup.map((l) => `${roleById.get(l.role_id)?.title ?? "Role"}: ${l.child_first_name}`).join(" · ") : "No line-up"}
+                  {h?.lineup.length ? h.lineup.map((l) => `${roleById.get(l.role_id)?.title ?? "Role"}: ${lineupName(l)}`).join(" · ") : "No line-up"}
                 </p>
               </div>
             </CardContent>

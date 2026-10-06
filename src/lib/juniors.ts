@@ -16,11 +16,20 @@ export interface JuniorsRole {
 
 export interface JuniorsLineupRow {
   role_id: string;
-  registration_id: string;
-  child_first_name: string;
-  child_last_name: string;
+  /** A registered youth, or null when an adult was typed by name. */
+  registration_id: string | null;
+  person_name: string | null;
+  child_first_name: string | null;
+  child_last_name: string | null;
   child_headshot_url: string | null;
 }
+
+/** The name on a line-up card: the typed adult, or the youth's full name. */
+export const lineupName = (l: Pick<JuniorsLineupRow, "person_name" | "child_first_name" | "child_last_name">) =>
+  (l.person_name ?? "").trim() || `${l.child_first_name ?? ""} ${l.child_last_name ?? ""}`.trim();
+
+/** Initials for a card without a photo. */
+export const initials = (name: string) => name.split(/\s+/).filter(Boolean).slice(0, 2).map((w) => w[0]!.toUpperCase()).join("");
 
 export interface JuniorsCategory {
   id: string;

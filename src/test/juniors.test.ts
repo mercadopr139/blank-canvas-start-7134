@@ -1,5 +1,17 @@
 import { describe, it, expect } from "vitest";
-import { isTuesday, nextTuesday, recentTuesdays, orderTasks, groupTasks, groupRoles, type JuniorsTask } from "@/lib/juniors";
+import { isTuesday, nextTuesday, recentTuesdays, orderTasks, groupTasks, groupRoles, lineupName, initials, type JuniorsTask } from "@/lib/juniors";
+
+describe("Juniors line-up names", () => {
+  it("prefers a typed adult, else the youth's full name", () => {
+    expect(lineupName({ person_name: "Coach Rob", child_first_name: null, child_last_name: null })).toBe("Coach Rob");
+    expect(lineupName({ person_name: null, child_first_name: "Luka", child_last_name: "Mercado" })).toBe("Luka Mercado");
+    expect(lineupName({ person_name: "  ", child_first_name: "Luka", child_last_name: "Mercado" })).toBe("Luka Mercado");
+  });
+  it("makes initials", () => {
+    expect(initials("Josh Mercado")).toBe("JM");
+    expect(initials("Chrissy")).toBe("C");
+  });
+});
 
 const task = (id: string, category_id: string, sort_order: number, starred = false): JuniorsTask =>
   ({ id, category_id, title: id, details: null, photo_url: null, starred, sort_order, is_active: true });
