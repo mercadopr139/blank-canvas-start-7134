@@ -35,6 +35,7 @@ export interface JuniorsCategory {
   id: string;
   title: string;
   photo_url: string | null;
+  thumb_url?: string | null;
   sort_order: number;
   is_active: boolean;
 }
@@ -45,6 +46,8 @@ export interface JuniorsTask {
   title: string;
   details: string | null;
   photo_url: string | null;
+  /** A small copy for lists; the board falls back to photo_url for older rows. */
+  thumb_url?: string | null;
   starred: boolean;
   sort_order: number;
   is_active: boolean;

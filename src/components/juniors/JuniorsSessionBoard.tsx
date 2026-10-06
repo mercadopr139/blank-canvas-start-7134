@@ -255,7 +255,7 @@ const JuniorsSessionBoard = ({ open = true, onClose, standalone = false }: { ope
                           </div>
                           {t.photo_url && (
                             <button onClick={() => setPhoto({ url: t.photo_url!, title: t.title })} className="w-10 h-10 rounded-lg overflow-hidden shrink-0 ring-1 ring-white/15 hover:ring-white/40">
-                              <img src={t.photo_url} alt="" className="w-full h-full object-cover" />
+                              <img src={t.thumb_url ?? t.photo_url} alt="" loading="lazy" decoding="async" className="w-full h-full object-cover" />
                             </button>
                           )}
                         </div>

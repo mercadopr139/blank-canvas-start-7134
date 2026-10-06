@@ -22,6 +22,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { Star, Plus, Trash2, ArrowUp, ArrowDown, Camera, X, Loader2, GripVertical } from "lucide-react";
 import { type JuniorsCategory, type JuniorsTask, placeTask } from "@/lib/juniors";
+import { resizePhoto } from "@/lib/imageResize";
 
 const GOLD = "#f2c230";
 const NLA_RED = "#bf0f3e";
@@ -118,29 +119,78 @@ const JuniorsChecklistEditor = ({ categories, tasks, onChange }: { categories: J
     await tbl("juniors_categories").update({ sort_order: a.sort_order }).eq("id", b.id);
     onChange();
   };
+  // Every photo is shrunk in the browser first: a 1600 px JPEG for the pop-up
+  // and a 240 px thumbnail for the list. A phone original is 5 MB; these two
+  // together are under 300 KB.
+  const storePhoto = async (table: string, id: string, source: Blob): Promise<{ photo_url: string; thumb_url: string }> => {
+    const { full, thumb } = await resizePhoto(source);
+    const base = `juniors/${table === "juniors_tasks" ? "task" : "category"}_${id}_${Date.now()}`;
+    const bucket = supabase.storage.from("site-images");
+    const up = async (path: string, blob: Blob) => {
+      const { error } = await bucket.upload(path, blob, { upsert: true, contentType: "image/jpeg" });
+      if (error) throw new Error(error.message);
+      return bucket.getPublicUrl(path).data.publicUrl;
+    };
+    const [photo_url, thumb_url] = await Promise.all([up(`${base}_full.jpg`, full), up(`${base}_thumb.jpg`, thumb)]);
+    return { photo_url, thumb_url };
+  };
   const upload = async (table: string, id: string, file: File) => {
     setUploading(id);
-    const ext = (file.name.split(".").pop() || "jpg").toLowerCase();
-    const path = `juniors/${table === "juniors_tasks" ? "task" : "category"}_${id}_${Date.now()}.${ext}`;
-    const { error } = await supabase.storage.from("site-images").upload(path, file, { upsert: true, contentType: file.type || undefined });
-    if (error) { setUploading(null); toast.error(error.message); return; }
-    const url = supabase.storage.from("site-images").getPublicUrl(path).data.publicUrl;
-    await patch(table, id, { photo_url: url });
-    setUploading(null);
-    toast.success("Photo added.");
+    try {
+      const urls = await storePhoto(table, id, file);
+      await patch(table, id, urls);
+      toast.success("Photo added.");
+    } catch (e) {
+      toast.error((e as Error).message);
+    } finally {
+      setUploading(null);
+    }
+  };
+  // Photos uploaded before shrinking existed: fetch each original, shrink it,
+  // store the two sizes, and point the row at them.
+  const [shrinking, setShrinking] = useState(false);
+  const pending = [...tasks.map((t) => ({ table: "juniors_tasks", row: t })), ...categories.map((c) => ({ table: "juniors_categories", row: c }))]
+    .filter(({ row }) => row.photo_url && !row.thumb_url);
+  const shrinkExisting = async () => {
+    setShrinking(true);
+    let done = 0;
+    try {
+      for (const { table, row } of pending) {
+        const res = await fetch(row.photo_url!);
+        if (!res.ok) throw new Error(`Couldn't fetch a photo (${res.status}).`);
+        const urls = await storePhoto(table, row.id, await res.blob());
+        const { error } = await tbl(table).update(urls).eq("id", row.id);
+        if (error) throw new Error(error.message);
+        done++;
+      }
+      toast.success(`Shrunk ${done} photo${done === 1 ? "" : "s"}.`);
+    } catch (e) {
+      toast.error(`${(e as Error).message} (${done} done)`);
+    } finally {
+      setShrinking(false);
+      onChange();
+    }
   };
 
-  const PhotoButton = ({ table, row }: { table: string; row: { id: string; photo_url: string | null } }) => (
+  const PhotoButton = ({ table, row }: { table: string; row: { id: string; photo_url: string | null; thumb_url?: string | null } }) => (
     <label className="inline-flex items-center gap-1 text-xs text-white/50 hover:text-white cursor-pointer" title={row.photo_url ? "Replace photo" : "Add a photo of the proper set-up"}>
-      {uploading === row.id ? <Loader2 className="w-4 h-4 animate-spin" /> : row.photo_url ? <img src={row.photo_url} alt="" className="w-8 h-8 rounded object-cover ring-1 ring-white/20" /> : <Camera className="w-4 h-4" />}
+      {uploading === row.id ? <Loader2 className="w-4 h-4 animate-spin" /> : row.photo_url ? <img src={row.thumb_url ?? row.photo_url} alt="" loading="lazy" className="w-8 h-8 rounded object-cover ring-1 ring-white/20" /> : <Camera className="w-4 h-4" />}
       <input type="file" accept="image/*" capture="environment" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) upload(table, row.id, f); e.currentTarget.value = ""; }} />
-      {row.photo_url && <button type="button" className="text-white/30 hover:text-rose-300" title="Remove photo" onClick={(e) => { e.preventDefault(); patch(table, row.id, { photo_url: null }); }}><X className="w-3 h-3" /></button>}
+      {row.photo_url && <button type="button" className="text-white/30 hover:text-rose-300" title="Remove photo" onClick={(e) => { e.preventDefault(); patch(table, row.id, { photo_url: null, thumb_url: null }); }}><X className="w-3 h-3" /></button>}
     </label>
   );
 
   return (
     <div className="space-y-4">
       <p className="text-xs text-white/40">Drag a task by its handle to reorder it or move it to another category. Starred tasks sit at the top of their category on the board. A photo shows the kids the proper set-up. The switch hides a task without deleting it.</p>
+      {pending.length > 0 && (
+        <div className="flex items-center gap-3 rounded-lg border border-amber-400/30 bg-amber-500/10 px-3 py-2 text-sm">
+          <span className="text-amber-200">{pending.length} photo{pending.length === 1 ? " is" : "s are"} still full phone size and slow the board down.</span>
+          <Button size="sm" onClick={shrinkExisting} disabled={shrinking} className="ml-auto h-8 bg-amber-500 hover:bg-amber-400 text-black font-bold">
+            {shrinking ? <Loader2 className="w-4 h-4 animate-spin mr-1.5" /> : null}{shrinking ? "Shrinking…" : "Shrink photos"}
+          </Button>
+        </div>
+      )}
       <DndContext sensors={sensors} collisionDetection={pointerWithin} onDragStart={onDragStart} onDragOver={onDragOver} onDragEnd={onDragEnd} onDragCancel={() => setDragging(null)}>
         {sortedCats.map((c) => {
           const ts = inCat(local, c.id);
