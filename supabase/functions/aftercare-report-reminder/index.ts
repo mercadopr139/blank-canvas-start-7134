@@ -32,7 +32,8 @@ const FIRST_SESSION = "2026-10-06";
 export type Lab = "smile" | "life";
 export const LABS: Record<Lab, { name: string; coach: string; to: string; colour: string; emoji: string }> = {
   smile: { name: "Smile Lab", coach: "Jaime", to: "jaime@nolimitsboxingacademy.org", colour: "#0d9488", emoji: "🦷" },
-  life: { name: "Life Lab", coach: "Chrissy", to: "chrissycasiello@nolimitsboxingacademy.org", colour: "#d97706", emoji: "😊" },
+  // Life Lab is rose on the Intelligence page; a deeper rose here so white text reads.
+  life: { name: "Life Lab", coach: "Chrissy", to: "chrissycasiello@nolimitsboxingacademy.org", colour: "#e11d48", emoji: "😊" },
 };
 const LAB_PREFIX: Record<Lab, string> = { smile: "Smile Lab — ", life: "Life Lab — " };
 
