@@ -1,4 +1,6 @@
+import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
+import PhotoLightbox from "@/components/photos/PhotoLightbox";
 import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
 import { Pencil } from "lucide-react";
@@ -20,6 +22,8 @@ const hasContent = (s: SessionRow) =>
   !!(s.caring_note?.trim() || s.sharing_note?.trim() || (s.highlights?.length) || (s.photos?.length));
 
 const SmileLabJournalReview = ({ onEdit }: { onEdit?: (date: string) => void }) => {
+  // The photos of one entry, open in the viewer, stepped through with the arrows.
+  const [gallery, setGallery] = useState<{ title: string; photos: string[]; index: number } | null>(null);
   const { data: sessions = [], isLoading } = useQuery({
     queryKey: ["smile-lab-journal"],
     queryFn: async (): Promise<SessionRow[]> => {
@@ -83,14 +87,25 @@ const SmileLabJournalReview = ({ onEdit }: { onEdit?: (date: string) => void }) 
           {s.photos?.length > 0 && (
             <div className="mt-3 flex flex-wrap gap-2">
               {s.photos.map((url, i) => (
-                <a key={i} href={url} target="_blank" rel="noopener noreferrer" className="block h-20 w-20 rounded-lg overflow-hidden border border-white/10">
-                  <img src={url} alt="" className="w-full h-full object-cover" />
-                </a>
+                <button key={i} type="button"
+                  onClick={() => setGallery({ title: format(new Date(s.session_date + "T00:00:00"), "EEEE, MMMM d, yyyy"), photos: s.photos, index: i })}
+                  className="block h-20 w-20 rounded-lg overflow-hidden border border-white/10 hover:border-white/40 focus:outline-none focus:ring-2 focus:ring-white/50"
+                  aria-label={`Open photo ${i + 1} of ${s.photos.length}`}>
+                  <img src={url} alt="" loading="lazy" className="w-full h-full object-cover" />
+                </button>
               ))}
             </div>
           )}
         </div>
       ))}
+
+      {gallery && (
+        <PhotoLightbox
+          photos={gallery.photos.map((url) => ({ url, title: gallery.title }))}
+          index={gallery.index}
+          onChange={(i) => setGallery(i == null ? null : { ...gallery, index: i })}
+        />
+      )}
     </div>
   );
 };
