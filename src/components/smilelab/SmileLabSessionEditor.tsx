@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { normalizeImageForUpload } from "@/lib/imageUpload";
+import { resizePhoto, thumbOf } from "@/lib/imageResize";
 import { toast } from "sonner";
 import { ChevronLeft, ChevronRight, Users, ImagePlus, Trash2, Loader2 } from "lucide-react";
 
@@ -45,13 +46,21 @@ const textToArray = (t: string): string[] =>
 type Lab = "smile" | "life";
 const isLifePhoto = (url: string) => url.includes("/smile-lab-photos/life/");
 
-async function uploadPhoto(file: File, lab: Lab): Promise<string> {
-  const normalized = await normalizeImageForUpload(file);
-  const ext = (normalized.name.split(".").pop() || "jpg").toLowerCase();
-  const path = `${lab}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
-  const { error } = await supabase.storage.from("smile-lab-photos").upload(path, normalized, { upsert: true, contentType: normalized.type || undefined });
-  if (error) throw error;
-  return supabase.storage.from("smile-lab-photos").getPublicUrl(path).data.publicUrl;
+// A phone photo is 3–6 MB. After the HEIC conversion it is shrunk to a
+// 1600 px JPEG for the viewer and a 320 px thumbnail for the lists, stored
+// side by side as …_full.jpg and …_thumb.jpg. The session keeps the full URL;
+// thumbOf() derives the other.
+export async function uploadPhoto(source: Blob, lab: Lab): Promise<string> {
+  const normalized = source instanceof File ? await normalizeImageForUpload(source) : source;
+  const { full, thumb } = await resizePhoto(normalized, { thumbPx: 320 });
+  const base = `${lab}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+  const bucket = supabase.storage.from("smile-lab-photos");
+  const put = async (path: string, blob: Blob) => {
+    const { error } = await bucket.upload(path, blob, { upsert: true, contentType: "image/jpeg" });
+    if (error) throw error;
+  };
+  await Promise.all([put(`${base}_full.jpg`, full), put(`${base}_thumb.jpg`, thumb)]);
+  return bucket.getPublicUrl(`${base}_full.jpg`).data.publicUrl;
 }
 
 interface Attendee { child_first_name: string; child_last_name: string }
@@ -248,7 +257,7 @@ const SmileLabSessionEditor = ({ date, onDateChange, showDateNav = true, onSaved
               <div className="grid grid-cols-3 gap-2">
                 {list.map((url) => (
                   <div key={url} className="relative group aspect-square rounded-lg overflow-hidden border border-white/10">
-                    <img src={url} alt="" className="w-full h-full object-cover" />
+                    <img src={thumbOf(url)} alt="" loading="lazy" className="w-full h-full object-cover" />
                     <button onClick={() => removePhoto(url)}
                       className="absolute top-1 right-1 h-7 w-7 grid place-items-center rounded-md bg-black/60 hover:bg-red-600/80 opacity-0 group-hover:opacity-100 transition-opacity">
                       <Trash2 className="h-3.5 w-3.5" />

@@ -10,6 +10,8 @@ import { Button } from "@/components/ui/button";
 
 export interface LightboxPhoto {
   url: string;
+  /** A small copy for the filmstrip; the full picture is used when absent. */
+  thumb?: string;
   /** Shown above the picture when set. */
   title?: string;
 }
@@ -67,8 +69,9 @@ const PhotoLightbox = ({ photos, index, onChange }: Props) => {
   return (
     <div className="fixed inset-0 z-[80] bg-black/90 backdrop-blur-sm flex items-center justify-center p-3 md:p-8 animate-in fade-in duration-150 select-none"
       onClick={close} onTouchStart={onTouchStart} onTouchEnd={onTouchEnd} role="dialog" aria-label="Photo viewer">
-      <div className="relative max-w-[94vw] max-h-[94vh] rounded-2xl bg-neutral-950 border border-white/15 shadow-2xl overflow-hidden flex flex-col" onClick={(e) => e.stopPropagation()}>
-        <div className="flex items-center justify-between gap-3 px-4 py-2.5 border-b border-white/10 shrink-0">
+      <div className="relative w-auto max-w-[94vw] h-[94vh] rounded-2xl bg-neutral-950 border border-white/15 shadow-2xl overflow-hidden flex flex-col" onClick={(e) => e.stopPropagation()}>
+        {/* The title bar is its own row above the picture; the picture can never draw over it. */}
+        <div className="relative z-10 flex items-center justify-between gap-3 px-4 py-2.5 border-b border-white/10 shrink-0 bg-neutral-950">
           <p className="font-bold text-sm md:text-base truncate text-white">
             {photo.title ?? "Photo"}
             {many && <span className="ml-2 text-white/45 font-normal tabular-nums">{i + 1} of {photos.length}</span>}
@@ -77,8 +80,8 @@ const PhotoLightbox = ({ photos, index, onChange }: Props) => {
             <X className="w-4 h-4 mr-1" /> Close
           </Button>
         </div>
-        <div className="relative min-h-0 flex items-center justify-center bg-black">
-          <img key={photo.url} src={photo.url} alt={photo.title ?? ""} className="block object-contain animate-in fade-in duration-150" style={{ maxWidth: "94vw", maxHeight: "calc(94vh - 56px)" }} />
+        <div className="relative flex-1 min-h-0 flex items-center justify-center bg-black">
+          <img key={photo.url} src={photo.url} alt={photo.title ?? ""} className="block max-w-full max-h-full object-contain animate-in fade-in duration-150" />
           {many && (
             <>
               <button onClick={(e) => { e.stopPropagation(); prev(); }} aria-label="Previous photo"
@@ -97,7 +100,7 @@ const PhotoLightbox = ({ photos, index, onChange }: Props) => {
             {photos.map((p, n) => (
               <button key={p.url + n} onClick={() => onChange(n)} aria-label={`Photo ${n + 1}`}
                 className={`h-11 w-11 shrink-0 rounded-md overflow-hidden ring-2 transition-all ${n === i ? "ring-white" : "ring-transparent opacity-60 hover:opacity-100"}`}>
-                <img src={p.url} alt="" loading="lazy" className="w-full h-full object-cover" />
+                <img src={p.thumb ?? p.url} alt="" loading="lazy" className="w-full h-full object-cover" />
               </button>
             ))}
           </div>

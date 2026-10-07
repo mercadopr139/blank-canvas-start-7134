@@ -25,6 +25,16 @@ const draw = async (bitmap: ImageBitmap, maxPx: number, quality: number): Promis
     canvas.toBlob((b) => (b ? resolve(b) : reject(new Error("Couldn't encode the photo."))), "image/jpeg", quality));
 };
 
+/**
+ * The thumbnail that sits beside a full photo stored by `storePair`-style
+ * uploads: `…_full.jpg` → `…_thumb.jpg`. Older photos without the suffix
+ * have no thumbnail, so the full picture is returned.
+ */
+export const thumbOf = (url: string) => (url.endsWith("_full.jpg") ? url.slice(0, -"_full.jpg".length) + "_thumb.jpg" : url);
+
+/** Was this photo stored shrunk, with a thumbnail beside it? */
+export const isShrunk = (url: string) => url.endsWith("_full.jpg");
+
 /** Resize a photo (File or Blob) into a full-size JPEG and a thumbnail. Honours camera orientation. */
 export const resizePhoto = async (source: Blob, { fullPx = 1600, thumbPx = 240, quality = 0.82 } = {}): Promise<ResizedPhoto> => {
   const bitmap = await createImageBitmap(source, { imageOrientation: "from-image" });
