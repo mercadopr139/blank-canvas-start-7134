@@ -20,6 +20,7 @@ import {
 } from "lucide-react";
 import { getCurrentAttendanceYear } from "@/lib/programYear";
 import JuniorsChecklistEditor from "@/components/juniors/JuniorsChecklistEditor";
+import JuniorsSessionBoard from "@/components/juniors/JuniorsSessionBoard";
 import {
   type JuniorsRole, type JuniorsLineupRow, type JuniorsCategory, type JuniorsTask, type JuniorsCompletion,
   juniorsTodayET, nextTuesday, recentTuesdays, groupTasks, groupRoles, youthPhotoUrl, lineupName, initials,
@@ -50,6 +51,7 @@ const fmtDay = (ymd: string) => new Date(`${ymd}T12:00:00`).toLocaleDateString("
 const AdminJuniorsSession = () => {
   const qc = useQueryClient();
   const today = juniorsTodayET();
+  const [boardOpen, setBoardOpen] = useState(false);
 
   const { data: roles = [] } = useQuery({ queryKey: ["juniors-roles-admin"], queryFn: async () => { const { data, error } = await tbl("juniors_roles").select("*").order("sort_order", { ascending: true }); if (error) throw new Error(error.message); return (data as JuniorsRole[]) ?? []; } });
   const { data: categories = [] } = useQuery({ queryKey: ["juniors-categories-admin"], queryFn: async () => { const { data, error } = await tbl("juniors_categories").select("*").order("sort_order", { ascending: true }); if (error) throw new Error(error.message); return (data as JuniorsCategory[]) ?? []; } });
@@ -63,14 +65,17 @@ const AdminJuniorsSession = () => {
           <h2 className="text-2xl font-bold">Juniors Session</h2>
           <p className="text-neutral-400 text-sm mt-1">Tuesday's line-up and the setup checklist the senior boxers tick off on the Gym Board.</p>
         </div>
-        <Button variant="outline" onClick={() => window.open("/juniors-session", "_blank")} className="bg-transparent border-neutral-700 text-neutral-300 hover:text-white">
-          <Monitor className="w-4 h-4 mr-1.5" /> Open the board
+        <Button variant="outline" onClick={() => setBoardOpen(true)} className="bg-transparent border-neutral-700 text-neutral-300 hover:text-white">
+          <Monitor className="w-4 h-4 mr-1.5" /> Open Gym Board View
         </Button>
       </div>
 
-      <Tabs defaultValue="lineup">
+      {/* The board exactly as the kids see it, over this page; Done brings the edits back. */}
+      <JuniorsSessionBoard open={boardOpen} onClose={() => setBoardOpen(false)} />
+
+      <Tabs defaultValue="checklist">
         <TabsList className="bg-white/5 border border-white/10 gap-1">
-          {[["lineup", "Line-up"], ["checklist", "Checklist"], ["roles", "Roles"], ["history", "History"]].map(([v, l]) => (
+          {[["checklist", "Checklist"], ["lineup", "Line-up"], ["roles", "Roles"], ["history", "History"]].map(([v, l]) => (
             <TabsTrigger key={v} value={v} className="text-white/70 hover:text-white data-[state=active]:bg-[#bf0f3e] data-[state=active]:text-white font-semibold">{l}</TabsTrigger>
           ))}
         </TabsList>

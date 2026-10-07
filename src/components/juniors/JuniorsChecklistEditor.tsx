@@ -20,7 +20,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
-import { Star, Plus, Trash2, ArrowUp, ArrowDown, Camera, X, Loader2, GripVertical } from "lucide-react";
+import { Star, Plus, Trash2, ArrowUp, ArrowDown, Camera, X, Loader2, GripVertical, RefreshCw } from "lucide-react";
 import { type JuniorsCategory, type JuniorsTask, placeTask } from "@/lib/juniors";
 import { resizePhoto } from "@/lib/imageResize";
 
@@ -40,6 +40,7 @@ const JuniorsChecklistEditor = ({ categories, tasks, onChange }: { categories: J
   const [newCat, setNewCat] = useState("");
   const [newTask, setNewTask] = useState<Record<string, string>>({});
   const [uploading, setUploading] = useState<string | null>(null);
+  const [preview, setPreview] = useState<{ table: string; row: { id: string; photo_url: string | null; thumb_url?: string | null }; title: string } | null>(null);
   // The list as it is being dragged; follows the server between drags.
   const [local, setLocal] = useState<JuniorsTask[]>(tasks);
   const [dragging, setDragging] = useState<JuniorsTask | null>(null);
@@ -172,12 +173,20 @@ const JuniorsChecklistEditor = ({ categories, tasks, onChange }: { categories: J
     }
   };
 
-  const PhotoButton = ({ table, row }: { table: string; row: { id: string; photo_url: string | null; thumb_url?: string | null } }) => (
-    <label className="inline-flex items-center gap-1 text-xs text-white/50 hover:text-white cursor-pointer" title={row.photo_url ? "Replace photo" : "Add a photo of the proper set-up"}>
-      {uploading === row.id ? <Loader2 className="w-4 h-4 animate-spin" /> : row.photo_url ? <img src={row.thumb_url ?? row.photo_url} alt="" loading="lazy" className="w-8 h-8 rounded object-cover ring-1 ring-white/20" /> : <Camera className="w-4 h-4" />}
-      <input type="file" accept="image/*" capture="environment" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) upload(table, row.id, f); e.currentTarget.value = ""; }} />
-      {row.photo_url && <button type="button" className="text-white/30 hover:text-rose-300" title="Remove photo" onClick={(e) => { e.preventDefault(); patch(table, row.id, { photo_url: null, thumb_url: null }); }}><X className="w-3 h-3" /></button>}
-    </label>
+  // No photo yet: the camera opens the picker. A photo: tap it to see it big,
+  // and from there replace or remove it.
+  const PhotoButton = ({ table, row, title }: { table: string; row: { id: string; photo_url: string | null; thumb_url?: string | null }; title: string }) => (
+    uploading === row.id ? <Loader2 className="w-4 h-4 animate-spin text-white/50" />
+    : row.photo_url ? (
+      <button type="button" onClick={() => setPreview({ table, row, title })} title="See the photo" className="shrink-0 rounded ring-1 ring-white/20 hover:ring-white/60 overflow-hidden">
+        <img src={row.thumb_url ?? row.photo_url} alt="" loading="lazy" className="w-9 h-9 object-cover" />
+      </button>
+    ) : (
+      <label className="inline-flex items-center text-white/50 hover:text-white cursor-pointer" title="Add a photo of the proper set-up">
+        <Camera className="w-4 h-4" />
+        <input type="file" accept="image/*" capture="environment" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) upload(table, row.id, f); e.currentTarget.value = ""; }} />
+      </label>
+    )
   );
 
   return (
@@ -200,7 +209,7 @@ const JuniorsChecklistEditor = ({ categories, tasks, onChange }: { categories: J
                 <div className="flex items-center gap-2">
                   <Input defaultValue={c.title} onBlur={(e) => e.target.value.trim() && e.target.value !== c.title && patch("juniors_categories", c.id, { title: e.target.value.trim() })}
                     className="h-9 bg-transparent border-transparent hover:border-neutral-700 focus:border-neutral-600 text-white font-black uppercase tracking-wider max-w-xs" />
-                  <PhotoButton table="juniors_categories" row={c} />
+                  <PhotoButton table="juniors_categories" row={c} title={c.title} />
                   <div className="ml-auto flex items-center gap-1">
                     <Button size="icon" variant="ghost" className="h-8 w-8 text-white/40 hover:text-white" onClick={() => moveCat(c.id, -1)}><ArrowUp className="w-4 h-4" /></Button>
                     <Button size="icon" variant="ghost" className="h-8 w-8 text-white/40 hover:text-white" onClick={() => moveCat(c.id, 1)}><ArrowDown className="w-4 h-4" /></Button>
@@ -222,7 +231,7 @@ const JuniorsChecklistEditor = ({ categories, tasks, onChange }: { categories: J
                             onBlur={(e) => (e.target.value.trim() || null) !== (t.details ?? null) && patch("juniors_tasks", t.id, { details: e.target.value.trim() || null })}
                             className="mt-0.5 min-h-0 h-7 py-1 bg-transparent border-transparent hover:border-neutral-700 focus:border-neutral-600 text-white/60 text-xs resize-none" />
                         </div>
-                        <PhotoButton table="juniors_tasks" row={t} />
+                        <PhotoButton table="juniors_tasks" row={t} title={t.title} />
                         <Switch checked={t.is_active} onCheckedChange={(v) => patch("juniors_tasks", t.id, { is_active: v })} />
                         <Button size="icon" variant="ghost" className="h-7 w-7 text-white/30 hover:text-rose-300" onClick={() => remove("juniors_tasks", t.id, t.title)}><Trash2 className="w-3.5 h-3.5" /></Button>
                       </TaskRow>
@@ -248,6 +257,34 @@ const JuniorsChecklistEditor = ({ categories, tasks, onChange }: { categories: J
           )}
         </DragOverlay>
       </DndContext>
+      {/* The photo, big, with what you can do to it. */}
+      {preview && (
+        <div className="fixed inset-0 z-[70] bg-black/85 backdrop-blur-sm flex items-center justify-center p-4 md:p-8 animate-in fade-in duration-150" onClick={() => setPreview(null)}>
+          <div className="relative max-w-[92vw] max-h-[92vh] rounded-2xl bg-neutral-950 border border-white/15 shadow-2xl overflow-hidden flex flex-col" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between gap-3 px-4 py-3 border-b border-white/10 shrink-0">
+              <p className="font-bold text-base md:text-lg truncate">{preview.title}</p>
+              <div className="flex items-center gap-2 shrink-0">
+                <label className="inline-flex items-center h-9 px-3 rounded-md border border-neutral-700 text-sm text-neutral-300 hover:text-white cursor-pointer">
+                  <RefreshCw className="w-4 h-4 mr-1.5" /> Replace
+                  <input type="file" accept="image/*" capture="environment" className="hidden"
+                    onChange={(e) => { const f = e.target.files?.[0]; if (f) { upload(preview.table, preview.row.id, f); setPreview(null); } e.currentTarget.value = ""; }} />
+                </label>
+                <Button variant="ghost" className="h-9 text-white/60 hover:text-rose-300"
+                  onClick={() => { if (window.confirm("Remove this photo?")) { patch(preview.table, preview.row.id, { photo_url: null, thumb_url: null }); setPreview(null); } }}>
+                  <Trash2 className="w-4 h-4 mr-1.5" /> Remove
+                </Button>
+                <Button onClick={() => setPreview(null)} className="h-9 px-4 font-bold text-white" style={{ backgroundColor: NLA_RED }}>
+                  <X className="w-4 h-4 mr-1.5" /> Close
+                </Button>
+              </div>
+            </div>
+            <div className="min-h-0 flex items-center justify-center bg-black">
+              <img src={preview.row.photo_url ?? ""} alt={preview.title} className="block object-contain" style={{ maxWidth: "92vw", maxHeight: "calc(92vh - 64px)" }} />
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="flex items-center gap-2">
         <Input value={newCat} onChange={(e) => setNewCat(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") addCategory(); }} placeholder="New category…" className="h-9 max-w-xs bg-neutral-900 border-neutral-700 text-white" />
         <Button onClick={addCategory} disabled={!newCat.trim()} className="h-9 text-white font-bold" style={{ backgroundColor: NLA_RED }}><Plus className="w-4 h-4 mr-1" /> Category</Button>
