@@ -108,20 +108,21 @@ Deno.serve(async (req) => {
     let dry = false;
 
     if (isCron) {
-      // A sample, for seeing what the email looks like: {"sample_to": "<academy address>"}.
+      // A sample, for seeing what the email looks like: {"sample_to": "<academy address>", "sample_lab": "smile" | "life"}.
       // Needs the scheduler's secret; only academy addresses; example dates.
       const body = await req.json().catch(() => ({} as Record<string, unknown>));
       const sampleTo = typeof body?.sample_to === "string" ? body.sample_to.trim().toLowerCase() : "";
       if (sampleTo) {
         if (!sampleTo.endsWith("@nolimitsboxingacademy.org")) return json({ error: "Samples go to academy addresses only." }, 400);
         const resend = new Resend(Deno.env.get("RESEND_API_KEY"));
-        const sample = renderEmail("smile", [
+        const sampleLab: Lab = body?.sample_lab === "life" ? "life" : "smile";
+        const sample = renderEmail(sampleLab, [
           { date: "2026-09-29", missing: ["standout moments"], students: 20 },
           { date: "2026-10-06", missing: ["what we covered", "standout moments"], students: 20 },
         ]);
         const { error: sendError } = await resend.emails.send({ from: FROM, to: [sampleTo], subject: `[SAMPLE] ${sample.subject}`, html: sample.html, text: sample.text });
         if (sendError) throw new Error(`Resend failed: ${sendError.message}`);
-        return json({ sample: true, to: sampleTo });
+        return json({ sample: true, lab: sampleLab, to: sampleTo });
       }
       // Scheduled at 00:00 and 01:00 UTC; keep the run that is 8 PM Eastern.
       const easternHour = Number(new Intl.DateTimeFormat("en-US", { timeZone: "America/New_York", hour: "numeric", hour12: false }).format(new Date()));
