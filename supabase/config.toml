@@ -49,3 +49,6 @@ verify_jwt = false
 
 [functions.aftercare-report-reminder]
 verify_jwt = false
+
+[functions.board-unlock]
+verify_jwt = false
