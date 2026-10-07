@@ -1,4 +1,5 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Sparkles } from "lucide-react";
@@ -11,9 +12,16 @@ import SmileLabGrantReportSheet from "@/components/admin/SmileLabGrantReportShee
 
 const SmileLabJournalTab = () => {
   const queryClient = useQueryClient();
-  const [date, setDate] = useState<string>(todayNY());
+  // The reminder email links here with ?journal=YYYY-MM-DD: open the editor on that date.
+  const [params] = useSearchParams();
+  const fromLink = params.get("journal");
+  const [date, setDate] = useState<string>(fromLink && /^d{4}-d{2}-d{2}$/.test(fromLink) ? fromLink : todayNY());
   const [reportOpen, setReportOpen] = useState(false);
   const topRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (fromLink) setTimeout(() => topRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 300);
+  }, [fromLink]);
 
   const editEntry = (d: string) => {
     setDate(d);
