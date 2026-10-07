@@ -17,7 +17,8 @@ import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } fr
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/contexts/AuthContext";
+import CoachUnlock from "@/components/board/CoachUnlock";
+import { useBoardSession } from "@/hooks/useBoardSession";
 import { Button } from "@/components/ui/button";
 import {
   ArrowLeft, ChevronLeft, ChevronRight, ClipboardList, Dumbbell, Maximize, Minimize, Pencil, Check,
@@ -83,7 +84,8 @@ const StrengthBoard = () => {
   const day = week?.days?.[dayKey];
   const meta = DAYS.find((d) => d.key === dayKey)!;
   // Edit tonight — a signed-in coach fixes the plan where the kids read it.
-  const { isAdmin } = useAuth();
+  const { isAdmin, lock, isBoardSession } = useBoardSession();
+  const [unlockOpen, setUnlockOpen] = useState(false);
   const [editing, setEditing] = useState(false);
   const qc = useQueryClient();
 
@@ -234,10 +236,16 @@ const StrengthBoard = () => {
           >
             {isFullscreen ? <Minimize className="w-5 h-5" /> : <Maximize className="w-5 h-5" />}
           </Button>
+          {!isAdmin && week && day && (
+            <Button variant="outline" onClick={() => setUnlockOpen(true)} className="ml-2 bg-transparent border-white/20 text-white/60 hover:bg-white/5 hover:text-white">
+              <Pencil className="w-4 h-4 mr-1.5" /> Edit tonight
+            </Button>
+          )}
+          <CoachUnlock open={unlockOpen} onClose={() => setUnlockOpen(false)} onUnlocked={() => setEditing(true)} what="edit tonight's workout" />
           {isAdmin && week && day && (
             <Button
               variant="outline"
-              onClick={() => setEditing((e) => !e)}
+              onClick={() => { if (editing && isBoardSession) { setEditing(false); lock(); } else setEditing((e) => !e); }}
               className={
                 editing
                   ? "ml-2 bg-white/10 border-white/30 text-white font-bold"

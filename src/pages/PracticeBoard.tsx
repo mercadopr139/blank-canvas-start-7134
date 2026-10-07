@@ -12,7 +12,8 @@ import { useState, useEffect, useMemo, useRef, useCallback, useLayoutEffect } fr
 import { useNavigate, useSearchParams } from "react-router-dom";
 import nlaLogoWhite from "@/assets/nla-logo-white.png";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useAuth } from "@/contexts/AuthContext";
+import CoachUnlock from "@/components/board/CoachUnlock";
+import { useBoardSession } from "@/hooks/useBoardSession";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -39,7 +40,10 @@ import { DAYS as NBT_DAYS } from "@/lib/nbt";
 const PracticeBoard = () => {
   const navigate = useNavigate();
   const qc = useQueryClient();
-  const { isAdmin } = useAuth();
+  // The TV is never signed in. A coach unlocks the coach-only buttons right
+  // here, and the board signs out again when they are done or go quiet.
+  const { isAdmin, lock, isBoardSession } = useBoardSession();
+  const [unlockOpen, setUnlockOpen] = useState(false);
   const [editing, setEditing] = useState(false);
   // Admin-only override to preview another week; null = follow the live week,
   // so the TV keeps auto-rolling to today's week (recomputed every render).
@@ -620,12 +624,21 @@ const PracticeBoard = () => {
           >
             {isFullscreen ? <Minimize className="w-5 h-5" /> : <Maximize className="w-5 h-5" />}
           </Button>
-          {/* Only a signed-in admin is offered editing. Everyone else — the
-              TV, a kid with the URL — sees a read-only board. */}
+          {/* Edit tonight: a coach signs in on the wall to use it; Done editing
+              signs the board out again. Kids see a read-only board. */}
+          {!isAdmin && week && (
+            <Button
+              variant="outline"
+              onClick={() => setUnlockOpen(true)}
+              className="bg-transparent border-white/20 text-white/60 hover:bg-white/5 hover:text-white"
+            >
+              <Pencil className="w-4 h-4 mr-2" /> Edit tonight
+            </Button>
+          )}
           {isAdmin && week && (
             <Button
               variant="outline"
-              onClick={() => setEditing((e) => !e)}
+              onClick={() => { if (editing && isBoardSession) { setEditing(false); lock(); } else setEditing((e) => !e); }}
               className={
                 editing
                   ? "bg-white/10 border-white/30 text-white font-bold"
@@ -667,6 +680,7 @@ const PracticeBoard = () => {
         </div>
       </header>
 
+      <CoachUnlock open={unlockOpen} onClose={() => setUnlockOpen(false)} onUnlocked={() => setEditing(true)} what="edit tonight's plan" />
       <DailyDutiesBoard open={dutiesOpen} onClose={() => setDutiesOpen(false)} />
       <JuniorsSessionBoard open={juniorsOpen} onClose={() => setJuniorsOpen(false)} />
       <VerseDiscussion day={verseDiscussion} onClose={() => setVerseDiscussion(null)} />
