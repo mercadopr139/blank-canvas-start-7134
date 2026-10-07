@@ -121,6 +121,12 @@ const ProgramWeeklyMoments = ({ program }: { program: ProgramConfig }) => {
       </Card>
 
       {/* Every entry */}
+      <div className="flex items-end justify-between gap-3 pt-1">
+        <div>
+          <p className="font-bold">Saved weeks <span className="text-white/45 font-normal text-sm">· {entries.filter((e) => e.notes.trim()).length}</span></p>
+          <p className="text-xs text-white/45">Every week written so far. Edit opens it in the box above; the trash deletes it.</p>
+        </div>
+      </div>
       <Card className="bg-black/25 border-white/10 text-white">
         <CardContent className="p-0">
           {isLoading ? <p className="p-4 text-white/40 text-sm">Loading…</p>

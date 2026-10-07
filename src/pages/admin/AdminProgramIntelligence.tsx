@@ -103,6 +103,18 @@ const AdminProgramIntelligence = ({ program }: { program: ProgramConfig }) => {
   });
 
   // Weekly Standout Moments whose week touches the period: the report's nuggets.
+  // How many weeks have been written in all, for the jump bar.
+  const { data: savedWeeks = 0 } = useQuery({
+    queryKey: ["program-moments-count", program.key],
+    queryFn: async () => {
+      const { data, error } = await (supabase.from(program.tables.moments as never) as never as {
+        select: (s: string) => { neq: (k: string, v: string) => Promise<{ data: unknown; error: { message: string } | null }> };
+      }).select("id").neq("notes", "");
+      if (error) throw new Error(error.message);
+      return ((data as unknown[]) ?? []).length;
+    },
+  });
+
   const { data: moments = [] } = useQuery({
     queryKey: ["program-moments-period", program.key, from, to],
     enabled: !!program.tables.moments,
@@ -135,6 +147,15 @@ const AdminProgramIntelligence = ({ program }: { program: ProgramConfig }) => {
 
   const pct = (n: number, d: number) => (d ? Math.round((n / d) * 100) : 0);
 
+  // Scroll to a band and flash its edge so the eye lands on it.
+  const jumpTo = (id: string) => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.scrollIntoView({ behavior: "smooth", block: "start" });
+    el.style.boxShadow = `0 0 0 3px ${program.brand.accent}`;
+    window.setTimeout(() => { el.style.boxShadow = ""; }, 1600);
+  };
+
   return (
     <div className="p-4 md:p-8 space-y-6 max-w-6xl mx-auto text-white">
       <div className="flex items-start justify-between gap-4 flex-wrap">
@@ -148,7 +169,24 @@ const AdminProgramIntelligence = ({ program }: { program: ProgramConfig }) => {
       </div>
 
       {/* ── By the numbers ── */}
+      {/* One click to any band of the page; Moments shows how many weeks are written. */}
+      <div className="flex items-center gap-1.5 flex-wrap -mt-2">
+        <span className="text-[10px] uppercase tracking-wider text-white/35 mr-1">Jump to</span>
+        {([
+          ["numbers", "Numbers", null],
+          ["attendance", "Attendance", null],
+          ["moments", "Moments", savedWeeks],
+        ] as const).map(([id, text, count]) => (
+          <button key={id} onClick={() => jumpTo(id)}
+            className="rounded-full border border-white/15 bg-white/5 px-3 py-1 text-xs font-semibold text-white/70 hover:text-white hover:border-white/30 transition-colors">
+            {text}{count != null && <span className="ml-1.5 rounded-full px-1.5 py-px text-[10px] font-black" style={{ backgroundColor: program.brand.accent, color: program.brand.onAccent }}>{count}</span>}
+          </button>
+        ))}
+      </div>
+
+      <div id="numbers" className="scroll-mt-6 rounded-2xl transition-shadow">
       <SectionLabel program={program} tag="By the numbers" title="Reach and who the students are" tone="accent" />
+      </div>
 
       {/* Period */}
       <div className="flex flex-wrap items-center gap-2">
