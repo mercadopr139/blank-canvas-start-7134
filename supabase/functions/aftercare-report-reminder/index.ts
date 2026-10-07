@@ -26,6 +26,8 @@ const corsHeaders = {
 const FROM = "No Limits Academy <joshmercado@nolimitsboxingacademy.org>";
 const JOURNAL_URL = "https://www.nolimitsboxingacademy.org/admin/operations/smile-lab-attendance";
 const LOOKBACK_DAYS = 56; // the last eight Tuesdays
+// Nothing before this date is ever asked for (Josh, 2026-10-07).
+const FIRST_SESSION = "2026-10-06";
 
 export type Lab = "smile" | "life";
 export const LABS: Record<Lab, { name: string; coach: string; to: string; colour: string; emoji: string }> = {
@@ -106,6 +108,21 @@ Deno.serve(async (req) => {
     let dry = false;
 
     if (isCron) {
+      // A sample, for seeing what the email looks like: {"sample_to": "<academy address>"}.
+      // Needs the scheduler's secret; only academy addresses; example dates.
+      const body = await req.json().catch(() => ({} as Record<string, unknown>));
+      const sampleTo = typeof body?.sample_to === "string" ? body.sample_to.trim().toLowerCase() : "";
+      if (sampleTo) {
+        if (!sampleTo.endsWith("@nolimitsboxingacademy.org")) return json({ error: "Samples go to academy addresses only." }, 400);
+        const resend = new Resend(Deno.env.get("RESEND_API_KEY"));
+        const sample = renderEmail("smile", [
+          { date: "2026-09-29", missing: ["standout moments"], students: 20 },
+          { date: "2026-10-06", missing: ["what we covered", "standout moments"], students: 20 },
+        ]);
+        const { error: sendError } = await resend.emails.send({ from: FROM, to: [sampleTo], subject: `[SAMPLE] ${sample.subject}`, html: sample.html, text: sample.text });
+        if (sendError) throw new Error(`Resend failed: ${sendError.message}`);
+        return json({ sample: true, to: sampleTo });
+      }
       // Scheduled at 00:00 and 01:00 UTC; keep the run that is 8 PM Eastern.
       const easternHour = Number(new Intl.DateTimeFormat("en-US", { timeZone: "America/New_York", hour: "numeric", hour12: false }).format(new Date()));
       if (easternHour !== 20) return json({ sent: [], reason: `wrong hour: ${easternHour}` });
@@ -122,7 +139,8 @@ Deno.serve(async (req) => {
 
     const service = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
     const today = todayET();
-    const since = addDays(today, -LOOKBACK_DAYS);
+    const lookback = addDays(today, -LOOKBACK_DAYS);
+    const since = lookback > FIRST_SESSION ? lookback : FIRST_SESSION;
 
     // Session dates that actually happened: aftercare check-ins, up to today.
     const { data: att, error: attError } = await service.from("attendance_records")
