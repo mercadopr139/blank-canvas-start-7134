@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import PhotoLightbox from "@/components/photos/PhotoLightbox";
 import { thumbOf, isShrunk } from "@/lib/imageResize";
-import { uploadPhoto } from "@/components/smilelab/SmileLabSessionEditor";
+import { uploadAftercarePhoto } from "@/lib/aftercarePhotos";
 import { Button } from "@/components/ui/button";
 import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
@@ -45,7 +45,7 @@ const SmileLabJournalReview = ({ onEdit }: { onEdit?: (date: string) => void }) 
           if (isShrunk(url)) { next.push(url); continue; }
           const res = await fetch(url);
           if (!res.ok) throw new Error(`Couldn't fetch a photo (${res.status}).`);
-          next.push(await uploadPhoto(await res.blob(), url.includes("/life/") ? "life" : "smile"));
+          next.push(await uploadAftercarePhoto(await res.blob(), url.includes("/life/") ? "life" : "smile"));
           done++;
         }
         const { error } = await (supabase.from("smile_lab_sessions" as never) as never as {

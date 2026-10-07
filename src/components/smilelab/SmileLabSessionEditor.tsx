@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { normalizeImageForUpload } from "@/lib/imageUpload";
-import { resizePhoto, thumbOf } from "@/lib/imageResize";
+import { thumbOf } from "@/lib/imageResize";
+import { uploadAftercarePhoto } from "@/lib/aftercarePhotos";
 import { toast } from "sonner";
 import { ChevronLeft, ChevronRight, Users, ImagePlus, Trash2, Loader2 } from "lucide-react";
 
@@ -46,22 +46,8 @@ const textToArray = (t: string): string[] =>
 type Lab = "smile" | "life";
 const isLifePhoto = (url: string) => url.includes("/smile-lab-photos/life/");
 
-// A phone photo is 3–6 MB. After the HEIC conversion it is shrunk to a
-// 1600 px JPEG for the viewer and a 320 px thumbnail for the lists, stored
-// side by side as …_full.jpg and …_thumb.jpg. The session keeps the full URL;
-// thumbOf() derives the other.
-export async function uploadPhoto(source: Blob, lab: Lab): Promise<string> {
-  const normalized = source instanceof File ? await normalizeImageForUpload(source) : source;
-  const { full, thumb } = await resizePhoto(normalized, { thumbPx: 320 });
-  const base = `${lab}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
-  const bucket = supabase.storage.from("smile-lab-photos");
-  const put = async (path: string, blob: Blob) => {
-    const { error } = await bucket.upload(path, blob, { upsert: true, contentType: "image/jpeg" });
-    if (error) throw error;
-  };
-  await Promise.all([put(`${base}_full.jpg`, full), put(`${base}_thumb.jpg`, thumb)]);
-  return bucket.getPublicUrl(`${base}_full.jpg`).data.publicUrl;
-}
+// Photos are shrunk and stored by uploadAftercarePhoto (src/lib/aftercarePhotos.ts).
+const uploadPhoto = (file: File, lab: Lab) => uploadAftercarePhoto(file, lab);
 
 interface Attendee { child_first_name: string; child_last_name: string }
 
