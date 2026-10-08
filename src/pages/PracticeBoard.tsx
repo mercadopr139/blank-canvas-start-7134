@@ -1357,11 +1357,14 @@ const PracticeBoard = () => {
                       })
                     )}
 
-                    {/* Bible study is one study for both teams but lives as
-                        one block in one column. The other team's tile mirrors
-                        the slot so both read the same way; the strip below
-                        carries the detail. */}
-                    {bibleBlock && bibleBlock.group !== g.key && g.key !== "littles" && (
+                    {/* Bible study is one study for both teams. When it lives
+                        as a block in only one team's column, the other team's
+                        tile mirrors the slot so both read the same way; the
+                        strip below carries the detail. A column that already
+                        has its own Bible Study block never gets the mirror,
+                        or it would show the study twice. */}
+                    {bibleBlock && g.key !== "littles"
+                      && !blocks.some((b) => b.weekday === day.n && b.group === g.key && isBibleStudyBlock(b.category)) && (
                       <div>
                         <p
                           className="text-[0.62em] font-bold uppercase tracking-[0.15em] mb-1"
