@@ -34,7 +34,7 @@ import {
 } from "@/lib/practicePlan";
 import { handleIndentKey } from "@/lib/indentTextarea";
 import { SplitLanesEditor, SplitLanesView } from "@/components/practice/SplitLanes";
-import { isSplitBlock, parseSplit, isJuniorsLane, hasLanes, isBibleStudyBlock, laneDefaults, bibleStudySiblings, isWeightsBlock, wrapupFor } from "@/lib/practicePlan";
+import { isSplitBlock, parseSplit, isJuniorsLane, hasLanes, isBibleStudyBlock, bibleStudyText, bibleStudySiblings, isWeightsBlock, wrapupFor } from "@/lib/practicePlan";
 import { DAYS as NBT_DAYS } from "@/lib/nbt";
 
 const PracticeBoard = () => {
@@ -472,21 +472,9 @@ const PracticeBoard = () => {
       .flatMap((b) => parseSplit(b.detail).filter(isJuniorsLane).map((lane) => ({ lane, group: b.group }))),
     [blocks, day.n],
   );
-  // Thursday's Bible study: one block in the plan (Battle Team or Non-Battle
-  // Team, whichever carries it), printed once as a strip under the tiles with
-  // its boys and girls lanes. The Littles aren't in it — the Verse of the Day
-  // up top is theirs — so their column just says to keep going.
-  const bibleBlock = useMemo(
-    () => blocks.find((b) => b.weekday === day.n && isBibleStudyBlock(b.category)) ?? null,
-    [blocks, day.n],
-  );
-  const bibleLanes = useMemo(
-    () => (bibleBlock ? parseSplit(bibleBlock.detail, laneDefaults(bibleBlock.category)) : []),
-    [bibleBlock],
-  );
-  // One study, two rooms: the topic typed on the block wins; otherwise the
-  // week's published Bible topic from the banner, so verse and study agree.
-  const bibleTopic = bibleLanes[0]?.text.trim() || themed?.theme || "";
+  // Thursday's Bible study is an ordinary block on each team's tile, in teal
+  // (bibleStudyText reads an older two-lane save as plain lines). The
+  // Littles aren't in it — the Verse of the Day up top is theirs.
   const points = meeting.find((m) => m.weekday === day.n)?.points ?? [];
   // A paused template row keeps its place in the template but must not
   // reach the wall — Juniors Aftercare is not running for a few weeks.
@@ -1167,7 +1155,12 @@ const PracticeBoard = () => {
                     {gb.length === 0 && !editing ? (
                       <p className="text-white/25 italic text-[0.85em]">Nothing scheduled</p>
                     ) : (
-                      gb.map((b, bi) => {
+                      gb.map((raw, bi) => {
+                        // Bible Study prints like any other block; an older
+                        // two-lane save reads as plain lines.
+                        const b = isBibleStudyBlock(raw.category) ? { ...raw, detail: bibleStudyText(raw.detail) } : raw;
+                        // Bullets wear the block's colour: the team's, or teal for Bible Study.
+                        const bullet = blockAccent(b.category, g.accent);
                         // Weights day: the workout is one tap away, shown over
                         // the board rather than on another page, so the board is
                         // never navigated away from.
@@ -1265,12 +1258,6 @@ const PracticeBoard = () => {
                               dark
                               onSave={(v) => saveDetail.mutate({ id: b.id, detail: v })}
                             />
-                          ) : isBibleStudyBlock(b.category) ? (
-                            /* The lanes print once, in the strip under the
-                               tiles — the tile just holds the slot's place. */
-                            <p className="text-[0.85em] leading-snug" style={{ color: "#99f6e4" }}>
-                              Boys &amp; Girls separated · see below ↓
-                            </p>
                           ) : isSplitBlock(b.category) ? (
                             <SplitLanesView detail={b.detail} accent={g.accent} />
                           ) : editing ? (
@@ -1327,7 +1314,7 @@ const PracticeBoard = () => {
                                             width: l.nested ? "0.2em" : "0.3em",
                                             height: l.nested ? "0.2em" : "0.3em",
                                             marginTop: l.nested ? "0.6em" : "0.55em",
-                                            backgroundColor: g.accent,
+                                            backgroundColor: bullet,
                                             opacity: l.nested ? 0.55 : 1,
                                           }}
                                         />
@@ -1355,27 +1342,6 @@ const PracticeBoard = () => {
                         </div>
                         );
                       })
-                    )}
-
-                    {/* Bible study is one study for both teams. When it lives
-                        as a block in only one team's column, the other team's
-                        tile mirrors the slot so both read the same way; the
-                        strip below carries the detail. A column that already
-                        has its own Bible Study block never gets the mirror,
-                        or it would show the study twice. */}
-                    {bibleBlock && g.key !== "littles"
-                      && !blocks.some((b) => b.weekday === day.n && b.group === g.key && isBibleStudyBlock(b.category)) && (
-                      <div>
-                        <p
-                          className="text-[0.62em] font-bold uppercase tracking-[0.15em] mb-1"
-                          style={{ color: blockAccent(bibleBlock.category, g.accent) }}
-                        >
-                          {bibleBlock.category}
-                        </p>
-                        <p className="text-[0.85em] leading-snug" style={{ color: "#99f6e4" }}>
-                          Boys &amp; Girls separated · see below ↓
-                        </p>
-                      </div>
                     )}
 
                     {/* Ad-hoc additions live in this week only — never the
@@ -1438,40 +1404,6 @@ const PracticeBoard = () => {
               );
             })}
           </div>
-
-          {/* Bible study strip — under the tiles, only on a night the plan
-              carries one. Teal like the Junior strip: the same three columns
-              as the tiles, so the Littles' note sits under the Littles. */}
-          {bibleBlock && (
-            <section
-              className="shrink-0 rounded-xl border px-4 py-2 grid grid-cols-1 md:grid-cols-3 gap-4"
-              style={{ borderColor: "#14b8a6aa", background: "#14b8a61f", boxShadow: "0 0 24px #14b8a622" }}
-            >
-              {/* One study across both teams: the name once, then a single
-                  "Boys & Girls · separated" cell with whatever was typed on
-                  the block (or the week's published Bible topic). */}
-              <div className="md:col-span-2 min-w-0 flex items-start gap-4">
-                <div className="shrink-0 min-w-[7.5rem]">
-                  <p className="text-[10px] font-bold uppercase tracking-[0.2em]" style={{ color: "#5eead4" }}>
-                    {bibleBlock.category}
-                  </p>
-                  <p className="text-xs leading-snug" style={{ color: "#99f6e4" }}>Battle Team + Non-Battle Team</p>
-                </div>
-                <div className="flex-1 min-w-0 rounded-lg border border-white/15 bg-white/[0.04] px-3 py-1">
-                  <p className="text-[9px] font-bold uppercase tracking-[0.2em]" style={{ color: "#5eead4" }}>
-                    Boys &amp; Girls · separated
-                  </p>
-                  {bibleTopic && (
-                    <p className="text-white/90 text-sm leading-snug">{bibleTopic}</p>
-                  )}
-                </div>
-              </div>
-              <div className="min-w-0 rounded-lg border border-white/10 px-3 py-1 self-start">
-                <p className="text-[9px] font-bold uppercase tracking-[0.2em] text-white/40">Littles</p>
-                <p className="text-white/60 text-sm leading-snug">Keep going with the plan above</p>
-              </div>
-            </section>
-          )}
 
         </main>
       )}

@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { parseSplit, serializeSplit, isSplitBlock, isJuniorsLane, daysForWeek, ALL_WEEKDAYS, capFirst, QUICK_BLOCKS, BIBLE_STUDY_BLOCK, isBibleStudyBlock, hasLanes, laneDefaults, blockAccent, bibleStudySiblings, wrapupFor } from "@/lib/practicePlan";
+import { parseSplit, serializeSplit, isSplitBlock, isJuniorsLane, daysForWeek, ALL_WEEKDAYS, capFirst, QUICK_BLOCKS, BIBLE_STUDY_BLOCK, isBibleStudyBlock, bibleStudyText, hasLanes, laneDefaults, DEFAULT_BIBLE_LANES, blockAccent, bibleStudySiblings, wrapupFor } from "@/lib/practicePlan";
 
 describe("Split block lanes", () => {
   it("is recognised by its category", () => {
@@ -70,27 +70,36 @@ describe("A week's days", () => {
 });
 
 describe("Bible Study block", () => {
-  it("is a quick block, recognised by name, and starts as Boys / Girls", () => {
+  it("is a quick block, recognised by name, and is one plain box (not lanes) since 2026-10-08", () => {
     expect(QUICK_BLOCKS).toContain(BIBLE_STUDY_BLOCK);
     expect(isBibleStudyBlock("Bible Study · 6:30")).toBe(true);
     expect(isBibleStudyBlock("bible study 6:00")).toBe(true);
     expect(isBibleStudyBlock("Split")).toBe(false);
-    expect(hasLanes("Bible Study · 6:30")).toBe(true);
-    const lanes = parseSplit(null, laneDefaults(BIBLE_STUDY_BLOCK));
-    expect(lanes.map((l) => l.title)).toEqual(["Boys", "Girls"]);
-    expect(serializeSplit(lanes, laneDefaults(BIBLE_STUDY_BLOCK))).toBeNull();
+    expect(hasLanes("Bible Study · 6:30")).toBe(false);
+    expect(hasLanes("Split")).toBe(true);
+    expect(laneDefaults(BIBLE_STUDY_BLOCK)).toBe(laneDefaults("Split"));
   });
 
-  it("keeps each lane's leader and topic", () => {
-    const d = laneDefaults(BIBLE_STUDY_BLOCK);
+  it("prints what was typed, one line per bullet", () => {
+    expect(bibleStudyText(null)).toBeNull();
+    expect(bibleStudyText("   ")).toBeNull();
+    expect(bibleStudyText("Off")).toBe("Off");
+    expect(bibleStudyText("Boys with Pastor\nGirls with Chrissy")).toBe("Boys with Pastor\nGirls with Chrissy");
+  });
+
+  it("reads a week saved while the study was two lanes as plain lines", () => {
+    // Exactly what the week of Oct 5 holds: "Off" typed in the Boys lane, Girls empty.
+    expect(bibleStudyText("## Boys\nOff\n## Girls\n")).toBe("Off");
+    // Both lanes filled, each with a leader.
     const stored = serializeSplit(
       [{ title: "Boys", who: "Coach Marcus", text: "James 1" }, { title: "Girls", who: "Ms. Dana", text: "Psalm 23" }],
-      d,
+      DEFAULT_BIBLE_LANES,
     )!;
-    expect(parseSplit(stored, d)).toEqual([
-      { title: "Boys", who: "Coach Marcus", text: "James 1" },
-      { title: "Girls", who: "Ms. Dana", text: "Psalm 23" },
-    ]);
+    expect(bibleStudyText(stored)).toBe("Boys with Coach Marcus: James 1\nGirls with Ms. Dana: Psalm 23");
+    // A leader named but no topic yet.
+    expect(bibleStudyText("## Boys | Pastor\n## Girls | Chrissy\n")).toBe("Boys with Pastor\nGirls with Chrissy");
+    // Lane headers with nothing in them print nothing.
+    expect(bibleStudyText("## Boys\n## Girls\n")).toBeNull();
   });
 
   it("wears the spiritual teal wherever it appears", () => {

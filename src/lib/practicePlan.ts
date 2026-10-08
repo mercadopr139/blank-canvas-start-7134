@@ -93,13 +93,44 @@ export const blockAccent = (category: string, fallback: string) =>
  * night. Anything else can still be typed in. (Josh, 2026-10-02.)
  */
 /**
- * Thursday's Bible study (Josh, 2026-10-02): Battle Team + Non-Battle Team,
- * boys and girls separately, each with a leader. The Littles keep going with
- * whatever they're doing — their Bible study is the Verse of the Day up top.
- * The time is part of the name so it's retyped, never coded.
+ * Thursday's Bible study (Josh, 2026-10-02): Battle Team + Non-Battle Team.
+ * The Littles keep going with whatever they're doing — their Bible study is
+ * the Verse of the Day up top. The time is part of the name so it's retyped,
+ * never coded.
+ *
+ * On the board it is an ordinary block in teal (Josh, 2026-10-08): the
+ * heading, then bullets from whatever was typed — "Off", or "Boys with
+ * Pastor" / "Girls with Chrissy" on two lines. It used to be two lanes
+ * (boys / girls) printed in a strip under the tiles with the tile saying
+ * "see below"; the kids had to look in two places and "Off" ended up at the
+ * bottom of the wall. One place now.
  */
 export const BIBLE_STUDY_BLOCK = "Bible Study · 6:30";
 export const isBibleStudyBlock = (category: string) => /bible/i.test(category);
+
+/**
+ * What a Bible Study block prints. Text typed since 2026-10-08 is plain
+ * lines and passes straight through. A block saved while the study was
+ * two lanes ("## Boys | leader" headers) is read as lines instead, so
+ * nothing in the database has to change: a lane with a leader or a topic
+ * becomes one line ("Boys with Pastor: James 1"); when only the first lane
+ * has text and no one is named, that text stands alone ("Off").
+ */
+export const bibleStudyText = (detail: string | null | undefined): string | null => {
+  const raw = (detail ?? "").trim();
+  if (!raw) return null;
+  if (!/^##\s/m.test(raw)) return raw;
+  const lanes = parseSplit(raw, DEFAULT_BIBLE_LANES).filter((l) => l.who.trim() || l.text.trim());
+  if (lanes.length === 0) return null;
+  const nobodyNamed = lanes.every((l) => !l.who.trim());
+  if (lanes.length === 1 && nobodyNamed && lanes[0].title === DEFAULT_BIBLE_LANES[0].title) return lanes[0].text.trim();
+  return lanes
+    .map((l) => {
+      const head = l.who.trim() ? `${l.title} with ${l.who.trim()}` : l.title;
+      return l.text.trim() ? `${head}: ${l.text.trim().replace(/\n+/g, " · ")}` : head;
+    })
+    .join("\n");
+};
 
 export const QUICK_BLOCKS = [
   "Boxing",
@@ -137,17 +168,16 @@ export const DEFAULT_SPLIT_LANES: readonly SplitLane[] = [
   { title: "Cardio", who: "", text: "" },
 ];
 
-/** Bible study lanes: boys and girls, each with its leader and topic. */
+/** The lanes Bible study had before 2026-10-08 — kept so an older week still reads (see bibleStudyText). */
 export const DEFAULT_BIBLE_LANES: readonly SplitLane[] = [
   { title: "Boys", who: "", text: "" },
   { title: "Girls", who: "", text: "" },
 ];
 
-/** Any block that is two lanes rather than one box of drills. */
-export const hasLanes = (category: string) => isSplitBlock(category) || isBibleStudyBlock(category);
+/** Any block that is two lanes rather than one box of drills. Bible Study is one box since 2026-10-08. */
+export const hasLanes = (category: string) => isSplitBlock(category);
 /** The lane names a block starts with before anyone types. */
-export const laneDefaults = (category: string): readonly SplitLane[] =>
-  isBibleStudyBlock(category) ? DEFAULT_BIBLE_LANES : DEFAULT_SPLIT_LANES;
+export const laneDefaults = (_category: string): readonly SplitLane[] => DEFAULT_SPLIT_LANES;
 
 export const parseSplit = (
   detail: string | null | undefined,

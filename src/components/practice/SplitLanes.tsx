@@ -6,7 +6,7 @@
 import { useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { parseSplit, serializeSplit, capFirst, laneDefaults, isBibleStudyBlock, type SplitLane } from "@/lib/practicePlan";
+import { parseSplit, serializeSplit, capFirst, laneDefaults, type SplitLane } from "@/lib/practicePlan";
 import { handleIndentKey } from "@/lib/indentTextarea";
 
 /** Two side-by-side mini-columns: lane name, who, drills. Saves on blur. */
@@ -22,9 +22,6 @@ export const SplitLanesEditor = ({
   onSave: (detail: string | null) => void;
 }) => {
   const defaults = laneDefaults(category);
-  // Bible study is ONE study in two rooms: a single topic (kept as lane 1's
-  // text) and a leader per lane — no drills box under each lane.
-  const oneStudy = isBibleStudyBlock(category);
   const [lanes, setLanes] = useState<SplitLane[]>(() => parseSplit(detail, defaults));
   const patch = (i: number, field: keyof SplitLane, value: string) =>
     setLanes((prev) => prev.map((l, idx) => (idx === i ? { ...l, [field]: value } : l)));
@@ -47,22 +44,7 @@ export const SplitLanesEditor = ({
 
   return (
     <div className="ml-1 pl-2.5 space-y-2.5" style={{ borderLeft: `2px solid ${accent}66` }}>
-      {oneStudy && (
-        /* One label, one open box (Josh, 2026-10-02). Kept as lane 1's text so
-           the board reads it the same way as any lane. */
-        <div className="space-y-1">
-          <p className={`text-[12px] font-bold ${dark ? "text-white/60" : "text-neutral-400"}`}>Boys &amp; Girls Separated</p>
-          <Textarea
-            value={lanes[0]?.text ?? ""}
-            onChange={(e) => patch(0, "text", e.target.value)}
-            onBlur={commit}
-            onKeyDown={handleIndentKey}
-            rows={2}
-            className={`min-h-[48px] resize-none px-2.5 py-1.5 text-[13px] rounded-md ${box}`}
-          />
-        </div>
-      )}
-      {!oneStudy && lanes.map((l, i) => {
+      {lanes.map((l, i) => {
         return (
           <div key={i} className="space-y-1">
             <div className="flex items-baseline gap-2">
@@ -81,16 +63,14 @@ export const SplitLanesEditor = ({
                 className={`h-6 w-[45%] min-w-0 px-0 text-[11px] text-right ${quiet}`}
               />
             </div>
-            {!oneStudy && (
-              <Textarea
-                value={l.text}
-                onChange={(e) => patch(i, "text", e.target.value)}
-                onBlur={commit}
-                onKeyDown={handleIndentKey}
-                rows={2}
-                className={`min-h-[48px] resize-none px-2.5 py-1.5 text-[13px] rounded-md ${box}`}
-              />
-            )}
+            <Textarea
+              value={l.text}
+              onChange={(e) => patch(i, "text", e.target.value)}
+              onBlur={commit}
+              onKeyDown={handleIndentKey}
+              rows={2}
+              className={`min-h-[48px] resize-none px-2.5 py-1.5 text-[13px] rounded-md ${box}`}
+            />
           </div>
         );
       })}

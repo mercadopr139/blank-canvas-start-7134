@@ -51,7 +51,7 @@ import {
 } from "@/lib/practicePlan";
 import { handleIndentKey } from "@/lib/indentTextarea";
 import { SplitLanesEditor } from "@/components/practice/SplitLanes";
-import { hasLanes, bibleStudySiblings, wrapupFor, planningWeekOf, type Wrapups } from "@/lib/practicePlan";
+import { hasLanes, isBibleStudyBlock, bibleStudyText, bibleStudySiblings, wrapupFor, planningWeekOf, type Wrapups } from "@/lib/practicePlan";
 
 const AdminPracticePlan = () => {
   const qc = useQueryClient();
@@ -1412,7 +1412,7 @@ const BlockEditor = ({
       )}
 
       {hasLanes(block.category) ? (
-        /* Two lanes — a group doing two things at once, or Bible study's boys / girls. */
+        /* Two lanes — a group doing two things at once. */
         <SplitLanesEditor
           key={`${block.id}-${block.detail ?? ""}`}
           detail={block.detail}
@@ -1421,9 +1421,11 @@ const BlockEditor = ({
           onSave={(v) => onSave(block.id, v)}
         />
       ) : (
+        /* One box, a line per bullet. Bible Study is the same box since
+           2026-10-08; a week saved while it was two lanes reads as lines. */
         <Textarea
           key={`${block.id}-${block.detail ?? ""}`}
-          defaultValue={block.detail ?? ""}
+          defaultValue={(isBibleStudyBlock(block.category) ? bibleStudyText(block.detail) : block.detail) ?? ""}
           onBlur={(e) => {
             const v = e.target.value.trim() || null;
             if (v !== (block.detail || null)) onSave(block.id, v);
