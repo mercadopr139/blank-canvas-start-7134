@@ -8,8 +8,13 @@ const awards = [
   `Cape May County Chamber of Commerce — Non-Profit of the Year Award`,
   `Caring For Kids — Community Impact Award`,
   `Middle Township City Council — "Middle Matters" Civic Recognition Award`,
-  `United States House of Representatives — Congressional Proclamation of Recognition`,
+  // Two proclamations from the same office: the year leads so the pair sorts
+  // in order. Years appear only here, where they tell the two apart.
+  `United States House of Representatives — 2024 Congressional Proclamation of Recognition, No Limits Academy`,
+  `United States House of Representatives — 2026 Congressional Proclamation of Recognition, Chrissy Casiello, Program Coordinator`,
+  `United States House of Representatives — 2026 Congressional Proclamation of Recognition, Josh Mercado, Program Director`,
   `USA Boxing's Mid-Atlantic Association — George Hill Humanitarian Award`,
+  `Veteran Boxers Association, Ring 1 — Man of the Year Award, presented at the Pennsylvania Boxing Hall of Fame`,
 ].sort((a, b) => a.localeCompare(b));
 
 const AwardsSection = () => {
