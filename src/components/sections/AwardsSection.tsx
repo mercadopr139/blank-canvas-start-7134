@@ -4,6 +4,7 @@ import georgeHillAward from "@/assets/awards/george-hill-award-ceremony.jpeg";
 const awards = [
   `BCMF — Be Kind Award Recipient`,
   `Cape Assist — Partner in Prevention Award`,
+  `Cape May County Board of County Commissioners — Certificate of Recognition, Josh Mercado, Program Director`,
   `Cape May County NAACP Freedom Fund — Recognition of Educator Award`,
   `Cape May County Chamber of Commerce — Non-Profit of the Year Award`,
   `Caring For Kids — Community Impact Award`,
