@@ -1,14 +1,16 @@
 import { useState } from "react";
+import { Link } from "react-router-dom";
+import { Button } from "@/components/ui/button";
 import Header from "@/components/layout/Header";
 import Footer from "@/components/layout/Footer";
 import PortalLightbox from "@/components/ui/portal-lightbox";
 import joshMcNallyDave from "@/assets/our-story/josh-mcnally-dave.webp";
 import joshParents from "@/assets/our-story/josh-parents.webp";
 import daveFamily from "@/assets/our-story/dave-family.webp";
-import joshDaveEarly from "@/assets/our-story/josh-dave-early.webp";
 import joshBasketballCoach from "@/assets/our-story/josh-basketball-coach.webp";
 import daveBrigadeChampion from "@/assets/our-story/dave-brigade-champion.webp";
 import joshProBoxing from "@/assets/our-story/josh-pro-boxing-2.webp";
+import joshDocCox from "@/assets/our-story/josh-doc-cox.webp";
 import facilityConstructionCrew from "@/assets/facility/facility-construction-crew.webp";
 import facilityPlumbingCrew from "@/assets/facility/facility-plumbing-crew.webp";
 import facilityRebarPrep from "@/assets/facility/facility-rebar-prep.webp";
@@ -137,11 +139,11 @@ const OurStory = () => {
                   </div>
                 </div>
                 <div className="bg-muted rounded-lg shadow-md overflow-hidden mt-3">
-                  <button type="button" onClick={() => setActiveImg({ src: joshProBoxing, alt: "Josh competing professionally" })} aria-label="Enlarge photo">
-                    <img loading="lazy" src={joshProBoxing} alt="Josh competing professionally" className="w-full h-auto cursor-pointer" />
+                  <button type="button" onClick={() => setActiveImg({ src: joshDocCox, alt: "Josh with Dr. Ken Cox at Lock Haven" })} aria-label="Enlarge photo">
+                    <img loading="lazy" src={joshDocCox} alt="Josh with Dr. Ken Cox at Lock Haven" className="w-full h-auto cursor-pointer" />
                   </button>
-                  <div className="px-2 py-1 text-center">
-                    <p className="text-[10px] text-muted-foreground italic leading-tight">Josh competed in 7 professional fights, before retiring to focus on his career as an educator</p>
+                  <div className="px-3 py-1.5 text-center">
+                    <p className="text-xs text-muted-foreground italic">Josh with Dr. Ken Cox at Lock Haven</p>
                   </div>
                 </div>
               </div>
@@ -151,41 +153,30 @@ const OurStory = () => {
               </p>
 
               <p className="text-lg md:text-xl text-muted-foreground leading-relaxed mb-6">
-                Sports provided an outlet, but boxing became the turning point. While pursuing his education at Lock Haven University—known for its nationally ranked boxing program—Josh found structure, accountability, and belief in his own potential. In 2007, he became a National Collegiate Boxing Champion, later competing professionally, while earning his degree in Secondary Education. Boxing did more than sharpen his athletic ability; it taught him discipline, resilience, and how to confront adversity with focus and self-control.
+                Sports provided an outlet, but boxing became the turning point. While pursuing his education at Lock Haven University, known for its nationally ranked boxing program, Josh found structure, accountability, and belief in his own potential. He boxed under Dr. Ken Cox, a Pennsylvania Boxing Hall of Famer and a legend in both boxing and wrestling. In 2007, Josh became a National Collegiate Boxing Champion, later competing professionally, while earning his degree in Secondary Education. Boxing did more than sharpen his athletic ability; it taught him discipline, resilience, and how to confront adversity with focus and self-control.
               </p>
 
               <div className="clear-both" />
 
-              {/* Basketball Coach photo — floated left with teaching paragraph */}
-              {/* negative top margin pulls it up to align with text */}
-              <div className="md:float-left md:mr-5 md:mb-3 md:max-w-[240px] md:-mt-4 mb-6 w-full max-w-[300px] mx-auto md:mx-0">
+              {/* Josh as a pro — floated left with the coaching-back-home paragraph */}
+              <div className="md:float-left md:mr-5 md:mb-3 md:max-w-[240px] mb-6 w-full max-w-[300px] mx-auto md:mx-0">
                 <div className="bg-muted rounded-lg shadow-md overflow-hidden">
-                  <button type="button" onClick={() => setActiveImg({ src: joshBasketballCoach, alt: "Josh, Head Varsity Basketball Coach, 2015-2021" })} aria-label="Enlarge photo">
-                    <img loading="lazy"
-                      src={joshBasketballCoach}
-                      alt="Josh, Head Varsity Basketball Coach, 2015-2021"
-                      className="w-full h-auto cursor-pointer" />
+                  <button type="button" onClick={() => setActiveImg({ src: joshProBoxing, alt: "Josh competing professionally" })} aria-label="Enlarge photo">
+                    <img loading="lazy" src={joshProBoxing} alt="Josh competing professionally" className="w-full h-auto cursor-pointer" />
                   </button>
                   <div className="px-3 py-1.5 text-center">
-                    <p className="text-xs text-muted-foreground italic">Josh, Head Varsity Basketball Coach, 2015-2021</p>
+                    <p className="text-xs text-muted-foreground italic leading-tight">Josh competed in 7 professional fights before retiring to focus on his career as an educator</p>
                   </div>
                 </div>
               </div>
 
               <p className="text-lg md:text-xl text-muted-foreground leading-relaxed mb-6">
-                After graduating, Josh felt a calling to make an impact beyond the ring. He spent over a decade as a psychology and sociology teacher, earning recognition for exceptional classroom culture, relationship-based discipline, and student motivation. As both a teacher and multi-sport coach, Josh was intentional about becoming the mentor he once needed—consistent, fair, and committed to giving every young person a genuine opportunity.
+                Not long after finishing college, Josh began coaching boxing back home in Cape May, NJ, where he met Dave Von Savage Jr., who was preparing to attend the United States Naval Academy. What began as weekly boxing lessons in a basement boxing gym formed the foundation of a lasting friendship rooted in trust, discipline, and shared values.
               </p>
 
               <div className="clear-both" />
 
-
-              <p className="text-lg md:text-xl text-muted-foreground leading-relaxed mb-2">
-                Not long after finishing college, Josh began coaching boxing back home in Cape May, NJ—where he met Dave Von Savage who was preparing to attend the United States Naval Academy. What began as weekly boxing lessons in a basement boxing gym formed the foundation of a lasting friendship rooted in trust, discipline, and shared values.
-              </p>
-
-              <div className="clear-both" />
-
-              {/* Dave with Sister & Parents — floated left with Dave paragraph */}
+              {/* Dave with Sister & Parents — floated right with Dave paragraph */}
               <div className="md:float-right md:ml-5 md:mb-3 md:max-w-[260px] mb-6 w-full max-w-[320px] mx-auto md:mx-0">
                 <div className="bg-muted rounded-lg shadow-md overflow-hidden">
                   <button type="button" onClick={() => setActiveImg({ src: daveFamily, alt: "Dave, pictured with sister & parents" })} aria-label="Enlarge photo">
@@ -203,11 +194,10 @@ const OurStory = () => {
               </div>
 
               <p className="text-lg md:text-xl text-muted-foreground leading-relaxed mb-6">
-                Dave, raised by both parents and influenced by their commitment to community service, attended the United States Naval Academy in Annapolis. There, he distinguished himself academically and athletically as a four-year member of the Navy boxing team, earning multiple Brigade Boxing Championships. Following graduation, he commissioned into the United States Navy and served for seven years on active duty before later attending the Wharton School of the University of Pennsylvania, earning his MBA.
+                Dave, raised in Cape May by parents devoted to community service, attended the United States Naval Academy in Annapolis. There, he distinguished himself academically and athletically as a four-year member of the Navy boxing team, earning multiple Brigade Boxing Championships. Following graduation, he commissioned into the United States Navy and served seven years on active duty, and later earned his MBA at the Wharton School of the University of Pennsylvania.
               </p>
 
               <div className="clear-both" />
-
 
               {/* Dave Brigade Champion — floated right */}
               <div className="md:float-right md:ml-5 md:mb-3 md:max-w-[200px] mb-6 w-full max-w-[240px] mx-auto md:mx-0">
@@ -225,10 +215,33 @@ const OurStory = () => {
               </div>
 
               <p className="text-lg md:text-xl text-muted-foreground leading-relaxed mb-6">
-                Though they are from completely different upbringings with distinct journeys, Josh and Dave stayed closely connected, united by boxing, friendship, and a shared belief in the power of structure and consistency to change lives. In 2020, those parallel journeys converged with the establishment of No Limits Academy. In 2022, Josh resigned from his teaching position to commit to NLA full time, allowing the organization to grow from a vision into a comprehensive youth development program serving children across Cape May County.
+                The two programs that shaped them turn out to share a root. Jim McNally, who coached Navy boxing for 37 years and became a legend in Annapolis, had graduated from Lock Haven in the late 1970s. Together, McNally and Dr. Ken Cox were among the founding fathers of the famous Lock Haven boxing program, the same program Josh would arrive at decades later.
               </p>
 
-              {/* Josh, Coach McNally & Dave — floated right with final paragraph */}
+              <div className="clear-both" />
+
+              {/* Basketball Coach photo — floated left with teaching paragraph */}
+              <div className="md:float-left md:mr-5 md:mb-3 md:max-w-[240px] mb-6 w-full max-w-[300px] mx-auto md:mx-0">
+                <div className="bg-muted rounded-lg shadow-md overflow-hidden">
+                  <button type="button" onClick={() => setActiveImg({ src: joshBasketballCoach, alt: "Josh, Head Varsity Basketball Coach, 2015-2021" })} aria-label="Enlarge photo">
+                    <img loading="lazy"
+                      src={joshBasketballCoach}
+                      alt="Josh, Head Varsity Basketball Coach, 2015-2021"
+                      className="w-full h-auto cursor-pointer" />
+                  </button>
+                  <div className="px-3 py-1.5 text-center">
+                    <p className="text-xs text-muted-foreground italic">Josh, Head Varsity Basketball Coach, 2015-2021</p>
+                  </div>
+                </div>
+              </div>
+
+              <p className="text-lg md:text-xl text-muted-foreground leading-relaxed mb-6">
+                Back in New Jersey, Josh felt a calling to make an impact beyond the ring. He spent over a decade as a psychology and sociology teacher, earning recognition for exceptional classroom culture, relationship-based discipline, and student motivation. As both a teacher and multi-sport coach, Josh was intentional about becoming the mentor he once needed: consistent, fair, and committed to giving every young person a genuine opportunity.
+              </p>
+
+              <div className="clear-both" />
+
+              {/* Josh, Coach McNally & Dave — floated right with the founding paragraph */}
               <div className="md:float-right md:ml-5 md:mb-3 md:max-w-[260px] mb-6 w-full max-w-[320px] mx-auto md:mx-0">
                 <div className="bg-muted rounded-lg shadow-md overflow-hidden">
                   <button type="button" onClick={() => setActiveImg({ src: joshMcNallyDave, alt: "Josh Mercado, Coach Jim McNally & Dave Von Savage" })} aria-label="Enlarge photo">
@@ -237,16 +250,18 @@ const OurStory = () => {
                       alt="Josh Mercado, Coach Jim McNally & Dave Von Savage"
                       className="w-full h-auto cursor-pointer" />
                   </button>
-                  <div className="px-2 py-1.5 text-center">
-                    <p className="text-[10px] text-muted-foreground italic leading-tight">Josh, legendary Naval Academy coach Jim McNally, & Dave —
-
-McNally coached Navy boxing for 37 years and interestingly, in the late 1970s, he graduated from Lock Haven and was one of the "founding fathers" of the historic boxing program, where Mercado would arrive years later.                  </p>
+                  <div className="px-3 py-1.5 text-center">
+                    <p className="text-xs text-muted-foreground italic">Josh, Coach Jim McNally &amp; Dave</p>
                   </div>
                 </div>
               </div>
 
               <p className="text-lg md:text-xl text-muted-foreground leading-relaxed mb-6">
-                Today, No Limits Academy is more than a boxing gym. It is a community hub built on mentorship, belonging, and opportunity. Leveraging backgrounds in education, military service, business, and boxing, alongside a network of incredible people, Josh and Dave created a space where young people are challenged, supported, and believed in. Through discipline and care, NLA teaches its athletes that their circumstances do not define their future—and that no one succeeds alone.
+                Though they are from completely different upbringings with distinct journeys, Josh and Dave stayed closely connected, united by boxing, friendship, and a shared belief in the power of structure and consistency to change lives. In 2020, those parallel journeys converged with the establishment of No Limits Academy. In 2022, Josh resigned from his teaching position to commit to NLA full time, allowing the organization to grow from a vision into a comprehensive youth development program serving children across Cape May County.
+              </p>
+
+              <p className="text-lg md:text-xl text-muted-foreground leading-relaxed mb-6">
+                Today, No Limits Academy is more than a boxing gym. It is a community hub built on mentorship, belonging, and opportunity. Leveraging backgrounds in education, military service, business, and boxing, alongside a network of incredible people, Josh and Dave created a space where young people are challenged, supported, and believed in. Through discipline and care, NLA teaches its athletes that their circumstances do not define their future, and that no one succeeds alone.
               </p>
 
               <div className="clear-both" />
@@ -264,7 +279,7 @@ McNally coached Navy boxing for 37 years and interestingly, in the late 1970s, h
                 Our Facility
               </h2>
               <p className="text-lg text-background/80 mb-10">
-                We began our journey in April of 2020 and moved into our current location in Rio Grande, NJ. Since then, we have methodically renovated, built, and modified our space to create a state-of-the-art training and youth development center that services at-risk and local youth of Cape May County.
+                We began our journey in April of 2020 and made our home at 1086 Route 47 South in Rio Grande, NJ. Since then, we have methodically renovated, built, and modified the space into a state-of-the-art training and youth development center that serves at-risk and local youth of Cape May County.
               </p>
 
               {/* Featured finished facility photos */}
@@ -316,6 +331,24 @@ McNally coached Navy boxing for 37 years and interestingly, in the late 1970s, h
                   </div>
                 )}
               </div>
+            </div>
+          </div>
+        </section>
+
+        {/* Where to go next */}
+        <section className="bg-primary py-12 md:py-14">
+          <div className="container text-center">
+            <h2 className="text-2xl md:text-3xl font-black text-primary-foreground mb-2">Be part of the story</h2>
+            <p className="text-primary-foreground/80 max-w-xl mx-auto mb-7">
+              Enroll a young person, or stand behind the ones already here.
+            </p>
+            <div className="flex flex-col sm:flex-row gap-3 justify-center">
+              <Button asChild size="lg" className="bg-white hover:bg-neutral-100 text-black font-semibold">
+                <Link to="/register">Register a Youth</Link>
+              </Button>
+              <Button asChild size="lg" variant="outline" className="border-white/70 text-primary-foreground bg-transparent hover:bg-white/10 hover:text-primary-foreground font-semibold">
+                <Link to="/supporters">Support the Academy</Link>
+              </Button>
             </div>
           </div>
         </section>
