@@ -279,7 +279,9 @@ Deno.serve(async (req: Request) => {
     const userPrompt =
       `The theme for this week is:\n"${theme}"\n\n` +
       (exclude.length
-        ? "Do NOT use any of these references — they are already in use this week:\n" +
+        ? "Do NOT use any of these references — they are already in use this week, or the coach has already " +
+          "seen them and passed. Do not return a near-identical verse either (the next verse of the same passage, " +
+          "or a parallel passage in another Gospel):\n" +
           exclude.map((r) => `- ${r}`).join("\n") + "\n\n"
         : "") +
       (single

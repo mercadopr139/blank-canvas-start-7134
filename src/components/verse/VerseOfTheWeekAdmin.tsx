@@ -5,7 +5,7 @@
 // The AI picks references and writes context/questions/answers; the ESV text
 // comes from the API (via the verse-week function). The mentor's answers are
 // hidden on the board until tapped, but the coach sees and edits them here.
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -64,6 +64,11 @@ const VerseOfTheWeekAdmin = ({ season = "in_season", weekStart }: { season?: Sea
   const [saving, setSaving] = useState(false);
   const [regenDay, setRegenDay] = useState<number | null>(null);
   const [dirty, setDirty] = useState(false);
+  // Every reference the coach has passed over with New verse or Rebuild
+  // while on this week. Each tap must bring something new: excluding only
+  // the five on screen let the verse just replaced come straight back
+  // (Josh, 2026-10-12). Cleared when a different week loads.
+  const passedOver = useRef<Set<string>>(new Set());
 
   // Load whatever is already saved for the week being viewed.
   const { data: loaded, isFetching } = useQuery({
@@ -107,7 +112,12 @@ const VerseOfTheWeekAdmin = ({ season = "in_season", weekStart }: { season?: Sea
       })
     );
     setDirty(false);
+    passedOver.current = new Set();
   }, [loaded]);
+
+  /** The five on screen plus everything passed over this week: all off the table for the next pick. */
+  const excludeList = () =>
+    Array.from(new Set([...days.map((d) => d.reference).filter(Boolean), ...passedOver.current])).slice(0, 40);
 
   const hasContent = days.some((d) => d.reference.trim() && d.text.trim());
 
@@ -119,7 +129,9 @@ const VerseOfTheWeekAdmin = ({ season = "in_season", weekStart }: { season?: Sea
     }
     setGenerating(true);
     try {
-      const exclude = regenerate ? days.map((d) => d.reference).filter(Boolean) : [];
+      // Rebuild passes over the whole week: remember all five.
+      if (regenerate) days.forEach((d) => { if (d.reference) passedOver.current.add(d.reference); });
+      const exclude = regenerate ? excludeList() : [];
       const { data, error } = await supabase.functions.invoke("verse-week", {
         body: { theme: theme.trim(), exclude },
       });
@@ -205,14 +217,19 @@ const VerseOfTheWeekAdmin = ({ season = "in_season", weekStart }: { season?: Sea
     }
     const label = DAYS.find((x) => x.n === weekday)?.label ?? "";
     setRegenDay(weekday);
+    // The verse being replaced is passed over: it must not come back on the
+    // next tap, or any tap after. Added before the call so a failed call
+    // still remembers it.
+    const current = days.find((x) => x.weekday === weekday)?.reference;
+    if (current) passedOver.current.add(current);
     try {
       const { data, error } = await supabase.functions.invoke("verse-week", {
         body: {
           theme: theme.trim(),
           dayLabel: label,
-          // Every reference currently in the week, so the replacement is not one
-          // of the other four days over again.
-          exclude: days.map((x) => x.reference).filter(Boolean),
+          // The other four days plus every verse already passed over this
+          // week, so each tap is something new.
+          exclude: excludeList(),
         },
       });
       if (error) throw error;
