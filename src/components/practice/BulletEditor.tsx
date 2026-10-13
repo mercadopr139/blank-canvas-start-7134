@@ -252,9 +252,9 @@ const BulletEditor = ({
             onPaste={(e) => onPaste(e, i)}
             aria-label={row.nested ? `Sub-bullet ${i + 1}` : `Bullet ${i + 1}`}
             className={`flex-1 min-w-0 resize-none overflow-hidden bg-transparent border-0 p-0 leading-snug outline-none focus:ring-0 text-inherit placeholder:${muted} ${
-              row.nested ? "opacity-85" : ""
+              row.nested ? "font-normal text-white/60" : "font-semibold text-white"
             }`}
-            style={{ color: "inherit" }}
+            style={{ color: row.nested ? "rgba(255,255,255,0.62)" : "#ffffff" }}
           />
           {/* Nest / un-nest for a finger: shown on the bullet being edited. */}
           {focused === row.id && (

@@ -1313,7 +1313,7 @@ const PracticeBoard = () => {
                                         />
                                         <span
                                           className="flex-1"
-                                          style={l.nested ? { opacity: 0.85 } : undefined}
+                                          style={l.nested ? { color: "rgba(255,255,255,0.62)", fontWeight: 400 } : { fontWeight: 600 }}
                                         >
                                           {l.text}
                                         </span>

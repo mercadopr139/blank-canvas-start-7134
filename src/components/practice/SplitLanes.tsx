@@ -100,7 +100,7 @@ export const SplitLanesView = ({
             {lines.length ? (
               <ul className="mt-[0.3em] text-[0.95em] leading-snug text-white space-y-[0.15em]">
                 {lines.map((t, k) => (
-                  <li key={k} className="flex items-start gap-[0.4em]" style={t.nested ? { marginLeft: "1.1em", opacity: 0.85 } : undefined}>
+                  <li key={k} className="flex items-start gap-[0.4em]" style={t.nested ? { marginLeft: "1.1em", color: "rgba(255,255,255,0.62)", fontWeight: 400 } : { fontWeight: 600 }}>
                     <span className="shrink-0 rounded-full" style={{ width: t.nested ? "0.2em" : "0.3em", height: t.nested ? "0.2em" : "0.3em", marginTop: t.nested ? "0.6em" : "0.55em", backgroundColor: accent, opacity: t.nested ? 0.55 : 1 }} />
                     <span className="flex-1">{t.text}</span>
                   </li>
