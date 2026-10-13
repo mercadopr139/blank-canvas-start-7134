@@ -25,22 +25,26 @@ export interface BulletLine {
 /** The marker itself is stripped — it did its job. */
 const MARKER = /^[-*>•]\s*/;
 
+/** One raw line → its text and level. Blank text means the line was empty. */
+export const parseBulletLine = (raw: string): BulletLine => {
+  const lead = raw.match(/^[ \t]*/)?.[0] ?? "";
+  const indent = [...lead].reduce((n, c) => n + (c === "\t" ? 2 : 1), 0);
+  const rest = raw.slice(lead.length);
+  const marked = MARKER.test(rest);
+  // A dash is one level; every two spaces before it is one more. Any
+  // indent at all without a dash is at least a sub-bullet.
+  const raised = marked ? 1 + Math.floor(indent / 2) : indent > 0 ? Math.max(1, Math.floor(indent / 2)) : 0;
+  const level = Math.min(MAX_LEVEL, raised) as Level;
+  return { level, text: rest.replace(MARKER, "").trim() };
+};
+
 /** Text → lines. Blank lines are dropped: the board never prints them. */
 export const parseBullets = (detail: string | null | undefined): BulletLine[] =>
-  (detail ?? "")
-    .split("\n")
-    .map((raw) => {
-      const lead = raw.match(/^[ \t]*/)?.[0] ?? "";
-      const indent = [...lead].reduce((n, c) => n + (c === "\t" ? 2 : 1), 0);
-      const rest = raw.slice(lead.length);
-      const marked = MARKER.test(rest);
-      // A dash is one level; every two spaces before it is one more. Any
-      // indent at all without a dash is at least a sub-bullet.
-      const raised = marked ? 1 + Math.floor(indent / 2) : indent > 0 ? Math.max(1, Math.floor(indent / 2)) : 0;
-      const level = Math.min(MAX_LEVEL, raised) as Level;
-      return { level, text: rest.replace(MARKER, "").trim() };
-    })
-    .filter((l) => l.text);
+  (detail ?? "").split("\n").map(parseBulletLine).filter((l) => l.text);
+
+/** Lines → the `string[]` the NBT plan keeps, one entry per line, nesting kept. */
+export const bulletLinesOf = (detail: string | null | undefined): string[] =>
+  (serializeBullets(parseBullets(detail)) ?? "").split("\n").filter(Boolean);
 
 /**
  * Lines → text. A nested line is written with a dash, two spaces deeper per

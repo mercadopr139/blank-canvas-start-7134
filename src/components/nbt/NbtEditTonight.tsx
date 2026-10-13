@@ -18,6 +18,8 @@ import {
 import { priorWeekBriefs, dayProblem } from "@/lib/nbtCoaching";
 import { roomBrief } from "@/lib/nbtRooms";
 import { todayNY } from "@/lib/programYear";
+import BulletEditor from "@/components/practice/BulletEditor";
+import { bulletLinesOf } from "@/lib/bulletText";
 
 const box = "bg-black/60 border-white/15 text-white";
 const linesOf = (v: string) => v.split("\n").map((s) => s.trim()).filter(Boolean);
@@ -53,8 +55,12 @@ export const NbtEditTonight = ({
 
   const setLift = (t: Track, field: "name" | "detail", value: string) =>
     setDraft((d) => ({ ...d, lift: { ...d.lift, [t]: { ...d.lift[t], [field]: value } } }));
-  const setWork = (t: Track, value: string) =>
-    setDraft((d) => ({ ...d, work: { ...d.work, [t]: linesOf(value) } }));
+  /** A track's work arrives from its bullet editor when focus leaves it: saved straight away. */
+  const saveWork = (t: Track, value: string | null) => {
+    const next: NbtDay = { ...draft, work: { ...draft.work, [t]: bulletLinesOf(value) } };
+    setDraft(next);
+    save(next);
+  };
 
   /** One track rewritten by the generator with the coach's note; the other stays. */
   const rewrite = async (t: Track) => {
@@ -143,13 +149,16 @@ export const NbtEditTonight = ({
               </div>
 
               <div>
-                <p className="text-[11px] font-bold uppercase tracking-[0.18em] mb-1" style={{ color: `${m.color}cc` }}>Work · one per line</p>
-                <Textarea
-                  value={(draft.work[t] ?? []).join("\n")}
-                  onChange={(e) => setWork(t, e.target.value)}
-                  onBlur={commit}
-                  rows={5}
-                  className={`${box} text-sm`}
+                <p className="text-[11px] font-bold uppercase tracking-[0.18em] mb-1" style={{ color: `${m.color}cc` }}>Work · one per line, Tab to nest</p>
+                <BulletEditor
+                  key={`${t}-${(draft.work[t] ?? []).join("\n")}`}
+                  defaultValue={(draft.work[t] ?? []).join("\n")}
+                  accent={m.color}
+                  dark
+                  textClassName="text-sm"
+                  className="min-h-[7rem]"
+                  placeholder="One station per line. Enter for the next, Tab to nest."
+                  onSave={(v) => saveWork(t, v)}
                 />
               </div>
 

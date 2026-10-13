@@ -200,7 +200,7 @@ describe("readableLines — what the screen actually shows", () => {
 
   it("hoists the rounds line to the top wherever it was written", () => {
     const out = readableLines(["Row 250m", "Jump rope 30 sec", "Rest 45 sec, repeat 4 rounds"]);
-    expect(out[0]).toEqual({ text: "Rest 45 sec, repeat 4 rounds", kind: "rounds" });
+    expect(out[0]).toEqual({ text: "Rest 45 sec, repeat 4 rounds", kind: "rounds", level: 0 });
     expect(out.slice(1).every((l) => l.kind === "station")).toBe(true);
   });
 
@@ -211,6 +211,23 @@ describe("readableLines — what the screen actually shows", () => {
 
   it("drops blank lines", () => {
     expect(readableLines(["", "Burpees x10", "  "]).length).toBe(1);
+  });
+
+  it("keeps the nesting a coach typed — the Practice Plan's bullet rule, three levels", () => {
+    const out = readableLines(["3 rounds", "Bike station", "- 30 sec strong", "  - then 15 sec easy", "Jump rope"]);
+    expect(out.map((l) => [l.text, l.level])).toEqual([
+      ["3 rounds", 0],
+      ["Bike station", 0],
+      ["30 sec strong", 1],
+      ["then 15 sec easy", 2],
+      ["Jump rope", 0],
+    ]);
+    expect(out[0].kind).toBe("rounds");
+  });
+
+  it("a heading with a nested detail under it stays two lines, not one", () => {
+    const out = readableLines(["Bike station:", "- :30 strong effort"]);
+    expect(out.map((l) => [l.text, l.level])).toEqual([["Bike station:", 0], ["30 sec strong effort", 1]]);
   });
 });
 

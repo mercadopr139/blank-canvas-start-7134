@@ -5,6 +5,7 @@
 // builds a whole month at once, feeding each week the earlier weeks of the same
 // block, and the coach reviews before any of it reaches the gym screen.
 import { useMemo, useState } from "react";
+import { levelIndent, levelDot, levelText } from "@/lib/bulletText";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -604,9 +605,9 @@ export const NbtWeekBuilder = ({
                                                 {line.text}
                                               </li>
                                             ) : (
-                                              <li key={k} className="text-xs text-neutral-300 flex items-start gap-1.5">
-                                                <span className="w-1 h-1 rounded-full shrink-0 mt-[0.45em]" style={{ backgroundColor: m.color }} />
-                                                <span>{line.text}</span>
+                                              <li key={k} className="text-xs flex items-start gap-1.5" style={{ marginLeft: levelIndent(line.level) }}>
+                                                <span className="rounded-full shrink-0 mt-[0.45em]" style={{ width: levelDot(line.level, 0.25).size, height: levelDot(line.level, 0.25).size, backgroundColor: m.color, opacity: levelDot(line.level, 0.25).opacity }} />
+                                                <span style={levelText(line.level)}>{line.text}</span>
                                               </li>
                                             )
                                           )}

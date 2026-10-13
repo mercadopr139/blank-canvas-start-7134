@@ -1,3 +1,4 @@
+import { parseBulletLine, type Level } from "@/lib/bulletText";
 // Non-Battle Team S&C — shared types and the date/block maths.
 //
 // Pure, so the block arithmetic that decides which week a session belongs to can
@@ -257,6 +258,8 @@ export interface CircuitLine {
   text: string;
   /** The structure line ("4 rounds — rest 45 sec") reads as a header, not a bullet. */
   kind: "rounds" | "station";
+  /** 0 = main bullet, 1 = sub-bullet, 2 = sub-sub-bullet — the Practice Plan's rule. */
+  level: Level;
 }
 
 /** Does this line describe the shape of the circuit rather than a station? */
@@ -274,16 +277,22 @@ export const isRoundsLine = (line: string) => /\b\d+\s*rounds?\b|\bamrap\b|\bemo
 export const readableLines = (lines: string[]): CircuitLine[] => {
   const out: CircuitLine[] = [];
   for (let i = 0; i < lines.length; i++) {
-    let text = (lines[i] ?? "").trim();
+    // A line keeps the nesting it was typed with (a dash, or an indent).
+    const first = parseBulletLine(lines[i] ?? "");
+    let text = first.text;
+    const level = first.level;
     if (!text) continue;
+    // "Bike station:" with the detail on the line beneath reads as one line —
+    // unless that detail was nested on purpose, in which case it stays under.
     while (/:\s*$/.test(text) && i + 1 < lines.length) {
-      const next = (lines[i + 1] ?? "").trim();
-      text = `${text.replace(/:\s*$/, "")} — ${next}`;
+      const next = parseBulletLine(lines[i + 1] ?? "");
+      if (!next.text || next.level !== level) break;
+      text = `${text.replace(/:\s*$/, "")} — ${next.text}`;
       i++;
     }
     // A bare ":30" is gym shorthand nobody under twenty reads first time.
     text = text.replace(/(^|\s):(\d{1,2})\b/g, (_, pre: string, n: string) => `${pre}${n} sec`);
-    out.push({ text, kind: isRoundsLine(text) ? "rounds" : "station" });
+    out.push({ text, kind: isRoundsLine(text) ? "rounds" : "station", level });
   }
   const rounds = out.filter((l) => l.kind === "rounds");
   const stations = out.filter((l) => l.kind === "station");

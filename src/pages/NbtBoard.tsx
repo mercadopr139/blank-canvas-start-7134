@@ -5,6 +5,7 @@
 // as Alpha, because a beginner should never be able to tell they have been
 // given "the lesser workout".
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { levelIndent, levelDot, levelText } from "@/lib/bulletText";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -401,12 +402,18 @@ const NbtBoard = () => {
                                   {line.text}
                                 </li>
                               ) : (
-                                <li key={i} className="flex items-start gap-[0.5em]">
+                                <li key={i} className="flex items-start gap-[0.5em]" style={{ marginLeft: levelIndent(line.level) }}>
                                   <span
-                                    className="w-[0.3em] h-[0.3em] rounded-full shrink-0 mt-[0.5em]"
-                                    style={{ backgroundColor: m.color }}
+                                    className="rounded-full shrink-0"
+                                    style={{
+                                      width: levelDot(line.level, 0.3).size,
+                                      height: levelDot(line.level, 0.3).size,
+                                      marginTop: line.level ? "0.55em" : "0.5em",
+                                      backgroundColor: m.color,
+                                      opacity: levelDot(line.level, 0.3).opacity,
+                                    }}
                                   />
-                                  <span className="text-[1.05em] leading-snug text-white/90">{line.text}</span>
+                                  <span className="text-[1.05em] leading-snug" style={levelText(line.level)}>{line.text}</span>
                                 </li>
                               )
                             )}

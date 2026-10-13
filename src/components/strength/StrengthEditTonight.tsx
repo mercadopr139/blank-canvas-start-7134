@@ -9,23 +9,15 @@ import { toast } from "sonner";
 import { Loader2, Sparkles } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { DAYS, type DayKey, type DayWorkout, type WeekRow } from "@/lib/strength";
 import { todayNY } from "@/lib/programYear";
+import BulletEditor from "@/components/practice/BulletEditor";
+import { warmupToText, textToWarmup } from "@/lib/warmupText";
 
 const NLA_RED = "#bf0f3e";
 const box = "bg-black/60 border-white/15 text-white";
-const linesOf = (v: string) => v.split("\n").map((s) => s.trim()).filter(Boolean);
 const label = "text-[11px] font-bold uppercase tracking-[0.18em] mb-1";
-
-/** "Name — detail" lines ⇄ the warm-up list. */
-const warmupToText = (w: DayWorkout["warmup"]) => (w ?? []).map((x) => (x.detail ? `${x.name} — ${x.detail}` : x.name)).join("\n");
-const textToWarmup = (v: string) =>
-  linesOf(v).map((line) => {
-    const [name, ...rest] = line.split(/\s+—\s+|\s+-\s+/);
-    return { name: name.trim(), detail: rest.join(" — ").trim() };
-  });
 
 export const StrengthEditTonight = ({
   week, dayKey, day, onSaved,
@@ -96,13 +88,20 @@ export const StrengthEditTonight = ({
         <section className="rounded-2xl border-2 p-4 space-y-3" style={{ borderColor: `${NLA_RED}66` }}>
           <h2 className="text-lg font-black uppercase tracking-[0.15em]" style={{ color: NLA_RED }}>The bar</h2>
           <div>
-            <p className={label} style={{ color: `${NLA_RED}cc` }}>Warm-up · one per line, "name — detail"</p>
-            <Textarea
-              value={warmupToText(draft.warmup)}
-              onChange={(e) => setDraft((d) => ({ ...d, warmup: textToWarmup(e.target.value) }))}
-              onBlur={commit}
-              rows={3}
-              className={`${box} text-sm`}
+            <p className={label} style={{ color: `${NLA_RED}cc` }}>Warm-up · a movement per line, its detail nested under it</p>
+            <BulletEditor
+              key={warmupToText(draft.warmup) ?? ""}
+              defaultValue={warmupToText(draft.warmup)}
+              accent={NLA_RED}
+              dark
+              textClassName="text-sm"
+              className="min-h-[5rem]"
+              placeholder="Empty bar, Enter, Tab, 2 × 5"
+              onSave={(v) => {
+                const next: DayWorkout = { ...draft, warmup: textToWarmup(v) };
+                setDraft(next);
+                save(next);
+              }}
             />
           </div>
           <div>

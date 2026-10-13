@@ -13,6 +13,8 @@ import {
 } from "@/components/ui/dialog";
 import { Loader2 } from "lucide-react";
 import { DAYS, DayKey, TRACKS, TRACK_META, NbtDay } from "@/lib/nbt";
+import BulletEditor from "@/components/practice/BulletEditor";
+import { bulletLinesOf } from "@/lib/bulletText";
 
 /** Textarea in, trimmed lines out. Blank lines are dropped, not stored. */
 const linesOf = (s: string) => s.split("\n").map((l) => l.trim()).filter(Boolean);
@@ -146,12 +148,13 @@ const NbtEditDay = ({
                   <p className="text-xs font-bold mb-1" style={{ color: TRACK_META[t].color }}>
                     {TRACK_META[t].label}
                   </p>
-                  <Textarea
-                    value={draft.work[t].join("\n")}
-                    onChange={(e) => set((d) => { d.work[t] = linesOf(e.target.value); })}
-                    rows={4}
-                    placeholder="One line each"
-                    className="bg-neutral-900 border-neutral-800 text-white text-sm"
+                  <BulletEditor
+                    defaultValue={draft.work[t].join("\n")}
+                    accent={TRACK_META[t].color}
+                    textClassName="text-sm"
+                    className="min-h-[6rem] !bg-neutral-900 !border-neutral-800"
+                    placeholder="One station per line. Enter for the next, Tab to nest."
+                    onSave={(v) => set((d) => { d.work[t] = bulletLinesOf(v); })}
                   />
                 </div>
               ))}
