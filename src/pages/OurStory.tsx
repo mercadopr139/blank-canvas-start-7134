@@ -195,7 +195,7 @@ const OurStory = () => {
               </div>
 
               <p className="text-lg md:text-xl text-muted-foreground leading-relaxed mb-6">
-                Dave, raised in Cape May by parents devoted to community service, attended the United States Naval Academy in Annapolis. There, he distinguished himself academically and athletically as a four-year member of the Navy boxing team, earning multiple Brigade Boxing Championships. Following graduation, he commissioned into the United States Navy and served seven years on active duty, and later earned his MBA at the Wharton School of the University of Pennsylvania.
+                Dave, raised in Cape May by parents devoted to community service, attended the United States Naval Academy in Annapolis. There, he distinguished himself academically and athletically as a four-year member of Navy&apos;s nationally renowned boxing team, earning multiple Brigade Boxing Championships. Following graduation, he commissioned into the United States Navy and served seven years on active duty, and later earned his MBA at the Wharton School of the University of Pennsylvania.
               </p>
 
               <div className="clear-both" />
