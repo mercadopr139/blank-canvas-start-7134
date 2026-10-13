@@ -263,16 +263,16 @@ const OurStory = () => {
 
               {/* Doc's Reach mural — floated left with the closing paragraph, where
                   McNally and Dr. Cox come back in. Painted on the gym wall. */}
-              <div className="md:float-left md:mr-5 md:mb-3 md:max-w-[220px] mb-6 w-full max-w-[280px] mx-auto md:mx-0">
+              <div className="md:float-left md:mr-5 md:mb-3 md:max-w-[260px] mb-6 w-full max-w-[320px] mx-auto md:mx-0">
                 <div className="bg-muted rounded-lg shadow-md overflow-hidden">
-                  <button type="button" onClick={() => setActiveImg({ src: docsReachMural, alt: "Doc's Reach, the mural honoring Dr. Ken and Glenda Cox on the NLA gym wall" })} aria-label="Enlarge photo">
+                  <button type="button" onClick={() => setActiveImg({ src: docsReachMural, alt: "Doc's Reach: the NLA gym wall honoring Dr. Ken and Glenda Cox, with the mural, the quote and Josh's trunks" })} aria-label="Enlarge photo">
                     <img loading="lazy"
                       src={docsReachMural}
-                      alt="Doc's Reach, the mural honoring Dr. Ken and Glenda Cox on the NLA gym wall"
+                      alt="Doc's Reach: the NLA gym wall honoring Dr. Ken and Glenda Cox, with the mural, the quote and Josh's trunks"
                       className="w-full h-auto cursor-pointer" />
                   </button>
                   <div className="px-3 py-1.5 text-center">
-                    <p className="text-xs text-muted-foreground italic">Doc&apos;s Reach: the mural honoring Dr. Ken &amp; Glenda Cox in the NLA gym</p>
+                    <p className="text-xs text-muted-foreground italic">Doc&apos;s Reach: the gym wall honoring Dr. Ken &amp; Glenda Cox, with Josh&apos;s trunks</p>
                   </div>
                 </div>
               </div>
