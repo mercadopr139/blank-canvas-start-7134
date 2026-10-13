@@ -237,7 +237,7 @@ const OurStory = () => {
               </div>
 
               <p className="text-lg md:text-xl text-muted-foreground leading-relaxed mb-6">
-                Back in New Jersey, Josh felt a calling to make an impact beyond the ring. He spent over a decade as a psychology and sociology teacher, earning recognition for exceptional classroom culture, relationship-based discipline, and student motivation. As both a teacher and multi-sport coach, Josh was intentional about becoming the mentor he once needed: consistent, fair, and committed to giving every young person a genuine opportunity.
+                Back in New Jersey, Josh felt a calling to make an impact beyond the ring. He spent over a decade as a psychology and sociology teacher at Cape May County Technical High School, earning recognition for exceptional classroom culture, relationship-based discipline, and student motivation. As both a teacher and multi-sport coach, Josh was intentional about becoming the mentor he once needed: consistent, fair, and committed to giving every young person a genuine opportunity.
               </p>
 
               <div className="clear-both" />
