@@ -278,7 +278,7 @@ const OurStory = () => {
               </div>
 
               <p className="text-lg md:text-xl text-muted-foreground leading-relaxed mb-6">
-                Today, No Limits Academy is more than a boxing gym. It is a community hub built on mentorship, belonging, and opportunity. Just as Dr. Cox and Coach McNally had built the Lock Haven program together a generation earlier, two of their boxers, Josh and Dave, founded No Limits Academy together. Leveraging backgrounds in education, military service, business, and boxing, alongside a network of incredible people, they created a space where young people are challenged, supported, and believed in. Through discipline and care, NLA teaches its athletes that their circumstances do not define their future, and that no one succeeds alone.
+                Today, No Limits Academy is more than a boxing gym. It is a community hub built on mentorship, belonging, and opportunity. Just as Dr. Cox and Coach McNally had helped build the Lock Haven program a generation earlier, two of their boxers, Josh and Dave, founded No Limits Academy together. Leveraging backgrounds in education, military service, business, and boxing, alongside a network of incredible people, they created a space where young people are challenged, supported, and believed in. Through discipline and care, NLA teaches its athletes that their circumstances do not define their future, and that no one succeeds alone.
               </p>
 
               <div className="clear-both" />
