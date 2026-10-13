@@ -69,15 +69,15 @@ export const levelDot = (level: Level, base: number) => ({
 });
 
 /**
- * Main bullets bold white; a sub-bullet a lighter, regular-weight white; a
- * sub-sub-bullet lighter again and a size smaller (Josh, 2026-10-13).
+ * Main bullets bold white at full size. Each level under it is regular
+ * weight, a step lighter, and a step smaller (Josh, 2026-10-13).
  */
 export const levelText = (level: Level): { color: string; fontWeight: number; fontSize?: string } =>
   level === 0
     ? { color: "#ffffff", fontWeight: 600 }
     : level === 1
-      ? { color: "rgba(255,255,255,0.62)", fontWeight: 400 }
-      : { color: "rgba(255,255,255,0.5)", fontWeight: 400, fontSize: "0.86em" };
+      ? { color: "rgba(255,255,255,0.62)", fontWeight: 400, fontSize: "0.9em" }
+      : { color: "rgba(255,255,255,0.5)", fontWeight: 400, fontSize: "0.8em" };
 
 /** What a screen reader calls a bullet of each level. */
 export const levelName = (level: Level) => ["Bullet", "Sub-bullet", "Sub-sub-bullet"][level];
