@@ -238,7 +238,7 @@ const OurStory = () => {
                     Lock Haven&apos;s founding fathers with world champion Tommy Loughran.
                   </p>
                   <p className="text-xs text-muted-foreground leading-snug mt-1">
-                    1980: Dr. Ken Cox, Jim McNally, Tommy Loughran, and Gary Rosato. Gary coached first and Doc, the faculty rep, carried the program on. Gary went on to become a world-class boxing referee and entered the Pennsylvania Boxing Hall of Fame in 2025. Photo courtesy of Jim McNally.
+                    1980: Dr. Ken Cox, Jim McNally, Tommy Loughran, and Gary Rosato. Gary coached first and Doc, the faculty rep, carried the program on. Gary went on to become a world-class boxing referee and entered the Pennsylvania Boxing Hall of Fame in 2025. Jim McNally is an inductee of the Maryland Boxing Hall of Fame.
                   </p>
                 </figcaption>
               </figure>
