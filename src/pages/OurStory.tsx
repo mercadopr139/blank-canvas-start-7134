@@ -155,7 +155,7 @@ const OurStory = () => {
               </p>
 
               <p className="text-lg md:text-xl text-muted-foreground leading-relaxed mb-6">
-                Sports provided an outlet, but boxing became the turning point. While pursuing his education at Lock Haven University, known for its nationally ranked boxing program, Josh found structure, accountability, and belief in his own potential. He boxed under Dr. Ken Cox, a Pennsylvania Boxing Hall of Famer and legendary coach in both boxing and wrestling. In 2007, Josh became a National Collegiate Boxing Champion and later competed professionally. Along the way, following the direction of Dr. Cox, he earned a degree in Secondary Education. Boxing did more than sharpen his athletic ability; it taught him discipline, resilience, and how to confront adversity with focus and self-control, and simultaneously he was learning that education was his ticket to success, a lesson he would one day pass on to every young person he encountered.
+                Sports provided an outlet, but boxing became the turning point. While pursuing his education at Lock Haven University, known for its nationally ranked boxing program, Josh found structure, accountability, and belief in his own potential. He boxed under Dr. Ken Cox, &ldquo;Doc&rdquo; to everyone who knew him, a Pennsylvania Boxing Hall of Famer and legendary coach in both boxing and wrestling. In 2007, Josh became a National Collegiate Boxing Champion and later competed professionally. Along the way, following the direction of Dr. Cox, he earned a degree in Secondary Education. Boxing did more than sharpen his athletic ability; it taught him discipline, resilience, and how to confront adversity with focus and self-control, and simultaneously he was learning that education was his ticket to success, a lesson he would one day pass on to every young person he encountered.
               </p>
 
               <div className="clear-both" />
@@ -178,8 +178,10 @@ const OurStory = () => {
 
               <div className="clear-both" />
 
-              {/* Dave with Sister & Parents — floated right with Dave paragraph */}
-              <div className="md:float-right md:ml-5 md:mb-3 md:max-w-[260px] mb-6 w-full max-w-[320px] mx-auto md:mx-0">
+              {/* Dave's two photos, stacked in one right-hand column. The Dave
+                  paragraph and the Lock Haven paragraph both wrap around it, so
+                  the text is never pinched between a photo on each side. */}
+              <div className="md:float-right md:ml-5 md:mb-3 md:max-w-[240px] mb-6 w-full max-w-[320px] mx-auto md:mx-0 space-y-4">
                 <div className="bg-muted rounded-lg shadow-md overflow-hidden">
                   <button type="button" onClick={() => setActiveImg({ src: daveFamily, alt: "Dave, pictured with sister & parents" })} aria-label="Enlarge photo">
                     <img loading="lazy"
@@ -193,16 +195,6 @@ const OurStory = () => {
                     </p>
                   </div>
                 </div>
-              </div>
-
-              <p className="text-lg md:text-xl text-muted-foreground leading-relaxed mb-6">
-                Dave, raised in Cape May by parents devoted to community service, attended the United States Naval Academy in Annapolis. There, he distinguished himself academically and athletically as a four-year member of Navy&apos;s nationally renowned boxing team, earning multiple Brigade Boxing Championships. Following graduation, he commissioned into the United States Navy and served seven years on active duty, and later earned his MBA at the Wharton School of the University of Pennsylvania.
-              </p>
-
-              <div className="clear-both" />
-
-              {/* Dave Brigade Champion — floated right */}
-              <div className="md:float-right md:ml-5 md:mb-3 md:max-w-[200px] mb-6 w-full max-w-[240px] mx-auto md:mx-0">
                 <div className="bg-muted rounded-lg shadow-md overflow-hidden">
                   <button type="button" onClick={() => setActiveImg({ src: daveBrigadeChampion, alt: "Dave, 2015 Brigade Champion" })} aria-label="Enlarge photo">
                     <img loading="lazy"
@@ -216,32 +208,40 @@ const OurStory = () => {
                 </div>
               </div>
 
-              {/* Lock Haven boxing, 1980 — from Jim McNally, floated left with the
-                  shared-root paragraph. Names left to right confirmed by Josh. */}
-              <div className="md:float-left md:mr-5 md:mb-3 md:max-w-[300px] mb-6 w-full max-w-[340px] mx-auto md:mx-0">
-                <div className="bg-muted rounded-lg shadow-md overflow-hidden">
-                  <button type="button" onClick={() => setActiveImg({ src: lockHaven1980, alt: "Lock Haven boxing, 1980: Dr. Ken Cox, Jim McNally, Tommy Loughran and Gary Rosato at the Downtown Athletic Club, New York" })} aria-label="Enlarge photo">
-                    <img loading="lazy"
-                      src={lockHaven1980}
-                      alt="Lock Haven boxing, 1980: Dr. Ken Cox, Jim McNally, Tommy Loughran and Gary Rosato at the Downtown Athletic Club, New York"
-                      className="w-full h-auto cursor-pointer" />
-                  </button>
-                  <div className="px-3 py-1.5 text-center">
-                    <p className="text-xs text-muted-foreground italic font-semibold leading-snug">
-                      Lock Haven&apos;s founding fathers with world champion Tommy Loughran.
-                    </p>
-                    <p className="text-xs text-muted-foreground leading-snug mt-0.5">
-                      1980: Dr. Ken Cox, Jim McNally, Tommy Loughran, and Gary Rosato. Gary coached first and Doc, the faculty rep, carried the program on. Gary went on to become a world-class boxing referee and entered the Pennsylvania Boxing Hall of Fame in 2025. Photo courtesy of Jim McNally.
-                    </p>
-                  </div>
-                </div>
-              </div>
+              <p className="text-lg md:text-xl text-muted-foreground leading-relaxed mb-6">
+                Dave, raised in Cape May by parents devoted to community service, attended the United States Naval Academy in Annapolis. There, he distinguished himself academically and athletically as a four-year member of Navy&apos;s nationally renowned boxing team, earning multiple Brigade Boxing Championships. Following graduation, he commissioned into the United States Navy and served seven years on active duty, and later earned his MBA at the Wharton School of the University of Pennsylvania.
+              </p>
 
               <p className="text-lg md:text-xl text-muted-foreground leading-relaxed mb-6">
-                The two programs that shaped them turn out to share a root. Jim McNally, who coached Navy boxing for 37 years and became a legend in Annapolis, transferred to Lock Haven in the spring of 1979, met Gary Rosato, and within weeks the two had permission to start a boxing club. Dr. Ken Cox, their faculty advisor, helped them get a gym. Gary coached until he graduated, Doc took over, and the club he carried on is the program Josh would arrive at decades later.
+                The two programs that shaped them turn out to share a root. Jim McNally, who coached Navy boxing for 37 years and became a legend in Annapolis, transferred to Lock Haven in the spring of 1979, met Gary Rosato, and within weeks the two had permission to start a boxing club. Dr. Cox, their faculty advisor, helped them secure a facility. Gary coached until he graduated, Doc took over, and the club he carried on is the program Josh would arrive at decades later.
               </p>
 
               <div className="clear-both" />
+
+              {/* Lock Haven boxing, 1980 — from Jim McNally. A feature, full width,
+                  after the paragraph it belongs to. Names left to right
+                  confirmed by Josh. */}
+              <figure className="mb-8 max-w-[420px] mx-auto">
+                <button
+                  type="button"
+                  onClick={() => setActiveImg({ src: lockHaven1980, alt: "Lock Haven boxing, 1980: Dr. Ken Cox, Jim McNally, Tommy Loughran and Gary Rosato at the Downtown Athletic Club, New York" })}
+                  aria-label="Enlarge photo"
+                  className="block w-full rounded-xl overflow-hidden shadow-md bg-muted"
+                >
+                  <img loading="lazy"
+                    src={lockHaven1980}
+                    alt="Lock Haven boxing, 1980: Dr. Ken Cox, Jim McNally, Tommy Loughran and Gary Rosato at the Downtown Athletic Club, New York"
+                    className="w-full h-auto cursor-pointer" />
+                </button>
+                <figcaption className="mt-3 text-center px-2">
+                  <p className="text-xs text-muted-foreground italic font-semibold leading-snug">
+                    Lock Haven&apos;s founding fathers with world champion Tommy Loughran.
+                  </p>
+                  <p className="text-xs text-muted-foreground leading-snug mt-1">
+                    1980: Dr. Ken Cox, Jim McNally, Tommy Loughran, and Gary Rosato. Gary coached first and Doc, the faculty rep, carried the program on. Gary went on to become a world-class boxing referee and entered the Pennsylvania Boxing Hall of Fame in 2025. Photo courtesy of Jim McNally.
+                  </p>
+                </figcaption>
+              </figure>
 
               {/* Basketball Coach photo — floated left with teaching paragraph */}
               <div className="md:float-left md:mr-5 md:mb-3 md:max-w-[240px] mb-6 w-full max-w-[300px] mx-auto md:mx-0">
