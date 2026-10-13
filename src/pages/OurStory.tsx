@@ -12,6 +12,7 @@ import daveBrigadeChampion from "@/assets/our-story/dave-brigade-champion.webp";
 import joshProBoxing from "@/assets/our-story/josh-pro-boxing-2.webp";
 import joshDocCox from "@/assets/our-story/josh-doc-cox.webp";
 import docsReachMural from "@/assets/our-story/docs-reach-mural.webp";
+import lockHaven1980 from "@/assets/our-story/lock-haven-1980.webp";
 import facilityConstructionCrew from "@/assets/facility/facility-construction-crew.webp";
 import facilityPlumbingCrew from "@/assets/facility/facility-plumbing-crew.webp";
 import facilityRebarPrep from "@/assets/facility/facility-rebar-prep.webp";
@@ -215,8 +216,29 @@ const OurStory = () => {
                 </div>
               </div>
 
+              {/* Lock Haven boxing, 1980 — from Jim McNally, floated left with the
+                  shared-root paragraph. Names left to right confirmed by Josh. */}
+              <div className="md:float-left md:mr-5 md:mb-3 md:max-w-[300px] mb-6 w-full max-w-[340px] mx-auto md:mx-0">
+                <div className="bg-muted rounded-lg shadow-md overflow-hidden">
+                  <button type="button" onClick={() => setActiveImg({ src: lockHaven1980, alt: "Lock Haven boxing, 1980: Dr. Ken Cox, Jim McNally, Tommy Loughran and Gary Rosato at the Downtown Athletic Club, New York" })} aria-label="Enlarge photo">
+                    <img loading="lazy"
+                      src={lockHaven1980}
+                      alt="Lock Haven boxing, 1980: Dr. Ken Cox, Jim McNally, Tommy Loughran and Gary Rosato at the Downtown Athletic Club, New York"
+                      className="w-full h-auto cursor-pointer" />
+                  </button>
+                  <div className="px-3 py-1.5 text-center">
+                    <p className="text-xs text-muted-foreground italic font-semibold leading-snug">
+                      Lock Haven&apos;s founding fathers with world champion Tommy Loughran.
+                    </p>
+                    <p className="text-xs text-muted-foreground leading-snug mt-0.5">
+                      1980: Dr. Ken Cox, Jim McNally, Tommy Loughran, and Gary Rosato. Gary coached first and Doc, the faculty rep, carried the program on. Gary went on to become a world-class boxing referee and entered the Pennsylvania Boxing Hall of Fame in 2025. Photo courtesy of Jim McNally.
+                    </p>
+                  </div>
+                </div>
+              </div>
+
               <p className="text-lg md:text-xl text-muted-foreground leading-relaxed mb-6">
-                The two programs that shaped them turn out to share a root. Jim McNally, who coached Navy boxing for 37 years and became a legend in Annapolis, had graduated from Lock Haven in the late 1970s. Together, McNally and Dr. Ken Cox were among the founding fathers of the famous Lock Haven boxing program, the same program Josh would arrive at decades later.
+                The two programs that shaped them turn out to share a root. Jim McNally, who coached Navy boxing for 37 years and became a legend in Annapolis, transferred to Lock Haven in the spring of 1979, met Gary Rosato, and within weeks the two had permission to start a boxing club. Dr. Ken Cox, their faculty advisor, helped them get a gym. Gary coached until he graduated, Doc took over, and the club he carried on is the program Josh would arrive at decades later.
               </p>
 
               <div className="clear-both" />
