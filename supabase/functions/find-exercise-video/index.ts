@@ -65,17 +65,29 @@ const QUALIFIERS: Record<string, string[]> = {
   hammer: [],
 };
 
-/** 2 = title agrees with the name's qualifiers, 1 = says nothing, 0 = contradicts one. */
+/**
+ * How well a title matches the name's qualifiers: 0 when it contradicts one
+ * (seated, for a standing press), 1 when it says nothing, and 1 + the number
+ * of qualifiers it carries otherwise — so "standing dumbbell" beats
+ * "dumbbell" alone (Josh, 2026-10-13: the dumbbell clip was a seated one).
+ */
 const agreement = (name: string, title: string): number => {
   const n = name.toLowerCase();
   const t = title.toLowerCase();
-  let score = 1;
+  let matched = 0;
   for (const [word, opposites] of Object.entries(QUALIFIERS)) {
     if (!n.includes(word)) continue;
     if (opposites.some((o) => t.includes(o)) && !t.includes(word)) return 0;
-    if (t.includes(word)) score = 2;
+    if (t.includes(word)) matched++;
   }
-  return score;
+  return 1 + matched;
+};
+
+/** Does the title carry every qualifier the name has? */
+const fullyAgrees = (name: string, title: string): boolean => {
+  const n = name.toLowerCase();
+  const t = title.toLowerCase();
+  return Object.keys(QUALIFIERS).filter((w) => n.includes(w)).every((w) => t.includes(w));
 };
 
 // ISO-8601 duration (e.g. "PT5M12S") → seconds.
@@ -154,7 +166,7 @@ Deno.serve(async (req) => {
     // "standing dumbbell overhead press" rather than "how to … proper form
     // technique" — which surfaces the titles that name the exact movement.
     const hasQualifier = Object.keys(QUALIFIERS).some((w) => nameNorm.includes(w));
-    const titleAgrees = (it: any) => agreement(name, it?.snippet?.title ?? "") === 2;
+    const titleAgrees = (it: any) => fullyAgrees(name, it?.snippet?.title ?? "");
     if (hasQualifier && !(sdata.items ?? []).some(titleAgrees)) {
       const again = new URLSearchParams(searchParams);
       again.set("q", `${name} tutorial`);
