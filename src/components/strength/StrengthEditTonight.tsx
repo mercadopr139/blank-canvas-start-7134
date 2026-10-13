@@ -13,6 +13,7 @@ import { Button } from "@/components/ui/button";
 import { DAYS, type DayKey, type DayWorkout, type WeekRow } from "@/lib/strength";
 import { todayNY } from "@/lib/programYear";
 import BulletEditor from "@/components/practice/BulletEditor";
+import ExerciseVideoPicker from "@/components/strength/ExerciseVideoPicker";
 import { warmupToText, textToWarmup } from "@/lib/warmupText";
 
 const NLA_RED = "#bf0f3e";
@@ -116,9 +117,14 @@ export const StrengthEditTonight = ({
         <section className="rounded-2xl border-2 p-4 space-y-3" style={{ borderColor: "#fb718566" }}>
           <h2 className="text-lg font-black uppercase tracking-[0.15em]" style={{ color: "#fb7185" }}>Extra work</h2>
           {(draft.accessories ?? []).map((a, i) => (
-            <div key={i} className="flex gap-2">
-              <Input value={a.name} onChange={(e) => setAccessory(i, "name", e.target.value)} onBlur={commit} className={`${box} flex-1 text-sm font-semibold`} />
-              <Input value={a.sets} onChange={(e) => setAccessory(i, "sets", e.target.value)} onBlur={commit} className={`${box} w-24 text-sm font-black tabular-nums text-center`} />
+            <div key={i} className="space-y-1.5">
+              <div className="flex gap-2">
+                <Input value={a.name} onChange={(e) => setAccessory(i, "name", e.target.value)} onBlur={commit} className={`${box} flex-1 text-sm font-semibold`} />
+                <Input value={a.sets} onChange={(e) => setAccessory(i, "sets", e.target.value)} onBlur={commit} className={`${box} w-24 text-sm font-black tabular-nums text-center`} />
+              </div>
+              {/* The demo video the kids will see for this exercise, and a
+                  way to throw it out for another (Josh, 2026-10-13). */}
+              <ExerciseVideoPicker name={a.name} />
             </div>
           ))}
           <div>
