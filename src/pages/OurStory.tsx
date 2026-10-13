@@ -11,6 +11,7 @@ import joshBasketballCoach from "@/assets/our-story/josh-basketball-coach.webp";
 import daveBrigadeChampion from "@/assets/our-story/dave-brigade-champion.webp";
 import joshProBoxing from "@/assets/our-story/josh-pro-boxing-2.webp";
 import joshDocCox from "@/assets/our-story/josh-doc-cox.webp";
+import docsReachMural from "@/assets/our-story/docs-reach-mural.webp";
 import facilityConstructionCrew from "@/assets/facility/facility-construction-crew.webp";
 import facilityPlumbingCrew from "@/assets/facility/facility-plumbing-crew.webp";
 import facilityRebarPrep from "@/assets/facility/facility-rebar-prep.webp";
@@ -259,6 +260,22 @@ const OurStory = () => {
               <p className="text-lg md:text-xl text-muted-foreground leading-relaxed mb-6">
                 Though they are from completely different upbringings with distinct journeys, Josh and Dave stayed closely connected, united by boxing, friendship, and a shared belief in the power of structure and consistency to change lives. In 2020, those parallel journeys converged with the establishment of No Limits Academy. In 2022, Josh resigned from his teaching position to commit to NLA full time, allowing the organization to grow from a vision into a comprehensive youth development program serving children across Cape May County.
               </p>
+
+              {/* Doc's Reach mural — floated left with the closing paragraph, where
+                  McNally and Dr. Cox come back in. Painted on the gym wall. */}
+              <div className="md:float-left md:mr-5 md:mb-3 md:max-w-[220px] mb-6 w-full max-w-[280px] mx-auto md:mx-0">
+                <div className="bg-muted rounded-lg shadow-md overflow-hidden">
+                  <button type="button" onClick={() => setActiveImg({ src: docsReachMural, alt: "Doc's Reach, the mural honoring Dr. Ken and Glenda Cox on the NLA gym wall" })} aria-label="Enlarge photo">
+                    <img loading="lazy"
+                      src={docsReachMural}
+                      alt="Doc's Reach, the mural honoring Dr. Ken and Glenda Cox on the NLA gym wall"
+                      className="w-full h-auto cursor-pointer" />
+                  </button>
+                  <div className="px-3 py-1.5 text-center">
+                    <p className="text-xs text-muted-foreground italic">Doc&apos;s Reach: the mural honoring Dr. Ken &amp; Glenda Cox in the NLA gym</p>
+                  </div>
+                </div>
+              </div>
 
               <p className="text-lg md:text-xl text-muted-foreground leading-relaxed mb-6">
                 Today, No Limits Academy is more than a boxing gym. It is a community hub built on mentorship, belonging, and opportunity. Just as Coach McNally and Dr. Cox had built the Lock Haven program together a generation earlier, Josh and Dave founded No Limits Academy together. Leveraging backgrounds in education, military service, business, and boxing, alongside a network of incredible people, they created a space where young people are challenged, supported, and believed in. Through discipline and care, NLA teaches its athletes that their circumstances do not define their future, and that no one succeeds alone.
