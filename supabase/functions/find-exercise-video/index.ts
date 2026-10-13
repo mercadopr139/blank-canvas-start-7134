@@ -144,9 +144,30 @@ Deno.serve(async (req) => {
     const sres = await fetch(`https://www.googleapis.com/youtube/v3/search?${searchParams}`);
     if (!sres.ok) return json({ youtube_id: refresh ? null : (cached?.youtube_id ?? null), error: refresh ? "YouTube didn't answer. Try again." : undefined });
     const sdata = await sres.json();
+    const seen = new Set<string>();
     const ids: string[] = (sdata.items ?? [])
       .map((it: any) => it?.id?.videoId)
-      .filter((v: unknown): v is string => typeof v === "string" && !rejected.has(v));
+      .filter((v: unknown): v is string => typeof v === "string" && !rejected.has(v) && !seen.has(v) && !!seen.add(v));
+
+    // When the name carries a qualifier (dumbbell, standing…) and nothing
+    // YouTube returned says so in its title, ask once more in plainer words —
+    // "standing dumbbell overhead press" rather than "how to … proper form
+    // technique" — which surfaces the titles that name the exact movement.
+    const hasQualifier = Object.keys(QUALIFIERS).some((w) => nameNorm.includes(w));
+    const titleAgrees = (it: any) => agreement(name, it?.snippet?.title ?? "") === 2;
+    if (hasQualifier && !(sdata.items ?? []).some(titleAgrees)) {
+      const again = new URLSearchParams(searchParams);
+      again.set("q", `${name} tutorial`);
+      again.set("maxResults", "15");
+      const r2 = await fetch(`https://www.googleapis.com/youtube/v3/search?${again}`);
+      if (r2.ok) {
+        const d2 = await r2.json();
+        for (const it of d2.items ?? []) {
+          const v = it?.id?.videoId;
+          if (typeof v === "string" && !rejected.has(v) && !seen.has(v)) { seen.add(v); ids.push(v); }
+        }
+      }
+    }
 
     let youtubeId: string | null = null;
     let title: string | null = null;
