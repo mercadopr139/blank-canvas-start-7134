@@ -123,6 +123,13 @@ const BulletEditor = ({
     }
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
+      // Enter on an empty sub-bullet backs it out to a main bullet, the way
+      // every list editor does: Enter, Enter after a run of sub-bullets lands
+      // on a fresh main bullet (Josh, 2026-10-13).
+      if (row.nested && !row.text.trim()) {
+        update(row.id, { nested: false, text: "" });
+        return;
+      }
       const before = row.text.slice(0, start);
       const after = row.text.slice(end);
       const fresh = newRow(after, row.nested);

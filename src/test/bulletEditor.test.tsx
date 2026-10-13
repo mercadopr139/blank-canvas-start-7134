@@ -44,6 +44,26 @@ describe("BulletEditor — bullets as bullets while typing", () => {
     expect(document.activeElement).toBe(areas()[1]);
   });
 
+  it("Enter on an empty sub-bullet backs it out to a main bullet (Enter, Enter after sub-bullets)", () => {
+    render(<BulletEditor defaultValue={"4 miles on treadmill\n- Denum, Cuevas"} onSave={() => {}} />);
+    caretAtEnd(areas()[1]);
+    fireEvent.keyDown(areas()[1], { key: "Enter" });
+    // First Enter: a fresh, empty sub-bullet.
+    expect(areas()).toHaveLength(3);
+    expect(areas()[2].value).toBe("");
+    expect(areas()[2].getAttribute("aria-label")).toBe("Sub-bullet 3");
+    // Second Enter: that empty sub-bullet becomes a main bullet, no new row.
+    fireEvent.keyDown(areas()[2], { key: "Enter" });
+    expect(areas()).toHaveLength(3);
+    expect(areas()[2].getAttribute("aria-label")).toBe("Bullet 3");
+    // Typing there and pressing Enter again carries on as a main bullet.
+    fireEvent.change(areas()[2], { target: { value: "Pad work" } });
+    caretAtEnd(areas()[2]);
+    fireEvent.keyDown(areas()[2], { key: "Enter" });
+    expect(areas()).toHaveLength(4);
+    expect(areas()[3].getAttribute("aria-label")).toBe("Bullet 4");
+  });
+
   it("saves once, when focus leaves the editor, as the text the board reads", () => {
     const onSave = vi.fn();
     render(
