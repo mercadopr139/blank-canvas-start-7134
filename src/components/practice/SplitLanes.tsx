@@ -6,7 +6,7 @@
 import { useState } from "react";
 import { Input } from "@/components/ui/input";
 import { parseSplit, serializeSplit, capFirst, laneDefaults, type SplitLane } from "@/lib/practicePlan";
-import { parseBullets } from "@/lib/bulletText";
+import { parseBullets, levelIndent, levelDot, levelText } from "@/lib/bulletText";
 import BulletEditor from "./BulletEditor";
 
 /** Two side-by-side mini-columns: lane name, who, drills. Saves on blur. */
@@ -100,8 +100,8 @@ export const SplitLanesView = ({
             {lines.length ? (
               <ul className="mt-[0.3em] text-[0.95em] leading-snug text-white space-y-[0.15em]">
                 {lines.map((t, k) => (
-                  <li key={k} className="flex items-start gap-[0.4em]" style={t.nested ? { marginLeft: "1.1em", color: "rgba(255,255,255,0.62)", fontWeight: 400 } : { fontWeight: 600 }}>
-                    <span className="shrink-0 rounded-full" style={{ width: t.nested ? "0.2em" : "0.3em", height: t.nested ? "0.2em" : "0.3em", marginTop: t.nested ? "0.6em" : "0.55em", backgroundColor: accent, opacity: t.nested ? 0.55 : 1 }} />
+                  <li key={k} className="flex items-start gap-[0.4em]" style={{ marginLeft: levelIndent(t.level), ...levelText(t.level) }}>
+                    <span className="shrink-0 rounded-full" style={{ width: levelDot(t.level, 0.3).size, height: levelDot(t.level, 0.3).size, marginTop: t.level ? "0.6em" : "0.55em", backgroundColor: accent, opacity: levelDot(t.level, 0.3).opacity }} />
                     <span className="flex-1">{t.text}</span>
                   </li>
                 ))}

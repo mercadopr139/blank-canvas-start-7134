@@ -33,7 +33,7 @@ import {
   SeasonMode,
 } from "@/lib/practicePlan";
 import BulletEditor from "@/components/practice/BulletEditor";
-import { parseBullets } from "@/lib/bulletText";
+import { parseBullets, levelIndent, levelDot, levelText } from "@/lib/bulletText";
 import { SplitLanesEditor, SplitLanesView } from "@/components/practice/SplitLanes";
 import { isSplitBlock, parseSplit, isJuniorsLane, hasLanes, isBibleStudyBlock, bibleStudyText, bibleStudySiblings, isWeightsBlock, wrapupFor } from "@/lib/practicePlan";
 import { DAYS as NBT_DAYS } from "@/lib/nbt";
@@ -1299,21 +1299,21 @@ const PracticeBoard = () => {
                                       <li
                                         key={li}
                                         className="flex items-start gap-[0.5em]"
-                                        style={l.nested ? { marginLeft: "1.15em" } : undefined}
+                                        style={l.level ? { marginLeft: levelIndent(l.level) } : undefined}
                                       >
                                         <span
                                           className="shrink-0 rounded-full mt-[0.55em]"
                                           style={{
-                                            width: l.nested ? "0.2em" : "0.3em",
-                                            height: l.nested ? "0.2em" : "0.3em",
-                                            marginTop: l.nested ? "0.6em" : "0.55em",
+                                            width: levelDot(l.level, 0.3).size,
+                                            height: levelDot(l.level, 0.3).size,
+                                            marginTop: l.level ? "0.6em" : "0.55em",
                                             backgroundColor: bullet,
-                                            opacity: l.nested ? 0.55 : 1,
+                                            opacity: levelDot(l.level, 0.3).opacity,
                                           }}
                                         />
                                         <span
                                           className="flex-1"
-                                          style={l.nested ? { color: "rgba(255,255,255,0.62)", fontWeight: 400 } : { fontWeight: 600 }}
+                                          style={levelText(l.level)}
                                         >
                                           {l.text}
                                         </span>
