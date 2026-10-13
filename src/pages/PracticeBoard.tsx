@@ -32,7 +32,8 @@ import {
   PracticeSettings, PracticeWeek, PracticeBlock, SpiritualDay, MeetingPoints,
   SeasonMode,
 } from "@/lib/practicePlan";
-import { handleIndentKey } from "@/lib/indentTextarea";
+import BulletEditor from "@/components/practice/BulletEditor";
+import { parseBullets } from "@/lib/bulletText";
 import { SplitLanesEditor, SplitLanesView } from "@/components/practice/SplitLanes";
 import { isSplitBlock, parseSplit, isJuniorsLane, hasLanes, isBibleStudyBlock, bibleStudyText, bibleStudySiblings, isWeightsBlock, wrapupFor } from "@/lib/practicePlan";
 import { DAYS as NBT_DAYS } from "@/lib/nbt";
@@ -1261,17 +1262,17 @@ const PracticeBoard = () => {
                           ) : isSplitBlock(b.category) ? (
                             <SplitLanesView detail={b.detail} accent={g.accent} />
                           ) : editing ? (
-                            <textarea
+                            /* Bullets as bullets while typing: Enter for the
+                               next, Tab to nest. Saves when focus leaves it. */
+                            <BulletEditor
                               key={`${b.id}-${b.detail ?? ""}`}
-                              defaultValue={b.detail ?? ""}
-                              onBlur={(e) => {
-                                const v = e.target.value.trim() || null;
-                                if (v !== (b.detail || null))
-                                  saveDetail.mutate({ id: b.id, detail: v });
+                              defaultValue={b.detail}
+                              accent={bullet}
+                              dark
+                              textClassName="text-lg"
+                              onSave={(v) => {
+                                if (v !== (b.detail || null)) saveDetail.mutate({ id: b.id, detail: v });
                               }}
-                              onKeyDown={handleIndentKey}
-                              rows={2}
-                              className="w-full rounded-lg bg-black/60 border border-white/15 px-3 py-2 text-lg text-white outline-none focus:border-white/40"
                             />
                           ) : (
                             /* The drills and the Workout Prep button share a
@@ -1294,15 +1295,7 @@ const PracticeBoard = () => {
                                    invisible in a textarea: a coach cannot see
                                    whether the convention took. */
                                 <ul className="text-[1em] leading-snug text-white space-y-0.5">
-                                  {b.detail
-                                    .split("\n")
-                                    .map((raw) => ({
-                                      nested: /^([ \t]+|\s*[-*>•])/.test(raw),
-                                      // Strip the marker itself — it did its job.
-                                      text: raw.trim().replace(/^[-*>•]\s*/, ""),
-                                    }))
-                                    .filter((l) => l.text)
-                                    .map((l, li) => (
+                                  {parseBullets(b.detail).map((l, li) => (
                                       <li
                                         key={li}
                                         className="flex items-start gap-[0.5em]"

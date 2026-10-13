@@ -5,9 +5,9 @@
 // default lane names.
 import { useState } from "react";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import { parseSplit, serializeSplit, capFirst, laneDefaults, type SplitLane } from "@/lib/practicePlan";
-import { handleIndentKey } from "@/lib/indentTextarea";
+import { parseBullets } from "@/lib/bulletText";
+import BulletEditor from "./BulletEditor";
 
 /** Two side-by-side mini-columns: lane name, who, drills. Saves on blur. */
 export const SplitLanesEditor = ({
@@ -25,12 +25,19 @@ export const SplitLanesEditor = ({
   const [lanes, setLanes] = useState<SplitLane[]>(() => parseSplit(detail, defaults));
   const patch = (i: number, field: keyof SplitLane, value: string) =>
     setLanes((prev) => prev.map((l, idx) => (idx === i ? { ...l, [field]: value } : l)));
-  const commit = () => {
+  const commitWith = (next: SplitLane[]) => {
     // Lane names settle into sentence case as they're saved.
-    const tidy = lanes.map((l) => ({ ...l, title: capFirst(l.title) }));
-    if (tidy.some((l, i) => l.title !== lanes[i].title)) setLanes(tidy);
+    const tidy = next.map((l) => ({ ...l, title: capFirst(l.title) }));
+    if (tidy.some((l, i) => l.title !== next[i].title)) setLanes(tidy);
     const v = serializeSplit(tidy, defaults);
     if (v !== (detail || null)) onSave(v);
+  };
+  const commit = () => commitWith(lanes);
+  // A lane's drills arrive from its bullet editor when focus leaves it.
+  const saveText = (i: number, text: string | null) => {
+    const next = lanes.map((l, idx) => (idx === i ? { ...l, text: text ?? "" } : l));
+    setLanes(next);
+    commitWith(next);
   };
   // Lanes are SUB-divisions of the Split column, and they look like it: indented
   // behind a thin rule in the group's colour, small muted sub-labels, boxes a
@@ -38,10 +45,6 @@ export const SplitLanesEditor = ({
   const quiet = `border-0 bg-transparent shadow-none focus-visible:ring-0 focus-visible:ring-offset-0 ${
     dark ? "text-white placeholder:text-white/30" : "text-white placeholder:text-neutral-600"
   }`;
-  const box = dark
-    ? "bg-black/60 border-white/15 text-white placeholder:text-white/30"
-    : "bg-neutral-950 border-neutral-800 text-white placeholder:text-neutral-600";
-
   return (
     <div className="ml-1 pl-2.5 space-y-2.5" style={{ borderLeft: `2px solid ${accent}66` }}>
       {lanes.map((l, i) => {
@@ -63,13 +66,14 @@ export const SplitLanesEditor = ({
                 className={`h-6 w-[45%] min-w-0 px-0 text-[11px] text-right ${quiet}`}
               />
             </div>
-            <Textarea
-              value={l.text}
-              onChange={(e) => patch(i, "text", e.target.value)}
-              onBlur={commit}
-              onKeyDown={handleIndentKey}
-              rows={2}
-              className={`min-h-[48px] resize-none px-2.5 py-1.5 text-[13px] rounded-md ${box}`}
+            <BulletEditor
+              defaultValue={l.text}
+              accent={accent}
+              dark={dark}
+              textClassName="text-[13px]"
+              className="min-h-[48px] !px-2.5 !py-1.5 rounded-md"
+              placeholder="Drills, one per line"
+              onSave={(v) => saveText(i, v)}
             />
           </div>
         );
@@ -86,7 +90,7 @@ export const SplitLanesView = ({
   return (
     <div className="grid grid-cols-2 gap-[0.6em]">
       {lanes.map((l, i) => {
-        const lines = l.text.split("\n").map((s) => s.trim().replace(/^[-*>•]\s*/, "")).filter(Boolean);
+        const lines = parseBullets(l.text);
         return (
           <div key={i} className="rounded-lg border p-[0.5em]" style={{ borderColor: `${accent}44`, background: `${accent}0d` }}>
             <p className="text-[0.7em] font-bold text-white/60 leading-tight">
@@ -96,9 +100,9 @@ export const SplitLanesView = ({
             {lines.length ? (
               <ul className="mt-[0.3em] text-[0.95em] leading-snug text-white space-y-[0.15em]">
                 {lines.map((t, k) => (
-                  <li key={k} className="flex items-start gap-[0.4em]">
-                    <span className="shrink-0 rounded-full" style={{ width: "0.3em", height: "0.3em", marginTop: "0.55em", backgroundColor: accent }} />
-                    <span className="flex-1">{t}</span>
+                  <li key={k} className="flex items-start gap-[0.4em]" style={t.nested ? { marginLeft: "1.1em", opacity: 0.85 } : undefined}>
+                    <span className="shrink-0 rounded-full" style={{ width: t.nested ? "0.2em" : "0.3em", height: t.nested ? "0.2em" : "0.3em", marginTop: t.nested ? "0.6em" : "0.55em", backgroundColor: accent, opacity: t.nested ? 0.55 : 1 }} />
+                    <span className="flex-1">{t.text}</span>
                   </li>
                 ))}
               </ul>

@@ -14,7 +14,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
+
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -49,7 +49,7 @@ import {
   dateForWeekday, blockAccent, PracticeGroup, PracticeSettings, PracticeWeek, PracticeBlock,
   TemplateBlock, SpiritualDay, MeetingPoints, SeasonMode, formatStartTime,
 } from "@/lib/practicePlan";
-import { handleIndentKey } from "@/lib/indentTextarea";
+import BulletEditor from "@/components/practice/BulletEditor";
 import { SplitLanesEditor } from "@/components/practice/SplitLanes";
 import { hasLanes, isBibleStudyBlock, bibleStudyText, bibleStudySiblings, wrapupFor, planningWeekOf, type Wrapups } from "@/lib/practicePlan";
 
@@ -1423,15 +1423,15 @@ const BlockEditor = ({
       ) : (
         /* One box, a line per bullet. Bible Study is the same box since
            2026-10-08; a week saved while it was two lanes reads as lines. */
-        <Textarea
+        <BulletEditor
           key={`${block.id}-${block.detail ?? ""}`}
-          defaultValue={(isBibleStudyBlock(block.category) ? bibleStudyText(block.detail) : block.detail) ?? ""}
-          onBlur={(e) => {
-            const v = e.target.value.trim() || null;
+          defaultValue={isBibleStudyBlock(block.category) ? bibleStudyText(block.detail) : block.detail}
+          accent={accent}
+          textClassName="text-sm"
+          className="min-h-[68px]"
+          onSave={(v) => {
             if (v !== (block.detail || null)) onSave(block.id, v);
           }}
-          onKeyDown={handleIndentKey}
-          className="min-h-[68px] text-sm bg-neutral-950 border-neutral-800 text-white"
         />
       )}
     </div>
