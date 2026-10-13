@@ -149,7 +149,7 @@ const OurStory = () => {
               </div>
 
               <p className="text-lg md:text-xl text-muted-foreground leading-relaxed mb-6">
-                No Limits Academy was founded by Josh Mercado, whose life has been shaped by the power—and absence—of mentorship. Raised in a single-parent household, Josh grew up acutely aware of what it meant to feel unrepresented and unsupported, watching other children benefit from adults who coached, advocated, and opened doors for them. That early longing to be seen, guided, and defended became a defining force in his life.
+                No Limits Academy was co-founded by Josh Mercado, whose life has been shaped by the power—and absence—of mentorship. Raised in a single-parent household, Josh grew up acutely aware of what it meant to feel unrepresented and unsupported, watching other children benefit from adults who coached, advocated, and opened doors for them. That early longing to be seen, guided, and defended became a defining force in his life.
               </p>
 
               <p className="text-lg md:text-xl text-muted-foreground leading-relaxed mb-6">
@@ -261,7 +261,7 @@ const OurStory = () => {
               </p>
 
               <p className="text-lg md:text-xl text-muted-foreground leading-relaxed mb-6">
-                Today, No Limits Academy is more than a boxing gym. It is a community hub built on mentorship, belonging, and opportunity. Leveraging backgrounds in education, military service, business, and boxing, alongside a network of incredible people, Josh and Dave created a space where young people are challenged, supported, and believed in. Through discipline and care, NLA teaches its athletes that their circumstances do not define their future, and that no one succeeds alone.
+                Today, No Limits Academy is more than a boxing gym. It is a community hub built on mentorship, belonging, and opportunity. Just as Coach McNally and Dr. Cox had built the Lock Haven program together a generation earlier, Josh and Dave founded No Limits Academy together. Leveraging backgrounds in education, military service, business, and boxing, alongside a network of incredible people, they created a space where young people are challenged, supported, and believed in. Through discipline and care, NLA teaches its athletes that their circumstances do not define their future, and that no one succeeds alone.
               </p>
 
               <div className="clear-both" />
