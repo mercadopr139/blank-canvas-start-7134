@@ -32,7 +32,8 @@ import {
   PracticeSettings, PracticeWeek, PracticeBlock, SpiritualDay, MeetingPoints,
   SeasonMode,
 } from "@/lib/practicePlan";
-import { WEEKDAY_KEYS as STRENGTH_DAY_KEY, DAY_LABELS, moveWorkout as moveStrengthWorkout, type WeekRow as StrengthWeekRow } from "@/lib/strength";
+import { WEEKDAY_KEYS as STRENGTH_DAY_KEY, DAY_LABELS, moveWorkout as moveStrengthWorkout, removeWorkout as removeStrengthWorkout, type WeekRow as StrengthWeekRow } from "@/lib/strength";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import BulletEditor from "@/components/practice/BulletEditor";
 import { parseBullets, levelIndent, levelDot, levelText } from "@/lib/bulletText";
 import { SplitLanesEditor, SplitLanesView } from "@/components/practice/SplitLanes";
@@ -428,17 +429,16 @@ const PracticeBoard = () => {
     onError: (e: Error) => toast.error(e.message || "Couldn't move that."),
   });
 
-  // Move tonight's Battle Team workout to tomorrow — the workout itself in
-  // the S&C week, and the Strength block on this board along with it, so the
-  // Workout Plan button follows. If tomorrow already has a workout the two
-  // swap. Week only; the template is untouched. (Josh, 2026-10-14: something
-  // else took the floor on a Wednesday.)
-  const moveWorkoutToTomorrow = useMutation({
-    mutationFn: async ({ fromWeekday }: { fromWeekday: number }) => {
-      const toWeekday = fromWeekday + 1;
+  // Move tonight's Battle Team workout to another night — the workout itself
+  // in the S&C week, and the Strength block on this board along with it, so
+  // the Workout Plan button follows. If that night already has a workout the
+  // two swap. Week only; the template is untouched. (Josh, 2026-10-14:
+  // something else took the floor on a Wednesday.)
+  const moveWorkoutTo = useMutation({
+    mutationFn: async ({ fromWeekday, toWeekday }: { fromWeekday: number; toWeekday: number }) => {
       const from = STRENGTH_DAY_KEY[fromWeekday];
       const to = STRENGTH_DAY_KEY[toWeekday];
-      if (!from || !to) throw new Error("There is no practice tomorrow to move it to.");
+      if (!from || !to || from === to) throw new Error("Pick another practice day to move it to.");
 
       const { data: wk, error } = await supabase
         .from("strength_weeks" as never)
@@ -496,6 +496,47 @@ const PracticeBoard = () => {
       );
     },
     onError: (e: Error) => toast.error(e.message || "Couldn't move the workout."),
+  });
+
+  // Take tonight's Battle Team workout out of the week altogether — the
+  // workout from the S&C week and the Strength block off this board. Week
+  // only; the template is untouched.
+  const removeWorkoutFromWeek = useMutation({
+    mutationFn: async ({ weekday: wd }: { weekday: number }) => {
+      const key = STRENGTH_DAY_KEY[wd];
+      if (!key) throw new Error("That is not a practice day.");
+      const { data: wk, error } = await supabase
+        .from("strength_weeks" as never)
+        .select("id, days")
+        .eq("week_start", weekStart)
+        .maybeSingle();
+      if (error) throw error;
+      const row = wk as unknown as Pick<StrengthWeekRow, "id" | "days"> | null;
+      const nextDays = row ? removeStrengthWorkout(row.days ?? {}, key) : null;
+      if (row && nextDays) {
+        const { error: e2 } = await supabase
+          .from("strength_weeks" as never)
+          .update({ days: nextDays } as never)
+          .eq("id", row.id);
+        if (e2) throw e2;
+      }
+      const gone = blocks.filter((b) => b.group === "battle_team" && b.weekday === wd && isWeightsBlock(b.category));
+      if (gone.length) {
+        const { error: e3 } = await supabase
+          .from("practice_blocks" as never)
+          .delete()
+          .in("id", gone.map((b) => b.id));
+        if (e3) throw e3;
+      }
+      if (!nextDays && !gone.length) throw new Error(`There is no ${DAY_LABELS[key]} workout to remove.`);
+      return { key };
+    },
+    onSuccess: ({ key }) => {
+      qc.invalidateQueries({ queryKey: ["board-blocks", week?.id] });
+      qc.invalidateQueries({ queryKey: ["strength-week", weekStart] });
+      toast.success(`${DAY_LABELS[key]}'s workout removed from this week.`);
+    },
+    onError: (e: Error) => toast.error(e.message || "Couldn't remove the workout."),
   });
 
   // The week's own days (Sat/Sun included when the week was started with
@@ -1408,16 +1449,43 @@ const PracticeBoard = () => {
                               {/* Something else took the floor tonight: push the
                                   Battle Team's workout to tomorrow. */}
                               {g.key === "battle_team" && isWeightsBlock(b.category) && (
-                                <button
-                                  type="button"
-                                  disabled={!STRENGTH_DAY_KEY[day.n + 1] || moveWorkoutToTomorrow.isPending}
-                                  onClick={() => moveWorkoutToTomorrow.mutate({ fromWeekday: day.n })}
-                                  title={STRENGTH_DAY_KEY[day.n + 1] ? "Move tonight's workout to tomorrow (swaps if tomorrow has one)" : "There is no practice tomorrow"}
-                                  className="inline-flex items-center gap-1.5 rounded-lg border px-2.5 py-1 text-[0.7em] font-bold transition-colors hover:bg-white/10 disabled:opacity-40 shrink-0"
-                                  style={{ borderColor: "rgba(255,255,255,0.3)", color: "rgba(255,255,255,0.8)" }}
-                                >
-                                  {moveWorkoutToTomorrow.isPending ? "Moving…" : `Move to ${DAY_LABELS[STRENGTH_DAY_KEY[day.n + 1]] ?? "tomorrow"} →`}
-                                </button>
+                                <DropdownMenu>
+                                  <DropdownMenuTrigger asChild>
+                                    <button
+                                      type="button"
+                                      disabled={moveWorkoutTo.isPending || removeWorkoutFromWeek.isPending}
+                                      title="Move tonight's workout to another night, or take it out of this week"
+                                      className="inline-flex items-center gap-1.5 rounded-lg border px-2.5 py-1 text-[0.7em] font-bold transition-colors hover:bg-white/10 disabled:opacity-40 shrink-0"
+                                      style={{ borderColor: "rgba(255,255,255,0.3)", color: "rgba(255,255,255,0.8)" }}
+                                    >
+                                      {moveWorkoutTo.isPending || removeWorkoutFromWeek.isPending ? "Working…" : "Move workout ▾"}
+                                    </button>
+                                  </DropdownMenuTrigger>
+                                  <DropdownMenuContent align="start" className="bg-neutral-900 border-neutral-700 text-white min-w-[12rem]">
+                                    {days
+                                      .filter((d) => d.n !== day.n && STRENGTH_DAY_KEY[d.n])
+                                      .map((d) => (
+                                        <DropdownMenuItem
+                                          key={d.n}
+                                          className="cursor-pointer focus:bg-white/10 focus:text-white"
+                                          onSelect={() => moveWorkoutTo.mutate({ fromWeekday: day.n, toWeekday: d.n })}
+                                        >
+                                          Move to {DAY_LABELS[STRENGTH_DAY_KEY[d.n]]}
+                                        </DropdownMenuItem>
+                                      ))}
+                                    <DropdownMenuSeparator className="bg-white/10" />
+                                    <DropdownMenuItem
+                                      className="cursor-pointer text-red-300 focus:bg-red-500/15 focus:text-red-200"
+                                      onSelect={() => {
+                                        const label = DAY_LABELS[STRENGTH_DAY_KEY[day.n]] ?? "tonight";
+                                        if (window.confirm(`Remove ${label}'s workout from this week? The Strength block comes off the board too.`))
+                                          removeWorkoutFromWeek.mutate({ weekday: day.n });
+                                      }}
+                                    >
+                                      Remove from this week
+                                    </DropdownMenuItem>
+                                  </DropdownMenuContent>
+                                </DropdownMenu>
                               )}
                             </div>
                           )}

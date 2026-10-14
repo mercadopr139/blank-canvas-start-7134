@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { moveWorkout, weekDays, dayMeta, WEEKDAY_KEYS, type DayWorkout, type WeekRow } from "@/lib/strength";
+import { moveWorkout, removeWorkout, weekDays, dayMeta, WEEKDAY_KEYS, type DayWorkout, type WeekRow } from "@/lib/strength";
 
 const w = (focus: string, extra: Partial<DayWorkout> = {}): DayWorkout => ({ focus, ...extra });
 
@@ -28,6 +28,14 @@ describe("Battle Team workout — pushed to another night", () => {
     const next = moveWorkout(days, "thursday", "wednesday")!;
     expect(next.wednesday).toEqual({ focus: "Squat" });
     expect(next.thursday).toBeUndefined();
+  });
+
+  it("removes one day's workout from the week and leaves the rest", () => {
+    const days: WeekRow["days"] = { monday: w("Bench"), thursday: w("Squat", { movedFrom: "wednesday" }) };
+    const next = removeWorkout(days, "thursday")!;
+    expect(next).toEqual({ monday: w("Bench") });
+    expect(days.thursday).toBeDefined();
+    expect(removeWorkout(days, "friday")).toBeNull();
   });
 
   it("nothing to move, or no move at all, is null", () => {

@@ -102,6 +102,14 @@ export const moveWorkout = (
   return next;
 };
 
+/** Take one day's workout out of the week. Null when there was nothing on it. Pure. */
+export const removeWorkout = (days: WeekRow["days"], key: DayKey): WeekRow["days"] | null => {
+  if (!days[key]) return null;
+  const next: WeekRow["days"] = { ...days };
+  delete next[key];
+  return next;
+};
+
 /** The whole session, warm-up to finisher. The programme's own cap. */
 export const SESSION_MINUTES = 20;
 
