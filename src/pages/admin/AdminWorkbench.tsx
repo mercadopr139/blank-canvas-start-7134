@@ -237,6 +237,16 @@ const TileSignalRow = ({
 /* ───────── A draggable row in Today's Plan — the same look as the inline plan
     row plus a grip handle. data.type "plan" routes the drag to the plan-reorder
     branch of the page-level handler (writes plan_sort_order). ───────── */
+/**
+ * A planned task is drawn twice — in Today's Plan and in its focus tile — and
+ * both rows are draggable inside the one DndContext. Two draggables cannot
+ * share an id, so the plan row carries a prefixed one; the tile row keeps the
+ * bare task id. (Josh, 2026-10-14: planned tasks could not be dragged inside
+ * their tile — the tile row lost the id to the plan row.)
+ */
+const planRowId = (signalId: string) => `plan:${signalId}`;
+const signalIdOf = (dragId: string | number) => String(dragId).replace(/^plan:/, "");
+
 const SortablePlanRow = ({
   signal,
   onToggle,
@@ -247,7 +257,7 @@ const SortablePlanRow = ({
   onRemove: () => void;
 }) => {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
-    useSortable({ id: signal.id, data: { type: "plan" } });
+    useSortable({ id: planRowId(signal.id), data: { type: "plan" } });
   const style = {
     transform: CSS.Transform.toString(transform),
     transition,
@@ -1323,10 +1333,12 @@ const AdminWorkbench = () => {
     }
 
     if (type === "plan") {
-      // Reorder Today's Plan.
+      // Reorder Today's Plan. Plan rows carry the "plan:" prefix; strip it.
       if (active.id === over.id) return;
-      const oldIndex = plannedSignals.findIndex((s) => s.id === active.id);
-      const newIndex = plannedSignals.findIndex((s) => s.id === over.id);
+      const fromId = signalIdOf(active.id);
+      const toId = signalIdOf(over.id);
+      const oldIndex = plannedSignals.findIndex((s) => s.id === fromId);
+      const newIndex = plannedSignals.findIndex((s) => s.id === toId);
       if (oldIndex === -1 || newIndex === -1) return;
       reorderPlanMutation.mutate(arrayMove(plannedSignals, oldIndex, newIndex));
       return;
@@ -1485,7 +1497,7 @@ const AdminWorkbench = () => {
                   </p>
                 ) : (
                   <SortableContext
-                    items={plannedSignals.map((s) => s.id)}
+                    items={plannedSignals.map((s) => planRowId(s.id))}
                     strategy={verticalListSortingStrategy}
                   >
                     <div className="space-y-0.5 mb-1">
