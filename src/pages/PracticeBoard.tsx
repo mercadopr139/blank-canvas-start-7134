@@ -457,26 +457,33 @@ const PracticeBoard = () => {
         .eq("id", row.id);
       if (e2) throw e2;
 
-      // The Strength block follows (and tomorrow's comes back, if it had one).
-      // Marked as this week's own, so the template sync never "corrects" it.
+      // The Strength block follows (and tomorrow's comes back, if it had one),
+      // and it goes to the TOP of its new column: the Battle Team lifts first
+      // (Josh, 2026-10-14). Marked as this week's own, so the template sync
+      // never "corrects" it.
       const bt = blocks.filter((b) => b.group === "battle_team");
       const mine = bt.filter((b) => b.weekday === fromWeekday && isWeightsBlock(b.category));
       const theirs = bt.filter((b) => b.weekday === toWeekday && isWeightsBlock(b.category));
-      const top = (wd: number) => Math.max(-1, ...bt.filter((b) => b.weekday === wd).map((b) => b.position));
-      const topTo = top(toWeekday);
-      const topFrom = top(fromWeekday);
-      await Promise.all([
-        ...mine.map((b, i) =>
-          supabase.from("practice_blocks" as never)
-            .update({ weekday: toWeekday, position: topTo + 1 + i, category_overridden: true } as never)
-            .eq("id", b.id)
-        ),
-        ...theirs.map((b, i) =>
-          supabase.from("practice_blocks" as never)
-            .update({ weekday: fromWeekday, position: topFrom + 1 + i, category_overridden: true } as never)
-            .eq("id", b.id)
-        ),
-      ]);
+      const byPos = (x: PracticeBlock, y: PracticeBlock) => x.position - y.position;
+      const stay = (wd: number) => bt.filter((b) => b.weekday === wd && !isWeightsBlock(b.category)).sort(byPos);
+      // The two columns as they will read: lift first, then the rest in order.
+      const columns: Array<{ weekday: number; order: PracticeBlock[] }> = [
+        { weekday: toWeekday, order: [...mine, ...stay(toWeekday)] },
+        { weekday: fromWeekday, order: [...theirs, ...stay(fromWeekday)] },
+      ];
+      const moved = new Set([...mine, ...theirs].map((b) => b.id));
+      const set = (b: PracticeBlock, patch: Record<string, unknown>) =>
+        supabase.from("practice_blocks" as never).update(patch as never).eq("id", b.id);
+      // Positions are unique per column, so park everything high first, then
+      // write the final order — no two rows ever claim one slot on the way.
+      for (const c of columns) {
+        await Promise.all(c.order.map((b, i) => set(b, { weekday: c.weekday, position: 1000 + i })));
+      }
+      for (const c of columns) {
+        await Promise.all(
+          c.order.map((b, i) => set(b, { position: i, ...(moved.has(b.id) ? { category_overridden: true } : {}) }))
+        );
+      }
       return { from, to, swapped };
     },
     onSuccess: ({ from, to, swapped }) => {
