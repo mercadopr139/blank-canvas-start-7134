@@ -32,6 +32,7 @@ import {
   PracticeSettings, PracticeWeek, PracticeBlock, SpiritualDay, MeetingPoints,
   SeasonMode,
 } from "@/lib/practicePlan";
+import { WEEKDAY_KEYS as STRENGTH_DAY_KEY, DAY_LABELS, moveWorkout as moveStrengthWorkout, type WeekRow as StrengthWeekRow } from "@/lib/strength";
 import BulletEditor from "@/components/practice/BulletEditor";
 import { parseBullets, levelIndent, levelDot, levelText } from "@/lib/bulletText";
 import { SplitLanesEditor, SplitLanesView } from "@/components/practice/SplitLanes";
@@ -425,6 +426,69 @@ const PracticeBoard = () => {
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["board-blocks", week?.id] }),
     onError: (e: Error) => toast.error(e.message || "Couldn't move that."),
+  });
+
+  // Move tonight's Battle Team workout to tomorrow — the workout itself in
+  // the S&C week, and the Strength block on this board along with it, so the
+  // Workout Plan button follows. If tomorrow already has a workout the two
+  // swap. Week only; the template is untouched. (Josh, 2026-10-14: something
+  // else took the floor on a Wednesday.)
+  const moveWorkoutToTomorrow = useMutation({
+    mutationFn: async ({ fromWeekday }: { fromWeekday: number }) => {
+      const toWeekday = fromWeekday + 1;
+      const from = STRENGTH_DAY_KEY[fromWeekday];
+      const to = STRENGTH_DAY_KEY[toWeekday];
+      if (!from || !to) throw new Error("There is no practice tomorrow to move it to.");
+
+      const { data: wk, error } = await supabase
+        .from("strength_weeks" as never)
+        .select("id, days")
+        .eq("week_start", weekStart)
+        .maybeSingle();
+      if (error) throw error;
+      const row = wk as unknown as Pick<StrengthWeekRow, "id" | "days"> | null;
+      if (!row) throw new Error("No Battle Team workout plan exists for this week yet.");
+      const nextDays = moveStrengthWorkout(row.days ?? {}, from, to);
+      if (!nextDays) throw new Error(`There is no ${DAY_LABELS[from]} workout to move.`);
+      const swapped = !!row.days?.[to];
+      const { error: e2 } = await supabase
+        .from("strength_weeks" as never)
+        .update({ days: nextDays } as never)
+        .eq("id", row.id);
+      if (e2) throw e2;
+
+      // The Strength block follows (and tomorrow's comes back, if it had one).
+      // Marked as this week's own, so the template sync never "corrects" it.
+      const bt = blocks.filter((b) => b.group === "battle_team");
+      const mine = bt.filter((b) => b.weekday === fromWeekday && isWeightsBlock(b.category));
+      const theirs = bt.filter((b) => b.weekday === toWeekday && isWeightsBlock(b.category));
+      const top = (wd: number) => Math.max(-1, ...bt.filter((b) => b.weekday === wd).map((b) => b.position));
+      const topTo = top(toWeekday);
+      const topFrom = top(fromWeekday);
+      await Promise.all([
+        ...mine.map((b, i) =>
+          supabase.from("practice_blocks" as never)
+            .update({ weekday: toWeekday, position: topTo + 1 + i, category_overridden: true } as never)
+            .eq("id", b.id)
+        ),
+        ...theirs.map((b, i) =>
+          supabase.from("practice_blocks" as never)
+            .update({ weekday: fromWeekday, position: topFrom + 1 + i, category_overridden: true } as never)
+            .eq("id", b.id)
+        ),
+      ]);
+      return { from, to, swapped };
+    },
+    onSuccess: ({ from, to, swapped }) => {
+      qc.invalidateQueries({ queryKey: ["board-blocks", week?.id] });
+      qc.invalidateQueries({ queryKey: ["strength-week", weekStart] });
+      toast.success(
+        swapped
+          ? `${DAY_LABELS[from]}'s and ${DAY_LABELS[to]}'s workouts swapped.`
+          : `${DAY_LABELS[from]}'s workout moved to ${DAY_LABELS[to]}. The Workout Plan button moved with it.`
+      );
+    },
+    onError: (e: Error) => toast.error(e.message || "Couldn't move the workout."),
   });
 
   // The week's own days (Sat/Sun included when the week was started with
@@ -1331,7 +1395,25 @@ const PracticeBoard = () => {
 
                           {/* While editing the textarea takes the full width, so
                               the button drops beneath it. */}
-                          {editing && showPrep && <div className="mt-1.5">{prepButton}</div>}
+                          {editing && showPrep && (
+                            <div className="mt-1.5 flex flex-wrap items-center gap-2">
+                              {prepButton}
+                              {/* Something else took the floor tonight: push the
+                                  Battle Team's workout to tomorrow. */}
+                              {g.key === "battle_team" && isWeightsBlock(b.category) && (
+                                <button
+                                  type="button"
+                                  disabled={!STRENGTH_DAY_KEY[day.n + 1] || moveWorkoutToTomorrow.isPending}
+                                  onClick={() => moveWorkoutToTomorrow.mutate({ fromWeekday: day.n })}
+                                  title={STRENGTH_DAY_KEY[day.n + 1] ? "Move tonight's workout to tomorrow (swaps if tomorrow has one)" : "There is no practice tomorrow"}
+                                  className="inline-flex items-center gap-1.5 rounded-lg border px-2.5 py-1 text-[0.7em] font-bold transition-colors hover:bg-white/10 disabled:opacity-40 shrink-0"
+                                  style={{ borderColor: "rgba(255,255,255,0.3)", color: "rgba(255,255,255,0.8)" }}
+                                >
+                                  {moveWorkoutToTomorrow.isPending ? "Moving…" : `Move to ${DAY_LABELS[STRENGTH_DAY_KEY[day.n + 1]] ?? "tomorrow"} →`}
+                                </button>
+                              )}
+                            </div>
+                          )}
                         </div>
                         );
                       })
@@ -1421,11 +1503,6 @@ const PracticeBoard = () => {
 };
 
 /** The S&C week is keyed by day name; the board works in weekday numbers. */
-const STRENGTH_DAY_KEY: Record<number, string> = {
-  1: "monday",
-  3: "wednesday",
-  5: "friday",
-};
 
 const AddBlock = ({
   accent, onAdd,

@@ -16,7 +16,7 @@ const NLA_RED = "#bf0f3e";
 // The week's shape and the date helpers live in src/lib/strength.ts now, shared
 // with the gym screen at /strength-board so the two can never disagree.
 import {
-  DAYS, type DayKey, type DayWorkout, type WeekRow, toMonday, isoDate, addDays, prettyRange,
+  DAYS, type DayKey, type DayWorkout, type WeekRow, toMonday, isoDate, addDays, prettyRange, dayMeta, weekDays, type DayMeta,
 } from "@/lib/strength";
 import ExerciseVideo from "@/components/strength/ExerciseVideo";
 import { LiveSwitch } from "@/components/practice/LiveSwitch";
@@ -82,7 +82,7 @@ export const BattleTeamWeek = ({
   const hasWeek = !!week && Object.keys(days).length > 0;
   const locked = week?.status === "locked";
   const current = days[selectedDay];
-  const selectedMeta = DAYS.find((d) => d.key === selectedDay)!;
+  const selectedMeta = dayMeta(selectedDay);
   const workoutDate = isoDate(addDays(weekMonday, selectedMeta.weekday - 1));
 
   const shiftWeek = (n: number) => { setReviseTexts({}); setWeekMonday((w) => addDays(w, n * 7)); };
@@ -321,7 +321,7 @@ export const BattleTeamWeek = ({
             </div>
           ) : (
             <div className="grid gap-3 md:grid-cols-3">
-              {DAYS.map((d) => (
+              {weekDays(days).map((d) => (
                 <DayCard
                   key={d.key}
                   meta={d}
@@ -346,7 +346,7 @@ export const BattleTeamWeek = ({
           <div className="mt-5">
             <div className="flex items-center gap-2 mb-3 flex-wrap">
               <span className="text-[11px] uppercase tracking-widest text-white/40 font-bold">Log sets for</span>
-              {DAYS.map((d) => {
+              {weekDays(days).map((d) => {
                 const active = d.key === selectedDay;
                 return (
                   <button key={d.key} onClick={() => setSelectedDay(d.key)}
@@ -383,7 +383,7 @@ const StrengthCoach = () => <BattleTeamWeek />;
 const DayCard = ({
   meta, day, locked, isToday, rewriting, revising, busy, reviseText, onReviseText, onRewrite, onRevise,
 }: {
-  meta: (typeof DAYS)[number];
+  meta: DayMeta;
   day: DayWorkout | undefined;
   locked: boolean;
   isToday: boolean;
