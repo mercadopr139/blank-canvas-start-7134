@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { format, subDays, startOfWeek, startOfMonth } from "date-fns";
+import { format, startOfWeek, startOfMonth } from "date-fns";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
