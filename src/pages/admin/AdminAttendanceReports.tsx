@@ -428,7 +428,7 @@ const AdminAttendanceReports = () => {
 
     programBreakdown.forEach(([prog, count]) => summary.push([`Program: ${prog}`, `${count} of ${uniqueCount} (${pct(count, uniqueCount)})`]));
     sexBreakdown.forEach(([sex, count]) => summary.push([`Sex: ${sex}`, `${count} of ${uniqueCount} (${pct(count, uniqueCount)})`]));
-    summary.push(["Below Federal Poverty Line", `${poverty.below} of ${poverty.total} (${pct(poverty.below, poverty.total)})`]);
+    summary.push(["Economically Disadvantaged", `${poverty.below} of ${poverty.total} (${pct(poverty.below, poverty.total)})`]);
     summary.push(["Bald Eagles Sign-Ins", String(baldEagleRecords.length)]);
     summary.push(["Bald Eagles Unique", String(baldEagleUniqueCount)]);
 
@@ -679,7 +679,7 @@ const AdminAttendanceReports = () => {
               </div>
             )}
             <div className="text-center">
-              <p className="text-[10px] uppercase tracking-wider text-white/40">Below Poverty</p>
+              <p className="text-[10px] uppercase tracking-wider text-white/40">Economically Disadvantaged</p>
               <p className="text-xl font-bold">{pct(poverty.below, poverty.total)}</p>
             </div>
             <div className="text-center">

@@ -229,7 +229,7 @@ const AdminExcursionIntelligence = () => {
     const summary =
       `In ${yearLabel}, No Limits Boxing Academy ran ${stats.total} excursion${stats.total === 1 ? "" : "s"}, ` +
       `reaching ${stats.uniqueYouth} unique youth across ${stats.youthTrips} youth-trips. ` +
-      `${equity.povertyPct}% of participating youth come from households at or below the poverty line, ` +
+      `${equity.povertyPct}% of participating youth are economically disadvantaged, ` +
       `and these enrichment experiences continue to open doors beyond the gym.` +
       (topRaces ? ` Participants reflect the community we serve, including ${topRaces}.` : "");
     downloadCornerCoachReportPdf({
@@ -240,7 +240,7 @@ const AdminExcursionIntelligence = () => {
         { label: "Excursions", value: String(stats.total) },
         { label: "Youth-Trips", value: String(stats.youthTrips) },
         { label: "Unique Youth", value: String(stats.uniqueYouth) },
-        { label: "Below Poverty", value: `${equity.povertyPct}%` },
+        { label: "Economically Disadvantaged", value: `${equity.povertyPct}%` },
       ],
       table: {
         columns: ["Date", "Trip", "Youth"],
@@ -342,7 +342,7 @@ const AdminExcursionIntelligence = () => {
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                 <div className="rounded-lg border border-white/10 bg-white/[0.02] px-3 py-2">
                   <p className="text-2xl font-bold text-amber-300">{equity.povertyPct}%</p>
-                  <p className="text-[10px] text-white/40">At/below poverty line</p>
+                  <p className="text-[10px] text-white/40">Economically disadvantaged</p>
                 </div>
                 <div className="rounded-lg border border-white/10 bg-white/[0.02] px-3 py-2">
                   <p className="text-2xl font-bold text-[#bf0f3e]">{equity.minorityPct}%</p>

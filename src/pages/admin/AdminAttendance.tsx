@@ -2620,7 +2620,7 @@ const AdminAttendance = () => {
             {/* Poverty % */}
             <Card className="bg-white/5 border-white/10 text-white">
               <CardContent className="pt-4 pb-3 text-center">
-                <p className="text-[10px] uppercase tracking-wider text-white/40">Below Poverty — {label}</p>
+                <p className="text-[10px] uppercase tracking-wider text-white/40">Economically Disadvantaged — {label}</p>
                 <p className="text-3xl font-bold mt-1">{pct(snap.poverty.below, snap.poverty.total)}</p>
                 <p className="text-[10px] text-white/30">{snap.poverty.below} of {snap.poverty.total}</p>
               </CardContent>
@@ -2692,7 +2692,7 @@ const AdminAttendance = () => {
           {/* Poverty % */}
           <Card className="bg-white/5 border-white/10 text-white">
             <CardContent className="pt-4 pb-3 text-center">
-              <p className="text-[10px] uppercase tracking-wider text-white/40">Below Poverty — {midHeaderSuffix}</p>
+              <p className="text-[10px] uppercase tracking-wider text-white/40">Economically Disadvantaged — {midHeaderSuffix}</p>
               <p className="text-3xl font-bold mt-1">{pct(midPoverty.below, midPoverty.total)}</p>
               <p className="text-[10px] text-white/30">{midPoverty.below} of {midPoverty.total}</p>
             </CardContent>
@@ -2765,7 +2765,7 @@ const AdminAttendance = () => {
             {/* Poverty % */}
             <Card className="bg-white/5 border-white/10 text-white">
               <CardContent className="pt-4 pb-3 text-center">
-                <p className="text-[10px] uppercase tracking-wider text-white/40">Below Poverty — {label}</p>
+                <p className="text-[10px] uppercase tracking-wider text-white/40">Economically Disadvantaged — {label}</p>
                 <p className="text-3xl font-bold mt-1">{pct(snap.poverty.below, snap.poverty.total)}</p>
                 <p className="text-[10px] text-white/30">{snap.poverty.below} of {snap.poverty.total}</p>
               </CardContent>
@@ -3076,7 +3076,7 @@ const AdminAttendance = () => {
           {/* Poverty Summary */}
           <Card className="bg-white/5 border-white/10 text-white">
             <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-white/60">Below Poverty Line ({viewedMonthShort})</CardTitle>
+              <CardTitle className="text-sm font-medium text-white/60">Economically Disadvantaged ({viewedMonthShort})</CardTitle>
             </CardHeader>
             <CardContent className="flex flex-col items-center justify-center py-4">
               <p className="text-5xl font-black text-white">{pct(povertyMonth.below, povertyMonth.total)}</p>

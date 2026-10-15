@@ -283,7 +283,7 @@ const ActivityReportSheet = ({ open, source, config, onClose }: Props) => {
     const stats: { label: string; value: string }[] = [];
     if (counts) stats.push({ label: "Total Youth", value: String(source.youthCount) });
     if (includeYR && youthReached) {
-      if (yrParts.poverty) stats.push({ label: "Below Poverty Line", value: `${youthReached.belowPovertyPct}%` });
+      if (yrParts.poverty) stats.push({ label: "Economically Disadvantaged", value: `${youthReached.belowPovertyPct}%` });
       if (yrParts.minority) stats.push({ label: "Minority", value: `${youthReached.minorityPct}%` });
       if (yrParts.gender) stats.push({ label: "Boys / Girls", value: `${youthReached.boysPct}% / ${youthReached.girlsPct}%` });
     }
@@ -319,7 +319,7 @@ const ActivityReportSheet = ({ open, source, config, onClose }: Props) => {
   };
 
   const partOptions: { key: keyof YrParts; label: string }[] = [
-    { key: "poverty", label: "Below poverty" },
+    { key: "poverty", label: "Economically disadvantaged" },
     { key: "minority", label: "Minority" },
     { key: "gender", label: "Boy / Girl" },
     { key: "race", label: "Race/Ethnicity" },

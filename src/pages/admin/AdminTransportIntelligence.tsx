@@ -323,7 +323,7 @@ const ZoneColumn = ({ name, stats }: { name: ZoneKey; stats: ZoneStats }) => (
 
       <div className="bg-white/5 rounded-lg p-3 flex items-center justify-between">
         <div>
-          <p className="text-white/50 text-[11px]">At / below federal poverty line</p>
+          <p className="text-white/50 text-[11px]">Economically disadvantaged</p>
           <p className="text-white/40 text-[11px]">{stats.povertyCount} of {stats.assessedYouth} assessed</p>
         </div>
         <p className="text-2xl font-bold" style={{ color: ZONE_ACCENT[name] }}>{stats.povertyPct}%</p>
@@ -434,7 +434,7 @@ export default function AdminTransportIntelligence() {
               <Kpi label="Rides Provided" value={combined.rides} />
               <Kpi label="Youth Served" value={combined.uniqueYouth} />
               <Kpi label="Avg Youth / Trip" value={combined.avgYouthPerTrip} />
-              <Kpi label="% ≤ Poverty Line" value={`${combined.povertyPct}%`} />
+              <Kpi label="% Economically Disadvantaged" value={`${combined.povertyPct}%`} />
             </div>
           </div>
 

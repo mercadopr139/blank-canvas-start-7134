@@ -10,7 +10,7 @@ const ImpactStrip = () => {
     {
       icon: Heart,
       value: "70%",
-      label: "Below Poverty Line",
+      label: "Economically Disadvantaged",
     },
     {
       icon: Bus,

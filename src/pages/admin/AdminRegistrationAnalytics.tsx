@@ -446,7 +446,7 @@ const AdminRegistrationAnalytics = () => {
                 <Card className="bg-white/5 border-white/10">
                   <CardContent className="pt-4">
                     <p className="text-[10px] uppercase tracking-wider text-white/40 mb-2 flex items-center gap-1">
-                      <TrendingDown className="w-3 h-3" /> Below Federal Poverty Line
+                      <TrendingDown className="w-3 h-3" /> Economically Disadvantaged
                     </p>
                     <p className="text-3xl font-bold text-amber-400">{belowFPLPct}%</p>
                     <p className="text-xs text-white/40 mt-0.5">{belowFPL} of {fplEligible} youth</p>

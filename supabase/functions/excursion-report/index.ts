@@ -52,7 +52,7 @@ const youthReachedBlock = (yr: any): string => {
   let out = "\nYOUTH REACHED breakdown (weave these EXACT figures into the narrative):\n";
   let any = false;
   if (yr.total != null) { out += `- Total youth reached: ${yr.total}\n`; any = true; }
-  if (yr.belowPovertyPct != null) { out += `- From households at or below the poverty line: ${yr.belowPovertyPct}%\n`; any = true; }
+  if (yr.belowPovertyPct != null) { out += `- Economically disadvantaged: ${yr.belowPovertyPct}%\n`; any = true; }
   if (yr.minorityPct != null) { out += `- Minority (non-white): ${yr.minorityPct}%\n`; any = true; }
   if (yr.boysPct != null || yr.girlsPct != null) { out += `- Boys: ${yr.boysPct ?? 0}%, Girls: ${yr.girlsPct ?? 0}%\n`; any = true; }
   if (Array.isArray(yr.races) && yr.races.length) {

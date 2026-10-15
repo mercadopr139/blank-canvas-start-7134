@@ -239,7 +239,7 @@ const AdminEventsIntelligence = () => {
       `In ${yearLabel}, No Limits Boxing Academy hosted ${stats.total} program event${stats.total === 1 ? "" : "s"}, ` +
       reachSentence +
       (equity.n > 0
-        ? `${equity.povertyPct}% of participating youth come from households at or below the poverty line, and these on-site experiences continue to build skills and connection beyond the ring.`
+        ? `${equity.povertyPct}% of participating youth are economically disadvantaged, and these on-site experiences continue to build skills and connection beyond the ring.`
         : `each one giving our youth new skills, mentorship, and connection beyond the ring.`) +
       (topRaces ? ` Participants reflect the community we serve, including ${topRaces}.` : "");
     downloadCornerCoachReportPdf({
@@ -250,7 +250,7 @@ const AdminEventsIntelligence = () => {
         { label: "Events", value: String(stats.total) },
         { label: "Youth Check-Ins", value: String(stats.youthCheckIns) },
         { label: "Unique Youth", value: String(stats.uniqueYouth) },
-        { label: "Below Poverty", value: `${equity.povertyPct}%` },
+        { label: "Economically Disadvantaged", value: `${equity.povertyPct}%` },
       ],
       table: {
         columns: ["Date", "Event", "Youth"],
@@ -344,7 +344,7 @@ const AdminEventsIntelligence = () => {
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                 <div className="rounded-lg border border-white/10 bg-white/[0.02] px-3 py-2">
                   <p className="text-2xl font-bold text-amber-300">{equity.povertyPct}%</p>
-                  <p className="text-[10px] text-white/40">At/below poverty line</p>
+                  <p className="text-[10px] text-white/40">Economically disadvantaged</p>
                 </div>
                 <div className="rounded-lg border border-white/10 bg-white/[0.02] px-3 py-2">
                   <p className="text-2xl font-bold text-[#bf0f3e]">{equity.minorityPct}%</p>

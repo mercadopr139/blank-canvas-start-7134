@@ -43,7 +43,7 @@ type ReportConfig = {
 const ALL_SECTIONS = [
   { key: "youth_summary", label: "Youth Transportation Summary", icon: Users },
   { key: "demographics", label: "Demographics Breakdown", icon: PieChart },
-  { key: "poverty", label: "Federal Poverty Line Analysis", icon: BarChart3 },
+  { key: "poverty", label: "Economic Disadvantage Analysis", icon: BarChart3 },
   { key: "routes", label: "Route & Zone Breakdown", icon: Bus },
   { key: "trip_frequency", label: "Trip Frequency (Daily/Weekly/Monthly/Yearly)", icon: BarChart3 },
   { key: "driver_pay", label: "Driver Activity & Pay Summary", icon: DollarSign },
@@ -553,13 +553,13 @@ export default function AdminTransportImpactReports() {
 
     // ── Poverty ──
     if (s.includes("poverty")) {
-      children.push(sectionTitle("Federal Poverty Line Analysis"));
+      children.push(sectionTitle("Economic Disadvantage Analysis"));
       children.push(new Table({
         width: { size: 9360, type: WidthType.DXA },
         columnWidths: [6000, 3360],
         rows: [makeHeaderRow(["Metric", "Value"]),
           makeRow(["Youth assessed (matched to a registration)", String(previewData.matchedYouth)]),
-          makeRow(["Youth at/below Poverty Line", String(previewData.povertyCount)], true),
+          makeRow(["Economically Disadvantaged Youth", String(previewData.povertyCount)], true),
           makeRow(["Percentage of Assessed Youth", `${previewData.povertyPct}%`])],
       }));
       children.push(new Paragraph({
@@ -1077,12 +1077,12 @@ function ReportPreviewContent({ data, sections, reportName, dateStart, dateEnd }
       {/* Poverty */}
       {s.includes("poverty") && (
         <Card className="bg-zinc-900/60 border-white/10">
-          <CardHeader><CardTitle className="text-white flex items-center gap-2"><BarChart3 className="w-5 h-5 text-[#CC0000]" /> Federal Poverty Line Analysis</CardTitle></CardHeader>
+          <CardHeader><CardTitle className="text-white flex items-center gap-2"><BarChart3 className="w-5 h-5 text-[#CC0000]" /> Economic Disadvantage Analysis</CardTitle></CardHeader>
           <CardContent>
             <div className="grid grid-cols-2 gap-4 mb-6">
               <div className="bg-white/5 rounded-lg p-4 text-center">
                 <p className="text-3xl font-bold text-[#CC0000]">{data.povertyCount}</p>
-                <p className="text-white/50 text-xs mt-1">Youth at/below Poverty Line</p>
+                <p className="text-white/50 text-xs mt-1">Economically Disadvantaged Youth</p>
               </div>
               <div className="bg-white/5 rounded-lg p-4 text-center">
                 <p className="text-3xl font-bold text-[#002868]">{data.povertyPct}%</p>
