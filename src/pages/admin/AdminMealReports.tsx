@@ -53,7 +53,9 @@ const AdminMealReports = () => {
   const [avgPerNight, setAvgPerNight] = useState(0);
   const programYear = getCurrentAttendanceYear();
   const priorProgramYear = `${Number(programYear.slice(0, 4)) - 1}-${Number(programYear.slice(5, 9)) - 1}`;
-  const [startDate, setStartDate] = useState<Date>(subDays(new Date(), 30));
+  // The table and its averages open on THIS MONTH, the 1st to today — the
+  // numbers are read month to month (Josh, 2026-10-15). Program year is one tap away.
+  const [startDate, setStartDate] = useState<Date>(startOfMonth(new Date()));
   const [endDate, setEndDate] = useState<Date>(new Date());
   const [reportData, setReportData] = useState<ReportRow[]>([]);
   const [loading, setLoading] = useState(false);
@@ -489,7 +491,15 @@ const AdminMealReports = () => {
       <div className="flex flex-wrap items-center gap-3">
         <DatePicker label="Start" date={startDate} onSelect={setStartDate} />
         <DatePicker label="End" date={endDate} onSelect={setEndDate} />
-        {/* One tap: the whole program year so far, for the report and the CSV. */}
+        {/* One tap each: this month (the default), or the whole program year so far. */}
+        <Button
+          variant="outline"
+          onClick={() => { setStartDate(startOfMonth(new Date())); setEndDate(new Date()); }}
+          className="border-zinc-700 text-zinc-300 bg-transparent hover:bg-zinc-800 hover:text-white"
+          title="The 1st of this month to today"
+        >
+          <CalendarIcon className="w-4 h-4 mr-2" /> This month
+        </Button>
         <Button
           variant="outline"
           onClick={() => { setStartDate(programYearRange(programYear)[0]); setEndDate(new Date()); }}
