@@ -316,7 +316,9 @@ export const hawkBreakdown = (rows: HawkIntelRow[], opts: { cte?: boolean; grade
     ...(includeCte ? { "CTE program": tally((r) => r.reg?.cte_program) } : {}),
     Sex: tally((r) => r.reg?.child_sex),
     "Race / ethnicity": tally((r) => r.reg?.child_race_ethnicity),
-    "Free or reduced lunch": tally((r) => r.reg?.free_or_reduced_lunch),
+    // The partner-programme forms ask only about free or reduced lunch, which
+    // is the academy's marker for an economically disadvantaged household.
+    "Economically disadvantaged youth": tally((r) => r.reg?.free_or_reduced_lunch),
   };
 };
 

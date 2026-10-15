@@ -4,7 +4,7 @@
 // One shape per question, so the eye reads each one in a glance:
 //   Sex                      → two tiles, big number and percent each
 //   Race / ethnicity         → one stacked bar with a legend underneath
-//   Free or reduced lunch    → one headline percent, "16 of 20" under it
+//   Economically disadvantaged youth → one headline percent, "16 of 20" under it
 //   Grade, CTE program       → short rows (Hawk Squad / BAM only)
 // Everything is in the program's colour; the stacked bar steps that colour
 // down so the groups read apart without a second palette.
@@ -141,7 +141,7 @@ const ProgramDemographics = ({ breakdown, total, color }: Props) => {
       {b["CTE program"] && <Rows title="CTE program" counts={b["CTE program"]} total={total} color={color} />}
       {b["Sex"] && <SexTiles counts={b["Sex"]} total={total} color={color} />}
       {b["Race / ethnicity"] && <StackedBar title="Race / ethnicity" counts={b["Race / ethnicity"]} total={total} color={color} />}
-      {b["Free or reduced lunch"] && <Headline title="Free or reduced lunch" counts={b["Free or reduced lunch"]} total={total} color={color} />}
+      {b["Economically disadvantaged youth"] && <Headline title="Economically disadvantaged youth" counts={b["Economically disadvantaged youth"]} total={total} color={color} />}
     </div>
   );
 };

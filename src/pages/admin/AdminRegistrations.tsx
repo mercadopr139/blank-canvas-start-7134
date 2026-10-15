@@ -13,6 +13,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Search, Eye, AlertTriangle, ExternalLink, Loader2, Pencil, Trash2, CheckCircle2, XCircle, ShieldCheck, Download, Star, ImagePlus, Copy } from "lucide-react";
 import MondayPhotoSyncModal from "@/components/admin/MondayPhotoSyncModal";
+import PhotoUploadModal from "@/components/admin/PhotoUploadModal";
 import { Switch } from "@/components/ui/switch";
 import { format, parseISO, differenceInYears, differenceInMonths } from "date-fns";
 import { toast } from "sonner";
@@ -132,6 +133,10 @@ const AdminRegistrations = () => {
   const [archiveConfirmOpen, setArchiveConfirmOpen] = useState(false);
   const [archiving, setArchiving] = useState(false);
   const [selectedRegistration, setSelectedRegistration] = useState<any | null>(null);
+  // Change a youth's profile photo right from their registration — the same
+  // camera-or-file modal the kiosk uses (Josh, 2026-10-15: so Chrissy can fix
+  // a bad one).
+  const [photoOpen, setPhotoOpen] = useState(false);
   const [detailMode, setDetailMode] = useState<"view" | "edit">("view");
   const [csvFallbackUrl, setCsvFallbackUrl] = useState<string | null>(null);
   const [csvExportCount, setCsvExportCount] = useState(0);
@@ -576,7 +581,20 @@ const AdminRegistrations = () => {
             </Button>
           )}
         </div>
-        <MondayPhotoSyncModal
+        {selectedRegistration && (
+        <PhotoUploadModal
+          open={photoOpen}
+          onClose={() => setPhotoOpen(false)}
+          registrationId={selectedRegistration.id}
+          currentPhotoUrl={selectedRegistration.child_headshot_url}
+          youthName={`${selectedRegistration.child_first_name} ${selectedRegistration.child_last_name}`}
+          onPhotoUpdated={(url) => {
+            setSelectedRegistration((r: any) => (r ? { ...r, child_headshot_url: url } : r));
+            queryClient.invalidateQueries({ queryKey: ["youth-registrations"] });
+          }}
+        />
+      )}
+      <MondayPhotoSyncModal
           open={bulkPhotoOpen}
           onOpenChange={setBulkPhotoOpen}
         />
@@ -752,8 +770,25 @@ const AdminRegistrations = () => {
       >
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-hidden flex flex-col">
           <DialogHeader className="flex flex-row items-center gap-4">
-            {selectedRegistration?.child_headshot_url && (
-              <HeadshotThumbnail headshotPath={selectedRegistration.child_headshot_url} size="lg" />
+            {selectedRegistration && (
+              <button
+                type="button"
+                onClick={() => setPhotoOpen(true)}
+                title={selectedRegistration.child_headshot_url ? "Change profile photo" : "Add a profile photo"}
+                aria-label={selectedRegistration.child_headshot_url ? "Change profile photo" : "Add a profile photo"}
+                className="relative group shrink-0 rounded-full"
+              >
+                {selectedRegistration.child_headshot_url ? (
+                  <HeadshotThumbnail headshotPath={selectedRegistration.child_headshot_url} size="lg" />
+                ) : (
+                  <span className="grid place-items-center w-16 h-16 rounded-full bg-white/5 border border-dashed border-white/20 text-white/40">
+                    <ImagePlus className="w-5 h-5" />
+                  </span>
+                )}
+                <span className="absolute inset-0 grid place-items-center rounded-full bg-black/60 text-[10px] font-semibold text-white opacity-0 group-hover:opacity-100 transition-opacity">
+                  {selectedRegistration.child_headshot_url ? "Change" : "Add"}
+                </span>
+              </button>
             )}
             <DialogTitle className="flex-1">
               {selectedRegistration?.child_first_name} {selectedRegistration?.child_last_name}

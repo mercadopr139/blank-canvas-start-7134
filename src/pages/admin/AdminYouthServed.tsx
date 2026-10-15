@@ -32,7 +32,7 @@ const tallyDemographics = (rows: DemoRow[]): HawkBreakdown => {
   return {
     Sex: tally((r) => r.child_sex),
     "Race / ethnicity": tally((r) => r.child_race_ethnicity),
-    "Free or reduced lunch": tally((r) => r.free_or_reduced_lunch),
+    "Economically disadvantaged youth": tally((r) => r.free_or_reduced_lunch),
   };
 };
 
