@@ -12,7 +12,7 @@ import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter,
 } from "@/components/ui/dialog";
 import { Loader2 } from "lucide-react";
-import { DAYS, DayKey, TRACKS, TRACK_META, NbtDay } from "@/lib/nbt";
+import { DAYS, DayKey, TRACKS, TRACK_META, NbtDay, dayMeta } from "@/lib/nbt";
 import BulletEditor from "@/components/practice/BulletEditor";
 import { bulletLinesOf } from "@/lib/bulletText";
 
@@ -37,7 +37,7 @@ const NbtEditDay = ({
   }, [day]);
 
   if (!draft || !dayKey) return null;
-  const meta = DAYS.find((d) => d.key === dayKey);
+  const meta = dayMeta(dayKey);
 
   const set = (fn: (d: NbtDay) => void) =>
     setDraft((prev) => {

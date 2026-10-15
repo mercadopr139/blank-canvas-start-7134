@@ -17,9 +17,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import {
-  DAYS, DayKey, TRACKS, TRACK_META, Track, NbtBlock, NbtWeek, NbtDay, NbtLog,
-  toDateString, firstOfMonth, monthLabel, mondaysInMonth, dateOfDay, mondayOf, addDays, NBT_AMBER,
-  readableLines, minutesOf, totalMinutes,
+  DAYS, DayKey, TRACKS, TRACK_META, Track, NbtBlock, NbtWeek, NbtDay, NbtLog, toDateString, firstOfMonth, monthLabel, mondaysInMonth, dateOfDay, mondayOf, addDays, NBT_AMBER, readableLines, minutesOf, totalMinutes, weekDays,
 } from "@/lib/nbt";
 import { priorWeekBriefs, roomReport, carryOver, dayProblem } from "@/lib/nbtCoaching";
 import { AlertTriangle } from "lucide-react";
@@ -515,7 +513,7 @@ export const NbtWeekBuilder = ({
                     </div>
                   )}
                   <div className="grid gap-3 md:grid-cols-3">
-                    {DAYS.map((d) => {
+                    {weekDays(w.days).map((d) => {
                       const day = w.days?.[d.key];
                       const key = `${w.id}-${d.key}`;
                       return (

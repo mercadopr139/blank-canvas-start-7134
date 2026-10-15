@@ -32,13 +32,12 @@ import {
   PracticeSettings, PracticeWeek, PracticeBlock, SpiritualDay, MeetingPoints,
   SeasonMode,
 } from "@/lib/practicePlan";
-import { WEEKDAY_KEYS as STRENGTH_DAY_KEY, DAY_LABELS, moveWorkout as moveStrengthWorkout, removeWorkout as removeStrengthWorkout, type WeekRow as StrengthWeekRow } from "@/lib/strength";
+import { WEEKDAY_KEYS as STRENGTH_DAY_KEY, DAY_LABELS, moveDay, removeDay, type WeekdayKey } from "@/lib/programWeek";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import BulletEditor from "@/components/practice/BulletEditor";
 import { parseBullets, levelIndent, levelDot, levelText } from "@/lib/bulletText";
 import { SplitLanesEditor, SplitLanesView } from "@/components/practice/SplitLanes";
 import { isSplitBlock, parseSplit, isJuniorsLane, hasLanes, isBibleStudyBlock, bibleStudyText, bibleStudySiblings, isWeightsBlock, wrapupFor } from "@/lib/practicePlan";
-import { DAYS as NBT_DAYS } from "@/lib/nbt";
 
 const PracticeBoard = () => {
   const navigate = useNavigate();
@@ -170,6 +169,10 @@ const PracticeBoard = () => {
       return (data || []) as unknown as PracticeBlock[];
     },
   });
+
+  // A block a coach moved away (or took out of the week) stays as a hidden
+  // row for the template sync's sake; the wall never draws it.
+  const visibleBlocks = useMemo(() => blocks.filter((b) => !b.hidden), [blocks]);
 
   const { data: meeting = [] } = useQuery({
     queryKey: ["board-meeting", week?.id],
@@ -429,112 +432,120 @@ const PracticeBoard = () => {
     onError: (e: Error) => toast.error(e.message || "Couldn't move that."),
   });
 
-  // Move tonight's Battle Team workout to another night — the workout itself
-  // in the S&C week, and the Strength block on this board along with it, so
-  // the Workout Plan button follows. If that night already has a workout the
-  // two swap. Week only; the template is untouched. (Josh, 2026-10-14:
-  // something else took the floor on a Wednesday.)
+  // Which programme a weights block belongs to: the Battle Team's S&C week or
+  // the NBT's. Same table shape — a `days` JSON keyed by weekday.
+  const programFor = (group: string) =>
+    group === "battle_team"
+      ? { table: "strength_weeks", queryKey: ["strength-week", weekStart], name: "Battle Team" }
+      : group === "non_battle_team"
+        ? { table: "nbt_weeks", queryKey: ["nbt-week", weekStart], name: "NBT" }
+        : null;
+  type DaysJson = Partial<Record<WeekdayKey, { movedFrom?: WeekdayKey }>>;
+  const loadProgramWeek = async (table: string) => {
+    const { data, error } = await supabase
+      .from(table as never)
+      .select("id, days")
+      .eq("week_start", weekStart)
+      .maybeSingle();
+    if (error) throw error;
+    return data as unknown as { id: string; days: DaysJson | null } | null;
+  };
+  const saveProgramDays = async (table: string, id: string, days: DaysJson) => {
+    const { error } = await supabase.from(table as never).update({ days } as never).eq("id", id);
+    if (error) throw error;
+  };
+  /** The weights blocks of one column, visible and hidden. */
+  const weightsIn = (group: string, wd: number) =>
+    blocks.filter((b) => b.group === group && b.weekday === wd && isWeightsBlock(b.category));
+  const patchBlock = async (id: string, patch: Record<string, unknown>) => {
+    const { error } = await supabase.from("practice_blocks" as never).update(patch as never).eq("id", id);
+    if (error) throw error;
+  };
+
+  // Move tonight's workout to another night — the workout in the programme's
+  // week, and the block on this board along with it, so the Workout Plan
+  // button follows. If that night already has a workout the two swap. The
+  // night it left keeps its block as a HIDDEN row, so the template sync
+  // still sees the slot filled and never puts an empty block back, and the
+  // moved block sits above the template's slots at a negative position —
+  // nothing else in either column changes. Week only; the template is
+  // untouched. (Josh, 2026-10-14/15: something else took the floor, and the
+  // kids must not see an empty Strength block on the night it left.)
   const moveWorkoutTo = useMutation({
-    mutationFn: async ({ fromWeekday, toWeekday }: { fromWeekday: number; toWeekday: number }) => {
+    mutationFn: async ({ group, fromWeekday, toWeekday }: { group: string; fromWeekday: number; toWeekday: number }) => {
+      const program = programFor(group);
       const from = STRENGTH_DAY_KEY[fromWeekday];
       const to = STRENGTH_DAY_KEY[toWeekday];
-      if (!from || !to || from === to) throw new Error("Pick another practice day to move it to.");
+      if (!program || !from || !to || from === to) throw new Error("Pick another practice day to move it to.");
 
-      const { data: wk, error } = await supabase
-        .from("strength_weeks" as never)
-        .select("id, days")
-        .eq("week_start", weekStart)
-        .maybeSingle();
-      if (error) throw error;
-      const row = wk as unknown as Pick<StrengthWeekRow, "id" | "days"> | null;
-      if (!row) throw new Error("No Battle Team workout plan exists for this week yet.");
-      const nextDays = moveStrengthWorkout(row.days ?? {}, from, to);
+      const row = await loadProgramWeek(program.table);
+      if (!row) throw new Error(`No ${program.name} workout plan exists for this week yet.`);
+      const nextDays = moveDay(row.days ?? {}, from, to);
       if (!nextDays) throw new Error(`There is no ${DAY_LABELS[from]} workout to move.`);
       const swapped = !!row.days?.[to];
-      const { error: e2 } = await supabase
-        .from("strength_weeks" as never)
-        .update({ days: nextDays } as never)
-        .eq("id", row.id);
-      if (e2) throw e2;
+      await saveProgramDays(program.table, row.id, nextDays);
 
-      // The Strength block follows (and tomorrow's comes back, if it had one),
-      // and it goes to the TOP of its new column: the Battle Team lifts first
-      // (Josh, 2026-10-14). Marked as this week's own, so the template sync
-      // never "corrects" it.
-      const bt = blocks.filter((b) => b.group === "battle_team");
-      const mine = bt.filter((b) => b.weekday === fromWeekday && isWeightsBlock(b.category));
-      const theirs = bt.filter((b) => b.weekday === toWeekday && isWeightsBlock(b.category));
-      const byPos = (x: PracticeBlock, y: PracticeBlock) => x.position - y.position;
-      const stay = (wd: number) => bt.filter((b) => b.weekday === wd && !isWeightsBlock(b.category)).sort(byPos);
-      // The two columns as they will read: lift first, then the rest in order.
-      const columns: Array<{ weekday: number; order: PracticeBlock[] }> = [
-        { weekday: toWeekday, order: [...mine, ...stay(toWeekday)] },
-        { weekday: fromWeekday, order: [...theirs, ...stay(fromWeekday)] },
-      ];
-      const moved = new Set([...mine, ...theirs].map((b) => b.id));
-      const set = (b: PracticeBlock, patch: Record<string, unknown>) =>
-        supabase.from("practice_blocks" as never).update(patch as never).eq("id", b.id);
-      // Positions are unique per column, so park everything high first, then
-      // write the final order — no two rows ever claim one slot on the way.
-      for (const c of columns) {
-        await Promise.all(c.order.map((b, i) => set(b, { weekday: c.weekday, position: 1000 + i })));
+      const origin = weightsIn(group, fromWeekday).find((b) => !b.hidden);
+      const targetVisible = weightsIn(group, toWeekday).find((b) => !b.hidden);
+      const targetHidden = weightsIn(group, toWeekday).find((b) => b.hidden);
+      if (origin && targetVisible) {
+        // Both nights have a block: the coach's notes trade places.
+        await Promise.all([
+          patchBlock(origin.id, { detail: targetVisible.detail ?? null }),
+          patchBlock(targetVisible.id, { detail: origin.detail ?? null }),
+        ]);
+      } else if (origin) {
+        await patchBlock(origin.id, { hidden: true, category_overridden: true });
+        if (targetHidden) {
+          await patchBlock(targetHidden.id, { hidden: false, detail: origin.detail ?? null, category_overridden: true });
+        } else {
+          const lowest = Math.min(0, ...blocks.filter((b) => b.group === group && b.weekday === toWeekday).map((b) => b.position));
+          const { error } = await supabase.from("practice_blocks" as never).insert({
+            week_id: week!.id,
+            group,
+            weekday: toWeekday,
+            position: lowest - 1,
+            category: origin.category,
+            detail: origin.detail ?? null,
+            category_overridden: true,
+            hidden: false,
+          } as never);
+          if (error) throw error;
+        }
       }
-      for (const c of columns) {
-        await Promise.all(
-          c.order.map((b, i) => set(b, { position: i, ...(moved.has(b.id) ? { category_overridden: true } : {}) }))
-        );
-      }
-      return { from, to, swapped };
+      return { program, from, to, swapped };
     },
-    onSuccess: ({ from, to, swapped }) => {
+    onSuccess: ({ program, from, to, swapped }) => {
       qc.invalidateQueries({ queryKey: ["board-blocks", week?.id] });
-      qc.invalidateQueries({ queryKey: ["strength-week", weekStart] });
+      qc.invalidateQueries({ queryKey: program.queryKey });
       toast.success(
         swapped
-          ? `${DAY_LABELS[from]}'s and ${DAY_LABELS[to]}'s workouts swapped.`
-          : `${DAY_LABELS[from]}'s workout moved to ${DAY_LABELS[to]}. The Workout Plan button moved with it.`
+          ? `${DAY_LABELS[from]}'s and ${DAY_LABELS[to]}'s ${program.name} workouts swapped.`
+          : `${DAY_LABELS[from]}'s ${program.name} workout moved to ${DAY_LABELS[to]}. The Workout Plan button moved with it.`
       );
     },
     onError: (e: Error) => toast.error(e.message || "Couldn't move the workout."),
   });
 
-  // Take tonight's Battle Team workout out of the week altogether — the
-  // workout from the S&C week and the Strength block off this board. Week
-  // only; the template is untouched.
+  // Take tonight's workout out of the week — from the programme's week, and
+  // the block hidden on this board. Week only; the template is untouched.
   const removeWorkoutFromWeek = useMutation({
-    mutationFn: async ({ weekday: wd }: { weekday: number }) => {
+    mutationFn: async ({ group, weekday: wd }: { group: string; weekday: number }) => {
+      const program = programFor(group);
       const key = STRENGTH_DAY_KEY[wd];
-      if (!key) throw new Error("That is not a practice day.");
-      const { data: wk, error } = await supabase
-        .from("strength_weeks" as never)
-        .select("id, days")
-        .eq("week_start", weekStart)
-        .maybeSingle();
-      if (error) throw error;
-      const row = wk as unknown as Pick<StrengthWeekRow, "id" | "days"> | null;
-      const nextDays = row ? removeStrengthWorkout(row.days ?? {}, key) : null;
-      if (row && nextDays) {
-        const { error: e2 } = await supabase
-          .from("strength_weeks" as never)
-          .update({ days: nextDays } as never)
-          .eq("id", row.id);
-        if (e2) throw e2;
-      }
-      const gone = blocks.filter((b) => b.group === "battle_team" && b.weekday === wd && isWeightsBlock(b.category));
-      if (gone.length) {
-        const { error: e3 } = await supabase
-          .from("practice_blocks" as never)
-          .delete()
-          .in("id", gone.map((b) => b.id));
-        if (e3) throw e3;
-      }
-      if (!nextDays && !gone.length) throw new Error(`There is no ${DAY_LABELS[key]} workout to remove.`);
-      return { key };
+      if (!program || !key) throw new Error("That is not a practice day.");
+      const row = await loadProgramWeek(program.table);
+      const nextDays = row ? removeDay(row.days ?? {}, key) : null;
+      if (row && nextDays) await saveProgramDays(program.table, row.id, nextDays);
+      const visible = weightsIn(group, wd).filter((b) => !b.hidden);
+      await Promise.all(visible.map((b) => patchBlock(b.id, { hidden: true, category_overridden: true })));
+      if (!nextDays && !visible.length) throw new Error(`There is no ${DAY_LABELS[key]} workout to remove.`);
+      return { program, key };
     },
-    onSuccess: ({ key }) => {
+    onSuccess: ({ program, key }) => {
       qc.invalidateQueries({ queryKey: ["board-blocks", week?.id] });
-      qc.invalidateQueries({ queryKey: ["strength-week", weekStart] });
-      toast.success(`${DAY_LABELS[key]}'s workout removed from this week.`);
+      qc.invalidateQueries({ queryKey: program.queryKey });
+      toast.success(`${DAY_LABELS[key]}'s ${program.name} workout removed from this week.`);
     },
     onError: (e: Error) => toast.error(e.message || "Couldn't remove the workout."),
   });
@@ -554,7 +565,8 @@ const PracticeBoard = () => {
 
   const day = days.find((d) => d.n === weekday) ?? days[0];
   const dayDate = new Date(`${dateForWeekday(weekStart, day.n)}T12:00:00`);
-  const nbtDayKey = NBT_DAYS.find((d) => d.weekday === day.n)?.key ?? null;
+  // Any practice night can carry an NBT workout now (a coach may have moved one).
+  const nbtDayKey = STRENGTH_DAY_KEY[day.n] ?? null;
 
   // Tonight's duties, for the Eat up · Clean up band: how many jobs have
   // someone on them. Assignments are only ever "today", so the count only
@@ -580,10 +592,10 @@ const PracticeBoard = () => {
   // group splits to coach them, that lane IS their session — print it as a
   // strip under the tiles, from the same text, so it can never disagree.
   const juniorLanes = useMemo(
-    () => blocks
+    () => visibleBlocks
       .filter((b) => b.weekday === day.n && isSplitBlock(b.category))
       .flatMap((b) => parseSplit(b.detail).filter(isJuniorsLane).map((lane) => ({ lane, group: b.group }))),
-    [blocks, day.n],
+    [visibleBlocks, day.n],
   );
   // Thursday's Bible study is an ordinary block on each team's tile, in teal
   // (bibleStudyText reads an older two-lane save as plain lines). The
@@ -1237,7 +1249,7 @@ const PracticeBoard = () => {
               the plan is always on screen and never pushes the tiles off. */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:flex-1 md:min-h-0 md:grid-rows-1">
             {GROUPS.map((g, gi) => {
-              const gb = blocks
+              const gb = visibleBlocks
                 .filter((b) => b.group === g.key && b.weekday === day.n)
                 .sort((a, b) => a.position - b.position);
               return (
@@ -1448,7 +1460,7 @@ const PracticeBoard = () => {
                               {prepButton}
                               {/* Something else took the floor tonight: push the
                                   Battle Team's workout to tomorrow. */}
-                              {g.key === "battle_team" && isWeightsBlock(b.category) && (
+                              {(g.key === "battle_team" || g.key === "non_battle_team") && isWeightsBlock(b.category) && (
                                 <DropdownMenu>
                                   <DropdownMenuTrigger asChild>
                                     <button
@@ -1468,7 +1480,7 @@ const PracticeBoard = () => {
                                         <DropdownMenuItem
                                           key={d.n}
                                           className="cursor-pointer focus:bg-white/10 focus:text-white"
-                                          onSelect={() => moveWorkoutTo.mutate({ fromWeekday: day.n, toWeekday: d.n })}
+                                          onSelect={() => moveWorkoutTo.mutate({ group: g.key, fromWeekday: day.n, toWeekday: d.n })}
                                         >
                                           Move to {DAY_LABELS[STRENGTH_DAY_KEY[d.n]]}
                                         </DropdownMenuItem>
@@ -1479,7 +1491,7 @@ const PracticeBoard = () => {
                                       onSelect={() => {
                                         const label = DAY_LABELS[STRENGTH_DAY_KEY[day.n]] ?? "tonight";
                                         if (window.confirm(`Remove ${label}'s workout from this week? The Strength block comes off the board too.`))
-                                          removeWorkoutFromWeek.mutate({ weekday: day.n });
+                                          removeWorkoutFromWeek.mutate({ group: g.key, weekday: day.n });
                                       }}
                                     >
                                       Remove from this week

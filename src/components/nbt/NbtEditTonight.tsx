@@ -13,7 +13,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import {
-  DAYS, TRACKS, TRACK_META, NBT_AMBER, type DayKey, type NbtBlock, type NbtDay, type NbtWeek, type Track,
+  DAYS, TRACKS, TRACK_META, NBT_AMBER, type DayKey, type NbtBlock, type NbtDay, type NbtWeek, type Track, dayMeta,
 } from "@/lib/nbt";
 import { priorWeekBriefs, dayProblem } from "@/lib/nbtCoaching";
 import { roomBrief } from "@/lib/nbtRooms";
@@ -104,7 +104,7 @@ export const NbtEditTonight = ({
     }
   };
 
-  const dayLabel = DAYS.find((d) => d.key === dayKey)?.label ?? "";
+  const dayLabel = dayMeta(dayKey).label;
 
   return (
     <main className="flex-1 min-h-0 overflow-y-auto px-4 md:px-6 py-3 space-y-4">

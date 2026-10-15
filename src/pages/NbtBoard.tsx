@@ -20,9 +20,7 @@ import { VerseOfTheDayStrip } from "@/components/verse/VerseOfTheDayStrip";
 import { todayNY } from "@/lib/programYear";
 import TrackTimer from "@/components/nbt/TrackTimer";
 import {
-  DAYS, DayKey, TRACKS, TRACK_META, NbtDay, NbtWeek, NbtBlock,
-  toDateString, mondayOf, firstOfMonth, dateOfDay, todayDayKey, weekInBlock,
-  SESSION_CAP_MINUTES, readableLines, NBT_AMBER,
+  DAYS, DayKey, TRACKS, TRACK_META, NbtDay, NbtWeek, NbtBlock, toDateString, mondayOf, firstOfMonth, dateOfDay, todayDayKey, weekInBlock, SESSION_CAP_MINUTES, readableLines, NBT_AMBER, WEEKDAY_KEYS, DAY_LABELS, dayMeta, weekDays,
 } from "@/lib/nbt";
 import { PrepStrip } from "@/components/practice/PrepStrip";
 import { equipmentItems } from "@/lib/practicePlan";
@@ -37,7 +35,7 @@ const NbtBoard = () => {
   // Opened from the Practice Plan's NBT tab: the back arrow goes home there, same week.
   const fromPlan = params.get("from") === "plan";
   const dayParam = params.get("day");
-  const linkedDay = DAYS.find((d) => d.key === dayParam)?.key ?? null;
+  const linkedDay = (Object.values(WEEKDAY_KEYS) as string[]).includes(dayParam ?? "") ? (dayParam as DayKey) : null;
   const linkedWeek = /^\d{4}-\d{2}-\d{2}$/.test(params.get("week") ?? "") ? params.get("week")! : null;
   // Where to land when going back to the Gym Board: the night it was left on.
   const backToBoard = `/practice-board?${linkedWeek ? `week=${linkedWeek}&` : ""}${params.get("wd") ? `wd=${params.get("wd")}` : ""}`;
@@ -78,7 +76,21 @@ const NbtBoard = () => {
   const week = rawWeek && (!isDraft || isAdmin) ? rawWeek : null;
   const block = data?.block ?? null;
   const day: NbtDay | undefined = week?.days?.[dayKey];
-  const meta = DAYS.find((d) => d.key === dayKey)!;
+  const meta = dayMeta(dayKey);
+  // The programme's days plus any night a workout was moved onto.
+  const tabs = useMemo(() => weekDays(week?.days), [week]);
+  // Where this day's workout went, if a coach pushed it to another night.
+  const movedTo = (Object.keys(week?.days ?? {}) as DayKey[]).find((k) => week?.days?.[k]?.movedFrom === dayKey) ?? null;
+  // Land on today's workout wherever it sits — a coach may have pushed it a
+  // night — once the week arrives and nothing linked us to a day.
+  const landed = useRef(false);
+  useEffect(() => {
+    if (landed.current || linkedDay || !week) return;
+    landed.current = true;
+    const dow = new Date(`${today}T12:00:00`).getDay();
+    const k = WEEKDAY_KEYS[dow];
+    if (k && mondayOf(today) === weekStart && week.days?.[k]) setDayKey(k);
+  }, [week, linkedDay, today, weekStart]);
 
   // The coach's note from the Practice Plan's S&C block for this night.
   const { data: liftNote } = useQuery({
@@ -102,13 +114,13 @@ const NbtBoard = () => {
   // Arrow keys, for whoever is standing at the screen.
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      const i = DAYS.findIndex((d) => d.key === dayKey);
-      if (e.key === "ArrowRight" && i < DAYS.length - 1) setDayKey(DAYS[i + 1].key);
-      if (e.key === "ArrowLeft" && i > 0) setDayKey(DAYS[i - 1].key);
+      const i = tabs.findIndex((d) => d.key === dayKey);
+      if (e.key === "ArrowRight" && i < tabs.length - 1) setDayKey(tabs[i + 1].key);
+      if (e.key === "ArrowLeft" && i > 0) setDayKey(tabs[i - 1].key);
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [dayKey]);
+  }, [dayKey, tabs]);
 
   /* ───── The wall-TV specs, lifted from the Practice Board ─────
      That board is the one that already reads well on the Newline screen with
@@ -270,9 +282,9 @@ const NbtBoard = () => {
         </div>
       </header>
 
-      {/* Day tabs */}
+      {/* Day tabs — the programme's three, plus any night a workout was moved onto. */}
       <div className="flex items-stretch border-b border-white/10">
-        {DAYS.map((d) => {
+        {tabs.map((d) => {
           const on = d.key === dayKey;
           const isToday = dateOfDay(weekStart, d.key) === today;
           return (
@@ -288,7 +300,11 @@ const NbtBoard = () => {
                 {d.label}
                 {isToday && <span className="ml-2 text-[10px] font-bold text-white/40">TODAY</span>}
               </p>
-              <p className={`text-[11px] ${on ? "text-white/50" : "text-white/20"}`}>{d.title}</p>
+              <p className={`text-[11px] ${on ? "text-white/50" : "text-white/20"}`}>
+                {week?.days?.[d.key]?.movedFrom
+                  ? `${dayMeta(week.days[d.key]!.movedFrom!).title} · moved from ${DAY_LABELS[week.days[d.key]!.movedFrom!]}`
+                  : d.title}
+              </p>
             </button>
           );
         })}
@@ -300,7 +316,9 @@ const NbtBoard = () => {
         <div className="flex-1 grid place-items-center px-6 text-center">
           <div>
             <Dumbbell className="w-10 h-10 mx-auto mb-3 text-white/15" />
-            <p className="text-white/40">Nothing written for {meta.label} yet.</p>
+            <p className="text-white/40">
+              {movedTo ? `${meta.label}'s workout was moved to ${DAY_LABELS[movedTo]}.` : `Nothing written for ${meta.label} yet.`}
+            </p>
             <Button
               variant="outline"
               onClick={() => navigate("/admin/operations/nbt-board")}

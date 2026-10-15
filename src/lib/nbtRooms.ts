@@ -84,14 +84,14 @@ export const ROOMS: Record<RoomKey, Room> = {
   },
 };
 
-/** Which room each training day is in. */
-export const DAY_ROOM: Record<DayKey, RoomKey> = {
+/** Which room each programme day is in. A night a workout was moved onto takes the Performance Center. */
+export const DAY_ROOM: Partial<Record<DayKey, RoomKey>> = {
   monday: "performance_center",
   tuesday: "boxing_facility",
   thursday: "performance_center",
 };
 
-export const roomFor = (dayKey: DayKey): Room => ROOMS[DAY_ROOM[dayKey]];
+export const roomFor = (dayKey: DayKey): Room => ROOMS[DAY_ROOM[dayKey] ?? "performance_center"];
 export const kitIn = (room: Room, key: KitKey): Kit | undefined => room.kit.find((k) => k.key === key);
 
 /** Kit that moves between rooms during prep, so a day may ask for it to be brought over. */

@@ -360,7 +360,9 @@ export const BattleTeamWeek = ({
             {current && (
               <WorkingSetLog
                 weekStart={weekStart}
-                dayKey={selectedDay}
+                // A set logged on a moved night is filed under the lift's own
+                // programme day, so the intelligence page still counts it.
+                dayKey={current.movedFrom ?? selectedDay}
                 workoutDate={workoutDate}
                 lift={current.main?.lift || current.focus}
               />

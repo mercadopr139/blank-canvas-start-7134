@@ -203,7 +203,7 @@ export const roomReport = (
    Which room a day is in, and what that room allows, lives in nbtRooms.ts.
    Re-exported here so older callers and tests keep one name for it. */
 export type Facility = Room;
-export const FACILITY: Record<DayKey, Facility> = {
+export const FACILITY: Partial<Record<DayKey, Facility>> = {
   monday: roomFor("monday"),
   tuesday: roomFor("tuesday"),
   thursday: roomFor("thursday"),

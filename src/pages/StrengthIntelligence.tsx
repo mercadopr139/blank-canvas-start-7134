@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import type { DayKey } from "@/lib/strength";
 import { useQuery } from "@tanstack/react-query";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -14,7 +15,7 @@ const NLA_RED = "#bf0f3e";
 interface LogRow {
   youth_id: string;
   athlete_name: string;
-  day_key: "monday" | "wednesday" | "thursday" | "friday";
+  day_key: DayKey;
   workout_date: string;
   sets: { set: number; weight: number | null; reps: number | null }[];
 }

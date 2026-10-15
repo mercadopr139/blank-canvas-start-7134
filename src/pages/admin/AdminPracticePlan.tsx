@@ -608,13 +608,15 @@ const AdminPracticePlan = () => {
   });
 
   const blocksFor = (weekday: number, group: PracticeGroup) =>
-    blocks.filter((b) => b.weekday === weekday && b.group === group);
+    blocks.filter((b) => b.weekday === weekday && b.group === group && !b.hidden);
 
   const pointsFor = (weekday: number) =>
     meeting.find((m) => m.weekday === weekday)?.points ?? [];
 
   const isThisWeek = weekStart === mondayOf();
-  const filledCount = blocks.filter((b) => b.detail?.trim()).length;
+  // A hidden block (its workout was moved away) is neither drawn nor counted.
+  const visibleCount = blocks.filter((b) => !b.hidden).length;
+  const filledCount = blocks.filter((b) => !b.hidden && b.detail?.trim()).length;
 
   return (
     <div className="p-4 md:p-8 space-y-6 max-w-6xl mx-auto text-white">
@@ -743,7 +745,7 @@ const AdminPracticePlan = () => {
       {/* The week's four jobs — done means on the wall. */}
       <WeekProgress
         weekStart={weekStart}
-        plan={week ? { status: week.status, filled: filledCount, total: blocks.length } : null}
+        plan={week ? { status: week.status, filled: filledCount, total: visibleCount } : null}
         onTab={switchTab}
       />
 
@@ -822,11 +824,11 @@ const AdminPracticePlan = () => {
                   <div className="h-1.5 w-16 rounded-full bg-neutral-800 overflow-hidden" aria-hidden>
                     <div
                       className="h-full rounded-full bg-emerald-500/70 transition-all"
-                      style={{ width: `${blocks.length ? Math.round((filledCount / blocks.length) * 100) : 0}%` }}
+                      style={{ width: `${visibleCount ? Math.round((filledCount / visibleCount) * 100) : 0}%` }}
                     />
                   </div>
                   <span className="text-[11px] text-neutral-400 whitespace-nowrap">
-                    {filledCount} of {blocks.length} drills filled
+                    {filledCount} of {visibleCount} drills filled
                   </span>
                 </div>
                 {/* Wipe and start over. Confirmed first, and it says what

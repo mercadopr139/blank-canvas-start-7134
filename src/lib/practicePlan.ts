@@ -362,6 +362,12 @@ export interface PracticeBlock {
    */
   category_overridden?: boolean;
   detail: string | null;
+  /**
+   * True when a coach moved this night's workout away (or took it out of the
+   * week). The row stays so the template sync still sees the slot filled and
+   * never puts an empty block back; the board and the editor don't draw it.
+   */
+  hidden?: boolean;
 }
 
 export interface MeetingPoints {

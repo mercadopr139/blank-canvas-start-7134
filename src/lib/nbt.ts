@@ -1,3 +1,4 @@
+import { DAY_LABELS, weekdayOf, weekDayKeys, moveDay, removeDay, type WeekdayKey } from "@/lib/programWeek";
 import { parseBulletLine, type Level } from "@/lib/bulletText";
 // Non-Battle Team S&C — shared types and the date/block maths.
 //
@@ -32,13 +33,36 @@ export const TRACK_META: Record<Track, { label: string; word: string; color: str
 /** Any stored level, including the retired "charlie", as one of today's tracks. */
 export const asTrack = (level: string | null | undefined): Track => (level === "alpha" ? "alpha" : "bravo");
 
-export const DAYS = [
+// Any practice weekday can hold a workout: the programme's days are Monday,
+// Tuesday and Thursday, but a coach can push a night's workout to another
+// night from the Gym Board when something else takes the floor (Josh, 2026-10-15).
+export type DayKey = WeekdayKey;
+
+export interface DayMeta { key: DayKey; label: string; title: string; weekday: number }
+
+export const DAYS: readonly DayMeta[] = [
   { key: "monday", label: "Monday", title: "Squat + Push", weekday: 1 },
   { key: "tuesday", label: "Tuesday", title: "Athletic + Overhead", weekday: 2 },
   { key: "thursday", label: "Thursday", title: "Hinge + Pull", weekday: 4 },
-] as const;
+];
 
-export type DayKey = (typeof DAYS)[number]["key"];
+export { WEEKDAY_KEYS, DAY_LABELS } from "@/lib/programWeek";
+
+/** What a day is called: a programme day by name and title; any other weekday by its name alone. */
+export const dayMeta = (key: DayKey): DayMeta =>
+  DAYS.find((d) => d.key === key) ?? { key, label: DAY_LABELS[key], title: "", weekday: weekdayOf(key) };
+
+/** The days a week shows: the programme's three, plus any night a workout was moved onto. */
+export const weekDays = (days: NbtWeek["days"] | null | undefined): DayMeta[] =>
+  weekDayKeys(DAYS.map((d) => d.key), days).map(dayMeta);
+
+/** Move a day's workout to another night (swapping if that night has one). Pure. */
+export const moveWorkout = (days: NbtWeek["days"], from: DayKey, to: DayKey): NbtWeek["days"] | null =>
+  moveDay(days, from, to);
+
+/** Take a day's workout out of the week. Pure. */
+export const removeWorkout = (days: NbtWeek["days"], key: DayKey): NbtWeek["days"] | null =>
+  removeDay(days, key);
 
 export const RESULT_UNITS = ["rounds", "minutes", "seconds", "meters", "reps"] as const;
 export type ResultUnit = (typeof RESULT_UNITS)[number];
@@ -89,6 +113,8 @@ export interface NbtDay {
   reset: string[];
   /** The date (America/New_York) a coach changed this day on the wall, if ever. */
   editedOn?: string;
+  /** The programme day this workout was pushed from, when a coach moved it a night. */
+  movedFrom?: DayKey;
 }
 
 export const minutesOf = (day: NbtDay | undefined): SessionMinutes => ({
@@ -197,10 +223,8 @@ export const weekInBlock = (monthStart: string, weekStart: string) =>
   mondaysInMonth(monthStart).indexOf(weekStart) + 1;
 
 /** The date a given training day falls on, for a week starting Monday. */
-export const dateOfDay = (weekStart: string, dayKey: DayKey) => {
-  const day = DAYS.find((d) => d.key === dayKey);
-  return addDays(weekStart, day ? day.weekday - 1 : 0);
-};
+export const dateOfDay = (weekStart: string, dayKey: DayKey) =>
+  addDays(weekStart, Math.max(0, weekdayOf(dayKey) - 1));
 
 /** Which training day, if any, today is. Null on Wed/Fri/weekends. */
 export const todayDayKey = (today: string = toDateString(new Date())): DayKey | null => {
