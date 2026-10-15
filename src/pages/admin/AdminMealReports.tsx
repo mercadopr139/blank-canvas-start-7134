@@ -8,6 +8,7 @@ import { CalendarIcon, Download, Loader2, UtensilsCrossed, TrendingUp, AlertTria
 
 import { downloadMealReportPdf } from "@/lib/generateMealReportPdf";
 import { cn } from "@/lib/utils";
+import { getCurrentAttendanceYear, programYearRange, shortProgramYear } from "@/lib/programYear";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { toast } from "sonner";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
@@ -39,10 +40,19 @@ interface MealItemRow {
 }
 
 const AdminMealReports = () => {
-  const [allTimeCount, setAllTimeCount] = useState(0);
+  // The leftmost tile and the nightly average follow the PROGRAM year, Sept 1
+  // to Aug 31 — the year the academy reports on — not the calendar year,
+  // which kept last spring's meals in the count until New Year's Day and
+  // then reset mid-season (Josh, 2026-10-15). Last year sits under it.
+  const [yearCount, setYearCount] = useState(0);
+  const [yearNights, setYearNights] = useState(0);
+  const [priorYearCount, setPriorYearCount] = useState(0);
+  const [priorYearNights, setPriorYearNights] = useState(0);
   const [monthCount, setMonthCount] = useState(0);
   const [weekCount, setWeekCount] = useState(0);
   const [avgPerNight, setAvgPerNight] = useState(0);
+  const programYear = getCurrentAttendanceYear();
+  const priorProgramYear = `${Number(programYear.slice(0, 4)) - 1}-${Number(programYear.slice(5, 9)) - 1}`;
   const [startDate, setStartDate] = useState<Date>(subDays(new Date(), 30));
   const [endDate, setEndDate] = useState<Date>(new Date());
   const [reportData, setReportData] = useState<ReportRow[]>([]);
@@ -76,21 +86,23 @@ const AdminMealReports = () => {
 
   const loadSummary = async () => {
     const today = new Date();
-    // Year-to-date scope for the leftmost tile + avg-per-night.
-    // Rolls over automatically on Jan 1: new year, fresh count.
-    const currentYear = today.getFullYear();
-    const yearStart = `${currentYear}-01-01`;
-    const yearEnd = `${currentYear}-12-31`;
-    const { data: yearData } = await supabase
-      .from("meal_events")
-      .select("meal_count")
-      .gte("event_date", yearStart)
-      .lte("event_date", yearEnd);
-    if (yearData) {
-      const total = yearData.reduce((s, r) => s + (r.meal_count || 0), 0);
-      setAllTimeCount(total);
-      setAvgPerNight(yearData.length > 0 ? Math.round(total / yearData.length) : 0);
-    }
+    // This program year and the one before it. Rolls over on Sept 1.
+    const sumYear = async (tag: string) => {
+      const [from, to] = programYearRange(tag);
+      const { data } = await supabase
+        .from("meal_events")
+        .select("meal_count")
+        .gte("event_date", format(from, "yyyy-MM-dd"))
+        .lte("event_date", format(to, "yyyy-MM-dd"));
+      const rows = data ?? [];
+      return { total: rows.reduce((acc, r) => acc + (r.meal_count || 0), 0), nights: rows.length };
+    };
+    const [thisYear, lastYear] = await Promise.all([sumYear(programYear), sumYear(priorProgramYear)]);
+    setYearCount(thisYear.total);
+    setYearNights(thisYear.nights);
+    setAvgPerNight(thisYear.nights > 0 ? Math.round(thisYear.total / thisYear.nights) : 0);
+    setPriorYearCount(lastYear.total);
+    setPriorYearNights(lastYear.nights);
     const monthStart = format(startOfMonth(today), "yyyy-MM-dd");
     const weekStart = format(startOfWeek(today), "yyyy-MM-dd");
     const todayStr = format(today, "yyyy-MM-dd");
@@ -454,15 +466,21 @@ const AdminMealReports = () => {
       {/* Summary strip */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         {[
-          { label: String(new Date().getFullYear()), value: allTimeCount, color: "text-green-400", icon: UtensilsCrossed },
-          { label: "This Month", value: monthCount, color: "text-blue-400", icon: TrendingUp },
-          { label: "This Week", value: weekCount, color: "text-amber-400", icon: TrendingUp },
-          { label: "Avg/Night", value: avgPerNight, color: "text-purple-400", icon: TrendingUp },
+          {
+            label: `${shortProgramYear(programYear)} program year`,
+            value: yearCount.toLocaleString(),
+            sub: `${yearNights} night${yearNights === 1 ? "" : "s"} · ${shortProgramYear(priorProgramYear)}: ${priorYearCount.toLocaleString()} meals, ${priorYearNights} nights`,
+            color: "text-green-400", icon: UtensilsCrossed,
+          },
+          { label: "This month", value: monthCount.toLocaleString(), color: "text-blue-400", icon: TrendingUp },
+          { label: "This week", value: weekCount.toLocaleString(), color: "text-amber-400", icon: TrendingUp },
+          { label: "Avg per night · this program year", value: avgPerNight.toLocaleString(), color: "text-purple-400", icon: TrendingUp },
         ].map((stat) => (
           <div key={stat.label} className="bg-zinc-900 border border-zinc-800 rounded-lg p-4 text-center">
             <stat.icon className={cn("w-5 h-5 mx-auto mb-1", stat.color)} />
             <p className={cn("text-3xl font-bold", stat.color)}>{stat.value}</p>
             <p className="text-zinc-500 text-xs">{stat.label}</p>
+            {"sub" in stat && stat.sub && <p className="text-zinc-600 text-[11px] mt-0.5">{stat.sub}</p>}
           </div>
         ))}
       </div>
@@ -471,6 +489,15 @@ const AdminMealReports = () => {
       <div className="flex flex-wrap items-center gap-3">
         <DatePicker label="Start" date={startDate} onSelect={setStartDate} />
         <DatePicker label="End" date={endDate} onSelect={setEndDate} />
+        {/* One tap: the whole program year so far, for the report and the CSV. */}
+        <Button
+          variant="outline"
+          onClick={() => { setStartDate(programYearRange(programYear)[0]); setEndDate(new Date()); }}
+          className="border-zinc-700 text-zinc-300 bg-transparent hover:bg-zinc-800 hover:text-white"
+          title={`Sept 1 to today — the ${shortProgramYear(programYear)} program year so far`}
+        >
+          <CalendarIcon className="w-4 h-4 mr-2" /> Program year
+        </Button>
         <Button onClick={() => runReport(true)} disabled={loading || estimating} className="bg-[#bf0f3e] hover:bg-[#bf0f3e]/80 text-white">
           {(loading || estimating) ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <FileText className="w-4 h-4 mr-2" />}
           {estimating ? "Estimating Nutrition..." : "Print Report"}
