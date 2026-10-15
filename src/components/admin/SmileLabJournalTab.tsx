@@ -58,7 +58,7 @@ const SmileLabJournalTab = () => {
       {/* Saved entries */}
       <div>
         <div className="text-xs font-semibold uppercase tracking-[0.15em] text-white/40 mb-3">Past entries</div>
-        <SmileLabJournalReview onEdit={editEntry} />
+        <SmileLabJournalReview onEdit={editEntry} openDate={date} />
       </div>
 
       <SmileLabGrantReportSheet open={reportOpen} onClose={() => setReportOpen(false)} />

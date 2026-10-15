@@ -32,7 +32,7 @@ interface SessionRow {
 const hasContent = (s: SessionRow) =>
   !!(s.caring_note?.trim() || s.sharing_note?.trim() || (s.highlights?.length) || (s.photos?.length));
 
-const SmileLabJournalReview = ({ onEdit }: { onEdit?: (date: string) => void }) => {
+const SmileLabJournalReview = ({ onEdit, openDate }: { onEdit?: (date: string) => void; openDate?: string }) => {
   // The photos of one entry, open in the viewer, stepped through with the arrows.
   const [gallery, setGallery] = useState<{ title: string; photos: string[]; index: number } | null>(null);
 
@@ -78,7 +78,9 @@ const SmileLabJournalReview = ({ onEdit }: { onEdit?: (date: string) => void }) 
     },
   });
 
-  const withContent = sessions.filter(hasContent);
+  // The session open in the editor above is left out, so a week is never on
+  // the page twice (Josh, 2026-10-15); tap Edit on another and they trade places.
+  const withContent = sessions.filter(hasContent).filter((s) => s.session_date !== openDate);
   const unshrunk = withContent.filter((x) => (x.photos ?? []).some((u) => !isShrunk(u)));
   const unshrunkCount = unshrunk.reduce((n, x) => n + (x.photos ?? []).filter((u) => !isShrunk(u)).length, 0);
 
