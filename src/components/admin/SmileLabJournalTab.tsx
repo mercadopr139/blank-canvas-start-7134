@@ -22,6 +22,9 @@ const SmileLabJournalTab = () => {
   const [date, setDate] = useState<string>(
     sessionDateFor(fromLink && /^\d{4}-\d{2}-\d{2}$/.test(fromLink) ? fromLink : todayNY())
   );
+  // "?submit=smile|life" from the reminder email: a written half hands itself in on arrival.
+  const submitParam = params.get("submit");
+  const autoSubmit = submitParam === "smile" || submitParam === "life" ? submitParam : null;
   const [reportOpen, setReportOpen] = useState(false);
   const topRef = useRef<HTMLDivElement>(null);
 
@@ -49,6 +52,7 @@ const SmileLabJournalTab = () => {
         date={date}
         onDateChange={setDate}
         showDateNav
+        autoSubmit={autoSubmit}
         onSaved={() => queryClient.invalidateQueries({ queryKey: ["smile-lab-journal"] })}
       />
 

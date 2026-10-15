@@ -19,8 +19,9 @@ const check = (label, ok) => { console.log((ok ? "PASS " : "FAIL ") + label); if
 
 // The rule.
 const empty = null;
-const smileDone = { session_date: "2026-10-06", caring_note: "Brushing twice a day", sharing_note: null, highlights: ["Smile Lab — Emma brushed for the full two minutes"] };
-const lifeDone = { session_date: "2026-10-06", caring_note: null, sharing_note: "Kindness", highlights: ["Life Lab — Marcellus helped a friend"] };
+const smileDone = { session_date: "2026-10-06", caring_note: "Brushing twice a day", sharing_note: null, highlights: ["Smile Lab — Emma brushed for the full two minutes"], caring_filed_at: "2026-10-07T01:00:00Z" };
+const lifeDone = { session_date: "2026-10-06", caring_note: null, sharing_note: "Kindness", highlights: ["Life Lab — Marcellus helped a friend"], sharing_filed_at: "2026-10-07T01:00:00Z" };
+const written = { ...smileDone, caring_filed_at: null };
 const noteOnly = { session_date: "2026-10-06", caring_note: "Flossing", sharing_note: "Gratitude", highlights: [] };
 const momentsOnly = { session_date: "2026-10-06", caring_note: "", sharing_note: "", highlights: ["Smile Lab — a win", "Life Lab — a win"] };
 check("nothing written → both pieces missing for both labs", m.missingFor("smile", empty).length === 2 && m.missingFor("life", empty).length === 2);
@@ -30,6 +31,8 @@ check("Life Lab done → nothing missing for Chrissy", m.missingFor("life", life
 check("note only → only moments missing", m.missingFor("smile", noteOnly).join() === "standout moments" && m.missingFor("life", noteOnly).join() === "standout moments");
 check("moments only → only the note missing", m.missingFor("smile", momentsOnly).join() === "what we covered" && m.missingFor("life", momentsOnly).join() === "what we covered");
 check("a blank moment does not count", m.missingFor("smile", { ...noteOnly, highlights: ["Smile Lab —   "] }).join() === "standout moments");
+check("written but not submitted → only Submit is owed", m.missingFor("smile", written).join() === "submit");
+check("submitted with the stamp → nothing owed, whatever the text", m.missingFor("smile", { ...noteOnly, caring_filed_at: "2026-10-07T01:00:00Z" }).length === 0);
 
 // The email.
 const one = m.renderEmail("smile", [{ date: "2026-10-06", missing: ["what we covered", "standout moments"], students: 12 }]);
@@ -38,6 +41,11 @@ check("addressed to Jaime", one.html.includes("Hi Jaime"));
 check("says what is missing", one.html.includes("what we covered and standout moments"));
 check("button opens the journal on that date", one.html.includes("/smile-lab-attendance?journal=2026-10-06"));
 check("Smile Lab teal header", one.html.includes("background-color:#0d9488;padding:26px"));
+check("tells them Submit hands it in", one.html.includes("press <strong>Submit</strong>"));
+const sub = m.renderEmail("smile", [{ date: "2026-10-06", missing: ["submit"], students: 12 }]);
+check("written-not-submitted → the button hands it in", sub.html.includes("?journal=2026-10-06&submit=smile") && sub.html.includes("tap Submit to hand it in"));
+check("written-not-submitted → plain text says so too", sub.text.includes("tap Submit to hand it in") && sub.text.includes("&submit=smile"));
+check("a missing-pieces email has no auto-submit link", !one.html.includes("&submit="));
 const two = m.renderEmail("life", [
   { date: "2026-09-29", missing: ["standout moments"], students: 10 },
   { date: "2026-10-06", missing: ["what we covered", "standout moments"], students: 12 },

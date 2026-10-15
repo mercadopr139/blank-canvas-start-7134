@@ -16,6 +16,10 @@ export const shiftDate = (isoStr: string, days: number): string => {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 };
 
+/** "Thu, Oct 8" — the day a half of the report was submitted, in Eastern time. */
+export const filedOn = (iso: string): string =>
+  new Date(iso).toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric", timeZone: "America/New_York" });
+
 /** The session a report written on `isoStr` belongs to: the Tuesday on or before it. */
 export const sessionDateFor = (isoStr: string): string => {
   const dow = new Date(isoStr + "T00:00:00").getDay(); // 0 Sun … 6 Sat

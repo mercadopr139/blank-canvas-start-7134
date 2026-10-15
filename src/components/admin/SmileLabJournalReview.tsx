@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { filedOn } from "@/lib/aftercareDates";
 import { useQuery } from "@tanstack/react-query";
 import PhotoLightbox from "@/components/photos/PhotoLightbox";
 import { thumbOf, isShrunk } from "@/lib/imageResize";
@@ -13,10 +14,6 @@ import { Pencil } from "lucide-react";
 // Read-only review of the Juniors Aftercare weekly journals (what coaches wrote on the
 // board). Newest first; skips fully-empty sessions. Phase 2 turns this into the
 // AI grant report.
-
-/** "Thu, Oct 8" — the day a half of the report was turned in, in Eastern time. */
-const filedOn = (iso: string) =>
-  new Date(iso).toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric", timeZone: "America/New_York" });
 
 interface SessionRow {
   id: string;
@@ -80,7 +77,11 @@ const SmileLabJournalReview = ({ onEdit, openDate }: { onEdit?: (date: string) =
 
   // The session open in the editor above is left out, so a week is never on
   // the page twice (Josh, 2026-10-15); tap Edit on another and they trade places.
-  const withContent = sessions.filter(hasContent).filter((s) => s.session_date !== openDate);
+  // A week fully submitted lives here even while it is the one open above;
+  // one still being written shows only in the editor.
+  const withContent = sessions
+    .filter(hasContent)
+    .filter((s) => s.session_date !== openDate || (s.caring_filed_at && s.sharing_filed_at));
   const unshrunk = withContent.filter((x) => (x.photos ?? []).some((u) => !isShrunk(u)));
   const unshrunkCount = unshrunk.reduce((n, x) => n + (x.photos ?? []).filter((u) => !isShrunk(u)).length, 0);
 
@@ -119,18 +120,18 @@ const SmileLabJournalReview = ({ onEdit, openDate }: { onEdit?: (date: string) =
             {s.caring_note?.trim() && (
               <div className="rounded-lg bg-white/5 p-3">
                 <div className="text-xs font-semibold text-teal-300 mb-1">🦷 Smile Lab (Coach Jaime)</div>
-                {s.caring_filed_at && (
-                  <div className="text-[11px] text-white/35 -mt-0.5 mb-1.5">Filed {filedOn(s.caring_filed_at)}</div>
-                )}
+                <div className={`text-[11px] -mt-0.5 mb-1.5 ${s.caring_filed_at ? "text-white/35" : "text-amber-300/80"}`}>
+                  {s.caring_filed_at ? `Submitted ${filedOn(s.caring_filed_at)}` : "Not submitted yet"}
+                </div>
                 <p className="text-sm text-white/80 whitespace-pre-wrap">{s.caring_note}</p>
               </div>
             )}
             {s.sharing_note?.trim() && (
               <div className="rounded-lg bg-white/5 p-3">
                 <div className="text-xs font-semibold text-rose-300 mb-1">😊 Life Lab (Coach Chrissy)</div>
-                {s.sharing_filed_at && (
-                  <div className="text-[11px] text-white/35 -mt-0.5 mb-1.5">Filed {filedOn(s.sharing_filed_at)}</div>
-                )}
+                <div className={`text-[11px] -mt-0.5 mb-1.5 ${s.sharing_filed_at ? "text-white/35" : "text-amber-300/80"}`}>
+                  {s.sharing_filed_at ? `Submitted ${filedOn(s.sharing_filed_at)}` : "Not submitted yet"}
+                </div>
                 <p className="text-sm text-white/80 whitespace-pre-wrap">{s.sharing_note}</p>
               </div>
             )}

@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { thumbOf } from "@/lib/imageResize";
 import { uploadAftercarePhoto } from "@/lib/aftercarePhotos";
-import { todayNY, shiftDate, sessionDateFor } from "@/lib/aftercareDates";
+import { todayNY, shiftDate, sessionDateFor, filedOn } from "@/lib/aftercareDates";
 import { toast } from "sonner";
 import { ChevronLeft, ChevronRight, Users, ImagePlus, Trash2, Loader2 } from "lucide-react";
 
@@ -53,9 +53,11 @@ interface Props {
   onDateChange: (d: string) => void;
   showDateNav?: boolean;
   onSaved?: () => void;
+  /** From the reminder email: hand this lab's half in on arrival, if it is written. */
+  autoSubmit?: Lab | null;
 }
 
-const SmileLabSessionEditor = ({ date, onDateChange, showDateNav = true, onSaved }: Props) => {
+const SmileLabSessionEditor = ({ date, onDateChange, showDateNav = true, onSaved, autoSubmit = null }: Props) => {
   const isToday = date === todayNY();
   // Whatever the parent hands over, the editor sits on that week's Tuesday.
   useEffect(() => {
@@ -70,6 +72,10 @@ const SmileLabSessionEditor = ({ date, onDateChange, showDateNav = true, onSaved
   const [status, setStatus] = useState<"idle" | "saving" | "saved">("idle");
   const [uploading, setUploading] = useState(false);
   const [attendees, setAttendees] = useState<Attendee[]>([]);
+  // When each lab's half was handed in with its Submit button (null = not yet).
+  const [filed, setFiled] = useState<Record<Lab, string | null>>({ smile: null, life: null });
+  const [submitting, setSubmitting] = useState<Lab | null>(null);
+  const autoSubmitted = useRef(false);
   const fileRef = useRef<HTMLInputElement>(null);
   const lifeFileRef = useRef<HTMLInputElement>(null);
   const smilePhotos = photos.filter((u) => !isLifePhoto(u));
@@ -88,6 +94,7 @@ const SmileLabSessionEditor = ({ date, onDateChange, showDateNav = true, onSaved
       const p = Array.isArray(data?.photos) ? (data.photos as string[]) : [];
       const split = splitHighlights(h);
       setCaring(c); setSharing(s); setSmileMoments(arrayToText(split.smile)); setLifeMoments(arrayToText(split.life)); setPhotos(p);
+      setFiled({ smile: data?.caring_filed_at ?? null, life: data?.sharing_filed_at ?? null });
       lastSaved.current = JSON.stringify({ c, s, h, p });
       loadedFor.current = date;
       setStatus("idle");
@@ -97,20 +104,88 @@ const SmileLabSessionEditor = ({ date, onDateChange, showDateNav = true, onSaved
     return () => { cancelled = true; };
   }, [date]);
 
-  const save = async () => {
+  const currentSnapshot = () =>
+    JSON.stringify({ c: caring, s: sharing, h: joinHighlights(textToArray(smileMoments), textToArray(lifeMoments)), p: photos });
+
+  /** Autosave. Returns false when the save failed, so Submit can refuse to hand in unsaved text. */
+  const save = async (): Promise<boolean> => {
     const payload = { c: caring, s: sharing, h: joinHighlights(textToArray(smileMoments), textToArray(lifeMoments)), p: photos };
     const snapshot = JSON.stringify(payload);
-    if (snapshot === lastSaved.current) return;
+    if (snapshot === lastSaved.current) return true;
     setStatus("saving");
     const { error } = await (supabase.from("smile_lab_sessions" as never) as any).upsert(
       { session_date: date, caring_note: caring || null, sharing_note: sharing || null, highlights: payload.h, photos },
       { onConflict: "session_date" }
     );
-    if (error) { toast.error("Couldn't save — try again."); setStatus("idle"); return; }
+    if (error) { toast.error("Couldn't save — try again."); setStatus("idle"); return false; }
     lastSaved.current = snapshot;
     setStatus("saved");
     onSaved?.();
+    return true;
   };
+
+  // Leaving with unsaved typing (or mid-save) gets the browser's "are you
+  // sure" — the reminder Josh asked for, at the one moment it matters.
+  useEffect(() => {
+    const warn = (e: BeforeUnloadEvent) => {
+      if (loadedFor.current !== date) return;
+      if (status === "saving" || currentSnapshot() !== lastSaved.current) { e.preventDefault(); e.returnValue = ""; }
+    };
+    window.addEventListener("beforeunload", warn);
+    return () => window.removeEventListener("beforeunload", warn);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [caring, sharing, smileMoments, lifeMoments, photos, status, date]);
+
+  const LAB_NAME: Record<Lab, string> = { smile: "Smile Lab", life: "Life Lab" };
+  const stampFor = (lab: Lab, value: string | null) => (lab === "smile" ? { caring_filed_at: value } : { sharing_filed_at: value });
+  /** What this lab's half still needs before it can be handed in. */
+  const stillNeeds = (lab: Lab): string[] => {
+    const note = lab === "smile" ? caring : sharing;
+    const moments = textToArray(lab === "smile" ? smileMoments : lifeMoments);
+    return [...(note.trim() ? [] : ["what we covered"]), ...(moments.length ? [] : ["a standout moment"])];
+  };
+
+  /** Hand one lab's half in: flush the autosave, then stamp it. */
+  const submit = async (lab: Lab) => {
+    if (stillNeeds(lab).length) { toast.error(`${LAB_NAME[lab]} still needs ${stillNeeds(lab).join(" and ")}.`); return; }
+    setSubmitting(lab);
+    try {
+      if (!(await save())) return;
+      const at = new Date().toISOString();
+      const { error } = await (supabase.from("smile_lab_sessions" as never) as any).upsert(
+        { session_date: date, ...stampFor(lab, at) },
+        { onConflict: "session_date" }
+      );
+      if (error) throw error;
+      setFiled((f) => ({ ...f, [lab]: at }));
+      toast.success(`${LAB_NAME[lab]} report submitted for ${prettyDate(date)}.`);
+      onSaved?.();
+    } catch (e) {
+      toast.error((e as Error)?.message || "Couldn't submit — try again.");
+    } finally {
+      setSubmitting(null);
+    }
+  };
+  /** Open a submitted half back up for a fix. Never locked. */
+  const reopen = async (lab: Lab) => {
+    const { error } = await (supabase.from("smile_lab_sessions" as never) as any).upsert(
+      { session_date: date, ...stampFor(lab, null) },
+      { onConflict: "session_date" }
+    );
+    if (error) { toast.error("Couldn't reopen — try again."); return; }
+    setFiled((f) => ({ ...f, [lab]: null }));
+    toast(`${LAB_NAME[lab]} reopened — press Submit again when you're done.`);
+    onSaved?.();
+  };
+
+  // From the reminder email ("tap Submit"): the half is written, hand it in.
+  useEffect(() => {
+    if (!autoSubmit || autoSubmitted.current || loadedFor.current !== date) return;
+    if (filed[autoSubmit] || stillNeeds(autoSubmit).length) return;
+    autoSubmitted.current = true;
+    void submit(autoSubmit);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [autoSubmit, filed, caring, sharing, smileMoments, lifeMoments, date]);
 
   useEffect(() => {
     if (loadedFor.current !== date) return;
@@ -188,43 +263,82 @@ const SmileLabSessionEditor = ({ date, onDateChange, showDateNav = true, onSaved
         )}
       </div>
 
+      {filed.smile && filed.life && (
+        <div className="rounded-xl border border-emerald-400/30 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-200 mb-4">
+          ✓ Both reports are in for {prettyDate(date)}. This week now lives under Past entries.
+        </div>
+      )}
+
       {/* The two labs, each with what was covered and its own standout moments.
-          The moments are the kid stories the grant report quotes, one per line. */}
+          The moments are the kid stories the grant report quotes, one per line.
+          A half is handed in with its Submit button (Josh, 2026-10-15); until
+          then autosave only protects the typing. Submitted, it collapses to a
+          summary with a Reopen link — never locked, coaches fix typos later. */}
       <div className="grid md:grid-cols-2 gap-4 mb-5">
-        <div className="rounded-2xl border bg-neutral-900/60 p-4 space-y-4" style={{ borderColor: `${LAB_COLOR.smile}55`, borderLeftWidth: 4, borderLeftColor: LAB_COLOR.smile }}>
-          <div>
-            <label className="flex items-center gap-2 font-bold mb-2" style={{ color: LAB_COLOR.smile }}>🦷 Smile Lab <span className="text-xs text-white/40 font-normal">· Coach Jaime</span></label>
-            <p className="text-[11px] uppercase tracking-wide text-white/40 font-semibold mb-1">What we covered</p>
-            <textarea value={caring} onChange={(e) => setCaring(dirty(e.target.value))} rows={5}
-              placeholder="Brushing, flossing, nutrition, hygiene, habits… how did it go?"
-              className="w-full rounded-lg bg-white/5 border border-white/15 px-3 py-2.5 text-sm text-white placeholder:text-white/30 focus:outline-none focus:border-white/30 resize-y min-h-[110px]" />
-          </div>
-          <div>
-            <p className="text-[11px] uppercase tracking-wide text-white/40 font-semibold mb-1">⭐ Standout moments · one per line</p>
-            <textarea value={smileMoments} onChange={(e) => setSmileMoments(dirty(e.target.value))} rows={3}
-              onFocus={() => { if (!smileMoments) setSmileMoments("• "); }}
-              placeholder="e.g. Marcus taught his little brother how to floss all week!"
-              className="w-full rounded-lg bg-white/5 border border-white/15 px-3 py-2.5 text-sm text-white placeholder:text-white/30 focus:outline-none focus:border-white/30 resize-y min-h-[80px]" />
-          </div>
-        </div>
-        <div className="rounded-2xl border bg-neutral-900/60 p-4 space-y-4" style={{ borderColor: `${LAB_COLOR.life}55`, borderLeftWidth: 4, borderLeftColor: LAB_COLOR.life }}>
-          <div>
-            <label className="flex items-center gap-2 font-bold mb-2" style={{ color: LAB_COLOR.life }}>😊 Life Lab <span className="text-xs text-white/40 font-normal">· Coach Chrissy</span></label>
-            <p className="text-[11px] uppercase tracking-wide text-white/40 font-semibold mb-1">What we covered</p>
-            <textarea value={sharing} onChange={(e) => setSharing(dirty(e.target.value))} rows={5}
-              placeholder="Manners, gratitude, kindness, handling bullying, serving others…"
-              className="w-full rounded-lg bg-white/5 border border-white/15 px-3 py-2.5 text-sm text-white placeholder:text-white/30 focus:outline-none focus:border-white/30 resize-y min-h-[110px]" />
-          </div>
-          <div>
-            <p className="text-[11px] uppercase tracking-wide text-white/40 font-semibold mb-1">⭐ Standout moments · one per line</p>
-            <textarea value={lifeMoments} onChange={(e) => setLifeMoments(dirty(e.target.value))} rows={3}
-              onFocus={() => { if (!lifeMoments) setLifeMoments("• "); }}
-              placeholder="e.g. Ava stood up for a friend who was being teased."
-              className="w-full rounded-lg bg-white/5 border border-white/15 px-3 py-2.5 text-sm text-white placeholder:text-white/30 focus:outline-none focus:border-white/30 resize-y min-h-[80px]" />
-          </div>
-        </div>
+        {([
+          { lab: "smile" as Lab, emoji: "🦷", coach: "Coach Jaime", note: caring, setNote: setCaring, moments: smileMoments, setMoments: setSmileMoments, photoCount: smilePhotos.length,
+            notePlaceholder: "Brushing, flossing, nutrition, hygiene, habits… how did it go?", momentPlaceholder: "e.g. Marcus taught his little brother how to floss all week!" },
+          { lab: "life" as Lab, emoji: "😊", coach: "Coach Chrissy", note: sharing, setNote: setSharing, moments: lifeMoments, setMoments: setLifeMoments, photoCount: lifePhotos.length,
+            notePlaceholder: "Manners, gratitude, kindness, handling bullying, serving others…", momentPlaceholder: "e.g. Ava stood up for a friend who was being teased." },
+        ]).map((L) => {
+          const filedAt = filed[L.lab];
+          const momentCount = textToArray(L.moments).length;
+          const needs = stillNeeds(L.lab);
+          return (
+            <div key={L.lab} className="rounded-2xl border bg-neutral-900/60 p-4 space-y-4" style={{ borderColor: `${LAB_COLOR[L.lab]}55`, borderLeftWidth: 4, borderLeftColor: LAB_COLOR[L.lab] }}>
+              <label className="flex items-center gap-2 font-bold" style={{ color: LAB_COLOR[L.lab] }}>
+                {L.emoji} {LAB_NAME[L.lab]} <span className="text-xs text-white/40 font-normal">· {L.coach}</span>
+              </label>
+              {filedAt ? (
+                <div className="space-y-2">
+                  <p className="text-sm font-semibold text-emerald-300/90">✓ Submitted {filedOn(filedAt)}</p>
+                  <p className="text-sm text-white/70 whitespace-pre-wrap line-clamp-4">{L.note}</p>
+                  <p className="text-xs text-white/40">
+                    {momentCount} standout moment{momentCount === 1 ? "" : "s"} · {L.photoCount} photo{L.photoCount === 1 ? "" : "s"}
+                  </p>
+                  <button type="button" onClick={() => void reopen(L.lab)} className="text-xs underline text-white/50 hover:text-white">
+                    Reopen to edit
+                  </button>
+                </div>
+              ) : (
+                <>
+                  <div>
+                    <p className="text-[11px] uppercase tracking-wide text-white/40 font-semibold mb-1">What we covered</p>
+                    <textarea value={L.note} onChange={(e) => L.setNote(dirty(e.target.value))} rows={5}
+                      placeholder={L.notePlaceholder}
+                      className="w-full rounded-lg bg-white/5 border border-white/15 px-3 py-2.5 text-sm text-white placeholder:text-white/30 focus:outline-none focus:border-white/40" />
+                  </div>
+                  <div>
+                    <p className="text-[11px] uppercase tracking-wide text-white/40 font-semibold mb-1">⭐ Standout moments · one per line</p>
+                    <textarea value={L.moments} onChange={(e) => L.setMoments(dirty(e.target.value))} rows={3}
+                      onFocus={() => { if (!L.moments) L.setMoments("• "); }}
+                      placeholder={L.momentPlaceholder}
+                      className="w-full rounded-lg bg-white/5 border border-white/15 px-3 py-2.5 text-sm text-white placeholder:text-white/30 focus:outline-none focus:border-white/40" />
+                  </div>
+                  <div className="flex items-center justify-between gap-3 pt-1 flex-wrap">
+                    <p className="text-[11px] text-white/45">
+                      {needs.length ? `Still needs ${needs.join(" and ")}.` : "Written. Wait for Saved ✓, then Submit."}
+                    </p>
+                    <button type="button" onClick={() => void submit(L.lab)} disabled={needs.length > 0 || submitting === L.lab || status === "saving"}
+                      className="inline-flex items-center gap-1.5 text-sm px-3.5 py-1.5 rounded-lg font-semibold text-black disabled:opacity-40"
+                      style={{ background: LAB_COLOR[L.lab] }}>
+                      {submitting === L.lab ? <Loader2 className="h-4 w-4 animate-spin" /> : null} Submit {LAB_NAME[L.lab]}
+                    </button>
+                  </div>
+                </>
+              )}
+            </div>
+          );
+        })}
       </div>
-      <p className="text-[11px] text-white/40 -mt-3 mb-5">Standout moments are the real kid wins, breakthroughs and quotes — each line becomes a featured story in the grant report.</p>
+      <p className="text-[11px] text-white/40 -mt-3 mb-2">Standout moments are the real kid wins, breakthroughs and quotes — each line becomes a featured story in the grant report.</p>
+      {/* The reminder Josh asked for: autosave protects the typing, but only
+          Submit hands the report in — and the 8 PM email keeps coming until it is. */}
+      {!(filed.smile && filed.life) && (
+        <p className="text-[12px] text-amber-200/90 mb-5 rounded-lg border border-amber-400/25 bg-amber-500/10 px-3 py-2">
+          ⚠️ Before you exit: wait for <span className="font-semibold">Saved ✓</span>, then press <span className="font-semibold">Submit</span> on your lab. A report that is written but not submitted keeps getting the 8 PM reminder.
+        </p>
+      )}
 
       {/* Photos — one panel per lab. */}
       <div className="grid md:grid-cols-2 gap-4">

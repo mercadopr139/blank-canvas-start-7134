@@ -37,18 +37,40 @@ export const LABS: Record<Lab, { name: string; coach: string; to: string; colour
 };
 const LAB_PREFIX: Record<Lab, string> = { smile: "Smile Lab — ", life: "Life Lab — " };
 
-export interface SessionRow { session_date: string; caring_note: string | null; sharing_note: string | null; highlights: unknown }
+export interface SessionRow {
+  session_date: string; caring_note: string | null; sharing_note: string | null; highlights: unknown;
+  /** Set when the coach pressed Submit on that half (Josh, 2026-10-15). */
+  caring_filed_at?: string | null; sharing_filed_at?: string | null;
+}
 
-/** What is still missing for one lab on one date: [] when that half is done. */
+/**
+ * What is still missing for one lab on one date: [] once that half has been
+ * SUBMITTED. A half that is written but never handed in owes just "submit" —
+ * the email's button hands it in with one tap.
+ */
 export const missingFor = (lab: Lab, row: SessionRow | null): string[] => {
+  const filed = lab === "smile" ? row?.caring_filed_at : row?.sharing_filed_at;
+  if (filed) return [];
   const note = lab === "smile" ? row?.caring_note : row?.sharing_note;
   const highlights = Array.isArray(row?.highlights) ? (row!.highlights as unknown[]).filter((h): h is string => typeof h === "string") : [];
   const moments = highlights.filter((h) => h.startsWith(LAB_PREFIX[lab]) && h.slice(LAB_PREFIX[lab].length).trim());
   const out: string[] = [];
   if (!(note ?? "").trim()) out.push("what we covered");
   if (moments.length === 0) out.push("standout moments");
+  if (out.length === 0) out.push("submit");
   return out;
 };
+
+/** The "still needs" line for one open date, HTML. */
+const needHtml = (o: OpenDate) =>
+  o.missing.join() === "submit"
+    ? `written — <strong style="color:#111;">tap Submit to hand it in</strong>`
+    : `still needs: <strong style="color:#111;">${escapeHtml(o.missing.join(" and "))}</strong>`;
+const needText = (o: OpenDate) =>
+  o.missing.join() === "submit" ? "written — tap Submit to hand it in" : `still needs: ${o.missing.join(" and ")}`;
+/** The journal, on that date; a written report also hands itself in on arrival. */
+const journalLink = (lab: Lab, o: OpenDate) =>
+  `${JOURNAL_URL}?journal=${o.date}${o.missing.join() === "submit" ? `&submit=${lab}` : ""}`;
 
 const json = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), { status, headers: { ...corsHeaders, "Content-Type": "application/json" } });
@@ -69,10 +91,10 @@ export function renderEmail(lab: Lab, open: OpenDate[]): { subject: string; html
     <tr>
       <td style="padding:10px 0;border-bottom:1px solid #eee;vertical-align:top;">
         <p style="margin:0;color:#111;font-size:15px;font-weight:700;">${escapeHtml(fmt(o.date))}</p>
-        <p style="margin:2px 0 0 0;color:#6b7280;font-size:13px;">${o.students} student${o.students === 1 ? "" : "s"} · still needs: <strong style="color:#111;">${escapeHtml(o.missing.join(" and "))}</strong></p>
+        <p style="margin:2px 0 0 0;color:#6b7280;font-size:13px;">${o.students} student${o.students === 1 ? "" : "s"} · ${needHtml(o)}</p>
       </td>
       <td style="padding:10px 0 10px 12px;border-bottom:1px solid #eee;text-align:right;vertical-align:middle;white-space:nowrap;">
-        <a href="${JOURNAL_URL}?journal=${o.date}" style="display:inline-block;background-color:${L.colour};color:#ffffff;font-size:13px;font-weight:700;padding:9px 14px;border-radius:8px;text-decoration:none;font-family:Arial,Helvetica,sans-serif;">Write it →</a>
+        <a href="${journalLink(lab, o)}" style="display:inline-block;background-color:${L.colour};color:#ffffff;font-size:13px;font-weight:700;padding:9px 14px;border-radius:8px;text-decoration:none;font-family:Arial,Helvetica,sans-serif;">Write it →</a>
       </td>
     </tr>`).join("");
   const html = `<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"></head>
@@ -86,9 +108,9 @@ export function renderEmail(lab: Lab, open: OpenDate[]): { subject: string; html
         </td></tr>
         <tr><td style="padding:30px 36px 26px 36px;">
           <h1 style="color:#111;font-size:21px;margin:0 0 6px 0;font-weight:700;">Hi ${escapeHtml(L.coach)} — your ${escapeHtml(L.name)} report is waiting</h1>
-          <p style="color:#6b7280;font-size:14px;margin:0 0 18px 0;line-height:1.5;">A few sentences on what you covered and one or two standout moments is all it takes. The grant reports are built from these.</p>
+          <p style="color:#6b7280;font-size:14px;margin:0 0 18px 0;line-height:1.5;">A few sentences on what you covered and one or two standout moments is all it takes, then press <strong>Submit</strong> on your lab — saving alone does not hand it in. The grant reports are built from these.</p>
           <table role="presentation" width="100%" cellpadding="0" cellspacing="0">${rows}</table>
-          <p style="color:#9ca3af;font-size:12px;margin:22px 0 0 0;text-align:center;">This reminder comes every evening at 8 until the report is in. Once it is saved, it stops.</p>
+          <p style="color:#9ca3af;font-size:12px;margin:22px 0 0 0;text-align:center;">This reminder comes every evening at 8 until the report is submitted.</p>
         </td></tr>
         <tr><td style="padding:16px 36px;background-color:#fafafa;border-top:1px solid #eee;text-align:center;">
           <p style="color:#b0b0b0;font-size:11px;margin:0;">No Limits Academy · Cape May County, NJ</p>
@@ -97,7 +119,7 @@ export function renderEmail(lab: Lab, open: OpenDate[]): { subject: string; html
     </td></tr>
   </table>
 </body></html>`;
-  const text = `${subject}\n\n${open.map((o) => `${fmt(o.date)} — still needs: ${o.missing.join(" and ")}\n${JOURNAL_URL}?journal=${o.date}`).join("\n\n")}\n\nThis reminder comes every evening at 8 until the report is in.`;
+  const text = `${subject}\n\n${open.map((o) => `${fmt(o.date)} — ${needText(o)}\n${journalLink(lab, o)}`).join("\n\n")}\n\nThis reminder comes every evening at 8 until the report is submitted.`;
   return { subject, html, text };
 }
 
@@ -154,7 +176,7 @@ Deno.serve(async (req) => {
     if (dates.length === 0) return json({ sent: [], reason: "no sessions in the window" });
 
     const { data: sessions, error: sessError } = await service.from("smile_lab_sessions")
-      .select("session_date, caring_note, sharing_note, highlights").in("session_date", dates);
+      .select("session_date, caring_note, sharing_note, highlights, caring_filed_at, sharing_filed_at").in("session_date", dates);
     if (sessError) throw new Error(sessError.message);
     const byDate = new Map((sessions ?? []).map((s) => [s.session_date, s as SessionRow]));
 
