@@ -246,9 +246,18 @@ const AdminProgramAttendance = ({ program, embedded = false }: { program: Progra
                       <button
                         onClick={(e) => { e.stopPropagation(); toggleDay(d); }}
                         title={on ? `${program.name} day — click to switch off` : `Off — click to make it a ${program.name} day`}
-                        className={`w-3 h-3 rounded-full border ${on ? program.tw.dotOn : "bg-transparent border-white/25"}`} />
+                        className={`w-2 h-2 rounded-full border ${on ? program.tw.dotOn : "bg-transparent border-white/25"}`} />
                     </div>
-                    {n > 0 && <p className="mt-1 text-lg font-black leading-none">{n}</p>}
+                    {/* The count sits in a solid pill in the programme's colour, so it
+                        reads as "how many came" and never as part of the date
+                        (Josh, 2026-10-15). */}
+                    {n > 0 && (
+                      <p className="mt-1.5 flex justify-center">
+                        <span className={`inline-flex items-center justify-center min-w-[1.9rem] h-7 px-2 rounded-full text-sm font-black tabular-nums border ${program.tw.chipActive}`}>
+                          {n}
+                        </span>
+                      </p>
+                    )}
                   </div>
                 );
               })}
