@@ -3,6 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { thumbOf } from "@/lib/imageResize";
 import { uploadAftercarePhoto } from "@/lib/aftercarePhotos";
 import { todayNY, shiftDate, sessionDateFor, filedOn } from "@/lib/aftercareDates";
+import PhotoLightbox from "@/components/photos/PhotoLightbox";
 import { toast } from "sonner";
 import { ChevronLeft, ChevronRight, Users, ImagePlus, Trash2, Loader2 } from "lucide-react";
 
@@ -75,6 +76,8 @@ const SmileLabSessionEditor = ({ date, onDateChange, showDateNav = true, onSaved
   // When each lab's half was handed in with its Submit button (null = not yet).
   const [filed, setFiled] = useState<Record<Lab, string | null>>({ smile: null, life: null });
   const [submitting, setSubmitting] = useState<Lab | null>(null);
+  // A tapped photo opens big, with arrows through that lab's set (Josh, 2026-10-15).
+  const [gallery, setGallery] = useState<{ lab: Lab; index: number } | null>(null);
   const autoSubmitted = useRef(false);
   const fileRef = useRef<HTMLInputElement>(null);
   const lifeFileRef = useRef<HTMLInputElement>(null);
@@ -359,9 +362,11 @@ const SmileLabSessionEditor = ({ date, onDateChange, showDateNav = true, onSaved
               <p className="text-sm text-white/40">No photos yet. Snap a couple from today's session.</p>
             ) : (
               <div className="grid grid-cols-3 gap-2">
-                {list.map((url) => (
+                {list.map((url, i) => (
                   <div key={url} className="relative group aspect-square rounded-lg overflow-hidden border border-white/10">
-                    <img src={thumbOf(url)} alt="" loading="lazy" className="w-full h-full object-cover" />
+                    <button type="button" onClick={() => setGallery({ lab, index: i })} className="block w-full h-full" aria-label="Enlarge photo">
+                      <img src={thumbOf(url)} alt="" loading="lazy" className="w-full h-full object-cover cursor-zoom-in" />
+                    </button>
                     <button onClick={() => removePhoto(url)}
                       className="absolute top-1 right-1 h-7 w-7 grid place-items-center rounded-md bg-black/60 hover:bg-red-600/80 opacity-0 group-hover:opacity-100 transition-opacity">
                       <Trash2 className="h-3.5 w-3.5" />
@@ -373,6 +378,14 @@ const SmileLabSessionEditor = ({ date, onDateChange, showDateNav = true, onSaved
           </div>
         ))}
       </div>
+
+      {gallery && (
+        <PhotoLightbox
+          photos={(gallery.lab === "smile" ? smilePhotos : lifePhotos).map((url) => ({ url, thumb: thumbOf(url), title: `${LAB_NAME[gallery.lab]} · ${prettyDate(date)}` }))}
+          index={gallery.index}
+          onChange={(i) => setGallery(i == null ? null : { ...gallery, index: i })}
+        />
+      )}
     </div>
   );
 };
