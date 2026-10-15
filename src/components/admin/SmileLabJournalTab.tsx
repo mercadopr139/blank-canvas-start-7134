@@ -3,7 +3,8 @@ import { useSearchParams } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Sparkles } from "lucide-react";
-import SmileLabSessionEditor, { todayNY } from "@/components/smilelab/SmileLabSessionEditor";
+import SmileLabSessionEditor from "@/components/smilelab/SmileLabSessionEditor";
+import { todayNY, sessionDateFor } from "@/lib/aftercareDates";
 import SmileLabJournalReview from "@/components/admin/SmileLabJournalReview";
 import SmileLabGrantReportSheet from "@/components/admin/SmileLabGrantReportSheet";
 
@@ -15,7 +16,12 @@ const SmileLabJournalTab = () => {
   // The reminder email links here with ?journal=YYYY-MM-DD: open the editor on that date.
   const [params] = useSearchParams();
   const fromLink = params.get("journal");
-  const [date, setDate] = useState<string>(fromLink && /^d{4}-d{2}-d{2}$/.test(fromLink) ? fromLink : todayNY());
+  // (The pattern used to be missing its backslashes, so the link's date never
+  // matched and the editor opened on today instead — which is how a report
+  // written on a Thursday ended up filed under the Thursday.)
+  const [date, setDate] = useState<string>(
+    sessionDateFor(fromLink && /^\d{4}-\d{2}-\d{2}$/.test(fromLink) ? fromLink : todayNY())
+  );
   const [reportOpen, setReportOpen] = useState(false);
   const topRef = useRef<HTMLDivElement>(null);
 

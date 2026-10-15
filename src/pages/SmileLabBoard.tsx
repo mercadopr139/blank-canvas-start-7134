@@ -1,7 +1,8 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { ArrowLeft, Smile } from "lucide-react";
-import SmileLabSessionEditor, { todayNY } from "@/components/smilelab/SmileLabSessionEditor";
+import SmileLabSessionEditor from "@/components/smilelab/SmileLabSessionEditor";
+import { todayNY, sessionDateFor } from "@/lib/aftercareDates";
 
 // Juniors Aftercare Board — the coaches' journaling screen, opened on the gym board with
 // no login. Thin wrapper: branding header + the shared session editor.
@@ -10,7 +11,7 @@ const TEAL = "#2dd4bf";
 
 const SmileLabBoard = () => {
   const navigate = useNavigate();
-  const [date, setDate] = useState<string>(todayNY());
+  const [date, setDate] = useState<string>(sessionDateFor(todayNY()));
   const goBack = () => { if (window.history.length > 1) navigate(-1); else navigate("/"); };
 
   return (

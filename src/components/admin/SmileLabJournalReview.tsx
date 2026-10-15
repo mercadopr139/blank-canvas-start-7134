@@ -14,6 +14,10 @@ import { Pencil } from "lucide-react";
 // board). Newest first; skips fully-empty sessions. Phase 2 turns this into the
 // AI grant report.
 
+/** "Thu, Oct 8" — the day a half of the report was turned in, in Eastern time. */
+const filedOn = (iso: string) =>
+  new Date(iso).toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric", timeZone: "America/New_York" });
+
 interface SessionRow {
   id: string;
   session_date: string;
@@ -21,6 +25,8 @@ interface SessionRow {
   sharing_note: string | null;
   highlights: string[];
   photos: string[];
+  caring_filed_at?: string | null;
+  sharing_filed_at?: string | null;
 }
 
 const hasContent = (s: SessionRow) =>
@@ -65,7 +71,7 @@ const SmileLabJournalReview = ({ onEdit }: { onEdit?: (date: string) => void }) 
     queryKey: ["smile-lab-journal"],
     queryFn: async (): Promise<SessionRow[]> => {
       const { data, error } = await (supabase.from("smile_lab_sessions" as never) as any)
-        .select("id, session_date, caring_note, sharing_note, highlights, photos")
+        .select("id, session_date, caring_note, sharing_note, highlights, photos, caring_filed_at, sharing_filed_at")
         .order("session_date", { ascending: false });
       if (error) throw error;
       return (data as SessionRow[]) ?? [];
@@ -111,12 +117,18 @@ const SmileLabJournalReview = ({ onEdit }: { onEdit?: (date: string) => void }) 
             {s.caring_note?.trim() && (
               <div className="rounded-lg bg-white/5 p-3">
                 <div className="text-xs font-semibold text-teal-300 mb-1">🦷 Smile Lab (Coach Jaime)</div>
+                {s.caring_filed_at && (
+                  <div className="text-[11px] text-white/35 -mt-0.5 mb-1.5">Filed {filedOn(s.caring_filed_at)}</div>
+                )}
                 <p className="text-sm text-white/80 whitespace-pre-wrap">{s.caring_note}</p>
               </div>
             )}
             {s.sharing_note?.trim() && (
               <div className="rounded-lg bg-white/5 p-3">
                 <div className="text-xs font-semibold text-rose-300 mb-1">😊 Life Lab (Coach Chrissy)</div>
+                {s.sharing_filed_at && (
+                  <div className="text-[11px] text-white/35 -mt-0.5 mb-1.5">Filed {filedOn(s.sharing_filed_at)}</div>
+                )}
                 <p className="text-sm text-white/80 whitespace-pre-wrap">{s.sharing_note}</p>
               </div>
             )}

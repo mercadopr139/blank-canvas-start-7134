@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { thumbOf } from "@/lib/imageResize";
 import { uploadAftercarePhoto } from "@/lib/aftercarePhotos";
+import { todayNY, shiftDate, sessionDateFor } from "@/lib/aftercareDates";
 import { toast } from "sonner";
 import { ChevronLeft, ChevronRight, Users, ImagePlus, Trash2, Loader2 } from "lucide-react";
 
@@ -15,12 +16,8 @@ const TEAL = "#2dd4bf";
 // rose, which nothing else in the app uses. (Josh, 2026-10-03.)
 const LAB_COLOR = { smile: TEAL, life: "#fb7185" } as const;
 
-export const todayNY = (): string => new Date().toLocaleDateString("en-CA", { timeZone: "America/New_York" });
-const shiftDate = (isoStr: string, days: number): string => {
-  const d = new Date(isoStr + "T00:00:00");
-  d.setDate(d.getDate() + days);
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-};
+// The date rules (today in Eastern time, and the Tuesday a report belongs
+// to) live in src/lib/aftercareDates.ts, shared with the Board and the tab.
 const prettyDate = (isoStr: string): string =>
   new Date(isoStr + "T00:00:00").toLocaleDateString(undefined, { weekday: "long", month: "long", day: "numeric" });
 
@@ -60,6 +57,11 @@ interface Props {
 
 const SmileLabSessionEditor = ({ date, onDateChange, showDateNav = true, onSaved }: Props) => {
   const isToday = date === todayNY();
+  // Whatever the parent hands over, the editor sits on that week's Tuesday.
+  useEffect(() => {
+    const tuesday = sessionDateFor(date);
+    if (tuesday !== date) onDateChange(tuesday);
+  }, [date, onDateChange]);
   const [caring, setCaring] = useState("");
   const [sharing, setSharing] = useState("");
   const [smileMoments, setSmileMoments] = useState("");
@@ -148,7 +150,7 @@ const SmileLabSessionEditor = ({ date, onDateChange, showDateNav = true, onSaved
             </button>
             <div className="text-center min-w-[12rem]">
               <div className="font-semibold">{prettyDate(date)}</div>
-              <div className="text-[11px] text-white/40">{isToday ? "Today" : "Session date"}</div>
+              <div className="text-[11px] text-white/40">{isToday ? "Tonight's session" : "Session date · Tuesday"}</div>
             </div>
             <button onClick={() => onDateChange(shiftDate(date, 7))} title="Next week"
               className="h-9 w-9 grid place-items-center rounded-lg bg-white/5 hover:bg-white/10 border border-white/10">
@@ -157,7 +159,9 @@ const SmileLabSessionEditor = ({ date, onDateChange, showDateNav = true, onSaved
           </div>
         ) : <div className="font-semibold">{prettyDate(date)}</div>}
         <div className="flex items-center gap-3">
-          <input type="date" value={date} onChange={(e) => e.target.value && onDateChange(e.target.value)}
+          {/* Any day picked snaps to its week's Tuesday — reports belong to sessions. */}
+          <input type="date" value={date} onChange={(e) => e.target.value && onDateChange(sessionDateFor(e.target.value))}
+            title="Reports belong to a Tuesday session; another day snaps to that week's Tuesday"
             className="rounded-lg bg-white/5 border border-white/15 px-2 py-1.5 text-sm text-white" />
           <span className="text-xs w-14 text-right">
             {status === "saving" ? <span className="text-white/40">Saving…</span>
