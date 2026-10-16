@@ -194,7 +194,7 @@ export const ORG_SECTIONS: OrgSection[] = [
       { key: "ocean_prior", label: "Previously received O.C.E.A.N. funding?", kind: "yesno", required: true, seed: "Yes" },
       { key: "ocean_program", label: "O.C.E.A.N. — program name funded", kind: "short", seed: "No Limits Academy's Youth Boxing Program" },
       { key: "ocean_amount", label: "O.C.E.A.N. — previous funding amount ($)", kind: "number", seed: "180000", help: "From the walk-through on 2026-10-15 — confirm." },
-      { key: "past_grants", label: "Past grants and awards", kind: "list", required: true, help: "One per line: funder, year, amount, purpose." },
+      { key: "past_grants", label: "Past grants received", kind: "list", required: true, help: "Funding only — honors live under Awards and recognition. One per line: funder, year, amount, purpose." },
       { key: "other_funds", label: "Other committed or pending program funds", kind: "long", help: "Source, status (committed or pending) and amount." },
       { key: "letters_support", label: "Letters of support and MOUs", kind: "list", help: "Who can write one, and the agreements on file." },
     ],
