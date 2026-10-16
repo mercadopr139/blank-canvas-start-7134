@@ -54,6 +54,9 @@ const AdminGrantCoach = () => {
   const completeness = orgCompleteness(saved);
 
   const [savingKey, setSavingKey] = useState<string | null>(null);
+  // The field that just saved, for a green "Saved" that lingers a moment.
+  const [justSaved, setJustSaved] = useState<string | null>(null);
+  const [lastSave, setLastSave] = useState<{ label: string; at: Date } | null>(null);
   const saveField = async (field: OrgField, raw: string) => {
     const value = raw.trim() ? raw : null;
     const current = saved[field.key];
@@ -66,6 +69,9 @@ const AdminGrantCoach = () => {
       .upsert({ key: field.key, value, updated_at: new Date().toISOString(), updated_by: user?.id ?? null } as never, { onConflict: "key" } as never);
     setSavingKey(null);
     if (error) { toast.error(`Couldn't save ${field.label}: ${error.message}`); return; }
+    setJustSaved(field.key);
+    setLastSave({ label: field.label, at: new Date() });
+    window.setTimeout(() => setJustSaved((k) => (k === field.key ? null : k)), 2500);
     qc.invalidateQueries({ queryKey: ["grant-org-fields"] });
   };
   /** Back to the website's text: drop the saved row. */
@@ -194,10 +200,19 @@ const AdminGrantCoach = () => {
         <div className="space-y-6">
           {/* Completeness */}
           <div className="rounded-xl border border-white/10 bg-white/[0.03] p-4">
-            <div className="flex items-center justify-between text-sm">
+            <div className="flex items-center justify-between text-sm gap-3 flex-wrap">
               <p className="font-semibold">Required facts filled</p>
               <p className="text-white/60">{completeness.done} of {completeness.total}</p>
             </div>
+            {/* Every entry saves the moment you click out of its box. This line
+                says so, and names the last one, so nobody wonders. */}
+            <p className="mt-2 text-[12px] inline-flex items-center gap-1.5 text-emerald-300/90">
+              <Check className="w-3.5 h-3.5" />
+              {fieldRows.length} {fieldRows.length === 1 ? "entry" : "entries"} saved
+              {lastSave
+                ? ` · last: ${lastSave.label}, ${lastSave.at.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })}`
+                : " · each box saves when you click out of it"}
+            </p>
             <div className="mt-2 h-2 rounded-full bg-white/10 overflow-hidden">
               <div className="h-full rounded-full transition-all" style={{ width: `${completeness.total ? Math.round((completeness.done / completeness.total) * 100) : 0}%`, backgroundColor: NLA_RED }} />
             </div>
@@ -229,8 +244,11 @@ const AdminGrantCoach = () => {
                             <span className="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wide text-amber-300"><AlertCircle className="w-3 h-3" /> Needed</span>
                           )}
                           {fromSite && <span className="text-[10px] font-bold uppercase tracking-wide rounded px-1.5 py-0.5 bg-sky-500/15 text-sky-200">From the website</span>}
-                          {savingKey === field.key && <Loader2 className="w-3.5 h-3.5 animate-spin text-white/40" />}
-                          {saved[field.key] !== undefined && savingKey !== field.key && (
+                          {savingKey === field.key && <span className="text-[10px] text-white/50 inline-flex items-center gap-1"><Loader2 className="w-3 h-3 animate-spin" /> Saving…</span>}
+                          {justSaved === field.key && savingKey !== field.key && (
+                            <span className="text-[10px] font-bold uppercase tracking-wide rounded px-1.5 py-0.5 bg-emerald-500/20 text-emerald-200 inline-flex items-center gap-1"><Check className="w-3 h-3" /> Saved</span>
+                          )}
+                          {saved[field.key] !== undefined && savingKey !== field.key && justSaved !== field.key && (
                             <span className="text-[10px] text-white/35 inline-flex items-center gap-1"><Check className="w-3 h-3" /> saved {when(savedAt[field.key])}</span>
                           )}
                         </div>

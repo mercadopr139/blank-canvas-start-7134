@@ -227,6 +227,7 @@ export const ORG_SECTIONS: OrgSection[] = [
       { key: "finance_contact_phone", label: "Finance contact — phone", kind: "short" },
       { key: "signer_name", label: "Authorized signer — name and title", kind: "short", required: true, seed: "Josh Mercado, Program Director", help: "Who signs applications and agreements." },
       { key: "board", label: "Board of directors", kind: "list", required: true, help: "One per line: name, role on the board, affiliation." },
+      { key: "staffing", label: "Staffing", kind: "long", required: true, seed: "No Limits Academy runs on two full-time employees — Josh Mercado, Program Director, and Chrissy Casiello, Program Coordinator — supported by part-time coaches, mentors and a volunteer network, on nearly $1 million in annual revenue. Josh leads programming and partnerships; Chrissy runs participant records, reporting, invoicing and day-to-day coordination. Every dollar funds youth, not overhead.", help: "Funders ask for staff roles, qualifications and supervision (O.C.E.A.N. narrative item 4). Two full-time staff on this revenue reads as efficiency — say it plainly. Add the coaches and volunteers by role." },
       { key: "staff_bios", label: "Staff bios", kind: "long", help: "A short paragraph each for Josh, Chrissy and the coaches funders will see named." },
     ],
   },
