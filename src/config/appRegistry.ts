@@ -177,6 +177,7 @@ export const APPS: AppEntry[] = [
   { key: "app_csbg_dashboard", label: "CSBG · Status Dashboard", group: "Finance", routes: [`${FIN}/csbg/dashboard`] },
   { key: "app_csbg_submissions", label: "CSBG · Submission Log", group: "Finance", routes: [`${FIN}/csbg/submissions`] },
   { key: "app_document_vault", label: "Document Vault", group: "Finance", routes: [`${FIN}/vault`], opens: "Stored organisation documents" },
+  { key: "app_grant_coach", label: "Grant Coach", group: "Finance", routes: [`${FIN}/grant-coach`], opens: "The About NLA library, funder documents, and grant folders" },
 ];
 
 /**

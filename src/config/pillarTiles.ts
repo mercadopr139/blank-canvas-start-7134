@@ -268,6 +268,13 @@ export const FINANCE_TILES: PillarTile[] = [
     href: "/admin/finance/vault",
     permKey: "finance_vault",
   },
+  {
+    title: "Grant Coach",
+    description: "About NLA library, documents & grants",
+    icon: Sparkles,
+    href: "/admin/finance/grant-coach",
+    permKey: "finance_grant_coach",
+  },
 ];
 
 // Permissions that aren't a sidebar tile of their own. Scripture Coach

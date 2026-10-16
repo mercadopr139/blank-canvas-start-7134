@@ -69,7 +69,17 @@ package, was never used, and is being replaced, not patched.
 
 ## Build order (one step at a time; show Josh after each; he says push)
 
-1. **About NLA library + organization document vault.**
+1. **About NLA library + organization document vault.** — BUILT 2026-10-16.
+   `/admin/finance/grant-coach` (app `app_grant_coach`, Finance tile).
+   Library fields: `src/lib/grantCoach/orgProfile.ts` (sections, help,
+   website seeds); saved values in `grant_org_fields`. Documents:
+   `src/lib/grantCoach/orgDocuments.ts` catalog; rows in
+   `grant_org_documents`; files in the private `grant-documents` bucket
+   (admins only, signed URLs) or a Drive link. The existing Document Vault
+   is a Drive-link index, not file storage, so Grant Coach keeps its own.
+   Josh fills the blanks (EIN, 501(c)(3) date, fiscal year, mailing
+   address, phones, board, budget, 990 year, past grants) and uploads the
+   four O.C.E.A.N. attachments.
 2. **Grant folder + upload + AI requirement extraction → checklist** with
    due dates and status; the O.C.E.A.N. checklist is the acceptance test.
 3. **Narrative/answer writer** from library + live data (youth served,
