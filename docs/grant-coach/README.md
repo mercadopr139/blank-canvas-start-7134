@@ -1,5 +1,53 @@
 # Grant Coach
 
+## RESUME HERE (handoff written 2026-10-16, end of the desktop session)
+
+Read this block first on any computer. Claude's session notes do not travel
+between machines; this file does.
+
+**State:** steps 1 and 2 are BUILT and PUSHED (main at `aa27bc30`). The
+database migrations are applied to production. Josh filled the About NLA
+library on 2026-10-16 (20+ entries saved in `grant_org_fields`). Nothing is
+uncommitted.
+
+**The very next move is step 3, the answer writer:**
+- One edge function (`grant-writer`, importing `_shared/claude.ts`) that
+  takes a checklist item (its label, detail, kind, the funder's length limit)
+  plus the About NLA library (`grant_org_fields` over the seeds in
+  `src/lib/grantCoach/orgProfile.ts`) plus live back-end numbers, and
+  returns a draft answer. Live numbers to pull for the period the funder
+  asks about: unduplicated youth served (`youth_served_all_programs`),
+  attendance, demographics incl. economically disadvantaged share
+  (`isBelowPoverty` in `src/lib/demographics.ts` — the word on screen is
+  "economically disadvantaged"), meals served (`meal_events`), rides, and
+  partner quotes from the library's "What partners say".
+- On the folder page (`AdminGrantFolder.tsx`), a "Draft with Grant Coach"
+  button inside an open item fills the answer box; Josh edits; the answer
+  saves on blur as it does today.
+- The 3-page program narrative (screen 8, items 1–7 in the funder's order)
+  is the big one: draft all seven as one document, ≤ 3 pages, then a
+  "Download as DOCX" so it can be uploaded to the portal.
+- Tone rules: year-round (never "10-month"); solutions and partnerships,
+  never blame; two full-time staff on ~$1M revenue is efficiency.
+
+**Open facts for Josh to confirm when asked, one at a time:** the
+O.C.E.A.N. prior-funding amount ($180,000, from the walk-through); board
+roles (Chair / Treasurer…) for the five names in the Board box; the exact
+annual operating budget ($825,000 was entered) and how income at or below
+200% FPL will be verified at enrollment (screen 7).
+
+**Deadline:** O.C.E.A.N. 2027 due Thu Oct 30, 2026, 5:00 PM. Draft done by
+Oct 23, submit by Oct 28. If the writer is not ready in time, draft the
+answers with Josh by hand into the checklist's answer boxes — the folder
+is already the record either way.
+
+**Laptop setup check:** `git pull`, `npm install`, `npm run dev`. The
+Supabase CLI must be linked to NLA Production (`npx supabase link
+--project-ref rkdkmzjontaufbyjbcku`) before any `db push` or
+`functions deploy`; `.env` must have the VITE_SUPABASE_* values.
+
+---
+
 A sibling to Scripture Coach: one digital folder per grant, from the day a
 funder's documents arrive to the day the final report is filed. Specified by
 Josh on 2026-10-15. Nothing is built yet; this is the brief to build from.
