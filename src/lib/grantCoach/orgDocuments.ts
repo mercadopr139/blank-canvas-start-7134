@@ -27,6 +27,7 @@ export const ORG_DOCUMENTS: OrgDocument[] = [
   { key: "insurance", title: "Certificate of insurance", why: "General liability; asked by funders who fund on-site youth programs.", accepts: "PDF" },
   { key: "nj_charity", title: "NJ charitable registration", why: "Annual state registration; some NJ funders check it.", accepts: "PDF" },
   { key: "bylaws", title: "Bylaws", why: "Occasionally requested with the determination letter.", accepts: "PDF" },
+  { key: "letters_packet", title: "Letters of support packet", why: "The March 2026 packet: eleven letters from law enforcement, school districts, O.C.E.A.N., Cape Assist and Acenda. Attach as is, or ask for fresh ones per application.", accepts: "PDF" },
 ];
 
 export const GRANT_DOCUMENTS_BUCKET = "grant-documents";

@@ -96,16 +96,56 @@ const AWARDS = [
   "Veteran Boxers Association, Ring 1 — Man of the Year Award, presented at the Pennsylvania Boxing Hall of Fame (2026)",
 ].join("\n");
 
-// Alphabetical, like the awards list on the site (Josh, 2026-10-16).
+// Alphabetical, like the awards list on the site (Josh, 2026-10-16). What
+// each partner does with NLA comes from their March 2026 letters of support
+// for the Community Project Funding request.
 const PARTNERS = [
-  "Acenda — counseling",
-  "Cape Assist — Coaching Boys into Men; counseling and prevention",
-  "Cape May County Special Services School District — BAM",
-  "Cape May County Technical High School — Hawk Squad",
+  "Acenda Integrated Health / NJ4S (Atlantic & Cape May Counties) — youth mental-health, prevention and early-intervention services delivered on site; Lil' Champs' Corner (now Juniors Aftercare) and NJ4S youth camp programming",
+  "Cape Assist — on-site mental-health and prevention support; Coaching Boys Into Men, the evidence-based violence-prevention programme; named NLA its Partner in Prevention (2022)",
+  "Cape May County Prosecutor's Office — the annual Shop with a Cop holiday initiative for youth from economically disadvantaged households",
+  "Cape May County Special Services School District — BAM (Body and Mind), a behavior-incentive programme for high-need students",
+  "Cape May County Technical School District — Hawk Squad, a fee-for-service after-school partnership; CTE students (HVAC, welding, automotive, carpentry) complete real projects at the academy",
+  "Cape May Police Department — Gym Buddies, officers working out alongside youth; Gloves Up for the Blue; the annual New Year's formal-dining event",
   "Caring For Kids — Cape May County children's services",
   "Delta Dental — Smile Lab oral-health programming",
-  "Meal Train donors — families, businesses, churches and the Cape May Police, who cook and serve dinner",
+  "Meal Train donors — families, businesses, churches and local police who cook and serve dinner five nights a week",
+  "Middle Township Police Department — Gym Buddies; officers present at practice and events; refers at-risk youth to NLA; NLA staff support the department's youth camp",
+  "Middle Township Public Schools — the largest share of NLA youth; students ride directly from school to NLA at dismissal; referrals and shared communication with teachers, counselors and coaches",
+  "O.C.E.A.N., Inc. — CSBG partnership funding hundreds of youth from economically disadvantaged households; financial guidance and mentorship to NLA's leadership",
   "Summer excursion venues across South Jersey, Philadelphia and the shore",
+  "Wildwood Public Schools — NLA extends the district's 21st Century Community Learning Centers after-school programme into the evening, with transportation from the school programme to NLA",
+  "Woodbine School District — a five-day-a-week after-school partnership through the academic year, extended to summer programming",
+].join("\n");
+
+// The eleven letters written in March 2026 for the Community Project Funding
+// request, alphabetical by organization. Each can be asked for again.
+const LETTERS = [
+  "Acenda Integrated Health / NJ4S — Dr. Noëlle Jacquelin, Director, NJ4S Atlantic & Cape May Counties (March 19, 2026)",
+  "Cape Assist — Katie Faldetta, Executive Director (March 20, 2026)",
+  "Cape May County Prosecutor's Office — Jeffrey H. Sutherland, County Prosecutor (March 20, 2026)",
+  "Cape May County Special Services School District — Valerie Bowers, Director, Cape May County High School and Ocean Academy (March 20, 2026)",
+  "Cape May County Technical School District & Special Services — Jamie Moscony, Superintendent (March 19, 2026)",
+  "Cape May Police Department — Chief Dekon W. Fashaw Sr. (2026)",
+  "Middle Township Police Department — Tracey Super, Chief of Police (March 20, 2026)",
+  "Middle Township Public Schools — Dr. Stephanie DeRose, Superintendent of Schools (March 19, 2026)",
+  "O.C.E.A.N., Inc. — Tamica Mickle, President & CEO (March 19, 2026)",
+  "Wildwood Public Schools — J. Kenyon Kummings, Superintendent (March 20, 2026)",
+  "Woodbine School District — Adrienne Breitinger, Ed.D., Superintendent (March 19, 2026)",
+].join("\n");
+
+// Lines a narrative can quote, each attributed, from those letters.
+const QUOTES = [
+  "\"The relationship between our department and No Limits Academy is one of the strongest community partnerships we have.\" — Tracey Super, Chief of Police, Middle Township",
+  "\"We frequently refer youth — particularly those who may be at risk — to their programming.\" — Tracey Super, Chief of Police, Middle Township",
+  "\"Middle Township represents the largest percentage of youth participating in No Limits Academy's programming.\" — Dr. Stephanie DeRose, Superintendent, Middle Township Public Schools",
+  "\"Students receive meaningful support that strengthens emotional regulation, engagement, and connection to positive adult mentors.\" — Jamie Moscony, Superintendent, Cape May County Technical School District",
+  "\"The City of Wildwood is recognized as a distressed community … Through our partnership with No Limits Academy, we have been able to extend that support even further into the evening hours.\" — J. Kenyon Kummings, Superintendent, Wildwood Public Schools",
+  "\"Woodbine is a high-need district … this partnership has also expanded to include summer programming, allowing Woodbine students to access No Limits Academy's facility and services year-round.\" — Adrienne Breitinger, Superintendent, Woodbine School District",
+  "\"O.C.E.A.N., Inc. has partnered with No Limits Academy to support hundreds of youth living below the federal poverty line.\" — Tamica Mickle, President & CEO, O.C.E.A.N., Inc.",
+  "\"[BAM] has created measurable improvements in student behavior, motivation, and confidence.\" — Valerie Bowers, Director, Cape May County Special Services",
+  "\"Cape Assist provides on-site mental health and prevention support … particularly for young people in communities such as Wildwood and Woodbine, where access to services can be limited.\" — Katie Faldetta, Executive Director, Cape Assist",
+  "\"A space where young people feel safe, supported, and held accountable.\" — Chief Dekon W. Fashaw Sr., Cape May Police Department",
+  "\"An essential partner in our efforts to connect with and support young people across Cape May County.\" — Jeffrey H. Sutherland, Cape May County Prosecutor",
 ].join("\n");
 
 const OUTCOMES =
@@ -170,6 +210,7 @@ export const ORG_SECTIONS: OrgSection[] = [
       { key: "impact", label: "Impact numbers, from the website", kind: "list", seed: IMPACT, help: "Headline figures. Drafts pull live counts from the back end for the period a funder asks about." },
       { key: "awards", label: "Awards and recognition", kind: "list", seed: AWARDS },
       { key: "partners", label: "Partners", kind: "list", required: true, seed: PARTNERS, help: "Funders ask about coordination and duplicated services; name who NLA works with and on what." },
+      { key: "partner_quotes", label: "What partners say", kind: "list", seed: QUOTES, help: "Attributed lines from the letters of support. The writer quotes these where a funder asks about coordination, experience or effectiveness." },
     ],
   },
   {
@@ -196,7 +237,7 @@ export const ORG_SECTIONS: OrgSection[] = [
       { key: "ocean_amount", label: "O.C.E.A.N. — previous funding amount ($)", kind: "number", seed: "180000", help: "From the walk-through on 2026-10-15 — confirm." },
       { key: "past_grants", label: "Past grants received", kind: "list", required: true, help: "Funding only — honors live under Awards and recognition. One per line: funder, year, amount, purpose." },
       { key: "other_funds", label: "Other committed or pending program funds", kind: "long", help: "Source, status (committed or pending) and amount." },
-      { key: "letters_support", label: "Letters of support and MOUs", kind: "list", help: "Who can write one, and the agreements on file." },
+      { key: "letters_support", label: "Letters of support and MOUs", kind: "list", seed: LETTERS, help: "Who has written one (the March 2026 CPF packet is under Documents) and the agreements on file. Each can be asked for again for a new application." },
     ],
   },
 ];
