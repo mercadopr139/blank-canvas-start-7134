@@ -8,6 +8,7 @@
 // the private grant-documents bucket, or as a link, one per catalog entry.
 // Steps 2–4 (grant folders, the writer, reporting) build on this page.
 import { useMemo, useRef, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -16,8 +17,9 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import {
-  BookOpen, FolderLock, Globe, Check, Loader2, Upload, Link2, ExternalLink, Trash2, RotateCcw, AlertCircle,
+  BookOpen, FolderLock, Globe, Check, Loader2, Upload, Link2, ExternalLink, Trash2, RotateCcw, AlertCircle, FolderPlus, CalendarClock, ChevronRight,
 } from "lucide-react";
+import { FOLDER_TEMPLATES, checklistProgress } from "@/lib/grantCoach/oceanChecklist";
 import { ORG_SECTIONS, orgFieldValue, orgCompleteness, type OrgField } from "@/lib/grantCoach/orgProfile";
 import { ORG_DOCUMENTS, GRANT_DOCUMENTS_BUCKET, orgDocumentPath, type OrgDocument } from "@/lib/grantCoach/orgDocuments";
 
@@ -33,12 +35,70 @@ const when = (iso: string) =>
   new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: "America/New_York" });
 const kb = (n: number | null) => (n == null ? "" : n > 1_000_000 ? `${(n / 1_000_000).toFixed(1)} MB` : `${Math.max(1, Math.round(n / 1000))} KB`);
 
-type Tab = "about" | "documents";
+type Tab = "grants" | "about" | "documents";
 
 const AdminGrantCoach = () => {
   const { user } = useAuth();
   const qc = useQueryClient();
-  const [tab, setTab] = useState<Tab>("about");
+  const navigate = useNavigate();
+  const [tab, setTab] = useState<Tab>("grants");
+
+  /* ───── The grants ───── */
+  interface FolderRow { id: string; name: string; funder: string; status: string; due_at: string | null; amount_requested: number | null; template_key: string | null }
+  const { data: folders = [] } = useQuery({
+    queryKey: ["grant-folders"],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("grant_folders" as never).select("id, name, funder, status, due_at, amount_requested, template_key").order("due_at", { ascending: true, nullsFirst: false });
+      if (error) throw error;
+      return (data ?? []) as unknown as FolderRow[];
+    },
+  });
+  const { data: itemCounts = {} } = useQuery({
+    queryKey: ["grant-folder-progress"],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("grant_checklist_items" as never).select("folder_id, required, status");
+      if (error) throw error;
+      const by: Record<string, { required: boolean; status: string }[]> = {};
+      for (const r of (data ?? []) as unknown as { folder_id: string; required: boolean; status: string }[]) (by[r.folder_id] ??= []).push(r);
+      return Object.fromEntries(Object.entries(by).map(([k, v]) => [k, checklistProgress(v)])) as Record<string, { done: number; total: number }>;
+    },
+  });
+  const [starting, setStarting] = useState(false);
+  /** A new folder from a built-in template, its checklist seeded. */
+  const startFromTemplate = async (key: string) => {
+    const t = FOLDER_TEMPLATES.find((f) => f.key === key);
+    if (!t) return;
+    setStarting(true);
+    try {
+      const { data: created, error } = await supabase
+        .from("grant_folders" as never)
+        .insert({
+          name: t.name, funder: t.funder, program_name: t.programName, status: "applying", due_at: t.dueAt,
+          amount_requested: t.amountMax, period_start: t.periodStart, period_end: t.periodEnd, portal_url: t.portalUrl ?? null,
+          template_key: t.key, created_by: user?.id ?? null,
+        } as never)
+        .select("id")
+        .single();
+      if (error) throw error;
+      const folderId = (created as unknown as { id: string }).id;
+      const dueOn = t.dueAt.slice(0, 10);
+      const rows = t.items.map((it, i) => ({
+        folder_id: folderId, section: it.section, label: it.label, detail: it.detail ?? null, kind: it.kind,
+        required: it.required ?? true, owner: it.owner ?? null, due_on: dueOn, sort_order: i,
+      }));
+      const { error: e2 } = await supabase.from("grant_checklist_items" as never).insert(rows as never);
+      if (e2) throw e2;
+      qc.invalidateQueries({ queryKey: ["grant-folders"] });
+      qc.invalidateQueries({ queryKey: ["grant-folder-progress"] });
+      navigate(`/admin/finance/grant-coach/${folderId}`);
+    } catch (e) {
+      toast.error(`Couldn't start the folder: ${(e as Error).message}`);
+    } finally {
+      setStarting(false);
+    }
+  };
+  const whenAt = (iso: string) => new Date(iso).toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit", timeZone: "America/New_York" });
+  const daysLeft = (iso: string) => Math.ceil((new Date(iso).getTime() - Date.now()) / 86_400_000);
 
   /* ───── The library ───── */
   const { data: fieldRows = [], isLoading: fieldsLoading } = useQuery({
@@ -181,6 +241,7 @@ const AdminGrantCoach = () => {
         </div>
         <div className="flex gap-2">
           {([
+            { k: "grants" as Tab, label: "Grants", icon: FolderPlus, sub: `${folders.filter((f) => f.status === "applying").length} applying · ${folders.filter((f) => f.status === "active").length} active` },
             { k: "about" as Tab, label: "About NLA", icon: BookOpen, sub: `${completeness.done} of ${completeness.total} required` },
             { k: "documents" as Tab, label: "Documents", icon: FolderLock, sub: `${docsDone} of ${ORG_DOCUMENTS.length} on file` },
           ]).map((t) => (
@@ -195,6 +256,43 @@ const AdminGrantCoach = () => {
           ))}
         </div>
       </div>
+
+      {tab === "grants" && (
+        <div className="space-y-4">
+          <div className="rounded-xl border border-white/10 bg-white/[0.03] p-4 text-sm">
+            <p className="font-semibold">One folder per grant, from the day the funder's documents arrive to the day the final report is filed.</p>
+            <p className="text-white/50 mt-1">The checklist is the spine: every requirement, with a status, an owner and a due date. The O.C.E.A.N. 2027 checklist was written from their online form, screen by screen.</p>
+          </div>
+          <div className="rounded-2xl border border-white/10 bg-neutral-900/60 divide-y divide-white/10">
+            {folders.map((f) => {
+              const p = itemCounts[f.id] ?? { done: 0, total: 0 };
+              const left = f.due_at ? daysLeft(f.due_at) : null;
+              return (
+                <button key={f.id} type="button" onClick={() => navigate(`/admin/finance/grant-coach/${f.id}`)} className="w-full p-4 flex items-center gap-4 text-left hover:bg-white/[0.03]">
+                  <div className="flex-1 min-w-0">
+                    <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-white/40">{f.funder}</p>
+                    <p className="font-semibold truncate">{f.name}</p>
+                    <p className="text-[12px] text-white/45 mt-0.5 inline-flex items-center gap-3 flex-wrap">
+                      <span className="rounded-full px-2 py-0.5 bg-white/10 text-white/70 text-[10px] font-bold uppercase tracking-wide">{f.status}</span>
+                      {f.due_at && <span className={`inline-flex items-center gap-1 ${left != null && left <= 7 ? "text-amber-300" : ""}`}><CalendarClock className="w-3.5 h-3.5" /> Due {whenAt(f.due_at)}{left != null && ` · ${left} day${left === 1 ? "" : "s"}`}</span>}
+                      {p.total > 0 && <span>{p.done} of {p.total} done</span>}
+                    </p>
+                  </div>
+                  <ChevronRight className="w-5 h-5 text-white/30 shrink-0" />
+                </button>
+              );
+            })}
+            {folders.length === 0 && <p className="p-4 text-sm text-white/40">No grants yet.</p>}
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {FOLDER_TEMPLATES.filter((t) => !folders.some((f) => f.template_key === t.key)).map((t) => (
+              <Button key={t.key} onClick={() => void startFromTemplate(t.key)} disabled={starting} className="text-white" style={{ backgroundColor: NLA_RED }}>
+                {starting ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <FolderPlus className="w-4 h-4 mr-2" />} Start {t.name}
+              </Button>
+            ))}
+          </div>
+        </div>
+      )}
 
       {tab === "about" && (
         <div className="space-y-6">

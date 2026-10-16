@@ -37,6 +37,7 @@ import AdminDuplicateRegistrations from "./pages/admin/AdminDuplicateRegistratio
 import AdminCSBGInvoice from "./pages/admin/AdminCSBGInvoice";
 import AdminDocumentVault from "./pages/admin/AdminDocumentVault";
 import AdminGrantCoach from "./pages/admin/AdminGrantCoach";
+import AdminGrantFolder from "./pages/admin/AdminGrantFolder";
 import AdminCSBGBudget from "./pages/admin/AdminCSBGBudget";
 import AdminCSBGChecklist from "./pages/admin/AdminCSBGChecklist";
 import AdminCSBGDashboard from "./pages/admin/AdminCSBGDashboard";
@@ -355,6 +356,7 @@ const App = () => (
               <Route path="vault" element={<AdminDocumentVault />} />
               {/* Grant Coach — the About NLA library, documents, and (next) grant folders. */}
               <Route path="grant-coach" element={<AdminGrantCoach />} />
+              <Route path="grant-coach/:id" element={<AdminGrantFolder />} />
               <Route path="invoices" element={<AdminInvoices />} />
               <Route path="clients" element={<AdminClients />} />
               <Route path="service-calendar" element={<AdminServiceCalendar />} />

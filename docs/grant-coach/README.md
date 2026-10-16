@@ -82,6 +82,16 @@ package, was never used, and is being replaced, not patched.
    four O.C.E.A.N. attachments.
 2. **Grant folder + upload + AI requirement extraction → checklist** with
    due dates and status; the O.C.E.A.N. checklist is the acceptance test.
+   — BUILT LEAN 2026-10-16. Grants tab on `/admin/finance/grant-coach`;
+   folder page `/admin/finance/grant-coach/:id` (`AdminGrantFolder.tsx`).
+   Tables `grant_folders`, `grant_checklist_items`, `grant_documents`
+   (files under `grants/<id>/` in the `grant-documents` bucket). The
+   O.C.E.A.N. 2027 checklist is written by hand from the captured form in
+   `src/lib/grantCoach/oceanChecklist.ts` (eligibility + 12 screens, 66
+   items, owner Josh/Chrissy, due Oct 30) and seeds a folder from the
+   "Start O.C.E.A.N. 2027" button; `grantCoachChecklist.test.ts` is the
+   acceptance test. NOT built yet: AI extraction of a checklist from
+   uploaded documents (after Oct 30, on the second grant).
 3. **Narrative/answer writer** from library + live data (youth served,
    attendance, demographics, meals, rides, journals, economically
    disadvantaged count) against the funder's exact questions and rubric.
