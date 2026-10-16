@@ -79,6 +79,9 @@ const IMPACT = [
   "Meals served five nights a week",
   "95% of youth participate in non-contact boxing",
   "$3M+ raised since 2020",
+  "140+ youth from Wildwood and Woodbine, two of New Jersey's most economically distressed communities",
+  "14,000-square-foot youth development facility",
+  "Youth engaged from 2:30 PM to about 8:30 PM, the hours when they are most vulnerable",
 ].join("\n");
 
 const AWARDS = [
@@ -106,6 +109,9 @@ const PARTNERS = [
   "Cape May County Special Services School District — BAM (Body and Mind), a behavior-incentive programme for high-need students",
   "Cape May County Technical School District — Hawk Squad, a fee-for-service after-school partnership; CTE students (HVAC, welding, automotive, carpentry) complete real projects at the academy",
   "Cape May Police Department — Gym Buddies, officers working out alongside youth; Gloves Up for the Blue; the annual New Year's formal-dining event",
+  "CARA — embedded mental-health support alongside Cape Assist and Acenda",
+  "Gym Buddies law-enforcement partners — Avalon, Lower Township, North Wildwood, Wildwood and Wildwood Crest police departments and the Cape May County Sheriff's Department, with the Prosecutor's Office and Middle Township and Cape May police",
+  "Lower Cape May Regional School District — a fee-for-service school partnership",
   "Caring For Kids — Cape May County children's services",
   "Delta Dental — Smile Lab oral-health programming",
   "Meal Train donors — families, businesses, churches and local police who cook and serve dinner five nights a week",
@@ -148,6 +154,33 @@ const QUOTES = [
   "\"An essential partner in our efforts to connect with and support young people across Cape May County.\" — Jeffrey H. Sutherland, Cape May County Prosecutor",
 ].join("\n");
 
+// The need and the place, as the winning CPF proposal put them (2026).
+const NEED =
+  "While Cape May County is widely known as a tourism destination, many families experience economic hardship and " +
+  "limited access to youth development opportunities. Approximately 14% of youth in the county live below the federal " +
+  "poverty line, and the hardship is concentrated in communities such as Wildwood and Woodbine. The youth NLA serves " +
+  "reflect that: 70% are economically disadvantaged, and 143 live in single-parent households headed by mothers.\n\n" +
+  "The school districts where participants live report high shares of economically disadvantaged students: Woodbine " +
+  "Elementary about 75%, Wildwood City about 70%, Middle Township about 50%, Lower Township about 45%. For many of these " +
+  "families, access to a safe after-school environment is limited. NLA keeps youth engaged, mentored and supported " +
+  "during the hours when they are most vulnerable to negative influences.";
+
+const FACILITY =
+  "NLA operates a 14,000-square-foot youth development facility at 1086 Route 47 South, Rio Grande, NJ 08242 — a safe, " +
+  "structured after-school environment where young people receive mentorship, train in non-contact boxing and fitness, " +
+  "develop life skills, and share family-style meals with peers and mentors. Many youth arrive as early as 2:30 PM and " +
+  "stay until about 8:30 PM. Transportation removes the barrier for youth from underserved communities, year-round, five " +
+  "days a week.\n\n" +
+  "The FY2027 Community Project Funding award ($300,000, Rep. Jeff Van Drew) funds the Facility Improvement and Youth " +
+  "Development Expansion Project: roof replacement ($150,000), parking lot resurfacing ($80,000), a digital community " +
+  "information board ($25,000), exterior beautification ($15,000), and Upper Cuts, a mentorship-based workforce-development " +
+  "barbershop teaching entrepreneurship, customer service and financial responsibility ($30,000).";
+
+const DEMOGRAPHICS =
+  "Race / ethnicity (CPF proposal, 2026): Caucasian 36.8%, Hispanic/Latino 30.0%, African American 20.0%, Multiracial 10.4%, " +
+  "Asian 1.0%, Native Hawaiian/Pacific Islander 0.9%, American Indian/Alaska Native 0.9%. 70% economically disadvantaged; " +
+  "143 youth in single-parent households headed by mothers.";
+
 const OUTCOMES =
   "NLA keeps attendance for every program through kiosk check-ins, so youth served are counted unduplicated and " +
   "retention is measured night by night. The back end also records meals served, rides provided, Juniors Aftercare " +
@@ -171,8 +204,8 @@ export const ORG_SECTIONS: OrgSection[] = [
       { key: "address_physical", label: "Program address (the gym)", kind: "long", required: true, seed: "1086 Route 47 South, Rio Grande, NJ 08242", help: "From Our Story; confirm the ZIP." },
       { key: "address_mailing", label: "Mailing address of record", kind: "long", required: true, help: "Funders use this on the award. Repeat the gym address if they are the same." },
       { key: "counties", label: "Counties served", kind: "short", required: true, seed: "Cape May County" },
-      { key: "service_area", label: "Cities, towns and communities served", kind: "long", required: true, help: "The towns most youth come from — the youth map under Attendance shows them." },
-      { key: "target_population", label: "Target population", kind: "short", required: true, seed: "Youth and young adults ages 7–19 in Cape May County" },
+      { key: "service_area", label: "Cities, towns and communities served", kind: "long", required: true, seed: "Youth from across Cape May County, including more than 140 from Wildwood and Woodbine, two of the most economically distressed communities in New Jersey. By school district (CPF proposal, 2026): Middle Township 31.5%, Lower Township 18.7%, Wildwood 15.1%, Woodbine 13.1%, Cape May County Technical 6.9%, Avalon / Stone Harbor 1.3%, Ocean City 1.0%, Upper Township 0.7%, Cape May / West Cape May 0.7%, other districts and alternative settings 6.6%.", help: "From the CPF proposal. The youth map under Attendance shows the current spread; refresh the percentages when they change." },
+      { key: "target_population", label: "Target population", kind: "short", required: true, seed: "Youth and young adults ages 7–19 across Cape May County; 70% economically disadvantaged" },
     ],
   },
   {
@@ -204,6 +237,9 @@ export const ORG_SECTIONS: OrgSection[] = [
     fields: [
       { key: "mission", label: "Mission statement", kind: "long", required: true, seed: MISSION },
       { key: "story", label: "Our story, short", kind: "long", required: true, seed: STORY },
+      { key: "need", label: "Statement of need", kind: "long", required: true, seed: NEED, help: "The community numbers behind every proposal's first question. From the CPF proposal; refresh the census and district figures yearly." },
+      { key: "facility", label: "The facility and the CPF project", kind: "long", seed: FACILITY, help: "The building, the hours, and what the $300,000 award is building. Update as the project is completed." },
+      { key: "demographics", label: "Who NLA serves — demographics", kind: "long", seed: DEMOGRAPHICS, help: "A snapshot from the CPF proposal. Drafts pull the live breakdown from Registration Analytics for the period a funder asks about." },
       { key: "schedule", label: "How the program runs through the year", kind: "long", required: true, seed: SCHEDULE, help: "Never \"a 10-month after-school program\": NLA is year-round." },
       { key: "programs", label: "Programs", kind: "list", required: true, seed: PROGRAMS },
       { key: "outcomes", label: "Outcomes and evaluation language", kind: "long", required: true, seed: OUTCOMES, help: "What is measured and how. Drafts cite this when a funder asks for outcome measures and data tools." },
@@ -219,7 +255,8 @@ export const ORG_SECTIONS: OrgSection[] = [
     blurb: "The numbers behind the budget screens.",
     fields: [
       { key: "annual_budget", label: "Most recent approved annual operating budget ($)", kind: "number", required: true, help: "The board-approved figure. The brief says NLA runs on about $1M a year." },
-      { key: "prior_revenue", label: "Prior fiscal year — total revenue ($)", kind: "number", help: "From the 990 or the year-end statement." },
+      { key: "prior_revenue", label: "Prior fiscal year — total revenue ($)", kind: "number", seed: "932498", help: "2025 revenue, from the CPF proposal. Confirm against the 990." },
+      { key: "revenue_history", label: "Annual revenue history", kind: "list", seed: "2021 — $149,180\n2022 — $374,295\n2023 — $518,905\n2024 — $596,862\n2025 — $932,498", help: "From the CPF proposal. Funders read steady growth as capacity; add each year as it closes." },
       { key: "prior_expenses", label: "Prior fiscal year — total expenses ($)", kind: "number" },
       { key: "operating_deficit", label: "Operating deficit?", kind: "yesno", required: true },
       { key: "deficit_explanation", label: "If a deficit: amount and explanation", kind: "long" },
@@ -235,8 +272,9 @@ export const ORG_SECTIONS: OrgSection[] = [
       { key: "ocean_prior", label: "Previously received O.C.E.A.N. funding?", kind: "yesno", required: true, seed: "Yes" },
       { key: "ocean_program", label: "O.C.E.A.N. — program name funded", kind: "short", seed: "No Limits Academy's Youth Boxing Program" },
       { key: "ocean_amount", label: "O.C.E.A.N. — previous funding amount ($)", kind: "number", seed: "180000", help: "From the walk-through on 2026-10-15 — confirm." },
-      { key: "past_grants", label: "Past grants received", kind: "list", help: "Optional. Foundations often ask for grants received in the last three years; awards logged in Grant Coach will add themselves here. Funding only — honors live under Awards and recognition." },
+      { key: "past_grants", label: "Past grants received", kind: "list", seed: "U.S. House Community Project Funding, FY2027 (Rep. Jeff Van Drew) — $300,000 — Facility Improvement and Youth Development Expansion Project — awarded 2026\nO.C.E.A.N., Inc. CSBG Partnership Program — $180,000 — youth boxing program (confirm amount and years)", help: "Optional. Foundations often ask for grants received in the last three years; awards logged in Grant Coach will add themselves here. Funding only — honors live under Awards and recognition." },
       { key: "other_funds", label: "Other committed or pending program funds", kind: "long", help: "Source, status (committed or pending) and amount." },
+      { key: "sustainability", label: "Sustainability and revenue model", kind: "long", seed: "NLA keeps core after-school programming free for families through a diversified funding structure: community support, philanthropic contributions, and fee-for-service partnerships with local school districts (Cape May County Special Services, Cape May County Technical, Middle Township, Lower Cape May Regional, Wildwood and Woodbine) that provide a reliable revenue stream. Annual revenue has grown every year since 2021, from $149,180 to $932,498 in 2025. The CPF award protects the facility itself. Dave Von Savage's business training underpins the financial framework and long-term model.", help: "Every funder asks what happens when their grant ends. From the CPF proposal." },
       { key: "letters_support", label: "Letters of support and MOUs", kind: "list", seed: LETTERS, help: "Who has written one (the March 2026 CPF packet is under Documents) and the agreements on file. Each can be asked for again for a new application." },
     ],
   },
