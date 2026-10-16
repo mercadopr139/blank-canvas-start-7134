@@ -65,3 +65,7 @@ Every calendar date on this site — anything stamped on a record, compared to "
 - Full ISO timestamps (`created_at`, `geocoded_at`, `signed_at`) are fine as `toISOString()` — the rule is about *calendar dates*, not instants.
 - An ESLint rule (`no-restricted-syntax` in `eslint.config.js`) fails the build on `toISOString().split/slice/substring`. Don't disable it without a one-line reason.
 - The partner-program registration forms (`HawkSquadRegister.tsx`, `BamRegister.tsx`) are generated from `Register.tsx` by `scripts/make-program-register.mjs` — fix the master and re-run; never hand-edit the outputs.
+
+## Grant Coach
+
+The brief and the first real application it is built against live in `docs/grant-coach/`. Read `docs/grant-coach/README.md` before touching anything grant-related.
