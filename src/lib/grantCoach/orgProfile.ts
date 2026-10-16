@@ -96,13 +96,14 @@ const AWARDS = [
   "Veteran Boxers Association, Ring 1 — Man of the Year Award, presented at the Pennsylvania Boxing Hall of Fame (2026)",
 ].join("\n");
 
+// Alphabetical, like the awards list on the site (Josh, 2026-10-16).
 const PARTNERS = [
-  "Cape Assist — Coaching Boys into Men; counseling and prevention",
   "Acenda — counseling",
-  "Delta Dental — Smile Lab oral-health programming",
-  "Caring For Kids — Cape May County children's services",
-  "Cape May County Technical High School — Hawk Squad",
+  "Cape Assist — Coaching Boys into Men; counseling and prevention",
   "Cape May County Special Services School District — BAM",
+  "Cape May County Technical High School — Hawk Squad",
+  "Caring For Kids — Cape May County children's services",
+  "Delta Dental — Smile Lab oral-health programming",
   "Meal Train donors — families, businesses, churches and the Cape May Police, who cook and serve dinner",
   "Summer excursion venues across South Jersey, Philadelphia and the shore",
 ].join("\n");
