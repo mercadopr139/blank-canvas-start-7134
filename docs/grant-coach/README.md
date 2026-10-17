@@ -1,50 +1,34 @@
 # Grant Coach
 
-## RESUME HERE (handoff written 2026-10-16, end of the desktop session)
+## RESUME HERE (handoff written 2026-10-17, end of the laptop session)
 
 Read this block first on any computer. Claude's session notes do not travel
 between machines; this file does.
 
-**State:** steps 1 and 2 are BUILT and PUSHED (main at `aa27bc30`). The
-database migrations are applied to production. Josh filled the About NLA
-library on 2026-10-16 (20+ entries saved in `grant_org_fields`). Nothing is
-uncommitted.
+**THE PLAN (Josh, 2026-10-17):** Grant Coach is an expert grant writer sitting next to Josh, not a form filler. (1) The library is the **Grant Vault**. (2) Questions come in by **screenshot** of the funder's online portal; Grant Coach reads them in with their limits, in the portal's order. (3) **Each question is a conversation**: ask first, recommend, pull numbers on request, write when told; Josh approves, **copies** the answer into the portal, marks it **pasted**; the folder is NLA's copy of the application. (4) A **reviewer** scores the application against the rubric before submit; the whole Q&A prints to PDF into the folder. (5) **Memory**: approved answers reused for the next grant; the Vault fills itself when gaps are found; each funder's preferences/history kept. (6) **Award → reporting** through the same conversation. (7) Later: pipeline board with asked/won/win rate, one calendar, fit check (go/no-go), budget help, documents that know their age, decline feedback, audit trail; left-rail page layout (Questions · Attachments · Budget · Review · Submit · Reporting); Copy / Download / Print everywhere.
 
-**The very next move is step 3, the answer writer:**
-- One edge function (`grant-writer`, importing `_shared/claude.ts`) that
-  takes a checklist item (its label, detail, kind, the funder's length limit)
-  plus the About NLA library (`grant_org_fields` over the seeds in
-  `src/lib/grantCoach/orgProfile.ts`) plus live back-end numbers, and
-  returns a draft answer. Live numbers to pull for the period the funder
-  asks about: unduplicated youth served (`youth_served_all_programs`),
-  attendance, demographics incl. economically disadvantaged share
-  (`isBelowPoverty` in `src/lib/demographics.ts` — the word on screen is
-  "economically disadvantaged"), meals served (`meal_events`), rides, and
-  partner quotes from the library's "What partners say".
-- On the folder page (`AdminGrantFolder.tsx`), a "Draft with Grant Coach"
-  button inside an open item fills the answer box; Josh edits; the answer
-  saves on blur as it does today.
-- The 3-page program narrative (screen 8, items 1–7 in the funder's order)
-  is the big one: draft all seven as one document, ≤ 3 pages, then a
-  "Download as DOCX" so it can be uploaded to the portal.
-- Tone rules: year-round (never "10-month"); solutions and partnerships,
-  never blame; two full-time staff on ~$1M revenue is efficiency.
+**Guardrails (Josh):** never invent a number. Every statistic about NLA's youth comes from the back end (`liveFacts.ts`), never the CPF proposal or website headline numbers (those are story and flow only). Use the **last complete program year (2025-26)**. Logs are young (kiosk, Meal Tracker and driver app built spring 2026; Meal Train pauses in summer, resumed Oct 1): use **rates from full months**, name the strongest full month as such, never partial totals, never project. Consistency across the back end: **no browser pop-ups**, every confirm/question is the themed dialog (`useAsk()` in `src/components/admin/AskDialog.tsx`).
 
-**Open facts for Josh to confirm when asked, one at a time:** the
-O.C.E.A.N. prior-funding amount ($180,000, from the walk-through); board
-roles (Chair / Treasurer…) for the five names in the Board box; the exact
-annual operating budget ($825,000 was entered) and how income at or below
-200% FPL will be verified at enrollment (screen 7).
+**STATE (pushed 2026-10-17, laptop):** step 1 is BUILT and PUSHED; Josh has not yet run the full test.
+- Home (`AdminGrantCoach.tsx`): tabs Grants · Grant Vault · Documents. Only **New grant** starts a folder (the hand-seeded O.C.E.A.N. template button is gone; `oceanChecklist.ts` stays for the tests only). Josh wiped the old O.C.E.A.N. folder to test the real flow from scratch.
+- Folder (`AdminGrantFolder.tsx`): "Questions from the funder's portal" upload box → `grant-writer` mode `read_screens` (claude-sonnet-5 vision) → one checklist row per question under "Portal · <screen>" with its limit; each row opens a `GrantQuestionPanel` (conversation via mode `chat`; Sparkles = write now; Copy / Approve / Mark pasted); "Talk to Grant Coach about this grant" for the whole-grant questions; sidebar "The numbers Grant Coach uses" (last complete program year, Refresh); "Remove this folder" under the three tiles.
+- Data: migration `20261017150000_grant_coach_questions.sql` APPLIED (limit_kind/limit_value/source_path/pasted_at on `grant_checklist_items`; `grant_messages`). Edge function `grant-writer` DEPLOYED (modes item · narrative · chat · read_screens).
+- Tests: `src/test/grantWriter.test.ts` (16) + `grantCoachChecklist.test.ts`; 366 passing. Pre-existing tsc errors in older files (AdminMessageBoard, ExcursionCoach…) are not ours; Vite builds fine.
+
+**THE VERY NEXT MOVE:** Josh's localhost test of step 1 — New grant (O.C.E.A.N., Inc. / 2027 CSBG Partnership Program) → upload the 12 portal screenshots (`docs/grant-coach/ocean-2027-rfp-form.md` describes every screen) → rows appear → open one → conversation → Approve / Copy / Mark pasted → Remove a throwaway folder (themed confirm). Fix whatever he finds, then step 2 (reviewer vs rubric + Q&A PDF + Submit), step 3 (Vault fills itself, funder memory, answer reuse), step 4 (award → reporting), step 5 (pipeline, calendar, fit check, budget, document age, decline feedback).
+
+**Open facts for Josh to confirm, inside the app when a question needs them, never in chat:** O.C.E.A.N. prior-funding amount ($180,000, from the walk-through); board roles for the five names in the Board box; the exact annual operating budget ($825,000 was entered); how income at or below 200% FPL will be verified at enrollment (screen 7).
 
 **Deadline:** O.C.E.A.N. 2027 due Thu Oct 30, 2026, 5:00 PM. Draft done by
-Oct 23, submit by Oct 28. If the writer is not ready in time, draft the
-answers with Josh by hand into the checklist's answer boxes — the folder
-is already the record either way.
+Oct 23, submit by Oct 28. The tool must never block the application: if a
+step is not ready, answer with Josh by hand into the rows; the folder is
+the record either way.
 
-**Laptop setup check:** `git pull`, `npm install`, `npm run dev`. The
+**Setup check on any machine:** `git pull`, `npm install`, `npm run dev`. The
 Supabase CLI must be linked to NLA Production (`npx supabase link
---project-ref rkdkmzjontaufbyjbcku`) before any `db push` or
-`functions deploy`; `.env` must have the VITE_SUPABASE_* values.
+--project-ref rkdkmzjontaufbyjbcku`) before any `functions deploy`; `.env`
+must have the VITE_SUPABASE_* values. Migrations: hand Josh the SQL for the
+SQL Editor if `db push` has no path from the machine.
 
 ---
 

@@ -19,8 +19,9 @@ import { Button } from "@/components/ui/button";
 import {
   BookOpen, FolderLock, Globe, Check, Loader2, Upload, Link2, ExternalLink, Trash2, RotateCcw, AlertCircle, FolderPlus, CalendarClock, ChevronRight,
 } from "lucide-react";
-import { FOLDER_TEMPLATES, checklistProgress } from "@/lib/grantCoach/oceanChecklist";
+import { checklistProgress } from "@/lib/grantCoach/oceanChecklist";
 import { ORG_SECTIONS, orgFieldValue, orgCompleteness, type OrgField } from "@/lib/grantCoach/orgProfile";
+import { useAsk } from "@/components/admin/AskDialog";
 import { ORG_DOCUMENTS, GRANT_DOCUMENTS_BUCKET, orgDocumentPath, type OrgDocument } from "@/lib/grantCoach/orgDocuments";
 
 const NLA_RED = "#bf0f3e";
@@ -64,33 +65,30 @@ const AdminGrantCoach = () => {
     },
   });
   const [starting, setStarting] = useState(false);
-  /** A new folder from a built-in template, its checklist seeded. */
-  const startFromTemplate = async (key: string) => {
-    const t = FOLDER_TEMPLATES.find((f) => f.key === key);
-    if (!t) return;
+  const { ask, dialog } = useAsk();
+  /** A blank folder for any funder: name and funder now, the rest inside. */
+  const startBlank = async () => {
+    const got = await ask.prompt({
+      title: "New grant",
+      body: "A folder for one grant. The funder's documents, the questions, the answers and the reports all live in it.",
+      fields: [
+        { key: "funder", label: "Funder", placeholder: "e.g. O.C.E.A.N., Inc." },
+        { key: "name", label: "What the grant is called", placeholder: "e.g. 2027 CSBG Partnership Program" },
+      ],
+      confirmLabel: "Start the folder",
+    });
+    if (!got) return;
+    const funder = got.funder, name = got.name;
     setStarting(true);
     try {
       const { data: created, error } = await supabase
         .from("grant_folders" as never)
-        .insert({
-          name: t.name, funder: t.funder, program_name: t.programName, status: "applying", due_at: t.dueAt,
-          amount_requested: t.amountMax, period_start: t.periodStart, period_end: t.periodEnd, portal_url: t.portalUrl ?? null,
-          template_key: t.key, created_by: user?.id ?? null,
-        } as never)
+        .insert({ name: name.trim(), funder: funder.trim(), status: "applying", created_by: user?.id ?? null } as never)
         .select("id")
         .single();
       if (error) throw error;
-      const folderId = (created as unknown as { id: string }).id;
-      const dueOn = t.dueAt.slice(0, 10);
-      const rows = t.items.map((it, i) => ({
-        folder_id: folderId, section: it.section, label: it.label, detail: it.detail ?? null, kind: it.kind,
-        required: it.required ?? true, owner: it.owner ?? null, due_on: dueOn, sort_order: i,
-      }));
-      const { error: e2 } = await supabase.from("grant_checklist_items" as never).insert(rows as never);
-      if (e2) throw e2;
       qc.invalidateQueries({ queryKey: ["grant-folders"] });
-      qc.invalidateQueries({ queryKey: ["grant-folder-progress"] });
-      navigate(`/admin/finance/grant-coach/${folderId}`);
+      navigate(`/admin/finance/grant-coach/${(created as unknown as { id: string }).id}`);
     } catch (e) {
       toast.error(`Couldn't start the folder: ${(e as Error).message}`);
     } finally {
@@ -181,8 +179,14 @@ const AdminGrantCoach = () => {
   };
 
   const linkDoc = async (doc: OrgDocument) => {
-    const url = window.prompt(`Link to ${doc.title} (a Google Drive or other web address):`, docs[doc.key]?.link_url ?? "");
-    if (url == null) return;
+    const got = await ask.prompt({
+      title: `Link to ${doc.title}`,
+      body: "A Google Drive or other web address.",
+      fields: [{ key: "url", label: "Web address", placeholder: "https://…", defaultValue: docs[doc.key]?.link_url ?? "" }],
+      confirmLabel: "Save link",
+    });
+    if (!got) return;
+    const url = got.url;
     const trimmed = url.trim();
     if (!/^https?:\/\//i.test(trimmed)) { toast.error("That doesn't look like a web address."); return; }
     setBusyDoc(doc.key);
@@ -211,7 +215,7 @@ const AdminGrantCoach = () => {
   const removeDoc = async (doc: OrgDocument) => {
     const row = docs[doc.key];
     if (!row) return;
-    if (!window.confirm(`Remove ${doc.title} from Grant Coach? ${row.storage_path ? "The file is deleted." : "The link is forgotten."}`)) return;
+    if (!(await ask.confirm({ title: `Remove ${doc.title}?`, body: row.storage_path ? "The file is deleted from Grant Coach." : "The link is forgotten.", confirmLabel: "Remove", danger: true }))) return;
     setBusyDoc(doc.key);
     try {
       if (row.storage_path) await supabase.storage.from(GRANT_DOCUMENTS_BUCKET).remove([row.storage_path]);
@@ -242,7 +246,7 @@ const AdminGrantCoach = () => {
         <div className="flex gap-2">
           {([
             { k: "grants" as Tab, label: "Grants", icon: FolderPlus, sub: `${folders.filter((f) => f.status === "applying").length} applying · ${folders.filter((f) => f.status === "active").length} active` },
-            { k: "about" as Tab, label: "About NLA", icon: BookOpen, sub: `${completeness.done} of ${completeness.total} required` },
+            { k: "about" as Tab, label: "Grant Vault", icon: BookOpen, sub: `${completeness.done} of ${completeness.total} required` },
             { k: "documents" as Tab, label: "Documents", icon: FolderLock, sub: `${docsDone} of ${ORG_DOCUMENTS.length} on file` },
           ]).map((t) => (
             <button
@@ -261,7 +265,7 @@ const AdminGrantCoach = () => {
         <div className="space-y-4">
           <div className="rounded-xl border border-white/10 bg-white/[0.03] p-4 text-sm">
             <p className="font-semibold">One folder per grant, from the day the funder's documents arrive to the day the final report is filed.</p>
-            <p className="text-white/50 mt-1">The checklist is the spine: every requirement, with a status, an owner and a due date. The O.C.E.A.N. 2027 checklist was written from their online form, screen by screen.</p>
+            <p className="text-white/50 mt-1">Start a grant, screenshot the funder's online application, and Grant Coach reads every question in. Each one is a conversation: it asks first, recommends, writes when you say so. Approve, copy into the portal, mark it pasted.</p>
           </div>
           <div className="rounded-2xl border border-white/10 bg-neutral-900/60 divide-y divide-white/10">
             {folders.map((f) => {
@@ -285,11 +289,9 @@ const AdminGrantCoach = () => {
             {folders.length === 0 && <p className="p-4 text-sm text-white/40">No grants yet.</p>}
           </div>
           <div className="flex flex-wrap gap-2">
-            {FOLDER_TEMPLATES.filter((t) => !folders.some((f) => f.template_key === t.key)).map((t) => (
-              <Button key={t.key} onClick={() => void startFromTemplate(t.key)} disabled={starting} className="text-white" style={{ backgroundColor: NLA_RED }}>
-                {starting ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <FolderPlus className="w-4 h-4 mr-2" />} Start {t.name}
-              </Button>
-            ))}
+            <Button onClick={() => void startBlank()} disabled={starting} className="text-white" style={{ backgroundColor: NLA_RED }}>
+              {starting ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <FolderPlus className="w-4 h-4 mr-2" />} New grant
+            </Button>
           </div>
         </div>
       )}
@@ -460,6 +462,7 @@ const AdminGrantCoach = () => {
           </div>
         </div>
       )}
+      {dialog}
     </div>
   );
 };

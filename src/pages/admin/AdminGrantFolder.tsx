@@ -1,8 +1,7 @@
-// Grant Coach — one grant's folder: the checklist that is its spine, the
+// Grant Coach — one grant's folder: the questions read off screenshots of
+// the funder's portal (each one a conversation with Grant Coach), the
 // funder's documents and NLA's, and the facts of the grant (due date,
-// amount, period). Step 2 of docs/grant-coach/README.md, built lean for the
-// O.C.E.A.N. 2027 deadline: the checklist is seeded from the captured form
-// (src/lib/grantCoach/oceanChecklist.ts); AI extraction comes later.
+// amount, period). See the REVISED PLAN in docs/grant-coach/README.md.
 import { useMemo, useRef, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -14,9 +13,17 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import {
   ArrowLeft, Check, Circle, CircleDot, MinusCircle, Loader2, Upload, Link2, ExternalLink, Trash2, CalendarClock, ChevronDown, ChevronRight,
+  Sparkles, Download, RefreshCw, Images, MessageSquareText,
 } from "lucide-react";
 import { checklistProgress } from "@/lib/grantCoach/oceanChecklist";
 import { GRANT_DOCUMENTS_BUCKET } from "@/lib/grantCoach/orgDocuments";
+import { gatherLiveFacts, factYearLabel } from "@/lib/grantCoach/liveFacts";
+import {
+  loadLibrary, draftWithGrantCoach, readPortalScreens, narrativeItems, narrativeWordCount, NARRATIVE_SECTION, NARRATIVE_WORD_LIMIT,
+} from "@/lib/grantCoach/writer";
+import { downloadNarrativeDocx, headingFromLabel } from "@/lib/grantCoach/narrativeDocx";
+import GrantQuestionPanel from "@/components/admin/grantCoach/GrantQuestionPanel";
+import { useAsk } from "@/components/admin/AskDialog";
 
 const NLA_RED = "#bf0f3e";
 
@@ -28,6 +35,7 @@ interface Folder {
 interface Item {
   id: string; folder_id: string; section: string; label: string; detail: string | null; kind: string; required: boolean;
   status: "todo" | "in_progress" | "done" | "na"; owner: string | null; due_on: string | null; answer: string | null; sort_order: number;
+  limit_kind?: "words" | "characters" | null; limit_value?: number | null; source_path?: string | null; pasted_at?: string | null;
 }
 interface Doc {
   id: string; folder_id: string; side: "funder" | "ours"; title: string; storage_path: string | null; file_name: string | null;
@@ -55,6 +63,7 @@ const AdminGrantFolder = () => {
   const navigate = useNavigate();
   const qc = useQueryClient();
   const { user } = useAuth();
+  const { ask, dialog } = useAsk();
 
   const { data: folder, isLoading } = useQuery({
     queryKey: ["grant-folder", id],
@@ -97,6 +106,165 @@ const AdminGrantFolder = () => {
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
   const [open, setOpen] = useState<string | null>(null);
 
+  /* ───── Grant Coach, the writer ─────
+     A draft is built from three things the page gathers here: the About NLA
+     library, the live numbers from the back end, and what is already written
+     in this folder. The numbers are shown in the sidebar so Josh sees exactly
+     what the writer was told. */
+  const { data: facts = [], isFetching: factsLoading, refetch: refetchFacts } = useQuery({
+    queryKey: ["grant-facts"],
+    queryFn: () => gatherLiveFacts(),
+    staleTime: 10 * 60_000,
+  });
+  const { data: library = [] } = useQuery({ queryKey: ["grant-library"], queryFn: loadLibrary, staleTime: 5 * 60_000 });
+  const [drafting, setDrafting] = useState<string | null>(null);
+  const [factsOpen, setFactsOpen] = useState(false);
+
+  const answered = () => items.filter((i) => i.answer?.trim()).map((i) => ({ section: i.section, label: i.label, answer: i.answer!.trim() }));
+  const draftFolder = () => ({
+    name: folder!.name, funder: folder!.funder, program_name: folder!.program_name, amount_requested: folder!.amount_requested,
+    period_start: folder!.period_start, period_end: folder!.period_end, due_at: folder!.due_at, notes: folder!.notes,
+  });
+
+  /* ───── Questions from the portal ─────
+     Screenshots of the funder's online application go up, Grant Coach reads
+     every question off them, and each becomes a checklist row under its
+     screen's heading, with the funder's limit. From there each row is a
+     conversation (GrantQuestionPanel). */
+  const screensInput = useRef<HTMLInputElement>(null);
+  const [reading, setReading] = useState<string | null>(null);
+  const importScreens = async (files: FileList | null) => {
+    if (!files?.length || !folder) return;
+    const list = Array.from(files).slice(0, 12);
+    setReading(`Uploading ${list.length} screenshot${list.length === 1 ? "" : "s"}…`);
+    try {
+      const paths: string[] = [];
+      for (const file of list) {
+        const path = `grants/${id}/screens/${Date.now()}_${file.name.replace(/[^\w.-]+/g, "_").slice(0, 60)}`;
+        const { error } = await supabase.storage.from(GRANT_DOCUMENTS_BUCKET).upload(path, file, { contentType: file.type || undefined });
+        if (error) throw error;
+        paths.push(path);
+        await supabase.from("grant_documents" as never).insert({
+          folder_id: id, side: "funder", title: `Portal screen: ${file.name.replace(/\.[^.]+$/, "")}`, storage_path: path, file_name: file.name,
+          mime_type: file.type || null, size_bytes: file.size, uploaded_by: user?.id ?? null,
+        } as never);
+      }
+      setReading("Grant Coach is reading the questions…");
+      const questions = await readPortalScreens(paths);
+      if (!questions.length) throw new Error("No questions were found on those screens.");
+      const base = items.reduce((m, i) => Math.max(m, i.sort_order), 0) + 1;
+      const rows = questions.map((q, i) => ({
+        folder_id: id,
+        section: `Portal · ${q.screen || "Application"}`,
+        label: q.text,
+        detail: q.help || null,
+        kind: q.kind === "choice" ? "field" : (q.kind || "field"),
+        required: q.required !== false,
+        status: "todo",
+        owner: null,
+        answer: null,
+        sort_order: base + i,
+        limit_kind: q.limit_kind ?? null,
+        limit_value: q.limit_value ?? null,
+        source_path: paths[Math.min(paths.length - 1, Math.floor((i / questions.length) * paths.length))],
+      }));
+      const { error } = await supabase.from("grant_checklist_items" as never).insert(rows as never);
+      if (error) throw error;
+      qc.invalidateQueries({ queryKey: ["grant-items", id] });
+      qc.invalidateQueries({ queryKey: ["grant-docs", id] });
+      toast.success(`${questions.length} questions read from ${paths.length} screen${paths.length === 1 ? "" : "s"}. Each one is now a row you can talk through.`);
+    } catch (e) {
+      toast.error(`Couldn't read the screens: ${(e as Error).message}`);
+    } finally {
+      setReading(null);
+      if (screensInput.current) screensInput.current.value = "";
+    }
+  };
+  const [grantTalkOpen, setGrantTalkOpen] = useState(false);
+
+  /* Wipe this folder: its checklist, conversations, documents and files.
+     The Grant Vault is untouched; it belongs to NLA, not to one grant. */
+  const removeFolder = async () => {
+    if (!folder) return;
+    const ok = await ask.confirm({
+      title: `Remove "${folder.name}"?`,
+      body: "Everything in it goes: the checklist, the conversations, the documents and files. The Grant Vault is not affected. This cannot be undone.",
+      confirmLabel: "Remove the folder",
+      danger: true,
+    });
+    if (!ok) return;
+    try {
+      // Files first: everything under grants/<id>/, one level of subfolders deep.
+      const prefix = `grants/${id}`;
+      const { data: top } = await supabase.storage.from(GRANT_DOCUMENTS_BUCKET).list(prefix, { limit: 1000 });
+      const paths: string[] = [];
+      for (const entry of top ?? []) {
+        if (entry.id) paths.push(`${prefix}/${entry.name}`);
+        else {
+          const { data: inner } = await supabase.storage.from(GRANT_DOCUMENTS_BUCKET).list(`${prefix}/${entry.name}`, { limit: 1000 });
+          (inner ?? []).forEach((e) => { if (e.id) paths.push(`${prefix}/${entry.name}/${e.name}`); });
+        }
+      }
+      if (paths.length) await supabase.storage.from(GRANT_DOCUMENTS_BUCKET).remove(paths);
+      const { error } = await supabase.from("grant_folders" as never).delete().eq("id", id!);
+      if (error) throw error;
+      qc.invalidateQueries({ queryKey: ["grant-folders"] });
+      qc.invalidateQueries({ queryKey: ["grant-folder-progress"] });
+      toast.success(`"${folder.name}" removed.`);
+      navigate("/admin/finance/grant-coach");
+    } catch (e) {
+      toast.error(`Couldn't remove the folder: ${(e as Error).message}`);
+    }
+  };
+
+  const draftNarrative = async (instruction?: string) => {
+    if (!folder) return;
+    const seven = narrativeItems(items);
+    if (seven.length !== 7) { toast.error("This folder doesn't have the seven narrative items."); return; }
+    setDrafting("narrative");
+    try {
+      const liveFacts = facts.length ? facts : (await refetchFacts()).data ?? [];
+      const res = await draftWithGrantCoach({
+        mode: "narrative", folder: draftFolder(), narrativeItems: seven, answered: answered().filter((a) => a.section !== NARRATIVE_SECTION), library, facts: liveFacts, instruction,
+      });
+      const sections = res.sections ?? [];
+      for (const sec of sections) {
+        const it = seven[sec.n - 1];
+        if (it && sec.text) await patchItem(it, { answer: sec.text.trim(), status: it.status === "todo" ? "in_progress" : it.status });
+      }
+      const words = res.words ?? 0;
+      toast.success(`Narrative drafted · ${words} words${words > NARRATIVE_WORD_LIMIT ? " — over the three-page limit, trim it" : ""}.`);
+    } catch (e) {
+      toast.error(`Grant Coach couldn't draft the narrative: ${(e as Error).message}`);
+    } finally {
+      setDrafting(null);
+    }
+  };
+
+  const revise = (what: (instruction?: string) => Promise<void>, prompt: string) => async () => {
+    const got = await ask.prompt({ title: "Revise the draft", body: prompt, fields: [{ key: "instruction", label: "What should change?", placeholder: "e.g. shorter, lead with the meals, more on partners", required: false }], confirmLabel: "Redraft" });
+    if (!got) return;
+    await what(got.instruction.trim() || undefined);
+  };
+
+  const downloadNarrative = async () => {
+    if (!folder) return;
+    const seven = narrativeItems(items);
+    if (seven.some((i) => !i.answer?.trim())) { toast.error("All seven narrative items need an answer first."); return; }
+    try {
+      await downloadNarrativeDocx(
+        seven.map((i) => ({ n: Number(i.label[0]), heading: headingFromLabel(i.label), text: i.answer!.trim() })),
+        { org: "No Limits Academy", grant: folder.name, program: folder.program_name },
+        `NoLimitsAcademy_Narrative_${folder.funder.replace(/[^A-Za-z0-9]+/g, "")}${folder.period_end ? "_" + folder.period_end.slice(0, 4) : ""}.docx`,
+      );
+      toast.success("Word file saved. Upload it on the narrative screen of the portal.");
+    } catch (e) {
+      toast.error(`Couldn't build the file: ${(e as Error).message}`);
+    }
+  };
+  const narrativeWords = narrativeWordCount(narrativeItems(items));
+  const narrativeReady = narrativeItems(items).length === 7 && narrativeItems(items).every((i) => i.answer?.trim());
+
   const patchItem = async (it: Item, patch: Partial<Item>) => {
     const { error } = await supabase.from("grant_checklist_items" as never).update({ ...patch, updated_at: new Date().toISOString() } as never).eq("id", it.id);
     if (error) { toast.error(error.message); return; }
@@ -133,10 +301,16 @@ const AdminGrantFolder = () => {
     }
   };
   const link = async () => {
-    const url = window.prompt("Link (the funder's portal, a Drive file, a web address):");
-    if (!url) return;
+    const got = await ask.prompt({
+      title: "Add a link",
+      body: "The funder's portal, a Drive file, or any web address.",
+      fields: [{ key: "url", label: "Web address", placeholder: "https://…" }, { key: "title", label: "Call it", defaultValue: "Link" }],
+      confirmLabel: "Add link",
+    });
+    if (!got) return;
+    const url = got.url;
     if (!/^https?:\/\//i.test(url.trim())) { toast.error("That doesn't look like a web address."); return; }
-    const title = window.prompt("Call it:", "Link") ?? "Link";
+    const title = got.title.trim() || "Link";
     const { error } = await supabase.from("grant_documents" as never).insert({ folder_id: id, side, title, link_url: url.trim(), uploaded_by: user?.id ?? null } as never);
     if (error) { toast.error(error.message); return; }
     qc.invalidateQueries({ queryKey: ["grant-docs", id] });
@@ -149,7 +323,7 @@ const AdminGrantFolder = () => {
     window.open(data.signedUrl, "_blank", "noopener");
   };
   const removeDoc = async (d: Doc) => {
-    if (!window.confirm(`Remove "${d.title}" from this folder?`)) return;
+    if (!(await ask.confirm({ title: `Remove "${d.title}"?`, body: "It comes off this folder's documents. A file is deleted; a link is just forgotten.", confirmLabel: "Remove", danger: true }))) return;
     if (d.storage_path) await supabase.storage.from(GRANT_DOCUMENTS_BUCKET).remove([d.storage_path]);
     const { error } = await supabase.from("grant_documents" as never).delete().eq("id", d.id);
     if (error) { toast.error(error.message); return; }
@@ -193,9 +367,14 @@ const AdminGrantFolder = () => {
             <div className="mt-1.5 h-1.5 rounded-full bg-white/10 overflow-hidden"><div className="h-full rounded-full" style={{ width: `${progress.total ? Math.round((progress.done / progress.total) * 100) : 0}%`, backgroundColor: NLA_RED }} /></div>
           </div>
         </div>
-        {folder.portal_url && (
-          <a href={folder.portal_url} target="_blank" rel="noreferrer" className="mt-3 inline-flex items-center gap-1.5 text-sm text-sky-300 hover:text-sky-200"><ExternalLink className="w-4 h-4" /> Open the funder's portal</a>
-        )}
+        <div className="mt-3 flex flex-wrap items-center gap-4">
+          {folder.portal_url && (
+            <a href={folder.portal_url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 text-sm text-sky-300 hover:text-sky-200"><ExternalLink className="w-4 h-4" /> Open the funder's portal</a>
+          )}
+          <button type="button" onClick={() => void removeFolder()} className="ml-auto inline-flex items-center gap-1.5 text-[12px] text-white/40 hover:text-red-300">
+            <Trash2 className="w-3.5 h-3.5" /> Remove this folder
+          </button>
+        </div>
         <Textarea
           key={folder.notes ?? ""}
           defaultValue={folder.notes ?? ""}
@@ -206,12 +385,40 @@ const AdminGrantFolder = () => {
         />
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-[2fr_1fr]">
+      <div className="grid gap-6 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
         {/* The checklist */}
-        <section className="space-y-3">
-          <div className="flex items-center justify-between">
+        <section className="space-y-3 min-w-0">
+          {/* Questions in by screenshot */}
+          <div className="rounded-xl border border-white/10 bg-neutral-900/60 p-4 flex flex-wrap items-center gap-3">
+            <div className="flex-1 min-w-[220px]">
+              <p className="font-semibold text-sm inline-flex items-center gap-2"><Images className="w-4 h-4 text-white/50" /> Questions from the funder's portal</p>
+              <p className="text-[12px] text-white/45 mt-0.5">Screenshot each screen of the online application and upload them here, in order. Grant Coach reads every question in, with its limit, and each becomes a row below to talk through. Your typed answers on the screens are ignored.</p>
+            </div>
+            <input ref={screensInput} type="file" multiple accept="image/png,image/jpeg,image/webp" className="hidden" onChange={(e) => void importScreens(e.target.files)} />
+            <Button size="sm" onClick={() => screensInput.current?.click()} disabled={reading != null} className="text-white" style={{ backgroundColor: NLA_RED }}>
+              {reading ? <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" /> : <Upload className="w-3.5 h-3.5 mr-1.5" />} {reading ?? "Upload screenshots"}
+            </Button>
+          </div>
+
+          {/* The grant as a whole */}
+          <div className="rounded-xl border border-white/10 bg-neutral-900/60 overflow-hidden">
+            <button type="button" onClick={() => setGrantTalkOpen((o) => !o)} className="w-full flex items-center justify-between px-4 py-2.5 text-left hover:bg-white/[0.03]">
+              <span className="font-semibold text-sm inline-flex items-center gap-2">
+                {grantTalkOpen ? <ChevronDown className="w-4 h-4 text-white/40" /> : <ChevronRight className="w-4 h-4 text-white/40" />}
+                <MessageSquareText className="w-4 h-4 text-white/50" /> Talk to Grant Coach about this grant
+              </span>
+              <span className="text-[11px] text-white/40">which program · how much · what to lead with</span>
+            </button>
+            {grantTalkOpen && folder && (
+              <div className="px-4 pb-4 border-t border-white/[0.06] pt-3">
+                <GrantQuestionPanel folderId={id!} folder={draftFolder()} item={null} library={library} facts={facts} answered={answered()} onPatch={async () => {}} />
+              </div>
+            )}
+          </div>
+
+          <div className="flex flex-wrap items-center justify-between gap-2">
             <h2 className="font-bold">Checklist</h2>
-            <p className="text-[12px] text-white/45">Tap the circle to move an item along: to do → in progress → done. Tap a row to write the answer.</p>
+            <p className="text-[12px] text-white/45">Tap the circle to move an item along. Tap a row to open it: talk it through with Grant Coach, approve the answer, copy it into the portal, mark it pasted.</p>
           </div>
           {sections.map((sec) => {
             const p = checklistProgress(sec.items);
@@ -222,6 +429,25 @@ const AdminGrantFolder = () => {
                   <span className="font-semibold text-sm inline-flex items-center gap-2">{hidden ? <ChevronRight className="w-4 h-4 text-white/40" /> : <ChevronDown className="w-4 h-4 text-white/40" />} {sec.name}</span>
                   <span className={`text-[11px] font-bold ${p.total && p.done === p.total ? "text-emerald-300" : "text-white/40"}`}>{p.done}/{p.total}</span>
                 </button>
+                {!hidden && sec.name === NARRATIVE_SECTION && (
+                  <div className="px-4 py-3 border-t border-white/[0.06] bg-white/[0.02] flex flex-wrap items-center gap-3">
+                    <Button size="sm" onClick={() => void draftNarrative()} disabled={drafting != null} className="text-white" style={{ backgroundColor: NLA_RED }}>
+                      {drafting === "narrative" ? <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" /> : <Sparkles className="w-3.5 h-3.5 mr-1.5" />}
+                      {narrativeReady ? "Redraft all seven" : "Draft all seven with Grant Coach"}
+                    </Button>
+                    {narrativeReady && (
+                      <Button size="sm" variant="outline" onClick={revise((i) => draftNarrative(i), "What should change in the narrative? (e.g. shorter, lead with the meals, more on partners)")} disabled={drafting != null} className="bg-transparent border-white/20 text-white/80 hover:bg-white/10 hover:text-white">
+                        Revise…
+                      </Button>
+                    )}
+                    <span className={`text-[12px] tabular-nums ${narrativeWords > NARRATIVE_WORD_LIMIT ? "text-amber-300" : "text-white/50"}`}>
+                      {narrativeWords.toLocaleString()} / {NARRATIVE_WORD_LIMIT.toLocaleString()} words{narrativeWords > NARRATIVE_WORD_LIMIT ? " · over three pages, trim" : " · about three pages"}
+                    </span>
+                    <Button size="sm" variant="outline" onClick={() => void downloadNarrative()} disabled={!narrativeReady} className="ml-auto bg-transparent border-white/20 text-white/80 hover:bg-white/10 hover:text-white">
+                      <Download className="w-3.5 h-3.5 mr-1.5" /> Download Word file
+                    </Button>
+                  </div>
+                )}
                 {!hidden && (
                   <div className="divide-y divide-white/[0.06]">
                     {sec.items.map((it) => {
@@ -241,6 +467,8 @@ const AdminGrantFolder = () => {
                               {it.detail && !isOpen && <p className="text-[12px] text-white/40 truncate">{it.detail}</p>}
                             </button>
                             <div className="shrink-0 text-right text-[11px] text-white/40">
+                              {it.pasted_at ? <p className="text-sky-300">Pasted</p> : it.status === "done" && it.answer ? <p className="text-emerald-300">Approved</p> : it.answer ? <p className="text-amber-300">Drafted</p> : null}
+                              {it.limit_value && <p>{it.limit_value} {it.limit_kind}</p>}
                               {it.owner && <p>{it.owner}</p>}
                               {it.due_on && <p>{whenOn(it.due_on + "T12:00:00")}</p>}
                             </div>
@@ -256,6 +484,17 @@ const AdminGrantFolder = () => {
                                 rows={it.kind === "narrative" ? 6 : 2}
                                 className="bg-neutral-950 border-neutral-800 text-white text-sm"
                               />
+                              {(it.kind === "narrative" || it.kind === "field") && (
+                                <GrantQuestionPanel
+                                  folderId={id!}
+                                  folder={draftFolder()}
+                                  item={it}
+                                  library={library}
+                                  facts={facts}
+                                  answered={answered().filter((a) => a.label !== it.label)}
+                                  onPatch={(patch) => patchItem(it, patch as Partial<Item>)}
+                                />
+                              )}
                               <div className="flex flex-wrap items-center gap-3 text-sm">
                                 <label className="inline-flex items-center gap-2 text-white/60">Owner
                                   <select key={`${it.id}-${it.owner ?? ""}`} defaultValue={it.owner ?? ""} onChange={(e) => void patchItem(it, { owner: e.target.value || null })} className="rounded-md bg-neutral-950 border border-neutral-800 px-2 py-1 text-white">
@@ -283,8 +522,35 @@ const AdminGrantFolder = () => {
           })}
         </section>
 
-        {/* Documents */}
-        <aside className="space-y-3">
+        {/* Documents, and the numbers the writer uses */}
+        <aside className="space-y-3 min-w-0">
+          <div className="rounded-xl border border-white/10 bg-neutral-900/60 overflow-hidden">
+            <button type="button" onClick={() => setFactsOpen((o) => !o)} className="w-full flex items-center justify-between px-4 py-2.5 text-left hover:bg-white/[0.03]">
+              <span className="font-semibold text-sm inline-flex items-center gap-2">
+                {factsOpen ? <ChevronDown className="w-4 h-4 text-white/40" /> : <ChevronRight className="w-4 h-4 text-white/40" />}
+                <Sparkles className="w-4 h-4 text-white/50" /> The numbers Grant Coach uses
+              </span>
+              <span className="text-[11px] text-white/40">{factsLoading ? "reading…" : `${facts.length} facts`}</span>
+            </button>
+            {factsOpen && (
+              <div className="px-4 pb-3 border-t border-white/[0.06]">
+                <p className="text-[12px] text-white/45 py-2">Program year {factYearLabel()}, the last complete year, pulled live from the back end. Every number about NLA's youth in a draft comes from here, never from the website or the CPF proposal; the library supplies the story, not the statistics. Nothing is made up.</p>
+                <ul className="space-y-2">
+                  {facts.map((f) => (
+                    <li key={f.key} className="text-[12px]">
+                      <span className="text-white/80">{f.label}:</span> <span className="text-white">{f.value}</span>
+                      <span className="block text-[11px] text-white/35">{f.period} · {f.source}</span>
+                    </li>
+                  ))}
+                  {!facts.length && !factsLoading && <li className="text-[12px] text-white/35">Nothing read yet.</li>}
+                </ul>
+                <Button size="sm" variant="outline" onClick={() => void refetchFacts()} disabled={factsLoading} className="mt-3 bg-transparent border-white/20 text-white/80 hover:bg-white/10 hover:text-white">
+                  <RefreshCw className={`w-3.5 h-3.5 mr-1.5 ${factsLoading ? "animate-spin" : ""}`} /> Refresh the numbers
+                </Button>
+              </div>
+            )}
+          </div>
+
           <h2 className="font-bold">Documents</h2>
           <div className="rounded-xl border border-white/10 bg-neutral-900/60 p-4 space-y-3">
             <div className="flex gap-1 rounded-lg bg-white/[0.04] p-1 text-xs">
@@ -319,6 +585,7 @@ const AdminGrantFolder = () => {
           </div>
         </aside>
       </div>
+      {dialog}
     </div>
   );
 };

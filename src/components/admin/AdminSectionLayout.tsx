@@ -263,7 +263,8 @@ const AdminSectionLayout = ({
           </div>
         )}
 
-        <main className="flex-1 overflow-y-auto overflow-x-hidden flex flex-col">
+        {/* min-w-0: a flex item will not shrink below its content otherwise, and a wide page then runs off the right edge. */}
+        <main className="flex-1 min-w-0 overflow-y-auto overflow-x-hidden flex flex-col">
           {/* The door: a typed address gets the same answer as the menu. */}
           {door.loading ? null : door.allowed ? <Outlet /> : <LockedPanel label={door.label} />}
           <PoweredByQuiktech size="lg" />
