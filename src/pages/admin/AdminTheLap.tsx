@@ -31,6 +31,7 @@ import { PILLAR_COLOR, commitmentSourceFor, carryTone, type CarryTone } from "@/
 
 const NLA_RED = "#bf0f3e";
 const STALE_DAYS = 7;
+const LAP_PATH = "https://www.nolimitsboxingacademy.org/admin/the-lap";
 
 // The finish line. From the public Vision page; Josh can hand over his own words.
 const VISION_TEXT =
@@ -165,6 +166,31 @@ const AdminTheLap = () => {
       return fetchMovedConversations(since);
     },
   });
+  // The conversations waiting at this checkpoint: pinned to it, or in its
+  // pillar with messages since the last lap finished. Links open the board
+  // on that conversation.
+  const { data: conversations = [] } = useQuery({
+    queryKey: ["lap-conversations", lap?.id ?? "none", lap?.current_topic_id ?? "none"],
+    enabled: !!lap?.current_topic_id,
+    queryFn: async () => {
+      const topic = allTopics.find((t) => t.id === lap!.current_topic_id);
+      if (!topic) return [] as { id: string; name: string | null; pinned: boolean; last: string | null }[];
+      const { data: last } = await supabase.from("laps" as never).select("finished_at, started_at").in("status", ["finished", "incomplete"]).order("started_at", { ascending: false }).limit(1).maybeSingle();
+      const row = last as unknown as { finished_at: string | null; started_at: string } | null;
+      const since = row?.finished_at ?? row?.started_at ?? new Date(Date.now() - 7 * 86_400_000).toISOString();
+      const { data: convs } = await supabase.from("mb_conversations").select("id, name, pillar, lap_topic_id" as never).eq("pillar" as never, topic.pillar);
+      const list = (convs ?? []) as unknown as { id: string; name: string | null; lap_topic_id: string | null }[];
+      const { data: msgs } = await supabase.from("mb_messages").select("conversation_id, created_at").gt("created_at", since).in("conversation_id", list.map((c) => c.id));
+      const lastBy = new Map<string, string>();
+      for (const m of (msgs ?? []) as { conversation_id: string; created_at: string }[]) if (!lastBy.has(m.conversation_id) || lastBy.get(m.conversation_id)! < m.created_at) lastBy.set(m.conversation_id, m.created_at);
+      return list
+        .map((c) => ({ id: c.id, name: c.name, pinned: c.lap_topic_id === topic.id, last: lastBy.get(c.id) ?? null }))
+        .filter((c) => c.pinned || c.last)
+        .sort((a, b) => Number(b.pinned) - Number(a.pinned) || (b.last ?? "").localeCompare(a.last ?? ""))
+        .slice(0, 8);
+    },
+  });
+
   const addDate = async () => {
     const r = await ask.prompt({ title: "Add a date to the strip", body: "Something the back end doesn't know about — a renewal, a deadline, a visit.", fields: [{ key: "title", label: "What" }, { key: "date", label: "Date (YYYY-MM-DD)" }, { key: "yearly", label: "Every year? (yes / no)", defaultValue: "no", required: false }] });
     if (!r?.title.trim() || !/^\d{4}-\d{2}-\d{2}$/.test(r.date.trim())) { if (r) toast.error("The date needs to look like 2026-11-15."); return; }
@@ -251,8 +277,31 @@ const AdminTheLap = () => {
     if (error) { toast.error(error.message); return; }
     fireConfetti([PILLAR_COLOR.operations, PILLAR_COLOR.sales_marketing, PILLAR_COLOR.finance, "#ffffff"], true);
     toast.success(`Lap finished — ${byCommitment.size} commitment${byCommitment.size === 1 ? "" : "s"}, ${decisions.length} decision${decisions.length === 1 ? "" : "s"}.`);
+    await postSummary();
     invalidate();
   };
+  /** The lap's record, posted to the "Agenda Meeting" conversation — what Chrissy reads on her phone that night. */
+  const postSummary = async () => {
+    if (!lap || !user) return;
+    const { data: conv } = await supabase.from("mb_conversations").select("id").eq("name", "Agenda Meeting").order("created_at", { ascending: false }).limit(1).maybeSingle();
+    const convId = (conv as unknown as { id: string } | null)?.id;
+    if (!convId) return;
+    const date = new Date(`${lap.meeting_date}T12:00:00`).toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" });
+    const lines: string[] = [`🏁 The Lap — ${date}`, `${visited.size} of ${order.length} checkpoints · ${byCommitment.size} commitment${byCommitment.size === 1 ? "" : "s"} · ${decisions.length} decision${decisions.length === 1 ? "" : "s"}`];
+    const byOwner = new Map<string, string[]>();
+    for (const rows of byCommitment.values()) {
+      const topic = order.find((t) => t.id === rows[0].lap_topic_id)?.title;
+      const names = rows.map((r) => { const m = managers.find((x) => x.key === managerKeyOf(r.source)); return m ? firstName(m) : "?"; }).join(" & ");
+      const carried = rows[0].carry_count > 0 ? ` (carried ${rows[0].carry_count})` : "";
+      (byOwner.get(names) ?? byOwner.set(names, []).get(names)!).push(`• ${rows[0].title}${topic ? ` — ${topic}` : ""}${carried}`);
+    }
+    for (const [names, items] of byOwner) lines.push("", `${names}:`, ...items);
+    if (decisions.length) lines.push("", "We decided:", ...decisions.map((d) => { const t = order.find((x) => x.id === d.topic_id)?.title; return `• ${d.text}${t ? ` — ${t}` : ""}`; }));
+    lines.push("", LAP_PATH);
+    const { error } = await supabase.from("mb_messages").insert({ conversation_id: convId, sender_id: user.id, content: lines.join("\n") } as never);
+    if (error) toast.error(`The lap finished, but the summary didn't post to the message board: ${error.message}`);
+  };
+
   const pauseLap = async () => {
     if (!lap) return;
     await supabase.from("laps" as never).update({ paused_at: new Date().toISOString() } as never).eq("id", lap.id);
@@ -598,6 +647,25 @@ const AdminTheLap = () => {
                 <MessageSquare className="w-4 h-4" style={{ color: PILLAR_COLOR[current.pillar] }} />
                 {moved[current.pillar]} {PILLAR_LABEL[current.pillar]} conversation{moved[current.pillar] === 1 ? "" : "s"} moved on the message board since the last lap
               </button>
+            )}
+
+            {/* Conversations waiting here: pinned to this checkpoint, or moved in this pillar since the last lap. */}
+            {conversations.length > 0 && (
+              <section className="rounded-2xl border border-white/10 bg-neutral-900/60 p-5 space-y-2">
+                <h3 className="font-bold text-sm uppercase tracking-wide text-white/60">On the message board</h3>
+                <ul className="space-y-1.5">
+                  {conversations.map((c) => (
+                    <li key={c.id}>
+                      <button type="button" onClick={() => navigate(`/admin/message-board?conv=${c.id}`)} className="w-full text-left text-sm text-white/85 hover:text-white inline-flex items-center gap-2">
+                        <MessageSquare className="w-4 h-4 shrink-0" style={{ color: PILLAR_COLOR[current.pillar] }} />
+                        <span className="truncate">{c.name ?? "Untitled conversation"}</span>
+                        {c.pinned && <span className="text-[10px] font-bold uppercase tracking-wide rounded px-1.5 py-0.5 bg-white/10 text-white/60 shrink-0">pinned here</span>}
+                        {c.last && <span className="text-[11px] text-white/40 shrink-0 ml-auto">{new Date(c.last).toLocaleDateString("en-US", { month: "short", day: "numeric" })}</span>}
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              </section>
             )}
 
             {/* Commitments at this checkpoint */}

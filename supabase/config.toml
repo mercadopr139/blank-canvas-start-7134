@@ -52,3 +52,6 @@ verify_jwt = false
 
 [functions.board-unlock]
 verify_jwt = false
+
+[functions.lap-reminder]
+verify_jwt = false

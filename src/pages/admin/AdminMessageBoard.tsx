@@ -42,6 +42,8 @@ export type Conversation = {
   created_by: string;
   created_at: string;
   pillar: Pillar;
+  /** The lap checkpoint this conversation is pinned to, if any (docs/LAP_PLAN.md). */
+  lap_topic_id?: string | null;
   last_message?: string;
   last_message_at?: string;
   member_names?: string[];
@@ -205,7 +207,7 @@ const AdminMessageBoard = () => {
       if (viewAll && isSuperAdmin) {
         const { data: convs, error: convErr } = await supabase
           .from("mb_conversations")
-          .select("id, name, is_group, created_by, created_at, pillar")
+          .select("id, name, is_group, created_by, created_at, pillar, lap_topic_id" as never)
           .order("created_at", { ascending: false });
         if (convErr) throw convErr;
         const ids = (convs || []).map((c) => c.id);
@@ -258,7 +260,7 @@ const AdminMessageBoard = () => {
       const ids = memberships.map((m) => m.conversation_id);
       const { data: convs, error: convErr } = await supabase
         .from("mb_conversations")
-        .select("id, name, is_group, created_by, created_at, pillar")
+        .select("id, name, is_group, created_by, created_at, pillar, lap_topic_id" as never)
         .in("id", ids)
         .order("created_at", { ascending: false });
       if (convErr) throw convErr;

@@ -210,9 +210,20 @@ covers the phone). Add only if a real week demands it.
    per-pillar line at the checkpoint, counting conversations with messages
    since the last lap finished. Read against production as Josh: every
    source answers (and 52 runs were never closed out — a real finding).
-5. **Message board link.** Pin a conversation to a checkpoint; the lap
-   summary posted to the "Agenda Meeting" conversation; the morning-of
-   reminder.
+5. **Message board link.** — BUILT 2026-10-19. `mb_conversations.lap_topic_id`
+   (migration `20261019150000`, applied): a "Pin to a lap checkpoint" select
+   in the thread header (`LapPinSelect.tsx`, the pillar's own topics). At a
+   checkpoint, "On the message board" lists conversations pinned there or
+   moved in that pillar since the last lap, each opening the board on that
+   conversation (`?conv=`). Finishing a lap posts its record to the
+   "Agenda Meeting" conversation as a message from whoever finished it:
+   date, counts, commitments by owner with topic and carries, decisions,
+   the link. `lap-reminder` edge function (deployed; cron
+   `lap-reminder-8am-eastern`, Monday = LAP_WEEKDAY): 8 AM Eastern on lap
+   day to Josh and Chrissy, last lap's open commitments by owner, the
+   most-carried first and red at two; a one-liner when nothing is open.
+   Offline checks in `scripts/check-lap-reminder.mjs` (8); a sample was sent
+   to Josh.
 6. **Record + print.** Lap history, print view.
 7. Retire the old agenda after two laps.
 

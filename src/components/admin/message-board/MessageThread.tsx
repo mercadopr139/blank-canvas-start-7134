@@ -6,6 +6,7 @@ import MessageInput from "./MessageInput";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import type { Conversation } from "@/pages/admin/AdminMessageBoard";
 import { PILLAR_COLOR, PILLAR_LABEL } from "@/pages/admin/AdminMessageBoard";
+import LapPinSelect from "@/components/lap/LapPinSelect";
 import { useToast } from "@/hooks/use-toast";
 import {
   DropdownMenu,
@@ -490,6 +491,8 @@ const MessageThread = ({ conversation, currentUserId, isSuperAdmin, canPost, scr
               Auditing
             </span>
           )}
+          {/* Pin this conversation to a lap checkpoint, so it is waiting there on lap day. */}
+          <LapPinSelect conversationId={conversation.id} pillar={conversation.pillar} value={conversation.lap_topic_id ?? null} />
           <span
             className="text-[10px] font-semibold px-2 py-1 rounded-full uppercase tracking-wide flex-shrink-0"
             style={{ background: `${pillarColor}18`, color: pillarColor }}
