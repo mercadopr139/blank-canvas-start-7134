@@ -188,9 +188,16 @@ covers the phone). Add only if a real week demands it.
    until Josh gives his own), confetti per pillar crossing and at the finish,
    streak in the header. Only the Super Admin sees Start. Exercised against
    production as Josh, rolled back.
-3. **Warm-up.** Last lap's commitments, done / carry / drop with reason,
-   carry_count colouring and the forced decision at three; gate on the
-   start.
+3. **Warm-up.** — BUILT 2026-10-19. On the start-line screen: every
+   commitment from the last lap (finished or incomplete), rules in
+   `src/lib/lap/warmup.ts`. Done → check (one small green burst). Open →
+   Carry forward (rows wait between laps with `lap_id` null and
+   `carry_count`+1; Start pulls them into the new lap at their checkpoint)
+   or Drop with a one-line reason (archived off the Workbench,
+   `dropped_reason` kept). At three carries no more carrying: Split (a
+   smaller commitment replaces it) or hand it to another owner. Start stays
+   disabled until no open commitment is left. Exercised against production
+   as Josh, rolled back.
 4. **Numbers and the horizon.** Live per-topic numbers; the two-week strip and
    `lap_dates`; new-messages flags from the message board.
 5. **Message board link.** Pin a conversation to a checkpoint; the lap
