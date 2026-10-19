@@ -107,8 +107,9 @@ Week; the agenda_items tree.
   unclosed trips; Hawk Squad / BAM → attendance; Budget → month-to-date
   revenue; Excursions → next trip and roster count. Read-only, from the same
   queries the Intelligence pages use.
-- A **30-day horizon** strip at the start line, repeated at the matching
-  checkpoint: program events, excursions, grant deadlines (O.C.E.A.N. Oct
+- A **"coming up" strip — the next two weeks** (Josh, 2026-10-19: the meeting
+  is weekly; the strip is a heads-up, never something the lap asks you to act
+  on) at the start line, repeated at the matching checkpoint: program events, excursions, grant deadlines (O.C.E.A.N. Oct
   30), 990 and insurance renewals, USA Boxing deadlines. Source: a small
   `lap_dates` table (title, date, pillar, topic, recurring) plus program
   events and grant folders' due dates.
@@ -174,7 +175,7 @@ covers the phone). Add only if a real week demands it.
 3. **Warm-up.** Last lap's commitments, done / carry / drop with reason,
    carry_count colouring and the forced decision at three; gate on the
    start.
-4. **Numbers and the horizon.** Live per-topic numbers; the 30-day strip and
+4. **Numbers and the horizon.** Live per-topic numbers; the two-week strip and
    `lap_dates`; new-messages flags from the message board.
 5. **Message board link.** Pin a conversation to a checkpoint; the lap
    summary posted to the "Agenda Meeting" conversation; the morning-of
