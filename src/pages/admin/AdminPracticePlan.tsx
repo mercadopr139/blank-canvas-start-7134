@@ -1409,7 +1409,7 @@ const BlockEditor = ({
 
         <div className="flex items-center gap-2 shrink-0">
           {/* This week's own words can go up to the template. */}
-          {canPromote && !hasLanes(block.category) && (
+          {canPromote && (
             <button
               type="button"
               onClick={onPromote}
@@ -1630,14 +1630,26 @@ const TemplateBlockEditor = ({
         </div>
       </div>
       {paused && <p className="text-[9px] uppercase tracking-wider font-semibold text-neutral-500 mb-1">Paused · not used when a week starts</p>}
-      <BulletEditor
-        key={`${block.id}-${block.detail ?? ""}`}
-        defaultValue={block.detail}
-        accent={blockAccent(block.category, accent)}
-        textClassName="text-sm"
-        className="min-h-[56px]"
-        onSave={(v) => { if (v !== (block.detail || null)) onDetail(v); }}
-      />
+      {hasLanes(block.category) ? (
+        /* A Split is two lanes in the template too — Coaching Juniors / Cardio,
+           each with its own standing drills (Josh, 2026-10-19). */
+        <SplitLanesEditor
+          key={`${block.id}-${block.detail ?? ""}`}
+          detail={block.detail}
+          category={block.category}
+          accent={accent}
+          onSave={(v) => { if (v !== (block.detail || null)) onDetail(v); }}
+        />
+      ) : (
+        <BulletEditor
+          key={`${block.id}-${block.detail ?? ""}`}
+          defaultValue={block.detail}
+          accent={blockAccent(block.category, accent)}
+          textClassName="text-sm"
+          className="min-h-[56px]"
+          onSave={(v) => { if (v !== (block.detail || null)) onDetail(v); }}
+        />
+      )}
     </div>
   );
 };
