@@ -125,6 +125,7 @@ import AdminMealReports from "./pages/admin/AdminMealReports";
 import AdminMessageBoard from "./pages/admin/AdminMessageBoard";
 import AdminAgenda from "./pages/admin/AdminAgenda";
 import AdminTheLap from "./pages/admin/AdminTheLap";
+import AdminLapHistory from "./pages/admin/AdminLapHistory";
 import MealCheckIn from "./pages/MealCheckIn";
 import NotFound from "./pages/NotFound";
 
@@ -501,6 +502,14 @@ const App = () => (
               element={
                 <ProtectedRoute requireAdmin>
                   <AdminTheLap />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin/the-lap/history"
+              element={
+                <ProtectedRoute requireAdmin>
+                  <AdminLapHistory />
                 </ProtectedRoute>
               }
             />

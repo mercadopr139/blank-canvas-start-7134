@@ -224,7 +224,12 @@ covers the phone). Add only if a real week demands it.
    most-carried first and red at two; a one-liner when nothing is open.
    Offline checks in `scripts/check-lap-reminder.mjs` (8); a sample was sent
    to Josh.
-6. **Record + print.** Lap history, print view.
+6. **Record + print.** — BUILT 2026-10-19. `/admin/the-lap/history`
+   (`AdminLapHistory.tsx`; "Past laps" in the Lap header). Every finished
+   or incomplete lap by date on the left; on the right the lap's record
+   by pillar — each commitment with owners, topic, carries, and what became
+   of it (done / open / carried / dropped with reason), then that pillar's
+   decisions. "Print this lap" prints the record alone, in black on white.
 7. Retire the old agenda after two laps.
 
 **Who starts a lap (Josh, 2026-10-19):** only Josh. The Start button is
