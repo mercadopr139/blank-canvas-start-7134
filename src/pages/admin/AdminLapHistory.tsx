@@ -4,7 +4,11 @@
 // the week's meeting record on one page.
 import { useMemo, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
+import { useStaffPermissions } from "@/hooks/useStaffPermissions";
+import { useAsk } from "@/components/admin/AskDialog";
+import { deleteLap } from "@/lib/lap/laps";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, Printer, Check, Circle, Forward, Trash2, Flag, Trophy } from "lucide-react";
@@ -23,6 +27,9 @@ const longDate = (ymd: string) => new Date(`${ymd}T12:00:00`).toLocaleDateString
 
 const AdminLapHistory = () => {
   const navigate = useNavigate();
+  const qc = useQueryClient();
+  const { isSuperAdmin } = useStaffPermissions();
+  const { ask, dialog } = useAsk();
   const [params, setParams] = useSearchParams();
   const selectedId = params.get("lap");
 
@@ -88,6 +95,30 @@ const AdminLapHistory = () => {
   }, [rows, topics, managers]);
   const byPillar = (p: Pillar) => groups.filter((g) => g.topic?.pillar === p);
   const streak = streakOf(laps.filter((l) => l.status === "finished").map((l) => l.meeting_date));
+  /** A test lap, or one that should never have been: gone, with the commitments made in it. Super Admin only. */
+  const removeLap = async () => {
+    if (!lap) return;
+    const made = groups.filter((g) => g.carried === 0).length;
+    const ok = await ask.confirm({
+      title: `Delete the lap of ${longDate(lap.meeting_date)}?`,
+      body: `It leaves the history${made ? `, along with the ${made} commitment${made === 1 ? "" : "s"} made in it` : ""}${decisions.length ? ` and its ${decisions.length} decision${decisions.length === 1 ? "" : "s"}` : ""}. Commitments carried into it go back to waiting. This cannot be undone.`,
+      confirmLabel: "Delete",
+      danger: true,
+    });
+    if (!ok) return;
+    try {
+      await deleteLap(lap.id);
+      toast.success("Lap deleted.");
+      setParams({});
+      qc.invalidateQueries({ queryKey: ["laps-history"] });
+      qc.invalidateQueries({ queryKey: ["laps-finished"] });
+      qc.invalidateQueries({ queryKey: ["lap-last"] });
+      qc.invalidateQueries({ queryKey: ["lap-warmup"] });
+      qc.invalidateQueries({ queryKey: ["task-manager-home-core"] });
+    } catch (e) {
+      toast.error((e as Error).message);
+    }
+  };
   const [printing, setPrinting] = useState(false);
   const print = () => { setPrinting(true); setTimeout(() => { window.print(); setPrinting(false); }, 50); };
 
@@ -105,6 +136,7 @@ const AdminLapHistory = () => {
         <div className="flex items-center gap-2">
           {streak > 0 && <span className="text-xs font-bold text-amber-300 inline-flex items-center gap-1"><Trophy className="w-4 h-4" /> {streak} in a row</span>}
           {lap && <Button size="sm" variant="outline" onClick={print} disabled={printing} className="bg-transparent border-white/20 text-white/80 hover:bg-white/10 hover:text-white"><Printer className="w-4 h-4 mr-1.5" /> Print this lap</Button>}
+          {lap && isSuperAdmin && <Button size="sm" variant="outline" onClick={() => void removeLap()} className="bg-transparent border-white/20 text-red-300 hover:bg-red-500/10 hover:text-red-200"><Trash2 className="w-4 h-4 mr-1.5" /> Delete this lap</Button>}
         </div>
       </header>
 
@@ -175,6 +207,7 @@ const AdminLapHistory = () => {
           </article>
         )}
       </main>
+      {dialog}
     </div>
   );
 };

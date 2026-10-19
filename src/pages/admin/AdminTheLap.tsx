@@ -25,6 +25,7 @@ import {
 } from "lucide-react";
 import { groupForWarmup, warmupGate, mustDecide, type WarmupGroup } from "@/lib/lap/warmup";
 import { fetchTopicNumbers, fetchComingUp, fetchMovedConversations } from "@/lib/lap/numbers";
+import { deleteLap } from "@/lib/lap/laps";
 import LapRing from "@/components/lap/LapRing";
 import { runningOrder, checkpoints, crossedPillar, streak as streakOf, PILLAR_LABEL, type RingTopic, type Pillar } from "@/lib/lap/ring";
 import { PILLAR_COLOR, commitmentSourceFor, carryTone, type CarryTone } from "@/lib/lap/commitments";
@@ -302,6 +303,28 @@ const AdminTheLap = () => {
     if (error) toast.error(`The lap finished, but the summary didn't post to the message board: ${error.message}`);
   };
 
+  /** Start this week over: the open lap goes, with the commitments made in it; carried-in ones go back to waiting. */
+  const startOver = async () => {
+    if (!lap) return;
+    const made = [...byCommitment.values()].filter((rows) => rows[0].carry_count === 0).length;
+    const ok = await ask.confirm({
+      title: "Start this week over?",
+      body: `This lap is thrown away${made ? `, along with the ${made} commitment${made === 1 ? "" : "s"} made in it` : ""}${decisions.length ? ` and its ${decisions.length} decision${decisions.length === 1 ? "" : "s"}` : ""}. Anything carried in from last lap goes back to waiting. You can start a fresh lap right after.`,
+      confirmLabel: "Start over",
+      danger: true,
+    });
+    if (!ok) return;
+    try {
+      await deleteLap(lap.id);
+      toast.success("This week's lap is cleared. Start a fresh one when you're ready.");
+      qc.invalidateQueries({ queryKey: ["lap-last"] });
+      qc.invalidateQueries({ queryKey: ["lap-warmup"] });
+      invalidate();
+    } catch (e) {
+      toast.error((e as Error).message);
+    }
+  };
+
   const pauseLap = async () => {
     if (!lap) return;
     await supabase.from("laps" as never).update({ paused_at: new Date().toISOString() } as never).eq("id", lap.id);
@@ -452,6 +475,7 @@ const AdminTheLap = () => {
           {streak > 0 && <span className="text-xs font-bold text-amber-300 inline-flex items-center gap-1"><Trophy className="w-4 h-4" /> {streak} lap{streak === 1 ? "" : "s"} in a row</span>}
           <Button size="sm" variant="outline" onClick={() => navigate("/admin/the-lap/history")} className="bg-transparent border-white/20 text-white/80 hover:bg-white/10 hover:text-white">Past laps</Button>
           {lap && <Button size="sm" variant="outline" onClick={() => void pauseLap()} className="bg-transparent border-white/20 text-white/80 hover:bg-white/10 hover:text-white"><Pause className="w-4 h-4 mr-1.5" /> Pause</Button>}
+          {lap && isSuperAdmin && <Button size="sm" variant="outline" onClick={() => void startOver()} className="bg-transparent border-white/20 text-red-300 hover:bg-red-500/10 hover:text-red-200">Start this week over</Button>}
           <button onClick={toggleFullscreen} className="text-white/50 hover:text-white p-1.5" aria-label="Fullscreen">{isFullscreen ? <Minimize2 className="w-5 h-5" /> : <Maximize2 className="w-5 h-5" />}</button>
         </div>
       </header>
