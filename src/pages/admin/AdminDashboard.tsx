@@ -83,7 +83,8 @@ const deletableWorkbenchKey = (href: string): string | null => {
 /* Tiles that were removed — delete from DB if found. Listing a tile's href
    here makes the dashboard auto-clean it from every admin's tile row on
    their next visit. */
-const DEPRECATED_TILE_HREFS = ["/admin/shared-task-board", "/admin/pd-task-manager", "/admin/pc-task-manager", "/admin/task-manager", "/transport"];
+// "/admin/agenda" is the old Weekly Agenda, retired for The Lap (2026-10-19).
+const DEPRECATED_TILE_HREFS = ["/admin/shared-task-board", "/admin/pd-task-manager", "/admin/pc-task-manager", "/admin/task-manager", "/transport", "/admin/agenda"];
 
 /* Default tiles to seed for new users. PD/PC tiles are no longer hardcoded
    here — they (and any newly-added task managers like HC) come from the
