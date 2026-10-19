@@ -1,5 +1,5 @@
 import { useNavigate } from "react-router-dom";
-import { Star, LogIn, UtensilsCrossed, MapPin, Smile, Scale, Bird, Brain } from "lucide-react";
+import { Star, LogIn, UtensilsCrossed, MapPin, Smile, Scale, Bird, Brain, Flag } from "lucide-react";
 import AdminSectionLayout from "@/components/admin/AdminSectionLayout";
 import { Button } from "@/components/ui/button";
 import { useSidebarCards } from "@/hooks/useSidebarCards";
@@ -15,6 +15,15 @@ const AdminOperations = () => {
 
   const checkInActions = (
     <div className="flex flex-col gap-2 w-full">
+      {/* The weekly agenda, as a lap around NLA (docs/LAP_PLAN.md). */}
+      <Button
+        size="sm"
+        className="w-full bg-white/10 hover:bg-white/20 border border-white/20 text-white text-sm font-bold"
+        onClick={() => navigate("/admin/the-lap")}
+      >
+        <Flag className="w-4 h-4 mr-1.5" style={{ color: "#bf0f3e" }} />
+        The Lap · weekly agenda
+      </Button>
       <Button
         size="sm"
         className="w-full bg-[#bf0f3e] hover:bg-[#bf0f3e]/80 text-white text-sm font-medium"

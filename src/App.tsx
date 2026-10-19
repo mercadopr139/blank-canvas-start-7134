@@ -124,6 +124,7 @@ import AdminMealTracker from "./pages/admin/AdminMealTracker";
 import AdminMealReports from "./pages/admin/AdminMealReports";
 import AdminMessageBoard from "./pages/admin/AdminMessageBoard";
 import AdminAgenda from "./pages/admin/AdminAgenda";
+import AdminTheLap from "./pages/admin/AdminTheLap";
 import MealCheckIn from "./pages/MealCheckIn";
 import NotFound from "./pages/NotFound";
 
@@ -494,6 +495,15 @@ const App = () => (
             />
 
             {/* Weekly Agenda — internal staff meeting tool spanning all 3 pillars */}
+            {/* The Lap — the weekly agenda as a lap around NLA; full width like a board. */}
+            <Route
+              path="/admin/the-lap"
+              element={
+                <ProtectedRoute requireAdmin>
+                  <AdminTheLap />
+                </ProtectedRoute>
+              }
+            />
             <Route
               path="/admin/agenda"
               element={

@@ -175,11 +175,19 @@ covers the phone). Add only if a real week demands it.
    the Agenda Meeting tile (key `agenda`, flag icon) on every Workbench right
    after NLA, not deletable. Helpers in `src/lib/lap/commitments.ts`. Josh can
    already add a commitment from the tile; two-owner rows arrive with step 2.
-2. **The Lap screen, walk-through.** Ring, checkpoints, runner, per-
-   checkpoint panels, Add a commitment (with owners and the plan "+"),
-   decisions, topic add/rename/reorder/retire from the lap, pause/resume,
-   Vision finish, confetti, saved lap + streak. Only Josh starts a lap.
-   Opened from the Operations sidebar as "The Lap".
+2. **The Lap screen, walk-through.** — BUILT 2026-10-19. `/admin/the-lap`
+   (`AdminTheLap.tsx`, app `app_the_lap` in Command Center, a button at the
+   top of the Operations sidebar). Ring (`LapRing.tsx`, geometry in
+   `src/lib/lap/ring.ts`), checkpoints in running order, runner, Back /
+   Next / tap-a-marker, per-checkpoint commitments (one row per owner,
+   owners = the task managers, "On today's plan"), "We decided"
+   (`lap_decisions`, migration `20261019130000` applied), topic menu
+   (rename, add after — every lap or this lap only, move, retire),
+   Pause (back to the admin; resumes on return), a lap open > 7 days closes
+   as incomplete, the Vision finish card (text from the public Vision page
+   until Josh gives his own), confetti per pillar crossing and at the finish,
+   streak in the header. Only the Super Admin sees Start. Exercised against
+   production as Josh, rolled back.
 3. **Warm-up.** Last lap's commitments, done / carry / drop with reason,
    carry_count colouring and the forced decision at three; gate on the
    start.
