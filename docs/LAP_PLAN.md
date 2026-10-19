@@ -151,10 +151,15 @@ covers the phone). Add only if a real week demands it.
   and insurance renewals once Josh gives the dates.
 - `signals` also: `carry_count` (turns red at 2, forces a decision at 3),
   `dropped_reason`.
-- `signals` gains `lap_id`, `lap_topic_id`, `carried_from_signal_id`,
-  `owner_user_ids uuid[]` (two owners on one row; the Workbench shows a row
-  in a tile when the manager's owner is in the array **or** `source` matches,
-  so existing single-owner behaviour is unchanged).
+- `signals` gains `lap_id`, `lap_topic_id`, `lap_commitment_id`,
+  `carried_from_signal_id`, `carry_count`, `dropped_reason`. **Two owners =
+  one row per owner**, tied by `lap_commitment_id`, each in its owner's
+  Agenda Meeting tile with the Workbench's normal `source` ("Agenda Meeting"
+  for PD, "PC:Agenda Meeting" for PC…). A trigger keeps the rows' status in
+  step, so done by either is done for both, and each owner still plans it on
+  their own day. (Built 2026-10-19 this way instead of an owner array so every
+  existing Workbench read — tile grouping, Today's Plan, the tile page — stays
+  exactly as it is.)
 - `mb_conversations` gains `lap_topic_id` (nullable) so a conversation can be
   pinned to a checkpoint; untagged ones show under their pillar.
 - Reuse: `AddWorkbenchModal` (send-to-Workbench), Today's Plan "+", the
@@ -164,9 +169,12 @@ covers the phone). Add only if a real week demands it.
 
 ## Build order (one step at a time; show Josh after each; he says push)
 
-1. **Data + Agenda Meeting tile.** Migration above; seed the 21 topics; the
-   tile appears on every Workbench; two-owner rows show in both tiles. No
-   lap screen yet — Josh can already add a commitment from the Workbench.
+1. **Data + Agenda Meeting tile.** — BUILT 2026-10-19. Migration
+   `20261019120000_the_lap_step1.sql` (applied): `lap_topics` seeded with the
+   21 topics, `laps`, the `signals` columns and the status-sync trigger, and
+   the Agenda Meeting tile (key `agenda`, flag icon) on every Workbench right
+   after NLA, not deletable. Helpers in `src/lib/lap/commitments.ts`. Josh can
+   already add a commitment from the tile; two-owner rows arrive with step 2.
 2. **The Lap screen, walk-through.** Ring, checkpoints, runner, per-
    checkpoint panels, Add a commitment (with owners and the plan "+"),
    decisions, topic add/rename/reorder/retire from the lap, pause/resume,

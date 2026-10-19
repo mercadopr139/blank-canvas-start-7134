@@ -332,8 +332,10 @@ const FocusAreaModal = ({ open, onClose, onSaved, editingArea, managerType = "PD
               )}
             </div>
 
-            {/* Delete button for editing */}
-            {isEditing && (
+            {/* Delete button for editing. The Agenda Meeting tile is the
+                weekly agenda's home on every Workbench (docs/LAP_PLAN.md);
+                it is never deleted. */}
+            {isEditing && editingArea?.key !== "agenda" && (
               <div className="pt-2 border-t border-white/10">
                 <Button
                   variant="ghost"
