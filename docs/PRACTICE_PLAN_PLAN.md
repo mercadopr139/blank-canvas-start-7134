@@ -257,3 +257,29 @@ Phases 1–5 are the usable product.
   button and closed just as easily.
 - Josh writes the practice detail. Pastors run their own lessons their own way;
   the board only announces what is on.
+
+---
+
+## 12. Template revision (shipped 2026-10-19)
+
+**Standing text on the template.** A template block has its own bullets
+(`practice_template_blocks.detail`). A week block with nothing typed
+INHERITS them — on the wall and in the editor ("From the template" tag).
+Typing in the week overrides for that week only. Clear becomes "Back to
+template" when the slot has standing text. Saving words that merely repeat
+the template stores nothing, so the slot keeps inheriting (`detailToStore`).
+Match rule: same group, night, position and name; a renamed one-off
+inherits nothing (`templateSlotFor`, tested in practicePlanTemplate.test.ts).
+
+**Promote from the week.** "Make this the template" on a week block pushes
+its words up to the slot and the block goes back to inheriting. The
+template builds itself out of real weeks.
+
+**Edit Template is the week's layout.** One card per night, three groups,
+rename / up-down / pause / remove per slot, the bullets editor for standing
+text, the wrap-up row at the foot. No separate edit mode; no drag.
+
+**Board reads the template** (anon SELECT policy added) to print inherited
+text. Still to do, in order: the week writes itself on Monday (draft from
+the template); push a block to the other groups; the Strength block reading
+the day's focus live from the BT Workout Plan.

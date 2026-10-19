@@ -27,16 +27,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import {
   ChevronLeft, ChevronRight, Plus, Loader2, Send, Monitor, Users,
-  X, Sparkles, CalendarDays, Trash2, Pencil, Check, RefreshCw, Eye, EyeOff, GripVertical, Dumbbell,
+  X, Sparkles, CalendarDays, Trash2, Pencil, Check, RefreshCw, Eye, EyeOff, Dumbbell, ChevronUp, ChevronDown, ArrowUpToLine,
 } from "lucide-react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import {
-  DndContext, closestCenter, PointerSensor, KeyboardSensor, useSensor, useSensors, type DragEndEvent,
-} from "@dnd-kit/core";
-import {
-  SortableContext, arrayMove, rectSortingStrategy, sortableKeyboardCoordinates, useSortable,
-} from "@dnd-kit/sortable";
-import { CSS } from "@dnd-kit/utilities";
 import { toast } from "sonner";
 import VerseOfTheWeekAdmin from "@/components/verse/VerseOfTheWeekAdmin";
 import { WeekProgress } from "@/components/practice/WeekProgress";
@@ -52,6 +45,7 @@ import {
 import BulletEditor from "@/components/practice/BulletEditor";
 import { SplitLanesEditor } from "@/components/practice/SplitLanes";
 import { hasLanes, isBibleStudyBlock, bibleStudyText, bibleStudySiblings, wrapupFor, planningWeekOf, type Wrapups } from "@/lib/practicePlan";
+import { templateSlotFor, standingDetailFor, effectiveDetail, detailToStore } from "@/lib/practicePlan";
 
 const AdminPracticePlan = () => {
   const qc = useQueryClient();
@@ -225,7 +219,7 @@ const AdminPracticePlan = () => {
           position: t.position,
           category: t.category,
           detail: copyLastWeek
-            ? prior.get(`${t.group}|${t.weekday}|${t.position}`) ?? null
+            ? detailToStore(prior.get(`${t.group}|${t.weekday}|${t.position}`) ?? null, t, template)
             : null,
         }));
       // A chosen day the template doesn't know (a Saturday session) gets one
@@ -332,7 +326,11 @@ const AdminPracticePlan = () => {
   });
 
   const saveBlock = useMutation({
-    mutationFn: async ({ id, detail }: { id: string; detail: string | null }) => {
+    mutationFn: async ({ id, detail: typed }: { id: string; detail: string | null }) => {
+      // Text that only repeats the template is stored as nothing, so the slot
+      // keeps inheriting and a later template edit still reaches it.
+      const me = blocks.find((b) => b.id === id);
+      const detail = me ? detailToStore(typed, me, template) : typed;
       // A Bible Study box in both team columns is one study: write both.
       const { error } = await supabase
         .from("practice_blocks" as never)
@@ -352,6 +350,30 @@ const AdminPracticePlan = () => {
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["practice-blocks", week?.id] }),
     onError: (e: Error) => toast.error(e.message || "Couldn't save."),
+  });
+
+  // "Make this the template": the words typed in this week's slot become the
+  // standing text, and the slot goes back to inheriting them — so the template
+  // builds itself out of real weeks instead of being a separate chore.
+  const promoteToTemplate = useMutation({
+    mutationFn: async (id: string) => {
+      const me = blocks.find((b) => b.id === id);
+      const slot = me ? templateSlotFor(me, template) : null;
+      if (!me || !slot) throw new Error("This slot isn't in the template, so there is nothing to promote to.");
+      const text = me.detail?.trim() ? me.detail : null;
+      const { error } = await supabase.from("practice_template_blocks" as never).update({ detail: text } as never).eq("id", slot.id);
+      if (error) throw error;
+      const { error: e2 } = await supabase.from("practice_blocks" as never).update({ detail: null } as never).in("id", bibleStudySiblings(blocks, id));
+      if (e2) throw e2;
+      return slot.category;
+    },
+    onSuccess: (category) => {
+      toast.success(`${category} now says this every week.`);
+      qc.invalidateQueries({ queryKey: ["practice-template"] });
+      qc.invalidateQueries({ queryKey: ["practice-blocks", week?.id] });
+      qc.invalidateQueries({ queryKey: ["board-template"] });
+    },
+    onError: (e: Error) => toast.error(e.message || "Couldn't update the template."),
   });
 
   const saveMeeting = useMutation({
@@ -616,7 +638,7 @@ const AdminPracticePlan = () => {
   const isThisWeek = weekStart === mondayOf();
   // A hidden block (its workout was moved away) is neither drawn nor counted.
   const visibleCount = blocks.filter((b) => !b.hidden).length;
-  const filledCount = blocks.filter((b) => !b.hidden && b.detail?.trim()).length;
+  const filledCount = blocks.filter((b) => !b.hidden && effectiveDetail(b, template)?.trim()).length;
 
   return (
     <div className="p-4 md:p-8 space-y-6 max-w-6xl mx-auto text-white">
@@ -954,6 +976,7 @@ const AdminPracticePlan = () => {
                   onAddWeekBlock={(g, weekday, category) =>
                     addWeekBlock.mutate({ group: g, weekday, category })
                   }
+                  onPromote={(id) => promoteToTemplate.mutate(id)}
                 />
               ))}
             </div>
@@ -1030,7 +1053,7 @@ const StartWeekCard = ({
 // ── One day ──────────────────────────────────────────────────────────
 const DayCard = ({
   day, dateISO, spiritual, onWrapup, points, onPoints, reminders, onReminders, verse, blocksFor, onSaveBlock,
-  template, onRename, onReset, onRemove, onAddWeekBlock,
+  template, onRename, onReset, onRemove, onAddWeekBlock, onPromote,
 }: {
   day: { n: number; short: string; long: string };
   dateISO: string;
@@ -1048,6 +1071,7 @@ const DayCard = ({
   onReset: (block: PracticeBlock) => void;
   onRemove: (id: string) => void;
   onAddWeekBlock: (g: PracticeGroup, weekday: number, category: string) => void;
+  onPromote: (id: string) => void;
 }) => {
   const [draft, setDraft] = useState("");
   const [reminderDraft, setReminderDraft] = useState("");
@@ -1223,10 +1247,13 @@ const DayCard = ({
                           t.position === b.position
                       )?.category
                     }
+                    standing={standingDetailFor(b, template)}
+                    inTemplate={!!templateSlotFor(b, template)}
                     onSave={onSaveBlock}
                     onRename={onRename}
                     onReset={() => onReset(b)}
                     onRemove={() => onRemove(b.id)}
+                    onPromote={() => onPromote(b.id)}
                   />
                 ))
               )}
@@ -1326,18 +1353,28 @@ const DayCard = ({
  * the "template has changed" sync leaves it alone instead of putting it back.
  */
 const BlockEditor = ({
-  block, accent, templateCategory, onSave, onRename, onReset, onRemove,
+  block, accent, templateCategory, standing, inTemplate, onSave, onRename, onReset, onRemove, onPromote,
 }: {
   block: PracticeBlock;
   accent: string;
   templateCategory?: string;
+  /** The template's standing text for this slot, if any. */
+  standing: string | null;
+  /** Whether the slot exists in the template at all (a renamed one-off does not). */
+  inTemplate: boolean;
   onSave: (id: string, detail: string | null) => void;
   onRename: (id: string, category: string) => void;
   onReset: () => void;
   onRemove: () => void;
+  onPromote: () => void;
 }) => {
   const [renaming, setRenaming] = useState(false);
   const changed = !!block.category_overridden;
+  // What the slot says: its own words, else the template's.
+  const own = block.detail?.trim() ? block.detail : null;
+  const effective = own ?? standing;
+  const inherited = own === null && standing !== null;
+  const canPromote = inTemplate && own !== null && own.trim() !== (standing ?? "").trim();
 
   return (
     <div>
@@ -1371,14 +1408,26 @@ const BlockEditor = ({
         )}
 
         <div className="flex items-center gap-2 shrink-0">
-          {/* Lanes each have their own box, so no column-level Clear. */}
-          {block.detail?.trim() && !hasLanes(block.category) && (
+          {/* This week's own words can go up to the template. */}
+          {canPromote && !hasLanes(block.category) && (
+            <button
+              type="button"
+              onClick={onPromote}
+              title="Make this the template: every week says this from now on"
+              className="text-[10px] text-neutral-500 hover:text-white flex items-center gap-1"
+            >
+              <ArrowUpToLine className="w-3 h-3" /> Make this the template
+            </button>
+          )}
+          {/* Lanes each have their own box, so no column-level Clear. Clear
+              goes back to the template's words when the slot has some. */}
+          {own !== null && !hasLanes(block.category) && (
             <button
               type="button"
               onClick={() => onSave(block.id, null)}
               className="text-[10px] text-neutral-600 hover:text-red-400 flex items-center gap-1"
             >
-              <Trash2 className="w-3 h-3" /> Clear
+              <Trash2 className="w-3 h-3" /> {standing !== null ? "Back to template" : "Clear"}
             </button>
           )}
           <button
@@ -1413,11 +1462,16 @@ const BlockEditor = ({
         </div>
       )}
 
+      {inherited && (
+        <p className="text-[9px] uppercase tracking-wider font-semibold text-neutral-500 mb-1" title="The template's words. Type here to say something else this week.">
+          From the template
+        </p>
+      )}
       {hasLanes(block.category) ? (
         /* Two lanes — a group doing two things at once. */
         <SplitLanesEditor
-          key={`${block.id}-${block.detail ?? ""}`}
-          detail={block.detail}
+          key={`${block.id}-${effective ?? ""}`}
+          detail={effective}
           category={block.category}
           accent={accent}
           onSave={(v) => onSave(block.id, v)}
@@ -1426,13 +1480,13 @@ const BlockEditor = ({
         /* One box, a line per bullet. Bible Study is the same box since
            2026-10-08; a week saved while it was two lanes reads as lines. */
         <BulletEditor
-          key={`${block.id}-${block.detail ?? ""}`}
-          defaultValue={isBibleStudyBlock(block.category) ? bibleStudyText(block.detail) : block.detail}
+          key={`${block.id}-${effective ?? ""}`}
+          defaultValue={isBibleStudyBlock(block.category) ? bibleStudyText(effective) : effective}
           accent={accent}
           textClassName="text-sm"
-          className="min-h-[68px]"
+          className={`min-h-[68px] ${inherited ? "opacity-80" : ""}`}
           onSave={(v) => {
-            if (v !== (block.detail || null)) onSave(block.id, v);
+            if (v !== (effective || null)) onSave(block.id, v);
           }}
         />
       )}
@@ -1516,97 +1570,76 @@ const AddTemplateBlock = ({
 };
 
 // ── Template ─────────────────────────────────────────────────────────
-// ── Template cell: the chips for one group's day, drag to reorder ────────
-// Each cell is its own small drag context, so a chip can only move within
-// its own group and day — Monday's Battle Team order is Monday's Battle Team
-// order. Grab the handle (or the chip itself) and drop it where it goes.
-const SortableTemplateChip = ({
-  block, accent, onToggle, onRemove,
+// The standing pattern, laid out exactly like a week (Josh, 2026-10-19):
+// one card per night, the three groups side by side, every slot with its
+// name and its standing bullets. There is no separate "edit mode" — the
+// template is edited the way a week is edited, and what you see here is
+// what an untouched week prints on the wall.
+
+/** One slot of the template: its name, its standing text, pause, order, remove. */
+const TemplateBlockEditor = ({
+  block, accent, index, count, onRename, onDetail, onToggle, onMove, onRemove,
 }: {
   block: TemplateBlock;
   accent: string;
-  onToggle: (t: TemplateBlock) => void;
-  onRemove: (id: string) => void;
+  index: number;
+  count: number;
+  onRename: (category: string) => void;
+  onDetail: (detail: string | null) => void;
+  onToggle: () => void;
+  onMove: (dir: -1 | 1) => void;
+  onRemove: () => void;
 }) => {
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: block.id });
+  const [renaming, setRenaming] = useState(false);
   const paused = block.is_active === false;
   return (
-    <span
-      ref={setNodeRef}
-      style={{
-        transform: CSS.Transform.toString(transform),
-        transition,
-        opacity: isDragging ? 0.5 : paused ? 0.4 : 1,
-        borderColor: `${accent}55`,
-        color: blockAccent(block.category, accent),
-      }}
-      className={`inline-flex items-center gap-1 rounded-md border pl-1 pr-2 py-0.5 text-xs select-none ${
-        paused ? "line-through" : ""
-      } ${isDragging ? "shadow-lg" : ""}`}
-    >
-      <button
-        type="button"
-        {...attributes}
-        {...listeners}
-        className="cursor-grab active:cursor-grabbing text-neutral-600 hover:text-neutral-300 no-underline touch-none"
-        title="Drag to reorder"
-        aria-label={`Reorder ${block.category}`}
-      >
-        <GripVertical className="w-3 h-3" />
-      </button>
-      {block.category}
-      <button
-        type="button"
-        onClick={() => onToggle(block)}
-        className="text-neutral-500 hover:text-white no-underline"
-        title={paused ? "Bring it back" : "Pause — keeps it, stops using it"}
-      >
-        {paused ? <Eye className="w-3 h-3" /> : <EyeOff className="w-3 h-3" />}
-      </button>
-      <button
-        type="button"
-        onClick={() => onRemove(block.id)}
-        className="text-neutral-500 hover:text-red-400 no-underline"
-        aria-label={`Remove ${block.category}`}
-      >
-        <X className="w-3 h-3" />
-      </button>
-    </span>
-  );
-};
-
-const TemplateCellChips = ({
-  cells, accent, onToggle, onRemove, onReorder,
-}: {
-  cells: TemplateBlock[];
-  accent: string;
-  onToggle: (t: TemplateBlock) => void;
-  onRemove: (id: string) => void;
-  onReorder: (ordered: TemplateBlock[]) => void;
-}) => {
-  // A small distance threshold so a plain click on the pause/remove buttons
-  // never starts a drag.
-  const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 4 } }),
-    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
-  );
-  const ordered = [...cells].sort((a, b) => a.position - b.position);
-  const onDragEnd = (e: DragEndEvent) => {
-    const { active, over } = e;
-    if (!over || active.id === over.id) return;
-    const from = ordered.findIndex((t) => t.id === active.id);
-    const to = ordered.findIndex((t) => t.id === over.id);
-    if (from < 0 || to < 0) return;
-    onReorder(arrayMove(ordered, from, to));
-  };
-  return (
-    <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={onDragEnd}>
-      <SortableContext items={ordered.map((t) => t.id)} strategy={rectSortingStrategy}>
-        {ordered.map((t) => (
-          <SortableTemplateChip key={t.id} block={t} accent={accent} onToggle={onToggle} onRemove={onRemove} />
-        ))}
-      </SortableContext>
-    </DndContext>
+    <div className={paused ? "opacity-50" : ""}>
+      <div className="flex items-center justify-between gap-2 mb-1">
+        {renaming ? (
+          <Input
+            autoFocus
+            defaultValue={block.category}
+            onBlur={(e) => {
+              const v = e.target.value.trim();
+              if (v && v !== block.category) onRename(v);
+              setRenaming(false);
+            }}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") (e.target as HTMLInputElement).blur();
+              if (e.key === "Escape") setRenaming(false);
+            }}
+            className="h-6 text-[11px] uppercase tracking-wider font-semibold bg-neutral-950 border-neutral-700 text-white px-2"
+          />
+        ) : (
+          <button
+            type="button"
+            onClick={() => setRenaming(true)}
+            title="Rename this slot in the template"
+            className={`flex items-center gap-1.5 text-[11px] uppercase tracking-wider font-semibold hover:opacity-70 transition-opacity ${paused ? "line-through" : ""}`}
+            style={{ color: blockAccent(block.category, accent) }}
+          >
+            {block.category}
+            <Pencil className="w-2.5 h-2.5 opacity-0 group-hover/col:opacity-60" />
+          </button>
+        )}
+        <div className="flex items-center gap-1 shrink-0">
+          <button type="button" onClick={() => onMove(-1)} disabled={index === 0} title="Move up" aria-label={`Move ${block.category} up`} className="text-neutral-600 hover:text-white disabled:opacity-20 disabled:hover:text-neutral-600"><ChevronUp className="w-3.5 h-3.5" /></button>
+          <button type="button" onClick={() => onMove(1)} disabled={index === count - 1} title="Move down" aria-label={`Move ${block.category} down`} className="text-neutral-600 hover:text-white disabled:opacity-20 disabled:hover:text-neutral-600"><ChevronDown className="w-3.5 h-3.5" /></button>
+          <button type="button" onClick={onToggle} title={paused ? "Paused — bring it back" : "Pause: keeps it, stops using it"} aria-label={paused ? "Resume" : "Pause"} className="text-neutral-600 hover:text-white ml-1">{paused ? <Eye className="w-3.5 h-3.5" /> : <EyeOff className="w-3.5 h-3.5" />}</button>
+          <button type="button" onClick={onRemove} title="Remove from the template" aria-label={`Remove ${block.category}`} className="text-neutral-600 hover:text-red-400"><X className="w-3 h-3" /></button>
+        </div>
+      </div>
+      {paused && <p className="text-[9px] uppercase tracking-wider font-semibold text-neutral-500 mb-1">Paused · not used when a week starts</p>}
+      <BulletEditor
+        key={`${block.id}-${block.detail ?? ""}`}
+        defaultValue={block.detail}
+        accent={blockAccent(block.category, accent)}
+        textClassName="text-sm"
+        className="min-h-[56px]"
+        placeholder="Standing drills — what this slot says every week unless the week says otherwise."
+        onSave={(v) => { if (v !== (block.detail || null)) onDetail(v); }}
+      />
+    </div>
   );
 };
 
@@ -1621,66 +1654,42 @@ const TemplateView = ({
   onStartTime: (t: string) => void;
 }) => {
   const qc = useQueryClient();
-  const [editing, setEditing] = useState(false);
   const days = daysFor(season);
 
   const refresh = () => {
     qc.invalidateQueries({ queryKey: ["practice-template"] });
     qc.invalidateQueries({ queryKey: ["practice-spiritual"] });
+    qc.invalidateQueries({ queryKey: ["board-template"] });
+  };
+  const run = async (p: PromiseLike<{ error: { message: string } | null }>) => {
+    const { error } = await p;
+    if (error) toast.error(error.message);
+    else refresh();
   };
 
-  const onAddTemplate = async (
-    group: PracticeGroup, weekday: number, category: string
-  ) => {
+  const onAddTemplate = (group: PracticeGroup, weekday: number, category: string) => {
     const existing = template.filter((t) => t.group === group && t.weekday === weekday);
     const position = existing.reduce((m, t) => Math.max(m, t.position), -1) + 1;
-    const { error } = await supabase
-      .from("practice_template_blocks" as never)
-      .insert({ group, weekday, position, category } as never);
-    if (error) toast.error(error.message);
-    else refresh();
+    return run(supabase.from("practice_template_blocks" as never).insert({ group, weekday, position, category } as never));
   };
+  const onRenameTemplate = (id: string, category: string) =>
+    run(supabase.from("practice_template_blocks" as never).update({ category } as never).eq("id", id));
+  const onDetailTemplate = (id: string, detail: string | null) =>
+    run(supabase.from("practice_template_blocks" as never).update({ detail } as never).eq("id", id));
+  const onToggleTemplate = (block: TemplateBlock) =>
+    run(supabase.from("practice_template_blocks" as never).update({ is_active: block.is_active === false } as never).eq("id", block.id));
+  const onRemoveTemplate = (id: string) =>
+    run(supabase.from("practice_template_blocks" as never).delete().eq("id", id));
+  const onToggleSpiritual = (weekday: number, next: boolean) =>
+    run(supabase.from("practice_spiritual_template" as never).update({ is_active: next } as never).eq("weekday", weekday));
 
-  const onToggleTemplate = async (block: TemplateBlock) => {
-    const { error } = await supabase
-      .from("practice_template_blocks" as never)
-      .update({ is_active: block.is_active === false } as never)
-      .eq("id", block.id);
-    if (error) toast.error(error.message);
-    else refresh();
-  };
-
-  const onToggleSpiritual = async (weekday: number, next: boolean) => {
-    const { error } = await supabase
-      .from("practice_spiritual_template" as never)
-      .update({ is_active: next } as never)
-      .eq("weekday", weekday);
-    if (error) toast.error(error.message);
-    else refresh();
-  };
-
-  const onRemoveTemplate = async (id: string) => {
-    const { error } = await supabase
-      .from("practice_template_blocks" as never)
-      .delete()
-      .eq("id", id);
-    if (error) toast.error(error.message);
-    else refresh();
-  };
-
-  // Drag-to-reorder within one group's day: the new order becomes positions
-  // 0..n. Only this cell's rows are touched. Weeks already written keep their
-  // own order (a template change never rewrites history); the drift banner on
-  // This Week offers to pull it in.
+  // Reorder within one group's night: the new order becomes positions 0..n.
+  // (group, weekday, position) is unique, so a straight swap collides for an
+  // instant — park every row high first, then settle them in order. Weeks
+  // already written keep their own order; the drift banner offers to pull it in.
   const onReorderTemplate = async (ordered: TemplateBlock[]) => {
-    // (group, weekday, position) is unique in the database, so a straight swap
-    // collides for an instant — A takes 0 while B still holds 0. Park every
-    // chip in a high temporary position first, then settle them in order.
     const setPos = async (id: string, position: number) => {
-      const { error } = await supabase
-        .from("practice_template_blocks" as never)
-        .update({ position } as never)
-        .eq("id", id);
+      const { error } = await supabase.from("practice_template_blocks" as never).update({ position } as never).eq("id", id);
       if (error) throw new Error(error.message);
     };
     try {
@@ -1689,25 +1698,23 @@ const TemplateView = ({
       refresh();
     } catch (e) {
       toast.error((e as Error).message || "Couldn't reorder.");
-      refresh(); // show whatever state the rows are actually in
+      refresh();
     }
   };
-
-  const onSaveSpiritual = async (
-    weekday: number, label: string, leader: string | null
-  ) => {
-    // Clearing the box means "back to the default" — save that, don't ignore
-    // it. (It used to return early on an empty label, so a cleared day kept
-    // its old text and looked like it hadn't saved.)
-    const value = label.trim() || "Eat up · Clean up";
-    const { error } = await supabase
-      .from("practice_spiritual_template" as never)
-      .upsert({ weekday, label: value, leader } as never, {
-        onConflict: "weekday",
-      } as never);
-    if (error) toast.error(error.message);
-    else refresh();
+  const moveTemplate = (cells: TemplateBlock[], index: number, dir: -1 | 1) => {
+    const to = index + dir;
+    if (to < 0 || to >= cells.length) return;
+    const next = [...cells];
+    [next[index], next[to]] = [next[to], next[index]];
+    void onReorderTemplate(next);
   };
+
+  const onSaveSpiritual = (weekday: number, label: string, leader: string | null) => {
+    // Clearing the box means "back to the default" — save that, don't ignore it.
+    const value = label.trim() || "Eat up · Clean up";
+    return run(supabase.from("practice_spiritual_template" as never).upsert({ weekday, label: value, leader } as never, { onConflict: "weekday" } as never));
+  };
+
   return (
     <div className="space-y-4">
       <div className="rounded-xl border border-neutral-800 bg-neutral-900 p-4 flex items-center justify-between gap-4 flex-wrap">
@@ -1732,12 +1739,8 @@ const TemplateView = ({
       <div className="rounded-xl border border-neutral-800 bg-neutral-900 p-4 flex items-center justify-between gap-4 flex-wrap">
         <div>
           <p className="text-sm font-semibold text-white">Practice starts</p>
-          <p className="text-xs text-neutral-500 mt-0.5">
-            What the gym board counts down to.
-          </p>
+          <p className="text-xs text-neutral-500 mt-0.5">What the gym board counts down to.</p>
         </div>
-        {/* Two start times the academy actually uses. The board, the countdown
-            and the Junior strip all follow this. */}
         <Select value={startTime} onValueChange={onStartTime}>
           <SelectTrigger className="w-36 h-10 bg-neutral-800 border-neutral-700 text-white font-semibold">
             <SelectValue>{formatStartTime(startTime)}</SelectValue>
@@ -1749,168 +1752,88 @@ const TemplateView = ({
         </Select>
       </div>
 
-      <div className="rounded-xl border border-neutral-800 bg-neutral-900 overflow-hidden">
-        <div className="px-4 py-3 border-b border-neutral-800 flex items-start justify-between gap-4 flex-wrap">
-          <div>
-            <p className="text-sm font-semibold text-white">Weekly template</p>
-            <p className="text-xs text-neutral-500 mt-0.5">
-              What kind of session each group runs. The drills live in the week,
-              not here.
-            </p>
-          </div>
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={() => setEditing((e) => !e)}
-            className={
-              editing
-                ? "bg-neutral-800 border-neutral-600 text-white"
-                : "bg-transparent border-neutral-700 text-neutral-300 hover:bg-white/5 hover:text-white"
-            }
-          >
-            {editing ? (
-              <><Check className="w-4 h-4 mr-1.5" /> Done</>
-            ) : (
-              <><Pencil className="w-4 h-4 mr-1.5" /> Edit template</>
-            )}
-          </Button>
-        </div>
+      <div className="rounded-xl border border-neutral-800 bg-neutral-900 p-4 space-y-1">
+        <p className="text-sm font-semibold text-white">Weekly template</p>
+        <p className="text-xs text-neutral-500">
+          Every week starts from this. What you write in a slot here is what an untouched week prints on the wall;
+          a week can say something else for one night, and <span className="text-neutral-300">Clear</span> on the week brings the template back.
+        </p>
+        <p className="text-[11px] text-amber-300/80">
+          Weeks already written keep what they say — a template change never rewrites history. The week&apos;s banner offers to pull a change in.
+        </p>
+      </div>
 
-        {editing && (
-          <p className="px-4 py-2.5 text-[11px] text-amber-300/80 bg-amber-500/[0.06] border-b border-amber-500/20">
-            Changes here shape the weeks you start from now on. Weeks already
-            written keep what they say — a template change never rewrites
-            history.
-          </p>
-        )}
-
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-neutral-800">
-                <th className="text-left px-4 py-2 text-[11px] uppercase tracking-wider text-neutral-500 font-semibold">
-                  Day
-                </th>
-                {GROUPS.map((g) => (
-                  <th
-                    key={g.key}
-                    className="text-left px-4 py-2 text-[11px] uppercase tracking-wider font-semibold"
-                    style={{ color: g.accent }}
-                  >
-                    {g.label}
-                  </th>
-                ))}
-                <th
-                  className="text-left px-4 py-2 text-[11px] uppercase tracking-wider font-semibold"
-                  style={{ color: TOGETHER_GRAY }}
-                  title="The band at the foot of the gym board. Eat up · Clean up unless a day says otherwise."
-                >
-                  Wrap-up
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              {WEEKDAYS.map((d) => {
-                const dormant = !days.some((x) => x.n === d.n);
-                const sp = spiritual.find((s) => s.weekday === d.n);
+      {WEEKDAYS.map((d) => {
+        const dormant = !days.some((x) => x.n === d.n);
+        const sp = spiritual.find((s) => s.weekday === d.n);
+        return (
+          <div key={d.n} className={`rounded-xl border border-neutral-800 bg-neutral-900 overflow-hidden ${dormant ? "opacity-50" : ""}`}>
+            <div className="flex items-center justify-between gap-3 px-4 py-3 border-b border-neutral-800">
+              <div className="flex items-baseline gap-2.5">
+                <h3 className="text-white font-bold">{d.long}</h3>
+                <span className="text-xs text-neutral-500">every week</span>
+                {dormant && <span className="text-[10px] uppercase tracking-wider text-neutral-500">dormant · off season</span>}
+              </div>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-3 divide-y md:divide-y-0 md:divide-x divide-neutral-800">
+              {GROUPS.map((g) => {
+                const cells = template
+                  .filter((t) => t.weekday === d.n && t.group === g.key)
+                  .sort((a, b) => a.position - b.position);
                 return (
-                  <tr
-                    key={d.n}
-                    className={`border-b border-neutral-800/60 last:border-0 ${
-                      dormant ? "opacity-40" : ""
-                    }`}
-                  >
-                    <td className="px-4 py-3 text-white font-medium whitespace-nowrap">
-                      {d.short}
-                      {dormant && (
-                        <span className="ml-2 text-[10px] text-neutral-500">dormant</span>
-                      )}
-                    </td>
-                    {GROUPS.map((g) => {
-                      const cells = template.filter(
-                        (t) => t.weekday === d.n && t.group === g.key
-                      );
-                      return (
-                        <td key={g.key} className="px-4 py-3 text-neutral-300 align-top">
-                          {!editing ? (
-                            cells.map((t) => t.category).join(" · ") || (
-                              <span className="text-neutral-600">—</span>
-                            )
-                          ) : (
-                            <div className="flex flex-wrap gap-1.5 items-center">
-                              <TemplateCellChips
-                                cells={cells}
-                                accent={g.accent}
-                                onToggle={onToggleTemplate}
-                                onRemove={onRemoveTemplate}
-                                onReorder={onReorderTemplate}
-                              />
-                              <AddTemplateBlock
-                                accent={g.accent}
-                                onAdd={(category) =>
-                                  onAddTemplate(g.key, d.n, category)
-                                }
-                              />
-                            </div>
-                          )}
-                        </td>
-                      );
-                    })}
-                    <td
-                      className="px-4 py-3 text-xs align-top"
-                      style={{ color: spiritualAccent(sp?.label ?? "") }}
-                    >
-                      {!editing ? (
-                        sp?.label?.trim() ? `${sp.label}${sp.leader ? ` — ${sp.leader}` : ""}` : "Eat up · Clean up"
-                      ) : (
-                        <div
-                          className={`space-y-1.5 min-w-[190px] ${
-                            sp?.is_active === false ? "opacity-40" : ""
-                          }`}
-                        >
-                          {sp && (
-                            <button
-                              type="button"
-                              onClick={() => onToggleSpiritual(d.n, sp.is_active === false)}
-                              className="flex items-center gap-1.5 text-[10px] uppercase tracking-wider text-neutral-500 hover:text-white"
-                            >
-                              {sp.is_active === false ? (
-                                <><Eye className="w-3 h-3" /> Paused — bring it back</>
-                              ) : (
-                                <><EyeOff className="w-3 h-3" /> Pause</>
-                              )}
-                            </button>
-                          )}
-                          <Input
-                            defaultValue={sp?.label ?? ""}
-                            onBlur={(e) =>
-                              onSaveSpiritual(d.n, e.target.value.trim(), sp?.leader ?? null)
-                            }
-                            placeholder="Eat up · Clean up"
-                            className="h-7 text-xs bg-neutral-950 border-neutral-800 text-white"
-                          />
-                          <Input
-                            defaultValue={sp?.leader ?? ""}
-                            onBlur={(e) =>
-                              onSaveSpiritual(
-                                d.n,
-                                sp?.label ?? "",
-                                e.target.value.trim() || null
-                              )
-                            }
-                            placeholder="Who leads it?"
-                            className="h-7 text-xs bg-neutral-950 border-neutral-800 text-white"
-                          />
-                        </div>
-                      )}
-                    </td>
-                  </tr>
+                  <div key={g.key} className="p-4 space-y-3 group/col">
+                    <div>
+                      <p className="text-sm font-bold" style={{ color: g.accent }}>{g.label}</p>
+                      <p className="text-[10px] text-neutral-600">{g.blurb}</p>
+                    </div>
+                    {cells.length === 0 && <p className="text-xs text-neutral-600 italic">Nothing scheduled</p>}
+                    {cells.map((t, i) => (
+                      <TemplateBlockEditor
+                        key={t.id}
+                        block={t}
+                        accent={g.accent}
+                        index={i}
+                        count={cells.length}
+                        onRename={(c) => void onRenameTemplate(t.id, c)}
+                        onDetail={(v) => void onDetailTemplate(t.id, v)}
+                        onToggle={() => void onToggleTemplate(t)}
+                        onMove={(dir) => moveTemplate(cells, i, dir)}
+                        onRemove={() => void onRemoveTemplate(t.id)}
+                      />
+                    ))}
+                    <AddTemplateBlock accent={g.accent} label="Add a slot" onAdd={(category) => void onAddTemplate(g.key, d.n, category)} />
+                  </div>
                 );
               })}
-            </tbody>
-          </table>
-        </div>
-      </div>
+            </div>
+            {/* The foot of the night, as the board shows it. */}
+            <div className={`px-4 py-2.5 border-t border-neutral-800 flex items-center justify-between gap-3 flex-wrap ${sp?.is_active === false ? "opacity-60" : ""}`} style={{ background: `${TOGETHER_GRAY}14` }}>
+              <div className="flex items-center gap-3">
+                <p className="text-[10px] font-bold uppercase tracking-[0.2em] opacity-70" style={{ color: TOGETHER_GRAY }}>Nightly Wrap Up</p>
+                {sp && (
+                  <button type="button" onClick={() => void onToggleSpiritual(d.n, sp.is_active === false)} className="flex items-center gap-1.5 text-[10px] uppercase tracking-wider text-neutral-500 hover:text-white">
+                    {sp.is_active === false ? <><Eye className="w-3 h-3" /> Paused — bring it back</> : <><EyeOff className="w-3 h-3" /> Pause</>}
+                  </button>
+                )}
+              </div>
+              <div className="flex items-center gap-2 flex-wrap">
+                <Input
+                  defaultValue={sp?.label ?? ""}
+                  onBlur={(e) => void onSaveSpiritual(d.n, e.target.value.trim(), sp?.leader ?? null)}
+                  placeholder="Eat up · Clean up"
+                  className="h-7 w-48 text-xs bg-neutral-950 border-neutral-800 text-white"
+                />
+                <Input
+                  defaultValue={sp?.leader ?? ""}
+                  onBlur={(e) => void onSaveSpiritual(d.n, sp?.label ?? "", e.target.value.trim() || null)}
+                  placeholder="Who leads it?"
+                  className="h-7 w-40 text-xs bg-neutral-950 border-neutral-800 text-white"
+                />
+              </div>
+            </div>
+          </div>
+        );
+      })}
     </div>
   );
 };

@@ -30,7 +30,7 @@ import {
   daysForWeek, mondayOf, dateForWeekday, todayWeekday, addDays, formatWeekRange,
   msUntilStart, countdownParts, formatStartTime,
   PracticeSettings, PracticeWeek, PracticeBlock, SpiritualDay, MeetingPoints,
-  SeasonMode,
+  SeasonMode, TemplateBlock, effectiveDetail, detailToStore,
 } from "@/lib/practicePlan";
 import { WEEKDAY_KEYS as STRENGTH_DAY_KEY, DAY_LABELS, moveDay, removeDay, type WeekdayKey } from "@/lib/programWeek";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
@@ -170,9 +170,25 @@ const PracticeBoard = () => {
     },
   });
 
+  // The template's standing text, for slots this week left as they are.
+  const { data: template = [] } = useQuery({
+    queryKey: ["board-template"],
+    refetchInterval: 60_000,
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("practice_template_blocks" as never)
+        .select("*");
+      return (data || []) as unknown as TemplateBlock[];
+    },
+  });
+
   // A block a coach moved away (or took out of the week) stays as a hidden
-  // row for the template sync's sake; the wall never draws it.
-  const visibleBlocks = useMemo(() => blocks.filter((b) => !b.hidden), [blocks]);
+  // row for the template sync's sake; the wall never draws it. A block with
+  // nothing typed prints the template's standing text.
+  const visibleBlocks = useMemo(
+    () => blocks.filter((b) => !b.hidden).map((b) => ({ ...b, detail: effectiveDetail(b, template) })),
+    [blocks, template],
+  );
 
   const { data: meeting = [] } = useQuery({
     queryKey: ["board-meeting", week?.id],
@@ -302,7 +318,11 @@ const PracticeBoard = () => {
   // laptop. Only ever offered to a signed-in admin; the board is anonymous for
   // everyone else, and RLS refuses anon writes regardless of what the UI shows.
   const saveDetail = useMutation({
-    mutationFn: async ({ id, detail }: { id: string; detail: string | null }) => {
+    mutationFn: async ({ id, detail: typed }: { id: string; detail: string | null }) => {
+      // Words that only repeat the template are stored as nothing, so the
+      // slot keeps inheriting them.
+      const me = blocks.find((b) => b.id === id);
+      const detail = me ? detailToStore(typed, me, template) : typed;
       // A Bible Study box in both team columns is one study: write both.
       const { error } = await supabase
         .from("practice_blocks" as never)

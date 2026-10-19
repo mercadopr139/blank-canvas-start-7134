@@ -329,6 +329,8 @@ export interface TemplateBlock {
   category: string;
   /** False = paused: kept in the template but skipped when starting a week. */
   is_active?: boolean;
+  /** Standing bullets for the slot; a week block with nothing typed prints these. */
+  detail?: string | null;
 }
 
 export interface SpiritualDay {
@@ -520,4 +522,59 @@ export const planningWeekOf = (date: Date = new Date()): string => {
   const dow = d.getDay(); // 0 = Sunday, 6 = Saturday
   if (dow === 6 || dow === 0) d.setDate(d.getDate() + (dow === 6 ? 2 : 1));
   return mondayOf(d);
+};
+
+/* ───── Standing text on the template (Josh, 2026-10-19) ─────
+ * A template block can carry its own bullets — "Chest" / "See workout plan"
+ * on every Battle Team Monday. A week block with nothing typed INHERITS
+ * them; typing overrides for that week only; clearing goes back to the
+ * template, not to blank. The same rule in the editor and on the wall.
+ */
+
+/** The template slot a week block stands in — same group, night and position, and the same name. A renamed one-off matches nothing. */
+export const templateSlotFor = <T extends { group: PracticeGroup; weekday: number; position: number; category: string; category_overridden?: boolean }>(
+  block: T,
+  template: TemplateBlock[],
+): TemplateBlock | null => {
+  if (block.category_overridden) return null;
+  const t = template.find((x) => x.group === block.group && x.weekday === block.weekday && x.position === block.position);
+  if (!t) return null;
+  return t.category.trim().toLowerCase() === block.category.trim().toLowerCase() ? t : null;
+};
+
+/** The template's standing text for a week block, or null when the slot has none. */
+export const standingDetailFor = (
+  block: { group: PracticeGroup; weekday: number; position: number; category: string; category_overridden?: boolean },
+  template: TemplateBlock[],
+): string | null => {
+  const t = templateSlotFor(block, template);
+  const d = t?.detail?.trim();
+  return d ? d : null;
+};
+
+/** What a week block says: its own text, else the template's standing text, else nothing. */
+export const effectiveDetail = (
+  block: { group: PracticeGroup; weekday: number; position: number; category: string; category_overridden?: boolean; detail: string | null },
+  template: TemplateBlock[],
+): string | null => (block.detail?.trim() ? block.detail : standingDetailFor(block, template));
+
+/** True when the block is printing the template's text rather than its own. */
+export const isInherited = (
+  block: { group: PracticeGroup; weekday: number; position: number; category: string; category_overridden?: boolean; detail: string | null },
+  template: TemplateBlock[],
+): boolean => !block.detail?.trim() && standingDetailFor(block, template) !== null;
+
+/**
+ * What to store when a week block is saved: text that merely repeats the
+ * template is stored as nothing, so the block keeps inheriting and a later
+ * template edit still reaches it.
+ */
+export const detailToStore = (
+  typed: string | null,
+  block: { group: PracticeGroup; weekday: number; position: number; category: string; category_overridden?: boolean },
+  template: TemplateBlock[],
+): string | null => {
+  const v = typed?.trim() ? typed : null;
+  const standing = standingDetailFor(block, template);
+  return v !== null && standing !== null && v.trim() === standing.trim() ? null : v;
 };
