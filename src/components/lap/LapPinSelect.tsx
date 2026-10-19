@@ -27,13 +27,21 @@ const LapPinSelect = ({ conversationId, pillar, value }: { conversationId: strin
     toast.success(topicId ? `Pinned to ${topics.find((t) => t.id === topicId)?.title ?? "the lap"}.` : "Unpinned from the lap.");
   };
 
+  const pinned = topics.find((t) => t.id === value) ?? null;
+  // A real control, not a bare dropdown (Josh, 2026-10-19: "where?"): a
+  // pill that reads "Pin to the lap" until pinned, then the checkpoint's
+  // name in NLA red. The select sits over it, so a click opens the list.
   return (
-    <label className="hidden sm:inline-flex items-center gap-1.5 text-[10px] text-zinc-500 flex-shrink-0" title="Pin this conversation to a checkpoint on the Lap">
-      <Flag className="w-3 h-3" style={{ color: value ? "#bf0f3e" : undefined }} />
+    <label
+      className={`relative inline-flex items-center gap-1.5 h-7 px-2.5 rounded-full border text-[11px] font-semibold flex-shrink-0 cursor-pointer ${pinned ? "border-[#bf0f3e]/70 bg-[#bf0f3e]/15 text-white" : "border-white/20 bg-white/5 text-zinc-300 hover:bg-white/10 hover:text-white"}`}
+      title={pinned ? `Pinned to ${pinned.title} on the Lap — click to change` : "Pin this conversation to a checkpoint on the Lap, so it is waiting there on lap day"}
+    >
+      <Flag className="w-3.5 h-3.5" style={{ color: "#bf0f3e" }} />
+      <span className="max-w-[160px] truncate">{pinned ? `On the lap: ${pinned.title}` : "Pin to the lap"}</span>
       <select
         value={value ?? ""}
         onChange={(e) => void pin(e.target.value)}
-        className="bg-transparent border border-white/10 rounded-md px-1.5 py-0.5 text-[10px] text-zinc-400 hover:text-white focus:outline-none max-w-[150px]"
+        className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
         aria-label="Pin to a lap checkpoint"
       >
         <option value="">Not on the lap</option>
