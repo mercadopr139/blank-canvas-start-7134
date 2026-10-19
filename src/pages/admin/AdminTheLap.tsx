@@ -156,29 +156,34 @@ const AdminTheLap = () => {
   });
   // The next two weeks — a heads-up only.
   const { data: comingUp = [] } = useQuery({ queryKey: ["lap-coming-up"], queryFn: () => fetchComingUp() });
-  // What moved on the message board since the last lap finished.
-  const { data: moved = null } = useQuery({
-    queryKey: ["lap-moved", lastLap?.id ?? lap?.id ?? "none"],
+  // The window for "what moved on the message board": since the last lap
+  // finished — or, when there has never been a lap, the last seven days.
+  // The label says which, so a first lap never claims a "last lap".
+  const { data: window = null } = useQuery({
+    queryKey: ["lap-window", lastLap?.id ?? lap?.id ?? "none"],
     enabled: !!(lastLap || lap),
     queryFn: async () => {
       const { data } = await supabase.from("laps" as never).select("finished_at, started_at").in("status", ["finished", "incomplete"]).order("started_at", { ascending: false }).limit(1).maybeSingle();
       const row = data as unknown as { finished_at: string | null; started_at: string } | null;
-      const since = row?.finished_at ?? row?.started_at ?? new Date(Date.now() - 7 * 86_400_000).toISOString();
-      return fetchMovedConversations(since);
+      const since = row?.finished_at ?? row?.started_at;
+      return since ? { since, label: "since the last lap" } : { since: new Date(Date.now() - 7 * 86_400_000).toISOString(), label: "in the last 7 days" };
     },
+  });
+  const { data: moved = null } = useQuery({
+    queryKey: ["lap-moved", window?.since ?? "none"],
+    enabled: !!window,
+    queryFn: () => fetchMovedConversations(window!.since),
   });
   // The conversations waiting at this checkpoint: pinned to it, or in its
   // pillar with messages since the last lap finished. Links open the board
   // on that conversation.
   const { data: conversations = [] } = useQuery({
-    queryKey: ["lap-conversations", lap?.id ?? "none", lap?.current_topic_id ?? "none"],
-    enabled: !!lap?.current_topic_id,
+    queryKey: ["lap-conversations", lap?.id ?? "none", lap?.current_topic_id ?? "none", window?.since ?? "none"],
+    enabled: !!lap?.current_topic_id && !!window,
     queryFn: async () => {
       const topic = allTopics.find((t) => t.id === lap!.current_topic_id);
       if (!topic) return [] as { id: string; name: string | null; pinned: boolean; last: string | null }[];
-      const { data: last } = await supabase.from("laps" as never).select("finished_at, started_at").in("status", ["finished", "incomplete"]).order("started_at", { ascending: false }).limit(1).maybeSingle();
-      const row = last as unknown as { finished_at: string | null; started_at: string } | null;
-      const since = row?.finished_at ?? row?.started_at ?? new Date(Date.now() - 7 * 86_400_000).toISOString();
+      const since = window!.since;
       const { data: convs } = await supabase.from("mb_conversations").select("id, name, pillar, lap_topic_id" as never).eq("pillar" as never, topic.pillar);
       const list = (convs ?? []) as unknown as { id: string; name: string | null; lap_topic_id: string | null }[];
       const { data: msgs } = await supabase.from("mb_messages").select("conversation_id, created_at").gt("created_at", since).in("conversation_id", list.map((c) => c.id));
@@ -515,7 +520,7 @@ const AdminTheLap = () => {
 
             {moved && (moved.operations + moved.sales_marketing + moved.finance) > 0 && (
               <p className="text-sm text-white/55 inline-flex items-center gap-2">
-                <MessageSquare className="w-4 h-4" /> Since the last lap, the message board moved in
+                <MessageSquare className="w-4 h-4" /> The message board moved {window?.label ?? "recently"} in
                 {(["operations", "sales_marketing", "finance"] as const).filter((p) => moved[p] > 0).map((p) => (
                   <span key={p} className="font-semibold" style={{ color: PILLAR_COLOR[p] }}>{PILLAR_LABEL[p]} ({moved[p]})</span>
                 ))}
@@ -670,7 +675,7 @@ const AdminTheLap = () => {
             {moved && moved[current.pillar] > 0 && (
               <button type="button" onClick={() => navigate("/admin/message-board")} className="w-full text-left rounded-xl border border-white/10 bg-white/[0.03] px-4 py-2.5 text-sm text-white/70 hover:bg-white/[0.06] inline-flex items-center gap-2">
                 <MessageSquare className="w-4 h-4" style={{ color: PILLAR_COLOR[current.pillar] }} />
-                {moved[current.pillar]} {PILLAR_LABEL[current.pillar]} conversation{moved[current.pillar] === 1 ? "" : "s"} moved on the message board since the last lap
+                {moved[current.pillar]} {PILLAR_LABEL[current.pillar]} conversation{moved[current.pillar] === 1 ? "" : "s"} moved on the message board {window?.label ?? "recently"}
               </button>
             )}
 
