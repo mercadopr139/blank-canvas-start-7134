@@ -100,7 +100,14 @@ sub-lines under it — and a standing note on any line (click the line). A
 sub-line never has children: trigger lap_checklist_two_levels refuses a
 third level (migration 20261019170000). A heading with sub-lines is
 reviewed when all of them are; ticking it ticks them all. The seeded
-"Parent · Child" lines were split back into heading + sub-line. Tables lap_checklist_items /
+"Parent · Child" lines were split back into heading + sub-line.
+Third pass: a line can OPEN the page it is about (`link_app` = an app key
+from appRegistry, migration 20261019180000; src/lib/lap/links.ts). A subtle
+"Open" pill on the line; the link icon in the hover controls picks the app.
+Leaving sets a session flag and a fixed "Back to the lap" pill
+(LapReturnPill, mounted in App.tsx) follows until the Lap is opened again.
+Seeded: Practice Plan, Daily Duties, Trips & Pay, Drivers, Registrations,
+Meal Setup, Excursion Intelligence. Tables lap_checklist_items /
 lap_checklist_ticks (migration 20261019160000), seeded from the old
 level-2 rows and level-3 rows flattened as "Parent · Child" (40 lines under
 11 checkpoints). Component src/components/lap/LapChecklist.tsx.

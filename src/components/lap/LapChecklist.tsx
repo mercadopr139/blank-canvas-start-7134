@@ -6,11 +6,14 @@
 // doing becomes a commitment ("+"). A sub-line never has children: the
 // database refuses it, and nothing here offers it.
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
-import { Check, Circle, Plus, Pencil, X, StickyNote, CornerDownRight } from "lucide-react";
+import { Check, Circle, Plus, Pencil, X, StickyNote, CornerDownRight, ExternalLink, Link2 } from "lucide-react";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { linkTarget, linkChoices, markLeavingLap } from "@/lib/lap/links";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
@@ -18,7 +21,7 @@ import type { useAsk } from "@/components/admin/AskDialog";
 
 const NLA_RED = "#bf0f3e";
 
-export interface ChecklistItem { id: string; title: string; sort_order: number; parent_id: string | null; note: string | null }
+export interface ChecklistItem { id: string; title: string; sort_order: number; parent_id: string | null; note: string | null; link_app: string | null }
 
 interface Props {
   lapId: string;
@@ -30,6 +33,7 @@ interface Props {
 
 const LapChecklist = ({ lapId, topicId, ask, onMakeCommitment }: Props) => {
   const qc = useQueryClient();
+  const navigate = useNavigate();
   const { user } = useAuth();
   const [draft, setDraft] = useState("");
   const [subDraft, setSubDraft] = useState<{ parentId: string; text: string } | null>(null);
@@ -39,7 +43,7 @@ const LapChecklist = ({ lapId, topicId, ask, onMakeCommitment }: Props) => {
   const { data: items = [] } = useQuery({
     queryKey: ["lap-checklist", topicId],
     queryFn: async () => {
-      const { data, error } = await supabase.from("lap_checklist_items" as never).select("id, title, sort_order, parent_id, note").eq("topic_id", topicId).is("retired_at", null).order("sort_order");
+      const { data, error } = await supabase.from("lap_checklist_items" as never).select("id, title, sort_order, parent_id, note, link_app").eq("topic_id", topicId).is("retired_at", null).order("sort_order");
       if (error) throw error;
       return (data ?? []) as unknown as ChecklistItem[];
     },
@@ -126,11 +130,20 @@ const LapChecklist = ({ lapId, topicId, ask, onMakeCommitment }: Props) => {
     setOpenNote(null);
     refresh();
   };
+  const setLink = async (item: ChecklistItem, appKey: string | null) => {
+    const { error } = await supabase.from("lap_checklist_items" as never).update({ link_app: appKey, updated_at: new Date().toISOString() } as never).eq("id", item.id);
+    if (error) { toast.error(error.message); return; }
+    refresh();
+  };
+  /** Leave for the page a line is about; the "Back to the lap" pill follows. */
+  const openLink = (path: string) => { markLeavingLap(); navigate(path); };
+  const choices = linkChoices();
   const toggleNote = (item: ChecklistItem) => setOpenNote((o) => (o?.id === item.id ? null : { id: item.id, text: item.note ?? "" }));
 
   const renderLine = (item: ChecklistItem, sub: boolean) => {
     const reviewed = isReviewed(item);
     const noteOpen = openNote?.id === item.id;
+    const target = linkTarget(item.link_app);
     return (
       <li key={item.id} className={sub ? "ml-7" : ""}>
         <div className="group flex items-center gap-3 rounded-lg px-1 py-1 hover:bg-white/[0.04]">
@@ -141,10 +154,41 @@ const LapChecklist = ({ lapId, topicId, ask, onMakeCommitment }: Props) => {
             {item.title}
             {item.note && <StickyNote className="inline w-3.5 h-3.5 ml-2 align-[-2px] text-amber-300/80" aria-label="Has a note" />}
           </button>
+          {target && (
+            <button onClick={() => openLink(target.path)} title={`Open ${target.label}`} className="shrink-0 inline-flex items-center gap-1 rounded-full border border-white/15 bg-white/[0.04] px-2 py-0.5 text-[11px] font-medium text-white/60 hover:text-white hover:border-[#bf0f3e] hover:bg-[#bf0f3e]/15 transition-colors">
+              <ExternalLink className="w-3 h-3" />
+              <span className="hidden sm:inline">Open</span>
+            </button>
+          )}
           <span className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity">
             {!sub && <button onClick={() => setSubDraft((d) => (d?.parentId === item.id ? null : { parentId: item.id, text: "" }))} title="Add a sub-line" aria-label="Add a sub-line" className="p-1 rounded text-white/50 hover:text-white hover:bg-white/10"><CornerDownRight className="w-4 h-4" /></button>}
             <button onClick={() => onMakeCommitment(item.title)} title="Make this a commitment" aria-label="Make this a commitment" className="p-1 rounded text-white/50 hover:text-white hover:bg-white/10"><Plus className="w-4 h-4" /></button>
             <button onClick={() => void rename(item)} title="Rename" aria-label="Rename" className="p-1 rounded text-white/50 hover:text-white hover:bg-white/10"><Pencil className="w-3.5 h-3.5" /></button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button title={target ? `Linked to ${target.label} — change` : "Link this line to a page"} aria-label="Link to a page" className={`p-1 rounded hover:bg-white/10 ${target ? "text-[#bf0f3e] hover:text-white" : "text-white/50 hover:text-white"}`}><Link2 className="w-4 h-4" /></button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-64 max-h-80 overflow-y-auto bg-neutral-900 border-white/[0.08] shadow-2xl text-white">
+                <DropdownMenuLabel className="text-[10px] uppercase tracking-wider text-zinc-500">Open this page from the line</DropdownMenuLabel>
+                {choices.map((g) => (
+                  <div key={g.group}>
+                    <DropdownMenuSeparator className="bg-white/10" />
+                    <DropdownMenuLabel className="text-[10px] uppercase tracking-wider text-zinc-500">{g.group}</DropdownMenuLabel>
+                    {g.apps.map((a) => (
+                      <DropdownMenuItem key={a.key} onSelect={() => void setLink(item, a.key)} className="cursor-pointer text-white/85 focus:text-white focus:bg-white/10">
+                        <span className="w-4 mr-1.5 inline-flex justify-center">{a.key === item.link_app ? <Check className="w-3.5 h-3.5 text-[#bf0f3e]" /> : null}</span>{a.label}
+                      </DropdownMenuItem>
+                    ))}
+                  </div>
+                ))}
+                {target && (
+                  <>
+                    <DropdownMenuSeparator className="bg-white/10" />
+                    <DropdownMenuItem onSelect={() => void setLink(item, null)} className="cursor-pointer text-zinc-400 focus:text-white focus:bg-white/10"><span className="w-4 mr-1.5" />Remove the link</DropdownMenuItem>
+                  </>
+                )}
+              </DropdownMenuContent>
+            </DropdownMenu>
             <button onClick={() => void remove(item)} title="Remove from this checkpoint" aria-label="Remove" className="p-1 rounded text-white/50 hover:text-red-300 hover:bg-white/10"><X className="w-4 h-4" /></button>
           </span>
         </div>
@@ -189,7 +233,7 @@ const LapChecklist = ({ lapId, topicId, ask, onMakeCommitment }: Props) => {
         <Input value={draft} onChange={(e) => setDraft(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") void addHeading(); }} placeholder="Add a topic we review every week…" className="bg-neutral-950 border-neutral-800 text-white" />
         <Button size="sm" onClick={() => void addHeading()} disabled={busy || !draft.trim()} className="text-white" style={{ backgroundColor: NLA_RED }}>Add</Button>
       </div>
-      <p className="text-[11px] text-white/35">Same lines every lap; ticks reset each Monday. Click a line for its note. Hover: ↵ adds a sub-line, + turns it into a commitment.</p>
+      <p className="text-[11px] text-white/35">Same lines every lap; ticks reset each Monday. Click a line for its note. Hover: ↵ adds a sub-line, + turns it into a commitment, the link icon makes it open a page.</p>
     </section>
   );
 };

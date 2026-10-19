@@ -17,6 +17,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useStaffPermissions } from "@/hooks/useStaffPermissions";
 import { useAsk } from "@/components/admin/AskDialog";
 import LapChecklist from "@/components/lap/LapChecklist";
+import { clearLapReturn } from "@/lib/lap/links";
 import { todayNY } from "@/lib/programYear";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -63,6 +64,7 @@ const AdminTheLap = () => {
   const { user } = useAuth();
   const { isSuperAdmin } = useStaffPermissions();
   const { ask, dialog } = useAsk();
+  useEffect(() => { clearLapReturn(); }, []);
 
   /* ───── Data ───── */
   const { data: allTopics = [] } = useQuery({
