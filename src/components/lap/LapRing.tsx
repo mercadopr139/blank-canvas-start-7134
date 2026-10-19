@@ -25,7 +25,8 @@ const LapRing = ({
   size?: number;
 }) => {
   const cx = size / 2, cy = size / 2;
-  const r = size * 0.4;
+  // Room around the track for the topic names (Josh, 2026-10-19: see the route, not just the markers).
+  const r = size * 0.33;
   const segs = segments(topics);
   const cps = checkpoints(topics);
   const current = cps[currentIndex];
@@ -62,8 +63,29 @@ const LapRing = ({
         return (
           <g key={cp.id} onClick={onPick ? () => onPick(cp) : undefined} style={onPick ? { cursor: "pointer" } : undefined}>
             <circle cx={p.x} cy={p.y} r={size * (isCurrent ? 0.024 : 0.016)} fill={done || isCurrent ? PILLAR_COLOR[cp.pillar] : "#0a0a0a"} stroke={done || isCurrent ? "#ffffff" : PILLAR_COLOR[cp.pillar]} strokeOpacity={done || isCurrent ? 1 : 0.6} strokeWidth={size * 0.005} />
+            {/* The topic's name, outside the track beside its marker: dim ahead,
+                solid once passed, white where the runner stands. */}
+            {(() => {
+              const lp = pointAt(cp.t, cx, cy, r * 1.17);
+              const onRight = lp.x > cx + 1, onLeft = lp.x < cx - 1;
+              const label = cp.title.length > 24 ? cp.title.slice(0, 22).trimEnd() + "…" : cp.title;
+              return (
+                <text
+                  x={lp.x} y={lp.y}
+                  textAnchor={onRight ? "start" : onLeft ? "end" : "middle"}
+                  dominantBaseline="central"
+                  fontSize={size * 0.021}
+                  fontWeight={isCurrent ? 800 : 600}
+                  fill={isCurrent ? "#ffffff" : PILLAR_COLOR[cp.pillar]}
+                  fillOpacity={isCurrent || done ? 1 : 0.55}
+                  style={{ letterSpacing: "0.02em" }}
+                >
+                  {label}
+                </text>
+              );
+            })()}
             {n > 0 && (
-              <g transform={`translate(${pointAt(cp.t, cx, cy, r * 1.16).x} ${pointAt(cp.t, cx, cy, r * 1.16).y})`}>
+              <g transform={`translate(${pointAt(cp.t, cx, cy, r * 0.86).x} ${pointAt(cp.t, cx, cy, r * 0.86).y})`}>
                 <circle r={size * 0.02} fill="#ffffff" />
                 <text textAnchor="middle" dominantBaseline="central" fontSize={size * 0.024} fontWeight={800} fill="#0a0a0a">{n}</text>
               </g>
