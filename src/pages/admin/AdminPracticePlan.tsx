@@ -27,7 +27,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import {
   ChevronLeft, ChevronRight, Plus, Loader2, Send, Monitor, Users,
-  X, Sparkles, CalendarDays, Trash2, Pencil, Check, RefreshCw, Eye, EyeOff, Dumbbell, ChevronUp, ChevronDown, ArrowUpToLine,
+  X, Sparkles, CalendarDays, Trash2, Pencil, Check, RefreshCw, Eye, EyeOff, Dumbbell, ChevronUp, ChevronDown, ArrowUpToLine, LayoutTemplate,
 } from "lucide-react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
@@ -806,9 +806,9 @@ const AdminPracticePlan = () => {
         <button
           type="button"
           onClick={() => switchTab("template")}
-          className={`mt-1.5 ml-1 text-xs inline-flex items-center gap-1 ${tab === "template" ? "text-white font-semibold" : "text-neutral-500 hover:text-neutral-300"}`}
+          className={`mt-1.5 ml-1 text-xs inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 border ${tab === "template" ? "border-dashed border-white/60 text-white font-semibold bg-white/5" : "border-transparent text-neutral-500 hover:text-neutral-300"}`}
         >
-          <Pencil className="w-3 h-3" /> Edit Template
+          <LayoutTemplate className="w-3 h-3" /> {tab === "template" ? "Editing the template" : "Edit Template"}
         </button>
         </div>
 
@@ -1715,9 +1715,22 @@ const TemplateView = ({
     return run(supabase.from("practice_spiritual_template" as never).upsert({ weekday, label: value, leader } as never, { onConflict: "weekday" } as never));
   };
 
+  // The template looks like the week on purpose — same cards, same editor —
+  // so it has to SAY it is the template (Josh, 2026-10-19): a blueprint look.
+  // Dashed borders, a faint hatch behind, a tag on every night, and a band
+  // that stays in view while scrolling. No new colour: every colour on this
+  // page already means something.
+  const BLUEPRINT = "repeating-linear-gradient(135deg, rgba(255,255,255,0.025) 0 2px, transparent 2px 14px)";
   return (
-    <div className="space-y-4">
-      <div className="rounded-xl border border-neutral-800 bg-neutral-900 p-4 flex items-center justify-between gap-4 flex-wrap">
+    <div className="space-y-4 rounded-2xl border-2 border-dashed border-white/25 p-3 md:p-4" style={{ backgroundImage: BLUEPRINT }}>
+      <div className="sticky top-2 z-10 rounded-xl border border-dashed border-white/40 bg-neutral-950/95 backdrop-blur px-4 py-2.5 flex items-center gap-3 flex-wrap shadow-2xl">
+        <span className="inline-flex items-center gap-1.5 rounded-full border border-dashed border-white/50 px-2.5 py-0.5 text-[10px] font-black uppercase tracking-[0.2em] text-white">
+          <LayoutTemplate className="w-3.5 h-3.5" /> Template
+        </span>
+        <p className="text-sm text-white font-semibold">You are editing the standing pattern — every week from now on.</p>
+        <p className="text-xs text-neutral-400">Not this week. The Practice Plan tab is this week.</p>
+      </div>
+      <div className="rounded-xl border border-dashed border-neutral-700 bg-neutral-900/80 p-4 flex items-center justify-between gap-4 flex-wrap">
         <div>
           <p className="text-sm font-semibold text-white">Season</p>
           <p className="text-xs text-neutral-500 mt-0.5">
@@ -1736,7 +1749,7 @@ const TemplateView = ({
         </Select>
       </div>
 
-      <div className="rounded-xl border border-neutral-800 bg-neutral-900 p-4 flex items-center justify-between gap-4 flex-wrap">
+      <div className="rounded-xl border border-dashed border-neutral-700 bg-neutral-900/80 p-4 flex items-center justify-between gap-4 flex-wrap">
         <div>
           <p className="text-sm font-semibold text-white">Practice starts</p>
           <p className="text-xs text-neutral-500 mt-0.5">What the gym board counts down to.</p>
@@ -1752,7 +1765,7 @@ const TemplateView = ({
         </Select>
       </div>
 
-      <div className="rounded-xl border border-neutral-800 bg-neutral-900 p-4 space-y-1">
+      <div className="rounded-xl border border-dashed border-neutral-700 bg-neutral-900/80 p-4 space-y-1">
         <p className="text-sm font-semibold text-white">Weekly template</p>
         <p className="text-xs text-neutral-500">
           Every week starts from this. What you write in a slot here is what an untouched week prints on the wall;
@@ -1767,13 +1780,16 @@ const TemplateView = ({
         const dormant = !days.some((x) => x.n === d.n);
         const sp = spiritual.find((s) => s.weekday === d.n);
         return (
-          <div key={d.n} className={`rounded-xl border border-neutral-800 bg-neutral-900 overflow-hidden ${dormant ? "opacity-50" : ""}`}>
-            <div className="flex items-center justify-between gap-3 px-4 py-3 border-b border-neutral-800">
+          <div key={d.n} className={`rounded-xl border border-dashed border-white/30 bg-neutral-900/80 overflow-hidden ${dormant ? "opacity-50" : ""}`}>
+            <div className="flex items-center justify-between gap-3 px-4 py-3 border-b border-dashed border-white/20">
               <div className="flex items-baseline gap-2.5">
                 <h3 className="text-white font-bold">{d.long}</h3>
                 <span className="text-xs text-neutral-500">every week</span>
                 {dormant && <span className="text-[10px] uppercase tracking-wider text-neutral-500">dormant · off season</span>}
               </div>
+              <span className="inline-flex items-center gap-1.5 rounded-full border border-dashed border-white/40 px-2 py-0.5 text-[9px] font-black uppercase tracking-[0.2em] text-white/80">
+                <LayoutTemplate className="w-3 h-3" /> Template
+              </span>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-3 divide-y md:divide-y-0 md:divide-x divide-neutral-800">
               {GROUPS.map((g) => {
