@@ -92,7 +92,6 @@ const FIN = "/admin/finance";
 export const APPS: AppEntry[] = [
   // ── Command Center ────────────────────────────────────────────────────
   { key: "app_message_board", label: "Message Board", group: "Command Center", routes: ["/admin/message-board"], opens: "Staff conversations they are a member of" },
-  { key: "app_agenda", label: "Agenda (old)", group: "Command Center", routes: ["/admin/agenda"], opens: "The weekly agenda before The Lap" },
   { key: "app_the_lap", label: "The Lap", group: "Command Center", routes: ["/admin/the-lap", "/admin/the-lap/history"], opens: "The weekly agenda: one lap around NLA. Only Josh starts a lap." },
   // Keeps its original key: the database rules on site photos check this one.
   { key: "manage_website_photos", label: "Website Photos", group: "Command Center", routes: ["/admin/website-photos"], opens: "Photos and the event banner on the public site" },

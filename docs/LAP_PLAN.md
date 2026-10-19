@@ -230,7 +230,15 @@ covers the phone). Add only if a real week demands it.
    by pillar — each commitment with owners, topic, carries, and what became
    of it (done / open / carried / dropped with reason), then that pillar's
    decisions. "Print this lap" prints the record alone, in black on white.
-7. Retire the old agenda after two laps.
+7. **Retire the old agenda.** — DONE 2026-10-19, on Josh's call after the
+   first lap. Removed from the code: `/admin/agenda`, `AdminAgenda.tsx`,
+   `src/components/admin/agenda/*`, the `app_agenda` app and its Staff
+   Management line; the dashboard's default "Weekly Agenda" tile is now
+   "The Lap", and the six saved dashboard tiles pointing at the old page were
+   repointed. **The data is kept**: the `agenda_*` tables (71 items, notes,
+   links, activity log) and `signals.source_agenda_item_id` stay in the
+   database untouched; a later migration can drop them once nobody misses
+   them. Staff Management rows for `app_agenda` are harmless leftovers.
 
 **Who starts a lap (Josh, 2026-10-19):** only Josh. The Start button is
 the Super Admin's alone; it keeps him present at every meeting. Chrissy

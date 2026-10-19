@@ -46,7 +46,7 @@ const BOXES = {
   // After step 3: an Admin, with her own Task Manager and the reviewer duty.
   chrissy: { access_admin: true, manage_website_photos: true, operations_scripture_coach_reviewer: true, task_manager_PC: true, task_manager_PD: false },
   // Invited, everything off, then one box checked.
-  jaime: { app_message_board: false, app_agenda: false, app_juniors_aftercare: true },
+  jaime: { app_message_board: false, app_the_lap: false, app_juniors_aftercare: true },
 };
 
 const Page = ({ name }: { name: string }) => <div>PAGE:{name}</div>;

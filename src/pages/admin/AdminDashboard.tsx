@@ -91,7 +91,7 @@ const DEPRECATED_TILE_HREFS = ["/admin/shared-task-board", "/admin/pd-task-manag
 const STATIC_DEFAULT_TILES = [
   { title: "Upcoming Events", subtitle: "Calendar reminders", icon_name: "calendar-days", accent_color: "#f59e0b", href: "__upcoming_events__", sort_order: 0, is_default: true },
   { title: "Message Board", subtitle: "Team communication & tasks", icon_name: "message-square", accent_color: "#bf0f3e", href: "/admin/message-board", sort_order: 100, is_default: true },
-  { title: "Weekly Agenda", subtitle: "Staff meeting review", icon_name: "list-todo", accent_color: "#bf0f3e", href: "/admin/agenda", sort_order: 101, is_default: true },
+  { title: "The Lap", subtitle: "The weekly agenda", icon_name: "flag", accent_color: "#bf0f3e", href: "/admin/the-lap", sort_order: 101, is_default: true },
   { title: "Settings", subtitle: "Staff Management", icon_name: "settings", accent_color: "#a1a1aa", href: "/admin/staff", sort_order: 102, is_default: true },
 ];
 
@@ -566,7 +566,7 @@ const AdminDashboard = () => {
     if (tile.href === "/admin/sales-marketing") return hasPillar("sales_marketing");
     if (tile.href === "/admin/finance") return hasPillar("finance");
     if (tile.href === "/admin/message-board") return hasPermission("app_message_board");
-    if (tile.href === "/admin/agenda") return hasPermission("app_agenda");
+    if (tile.href === "/admin/the-lap") return hasPermission("app_the_lap");
     const permKey = resolvePermKey(tile.href);
     if (!permKey) return true;
     return permLoading || hasPermission(permKey);

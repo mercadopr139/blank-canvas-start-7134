@@ -72,7 +72,6 @@ export const ACCESS_CARD: AccessPillar[] = [
 /** The Command Center tiles that are not Task Managers. */
 export const COMMAND_CENTER_LINES: AccessLine[] = [
   { key: "app_message_board", label: "Message Board" },
-  { key: "app_agenda", label: "Weekly Agenda (old)" },
   { key: "app_the_lap", label: "The Lap · weekly agenda" },
   { key: "manage_website_photos", label: "Website Photos" },
   { key: "app_corner_coach", label: "Corner Coach" },
