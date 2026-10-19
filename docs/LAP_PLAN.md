@@ -94,8 +94,13 @@ agenda's sub-items were gone. Most were review prompts, not tasks ("S&C
 included", "Review: Drivers' Schedule") — the same every week, never meant
 to clear. So each checkpoint has ONE flat level of lines ("Every week, we
 look at"), ticked as reviewed; ticks belong to the lap, so they reset each
-Monday. A line that needs doing becomes a commitment with "+". No nesting
-below a line, so the tree cannot grow back. Tables lap_checklist_items /
+Monday. A line that needs doing becomes a commitment with "+".
+Second pass the same day: TWO levels — a heading ("Daily Duties") with
+sub-lines under it — and a standing note on any line (click the line). A
+sub-line never has children: trigger lap_checklist_two_levels refuses a
+third level (migration 20261019170000). A heading with sub-lines is
+reviewed when all of them are; ticking it ticks them all. The seeded
+"Parent · Child" lines were split back into heading + sub-line. Tables lap_checklist_items /
 lap_checklist_ticks (migration 20261019160000), seeded from the old
 level-2 rows and level-3 rows flattened as "Parent · Child" (40 lines under
 11 checkpoints). Component src/components/lap/LapChecklist.tsx.
