@@ -5,7 +5,6 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, useParams, useNavigate, Navigate } from "react-router-dom";
 import { useEffect } from "react";
 import ScrollToTop from "./components/ScrollToTop";
-import LapReturnPill from "./components/lap/LapReturnPill";
 import { AuthProvider } from "./contexts/AuthContext";
 import ProtectedRoute from "./components/admin/ProtectedRoute";
 import ViewAsBanner from "./components/admin/ViewAsBanner";
@@ -175,7 +174,6 @@ const App = () => (
         <Sonner />
         <BrowserRouter>
           <ScrollToTop />
-          <LapReturnPill />
           <ViewAsBanner />
           <PasswordRecoveryRedirect />
           <Routes>

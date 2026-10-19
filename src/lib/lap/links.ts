@@ -1,8 +1,8 @@
 // A checklist line can open the page it is about (docs/LAP_PLAN.md). The
 // link is an app key from the registry, resolved to that app's first plain
 // route, so routes can move without the checklist breaking. Leaving the Lap
-// this way sets a flag; the "Back to the lap" pill shows until the Lap is
-// opened again, however deep the visit went.
+// this way sets a flag; the section header's back arrow then returns to the
+// Lap instead of the section home, until the Lap is opened again.
 import { APPS, APP_GROUPS, type AppEntry } from "@/config/appRegistry";
 
 export const LAP_RETURN_KEY = "nla-lap-return";

@@ -2,6 +2,7 @@ import { useState, type ReactNode } from "react";
 import { useNavigate, useLocation, Outlet } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, Menu, X, ExternalLink, ChevronDown, Lock } from "lucide-react";
+import { clearLapReturn, hasLapReturn } from "@/lib/lap/links";
 import type { LucideIcon } from "lucide-react";
 import PoweredByQuiktech from "@/components/admin/PoweredByQuiktech";
 import { LockedPanel } from "@/components/admin/AppDoor";
@@ -226,10 +227,14 @@ const AdminSectionLayout = ({
     <div className="min-h-screen bg-black text-white flex flex-col">
       <header className="bg-black border-b border-white/10 flex-shrink-0 z-30">
         <div className="px-4 py-4 flex items-center gap-3">
+          {/* The same arrow on every page. Came here from a checklist line on
+              the Lap mid-meeting? Then it goes back to the Lap, not this
+              section's home (Josh, 2026-10-19: consistency). */}
           <Button
             variant="ghost"
             size="icon"
-            onClick={() => navigate(backHref)}
+            onClick={() => { if (hasLapReturn()) { clearLapReturn(); navigate("/admin/the-lap"); } else navigate(backHref); }}
+            title={hasLapReturn() ? "Back to the lap" : undefined}
             className="text-white hover:bg-white/10 hover:text-white"
           >
             <ArrowLeft className="w-5 h-5" />
