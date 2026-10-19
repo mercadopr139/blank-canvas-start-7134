@@ -16,6 +16,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useStaffPermissions } from "@/hooks/useStaffPermissions";
 import { useAsk } from "@/components/admin/AskDialog";
+import LapChecklist from "@/components/lap/LapChecklist";
 import { todayNY } from "@/lib/programYear";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -338,6 +339,12 @@ const AdminTheLap = () => {
 
   /* ───── Commitments and decisions ───── */
   const [newTitle, setNewTitle] = useState("");
+  const newTitleRef = useRef<HTMLInputElement>(null);
+  /** A checklist line that needs doing: prefill the commitment box and put the cursor there. */
+  const makeCommitmentFrom = (title: string) => {
+    setNewTitle(title);
+    requestAnimationFrame(() => { newTitleRef.current?.focus(); newTitleRef.current?.select(); });
+  };
   const [owners, setOwners] = useState<Record<string, boolean>>({});
   const [onPlan, setOnPlan] = useState(false);
   useEffect(() => { if (managers.length && !Object.keys(owners).length) setOwners(Object.fromEntries(managers.map((m) => [m.key, m.key === "PD" || m.key === "PC"]))); }, [managers, owners]);
@@ -656,6 +663,9 @@ const AdminTheLap = () => {
               </div>
             </div>
 
+            {/* The standing checklist: what we look at every week here. */}
+            <LapChecklist lapId={lap.id} topicId={current.id} ask={ask} onMakeCommitment={makeCommitmentFrom} />
+
             {/* The numbers for this topic, this week against last. */}
             {numbers.length > 0 && (
               <section className="rounded-2xl border border-white/10 bg-neutral-900/60 p-5">
@@ -719,7 +729,7 @@ const AdminTheLap = () => {
                 })}
               </ul>
               <div className="pt-2 border-t border-white/10 space-y-2">
-                <Input value={newTitle} onChange={(e) => setNewTitle(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") void addCommitment(); }} placeholder="Add a commitment…" className="bg-neutral-950 border-neutral-800 text-white" />
+                <Input ref={newTitleRef} value={newTitle} onChange={(e) => setNewTitle(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") void addCommitment(); }} placeholder="Add a commitment…" className="bg-neutral-950 border-neutral-800 text-white" />
                 <div className="flex flex-wrap items-center gap-3 text-sm">
                   {managers.map((m) => (
                     <label key={m.key} className="inline-flex items-center gap-1.5 text-white/70">

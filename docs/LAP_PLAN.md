@@ -86,8 +86,19 @@ per-pillar counts, carried/dropped. A streak counter (laps in a row). A
 sales_marketing #22c55e, finance #38bdf8 — everywhere: ring, checkpoints,
 flags, confetti.
 
-**Not in it:** a timer; sound; sub-tasks; Pending Review/Reviewed; Reset
-Week; the agenda_items tree.
+**Not in it:** a timer; sound; Pending Review/Reviewed; Reset Week; the
+agenda_items tree (the nested task levels).
+
+**Added 2026-10-19, the standing checklist.** Josh asked why the old
+agenda's sub-items were gone. Most were review prompts, not tasks ("S&C
+included", "Review: Drivers' Schedule") — the same every week, never meant
+to clear. So each checkpoint has ONE flat level of lines ("Every week, we
+look at"), ticked as reviewed; ticks belong to the lap, so they reset each
+Monday. A line that needs doing becomes a commitment with "+". No nesting
+below a line, so the tree cannot grow back. Tables lap_checklist_items /
+lap_checklist_ticks (migration 20261019160000), seeded from the old
+level-2 rows and level-3 rows flattened as "Parent · Child" (40 lines under
+11 checkpoints). Component src/components/lap/LapChecklist.tsx.
 
 ## What makes it a real operating tool (added 2026-10-19, "operations cap")
 
