@@ -120,5 +120,9 @@ Week; the agenda_items tree.
 5. **Record + print.** Lap history page, print view, streak.
 6. Retire the old agenda.
 
+**Who starts a lap (Josh, 2026-10-19):** only Josh. The Start button is
+the Super Admin's alone; it keeps him present at every meeting. Chrissy
+does everything else on the screen once a lap is open.
+
 Open for Josh: the vision statement text for the finish card (the site's
-Vision page has one); whether Chrissy can start a lap without Josh.
+Vision page has one).
