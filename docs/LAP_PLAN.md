@@ -198,8 +198,18 @@ covers the phone). Add only if a real week demands it.
    smaller commitment replaces it) or hand it to another owner. Start stays
    disabled until no open commitment is left. Exercised against production
    as Josh, rolled back.
-4. **Numbers and the horizon.** Live per-topic numbers; the two-week strip and
-   `lap_dates`; new-messages flags from the message board.
+4. **Numbers and the horizon.** — BUILT 2026-10-19. `src/lib/lap/numbers.ts`:
+   per-topic numbers this week vs last (unique NLA youth + approved
+   registrations; meals + nights; runs + runs never closed out; Hawk Squad
+   and BAM students; next excursion; revenue month to date; donations this
+   month; grants in play + next due; next event) shown in a "The numbers"
+   card at the checkpoint. "Coming up · next two weeks" at the start line
+   from program events, excursions, grant due dates and `lap_dates`
+   (migration `20261019140000` applied; "Add a date" asks what / when /
+   every year?). "The message board moved in …" at the start line and a
+   per-pillar line at the checkpoint, counting conversations with messages
+   since the last lap finished. Read against production as Josh: every
+   source answers (and 52 runs were never closed out — a real finding).
 5. **Message board link.** Pin a conversation to a checkpoint; the lap
    summary posted to the "Agenda Meeting" conversation; the morning-of
    reminder.

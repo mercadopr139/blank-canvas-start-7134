@@ -21,9 +21,10 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import {
-  ArrowLeft, Flag, Play, Pause, ChevronLeft, ChevronRight, Check, Circle, Maximize2, Minimize2, Settings2, Loader2, Trophy, Sparkles, Forward, Trash2, Split,
+  ArrowLeft, Flag, Play, Pause, ChevronLeft, ChevronRight, Check, Circle, Maximize2, Minimize2, Settings2, Loader2, Trophy, Sparkles, Forward, Trash2, Split, CalendarDays, MessageSquare, Plus,
 } from "lucide-react";
 import { groupForWarmup, warmupGate, mustDecide, type WarmupGroup } from "@/lib/lap/warmup";
+import { fetchTopicNumbers, fetchComingUp, fetchMovedConversations } from "@/lib/lap/numbers";
 import LapRing from "@/components/lap/LapRing";
 import { runningOrder, checkpoints, crossedPillar, streak as streakOf, PILLAR_LABEL, type RingTopic, type Pillar } from "@/lib/lap/ring";
 import { PILLAR_COLOR, commitmentSourceFor, carryTone, type CarryTone } from "@/lib/lap/commitments";
@@ -143,6 +144,35 @@ const AdminTheLap = () => {
       return (data ?? []) as unknown as Decision[];
     },
   });
+
+  // The data comes to the checkpoint. Read-only, from the tables the
+  // Intelligence pages use; refreshed when the runner moves.
+  const { data: numbers = [] } = useQuery({
+    queryKey: ["lap-numbers", lap?.current_topic_id ?? "none"],
+    enabled: !!lap?.current_topic_id,
+    queryFn: () => fetchTopicNumbers(allTopics.find((t) => t.id === lap!.current_topic_id)?.title ?? ""),
+  });
+  // The next two weeks — a heads-up only.
+  const { data: comingUp = [] } = useQuery({ queryKey: ["lap-coming-up"], queryFn: () => fetchComingUp() });
+  // What moved on the message board since the last lap finished.
+  const { data: moved = null } = useQuery({
+    queryKey: ["lap-moved", lastLap?.id ?? lap?.id ?? "none"],
+    enabled: !!(lastLap || lap),
+    queryFn: async () => {
+      const { data } = await supabase.from("laps" as never).select("finished_at, started_at").in("status", ["finished", "incomplete"]).order("started_at", { ascending: false }).limit(1).maybeSingle();
+      const row = data as unknown as { finished_at: string | null; started_at: string } | null;
+      const since = row?.finished_at ?? row?.started_at ?? new Date(Date.now() - 7 * 86_400_000).toISOString();
+      return fetchMovedConversations(since);
+    },
+  });
+  const addDate = async () => {
+    const r = await ask.prompt({ title: "Add a date to the strip", body: "Something the back end doesn't know about — a renewal, a deadline, a visit.", fields: [{ key: "title", label: "What" }, { key: "date", label: "Date (YYYY-MM-DD)" }, { key: "yearly", label: "Every year? (yes / no)", defaultValue: "no", required: false }] });
+    if (!r?.title.trim() || !/^\d{4}-\d{2}-\d{2}$/.test(r.date.trim())) { if (r) toast.error("The date needs to look like 2026-11-15."); return; }
+    const { error } = await supabase.from("lap_dates" as never).insert({ title: r.title.trim(), on_date: r.date.trim(), recurring_every: /^y/i.test(r.yearly ?? "") ? "year" : null, created_by: user?.id ?? null } as never);
+    if (error) { toast.error(error.message); return; }
+    qc.invalidateQueries({ queryKey: ["lap-coming-up"] });
+  };
+  const fmtDay = (ymd: string) => new Date(`${ymd}T12:00:00`).toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" });
 
   // A lap left open for a week is not this week's lap.
   useEffect(() => {
@@ -388,6 +418,36 @@ const AdminTheLap = () => {
             <p className="text-white/60">
               {order.length} checkpoints: {order.filter((t) => t.pillar === "operations").length} in Operations, {order.filter((t) => t.pillar === "sales_marketing").length} in Sales & Marketing, {order.filter((t) => t.pillar === "finance").length} in Finance. The finish line is the Vision.
             </p>
+            {/* Coming up — the next two weeks. A heads-up; the lap never asks for action on it. */}
+            <section className="rounded-2xl border border-white/10 bg-neutral-900/60 p-4">
+              <div className="flex items-center justify-between">
+                <h3 className="font-bold text-sm uppercase tracking-wide text-white/60 inline-flex items-center gap-2"><CalendarDays className="w-4 h-4" /> Coming up · next two weeks</h3>
+                <button type="button" onClick={() => void addDate()} className="text-[11px] text-white/45 hover:text-white inline-flex items-center gap-1"><Plus className="w-3.5 h-3.5" /> Add a date</button>
+              </div>
+              {comingUp.length === 0 ? (
+                <p className="text-sm text-white/35 mt-2">Nothing on the calendar in the next two weeks.</p>
+              ) : (
+                <ul className="mt-2 space-y-1">
+                  {comingUp.map((c, i) => (
+                    <li key={`${c.date}-${c.title}-${i}`} className="text-sm flex items-center gap-3">
+                      <span className="w-24 shrink-0 text-white/45 tabular-nums">{fmtDay(c.date)}</span>
+                      <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ backgroundColor: c.pillar ? PILLAR_COLOR[c.pillar] : "#ffffff55" }} />
+                      <span className="text-white/85 truncate">{c.title}</span>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </section>
+
+            {moved && (moved.operations + moved.sales_marketing + moved.finance) > 0 && (
+              <p className="text-sm text-white/55 inline-flex items-center gap-2">
+                <MessageSquare className="w-4 h-4" /> Since the last lap, the message board moved in
+                {(["operations", "sales_marketing", "finance"] as const).filter((p) => moved[p] > 0).map((p) => (
+                  <span key={p} className="font-semibold" style={{ color: PILLAR_COLOR[p] }}>{PILLAR_LABEL[p]} ({moved[p]})</span>
+                ))}
+              </p>
+            )}
+
             {lastLap && (
               <p className="text-sm text-white/50">
                 Last lap: {new Date(`${lastLap.meeting_date}T12:00:00`).toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" })}
@@ -516,6 +576,29 @@ const AdminTheLap = () => {
                 </div>
               </div>
             </div>
+
+            {/* The numbers for this topic, this week against last. */}
+            {numbers.length > 0 && (
+              <section className="rounded-2xl border border-white/10 bg-neutral-900/60 p-5">
+                <h3 className="font-bold text-sm uppercase tracking-wide text-white/60 mb-3">The numbers</h3>
+                <div className="grid gap-3 sm:grid-cols-2">
+                  {numbers.map((st) => (
+                    <div key={st.label} className="rounded-xl bg-white/[0.04] px-3 py-2.5">
+                      <p className="text-[11px] uppercase tracking-wide text-white/40">{st.label}</p>
+                      <p className="text-xl font-black leading-tight mt-0.5">{st.value}</p>
+                      {(st.prev || st.note) && <p className="text-[11px] text-white/45 mt-0.5">{st.prev ?? st.note}</p>}
+                    </div>
+                  ))}
+                </div>
+              </section>
+            )}
+            {/* What moved on the message board in this pillar since the last lap. */}
+            {moved && moved[current.pillar] > 0 && (
+              <button type="button" onClick={() => navigate("/admin/message-board")} className="w-full text-left rounded-xl border border-white/10 bg-white/[0.03] px-4 py-2.5 text-sm text-white/70 hover:bg-white/[0.06] inline-flex items-center gap-2">
+                <MessageSquare className="w-4 h-4" style={{ color: PILLAR_COLOR[current.pillar] }} />
+                {moved[current.pillar]} {PILLAR_LABEL[current.pillar]} conversation{moved[current.pillar] === 1 ? "" : "s"} moved on the message board since the last lap
+              </button>
+            )}
 
             {/* Commitments at this checkpoint */}
             <section className="rounded-2xl border border-white/10 bg-neutral-900/60 p-5 space-y-3">
