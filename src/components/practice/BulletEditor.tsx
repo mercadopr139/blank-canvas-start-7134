@@ -45,7 +45,8 @@ const BulletEditor = ({
   dark = false,
   className = "",
   textClassName = "text-base",
-  placeholder = "Type a drill. Enter for the next, Tab to nest.",
+  // Empty stays empty — no hint text in the box (Josh, 2026-10-19).
+  placeholder = "",
   autoFocus = false,
 }: {
   defaultValue: string | null | undefined;

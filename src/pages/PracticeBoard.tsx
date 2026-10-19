@@ -1036,7 +1036,7 @@ const PracticeBoard = () => {
                           setPointDraft("");
                         }
                       }}
-                      placeholder="No gym tomorrow · Raffle tickets are due…"
+                      placeholder=""
                       className="flex-1 rounded-lg bg-black/60 border border-white/15 px-3 py-1.5 text-xs text-white outline-none focus:border-white/40"
                     />
                     <Button
@@ -1191,7 +1191,7 @@ const PracticeBoard = () => {
                           setReminderDraft("");
                         }
                       }}
-                      placeholder="Event Tomorrow — Must Set Up"
+                      placeholder=""
                       className="flex-1 rounded-lg bg-black/60 border border-white/15 px-2 py-1.5 text-xs text-white outline-none focus:border-white/40"
                     />
                     <Button

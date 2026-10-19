@@ -72,7 +72,7 @@ export const SplitLanesEditor = ({
               dark={dark}
               textClassName="text-[13px]"
               className="min-h-[48px] !px-2.5 !py-1.5 rounded-md"
-              placeholder="Drills, one per line"
+              placeholder=""
               onSave={(v) => saveText(i, v)}
             />
           </div>

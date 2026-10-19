@@ -1636,7 +1636,6 @@ const TemplateBlockEditor = ({
         accent={blockAccent(block.category, accent)}
         textClassName="text-sm"
         className="min-h-[56px]"
-        placeholder="Standing drills — what this slot says every week unless the week says otherwise."
         onSave={(v) => { if (v !== (block.detail || null)) onDetail(v); }}
       />
     </div>
