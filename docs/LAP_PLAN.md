@@ -89,11 +89,67 @@ flags, confetti.
 **Not in it:** a timer; sound; sub-tasks; Pending Review/Reviewed; Reset
 Week; the agenda_items tree.
 
+## What makes it a real operating tool (added 2026-10-19, "operations cap")
+
+**Flexibility**
+- Topics are editable from the lap: add one mid-meeting (joins the ring at
+  the current spot), rename in place, drag to reorder, retire (never delete —
+  history and open commitments survive under it). A new topic is either
+  *this lap only* or *added to the template*; template changes apply from
+  the next lap, never mid-lap.
+- Pause and resume: an interrupted lap resumes where it stopped. A lap open
+  more than 7 days closes as *incomplete* so it never blocks the next one.
+- A lap can be run by Josh alone; the other's commitments wait in their tile.
+
+**The data comes to the checkpoint (no one has to remember)**
+- Live numbers per topic, this week vs last: Registration & Attendance →
+  unique youth; Meal Train → meals and nights; Transportation → trips and
+  unclosed trips; Hawk Squad / BAM → attendance; Budget → month-to-date
+  revenue; Excursions → next trip and roster count. Read-only, from the same
+  queries the Intelligence pages use.
+- A **30-day horizon** strip at the start line, repeated at the matching
+  checkpoint: program events, excursions, grant deadlines (O.C.E.A.N. Oct
+  30), 990 and insurance renewals, USA Boxing deadlines. Source: a small
+  `lap_dates` table (title, date, pillar, topic, recurring) plus program
+  events and grant folders' due dates.
+- Message-board conversations with **new messages since the last lap** are
+  flagged at their pillar; the rest sit quietly.
+
+**Accountability on the week it matters**
+- A commitment carried forward twice turns red; carried three times the lap
+  asks for a decision: split it, reassign it, or drop it with a reason.
+- **Decisions, not just tasks**: a checkpoint can hold a one-line "we
+  decided" with a date, kept on the lap record. Why the schedule changed is
+  findable six months later.
+- A commitment can be put straight onto Today's Plan (or a day this week)
+  as it is created — the Workbench "+" without leaving the lap.
+- **Morning-of reminder** to both at 8 AM on lap day (the aftercare
+  reminder engine), listing last week's open commitments.
+
+**Visibility after the meeting**
+- The lap summary is **posted to the message board** in the existing
+  "Agenda Meeting" conversation: date, commitments by owner, decisions,
+  carried/dropped. That is what Chrissy reads on her phone that night.
+- **Lap history**: every past lap by date, printable, with its commitments
+  and decisions. Streak counter.
+
+**Left out on purpose (first version):** timer, sound, scoring people
+against each other, AI summaries, a phone layout (the message board already
+covers the phone). Add only if a real week demands it.
+
 ## Data
 
 - `lap_topics` (id, pillar, title, sort_order, is_active) — seeded from the
   21 `agenda_items` depth-1 rows. Editable from the lap's settings.
-- `laps` (id, meeting_date, started_by, finished_at, stats jsonb).
+- `laps` (id, meeting_date, started_by, started_at, paused_at, finished_at,
+  status applying|open|finished|incomplete, current_topic_id, stats jsonb).
+- `lap_topics` also: `retired_at`, `this_lap_only_lap_id`.
+- `lap_decisions` (id, lap_id, topic_id, text, created_by, created_at).
+- `lap_dates` (id, title, on_date, pillar, topic_id, recurring_every text
+  null, source text) — the horizon; seeded with O.C.E.A.N. Oct 30, the 990
+  and insurance renewals once Josh gives the dates.
+- `signals` also: `carry_count` (turns red at 2, forces a decision at 3),
+  `dropped_reason`.
 - `signals` gains `lap_id`, `lap_topic_id`, `carried_from_signal_id`,
   `owner_user_ids uuid[]` (two owners on one row; the Workbench shows a row
   in a tile when the manager's owner is in the array **or** `source` matches,
@@ -107,18 +163,24 @@ Week; the agenda_items tree.
 
 ## Build order (one step at a time; show Josh after each; he says push)
 
-1. **Data + Agenda Meeting tile.** Migration above; seed topics; the tile
-   appears on every Workbench; two-owner rows show in both tiles. No lap
-   screen yet — Josh can already add a commitment from the Workbench.
-2. **The Lap screen, walk-through only.** Ring, checkpoints, runner,
-   per-checkpoint panels, Add a commitment, Vision finish, confetti, saved
-   lap + streak. Opened from the Operations sidebar as "The Lap".
-3. **Warm-up.** Last lap's commitments, done/carry/drop, gate on the start.
-4. **Message board link.** Pin a conversation to a checkpoint from the
-   board; conversations appear at checkpoints; "send to Workbench" from a
-   checkpoint keeps the lap tag.
-5. **Record + print.** Lap history page, print view, streak.
-6. Retire the old agenda.
+1. **Data + Agenda Meeting tile.** Migration above; seed the 21 topics; the
+   tile appears on every Workbench; two-owner rows show in both tiles. No
+   lap screen yet — Josh can already add a commitment from the Workbench.
+2. **The Lap screen, walk-through.** Ring, checkpoints, runner, per-
+   checkpoint panels, Add a commitment (with owners and the plan "+"),
+   decisions, topic add/rename/reorder/retire from the lap, pause/resume,
+   Vision finish, confetti, saved lap + streak. Only Josh starts a lap.
+   Opened from the Operations sidebar as "The Lap".
+3. **Warm-up.** Last lap's commitments, done / carry / drop with reason,
+   carry_count colouring and the forced decision at three; gate on the
+   start.
+4. **Numbers and the horizon.** Live per-topic numbers; the 30-day strip and
+   `lap_dates`; new-messages flags from the message board.
+5. **Message board link.** Pin a conversation to a checkpoint; the lap
+   summary posted to the "Agenda Meeting" conversation; the morning-of
+   reminder.
+6. **Record + print.** Lap history, print view.
+7. Retire the old agenda after two laps.
 
 **Who starts a lap (Josh, 2026-10-19):** only Josh. The Start button is
 the Super Admin's alone; it keeps him present at every meeting. Chrissy
