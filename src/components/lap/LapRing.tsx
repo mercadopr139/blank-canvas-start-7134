@@ -24,9 +24,11 @@ const LapRing = ({
   onPick?: (cp: Checkpoint) => void;
   size?: number;
 }) => {
-  const cx = size / 2, cy = size / 2;
-  // Room around the track for the topic names (Josh, 2026-10-19: see the route, not just the markers).
-  const r = size * 0.33;
+  // The drawing is wider than the ring so the names on the left and right
+  // print in full (Josh, 2026-10-19: "I need to see the entire spelling").
+  const width = size * 1.7, height = size;
+  const cx = width / 2, cy = height / 2;
+  const r = size * 0.36;
   const segs = segments(topics);
   const cps = checkpoints(topics);
   const current = cps[currentIndex];
@@ -36,7 +38,7 @@ const LapRing = ({
   const runner = finished ? start : current ? pointAt(current.t, cx, cy, r) : start;
 
   return (
-    <svg viewBox={`0 0 ${size} ${size}`} width="100%" height="100%" className="max-h-[70vh]" role="img" aria-label="The lap">
+    <svg viewBox={`0 0 ${width} ${height}`} width="100%" height="100%" className="max-h-[70vh]" role="img" aria-label="The lap">
       {/* The dim track, per pillar. */}
       {segs.map((s) => (
         <path key={`dim-${s.pillar}`} d={arcPath(s.from, s.to, cx, cy, r)} fill="none" stroke={PILLAR_COLOR[s.pillar]} strokeOpacity={0.22} strokeWidth={size * 0.055} strokeLinecap="butt" />
@@ -68,7 +70,7 @@ const LapRing = ({
             {(() => {
               const lp = pointAt(cp.t, cx, cy, r * 1.17);
               const onRight = lp.x > cx + 1, onLeft = lp.x < cx - 1;
-              const label = cp.title.length > 24 ? cp.title.slice(0, 22).trimEnd() + "…" : cp.title;
+              const label = cp.title;
               return (
                 <text
                   x={lp.x} y={lp.y}

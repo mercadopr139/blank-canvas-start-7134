@@ -307,7 +307,7 @@ const AdminTheLap = () => {
       ) : !lap ? (
         /* ───── Before the start line ───── */
         <main className="flex-1 grid lg:grid-cols-[1fr_1fr] gap-8 p-6 lg:p-10 items-center">
-          <div className="max-w-[560px] mx-auto w-full"><LapRing topics={order} currentIndex={-1} visited={new Set()} flags={{}} /></div>
+          <div className="max-w-[880px] mx-auto w-full"><LapRing topics={order} currentIndex={-1} visited={new Set()} flags={{}} /></div>
           <div className="space-y-5 max-w-xl">
             <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-white/40">Start line</p>
             <h2 className="text-3xl font-black">One lap around NLA.</h2>
@@ -333,7 +333,7 @@ const AdminTheLap = () => {
       ) : atFinish ? (
         /* ───── The finish line ───── */
         <main className="flex-1 grid lg:grid-cols-[1fr_1fr] gap-8 p-6 lg:p-10 items-center">
-          <div className="max-w-[560px] mx-auto w-full"><LapRing topics={order} currentIndex={-1} visited={visited} flags={flags} finished /></div>
+          <div className="max-w-[880px] mx-auto w-full"><LapRing topics={order} currentIndex={-1} visited={visited} flags={flags} finished /></div>
           <div className="space-y-5 max-w-xl">
             <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-white/40">Finish line · the Vision</p>
             <p className="text-xl leading-relaxed text-white/90">{VISION_TEXT}</p>
@@ -349,7 +349,7 @@ const AdminTheLap = () => {
       ) : current ? (
         /* ───── A checkpoint ───── */
         <main className="flex-1 grid lg:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)] gap-6 p-5 lg:p-8 items-start">
-          <div className="max-w-[560px] mx-auto w-full">
+          <div className="max-w-[880px] mx-auto w-full">
             <LapRing topics={order} currentIndex={currentIndex} visited={visited} flags={flags} onPick={(cp) => void moveTo(cp.index)} />
             <div className="flex items-center justify-center gap-3 mt-2">
               <Button variant="outline" size="sm" disabled={currentIndex === 0} onClick={() => void moveTo(currentIndex - 1)} className="bg-transparent border-white/20 text-white/80 hover:bg-white/10 hover:text-white"><ChevronLeft className="w-4 h-4" /> Back</Button>
