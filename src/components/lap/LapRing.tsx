@@ -45,9 +45,10 @@ const LapRing = ({
           <feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge>
         </filter>
       </defs>
-      {/* Ahead: a light, neutral track — no colour until it has been run. */}
+      {/* Ahead: the pillar colours, soft, so the three pillars read from the
+          start (Josh, 2026-10-19: an all-grey ring threw him off). */}
       {segs.map((s) => (
-        <path key={`dim-${s.pillar}`} d={arcPath(s.from, s.to, cx, cy, r)} fill="none" stroke="#ffffff" strokeOpacity={0.16} strokeWidth={size * 0.055} strokeLinecap="butt" />
+        <path key={`dim-${s.pillar}`} d={arcPath(s.from, s.to, cx, cy, r)} fill="none" stroke={PILLAR_COLOR[s.pillar]} strokeOpacity={0.3} strokeWidth={size * 0.055} strokeLinecap="butt" />
       ))}
       {/* Behind: the pillar colour lights up as the runner passes. */}
       {segs.map((s) => {
@@ -70,7 +71,7 @@ const LapRing = ({
         const n = flags[cp.id] ?? 0;
         return (
           <g key={cp.id} onClick={onPick ? () => onPick(cp) : undefined} style={onPick ? { cursor: "pointer" } : undefined}>
-            <circle cx={p.x} cy={p.y} r={size * (isCurrent ? 0.024 : 0.016)} fill={done || isCurrent ? PILLAR_COLOR[cp.pillar] : "#0a0a0a"} stroke="#ffffff" strokeOpacity={done || isCurrent ? 1 : 0.45} strokeWidth={size * 0.005} />
+            <circle cx={p.x} cy={p.y} r={size * (isCurrent ? 0.024 : 0.016)} fill={done || isCurrent ? PILLAR_COLOR[cp.pillar] : "#0a0a0a"} stroke={done || isCurrent ? "#ffffff" : PILLAR_COLOR[cp.pillar]} strokeOpacity={done || isCurrent ? 1 : 0.7} strokeWidth={size * 0.005} />
             {/* The topic's name, outside the track beside its marker: dim ahead,
                 solid once passed, white where the runner stands. */}
             {(() => {
@@ -84,8 +85,8 @@ const LapRing = ({
                   dominantBaseline="central"
                   fontSize={size * 0.021}
                   fontWeight={isCurrent ? 800 : 600}
-                  fill={isCurrent ? "#ffffff" : done ? PILLAR_COLOR[cp.pillar] : "#ffffff"}
-                  fillOpacity={isCurrent || done ? 1 : 0.38}
+                  fill={isCurrent ? "#ffffff" : PILLAR_COLOR[cp.pillar]}
+                  fillOpacity={isCurrent || done ? 1 : 0.5}
                   style={{ letterSpacing: "0.02em" }}
                 >
                   {label}
