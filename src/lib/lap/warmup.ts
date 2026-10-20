@@ -17,6 +17,7 @@ export interface WarmupRow {
   source: string | null;
   lap_id: string | null;
   lap_topic_id: string | null;
+  lap_checklist_item_id?: string | null;
   lap_commitment_id: string | null;
   carry_count: number;
   is_archived?: boolean;
@@ -33,11 +34,11 @@ export interface WarmupGroup {
   topicId: string | null;
 }
 
-/** Rows → commitments, each with its state. Dropped (archived) rows are left out. */
+/** Rows → goals, each with its state. Dropped (archived, not done) rows are left out; a done goal archived off the tiles at the finish still shows as done. */
 export const groupForWarmup = (rows: WarmupRow[], lastLapId: string | null): WarmupGroup[] => {
   const by = new Map<string, WarmupRow[]>();
   for (const r of rows) {
-    if (r.is_archived) continue;
+    if (r.is_archived && r.status !== "Complete") continue;
     const k = r.lap_commitment_id ?? r.id;
     (by.get(k) ?? by.set(k, []).get(k)!).push(r);
   }

@@ -25,7 +25,7 @@ const LapPinSelect = ({ conversationId, pillar, value }: { conversationId: strin
     if (error) { toast.error(`Couldn't pin: ${error.message}`); return; }
     qc.invalidateQueries({ queryKey: ["mb-conversations"] });
     qc.invalidateQueries({ queryKey: ["lap-conversations"] });
-    toast.success(topicId ? `Pinned to ${topics.find((t) => t.id === topicId)?.title ?? "the lap"}.` : "Unpinned from the lap.");
+    toast.success(topicId ? `Pinned to ${topics.find((t) => t.id === topicId)?.title ?? "the Lap"}.` : "Unpinned from the Lap.");
   };
 
   const pinned = topics.find((t) => t.id === value) ?? null;
@@ -43,7 +43,7 @@ const LapPinSelect = ({ conversationId, pillar, value }: { conversationId: strin
           aria-label="Pin to a lap checkpoint"
         >
           <Flag className="w-3.5 h-3.5" style={{ color: "#bf0f3e" }} />
-          <span className="max-w-[160px] truncate">{pinned ? `On the lap: ${pinned.title}` : "Pin to the lap"}</span>
+          <span className="max-w-[160px] truncate">{pinned ? `On the Lap: ${pinned.title}` : "Pin to the Lap"}</span>
           <ChevronDown className="w-3 h-3 opacity-60" />
         </button>
       </DropdownMenuTrigger>
@@ -59,7 +59,7 @@ const LapPinSelect = ({ conversationId, pillar, value }: { conversationId: strin
           <>
             <DropdownMenuSeparator className="bg-white/10" />
             <DropdownMenuItem onSelect={() => void pin("")} className="cursor-pointer text-zinc-400 focus:text-white focus:bg-white/10">
-              <span className="w-4 mr-1.5" />Take off the lap
+              <span className="w-4 mr-1.5" />Take off the Lap
             </DropdownMenuItem>
           </>
         )}

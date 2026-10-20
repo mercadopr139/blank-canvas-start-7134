@@ -25,6 +25,14 @@ describe("The Lap — the warm-up (last lap's commitments)", () => {
     expect(groups.map((g) => [g.key, g.state])).toEqual([["c-c", "carried"]]);
   });
 
+  it("still shows a done goal that was archived off the tiles when its lap finished, and leaves a dropped one out", () => {
+    const groups = groupForWarmup([
+      row({ id: "f1", lap_commitment_id: "c-f", status: "Complete", is_archived: true }),
+      row({ id: "g1", lap_commitment_id: "c-g", status: "Pending", is_archived: true }),
+    ], LAST);
+    expect(groups.map((g) => [g.key, g.state])).toEqual([["c-f", "done"]]);
+  });
+
   it("puts open commitments first, the most-carried on top, then carried, then done", () => {
     const groups = groupForWarmup([
       row({ id: "1", lap_commitment_id: "done", status: "Complete" }),

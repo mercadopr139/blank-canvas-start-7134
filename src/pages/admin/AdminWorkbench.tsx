@@ -9,7 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import {
   ArrowLeft, LogOut, Plus, Pencil, GripVertical, Lock,
   Circle, CheckCircle2, ArrowRight, Trophy, MessageSquare, Archive,
-  Target, ChevronDown, X, Save,
+  Target, ChevronDown, X, Save, Forward,
 } from "lucide-react";
 import { icons } from "lucide-react";
 import { toast } from "sonner";
@@ -18,6 +18,10 @@ import nlaLogo from "@/assets/nla-logo-white.png";
 import FocusAreaModal from "@/components/admin/FocusAreaModal";
 import InTheWorksPennant from "@/components/admin/InTheWorksPennant";
 import DailyVerse from "@/components/admin/DailyVerse";
+import WeeklyGoalDialog from "@/components/lap/WeeklyGoalDialog";
+import { AGENDA_TILE_KEY } from "@/lib/lap/commitments";
+import { dropGoal, carryGoalNow, refreshGoals } from "@/lib/lap/goals";
+import { useAsk } from "@/components/admin/AskDialog";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import {
@@ -125,6 +129,8 @@ type CoreSignal = {
   pillar: string | null;
   completed_at: string | null;
   planned_date: string | null;
+  lap_topic_id?: string | null;
+  lap_commitment_id?: string | null;
 };
 
 const getGradient = (hex: string) =>
@@ -147,6 +153,9 @@ const TileSignalRow = ({
   onToggle,
   onOpenDetails,
   onTogglePlan,
+  tag,
+  onCarry,
+  onDrop,
 }: {
   signal: CoreSignal;
   areaKey: string;
@@ -155,6 +164,11 @@ const TileSignalRow = ({
   onToggle: () => void;
   onOpenDetails: () => void;
   onTogglePlan: () => void;
+  /** A small gold tag after the title: on the Agenda Meeting tile, the weekly goal's topic. */
+  tag?: string;
+  /** On the Agenda Meeting tile: move the goal to next week, or drop it with a reason. */
+  onCarry?: () => void;
+  onDrop?: () => void;
 }) => {
   // `data.type` lets the single page-level drag handler tell a signal drag from
   // a focus-area drag; `areaKey` scopes same-tile reordering.
@@ -206,12 +220,21 @@ const TileSignalRow = ({
         title="View signal details"
       >
         {signal.title || "Untitled"}
+        {tag && (
+          <span className="ml-1.5 inline-block align-middle rounded-full border border-amber-400/40 bg-amber-400/10 px-1.5 py-px text-[10px] font-medium text-amber-300/90 max-w-[140px] truncate">{tag}</span>
+        )}
         {hasNotes && (
           <span className="ml-1 text-[10px] text-white/30 align-middle" aria-label="has notes">
             ·
           </span>
         )}
       </button>
+      {!isComplete && onCarry && onDrop && (
+        <span className="flex items-center gap-0.5 shrink-0 pt-0.5 opacity-0 group-hover/row:opacity-100 transition-opacity">
+          <button type="button" onClick={onCarry} title="Move to next week" className="text-white/30 hover:text-amber-300"><Forward className="w-4 h-4" /></button>
+          <button type="button" onClick={onDrop} title="Drop this goal" className="text-white/30 hover:text-red-300"><X className="w-4 h-4" /></button>
+        </span>
+      )}
       {/* Add / remove this task from Today's Plan — a reliable click that
           leaves the task in its focus area and mirrors it into the plan. */}
       <button
@@ -534,6 +557,42 @@ const FocusAreaTile = ({
   const [adding, setAdding] = useState(false);
   const [draftTitle, setDraftTitle] = useState("");
   const [savingAdd, setSavingAdd] = useState(false);
+  // The Agenda Meeting tile holds weekly goals: its Add opens the same gold
+  // window the Lap uses, so a goal always carries its lap, topic and owners
+  // and the Lap always sees it (Josh, 2026-10-19).
+  const isAgenda = area.key === AGENDA_TILE_KEY;
+  const [goalOpen, setGoalOpen] = useState(false);
+  const { data: lapTopics = [] } = useQuery({
+    queryKey: ["lap-topics"],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("lap_topics" as never).select("id, pillar, title, sort_order, this_lap_only_lap_id").is("retired_at", null).order("sort_order");
+      if (error) throw error;
+      return (data ?? []) as unknown as { id: string; title: string }[];
+    },
+    enabled: isAgenda,
+  });
+  const topicTitle = (id: string | null | undefined) => (id ? lapTopics.find((t) => t.id === id)?.title : undefined);
+  const { ask, dialog: askDialog } = useAsk();
+  const qcGoals = useQueryClient();
+  const carryGoal = async (s: CoreSignal) => {
+    if (!s.lap_commitment_id) return;
+    const ok = await ask.confirm({ title: `Move "${s.title ?? "this goal"}" to next week?`, body: "It leaves this lap and waits at the start line of the next one, counted as carried once more.", confirmLabel: "Next week" });
+    if (!ok) return;
+    const err = await carryGoalNow(s.lap_commitment_id);
+    if (err) { toast.error(err); return; }
+    toast.success("Moved to next week.");
+    refreshGoals(qcGoals);
+  };
+  const dropThisGoal = async (s: CoreSignal) => {
+    if (!s.lap_commitment_id) return;
+    const r = await ask.prompt({ title: `Drop "${s.title ?? "this goal"}"?`, body: "It leaves every owner's tile.", fields: [{ key: "reason", label: "Why", placeholder: "Optional, for the lap history", required: false }], confirmLabel: "Drop" });
+    if (!r) return;
+    const reason = r.reason.trim() || "Dropped";
+    const err = await dropGoal(s.lap_commitment_id, reason);
+    if (err) { toast.error(err); return; }
+    toast.success("Dropped.");
+    refreshGoals(qcGoals);
+  };
 
   const handleSubmitAdd = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -622,6 +681,9 @@ const FocusAreaTile = ({
                     onToggle={() => onToggle(s)}
                     onOpenDetails={() => onOpenSignalDetails(s)}
                     onTogglePlan={() => onTogglePlan(s)}
+                    tag={isAgenda ? topicTitle(s.lap_topic_id) : undefined}
+                    onCarry={isAgenda && s.lap_commitment_id ? () => void carryGoal(s) : undefined}
+                    onDrop={isAgenda && s.lap_commitment_id ? () => void dropThisGoal(s) : undefined}
                   />
                 ))}
               </div>
@@ -629,8 +691,23 @@ const FocusAreaTile = ({
           )}
         </div>
 
-        {/* Add Signal trigger — sits at the bottom of the tile per design. */}
-        {!adding ? (
+        {/* Add Signal trigger — sits at the bottom of the tile per design.
+            On the Agenda Meeting tile it is "Add a weekly goal" and opens the window. */}
+        {isAgenda ? (
+          <>
+            <button
+              type="button"
+              onClick={() => setGoalOpen(true)}
+              className="mt-2 inline-flex items-center justify-center gap-1.5 w-full text-[11px] font-semibold px-2 py-1.5 rounded-md border border-amber-400/30 hover:border-amber-400/60 hover:bg-amber-400/10 text-amber-300/90 hover:text-amber-200 transition-colors"
+              title="Add a weekly goal"
+            >
+              <Target className="w-3.5 h-3.5" />
+              Add a weekly goal
+            </button>
+            <WeeklyGoalDialog open={goalOpen} seed={goalOpen ? {} : null} onClose={() => setGoalOpen(false)} />
+            {askDialog}
+          </>
+        ) : !adding ? (
           <button
             type="button"
             onClick={() => setAdding(true)}
@@ -837,7 +914,7 @@ const AdminWorkbench = () => {
     queryFn: async () => {
       const { data, error } = await (supabase
         .from("signals")
-        .select("id, title, status, source, today_sort_order, plan_sort_order, description, pillar, completed_at, planned_date") as any)
+        .select("id, title, status, source, today_sort_order, plan_sort_order, description, pillar, completed_at, planned_date, lap_topic_id, lap_commitment_id") as any)
         .eq("priority_layer", "Core")
         .eq("is_archived", false)
         .eq("is_trashed", false)

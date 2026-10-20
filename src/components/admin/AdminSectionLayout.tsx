@@ -234,7 +234,7 @@ const AdminSectionLayout = ({
             variant="ghost"
             size="icon"
             onClick={() => { if (hasLapReturn()) { clearLapReturn(); navigate("/admin/the-lap"); } else navigate(backHref); }}
-            title={hasLapReturn() ? "Back to the lap" : undefined}
+            title={hasLapReturn() ? "Back to the Lap" : undefined}
             className="text-white hover:bg-white/10 hover:text-white"
           >
             <ArrowLeft className="w-5 h-5" />

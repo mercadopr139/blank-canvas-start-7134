@@ -100,8 +100,8 @@ const AdminLapHistory = () => {
     if (!lap) return;
     const made = groups.filter((g) => g.carried === 0).length;
     const ok = await ask.confirm({
-      title: `Delete the lap of ${longDate(lap.meeting_date)}?`,
-      body: `It leaves the history${made ? `, along with the ${made} commitment${made === 1 ? "" : "s"} made in it` : ""}${decisions.length ? ` and its ${decisions.length} decision${decisions.length === 1 ? "" : "s"}` : ""}. Commitments carried into it go back to waiting. This cannot be undone.`,
+      title: `Delete the Lap of ${longDate(lap.meeting_date)}?`,
+      body: `It leaves the history${made ? `, along with the ${made} weekly goal${made === 1 ? "" : "s"} made in it` : ""}${decisions.length ? ` and its ${decisions.length} decision${decisions.length === 1 ? "" : "s"}` : ""}. Commitments carried into it go back to waiting. This cannot be undone.`,
       confirmLabel: "Delete",
       danger: true,
     });
@@ -150,7 +150,7 @@ const AdminLapHistory = () => {
               <button key={l.id} type="button" onClick={() => setParams({ lap: l.id })} className={`w-full text-left rounded-xl px-3 py-2.5 border ${on ? "border-white/30 bg-white/10" : "border-white/10 hover:bg-white/[0.05]"}`}>
                 <p className="text-sm font-semibold">{new Date(`${l.meeting_date}T12:00:00`).toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric", year: "numeric" })}</p>
                 <p className="text-[11px] text-white/45">
-                  {l.status === "incomplete" ? "not finished" : `${l.stats?.commitments ?? 0} commitment${(l.stats?.commitments ?? 0) === 1 ? "" : "s"} · ${l.stats?.decisions ?? 0} decision${(l.stats?.decisions ?? 0) === 1 ? "" : "s"}`}
+                  {l.status === "incomplete" ? "not finished" : `${l.stats?.commitments ?? 0} weekly goal${(l.stats?.commitments ?? 0) === 1 ? "" : "s"} · ${l.stats?.decisions ?? 0} decision${(l.stats?.decisions ?? 0) === 1 ? "" : "s"}`}
                 </p>
               </button>
             );
@@ -165,7 +165,7 @@ const AdminLapHistory = () => {
               <h2 className="text-2xl font-black mt-0.5">{longDate(lap.meeting_date)}</h2>
               <p className="text-sm text-white/55 print:text-neutral-600 mt-1">
                 {lap.status === "incomplete" ? "Not finished. " : ""}
-                {(lap.stats?.visited?.length ?? 0)} of {lap.stats?.topics ?? topics.length} checkpoints · {groups.length} commitment{groups.length === 1 ? "" : "s"} · {decisions.length} decision{decisions.length === 1 ? "" : "s"}
+                {(lap.stats?.visited?.length ?? 0)} of {lap.stats?.topics ?? topics.length} checkpoints · {groups.length} weekly goal{groups.length === 1 ? "" : "s"} · {decisions.length} decision{decisions.length === 1 ? "" : "s"}
                 {lap.finished_at && ` · finished ${new Date(lap.finished_at).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })}`}
               </p>
             </div>

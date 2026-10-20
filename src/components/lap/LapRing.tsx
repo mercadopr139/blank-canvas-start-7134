@@ -39,22 +39,18 @@ const LapRing = ({
 
   return (
     <svg viewBox={`0 0 ${width} ${height}`} width="100%" height="100%" className="max-h-[70vh]" role="img" aria-label="The lap">
-      <defs>
-        <filter id="lap-glow" x="-20%" y="-20%" width="140%" height="140%">
-          <feGaussianBlur stdDeviation={size * 0.012} result="blur" />
-          <feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge>
-        </filter>
-      </defs>
       {/* Ahead: the pillar colours, soft, so the three pillars read from the
           start (Josh, 2026-10-19: an all-grey ring threw him off). */}
       {segs.map((s) => (
         <path key={`dim-${s.pillar}`} d={arcPath(s.from, s.to, cx, cy, r)} fill="none" stroke={PILLAR_COLOR[s.pillar]} strokeOpacity={0.3} strokeWidth={size * 0.055} strokeLinecap="butt" />
       ))}
-      {/* Behind: the pillar colour lights up as the runner passes. */}
+      {/* Behind: the pillar colour lights up as the runner passes. No glow:
+          the lit stretch stays inside the track's own lines (Josh, 2026-10-19:
+          colour spilling past the ring read as an error). */}
       {segs.map((s) => {
         const to = Math.min(s.to, progressTo);
         if (to <= s.from) return null;
-        return <path key={`on-${s.pillar}`} d={arcPath(s.from, to, cx, cy, r)} fill="none" stroke={PILLAR_COLOR[s.pillar]} strokeWidth={size * 0.055} strokeLinecap="butt" filter="url(#lap-glow)" />;
+        return <path key={`on-${s.pillar}`} d={arcPath(s.from, to, cx, cy, r)} fill="none" stroke={PILLAR_COLOR[s.pillar]} strokeWidth={size * 0.055} strokeLinecap="butt" />;
       })}
       {/* Pillar boundaries. */}
       {segs.map((s) => {

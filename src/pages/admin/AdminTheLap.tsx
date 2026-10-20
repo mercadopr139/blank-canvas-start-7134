@@ -23,12 +23,14 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import {
-  ArrowLeft, Flag, Play, Pause, ChevronLeft, ChevronRight, Check, Circle, Maximize2, Minimize2, Settings2, Loader2, Trophy, Sparkles, Forward, Trash2, Split, CalendarDays, MessageSquare, Plus,
+  ArrowLeft, Flag, Play, Pause, ChevronLeft, ChevronRight, Check, Circle, Maximize2, Minimize2, Settings2, Loader2, Trophy, Sparkles, Forward, Trash2, Split, MessageSquare, Plus, Target, X,
 } from "lucide-react";
 import { groupForWarmup, warmupGate, mustDecide, type WarmupGroup } from "@/lib/lap/warmup";
-import { fetchTopicNumbers, fetchComingUp, fetchMovedConversations } from "@/lib/lap/numbers";
+import { fetchTopicNumbers, fetchMovedConversations } from "@/lib/lap/numbers";
 import { deleteLap } from "@/lib/lap/laps";
 import LapRing from "@/components/lap/LapRing";
+import WeeklyGoalDialog, { type WeeklyGoalSeed } from "@/components/lap/WeeklyGoalDialog";
+import { dropGoal, carryGoalNow, archiveDoneGoalsBefore } from "@/lib/lap/goals";
 import { runningOrder, checkpoints, crossedPillar, streak as streakOf, PILLAR_LABEL, type RingTopic, type Pillar } from "@/lib/lap/ring";
 import { PILLAR_COLOR, commitmentSourceFor, carryTone, type CarryTone } from "@/lib/lap/commitments";
 
@@ -46,7 +48,7 @@ const VISION_TEXT =
 interface Topic extends RingTopic { sort_order: number; this_lap_only_lap_id: string | null }
 interface Lap { id: string; meeting_date: string; status: "open" | "finished" | "incomplete"; started_at: string; current_topic_id: string | null; stats: { visited?: string[]; at_finish?: boolean } }
 interface Manager { key: string; display_name: string; owner_name: string | null }
-interface Commitment { id: string; title: string; status: string; source: string | null; lap_topic_id: string | null; lap_commitment_id: string | null; carry_count: number; planned_date: string | null }
+interface Commitment { id: string; title: string; status: string; source: string | null; lap_topic_id: string | null; lap_commitment_id: string | null; carry_count: number; planned_date: string | null; lap_checklist_item_id: string | null }
 interface Decision { id: string; topic_id: string | null; text: string; created_at: string }
 
 const managerKeyOf = (source: string | null) => (!source ? null : source.includes(":") ? source.split(":")[0] : "PD");
@@ -106,7 +108,7 @@ const AdminTheLap = () => {
     queryKey: ["lap-warmup", lastLap?.id ?? "none"],
     enabled: !lap,
     queryFn: async () => {
-      let q = supabase.from("signals").select("id, title, status, source, lap_id, lap_topic_id, lap_commitment_id, carry_count, is_archived" as never).not("lap_commitment_id" as never, "is", null).eq("is_trashed", false);
+      let q = supabase.from("signals").select("id, title, status, source, lap_id, lap_topic_id, lap_commitment_id, carry_count, is_archived, lap_checklist_item_id" as never).not("lap_commitment_id" as never, "is", null).eq("is_trashed", false);
       q = lastLap ? q.or(`lap_id.eq.${lastLap.id},lap_id.is.null`) : q.is("lap_id" as never, null);
       const { data, error } = await q.order("created_at");
       if (error) throw error;
@@ -135,7 +137,7 @@ const AdminTheLap = () => {
     queryKey: ["lap-commitments", lap?.id],
     enabled: !!lap,
     queryFn: async () => {
-      const { data, error } = await supabase.from("signals").select("id, title, status, source, lap_topic_id, lap_commitment_id, carry_count, planned_date" as never).eq("lap_id" as never, lap!.id).eq("is_archived", false).eq("is_trashed", false).order("created_at");
+      const { data, error } = await supabase.from("signals").select("id, title, status, source, lap_topic_id, lap_commitment_id, carry_count, planned_date, lap_checklist_item_id" as never).eq("lap_id" as never, lap!.id).eq("is_archived", false).eq("is_trashed", false).order("created_at");
       if (error) throw error;
       return (data ?? []) as unknown as Commitment[];
     },
@@ -158,7 +160,6 @@ const AdminTheLap = () => {
     queryFn: () => fetchTopicNumbers(allTopics.find((t) => t.id === lap!.current_topic_id)?.title ?? ""),
   });
   // The next two weeks — a heads-up only.
-  const { data: comingUp = [] } = useQuery({ queryKey: ["lap-coming-up"], queryFn: () => fetchComingUp() });
   // The window for "what moved on the message board": since the last lap
   // finished — or, when there has never been a lap, the last seven days.
   // The label says which, so a first lap never claims a "last lap".
@@ -200,14 +201,6 @@ const AdminTheLap = () => {
     },
   });
 
-  const addDate = async () => {
-    const r = await ask.prompt({ title: "Add a date to the strip", body: "Something the back end doesn't know about — a renewal, a deadline, a visit.", fields: [{ key: "title", label: "What" }, { key: "date", label: "Date (YYYY-MM-DD)" }, { key: "yearly", label: "Every year? (yes / no)", defaultValue: "no", required: false }] });
-    if (!r?.title.trim() || !/^\d{4}-\d{2}-\d{2}$/.test(r.date.trim())) { if (r) toast.error("The date needs to look like 2026-11-15."); return; }
-    const { error } = await supabase.from("lap_dates" as never).insert({ title: r.title.trim(), on_date: r.date.trim(), recurring_every: /^y/i.test(r.yearly ?? "") ? "year" : null, created_by: user?.id ?? null } as never);
-    if (error) { toast.error(error.message); return; }
-    qc.invalidateQueries({ queryKey: ["lap-coming-up"] });
-  };
-  const fmtDay = (ymd: string) => new Date(`${ymd}T12:00:00`).toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" });
 
   // A lap left open for a week is not this week's lap.
   useEffect(() => {
@@ -240,6 +233,8 @@ const AdminTheLap = () => {
     qc.invalidateQueries({ queryKey: ["lap-open"] });
     qc.invalidateQueries({ queryKey: ["lap-topics"] });
     qc.invalidateQueries({ queryKey: ["lap-commitments"] });
+    qc.invalidateQueries({ queryKey: ["lap-line-goals"] });
+    qc.invalidateQueries({ queryKey: ["lap-checklist-ticks"] });
     qc.invalidateQueries({ queryKey: ["lap-decisions"] });
     qc.invalidateQueries({ queryKey: ["laps-finished"] });
     qc.invalidateQueries({ queryKey: ["task-manager-home-core"] });
@@ -251,10 +246,13 @@ const AdminTheLap = () => {
     if (!order.length) { toast.error("There are no topics on the ring yet."); return; }
     setBusy(true);
     const { data: created, error } = await supabase.from("laps" as never).insert({ meeting_date: todayNY(), started_by: user?.id ?? null, current_topic_id: order[0].id, stats: { visited: [] } } as never).select("id").single();
-    if (error || !created) { setBusy(false); toast.error(error?.message ?? "Couldn't start the lap."); return; }
+    if (error || !created) { setBusy(false); toast.error(error?.message ?? "Couldn't start the Lap."); return; }
     // Commitments carried from the last lap join this one at their checkpoint.
     const newId = (created as unknown as { id: string }).id;
     await supabase.from("signals").update({ lap_id: newId } as never).is("lap_id" as never, null).not("lap_commitment_id" as never, "is", null).eq("is_archived", false).eq("is_trashed", false).neq("status", "Complete");
+    // Last week's done goals have been reviewed in the warm-up: off the tiles they go.
+    const cleared = await archiveDoneGoalsBefore(newId);
+    if (cleared) toast.error(`Last week's done goals stayed on the tiles: ${cleared}`);
     setBusy(false);
     fireConfetti([PILLAR_COLOR.operations, "#ffffff"]);
     qc.invalidateQueries({ queryKey: ["lap-last"] });
@@ -285,7 +283,7 @@ const AdminTheLap = () => {
     const { error } = await supabase.from("laps" as never).update({ status: "finished", finished_at: new Date().toISOString(), stats } as never).eq("id", lap.id);
     if (error) { toast.error(error.message); return; }
     fireConfetti([PILLAR_COLOR.operations, PILLAR_COLOR.sales_marketing, PILLAR_COLOR.finance, "#ffffff"], true);
-    toast.success(`Lap finished — ${byCommitment.size} commitment${byCommitment.size === 1 ? "" : "s"}, ${decisions.length} decision${decisions.length === 1 ? "" : "s"}.`);
+    toast.success(`Lap finished — ${byCommitment.size} weekly goal${byCommitment.size === 1 ? "" : "s"}, ${decisions.length} decision${decisions.length === 1 ? "" : "s"}.`);
     await postSummary();
     invalidate();
   };
@@ -296,7 +294,7 @@ const AdminTheLap = () => {
     const convId = (conv as unknown as { id: string } | null)?.id;
     if (!convId) return;
     const date = new Date(`${lap.meeting_date}T12:00:00`).toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" });
-    const lines: string[] = [`🏁 The Lap — ${date}`, `${visited.size} of ${order.length} checkpoints · ${byCommitment.size} commitment${byCommitment.size === 1 ? "" : "s"} · ${decisions.length} decision${decisions.length === 1 ? "" : "s"}`];
+    const lines: string[] = [`🏁 The Lap — ${date}`, `${visited.size} of ${order.length} checkpoints · ${byCommitment.size} weekly goal${byCommitment.size === 1 ? "" : "s"} · ${decisions.length} decision${decisions.length === 1 ? "" : "s"}`];
     const byOwner = new Map<string, string[]>();
     for (const rows of byCommitment.values()) {
       const topic = order.find((t) => t.id === rows[0].lap_topic_id)?.title;
@@ -317,7 +315,7 @@ const AdminTheLap = () => {
     const made = [...byCommitment.values()].filter((rows) => rows[0].carry_count === 0).length;
     const ok = await ask.confirm({
       title: "Start this week over?",
-      body: `This lap is thrown away${made ? `, along with the ${made} commitment${made === 1 ? "" : "s"} made in it` : ""}${decisions.length ? ` and its ${decisions.length} decision${decisions.length === 1 ? "" : "s"}` : ""}. Anything carried in from last lap goes back to waiting. You can start a fresh lap right after.`,
+      body: `This lap is thrown away${made ? `, along with the ${made} weekly goal${made === 1 ? "" : "s"} made in it` : ""}${decisions.length ? ` and its ${decisions.length} decision${decisions.length === 1 ? "" : "s"}` : ""}. Anything carried in from last lap goes back to waiting. You can start a fresh lap right after.`,
       confirmLabel: "Start over",
       danger: true,
     });
@@ -339,32 +337,32 @@ const AdminTheLap = () => {
     navigate("/admin");
   };
 
-  /* ───── Commitments and decisions ───── */
-  const [newTitle, setNewTitle] = useState("");
-  const newTitleRef = useRef<HTMLInputElement>(null);
-  /** A checklist line that needs doing: prefill the commitment box and put the cursor there. */
-  const makeCommitmentFrom = (title: string) => {
-    setNewTitle(title);
-    requestAnimationFrame(() => { newTitleRef.current?.focus(); newTitleRef.current?.select(); });
+  /* ───── Weekly goals and decisions ─────
+     A weekly goal (Josh, 2026-10-19: "weekly goal", never "commitment") is
+     made in one themed window (WeeklyGoalDialog), opened from the + on any
+     checklist line or from the gold box at the checkpoint. The line's words
+     are prefilled; the topic starts as this checkpoint and can be changed. */
+  const [goal, setGoal] = useState<WeeklyGoalSeed | null>(null);
+  const openGoal = (title = "", itemId?: string) => { if (current) setGoal({ title, topicId: current.id, itemId }); };
+  /* Mid-week moves on a goal (Josh, 2026-10-19): carry it to next week now,
+     or drop it with a reason. The warm-up still rules on whatever is left. */
+  const carryNow = async (rows: Commitment[]) => {
+    const id = rows[0].lap_commitment_id; if (!id) return;
+    const ok = await ask.confirm({ title: `Move "${rows[0].title}" to next week?`, body: "It leaves this lap and waits at the start line of the next one, counted as carried once more.", confirmLabel: "Next week" });
+    if (!ok) return;
+    const err = await carryGoalNow(id);
+    if (err) { toast.error(err); return; }
+    toast.success("Moved to next week.");
+    invalidate();
   };
-  const [owners, setOwners] = useState<Record<string, boolean>>({});
-  const [onPlan, setOnPlan] = useState(false);
-  useEffect(() => { if (managers.length && !Object.keys(owners).length) setOwners(Object.fromEntries(managers.map((m) => [m.key, m.key === "PD" || m.key === "PC"]))); }, [managers, owners]);
-  const addCommitment = async () => {
-    const title = newTitle.trim();
-    const keys = managers.map((m) => m.key).filter((k) => owners[k]);
-    if (!lap || !current || !title) return;
-    if (!keys.length) { toast.error("Pick at least one owner."); return; }
-    setBusy(true);
-    const commitmentId = crypto.randomUUID();
-    const rows = keys.map((k) => ({
-      title, source: commitmentSourceFor(k), priority_layer: "Core", signal_type: "Action", status: "Pending", is_archived: false,
-      lap_id: lap.id, lap_topic_id: current.id, lap_commitment_id: commitmentId, planned_date: onPlan ? todayNY() : null,
-    }));
-    const { error } = await supabase.from("signals").insert(rows as never);
-    setBusy(false);
-    if (error) { toast.error(error.message); return; }
-    setNewTitle(""); setOnPlan(false);
+  const dropNow = async (rows: Commitment[]) => {
+    const id = rows[0].lap_commitment_id; if (!id) return;
+    const r = await ask.prompt({ title: `Drop "${rows[0].title}"?`, body: "It leaves every owner's tile.", fields: [{ key: "reason", label: "Why", placeholder: "Optional, for the lap history", required: false }], confirmLabel: "Drop" });
+    if (!r) return;
+    const reason = r.reason.trim() || "Dropped";
+    const err = await dropGoal(id, reason);
+    if (err) { toast.error(err); return; }
+    toast.success("Dropped.");
     invalidate();
   };
   const toggleDone = async (rows: Commitment[]) => {
@@ -383,7 +381,7 @@ const AdminTheLap = () => {
     invalidate();
   };
 
-  /* ───── The warm-up: last lap's open commitments ───── */
+  /* ───── The warm-up: last lap's open weekly goals ───── */
   const refreshWarmup = () => { qc.invalidateQueries({ queryKey: ["lap-warmup"] }); qc.invalidateQueries({ queryKey: ["task-manager-home-core"] }); };
   const carryForward = async (g: WarmupGroup) => {
     for (const r of g.rows) {
@@ -393,8 +391,12 @@ const AdminTheLap = () => {
     refreshWarmup();
   };
   const dropCommitment = async (g: WarmupGroup, presetReason?: string) => {
-    const reason = presetReason ?? (await ask.prompt({ title: `Drop "${g.title}"?`, body: "It leaves the Workbench. One line on why, for the record.", fields: [{ key: "reason", label: "Why" }], confirmLabel: "Drop" }))?.reason?.trim();
-    if (!reason) return;
+    let reason = presetReason;
+    if (!reason) {
+      const r = await ask.prompt({ title: `Drop "${g.title}"?`, body: "It leaves the Workbench.", fields: [{ key: "reason", label: "Why", placeholder: "Optional, for the lap history", required: false }], confirmLabel: "Drop" });
+      if (!r) return;
+      reason = r.reason.trim() || "Dropped";
+    }
     const { error } = await supabase.from("signals").update({ dropped_reason: reason, is_archived: true, archived_at: new Date().toISOString() } as never).in("id", g.rows.map((r) => r.id));
     if (error) { toast.error(error.message); return; }
     refreshWarmup();
@@ -404,7 +406,7 @@ const AdminTheLap = () => {
     const title = r?.title?.trim();
     if (!title) return;
     const commitmentId = crypto.randomUUID();
-    const rows = g.rows.map((old) => ({ title, source: old.source, priority_layer: "Core", signal_type: "Action", status: "Pending", is_archived: false, lap_id: null, lap_topic_id: old.lap_topic_id, lap_commitment_id: commitmentId, carried_from_signal_id: old.id }));
+    const rows = g.rows.map((old) => ({ title, source: old.source, priority_layer: "Core", signal_type: "Action", status: "Pending", is_archived: false, lap_id: null, lap_topic_id: old.lap_topic_id, lap_checklist_item_id: old.lap_checklist_item_id ?? null, lap_commitment_id: commitmentId, carried_from_signal_id: old.id }));
     const { error } = await supabase.from("signals").insert(rows as never);
     if (error) { toast.error(error.message); return; }
     await dropCommitment(g, `Split into: ${title}`);
@@ -413,7 +415,7 @@ const AdminTheLap = () => {
     const m = managers.find((x) => x.key === managerKey);
     if (!m) return;
     const old = g.rows[0];
-    const { error } = await supabase.from("signals").insert({ title: g.title, source: commitmentSourceFor(managerKey), priority_layer: "Core", signal_type: "Action", status: "Pending", is_archived: false, lap_id: null, lap_topic_id: old.lap_topic_id, lap_commitment_id: crypto.randomUUID(), carried_from_signal_id: old.id } as never);
+    const { error } = await supabase.from("signals").insert({ title: g.title, source: commitmentSourceFor(managerKey), priority_layer: "Core", signal_type: "Action", status: "Pending", is_archived: false, lap_id: null, lap_topic_id: old.lap_topic_id, lap_checklist_item_id: old.lap_checklist_item_id ?? null, lap_commitment_id: crypto.randomUUID(), carried_from_signal_id: old.id } as never);
     if (error) { toast.error(error.message); return; }
     await dropCommitment(g, `Handed to ${firstName(m)}`);
   };
@@ -437,7 +439,7 @@ const AdminTheLap = () => {
     if (error) toast.error(error.message); else invalidate();
   };
   const retireTopic = async (t: Topic) => {
-    const ok = await ask.confirm({ title: `Retire "${t.title}"?`, body: "It leaves the ring from now on. Its history and any open commitments are kept.", confirmLabel: "Retire", danger: true });
+    const ok = await ask.confirm({ title: `Retire "${t.title}"?`, body: "It leaves the ring from now on. Its history and any open weekly goals are kept.", confirmLabel: "Retire", danger: true });
     if (!ok) return;
     const { error } = await supabase.from("lap_topics" as never).update({ retired_at: new Date().toISOString() } as never).eq("id", t.id);
     if (error) { toast.error(error.message); return; }
@@ -506,26 +508,6 @@ const AdminTheLap = () => {
             <p className="text-white/60">
               {order.length} checkpoints: {order.filter((t) => t.pillar === "operations").length} in Operations, {order.filter((t) => t.pillar === "sales_marketing").length} in Sales & Marketing, {order.filter((t) => t.pillar === "finance").length} in Finance. The finish line is the Vision.
             </p>
-            {/* Coming up — the next two weeks. A heads-up; the lap never asks for action on it. */}
-            <section className="rounded-2xl border border-white/10 bg-neutral-900/60 p-4">
-              <div className="flex items-center justify-between">
-                <h3 className="font-bold text-sm uppercase tracking-wide text-white/60 inline-flex items-center gap-2"><CalendarDays className="w-4 h-4" /> Coming up · next two weeks</h3>
-                <button type="button" onClick={() => void addDate()} className="text-[11px] text-white/45 hover:text-white inline-flex items-center gap-1"><Plus className="w-3.5 h-3.5" /> Add a date</button>
-              </div>
-              {comingUp.length === 0 ? (
-                <p className="text-sm text-white/35 mt-2">Nothing on the calendar in the next two weeks.</p>
-              ) : (
-                <ul className="mt-2 space-y-1">
-                  {comingUp.map((c, i) => (
-                    <li key={`${c.date}-${c.title}-${i}`} className="text-sm flex items-center gap-3">
-                      <span className="w-24 shrink-0 text-white/45 tabular-nums">{fmtDay(c.date)}</span>
-                      <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ backgroundColor: c.pillar ? PILLAR_COLOR[c.pillar] : "#ffffff55" }} />
-                      <span className="text-white/85 truncate">{c.title}</span>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </section>
 
             {moved && (moved.operations + moved.sales_marketing + moved.finance) > 0 && (
               <p className="text-sm text-white/55 inline-flex items-center gap-2">
@@ -540,16 +522,16 @@ const AdminTheLap = () => {
               <p className="text-sm text-white/50">
                 Last lap: {new Date(`${lastLap.meeting_date}T12:00:00`).toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" })}
                 {lastLap.status === "incomplete" && " · not finished"}
-                {lastLap.stats?.commitments != null && ` · ${lastLap.stats.commitments} commitment${lastLap.stats.commitments === 1 ? "" : "s"}`}
+                {lastLap.stats?.commitments != null && ` · ${lastLap.stats.commitments} weekly goal${lastLap.stats.commitments === 1 ? "" : "s"}`}
                 {lastLap.stats?.decisions != null && ` · ${lastLap.stats.decisions} decision${lastLap.stats.decisions === 1 ? "" : "s"}`}
               </p>
             )}
 
-            {/* The warm-up: every commitment from last lap, touched before the start. */}
+            {/* The warm-up: every weekly goal from last lap, touched before the start. */}
             {warmup.length > 0 && (
               <section className="rounded-2xl border border-white/10 bg-neutral-900/60 p-4 space-y-3">
                 <div className="flex items-center justify-between">
-                  <h3 className="font-bold text-sm uppercase tracking-wide text-white/60">Warm-up · last lap's commitments</h3>
+                  <h3 className="font-bold text-sm uppercase tracking-wide text-white/60">Warm-up · last lap's weekly goals</h3>
                   <span className={`text-[11px] font-bold ${gate.ready ? "text-emerald-300" : "text-amber-300"}`}>{gate.ready ? "All reviewed" : `${gate.open} to review`}</span>
                 </div>
                 <ul className="space-y-2">
@@ -598,12 +580,12 @@ const AdminTheLap = () => {
             {isSuperAdmin ? (
               <div className="space-y-2">
                 <Button size="lg" onClick={() => void startLap()} disabled={busy || !order.length || !gate.ready} className="text-white text-base font-bold px-8" style={{ backgroundColor: NLA_RED }}>
-                  {busy ? <Loader2 className="w-5 h-5 mr-2 animate-spin" /> : <Play className="w-5 h-5 mr-2" />} Start the lap
+                  {busy ? <Loader2 className="w-5 h-5 mr-2 animate-spin" /> : <Play className="w-5 h-5 mr-2" />} Start the Lap
                 </Button>
-                {!gate.ready && <p className="text-[12px] text-amber-300/90">Carry forward or drop the {gate.open} open commitment{gate.open === 1 ? "" : "s"} from last lap to unlock the start.</p>}
+                {!gate.ready && <p className="text-[12px] text-amber-300/90">Carry forward or drop the {gate.open} open weekly goal{gate.open === 1 ? "" : "s"} from last lap to unlock the start.</p>}
               </div>
             ) : (
-              <p className="text-sm text-amber-200/90">Waiting for Josh to start the lap.</p>
+              <p className="text-sm text-amber-200/90">Waiting for Josh to start the Lap.</p>
             )}
           </div>
         </main>
@@ -615,11 +597,11 @@ const AdminTheLap = () => {
             <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-white/40">Finish line · the Vision</p>
             <p className="text-xl leading-relaxed text-white/90">{VISION_TEXT}</p>
             <p className="text-sm text-white/50">
-              This lap: {byCommitment.size} commitment{byCommitment.size === 1 ? "" : "s"} · {decisions.length} decision{decisions.length === 1 ? "" : "s"} · {visited.size} of {order.length} checkpoints
+              This lap: {byCommitment.size} weekly goal{byCommitment.size === 1 ? "" : "s"} · {decisions.length} decision{decisions.length === 1 ? "" : "s"} · {visited.size} of {order.length} checkpoints
             </p>
             <div className="flex flex-wrap gap-2">
               <Button variant="outline" onClick={() => void moveTo(order.length - 1)} className="bg-transparent border-white/20 text-white/80 hover:bg-white/10 hover:text-white"><ChevronLeft className="w-4 h-4 mr-1" /> Back to the last checkpoint</Button>
-              <Button size="lg" onClick={() => void finishLap()} className="text-white font-bold px-8" style={{ backgroundColor: NLA_RED }}><Sparkles className="w-5 h-5 mr-2" /> Finish the lap</Button>
+              <Button size="lg" onClick={() => void finishLap()} className="text-white font-bold px-8" style={{ backgroundColor: NLA_RED }}><Sparkles className="w-5 h-5 mr-2" /> Finish the Lap</Button>
             </div>
           </div>
         </main>
@@ -666,7 +648,7 @@ const AdminTheLap = () => {
             </div>
 
             {/* The standing checklist: what we look at every week here. */}
-            <LapChecklist lapId={lap.id} topicId={current.id} ask={ask} onMakeCommitment={makeCommitmentFrom} />
+            <LapChecklist lapId={lap.id} topicId={current.id} ask={ask} onMakeGoal={openGoal} />
 
             {/* The numbers for this topic, this week against last. */}
             {numbers.length > 0 && (
@@ -710,9 +692,10 @@ const AdminTheLap = () => {
               </section>
             )}
 
-            {/* Commitments at this checkpoint */}
-            <section className="rounded-2xl border border-white/10 bg-neutral-900/60 p-5 space-y-3">
-              <h3 className="font-bold text-sm uppercase tracking-wide text-white/60">Commitments</h3>
+            {/* Weekly goals at this checkpoint — gold, their own colour, so
+                they pop against the checklist and the board (Josh, 2026-10-19). */}
+            <section className="rounded-2xl border border-amber-400/40 bg-amber-400/[0.05] p-5 space-y-3">
+              <h3 className="font-bold text-sm uppercase tracking-wide text-amber-300 inline-flex items-center gap-2"><Target className="w-4 h-4" /> Weekly goals</h3>
               {currentRows.length === 0 && <p className="text-sm text-white/35">None yet at this checkpoint.</p>}
               <ul className="space-y-2">
                 {currentRows.map((rows) => {
@@ -720,27 +703,24 @@ const AdminTheLap = () => {
                   const names = rows.map((r) => { const m = managers.find((x) => x.key === managerKeyOf(r.source)); return m ? firstName(m) : managerKeyOf(r.source) ?? "?"; });
                   const tone = carryTone(Math.max(...rows.map((r) => r.carry_count)));
                   return (
-                    <li key={rows[0].lap_commitment_id ?? rows[0].id} className="flex items-start gap-3">
-                      <button onClick={() => void toggleDone(rows)} className={`mt-0.5 shrink-0 ${done ? "text-emerald-300" : "text-white/35 hover:text-white"}`} aria-label={done ? "Reopen" : "Mark done"}>{done ? <Check className="w-5 h-5" /> : <Circle className="w-5 h-5" />}</button>
+                    <li key={rows[0].lap_commitment_id ?? rows[0].id} className="group flex items-start gap-3 rounded-lg -mx-1 px-1 hover:bg-amber-400/[0.06]">
+                      <button onClick={() => void toggleDone(rows)} className={`mt-0.5 shrink-0 ${done ? "text-amber-300" : "text-amber-300/40 hover:text-amber-300"}`} aria-label={done ? "Reopen" : "Mark done"}>{done ? <Check className="w-5 h-5" /> : <Circle className="w-5 h-5" />}</button>
                       <div className="flex-1 min-w-0">
                         <p className={`text-sm ${done ? "line-through text-white/40" : TONE_CLASS[tone]}`}>{rows[0].title}</p>
                         <p className="text-[11px] text-white/40">{names.join(" & ")}{rows[0].carry_count > 0 && ` · carried ${rows[0].carry_count} lap${rows[0].carry_count === 1 ? "" : "s"}`}{rows.some((r) => r.planned_date === todayNY()) && " · on today's plan"}</p>
                       </div>
+                      {!done && (
+                        <span className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity">
+                          <button onClick={() => void carryNow(rows)} title="Move to next week" aria-label="Move to next week" className="p-1 rounded text-white/50 hover:text-amber-300 hover:bg-amber-400/10"><Forward className="w-4 h-4" /></button>
+                          <button onClick={() => void dropNow(rows)} title="Drop this goal" aria-label="Drop this goal" className="p-1 rounded text-white/50 hover:text-red-300 hover:bg-red-500/10"><X className="w-4 h-4" /></button>
+                        </span>
+                      )}
                     </li>
                   );
                 })}
               </ul>
-              <div className="pt-2 border-t border-white/10 space-y-2">
-                <Input ref={newTitleRef} value={newTitle} onChange={(e) => setNewTitle(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") void addCommitment(); }} placeholder="Add a commitment…" className="bg-neutral-950 border-neutral-800 text-white" />
-                <div className="flex flex-wrap items-center gap-3 text-sm">
-                  {managers.map((m) => (
-                    <label key={m.key} className="inline-flex items-center gap-1.5 text-white/70">
-                      <input type="checkbox" checked={!!owners[m.key]} onChange={(e) => setOwners((o) => ({ ...o, [m.key]: e.target.checked }))} className="accent-[#bf0f3e]" /> {firstName(m)}
-                    </label>
-                  ))}
-                  <label className="inline-flex items-center gap-1.5 text-white/50 ml-auto"><input type="checkbox" checked={onPlan} onChange={(e) => setOnPlan(e.target.checked)} className="accent-[#bf0f3e]" /> On today's plan</label>
-                  <Button size="sm" onClick={() => void addCommitment()} disabled={busy || !newTitle.trim()} className="text-white" style={{ backgroundColor: NLA_RED }}>Add</Button>
-                </div>
+              <div className="pt-2 border-t border-amber-400/20 flex flex-wrap items-center gap-3">
+                <Button size="sm" onClick={() => openGoal()} className="text-white" style={{ backgroundColor: NLA_RED }}><Plus className="w-4 h-4 mr-1.5" /> Add a weekly goal</Button>
                 <p className="text-[11px] text-white/35">Lands in each owner's Agenda Meeting tile. Done by either is done for both.</p>
               </div>
             </section>
@@ -766,6 +746,7 @@ const AdminTheLap = () => {
         </main>
       )}
       {dialog}
+      <WeeklyGoalDialog open={!!goal} seed={goal} onClose={() => setGoal(null)} onSaved={invalidate} />
     </div>
   );
 };
