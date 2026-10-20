@@ -219,7 +219,7 @@ const NbtLogSheet = ({
             {/* One number for the circuit. */}
             <div>
               <p className="text-[11px] uppercase tracking-[0.15em] text-white/35 font-bold mb-1.5">
-                {day?.work?.title || "Work"} — how many {unit}?
+                {day?.work?.title || "Cardio"} — how many {unit}?
               </p>
               <Input
                 type="number"

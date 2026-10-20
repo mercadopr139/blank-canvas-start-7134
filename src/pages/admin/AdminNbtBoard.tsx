@@ -569,7 +569,7 @@ export const NbtWeekBuilder = ({
                                       <div className="flex items-center gap-1 shrink-0">
                                         {([
                                           ["lift", "Lift"],
-                                          ["work", "Work"],
+                                          ["work", "Cardio"],
                                           [undefined, "Both"],
                                         ] as const).map(([part, label]) => {
                                           const key = `${w.id}-${d.key}-${t}${part ? `-${part}` : ""}`;
@@ -595,7 +595,7 @@ export const NbtWeekBuilder = ({
                                     </p>
                                     {(day.work[t] ?? []).length > 0 && (
                                       <div>
-                                        <p className="text-[10px] font-bold uppercase tracking-wide text-neutral-500">Work</p>
+                                        <p className="text-[10px] font-bold uppercase tracking-wide text-neutral-500">Cardio</p>
                                         <ul className="mt-0.5 space-y-0.5">
                                           {readableLines(day.work[t]).map((line, k) =>
                                             line.kind === "rounds" ? (

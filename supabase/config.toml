@@ -55,3 +55,6 @@ verify_jwt = false
 
 [functions.lap-reminder]
 verify_jwt = false
+
+[functions.nbt-morning]
+verify_jwt = false
