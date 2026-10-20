@@ -20,7 +20,7 @@ import {
   DAYS, DayKey, TRACKS, TRACK_META, Track, NbtBlock, NbtWeek, NbtDay, NbtLog, toDateString, firstOfMonth, monthLabel, mondaysInMonth, dateOfDay, mondayOf, addDays, NBT_AMBER, readableLines, minutesOf, totalMinutes, weekDays,
 } from "@/lib/nbt";
 import { priorWeekBriefs, roomReport, carryOver, dayProblem } from "@/lib/nbtCoaching";
-import { AlertTriangle } from "lucide-react";
+import { AlertTriangle, Mail } from "lucide-react";
 import { roomBrief } from "@/lib/nbtRooms";
 import { prettyRange } from "@/lib/strength";
 import { LiveSwitch } from "@/components/practice/LiveSwitch";
@@ -67,6 +67,22 @@ export const NbtWeekBuilder = ({
   const thisWeekStart = mondayOf(toDateString(new Date()));
   const [focus, setFocus] = useState("");
   const [busy, setBusy] = useState<string | null>(null);
+  // Rev gets the day at 7 AM on his own; this is the resend, or the late change.
+  const emailRev = async (w: NbtWeek, dayKey: DayKey) => {
+    const date = dateOfDay(w.week_start, dayKey);
+    setBusy(`mail-${w.id}-${dayKey}`);
+    try {
+      const { data, error } = await supabase.functions.invoke("nbt-morning", { body: { date } });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      if (data?.held) toast.error("The week isn't locked, so it went to Josh instead of Rev.");
+      else toast.success(`Sent to Rev: ${DAYS.find((d) => d.key === dayKey)?.label ?? dayKey}'s workout.`);
+    } catch (e) {
+      toast.error(`Couldn't send it: ${(e as Error).message}`);
+    } finally {
+      setBusy(null);
+    }
+  };
   // Persistent, unlike a toast — a twelve-call build should say where it is.
   const [progress, setProgress] = useState<string | null>(null);
   const [editing, setEditing] = useState<{ week: NbtWeek; dayKey: DayKey } | null>(null);
@@ -533,6 +549,18 @@ export const NbtWeekBuilder = ({
                                 className="text-neutral-500 hover:text-white disabled:opacity-30"
                               >
                                 <Pencil className="w-3.5 h-3.5" />
+                              </button>
+                              <button
+                                onClick={() => emailRev(w, d.key)}
+                                disabled={!day || !locked || busy !== null}
+                                title={locked ? "Email this day's workout to Rev now" : "Put the week on the Gym Board first, then it can go to Rev"}
+                                className="text-neutral-500 hover:text-white disabled:opacity-30"
+                              >
+                                {busy === `mail-${w.id}-${d.key}` ? (
+                                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                                ) : (
+                                  <Mail className="w-3.5 h-3.5" />
+                                )}
                               </button>
                               <button
                                 onClick={() => regenerateDay(w, d.key)}
