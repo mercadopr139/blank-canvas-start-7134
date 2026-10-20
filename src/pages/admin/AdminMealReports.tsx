@@ -9,6 +9,7 @@ import { CalendarIcon, Download, Loader2, UtensilsCrossed, TrendingUp, AlertTria
 import { downloadMealReportPdf } from "@/lib/generateMealReportPdf";
 import { cn } from "@/lib/utils";
 import { getCurrentAttendanceYear, programYearRange, shortProgramYear } from "@/lib/programYear";
+import { isDayClosed } from "@/lib/attendanceDay";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { toast } from "sonner";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
@@ -93,16 +94,23 @@ const AdminMealReports = () => {
       const [from, to] = programYearRange(tag);
       const { data } = await supabase
         .from("meal_events")
-        .select("meal_count")
+        .select("meal_count, event_date")
         .gte("event_date", format(from, "yyyy-MM-dd"))
         .lte("event_date", format(to, "yyyy-MM-dd"));
       const rows = data ?? [];
-      return { total: rows.reduce((acc, r) => acc + (r.meal_count || 0), 0), nights: rows.length };
+      // The nightly average counts closed nights only — tonight joins at
+      // 8 PM Eastern, like the attendance averages (Josh, 2026-10-20). The
+      // totals still include tonight's meals as they are served.
+      const closed = rows.filter((r) => isDayClosed(r.event_date));
+      return {
+        total: rows.reduce((acc, r) => acc + (r.meal_count || 0), 0), nights: rows.length,
+        closedTotal: closed.reduce((acc, r) => acc + (r.meal_count || 0), 0), closedNights: closed.length,
+      };
     };
     const [thisYear, lastYear] = await Promise.all([sumYear(programYear), sumYear(priorProgramYear)]);
     setYearCount(thisYear.total);
     setYearNights(thisYear.nights);
-    setAvgPerNight(thisYear.nights > 0 ? Math.round(thisYear.total / thisYear.nights) : 0);
+    setAvgPerNight(thisYear.closedNights > 0 ? Math.round(thisYear.closedTotal / thisYear.closedNights) : 0);
     setPriorYearCount(lastYear.total);
     setPriorYearNights(lastYear.nights);
     const monthStart = format(startOfMonth(today), "yyyy-MM-dd");

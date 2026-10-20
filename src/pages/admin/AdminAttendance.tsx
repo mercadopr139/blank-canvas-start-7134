@@ -33,6 +33,7 @@ import ExcursionRideComparison from "@/components/admin/ExcursionRideComparison"
 import EditExcursionModal, { type Excursion } from "@/components/admin/EditExcursionModal";
 import EditEventModal, { type ProgramEvent, newEventForDate } from "@/components/admin/EditEventModal";
 import { getCurrentAttendanceYear, shortProgramYear } from "@/lib/programYear";
+import { closedDaysOnly, isDayClosed, DAY_CLOSES_AT_HOUR } from "@/lib/attendanceDay";
 import { summarizeMinority } from "@/lib/demographics";
 
 /* ───────── Types ───────── */
@@ -1193,11 +1194,19 @@ const AdminAttendance = () => {
     };
   }, [practiceAttendance]);
 
-  /* ───── STAT BOX: Month Avg → avg per practice day in the viewed month ───── */
+  /* ───── Averages count CLOSED days only (Josh, 2026-10-20) ─────
+     A night still in progress is not a completed observation: 18 kids at
+     4 PM counted as a full practice day drags every average down while a
+     donor is looking. Today joins the averages at 8 PM Eastern; its own
+     count still shows on the Today row. Nothing hidden, nothing inflated. */
+  const todayIsOpen = !isDayClosed(todayStr);
+  const closedPracticeAttendance = useMemo(() => closedDaysOnly(practiceAttendance), [practiceAttendance]);
+
+  /* ───── STAT BOX: Month Avg → avg per closed practice day in the viewed month ───── */
   const mtdAvg = useMemo(() => {
-    const days = new Set(practiceAttendance.map((a) => a.check_in_date));
-    return days.size > 0 ? Math.round(practiceAttendance.length / days.size) : 0;
-  }, [practiceAttendance]);
+    const days = new Set(closedPracticeAttendance.map((a) => a.check_in_date));
+    return days.size > 0 ? Math.round(closedPracticeAttendance.length / days.size) : 0;
+  }, [closedPracticeAttendance]);
 
   /* ───── YTD practice attendance (practice days), since 2026-03-09 ─────
      ytdAttendance is NLA-only, so excursion check-ins (program_source
@@ -1210,8 +1219,9 @@ const AdminAttendance = () => {
     return m;
   }, [ytdPracticeDays]);
 
+  // Closed days only — today joins at 8 PM Eastern (see mtdAvg).
   const ytdPracticeAttendance = useMemo(
-    () => ytdAttendance.filter((a) => isPracticeDay(a.check_in_date, ytdPracticeDayMap)),
+    () => closedDaysOnly(ytdAttendance.filter((a) => isPracticeDay(a.check_in_date, ytdPracticeDayMap))),
     [ytdAttendance, ytdPracticeDayMap, isPracticeDay]
   );
 
@@ -2182,6 +2192,9 @@ const AdminAttendance = () => {
               <p className="text-[10px] uppercase tracking-wider text-white/40">Month Avg</p>
               <p className="text-3xl font-bold mt-1">{mtdAvg}</p>
               <p className="text-[10px] text-white/30">per practice day in {viewedMonthShort}</p>
+              {isCurrentMonth && todayIsOpen && (
+                <p className="text-[10px] text-white/30" title={`Today's check-ins are still coming in. Today joins every average at ${DAY_CLOSES_AT_HOUR - 12} PM.`}>today joins at 8 PM</p>
+              )}
             </CardContent>
           </Card>
           <Card className="bg-white/5 border-white/10 text-white">

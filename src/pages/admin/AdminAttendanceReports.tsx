@@ -9,6 +9,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { FileText, Download, Star, Search, Trash2 } from "lucide-react";
+import { isDayClosed, closedDaysOnly } from "@/lib/attendanceDay";
 import { format, startOfWeek, endOfWeek, startOfMonth, endOfMonth, startOfYear, endOfYear, parseISO, isWeekend, eachDayOfInterval } from "date-fns";
 import { toast } from "sonner";
 import jsPDF from "jspdf";
@@ -343,16 +344,21 @@ const AdminAttendanceReports = () => {
   const sexBreakdown = uniqueBreakdownBy(filteredAttendance, regMap, "child_sex");
 
   // Compute total practice days and non-practice days in the date range
-  const { totalPracticeDays, totalNonPracticeDays, totalCalendarDays } = useMemo(() => {
+  const { totalPracticeDays, totalNonPracticeDays, totalCalendarDays, openPracticeDays } = useMemo(() => {
     const allDays = eachDayOfInterval({ start: parseISO(dateRange.from), end: parseISO(dateRange.to) });
     let practice = 0;
     let nonPractice = 0;
+    // A practice day still in progress (today before 8 PM Eastern) is not
+    // counted yet, and neither are its check-ins (see avgAttendance), so the
+    // average stays an average of completed nights (Josh, 2026-10-20).
+    let open = 0;
     allDays.forEach((d) => {
       const ds = format(d, "yyyy-MM-dd");
-      if (isPracticeDay(ds)) practice++;
-      else nonPractice++;
+      if (!isPracticeDay(ds)) nonPractice++;
+      else if (!isDayClosed(ds)) open++;
+      else practice++;
     });
-    return { totalPracticeDays: practice, totalNonPracticeDays: nonPractice, totalCalendarDays: allDays.length };
+    return { totalPracticeDays: practice, totalNonPracticeDays: nonPractice, totalCalendarDays: allDays.length, openPracticeDays: open };
   }, [dateRange.from, dateRange.to, isPracticeDay]);
 
   // Daily counts for charts
@@ -369,8 +375,10 @@ const AdminAttendanceReports = () => {
     }));
   }, [filteredAttendance, reportType]);
 
-  // Average uses total practice days (not just days with sign-ins)
-  const avgAttendance = totalPracticeDays > 0 ? Math.round(totalAttendance / totalPracticeDays) : 0;
+  // Average uses total CLOSED practice days (not just days with sign-ins);
+  // today's check-ins join it at 8 PM Eastern, with today's practice day.
+  const closedAttendanceCount = useMemo(() => closedDaysOnly(filteredAttendance).length, [filteredAttendance]);
+  const avgAttendance = totalPracticeDays > 0 ? Math.round(closedAttendanceCount / totalPracticeDays) : 0;
   const highestDay = dailyChartData.length > 0 ? dailyChartData.reduce((a, b) => (b.count > a.count ? b : a)) : null;
   const lowestDay = dailyChartData.length > 0 ? dailyChartData.reduce((a, b) => (b.count < a.count ? b : a)) : null;
 
@@ -417,7 +425,7 @@ const AdminAttendanceReports = () => {
     summary.push(["Excursions", `${excursionCount} (${excursionTotalYouth} total youth)`]);
 
     if (reportType !== "daily") {
-      summary.push(["Average Daily Attendance", String(avgAttendance)]);
+      summary.push(["Average Daily Attendance", openPracticeDays > 0 ? `${avgAttendance} (completed practice days; today joins at 8 PM)` : String(avgAttendance)]);
     }
     if (highestDay && reportType !== "daily") {
       summary.push(["Highest Attendance Day", `${highestDay.count} (${highestDay.fullDate})`]);
