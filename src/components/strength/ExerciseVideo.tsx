@@ -12,20 +12,41 @@
 // `compact` sizes the play icon and label in em, so inside a column that is
 // shrunk to fit the wall they scale with the column.
 import { useEffect, useState } from "react";
-import { PlayCircle, X } from "lucide-react";
+import { PlayCircle, X, RefreshCw, Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 
 const ExerciseVideo = ({
-  name, compact = false, inline = false,
+  name, compact = false, inline = false, swappable = false,
 }: {
   name: string;
   compact?: boolean;
   inline?: boolean;
+  /** A "New video" link under the thumbnail: throw this pick out and find another (the coach's page, Josh, 2026-10-20). */
+  swappable?: boolean;
 }) => {
   const [loading, setLoading] = useState(true);
   const [videoId, setVideoId] = useState<string | null>(null);
   const [open, setOpen] = useState(false);
   const [playing, setPlaying] = useState(false);
+  const [swapping, setSwapping] = useState(false);
+  const swap = async () => {
+    if (swapping) return;
+    setSwapping(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("find-exercise-video", { body: { name, refresh: true } });
+      if (error) throw error;
+      const d = data as { youtube_id?: string | null; title?: string | null; error?: string };
+      if (d?.error && !d.youtube_id) throw new Error(d.error);
+      setVideoId(d?.youtube_id ?? null);
+      setPlaying(false);
+      toast.success(d?.title ? `New video: ${d.title}` : "New video picked.");
+    } catch (e) {
+      toast.error((e as Error)?.message ?? "Couldn't find another video.");
+    } finally {
+      setSwapping(false);
+    }
+  };
 
   useEffect(() => {
     let alive = true;
@@ -124,6 +145,17 @@ const ExerciseVideo = ({
           </a>
         )}
       </div>
+      {swappable && !loading && (
+        <button
+          type="button"
+          onClick={() => void swap()}
+          disabled={swapping}
+          className={`mt-[0.3em] inline-flex items-center gap-1 text-white/45 hover:text-white disabled:opacity-50 ${compact ? "text-[0.6em]" : "text-xs"}`}
+          title="Throw this video out and find another"
+        >
+          {swapping ? <Loader2 className={`animate-spin ${compact ? "w-[1.2em] h-[1.2em]" : "w-3.5 h-3.5"}`} /> : <RefreshCw className={compact ? "w-[1.2em] h-[1.2em]" : "w-3.5 h-3.5"} />} New video
+        </button>
+      )}
 
       {/* In-app pop-up player (the default, non-inline mode) */}
       {open && videoId && (

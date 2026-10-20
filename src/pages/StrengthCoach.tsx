@@ -190,6 +190,15 @@ export const BattleTeamWeek = ({
     }
   };
 
+  // A word changed by hand on a day — saved as-is, no AI round trip.
+  const editDay = async (dayKey: DayKey, next: DayWorkout) => {
+    if (!week) return;
+    const nextDays = { ...days, [dayKey]: next };
+    const { error } = await supabase.from("strength_weeks" as never).update({ days: nextDays } as never).eq("id", week.id);
+    if (error) { toast.error(`Couldn't save that change: ${error.message}`); return; }
+    await refetch();
+    queryClient.invalidateQueries({ queryKey: ["strength-history"] });
+  };
   const setLocked = async (lock: boolean) => {
     if (!week) return;
     const { error } = await (supabase.from("strength_weeks" as never) as any)
@@ -335,6 +344,7 @@ export const BattleTeamWeek = ({
                   onReviseText={(v) => setReviseTexts((t) => ({ ...t, [d.key]: v }))}
                   onRewrite={() => regenerateDay(d.key)}
                   onRevise={() => reviseDay(d.key)}
+                  onEditDay={(next) => void editDay(d.key, next)}
                 />
               ))}
             </div>
@@ -382,8 +392,35 @@ const StrengthCoach = () => <BattleTeamWeek />;
 // One day, the whole session, on the review card: the bar, the extra work with
 // its demo video, the finisher — and the coach-only extras (guidance, cues,
 // how-tos, scaling) in grey underneath, which the wall deliberately leaves off.
+
+/** A name or a scheme retyped in place (Josh, 2026-10-20: "regular pull-ups,
+ *  not weighted" should not need the AI). Click, type, Enter or click away. */
+const Retype = ({ value, onSave, className = "", title = "Click to change" }: { value: string; onSave: (v: string) => void; className?: string; title?: string }) => {
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState(value);
+  useEffect(() => { if (!editing) setDraft(value); }, [value, editing]);
+  const done = () => { setEditing(false); const v = draft.trim(); if (v && v !== value) onSave(v); else setDraft(value); };
+  if (!editing) {
+    return (
+      <button type="button" onClick={() => setEditing(true)} title={title} className={`text-left rounded px-0.5 -mx-0.5 border-b border-dashed border-transparent hover:border-white/30 ${className}`}>
+        {value}
+      </button>
+    );
+  }
+  return (
+    <input
+      autoFocus
+      value={draft}
+      onChange={(e) => setDraft(e.target.value)}
+      onBlur={done}
+      onKeyDown={(e) => { if (e.key === "Enter") done(); if (e.key === "Escape") { setDraft(value); setEditing(false); } }}
+      className={`rounded bg-white/10 border border-white/30 px-1 -mx-0.5 outline-none min-w-0 w-full ${className}`}
+    />
+  );
+};
+
 const DayCard = ({
-  meta, day, locked, isToday, rewriting, revising, busy, reviseText, onReviseText, onRewrite, onRevise,
+  meta, day, locked, isToday, rewriting, revising, busy, reviseText, onReviseText, onRewrite, onRevise, onEditDay,
 }: {
   meta: DayMeta;
   day: DayWorkout | undefined;
@@ -396,6 +433,8 @@ const DayCard = ({
   onReviseText: (v: string) => void;
   onRewrite: () => void;
   onRevise: () => void;
+  /** A word changed by hand — the day comes back with that one change. */
+  onEditDay: (next: DayWorkout) => void;
 }) => (
   <div className="rounded-lg border border-white/10 bg-black/30 p-3">
     <div className="flex items-start justify-between gap-2 mb-2">
@@ -426,7 +465,8 @@ const DayCard = ({
             <p className="text-xs text-white leading-snug">
               <span className="text-[10px] font-bold uppercase tracking-wide text-white/45 mr-1.5">Lift</span>
               <span className="font-semibold">{day.main.lift}</span>
-              <span className="text-white/60"> · {day.main.scheme}</span>
+              <span className="text-white/60"> · </span>
+              {locked ? <span className="text-white/60">{day.main.scheme}</span> : <Retype value={day.main.scheme} className="text-white/60" title="Click to change the sets × reps" onSave={(v) => onEditDay({ ...day, main: { ...day.main, scheme: v } })} />}
             </p>
           </div>
         )}
@@ -438,11 +478,11 @@ const DayCard = ({
             {day.accessories.map((a, i) => (
               <div key={i}>
                 <p className="text-xs text-white leading-snug flex items-baseline justify-between gap-2">
-                  <span className="font-semibold">{a.name}</span>
-                  <span className="text-white/60 whitespace-nowrap">{a.sets}</span>
+                  {locked ? <span className="font-semibold">{a.name}</span> : <Retype value={a.name} className="font-semibold" title="Click to change the exercise" onSave={(v) => onEditDay({ ...day, accessories: day.accessories.map((x, k) => (k === i ? { ...x, name: v } : x)) })} />}
+                  {locked ? <span className="text-white/60 whitespace-nowrap">{a.sets}</span> : <Retype value={a.sets} className="text-white/60 whitespace-nowrap shrink-0" title="Click to change the sets" onSave={(v) => onEditDay({ ...day, accessories: day.accessories.map((x, k) => (k === i ? { ...x, sets: v } : x)) })} />}
                 </p>
                 <div className="mt-1">
-                  <ExerciseVideo name={a.name} compact inline />
+                  <ExerciseVideo name={a.name} compact inline swappable />
                 </div>
               </div>
             ))}

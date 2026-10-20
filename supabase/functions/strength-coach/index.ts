@@ -69,6 +69,12 @@ const SYSTEM =
   "bars, med balls or bodyweight — NEVER a kettlebell in any form. Wednesday and Friday are not shared; the " +
   "usual list applies.\n\n" +
 
+  "THE COACH'S WORD WINS (Josh, 2026-10-20): the rules above govern what YOU choose on your own. When the coach " +
+  "revises a day and NAMES a movement — 'air squats', 'regular pull-ups, not weighted', 'push-ups' — you use " +
+  "exactly that movement, even if it repeats the main lift's pattern or breaks a preference above. Never " +
+  "substitute a 'better' move. Keep the sets, the cues, the rest and the scale written around what the coach " +
+  "asked for. If you think it is a poor choice, say so in ONE line of coachNotes, and still do it.\n\n" +
+
   "BUILT-IN MODIFICATIONS: Every accessory MUST carry an inline scale so a coach can adjust on the fly for an injured or weaker " +
   "athlete — phrase it as a natural part of the move (an easier option AND a harder option), not a separate 'modifications' section.\n\n" +
 
@@ -149,6 +155,7 @@ Deno.serve(async (req) => {
       userContent =
         `Here is the current ${dayLabel(dayKey)} workout as JSON:\n\n${JSON.stringify(day, null, 2)}\n\n` +
         `Revise it with this instruction from the coach: "${instruction}"\n\n` +
+        `The instruction is an order, not a suggestion: if it names a movement, that movement is the one you write. ` +
         `Keep the day's main lift and its scheme unless the instruction explicitly says otherwise. ` +
         `Return ONLY { "day": DAY }.`;
       maxTokens = 8000; // thinking is charged against this too — see _shared/claude.ts
@@ -176,8 +183,12 @@ Deno.serve(async (req) => {
     };
     const main = MAIN[dayKey];
     const mainWord = main?.word ?? "";
+    // The guard catches the AI's own repeats. When the coach's revise text names
+    // the main lift's pattern ("air squats" on squat day), the coach has decided,
+    // and the guard stands down (Josh, 2026-10-20).
+    const coachNamedIt = mode === "revise" && !!main && main.re.test(String(body.instruction ?? ""));
     const repeatsMain = (day: { accessories?: Array<{ name?: string }> } | undefined) =>
-      !!main && (day?.accessories ?? []).some((a) => main.re.test(a?.name ?? ""));
+      !!main && !coachNamedIt && (day?.accessories ?? []).some((a) => main.re.test(a?.name ?? ""));
     // Monday shares the room and the Non-Battle Team has the kettlebells.
     const KB = /kettle\s*bell|\bkbs?\b/i;
     const mondayKettlebell = (day: { accessories?: Array<{ name?: string; equipment?: string; howTo?: string; scale?: string }> } | undefined) =>
