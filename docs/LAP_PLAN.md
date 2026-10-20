@@ -286,3 +286,9 @@ mb_set_archived): one archive or restore moves every member's row; a new
 message already un-archives for everyone. The board's Archive / Restore and
 Archive all call the RPC. One-time backfill applied: anything either person
 had archived is archived for both.
+
+**"The numbers" card retired (2026-10-20).** It showed on nine checkpoints
+and not the other twelve, which broke the one-shape-every-checkpoint rule.
+Josh would rather open the page a checklist line links to (Registration
+Intelligence etc.) for the real figures. fetchTopicNumbers stays in
+src/lib/lap/numbers.ts, unused, in case a per-line stat is ever wanted.
