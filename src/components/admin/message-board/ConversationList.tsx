@@ -236,27 +236,26 @@ const ConversationList = ({
     }
   };
 
-  /* Archive every active conversation for me (Josh, 2026-10-19: "clear the
-     sidebar"). Archiving is per person, so nobody else's list changes; the
-     Archived tab keeps them all. */
+  /* Archive every active conversation (Josh, 2026-10-19: "clear the
+     sidebar"). Since 2026-10-20 an archive clears the thread for everyone in
+     it — the Lap lists live threads at every checkpoint so they get pruned,
+     and that only works if one archive is the archive. A new message brings
+     a thread back for everyone, the same way. */
   const { ask, dialog: askDialog } = useAsk();
   const archiveAll = async () => {
     const ids = conversations.filter((c) => !c.archived_at).map((c) => c.id);
     if (!ids.length) return;
-    const ok = await ask.confirm({ title: `Archive all ${ids.length} conversation${ids.length === 1 ? "" : "s"}?`, body: "They move to your Archived tab. Nothing is deleted, and nobody else's list changes. A new message brings a conversation back.", confirmLabel: "Archive all" });
+    const ok = await ask.confirm({ title: `Archive all ${ids.length} conversation${ids.length === 1 ? "" : "s"}?`, body: "They move to the Archived tab for everyone in them. Nothing is deleted. A new message brings a conversation back.", confirmLabel: "Archive all" });
     if (!ok) return;
-    const { error } = await supabase.from("mb_conversation_members").update({ archived_at: new Date().toISOString() } as never).eq("user_id", currentUserId).in("conversation_id", ids);
+    const { error } = await supabase.rpc("mb_set_archived" as never, { _ids: ids, _archived: true } as never);
     if (error) { toast({ title: "Failed to archive", description: error.message, variant: "destructive" }); return; }
     onConversationsChanged();
     toast({ title: `${ids.length} archived` });
   };
   const setArchived = async (conv: Conversation, archived: boolean) => {
     try {
-      const { error } = await supabase
-        .from("mb_conversation_members")
-        .update({ archived_at: archived ? new Date().toISOString() : null })
-        .eq("conversation_id", conv.id)
-        .eq("user_id", currentUserId);
+      // For everyone in the conversation, not just me (see archiveAll).
+      const { error } = await supabase.rpc("mb_set_archived" as never, { _ids: [conv.id], _archived: archived } as never);
       if (error) throw error;
       onConversationsChanged();
       toast({ title: archived ? "Archived" : "Restored" });

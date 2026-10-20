@@ -205,8 +205,10 @@ const AdminTheLap = () => {
         .sort((a, b) => PILLAR_ORDER.indexOf(a.pillar) - PILLAR_ORDER.indexOf(b.pillar) || b.last.localeCompare(a.last));
     },
   });
-  // The conversations pinned to this checkpoint ("Pin to the Lap" on the
-  // board), with the date of their last message in the window, if any.
+  // Message board topics at this checkpoint (Josh, 2026-10-20): every live
+  // conversation of this pillar — pinned here first, then the rest by their
+  // last message — so a stale thread keeps showing up until someone archives
+  // it from the thread. Archiving clears it for everyone (mb_set_archived).
   const { data: conversations = [] } = useQuery({
     queryKey: ["lap-conversations", lap?.id ?? "none", lap?.current_topic_id ?? "none", window?.since ?? "none", myArchived.length],
     enabled: !!lap?.current_topic_id && !!window,
@@ -222,8 +224,7 @@ const AdminTheLap = () => {
       for (const m of (msgs ?? []) as { conversation_id: string; created_at: string }[]) if (!lastBy.has(m.conversation_id) || lastBy.get(m.conversation_id)! < m.created_at) lastBy.set(m.conversation_id, m.created_at);
       return list
         .map((c) => ({ id: c.id, name: c.name, pinned: c.lap_topic_id === topic.id, last: lastBy.get(c.id) ?? null }))
-        .filter((c) => c.pinned)
-        .sort((a, b) => (b.last ?? "").localeCompare(a.last ?? ""));
+        .sort((a, b) => Number(b.pinned) - Number(a.pinned) || (b.last ?? "").localeCompare(a.last ?? "") || (a.name ?? "").localeCompare(b.name ?? ""));
     },
   });
 
@@ -325,7 +326,7 @@ const AdminTheLap = () => {
     const { error } = await supabase.from("laps" as never).update({ status: "finished", finished_at: new Date().toISOString(), stats } as never).eq("id", lap.id);
     if (error) { toast.error(error.message); return; }
     fireConfetti([PILLAR_COLOR.operations, PILLAR_COLOR.sales_marketing, PILLAR_COLOR.finance, "#ffffff"], true);
-    toast.success(`Lap finished — ${byCommitment.size} weekly goal${byCommitment.size === 1 ? "" : "s"}, ${decisions.length} decision${decisions.length === 1 ? "" : "s"}.`);
+    toast.success(`Lap finished — ${byCommitment.size} weekly goal${byCommitment.size === 1 ? "" : "s"}${decisions.length ? `, ${decisions.length} decision${decisions.length === 1 ? "" : "s"}` : ""}.`);
     await postSummary();
     invalidate();
   };
@@ -413,15 +414,6 @@ const AdminTheLap = () => {
     if (error) { toast.error(error.message); return; }
     invalidate();
   };
-  const [newDecision, setNewDecision] = useState("");
-  const addDecision = async () => {
-    const text = newDecision.trim();
-    if (!lap || !text) return;
-    const { error } = await supabase.from("lap_decisions" as never).insert({ lap_id: lap.id, topic_id: current?.id ?? null, text, created_by: user?.id ?? null } as never);
-    if (error) { toast.error(error.message); return; }
-    setNewDecision("");
-    invalidate();
-  };
 
   /* ───── The warm-up: last lap's open weekly goals ───── */
   const refreshWarmup = () => { qc.invalidateQueries({ queryKey: ["lap-warmup"] }); qc.invalidateQueries({ queryKey: ["task-manager-home-core"] }); };
@@ -505,7 +497,6 @@ const AdminTheLap = () => {
 
   const [topicMenu, setTopicMenu] = useState(false);
   const currentRows = current ? [...byCommitment.values()].filter((rows) => rows[0].lap_topic_id === current.id) : [];
-  const currentDecisions = current ? decisions.filter((d) => d.topic_id === current.id) : [];
 
   /* ───── Render ───── */
   return (
@@ -650,7 +641,7 @@ const AdminTheLap = () => {
             <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-white/40">Finish line · the Vision</p>
             <p className="text-xl leading-relaxed text-white/90">{VISION_TEXT}</p>
             <p className="text-sm text-white/50">
-              This lap: {byCommitment.size} weekly goal{byCommitment.size === 1 ? "" : "s"} · {decisions.length} decision{decisions.length === 1 ? "" : "s"} · {visited.size} of {order.length} checkpoints
+              This lap: {byCommitment.size} weekly goal{byCommitment.size === 1 ? "" : "s"}{decisions.length > 0 && ` · ${decisions.length} decision${decisions.length === 1 ? "" : "s"}`} · {visited.size} of {order.length} checkpoints
             </p>
             <div className="flex flex-wrap gap-2">
               <Button variant="outline" onClick={() => void moveTo(order.length - 1)} className="bg-transparent border-white/20 text-white/80 hover:bg-white/10 hover:text-white"><ChevronLeft className="w-4 h-4 mr-1" /> Back to the last checkpoint</Button>
@@ -718,23 +709,7 @@ const AdminTheLap = () => {
               </section>
             )}
 
-            {/* Conversations pinned to this checkpoint. */}
-            {conversations.length > 0 && (
-              <section className="rounded-2xl border border-white/10 bg-neutral-900/60 p-5 space-y-2">
-                <h3 className="font-bold text-sm uppercase tracking-wide text-white/60">Pinned here from the message board</h3>
-                <ul className="space-y-1.5">
-                  {conversations.map((c) => (
-                    <li key={c.id}>
-                      <button type="button" onClick={() => { markLeavingLap(); navigate(`/admin/message-board?conv=${c.id}`); }} className="w-full text-left text-sm text-white/85 hover:text-white inline-flex items-center gap-2">
-                        <MessageSquare className="w-4 h-4 shrink-0" style={{ color: PILLAR_COLOR[current.pillar] }} />
-                        <span className="truncate">{c.name ?? "Untitled conversation"}</span>
-                        {c.last && <span className="text-[11px] text-white/40 shrink-0 ml-auto">{new Date(c.last).toLocaleDateString("en-US", { month: "short", day: "numeric" })}</span>}
-                      </button>
-                    </li>
-                  ))}
-                </ul>
-              </section>
-            )}
+
 
             {/* Weekly goals at this checkpoint — gold, their own colour, so
                 they pop against the checklist and the board (Josh, 2026-10-19). */}
@@ -769,15 +744,29 @@ const AdminTheLap = () => {
               </div>
             </section>
 
-            {/* Decisions */}
+            {/* Message board topics: this pillar's live conversations, pinned
+                here first. Open one, archive it inside the thread if it is
+                done, and the back arrow returns here. "We decided" retired
+                2026-10-20 — anything to remember becomes a weekly goal. */}
             <section className="rounded-2xl border border-white/10 bg-neutral-900/60 p-5 space-y-3">
-              <h3 className="font-bold text-sm uppercase tracking-wide text-white/60">We decided</h3>
-              {currentDecisions.length === 0 && <p className="text-sm text-white/35">Nothing recorded here yet.</p>}
-              <ul className="space-y-1.5">{currentDecisions.map((d) => <li key={d.id} className="text-sm text-white/85">• {d.text}</li>)}</ul>
-              <div className="flex gap-2">
-                <Input value={newDecision} onChange={(e) => setNewDecision(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") void addDecision(); }} placeholder="One line — what we decided" className="bg-neutral-950 border-neutral-800 text-white" />
-                <Button size="sm" variant="outline" onClick={() => void addDecision()} disabled={!newDecision.trim()} className="bg-transparent border-white/20 text-white/80 hover:bg-white/10 hover:text-white">Record</Button>
+              <div className="flex items-baseline justify-between gap-3">
+                <h3 className="font-bold text-sm uppercase tracking-wide text-white/60">Message board topics</h3>
+                <span className="text-[11px] text-white/40">{PILLAR_LABEL[current.pillar]} · {conversations.length} live</span>
               </div>
+              {conversations.length === 0 && <p className="text-sm text-white/35">Nothing live on the board for {PILLAR_LABEL[current.pillar]}.</p>}
+              <ul className="space-y-1.5">
+                {conversations.map((c) => (
+                  <li key={c.id}>
+                    <button type="button" onClick={() => { markLeavingLap(); navigate(`/admin/message-board?conv=${c.id}`); }} className="w-full text-left text-sm text-white/85 hover:text-white inline-flex items-center gap-2 rounded-lg -mx-1 px-1 py-0.5 hover:bg-white/[0.04]">
+                      <MessageSquare className="w-4 h-4 shrink-0" style={{ color: PILLAR_COLOR[current.pillar] }} />
+                      <span className="truncate">{c.name ?? "Untitled conversation"}</span>
+                      {c.pinned && <span className="shrink-0 inline-flex items-center gap-1 rounded-full border px-1.5 py-0 text-[10px] font-semibold" style={{ borderColor: `${PILLAR_COLOR[current.pillar]}88`, color: PILLAR_COLOR[current.pillar] }}><Flag className="w-2.5 h-2.5" /> Pinned here</span>}
+                      <span className="text-[11px] text-white/40 shrink-0 ml-auto">{c.last ? new Date(c.last).toLocaleDateString("en-US", { month: "short", day: "numeric" }) : "quiet"}</span>
+                    </button>
+                  </li>
+                ))}
+              </ul>
+              <p className="text-[11px] text-white/35">A thread stays here until someone archives it inside the thread — and that clears it for everyone.</p>
             </section>
           </div>
         </main>

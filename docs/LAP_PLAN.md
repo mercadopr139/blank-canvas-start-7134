@@ -269,3 +269,20 @@ does everything else on the screen once a lap is open.
 
 Open for Josh: the vision statement text for the finish card (the site's
 Vision page has one).
+
+
+## Message board topics at every checkpoint (2026-10-20)
+
+"We decided" is retired from the checkpoint — anything to remember becomes
+a weekly goal (the lap_decisions table and past records stay). In its place,
+**Message board topics**: every live conversation of the checkpoint's
+pillar, pinned-here first, then by last message; a thread stays on the Lap
+at every checkpoint of its pillar until someone archives it inside the
+thread, and the back arrow returns to the checkpoint. The point is
+accountability: stale threads keep showing up until they are archived.
+
+**Archive clears for everyone** (migration 20261020140000, RPC
+mb_set_archived): one archive or restore moves every member's row; a new
+message already un-archives for everyone. The board's Archive / Restore and
+Archive all call the RPC. One-time backfill applied: anything either person
+had archived is archived for both.
