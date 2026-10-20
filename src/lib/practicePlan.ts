@@ -144,8 +144,8 @@ export const QUICK_BLOCKS = [
 
 /* ───── Split block ─────
  * One group doing two things at once — Tuesday's Battle Team: some coach the
- * Junior Boxers (7–10), the rest run. A Split block is two lanes side by side,
- * each with a name, who's in it, and its own drills. Both lanes live in the
+ * Junior Boxers (7–10), the rest run. A Split block is two or three lanes side
+ * by side (Josh, 2026-10-20), each with a name, who's in it, and its own drills. Both lanes live in the
  * block's ordinary `detail` text (a "## Lane | who" line opens each lane), so
  * nothing in the database changes and a week already written is untouched.
  */
@@ -162,6 +162,12 @@ export const capFirst = (s: string) => {
   const t = s.trim();
   return t ? t[0].toUpperCase() + t.slice(1) : t;
 };
+
+/** A Split is at least two lanes and at most three. */
+export const MIN_LANES = 2;
+export const MAX_LANES = 3;
+/** What a brand-new third lane is called until someone types. */
+export const NEW_LANE: SplitLane = { title: "", who: "", text: "" };
 
 export const DEFAULT_SPLIT_LANES: readonly SplitLane[] = [
   { title: "Coaching Juniors", who: "", text: "Boxing stations" },
@@ -199,8 +205,8 @@ export const parseSplit = (
     if (!cur) { cur = { ...defaults[0], text: "" }; lanes.push(cur); }
     cur.text += (cur.text ? "\n" : "") + raw;
   }
-  while (lanes.length < 2) lanes.push({ ...defaults[lanes.length] });
-  return lanes.slice(0, 2).map((l) => ({ ...l, text: l.text.trim() }));
+  while (lanes.length < MIN_LANES) lanes.push({ ...defaults[lanes.length] });
+  return lanes.slice(0, MAX_LANES).map((l) => ({ ...l, text: l.text.trim() }));
 };
 
 export const serializeSplit = (

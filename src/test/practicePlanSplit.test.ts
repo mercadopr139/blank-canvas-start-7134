@@ -142,4 +142,11 @@ describe("A night's wrap-up", () => {
   it("ignores a blank override", () => {
     expect(wrapupFor({ wrapups: { "4": { label: "  ", leader: null } } }, 4, tpl)?.overridden).toBe(false);
   });
+  it("keeps a third lane, and never more than three (Josh, 2026-10-20)", () => {
+    const three = [{ title: "Juniors", who: "", text: "bags" }, { title: "Run", who: "", text: "" }, { title: "Sparring", who: "Alex", text: "rounds" }];
+    expect(parseSplit(serializeSplit(three))).toEqual(three);
+    const four = parseSplit(["## A", "## B", "## C", "## D"].join("\n"));
+    expect(four.map((l) => l.title)).toEqual(["A", "B", "C"]);
+  });
+
 });

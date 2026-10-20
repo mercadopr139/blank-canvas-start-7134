@@ -97,6 +97,12 @@ const SYSTEM =
   "- PLENTIFUL — dumbbells and kettlebells, wall-ball targets, med balls, jump ropes, bands, pull-up bars, " +
   "  barbells and plates, and bodyweight. Any number of tracks may use these at once.\n" +
   "- Anything the room says is NOT IN THIS ROOM is never written for that day.\n" +
+  "- MONDAY SHARES THE ROOM WITH THE BATTLE TEAM (Josh, 2026-10-20), who lift at the same time and HAVE THE " +
+  "  DUMBBELLS. On Monday the Non-Battle Team uses NO DUMBBELLS ANYWHERE IN THE DAY — not in the lift, not in " +
+  "  the work block, not as a scale-down, not for either track. Monday's implement is the KETTLEBELL: goblet " +
+  "  squat, kettlebell floor press, kettlebell carries, plus barbells on the floor, med balls, bands, boxes, " +
+  "  machines and bodyweight. Where the ladder says 'dumbbell or kettlebell', on Monday it says kettlebell. " +
+  "  Tuesday and Thursday are not shared; dumbbells are fine.\n" +
   "ON THE LIFT the two tracks climb an IMPLEMENT LADDER rather than sharing one — dumbbell or kettlebell for " +
   "BRAVO, barbell for ALPHA. The bodyweight or banded rung is the scale-down a coach gives a Bravo athlete still " +
   "learning the pattern; mention it in Bravo's detail when it matters, never as a third track. Use these:\n" +
@@ -277,7 +283,9 @@ const DAY_BRIEF: Record<string, string> = {
     "MONDAY — SQUAT + PUSH. Performance Center, on the basketball court: 75 ft baseline to baseline, 56 ft " +
     "sideline to sideline. Floor distances are said in court — baseline to baseline (75 ft), baseline to " +
     "baseline and back (150 ft), sideline to sideline (56 ft), sideline to sideline and back (112 ft) — never " +
-    "in metres, yards or feet. Never a lap. Bikes, rowers and ski ergs are here for the work block. No sled.",
+    "in metres, yards or feet. Never a lap. Bikes, rowers and ski ergs are here for the work block. No sled. " +
+    "THE BATTLE TEAM IS HERE TOO AND HAS THE DUMBBELLS: no dumbbells anywhere in this day, in either track — " +
+    "kettlebells instead.",
   tuesday:
     "TUESDAY — ATHLETIC + OVERHEAD. Boxing facility: NO RUNNING AT ALL — there is no floor for it, and NO " +
     "machines — no bikes, no rowers, no ski ergs. Every conditioning movement stays on the spot. " +
@@ -436,19 +444,36 @@ Deno.serve(async (req: Request) => {
       "\nReturn ONLY the JSON shape described.";
 
     const anthropic = new Anthropic({ apiKey: ANTHROPIC_API_KEY });
-    const response = await anthropic.messages.create({
-      model: MODEL,
-      // Thinking is charged against this, and three tracks under a 40-minute
-      // cap in a room with no floor is a lot to think about. Thursday used to
-      // spend the whole budget deliberating and return nothing -- see
-      // _shared/claude.ts. 9000 leaves room for both.
-      max_tokens: 9000,
-      system: SYSTEM,
-      messages: [{ role: "user", content: userPrompt }],
-      ...thinking("medium"),
-    } as never);
-
-    const parsed = extractJson(textOf(response));
+    // Monday shares the room: the Battle Team has the dumbbells. A prompt rule
+    // can be ignored silently, so the day is read back and, on a dumbbell,
+    // asked for again with the reason attached. Two tries, then an honest error.
+    const DB = /dumb\s*bell|\bdbs?\b/i;
+    const mondayDumbbell = (p: unknown) => dayKey === "monday" && DB.test(JSON.stringify(p ?? {}));
+    let parsed: ReturnType<typeof extractJson> = {};
+    let mondayNote = "";
+    for (let attempt = 0; attempt < 2; attempt++) {
+      const response = await anthropic.messages.create({
+        model: MODEL,
+        // Thinking is charged against this, and three tracks under a 40-minute
+        // cap in a room with no floor is a lot to think about. Thursday used to
+        // spend the whole budget deliberating and return nothing -- see
+        // _shared/claude.ts. 9000 leaves room for both.
+        max_tokens: 9000,
+        system: SYSTEM,
+        messages: [{ role: "user", content: userPrompt + mondayNote }],
+        ...thinking("medium"),
+      } as never);
+      parsed = extractJson(textOf(response));
+      if (!mondayDumbbell(parsed)) break;
+      mondayNote =
+        "\n\nYOUR PREVIOUS ATTEMPT WAS REJECTED: it is MONDAY and the day uses dumbbells somewhere. The Battle " +
+        "Team has the dumbbells on Monday. Replace every dumbbell — in the lift, the work block, the cues and " +
+        "any scale-down, for both tracks — with a kettlebell, a floor barbell, a med ball, a band or bodyweight. " +
+        "Everything else can stay.";
+    }
+    if (mondayDumbbell(parsed)) {
+      return json({ error: "The coach kept reaching for dumbbells on Monday, when the Battle Team has them. Try again." }, 502);
+    }
 
     // The model states its own times and is held to them. 40 is the ceiling
     // because boxing starts straight afterwards, and overrunning costs the

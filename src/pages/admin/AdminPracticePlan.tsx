@@ -38,7 +38,7 @@ import { LiveSwitch } from "@/components/practice/LiveSwitch";
 import { BattleTeamWeek } from "@/pages/StrengthCoach";
 import { NbtWeekBuilder } from "@/pages/admin/AdminNbtBoard";
 import {
-  NLA_RED, TOGETHER_GRAY, OFF_TEMPLATE_VIOLET, GROUPS, WEEKDAYS, QUICK_BLOCKS, spiritualAccent, daysFor, daysForWeek, ALL_WEEKDAYS, mondayOf, addDays, formatWeekRange,
+  NLA_RED, TOGETHER_GRAY, OFF_TEMPLATE_VIOLET, GROUPS, WEEKDAYS, spiritualAccent, daysFor, daysForWeek, ALL_WEEKDAYS, mondayOf, addDays, formatWeekRange,
   dateForWeekday, blockAccent, PracticeGroup, PracticeSettings, PracticeWeek, PracticeBlock,
   TemplateBlock, SpiritualDay, MeetingPoints, SeasonMode, formatStartTime,
 } from "@/lib/practicePlan";
@@ -46,6 +46,7 @@ import BulletEditor from "@/components/practice/BulletEditor";
 import { SplitLanesEditor } from "@/components/practice/SplitLanes";
 import { hasLanes, isBibleStudyBlock, bibleStudyText, bibleStudySiblings, wrapupFor, planningWeekOf, type Wrapups } from "@/lib/practicePlan";
 import { templateSlotFor, standingDetailFor, effectiveDetail, detailToStore } from "@/lib/practicePlan";
+import { usePracticeCategories } from "@/hooks/usePracticeCategories";
 
 const AdminPracticePlan = () => {
   const qc = useQueryClient();
@@ -361,7 +362,7 @@ const AdminPracticePlan = () => {
       const slot = me ? templateSlotFor(me, template) : null;
       if (!me || !slot) throw new Error("This slot isn't in the template, so there is nothing to promote to.");
       const text = me.detail?.trim() ? me.detail : null;
-      const { error } = await supabase.from("practice_template_blocks" as never).update({ detail: text } as never).eq("id", slot.id);
+      const { error } = await supabase.from("practice_template_blocks" as never).update({ detail: text } as never).in("id", bibleStudySiblings(template, slot.id));
       if (error) throw error;
       const { error: e2 } = await supabase.from("practice_blocks" as never).update({ detail: null } as never).in("id", bibleStudySiblings(blocks, id));
       if (e2) throw e2;
@@ -1508,6 +1509,8 @@ const AddTemplateBlock = ({
 }) => {
   const [open, setOpen] = useState(false);
   const [custom, setCustom] = useState("");
+  // Built-in chips plus the ones Josh added; a typed category becomes a chip.
+  const categories = usePracticeCategories();
 
   if (!open) {
     return (
@@ -1521,27 +1524,44 @@ const AddTemplateBlock = ({
     );
   }
 
-  const add = (c: string) => {
+  const add = (c: string, keep = false) => {
     const v = c.trim();
     if (!v) return;
     onAdd(v);
+    if (keep) void categories.add(v).then((err) => { if (err) toast.error(`The block is in, but the chip didn't save: ${err}`); });
     setCustom("");
     setOpen(false);
+  };
+  const forget = async (name: string) => {
+    const err = await categories.remove(name);
+    if (err) toast.error(err);
   };
 
   return (
     <div className="w-full rounded-lg border border-neutral-700 bg-neutral-950 p-2 space-y-1.5">
       <div className="flex flex-wrap gap-1">
-        {QUICK_BLOCKS.map((q) => (
-          <button
-            key={q}
-            type="button"
-            onClick={() => add(q)}
-            className="px-1.5 py-0.5 rounded border text-[11px] hover:bg-white/10"
-            style={{ borderColor: `${accent}55`, color: accent }}
-          >
-            {q}
-          </button>
+        {categories.chips.map((q) => (
+          <span key={q} className="group/chip relative inline-flex">
+            <button
+              type="button"
+              onClick={() => add(q)}
+              className={`px-1.5 py-0.5 rounded border text-[11px] hover:bg-white/10 ${categories.isCustom(q) ? "pr-4" : ""}`}
+              style={{ borderColor: `${accent}55`, color: accent }}
+            >
+              {q}
+            </button>
+            {categories.isCustom(q) && (
+              <button
+                type="button"
+                onClick={(e) => { e.stopPropagation(); void forget(q); }}
+                title={`Forget "${q}" as a choice`}
+                aria-label={`Forget ${q}`}
+                className="absolute right-0.5 top-1/2 -translate-y-1/2 rounded p-0.5 text-white/30 opacity-0 group-hover/chip:opacity-100 hover:text-red-300"
+              >
+                <X className="w-3 h-3" />
+              </button>
+            )}
+          </span>
         ))}
       </div>
       <div className="flex gap-1">
@@ -1550,10 +1570,10 @@ const AddTemplateBlock = ({
           value={custom}
           onChange={(e) => setCustom(e.target.value)}
           onKeyDown={(e) => {
-            if (e.key === "Enter") add(custom);
+            if (e.key === "Enter") add(custom, true);
             if (e.key === "Escape") setOpen(false);
           }}
-          placeholder="Something else…"
+          placeholder="Something else… (it stays as a chip)"
           className="h-7 text-xs bg-neutral-900 border-neutral-800 text-white"
         />
         <Button
@@ -1685,8 +1705,10 @@ const TemplateView = ({
   };
   const onRenameTemplate = (id: string, category: string) =>
     run(supabase.from("practice_template_blocks" as never).update({ category } as never).eq("id", id));
+  // Bible Study is one study for both teams, in the template as in the week
+  // (Josh, 2026-10-20: the two cells did not match): one edit writes both.
   const onDetailTemplate = (id: string, detail: string | null) =>
-    run(supabase.from("practice_template_blocks" as never).update({ detail } as never).eq("id", id));
+    run(supabase.from("practice_template_blocks" as never).update({ detail } as never).in("id", bibleStudySiblings(template, id)));
   const onToggleTemplate = (block: TemplateBlock) =>
     run(supabase.from("practice_template_blocks" as never).update({ is_active: block.is_active === false } as never).eq("id", block.id));
   const onRemoveTemplate = (id: string) =>

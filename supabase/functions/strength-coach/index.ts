@@ -64,6 +64,11 @@ const SYSTEM =
   "   glute bridges, wall sits. On deadlift day it is not a deadlift — not Romanian, single-leg, trap bar or kettlebell; it is " +
   "   swings, hip bridges, rows, farmer carries, hangs. Same muscles, DIFFERENT movement.\n\n" +
 
+  "MONDAY SHARES THE ROOM (Josh, 2026-10-20): on Monday the Non-Battle Team trains at the same time, in the same " +
+  "room, and THEY have the kettlebells. On Monday the Battle Team's accessory uses DUMBBELLS, benches, pull-up " +
+  "bars, med balls or bodyweight — NEVER a kettlebell in any form. Wednesday and Friday are not shared; the " +
+  "usual list applies.\n\n" +
+
   "BUILT-IN MODIFICATIONS: Every accessory MUST carry an inline scale so a coach can adjust on the fly for an injured or weaker " +
   "athlete — phrase it as a natural part of the move (an easier option AND a harder option), not a separate 'modifications' section.\n\n" +
 
@@ -173,10 +178,14 @@ Deno.serve(async (req) => {
     const mainWord = main?.word ?? "";
     const repeatsMain = (day: { accessories?: Array<{ name?: string }> } | undefined) =>
       !!main && (day?.accessories ?? []).some((a) => main.re.test(a?.name ?? ""));
+    // Monday shares the room and the Non-Battle Team has the kettlebells.
+    const KB = /kettle\s*bell|\bkbs?\b/i;
+    const mondayKettlebell = (day: { accessories?: Array<{ name?: string; equipment?: string; howTo?: string; scale?: string }> } | undefined) =>
+      dayKey === "monday" && (day?.accessories ?? []).some((a) => KB.test([a?.name, a?.equipment, a?.howTo, a?.scale].filter(Boolean).join(" ")));
 
-    let parsed: { day?: { accessories?: Array<{ name?: string }> } } = {};
+    let parsed: { day?: { accessories?: Array<{ name?: string; equipment?: string; howTo?: string; scale?: string }> } } = {};
     let note = "";
-    for (let attempt = 0; attempt < 2; attempt++) {
+    for (let attempt = 0; attempt < 3; attempt++) {
       const response = await anthropic.messages.create({
         model: MODEL,
         max_tokens: maxTokens,
@@ -185,14 +194,27 @@ Deno.serve(async (req) => {
         ...thinking("medium"),
       } as never);
       parsed = extractJson(textOf(response));
-      if (!repeatsMain(parsed.day)) break;
-      const bad = (parsed.day?.accessories ?? []).map((a) => a?.name).filter(Boolean).join(", ");
-      note =
-        `\n\nYOUR PREVIOUS ATTEMPT WAS REJECTED: the accessory "${bad}" is the day's main lift again. ` +
-        `They just did five sets of it. Choose a DIFFERENT movement for the same muscles. Everything else can stay.`;
+      if (repeatsMain(parsed.day)) {
+        const bad = (parsed.day?.accessories ?? []).map((a) => a?.name).filter(Boolean).join(", ");
+        note =
+          `\n\nYOUR PREVIOUS ATTEMPT WAS REJECTED: the accessory "${bad}" is the day's main lift again. ` +
+          `They just did five sets of it. Choose a DIFFERENT movement for the same muscles. Everything else can stay.`;
+        continue;
+      }
+      if (mondayKettlebell(parsed.day)) {
+        note =
+          "\n\nYOUR PREVIOUS ATTEMPT WAS REJECTED: it is MONDAY and the accessory uses a kettlebell. The " +
+          "Non-Battle Team has the kettlebells on Monday. Use dumbbells, a bench, a pull-up bar, a med ball or " +
+          "bodyweight instead — in the move, its scale and its cue. Everything else can stay.";
+        continue;
+      }
+      break;
     }
     if (repeatsMain(parsed.day)) {
       return json({ error: `The coach kept offering ${mainWord} as the extra work. Try again.` }, 502);
+    }
+    if (mondayKettlebell(parsed.day)) {
+      return json({ error: "The coach kept reaching for kettlebells on Monday, when the Non-Battle Team has them. Try again." }, 502);
     }
     return json(parsed);
   } catch (e) {

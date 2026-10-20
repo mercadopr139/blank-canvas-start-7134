@@ -5,11 +5,13 @@
 // default lane names.
 import { useState } from "react";
 import { Input } from "@/components/ui/input";
-import { parseSplit, serializeSplit, capFirst, laneDefaults, type SplitLane } from "@/lib/practicePlan";
+import { Pencil, Plus, X } from "lucide-react";
+import { parseSplit, serializeSplit, capFirst, laneDefaults, MIN_LANES, MAX_LANES, NEW_LANE, type SplitLane } from "@/lib/practicePlan";
 import { parseBullets, levelIndent, levelDot, levelText } from "@/lib/bulletText";
 import BulletEditor from "./BulletEditor";
 
-/** Two side-by-side mini-columns: lane name, who, drills. Saves on blur. */
+/** Two or three mini-columns: lane name, who, drills. Saves on blur. The names are
+ *  typed over, and look it: a pencil on hover, an underline while editing (Josh, 2026-10-20). */
 export const SplitLanesEditor = ({
   detail, category = "Split", accent, dark = false, onSave,
 }: {
@@ -33,6 +35,8 @@ export const SplitLanesEditor = ({
     if (v !== (detail || null)) onSave(v);
   };
   const commit = () => commitWith(lanes);
+  const addLane = () => { if (lanes.length >= MAX_LANES) return; const next = [...lanes, { ...NEW_LANE }]; setLanes(next); commitWith(next); };
+  const removeLane = (i: number) => { if (lanes.length <= MIN_LANES) return; const next = lanes.filter((_, idx) => idx !== i); setLanes(next); commitWith(next); };
   // A lane's drills arrive from its bullet editor when focus leaves it.
   const saveText = (i: number, text: string | null) => {
     const next = lanes.map((l, idx) => (idx === i ? { ...l, text: text ?? "" } : l));
@@ -45,26 +49,39 @@ export const SplitLanesEditor = ({
   const quiet = `border-0 bg-transparent shadow-none focus-visible:ring-0 focus-visible:ring-offset-0 ${
     dark ? "text-white placeholder:text-white/30" : "text-white placeholder:text-neutral-600"
   }`;
+  const editable = "border-b border-transparent hover:border-white/20 focus-visible:border-white/50 rounded-none";
   return (
     <div className="ml-1 pl-2.5 space-y-2.5" style={{ borderLeft: `2px solid ${accent}66` }}>
       {lanes.map((l, i) => {
         return (
-          <div key={i} className="space-y-1">
+          <div key={i} className="space-y-1 group/lane">
             <div className="flex items-baseline gap-2">
               {/* Bold gray, sentence case — a sub-heading under the column's
-                  coloured header, not a second header. */}
-              <Input
-                value={l.title}
-                onChange={(e) => patch(i, "title", e.target.value)}
-                onBlur={commit}
-                className={`h-6 flex-1 min-w-0 px-0 text-[12px] font-bold ${quiet} ${dark ? "!text-white/60" : "!text-neutral-400"}`}
-              />
+                  coloured header, not a second header. Typed over to rename. */}
+              <span className="relative flex-1 min-w-0 flex items-baseline">
+                <Input
+                  value={l.title}
+                  onChange={(e) => patch(i, "title", e.target.value)}
+                  onBlur={commit}
+                  placeholder={`Lane ${i + 1} name`}
+                  title="Click to rename this lane"
+                  className={`h-6 flex-1 min-w-0 px-0 pr-4 text-[12px] font-bold ${quiet} ${editable} ${dark ? "!text-white/60" : "!text-neutral-400"}`}
+                />
+                <Pencil className="pointer-events-none absolute right-0 top-1/2 -translate-y-1/2 w-3 h-3 text-white/25 opacity-0 group-hover/lane:opacity-100" />
+              </span>
               <Input
                 value={l.who}
                 onChange={(e) => patch(i, "who", e.target.value)}
                 onBlur={commit}
-                className={`h-6 w-[45%] min-w-0 px-0 text-[11px] text-right ${quiet}`}
+                placeholder="who"
+                title="Who is in this lane"
+                className={`h-6 w-[40%] min-w-0 px-0 text-[11px] text-right ${quiet} ${editable}`}
               />
+              {lanes.length > MIN_LANES && (
+                <button type="button" onClick={() => removeLane(i)} title="Remove this lane" aria-label="Remove this lane" className="shrink-0 p-0.5 rounded text-white/25 opacity-0 group-hover/lane:opacity-100 hover:text-red-300 hover:bg-white/10">
+                  <X className="w-3 h-3" />
+                </button>
+              )}
             </div>
             <BulletEditor
               defaultValue={l.text}
@@ -78,17 +95,22 @@ export const SplitLanesEditor = ({
           </div>
         );
       })}
+      {lanes.length < MAX_LANES && (
+        <button type="button" onClick={addLane} className="inline-flex items-center gap-1 text-[11px] text-white/35 hover:text-white">
+          <Plus className="w-3 h-3" /> Add a lane
+        </button>
+      )}
     </div>
   );
 };
 
-/** The two lanes as the wall sees them. Sized in em so the board's fit pass scales it. */
+/** The lanes as the wall sees them, two or three across. Sized in em so the board's fit pass scales it. */
 export const SplitLanesView = ({
   detail, category = "Split", accent,
 }: { detail: string | null; category?: string; accent: string }) => {
   const lanes = parseSplit(detail, laneDefaults(category));
   return (
-    <div className="grid grid-cols-2 gap-[0.6em]">
+    <div className={`grid gap-[0.6em] ${lanes.length >= 3 ? "grid-cols-3" : "grid-cols-2"}`}>
       {lanes.map((l, i) => {
         const lines = parseBullets(l.text);
         return (

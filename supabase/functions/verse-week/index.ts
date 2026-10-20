@@ -5,7 +5,9 @@
 // day, Monday to Friday — that walk the academy through that theme together,
 // each with short context, a one-line introduction to anyone the passage names,
 // and ONE discussion question. The question is deliberately about the youth’s
-// own life rather than the text: a comprehension question turns a gym into a
+// own life rather than the text, and from the SAFE side of that life (Josh,
+// 2026-10-20: sixty kids answer out loud; a question opens the door, the
+// read-aloud goes deep): a comprehension question turns a gym into a
 // classroom, where only the confident kids speak. With it comes a short script
 // the mentor reads out loud to close the discussion — the actual words, not
 // notes about what to say.
@@ -84,19 +86,31 @@ const SYSTEM_BODY =
   "  follows and a 19-year-old is not talked down to.\n" +
   "- Never condescending. Teenagers detect it instantly and stop listening.\n\n" +
 
-  "THE QUESTION: exactly ONE per day. It is the entire discussion, so it has to earn its place.\n" +
+  "THE QUESTION: exactly ONE per day. It OPENS THE DOOR to the discussion; the read-aloud is where it goes deep.\n" +
+  "The room is PUBLIC: sixty youth, their teammates and their coaches, answering out loud in front of each other. " +
+  "So the question has to be one a kid can answer in front of his whole team without exposing himself.\n" +
   "Write it so a teenager answers out of THEIR OWN LIFE, not out of Bible knowledge. Do NOT ask what the passage " +
   "means, what a word means, or what the person in it did — the context already covered that, and a comprehension " +
   "question turns the room into a classroom where only the confident kids speak.\n" +
-  "Instead, find the pressure, fear, choice or relationship in the verse and ask about where THAT shows up in a " +
-  "13-to-19-year-old's week: school, the gym, their phone, their friends, their family, money, who they are when " +
-  "nobody is watching, what they do after they lose. Same truth, their lens.\n" +
-  "- Concrete beats abstract. 'Where do you feel like you have to pretend?' beats 'What does authenticity mean?'\n" +
+  "Find the truth in the verse, then ask about it from the side a kid can SHOW in front of friends: a win, a " +
+  "person they can count on, a time they kept going, a habit they are building, something they are proud of, big " +
+  "or small. Same truth, the safe side of it. Never the wound side: not a secret, a sin, a fear, a shame, a family " +
+  "problem, or 'the heaviest thing you're carrying'. Those are true, and they are for the read-aloud, not for a " +
+  "kid to confess to sixty people.\n" +
+  "THE SAY-IT-OUT-LOUD TEST, before you keep any question: picture a 7th grader answering it standing with his " +
+  "team. If his honest answer could embarrass him, or he would have to make something up to stay safe, REWRITE " +
+  "IT until he could answer with a name, a moment, or a nod.\n" +
+  "- Ask it the way a coach asks the group: warm, to 'you guys', with a frame that makes answering easy. " +
+  "'Do you guys have someone you can really count on, beyond the basic conversation — someone who has proven " +
+  "they will be there?' beats 'Who actually showed up for you instead of just texting?'\n" +
+  "- 'Think about something you've done that you were proud of, big or small' beats 'What's the heaviest thing " +
+  "you're carrying that nobody here knows about?'\n" +
+  "- Concrete beats abstract. A moment or a person beats a definition.\n" +
   "- A 13-year-old can answer it and a 19-year-old still finds it worth answering.\n" +
-  "- Open. Never yes/no, never a right answer they can guess, never a question with 'God' or 'Jesus' as the obvious " +
-  "  one-word reply.\n" +
+  "- Open. Never yes/no only, never a right answer they can guess, never a question with 'God' or 'Jesus' as the " +
+  "  obvious one-word reply.\n" +
   "- No church vocabulary in the question itself.\n" +
-  "- ONE sentence. It gets read aloud to a room of eighty.\n\n" +
+  "- ONE or two sentences at most — a short frame, then the ask. It gets read aloud to a room of sixty.\n\n" +
 
   "WHO IS IN THE PASSAGE: name every real person the verse or the questions refer to — David, Paul, Peter, " +
   "Gideon, Ruth — and give ONE sentence saying who they were. Assume the room has never heard of them. Plain " +
@@ -113,8 +127,9 @@ const SYSTEM_BODY =
   "- Spoken English, not written English. Short sentences. Contractions. The way a man talks, not the way an " +
   "  essay reads.\n" +
   "- Three to five sentences. Long enough to land, short enough to hold a gym.\n" +
-  "- Name honestly what they are probably carrying, then bring it to what the verse actually says, then leave " +
-  "  them with one thing that is true whether or not they feel it today.\n" +
+  "- This is where the depth lives. The question stayed on the safe side on purpose; here you name honestly " +
+  "  what they are probably carrying — the fear, the weight, the thing nobody in the room knows — then bring it " +
+  "  to what the verse actually says, then leave them with one thing that is true whether or not they feel it today.\n" +
   "- No church vocabulary they would have to be taught. If a weighty word is unavoidable, say it and then say " +
   "  what it means in the same breath.\n" +
   "- Never a lecture, never scolding, and never sentimental. These are children who have heard adults perform " +
@@ -240,8 +255,9 @@ Deno.serve(async (req: Request) => {
           ? dayBlock +
             `\nThe current question is:\n"${question}"\n\n` +
             "The coach wants a DIFFERENT question from this same verse. Do not repeat it and do not rephrase it — " +
-            "find another pressure, fear, choice or relationship in the verse and ask about where that shows up in " +
-            "their week. Then write the read-aloud that closes YOUR new question, following every rule for both.\n\n" +
+            "find another truth in the verse and ask about it from the safe side a kid can show in front of his " +
+            "team (a win, a person, a moment, a habit, something he is proud of). Run the say-it-out-loud test. " +
+            "Then write the read-aloud that closes YOUR new question, following every rule for both.\n\n" +
             'Return ONLY: { "question": "...", "answer": "..." }'
           : dayBlock +
             `\nThe coach has written the question in their own words:\n"${question}"\n\n` +

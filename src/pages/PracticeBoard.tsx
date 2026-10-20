@@ -14,6 +14,7 @@ import nlaLogoWhite from "@/assets/nla-logo-white.png";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import CoachUnlock from "@/components/board/CoachUnlock";
 import { useBoardSession } from "@/hooks/useBoardSession";
+import { usePracticeCategories } from "@/hooks/usePracticeCategories";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -26,7 +27,7 @@ import DailyDutiesBoard from "@/components/duties/DailyDutiesBoard";
 import JuniorsSessionBoard from "@/components/juniors/JuniorsSessionBoard";
 import VerseDiscussion, { DiscussionDay, DiscussionFigure } from "@/components/verse/VerseDiscussion";
 import {
-  NLA_RED, TOGETHER_GRAY, GROUPS, QUICK_BLOCKS, PracticeGroup, blockAccent, spiritualAccent,
+  NLA_RED, TOGETHER_GRAY, GROUPS, PracticeGroup, blockAccent, spiritualAccent,
   daysForWeek, mondayOf, dateForWeekday, todayWeekday, addDays, formatWeekRange,
   msUntilStart, countdownParts, formatStartTime,
   PracticeSettings, PracticeWeek, PracticeBlock, SpiritualDay, MeetingPoints,
@@ -1619,6 +1620,7 @@ const AddBlock = ({
 }) => {
   const [open, setOpen] = useState(false);
   const [custom, setCustom] = useState("");
+  const { chips } = usePracticeCategories();
 
   if (!open) {
     return (
@@ -1656,7 +1658,7 @@ const AddBlock = ({
         </button>
       </div>
       <div className="flex flex-wrap gap-1.5">
-        {QUICK_BLOCKS.map((q) => (
+        {chips.map((q) => (
           <button
             key={q}
             type="button"
