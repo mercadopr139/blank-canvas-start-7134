@@ -505,7 +505,12 @@ BEGIN
 END;
 $$;
 
--- admin_get_duplicate_registrations (from 20260915130000_duplicate_detector_min_uuid.sql) → app_duplicate_registrations
+-- admin_get_duplicate_registrations (from 20260915140000_duplicates_program_year.sql) → app_duplicate_registrations
+-- The program_year column stays: the Duplicates page badges a cross-year
+-- group with it and refuses to merge one (the 2026-09-02 lesson). The first
+-- draft of this file copied the older 20260915130000 shape without it, and
+-- Postgres refused to change the return type — that is why the laptop push
+-- failed. Same columns as production, so CREATE OR REPLACE goes through.
 CREATE OR REPLACE FUNCTION public.admin_get_duplicate_registrations()
 RETURNS TABLE (
   id                      uuid,
@@ -521,7 +526,8 @@ RETURNS TABLE (
   first_attendance        date,
   last_attendance         date,
   dup_key                 text,
-  match_type              text
+  match_type              text,
+  program_year            text
 )
 LANGUAGE plpgsql
 SECURITY DEFINER
@@ -580,7 +586,8 @@ BEGIN
     yr.child_date_of_birth, yr.parent_first_name, yr.parent_last_name,
     yr.created_at::date AS registered_on, yr.approved_for_attendance,
     COUNT(ar.id) AS attendance_count, MIN(ar.check_in_date) AS first_attendance,
-    MAX(ar.check_in_date) AS last_attendance, c.dup_key, c.match_type
+    MAX(ar.check_in_date) AS last_attendance, c.dup_key, c.match_type,
+    yr.program_year
   FROM public.youth_registrations yr
   JOIN clustered c ON c.id = yr.id
   LEFT JOIN public.attendance_records ar ON ar.registration_id = yr.id
