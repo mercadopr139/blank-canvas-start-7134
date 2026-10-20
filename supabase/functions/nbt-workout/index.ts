@@ -254,9 +254,9 @@ const SYSTEM =
   "× 2'. NO STATIC HOLDS in the circuit — a plank or hollow hold is a clock; write plank shoulder taps × 20 or " +
   "hollow rocks × 15 instead. The two tracks differ by the COUNT and the variation.\n" +
   "THE SHAPE: as many rounds as they can inside the cardio minutes, every round the same stations, and the " +
-  "result a kid writes down is ROUNDS. The first line is always: 'As many rounds as you can in N min — rest 2 " +
-  "min between rounds' (N = the cardio minutes; 2 min rest is the house standard, a coach edits it on the " +
-  "plan when a day needs something else). That first line is the ONLY place a time appears.\n" +
+  "result a kid writes down is ROUNDS. The first line is always: 'As many rounds as you can in N min' (N = the " +
+  "cardio minutes) and nothing more — no rest instruction. They know to breathe after a round and go again, " +
+  "each at his own pace (Josh, 2026-10-20). That first line is the ONLY place a time appears.\n" +
   "CIRCUIT LINES — WRITTEN FOR A FOURTEEN-YEAR-OLD READING A SCREEN FROM ACROSS THE ROOM. Each track's circuit " +
   "is a list of lines and EVERY LINE MUST STAND ON ITS OWN. After the first line, every line is ONE station, " +
   "complete: the movement first, then the count or distance, then the effort or cue, on the same line, " +
@@ -280,8 +280,8 @@ const SYSTEM =
   '  "work": {\n' +
   '    "emphasis": "one of: steady aerobic | intervals | strength-endurance | carries | grip | obstacle prep",\n' +
   '    "title": "short name for the circuit",\n' +
-  '    "bravo":   ["As many rounds as you can in 20 min — rest 2 min between rounds", "Row — 200 m — controlled pace", "Shuttle — baseline to baseline and back — strong but repeatable", "Jump rope — 40 skips — steady, step-hop if learning", "Med ball chest pass to wall — 12 — strong but repeatable"],\n' +
-  '    "alpha":   ["As many rounds as you can in 20 min — rest 2 min between rounds", "Bike — 12 calories — strong but repeatable", "Shuttle — baseline to baseline and back × 2 — strong but repeatable", "Jump rope — 80 skips — fast singles", "Med ball slam — 15 — full extension, hard but controlled"],\n' +
+  '    "bravo":   ["As many rounds as you can in 20 min", "Row — 200 m — controlled pace", "Shuttle — baseline to baseline and back — strong but repeatable", "Jump rope — 40 skips — steady, step-hop if learning", "Med ball chest pass to wall — 12 — strong but repeatable"],\n' +
+  '    "alpha":   ["As many rounds as you can in 20 min", "Bike — 12 calories — strong but repeatable", "Shuttle — baseline to baseline and back × 2 — strong but repeatable", "Jump rope — 80 skips — fast singles", "Med ball slam — 15 — full extension, hard but controlled"],\n' +
   '    "result_unit": "rounds — what the athletes write down"\n' +
   "  },\n" +
   '  "reset": ["2-3 short transition lines"]\n' +
@@ -514,7 +514,7 @@ Deno.serve(async (req: Request) => {
           "\n\nYOUR PREVIOUS ATTEMPT WAS REJECTED: these cardio stations are timed or are holds, and the cardio is " +
           `counted, never timed: ${timed.map((l) => `"${l}"`).join(", ")}. Rewrite each as a number of reps, court ` +
           "lengths, metres or calories (a hold becomes a rep movement). The first line alone keeps its minutes and " +
-          "the 2 min rest. Everything else can stay.";
+          "nothing else. Everything else can stay.";
         continue;
       }
       if (!mondayDumbbell(parsed)) break;
