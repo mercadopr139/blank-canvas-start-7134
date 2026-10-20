@@ -1,6 +1,6 @@
 // The weekly-goal window (Josh, 2026-10-19: "weekly goal", never
 // "commitment"). One place to make a goal, wherever it is made: the + on a
-// checklist line, the gold box at a checkpoint, or the Agenda Meeting tile on
+// checklist line, the green goal box at a checkpoint, or the Agenda Meeting tile on
 // a Workbench. The goal is one Workbench task per owner, tied by
 // lap_commitment_id, under a topic of the lap. Made while a lap is open it
 // belongs to that lap; made between laps it waits and joins the next one at
@@ -114,7 +114,7 @@ const WeeklyGoalDialog = ({ open, seed, onClose, onSaved }: { open: boolean; see
     <Dialog open={open} onOpenChange={(o) => { if (!o) onClose(); }}>
       <DialogContent className="bg-[#1a1a2e] border-white/10 text-white" onOpenAutoFocus={(e) => { e.preventDefault(); titleRef.current?.focus(); titleRef.current?.select(); }}>
         <DialogHeader>
-          <DialogTitle className="inline-flex items-center gap-2"><Target className="w-5 h-5 text-amber-300" /> Weekly goal</DialogTitle>
+          <DialogTitle className="inline-flex items-center gap-2"><Target className="w-5 h-5 text-green-400" /> Weekly goal</DialogTitle>
           <DialogDescription className="text-white/60">
             Something that gets done this week, by someone. It lands on each owner's Agenda Meeting tile and comes up in next lap's warm-up.
             {!lap && " No lap is open right now, so it waits for the next one."}

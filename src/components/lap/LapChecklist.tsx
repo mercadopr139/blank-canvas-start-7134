@@ -3,7 +3,7 @@
 // ("Daily Duties") with sub-lines under it ("Review Current System"), ticked
 // as they are reviewed; ticks belong to the lap, so they reset each Monday.
 // Any line carries a standing note (click the line). A line that needs
-// doing becomes a weekly goal ("+"). A sub-line never has children: the
+// doing becomes a weekly goal (the green target, as on the Workbench). A sub-line never has children: the
 // database refuses it, and nothing here offers it.
 import { useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
@@ -11,7 +11,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
-import { Check, Circle, Plus, Pencil, X, StickyNote, CornerDownRight, ExternalLink, Link2, Target, Globe, Paperclip, LayoutGrid, ChevronRight, ChevronLeft } from "lucide-react";
+import { Check, Circle, Plus, Pencil, X, StickyNote, ExternalLink, Link2, Target, Globe, Paperclip, LayoutGrid, ChevronRight, ChevronLeft } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { linkTarget, linkChoices, markLeavingLap } from "@/lib/lap/links";
 import { Input } from "@/components/ui/input";
@@ -241,7 +241,7 @@ const LapChecklist = ({ lapId, topicId, ask, onMakeGoal, onAllReviewed }: Props)
             {item.note && <StickyNote className="inline w-3.5 h-3.5 ml-2 align-[-2px] text-amber-300/80" aria-label="Has a note" />}
           </button>
           {goal && (
-            <span className={`shrink-0 inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] font-medium ${goal.done ? "border-amber-400/30 bg-amber-400/10 text-amber-300/70" : "border-amber-400/50 bg-amber-400/15 text-amber-300"}`} title={goal.done ? "This week's goal, done" : "This week's goal"}>
+            <span className={`shrink-0 inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] font-medium ${goal.done ? "border-green-400/30 bg-green-400/10 text-green-400/70" : "border-green-400/50 bg-green-400/15 text-green-400"}`} title={goal.done ? "This week's goal, done" : "This week's goal"}>
               {goal.done ? <Check className="w-3 h-3" /> : <Target className="w-3 h-3" />}
               <span className="hidden sm:inline">{goal.done ? "Goal done" : "Weekly goal"}</span>
             </span>
@@ -265,8 +265,8 @@ const LapChecklist = ({ lapId, topicId, ask, onMakeGoal, onAllReviewed }: Props)
             </button>
           )}
           <span className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity">
-            {!sub && <button onClick={() => setSubDraft((d) => (d?.parentId === item.id ? null : { parentId: item.id, text: "" }))} title="Add a sub-line" aria-label="Add a sub-line" className="p-1 rounded text-white/50 hover:text-white hover:bg-white/10"><CornerDownRight className="w-4 h-4" /></button>}
-            <button onClick={() => onMakeGoal(item.title, item.id)} title="Make this a weekly goal" aria-label="Make this a weekly goal" className="p-1 rounded text-white/50 hover:text-amber-300 hover:bg-amber-400/10"><Plus className="w-4 h-4" /></button>
+            {!sub && <button onClick={() => setSubDraft((d) => (d?.parentId === item.id ? null : { parentId: item.id, text: "" }))} title="Add a sub-line" aria-label="Add a sub-line" className="p-1 rounded text-white/50 hover:text-white hover:bg-white/10"><Plus className="w-4 h-4" /></button>}
+            <button onClick={() => onMakeGoal(item.title, item.id)} title="Make this a weekly goal" aria-label="Make this a weekly goal" className="p-1 rounded text-white/50 hover:text-green-400 hover:bg-green-400/10"><Target className="w-4 h-4" /></button>
             <button onClick={() => void rename(item)} title="Rename" aria-label="Rename" className="p-1 rounded text-white/50 hover:text-white hover:bg-white/10"><Pencil className="w-3.5 h-3.5" /></button>
             <DropdownMenu onOpenChange={(o) => { if (!o) setPagesFor(null); }}>
               <DropdownMenuTrigger asChild>
@@ -382,7 +382,7 @@ const LapChecklist = ({ lapId, topicId, ask, onMakeGoal, onAllReviewed }: Props)
         <Button size="sm" onClick={() => void addHeading()} disabled={busy || !draft.trim()} className="text-white" style={{ backgroundColor: NLA_RED }}>Add</Button>
       </div>
       <input ref={fileInput} type="file" accept="application/pdf,image/png,image/jpeg,image/webp,image/gif" className="hidden" onChange={(e) => void attach(e.target.files?.[0])} />
-      <p className="text-[11px] text-white/35">Same lines every lap; ticks reset each Monday. Click a line for its note. Hover: ↵ adds a sub-line, + makes it a weekly goal, the link icon adds a web address, a PDF or image, or one of our pages.</p>
+      <p className="text-[11px] text-white/35">Same lines every lap; ticks reset each Monday. Click a line for its note. Hover: + adds a sub-line, the target makes it a weekly goal, the link icon adds a web address, a PDF or image, or one of our pages.</p>
     </section>
   );
 };

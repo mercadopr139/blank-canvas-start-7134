@@ -382,7 +382,7 @@ const AdminTheLap = () => {
   /* ───── Weekly goals and decisions ─────
      A weekly goal (Josh, 2026-10-19: "weekly goal", never "commitment") is
      made in one themed window (WeeklyGoalDialog), opened from the + on any
-     checklist line or from the gold box at the checkpoint. The line's words
+     checklist line or from the green goal box at the checkpoint. The line's words
      are prefilled; the topic starts as this checkpoint and can be changed. */
   const [goal, setGoal] = useState<WeeklyGoalSeed | null>(null);
   const openGoal = (title = "", itemId?: string) => { if (current) setGoal({ title, topicId: current.id, itemId }); };
@@ -738,8 +738,8 @@ const AdminTheLap = () => {
 
             {/* Weekly goals at this checkpoint — gold, their own colour, so
                 they pop against the checklist and the board (Josh, 2026-10-19). */}
-            <section className="rounded-2xl border border-amber-400/40 bg-amber-400/[0.05] p-5 space-y-3">
-              <h3 className="font-bold text-sm uppercase tracking-wide text-amber-300 inline-flex items-center gap-2"><Target className="w-4 h-4" /> Weekly goals</h3>
+            <section className="rounded-2xl border border-green-400/40 bg-green-400/[0.05] p-5 space-y-3">
+              <h3 className="font-bold text-sm uppercase tracking-wide text-green-400 inline-flex items-center gap-2"><Target className="w-4 h-4" /> Weekly goals</h3>
               {currentRows.length === 0 && <p className="text-sm text-white/35">None yet at this checkpoint.</p>}
               <ul className="space-y-2">
                 {currentRows.map((rows) => {
@@ -747,15 +747,15 @@ const AdminTheLap = () => {
                   const names = rows.map((r) => { const m = managers.find((x) => x.key === managerKeyOf(r.source)); return m ? firstName(m) : managerKeyOf(r.source) ?? "?"; });
                   const tone = carryTone(Math.max(...rows.map((r) => r.carry_count)));
                   return (
-                    <li key={rows[0].lap_commitment_id ?? rows[0].id} className="group flex items-start gap-3 rounded-lg -mx-1 px-1 hover:bg-amber-400/[0.06]">
-                      <button onClick={() => void toggleDone(rows)} className={`mt-0.5 shrink-0 ${done ? "text-amber-300" : "text-amber-300/40 hover:text-amber-300"}`} aria-label={done ? "Reopen" : "Mark done"}>{done ? <Check className="w-5 h-5" /> : <Circle className="w-5 h-5" />}</button>
+                    <li key={rows[0].lap_commitment_id ?? rows[0].id} className="group flex items-start gap-3 rounded-lg -mx-1 px-1 hover:bg-green-400/[0.06]">
+                      <button onClick={() => void toggleDone(rows)} className={`mt-0.5 shrink-0 ${done ? "text-green-400" : "text-green-400/40 hover:text-green-400"}`} aria-label={done ? "Reopen" : "Mark done"}>{done ? <Check className="w-5 h-5" /> : <Circle className="w-5 h-5" />}</button>
                       <div className="flex-1 min-w-0">
                         <p className={`text-sm ${done ? "line-through text-white/40" : TONE_CLASS[tone]}`}>{rows[0].title}</p>
                         <p className="text-[11px] text-white/40">{names.join(" & ")}{rows[0].carry_count > 0 && ` · carried ${rows[0].carry_count} lap${rows[0].carry_count === 1 ? "" : "s"}`}{rows.some((r) => r.planned_date === todayNY()) && " · on today's plan"}</p>
                       </div>
                       {!done && (
                         <span className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity">
-                          <button onClick={() => void carryNow(rows)} title="Move to next week" aria-label="Move to next week" className="p-1 rounded text-white/50 hover:text-amber-300 hover:bg-amber-400/10"><Forward className="w-4 h-4" /></button>
+                          <button onClick={() => void carryNow(rows)} title="Move to next week" aria-label="Move to next week" className="p-1 rounded text-white/50 hover:text-green-400 hover:bg-green-400/10"><Forward className="w-4 h-4" /></button>
                           <button onClick={() => void dropNow(rows)} title="Drop this goal" aria-label="Drop this goal" className="p-1 rounded text-white/50 hover:text-red-300 hover:bg-red-500/10"><X className="w-4 h-4" /></button>
                         </span>
                       )}
@@ -763,7 +763,7 @@ const AdminTheLap = () => {
                   );
                 })}
               </ul>
-              <div className="pt-2 border-t border-amber-400/20 flex flex-wrap items-center gap-3">
+              <div className="pt-2 border-t border-green-400/20 flex flex-wrap items-center gap-3">
                 <Button size="sm" onClick={() => openGoal()} className="text-white" style={{ backgroundColor: NLA_RED }}><Plus className="w-4 h-4 mr-1.5" /> Add a weekly goal</Button>
                 <p className="text-[11px] text-white/35">Lands in each owner's Agenda Meeting tile. Done by either is done for both.</p>
               </div>
