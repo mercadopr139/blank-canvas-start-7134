@@ -17,7 +17,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useStaffPermissions } from "@/hooks/useStaffPermissions";
 import { useAsk } from "@/components/admin/AskDialog";
 import LapChecklist from "@/components/lap/LapChecklist";
-import { clearLapReturn } from "@/lib/lap/links";
+import { clearLapReturn, markLeavingLap } from "@/lib/lap/links";
 import { todayNY } from "@/lib/programYear";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -26,12 +26,12 @@ import {
   ArrowLeft, Flag, Play, Pause, ChevronLeft, ChevronRight, Check, Circle, Maximize2, Minimize2, Settings2, Loader2, Trophy, Sparkles, Forward, Trash2, Split, MessageSquare, Plus, Target, X,
 } from "lucide-react";
 import { groupForWarmup, warmupGate, mustDecide, type WarmupGroup } from "@/lib/lap/warmup";
-import { fetchTopicNumbers, fetchMovedConversations } from "@/lib/lap/numbers";
+import { fetchTopicNumbers } from "@/lib/lap/numbers";
 import { deleteLap } from "@/lib/lap/laps";
 import LapRing from "@/components/lap/LapRing";
 import WeeklyGoalDialog, { type WeeklyGoalSeed } from "@/components/lap/WeeklyGoalDialog";
 import { dropGoal, carryGoalNow, archiveDoneGoalsBefore } from "@/lib/lap/goals";
-import { runningOrder, checkpoints, crossedPillar, streak as streakOf, PILLAR_LABEL, type RingTopic, type Pillar } from "@/lib/lap/ring";
+import { runningOrder, checkpoints, crossedPillar, streak as streakOf, PILLAR_LABEL, PILLAR_ORDER, type RingTopic, type Pillar } from "@/lib/lap/ring";
 import { PILLAR_COLOR, commitmentSourceFor, carryTone, type CarryTone } from "@/lib/lap/commitments";
 
 const NLA_RED = "#bf0f3e";
@@ -173,31 +173,56 @@ const AdminTheLap = () => {
       return since ? { since, label: "since the last lap" } : { since: new Date(Date.now() - 7 * 86_400_000).toISOString(), label: "in the last 7 days" };
     },
   });
-  const { data: moved = null } = useQuery({
-    queryKey: ["lap-moved", window?.since ?? "none"],
-    enabled: !!window,
-    queryFn: () => fetchMovedConversations(window!.since),
+  // What I archived on the message board stays off the Lap (Josh, 2026-10-19:
+  // archived the whole board, the Lap still listed it). Archiving is per
+  // person, so this is my list, not Chrissy's.
+  const { data: myArchived = [] } = useQuery({
+    queryKey: ["mb-my-archived", user?.id ?? "none"],
+    enabled: !!user,
+    queryFn: async () => {
+      const { data } = await supabase.from("mb_conversation_members").select("conversation_id, archived_at" as never).eq("user_id", user!.id).not("archived_at" as never, "is", null);
+      return ((data ?? []) as unknown as { conversation_id: string }[]).map((m) => m.conversation_id);
+    },
   });
-  // The conversations waiting at this checkpoint: pinned to it, or in its
-  // pillar with messages since the last lap finished. Links open the board
-  // on that conversation.
+  /* What moved on the message board since the last lap — listed ONCE, at the
+     start line, by pillar (Josh, 2026-10-19: the same conversations repeated
+     at every checkpoint of a pillar). At a checkpoint, only what is pinned there. */
+  const { data: boardStart = [] } = useQuery({
+    queryKey: ["lap-board-start", window?.since ?? "none", myArchived.length],
+    enabled: !lap && !!window,
+    queryFn: async () => {
+      const { data: msgs } = await supabase.from("mb_messages").select("conversation_id, created_at").gt("created_at", window!.since);
+      const lastBy = new Map<string, string>();
+      for (const m of (msgs ?? []) as { conversation_id: string; created_at: string }[]) if (!lastBy.has(m.conversation_id) || lastBy.get(m.conversation_id)! < m.created_at) lastBy.set(m.conversation_id, m.created_at);
+      const archived = new Set(myArchived);
+      const ids = [...lastBy.keys()].filter((id) => !archived.has(id));
+      if (!ids.length) return [] as { id: string; name: string | null; pillar: Pillar; last: string }[];
+      const { data: convs } = await supabase.from("mb_conversations").select("id, name, pillar" as never).in("id", ids);
+      return ((convs ?? []) as unknown as { id: string; name: string | null; pillar: string | null }[])
+        .filter((c): c is { id: string; name: string | null; pillar: Pillar } => !!c.pillar && (PILLAR_ORDER as string[]).includes(c.pillar))
+        .map((c) => ({ ...c, last: lastBy.get(c.id)! }))
+        .sort((a, b) => PILLAR_ORDER.indexOf(a.pillar) - PILLAR_ORDER.indexOf(b.pillar) || b.last.localeCompare(a.last));
+    },
+  });
+  // The conversations pinned to this checkpoint ("Pin to the Lap" on the
+  // board), with the date of their last message in the window, if any.
   const { data: conversations = [] } = useQuery({
-    queryKey: ["lap-conversations", lap?.id ?? "none", lap?.current_topic_id ?? "none", window?.since ?? "none"],
+    queryKey: ["lap-conversations", lap?.id ?? "none", lap?.current_topic_id ?? "none", window?.since ?? "none", myArchived.length],
     enabled: !!lap?.current_topic_id && !!window,
     queryFn: async () => {
       const topic = allTopics.find((t) => t.id === lap!.current_topic_id);
       if (!topic) return [] as { id: string; name: string | null; pinned: boolean; last: string | null }[];
       const since = window!.since;
       const { data: convs } = await supabase.from("mb_conversations").select("id, name, pillar, lap_topic_id" as never).eq("pillar" as never, topic.pillar);
-      const list = (convs ?? []) as unknown as { id: string; name: string | null; lap_topic_id: string | null }[];
+      const archived = new Set(myArchived);
+      const list = ((convs ?? []) as unknown as { id: string; name: string | null; lap_topic_id: string | null }[]).filter((c) => !archived.has(c.id));
       const { data: msgs } = await supabase.from("mb_messages").select("conversation_id, created_at").gt("created_at", since).in("conversation_id", list.map((c) => c.id));
       const lastBy = new Map<string, string>();
       for (const m of (msgs ?? []) as { conversation_id: string; created_at: string }[]) if (!lastBy.has(m.conversation_id) || lastBy.get(m.conversation_id)! < m.created_at) lastBy.set(m.conversation_id, m.created_at);
       return list
         .map((c) => ({ id: c.id, name: c.name, pinned: c.lap_topic_id === topic.id, last: lastBy.get(c.id) ?? null }))
-        .filter((c) => c.pinned || c.last)
-        .sort((a, b) => Number(b.pinned) - Number(a.pinned) || (b.last ?? "").localeCompare(a.last ?? ""))
-        .slice(0, 8);
+        .filter((c) => c.pinned)
+        .sort((a, b) => (b.last ?? "").localeCompare(a.last ?? ""));
     },
   });
 
@@ -259,6 +284,22 @@ const AdminTheLap = () => {
     qc.invalidateQueries({ queryKey: ["lap-warmup"] });
     invalidate();
   };
+  // Arrow keys move the lap on the big screen: → next checkpoint, ← back.
+  // Not while typing, and not while a window is open.
+  useEffect(() => {
+    if (!lap || currentIndex < 0) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== "ArrowRight" && e.key !== "ArrowLeft") return;
+      const t = e.target as HTMLElement | null;
+      if (t && (t.tagName === "INPUT" || t.tagName === "TEXTAREA" || t.isContentEditable)) return;
+      if (document.querySelector('[role="dialog"], [role="menu"]')) return;
+      e.preventDefault();
+      if (e.key === "ArrowRight") void moveTo(currentIndex + 1);
+      else if (currentIndex > 0) void moveTo(currentIndex - 1);
+    };
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  });
   const moveTo = async (toIndex: number) => {
     if (!lap) return;
     const leaving = current?.id;
@@ -509,14 +550,6 @@ const AdminTheLap = () => {
               {order.length} checkpoints: {order.filter((t) => t.pillar === "operations").length} in Operations, {order.filter((t) => t.pillar === "sales_marketing").length} in Sales & Marketing, {order.filter((t) => t.pillar === "finance").length} in Finance. The finish line is the Vision.
             </p>
 
-            {moved && (moved.operations + moved.sales_marketing + moved.finance) > 0 && (
-              <p className="text-sm text-white/55 inline-flex items-center gap-2">
-                <MessageSquare className="w-4 h-4" /> The message board moved {window?.label ?? "recently"} in
-                {(["operations", "sales_marketing", "finance"] as const).filter((p) => moved[p] > 0).map((p) => (
-                  <span key={p} className="font-semibold" style={{ color: PILLAR_COLOR[p] }}>{PILLAR_LABEL[p]} ({moved[p]})</span>
-                ))}
-              </p>
-            )}
 
             {lastLap && (
               <p className="text-sm text-white/50">
@@ -574,6 +607,32 @@ const AdminTheLap = () => {
                     );
                   })}
                 </ul>
+              </section>
+            )}
+
+            {/* The message board, once: everything that moved since the last lap, by pillar. */}
+            {boardStart.length > 0 && (
+              <section className="rounded-2xl border border-white/10 bg-neutral-900/60 p-4 space-y-3">
+                <div className="flex items-center justify-between">
+                  <h3 className="font-bold text-sm uppercase tracking-wide text-white/60">On the message board · {window?.label ?? "recently"}</h3>
+                  <span className="text-[11px] text-white/40">{boardStart.length} conversation{boardStart.length === 1 ? "" : "s"}</span>
+                </div>
+                {PILLAR_ORDER.filter((p) => boardStart.some((c) => c.pillar === p)).map((p) => (
+                  <div key={p}>
+                    <p className="text-[10px] font-bold uppercase tracking-wider mb-1" style={{ color: PILLAR_COLOR[p] }}>{PILLAR_LABEL[p]}</p>
+                    <ul className="space-y-1">
+                      {boardStart.filter((c) => c.pillar === p).map((c) => (
+                        <li key={c.id}>
+                          <button type="button" onClick={() => { markLeavingLap(); navigate(`/admin/message-board?conv=${c.id}`); }} className="w-full text-left text-sm text-white/85 hover:text-white inline-flex items-center gap-2">
+                            <MessageSquare className="w-4 h-4 shrink-0" style={{ color: PILLAR_COLOR[p] }} />
+                            <span className="truncate">{c.name ?? "Untitled conversation"}</span>
+                            <span className="text-[11px] text-white/40 shrink-0 ml-auto">{new Date(c.last).toLocaleDateString("en-US", { month: "short", day: "numeric" })}</span>
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                ))}
               </section>
             )}
 
@@ -648,7 +707,7 @@ const AdminTheLap = () => {
             </div>
 
             {/* The standing checklist: what we look at every week here. */}
-            <LapChecklist lapId={lap.id} topicId={current.id} ask={ask} onMakeGoal={openGoal} />
+            <LapChecklist lapId={lap.id} topicId={current.id} ask={ask} onMakeGoal={openGoal} onAllReviewed={() => void moveTo(currentIndex + 1)} />
 
             {/* The numbers for this topic, this week against last. */}
             {numbers.length > 0 && (
@@ -665,25 +724,17 @@ const AdminTheLap = () => {
                 </div>
               </section>
             )}
-            {/* What moved on the message board in this pillar since the last lap. */}
-            {moved && moved[current.pillar] > 0 && (
-              <button type="button" onClick={() => navigate("/admin/message-board")} className="w-full text-left rounded-xl border border-white/10 bg-white/[0.03] px-4 py-2.5 text-sm text-white/70 hover:bg-white/[0.06] inline-flex items-center gap-2">
-                <MessageSquare className="w-4 h-4" style={{ color: PILLAR_COLOR[current.pillar] }} />
-                {moved[current.pillar]} {PILLAR_LABEL[current.pillar]} conversation{moved[current.pillar] === 1 ? "" : "s"} moved on the message board {window?.label ?? "recently"}
-              </button>
-            )}
 
-            {/* Conversations waiting here: pinned to this checkpoint, or moved in this pillar since the last lap. */}
+            {/* Conversations pinned to this checkpoint. */}
             {conversations.length > 0 && (
               <section className="rounded-2xl border border-white/10 bg-neutral-900/60 p-5 space-y-2">
-                <h3 className="font-bold text-sm uppercase tracking-wide text-white/60">On the message board</h3>
+                <h3 className="font-bold text-sm uppercase tracking-wide text-white/60">Pinned here from the message board</h3>
                 <ul className="space-y-1.5">
                   {conversations.map((c) => (
                     <li key={c.id}>
-                      <button type="button" onClick={() => navigate(`/admin/message-board?conv=${c.id}`)} className="w-full text-left text-sm text-white/85 hover:text-white inline-flex items-center gap-2">
+                      <button type="button" onClick={() => { markLeavingLap(); navigate(`/admin/message-board?conv=${c.id}`); }} className="w-full text-left text-sm text-white/85 hover:text-white inline-flex items-center gap-2">
                         <MessageSquare className="w-4 h-4 shrink-0" style={{ color: PILLAR_COLOR[current.pillar] }} />
                         <span className="truncate">{c.name ?? "Untitled conversation"}</span>
-                        {c.pinned && <span className="text-[10px] font-bold uppercase tracking-wide rounded px-1.5 py-0.5 bg-white/10 text-white/60 shrink-0">pinned here</span>}
                         {c.last && <span className="text-[11px] text-white/40 shrink-0 ml-auto">{new Date(c.last).toLocaleDateString("en-US", { month: "short", day: "numeric" })}</span>}
                       </button>
                     </li>

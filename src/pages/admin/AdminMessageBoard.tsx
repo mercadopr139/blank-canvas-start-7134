@@ -11,6 +11,7 @@ import {
   ResizableHandle,
 } from "@/components/ui/resizable";
 import { ArrowLeft, MessageSquare, Signal, Globe } from "lucide-react";
+import { hasLapReturn, clearLapReturn } from "@/lib/lap/links";
 import ConversationList from "@/components/admin/message-board/ConversationList";
 import MessageThread from "@/components/admin/message-board/MessageThread";
 import NewConversationModal from "@/components/admin/message-board/NewConversationModal";
@@ -341,11 +342,13 @@ const AdminMessageBoard = () => {
         <div className="px-4 py-3 flex items-center justify-between gap-2">
           <div className="flex items-center gap-3 min-w-0">
             {/* On mobile, the back arrow inside the thread handles list return;
-                this header back arrow always returns to admin dashboard. */}
+                this header back arrow returns to the Lap when the visit
+                started there (Josh, 2026-10-19), else to the dashboard. */}
             <Button
               variant="ghost"
               size="icon"
-              onClick={() => navigate("/admin/dashboard")}
+              onClick={() => { if (hasLapReturn()) { clearLapReturn(); navigate("/admin/the-lap"); } else navigate("/admin/dashboard"); }}
+              title={hasLapReturn() ? "Back to the Lap" : "Back to the dashboard"}
               className="text-zinc-400 hover:text-white hover:bg-white/5 flex-shrink-0"
             >
               <ArrowLeft className="w-5 h-5" />

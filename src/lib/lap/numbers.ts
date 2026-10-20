@@ -189,11 +189,12 @@ export const fetchComingUp = async (today = todayNY(), days = 14): Promise<Comin
   return withinWindow(items, today, days);
 };
 
-/** Conversations with new messages since an instant, by pillar — what moved on the message board. */
-export const fetchMovedConversations = async (sinceIso: string): Promise<Record<Pillar, number>> => {
+/** Conversations with new messages since an instant, by pillar — what moved on the message board. Ones in skipIds (archived by me) are left out. */
+export const fetchMovedConversations = async (sinceIso: string, skipIds: string[] = []): Promise<Record<Pillar, number>> => {
   const out: Record<Pillar, number> = { operations: 0, sales_marketing: 0, finance: 0 };
   const { data: msgs } = await supabase.from("mb_messages").select("conversation_id").gt("created_at", sinceIso);
-  const ids = [...new Set(((msgs ?? []) as { conversation_id: string }[]).map((m) => m.conversation_id))];
+  const skip = new Set(skipIds);
+  const ids = [...new Set(((msgs ?? []) as { conversation_id: string }[]).map((m) => m.conversation_id))].filter((id) => !skip.has(id));
   if (!ids.length) return out;
   const { data: convs } = await supabase.from("mb_conversations").select("id, pillar" as never).in("id", ids);
   for (const c of (convs ?? []) as unknown as { id: string; pillar: string | null }[]) if (c.pillar && c.pillar in out) out[c.pillar as Pillar]++;

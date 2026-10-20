@@ -20,3 +20,12 @@ export const displayNameFor = (s: NameLike | null | undefined): string => {
   const dn = s.display_name?.trim();
   return dn && dn.length > 0 ? dn : s.full_name;
 };
+
+/** A shared login for a wall screen or kiosk (the Gym Board) — an account,
+ *  not a person; never offered as someone to message. */
+export const isSharedLogin = (s: { full_name?: string | null; display_name?: string | null; job_title?: string | null } | null | undefined): boolean => {
+  if (!s) return false;
+  const name = `${s.display_name ?? ""} ${s.full_name ?? ""}`.toLowerCase();
+  const job = (s.job_title ?? "").toLowerCase();
+  return /\bgym board\b/.test(name) || /wall board|kiosk|shared password|code unlock/.test(job);
+};

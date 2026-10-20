@@ -34,9 +34,11 @@ interface Props {
   ask: ReturnType<typeof useAsk>["ask"];
   /** Turn a line (or sub-line) into a weekly goal: the page opens its weekly-goal window with these words. */
   onMakeGoal: (title: string, itemId: string) => void;
+  /** "All reviewed": every line here is ticked and the lap moves to the next checkpoint. */
+  onAllReviewed?: () => void;
 }
 
-const LapChecklist = ({ lapId, topicId, ask, onMakeGoal }: Props) => {
+const LapChecklist = ({ lapId, topicId, ask, onMakeGoal, onAllReviewed }: Props) => {
   const qc = useQueryClient();
   const navigate = useNavigate();
   const { user } = useAuth();
@@ -96,6 +98,12 @@ const LapChecklist = ({ lapId, topicId, ask, onMakeGoal }: Props) => {
       : await supabase.from("lap_checklist_ticks" as never).delete().eq("lap_id", lapId).in("item_id", ids);
     if (error) { toast.error(error.message); return; }
     refresh();
+  };
+  /* Most stops on most Mondays are "looked at, nothing new" — one tap (Josh, 2026-10-19). */
+  const allReviewed = async () => {
+    const left = leaves.filter((i) => !ticked.includes(i.id)).map((i) => i.id);
+    if (left.length) await setTicks(left, true);
+    onAllReviewed?.();
   };
   const toggle = (item: ChecklistItem) => {
     const kids = item.parent_id ? [] : childrenOf(item.id);
@@ -342,7 +350,14 @@ const LapChecklist = ({ lapId, topicId, ask, onMakeGoal }: Props) => {
     <section className="rounded-2xl border border-white/10 bg-neutral-900/60 p-5 space-y-3">
       <div className="flex items-baseline justify-between gap-3">
         <h3 className="font-bold text-sm uppercase tracking-wide text-white/60">Every week, we look at</h3>
-        {leaves.length > 0 && <span className={`text-xs font-semibold ${done === leaves.length ? "text-emerald-300" : "text-white/40"}`}>{done}/{leaves.length} reviewed</span>}
+        <div className="flex items-center gap-3">
+          {leaves.length > 0 && <span className={`text-xs font-semibold ${done === leaves.length ? "text-emerald-300" : "text-white/40"}`}>{done}/{leaves.length} reviewed</span>}
+          {onAllReviewed && leaves.length > 0 && (
+            <Button size="sm" variant="outline" onClick={() => void allReviewed()} disabled={busy} className="h-7 bg-transparent border-white/20 text-white/80 hover:bg-white/10 hover:text-white">
+              <Check className="w-3.5 h-3.5 mr-1" /> All reviewed, next
+            </Button>
+          )}
+        </div>
       </div>
       {items.length === 0 && <p className="text-sm text-white/35">Nothing standing here yet. Add the topics you review every week at this checkpoint.</p>}
       <ul className="space-y-0.5">

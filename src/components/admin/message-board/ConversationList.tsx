@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import type { Conversation, Pillar } from "@/pages/admin/AdminMessageBoard";
 import { PILLARS, PILLAR_COLOR, PILLAR_LABEL } from "@/pages/admin/AdminMessageBoard";
+import { useAsk } from "@/components/admin/AskDialog";
 
 interface Props {
   conversations: Conversation[];
@@ -235,6 +236,20 @@ const ConversationList = ({
     }
   };
 
+  /* Archive every active conversation for me (Josh, 2026-10-19: "clear the
+     sidebar"). Archiving is per person, so nobody else's list changes; the
+     Archived tab keeps them all. */
+  const { ask, dialog: askDialog } = useAsk();
+  const archiveAll = async () => {
+    const ids = conversations.filter((c) => !c.archived_at).map((c) => c.id);
+    if (!ids.length) return;
+    const ok = await ask.confirm({ title: `Archive all ${ids.length} conversation${ids.length === 1 ? "" : "s"}?`, body: "They move to your Archived tab. Nothing is deleted, and nobody else's list changes. A new message brings a conversation back.", confirmLabel: "Archive all" });
+    if (!ok) return;
+    const { error } = await supabase.from("mb_conversation_members").update({ archived_at: new Date().toISOString() } as never).eq("user_id", currentUserId).in("conversation_id", ids);
+    if (error) { toast({ title: "Failed to archive", description: error.message, variant: "destructive" }); return; }
+    onConversationsChanged();
+    toast({ title: `${ids.length} archived` });
+  };
   const setArchived = async (conv: Conversation, archived: boolean) => {
     try {
       const { error } = await supabase
@@ -524,6 +539,10 @@ const ConversationList = ({
             ))}
           </div>
         )}
+        {!viewAll && listView === "active" && conversations.some((c) => !c.archived_at) && (
+          <button type="button" onClick={() => void archiveAll()} className="-mt-1.5 mb-2 text-[11px] text-zinc-500 hover:text-white">Archive all</button>
+        )}
+        {askDialog}
 
         <div className="relative">
           <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-zinc-600" />
