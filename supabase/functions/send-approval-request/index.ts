@@ -1,4 +1,5 @@
 import { Resend } from "https://esm.sh/resend@2.0.0";
+import { holdsBox } from "../_shared/access.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
 
 const resend = new Resend(Deno.env.get("RESEND_API_KEY"));
@@ -54,7 +55,7 @@ const handler = async (req: Request): Promise<Response> => {
       .eq("role", "admin")
       .maybeSingle();
 
-    if (!roleData) {
+    if (((!roleData)) && !(await holdsBox(req, ["app_billing"]))) {
       return new Response(JSON.stringify({ error: "Admin access required" }), {
         status: 403,
         headers: { "Content-Type": "application/json", ...corsHeaders },

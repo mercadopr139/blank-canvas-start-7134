@@ -299,8 +299,11 @@ export const ownerOfPath = (pathname: string): PathOwner => {
 
 export const appByKey = (key: string) => APPS.find((a) => a.key === key);
 
+// Every box is clickable (Josh, 2026-10-20): the database opens each app's
+// tables to whoever holds its box (app_tables + has_table), so the only apps
+// a Staff person cannot be given are the ones whose tier says Admin or Super.
 const STAFF_READY = new Set<string>([
-  ...APPS.filter((a) => a.staffReady).map((a) => a.key),
+  ...APPS.filter((a) => !a.tier).map((a) => a.key),
   // Menu links open pages outside the admin side, which carry their own
   // password or are public, so there is no admin data behind them to guard.
   ...MENU_LINKS.map((l) => l.key),

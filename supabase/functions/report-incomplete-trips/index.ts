@@ -12,6 +12,7 @@
 // zone-aware "Both - X" variants) without route-specific logic.
 
 import { Resend } from "https://esm.sh/resend@2.0.0";
+import { holdsBox } from "../_shared/access.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
 
 const resend = new Resend(Deno.env.get("RESEND_API_KEY"));
@@ -117,7 +118,7 @@ Deno.serve(async (req) => {
         .eq("user_id", user.id)
         .eq("role", "admin")
         .maybeSingle();
-      if (!roleData) {
+      if (((!roleData)) && !(await holdsBox(req, ["app_transport_runs", "app_transport_intelligence"]))) {
         return new Response(JSON.stringify({ error: "Admin only" }), {
           status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" },
         });

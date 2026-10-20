@@ -7,6 +7,7 @@
 //
 // Step 3 of docs/grant-coach/README.md.
 import Anthropic from "https://esm.sh/@anthropic-ai/sdk@0.63.0";
+import { holdsBox } from "../_shared/access.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.94.0";
 import { thinking, textOf, extractJson } from "../_shared/claude.ts";
 import { isSuperAdmin } from "../_shared/superAdmins.ts";
@@ -113,6 +114,7 @@ Deno.serve(async (req) => {
       const { data: role } = await service.from("user_roles").select("role").eq("user_id", uid).eq("role", "admin").maybeSingle();
       allowed = !!role;
     }
+    if (!allowed) allowed = await holdsBox(req, ["app_grant_coach"]);
     if (!allowed) return json({ error: "Grant Coach is open to Admins." }, 403);
 
     const body = (await req.json()) as Req;

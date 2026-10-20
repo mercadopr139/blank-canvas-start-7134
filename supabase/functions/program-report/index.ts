@@ -9,6 +9,7 @@
 // Access: any authenticated admin (user_roles admin) or a super-admin. The
 // Anthropic key stays server-side. No DB writes.
 import Anthropic from "https://esm.sh/@anthropic-ai/sdk@0.63.0";
+import { holdsBox } from "../_shared/access.ts";
 import { thinking, textOf } from "../_shared/claude.ts";
 import { isSuperAdmin } from "../_shared/superAdmins.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.94.0";
@@ -141,6 +142,7 @@ Deno.serve(async (req) => {
       const { data: role } = await service.from("user_roles").select("role").eq("user_id", uid).eq("role", "admin").maybeSingle();
       isAdmin = !!role;
     }
+    if (!isAdmin) isAdmin = await holdsBox(req, ["app_hawk_intelligence", "app_bam_intelligence", "app_juniors_aftercare"]);
     if (!isAdmin) return json({ error: "Admin access required." }, 403);
 
     const body = await req.json();

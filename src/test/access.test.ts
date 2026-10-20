@@ -65,19 +65,22 @@ describe("who can open what", () => {
     COMMAND_CENTER_LINES.forEach((l) => expect(canOpen(l.key, nobody), l.label).toBe(false));
   });
 
-  it("a Staff person cannot hold an app the database has not opened to Staff", () => {
-    // Even with the box checked, Billing stays locked until it is made ready.
+  it("a Staff person opens exactly the boxes on their card (Josh, 2026-10-20: every box opens its app)", () => {
     const eager: Who = { isSuperAdmin: false, permissions: { app_billing: true, app_message_board: true, task_manager_PC: true } };
-    expect(canOpen("app_billing", eager)).toBe(false);
-    expect(canOpen("app_message_board", eager)).toBe(false);
+    expect(canOpen("app_billing", eager)).toBe(true);
+    expect(canOpen("app_message_board", eager)).toBe(true);
+    // Task Managers are explicit-only and never part of a Staff card.
     expect(canOpen("task_manager_PC", eager)).toBe(false);
-    expect(canOpenPillar("finance", eager)).toBe(false);
+    expect(canOpenPillar("finance", eager)).toBe(true);
+    // Tiered apps stay with Admins / the Super Admin.
+    expect(canOpen("app_staff_management", { isSuperAdmin: false, permissions: { app_staff_management: true } })).toBe(false);
+    expect(canOpen("app_corner_coach", { isSuperAdmin: false, permissions: { app_corner_coach: true } })).toBe(false);
   });
 
-  it("turning Admin off makes the person Staff: only Staff-ready boxes remain", () => {
+  it("turning Admin off makes the person Staff: only the boxes on the card remain", () => {
     const off: Who = { isSuperAdmin: false, permissions: { access_admin: false, app_billing: true, app_juniors_aftercare: true } };
     expect(canOpen("app_juniors_aftercare", off)).toBe(true);
-    expect(canOpen("app_billing", off)).toBe(false);
+    expect(canOpen("app_billing", off)).toBe(true);
     expect(canOpen("app_document_vault", off)).toBe(false);
   });
 });

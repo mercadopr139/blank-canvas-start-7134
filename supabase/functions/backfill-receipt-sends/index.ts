@@ -8,6 +8,7 @@
 // don't already have an audit row.
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { holdsBox } from "../_shared/access.ts";
 import {
   generateReceiptPdf,
   buildReceiptEmailHtml,
@@ -67,7 +68,7 @@ Deno.serve(async (req) => {
       .eq("user_id", userId)
       .eq("role", "admin")
       .maybeSingle();
-    if (!roleData) {
+    if (((!roleData)) && !(await holdsBox(req, ["app_billing", "app_revenue"]))) {
       return new Response(JSON.stringify({ error: "Forbidden" }), {
         status: 403,
         headers: { ...corsHeaders, "Content-Type": "application/json" },

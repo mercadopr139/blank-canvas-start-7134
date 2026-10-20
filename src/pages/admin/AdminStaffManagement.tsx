@@ -648,7 +648,7 @@ export default function AdminStaffManagement() {
                           <span className="block text-[11px] text-white/45 leading-snug">
                             {isMemberAdmin
                               ? "Every app is open, including new ones as they are built. Task Managers and the reviewer box stay your choice below."
-                              : "Off: this person is Staff and opens only the boxes checked below. Boxes marked Admins only are not open to Staff yet."}
+                              : "Off: this person is Staff and opens only the boxes checked below. A box opens that app the way an Admin sees it, and nothing else."}
                           </span>
                         </span>
                       </label>

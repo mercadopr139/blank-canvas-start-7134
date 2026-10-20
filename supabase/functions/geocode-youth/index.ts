@@ -25,6 +25,7 @@
 // permanent and "Locate addresses" would report 0 left while 59 sat unlocated.
 // The batch now takes any row without coordinates, never-tried first.
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.94.0";
+import { holdsBox } from "../_shared/access.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -130,6 +131,7 @@ Deno.serve(async (req) => {
       const { data: role } = await service.from("user_roles").select("role").eq("user_id", uid).eq("role", "admin").maybeSingle();
       isAdmin = !!role;
     }
+    if (!isAdmin) isAdmin = await holdsBox(req, ["app_transport_youth", "app_transport_runs"]);
     if (!isAdmin) return json({ error: "Admin access required." }, 403);
 
     // Optional: caller can force a full re-geocode of everything.

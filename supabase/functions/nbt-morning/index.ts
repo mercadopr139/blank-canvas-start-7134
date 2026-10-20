@@ -12,6 +12,7 @@
 // (sends now, any day — for testing). Cron body {"sample_to": "<academy
 // address>"} sends a sample of today's (or the next) NBT day to one address.
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { holdsBox } from "../_shared/access.ts";
 import { Resend } from "https://esm.sh/resend@3.2.0";
 
 const corsHeaders = {
@@ -217,7 +218,7 @@ Deno.serve(async (req) => {
       const { data: { user } } = await userClient.auth.getUser();
       if (!user) return json({ error: "Unauthorized" }, 401);
       const { data: role } = await userClient.from("user_roles").select("role").eq("user_id", user.id).eq("role", "admin").maybeSingle();
-      if (!role) return json({ error: "Admins only" }, 403);
+      if (!role && !(await holdsBox(req, ["app_practice_plan"]))) return json({ error: "This needs the Practice Plan box." }, 403);
       const body = await req.json().catch(() => ({} as Record<string, unknown>));
       // "Send to Rev now": today, or a date the plan names.
       date = typeof body?.date === "string" && /^\d{4}-\d{2}-\d{2}$/.test(body.date) ? body.date : nextNbtDay(todayET);

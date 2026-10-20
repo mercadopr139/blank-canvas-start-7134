@@ -10,6 +10,7 @@
 // skipped, so subsequent invocations only process new gaps.
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { holdsBox } from "../_shared/access.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -170,7 +171,7 @@ Deno.serve(async (req) => {
       .eq("user_id", user.id)
       .eq("role", "admin")
       .maybeSingle();
-    if (!roleData) {
+    if (((!roleData)) && !(await holdsBox(req, ["app_billing"]))) {
       return new Response(JSON.stringify({ error: "Forbidden" }), {
         status: 403,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
