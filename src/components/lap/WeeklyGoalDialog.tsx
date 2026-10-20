@@ -14,9 +14,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { Check, ChevronDown, Loader2, Target } from "lucide-react";
+import { Check, ChevronDown, Loader2, Flag } from "lucide-react";
 import { runningOrder, type RingTopic } from "@/lib/lap/ring";
-import { commitmentSourceFor } from "@/lib/lap/commitments";
+import { commitmentSourceFor, sourceForTile, LAP_GREEN } from "@/lib/lap/commitments";
 import { openGoalTitles, sameGoal, refreshGoals } from "@/lib/lap/goals";
 
 const NLA_RED = "#bf0f3e";
@@ -50,6 +50,15 @@ const WeeklyGoalDialog = ({ open, seed, onClose, onSaved }: { open: boolean; see
       const { data, error } = await supabase.from("lap_topics" as never).select("id, pillar, title, sort_order, this_lap_only_lap_id").is("retired_at", null).order("sort_order");
       if (error) throw error;
       return (data ?? []) as unknown as TopicRow[];
+    },
+    enabled: open,
+  });
+  const { data: areas = [] } = useQuery({
+    queryKey: ["focus-areas-all"],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("focus_areas").select("key, title, manager_type");
+      if (error) throw error;
+      return (data ?? []) as unknown as { key: string; title: string; manager_type: string }[];
     },
     enabled: open,
   });
@@ -94,8 +103,16 @@ const WeeklyGoalDialog = ({ open, seed, onClose, onSaved }: { open: boolean; see
     if (!keys.length) { toast.error("Pick at least one owner."); return; }
     setBusy(true);
     const commitmentId = crypto.randomUUID();
+    // A sensible default (Josh, 2026-10-20): when an owner has a focus area
+    // named like the checkpoint — "USA Boxing" at the USA Boxing checkpoint —
+    // the goal is placed there straight away; otherwise it waits in the basket.
+    const topicName = (order.find((t) => t.id === chosenTopic)?.title ?? "").trim().toLowerCase();
+    const sourceFor = (k: string) => {
+      const match = areas.find((a) => a.manager_type === k && a.key !== "agenda" && a.key !== "nla" && a.title.trim().toLowerCase() === topicName);
+      return match ? sourceForTile(k, match) : commitmentSourceFor(k);
+    };
     const rows = keys.map((k) => ({
-      title: text, source: commitmentSourceFor(k), priority_layer: "Core", signal_type: "Action", status: "Pending", is_archived: false,
+      title: text, source: sourceFor(k), priority_layer: "Core", signal_type: "Action", status: "Pending", is_archived: false,
       lap_id: lap?.id ?? null, lap_topic_id: chosenTopic, lap_commitment_id: commitmentId, lap_checklist_item_id: seed?.itemId ?? null,
       planned_date: onPlan ? todayNY() : null,
     }));
@@ -114,7 +131,7 @@ const WeeklyGoalDialog = ({ open, seed, onClose, onSaved }: { open: boolean; see
     <Dialog open={open} onOpenChange={(o) => { if (!o) onClose(); }}>
       <DialogContent className="bg-[#1a1a2e] border-white/10 text-white" onOpenAutoFocus={(e) => { e.preventDefault(); titleRef.current?.focus(); titleRef.current?.select(); }}>
         <DialogHeader>
-          <DialogTitle className="inline-flex items-center gap-2"><Target className="w-5 h-5 text-green-400" /> Weekly goal</DialogTitle>
+          <DialogTitle className="inline-flex items-center gap-2"><Flag className="w-5 h-5" style={{ color: LAP_GREEN }} /> Weekly goal</DialogTitle>
           <DialogDescription className="text-white/60">
             Something that gets done this week, by someone. It lands on each owner's Agenda Meeting tile and comes up in next lap's warm-up.
             {!lap && " No lap is open right now, so it waits for the next one."}

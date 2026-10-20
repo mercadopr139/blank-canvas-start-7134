@@ -10,7 +10,7 @@ import { Textarea } from "@/components/ui/textarea";
 import {
   ArrowLeft, LogOut, Plus, Pencil, GripVertical, Lock,
   Circle, CheckCircle2, ArrowRight, Trophy, MessageSquare, Archive,
-  Target, ChevronDown, X, Save, Forward,
+  Target, ChevronDown, X, Save, Forward, Flag,
 } from "lucide-react";
 import { icons } from "lucide-react";
 import { toast } from "sonner";
@@ -20,7 +20,8 @@ import FocusAreaModal from "@/components/admin/FocusAreaModal";
 import InTheWorksPennant from "@/components/admin/InTheWorksPennant";
 import DailyVerse from "@/components/admin/DailyVerse";
 import WeeklyGoalDialog from "@/components/lap/WeeklyGoalDialog";
-import { AGENDA_TILE_KEY } from "@/lib/lap/commitments";
+import { AGENDA_TILE_KEY, LAP_GREEN, commitmentSourceFor, sourceForTile } from "@/lib/lap/commitments";
+import LapBasket, { type BasketArea, type BasketGoal } from "@/components/lap/LapBasket";
 import { dropGoal, carryGoalNow, refreshGoals } from "@/lib/lap/goals";
 import { useAsk } from "@/components/admin/AskDialog";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
@@ -155,6 +156,7 @@ const TileSignalRow = ({
   onOpenDetails,
   onTogglePlan,
   tag,
+  isGoal,
   onCarry,
   onDrop,
 }: {
@@ -165,8 +167,10 @@ const TileSignalRow = ({
   onToggle: () => void;
   onOpenDetails: () => void;
   onTogglePlan: () => void;
-  /** A small gold tag after the title: on the Agenda Meeting tile, the weekly goal's topic. */
+  /** A small lime tag after the title: a weekly goal's checkpoint. */
   tag?: string;
+  /** A weekly goal placed here from the Lap's basket: wears the Lap flag. */
+  isGoal?: boolean;
   /** On the Agenda Meeting tile: move the goal to next week, or drop it with a reason. */
   onCarry?: () => void;
   onDrop?: () => void;
@@ -220,9 +224,10 @@ const TileSignalRow = ({
         }`}
         title="View signal details"
       >
+        {isGoal && <Flag className="inline w-3.5 h-3.5 mr-1.5 align-[-2px]" style={{ color: LAP_GREEN }} aria-label="This week's goal" />}
         {signal.title || "Untitled"}
         {tag && (
-          <span className="ml-1.5 inline-block align-middle rounded-full border border-amber-400/40 bg-amber-400/10 px-1.5 py-px text-[10px] font-medium text-amber-300/90 max-w-[140px] truncate">{tag}</span>
+          <span className="ml-1.5 inline-block align-middle rounded-full border px-1.5 py-px text-[10px] font-medium max-w-[140px] truncate" style={{ borderColor: `${LAP_GREEN}66`, background: `${LAP_GREEN}1a`, color: LAP_GREEN }}>{tag}</span>
         )}
         {hasNotes && (
           <span className="ml-1 text-[10px] text-white/30 align-middle" aria-label="has notes">
@@ -232,7 +237,7 @@ const TileSignalRow = ({
       </button>
       {!isComplete && onCarry && onDrop && (
         <span className="flex items-center gap-0.5 shrink-0 pt-0.5 opacity-0 group-hover/row:opacity-100 transition-opacity">
-          <button type="button" onClick={onCarry} title="Move to next week" className="text-white/30 hover:text-amber-300"><Forward className="w-4 h-4" /></button>
+          <button type="button" onClick={onCarry} title="Move to next week" className="text-white/30 hover:text-white"><Forward className="w-4 h-4" /></button>
           <button type="button" onClick={onDrop} title="Drop this goal" className="text-white/30 hover:text-red-300"><X className="w-4 h-4" /></button>
         </span>
       )}
@@ -570,7 +575,6 @@ const FocusAreaTile = ({
       if (error) throw error;
       return (data ?? []) as unknown as { id: string; title: string }[];
     },
-    enabled: isAgenda,
   });
   const topicTitle = (id: string | null | undefined) => (id ? lapTopics.find((t) => t.id === id)?.title : undefined);
   const { ask, dialog: askDialog } = useAsk();
@@ -682,9 +686,10 @@ const FocusAreaTile = ({
                     onToggle={() => onToggle(s)}
                     onOpenDetails={() => onOpenSignalDetails(s)}
                     onTogglePlan={() => onTogglePlan(s)}
-                    tag={isAgenda ? topicTitle(s.lap_topic_id) : undefined}
-                    onCarry={isAgenda && s.lap_commitment_id ? () => void carryGoal(s) : undefined}
-                    onDrop={isAgenda && s.lap_commitment_id ? () => void dropThisGoal(s) : undefined}
+                    tag={s.lap_commitment_id ? topicTitle(s.lap_topic_id) : undefined}
+                    isGoal={!isAgenda && !!s.lap_commitment_id}
+                    onCarry={s.lap_commitment_id ? () => void carryGoal(s) : undefined}
+                    onDrop={s.lap_commitment_id ? () => void dropThisGoal(s) : undefined}
                   />
                 ))}
               </div>
@@ -817,6 +822,8 @@ const AdminWorkbench = () => {
   const [goalDraft, setGoalDraft] = useState<string>("");
   // Today's Plan expand-in-place panel.
   const [planOpen, setPlanOpen] = useState(false);
+  // The basket's "Add a weekly goal" window.
+  const [basketGoalOpen, setBasketGoalOpen] = useState(false);
 
 
   const sensors = useSensors(
@@ -933,6 +940,37 @@ const AdminWorkbench = () => {
   });
 
   // Group signals by focus-area key (preserves the per-tile sort order).
+  // The Lap's basket (Josh, 2026-10-20): every weekly goal of this manager,
+  // wherever it has been placed; the Agenda Meeting tile leaves the grid.
+  const agendaArea = focusAreas.find((a) => a.key === AGENDA_TILE_KEY) ?? null;
+  const gridAreas = useMemo(() => focusAreas.filter((a) => a.key !== AGENDA_TILE_KEY), [focusAreas]);
+  const placeableAreas: BasketArea[] = useMemo(() => gridAreas.map((a) => ({ key: a.key, title: a.title, accent_color: a.accent_color })), [gridAreas]);
+  const weeklyGoals: BasketGoal[] = useMemo(() => todaysCoreSignals.filter((s) => !!s.lap_commitment_id), [todaysCoreSignals]);
+  const { data: lapTopicsAll = [] } = useQuery({
+    queryKey: ["lap-topics"],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("lap_topics" as never).select("id, pillar, title, sort_order, this_lap_only_lap_id").is("retired_at", null).order("sort_order");
+      if (error) throw error;
+      return (data ?? []) as unknown as { id: string; title: string }[];
+    },
+  });
+  // Place a goal where the work happens, or bring it back to the basket. The
+  // goal keeps its lap identity either way; only its tile changes.
+  const placeGoalMutation = useMutation({
+    mutationFn: async ({ id, area }: { id: string; area: BasketArea | null }) => {
+      const source = area ? sourceForTile(managerType, area) : commitmentSourceFor(managerType);
+      const { error } = await supabase.from("signals").update({ source } as never).eq("id", id);
+      if (error) throw error;
+      return area?.title ?? null;
+    },
+    onSuccess: (title) => {
+      queryClient.invalidateQueries({ queryKey: ["task-manager-home-core"] });
+      queryClient.invalidateQueries({ queryKey: ["signals"] });
+      toast.success(title ? `Placed in ${title}. It is still this week's goal.` : "Back in the basket.");
+    },
+    onError: (e: any) => toast.error(e?.message || "Couldn't place the goal"),
+  });
+
   const signalsByArea = useMemo(() => {
     const map = new Map<string, CoreSignal[]>();
     for (const area of focusAreas) map.set(area.key, []);
@@ -1675,12 +1713,31 @@ const AdminWorkbench = () => {
             /* Locked tiles render as plain divs (not draggable), so they must
                stay out of the sortable id list — including them threw the
                reorder indexes off by however many locked tiles came first. */
+            <>
+            {/* The Lap's basket: this week's goals, placed where the work
+                happens (Josh, 2026-10-20). The Agenda Meeting tile no longer
+                sits among the focus areas — this row is it. */}
+            {!isLocked(agendaArea ?? focusAreas[0]) && (
+              <LapBasket
+                goals={weeklyGoals}
+                areas={placeableAreas}
+                areaOf={(g) => placeableAreas.find((a) => a.key === sourceToFocusAreaKey(g.source, managerType, focusAreas)) ?? null}
+                topicTitle={(id) => (id ? lapTopicsAll.find((t) => t.id === id)?.title : undefined)}
+                todayStr={todayStr}
+                onToggle={(g) => toggleStatusMutation.mutate({ id: g.id, current: g.status })}
+                onOpenDetails={(g) => { const s = todaysCoreSignals.find((x) => x.id === g.id); if (s) { setDetailsSignal(s); setDetailsAccent(LAP_GREEN); } }}
+                onTogglePlan={(g) => { const planned = g.planned_date !== todayStr; setPlanMutation.mutate({ id: g.id, planned }); if (planned) setPlanOpen(true); }}
+                onPlace={(g, area) => placeGoalMutation.mutate({ id: g.id, area })}
+                onAddGoal={() => setBasketGoalOpen(true)}
+              />
+            )}
+            <WeeklyGoalDialog open={basketGoalOpen} seed={basketGoalOpen ? {} : null} onClose={() => setBasketGoalOpen(false)} />
             <SortableContext
-              items={focusAreas.filter((a) => !isLocked(a)).map((a) => a.id)}
+              items={gridAreas.filter((a) => !isLocked(a)).map((a) => a.id)}
               strategy={rectSortingStrategy}
             >
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 max-w-4xl mx-auto">
-                {focusAreas.map((area) => {
+                {gridAreas.map((area) => {
                   if (isLocked(area)) {
                     const IconComp = getIconComponent(area.icon_name);
                     return (
@@ -1772,6 +1829,7 @@ const AdminWorkbench = () => {
                 )}
               </div>
             </SortableContext>
+            </>
         )}
         </DndContext>
 

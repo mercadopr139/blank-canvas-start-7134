@@ -306,3 +306,25 @@ lap_checklist_items.note ("[x] " = done, two-space indent = nested), so
 notes written as prose before today read as items unchanged
 (src/lib/lap/noteList.ts, tested). Nothing inside a note gets its own note,
 links or files — the checklist stays two levels.
+
+## The basket on the Workbench, and the Lap's own colour (2026-10-20)
+
+**Lime + flag = the Lap; green + target = Today's Plan.** LAP_GREEN
+(lime-400) in lap/commitments.ts; the palette is in docs/COLOURS.md.
+
+**The basket.** The Agenda Meeting tile no longer sits among the focus areas.
+It is a full-width lime row above them, "The Lap · Agenda Meeting"
+(LapBasket.tsx), listing every weekly goal of that manager wherever each has
+been placed: checkpoint tag, "in <focus area>" chip, Place in / Move / Back
+to the basket, carry, drop, Today's Plan, Open the Lap, Add a weekly goal.
+
+**Placing.** "Place in" rewrites the goal's source to the focus area's
+(sourceForTile); its lap identity (lap_id, lap_topic_id, lap_commitment_id)
+never changes, so the Lap, the warm-up and the other owner's copy are
+untouched. In the focus area the goal wears the lime flag and its checkpoint
+tag, and carry/drop work there too. One row of data, seen twice.
+
+**Default placement.** The goal window places a new goal straight into an
+owner's focus area whose title matches the checkpoint (USA Boxing → USA
+Boxing); otherwise it waits in the basket. Each owner's copy is placed on
+its own. The database title stays "Agenda Meeting" — it is the source key.

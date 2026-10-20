@@ -11,7 +11,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
-import { Check, Circle, Plus, Pencil, X, StickyNote, ExternalLink, Link2, Target, Globe, Paperclip, LayoutGrid, ChevronRight, ChevronLeft } from "lucide-react";
+import { Check, Circle, Plus, Pencil, X, StickyNote, ExternalLink, Link2, Flag, Globe, Paperclip, LayoutGrid, ChevronRight, ChevronLeft } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { linkTarget, linkChoices, markLeavingLap } from "@/lib/lap/links";
 import { Input } from "@/components/ui/input";
@@ -245,8 +245,8 @@ const LapChecklist = ({ lapId, topicId, ask, onMakeGoal, onAllReviewed }: Props)
             ); })()}
           </button>
           {goal && (
-            <span className={`shrink-0 inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] font-medium ${goal.done ? "border-green-400/30 bg-green-400/10 text-green-400/70" : "border-green-400/50 bg-green-400/15 text-green-400"}`} title={goal.done ? "This week's goal, done" : "This week's goal"}>
-              {goal.done ? <Check className="w-3 h-3" /> : <Target className="w-3 h-3" />}
+            <span className={`shrink-0 inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] font-medium ${goal.done ? "border-lime-400/30 bg-lime-400/10 text-lime-400/70" : "border-lime-400/50 bg-lime-400/15 text-lime-400"}`} title={goal.done ? "This week's goal, done" : "This week's goal"}>
+              {goal.done ? <Check className="w-3 h-3" /> : <Flag className="w-3 h-3" />}
               <span className="hidden sm:inline">{goal.done ? "Goal done" : "Weekly goal"}</span>
             </span>
           )}
@@ -270,7 +270,7 @@ const LapChecklist = ({ lapId, topicId, ask, onMakeGoal, onAllReviewed }: Props)
           )}
           <span className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity">
             {!sub && <button onClick={() => setSubDraft((d) => (d?.parentId === item.id ? null : { parentId: item.id, text: "" }))} title="Add a sub-line" aria-label="Add a sub-line" className="p-1 rounded text-white/50 hover:text-white hover:bg-white/10"><Plus className="w-4 h-4" /></button>}
-            <button onClick={() => onMakeGoal(item.title, item.id)} title="Make this a weekly goal" aria-label="Make this a weekly goal" className="p-1 rounded text-white/50 hover:text-green-400 hover:bg-green-400/10"><Target className="w-4 h-4" /></button>
+            <button onClick={() => onMakeGoal(item.title, item.id)} title="Make this a weekly goal" aria-label="Make this a weekly goal" className="p-1 rounded text-white/50 hover:text-lime-400 hover:bg-lime-400/10"><Flag className="w-4 h-4" /></button>
             <button onClick={() => void rename(item)} title="Rename" aria-label="Rename" className="p-1 rounded text-white/50 hover:text-white hover:bg-white/10"><Pencil className="w-3.5 h-3.5" /></button>
             <DropdownMenu onOpenChange={(o) => { if (!o) setPagesFor(null); }}>
               <DropdownMenuTrigger asChild>
@@ -387,7 +387,7 @@ const LapChecklist = ({ lapId, topicId, ask, onMakeGoal, onAllReviewed }: Props)
         <Button size="sm" onClick={() => void addHeading()} disabled={busy || !draft.trim()} className="text-white" style={{ backgroundColor: NLA_RED }}>Add</Button>
       </div>
       <input ref={fileInput} type="file" accept="application/pdf,image/png,image/jpeg,image/webp,image/gif" className="hidden" onChange={(e) => void attach(e.target.files?.[0])} />
-      <p className="text-[11px] text-white/35">Same lines every lap; ticks reset each Monday. Click a line for its note. Hover: + adds a sub-line, the target makes it a weekly goal, the link icon adds a web address, a PDF or image, or one of our pages.</p>
+      <p className="text-[11px] text-white/35">Same lines every lap; ticks reset each Monday. Click a line for its note. Hover: + adds a sub-line, the flag makes it a weekly goal, the link icon adds a web address, a PDF or image, or one of our pages.</p>
     </section>
   );
 };

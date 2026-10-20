@@ -4,7 +4,7 @@
 // Crossed-off items stay crossed off week to week — the line's own tick is
 // the thing that resets each Monday.
 import { useEffect, useRef, useState } from "react";
-import { Check, Circle, Plus, X, Target, CornerDownRight } from "lucide-react";
+import { Check, Circle, Plus, X, Flag, CornerDownRight } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import {
@@ -75,7 +75,7 @@ const LapLineNote = ({ note, onChange, onClose, onMakeGoal }: Props) => {
               )}
               <span className="flex items-center gap-0.5 opacity-0 group-hover/note:opacity-100 focus-within:opacity-100 transition-opacity">
                 {!item.done && <button onClick={() => commit(setItemLevel(items, idx, item.level ? 0 : 1))} title={item.level ? "Un-nest" : "Nest under the item above"} aria-label="Nest" className="p-1 rounded text-white/50 hover:text-white hover:bg-white/10"><CornerDownRight className="w-3.5 h-3.5" /></button>}
-                {!item.done && <button onClick={() => onMakeGoal(item.text)} title="Make this a weekly goal" aria-label="Make this a weekly goal" className="p-1 rounded text-white/50 hover:text-green-400 hover:bg-green-400/10"><Target className="w-3.5 h-3.5" /></button>}
+                {!item.done && <button onClick={() => onMakeGoal(item.text)} title="Make this a weekly goal" aria-label="Make this a weekly goal" className="p-1 rounded text-white/50 hover:text-lime-400 hover:bg-lime-400/10"><Flag className="w-3.5 h-3.5" /></button>}
                 <button onClick={() => commit(removeItem(items, idx))} title="Remove" aria-label="Remove" className="p-1 rounded text-white/50 hover:text-red-300 hover:bg-white/10"><X className="w-3.5 h-3.5" /></button>
               </span>
             </li>

@@ -697,8 +697,8 @@ const AdminTheLap = () => {
 
             {/* Weekly goals at this checkpoint — gold, their own colour, so
                 they pop against the checklist and the board (Josh, 2026-10-19). */}
-            <section className="rounded-2xl border border-green-400/40 bg-green-400/[0.05] p-5 space-y-3">
-              <h3 className="font-bold text-sm uppercase tracking-wide text-green-400 inline-flex items-center gap-2"><Target className="w-4 h-4" /> Weekly goals</h3>
+            <section className="rounded-2xl border border-lime-400/40 bg-lime-400/[0.05] p-5 space-y-3">
+              <h3 className="font-bold text-sm uppercase tracking-wide text-lime-400 inline-flex items-center gap-2"><Flag className="w-4 h-4" /> Weekly goals</h3>
               {currentRows.length === 0 && <p className="text-sm text-white/35">None yet at this checkpoint.</p>}
               <ul className="space-y-2">
                 {currentRows.map((rows) => {
@@ -706,15 +706,15 @@ const AdminTheLap = () => {
                   const names = rows.map((r) => { const m = managers.find((x) => x.key === managerKeyOf(r.source)); return m ? firstName(m) : managerKeyOf(r.source) ?? "?"; });
                   const tone = carryTone(Math.max(...rows.map((r) => r.carry_count)));
                   return (
-                    <li key={rows[0].lap_commitment_id ?? rows[0].id} className="group flex items-start gap-3 rounded-lg -mx-1 px-1 hover:bg-green-400/[0.06]">
-                      <button onClick={() => void toggleDone(rows)} className={`mt-0.5 shrink-0 ${done ? "text-green-400" : "text-green-400/40 hover:text-green-400"}`} aria-label={done ? "Reopen" : "Mark done"}>{done ? <Check className="w-5 h-5" /> : <Circle className="w-5 h-5" />}</button>
+                    <li key={rows[0].lap_commitment_id ?? rows[0].id} className="group flex items-start gap-3 rounded-lg -mx-1 px-1 hover:bg-lime-400/[0.06]">
+                      <button onClick={() => void toggleDone(rows)} className={`mt-0.5 shrink-0 ${done ? "text-lime-400" : "text-lime-400/40 hover:text-lime-400"}`} aria-label={done ? "Reopen" : "Mark done"}>{done ? <Check className="w-5 h-5" /> : <Circle className="w-5 h-5" />}</button>
                       <div className="flex-1 min-w-0">
                         <p className={`text-sm ${done ? "line-through text-white/40" : TONE_CLASS[tone]}`}>{rows[0].title}</p>
                         <p className="text-[11px] text-white/40">{names.join(" & ")}{rows[0].carry_count > 0 && ` · carried ${rows[0].carry_count} lap${rows[0].carry_count === 1 ? "" : "s"}`}{rows.some((r) => r.planned_date === todayNY()) && " · on today's plan"}</p>
                       </div>
                       {!done && (
                         <span className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity">
-                          <button onClick={() => void carryNow(rows)} title="Move to next week" aria-label="Move to next week" className="p-1 rounded text-white/50 hover:text-green-400 hover:bg-green-400/10"><Forward className="w-4 h-4" /></button>
+                          <button onClick={() => void carryNow(rows)} title="Move to next week" aria-label="Move to next week" className="p-1 rounded text-white/50 hover:text-lime-400 hover:bg-lime-400/10"><Forward className="w-4 h-4" /></button>
                           <button onClick={() => void dropNow(rows)} title="Drop this goal" aria-label="Drop this goal" className="p-1 rounded text-white/50 hover:text-red-300 hover:bg-red-500/10"><X className="w-4 h-4" /></button>
                         </span>
                       )}
@@ -722,7 +722,7 @@ const AdminTheLap = () => {
                   );
                 })}
               </ul>
-              <div className="pt-2 border-t border-green-400/20 flex flex-wrap items-center gap-3">
+              <div className="pt-2 border-t border-lime-400/20 flex flex-wrap items-center gap-3">
                 {/* My Workbench, from the goals (Josh, 2026-10-20): the page's own
                     back arrow returns to this checkpoint. */}
                 {myWorkbench && (
