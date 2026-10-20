@@ -23,7 +23,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import {
-  ArrowLeft, Flag, Play, Pause, ChevronLeft, ChevronRight, Check, Circle, Maximize2, Minimize2, Settings2, Loader2, Trophy, Sparkles, Forward, Trash2, Split, MessageSquare, Plus, Target, X,
+  ArrowLeft, Flag, Play, Pause, ChevronLeft, ChevronRight, Check, Circle, Maximize2, Minimize2, Settings2, Loader2, LayoutGrid, Trophy, Sparkles, Forward, Trash2, Split, MessageSquare, Plus, Target, X,
 } from "lucide-react";
 import { groupForWarmup, warmupGate, mustDecide, type WarmupGroup } from "@/lib/lap/warmup";
 import { deleteLap } from "@/lib/lap/laps";
@@ -47,7 +47,7 @@ const VISION_TEXT =
 
 interface Topic extends RingTopic { sort_order: number; this_lap_only_lap_id: string | null }
 interface Lap { id: string; meeting_date: string; status: "open" | "finished" | "incomplete"; started_at: string; current_topic_id: string | null; stats: { visited?: string[]; at_finish?: boolean } }
-interface Manager { key: string; display_name: string; owner_name: string | null }
+interface Manager { key: string; display_name: string; owner_name: string | null; owner_email: string | null }
 interface Commitment { id: string; title: string; status: string; source: string | null; lap_topic_id: string | null; lap_commitment_id: string | null; carry_count: number; planned_date: string | null; lap_checklist_item_id: string | null }
 interface Decision { id: string; topic_id: string | null; text: string; created_at: string }
 
@@ -128,7 +128,7 @@ const AdminTheLap = () => {
   const { data: managers = [] } = useQuery({
     queryKey: ["task-managers-all"],
     queryFn: async () => {
-      const { data, error } = await supabase.from("task_managers").select("key, display_name, owner_name").order("sort_order");
+      const { data, error } = await supabase.from("task_managers").select("key, display_name, owner_name, owner_email").order("sort_order");
       if (error) throw error;
       return (data ?? []) as unknown as Manager[];
     },
@@ -413,6 +413,8 @@ const AdminTheLap = () => {
   };
 
   /* ───── The warm-up: last lap's open weekly goals ───── */
+  // The signed-in person's own Workbench, by the owner email on task_managers.
+  const myWorkbench = managers.find((m) => !!user?.email && (m.owner_email ?? "").trim().toLowerCase() === user.email.toLowerCase()) ?? null;
   const refreshWarmup = () => { qc.invalidateQueries({ queryKey: ["lap-warmup"] }); qc.invalidateQueries({ queryKey: ["task-manager-home-core"] }); };
   const carryForward = async (g: WarmupGroup) => {
     for (const r of g.rows) {
@@ -721,6 +723,13 @@ const AdminTheLap = () => {
                 })}
               </ul>
               <div className="pt-2 border-t border-green-400/20 flex flex-wrap items-center gap-3">
+                {/* My Workbench, from the goals (Josh, 2026-10-20): the page's own
+                    back arrow returns to this checkpoint. */}
+                {myWorkbench && (
+                  <Button size="sm" variant="outline" onClick={() => { markLeavingLap(); navigate(`/admin/task-manager/${myWorkbench.key}`); }} className="bg-transparent border-white/20 text-white/80 hover:bg-white/10 hover:text-white">
+                    <LayoutGrid className="w-4 h-4 mr-1.5" /> My Workbench
+                  </Button>
+                )}
                 <Button size="sm" onClick={() => openGoal()} className="text-white" style={{ backgroundColor: NLA_RED }}><Plus className="w-4 h-4 mr-1.5" /> Add a weekly goal</Button>
                 <p className="text-[11px] text-white/35">Lands in each owner's Agenda Meeting tile. Done by either is done for both.</p>
               </div>

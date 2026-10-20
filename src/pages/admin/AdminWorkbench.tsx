@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import { useNavigate, useParams } from "react-router-dom";
+import { clearLapReturn, hasLapReturn } from "@/lib/lap/links";
 import { useAuth } from "@/contexts/AuthContext";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -1458,8 +1459,9 @@ const AdminWorkbench = () => {
             <Button
               variant="ghost"
               size="icon"
-              onClick={() => navigate("/admin/dashboard")}
+              onClick={() => { if (hasLapReturn()) { clearLapReturn(); navigate("/admin/the-lap"); } else navigate("/admin/dashboard"); }}
               aria-label="Back"
+              title={hasLapReturn() ? "Back to the Lap" : undefined}
               className="text-zinc-400 hover:text-white hover:bg-white/5"
             >
               <ArrowLeft className="w-5 h-5" />
