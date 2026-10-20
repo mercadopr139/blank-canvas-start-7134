@@ -26,7 +26,6 @@ import {
   ArrowLeft, Flag, Play, Pause, ChevronLeft, ChevronRight, Check, Circle, Maximize2, Minimize2, Settings2, Loader2, Trophy, Sparkles, Forward, Trash2, Split, MessageSquare, Plus, Target, X,
 } from "lucide-react";
 import { groupForWarmup, warmupGate, mustDecide, type WarmupGroup } from "@/lib/lap/warmup";
-import { fetchTopicNumbers } from "@/lib/lap/numbers";
 import { deleteLap } from "@/lib/lap/laps";
 import LapRing from "@/components/lap/LapRing";
 import WeeklyGoalDialog, { type WeeklyGoalSeed } from "@/components/lap/WeeklyGoalDialog";
@@ -155,11 +154,9 @@ const AdminTheLap = () => {
 
   // The data comes to the checkpoint. Read-only, from the tables the
   // Intelligence pages use; refreshed when the runner moves.
-  const { data: numbers = [] } = useQuery({
-    queryKey: ["lap-numbers", lap?.current_topic_id ?? "none"],
-    enabled: !!lap?.current_topic_id,
-    queryFn: () => fetchTopicNumbers(allTopics.find((t) => t.id === lap!.current_topic_id)?.title ?? ""),
-  });
+  // "The numbers" card retired 2026-10-20 (Josh: it appeared on nine
+  // checkpoints and not the other twelve; the page a checklist line opens
+  // is where to get a real handle on the figures).
   // The next two weeks — a heads-up only.
   // The window for "what moved on the message board": since the last lap
   // finished — or, when there has never been a lap, the last seven days.
@@ -693,21 +690,6 @@ const AdminTheLap = () => {
             {/* The standing checklist: what we look at every week here. */}
             <LapChecklist lapId={lap.id} topicId={current.id} ask={ask} onMakeGoal={openGoal} onAllReviewed={() => void moveTo(currentIndex + 1)} />
 
-            {/* The numbers for this topic, this week against last. */}
-            {numbers.length > 0 && (
-              <section className="rounded-2xl border border-white/10 bg-neutral-900/60 p-5">
-                <h3 className="font-bold text-sm uppercase tracking-wide text-white/60 mb-3">The numbers</h3>
-                <div className="grid gap-3 sm:grid-cols-2">
-                  {numbers.map((st) => (
-                    <div key={st.label} className="rounded-xl bg-white/[0.04] px-3 py-2.5">
-                      <p className="text-[11px] uppercase tracking-wide text-white/40">{st.label}</p>
-                      <p className="text-xl font-black leading-tight mt-0.5">{st.value}</p>
-                      {(st.prev || st.note) && <p className="text-[11px] text-white/45 mt-0.5">{st.prev ?? st.note}</p>}
-                    </div>
-                  ))}
-                </div>
-              </section>
-            )}
 
 
 
