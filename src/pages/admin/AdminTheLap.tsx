@@ -30,6 +30,7 @@ import { fetchTopicNumbers } from "@/lib/lap/numbers";
 import { deleteLap } from "@/lib/lap/laps";
 import LapRing from "@/components/lap/LapRing";
 import WeeklyGoalDialog, { type WeeklyGoalSeed } from "@/components/lap/WeeklyGoalDialog";
+import RingOrderDialog from "@/components/lap/RingOrderDialog";
 import { dropGoal, carryGoalNow, archiveDoneGoalsBefore } from "@/lib/lap/goals";
 import { runningOrder, checkpoints, crossedPillar, streak as streakOf, PILLAR_LABEL, PILLAR_ORDER, type RingTopic, type Pillar } from "@/lib/lap/ring";
 import { PILLAR_COLOR, commitmentSourceFor, carryTone, type CarryTone } from "@/lib/lap/commitments";
@@ -487,18 +488,8 @@ const AdminTheLap = () => {
     if (current?.id === t.id) await moveTo(currentIndex + 1 < order.length ? currentIndex + 1 : currentIndex - 1);
     invalidate();
   };
-  const nudgeTopic = async (t: Topic, dir: -1 | 1) => {
-    const mine = allTopics.filter((x) => x.pillar === t.pillar).sort((a, b) => a.sort_order - b.sort_order);
-    const i = mine.findIndex((x) => x.id === t.id);
-    const j = i + dir;
-    if (j < 0 || j >= mine.length) return;
-    const other = mine[j];
-    await Promise.all([
-      supabase.from("lap_topics" as never).update({ sort_order: other.sort_order } as never).eq("id", t.id),
-      supabase.from("lap_topics" as never).update({ sort_order: t.sort_order } as never).eq("id", other.id),
-    ]);
-    invalidate();
-  };
+  // Reorder the ring: drag in a list, watch the ring redraw (RingOrderDialog).
+  const [ringOrderOpen, setRingOrderOpen] = useState(false);
 
   /* ───── Fullscreen, for the wall ───── */
   const [isFullscreen, setIsFullscreen] = useState(false);
@@ -545,7 +536,10 @@ const AdminTheLap = () => {
           <div className="max-w-[880px] mx-auto w-full"><LapRing topics={order} currentIndex={-1} visited={new Set()} flags={{}} /></div>
           <div className="space-y-5 max-w-xl">
             <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-white/40">Start line</p>
-            <h2 className="text-3xl font-black">One lap around NLA.</h2>
+            <div className="flex flex-wrap items-center gap-3">
+              <h2 className="text-3xl font-black">One lap around NLA.</h2>
+              {isSuperAdmin && <button type="button" onClick={() => setRingOrderOpen(true)} className="text-[12px] text-white/45 hover:text-white inline-flex items-center gap-1"><Settings2 className="w-3.5 h-3.5" /> Reorder the ring</button>}
+            </div>
             <p className="text-white/60">
               {order.length} checkpoints: {order.filter((t) => t.pillar === "operations").length} in Operations, {order.filter((t) => t.pillar === "sales_marketing").length} in Sales & Marketing, {order.filter((t) => t.pillar === "finance").length} in Finance. The finish line is the Vision.
             </p>
@@ -694,8 +688,7 @@ const AdminTheLap = () => {
                         { label: "Rename", run: () => renameTopic(current) },
                         { label: "Add a topic after this — every lap", run: () => addTopicAfter(current, false) },
                         { label: "Add a topic after this — this lap only", run: () => addTopicAfter(current, true) },
-                        { label: "Move earlier in the pillar", run: () => nudgeTopic(current, -1) },
-                        { label: "Move later in the pillar", run: () => nudgeTopic(current, 1) },
+                        { label: "Reorder the ring…", run: async () => setRingOrderOpen(true) },
                         { label: "Retire this topic", run: () => retireTopic(current), danger: true },
                       ].map((o) => (
                         <button key={o.label} onClick={() => { setTopicMenu(false); void o.run(); }} className={`w-full text-left rounded-lg px-3 py-2 hover:bg-white/10 ${o.danger ? "text-red-300" : "text-white/85"}`}>{o.label}</button>
@@ -798,6 +791,7 @@ const AdminTheLap = () => {
       )}
       {dialog}
       <WeeklyGoalDialog open={!!goal} seed={goal} onClose={() => setGoal(null)} onSaved={invalidate} />
+      <RingOrderDialog open={ringOrderOpen} topics={topics} onClose={() => { setRingOrderOpen(false); invalidate(); }} />
     </div>
   );
 };
