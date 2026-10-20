@@ -292,3 +292,17 @@ and not the other twelve, which broke the one-shape-every-checkpoint rule.
 Josh would rather open the page a checklist line links to (Registration
 Intelligence etc.) for the real figures. fetchTopicNumbers stays in
 src/lib/lap/numbers.ts, unused, in case a per-line stat is ever wanted.
+
+## The note on a line is a running list (2026-10-20)
+
+Josh: "the notepad becomes a real tool for me." A line's note opens as a
+list: add items (Enter adds the next), nest one level with Tab or the
+corner arrow, cross items off (they strike through, drop to the bottom and
+STAY crossed off week to week — unlike the line's tick, which resets each
+Monday), Clear done, and send an item up as a weekly goal with the green
+target. Every change saves itself; no Save button. The line shows the count
+of open items beside its note icon. Stored as plain text in
+lap_checklist_items.note ("[x] " = done, two-space indent = nested), so
+notes written as prose before today read as items unchanged
+(src/lib/lap/noteList.ts, tested). Nothing inside a note gets its own note,
+links or files — the checklist stays two levels.

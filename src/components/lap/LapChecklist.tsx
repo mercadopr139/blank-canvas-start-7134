@@ -15,7 +15,8 @@ import { Check, Circle, Plus, Pencil, X, StickyNote, ExternalLink, Link2, Target
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { linkTarget, linkChoices, markLeavingLap } from "@/lib/lap/links";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
+import LapLineNote from "@/components/lap/LapLineNote";
+import { parseNote, countOpen } from "@/lib/lap/noteList";
 import { Button } from "@/components/ui/button";
 import type { useAsk } from "@/components/admin/AskDialog";
 
@@ -44,7 +45,7 @@ const LapChecklist = ({ lapId, topicId, ask, onMakeGoal, onAllReviewed }: Props)
   const { user } = useAuth();
   const [draft, setDraft] = useState("");
   const [subDraft, setSubDraft] = useState<{ parentId: string; text: string } | null>(null);
-  const [openNote, setOpenNote] = useState<{ id: string; text: string } | null>(null);
+  const [openNote, setOpenNote] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
   const { data: items = [] } = useQuery({
@@ -146,15 +147,13 @@ const LapChecklist = ({ lapId, topicId, ask, onMakeGoal, onAllReviewed }: Props)
     const ids = [item.id, ...kids.map((k) => k.id)];
     const { error } = await supabase.from("lap_checklist_items" as never).update({ retired_at: new Date().toISOString() } as never).in("id", ids);
     if (error) { toast.error(error.message); return; }
-    if (openNote?.id === item.id) setOpenNote(null);
+    if (openNote === item.id) setOpenNote(null);
     refresh();
   };
-  const saveNote = async () => {
-    if (!openNote) return;
-    const note = openNote.text.trim() || null;
-    const { error } = await supabase.from("lap_checklist_items" as never).update({ note, updated_at: new Date().toISOString() } as never).eq("id", openNote.id);
+  // The note's running list saves itself after every change (no Save button).
+  const saveNote = async (id: string, note: string | null) => {
+    const { error } = await supabase.from("lap_checklist_items" as never).update({ note, updated_at: new Date().toISOString() } as never).eq("id", id);
     if (error) { toast.error(error.message); return; }
-    setOpenNote(null);
     refresh();
   };
   const setLink = async (item: ChecklistItem, appKey: string | null) => {
@@ -223,11 +222,11 @@ const LapChecklist = ({ lapId, topicId, ask, onMakeGoal, onAllReviewed }: Props)
   // The link menu has two levels in one panel: what the line opens, and, a
   // level in, our pages. A side flyout ran off the screen edge (Josh, 2026-10-19).
   const [pagesFor, setPagesFor] = useState<string | null>(null);
-  const toggleNote = (item: ChecklistItem) => setOpenNote((o) => (o?.id === item.id ? null : { id: item.id, text: item.note ?? "" }));
+  const toggleNote = (item: ChecklistItem) => setOpenNote((o) => (o === item.id ? null : item.id));
 
   const renderLine = (item: ChecklistItem, sub: boolean) => {
     const reviewed = isReviewed(item);
-    const noteOpen = openNote?.id === item.id;
+    const noteOpen = openNote === item.id;
     const target = linkTarget(item.link_app);
     const goal = goalOf(item.id);
     return (
@@ -238,7 +237,12 @@ const LapChecklist = ({ lapId, topicId, ask, onMakeGoal, onAllReviewed }: Props)
           </button>
           <button onClick={() => toggleNote(item)} title={item.note ? "Open the note" : "Add a note"} className={`flex-1 min-w-0 text-left truncate ${sub ? "text-sm" : "text-[15px] font-semibold"} ${reviewed ? "text-white/45" : sub ? "text-white/80" : "text-white"}`}>
             {item.title}
-            {item.note && <StickyNote className="inline w-3.5 h-3.5 ml-2 align-[-2px] text-amber-300/80" aria-label="Has a note" />}
+            {item.note && (() => { const open = countOpen(parseNote(item.note)); return (
+              <span className="inline-flex items-center gap-1 ml-2 align-[-2px] text-amber-300/80" aria-label={open ? `${open} open in its list` : "Has a note"}>
+                <StickyNote className="w-3.5 h-3.5" />
+                {open > 0 && <span className="text-[10px] font-semibold">{open}</span>}
+              </span>
+            ); })()}
           </button>
           {goal && (
             <span className={`shrink-0 inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] font-medium ${goal.done ? "border-green-400/30 bg-green-400/10 text-green-400/70" : "border-green-400/50 bg-green-400/15 text-green-400"}`} title={goal.done ? "This week's goal, done" : "This week's goal"}>
@@ -334,12 +338,13 @@ const LapChecklist = ({ lapId, topicId, ask, onMakeGoal, onAllReviewed }: Props)
           </span>
         </div>
         {noteOpen && (
-          <div className="ml-8 mr-1 mb-2 rounded-lg border border-amber-300/20 bg-amber-300/5 p-2 space-y-2">
-            <Textarea autoFocus value={openNote.text} onChange={(e) => setOpenNote({ id: item.id, text: e.target.value })} placeholder="A standing note for this line — it stays week to week." rows={3} className="bg-neutral-950 border-neutral-800 text-white text-sm" />
-            <div className="flex justify-end gap-2">
-              <Button size="sm" variant="ghost" onClick={() => setOpenNote(null)} className="text-white/60 hover:text-white hover:bg-white/10">Close</Button>
-              <Button size="sm" onClick={() => void saveNote()} className="text-white" style={{ backgroundColor: NLA_RED }}>Save note</Button>
-            </div>
+          <div className={sub ? "ml-7" : "ml-8"}>
+            <LapLineNote
+              note={item.note}
+              onChange={(note) => void saveNote(item.id, note)}
+              onClose={() => setOpenNote(null)}
+              onMakeGoal={(title) => onMakeGoal(title, item.id)}
+            />
           </div>
         )}
       </li>
