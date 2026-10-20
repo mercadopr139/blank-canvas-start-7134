@@ -130,7 +130,7 @@ export const APPS: AppEntry[] = [
   // ── Operations · Gym Board ────────────────────────────────────────────
   // The BT and NBT Workout Plans are tabs inside Practice Plan, so the NBT
   // builder and its intelligence page ride on the same box.
-  { key: "app_practice_plan", label: "Practice Plan", group: "Gym Board", routes: [`${OPS}/practice-plan`, `${OPS}/nbt-board`, `${OPS}/nbt-intelligence`], opens: "The week's plan, verse and both Workout Plans" },
+  { key: "app_practice_plan", label: "Practice Plan", group: "Gym Board", routes: [`${OPS}/practice-plan`, `${OPS}/nbt-board`, `${OPS}/nbt-intelligence`], staffReady: true, opens: "The week's plan, verse and both Workout Plans" },
   { key: "app_daily_duties", label: "Daily Duties Intelligence", group: "Gym Board", routes: [`${OPS}/daily-duties`] },
   { key: "app_juniors_session", label: "Juniors Session", group: "Gym Board", routes: [`${OPS}/juniors-session`], opens: "Tuesday's line-up and the setup checklist" },
 
