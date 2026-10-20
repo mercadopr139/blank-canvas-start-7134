@@ -69,9 +69,9 @@ const LapChecklist = ({ lapId, topicId, ask, onMakeGoal, onAllReviewed }: Props)
   const { data: lineGoals = [] } = useQuery({
     queryKey: ["lap-line-goals", lapId],
     queryFn: async () => {
-      const { data, error } = await supabase.from("signals").select("lap_checklist_item_id, status" as never).eq("lap_id" as never, lapId).not("lap_checklist_item_id" as never, "is", null).eq("is_archived", false).eq("is_trashed", false);
+      const { data, error } = await supabase.from("signals").select("lap_checklist_item_id, status, title" as never).eq("lap_id" as never, lapId).not("lap_checklist_item_id" as never, "is", null).eq("is_archived", false).eq("is_trashed", false);
       if (error) throw error;
-      return (data ?? []) as unknown as { lap_checklist_item_id: string; status: string }[];
+      return (data ?? []) as unknown as { lap_checklist_item_id: string; status: string; title: string | null }[];
     },
   });
   const goalOf = (itemId: string) => {
@@ -344,6 +344,7 @@ const LapChecklist = ({ lapId, topicId, ask, onMakeGoal, onAllReviewed }: Props)
               onChange={(note) => void saveNote(item.id, note)}
               onClose={() => setOpenNote(null)}
               onMakeGoal={(title) => onMakeGoal(title, item.id)}
+              goals={lineGoals.filter((g) => g.lap_checklist_item_id === item.id).map((g) => ({ title: g.title ?? "", done: g.status === "Complete" }))}
             />
           </div>
         )}
