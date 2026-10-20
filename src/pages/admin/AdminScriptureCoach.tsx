@@ -25,8 +25,9 @@ import {
 } from "@/components/ui/alert-dialog";
 import {
   Search, X, Sparkles, RefreshCw, ArrowRight, ArrowLeft, Check,
-  MessageSquareQuote, MessagesSquare, HandHeart, NotebookPen, Save, Loader2, Trash2, History, Languages,
+  MessageSquareQuote, MessagesSquare, HandHeart, NotebookPen, Save, Loader2, Trash2, History, Languages, UserRound, Copy, ShieldOff,
 } from "lucide-react";
+import { useStaffPermissions } from "@/hooks/useStaffPermissions";
 import { toast } from "sonner";
 import { format, parseISO } from "date-fns";
 import { getCurrentAttendanceYear } from "@/lib/programYear";
@@ -106,6 +107,13 @@ const AdminScriptureCoach = () => {
   const preselectId = params.get("youth");
 
   const [youth, setYouth] = useState<Youth | null>(null);
+  // An adult across the desk (Josh, 2026-10-20): a coach, a parent, someone
+  // close to the academy. No record is kept — no session row, nothing in
+  // Intelligence, no review, no notifications. Super Admin only, so the
+  // youth path (which IS the record that protects a child) is never skipped
+  // by habit.
+  const [adult, setAdult] = useState(false);
+  const { isSuperAdmin } = useStaffPermissions();
   const [search, setSearch] = useState("");
   const [results, setResults] = useState<Youth[]>([]);
   const [searching, setSearching] = useState(false);
@@ -215,6 +223,7 @@ const AdminScriptureCoach = () => {
 
   const changeYouth = () => {
     setYouth(null);
+    setAdult(false);
     setSearch("");
     setTopic("");
     resetSession();
@@ -222,12 +231,13 @@ const AdminScriptureCoach = () => {
 
   // ── Generate a full set for a new topic ──
   const generate = async () => {
-    if (!youth || topic.trim().length < 3) return;
+    if ((!youth && !adult) || topic.trim().length < 3) return;
     setGenerating(true);
     try {
       const { data, error } = await supabase.functions.invoke("scripture-coach", {
         body: {
           topic: topic.trim(),
+          audience: adult ? "adult" : "youth",
           age,
           count: 5,
           history: priorSessions.map((sn) => ({
@@ -265,6 +275,7 @@ const AdminScriptureCoach = () => {
       const { data, error } = await supabase.functions.invoke("scripture-coach", {
         body: {
           topic: topic.trim(),
+          audience: adult ? "adult" : "youth",
           age,
           count: dropped.length,
           exclude: [...seenRefs, ...previouslyUsedRefs],
@@ -348,12 +359,26 @@ const AdminScriptureCoach = () => {
     }
   };
 
+  // For an adult: the whole set to the clipboard, so it can be texted on. Nothing is stored here.
+  const copySet = async () => {
+    const lines: string[] = [];
+    for (const p of passages.filter((x) => x.used)) {
+      lines.push(p.ref, p.esv_text.trim(), "");
+      if (p.context?.trim()) lines.push(p.context.trim(), "");
+    }
+    if (talkingPoints.length) lines.push("To talk about:", ...talkingPoints.map((t) => `- ${t}`), "");
+    if (prayerPoints.length) lines.push("To pray for:", ...prayerPoints.map((t) => `- ${t}`), "");
+    lines.push(ESV_COPYRIGHT);
+    try { await navigator.clipboard.writeText(lines.join("\n")); toast.success("Copied. Nothing was saved here."); }
+    catch { toast.error("Couldn't reach the clipboard."); }
+  };
+
   const keptCount = passages.filter((p) => p.kept).length;
   const droppedCount = passages.length - keptCount;
   const usedCount = passages.filter((p) => p.used).length;
 
   // ── Youth picker ──────────────────────────────────────────────────
-  if (!youth) {
+  if (!youth && !adult) {
     return (
       <div className="p-4 md:p-8 space-y-6 max-w-5xl mx-auto text-white">
         <div className="flex flex-col items-center text-center pt-4">
@@ -414,32 +439,63 @@ const AdminScriptureCoach = () => {
               );
             })}
           </div>
+
+          {/* The adult door (Josh, 2026-10-20). A step aside, not a shortcut:
+              a conversation with a youth stays on the youth path so it is
+              documented. Super Admin only to start. */}
+          {isSuperAdmin && search.trim().length < 2 && (
+            <div className="mt-8 pt-6 border-t border-neutral-800 text-center">
+              <p className="text-[11px] uppercase tracking-[0.15em] text-neutral-500 mb-3">or</p>
+              <Button
+                variant="outline"
+                onClick={() => { setAdult(true); setSearch(""); setResults([]); }}
+                className="bg-transparent border-neutral-700 text-neutral-200 hover:bg-white/5 hover:text-white h-11 px-5"
+              >
+                <UserRound className="w-4 h-4 mr-2" /> For an adult · nothing is saved
+              </Button>
+              <p className="text-xs text-neutral-500 mt-2.5 max-w-md mx-auto">
+                Adults only — a coach, a parent, a friend of the academy. A conversation with a youth
+                stays on the youth path so it is documented.
+              </p>
+            </div>
+          )}
         </div>
       </div>
     );
   }
 
-  const photo = resolveHeadshot(youth.child_headshot_url);
+  const photo = youth ? resolveHeadshot(youth.child_headshot_url) : null;
 
   return (
     <div className="p-4 md:p-8 space-y-6 max-w-5xl mx-auto text-white">
       {/* Who we're with — persistent, so the screen never loses the person */}
       <div className="flex items-center gap-3 p-3 rounded-xl bg-neutral-900 border border-neutral-800">
-        {photo ? (
+        {adult ? (
+          <div className="w-11 h-11 rounded-full bg-neutral-700 flex items-center justify-center text-white"><UserRound className="w-5 h-5" /></div>
+        ) : photo ? (
           <img src={photo} alt="" className="w-11 h-11 rounded-full object-cover" />
         ) : (
           <div className="w-11 h-11 rounded-full bg-neutral-700 flex items-center justify-center text-white font-bold">
-            {youth.child_first_name[0]}{youth.child_last_name[0]}
+            {youth!.child_first_name[0]}{youth!.child_last_name[0]}
           </div>
         )}
         <div className="flex-1 min-w-0">
-          <p className="text-white font-semibold truncate">
-            {youth.child_first_name} {youth.child_last_name}
-          </p>
-          <p className="text-xs text-neutral-500">
-            {age !== null ? `${age} years old · ` : ""}
-            {ageBandFor(age) === "junior" ? "Junior" : "Senior"}
-          </p>
+          {adult ? (
+            <>
+              <p className="text-white font-semibold truncate">An adult</p>
+              <p className="text-xs text-neutral-500 inline-flex items-center gap-1"><ShieldOff className="w-3 h-3" /> Not recorded — nothing from this conversation is saved</p>
+            </>
+          ) : (
+            <>
+              <p className="text-white font-semibold truncate">
+                {youth!.child_first_name} {youth!.child_last_name}
+              </p>
+              <p className="text-xs text-neutral-500">
+                {age !== null ? `${age} years old · ` : ""}
+                {ageBandFor(age) === "junior" ? "Junior" : "Senior"}
+              </p>
+            </>
+          )}
         </div>
         <Button
           variant="ghost"
@@ -455,7 +511,7 @@ const AdminScriptureCoach = () => {
       {phase === "topic" && (
         <div className="space-y-4 max-w-2xl mx-auto">
           <div>
-            <h2 className="text-xl font-bold text-white">What did they bring up?</h2>
+            <h2 className="text-xl font-bold text-white">{adult ? "What are they wrestling with?" : "What did they bring up?"}</h2>
             <p className="text-sm text-neutral-400 mt-1">
               In your words — the way they said it is fine.
             </p>
@@ -470,7 +526,7 @@ const AdminScriptureCoach = () => {
                 <p className="text-sm font-semibold text-sky-200">
                   {priorSessions.length} previous{" "}
                   {priorSessions.length === 1 ? "conversation" : "conversations"} with{" "}
-                  {youth.child_first_name}
+                  {youth?.child_first_name}
                 </p>
                 {priorSessions.some((sn) => sn.follow_up_needed) && (
                   <Badge className="bg-amber-500/15 text-amber-300 border-amber-500/30 text-[10px]">
@@ -623,8 +679,9 @@ const AdminScriptureCoach = () => {
             <div>
               <h2 className="text-xl font-bold text-white">After the conversation</h2>
               <p className="text-sm text-neutral-400 mt-1 max-w-xl">
-                Tick the ones you actually walked through — only those go in the
-                report.
+                {adult
+                  ? "Tick the ones you walked through if you want to copy them. Nothing here is saved."
+                  : "Tick the ones you actually walked through — only those go in the report."}
               </p>
             </div>
             <Button
@@ -654,6 +711,7 @@ const AdminScriptureCoach = () => {
             prayerPoints={prayerPoints}
           />
 
+          {!adult && (
           <div className="rounded-xl border border-neutral-800 bg-neutral-900 p-4">
             <div className="flex items-center gap-2 mb-3">
               <NotebookPen className="w-4 h-4" style={{ color: NLA_RED }} />
@@ -671,7 +729,26 @@ const AdminScriptureCoach = () => {
               className="min-h-[130px] bg-neutral-950 border-neutral-800 text-white"
             />
           </div>
+          )}
 
+          {adult ? (
+            <div className="sticky bottom-4 z-10 flex gap-2">
+              <Button
+                variant="outline"
+                onClick={() => void copySet()}
+                className="h-12 bg-neutral-900 border-neutral-700 text-neutral-200 hover:bg-white/5 hover:text-white"
+              >
+                <Copy className="w-4 h-4 mr-1.5" /> Copy to send on
+              </Button>
+              <Button
+                onClick={changeYouth}
+                className="flex-1 h-12 text-white font-bold text-base shadow-xl"
+                style={{ backgroundColor: NLA_RED }}
+              >
+                <Check className="w-5 h-5 mr-2" /> Done · nothing was saved
+              </Button>
+            </div>
+          ) : (
           <div className="sticky bottom-4 z-10 flex gap-2">
             <Button
               variant="outline"
@@ -693,6 +770,7 @@ const AdminScriptureCoach = () => {
               )}
             </Button>
           </div>
+          )}
         </div>
       )}
 

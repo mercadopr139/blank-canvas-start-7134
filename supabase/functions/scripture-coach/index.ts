@@ -57,6 +57,43 @@ const SYSTEM =
   "- The gospel is the center. Behavior change without Christ is moralism, and these are children who need a Savior " +
   "  more than they need a rule.\n\n" +
 
+  "";
+
+// The same lane, a different person across the desk (Josh, 2026-10-20): a
+// coach, a parent, a volunteer, someone close to the academy. Nothing about
+// this conversation is saved anywhere, so the engine only ever sees the words
+// typed. Peer to peer, no kid language, the gospel still the centre.
+const WHO_IS_IN_THE_ROOM_ADULT =
+  "WHO IS IN THE ROOM: an ADULT — a coach, a parent, a volunteer, a friend of the academy — sitting with the " +
+  "Program Director, who is a brother in Christ to them, not their pastor or their boss. This is peer to peer. So:\n" +
+  "- Keep every piece SHORT. Context is 2–3 sentences. Talking points are one sentence each.\n" +
+  "- Plain words, but grown-up words. No seminary vocabulary unless you explain it in a clause.\n" +
+  "- Write for an adult carrying adult weight: a marriage, money, a job, a child, grief, temptation, burnout, " +
+  "  doubt. Never simplify the way you would for a child, and never moralise.\n" +
+  "- Never condescending, never clinical. A friend who knows the Bible, not a counsellor reading a script.\n\n" +
+
+  "PLAIN ENGLISH: for EVERY passage, also give a 'plain_english' — the passage restated in everyday words, " +
+  "so the point lands before the ESV wording is unpacked. An EXPLANATION, faithful to the meaning, never a new " +
+  "translation, never quoting the ESV wording back. 1-2 short sentences.\n\n" +
+
+  "TALKING POINTS are questions and prompts that get the PERSON talking — the way one brother opens a real " +
+  "conversation with another. Open-ended, specific to their situation, the kind of thing that opens a 10–20 " +
+  "minute conversation.\n\n" +
+
+  "RESPONSES pair one-to-one with the talking points, in the same order. Each is what a wise, warm, biblically " +
+  "grounded friend would say next — words the Program Director could actually SAY OUT LOUD, in the second person. " +
+  "One or two short sentences — a guide, not a script. Honest about what scripture says, unmistakably kind, " +
+  "gospel-centered, never dismissive of what was just admitted.\n\n" +
+
+  "PRAYER POINTS are a few short things to name before praying together. Reminders, NOT a written prayer. " +
+  "Three to four words to a short phrase each.\n\n" +
+
+  "HARD TOPICS: some of these will be heavy — a marriage breaking, addiction, abuse, self-harm, suicidal thoughts, " +
+  "a crisis of faith. Do not soften scripture, and do not become clinical. If what was shared signals danger to " +
+  "the person or to someone else, the FIRST talking point names that plainly and urges immediate help today " +
+  "(in the United States: call or text 988), before any scripture is opened. Then continue with tenderness.\n\n";
+
+const WHO_IS_IN_THE_ROOM_YOUTH =
   "WHO IS IN THE ROOM: a real child, sitting across the desk right now, who has just told an adult something hard. " +
   "The mentor will be glancing at a screen while talking to them. So:\n" +
   "- Keep every piece SHORT. Context is 2–3 sentences. Talking points are one sentence each.\n" +
@@ -87,8 +124,9 @@ const SYSTEM =
 
   "HARD TOPICS: some of these will be heavy — sexuality, abuse, self-harm, a parent leaving, suicidal thoughts. " +
   "Do not soften scripture, and do not become clinical. Handle the child with the tenderness of someone who knows " +
-  "they are made in God's image and is speaking to them at the hardest moment of their week.\n\n" +
+  "they are made in God's image and is speaking to them at the hardest moment of their week.\n\n";
 
+const OUTPUT_RULES =
   "OUTPUT: valid JSON only. No prose before or after, no markdown fences.\n" +
   "{\n" +
   '  "passages": [ { "ref": "1 Corinthians 6:18-20", "context": "2-3 short sentences on what this passage is saying and why it speaks to this situation.", "plain_english": "1-2 short sentences restating the passage in plain, everyday words for this age." } ],\n' +
@@ -103,6 +141,10 @@ const SYSTEM =
   "punctuation: 'John 3:16', 'Psalm 139:13-16', '1 Corinthians 6:18-20', 'Romans 8:1'. Never abbreviate the book, " +
   "never use a dash other than a hyphen, never cite a whole chapter. Keep each passage to roughly 1–8 verses so it " +
   "can be read aloud in under a minute.";
+
+/** The whole system prompt for one audience: the lane, who is in the room, the output rules. */
+const systemFor = (audience: "youth" | "adult") =>
+  SYSTEM + (audience === "adult" ? WHO_IS_IN_THE_ROOM_ADULT : WHO_IS_IN_THE_ROOM_YOUTH) + OUTPUT_RULES;
 
 // Fetch one passage's text from Crossway. Returns null when the reference
 // cannot be resolved, so a bad pick is dropped rather than shown blank.
@@ -140,18 +182,21 @@ Deno.serve(async (req: Request) => {
   try {
     const body = await req.json();
     const topic = String(body?.topic ?? "").trim();
-    const age = Number(body?.age) || null;
+    const audience: "youth" | "adult" = body?.audience === "adult" ? "adult" : "youth";
+    const age = audience === "adult" ? null : Number(body?.age) || null;
     const count = Math.min(Math.max(Number(body?.count) || 5, 1), 5);
     const exclude: string[] = Array.isArray(body?.exclude) ? body.exclude.slice(0, 40) : [];
 
     if (topic.length < 3) {
-      return json({ error: "Tell me what the youth brought up." }, 400);
+      return json({ error: audience === "adult" ? "Tell me what they are wrestling with." : "Tell me what the youth brought up." }, 400);
     }
 
     const isRefill = count < 5;
-    const who = age
-      ? `The young person is ${age} years old.`
-      : "The young person is a youth-program age child.";
+    const who = audience === "adult"
+      ? "The person is an adult — a coach, a parent, a volunteer or a friend of the academy. Nothing about this conversation is recorded."
+      : age
+        ? `The young person is ${age} years old.`
+        : "The young person is a youth-program age child.";
 
     // Prior conversations with THIS youth. A second session should build on
     // the first rather than starting cold — and it must not hand the mentor
@@ -188,7 +233,7 @@ Deno.serve(async (req: Request) => {
         model: MODEL,
         // Thinking is charged against this as well as the answer.
         max_tokens: 8000,
-        system: SYSTEM,
+        system: systemFor(audience),
         messages: [{ role: "user", content: userPrompt }],
         ...thinking("low"),
       } as never);
