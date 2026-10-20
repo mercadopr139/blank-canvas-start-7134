@@ -17,7 +17,7 @@ import { Button } from "@/components/ui/button";
 
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tabs, TabsContent } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription,
@@ -770,44 +770,18 @@ const AdminPracticePlan = () => {
         weekStart={weekStart}
         plan={week ? { status: week.status, filled: filledCount, total: visibleCount } : null}
         onTab={switchTab}
+        active={tab as "week" | "verse" | "bt" | "nbt" | "template"}
       />
 
       <Tabs value={tab} onValueChange={switchTab}>
-        {/* The default inactive tab is near-invisible on this dark
-            surface — lift it so both options are readable. */}
+        {/* The strip above is the tab bar. The template pill sits under it. */}
         <div className="flex flex-col items-start">
-        <TabsList className="bg-neutral-900 border border-neutral-800 h-11 p-1 gap-1">
-          <TabsTrigger
-            value="week"
-            className="px-5 h-9 text-sm font-semibold text-neutral-300 hover:text-white data-[state=active]:bg-white data-[state=active]:text-black"
-          >
-            Practice Plan
-          </TabsTrigger>
-          <TabsTrigger
-            value="verse"
-            className="px-5 h-9 text-sm font-semibold text-neutral-300 hover:text-white data-[state=active]:bg-white data-[state=active]:text-black"
-          >
-            Verse of the Week
-          </TabsTrigger>
-          <TabsTrigger
-            value="bt"
-            className="px-5 h-9 text-sm font-semibold text-neutral-300 hover:text-white data-[state=active]:bg-white data-[state=active]:text-black"
-          >
-            BT Workout Plan
-          </TabsTrigger>
-          <TabsTrigger
-            value="nbt"
-            className="px-5 h-9 text-sm font-semibold text-neutral-300 hover:text-white data-[state=active]:bg-white data-[state=active]:text-black"
-          >
-            NBT Workout Plan
-          </TabsTrigger>
-        </TabsList>
         {/* Template: the standing pattern behind every week. Rarely touched,
             so it sits quietly under the Practice Plan tab. */}
         <button
           type="button"
           onClick={() => switchTab("template")}
-          className={`mt-1.5 ml-1 text-xs inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 border ${tab === "template" ? "border-dashed border-white/60 text-white font-semibold bg-white/5" : "border-transparent text-neutral-500 hover:text-neutral-300"}`}
+          className={`-mt-1 ml-1 text-xs inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 border ${tab === "template" ? "border-dashed border-white/60 text-white font-semibold bg-white/5" : "border-transparent text-neutral-500 hover:text-neutral-300"}`}
         >
           <LayoutTemplate className="w-3 h-3" /> {tab === "template" ? "Editing the template" : "Edit Template"}
         </button>

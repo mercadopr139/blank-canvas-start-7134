@@ -70,8 +70,8 @@ const SYSTEM =
   "  where tired kids land badly. Bravo lower boxes, step-offs and two-foot landings; Alpha higher boxes " +
   "  and single-leg landings.\n\n" +
 
-  "TUESDAY'S CONDITIONING STYLE: standard gym and CrossFit-style work — familiar movements repeated in rounds " +
-  "or intervals, couplets and triplets a whole room can run together. It must genuinely raise heart rates. Do " +
+  "TUESDAY'S CONDITIONING STYLE: standard gym and CrossFit-style work — familiar movements repeated in rounds, " +
+  "couplets and triplets a whole room can run together, each station a count, each kid at his own pace. It must genuinely raise heart rates. Do " +
   "NOT use shadow boxing or boxing drills as the conditioning piece; they are about to box for an hour and it " +
   "is not the training they lack. The programme's existing limits still outrank the style: no Olympic lifts, " +
   "no kipping, never to failure, never an exhaustion contest, and never athletes racing each other.\n\n" +
@@ -148,10 +148,10 @@ const SYSTEM =
   "tracks must train the SAME fundamental pattern at different progressions, never three unrelated workouts. " +
   "The lift ladders are the ones under EQUIPMENT above — bodyweight or band, then dumbbell or kettlebell, then " +
   "barbell — and they are not optional. Conditioning on MONDAY and THURSDAY, where there " +
-  "is floor: run/walk shuttles → controlled shuttle intervals → longer or faster shuttle intervals, all inside " +
-  "25 yards. Conditioning on TUESDAY, where there is not: shorter machine or bodyweight intervals with longer " +
-  "rests → longer intervals with less rest → longer intervals at a stronger effort or heavier load. The three " +
-  "tracks differ by dose and difficulty, never by who gets to run.\n\n" +
+  "is floor: fewer court lengths at a walk/run → more court lengths, controlled → more court lengths at a " +
+  "stronger effort, all inside 25 yards. Conditioning on TUESDAY, where there is not: fewer reps or metres per " +
+  "station → more reps or metres → more reps at a stronger effort or heavier load. The tracks differ by " +
+  "COUNT and difficulty, never by who gets to run and never by a clock.\n\n" +
 
   "THE DAY — 40 MINUTES AT THE ABSOLUTE MOST, warm-up and reset included. They box straight afterwards, so " +
   "overrunning costs the session that actually matters. State the minutes you intend for each block, and make " +
@@ -239,15 +239,32 @@ const SYSTEM =
   "BOARD VOICE: this goes on a screen read from across a gym. Short exercise names, sets, reps, time, distance, " +
   "and only essential cues. No paragraphs of coaching theory.\n\n" +
 
+  "REPS ARE 5, 8, 10 OR 12 — NOTHING ELSE (Josh, 2026-10-20: a kid reads '4 × 9' and stops to think). Every " +
+  "lift dose for either track is sets × one of those four: 5 for heavy work, 8, 10 or 12 otherwise. Never 6, 7, " +
+  "9 or 11, and never a range like '10–12'. Progression still moves one variable at a time, on those steps: " +
+  "8 → 10 → 12, then a little more load and back to 8; or a set added. Cardio counts are ROUND: 10, 12, 15 or " +
+  "20 reps; 40, 50, 60, 80 or 100 skips; whole court lengths; 100, 150, 200 or 250 m; 10, 12 or 15 calories. " +
+  "No '18 wall balls'.\n\n" +
+
+  "THE CARDIO IS COUNTED, NEVER TIMED (Josh, 2026-10-20): every station is a NUMBER OF REPS, a number of " +
+  "court lengths, or what a machine shows — never seconds or minutes. Reps let a faster kid move on and a kid " +
+  "still learning finish his count at his own pace; a clock makes thirty kids do the same thing at the same " +
+  "time, which is exactly what this room cannot do. So: 'Jump rope — 60 skips', 'KB goblet step-up — 10 each " +
+  "leg', 'Med ball slam — 15', 'Row — 200 m', 'Bike — 10 calories', 'Shuttle — baseline to baseline and back " +
+  "× 2'. NO STATIC HOLDS in the circuit — a plank or hollow hold is a clock; write plank shoulder taps × 20 or " +
+  "hollow rocks × 15 instead. The two tracks differ by the COUNT and the variation.\n" +
+  "THE SHAPE: as many rounds as they can inside the cardio minutes, every round the same stations, and the " +
+  "result a kid writes down is ROUNDS. The first line is always: 'As many rounds as you can in N min — rest 2 " +
+  "min between rounds' (N = the cardio minutes; 2 min rest is the house standard, a coach edits it on the " +
+  "plan when a day needs something else). That first line is the ONLY place a time appears.\n" +
   "CIRCUIT LINES — WRITTEN FOR A FOURTEEN-YEAR-OLD READING A SCREEN FROM ACROSS THE ROOM. Each track's circuit " +
-  "is a list of lines and EVERY LINE MUST STAND ON ITS OWN. The first line is the structure: '4 rounds — rest " +
-  "45 sec between rounds', or '12 min AMRAP'. Every line after it is ONE station, complete: the movement first, " +
-  "then the time or reps or distance, then the effort or cue, on the same line, separated by dashes. " +
-  "'Assault bike — 30 sec — strong but repeatable'. 'Row — 250 m — controlled pace'. '15-yard shuttle × 2 — " +
-  "strong but repeatable'. 'Jump rope — 30 sec — steady bounce, step-hop if learning'. NEVER a heading with " +
-  "nothing on it ('Bike station:'). NEVER a line that opens with a time or a number and no movement (':30 " +
-  "strong effort', '250m controlled pace'). NEVER a station split across two lines. If a youth reads one line " +
-  "they must know exactly what to do, for how long, and how hard. Six lines at most per track.\n\n" +
+  "is a list of lines and EVERY LINE MUST STAND ON ITS OWN. After the first line, every line is ONE station, " +
+  "complete: the movement first, then the count or distance, then the effort or cue, on the same line, " +
+  "separated by dashes. 'Jump rope — 60 skips — steady bounce, step-hop if learning'. 'Row — 200 m — " +
+  "controlled pace'. 'Shuttle — baseline to baseline and back × 2 — strong but repeatable'. NEVER a heading " +
+  "with nothing on it ('Bike station:'). NEVER a line that opens with a number and no movement ('15 strong " +
+  "effort'). NEVER a station split across two lines. If a youth reads one line they must know exactly what to " +
+  "do, how many, and how hard. Six lines at most per track, the first line included.\n\n" +
 
   "OUTPUT: valid JSON only, no prose and no markdown fences.\n" +
   "{\n" +
@@ -256,16 +273,16 @@ const SYSTEM =
   '  "prep": ["3-5 short warm-up lines"],\n' +
   '  "lift": {\n' +
   '    "pattern": "Squat",\n' +
-  '    "bravo":   { "name": "Goblet Squat", "detail": "4 × 6" },\n' +
+  '    "bravo":   { "name": "Goblet Squat", "detail": "4 × 8" },\n' +
   '    "alpha":   { "name": "Back Squat", "detail": "4 × 5" },\n' +
   '    "cues": ["one or two short coaching cues"]\n' +
   "  },\n" +
   '  "work": {\n' +
   '    "emphasis": "one of: steady aerobic | intervals | strength-endurance | carries | grip | obstacle prep",\n' +
   '    "title": "short name for the circuit",\n' +
-  '    "bravo":   ["4 rounds — rest 45 sec between rounds", "Row — 250 m — controlled pace", "10-yard shuttle × 2 — strong but repeatable", "Jump rope — 30 sec — steady"],\n' +
-  '    "alpha":   ["4 rounds — rest 45 sec between rounds", "Assault bike — 30 sec — strong but repeatable", "15-yard shuttle × 2 — strong but repeatable", "Jump rope — 30 sec — fast singles"],\n' +
-  '    "result_unit": "one of: rounds | minutes | seconds | meters | reps — what the athletes write down"\n' +
+  '    "bravo":   ["As many rounds as you can in 20 min — rest 2 min between rounds", "Row — 200 m — controlled pace", "Shuttle — baseline to baseline and back — strong but repeatable", "Jump rope — 40 skips — steady, step-hop if learning", "Med ball chest pass to wall — 12 — strong but repeatable"],\n' +
+  '    "alpha":   ["As many rounds as you can in 20 min — rest 2 min between rounds", "Bike — 12 calories — strong but repeatable", "Shuttle — baseline to baseline and back × 2 — strong but repeatable", "Jump rope — 80 skips — fast singles", "Med ball slam — 15 — full extension, hard but controlled"],\n' +
+  '    "result_unit": "rounds — what the athletes write down"\n' +
   "  },\n" +
   '  "reset": ["2-3 short transition lines"]\n' +
   "}";
@@ -449,9 +466,28 @@ Deno.serve(async (req: Request) => {
     // asked for again with the reason attached. Two tries, then an honest error.
     const DB = /dumb\s*bell|\bdbs?\b/i;
     const mondayDumbbell = (p: unknown) => dayKey === "monday" && DB.test(JSON.stringify(p ?? {}));
+    // The cardio is counted, never timed: after the first (structure) line, no
+    // station may carry seconds or minutes, and no static hold.
+    const TIMED = /\b\d+\s*(sec|secs|seconds|s|min|mins|minutes)\b|\d+:\d\d|\bhold\b|\bplank\b(?!\s*shoulder)/i;
+    // Reps are 5, 8, 10 or 12: every "sets × reps" in a lift dose is read back.
+    const REPS_OK = new Set([5, 8, 10, 12]);
+    const oddReps = (p: { lift?: { bravo?: { detail?: unknown }; alpha?: { detail?: unknown } } } | undefined): string[] =>
+      ["bravo", "alpha"].flatMap((t) => {
+        const detail = String(p?.lift?.[t as "bravo" | "alpha"]?.detail ?? "");
+        const bad: string[] = [];
+        for (const m of detail.matchAll(/\d+\s*[×x]\s*(\d+)(?:\s*[–-]\s*(\d+))?/g)) {
+          if (m[2] || !REPS_OK.has(Number(m[1]))) bad.push(`${t}: ${m[0]}`);
+        }
+        return bad;
+      });
+    const timedStations = (p: { work?: { bravo?: unknown; alpha?: unknown } } | undefined): string[] =>
+      ["bravo", "alpha"].flatMap((t) => {
+        const lines = p?.work?.[t as "bravo" | "alpha"];
+        return Array.isArray(lines) ? lines.slice(1).map(String).filter((l) => TIMED.test(l)) : [];
+      });
     let parsed: ReturnType<typeof extractJson> = {};
     let mondayNote = "";
-    for (let attempt = 0; attempt < 2; attempt++) {
+    for (let attempt = 0; attempt < 3; attempt++) {
       const response = await anthropic.messages.create({
         model: MODEL,
         // Thinking is charged against this, and three tracks under a 40-minute
@@ -464,12 +500,35 @@ Deno.serve(async (req: Request) => {
         ...thinking("medium"),
       } as never);
       parsed = extractJson(textOf(response));
+      const odd = oddReps(parsed);
+      if (odd.length) {
+        mondayNote =
+          "\n\nYOUR PREVIOUS ATTEMPT WAS REJECTED: these lift doses use reps that are not 5, 8, 10 or 12, or use a " +
+          `range: ${odd.map((l) => `"${l}"`).join(", ")}. Rewrite each as sets × 5, 8, 10 or 12 — one number. ` +
+          "Everything else can stay.";
+        continue;
+      }
+      const timed = timedStations(parsed);
+      if (timed.length) {
+        mondayNote =
+          "\n\nYOUR PREVIOUS ATTEMPT WAS REJECTED: these cardio stations are timed or are holds, and the cardio is " +
+          `counted, never timed: ${timed.map((l) => `"${l}"`).join(", ")}. Rewrite each as a number of reps, court ` +
+          "lengths, metres or calories (a hold becomes a rep movement). The first line alone keeps its minutes and " +
+          "the 2 min rest. Everything else can stay.";
+        continue;
+      }
       if (!mondayDumbbell(parsed)) break;
       mondayNote =
         "\n\nYOUR PREVIOUS ATTEMPT WAS REJECTED: it is MONDAY and the day uses dumbbells somewhere. The Battle " +
         "Team has the dumbbells on Monday. Replace every dumbbell — in the lift, the work block, the cues and " +
         "any scale-down, for both tracks — with a kettlebell, a floor barbell, a med ball, a band or bodyweight. " +
         "Everything else can stay.";
+    }
+    if (oddReps(parsed).length) {
+      return json({ error: "The coach kept writing reps that are not 5, 8, 10 or 12. Try again." }, 502);
+    }
+    if (timedStations(parsed).length) {
+      return json({ error: "The coach kept writing timed cardio stations; the cardio is counted in reps. Try again." }, 502);
     }
     if (mondayDumbbell(parsed)) {
       return json({ error: "The coach kept reaching for dumbbells on Monday, when the Battle Team has them. Try again." }, 502);
@@ -514,7 +573,7 @@ Deno.serve(async (req: Request) => {
         title: String(work?.title ?? "").trim(),
         bravo: strArray(work?.bravo, 8),
         alpha: strArray(work?.alpha, 8),
-        result_unit: String(work?.result_unit ?? "rounds").trim().toLowerCase(),
+        result_unit: (["rounds", "reps", "meters", "minutes", "seconds"].find((u) => String(work?.result_unit ?? "").toLowerCase().includes(u)) ?? "rounds"),
       },
       reset: strArray(parsed?.reset, 4),
       minutes,

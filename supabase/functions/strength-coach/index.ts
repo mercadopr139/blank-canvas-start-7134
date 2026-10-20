@@ -53,7 +53,7 @@ const SYSTEM =
   "   simple and directly tied to the lift. Return it as a warmup array with exactly ONE item.\n" +
   "2) MAIN LIFT: the day's barbell lift at 5×5, with 2–4 short technique cues and simple rest guidance (about 2 minutes between " +
   "   heavy sets).\n" +
-  "3) ACCESSORY: exactly ONE accessory move, 5 sets of 10–12 reps, ~30–45s rest, muscle-group-matched to the day (bench → chest/" +
+  "3) ACCESSORY: exactly ONE accessory move, 5 sets of 8, 10 or 12 reps — ONE number, never a range, never 9 or 11 (Josh, 2026-10-20: kids read '4 × 9' and stop to think), ~30–45s rest, muscle-group-matched to the day (bench → chest/" +
   "   triceps/shoulders/upper back; squat → quads/glutes/core; deadlift → posterior chain/back/grip/core). Use ONLY this equipment: " +
   "   dumbbells, benches, pull-up bars, medicine balls with the crossfit targets on the rig, and kettlebells. VARY it from recent " +
   "   weeks (see history) so training stays fresh. Just ONE accessory — 5 sets is plenty of volume and keeps the session inside 20 " +
@@ -79,7 +79,7 @@ const SYSTEM =
   "athlete — phrase it as a natural part of the move (an easier option AND a harder option), not a separate 'modifications' section.\n\n" +
 
   "TIME — HARD CAP 20 MINUTES, warm-up through the accessory. Budget it honestly: warm-up ~1–2 min, main lift 5×5 with ~2-min " +
-  "rests ~12–14 min, one accessory (5 × 10–12) with short rest ~4–5 min. NEVER program more than fits. estMinutes must reflect this " +
+  "rests ~12–14 min, one accessory (5 × 8, 10 or 12) with short rest ~4–5 min. NEVER program more than fits. estMinutes must reflect this " +
   "real total (about 20) — do not claim 20 while programming 30 minutes of work.\n\n" +
 
   "SAFETY (these are minors): technique before load, controlled tempo, full warm-up every session, coach supervises the barbell " +
@@ -102,7 +102,7 @@ const SYSTEM =
   '     "rest": string                      // e.g. "~2 min between sets"\n' +
   "  },\n" +
   '  "accessories": [ {\n' +
-  '     "name": string, "sets": string,      // sets e.g. "3 sets × 12–15 reps"\n' +
+  '     "name": string, "sets": string,      // sets e.g. "5 sets × 10 reps" — reps are 8, 10 or 12, one number\n' +
   '     "equipment": string, "targets": string,\n' +
   '     "howTo": string,                     // one short cue line\n' +
   '     "scale": string, "rest": string      // scale = easier + harder option in one line\n' +
@@ -191,10 +191,19 @@ Deno.serve(async (req) => {
       !!main && !coachNamedIt && (day?.accessories ?? []).some((a) => main.re.test(a?.name ?? ""));
     // Monday shares the room and the Non-Battle Team has the kettlebells.
     const KB = /kettle\s*bell|\bkbs?\b/i;
+    const REPS_OK = new Set([5, 8, 10, 12]);
+    const oddReps = (day: { accessories?: Array<{ sets?: string }> } | undefined): string[] =>
+      (day?.accessories ?? []).flatMap((a) => {
+        const bad: string[] = [];
+        for (const m of String(a?.sets ?? "").matchAll(/\d+\s*(?:sets?)?\s*[×x]\s*(\d+)(?:\s*[–-]\s*(\d+))?/gi)) {
+          if (m[2] || !REPS_OK.has(Number(m[1]))) bad.push(m[0]);
+        }
+        return bad;
+      });
     const mondayKettlebell = (day: { accessories?: Array<{ name?: string; equipment?: string; howTo?: string; scale?: string }> } | undefined) =>
       dayKey === "monday" && (day?.accessories ?? []).some((a) => KB.test([a?.name, a?.equipment, a?.howTo, a?.scale].filter(Boolean).join(" ")));
 
-    let parsed: { day?: { accessories?: Array<{ name?: string; equipment?: string; howTo?: string; scale?: string }> } } = {};
+    let parsed: { day?: { accessories?: Array<{ name?: string; sets?: string; equipment?: string; howTo?: string; scale?: string }> } } = {};
     let note = "";
     for (let attempt = 0; attempt < 3; attempt++) {
       const response = await anthropic.messages.create({
@@ -212,6 +221,13 @@ Deno.serve(async (req) => {
           `They just did five sets of it. Choose a DIFFERENT movement for the same muscles. Everything else can stay.`;
         continue;
       }
+      const odd = oddReps(parsed.day);
+      if (odd.length) {
+        note =
+          `\n\nYOUR PREVIOUS ATTEMPT WAS REJECTED: the accessory dose "${odd.join(", ")}" uses reps that are not 8, 10 or 12, ` +
+          "or uses a range. Write it as 5 sets × 8, 10 or 12 — one number. Everything else can stay.";
+        continue;
+      }
       if (mondayKettlebell(parsed.day)) {
         note =
           "\n\nYOUR PREVIOUS ATTEMPT WAS REJECTED: it is MONDAY and the accessory uses a kettlebell. The " +
@@ -223,6 +239,9 @@ Deno.serve(async (req) => {
     }
     if (repeatsMain(parsed.day)) {
       return json({ error: `The coach kept offering ${mainWord} as the extra work. Try again.` }, 502);
+    }
+    if (oddReps(parsed.day).length) {
+      return json({ error: "The coach kept writing reps that are not 8, 10 or 12. Try again." }, 502);
     }
     if (mondayKettlebell(parsed.day)) {
       return json({ error: "The coach kept reaching for kettlebells on Monday, when the Non-Battle Team has them. Try again." }, 502);

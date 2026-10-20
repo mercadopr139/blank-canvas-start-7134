@@ -1,5 +1,7 @@
 // The strip under the Practice Plan title: four pills, one per job the week
 // needs before it's ready for the Gym Board. Tap a pill to go do that job.
+// It is also the page's only tab bar (Josh, 2026-10-20: a second row of the
+// same four names was redundant), so the open tab's pill is drawn as such.
 // Reads the verse, Battle Team and NBT state itself; the practice plan's
 // state comes from the page, which already has it.
 import { useQuery } from "@tanstack/react-query";
@@ -14,12 +16,14 @@ const STATE_CLASS: Record<WeekStep["state"], string> = {
 };
 
 export const WeekProgress = ({
-  weekStart, plan, onTab,
+  weekStart, plan, onTab, active,
 }: {
   weekStart: string;
   plan: { status: string; filled: number; total: number } | null;
   /** Switch the page to one of its own tabs. */
   onTab: (tab: "week" | "verse" | "bt" | "nbt") => void;
+  /** The tab that is open, so its pill reads as selected. */
+  active?: "week" | "verse" | "bt" | "nbt" | "template";
 }) => {
 
   const { data: verse = null } = useQuery({
@@ -68,12 +72,11 @@ export const WeekProgress = ({
 
   const steps = weekSteps({ plan, verse, battle, nbt });
   const ready = weekReady(steps);
-  const go = (s: WeekStep) => {
-    if (s.key === "plan") onTab("week");
-    else if (s.key === "verse") onTab("verse");
-    else if (s.key === "battle") onTab("bt");
-    else onTab("nbt");
-  };
+  const tabOf = (s: WeekStep): "week" | "verse" | "bt" | "nbt" =>
+    s.key === "plan" ? "week" : s.key === "verse" ? "verse" : s.key === "battle" ? "bt" : "nbt";
+  const go = (s: WeekStep) => onTab(tabOf(s));
+  // The template is edited from the Practice Plan pill.
+  const isOpen = (s: WeekStep) => active === tabOf(s) || (active === "template" && s.key === "plan");
 
   return (
     <div
@@ -86,7 +89,8 @@ export const WeekProgress = ({
           key={s.key}
           type="button"
           onClick={() => go(s)}
-          className={`flex items-center gap-2.5 rounded-lg border px-3 py-2 text-left transition-colors ${STATE_CLASS[s.state]}`}
+          aria-current={isOpen(s) ? "page" : undefined}
+          className={`flex items-center gap-2.5 rounded-lg border px-3 py-2 text-left transition-colors ${STATE_CLASS[s.state]} ${isOpen(s) ? "ring-2 ring-white/70 ring-offset-2 ring-offset-black" : ""}`}
         >
           <span
             className={`h-5 w-5 rounded-full grid place-items-center text-[11px] font-bold shrink-0 ${
