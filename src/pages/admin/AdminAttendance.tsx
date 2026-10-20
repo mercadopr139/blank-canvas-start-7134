@@ -1172,10 +1172,12 @@ const AdminAttendance = () => {
     return { effectiveDate: null, effectiveRecords: practiceAttendance, effectiveRegIds: ids, effectiveLabel: viewedMonthShort };
   }, [isCurrentMonth, todayRecords, todayRegIds, practiceAttendance, viewedMonthShort]);
 
-  // Attendance High & Low for practice days
+  // Attendance High & Low for practice days — closed days only: a night
+  // still in progress is not the month's low (Josh, 2026-10-20). Today
+  // joins at 8 PM Eastern, like the averages.
   const { attendanceHigh, attendanceLow } = useMemo(() => {
     const dayCounts: Record<string, Set<string>> = {};
-    practiceAttendance.forEach((a) => {
+    closedDaysOnly(practiceAttendance).forEach((a) => {
       if (!dayCounts[a.check_in_date]) dayCounts[a.check_in_date] = new Set();
       dayCounts[a.check_in_date].add(identityById[a.registration_id] || a.registration_id);
     });
