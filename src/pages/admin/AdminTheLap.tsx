@@ -766,7 +766,7 @@ const AdminTheLap = () => {
                   </li>
                 ))}
               </ul>
-              <p className="text-[11px] text-white/35">A thread stays here until someone archives it inside the thread — and that clears it for everyone.</p>
+              <p className="text-[11px] text-white/35">A thread stays here until someone archives or deletes it inside the thread — either clears it for everyone.</p>
             </section>
           </div>
         </main>
