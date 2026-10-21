@@ -84,6 +84,16 @@ export const ROOMS: Record<RoomKey, Room> = {
   },
 };
 
+/** The hand weights, counted (Josh, 2026-10-20, after a Tuesday where Bravo stood in line for the light dumbbells).
+ *  "Plenty" for the scarce-kit rule — both tracks may use them in the same block — but at the light end it is a
+ *  handful, and Bravo is the bigger, weaker group. So Bravo lifts one piece per kid. */
+export const HAND_WEIGHTS =
+  "HAND WEIGHTS, COUNTED: five dumbbells of each weight (5 lb to 50 lb) and three kettlebells of each weight. " +
+  "At the light end that is a handful, and Bravo is the bigger group. BRAVO'S LIFT IS ONE PIECE PER KID: a " +
+  "single dumbbell held in both hands and pressed from the chest, a kettlebell by the horns, a plate for raises " +
+  "and goblets — two dumbbells only when the count allows. Spread the same movement across dumbbells, " +
+  "kettlebells and plates at once so five dumbbells never cap the group at five.";
+
 /** Which room each programme day is in. A night a workout was moved onto takes the Performance Center. */
 export const DAY_ROOM: Partial<Record<DayKey, RoomKey>> = {
   monday: "performance_center",
@@ -157,6 +167,7 @@ export const roomBrief = (dayKey: DayKey): string => {
       : "",
     plentyKit.length ? "PLENTY — anyone, any time: " + plentyKit.map((k) => k.label).join(", ") + "." : "",
     absent.length ? "NOT IN THIS ROOM — never write them: " + absent.join(", ") + "." : "",
+    HAND_WEIGHTS,
     "Plyo boxes, dumbbells and kettlebells can be carried over from the other room during prep; say so in the prep when a session needs them.",
     "Never a sled or prowler push: there is one sled and it does not work for a group.",
   ];

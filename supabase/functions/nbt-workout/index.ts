@@ -94,8 +94,9 @@ const SYSTEM =
   "- BARBELLS AND PLATES ARE PLENTIFUL; it is the RACKS that are scarce. Floor barbell work — deadlifts, " +
   "  Romanian deadlifts, barbell rows, floor press, landmine press — needs no rack, so both tracks may be on " +
   "  barbells at once when the pattern allows. Squats and bench press need the racks and benches.\n" +
-  "- PLENTIFUL — dumbbells and kettlebells, wall-ball targets, med balls, jump ropes, bands, pull-up bars, " +
-  "  barbells and plates, and bodyweight. Any number of tracks may use these at once.\n" +
+  "- PLENTIFUL for the scarce-kit rule — dumbbells and kettlebells, wall-ball targets, med balls, jump ropes, " +
+  "bands, pull-up bars, barbells and plates, and bodyweight. Any number of tracks may use these at once — but " +
+  "see BRAVO'S LIFT, HOW IT RUNS: the light hand weights are few, so Bravo lifts one piece per kid.\n" +
   "- Anything the room says is NOT IN THIS ROOM is never written for that day.\n" +
   "- MONDAY SHARES THE ROOM WITH THE BATTLE TEAM (Josh, 2026-10-20), who lift at the same time and HAVE THE " +
   "  DUMBBELLS. On Monday the Non-Battle Team uses NO DUMBBELLS ANYWHERE IN THE DAY — not in the lift, not in " +
@@ -113,7 +114,16 @@ const SYSTEM =
   "  deadlift or Romanian deadlift.\n" +
   "- PULL: inverted row, band row or scap pull-up → DB row → barbell row or pull-up.\n" +
   "CARRIES follow the same ladder: dumbbell or kettlebell farmer carry for BRAVO, heavier farmer carry or a " +
-  "plate carry for ALPHA. There are plenty of dumbbells and kettlebells, so both may carry at once.\n" +
+  "plate carry for ALPHA. Both may carry at once.\n" +
+  "BRAVO'S LIFT, HOW IT RUNS (Josh, 2026-10-20): the hand weights are few at the light end — five dumbbells and " +
+  "three kettlebells of each weight — and Bravo is the bigger, weaker group, so 'shared pairs, alternate sets' " +
+  "leaves most of them standing. ONE PIECE PER KID is Bravo's default: a single dumbbell in both hands pressed " +
+  "from the chest; a kettlebell by the horns; a plate for a front raise, a plate press, a goblet hold; goblet " +
+  "position for squats and step-ups. Two dumbbells only when the count allows. SPREAD the same movement across " +
+  "dumbbells, kettlebells and plates at once, so no station has a queue. And WRITE THE RUN-IT CUE INTO BRAVO'S " +
+  "DETAIL, after the dose, for the coach on the floor: '4 × 10 — one dumbbell in both hands, light; or a " +
+  "kettlebell by the horns, or a plate; groups of 3 rotate'. Alpha's line is unchanged: the racks and benches " +
+  "set Alpha's count ('3–4 per rack rotating sets').\n" +
   "IN THE WORK BLOCK, one circuit written twice at two doses on the same scarce station is a queue two deep. " +
   "Split the STATIONS, not just the doses: if Alpha rows, Bravo does not row — Bravo bikes, skis, or is on " +
   "the floor. Each track's circuit must be mostly floor work that needs nothing, with at most " +
@@ -273,7 +283,7 @@ const SYSTEM =
   '  "prep": ["3-5 short warm-up lines"],\n' +
   '  "lift": {\n' +
   '    "pattern": "Squat",\n' +
-  '    "bravo":   { "name": "Goblet Squat", "detail": "4 × 8" },\n' +
+  '    "bravo":   { "name": "Goblet Squat", "detail": "4 × 8 — one kettlebell by the horns, or a plate; groups of 3 rotate" },\n' +
   '    "alpha":   { "name": "Back Squat", "detail": "4 × 5" },\n' +
   '    "cues": ["one or two short coaching cues"]\n' +
   "  },\n" +
