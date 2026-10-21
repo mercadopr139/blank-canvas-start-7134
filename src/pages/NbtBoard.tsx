@@ -289,7 +289,7 @@ const NbtBoard = () => {
       </header>
 
       {/* Day tabs — the programme's three, plus any night a workout was moved onto. */}
-      <div className="flex items-stretch border-b border-white/10">
+      <div className="flex items-stretch border-b border-white/10 bg-black">
         {tabs.map((d) => {
           const on = d.key === dayKey;
           const isToday = dateOfDay(weekStart, d.key) === today;
@@ -298,7 +298,7 @@ const NbtBoard = () => {
               key={d.key}
               onClick={() => setDayKey(d.key)}
               className={`flex-1 px-3 py-2.5 text-left transition-colors border-r border-white/[0.06] last:border-r-0 ${
-                on ? "bg-white/[0.07]" : "hover:bg-white/[0.03]"
+                on ? "bg-black" : "bg-black hover:bg-white/[0.03]"
               }`}
               style={on ? { boxShadow: `inset 0 -3px 0 ${NBT_AMBER}` } : undefined}
             >
@@ -368,11 +368,11 @@ const NbtBoard = () => {
               return (
                 <section
                   key={t}
-                  className="rounded-2xl border border-white/15 bg-black/50 overflow-hidden flex flex-col md:min-h-0 shadow-[0_0.3em_1.2em_rgba(0,0,0,0.45)]"
+                  className="rounded-2xl border border-white/15 bg-[#141416] overflow-hidden flex flex-col md:min-h-0 shadow-[0_0.3em_1.2em_rgba(0,0,0,0.45)]"
                 >
                   {/* The lane's colour tints the header, as on Tuesday and the Gym Board. */}
-                  <div className="px-5 py-2.5 border-b shrink-0" style={{ borderColor: `${m.color}44`, background: `${m.color}18` }}>
-                    <h2 className="text-base md:text-lg font-black uppercase tracking-wide leading-tight" style={{ color: m.color }}>{m.label}</h2>
+                  <div className="px-5 py-2.5 border-b shrink-0" style={{ background: "#3c3527", borderColor: `${NBT_AMBER}66` }}>
+                    <h2 className="text-base md:text-lg font-black uppercase tracking-wide leading-tight text-white">{m.label}</h2>
                     <p className="text-[10px] md:text-[11px] text-white/40 mt-0.5">{m.blurb}</p>
                   </div>
 
@@ -396,7 +396,7 @@ const NbtBoard = () => {
                         return (
                           <>
                             <div className="flex items-baseline gap-[0.6em] flex-wrap mt-[0.25em]">
-                              <p className="text-[1.45em] font-bold leading-tight">{lift?.name}</p>
+                              <p className="text-[1.45em] font-bold leading-tight" style={{ color: m.color }}>{lift?.name}</p>
                               {dose && (
                                 <p className="rounded-[0.35em] px-[0.5em] py-[0.1em] text-[0.9em] font-black leading-snug" style={{ backgroundColor: `${m.color}26`, color: m.color }}>{dose}</p>
                               )}
@@ -439,7 +439,7 @@ const NbtBoard = () => {
                                       opacity: levelDot(line.level, 0.3).opacity,
                                     }}
                                   />
-                                  <span className="text-[1.05em] leading-snug" style={{ ...levelText(line.level), fontWeight: 400, color: line.level ? levelText(line.level).color : "rgba(255,255,255,0.88)" }}>{line.text}</span>
+                                  <span className="text-[0.9em] leading-snug" style={{ ...levelText(line.level), fontWeight: 400, color: line.level ? levelText(line.level).color : "rgba(255,255,255,0.88)" }}>{line.text}</span>
                                 </li>
                               )
                             )}
@@ -492,15 +492,15 @@ const NbtBoard = () => {
                   const lift = day.lift[t];
                   const [dose, ...cue] = (lift?.detail ?? "").split(" — ");
                   return (
-                    <section key={t} className="rounded-[0.8em] border border-white/15 bg-black/50 overflow-hidden shadow-[0_0.3em_1.2em_rgba(0,0,0,0.45)]">
-                      <div className="px-[0.9em] py-[0.4em] border-b" style={{ borderColor: `${m.color}44`, background: `${m.color}18` }}>
-                        <h2 className="text-[0.85em] font-black uppercase tracking-wide leading-tight" style={{ color: m.color }}>{m.label}</h2>
+                    <section key={t} className="rounded-[0.8em] border border-white/15 bg-[#141416] overflow-hidden shadow-[0_0.3em_1.2em_rgba(0,0,0,0.45)]">
+                      <div className="px-[0.9em] py-[0.4em] border-b" style={{ background: "#3c3527", borderColor: `${NBT_AMBER}66` }}>
+                        <h2 className="text-[0.85em] font-black uppercase tracking-wide leading-tight text-white">{m.label}</h2>
                         <p className="text-[0.5em] text-white/40 mt-[0.1em]">{m.blurb}</p>
                       </div>
                       <div className="px-[0.9em] pt-[0.45em] pb-[0.6em]">
                         <p className="text-[0.45em] uppercase tracking-[0.18em] font-bold" style={{ color: `${m.color}b3` }}>Lift</p>
                         <div className="flex items-baseline gap-[0.6em] flex-wrap mt-[0.15em]">
-                          <p className="text-[1.35em] font-bold leading-tight text-white">{lift?.name}</p>
+                          <p className="text-[1.35em] font-bold leading-tight" style={{ color: m.color }}>{lift?.name}</p>
                           {dose && (
                             <p className="rounded-[0.35em] px-[0.5em] py-[0.1em] text-[0.85em] font-black leading-snug" style={{ backgroundColor: `${m.color}26`, color: m.color }}>{dose}</p>
                           )}
@@ -533,7 +533,7 @@ const NbtBoard = () => {
                 });
                 return (
                   <section className="rounded-[0.8em] border border-white/15 bg-white/[0.06] overflow-hidden flex-1 min-h-0 flex flex-col shadow-[0_0.3em_1.2em_rgba(0,0,0,0.45)]">
-                    <div className="px-[0.9em] py-[0.4em] border-b shrink-0 flex items-baseline justify-between gap-[1em]" style={{ borderColor: `${NBT_AMBER}44`, background: `${NBT_AMBER}18` }}>
+                    <div className="px-[0.9em] py-[0.4em] border-b shrink-0 flex items-baseline justify-between gap-[1em]" style={{ background: "#3c3527", borderColor: `${NBT_AMBER}66` }}>
                       <h2 className="text-[0.85em] font-black uppercase tracking-wide leading-tight text-white">
                         Cardio Stations <span className="text-white/40 text-[0.6em] tracking-normal font-bold">· everyone</span>
                       </h2>
@@ -541,7 +541,7 @@ const NbtBoard = () => {
                     </div>
                     <div className="grid grid-cols-5 gap-[0.5em] flex-1 min-h-0 px-[0.9em] pt-[0.6em] pb-[0.5em]">
                       {tiles.map((t, i) => (
-                        <div key={i} data-fit className="rounded-[0.6em] border border-white/15 bg-black/50 px-[0.7em] py-[0.5em] min-h-0 overflow-hidden flex flex-col">
+                        <div key={i} data-fit className="rounded-[0.6em] border border-white/15 bg-[#141416] px-[0.7em] py-[0.5em] min-h-0 overflow-hidden flex flex-col">
                           <p className="text-[0.5em] font-bold uppercase tracking-[0.18em] leading-tight" style={{ color: `${NBT_AMBER}b3` }}>
                             <span className="text-[1.7em] font-black tracking-normal mr-[0.3em] align-[-0.1em]" style={{ color: NBT_AMBER }}>{t.n || i + 1}</span>{t.name}
                           </p>

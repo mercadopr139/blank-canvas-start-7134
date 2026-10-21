@@ -92,7 +92,7 @@ const StationClock = ({
   return (
     <div
       className={`rounded-[0.8em] border px-[1.1em] py-[0.55em] flex items-center gap-[1em] ${clock.rang ? "animate-pulse" : ""}`}
-      style={{ borderColor: `${tone}77`, backgroundColor: "rgba(0,0,0,0.5)" }}
+      style={{ borderColor: `${tone}77`, backgroundColor: "#141416" }}
     >
       <div className="min-w-0 w-[11em] shrink-0">
         <p className="text-[0.7em] uppercase tracking-[0.25em] font-black text-white/60 leading-tight">{title}</p>
