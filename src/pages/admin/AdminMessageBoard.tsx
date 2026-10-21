@@ -10,13 +10,12 @@ import {
   ResizablePanel,
   ResizableHandle,
 } from "@/components/ui/resizable";
-import { ArrowLeft, MessageSquare, Signal, Globe } from "lucide-react";
+import { ArrowLeft, MessageSquare, Globe } from "lucide-react";
 import { hasLapReturn, clearLapReturn } from "@/lib/lap/links";
 import ConversationList from "@/components/admin/message-board/ConversationList";
 import MessageThread from "@/components/admin/message-board/MessageThread";
 import NewConversationModal from "@/components/admin/message-board/NewConversationModal";
 import AddToWorkbenchModal from "@/components/admin/message-board/AddToWorkbenchModal";
-import MyWorkbenchOverlay from "@/components/admin/message-board/MyWorkbenchOverlay";
 
 // Three pillars — no General. Pillar is required at conversation creation
 // and is set once for the lifetime of the conversation.
@@ -96,7 +95,6 @@ const AdminMessageBoard = () => {
   // of the user's focus areas + Core signals). Distinct from the per-
   // message "Add to my Workbench" modal above, which is a single-shot
   // quick-add tied to a specific source message.
-  const [workbenchOverlayOpen, setWorkbenchOverlayOpen] = useState(false);
 
   // Deep-link from an "important message" email: ?conv=<id> auto-opens
   // that conversation on landing. Strip the param after consumption so a
@@ -508,37 +506,21 @@ const AdminMessageBoard = () => {
         }}
       />
 
-      {/* Floating Workbench shortcut — fixed to the viewport so it stays
-          visible no matter what scrolls (message list, sidebar groups,
-          outer page). Sits below the page header + thread header so it
-          doesn't cover the pillar badge on the right side. */}
-      <button
-        onClick={() => setWorkbenchOverlayOpen(true)}
-        className="fixed top-[125px] right-4 z-40 flex items-center gap-2 h-9 px-3 rounded-full bg-emerald-500 hover:bg-emerald-400 text-black text-xs font-semibold transition-colors shadow-md shadow-emerald-500/30"
-        title="Open my Workbench"
-      >
-        <Signal className="w-4 h-4" />
-        My Workbench
-      </button>
-
-      {/* Floating New Message shortcut — pinned just below My Workbench
-          so a new conversation is always one click away, regardless of
-          whether a thread is open or scrolled. NLA red so it doesn't
-          read as a sibling of the green Workbench pill. */}
+      {/* Floating New Message shortcut — fixed to the viewport so a new
+          conversation is always one click away, regardless of whether a
+          thread is open or scrolled. Sits below the page header + thread
+          header so it doesn't cover the pillar badge on the right side.
+          (The My Workbench pill that used to sit here was removed
+          2026-10-21: the Workbench is reached from a message's three-dots
+          menu, "Add to my Workbench".) */}
       <button
         onClick={() => setNewConvOpen(true)}
-        className="fixed top-[170px] right-4 z-40 flex items-center gap-2 h-9 px-3 rounded-full bg-[#bf0f3e] hover:bg-[#a00d34] text-white text-xs font-semibold transition-colors shadow-md shadow-[#bf0f3e]/30"
+        className="fixed top-[125px] right-4 z-40 flex items-center gap-2 h-9 px-3 rounded-full bg-[#bf0f3e] hover:bg-[#a00d34] text-white text-xs font-semibold transition-colors shadow-md shadow-[#bf0f3e]/30"
         title="Start a new conversation"
       >
         <MessageSquare className="w-4 h-4" />
         New Message
       </button>
-
-      <MyWorkbenchOverlay
-        open={workbenchOverlayOpen}
-        onClose={() => setWorkbenchOverlayOpen(false)}
-        currentUserId={user?.id || ""}
-      />
 
       {/* AddToWorkbenchModal is still wired for the per-message back-ref
           flow ("Add to my Workbench" on a specific message). It pre-fills

@@ -214,7 +214,7 @@ const AddToWorkbenchModal = ({
                   <SelectTrigger className="bg-white/[0.04] border-white/[0.08] text-zinc-200 text-sm h-9">
                     <SelectValue placeholder="Pick one" />
                   </SelectTrigger>
-                  <SelectContent className="bg-neutral-900 border-white/[0.08] z-[200]">
+                  <SelectContent className="bg-neutral-900 border-white/[0.08] z-[200] [&_[data-radix-select-viewport]]:bg-neutral-900">
                     {focusAreas.map((a) => (
                       <SelectItem key={a.key} value={a.key} className="text-zinc-200 text-sm focus:bg-white/[0.06] focus:text-white">
                         {a.title}
@@ -230,7 +230,7 @@ const AddToWorkbenchModal = ({
                   <SelectTrigger className="bg-white/[0.04] border-white/[0.08] text-zinc-200 text-sm h-9">
                     <SelectValue />
                   </SelectTrigger>
-                  <SelectContent className="bg-neutral-900 border-white/[0.08] z-[200]">
+                  <SelectContent className="bg-neutral-900 border-white/[0.08] z-[200] [&_[data-radix-select-viewport]]:bg-neutral-900">
                     <SelectItem value="Core" className="text-zinc-200 text-sm focus:bg-white/[0.06] focus:text-white">Core</SelectItem>
                     <SelectItem value="Bonus" className="text-zinc-200 text-sm focus:bg-white/[0.06] focus:text-white">On-Deck</SelectItem>
                   </SelectContent>
