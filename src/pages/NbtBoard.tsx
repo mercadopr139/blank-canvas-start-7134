@@ -403,7 +403,7 @@ const NbtBoard = () => {
                       <>
                         <div className="h-px mx-[0.9em] bg-white/10" />
                         <div className="px-[0.9em] pt-[0.6em] pb-[0.8em] flex-1 flex flex-col">
-                          <TrackLabel color="#ffffff">Cardio</TrackLabel>
+                          <TrackLabel color="#ffffff">{dayKey === "tuesday" ? "Cardio Stations" : "Cardio"}</TrackLabel>
 
                           {/* The structure line ("4 rounds — rest 45 sec") reads
                               as a header; every station underneath is one

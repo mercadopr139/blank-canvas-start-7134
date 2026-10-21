@@ -70,8 +70,27 @@ const SYSTEM =
   "  where tired kids land badly. Bravo lower boxes, step-offs and two-foot landings; Alpha higher boxes " +
   "  and single-leg landings.\n\n" +
 
-  "TUESDAY'S CONDITIONING STYLE: standard gym and CrossFit-style work — familiar movements repeated in rounds, " +
-  "couplets and triplets a whole room can run together, each station a count, each kid at his own pace. It must genuinely raise heart rates. Do " +
+  "TUESDAY IS CARDIO STATIONS (Josh, 2026-10-20, after a Tuesday on the floor): after the lift, Alpha and Bravo " +
+  "MERGE into one room and rotate through FIVE STATIONS, two minutes at each, one lap — ten minutes. The block is " +
+  "titled 'Cardio Stations' and is ONE block for everyone: write the SAME six lines for bravo and alpha. Line " +
+  "one, exactly: '5 stations · 2 min each · rotate on the whistle'. Then exactly five lines, numbered, one " +
+  "per station, in this order and with these names:\n" +
+  "- 'Station 1 · The Racks — …': six racks with wall-ball targets. Barbell and rack work, pull-ups on the " +
+  "  rack, wall balls, kettlebells, dumbbells, med balls, lunges, jump rope.\n" +
+  "- 'Station 2 · The Open Floor — …': 12 by 30 feet, open. Plyo and the tough bodyweight work: tuck jumps, " +
+  "  burpees, split jumps, jumping jacks, air squats, lunges, jump rope, med balls, kettlebells.\n" +
+  "- 'Station 3 · The Ring — …': 20 by 20, padded. Core and abs. Plank holds and other holds are ALLOWED here.\n" +
+  "- 'Station 4 · The Heavy Bag — …': long benches. Step-ups, a dumbbell press, push-ups, mountain climbers, " +
+  "  squat to squat jump, jump rope, kettlebells, med balls. Not bag work — they box straight afterwards.\n" +
+  "- 'Station 5 · The Uppercut — …': core and abs again, a different pair from Station 3. Holds ALLOWED.\n" +
+  "ON A STATION THE CLOCK IS THE DOSE: write the work and the cue only — a movement, or two that alternate — " +
+  "with a pace word or a form cue. NO COUNTS AND NO TIMES on a station line: not '15 wall balls', not '30 sec', " +
+  "not '× 10'. 'Station 1 · The Racks — wall balls — chest-height target, steady pace'. 'Station 2 · The Open " +
+  "Floor — tuck jumps and jumping jacks, alternate — land soft'. Each kid works at his own pace for the two " +
+  "minutes; the whistle moves everyone. Be creative across the five areas week to week, and never two " +
+  "stations that both hammer the same pattern back to back in the rotation. Hand weights are few: a station " +
+  "that uses them is one piece per kid. Tuesday's minutes are fixed: prep 5, lift 20, work 10, reset 3.\n" +
+  "TUESDAY'S STYLE INSIDE A STATION: standard gym and CrossFit-style work. It must genuinely raise heart rates. Do " +
   "NOT use shadow boxing or boxing drills as the conditioning piece; they are about to box for an hour and it " +
   "is not the training they lack. The programme's existing limits still outrank the style: no Olympic lifts, " +
   "no kipping, never to failure, never an exhaustion contest, and never athletes racing each other.\n\n" +
@@ -316,7 +335,9 @@ const DAY_BRIEF: Record<string, string> = {
   tuesday:
     "TUESDAY — ATHLETIC + OVERHEAD. Boxing facility: NO RUNNING AT ALL — there is no floor for it, and NO " +
     "machines — no bikes, no rowers, no ski ergs. Every conditioning movement stays on the spot. " +
-    "Athletic and energetic, not a second heavy strength day. Plyometrics are an option here.",
+    "Athletic and energetic, not a second heavy strength day. Plyometrics are an option here. " +
+    "THE WORK BLOCK IS CARDIO STATIONS: five named stations, two minutes each, one block for the whole room " +
+    "(see TUESDAY IS CARDIO STATIONS). Lift 20 min, stations 10 min.",
   thursday:
     "THURSDAY — HINGE + PULL. Performance Center, on the basketball court: 75 ft baseline to baseline, 56 ft " +
     "sideline to sideline. Floor distances are said in court — baseline to baseline (75 ft), baseline to " +
@@ -490,6 +511,24 @@ Deno.serve(async (req: Request) => {
         }
         return bad;
       });
+    // Tuesday: six lines, the fixed header, five named stations in order, no counts or times on a
+    // station line, holds only on the two core stations. The whole room does the same block.
+    const STATION_NAMES = ["The Racks", "The Open Floor", "The Ring", "The Heavy Bag", "The Uppercut"];
+    const stationProblems = (p: { work?: { bravo?: unknown; alpha?: unknown } } | undefined): string[] => {
+      if (dayKey !== "tuesday") return [];
+      const lines = Array.isArray(p?.work?.alpha) ? (p!.work!.alpha as unknown[]).map(String) : [];
+      const bad: string[] = [];
+      if (lines.length !== 6) bad.push(`${lines.length} lines (need the header and five stations)`);
+      if (!/^5 stations/i.test(lines[0] ?? "")) bad.push(`header "${lines[0] ?? ""}" (must be: 5 stations · 2 min each · rotate on the whistle)`);
+      lines.slice(1, 6).forEach((l, i) => {
+        const want = `Station ${i + 1} · ${STATION_NAMES[i]} —`;
+        if (!l.startsWith(want)) { bad.push(`"${l}" (must start: ${want})`); return; }
+        const rest = l.slice(want.length);
+        if (/\d/.test(rest)) bad.push(`"${l}" (no counts or times on a station line)`);
+        if (/\b(hold|plank)\b/i.test(rest) && ![2, 4].includes(i)) bad.push(`"${l}" (holds only on The Ring and The Uppercut)`);
+      });
+      return bad;
+    };
     const timedStations = (p: { work?: { bravo?: unknown; alpha?: unknown } } | undefined): string[] =>
       ["bravo", "alpha"].flatMap((t) => {
         const lines = p?.work?.[t as "bravo" | "alpha"];
@@ -518,7 +557,16 @@ Deno.serve(async (req: Request) => {
           "Everything else can stay.";
         continue;
       }
-      const timed = timedStations(parsed);
+      const stations = stationProblems(parsed);
+      if (stations.length) {
+        mondayNote =
+          "\n\nYOUR PREVIOUS ATTEMPT WAS REJECTED: Tuesday's Cardio Stations block is not in the required shape: " +
+          stations.join("; ") + ". Rewrite the block: the exact header, then Station 1 · The Racks, Station 2 · The " +
+          "Open Floor, Station 3 · The Ring, Station 4 · The Heavy Bag, Station 5 · The Uppercut — work and cue " +
+          "only, no numbers, holds only on 3 and 5, identical for bravo and alpha. Everything else can stay.";
+        continue;
+      }
+      const timed = dayKey === "tuesday" ? [] : timedStations(parsed);
       if (timed.length) {
         mondayNote =
           "\n\nYOUR PREVIOUS ATTEMPT WAS REJECTED: these cardio stations are timed or are holds, and the cardio is " +
@@ -537,7 +585,10 @@ Deno.serve(async (req: Request) => {
     if (oddReps(parsed).length) {
       return json({ error: "The coach kept writing reps that are not 5, 8, 10 or 12. Try again." }, 502);
     }
-    if (timedStations(parsed).length) {
+    if (stationProblems(parsed).length) {
+      return json({ error: "The coach kept writing Tuesday's stations in the wrong shape. Try again." }, 502);
+    }
+    if (dayKey !== "tuesday" && timedStations(parsed).length) {
       return json({ error: "The coach kept writing timed cardio stations; the cardio is counted in reps. Try again." }, 502);
     }
     if (mondayDumbbell(parsed)) {
@@ -552,12 +603,14 @@ Deno.serve(async (req: Request) => {
       const n = Math.round(Number(v));
       return Number.isFinite(n) && n > 0 && n < 90 ? n : fallback;
     };
-    const minutes = {
-      prep: mins(parsed?.minutes?.prep, 5),
-      lift: mins(parsed?.minutes?.lift, 10),
-      work: mins(parsed?.minutes?.work, 20),
-      reset: mins(parsed?.minutes?.reset, 3),
-    };
+    const minutes = dayKey === "tuesday"
+      ? { prep: 5, lift: 20, work: 10, reset: 3 }
+      : {
+        prep: mins(parsed?.minutes?.prep, 5),
+        lift: mins(parsed?.minutes?.lift, 10),
+        work: mins(parsed?.minutes?.work, 20),
+        reset: mins(parsed?.minutes?.reset, 3),
+      };
     const total = minutes.prep + minutes.lift + minutes.work + minutes.reset;
     if (total > CAP) {
       // Rejected rather than quietly trimmed: shortening the circuit here would
@@ -580,8 +633,8 @@ Deno.serve(async (req: Request) => {
       },
       work: {
         emphasis: String(work?.emphasis ?? "").trim(),
-        title: String(work?.title ?? "").trim(),
-        bravo: strArray(work?.bravo, 8),
+        title: dayKey === "tuesday" ? "Cardio Stations" : String(work?.title ?? "").trim(),
+        bravo: dayKey === "tuesday" ? strArray(work?.alpha, 8) : strArray(work?.bravo, 8),
         alpha: strArray(work?.alpha, 8),
         result_unit: (["rounds", "reps", "meters", "minutes", "seconds"].find((u) => String(work?.result_unit ?? "").toLowerCase().includes(u)) ?? "rounds"),
       },

@@ -623,7 +623,7 @@ export const NbtWeekBuilder = ({
                                     </p>
                                     {(day.work[t] ?? []).length > 0 && (
                                       <div>
-                                        <p className="text-[10px] font-bold uppercase tracking-wide text-neutral-500">Cardio</p>
+                                        <p className="text-[10px] font-bold uppercase tracking-wide text-neutral-500">{d.key === "tuesday" ? "Cardio Stations" : "Cardio"}</p>
                                         <ul className="mt-0.5 space-y-0.5">
                                           {readableLines(day.work[t]).map((line, k) =>
                                             line.kind === "rounds" ? (

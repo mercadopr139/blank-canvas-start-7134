@@ -117,7 +117,7 @@ export function renderWorkout(date: string, day: NbtDay, plan: PlanBlocks | null
           </tr></table>
           ${lift.cues?.length ? `<p style="margin:8px 0 0 0;color:#374151;font-size:13px;line-height:1.5;">${lift.cues.map(escapeHtml).join(" · ")}</p>` : ""}
 
-          ${h(`Cardio${work.title ? ` · ${work.title}` : ""}`, m.work)}
+          ${h(work.title === "Cardio Stations" ? "Cardio Stations" : `Cardio${work.title ? ` · ${work.title}` : ""}`, m.work)}
           ${work.emphasis ? `<p style="margin:0 0 8px 0;color:#6b7280;font-size:13px;">${escapeHtml(work.emphasis)}${work.result_unit ? ` · athletes write down ${escapeHtml(work.result_unit)}` : ""}</p>` : ""}
           <table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr>
             ${trackBox("ALPHA", ALPHA, list(work.alpha) || `<p style="margin:0;color:#9ca3af;font-size:13px;">—</p>`)}
