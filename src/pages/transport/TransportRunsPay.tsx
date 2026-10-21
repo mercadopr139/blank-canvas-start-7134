@@ -6,7 +6,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { useToast } from "@/hooks/use-toast";
 import {
   AlertTriangle, CheckCircle, XCircle,
-  Download, ChevronLeft, ChevronRight, DollarSign, Trash2, Pencil, ChevronDown, ChevronUp, User, Users, Plus, Search, Mail,
+  Download, ChevronLeft, ChevronRight, DollarSign, Trash2, Pencil, ChevronDown, ChevronUp, User, Users, Plus, Search, Mail, StickyNote,
 } from "lucide-react";
 import {
   format, startOfMonth, endOfMonth, eachDayOfInterval, getDay,
@@ -55,7 +55,7 @@ function getMonthPayPeriods(month: Date): { first: PayPeriod; second: PayPeriod 
   };
 }
 
-interface RunWithDetails { id: string; run_type: string; status: string; started_at: string; closed_at: string | null; driver: { id: string; name: string } | null; route: { id: string; name: string } | null; }
+interface RunWithDetails { id: string; run_type: string; status: string; started_at: string; closed_at: string | null; notes: string | null; driver: { id: string; name: string } | null; route: { id: string; name: string } | null; }
 interface RunApproval { id: string; run_id: string; status: string; notes: string | null; }
 
 export default function TransportRunsPay() {
@@ -81,6 +81,10 @@ export default function TransportRunsPay() {
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [panelOpen, setPanelOpen] = useState(false);
   const [editingRunId, setEditingRunId] = useState<string | null>(null);
+  // Trip note (Chrissy, 2026-10-21): why the route was created, what is
+  // needed. Lives on runs.notes; the dispute reason stays on run_approvals.
+  const [noteEditRunId, setNoteEditRunId] = useState<string | null>(null);
+  const [noteDraft, setNoteDraft] = useState("");
   const [editForm, setEditForm] = useState<{ route: string; runType: string; date: string; time: string; driver: string }>({ route: "", runType: "", date: "", time: "", driver: "" });
   const [routes, setRoutes] = useState<{ id: string; name: string }[]>([]);
   // Drivers list for the edit-trip dropdown — lets the admin reassign a
@@ -142,11 +146,11 @@ export default function TransportRunsPay() {
     // Half-period totals are derived from the visible month's `runs` (split by
     // day-of-month in driverPayData), so no separate pay-period fetch needed.
     const [runsRes, approvalsRes, attRes, routesRes, yearRunsRes, driversRes] = await Promise.all([
-      supabase.from("runs").select("id, run_type, status, started_at, closed_at, driver:drivers(id, name), route:routes(id, name)").eq("status", "completed").gte("started_at", from).lte("started_at", to).order("started_at", { ascending: false }),
+      supabase.from("runs").select("id, run_type, status, started_at, closed_at, notes, driver:drivers(id, name), route:routes(id, name)").eq("status", "completed").gte("started_at", from).lte("started_at", to).order("started_at", { ascending: false }),
       supabase.from("run_approvals").select("id, run_id, status, notes"),
       supabase.from("transport_attendance").select("run_id").gte("recorded_at", from).lte("recorded_at", to),
       supabase.from("routes").select("id, name"),
-      supabase.from("runs").select("id, run_type, status, started_at, closed_at, driver:drivers(id, name), route:routes(id, name)").eq("status", "completed").gte("started_at", yearStart).lte("started_at", yearEnd),
+      supabase.from("runs").select("id, run_type, status, started_at, closed_at, notes, driver:drivers(id, name), route:routes(id, name)").eq("status", "completed").gte("started_at", yearStart).lte("started_at", yearEnd),
       supabase.from("drivers").select("id, name").order("name"),
     ]);
     if (runsRes.data) setRuns(runsRes.data as unknown as RunWithDetails[]);
@@ -270,6 +274,16 @@ export default function TransportRunsPay() {
     setEditingRunId(null);
     toast({ title: "Trip updated" }); fetchData();
   };
+  const startNote = (r: RunWithDetails) => { setNoteEditRunId(r.id); setNoteDraft(r.notes ?? ""); };
+  const handleSaveNote = async () => {
+    if (!noteEditRunId) return;
+    const notes = noteDraft.trim() || null;
+    // runs.notes is newer than the generated types.
+    const { error } = await supabase.from("runs").update({ notes } as never).eq("id", noteEditRunId);
+    if (error) { toast({ title: "Note not saved", description: error.message, variant: "destructive" }); return; }
+    setNoteEditRunId(null);
+    toast({ title: notes ? "Note saved" : "Note removed" }); fetchData();
+  };
   const exportMonth = () => {
     const allMonthRuns = runs;
     const driverPayRows = driverPayData.map(([driverId, d]) => [
@@ -283,10 +297,10 @@ export default function TransportRunsPay() {
       `$${d.yearEarnings}`,
     ]);
     const tripRows = allMonthRuns.map((r) => [
-      format(new Date(r.started_at), "MM/dd/yyyy"), r.run_type, r.driver?.name || "", r.route?.name || "", r.status, `$${getPayRate(r.route?.name)}`, String(attendanceCounts[r.id] || 0), approvalMap.get(r.id)?.status || "pending"
+      format(new Date(r.started_at), "MM/dd/yyyy"), r.run_type, r.driver?.name || "", r.route?.name || "", r.status, `$${getPayRate(r.route?.name)}`, String(attendanceCounts[r.id] || 0), approvalMap.get(r.id)?.status || "pending", r.notes || ""
     ]);
     const csv = toCsv(
-      ["Date","Type","Driver","Route","Status","Pay","Youth Count","Approval"],
+      ["Date","Type","Driver","Route","Status","Pay","Youth Count","Approval","Notes"],
       tripRows
     ) + "\n\n" + toCsv(
       ["Driver","Month Trips","Month $","1st-15th $","1st-15th Status","16th-end $","16th-end Status","Year $"],
@@ -455,7 +469,7 @@ export default function TransportRunsPay() {
     setHistoryLoading(true);
     setExpandedMonths(new Set());
     const [runsRes, approvalsRes] = await Promise.all([
-      supabase.from("runs").select("id, run_type, status, started_at, closed_at, driver:drivers(id, name), route:routes(id, name)").eq("status", "completed").eq("driver_id", driverId).order("started_at", { ascending: false }).limit(500),
+      supabase.from("runs").select("id, run_type, status, started_at, closed_at, notes, driver:drivers(id, name), route:routes(id, name)").eq("status", "completed").eq("driver_id", driverId).order("started_at", { ascending: false }).limit(500),
       supabase.from("run_approvals").select("id, run_id, status, notes"),
     ]);
     if (runsRes.data) setAllDriverRuns(runsRes.data as unknown as RunWithDetails[]);
@@ -636,6 +650,7 @@ export default function TransportRunsPay() {
                         <button key={driverId} onClick={() => { setSelectedDriver({ id: driverId, name: entry.driverName }); setSelectedDate(dateKey); setPanelOpen(true); setEditingRunId(null); setDeleteConfirmId(null); }} className="w-full flex items-center gap-1 px-1 py-0.5 rounded hover:bg-white/10 transition-colors text-left group">
                           <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${statusDot(entry.worstStatus)}`} />
                           <span className="text-[10px] text-white/70 group-hover:text-white truncate leading-tight">{entry.driverName.split(" ")[0]}</span>
+                          {entry.runs.some((run) => run.notes) && <StickyNote className="w-2.5 h-2.5 text-amber-300 flex-shrink-0" aria-label="Has a note" />}
                           <span className="text-[9px] text-white/30 ml-auto flex-shrink-0">{entry.runs.length}</span>
                         </button>
                       ))}
@@ -711,7 +726,7 @@ export default function TransportRunsPay() {
       )}
 
       {/* Trip Detail Dialog */}
-      <Dialog open={panelOpen} onOpenChange={(open) => { setPanelOpen(open); if (!open) { setEditingRunId(null); setDeleteConfirmId(null); setExpandedRosters(new Set()); } }}>
+      <Dialog open={panelOpen} onOpenChange={(open) => { setPanelOpen(open); if (!open) { setEditingRunId(null); setDeleteConfirmId(null); setNoteEditRunId(null); setExpandedRosters(new Set()); } }}>
         <DialogContent className="bg-[#111827] border-white/10 text-white max-w-md max-h-[85vh] overflow-y-auto">
           <DialogHeader><DialogTitle className="text-white">{selectedDriver?.name} — {selectedDate ? format(new Date(selectedDate + "T12:00:00"), "MMM d, yyyy") : ""}</DialogTitle></DialogHeader>
           <div className="space-y-3 mt-2">
@@ -895,7 +910,32 @@ export default function TransportRunsPay() {
                       )}
                     </div>
                   )}
-                  {status === "disputed" && approval?.notes && <p className="text-red-400/70 text-xs italic">Note: {approval.notes}</p>}
+                  {noteEditRunId === r.id ? (
+                    <div className="space-y-1.5">
+                      <textarea
+                        autoFocus
+                        value={noteDraft}
+                        onChange={(e) => setNoteDraft(e.target.value)}
+                        placeholder="Why this route was created, what is needed…"
+                        rows={3}
+                        className="w-full bg-white/5 border border-amber-400/40 rounded px-2 py-1.5 text-xs text-white placeholder:text-white/30 resize-none focus:outline-none focus:border-amber-400/70"
+                      />
+                      <div className="flex gap-2">
+                        <Button size="sm" variant="outline" onClick={() => setNoteEditRunId(null)} className="text-xs h-7 border-white/20 text-white bg-transparent hover:bg-white/10">Cancel</Button>
+                        <Button size="sm" onClick={handleSaveNote} className="text-xs h-7 bg-amber-500 hover:bg-amber-400 text-black">Save note</Button>
+                      </div>
+                    </div>
+                  ) : r.notes ? (
+                    <button onClick={() => startNote(r)} title="Edit note" className="w-full text-left bg-amber-400/10 border border-amber-400/25 hover:border-amber-400/50 rounded px-2 py-1.5 flex items-start gap-1.5 transition-colors">
+                      <StickyNote className="w-3 h-3 text-amber-300 mt-0.5 flex-shrink-0" />
+                      <span className="text-amber-100/90 text-xs whitespace-pre-wrap break-words">{r.notes}</span>
+                    </button>
+                  ) : (
+                    <button onClick={() => startNote(r)} className="w-full flex items-center justify-center gap-1 py-1.5 border border-dashed border-white/15 hover:border-amber-400/40 rounded text-[11px] text-white/40 hover:text-amber-200 transition-colors">
+                      <StickyNote className="w-3 h-3" /> Add a note
+                    </button>
+                  )}
+                  {status === "disputed" && approval?.notes && <p className="text-red-400/70 text-xs italic">Dispute: {approval.notes}</p>}
                   {status !== "approved" && (
                     <input placeholder="Dispute note..." value={noteInputs[r.id] || ""} onChange={(e) => setNoteInputs((prev) => ({ ...prev, [r.id]: e.target.value }))} className="w-full bg-white/5 border border-white/10 rounded px-2 py-1 text-xs text-white placeholder:text-white/30" />
                   )}
