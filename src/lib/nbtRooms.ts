@@ -166,6 +166,16 @@ export const OFF_RACK_RULE =
   "- THE BENCHES follow the racks on a press day. On a squat, pull or hinge day they may be carried to the floor as a station for a few athletes at a time — chest-supported rows, step-ups, incline push-ups.\n" +
   "- The same in reverse: when BRAVO has the racks, ALPHA takes the floor version with a barbell — barbell Romanian deadlift, barbell row, floor press, lunges with a bar.";
 
+/**
+ * One direction of travel per day on the court (Josh, 2026-10-21): a station
+ * going baseline to baseline meets a station going sideline to sideline head
+ * on at centre court.
+ */
+export const COURT_AXIS_RULE =
+  "ONE DIRECTION OF TRAVEL PER DAY: every moving station on the court runs the SAME way today — all baseline " +
+  "to baseline (75 ft), or all sideline to sideline (56 ft). Never both on one day: the paths cross head on in " +
+  "the middle of the court. Stations done on the spot are fine alongside either.";
+
 /** Every kit the room does NOT have — asking for it is a refusal, not a queue. */
 export const absentKit = (room: Room): KitKey[] =>
   (Object.keys(KIT_PATTERNS) as KitKey[]).filter((k) => !kitIn(room, k));
@@ -199,6 +209,7 @@ export const roomBrief = (dayKey: DayKey): string => {
     plentyKit.length ? "PLENTY — anyone, any time: " + plentyKit.map((k) => k.label).join(", ") + "." : "",
     // Where the racks are scarce, the off-rack rule travels with the room.
     scarce.some((k) => k.key === "rack") ? OFF_RACK_RULE : "",
+    room.canRun ? COURT_AXIS_RULE : "",
     absent.length ? "NOT IN THIS ROOM — never write them: " + absent.join(", ") + "." : "",
     HAND_WEIGHTS,
     "Plyo boxes, dumbbells and kettlebells can be carried over from the other room during prep; say so in the prep when a session needs them.",

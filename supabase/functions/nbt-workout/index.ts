@@ -85,6 +85,9 @@ const SYSTEM =
   "  court lengths: baseline to baseline (75 ft), baseline to baseline and back, sideline to sideline (56 ft), " +
   "  sideline to sideline and back; never metres, never a lap. Make the three Open Court stations different " +
   "  from each other — not three sets of lunges. Core work with holds is allowed on an Open Court station.\n" +
+  "  ONE DIRECTION OF TRAVEL PER DAY (Josh, 2026-10-21): every moving station runs the same way — all " +
+  "  baseline to baseline, or all sideline to sideline — never both on one day, because the paths cross head " +
+  "  on at centre court. On-the-spot stations are fine alongside either.\n" +
   "TUESDAY — the boxing facility, FIVE stations (lift 15 min, stations 10 min):\n" +
   "- 'Station 1 · The Racks — …': six racks with wall-ball targets. Barbell and rack work, pull-ups on the " +
   "  rack, wall balls, kettlebells, dumbbells, med balls, lunges, jump rope.\n" +

@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { ROOMS, roomFor, kitIn, absentKit, roomBrief, KIT_PATTERNS } from "@/lib/nbtRooms";
-import { equipmentClash, missingKit, dayProblem, courtLanguage } from "@/lib/nbtCoaching";
+import { equipmentClash, courtAxisClash, missingKit, dayProblem, courtLanguage } from "@/lib/nbtCoaching";
 import type { NbtDay } from "@/lib/nbt";
 
 const day = (bravoLift: string, alphaLift: string, bravoWork: string[], alphaWork: string[]): NbtDay => ({
@@ -117,6 +117,18 @@ describe("Scarce kit belongs to one track per block", () => {
     expect(equipmentClash(day("DB RDL + DB Row", "Barbell RDL + Assisted Pull-Up", [], []), "thursday")).toBeNull();
   });
 
+  it("one direction of travel per day on the court (Josh, 2026-10-21)", () => {
+    const mixed = day("Goblet Squat", "Back Squat",
+      ["6 stations · 2 min each", "Station 4 · Open Court — suitcase carry baseline to baseline and back", "Station 5 · Open Court — bear crawl sideline to sideline"],
+      ["6 stations · 2 min each", "Station 4 · Open Court — suitcase carry baseline to baseline and back", "Station 5 · Open Court — bear crawl sideline to sideline"]);
+    expect(courtAxisClash(mixed)).toMatch(/head on/);
+    expect(dayProblem(mixed, "thursday")).toMatch(/head on/);
+    const oneWay = day("Goblet Squat", "Back Squat",
+      ["Station 4 · Open Court — suitcase carry baseline to baseline and back", "Station 5 · Open Court — lunges baseline to baseline", "Station 6 · Open Court — 12 plank shoulder taps"],
+      ["Station 4 · Open Court — suitcase carry baseline to baseline and back", "Station 5 · Open Court — lunges baseline to baseline", "Station 6 · Open Court — 12 plank shoulder taps"]);
+    expect(courtAxisClash(oneWay)).toBeNull();
+  });
+
   it("an inverted row, a ring row or a band on a post is rack work — the racks are one fixture (Josh, 2026-10-21)", () => {
     // The rewrite that slipped through: Alpha on the bars, Bravo on a bar set low on the same racks.
     expect(equipmentClash(day("DB RDL + Inverted Row", "Barbell RDL + Assisted Pull-Up", [], []), "thursday")).toMatch(/racks|pull-up bars/);
@@ -192,7 +204,8 @@ describe("On the court, distance is said in court", () => {
   it("accepts the court's own words", () => {
     const d = day("Goblet Squat", "Back Squat",
       ["Farmer carry — baseline to baseline", "Half court and back × 2 — strong but repeatable"],
-      ["Overhead carry — sideline to sideline", "Full court and back — controlled"]);
+      // One direction of travel per day (2026-10-21): Alpha goes baseline to baseline too.
+      ["Overhead carry — baseline to baseline", "Full court and back — controlled"]);
     expect(courtLanguage(d, "monday")).toBeNull();
     expect(dayProblem(d, "thursday")).toBeNull();
   });

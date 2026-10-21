@@ -553,10 +553,34 @@ export const courtLanguage = (day: NbtDay, dayKey: DayKey, only?: Track): string
 };
 
 /** Everything wrong with a generated day, or null. The room, the kit, the court, the repeat, then the reading. */
+/**
+ * One direction of travel per day (Josh, 2026-10-21). A station running
+ * baseline to baseline crosses a station running sideline to sideline, head
+ * on, in the middle of the court. So on any one day every moving station
+ * travels the same way: all baseline to baseline, or all sideline to
+ * sideline. On-the-spot stations are fine either way.
+ */
+const BASELINE = /\bbaseline to baseline\b/i;
+const SIDELINE = /\bsideline to sideline\b/i;
+export const courtAxisClash = (day: NbtDay): string | null => {
+  const lines = TRACKS.flatMap((t) => day.work?.[t] ?? []);
+  const along = lines.filter((l) => BASELINE.test(l));
+  const across = lines.filter((l) => SIDELINE.test(l));
+  if (along.length && across.length) {
+    return (
+      "The stations run both ways across the court — baseline to baseline and sideline to sideline on the same " +
+      "day — and those paths meet head on in the middle. Pick ONE direction for every moving station today: " +
+      "all baseline to baseline, or all sideline to sideline. On-the-spot stations are fine either way."
+    );
+  }
+  return null;
+};
+
 export const dayProblem = (day: NbtDay, dayKey: DayKey, only?: Track): string | null =>
   spaceViolation(day, dayKey, only) ??
   missingKit(day, dayKey, only) ??
   equipmentClash(day, dayKey) ??
+  courtAxisClash(day) ??
   courtLanguage(day, dayKey, only) ??
   liftRepeated(day) ??
   unreadableLine(day);
