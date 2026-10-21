@@ -38,6 +38,10 @@ const NLA_RED = "#bf0f3e";
 /** The extra work, a lighter rose so the column reads apart from the bar
     while the whole page stays Battle Team red. Amber belongs to NBT. */
 const EXTRA = "#fb7185";
+/** The one header shade on every card — NLA red mixed into the wall's dark,
+    as the NBT wall mixes its amber (#3c3527). Same wall, different team. */
+const SHADE = "#3a1e26";
+const CARD = "rounded-2xl border border-white/15 bg-[#141416] overflow-hidden flex flex-col md:min-h-0 shadow-[0_0.3em_1.2em_rgba(0,0,0,0.45)]";
 
 const StrengthBoard = () => {
   const navigate = useNavigate();
@@ -194,27 +198,32 @@ const StrengthBoard = () => {
       style={{ background: `linear-gradient(180deg, ${NLA_RED}14, transparent 40%), #1c1c1e` }}
     >
       {/* Header */}
-      <header className="flex items-center gap-3 px-5 md:px-8 py-3 border-b border-white/10 flex-wrap">
+      {/* The same wall as the NBT board, in Battle Team red (Josh, 2026-10-21):
+          a kid promoted from NBT should find the same screen, one colour over. */}
+      <header
+        className="flex items-center gap-3 px-5 md:px-8 py-3 border-b flex-wrap"
+        style={{ background: `linear-gradient(90deg, ${NLA_RED}3d, ${NLA_RED}14)`, borderColor: `${NLA_RED}66` }}
+      >
         <Button
           variant="ghost"
           onClick={() => navigate(fromPractice ? backToBoard : fromPlan ? `/admin/operations/practice-plan?week=${weekStart}&tab=bt` : "/strength-coach")}
-          className="text-white/50 hover:text-white hover:bg-white/5 h-9 px-2 -ml-2"
+          className="text-white/70 hover:text-white hover:bg-white/10 h-9 px-2 -ml-2"
           aria-label={fromPractice ? "Back to the Gym Board" : "Back to the Practice Plan"}
           title={fromPractice ? "Back to the Gym Board" : "Back to the Practice Plan"}
         >
           <ArrowLeft className="w-5 h-5" />
           {(fromPractice || fromPlan) && <span className="ml-1 text-sm font-semibold">{fromPractice ? "Gym Board" : "Practice Plan"}</span>}
         </Button>
-        <Dumbbell className="w-5 h-5" style={{ color: NLA_RED }} />
+        <Dumbbell className="w-7 h-7" style={{ color: NLA_RED }} />
         <div className="min-w-0">
-          <p className="text-[10px] font-bold uppercase tracking-[0.25em] leading-none mb-0.5" style={{ color: NLA_RED }}>
+          <p className="text-[11px] font-black uppercase tracking-[0.25em] leading-none mb-0.5" style={{ color: NLA_RED }}>
             Workout Plan · Battle Team
+            {week?.status === "draft" && <span className="ml-2 text-rose-200">· Draft · not on the board yet</span>}
             {day?.editedOn === todayNY() && <span className="ml-2 text-white/60">· Changed tonight</span>}
           </p>
-          <h1 className="text-lg md:text-xl font-black tracking-tight uppercase">Battle Team</h1>
-          <p className="text-[11px] text-white/35">
+          <h1 className="text-lg md:text-xl font-black tracking-tight uppercase text-white">Battle Team</h1>
+          <p className="text-[11px] text-white/50">
             {prettyRange(weekStart)}{isCurrentWeek ? " · this week" : ""}
-            {week?.status === "draft" ? " · draft" : ""}
           </p>
         </div>
 
@@ -222,16 +231,16 @@ const StrengthBoard = () => {
           <Button
             variant="ghost" size="icon"
             onClick={() => setWeekMonday((w) => addDays(w, -7))}
-            className="text-white/30 hover:text-white h-9 w-9"
+            className="text-white/50 hover:text-white h-9 w-9"
             aria-label="Previous week"
           >
             <ChevronLeft className="w-5 h-5" />
           </Button>
-          <span className="text-xs text-white/35 tabular-nums">{weekStart}</span>
+          <span className="text-xs text-white/60 tabular-nums font-semibold">{weekStart}</span>
           <Button
             variant="ghost" size="icon"
             onClick={() => setWeekMonday((w) => addDays(w, 7))}
-            className="text-white/30 hover:text-white h-9 w-9"
+            className="text-white/50 hover:text-white h-9 w-9"
             aria-label="Next week"
           >
             <ChevronRight className="w-5 h-5" />
@@ -239,14 +248,14 @@ const StrengthBoard = () => {
           <Button
             onClick={toggleFullscreen}
             variant="ghost" size="icon"
-            className="ml-1 text-white/40 hover:text-white hover:bg-white/10 h-9 w-9"
+            className="ml-1 text-white/60 hover:text-white hover:bg-white/10 h-9 w-9"
             aria-label={isFullscreen ? "Exit fullscreen" : "Fullscreen"}
             title={isFullscreen ? "Exit fullscreen" : "Fullscreen"}
           >
             {isFullscreen ? <Minimize className="w-5 h-5" /> : <Maximize className="w-5 h-5" />}
           </Button>
           {!isAdmin && week && day && (
-            <Button variant="outline" onClick={() => setUnlockOpen(true)} className="ml-2 bg-transparent border-white/20 text-white/60 hover:bg-white/5 hover:text-white">
+            <Button variant="outline" onClick={() => setUnlockOpen(true)} className="ml-2 bg-white/10 border-white/30 text-white hover:bg-white/20 hover:text-white font-semibold">
               <Pencil className="w-4 h-4 mr-1.5" /> Edit tonight
             </Button>
           )}
@@ -257,8 +266,8 @@ const StrengthBoard = () => {
               onClick={() => { if (editing && isBoardSession) { setEditing(false); lock(); } else setEditing((e) => !e); }}
               className={
                 editing
-                  ? "ml-2 bg-white/10 border-white/30 text-white font-bold"
-                  : "ml-2 bg-transparent border-white/20 text-white/60 hover:bg-white/5 hover:text-white"
+                  ? "ml-2 bg-white text-black border-white font-bold hover:bg-white/90 hover:text-black"
+                  : "ml-2 bg-white/10 border-white/30 text-white hover:bg-white/20 hover:text-white font-semibold"
               }
             >
               {editing ? <><Check className="w-4 h-4 mr-1.5" /> Done editing</> : <><Pencil className="w-4 h-4 mr-1.5" /> Edit tonight</>}
@@ -277,7 +286,7 @@ const StrengthBoard = () => {
       </header>
 
       {/* Day tabs — the programme's three, plus any night a workout was moved onto. */}
-      <div className="flex items-stretch border-b border-white/10">
+      <div className="flex items-stretch border-b border-white/10 bg-black">
         {tabs.map((d) => {
           const on = d.key === dayKey;
           const isToday = isCurrentWeek && d.weekday === new Date().getDay();
@@ -286,8 +295,9 @@ const StrengthBoard = () => {
               key={d.key}
               onClick={() => setDayKey(d.key)}
               className={`flex-1 px-3 py-2.5 text-left transition-colors border-r border-white/[0.06] last:border-r-0 ${
-                on ? "bg-white/[0.07]" : "hover:bg-white/[0.03]"
+                on ? "bg-black" : "bg-black hover:bg-white/[0.03]"
               }`}
+              style={on ? { boxShadow: `inset 0 -3px 0 ${NLA_RED}` } : undefined}
             >
               <p className={`text-sm md:text-base font-black uppercase tracking-wide ${on ? "text-white" : "text-white/35"}`}>
                 {d.label}
@@ -343,14 +353,11 @@ const StrengthBoard = () => {
               to it: the bar on the left, the extra work on the right. */}
           <div className="grid grid-cols-1 md:grid-cols-[1fr_1.15fr] gap-4 flex-1 md:min-h-0">
             {/* ── The bar ── */}
-            <section
-              className="rounded-2xl border-2 overflow-hidden flex flex-col md:min-h-0"
-              style={{ borderColor: `${NLA_RED}55` }}
-            >
-              <div className="px-4 py-2.5" style={{ backgroundColor: `${NLA_RED}1f` }}>
-                <h2 className="text-lg md:text-2xl font-black uppercase tracking-wide" style={{ color: NLA_RED }}>
-                  Working sets
-                </h2>
+            <section className={CARD}>
+              {/* One header shade on every card, white title, grey blurb — the NBT shape. */}
+              <div className="px-5 py-2.5 border-b shrink-0" style={{ background: SHADE, borderColor: `${NLA_RED}66` }}>
+                <h2 className="text-base md:text-lg font-black uppercase tracking-wide leading-tight text-white">Working sets</h2>
+                <p className="text-[10px] md:text-[11px] text-white/40 mt-0.5">The bar · warm up, then five sets</p>
               </div>
               <div
                 ref={(el) => { colRefs.current[0] = el; }}
@@ -358,37 +365,42 @@ const StrengthBoard = () => {
               >
                 {/* The warm-up ramp as one quiet line — it is how the bar gets loaded. */}
                 {day.warmup?.length ? (
-                  <div className="px-[0.9em] pt-[0.8em]">
-                    <ColLabel color={NLA_RED}>Warm-up</ColLabel>
-                    <p className="mt-[0.25em] text-[0.85em] leading-snug text-white/70">
-                      {day.warmup.map((w) => (w.detail ? `${w.name} — ${w.detail}` : w.name)).join("  ·  ")}
-                    </p>
-                  </div>
+                  <>
+                    <div className="px-[0.9em] pt-[0.8em] pb-[0.6em]">
+                      <ColLabel color={NLA_RED}>Warm-up</ColLabel>
+                      <p className="mt-[0.25em] text-[0.85em] leading-snug text-white/70">
+                        {day.warmup.map((w) => (w.detail ? `${w.name} — ${w.detail}` : w.name)).join("  ·  ")}
+                      </p>
+                    </div>
+                    <div className="h-px mx-[0.9em] bg-white/10" />
+                  </>
                 ) : null}
 
                 {day.main ? (
-                  <>
-                    <div className="px-[0.9em] pt-[0.7em] flex-1">
-                      <ColLabel color={NLA_RED}>
-                        Lift{day.main.rest ? ` · rest ${day.main.rest}` : ""}
-                      </ColLabel>
-                      <div className="flex items-start justify-between gap-[0.6em] mt-[0.3em]">
-                        <p className="text-[1.6em] font-bold leading-tight">{day.main.lift}</p>
-                        <span
-                          className="shrink-0 rounded-lg px-[0.55em] py-[0.2em] text-[1.1em] font-black tabular-nums"
-                          style={{ backgroundColor: `${NLA_RED}26`, color: NLA_RED }}
-                        >
-                          {day.main.scheme}
-                        </span>
-                      </div>
+                  <div className="px-[0.9em] pt-[0.6em] flex-1">
+                    <ColLabel color={NLA_RED}>
+                      Lift{day.main.rest ? ` · rest ${day.main.rest}` : ""}
+                    </ColLabel>
+                    {/* The lift in the lane's colour with the dose as a chip beside it — NBT's shape. */}
+                    <div className="flex items-baseline gap-[0.6em] flex-wrap mt-[0.25em]">
+                      <p className="text-[1.45em] font-bold leading-tight" style={{ color: NLA_RED }}>{day.main.lift}</p>
+                      <span
+                        className="rounded-[0.35em] px-[0.5em] py-[0.1em] text-[0.9em] font-black leading-snug tabular-nums"
+                        style={{ backgroundColor: `${NLA_RED}26`, color: NLA_RED }}
+                      >
+                        {day.main.scheme}
+                      </span>
                     </div>
-                  </>
+                  </div>
                 ) : null}
 
                 {/* The session clock, at the foot of the bar and bigger than
                     the text around it — twenty minutes, warm-up to finisher.
                     Inside the column so it scales with it. */}
-                <div className="mt-auto px-[0.8em] pb-[0.8em] text-[1em]">
+                <div className="mt-auto px-[0.9em] pb-[0.8em] pt-[0.6em]">
+                  <p className="text-[0.55em] uppercase tracking-[0.18em] font-bold mb-[0.3em] text-white/45">
+                    Battle Team&apos;s session · {SESSION_MINUTES} min
+                  </p>
                   <TrackTimer
                     storageKey={`bt-timer:${weekStart}:${dayKey}`}
                     minutes={SESSION_MINUTES}
@@ -399,14 +411,10 @@ const StrengthBoard = () => {
             </section>
 
             {/* ── The extra work ── */}
-            <section
-              className="rounded-2xl border-2 overflow-hidden flex flex-col md:min-h-0"
-              style={{ borderColor: `${EXTRA}55` }}
-            >
-              <div className="px-4 py-2.5" style={{ backgroundColor: `${EXTRA}1f` }}>
-                <h2 className="text-lg md:text-2xl font-black uppercase tracking-wide" style={{ color: EXTRA }}>
-                  Extra work
-                </h2>
+            <section className={CARD}>
+              <div className="px-5 py-2.5 border-b shrink-0" style={{ background: SHADE, borderColor: `${NLA_RED}66` }}>
+                <h2 className="text-base md:text-lg font-black uppercase tracking-wide leading-tight text-white">Extra work</h2>
+                <p className="text-[10px] md:text-[11px] text-white/40 mt-0.5">After the bar · see the form, then go</p>
               </div>
               <div
                 ref={(el) => { colRefs.current[1] = el; }}
@@ -422,11 +430,11 @@ const StrengthBoard = () => {
                            there at that size; nothing covers the workout. */
                         <li key={i}>
                           <div className="min-w-0">
-                            <div className="flex items-start justify-between gap-[0.6em]">
-                              <p className="text-[1.15em] font-bold leading-tight">{a.name}</p>
+                            <div className="flex items-baseline gap-[0.6em] flex-wrap">
+                              <p className="text-[1.35em] font-bold leading-tight" style={{ color: EXTRA }}>{a.name}</p>
                               <span
-                                className="shrink-0 rounded-lg px-[0.5em] py-[0.15em] text-[0.9em] font-black tabular-nums whitespace-nowrap"
-                                style={{ backgroundColor: `${EXTRA}22`, color: EXTRA }}
+                                className="rounded-[0.35em] px-[0.5em] py-[0.1em] text-[0.9em] font-black leading-snug tabular-nums whitespace-nowrap"
+                                style={{ backgroundColor: `${EXTRA}26`, color: EXTRA }}
                               >
                                 {a.sets}
                               </span>
@@ -447,7 +455,7 @@ const StrengthBoard = () => {
                   )}
 
                   {day.finisher ? (
-                    <div className="mt-[0.9em] pt-[0.7em] border-t" style={{ borderColor: `${EXTRA}33` }}>
+                    <div className="mt-[0.9em] pt-[0.7em] border-t border-white/10">
                       <ColLabel color={EXTRA}>Finisher</ColLabel>
                       <p className="mt-[0.25em] text-[1em] leading-snug">
                         <span className="font-bold">{day.finisher.name}</span>
@@ -468,7 +476,7 @@ const StrengthBoard = () => {
 
 /** Section heading inside a column — in em, so it scales with the column. */
 const ColLabel = ({ color, children }: { color: string; children: React.ReactNode }) => (
-  <p className="text-[0.55em] uppercase tracking-[0.18em] font-bold" style={{ color: `${color}cc` }}>
+  <p className="text-[0.55em] uppercase tracking-[0.18em] font-bold" style={{ color: `${color}b3` }}>
     {children}
   </p>
 );
