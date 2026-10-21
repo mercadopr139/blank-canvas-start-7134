@@ -199,6 +199,18 @@
   color: hsl(0 0% 95%);
 }
 
+/* Form fields inside dark pop-ups (dialogs, sheets, alerts): the stock
+   focus style is a 2px white ring with a 2px gap outside the box, which
+   crowds the pop-up edge and fights its border (Josh, 2026-10-21, Add to
+   my Workbench). Inside any dark pop-up a focused field shows a thin
+   lighter border instead. Light pop-ups (bg-white) keep the default. */
+:is([role="dialog"], [role="alertdialog"]):not([class*="bg-white"]) :is(input, textarea, select):focus-visible,
+:is([role="dialog"], [role="alertdialog"]):not([class*="bg-white"]) button[role="combobox"]:focus {
+  box-shadow: none;
+  outline: none;
+  border-color: rgba(255, 255, 255, 0.45);
+}
+
 /* Dialog/modal content inside dark containers — ensure dark bg */
 [class*="bg-zinc-9"] [role="dialog"],
 [class*="bg-black"] [role="dialog"] {
