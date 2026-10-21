@@ -432,7 +432,11 @@ const StrengthBoard = () => {
                               </span>
                             </div>
                           </div>
-                          <div className="mx-auto mt-[0.8em] w-[12em] max-w-full">
+                          {/* The demo fills the column (Josh, 2026-10-21: a
+                              thumbnail the size of a playing card left the
+                              whole right half of the wall empty). The fit
+                              pass still shrinks it if two movements have to share. */}
+                          <div className="mx-auto mt-[0.8em] w-full">
                             <ExerciseVideo name={a.name} compact inline />
                           </div>
                         </li>
