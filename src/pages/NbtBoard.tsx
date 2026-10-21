@@ -534,7 +534,7 @@ const NbtBoard = () => {
                 return (
                   <section className="rounded-[0.8em] border border-white/15 bg-white/[0.06] overflow-hidden flex-1 min-h-0 flex flex-col shadow-[0_0.3em_1.2em_rgba(0,0,0,0.45)]">
                     <div className="px-[0.9em] py-[0.4em] border-b shrink-0 flex items-baseline justify-between gap-[1em]" style={{ borderColor: `${NBT_AMBER}44`, background: `${NBT_AMBER}18` }}>
-                      <h2 className="text-[0.85em] font-black uppercase tracking-wide leading-tight" style={{ color: NBT_AMBER }}>
+                      <h2 className="text-[0.85em] font-black uppercase tracking-wide leading-tight text-white">
                         Cardio Stations <span className="text-white/40 text-[0.6em] tracking-normal font-bold">· everyone</span>
                       </h2>
                       <p className="text-[0.5em] text-white/40">{header}</p>
