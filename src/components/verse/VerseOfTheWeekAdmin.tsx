@@ -529,15 +529,21 @@ const VerseOfTheWeekAdmin = ({ season = "in_season", weekStart }: { season?: Sea
                       <div className="px-3 pt-3 pb-2">
                         <div className="flex items-start gap-3">
                           <span className="text-2xl font-black leading-none mt-0.5" style={{ color: TEAL }}>1</span>
-                          <Input
+                          {/* The whole question, however long: a box that grows
+                              with it, not a one-line input that clips it (Josh, 2026-10-21). */}
+                          <Textarea
                             value={d.questions[0] ?? ""}
                             onChange={(e) => {
                               patchList(d.weekday, "questions", 0, e.target.value);
                               // The read-aloud was written for the old wording.
                               setStaleReadAloud((prev) => new Set(prev).add(d.weekday));
+                              e.target.style.height = "auto";
+                              e.target.style.height = `${e.target.scrollHeight}px`;
                             }}
+                            ref={(el) => { if (el) { el.style.height = "auto"; el.style.height = `${el.scrollHeight}px`; } }}
+                            rows={2}
                             placeholder="Question"
-                            className={`h-auto py-0.5 text-base leading-snug font-medium ${QUIET}`}
+                            className={`min-h-0 py-0.5 text-base leading-snug font-medium resize-none overflow-hidden ${QUIET}`}
                           />
                         </div>
                         {/* Two ways to change the question without losing the verse:
