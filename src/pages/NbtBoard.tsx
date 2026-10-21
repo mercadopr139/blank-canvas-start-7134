@@ -439,7 +439,7 @@ const NbtBoard = () => {
                                       opacity: levelDot(line.level, 0.3).opacity,
                                     }}
                                   />
-                                  <span className="text-[1.05em] leading-snug" style={levelText(line.level)}>{line.text}</span>
+                                  <span className="text-[1.05em] leading-snug" style={{ ...levelText(line.level), fontWeight: 400, color: line.level ? levelText(line.level).color : "rgba(255,255,255,0.88)" }}>{line.text}</span>
                                 </li>
                               )
                             )}
@@ -545,7 +545,31 @@ const NbtBoard = () => {
                           <p className="text-[0.5em] font-bold uppercase tracking-[0.18em] leading-tight" style={{ color: `${NBT_AMBER}b3` }}>
                             <span className="text-[1.7em] font-black tracking-normal mr-[0.3em] align-[-0.1em]" style={{ color: NBT_AMBER }}>{t.n || i + 1}</span>{t.name}
                           </p>
-                          <p className="mt-[0.35em] text-[0.8em] leading-snug text-white">{t.rest}</p>
+                          {/* The work as bullets a kid reads in order — "10 squat jumps",
+                              "then 15 jumping jacks", "repeat" — and the cue in grey under
+                              them (Josh, 2026-10-20). */}
+                          {(() => {
+                            const [work, ...cueParts] = t.rest.split(" — ");
+                            // One bullet per exercise: "10 squat jumps", "15 jumping jacks". The
+                            // "then" is the order the bullets already show; "repeat" joins the cue.
+                            const raw = work.split(/,\s*(?=(?:then|repeat|and then)\b)/i).map((x) => x.trim()).filter(Boolean);
+                            const repeats = raw.some((x) => /^repeat\b/i.test(x));
+                            const items = raw.filter((x) => !/^repeat\b/i.test(x)).map((x) => x.replace(/^(?:and\s+)?then\s+/i, ""));
+                            const cue = [repeats ? "Repeat" : "", cueParts.join(" — ").trim()].filter(Boolean).join(" · ");
+                            return (
+                              <>
+                                <ul className="mt-[0.35em] space-y-[0.15em]">
+                                  {items.map((it, k) => (
+                                    <li key={k} className="flex items-start gap-[0.4em]">
+                                      <span className="shrink-0 rounded-full mt-[0.5em]" style={{ width: "0.3em", height: "0.3em", backgroundColor: NBT_AMBER }} />
+                                      <span className="text-[0.85em] leading-snug text-white">{it}</span>
+                                    </li>
+                                  ))}
+                                </ul>
+                                {cue && <p className="mt-[0.3em] text-[0.65em] leading-snug text-white/55">{cue}</p>}
+                              </>
+                            );
+                          })()}
                         </div>
                       ))}
                     </div>

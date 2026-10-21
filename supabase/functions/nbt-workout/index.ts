@@ -83,11 +83,13 @@ const SYSTEM =
   "- 'Station 4 · The Heavy Bag — …': long benches. Step-ups, a dumbbell press, push-ups, mountain climbers, " +
   "  squat to squat jump, jump rope, kettlebells, med balls. Not bag work — they box straight afterwards.\n" +
   "- 'Station 5 · The Uppercut — …': core and abs again, a different pair from Station 3. Holds ALLOWED.\n" +
-  "ON A STATION THE CLOCK IS THE DOSE: write the work and the cue only — a movement, or two that alternate — " +
-  "with a pace word or a form cue. NO COUNTS AND NO TIMES on a station line: not '15 wall balls', not '30 sec', " +
-  "not '× 10'. 'Station 1 · The Racks — wall balls — chest-height target, steady pace'. 'Station 2 · The Open " +
-  "Floor — tuck jumps and jumping jacks, alternate — land soft'. Each kid works at his own pace for the two " +
-  "minutes; the whistle moves everyone. Be creative across the five areas week to week, and never two " +
+  "ON A STATION THE CLOCK IS THE DOSE. ONE movement: no count — write the movement and a pace word or a form " +
+  "cue, and the kid works the two minutes at his own pace. 'Station 1 · The Racks — wall balls — chest-height " +
+  "target, steady pace'. TWO OR MORE movements: give each its COUNT, because the count is the switch point " +
+  "(Josh, 2026-10-20: without it nobody knows when to change) — 'Station 1 · The Racks — 5 pull-ups, then 10 " +
+  "wall balls, repeat — strong but repeatable'; 'Station 2 · The Open Floor — 10 tuck jumps, then 20 jumping " +
+  "jacks, repeat — land soft'. Round counts only: 5, 8, 10, 12, 15 or 20; skips 20, 30, 40 or 50. NEVER a time " +
+  "on a station line: not '30 sec', not '1 min'. The whistle moves everyone. Be creative across the five areas week to week, and never two " +
   "stations that both hammer the same pattern back to back in the rotation. Hand weights are few: a station " +
   "that uses them is one piece per kid. Tuesday's minutes are fixed: prep 5, lift 15, work 10, reset 3.\n" +
   "TUESDAY'S STYLE INSIDE A STATION: standard gym and CrossFit-style work. It must genuinely raise heart rates. Do " +
@@ -524,7 +526,9 @@ Deno.serve(async (req: Request) => {
         const want = `Station ${i + 1} · ${STATION_NAMES[i]} —`;
         if (!l.startsWith(want)) { bad.push(`"${l}" (must start: ${want})`); return; }
         const rest = l.slice(want.length);
-        if (/\d/.test(rest)) bad.push(`"${l}" (no counts or times on a station line)`);
+        if (/\b\d+\s*(sec|secs|seconds|s|min|mins|minutes)\b|\d+:\d\d/i.test(rest)) bad.push(`"${l}" (no times on a station line)`);
+        const movesTwo = /\b(then|and|alternate|alternating|→)\b/i.test(rest);
+        if (movesTwo && !/\d/.test(rest)) bad.push(`"${l}" (two movements need their counts — the switch point)`);
         if (/\b(hold|plank)\b/i.test(rest) && ![2, 4].includes(i)) bad.push(`"${l}" (holds only on The Ring and The Uppercut)`);
       });
       return bad;
