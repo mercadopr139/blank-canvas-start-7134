@@ -191,7 +191,7 @@ const AddToWorkbenchModal = ({
                 placeholder="What needs to get done?"
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
-                className="bg-white/[0.04] border-white/[0.08] text-zinc-200 placeholder:text-zinc-600 text-sm"
+                className="bg-white/[0.04] border-white/[0.08] text-zinc-200 placeholder:text-zinc-600 text-sm focus-visible:ring-0 focus-visible:ring-offset-0 focus-visible:border-emerald-400/60"
                 autoFocus
               />
             </div>
@@ -203,7 +203,7 @@ const AddToWorkbenchModal = ({
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
                 rows={3}
-                className="resize-none bg-white/[0.04] border-white/[0.08] text-zinc-200 placeholder:text-zinc-600 text-sm"
+                className="resize-none bg-white/[0.04] border-white/[0.08] text-zinc-200 placeholder:text-zinc-600 text-sm focus-visible:ring-0 focus-visible:ring-offset-0 focus-visible:border-emerald-400/60"
               />
             </div>
 
@@ -211,7 +211,7 @@ const AddToWorkbenchModal = ({
               <div>
                 <Label className="text-xs text-zinc-400 mb-1.5 block">Focus Area</Label>
                 <Select value={focusAreaKey} onValueChange={setFocusAreaKey}>
-                  <SelectTrigger className="bg-white/[0.04] border-white/[0.08] text-zinc-200 text-sm h-9">
+                  <SelectTrigger className="bg-white/[0.04] border-white/[0.08] text-zinc-200 text-sm h-9 focus:ring-0 focus:ring-offset-0 focus:border-emerald-400/60">
                     <SelectValue placeholder="Pick one" />
                   </SelectTrigger>
                   <SelectContent className="bg-neutral-900 border-white/[0.08] z-[200] [&_[data-radix-select-viewport]]:bg-neutral-900">
@@ -227,7 +227,7 @@ const AddToWorkbenchModal = ({
               <div>
                 <Label className="text-xs text-zinc-400 mb-1.5 block">Bucket</Label>
                 <Select value={bucket} onValueChange={(v) => setBucket(v as "Core" | "Bonus")}>
-                  <SelectTrigger className="bg-white/[0.04] border-white/[0.08] text-zinc-200 text-sm h-9">
+                  <SelectTrigger className="bg-white/[0.04] border-white/[0.08] text-zinc-200 text-sm h-9 focus:ring-0 focus:ring-offset-0 focus:border-emerald-400/60">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent className="bg-neutral-900 border-white/[0.08] z-[200] [&_[data-radix-select-viewport]]:bg-neutral-900">
