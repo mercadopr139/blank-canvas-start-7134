@@ -359,8 +359,7 @@ export const NbtWeekBuilder = ({
         work: day.work,
       };
       await saveDay(week, dayKey, merged);
-      const what = blockPart === "lift" ? "lift" : blockPart === "work" ? "work" : "track";
-      toast.success(`${TRACK_META[track].label}'s ${what} rewritten.`);
+      toast.success(blockPart === "work" ? "Cardio Stations rewritten for the room." : `${TRACK_META[track].label}'s ${blockPart === "lift" ? "lift" : "track"} rewritten.`);
     } catch (e) {
       toast.error((e as Error)?.message ?? "Couldn’t rewrite that track.");
     } finally {
@@ -633,12 +632,11 @@ export const NbtWeekBuilder = ({
                                           <p className="text-sm font-black uppercase tracking-wide text-white leading-tight">{m.label}</p>
                                           <p className="text-[10px] text-white/40 truncate">{m.blurb}</p>
                                         </div>
-                                        {/* Rewrite the lift, the stations (one block for the room), or both. */}
+                                        {/* Rewrite this track's lift. The Cardio Stations are one block for
+                                            the room, so their button sits on the stations card (Josh, 2026-10-21). */}
                                         <div className="flex items-center gap-1 shrink-0">
                                           {([
-                                            ["lift", "Lift"],
-                                            ["work", "Cardio"],
-                                            [undefined, "Both"],
+                                            ["lift", "Rewrite lift"],
                                           ] as const).map(([part, label]) => {
                                             const bkey = `${w.id}-${d.key}-${t}${part ? `-${part}` : ""}`;
                                             return (
@@ -698,7 +696,19 @@ export const NbtWeekBuilder = ({
                                     <p className="text-sm font-black uppercase tracking-wide text-white leading-tight">
                                       Cardio Stations <span className="text-white/40 text-[10px] tracking-normal font-bold">· everyone</span>
                                     </p>
-                                    <p className="text-[11px] text-white/40">{stations.header}</p>
+                                    <div className="flex items-center gap-3 flex-wrap">
+                                      <p className="text-[11px] text-white/40">{stations.header}</p>
+                                      {/* One rewrite for the room: the stations are the same lines for both tracks. */}
+                                      <button
+                                        onClick={() => regenerateTrack(w, d.key, "alpha", "work")}
+                                        disabled={busy !== null}
+                                        title="Rewrite the Cardio Stations for the whole room — both lifts stay as they are"
+                                        className={PART_BTN}
+                                      >
+                                        {busy === `${w.id}-${d.key}-alpha-work` ? <Loader2 className="w-3 h-3 animate-spin" /> : <RefreshCw className="w-3 h-3" />}
+                                        Rewrite stations
+                                      </button>
+                                    </div>
                                   </div>
                                   <div
                                     className="grid gap-2 px-3 pt-2.5 pb-3 grid-cols-2 md:grid-cols-[repeat(var(--n),minmax(0,1fr))]"

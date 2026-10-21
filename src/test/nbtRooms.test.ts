@@ -117,6 +117,18 @@ describe("Scarce kit belongs to one track per block", () => {
     expect(equipmentClash(day("DB RDL + DB Row", "Barbell RDL + Assisted Pull-Up", [], []), "thursday")).toBeNull();
   });
 
+  it("an inverted row, a ring row or a band on a post is rack work — the racks are one fixture (Josh, 2026-10-21)", () => {
+    // The rewrite that slipped through: Alpha on the bars, Bravo on a bar set low on the same racks.
+    expect(equipmentClash(day("DB RDL + Inverted Row", "Barbell RDL + Assisted Pull-Up", [], []), "thursday")).toMatch(/racks|pull-up bars/);
+    expect(equipmentClash(day("DB RDL + Ring Row", "Barbell RDL + Pull-Up", [], []), "monday")).toMatch(/racks|pull-up bars/);
+    expect(equipmentClash(day("Band row on the post", "Back Squat", [], []), "monday")).toMatch(/racks|pull-up bars/);
+    // Alpha squats in the racks while Bravo hangs from them: the same three racks.
+    expect(equipmentClash(day("Assisted Pull-Up", "Back Squat", [], []), "thursday")).toMatch(/racks|pull-up bars/);
+    // A seated band row around the feet and a band pull-apart need no anchor.
+    expect(equipmentClash(day("DB RDL + Seated Band Row (band around the feet)", "Barbell RDL + Assisted Pull-Up", [], []), "thursday")).toBeNull();
+    expect(equipmentClash(day("Band pull-aparts", "Back Squat", [], []), "thursday")).toBeNull();
+  });
+
   it("judges the lift block and the work block separately", () => {
     // Alpha squats in the rack; Bravo's circuit uses a rack later. Different times, no clash.
     const d = day("Goblet Squat", "Back Squat", ["Rack pull-ups x6"], ["Jump squats x10"]);

@@ -136,8 +136,35 @@ export const KIT_PATTERNS: Record<KitKey, RegExp> = {
   rope: /\bjump ?ropes?\b|\bskipping\b|\bdouble[- ]unders?\b/i,
   medBall: /\bmed(?:icine)? ?balls?\b|\bslam ?balls?\b/i,
   band: /\bbands?\b|\bbanded\b/i,
-  pullupBar: /\bpull[- ]?ups?\b|\bchin[- ]?ups?\b|\bhangs?\b|\bhanging\b|\brig\b/i,
+  // Anything that hangs from or pulls against a bar is on a rack: pull-ups,
+  // inverted and ring rows, TRX, a band anchored to a post or a bar set low
+  // (Josh, 2026-10-21: every bar and every anchor point in the Performance
+  // Center is one of the three racks).
+  pullupBar: /\bpull[- ]?ups?\b|\bchin[- ]?ups?\b|\bhangs?\b|\bhanging\b|\brig\b|\binverted rows?\b|\bring rows?\b|\btrx\b|\bsuspension\b|\baustralian pull[- ]?ups?\b|\bbar set low\b|\bband rows? (?:on|to|from|off|around) (?:the |a )?(?:rack|post|rig|bar|pole|upright)s?\b/i,
 };
+
+/**
+ * Kit that is physically the same fixture, so a clash is judged across the
+ * group: the pull-up bars ARE the racks. Alpha on pull-ups and Bravo on an
+ * inverted row is two tracks on three racks (Josh, 2026-10-21).
+ */
+export const SAME_FIXTURE: KitKey[][] = [["rack", "pullupBar"]];
+export const fixtureOf = (key: KitKey): KitKey[] => SAME_FIXTURE.find((g) => g.includes(key)) ?? [key];
+
+/**
+ * The rule the racks drive, in words, for the generator (Josh, 2026-10-21).
+ * One rack does three jobs — squat, bench press, pull-ups — and ONE track has
+ * the racks per block. The other track trains on the floor with what is in
+ * its hands; the benches follow the racks on a press day.
+ */
+export const OFF_RACK_RULE =
+  "THE RACKS ARE ONE FIXTURE THAT DOES THREE JOBS — squats, bench press, pull-ups (the pull-up bars are the racks; inverted rows, ring rows and a band on a post are rack work too). ONE TRACK HAS THE RACKS PER BLOCK, never both, and the other track trains ON THE FLOOR with what is in its hands:\n" +
+  "- PULL off the racks: bent-over dumbbell row, single-arm dumbbell row with a hand on a box, kettlebell row, renegade row, band pull-apart, seated band row with the band around the feet. NEVER a pull-up, an inverted row, a ring row or a band on a post — every bar and every anchor point is a rack.\n" +
+  "- PUSH off the racks: floor press, push-ups, pike push-ups, dumbbell press lying on the floor. Not a bench press — on a press day the benches stay at the racks with the track that has them.\n" +
+  "- SQUAT off the racks: goblet squat, dumbbell front squat, kettlebell squat.\n" +
+  "- HINGE off the racks: dumbbell or kettlebell Romanian deadlift, kettlebell swing. Barbell deadlifts and Romanian deadlifts live on the floor and need no rack, so both tracks may deadlift at once.\n" +
+  "- THE BENCHES follow the racks on a press day. On a squat, pull or hinge day they may be carried to the floor as a station for a few athletes at a time — chest-supported rows, step-ups, incline push-ups.\n" +
+  "- The same in reverse: when BRAVO has the racks, ALPHA takes the floor version with a barbell — barbell Romanian deadlift, barbell row, floor press, lunges with a bar.";
 
 /** Every kit the room does NOT have — asking for it is a refusal, not a queue. */
 export const absentKit = (room: Room): KitKey[] =>
@@ -170,6 +197,8 @@ export const roomBrief = (dayKey: DayKey): string => {
         enough.map((k) => `${k.label} (${k.count})`).join(", ") + "."
       : "",
     plentyKit.length ? "PLENTY — anyone, any time: " + plentyKit.map((k) => k.label).join(", ") + "." : "",
+    // Where the racks are scarce, the off-rack rule travels with the room.
+    scarce.some((k) => k.key === "rack") ? OFF_RACK_RULE : "",
     absent.length ? "NOT IN THIS ROOM — never write them: " + absent.join(", ") + "." : "",
     HAND_WEIGHTS,
     "Plyo boxes, dumbbells and kettlebells can be carried over from the other room during prep; say so in the prep when a session needs them.",

@@ -144,10 +144,13 @@ const SYSTEM =
   "- OVERHEAD: pike push-up, band overhead press or wall slide → DB overhead press → barbell overhead press.\n" +
   "- HINGE: bodyweight hip hinge, band good morning or glute bridge → DB or KB Romanian deadlift → barbell " +
   "  deadlift or Romanian deadlift.\n" +
-  "- PULL: inverted row or band row → DB row → barbell row or pull-up. THE PULL-UP BARS ARE THE RACKS: in the " +
-  "  Performance Center that is three bars, SCARCE, one track per block — if Alpha pulls up, Bravo rows (DB row, " +
-  "  band row, inverted row), never an assisted pull-up on the same bars. Both tracks on pull-ups is only possible " +
-  "  in the boxing facility, where six racks are enough for both. (Josh, 2026-10-21.)\n" +
+  "- PULL: band pull-apart or seated band row (band around the feet) → bent-over DB row, single-arm DB row " +
+  "  with a hand on a box, KB row, renegade row → barbell row or pull-up. THE PULL-UP BARS ARE THE RACKS, and " +
+  "  so is an inverted row, a ring row or a band on a post: in the Performance Center that is three racks, " +
+  "  SCARCE, ONE TRACK PER BLOCK. If Alpha pulls up, Bravo rows with a dumbbell or a kettlebell — never an " +
+  "  inverted row, never a bar set low on a rack. Both tracks on pull-ups is only possible in the boxing " +
+  "  facility, where six racks are enough for both. THE ROOM TODAY carries the full off-rack rule for every " +
+  "  pattern — obey it. (Josh, 2026-10-21.)\n" +
   "CARRIES follow the same ladder: dumbbell or kettlebell farmer carry for BRAVO, heavier farmer carry or a " +
   "plate carry for ALPHA. Both may carry at once.\n" +
   "BRAVO'S LIFT, HOW IT RUNS (Josh, 2026-10-20): the hand weights are few at the light end — five dumbbells and " +

@@ -15,7 +15,7 @@
 import {
   DayKey, NbtDay, NbtLog, NbtWeek, Track, TRACKS, heaviestSet, totalReps, isRoundsLine,
 } from "@/lib/nbt";
-import { roomFor, absentKit, KIT_PATTERNS, trackName, type Room } from "@/lib/nbtRooms";
+import { roomFor, absentKit, KIT_PATTERNS, fixtureOf, trackName, type Room } from "@/lib/nbtRooms";
 
 /* ───── 1. Earlier weeks of this block ───── */
 
@@ -328,19 +328,30 @@ export const equipmentClash = (day: NbtDay, dayKey: DayKey = "monday"): string |
   // Cardio Stations are one block for the whole room, rotated in groups on
   // the clock — "one track per scarce item" is a lift-block rule there.
   const blocks = isStations(day) ? ([["lift", liftText]] as const) : ([["lift", liftText], ["work", workText]] as const);
+  const seen = new Set<string>();
   for (const kit of room.kit) {
     if (kit.shared) continue;
-    const re = KIT_PATTERNS[kit.key];
+    // The pull-up bars are the racks: judge the fixture once, across every
+    // pattern that lands on it (Josh, 2026-10-21).
+    const group = fixtureOf(kit.key);
+    const groupKey = group.join("+");
+    if (seen.has(groupKey)) continue;
+    seen.add(groupKey);
+    const patterns = group.map((k) => KIT_PATTERNS[k]);
     for (const [block, textOf] of blocks) {
-      const users = TRACKS.filter((t) => re.test(textOf(day, t)));
+      const users = TRACKS.filter((t) => patterns.some((re) => re.test(textOf(day, t))));
       if (users.length > 1) {
         // Read by a coach in a toast AND fed back to the model on retry, so it
         // has to say how to fix it, not just that it is wrong.
         return (
           `${bothNames(users)} are both on ${kit.label} in the ${block} block, and the ${room.name} only has ${kit.count}. ` +
-          "A scarce item belongs to one track per block: give the other track a version of the same " +
-          "pattern that needs none of it — the floor, a different machine, bodyweight, bands, med balls, " +
-          "wall balls, or dumbbells and kettlebells, which there are plenty of."
+          (group.includes("rack")
+            ? "The pull-up bars are the racks, and one track has the racks per block. The other track trains on " +
+              "the floor with what is in its hands: dumbbell or kettlebell rows, floor press, goblet squats, " +
+              "dumbbell RDLs, band pull-aparts — never a pull-up, an inverted row or a band on a post."
+            : "A scarce item belongs to one track per block: give the other track a version of the same " +
+              "pattern that needs none of it — the floor, a different machine, bodyweight, bands, med balls, " +
+              "wall balls, or dumbbells and kettlebells, which there are plenty of.")
         );
       }
     }
