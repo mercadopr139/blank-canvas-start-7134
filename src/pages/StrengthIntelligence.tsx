@@ -170,7 +170,7 @@ const StrengthIntelligence = () => {
         {/* Back to admin */}
         <button onClick={() => navigate(backHome ?? "/admin/operations")}
           className="inline-flex items-center gap-1.5 text-sm text-white/50 hover:text-white mb-4">
-          <ArrowLeft className="h-4 w-4" /> {backHome ? "Practice Plan" : "Operations"}
+          <ArrowLeft className="h-4 w-4" /> {backHome ? "The Planner" : "Operations"}
         </button>
 
         {/* Header */}
@@ -186,7 +186,7 @@ const StrengthIntelligence = () => {
           </div>
           <button onClick={() => navigate(backHome ?? "/strength-coach")}
             className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl font-semibold bg-white/5 hover:bg-white/10 border border-white/15 shrink-0">
-            <ArrowLeft className="h-4 w-4" /> <span className="hidden sm:inline">{backHome ? "Back to Practice Plan" : "Back to the plan"}</span>
+            <ArrowLeft className="h-4 w-4" /> <span className="hidden sm:inline">{backHome ? "Back to The Planner" : "Back to the plan"}</span>
           </button>
         </div>
 

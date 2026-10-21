@@ -26,6 +26,34 @@ import { prettyRange } from "@/lib/strength";
 import { LiveSwitch } from "@/components/practice/LiveSwitch";
 import NbtEditDay from "@/components/nbt/NbtEditDay";
 
+/**
+ * The Cardio Stations block as the wall reads it: the header line, then one
+ * tile per station with its bullets (one per exercise) and the cue. Null for
+ * a day written before the stations — an older circuit — which keeps the list.
+ */
+const stationsOf = (day: NbtDay) => {
+  const lines = day.work.alpha ?? [];
+  if (!/^\d+ stations/i.test(lines[0] ?? "")) return null;
+  const tiles = lines.slice(1).map((l) => {
+    const m = l.match(/^Station\s+(\d)\s*·\s*([^—]+?)\s*—\s*(.*)$/);
+    const rest = m ? m[3].trim() : l;
+    const [work, ...cueParts] = rest.split(" — ");
+    const raw = work.split(/,\s*(?=(?:then|repeat|and then)\b)/i).map((x) => x.trim()).filter(Boolean);
+    const repeats = raw.some((x) => /^repeat\b/i.test(x));
+    const items = raw.filter((x) => !/^repeat\b/i.test(x)).map((x) => x.replace(/^(?:and\s+)?then\s+/i, ""));
+    const cue = [repeats ? "Repeat" : "", cueParts.join(" — ").trim()].filter(Boolean).join(" · ");
+    return { n: m ? m[1] : "", name: m ? m[2].trim() : "", items, cue };
+  });
+  return { header: lines[0], tiles };
+};
+
+/** The wall's card header shade — every card on the NBT wall wears it. */
+const CARD_HEADER = { background: "#3c3527", borderColor: `${NBT_AMBER}66` } as const;
+/** The small outline button on a lift card: Lift · Cardio · Both. */
+const PART_BTN = "inline-flex items-center gap-1 rounded border border-white/20 px-1.5 py-0.5 text-[10px] font-semibold text-white/55 hover:text-white hover:border-white/50 disabled:opacity-40 transition-colors";
+/** A control in a card header. */
+const ICON_BTN = "text-white/50 hover:text-white disabled:opacity-30 transition-colors";
+
 /** The first of the month n months away — for the previous block's weeks. */
 const shiftMonth = (monthStart: string, n: number) => {
   const d = new Date(`${monthStart}T12:00:00`);
@@ -362,7 +390,7 @@ export const NbtWeekBuilder = ({
           onClick={() => navigate(`/admin/operations/practice-plan?week=${weekStart}&tab=nbt`)}
           className="inline-flex items-center gap-1.5 text-sm text-neutral-400 hover:text-white"
         >
-          <ChevronLeft className="h-4 w-4" /> Practice Plan
+          <ChevronLeft className="h-4 w-4" /> The Planner
         </button>
       )}
       <div className="flex items-start justify-between gap-4 flex-wrap">
@@ -490,7 +518,7 @@ export const NbtWeekBuilder = ({
                 return (
                 <div
                   key={w.id}
-                  className={`rounded-xl border bg-neutral-900 p-4 ${isLinked ? "border-white/30" : "border-neutral-800"}`}
+                  className={`rounded-xl border bg-black/40 p-4 ${isLinked ? "border-white/30" : "border-white/10"}`}
                 >
                   <div className="flex items-center justify-between gap-3 flex-wrap mb-3">
                     <p className="font-bold">
@@ -529,25 +557,25 @@ export const NbtWeekBuilder = ({
                       </ul>
                     </div>
                   )}
-                  <div className="grid gap-3 md:grid-cols-3">
+                  <div className="space-y-4">
                     {weekDays(w.days).map((d) => {
                       const day = w.days?.[d.key];
                       const key = `${w.id}-${d.key}`;
+                      const stations = day ? stationsOf(day) : null;
                       return (
-                        <div key={d.key} className="rounded-lg border border-neutral-800 bg-black/30 p-3">
-                          <div className="flex items-start justify-between gap-2 mb-2">
-                            <div>
-                              <p className="text-xs font-bold uppercase tracking-wide text-neutral-300">
-                                {d.label}
-                              </p>
-                              <p className="text-[11px] text-neutral-500">{d.title}</p>
+                        <div key={d.key} className="rounded-xl border border-white/15 bg-[#141416] overflow-hidden shadow-[0_0.3em_1.2em_rgba(0,0,0,0.45)]">
+                          {/* The day's header in the wall's shade; the day's controls live in it. */}
+                          <div className="px-4 py-2.5 border-b flex items-center justify-between gap-3" style={CARD_HEADER}>
+                            <div className="min-w-0">
+                              <p className="text-sm font-black uppercase tracking-wide text-white leading-tight">{d.label}</p>
+                              <p className="text-[11px] text-white/40">{d.title}</p>
                             </div>
-                            <div className="flex items-center gap-2 shrink-0">
+                            <div className="flex items-center gap-2.5 shrink-0">
                               <button
                                 onClick={() => day && setEditing({ week: w, dayKey: d.key })}
                                 disabled={!day || busy !== null}
                                 title="Edit this day by hand"
-                                className="text-neutral-500 hover:text-white disabled:opacity-30"
+                                className={ICON_BTN}
                               >
                                 <Pencil className="w-3.5 h-3.5" />
                               </button>
@@ -555,7 +583,7 @@ export const NbtWeekBuilder = ({
                                 onClick={() => emailRev(w, d.key)}
                                 disabled={!day || !locked || busy !== null}
                                 title={locked ? "Email this day's workout to Rev now" : "Put the week on the Gym Board first, then it can go to Rev"}
-                                className="text-neutral-500 hover:text-white disabled:opacity-30"
+                                className={ICON_BTN}
                               >
                                 {busy === `mail-${w.id}-${d.key}` ? (
                                   <Loader2 className="w-3.5 h-3.5 animate-spin" />
@@ -567,7 +595,7 @@ export const NbtWeekBuilder = ({
                                 onClick={() => regenerateDay(w, d.key)}
                                 disabled={busy !== null}
                                 title="Rewrite the whole day"
-                                className="text-neutral-500 hover:text-white"
+                                className={ICON_BTN}
                               >
                                 {busy === key ? (
                                   <Loader2 className="w-3.5 h-3.5 animate-spin" />
@@ -578,84 +606,131 @@ export const NbtWeekBuilder = ({
                             </div>
                           </div>
 
+                          <div className="p-3">
                           {!day ? (
                             <p className="text-xs text-neutral-600 italic">Not written</p>
                           ) : (
-                            /* The whole session, in the order the kids read it,
-                               so the week is reviewed and approved from here. */
+                            /* The whole session the way the wall shows it, so the
+                               week is reviewed and approved from here. */
                             <div className="space-y-3">
-                              {day.focus && <p className="text-sm text-white">{day.focus}</p>}
+                              <div className="flex items-baseline justify-between gap-3 flex-wrap">
+                                <p className="text-sm text-white">{day.focus || ""}</p>
+                                <p className="text-[11px] text-white/45 tabular-nums">
+                                  prep {minutesOf(day).prep} · lift {minutesOf(day).lift} · stations {minutesOf(day).work} · reset {minutesOf(day).reset} · {totalMinutes(day)} min
+                                </p>
+                              </div>
 
-
-                              {TRACKS.map((t) => {
-                                const m = TRACK_META[t];
-                                return (
-                                  <div key={t} className="rounded-md border p-2 space-y-1.5" style={{ borderColor: `${m.color}44` }}>
-                                    <div className="flex items-start justify-between gap-2">
-                                      <p className="text-xs font-bold" style={{ color: m.color }}>{m.label}</p>
-                                      {/* Rewrite the whole track, just its lift, or just
-                                          its work. Whatever isn't asked for is put back. */}
-                                      <div className="flex items-center gap-1 shrink-0">
-                                        {([
-                                          ["lift", "Lift"],
-                                          ["work", "Cardio"],
-                                          [undefined, "Both"],
-                                        ] as const).map(([part, label]) => {
-                                          const key = `${w.id}-${d.key}-${t}${part ? `-${part}` : ""}`;
-                                          return (
-                                            <button
-                                              key={label}
-                                              onClick={() => regenerateTrack(w, d.key, t, part)}
-                                              disabled={busy !== null}
-                                              title={part ? `Rewrite only ${m.label}'s ${part}` : `Rewrite all of ${m.label}`}
-                                              className="inline-flex items-center gap-1 rounded border border-neutral-800 px-1.5 py-0.5 text-[10px] font-semibold text-neutral-500 hover:text-white hover:border-neutral-600 disabled:opacity-40"
-                                            >
-                                              {busy === key ? <Loader2 className="w-3 h-3 animate-spin" /> : <RefreshCw className="w-3 h-3" />}
-                                              {label}
-                                            </button>
-                                          );
-                                        })}
+                              {/* The lifts: two cards, one row — Alpha left, Bravo right, as on the wall. */}
+                              <div className="grid gap-3 sm:grid-cols-2">
+                                {TRACKS.map((t) => {
+                                  const m = TRACK_META[t];
+                                  const lift = day.lift[t];
+                                  const [dose, ...cue] = (lift?.detail ?? "").split(" — ");
+                                  return (
+                                    <section key={t} className="rounded-lg border border-white/15 bg-[#141416] overflow-hidden">
+                                      <div className="px-3 py-2 border-b flex items-center justify-between gap-2" style={CARD_HEADER}>
+                                        <div className="min-w-0">
+                                          <p className="text-sm font-black uppercase tracking-wide text-white leading-tight">{m.label}</p>
+                                          <p className="text-[10px] text-white/40 truncate">{m.blurb}</p>
+                                        </div>
+                                        {/* Rewrite the lift, the stations (one block for the room), or both. */}
+                                        <div className="flex items-center gap-1 shrink-0">
+                                          {([
+                                            ["lift", "Lift"],
+                                            ["work", "Cardio"],
+                                            [undefined, "Both"],
+                                          ] as const).map(([part, label]) => {
+                                            const bkey = `${w.id}-${d.key}-${t}${part ? `-${part}` : ""}`;
+                                            return (
+                                              <button
+                                                key={label}
+                                                onClick={() => regenerateTrack(w, d.key, t, part)}
+                                                disabled={busy !== null}
+                                                title={part === "lift" ? `Rewrite only ${m.label}'s lift` : part === "work" ? "Rewrite the Cardio Stations for the room" : `Rewrite ${m.label}'s lift and the Cardio Stations`}
+                                                className={PART_BTN}
+                                              >
+                                                {busy === bkey ? <Loader2 className="w-3 h-3 animate-spin" /> : <RefreshCw className="w-3 h-3" />}
+                                                {label}
+                                              </button>
+                                            );
+                                          })}
+                                        </div>
                                       </div>
-                                    </div>
-                                    <p className="text-xs text-white leading-snug">
-                                      <span className="text-[10px] font-bold uppercase tracking-wide text-neutral-500 mr-1.5">Lift</span>
-                                      <span className="font-semibold">{day.lift[t].name}</span>
-                                      {day.lift[t].detail && <span className="text-neutral-400"> · {day.lift[t].detail}</span>}
-                                    </p>
-                                    {(day.work[t] ?? []).length > 0 && (
-                                      <div>
-                                        <p className="text-[10px] font-bold uppercase tracking-wide text-neutral-500">Cardio Stations</p>
-                                        <ul className="mt-0.5 space-y-0.5">
-                                          {readableLines(day.work[t]).map((line, k) =>
-                                            line.kind === "rounds" ? (
-                                              <li key={k} className="text-[11px] font-bold uppercase tracking-wide" style={{ color: m.color }}>
-                                                {line.text}
-                                              </li>
-                                            ) : (
-                                              <li key={k} className="text-xs flex items-start gap-1.5" style={{ marginLeft: levelIndent(line.level) }}>
-                                                <span className="rounded-full shrink-0 mt-[0.45em]" style={{ width: levelDot(line.level, 0.25).size, height: levelDot(line.level, 0.25).size, backgroundColor: m.color, opacity: levelDot(line.level, 0.25).opacity }} />
-                                                <span style={levelText(line.level)}>{line.text}</span>
-                                              </li>
-                                            )
+                                      <div className="px-3 pt-2 pb-3">
+                                        <p className="text-[10px] uppercase tracking-[0.18em] font-bold" style={{ color: `${m.color}b3` }}>Lift</p>
+                                        <div className="flex items-baseline gap-2 flex-wrap mt-0.5">
+                                          <p className="text-lg font-bold leading-tight" style={{ color: m.color }}>{lift?.name || "—"}</p>
+                                          {dose && (
+                                            <p className="rounded px-1.5 py-0.5 text-sm font-black leading-snug" style={{ backgroundColor: `${m.color}26`, color: m.color }}>{dose}</p>
                                           )}
-                                        </ul>
+                                        </div>
+                                        {cue.length > 0 && <p className="mt-1 text-xs text-white/65 leading-snug">{cue.join(" — ")}</p>}
+                                        {/* A week written before the stations keeps its circuit under the lift. */}
+                                        {!stations && (day.work[t] ?? []).length > 0 && (
+                                          <div className="mt-2">
+                                            <p className="text-[10px] uppercase tracking-[0.18em] font-bold" style={{ color: `${m.color}b3` }}>Cardio</p>
+                                            <ul className="mt-0.5 space-y-0.5">
+                                              {readableLines(day.work[t]).map((line, k) =>
+                                                line.kind === "rounds" ? (
+                                                  <li key={k} className="text-[11px] font-bold uppercase tracking-wide" style={{ color: m.color }}>
+                                                    {line.text}
+                                                  </li>
+                                                ) : (
+                                                  <li key={k} className="text-xs flex items-start gap-1.5" style={{ marginLeft: levelIndent(line.level) }}>
+                                                    <span className="rounded-full shrink-0 mt-[0.45em]" style={{ width: levelDot(line.level, 0.25).size, height: levelDot(line.level, 0.25).size, backgroundColor: NBT_AMBER }} />
+                                                    <span style={levelText(line.level)}>{line.text}</span>
+                                                  </li>
+                                                )
+                                              )}
+                                            </ul>
+                                          </div>
+                                        )}
                                       </div>
-                                    )}
+                                    </section>
+                                  );
+                                })}
+                              </div>
+
+                              {/* Cardio Stations: one card for the room, a tile per station. */}
+                              {stations && (
+                                <section className="rounded-lg border border-white/15 bg-white/[0.06] overflow-hidden">
+                                  <div className="px-3 py-2 border-b flex items-baseline justify-between gap-3 flex-wrap" style={CARD_HEADER}>
+                                    <p className="text-sm font-black uppercase tracking-wide text-white leading-tight">
+                                      Cardio Stations <span className="text-white/40 text-[10px] tracking-normal font-bold">· everyone</span>
+                                    </p>
+                                    <p className="text-[11px] text-white/40">{stations.header}</p>
                                   </div>
-                                );
-                              })}
+                                  <div
+                                    className="grid gap-2 px-3 pt-2.5 pb-3 grid-cols-2 md:grid-cols-[repeat(var(--n),minmax(0,1fr))]"
+                                    style={{ "--n": Math.max(1, stations.tiles.length) } as React.CSSProperties}
+                                  >
+                                    {stations.tiles.map((tile, i) => (
+                                      <div key={i} className="rounded-md border border-white/15 bg-[#141416] px-2.5 py-2 min-w-0">
+                                        <p className="text-[10px] font-bold uppercase tracking-[0.18em] leading-tight" style={{ color: `${NBT_AMBER}b3` }}>
+                                          <span className="text-base font-black tracking-normal mr-1 align-[-0.1em]" style={{ color: NBT_AMBER }}>{tile.n || i + 1}</span>{tile.name}
+                                        </p>
+                                        <ul className="mt-1.5 space-y-0.5">
+                                          {tile.items.map((it, k) => (
+                                            <li key={k} className="flex items-start gap-1.5">
+                                              <span className="shrink-0 rounded-full mt-[0.45em]" style={{ width: 5, height: 5, backgroundColor: NBT_AMBER }} />
+                                              <span className="text-xs leading-snug text-white">{it}</span>
+                                            </li>
+                                          ))}
+                                        </ul>
+                                        {tile.cue && <p className="mt-1 text-[11px] leading-snug text-white/55">{tile.cue}</p>}
+                                      </div>
+                                    ))}
+                                  </div>
+                                </section>
+                              )}
 
                               {/* Coach-only: what the wall deliberately leaves off. */}
-                              <div className="text-[11px] text-neutral-500 space-y-1 pt-1 border-t border-neutral-800">
+                              <div className="text-[11px] text-white/40 space-y-1 pt-2 border-t border-white/10">
                                 <p>
                                   <span className="font-bold uppercase tracking-wide text-[10px] mr-1.5">Pattern</span>
                                   {day.lift.pattern || "—"}
                                   {day.work.title ? ` · ${day.work.title}` : ""}
                                   {day.work.emphasis ? ` (${day.work.emphasis})` : ""}
-                                </p>
-                                <p>
-                                  <span className="font-bold uppercase tracking-wide text-[10px] mr-1.5">Minutes</span>
-                                  prep {minutesOf(day).prep} · lift {minutesOf(day).lift} · work {minutesOf(day).work} · reset {minutesOf(day).reset} · {totalMinutes(day)} total
                                 </p>
                                 {day.lift.cues.length > 0 && (
                                   <p>
@@ -672,6 +747,7 @@ export const NbtWeekBuilder = ({
                               </div>
                             </div>
                           )}
+                          </div>
                         </div>
                       );
                     })}

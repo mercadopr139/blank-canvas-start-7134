@@ -310,6 +310,8 @@ export const spaceViolation = (day: NbtDay, dayKey: DayKey, only?: Track): strin
 const liftText = (day: NbtDay, track: Track) =>
   [day.lift?.[track]?.name ?? "", day.lift?.[track]?.detail ?? ""].join(" \n ");
 const workText = (day: NbtDay, track: Track) => (day.work?.[track] ?? []).join(" \n ");
+/** The work block is the Cardio Stations — one block for the room, both tracks together. */
+export const isStations = (day: NbtDay) => /^\d+ stations/i.test(day.work?.alpha?.[0] ?? day.work?.bravo?.[0] ?? "");
 
 const bothNames = (users: Track[]) => users.map(trackName).join(" and ");
 
@@ -323,10 +325,13 @@ const bothNames = (users: Track[]) => users.map(trackName).join(" and ");
  */
 export const equipmentClash = (day: NbtDay, dayKey: DayKey = "monday"): string | null => {
   const room = roomFor(dayKey);
+  // Cardio Stations are one block for the whole room, rotated in groups on
+  // the clock — "one track per scarce item" is a lift-block rule there.
+  const blocks = isStations(day) ? ([["lift", liftText]] as const) : ([["lift", liftText], ["work", workText]] as const);
   for (const kit of room.kit) {
     if (kit.shared) continue;
     const re = KIT_PATTERNS[kit.key];
-    for (const [block, textOf] of [["lift", liftText], ["work", workText]] as const) {
+    for (const [block, textOf] of blocks) {
       const users = TRACKS.filter((t) => re.test(textOf(day, t)));
       if (users.length > 1) {
         // Read by a coach in a toast AND fed back to the model on retry, so it

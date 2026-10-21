@@ -97,19 +97,19 @@ export const OPERATIONS_TILES: PillarTile[] = [
     ],
   },
   // One place in the building: the Gym Board on the wall. Everything that
-  // ends up on it is planned inside Practice Plan — the drills, the verse and
+  // ends up on it is planned inside The Planner — the drills, the verse and
   // both teams' Workout Plans are tabs there, so they need no sidebar lines of
   // their own. Battle Team Intelligence reads what the kids actually logged,
   // which is a different job, so it stays. NBT doesn't log on the wall, so its
   // Intelligence page has no sidebar line. (Josh, 2026-10-03.)
   {
     title: "Gym Board",
-    description: "The practice plan and the S&C plans behind the gym board",
+    description: "The Planner: the practice plan and the S&C plans behind the gym board",
     icon: Monitor,
     href: "/admin/operations/practice-plan",
     permKey: "operations_practice_plan",
     children: [
-      { title: "Practice Plan", href: "/admin/operations/practice-plan", icon: ClipboardList },
+      { title: "The Planner", href: "/admin/operations/practice-plan", icon: ClipboardList },
       { title: "Daily Duties Intelligence", href: "/admin/operations/daily-duties", icon: Sparkles },
       { title: "Juniors Session", href: "/admin/operations/juniors-session", icon: ClipboardCheck },
       { title: "Battle Team Intelligence", href: "/strength-coach/intelligence", icon: BarChart3, external: true },

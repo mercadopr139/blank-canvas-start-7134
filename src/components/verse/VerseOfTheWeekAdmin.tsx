@@ -16,8 +16,13 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { LiveSwitch } from "@/components/practice/LiveSwitch";
-import { Monitor, Sparkles as SparkIcon } from "lucide-react";
+import { Monitor, Sparkles as SparkIcon, User } from "lucide-react";
 import { mondayOf, addDays, formatWeekRange, SeasonMode } from "@/lib/practicePlan";
+
+/** The verse's teal — the wall strip and the discussion pop-up wear it. */
+const TEAL = "#2dd4bf";
+/** A field that reads like the card until it is touched. */
+const QUIET = "bg-transparent border border-transparent hover:border-white/15 focus-visible:ring-0 focus-visible:ring-offset-0 focus:border-[#2dd4bf]/60 px-2 -mx-2 text-white shadow-none";
 
 const DAYS: { n: number; label: string }[] = [
   { n: 1, label: "Monday" },
@@ -432,14 +437,16 @@ const VerseOfTheWeekAdmin = ({ season = "in_season", weekStart }: { season?: Sea
           {days.map((d) => {
             const label = DAYS.find((x) => x.n === d.weekday)?.label ?? "";
             return (
-              <div key={d.weekday} className="rounded-xl border border-neutral-800 bg-neutral-900 p-4">
-                <div className="flex items-center gap-3 mb-2">
-                  <span className="text-xs font-bold uppercase tracking-wide text-neutral-400 w-24 shrink-0">{label}</span>
+              <div key={d.weekday} className="rounded-xl border overflow-hidden bg-[#141416] shadow-[0_0.3em_1.2em_rgba(0,0,0,0.45)]" style={{ borderColor: `${TEAL}33` }}>
+                {/* The day's header in the verse's teal: day, reference, New verse. */}
+                <div className="px-4 py-2.5 border-b flex items-center gap-3 flex-wrap" style={{ backgroundColor: `${TEAL}1f`, borderColor: `${TEAL}55` }}>
+                  <p className="text-sm font-black uppercase tracking-wide text-white leading-tight w-24 shrink-0">{label}</p>
                   <Input
                     value={d.reference}
                     onChange={(e) => patchDay(d.weekday, { reference: e.target.value })}
                     placeholder="Reference"
-                    className="max-w-[220px] h-8 bg-neutral-800 border-neutral-700 text-white text-sm font-semibold"
+                    className={`max-w-[240px] h-8 text-base font-bold ${QUIET}`}
+                    style={{ color: TEAL }}
                   />
                   {/* Swap one day without touching the rest of the week — the
                       coach doesn't like Wednesday, or Monday has already been
@@ -454,7 +461,7 @@ const VerseOfTheWeekAdmin = ({ season = "in_season", weekStart }: { season?: Sea
                         ? "Type a theme first"
                         : `New verse for ${label} only`
                     }
-                    className="ml-auto h-8 text-neutral-400 hover:text-white hover:bg-white/5 text-xs"
+                    className="ml-auto h-8 text-white/50 hover:text-white hover:bg-white/10 text-xs"
                   >
                     {regenDay === d.weekday ? (
                       <><Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" /> Finding one…</>
@@ -463,93 +470,117 @@ const VerseOfTheWeekAdmin = ({ season = "in_season", weekStart }: { season?: Sea
                     )}
                   </Button>
                 </div>
-                {d.text && (
-                  <p className="text-sm text-white/70 italic leading-relaxed mb-3">&ldquo;{d.text}&rdquo;</p>
-                )}
-                <div className="grid gap-3 md:grid-cols-2">
-                  <div>
-                    <label className="text-[10px] uppercase tracking-wide text-neutral-500 font-semibold">Context</label>
-                    <Textarea
-                      value={d.context}
-                      onChange={(e) => patchDay(d.weekday, { context: e.target.value })}
-                      rows={3}
-                      className="mt-1 bg-neutral-800 border-neutral-700 text-white text-sm"
-                    />
-                    {d.figures.length > 0 && (
-                      <div className="mt-3">
-                        <label className="text-[10px] uppercase tracking-wide text-neutral-500 font-semibold">
-                          Who they are (shown on the board)
-                        </label>
-                        <div className="mt-1 space-y-1.5">
-                          {d.figures.map((f, i) => (
-                            <div key={i} className="flex gap-1.5">
-                              <Input
-                                value={f.name}
-                                onChange={(e) => patchFigure(d.weekday, i, "name", e.target.value)}
-                                placeholder="Name"
-                                className="h-8 w-[120px] shrink-0 bg-neutral-800 border-neutral-700 text-white text-sm font-semibold"
-                              />
-                              <Input
-                                value={f.who}
-                                onChange={(e) => patchFigure(d.weekday, i, "who", e.target.value)}
-                                placeholder="One sentence on who they were"
-                                className="h-8 flex-1 bg-neutral-800 border-neutral-700 text-white text-sm"
-                              />
-                            </div>
-                          ))}
+
+                <div className="p-4 space-y-4">
+                  {/* The verse, the way the room sees it. */}
+                  {d.text && (
+                    <div className="rounded-lg border px-4 py-3" style={{ borderColor: `${TEAL}33`, backgroundColor: `${TEAL}0d` }}>
+                      <p className="text-[10px] uppercase tracking-[0.2em] font-bold mb-1" style={{ color: TEAL, opacity: 0.7 }}>The verse</p>
+                      <p className="text-base leading-relaxed text-white/85 font-medium">&ldquo;{d.text}&rdquo;</p>
+                      <p className="mt-1 text-sm font-semibold" style={{ color: TEAL }}>— {d.reference}</p>
+                    </div>
+                  )}
+
+                  <div className="grid gap-4 md:grid-cols-2">
+                    {/* Context and the figures — the left of the pop-up. */}
+                    <div>
+                      <label className="text-[10px] uppercase tracking-[0.2em] font-bold" style={{ color: TEAL, opacity: 0.7 }}>Context</label>
+                      <Textarea
+                        value={d.context}
+                        onChange={(e) => patchDay(d.weekday, { context: e.target.value })}
+                        rows={3}
+                        className={`mt-1 text-sm leading-relaxed text-white/85 ${QUIET}`}
+                      />
+                      {d.figures.length > 0 && (
+                        <div className="mt-3">
+                          <label className="text-[10px] uppercase tracking-[0.2em] font-bold" style={{ color: TEAL, opacity: 0.7 }}>
+                            Who they are (shown on the board)
+                          </label>
+                          <div className="mt-1.5 space-y-1.5">
+                            {d.figures.map((f, i) => (
+                              <div key={i} className="rounded-lg border border-white/10 bg-white/[0.03] px-3 py-2 flex items-start gap-2">
+                                <div className="w-7 h-7 rounded-md flex items-center justify-center shrink-0 mt-0.5" style={{ backgroundColor: `${TEAL}22` }}>
+                                  <User className="w-3.5 h-3.5" style={{ color: TEAL }} />
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                  <Input
+                                    value={f.name}
+                                    onChange={(e) => patchFigure(d.weekday, i, "name", e.target.value)}
+                                    placeholder="Name"
+                                    className={`h-7 text-sm font-bold ${QUIET}`}
+                                    style={{ color: TEAL }}
+                                  />
+                                  <Input
+                                    value={f.who}
+                                    onChange={(e) => patchFigure(d.weekday, i, "who", e.target.value)}
+                                    placeholder="One sentence on who they were"
+                                    className={`h-7 text-xs text-white/70 ${QUIET}`}
+                                  />
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* The question with its number, then the read-aloud — the right of the pop-up. */}
+                    <div className="rounded-lg border border-white/10 bg-white/[0.03] overflow-hidden">
+                      <div className="px-3 pt-3 pb-2">
+                        <div className="flex items-start gap-3">
+                          <span className="text-2xl font-black leading-none mt-0.5" style={{ color: TEAL }}>1</span>
+                          <Input
+                            value={d.questions[0] ?? ""}
+                            onChange={(e) => {
+                              patchList(d.weekday, "questions", 0, e.target.value);
+                              // The read-aloud was written for the old wording.
+                              setStaleReadAloud((prev) => new Set(prev).add(d.weekday));
+                            }}
+                            placeholder="Question"
+                            className={`h-auto py-0.5 text-base leading-snug font-medium ${QUIET}`}
+                          />
+                        </div>
+                        {/* Two ways to change the question without losing the verse:
+                            let the AI ask something else (and close it), or tweak the
+                            wording yourself and have the closing script rewritten to
+                            match. The second lights up once the question has changed. */}
+                        <div className="flex items-center gap-1.5 flex-wrap mt-1.5 pl-8">
+                          <Button
+                            variant="ghost" size="sm"
+                            onClick={() => rewritePart(d.weekday, "question")}
+                            disabled={partBusy !== null || regenDay !== null || generating || !d.text}
+                            title="A different question from this same verse, with a read-aloud to close it"
+                            className="h-7 px-2 text-white/50 hover:text-white hover:bg-white/10 text-xs"
+                          >
+                            {partBusy?.weekday === d.weekday && partBusy.part === "question"
+                              ? <><Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" /> Asking…</>
+                              : <><RefreshCw className="w-3.5 h-3.5 mr-1.5" /> New question</>}
+                          </Button>
+                          <Button
+                            variant="ghost" size="sm"
+                            onClick={() => rewritePart(d.weekday, "readaloud")}
+                            disabled={partBusy !== null || regenDay !== null || generating || !staleReadAloud.has(d.weekday)}
+                            title={staleReadAloud.has(d.weekday)
+                              ? "Write the read-aloud that closes the question as you have worded it"
+                              : "Edit the question first, then this writes a read-aloud to match"}
+                            className={"h-7 px-2 text-xs hover:bg-white/10 " + (staleReadAloud.has(d.weekday) ? "text-amber-300 hover:text-amber-200" : "text-white/35")}
+                          >
+                            {partBusy?.weekday === d.weekday && partBusy.part === "readaloud"
+                              ? <><Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" /> Writing…</>
+                              : <><Wand2 className="w-3.5 h-3.5 mr-1.5" /> Rewrite read-aloud to match</>}
+                          </Button>
                         </div>
                       </div>
-                    )}
-                  </div>
-                  <div className="space-y-2">
-                    <div className="grid grid-cols-1 gap-1">
-                      <Input
-                        value={d.questions[0] ?? ""}
-                        onChange={(e) => {
-                          patchList(d.weekday, "questions", 0, e.target.value);
-                          // The read-aloud was written for the old wording.
-                          setStaleReadAloud((prev) => new Set(prev).add(d.weekday));
-                        }}
-                        placeholder="Question"
-                        className="h-8 bg-neutral-800 border-neutral-700 text-white text-sm"
-                      />
-                      {/* Two ways to change the question without losing the verse:
-                          let the AI ask something else (and close it), or tweak the
-                          wording yourself and have the closing script rewritten to
-                          match. The second lights up once the question has changed. */}
-                      <div className="flex items-center gap-1.5 flex-wrap">
-                        <Button
-                          variant="ghost" size="sm"
-                          onClick={() => rewritePart(d.weekday, "question")}
-                          disabled={partBusy !== null || regenDay !== null || generating || !d.text}
-                          title="A different question from this same verse, with a read-aloud to close it"
-                          className="h-7 px-2 text-neutral-400 hover:text-white hover:bg-white/5 text-xs"
-                        >
-                          {partBusy?.weekday === d.weekday && partBusy.part === "question"
-                            ? <><Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" /> Asking…</>
-                            : <><RefreshCw className="w-3.5 h-3.5 mr-1.5" /> New question</>}
-                        </Button>
-                        <Button
-                          variant="ghost" size="sm"
-                          onClick={() => rewritePart(d.weekday, "readaloud")}
-                          disabled={partBusy !== null || regenDay !== null || generating || !staleReadAloud.has(d.weekday)}
-                          title={staleReadAloud.has(d.weekday)
-                            ? "Write the read-aloud that closes the question as you have worded it"
-                            : "Edit the question first, then this writes a read-aloud to match"}
-                          className={"h-7 px-2 text-xs hover:bg-white/5 " + (staleReadAloud.has(d.weekday) ? "text-amber-300 hover:text-amber-200" : "text-neutral-500")}
-                        >
-                          {partBusy?.weekday === d.weekday && partBusy.part === "readaloud"
-                            ? <><Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" /> Writing…</>
-                            : <><Wand2 className="w-3.5 h-3.5 mr-1.5" /> Rewrite read-aloud to match</>}
-                        </Button>
+                      <div className="px-3 pb-3 pt-2 border-t border-white/10">
+                        <label className="text-[10px] uppercase tracking-[0.2em] font-bold" style={{ color: TEAL, opacity: 0.7 }}>Read this out loud</label>
+                        <Textarea
+                          value={d.answers[0] ?? ""}
+                          onChange={(e) => patchList(d.weekday, "answers", 0, e.target.value)}
+                          placeholder="Read this out loud"
+                          rows={3}
+                          className={`mt-1 text-sm leading-relaxed text-white/80 ${QUIET}`}
+                        />
                       </div>
-                      <Textarea
-                        value={d.answers[0] ?? ""}
-                        onChange={(e) => patchList(d.weekday, "answers", 0, e.target.value)}
-                        placeholder="Read this out loud"
-                        rows={3}
-                        className="bg-black/40 border-neutral-800 text-white/80 text-xs"
-                      />
                     </div>
                   </div>
                 </div>

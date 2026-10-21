@@ -1,4 +1,5 @@
-// Practice Plan — the weekly editor behind the Gym Board.
+// The Planner — the weekly editor behind the Gym Board. The Practice Plan is
+// what goes live on the wall; this is where the week gets built.
 //
 // Two layers, deliberately kept apart:
 //   TEMPLATE  what KIND of session each group does each day. Set once a season.
@@ -646,9 +647,9 @@ const AdminPracticePlan = () => {
       {/* Header */}
       <div className="flex items-start justify-between gap-4 flex-wrap">
         <div>
-          <h2 className="text-xl font-bold text-white">Practice Plan</h2>
+          <h2 className="text-xl font-bold text-white">The Planner</h2>
           <p className="text-sm text-neutral-400 mt-1">
-            The week behind the gym board.
+            Where the week gets built, then goes live on the Gym Board.
           </p>
         </div>
       </div>

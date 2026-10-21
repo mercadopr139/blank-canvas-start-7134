@@ -12,6 +12,10 @@ import { ChevronLeft, ChevronRight, Dumbbell, Lock, Unlock, RefreshCw, Sparkles,
 // Strength only: there is no conditioning on this page, by design.
 
 const NLA_RED = "#bf0f3e";
+/** The wall's rose for the extra work. */
+const EXTRA = "#fb7185";
+/** A card header in the wall's shade: the colour at a fifth, its line under. */
+const shade = (color: string) => ({ backgroundColor: `${color}1f`, borderColor: `${color}55` });
 
 // The week's shape and the date helpers live in src/lib/strength.ts now, shared
 // with the gym screen at /strength-board so the two can never disagree.
@@ -215,10 +219,10 @@ export const BattleTeamWeek = ({
       <div className={embedded ? "" : "max-w-5xl mx-auto px-4 py-6 sm:py-8"}>
         {!embedded && (
           <>
-            {/* Back to admin — or to the Practice Plan when that's where we came from */}
+            {/* Back to admin — or to The Planner when that's where we came from */}
             <button onClick={() => navigate(fromPlan ? `/admin/operations/practice-plan?week=${weekStart}&tab=bt` : "/admin/operations")}
               className="inline-flex items-center gap-1.5 text-sm text-white/50 hover:text-white mb-4">
-              <ChevronLeft className="h-4 w-4" /> {fromPlan ? "Practice Plan" : "Operations"}
+              <ChevronLeft className="h-4 w-4" /> {fromPlan ? "The Planner" : "Operations"}
             </button>
 
             {/* Header */}
@@ -329,7 +333,7 @@ export const BattleTeamWeek = ({
               </button>
             </div>
           ) : (
-            <div className="grid gap-3 md:grid-cols-3">
+            <div className="space-y-4">
               {weekDays(days).map((d) => (
                 <DayCard
                   key={d.key}
@@ -395,14 +399,14 @@ const StrengthCoach = () => <BattleTeamWeek />;
 
 /** A name or a scheme retyped in place (Josh, 2026-10-20: "regular pull-ups,
  *  not weighted" should not need the AI). Click, type, Enter or click away. */
-const Retype = ({ value, onSave, className = "", title = "Click to change" }: { value: string; onSave: (v: string) => void; className?: string; title?: string }) => {
+const Retype = ({ value, onSave, className = "", title = "Click to change", style }: { value: string; onSave: (v: string) => void; className?: string; title?: string; style?: React.CSSProperties }) => {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(value);
   useEffect(() => { if (!editing) setDraft(value); }, [value, editing]);
   const done = () => { setEditing(false); const v = draft.trim(); if (v && v !== value) onSave(v); else setDraft(value); };
   if (!editing) {
     return (
-      <button type="button" onClick={() => setEditing(true)} title={title} className={`text-left rounded px-0.5 -mx-0.5 border-b border-dashed border-transparent hover:border-white/30 ${className}`}>
+      <button type="button" onClick={() => setEditing(true)} title={title} style={style} className={`text-left rounded px-0.5 -mx-0.5 border-b border-dashed border-transparent hover:border-white/30 ${className}`}>
         {value}
       </button>
     );
@@ -414,6 +418,7 @@ const Retype = ({ value, onSave, className = "", title = "Click to change" }: { 
       onChange={(e) => setDraft(e.target.value)}
       onBlur={done}
       onKeyDown={(e) => { if (e.key === "Enter") done(); if (e.key === "Escape") { setDraft(value); setEditing(false); } }}
+      style={style}
       className={`rounded bg-white/10 border border-white/30 px-1 -mx-0.5 outline-none min-w-0 w-full ${className}`}
     />
   );
@@ -436,71 +441,96 @@ const DayCard = ({
   /** A word changed by hand — the day comes back with that one change. */
   onEditDay: (next: DayWorkout) => void;
 }) => (
-  <div className="rounded-lg border border-white/10 bg-black/30 p-3">
-    <div className="flex items-start justify-between gap-2 mb-2">
-      <div>
-        <p className="text-xs font-bold uppercase tracking-wide text-white/80">
-          {meta.label}{isToday && <span className="ml-1.5 text-[9px] font-bold px-1 rounded bg-white/20">TODAY</span>}
+  <div className="rounded-xl border border-white/15 bg-[#141416] overflow-hidden shadow-[0_0.3em_1.2em_rgba(0,0,0,0.45)]">
+    {/* The day's header in the wall's red shade; the day's controls live in it. */}
+    <div className="px-4 py-2.5 border-b flex items-center justify-between gap-3" style={shade(NLA_RED)}>
+      <div className="min-w-0">
+        <p className="text-sm font-black uppercase tracking-wide text-white leading-tight">
+          {meta.label}{isToday && <span className="ml-2 text-[9px] font-bold px-1 py-0.5 rounded bg-white/20 align-middle">TODAY</span>}
         </p>
-        <p className="text-[11px] text-white/45">{meta.lift}</p>
+        <p className="text-[11px] text-white/40">{meta.lift}</p>
       </div>
       {!locked && (
         <button onClick={onRewrite} disabled={busy} title={`Rewrite the whole ${meta.label}`}
-          className="text-white/40 hover:text-white disabled:opacity-30 shrink-0">
+          className="text-white/50 hover:text-white disabled:opacity-30 shrink-0 transition-colors">
           <RefreshCw className={`w-3.5 h-3.5 ${rewriting ? "animate-spin" : ""}`} />
         </button>
       )}
     </div>
 
+    <div className="p-3">
     {!day ? (
       <p className="text-xs text-white/40 italic">Not written</p>
     ) : (
       <div className="space-y-3">
         {day.focus && <p className="text-sm text-white">{day.focus}</p>}
 
-        {/* The bar */}
-        {day.main && (
-          <div className="rounded-md border p-2 space-y-1" style={{ borderColor: `${NLA_RED}55` }}>
-            <p className="text-xs font-bold" style={{ color: NLA_RED }}>The bar</p>
-            <p className="text-xs text-white leading-snug">
-              <span className="text-[10px] font-bold uppercase tracking-wide text-white/45 mr-1.5">Lift</span>
-              <span className="font-semibold">{day.main.lift}</span>
-              <span className="text-white/60"> · </span>
-              {locked ? <span className="text-white/60">{day.main.scheme}</span> : <Retype value={day.main.scheme} className="text-white/60" title="Click to change the sets × reps" onSave={(v) => onEditDay({ ...day, main: { ...day.main, scheme: v } })} />}
-            </p>
-          </div>
-        )}
-
-        {/* Extra work, each with its demo */}
-        {day.accessories?.length ? (
-          <div className="rounded-md border p-2 space-y-2" style={{ borderColor: "#fb718555" }}>
-            <p className="text-xs font-bold" style={{ color: "#fb7185" }}>Extra work</p>
-            {day.accessories.map((a, i) => (
-              <div key={i}>
-                <p className="text-xs text-white leading-snug flex items-baseline justify-between gap-2">
-                  {locked ? <span className="font-semibold">{a.name}</span> : <Retype value={a.name} className="font-semibold" title="Click to change the exercise" onSave={(v) => onEditDay({ ...day, accessories: day.accessories.map((x, k) => (k === i ? { ...x, name: v } : x)) })} />}
-                  {locked ? <span className="text-white/60 whitespace-nowrap">{a.sets}</span> : <Retype value={a.sets} className="text-white/60 whitespace-nowrap shrink-0" title="Click to change the sets" onSave={(v) => onEditDay({ ...day, accessories: day.accessories.map((x, k) => (k === i ? { ...x, sets: v } : x)) })} />}
-                </p>
-                <div className="mt-1">
-                  <ExerciseVideo name={a.name} compact inline swappable />
+        {/* The wall's two columns: working sets left, extra work right. */}
+        <div className="grid gap-3 md:grid-cols-[1fr_1.15fr]">
+          {/* ── Working sets ── */}
+          <section className="rounded-lg border overflow-hidden bg-[#141416]" style={{ borderColor: `${NLA_RED}55` }}>
+            <div className="px-3 py-2 border-b" style={shade(NLA_RED)}>
+              <p className="text-sm font-black uppercase tracking-wide leading-tight" style={{ color: NLA_RED }}>Working sets</p>
+            </div>
+            <div className="px-3 pt-2 pb-3 space-y-2.5">
+              {day.warmup?.length ? (
+                <div>
+                  <p className="text-[10px] uppercase tracking-[0.18em] font-bold" style={{ color: `${NLA_RED}b3` }}>Warm-up</p>
+                  <p className="mt-0.5 text-xs text-white/70 leading-snug">
+                    {day.warmup.map((w) => (w.detail ? `${w.name} — ${w.detail}` : w.name)).join("  ·  ")}
+                  </p>
                 </div>
-              </div>
-            ))}
-            {day.finisher && (
-              <p className="text-xs text-white/80 leading-snug pt-1 border-t border-white/10">
-                <span className="text-[10px] font-bold uppercase tracking-wide text-white/45 mr-1.5">Finisher</span>
-                <span className="font-semibold text-white">{day.finisher.name}</span>
-                {day.finisher.detail ? <span className="text-white/60"> — {day.finisher.detail}</span> : null}
-              </p>
-            )}
-          </div>
-        ) : null}
+              ) : null}
+              {day.main && (
+                <div>
+                  <p className="text-[10px] uppercase tracking-[0.18em] font-bold" style={{ color: `${NLA_RED}b3` }}>
+                    Lift{day.main.rest ? ` · rest ${day.main.rest}` : ""}
+                  </p>
+                  <div className="flex items-start justify-between gap-2 mt-0.5">
+                    <p className="text-lg font-bold leading-tight text-white">{day.main.lift}</p>
+                    {locked
+                      ? <span className="shrink-0 rounded px-1.5 py-0.5 text-sm font-black tabular-nums" style={{ backgroundColor: `${NLA_RED}26`, color: NLA_RED }}>{day.main.scheme}</span>
+                      : <Retype value={day.main.scheme} className="shrink-0 rounded px-1.5 py-0.5 text-sm font-black tabular-nums" style={{ backgroundColor: `${NLA_RED}26`, color: NLA_RED }} title="Click to change the sets × reps" onSave={(v) => onEditDay({ ...day, main: { ...day.main, scheme: v } })} />}
+                  </div>
+                </div>
+              )}
+            </div>
+          </section>
+
+          {/* ── Extra work, each with its demo ── */}
+          <section className="rounded-lg border overflow-hidden bg-[#141416]" style={{ borderColor: `${EXTRA}55` }}>
+            <div className="px-3 py-2 border-b" style={shade(EXTRA)}>
+              <p className="text-sm font-black uppercase tracking-wide leading-tight" style={{ color: EXTRA }}>Extra work</p>
+            </div>
+            <div className="px-3 pt-2 pb-3 space-y-3">
+              {day.accessories?.length ? day.accessories.map((a, i) => (
+                <div key={i}>
+                  <div className="flex items-baseline justify-between gap-2">
+                    {locked ? <span className="text-sm font-bold text-white leading-tight">{a.name}</span> : <Retype value={a.name} className="text-sm font-bold text-white leading-tight" title="Click to change the exercise" onSave={(v) => onEditDay({ ...day, accessories: day.accessories.map((x, k) => (k === i ? { ...x, name: v } : x)) })} />}
+                    {locked
+                      ? <span className="shrink-0 rounded px-1.5 py-0.5 text-xs font-black tabular-nums whitespace-nowrap" style={{ backgroundColor: `${EXTRA}22`, color: EXTRA }}>{a.sets}</span>
+                      : <Retype value={a.sets} className="shrink-0 rounded px-1.5 py-0.5 text-xs font-black tabular-nums whitespace-nowrap" style={{ backgroundColor: `${EXTRA}22`, color: EXTRA }} title="Click to change the sets" onSave={(v) => onEditDay({ ...day, accessories: day.accessories.map((x, k) => (k === i ? { ...x, sets: v } : x)) })} />}
+                  </div>
+                  <div className="mt-1">
+                    <ExerciseVideo name={a.name} compact inline swappable />
+                  </div>
+                </div>
+              )) : <p className="text-xs text-white/40 italic">No extra work</p>}
+              {day.finisher && (
+                <div className="pt-2 border-t" style={{ borderColor: `${EXTRA}33` }}>
+                  <p className="text-[10px] uppercase tracking-[0.18em] font-bold" style={{ color: `${EXTRA}b3` }}>Finisher</p>
+                  <p className="mt-0.5 text-xs leading-snug">
+                    <span className="font-semibold text-white">{day.finisher.name}</span>
+                    {day.finisher.detail ? <span className="text-white/60"> — {day.finisher.detail}</span> : null}
+                  </p>
+                </div>
+              )}
+            </div>
+          </section>
+        </div>
 
         {/* Coach-only: what the wall deliberately leaves off. */}
-        <div className="text-[11px] text-white/45 space-y-1 pt-1 border-t border-white/10">
-          {day.warmup?.length ? (
-            <p><span className="font-bold uppercase tracking-wide text-[10px] mr-1.5">Warm-up</span>{day.warmup.map((w) => (w.detail ? `${w.name} — ${w.detail}` : w.name)).join("  ·  ")}</p>
-          ) : null}
+        <div className="text-[11px] text-white/40 space-y-1 pt-2 border-t border-white/10">
           {day.main?.guidance ? <p><span className="font-bold uppercase tracking-wide text-[10px] mr-1.5">Guidance</span>{day.main.guidance}</p> : null}
           {day.main?.cues?.length ? <p><span className="font-bold uppercase tracking-wide text-[10px] mr-1.5">Cues</span>{day.main.cues.join("  ·  ")}</p> : null}
           {day.main?.rest ? <p><span className="font-bold uppercase tracking-wide text-[10px] mr-1.5">Rest</span>{day.main.rest}</p> : null}
@@ -530,6 +560,7 @@ const DayCard = ({
         )}
       </div>
     )}
+    </div>
   </div>
 );
 

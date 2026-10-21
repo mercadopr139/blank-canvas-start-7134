@@ -69,6 +69,22 @@ describe("The two rooms", () => {
 });
 
 describe("Scarce kit belongs to one track per block", () => {
+  it("lets the whole room rotate through The Racks when the work block is the Cardio Stations", () => {
+    const stations = [
+      "6 stations · 2 min each · rotate on the whistle",
+      "Station 1 · The Racks — 8 goblet squats, then 8 push-ups, repeat — strong and repeatable",
+      "Station 2 · The Rowers — row steady — long pulls",
+      "Station 3 · The Bikes — bike steady — keep the cadence",
+      "Station 4 · Open Court — bear crawl baseline to baseline — low hips",
+      "Station 5 · Open Court — 10 squat jumps, then 10 lunges, repeat — soft landings",
+      "Station 6 · Open Court — farmer carry sideline to sideline — tall chest",
+    ];
+    const d = day("Goblet Squat", "Back Squat", stations, stations);
+    expect(equipmentClash(d, "monday")).toBeNull();
+    // The lift block still keeps its rule.
+    expect(equipmentClash(day("Front Squat", "Back Squat", stations, stations), "monday")).toMatch(/squat racks/);
+  });
+
   it("refuses both tracks on the three benches in the lift", () => {
     const d = day("DB Bench Press", "Barbell Bench Press", ["Push-ups x10"], ["Dips x8"]);
     expect(equipmentClash(d, "monday")).toMatch(/Alpha and Bravo are both on the benches in the lift block/);
