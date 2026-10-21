@@ -13,6 +13,7 @@ one thing from across a room.
 | Today green | `green-400` `#4ade80` | target | Today's Plan — "today" | Workbench |
 | Lap lime | `lime-400` `#a3e635` | flag | The Lap and weekly goals — "this week": the basket on a Workbench, goal controls on the Lap, the flag a placed goal wears | `LAP_GREEN` (lap/commitments.ts) |
 | Gold | `#f0a500` | — | Non-Battle Team (Gym Board, NBT board) | `GROUPS` (practicePlan.ts), `NBT_AMBER` |
+| Rose | `#fb7185` | — | Battle Team extra work: the second lane on the BT wall, as violet/lime are the two lanes on the NBT wall | `EXTRA` (StrengthBoard.tsx) |
 | Light blue | `#3da5e8` | — | Littles (Gym Board) | `GROUPS` (practicePlan.ts) |
 | Teal | `#14b8a6` | — | Juniors Aftercare: Smile Lab / Life Lab, Bible Study blocks, the Junior Boxers strip | `SPIRITUAL_TEAL` |
 | Together gray | `#a1a1aa` | — | Everybody-together moments: team meeting, nightly wrap-up | `TOGETHER_GRAY` |
@@ -30,3 +31,8 @@ Rules of thumb:
   message board; Littles blue lives on the Gym Board. They never share a screen.
 - Native `<select>` lists paint white-on-white on these dark surfaces. Use the
   app's `DropdownMenu`, or give the select a dark background.
+
+One wall, two teams: the Battle Team and NBT walls share one shape — tinted
+header band, black day tabs with an underline, one header shade on every
+card, lift names in the lane colour, a captioned session clock. Only the
+colour changes (red / amber). A kid promoted from NBT finds the same screen.
