@@ -36,3 +36,9 @@ One wall, two teams: the Battle Team and NBT walls share one shape — tinted
 header band, black day tabs with an underline, one header shade on every
 card, lift names in the lane colour, a captioned session clock. Only the
 colour changes (red / amber). A kid promoted from NBT finds the same screen.
+
+## Trip notes (shipped 2026-10-21)
+
+- `runs.notes` — office note on a trip (why the route was created, what is needed). Amber sticky-note box on the trip card in the driver-day window; amber icon on the calendar; "Notes" column in the CSV.
+- Amber on Trips & Pay means ONE thing: an office note on a trip. Not a warning.
+- The dispute reason stays on `run_approvals.notes` and shows as "Dispute: …"; Approve clears it but never touches `runs.notes`.
