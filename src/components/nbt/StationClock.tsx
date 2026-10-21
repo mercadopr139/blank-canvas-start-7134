@@ -17,13 +17,13 @@ import { useEffect, useRef, useState } from "react";
 import { Play, Pause, RotateCcw, ChevronRight } from "lucide-react";
 import { elapsedOf, formatClock } from "@/lib/nbt";
 
-interface Clock { station: number; seconds: number; startedAt: string | null; rang: boolean }
-const BLANK: Clock = { station: 1, seconds: 0, startedAt: null, rang: false };
+interface Clock { station: number; seconds: number; startedAt: string | null; rang: boolean; /** Seconds added to or taken off this block by hand. */ adjust: number }
+const BLANK: Clock = { station: 1, seconds: 0, startedAt: null, rang: false, adjust: 0 };
 
 const read = (key: string): Clock => {
   try {
     const raw = localStorage.getItem(key);
-    if (raw) { const c = JSON.parse(raw); if (typeof c?.station === "number") return { ...BLANK, ...c }; }
+    if (raw) { const c = JSON.parse(raw); if (typeof c?.station === "number") return { ...BLANK, ...c, adjust: Number(c.adjust) || 0 }; }
   } catch { /* no storage */ }
   return BLANK;
 };
@@ -59,7 +59,9 @@ const StationClock = ({
   }, [clock.startedAt]);
 
   const elapsed = elapsedOf(clock.seconds, clock.startedAt);
-  const left = Math.max(0, seconds - elapsed);
+  // Never let a block be nudged below a minute.
+  const total = Math.max(60, seconds + clock.adjust);
+  const left = Math.max(0, total - elapsed);
   const running = !!clock.startedAt;
   const done = clock.station > stations;
   const set = (c: Clock) => { setClock(c); write(storageKey, c); };
@@ -68,7 +70,7 @@ const StationClock = ({
   useEffect(() => {
     if (!running || left > 0 || clock.rang) return;
     try { if (!audio.current) audio.current = new AudioContext(); ring(audio.current); } catch { /* no sound on this screen */ }
-    set({ ...clock, seconds, startedAt: null, rang: true });
+    set({ ...clock, seconds: total, startedAt: null, rang: true });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [left, running]);
 
@@ -77,8 +79,9 @@ const StationClock = ({
     set({ ...clock, startedAt: new Date().toISOString() });
   };
   const pause = () => set({ ...clock, seconds: elapsed, startedAt: null });
-  const next = () => set({ station: clock.station + 1, seconds: 0, startedAt: null, rang: false });
+  const next = () => set({ station: clock.station + 1, seconds: 0, startedAt: null, rang: false, adjust: 0 });
   const restart = () => set({ ...clock, seconds: 0, startedAt: null, rang: false });
+  const nudge = (delta: number) => set({ ...clock, adjust: Math.max(60 - seconds, clock.adjust + delta) });
   const allOver = () => set(BLANK);
 
   const warning = running && left <= 10;
@@ -108,6 +111,13 @@ const StationClock = ({
       </p>
 
       <div className="ml-auto flex items-center gap-[0.4em] shrink-0">
+        {/* Set by hand, like the Battle Team's clock: a minute less or more on this block. */}
+        {!done && !clock.rang && (
+          <>
+            <button onClick={() => nudge(-60)} title="A minute less on the clock" aria-label="A minute less on the clock" className="h-[2.4em] px-[0.7em] rounded-[0.5em] text-[0.75em] font-bold text-white/45 hover:text-white bg-white/[0.06] hover:bg-white/10 transition-colors tabular-nums">−1 min</button>
+            <button onClick={() => nudge(60)} title="A minute more on the clock" aria-label="A minute more on the clock" className="h-[2.4em] px-[0.7em] rounded-[0.5em] text-[0.75em] font-bold text-white/45 hover:text-white bg-white/[0.06] hover:bg-white/10 transition-colors tabular-nums">+1 min</button>
+          </>
+        )}
         {!done && !clock.rang && (
           <button onClick={running ? pause : start} className={`${btn} text-black`} style={{ backgroundColor: tone }} aria-label={running ? "Pause" : clock.seconds > 0 ? "Resume" : "Start"}>
             {running ? <><Pause className="w-[1.1em] h-[1.1em]" /> Pause</> : <><Play className="w-[1.1em] h-[1.1em]" /> {clock.seconds > 0 ? "Resume" : "Start"}</>}

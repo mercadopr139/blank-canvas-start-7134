@@ -70,11 +70,22 @@ const SYSTEM =
   "  where tired kids land badly. Bravo lower boxes, step-offs and two-foot landings; Alpha higher boxes " +
   "  and single-leg landings.\n\n" +
 
-  "TUESDAY IS CARDIO STATIONS (Josh, 2026-10-20, after a Tuesday on the floor): after the lift, Alpha and Bravo " +
-  "MERGE into one room and rotate through FIVE STATIONS, two minutes at each, one lap — ten minutes. The coach starts each station's clock and resets it for the next; the board rings at zero. The block is " +
-  "titled 'Cardio Stations' and is ONE block for everyone: write the SAME six lines for bravo and alpha. Line " +
-  "one, exactly: '5 stations · 2 min each · rotate on the whistle'. Then exactly five lines, numbered, one " +
-  "per station, in this order and with these names:\n" +
+  "THE WORK BLOCK IS CARDIO STATIONS, EVERY DAY (Josh, 2026-10-20/21): after the lift, Alpha and Bravo MERGE " +
+  "into one room and rotate through numbered STATIONS, two minutes at each, one lap. The block is titled " +
+  "'Cardio Stations' and is ONE block for everyone: write the SAME lines for bravo and alpha. Line one, " +
+  "exactly: 'N stations · 2 min each · rotate on the whistle' (N = the day's count). Then exactly N lines, " +
+  "numbered, one per station, in this order and with these names:\n" +
+  "MONDAY AND THURSDAY — the Performance Center, SIX stations (lift 20 min, stations 12 min):\n" +
+  "- 'Station 1 · The Racks — …': the three racks, barbells, wall-ball targets, kettlebells, plates, " +
+  "  pull-ups on the rack. (Monday: no dumbbells — the Battle Team has them.)\n" +
+  "- 'Station 2 · The Rowers — …': six rowers; metres or calories, each kid at his own pace.\n" +
+  "- 'Station 3 · The Bikes — …': six assault bikes; calories.\n" +
+  "- 'Station 4 · Open Court — …', 'Station 5 · Open Court — …', 'Station 6 · Open Court — …': the " +
+  "  basketball court. Either ON THE SPOT — jumps, lunges, med balls, bands, kettlebells, core — or MOVING in " +
+  "  court lengths: baseline to baseline (75 ft), baseline to baseline and back, sideline to sideline (56 ft), " +
+  "  sideline to sideline and back; never metres, never a lap. Make the three Open Court stations different " +
+  "  from each other — not three sets of lunges. Core work with holds is allowed on an Open Court station.\n" +
+  "TUESDAY — the boxing facility, FIVE stations (lift 15 min, stations 10 min):\n" +
   "- 'Station 1 · The Racks — …': six racks with wall-ball targets. Barbell and rack work, pull-ups on the " +
   "  rack, wall balls, kettlebells, dumbbells, med balls, lunges, jump rope.\n" +
   "- 'Station 2 · The Open Floor — …': 12 by 30 feet, open. Plyo and the tough bodyweight work: tuck jumps, " +
@@ -84,14 +95,14 @@ const SYSTEM =
   "  squat to squat jump, jump rope, kettlebells, med balls. Not bag work — they box straight afterwards.\n" +
   "- 'Station 5 · The Uppercut — …': core and abs again, a different pair from Station 3. Holds ALLOWED.\n" +
   "ON A STATION THE CLOCK IS THE DOSE. ONE movement: no count — write the movement and a pace word or a form " +
-  "cue, and the kid works the two minutes at his own pace. 'Station 1 · The Racks — wall balls — chest-height " +
-  "target, steady pace'. TWO OR MORE movements: give each its COUNT, because the count is the switch point " +
-  "(Josh, 2026-10-20: without it nobody knows when to change) — 'Station 1 · The Racks — 5 pull-ups, then 10 " +
-  "wall balls, repeat — strong but repeatable'; 'Station 2 · The Open Floor — 10 tuck jumps, then 20 jumping " +
-  "jacks, repeat — land soft'. Round counts only: 5, 8, 10, 12, 15 or 20; skips 20, 30, 40 or 50. NEVER a time " +
-  "on a station line: not '30 sec', not '1 min'. The whistle moves everyone. Be creative across the five areas week to week, and never two " +
-  "stations that both hammer the same pattern back to back in the rotation. Hand weights are few: a station " +
-  "that uses them is one piece per kid. Tuesday's minutes are fixed: prep 5, lift 15, work 10, reset 3.\n" +
+  "cue, and the kid works the two minutes at his own pace. 'Station 2 · The Rowers — row — steady pace, long " +
+  "pulls'. TWO OR MORE movements: give each its COUNT, because the count is the switch point (without it " +
+  "nobody knows when to change) — 'Station 1 · The Racks — 5 pull-ups, then 10 wall balls, repeat — strong " +
+  "but repeatable'; 'Station 4 · Open Court — 10 squat jumps, then baseline to baseline and back, repeat — " +
+  "land soft'. Round counts only: 5, 8, 10, 12, 15 or 20; skips 20, 30, 40 or 50. NEVER a time on a station " +
+  "line: not '30 sec', not '1 min'. The whistle moves everyone. Be creative across the areas week to week, " +
+  "and never two stations that hammer the same pattern back to back in the rotation. Hand weights are few: a " +
+  "station that uses them is one piece per kid. The stations never repeat the lift's movement.\n" +
   "TUESDAY'S STYLE INSIDE A STATION: standard gym and CrossFit-style work. It must genuinely raise heart rates. Do " +
   "NOT use shadow boxing or boxing drills as the conditioning piece; they are about to box for an hour and it " +
   "is not the training they lack. The programme's existing limits still outrank the style: no Olympic lifts, " +
@@ -277,25 +288,8 @@ const SYSTEM =
   "20 reps; 40, 50, 60, 80 or 100 skips; whole court lengths; 100, 150, 200 or 250 m; 10, 12 or 15 calories. " +
   "No '18 wall balls'.\n\n" +
 
-  "THE CARDIO IS COUNTED, NEVER TIMED (Josh, 2026-10-20): every station is a NUMBER OF REPS, a number of " +
-  "court lengths, or what a machine shows — never seconds or minutes. Reps let a faster kid move on and a kid " +
-  "still learning finish his count at his own pace; a clock makes thirty kids do the same thing at the same " +
-  "time, which is exactly what this room cannot do. So: 'Jump rope — 60 skips', 'KB goblet step-up — 10 each " +
-  "leg', 'Med ball slam — 15', 'Row — 200 m', 'Bike — 10 calories', 'Shuttle — baseline to baseline and back " +
-  "× 2'. NO STATIC HOLDS in the circuit — a plank or hollow hold is a clock; write plank shoulder taps × 20 or " +
-  "hollow rocks × 15 instead. The two tracks differ by the COUNT and the variation.\n" +
-  "THE SHAPE: as many rounds as they can inside the cardio minutes, every round the same stations, and the " +
-  "result a kid writes down is ROUNDS. The first line is always: 'As many rounds as you can in N min' (N = the " +
-  "cardio minutes) and nothing more — no rest instruction. They know to breathe after a round and go again, " +
-  "each at his own pace (Josh, 2026-10-20). That first line is the ONLY place a time appears.\n" +
-  "CIRCUIT LINES — WRITTEN FOR A FOURTEEN-YEAR-OLD READING A SCREEN FROM ACROSS THE ROOM. Each track's circuit " +
-  "is a list of lines and EVERY LINE MUST STAND ON ITS OWN. After the first line, every line is ONE station, " +
-  "complete: the movement first, then the count or distance, then the effort or cue, on the same line, " +
-  "separated by dashes. 'Jump rope — 60 skips — steady bounce, step-hop if learning'. 'Row — 200 m — " +
-  "controlled pace'. 'Shuttle — baseline to baseline and back × 2 — strong but repeatable'. NEVER a heading " +
-  "with nothing on it ('Bike station:'). NEVER a line that opens with a number and no movement ('15 strong " +
-  "effort'). NEVER a station split across two lines. If a youth reads one line they must know exactly what to " +
-  "do, how many, and how hard. Six lines at most per track, the first line included.\n\n" +
+  "THE WORK BLOCK IS WRITTEN AS CARDIO STATIONS on every day — see THE WORK BLOCK IS CARDIO STATIONS. There " +
+  "is no other shape for it.\n\n" +
 
   "OUTPUT: valid JSON only, no prose and no markdown fences.\n" +
   "{\n" +
@@ -311,8 +305,8 @@ const SYSTEM =
   '  "work": {\n' +
   '    "emphasis": "one of: steady aerobic | intervals | strength-endurance | carries | grip | obstacle prep",\n' +
   '    "title": "short name for the circuit",\n' +
-  '    "bravo":   ["As many rounds as you can in 20 min", "Row — 200 m — controlled pace", "Shuttle — baseline to baseline and back — strong but repeatable", "Jump rope — 40 skips — steady, step-hop if learning", "Med ball chest pass to wall — 12 — strong but repeatable"],\n' +
-  '    "alpha":   ["As many rounds as you can in 20 min", "Bike — 12 calories — strong but repeatable", "Shuttle — baseline to baseline and back × 2 — strong but repeatable", "Jump rope — 80 skips — fast singles", "Med ball slam — 15 — full extension, hard but controlled"],\n' +
+  '    "bravo":   ["6 stations · 2 min each · rotate on the whistle", "Station 1 · The Racks — 5 pull-ups, then 10 wall balls, repeat — strong but repeatable", "Station 2 · The Rowers — row — steady pace, long pulls", "Station 3 · The Bikes — bike — strong but repeatable", "Station 4 · Open Court — 10 squat jumps, then baseline to baseline and back, repeat — land soft", "Station 5 · Open Court — 10 KB goblet step-ups each leg, then 15 med ball slams, repeat — controlled", "Station 6 · Open Court — plank shoulder taps — slow, minimal hip sway"],\n' +
+  '    "alpha":   ["the SAME six lines as bravo — one block for the whole room"],\n' +
   '    "result_unit": "rounds — what the athletes write down"\n' +
   "  },\n" +
   '  "reset": ["2-3 short transition lines"]\n' +
@@ -331,20 +325,24 @@ const DAY_BRIEF: Record<string, string> = {
     "MONDAY — SQUAT + PUSH. Performance Center, on the basketball court: 75 ft baseline to baseline, 56 ft " +
     "sideline to sideline. Floor distances are said in court — baseline to baseline (75 ft), baseline to " +
     "baseline and back (150 ft), sideline to sideline (56 ft), sideline to sideline and back (112 ft) — never " +
-    "in metres, yards or feet. Never a lap. Bikes, rowers and ski ergs are here for the work block. No sled. " +
-    "THE BATTLE TEAM IS HERE TOO AND HAS THE DUMBBELLS: no dumbbells anywhere in this day, in either track — " +
-    "kettlebells instead.",
+    "in metres, yards or feet. Never a lap. No sled. THE WORK BLOCK IS CARDIO STATIONS: six stations — the " +
+    "Racks, the Rowers, the Bikes, three Open Court — two minutes each, one block for the whole room. " +
+    "Lift 20 min, stations 12 min. " +
+    "THE BATTLE TEAM HAS THE DUMBBELLS TODAY: no dumbbells anywhere in this day, in either track or on any " +
+    "station — kettlebells instead.",
   tuesday:
     "TUESDAY — ATHLETIC + OVERHEAD. Boxing facility: NO RUNNING AT ALL — there is no floor for it, and NO " +
     "machines — no bikes, no rowers, no ski ergs. Every conditioning movement stays on the spot. " +
     "Athletic and energetic, not a second heavy strength day. Plyometrics are an option here. " +
-    "THE WORK BLOCK IS CARDIO STATIONS: five named stations, two minutes each, one block for the whole room " +
-    "(see TUESDAY IS CARDIO STATIONS). Lift 15 min, stations 10 min.",
+    "THE WORK BLOCK IS CARDIO STATIONS: five named stations, two minutes each, one block for the whole room. " +
+    "Lift 15 min, stations 10 min.",
   thursday:
     "THURSDAY — HINGE + PULL. Performance Center, on the basketball court: 75 ft baseline to baseline, 56 ft " +
     "sideline to sideline. Floor distances are said in court — baseline to baseline (75 ft), baseline to " +
     "baseline and back (150 ft), sideline to sideline (56 ft), sideline to sideline and back (112 ft) — never " +
-    "in metres, yards or feet. Never a lap. Bikes, rowers and ski ergs are here for the work block. No sled.",
+    "in metres, yards or feet. Never a lap. No sled. THE WORK BLOCK IS CARDIO STATIONS: six stations — the " +
+    "Racks, the Rowers, the Bikes, three Open Court — two minutes each, one block for the whole room. " +
+    "Lift 20 min, stations 12 min.",
 };
 
 Deno.serve(async (req: Request) => {
@@ -470,11 +468,17 @@ Deno.serve(async (req: Request) => {
           "back to me with EVERYTHING else byte-for-byte unchanged: focus, prep, reset, lift pattern, cues, " +
           "work title, work emphasis, result unit, and the track you are not rewriting.\n" +
           `Here is the current day:\n${JSON.stringify(keepDay)}\n` +
-          (onlyBlock
-            ? `Change ONLY the "${onlyTrack}" entry inside "${onlyBlock}" — ${onlyBlock === "lift" ? "the lift and its dose" : "the work-block lines"}. ` +
-              `Leave "${onlyTrack}"'s ${onlyBlock === "lift" ? "work block" : "lift"} exactly as it is too. `
-            : `Change ONLY the "${onlyTrack}" entries inside lift and work. `) +
-          "The new version must remain a progression of the SAME movement pattern as the other track — a " +
+          (onlyBlock === "lift"
+            ? `Change ONLY the "${onlyTrack}" entry inside "lift" — the lift and its dose. ` +
+              "The Cardio Stations block is one block for the whole room: leave it exactly as it is for both " +
+              "tracks — unless it is not yet in the Cardio Stations shape, in which case rewrite it into that " +
+              "shape now, the same lines for bravo and alpha. "
+            : onlyBlock === "work"
+            ? "The coach wants the CARDIO STATIONS rewritten. It is ONE block for the whole room, so write a new " +
+              "stations block and put the SAME lines in both bravo and alpha. Leave both lifts exactly as they are. "
+            : `Change ONLY the "${onlyTrack}" entry inside "lift", and rewrite the Cardio Stations block for the ` +
+              "whole room (the same new lines for bravo and alpha). ") +
+          "A rewritten lift must remain a progression of the SAME movement pattern as the other track — a " +
           "different exercise or a different dose at that level, never a different pattern.\n"
         : "";
 
@@ -515,21 +519,25 @@ Deno.serve(async (req: Request) => {
       });
     // Tuesday: six lines, the fixed header, five named stations in order, no counts or times on a
     // station line, holds only on the two core stations. The whole room does the same block.
-    const STATION_NAMES = ["The Racks", "The Open Floor", "The Ring", "The Heavy Bag", "The Uppercut"];
+    const STATION_NAMES = dayKey === "tuesday"
+      ? ["The Racks", "The Open Floor", "The Ring", "The Heavy Bag", "The Uppercut"]
+      : ["The Racks", "The Rowers", "The Bikes", "Open Court", "Open Court", "Open Court"];
+    const HOLDS_OK = dayKey === "tuesday" ? [2, 4] : [3, 4, 5];
     const stationProblems = (p: { work?: { bravo?: unknown; alpha?: unknown } } | undefined): string[] => {
-      if (dayKey !== "tuesday") return [];
       const lines = Array.isArray(p?.work?.alpha) ? (p!.work!.alpha as unknown[]).map(String) : [];
       const bad: string[] = [];
-      if (lines.length !== 6) bad.push(`${lines.length} lines (need the header and five stations)`);
-      if (!/^5 stations/i.test(lines[0] ?? "")) bad.push(`header "${lines[0] ?? ""}" (must be: 5 stations · 2 min each · rotate on the whistle)`);
-      lines.slice(1, 6).forEach((l, i) => {
+      const n = STATION_NAMES.length;
+      if (lines.length !== n + 1) bad.push(`${lines.length} lines (need the header and ${n} stations)`);
+      if (!new RegExp(`^${n} stations`, "i").test(lines[0] ?? "")) bad.push(`header "${lines[0] ?? ""}" (must be: ${n} stations · 2 min each · rotate on the whistle)`);
+      lines.slice(1, n + 1).forEach((l, i) => {
         const want = `Station ${i + 1} · ${STATION_NAMES[i]} —`;
         if (!l.startsWith(want)) { bad.push(`"${l}" (must start: ${want})`); return; }
         const rest = l.slice(want.length);
         if (/\b\d+\s*(sec|secs|seconds|s|min|mins|minutes)\b|\d+:\d\d/i.test(rest)) bad.push(`"${l}" (no times on a station line)`);
-        const movesTwo = /\b(then|and|alternate|alternating|→)\b/i.test(rest);
-        if (movesTwo && !/\d/.test(rest)) bad.push(`"${l}" (two movements need their counts — the switch point)`);
-        if (/\b(hold|plank)\b/i.test(rest) && ![2, 4].includes(i)) bad.push(`"${l}" (holds only on The Ring and The Uppercut)`);
+        const workPart = rest.split(" — ")[0] ?? rest;
+        const movesTwo = /\bthen\b|→|\brepeat\b/i.test(workPart);
+        if (movesTwo && !/\d/.test(workPart)) bad.push(`"${l}" (two movements need their counts — the switch point)`);
+        if (/\b(hold|plank)\b/i.test(rest) && !HOLDS_OK.includes(i)) bad.push(`"${l}" (holds only on the core stations)`);
       });
       return bad;
     };
@@ -564,13 +572,14 @@ Deno.serve(async (req: Request) => {
       const stations = stationProblems(parsed);
       if (stations.length) {
         mondayNote =
-          "\n\nYOUR PREVIOUS ATTEMPT WAS REJECTED: Tuesday's Cardio Stations block is not in the required shape: " +
-          stations.join("; ") + ". Rewrite the block: the exact header, then Station 1 · The Racks, Station 2 · The " +
-          "Open Floor, Station 3 · The Ring, Station 4 · The Heavy Bag, Station 5 · The Uppercut — work and cue " +
-          "only, no numbers, holds only on 3 and 5, identical for bravo and alpha. Everything else can stay.";
+          "\n\nYOUR PREVIOUS ATTEMPT WAS REJECTED: the Cardio Stations block is not in the required shape: " +
+          stations.join("; ") + ". Rewrite the block: the exact header, then " +
+          STATION_NAMES.map((name, i) => `Station ${i + 1} · ${name}`).join(", ") +
+          " — work and cue, counts only where movements pair, no times, holds only on the core stations, " +
+          "identical for bravo and alpha. Everything else can stay.";
         continue;
       }
-      const timed = dayKey === "tuesday" ? [] : timedStations(parsed);
+      const timed: string[] = [];
       if (timed.length) {
         mondayNote =
           "\n\nYOUR PREVIOUS ATTEMPT WAS REJECTED: these cardio stations are timed or are holds, and the cardio is " +
@@ -590,10 +599,7 @@ Deno.serve(async (req: Request) => {
       return json({ error: "The coach kept writing reps that are not 5, 8, 10 or 12. Try again." }, 502);
     }
     if (stationProblems(parsed).length) {
-      return json({ error: "The coach kept writing Tuesday's stations in the wrong shape. Try again." }, 502);
-    }
-    if (dayKey !== "tuesday" && timedStations(parsed).length) {
-      return json({ error: "The coach kept writing timed cardio stations; the cardio is counted in reps. Try again." }, 502);
+      return json({ error: "The coach kept writing the Cardio Stations in the wrong shape. Try again." }, 502);
     }
     if (mondayDumbbell(parsed)) {
       return json({ error: "The coach kept reaching for dumbbells on Monday, when the Battle Team has them. Try again." }, 502);
@@ -607,14 +613,10 @@ Deno.serve(async (req: Request) => {
       const n = Math.round(Number(v));
       return Number.isFinite(n) && n > 0 && n < 90 ? n : fallback;
     };
+    // Fixed by the day (Josh): Tuesday 5 · 15 · 10 · 3; Monday and Thursday 5 · 20 · 12 · 3.
     const minutes = dayKey === "tuesday"
       ? { prep: 5, lift: 15, work: 10, reset: 3 }
-      : {
-        prep: mins(parsed?.minutes?.prep, 5),
-        lift: mins(parsed?.minutes?.lift, 10),
-        work: mins(parsed?.minutes?.work, 20),
-        reset: mins(parsed?.minutes?.reset, 3),
-      };
+      : { prep: 5, lift: 20, work: 12, reset: 3 };
     const total = minutes.prep + minutes.lift + minutes.work + minutes.reset;
     if (total > CAP) {
       // Rejected rather than quietly trimmed: shortening the circuit here would
@@ -637,8 +639,8 @@ Deno.serve(async (req: Request) => {
       },
       work: {
         emphasis: String(work?.emphasis ?? "").trim(),
-        title: dayKey === "tuesday" ? "Cardio Stations" : String(work?.title ?? "").trim(),
-        bravo: dayKey === "tuesday" ? strArray(work?.alpha, 8) : strArray(work?.bravo, 8),
+        title: "Cardio Stations",
+        bravo: strArray(work?.alpha, 8),
         alpha: strArray(work?.alpha, 8),
         result_unit: (["rounds", "reps", "meters", "minutes", "seconds"].find((u) => String(work?.result_unit ?? "").toLowerCase().includes(u)) ?? "rounds"),
       },

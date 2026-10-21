@@ -359,7 +359,7 @@ const NbtBoard = () => {
 
           {/* The two tracks, equal width and equal weight. This row takes
               whatever height is left and the tiles fit themselves to it. */}
-          {dayKey !== "tuesday" && (
+          {!/^\d+ stations/i.test(day.work.alpha?.[0] ?? "") && (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 flex-1 md:min-h-0">
             {TRACKS.map((t, ti) => {
               const m = TRACK_META[t];
@@ -479,7 +479,7 @@ const NbtBoard = () => {
               Board: ONE container, every size in em, and fitColumns sets its
               font-size so it fills the screen exactly, on the Newline or a
               laptop. Nothing scrolls, nothing clips. */}
-          {dayKey === "tuesday" && (
+          {/^\d+ stations/i.test(day.work.alpha?.[0] ?? "") && (
             <div
               ref={(el) => { colRefs.current[0] = el; }}
               data-max-px="44"
@@ -515,10 +515,10 @@ const NbtBoard = () => {
               {/* One clock for the lift, under both cards. */}
               <div className="shrink-0 text-[0.8em]">
                 <StationClock
-                  storageKey={`nbt-lift:${weekStart}`}
+                  storageKey={`nbt-lift:${weekStart}:${dayKey}`}
                   stations={1}
-                  seconds={15 * 60}
-                  words={{ title: "Lift · 15 min · everyone", idle: "Tap Start after the verse.", running: "On the bar. Groups rotate.", rang: "Time — rack it. Stations next.", done: "Lift done" }}
+                  seconds={(day.minutes?.lift ?? 15) * 60}
+                  words={{ title: `Lift · ${day.minutes?.lift ?? 15} min · everyone`, idle: "Tap Start after the verse.", running: "On the bar. Groups rotate.", rang: "Time — rack it. Stations next.", done: "Lift done" }}
                   color={NBT_AMBER}
                 />
               </div>
@@ -527,7 +527,7 @@ const NbtBoard = () => {
               {(() => {
                 const lines = day.work.alpha ?? [];
                 const header = lines[0] ?? "5 stations · 2 min each · rotate on the whistle";
-                const tiles = lines.slice(1, 6).map((l) => {
+                const tiles = lines.slice(1).map((l) => {
                   const m = l.match(/^Station\s+(\d)\s*·\s*([^—]+?)\s*—\s*(.*)$/);
                   return m ? { n: m[1], name: m[2].trim(), rest: m[3].trim() } : { n: "", name: "", rest: l };
                 });
@@ -539,7 +539,7 @@ const NbtBoard = () => {
                       </h2>
                       <p className="text-[0.5em] text-white/40">{header}</p>
                     </div>
-                    <div className="grid grid-cols-5 gap-[0.5em] flex-1 min-h-0 px-[0.9em] pt-[0.6em] pb-[0.5em]">
+                    <div className="grid gap-[0.5em] flex-1 min-h-0 px-[0.9em] pt-[0.6em] pb-[0.5em]" style={{ gridTemplateColumns: `repeat(${Math.max(1, tiles.length)}, minmax(0, 1fr))` }}>
                       {tiles.map((t, i) => (
                         <div key={i} data-fit className="rounded-[0.6em] border border-white/15 bg-[#141416] px-[0.7em] py-[0.5em] min-h-0 overflow-hidden flex flex-col">
                           <p className="text-[0.5em] font-bold uppercase tracking-[0.18em] leading-tight" style={{ color: `${NBT_AMBER}b3` }}>
@@ -574,7 +574,7 @@ const NbtBoard = () => {
                       ))}
                     </div>
                     <div className="shrink-0 px-[0.9em] pb-[0.6em]">
-                      <StationClock storageKey={`nbt-stations:${weekStart}`} stations={5} seconds={120} color={NBT_AMBER} />
+                      <StationClock storageKey={`nbt-stations:${weekStart}:${dayKey}`} stations={Math.max(1, tiles.length)} seconds={120} color={NBT_AMBER} />
                     </div>
                   </section>
                 );

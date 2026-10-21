@@ -327,7 +327,8 @@ export const NbtWeekBuilder = ({
       const merged: NbtDay = {
         ...current,
         lift: blockPart === "work" ? current.lift : { ...current.lift, [track]: day.lift[track] },
-        work: blockPart === "lift" ? current.work : { ...current.work, [track]: day.work[track] },
+        // The Cardio Stations block is one block for the room: both tracks' lines come back together.
+        work: day.work,
       };
       await saveDay(week, dayKey, merged);
       const what = blockPart === "lift" ? "lift" : blockPart === "work" ? "work" : "track";
@@ -623,7 +624,7 @@ export const NbtWeekBuilder = ({
                                     </p>
                                     {(day.work[t] ?? []).length > 0 && (
                                       <div>
-                                        <p className="text-[10px] font-bold uppercase tracking-wide text-neutral-500">{d.key === "tuesday" ? "Cardio Stations" : "Cardio"}</p>
+                                        <p className="text-[10px] font-bold uppercase tracking-wide text-neutral-500">Cardio Stations</p>
                                         <ul className="mt-0.5 space-y-0.5">
                                           {readableLines(day.work[t]).map((line, k) =>
                                             line.kind === "rounds" ? (
