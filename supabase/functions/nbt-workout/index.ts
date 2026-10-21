@@ -127,7 +127,7 @@ const SYSTEM =
   "  Romanian deadlifts, barbell rows, floor press, landmine press — needs no rack, so both tracks may be on " +
   "  barbells at once when the pattern allows. Squats and bench press need the racks and benches.\n" +
   "- PLENTIFUL for the scarce-kit rule — dumbbells and kettlebells, wall-ball targets, med balls, jump ropes, " +
-  "bands, pull-up bars, barbells and plates, and bodyweight. Any number of tracks may use these at once — but " +
+  "bands, barbells and plates, and bodyweight. Any number of tracks may use these at once — but " +
   "see BRAVO'S LIFT, HOW IT RUNS: the light hand weights are few, so Bravo lifts one piece per kid.\n" +
   "- Anything the room says is NOT IN THIS ROOM is never written for that day.\n" +
   "- MONDAY SHARES THE ROOM WITH THE BATTLE TEAM (Josh, 2026-10-20), who lift at the same time and HAVE THE " +
@@ -144,7 +144,10 @@ const SYSTEM =
   "- OVERHEAD: pike push-up, band overhead press or wall slide → DB overhead press → barbell overhead press.\n" +
   "- HINGE: bodyweight hip hinge, band good morning or glute bridge → DB or KB Romanian deadlift → barbell " +
   "  deadlift or Romanian deadlift.\n" +
-  "- PULL: inverted row, band row or scap pull-up → DB row → barbell row or pull-up.\n" +
+  "- PULL: inverted row or band row → DB row → barbell row or pull-up. THE PULL-UP BARS ARE THE RACKS: in the " +
+  "  Performance Center that is three bars, SCARCE, one track per block — if Alpha pulls up, Bravo rows (DB row, " +
+  "  band row, inverted row), never an assisted pull-up on the same bars. Both tracks on pull-ups is only possible " +
+  "  in the boxing facility, where six racks are enough for both. (Josh, 2026-10-21.)\n" +
   "CARRIES follow the same ladder: dumbbell or kettlebell farmer carry for BRAVO, heavier farmer carry or a " +
   "plate carry for ALPHA. Both may carry at once.\n" +
   "BRAVO'S LIFT, HOW IT RUNS (Josh, 2026-10-20): the hand weights are few at the light end — five dumbbells and " +

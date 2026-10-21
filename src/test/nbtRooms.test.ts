@@ -106,6 +106,17 @@ describe("Scarce kit belongs to one track per block", () => {
     expect(dayProblem(d, "tuesday")).toBeNull();
   });
 
+  it("the pull-up bars are the racks: three in the Performance Center, six in the boxing facility (Josh, 2026-10-21)", () => {
+    // Thursday had Alpha and Bravo both on assisted pull-ups — a queue on three bars.
+    const both = day("DB RDL + Assisted Pull-Up", "Barbell RDL + Assisted Pull-Up", [], []);
+    expect(equipmentClash(both, "thursday")).toMatch(/pull-up bars/);
+    expect(equipmentClash(both, "monday")).toMatch(/pull-up bars/);
+    // Six racks on Tuesday: enough for both, taking turns.
+    expect(equipmentClash(both, "tuesday")).toBeNull();
+    // Bravo rows while Alpha pulls up: no clash.
+    expect(equipmentClash(day("DB RDL + DB Row", "Barbell RDL + Assisted Pull-Up", [], []), "thursday")).toBeNull();
+  });
+
   it("judges the lift block and the work block separately", () => {
     // Alpha squats in the rack; Bravo's circuit uses a rack later. Different times, no clash.
     const d = day("Goblet Squat", "Back Squat", ["Rack pull-ups x6"], ["Jump squats x10"]);

@@ -61,7 +61,10 @@ export const ROOMS: Record<RoomKey, Room> = {
       plenty("rope", "jump ropes"),
       plenty("medBall", "med balls"),
       plenty("band", "bands"),
-      plenty("pullupBar", "pull-up bars"),
+      // The pull-up bars ARE the racks — three of them. Both tracks on
+      // assisted pull-ups is a queue (Josh, 2026-10-21: Thursday had Alpha
+      // and Bravo both on them). Scarce: one track per block.
+      one("pullupBar", "the pull-up bars (on the three racks)", 3),
     ],
   },
   boxing_facility: {
@@ -79,7 +82,8 @@ export const ROOMS: Record<RoomKey, Room> = {
       plenty("rope", "jump ropes"),
       plenty("medBall", "med balls"),
       plenty("band", "bands"),
-      plenty("pullupBar", "pull-up bars"),
+      // Six racks here, so six bars: enough for both tracks, taking turns.
+      both("pullupBar", "the pull-up bars (on the six racks)", 6),
     ],
   },
 };
