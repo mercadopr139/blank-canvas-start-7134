@@ -74,9 +74,11 @@ export const VerseOfTheDayStrip = ({ weekStart, weekday }: { weekStart: string; 
   // One quiet line: a small teal label, the verse, the reference. The board
   // was just made calm; this must not make it busy again. The pop-up carries
   // the full text, so the strip only has to be readable and tappable.
-  const frame = "shrink-0 rounded-lg border border-white/10 bg-white/[0.03] px-3 py-1.5 text-left w-full flex items-baseline gap-3 min-w-0";
+  // Teal, outlined and tinted, so the verse pops off the dark board (Josh, 2026-10-20).
+  const frame = "shrink-0 rounded-lg border-2 px-3 py-1.5 text-left w-full flex items-baseline gap-3 min-w-0";
+  const frameStyle = { borderColor: `${TEAL_LIGHT}b3`, background: `${TEAL_LIGHT}1f` };
   const label = (
-    <span className="text-[10px] font-bold uppercase tracking-[0.2em] shrink-0" style={{ color: TEAL_LIGHT }}>
+    <span className="text-[10px] font-black uppercase tracking-[0.2em] shrink-0 rounded px-1.5 py-0.5" style={{ color: "#0a0a0a", background: TEAL_LIGHT }}>
       Verse of the day
     </span>
   );
@@ -84,9 +86,9 @@ export const VerseOfTheDayStrip = ({ weekStart, weekday }: { weekStart: string; 
   let body: React.ReactNode = null;
   if (themedDay) {
     body = (
-      <button onClick={() => setOpen(themedDay)} className={`${frame} group`}>
+      <button onClick={() => setOpen(themedDay)} className={`${frame} group`} style={frameStyle}>
         {label}
-        <span className="flex-1 min-w-0 truncate text-sm text-white/70 group-hover:text-white/90 transition-colors">
+        <span className="flex-1 min-w-0 truncate text-sm md:text-base text-white/90 group-hover:text-white transition-colors">
           &ldquo;{themedDay.text}&rdquo; <span className="text-white/45">&mdash; {themedDay.reference}</span>
         </span>
         <span className="text-[9px] rounded-full px-1.5 py-0.5 font-semibold shrink-0" style={{ color: TEAL_LIGHT, background: `${TEAL_LIGHT}1a` }}>
@@ -96,14 +98,14 @@ export const VerseOfTheDayStrip = ({ weekStart, weekday }: { weekStart: string; 
     );
   } else if (isAdmin && !themed?.published) {
     body = (
-      <button onClick={() => navigate("/admin/operations/practice-plan")} className={frame}>
+      <button onClick={() => navigate("/admin/operations/practice-plan")} className={frame} style={frameStyle}>
         {label}
         <span className="flex-1 min-w-0 truncate text-xs text-amber-300/80">No theme set this week — tap to generate this week&apos;s Bible topic.</span>
       </button>
     );
   } else if (daily) {
     body = (
-      <div className={frame}>
+      <div className={frame} style={frameStyle}>
         {label}
         <span className="flex-1 min-w-0 truncate text-sm text-white/60">
           &ldquo;{daily.text}&rdquo; <span className="text-white/40">&mdash; {daily.reference}</span>
