@@ -346,6 +346,24 @@ const StrengthBoard = () => {
           {/* What to drag out first, and the coach's note from the plan. */}
           <PrepStrip equipment={equipment} note={liftNote} accent={NLA_RED} />
 
+          {/* The warm-up ramp as a strip of its own, in the prep pill's
+              style (Josh, 2026-10-21): it used to sit inside Working sets
+              and pushed the lift down while Extra work's movement sat at
+              the top — the two cards no longer line up. */}
+          {day.warmup?.length ? (
+            <div className="shrink-0 flex items-start gap-3 flex-wrap">
+              <span
+                className="inline-flex items-center rounded-full border px-3 py-1 text-[11px] font-bold uppercase tracking-[0.18em]"
+                style={{ color: NLA_RED, borderColor: `${NLA_RED}55`, backgroundColor: `${NLA_RED}10` }}
+              >
+                Warm-up
+              </span>
+              <p className="text-sm text-white/80 leading-snug flex-1 min-w-0 pt-0.5">
+                {day.warmup.map((w) => (w.detail ? `${w.name} — ${w.detail}` : w.name)).join("  ·  ")}
+              </p>
+            </div>
+          ) : null}
+
           {/* Kids read this from across the room, so the wall carries the
               prep, the bar and the extra work — names and doses. Guidance,
               cues, how-tos and scaling stay on the coach's page. (Josh, 2026-10-03.) */}
@@ -364,20 +382,8 @@ const StrengthBoard = () => {
                 className="flex-1 min-h-0 overflow-hidden flex flex-col"
               >
                 {/* The warm-up ramp as one quiet line — it is how the bar gets loaded. */}
-                {day.warmup?.length ? (
-                  <>
-                    <div className="px-[0.9em] pt-[0.8em] pb-[0.6em]">
-                      <ColLabel color={NLA_RED}>Warm-up</ColLabel>
-                      <p className="mt-[0.25em] text-[0.85em] leading-snug text-white/70">
-                        {day.warmup.map((w) => (w.detail ? `${w.name} — ${w.detail}` : w.name)).join("  ·  ")}
-                      </p>
-                    </div>
-                    <div className="h-px mx-[0.9em] bg-white/10" />
-                  </>
-                ) : null}
-
                 {day.main ? (
-                  <div className="px-[0.9em] pt-[0.6em] flex-1">
+                  <div className="px-[0.9em] pt-[0.8em] flex-1">
                     <ColLabel color={NLA_RED}>
                       Lift{day.main.rest ? ` · rest ${day.main.rest}` : ""}
                     </ColLabel>
@@ -420,7 +426,7 @@ const StrengthBoard = () => {
                 ref={(el) => { colRefs.current[1] = el; }}
                 className="flex-1 min-h-0 overflow-hidden flex flex-col"
               >
-                <div className="p-[0.8em] flex-1">
+                <div className="px-[0.9em] pt-[0.8em] pb-[0.8em] flex-1">
                   {day.accessories?.length ? (
                     <ul className="space-y-[1.4em]">
                       {day.accessories.map((a, i) => (
@@ -430,7 +436,8 @@ const StrengthBoard = () => {
                            there at that size; nothing covers the workout. */
                         <li key={i}>
                           <div className="min-w-0">
-                            <div className="flex items-baseline gap-[0.6em] flex-wrap">
+                            <ColLabel color={EXTRA}>{day.accessories!.length > 1 ? `Movement ${i + 1} of ${day.accessories!.length}` : "Movement"}</ColLabel>
+                            <div className="flex items-baseline gap-[0.6em] flex-wrap mt-[0.25em]">
                               <p className="text-[1.35em] font-bold leading-tight" style={{ color: EXTRA }}>{a.name}</p>
                               <span
                                 className="rounded-[0.35em] px-[0.5em] py-[0.1em] text-[0.9em] font-black leading-snug tabular-nums whitespace-nowrap"
