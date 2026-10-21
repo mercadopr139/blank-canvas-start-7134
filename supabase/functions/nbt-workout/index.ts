@@ -71,7 +71,7 @@ const SYSTEM =
   "  and single-leg landings.\n\n" +
 
   "TUESDAY IS CARDIO STATIONS (Josh, 2026-10-20, after a Tuesday on the floor): after the lift, Alpha and Bravo " +
-  "MERGE into one room and rotate through FIVE STATIONS, two minutes at each, one lap — ten minutes. The block is " +
+  "MERGE into one room and rotate through FIVE STATIONS, two minutes at each, one lap — ten minutes. The coach starts each station's clock and resets it for the next; the board rings at zero. The block is " +
   "titled 'Cardio Stations' and is ONE block for everyone: write the SAME six lines for bravo and alpha. Line " +
   "one, exactly: '5 stations · 2 min each · rotate on the whistle'. Then exactly five lines, numbered, one " +
   "per station, in this order and with these names:\n" +
@@ -89,7 +89,7 @@ const SYSTEM =
   "Floor — tuck jumps and jumping jacks, alternate — land soft'. Each kid works at his own pace for the two " +
   "minutes; the whistle moves everyone. Be creative across the five areas week to week, and never two " +
   "stations that both hammer the same pattern back to back in the rotation. Hand weights are few: a station " +
-  "that uses them is one piece per kid. Tuesday's minutes are fixed: prep 5, lift 20, work 10, reset 3.\n" +
+  "that uses them is one piece per kid. Tuesday's minutes are fixed: prep 5, lift 15, work 10, reset 3.\n" +
   "TUESDAY'S STYLE INSIDE A STATION: standard gym and CrossFit-style work. It must genuinely raise heart rates. Do " +
   "NOT use shadow boxing or boxing drills as the conditioning piece; they are about to box for an hour and it " +
   "is not the training they lack. The programme's existing limits still outrank the style: no Olympic lifts, " +
@@ -337,7 +337,7 @@ const DAY_BRIEF: Record<string, string> = {
     "machines — no bikes, no rowers, no ski ergs. Every conditioning movement stays on the spot. " +
     "Athletic and energetic, not a second heavy strength day. Plyometrics are an option here. " +
     "THE WORK BLOCK IS CARDIO STATIONS: five named stations, two minutes each, one block for the whole room " +
-    "(see TUESDAY IS CARDIO STATIONS). Lift 20 min, stations 10 min.",
+    "(see TUESDAY IS CARDIO STATIONS). Lift 15 min, stations 10 min.",
   thursday:
     "THURSDAY — HINGE + PULL. Performance Center, on the basketball court: 75 ft baseline to baseline, 56 ft " +
     "sideline to sideline. Floor distances are said in court — baseline to baseline (75 ft), baseline to " +
@@ -604,7 +604,7 @@ Deno.serve(async (req: Request) => {
       return Number.isFinite(n) && n > 0 && n < 90 ? n : fallback;
     };
     const minutes = dayKey === "tuesday"
-      ? { prep: 5, lift: 20, work: 10, reset: 3 }
+      ? { prep: 5, lift: 15, work: 10, reset: 3 }
       : {
         prep: mins(parsed?.minutes?.prep, 5),
         lift: mins(parsed?.minutes?.lift, 10),

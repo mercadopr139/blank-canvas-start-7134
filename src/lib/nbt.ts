@@ -25,9 +25,11 @@ export const NBT_AMBER = "#f0a500";
  * a kid can tell the two apart without confusing them with anything else.
  * (Josh, 2026-10-03.)
  */
-export const TRACK_META: Record<Track, { label: string; word: string; color: string }> = {
-  bravo: { label: "Bravo", word: "Build", color: "#a3e635" },
-  alpha: { label: "Alpha", word: "Progress", color: "#a78bfa" },
+export const TRACK_META: Record<Track, { label: string; word: string; color: string; blurb: string }> = {
+  // Bravo in a warm cream, Alpha in a tan (Josh, 2026-10-20): one warm family
+  // with the amber board, two shades a kid still tells apart from across the gym.
+  bravo: { label: "Bravo", word: "Build", color: "#f3dca0", blurb: "Build · dumbbells, kettlebells, bands and bodyweight" },
+  alpha: { label: "Alpha", word: "Progress", color: "#d2a86a", blurb: "Progress · barbell work, longer efforts, heavier carries" },
 };
 
 /** Any stored level, including the retired "charlie", as one of today's tracks. */
