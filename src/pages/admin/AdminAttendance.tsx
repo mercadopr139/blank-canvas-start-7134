@@ -3638,6 +3638,23 @@ const AdminAttendance = () => {
                   <Badge className="bg-green-500/15 text-green-400 border-green-500/30 flex-shrink-0">
                     {daySignIns.filter((s) => s.program_source === "NLA").length} Practice
                   </Badge>
+                  {/* Juniors / Seniors at a glance (Josh, 2026-10-22): Tuesdays
+                      are the busiest night and the one Junior Boxing meets, so
+                      the split matters most there — but it shows every day, so a
+                      junior on a senior night is visible too. Teal = Junior
+                      Boxers (docs/COLOURS.md); Seniors stay neutral. */}
+                  {(() => {
+                    const practice = daySignIns.filter((s) => s.program_source === "NLA");
+                    const juniors = practice.filter((s) => s.reg.child_boxing_program.includes("Junior")).length;
+                    const seniors = practice.filter((s) => s.reg.child_boxing_program.includes("Senior")).length;
+                    if (practice.length === 0) return null;
+                    return (
+                      <span className="flex items-center gap-1.5 flex-shrink-0">
+                        <Badge className="bg-teal-500/15 text-teal-300 border-teal-500/30">{juniors} Juniors</Badge>
+                        <Badge className="bg-white/[0.06] text-white/70 border-white/15">{seniors} Seniors</Badge>
+                      </span>
+                    );
+                  })()}
                   {!isPracticeDay(selectedDay, calPracticeDayMap) && (
                     <Badge className="bg-red-500/15 text-red-400 border-red-500/30 flex-shrink-0">Non-Practice Day</Badge>
                   )}
