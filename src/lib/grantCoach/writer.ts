@@ -77,6 +77,8 @@ export interface DraftRequest {
   usedStoryIds?: string[];
   /** chat: the conversation so far, the new message last. */
   messages?: ChatMessage[];
+  /** chat: the other questions on the same screen, numbered from 1, which Grant Coach fills only when asked. */
+  siblings?: { i: number; label: string; help: string | null; kind: string; answer: string | null; limit_kind?: string | null; limit_value?: number | null }[];
 }
 
 export interface DraftResult {
@@ -91,6 +93,12 @@ export interface DraftResult {
   story_id?: string | null;
   /** item: which scoring criterion a story answer earns points on, and the evidence. */
   score_note?: string | null;
+  /** chat: answers for other questions on the screen, by number, when Josh asked for them. */
+  fills?: { i: number; answer: string }[];
+  /** item / chat: what bears on the question but is not in the answer, and why. */
+  left_out?: string[];
+  /** chat: a story Josh just told, written up to save. */
+  story_draft?: StoryDraft;
 }
 
 /** Read the questions off uploaded portal screenshots (storage paths, in order). */

@@ -12,18 +12,18 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import {
-  Check, Copy, Loader2, Upload, X, ListChecks, FileQuestion, Globe, History, BookHeart, Award, RefreshCw, Sparkles, Eye, Printer, MoreHorizontal, Trash2, AlertCircle, Pencil, Vault, Wand2,
+  Check, Copy, Loader2, Upload, X, FileQuestion, Globe, History, BookHeart, Award, RefreshCw, Sparkles, Eye, Printer, MoreHorizontal, Trash2, AlertCircle, Pencil, Vault,
 } from "lucide-react";
 import { GRANT_DOCUMENTS_BUCKET } from "@/lib/grantCoach/orgDocuments";
 import { ORG_FIELDS } from "@/lib/grantCoach/orgProfile";
 import { readApplication, matchToVault, draftWithGrantCoach, measure, questionKey, type LibraryEntry, type DraftFolder, type CaseBrief, type FunderBrief } from "@/lib/grantCoach/writer";
-import GrantStrategy from "@/components/admin/grantCoach/GrantStrategy";
+import QuestionChat from "@/components/admin/grantCoach/QuestionChat";
+import type { ReactNode } from "react";
 import GrantReviewer from "@/components/admin/grantCoach/GrantReviewer";
 import type { Review } from "@/lib/grantCoach/review";
 import { loadStories, usableStories } from "@/lib/grantCoach/stories";
@@ -44,7 +44,7 @@ export interface AppItem {
   id: string; folder_id: string; section: string; label: string; detail: string | null; kind: string; required: boolean;
   status: "todo" | "in_progress" | "done" | "na"; answer: string | null; sort_order: number;
   limit_kind?: "words" | "characters" | null; limit_value?: number | null; source_path?: string | null; pasted_at?: string | null;
-  vault_key?: string | null; vault_part?: string | null; answer_source?: "vault" | "coach" | "you" | "portal" | "memory" | null; memory_id?: string | null; needs_case?: boolean; story_id?: string | null; score_note?: string | null; updated_at?: string; needs?: string | null;
+  vault_key?: string | null; vault_part?: string | null; answer_source?: "vault" | "coach" | "you" | "portal" | "memory" | null; memory_id?: string | null; needs_case?: boolean; story_id?: string | null; score_note?: string | null; updated_at?: string; left_out?: string[]; needs?: string | null;
 }
 
 interface Props {
@@ -153,7 +153,7 @@ export default function GrantApplication({ folderId, folder, items, library, get
       });
       const answer = (res.answer ?? "").trim();
       await forget([it.id]);
-      await patch(it.id, { answer, needs: res.needs ?? needsFrom(answer), answer_source: past ? "memory" : "coach", memory_id: past?.id ?? null, story_id: res.story_id ?? null, score_note: res.score_note ?? null, status: "in_progress", pasted_at: null });
+      await patch(it.id, { answer, needs: res.needs ?? needsFrom(answer), answer_source: past ? "memory" : "coach", memory_id: past?.id ?? null, story_id: res.story_id ?? null, score_note: res.score_note ?? null, left_out: res.left_out ?? [], status: "in_progress", pasted_at: null });
     } finally {
       setWriting((w) => { const n = new Set(w); n.delete(it.id); return n; });
       refresh();
@@ -405,29 +405,8 @@ export default function GrantApplication({ folderId, folder, items, library, get
   const live = items.filter((i) => i.status !== "na");
   const approvedCount = live.filter((i) => i.status === "done").length;
   const readyFacts = live.filter((i) => isFactRow(i) && i.status === "in_progress" && i.answer?.trim() && !i.needs);
-  const caseWaiting = live.filter((i) => i.needs_case && !i.answer?.trim());
   const waiting = live.filter((i) => !i.answer?.trim() && !writing.has(i.id) && !(i.vault_key && i.needs) && !(i.needs_case && !caseLocked));
-  const showStrategy = items.some((i) => i.needs_case) || !!caseBrief;
 
-  /** Lock the case, then write every story question from it. A revised case rewrites what isn't approved yet. */
-  const lockCase = async (c: CaseBrief) => {
-    const { error } = await supabase.from("grant_folders" as never).update({ case_brief: c, case_locked_at: new Date().toISOString(), updated_at: new Date().toISOString() } as never).eq("id", folderId);
-    if (error) { toast.error(error.message); return; }
-    qc.invalidateQueries({ queryKey: ["grant-folder", folderId] });
-    const rows = itemsRef.current.filter((i) => i.needs_case && i.status !== "done" && i.status !== "na");
-    toast.success(`Case locked: ${c.program_name}. Writing ${rows.length} story answer${rows.length === 1 ? "" : "s"} from it.`);
-    if (!rows.length) return;
-    setStage(`Writing ${rows.length} story answer${rows.length === 1 ? "" : "s"} from the case…`);
-    try {
-      const facts = await getFacts();
-      let failed = 0;
-      await pool(rows, WRITERS_AT_ONCE, async (r) => { try { await writeOne(r, facts, undefined, undefined, c); } catch { failed += 1; } });
-      if (failed) toast.error(`${failed} answer${failed === 1 ? "" : "s"} didn't come back. Use "Answer the rest" to try again.`);
-    } finally {
-      setStage(null);
-      refresh();
-    }
-  };
   const needYou = live.filter((i) => i.needs);
 
   const approveAllFacts = async () => {
@@ -462,99 +441,120 @@ export default function GrantApplication({ folderId, folder, items, library, get
 
   const empty = items.length === 0;
 
-  return (
-    <div className="space-y-4">
-      {/* ── The tile ── */}
-      <GcCard
-        icon={<Upload className="w-4 h-4" />}
-        title={empty ? "Upload Grant Questions Here" : "Upload More Grant Questions Here"}
-        blurb="Screenshots of the funder's portal, a PDF, or a Word file"
-      >
-      <div className="p-3">
-      <div
-        onDragOver={(e) => { e.preventDefault(); setDragging(true); }}
-        onDragLeave={() => setDragging(false)}
-        onDrop={(e) => { e.preventDefault(); setDragging(false); takeFiles(e.dataTransfer.files); }}
-        onClick={(e) => { if (!busy) { setArmed(true); (e.currentTarget as HTMLDivElement).focus(); } }}
-        onDoubleClick={() => { if (!busy) { setArmed(false); fileInput.current?.click(); } }}
-        onBlur={() => setArmed(false)}
-        // Back from taking a screenshot in another window, the tile still has focus: it is armed again.
-        onFocus={() => { if (!busy) setArmed(true); }}
-        ref={tileRef}
-        role="button"
-        tabIndex={0}
-        aria-label="Upload grant questions: click, then paste; double-click to choose a file"
-        onKeyDown={(e) => { if ((e.key === "Enter" || e.key === " ") && !busy) fileInput.current?.click(); }}
-        className={`rounded-xl border-2 border-dashed transition-colors cursor-pointer text-center outline-none ${dragging || armed ? "bg-sky-400/[0.06]" : "border-white/15 hover:border-sky-400/40 bg-black/30"} ${empty ? "px-6 py-12" : "px-5 py-5"}`}
-        style={dragging || armed ? { borderColor: GC_BLUE } : undefined}
-      >
-        <input ref={fileInput} type="file" multiple accept="image/png,image/jpeg,image/webp,application/pdf,.pdf,.docx" className="hidden" onChange={(e) => { takeFiles(e.target.files); e.target.value = ""; }} />
-        {busy ? (
-          <div className="flex flex-col items-center gap-2">
-            <Loader2 className="w-8 h-8 animate-spin" style={{ color: NLA_RED }} />
-            <p className="font-semibold">{stage}</p>
-            <p className="text-[12px] text-white/45">Answers appear below as they land. You can keep pasting the next screens.</p>
-          </div>
-        ) : gathered > 0 ? (
-          <div className="flex flex-col items-center gap-2">
-            <Loader2 className="w-6 h-6 animate-spin text-white/60" />
-            <p className="font-semibold">{gathered} screen{gathered === 1 ? "" : "s"} in. Paste the next one, or wait a moment.</p>
-          </div>
-        ) : armed ? (
-          <div className="flex flex-col items-center gap-2">
-            <Upload className={`${empty ? "w-10 h-10" : "w-6 h-6"}`} style={{ color: GC_BLUE }} />
-            <p className={`${empty ? "text-xl" : "text-base"} font-bold`} style={{ color: GC_BLUE }}>Ready. Press Ctrl+V to paste.</p>
-            <p className="text-[13px] text-white/55">Or double-click to choose a file from your computer.</p>
-          </div>
-        ) : (
-          <div className="flex flex-col items-center gap-2">
-            <Upload className={`${empty ? "w-10 h-10" : "w-6 h-6"} text-white/60`} />
-            <p className={`${empty ? "text-xl" : "text-base"} font-bold`}>Click here, then press <span style={{ color: GC_BLUE }}>Ctrl+V</span></p>
-            <p className="text-[13px] text-white/55 max-w-lg">
-              Double-click to choose a file, or drop one here. Grant Coach reads every question and answers it.
-            </p>
-          </div>
+  const [focusId, setFocusId] = useState<string | null>(null);
+  /** The question whose box is open (Answer, Jump, or "Approve and next"). */
+  const [openId, setOpenId] = useState<string | null>(null);
+
+  /** Approve this answer, then open the next question that still needs one — top to bottom. */
+  const approveAndNext = async (r: AppItem, answer: string, source: "coach" | "you", storyId: string | null) => {
+    await patch(r.id, { answer, status: "done", left_out: [], answer_source: source, story_id: storyId ?? r.story_id ?? null, needs: null, score_note: source === "you" ? null : r.score_note, pasted_at: null });
+    await remember({ ...r, answer, status: "done", answer_source: source }, ctx);
+    remembered();
+    refresh();
+    const order = itemsRef.current.filter((i) => i.status !== "na");
+    const at = order.findIndex((i) => i.id === r.id);
+    const next = [...order.slice(at + 1), ...order.slice(0, at)].find((i) => i.id !== r.id && i.status !== "done");
+    if (!next) { setOpenId(null); toast.success("That was the last open question. Run the reviewer at the bottom when you're ready."); return; }
+    setOpenId(next.id);
+    window.setTimeout(() => document.getElementById(`q-${next.id}`)?.scrollIntoView({ behavior: "smooth", block: "center" }), 120);
+  };
+  /** Other questions on the screen that Grant Coach filled because Josh asked: drafts, not approvals. */
+  const fillOthers = async (fills: { id: string; answer: string }[]) => {
+    for (const f of fills) await patch(f.id, { answer: f.answer, answer_source: "coach", status: "in_progress", needs: null, pasted_at: null });
+    await forget(fills.map((f) => f.id));
+    refresh();
+  };
+  const jumpTo = (id: string) => {
+    const it = items.find((i) => i.id === id);
+    const target = document.getElementById(`q-${id}`);
+    setFocusId(id);
+    if (it && it.status !== "done") setOpenId(id);
+    target?.scrollIntoView({ behavior: "smooth", block: "center" });
+    window.setTimeout(() => setFocusId((f) => (f === id ? null : f)), 2600);
+  };
+
+  const problemEl = (
+    <>
+    {problem && !busy && (
+      <div className="rounded-xl border border-amber-400/40 bg-amber-400/[0.07] p-4 flex flex-wrap items-center gap-3">
+        <AlertCircle className="w-5 h-5 text-amber-300 shrink-0" />
+        <p className="flex-1 min-w-[220px] text-sm text-amber-100">{problem.message}</p>
+        {(problem.paths.length > 0 || problem.text) && (
+          <Button size="sm" onClick={() => void readAndAnswer(problem.paths, problem.text)} className="text-white" style={{ backgroundColor: NLA_RED }}><RefreshCw className="w-4 h-4 mr-1.5" /> Try again</Button>
         )}
+        <Button size="sm" variant="outline" onClick={() => setProblem(null)} className="bg-transparent border-white/20 text-white/70 hover:bg-white/10 hover:text-white">Dismiss</Button>
       </div>
-      </div>
-      </GcCard>
-
-      {showStrategy && (
-        <GrantStrategy
-          folderId={folderId}
-          folder={folder}
-          library={library}
-          getFacts={getFacts}
-          answered={answered}
-          waiting={caseWaiting.map((i) => ({ label: i.label, help: i.detail, kind: i.kind, limit_kind: i.limit_kind, limit_value: i.limit_value }))}
-          caseBrief={caseBrief}
-          caseLockedAt={caseLockedAt}
-          userId={userId}
-          onLock={lockCase}
-          funderBrief={funderBrief}
-        />
-      )}
-
-      {problem && !busy && (
-        <div className="rounded-xl border border-amber-400/40 bg-amber-400/[0.07] p-4 flex flex-wrap items-center gap-3">
-          <AlertCircle className="w-5 h-5 text-amber-300 shrink-0" />
-          <p className="flex-1 min-w-[220px] text-sm text-amber-100">{problem.message}</p>
-          {(problem.paths.length > 0 || problem.text) && (
-            <Button size="sm" onClick={() => void readAndAnswer(problem.paths, problem.text)} className="text-white" style={{ backgroundColor: NLA_RED }}><RefreshCw className="w-4 h-4 mr-1.5" /> Try again</Button>
-          )}
-          <Button size="sm" variant="outline" onClick={() => setProblem(null)} className="bg-transparent border-white/20 text-white/70 hover:bg-white/10 hover:text-white">Dismiss</Button>
+    )}
+    </>
+  );
+  const tileEl = (
+    <>
+    {/* ── The tile ── */}
+    <GcCard
+      icon={<Upload className="w-4 h-4" />}
+      title={empty ? "Upload Grant Questions Here" : "Upload the Next Screen Here"}
+      blurb="Screenshots of the funder's portal, a PDF, or a Word file"
+    >
+    <div className="p-3">
+    <div
+      onDragOver={(e) => { e.preventDefault(); setDragging(true); }}
+      onDragLeave={() => setDragging(false)}
+      onDrop={(e) => { e.preventDefault(); setDragging(false); takeFiles(e.dataTransfer.files); }}
+      onClick={(e) => { if (!busy) { setArmed(true); (e.currentTarget as HTMLDivElement).focus(); } }}
+      onDoubleClick={() => { if (!busy) { setArmed(false); fileInput.current?.click(); } }}
+      onBlur={() => setArmed(false)}
+      // Back from taking a screenshot in another window, the tile still has focus: it is armed again.
+      onFocus={() => { if (!busy) setArmed(true); }}
+      ref={tileRef}
+      role="button"
+      tabIndex={0}
+      aria-label="Upload grant questions: click, then paste; double-click to choose a file"
+      onKeyDown={(e) => { if ((e.key === "Enter" || e.key === " ") && !busy) fileInput.current?.click(); }}
+      className={`rounded-xl border-2 border-dashed transition-colors cursor-pointer text-center outline-none ${dragging || armed ? "bg-sky-400/[0.06]" : "border-white/15 hover:border-sky-400/40 bg-black/30"} ${empty ? "px-6 py-12" : "px-5 py-5"}`}
+      style={dragging || armed ? { borderColor: GC_BLUE } : undefined}
+    >
+      <input ref={fileInput} type="file" multiple accept="image/png,image/jpeg,image/webp,application/pdf,.pdf,.docx" className="hidden" onChange={(e) => { takeFiles(e.target.files); e.target.value = ""; }} />
+      {busy ? (
+        <div className="flex flex-col items-center gap-2">
+          <Loader2 className="w-8 h-8 animate-spin" style={{ color: NLA_RED }} />
+          <p className="font-semibold">{stage}</p>
+          <p className="text-[12px] text-white/45">Answers appear below as they land. You can keep pasting the next screens.</p>
+        </div>
+      ) : gathered > 0 ? (
+        <div className="flex flex-col items-center gap-2">
+          <Loader2 className="w-6 h-6 animate-spin text-white/60" />
+          <p className="font-semibold">{gathered} screen{gathered === 1 ? "" : "s"} in. Paste the next one, or wait a moment.</p>
+        </div>
+      ) : armed ? (
+        <div className="flex flex-col items-center gap-2">
+          <Upload className={`${empty ? "w-10 h-10" : "w-6 h-6"}`} style={{ color: GC_BLUE }} />
+          <p className={`${empty ? "text-xl" : "text-base"} font-bold`} style={{ color: GC_BLUE }}>Ready. Press Ctrl+V to paste.</p>
+          <p className="text-[13px] text-white/55">Or double-click to choose a file from your computer.</p>
+        </div>
+      ) : (
+        <div className="flex flex-col items-center gap-2">
+          <Upload className={`${empty ? "w-10 h-10" : "w-6 h-6"} text-white/60`} />
+          <p className={`${empty ? "text-xl" : "text-base"} font-bold`}>Click here, then press <span style={{ color: GC_BLUE }}>Ctrl+V</span></p>
+          <p className="text-[13px] text-white/55 max-w-lg">
+            Double-click to choose a file, or drop one here. Grant Coach reads every question and answers it.
+          </p>
         </div>
       )}
+    </div>
+    </div>
+    </GcCard>
+    </>
+  );
+
+  return (
+    <div className="space-y-4">
+      {empty && <>{problemEl}{tileEl}</>}
 
       {!empty && (
         <>
           {/* ── Where it stands, and the few things to do with the whole application ── */}
-          <GcCard
-            icon={<ListChecks className="w-4 h-4" />}
-            title="The application"
-            blurb={`${approvedCount} of ${live.length} approved${needYou.length ? ` · ${needYou.length} need${needYou.length === 1 ? "s" : ""} you` : ""}`}
-          >
-          <div className="p-4 space-y-3">
+          <div className="sticky top-2 z-30 rounded-2xl border border-white/15 bg-[#141416]/95 backdrop-blur shadow-[0_0.3em_1.2em_rgba(0,0,0,0.55)]" style={{ borderTop: `3px solid ${GC_BLUE}` }}>
+          <div className="px-4 py-3 space-y-2">
             <div className="flex flex-wrap items-center gap-3">
               <div className="flex-1 min-w-[200px]">
                 <p className="font-semibold">{approvedCount} of {live.length} approved</p>
@@ -598,9 +598,9 @@ export default function GrantApplication({ folderId, folder, items, library, get
               </button>
             )}
           </div>
-          </GcCard>
+          </div>
 
-          {/* ── The questions, in portal order ── */}
+          {/* ── The questions, in portal order, newest screen last ── */}
           {sections.map((s) => {
             const rows = s.rows.filter((r) => r.status !== "na");
             const done = rows.filter((r) => r.status === "done").length;
@@ -633,6 +633,35 @@ export default function GrantApplication({ folderId, folder, items, library, get
                     key={r.id}
                     item={r}
                     pastFunder={r.memory_id ? memoryById.get(r.memory_id)?.funder ?? null : null}
+                    focused={focusId === r.id}
+                    forceOpen={openId === r.id}
+                    onClosed={() => setOpenId((o) => (o === r.id ? null : o))}
+                    onApproveNext={(answer, source, storyId) => approveAndNext(r, answer, source, storyId)}
+                    renderChat={(draft, fill) => (
+                      <QuestionChat
+                        folderId={folderId}
+                        item={r}
+                        draft={draft}
+                        siblings={rows.filter((x) => x.id !== r.id)}
+                        folder={folder}
+                        library={library}
+                        getFacts={getFacts}
+                        answered={answered}
+                        funderBrief={funderBrief}
+                        stories={usableStories(stories)}
+                        usedStoryIds={items.filter((x) => x.id !== r.id && x.story_id).map((x) => x.story_id!)}
+                        userId={userId}
+                        onAnswer={fill}
+                        onFills={fillOthers}
+                        onStartOver={async () => {
+                          await patch(r.id, { answer: null, status: "todo", answer_source: null, story_id: null, score_note: null, left_out: [], needs: null, pasted_at: null });
+                          await forget([r.id]);
+                          remembered();
+                          refresh();
+                          fill("", null);
+                        }}
+                      />
+                    )}
                     storyTitle={r.story_id ? storyTitle.get(r.story_id) ?? null : null}
                     writing={writing.has(r.id)}
                     busy={busy}
@@ -663,7 +692,7 @@ export default function GrantApplication({ folderId, folder, items, library, get
                       refresh();
                     }}
                     onRegenerate={async (instruction) => {
-                      if (r.needs_case && !caseLocked) { toast("This one waits for the strategy session. Lock the case first."); return; }
+                      if (r.needs_case && !caseLocked && !instruction) { setOpenId(r.id); return; }
                       try { await writeOne(r, await getFacts(), instruction || undefined); } catch (e) { toast.error(`Grant Coach: ${(e as Error).message}`); }
                     }}
                   />
@@ -672,6 +701,10 @@ export default function GrantApplication({ folderId, folder, items, library, get
             </GcCard>
             );
           })}
+
+          {/* ── The next screen goes in right where you are working ── */}
+          {problemEl}
+          {tileEl}
 
           {/* ── Before you submit: the reviewer ── */}
           <GrantReviewer
@@ -686,6 +719,7 @@ export default function GrantApplication({ folderId, folder, items, library, get
             funderBrief={funderBrief}
             lastChange={items.reduce<string | null>((m, i) => (i.updated_at && (!m || i.updated_at > m) ? i.updated_at : m), null)}
             busy={busy}
+            onJump={jumpTo}
             onFix={async (it, instruction) => { try { await writeOne(it, await getFacts(), instruction); } catch (e) { toast.error(`Grant Coach: ${(e as Error).message}`); } }}
           />
         </>
@@ -724,16 +758,23 @@ export default function GrantApplication({ folderId, folder, items, library, get
 }
 
 /* ───── One question ───── */
-function QuestionRow({ item, pastFunder, storyTitle, writing, busy, onApprove, onUnapprove, onCopy, onRemove, onSave, onRegenerate }: {
-  item: AppItem; pastFunder?: string | null; storyTitle?: string | null; writing: boolean; busy: boolean;
+function QuestionRow({ item, pastFunder, storyTitle, focused, forceOpen, onClosed, onApproveNext, renderChat, writing, busy, onApprove, onUnapprove, onCopy, onRemove, onSave, onRegenerate }: {
+  item: AppItem; pastFunder?: string | null; storyTitle?: string | null; focused?: boolean; writing: boolean; busy: boolean;
+  forceOpen?: boolean; onClosed?: () => void;
+  onApproveNext: (answer: string, source: "coach" | "you", storyId: string | null) => Promise<void>;
+  renderChat: (draft: string, fill: (text: string, storyId: string | null) => void) => ReactNode;
   onApprove: () => void; onUnapprove: () => void; onCopy: () => void; onRemove: () => void;
   onSave: (answer: string, toVault: boolean) => Promise<void>; onRegenerate: (instruction: string) => Promise<void>;
 }) {
   const [rejecting, setRejecting] = useState(false);
   const [draft, setDraft] = useState(item.answer ?? "");
-  const [instruction, setInstruction] = useState("");
   const [saving, setSaving] = useState(false);
+  /** What Grant Coach last put in the box, so an untouched draft is credited to it. */
+  const [fromCoach, setFromCoach] = useState<{ text: string; storyId: string | null } | null>(null);
   useEffect(() => { if (!rejecting) setDraft(item.answer ?? ""); }, [item.answer, rejecting]);
+  // Opened from outside: "Approve and next", or a jump from the reviewer.
+  useEffect(() => { if (forceOpen) setRejecting(true); }, [forceOpen]);
+  const close = () => { setRejecting(false); setFromCoach(null); onClosed?.(); };
 
   const fact = isFactRow(item);
   const approved = item.status === "done";
@@ -748,15 +789,21 @@ function QuestionRow({ item, pastFunder, storyTitle, writing, busy, onApprove, o
   const save = async (toVault: boolean) => {
     if (!draft.trim()) return;
     setSaving(true);
-    try { await onSave(draft.trim(), toVault && vaultField); setRejecting(false); setInstruction(""); } finally { setSaving(false); }
+    try { await onSave(draft.trim(), toVault && vaultField); close(); } finally { setSaving(false); }
   };
-  const regenerate = async () => {
+  const approveNext = async () => {
+    const text = draft.trim();
+    if (!text) return;
     setSaving(true);
-    try { await onRegenerate(instruction.trim()); setRejecting(false); setInstruction(""); } finally { setSaving(false); }
+    try {
+      const coachWrote = !!fromCoach && fromCoach.text.trim() === text;
+      await onApproveNext(text, coachWrote ? "coach" : "you", coachWrote ? fromCoach!.storyId : null);
+      setRejecting(false); setFromCoach(null);
+    } finally { setSaving(false); }
   };
 
   return (
-    <div className={`px-4 ${fact && !editing ? "py-2.5" : "py-4"} ${approved ? "bg-emerald-500/[0.04]" : ""}`}>
+    <div id={`q-${item.id}`} className={`scroll-mt-28 px-4 transition-shadow ${fact && !editing ? "py-2.5" : "py-4"} ${approved ? "bg-emerald-500/[0.04]" : ""} ${focused ? "ring-2 ring-inset ring-sky-400/80 bg-sky-400/[0.06]" : ""}`}>
       <div className="flex items-start gap-3">
         <div className="flex-1 min-w-0">
           <p className={`text-sm ${fact ? "text-white/60" : "font-semibold text-white"}`}>
@@ -775,25 +822,22 @@ function QuestionRow({ item, pastFunder, storyTitle, writing, busy, onApprove, o
           ) : editing ? (
             <div className="mt-2 space-y-2">
               <Textarea value={draft} onChange={(e) => setDraft(e.target.value)} rows={fact ? 1 : Math.min(12, Math.max(4, Math.ceil(draft.length / 90)))} placeholder={typeIn ? "Type it here" : "Edit the answer"} className="bg-neutral-950 border-white/15 text-white text-sm" autoFocus={rejecting} />
-              {!typeIn && (
-                <div className="flex gap-2">
-                  <Input value={instruction} onChange={(e) => setInstruction(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter" && instruction.trim()) void regenerate(); }} placeholder="Or tell Grant Coach what to change — shorter, lead with the meals, …" className="bg-neutral-950 border-white/15 text-white text-sm" />
-                  <Button size="sm" onClick={() => void regenerate()} disabled={saving || busy} className="text-white shrink-0" style={{ backgroundColor: NLA_RED }}>
-                    {saving ? <Loader2 className="w-4 h-4 mr-1.5 animate-spin" /> : <Wand2 className="w-4 h-4 mr-1.5" />} Regenerate
-                  </Button>
-                </div>
-              )}
+              {/* Talk it through with Grant Coach; its answer lands in the box above. */}
+              {renderChat(draft, (text, storyId) => { setDraft(text); setFromCoach({ text, storyId }); })}
               <div className="flex flex-wrap items-center gap-2">
+                <Button size="sm" onClick={() => void approveNext()} disabled={saving || busy || !draft.trim()} className="bg-emerald-700 hover:bg-emerald-600 text-white">
+                  {saving ? <Loader2 className="w-4 h-4 mr-1.5 animate-spin" /> : <Check className="w-4 h-4 mr-1.5" />} Approve and next
+                </Button>
                 {vaultField ? (
                   <>
                     {/* Two clear choices, never a hidden default: this grant only, or every grant from now on. */}
-                    <Button size="sm" onClick={() => void save(false)} disabled={saving || !draft.trim()} className={typeIn ? "bg-transparent border border-white/20 text-white/85 hover:bg-white/10" : "bg-emerald-700 hover:bg-emerald-600 text-white"}>Save for this grant</Button>
-                    <Button size="sm" onClick={() => void save(true)} disabled={saving || !draft.trim()} className={typeIn ? "bg-emerald-700 hover:bg-emerald-600 text-white" : "bg-transparent border border-white/20 text-white/85 hover:bg-white/10"}><Vault className="w-4 h-4 mr-1.5" /> Save to the Vault</Button>
+                    <Button size="sm" onClick={() => void save(false)} disabled={saving || !draft.trim()} className="bg-transparent border border-white/20 text-white/85 hover:bg-white/10">Save for this grant</Button>
+                    <Button size="sm" onClick={() => void save(true)} disabled={saving || !draft.trim()} className="bg-transparent border border-white/20 text-white/85 hover:bg-white/10"><Vault className="w-4 h-4 mr-1.5" /> Save to the Vault</Button>
                   </>
                 ) : (
-                  <Button size="sm" onClick={() => void save(false)} disabled={saving || !draft.trim()} className="bg-emerald-700 hover:bg-emerald-600 text-white">Save</Button>
+                  <Button size="sm" onClick={() => void save(false)} disabled={saving || !draft.trim()} className="bg-transparent border border-white/20 text-white/85 hover:bg-white/10">Save, don't approve yet</Button>
                 )}
-                {rejecting && <Button size="sm" variant="outline" onClick={() => { setRejecting(false); setDraft(item.answer ?? ""); setInstruction(""); }} className="bg-transparent border-white/20 text-white/70 hover:bg-white/10 hover:text-white">Cancel</Button>}
+                {rejecting && <Button size="sm" variant="outline" onClick={() => { setDraft(item.answer ?? ""); close(); }} className="bg-transparent border-white/20 text-white/70 hover:bg-white/10 hover:text-white">Close</Button>}
                 {vaultField && <span className="text-[11px] text-white/40">The Vault is what every future grant starts from.</span>}
                 {item.limit_value && <span className={`ml-auto text-[11px] tabular-nums ${over ? "text-amber-300" : "text-white/40"}`}>{count.toLocaleString()} / {item.limit_value.toLocaleString()} {item.limit_kind}</span>}
               </div>
@@ -801,9 +845,12 @@ function QuestionRow({ item, pastFunder, storyTitle, writing, busy, onApprove, o
           ) : hasAnswer ? (
             <p className={`mt-1 whitespace-pre-wrap ${fact ? "text-[15px] font-medium text-white" : "text-sm text-white/85 leading-relaxed"}`}>{item.answer}</p>
           ) : (
-            <p className="mt-1 text-sm text-white/35 italic">{item.needs_case ? "Waits for the strategy session above." : "No answer yet."}</p>
+            <p className="mt-1 text-sm text-white/35 italic">{item.needs_case ? "Not answered yet. Click Answer to work it out with Grant Coach." : "No answer yet."}</p>
           )}
 
+          {(item.left_out?.length ?? 0) > 0 && hasAnswer && !writing && !approved && (
+            <p className="mt-2 text-[12px] text-amber-300 inline-flex items-start gap-1.5"><AlertCircle className="w-3.5 h-3.5 mt-0.5 shrink-0" /> <span><span className="font-semibold">Left out: </span>{item.left_out!.join("; ")}. Open it and ask Grant Coach to work any of these in.</span></p>
+          )}
           {item.score_note && hasAnswer && !editing && !writing && (
             <p className="mt-2 text-[12px] inline-flex items-start gap-1.5" style={{ color: GC_BLUE }}><Award className="w-3.5 h-3.5 mt-0.5 shrink-0" /> <span className="text-white/70"><span className="font-semibold" style={{ color: GC_BLUE }}>Why it scores: </span>{item.score_note}</span></p>
           )}

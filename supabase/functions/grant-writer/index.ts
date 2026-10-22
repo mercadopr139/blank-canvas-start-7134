@@ -132,6 +132,8 @@ type Req = {
   funderBrief?: FunderBrief | null;
   /** funder_brief: the funder's documents — files in storage (PDFs, images) and text read in the browser (Word, Excel, PowerPoint). */
   docs?: { title: string; path?: string; text?: string }[];
+  /** chat: the other questions on the same screen as the open one (numbered), which Josh may ask it to fill. */
+  siblings?: { i: number; label: string; help: string | null; kind: string; answer: string | null; limit_kind?: string | null; limit_value?: number | null }[];
   /** review: the whole application in portal order, as it will be submitted. */
   application?: { i: number; section: string; label: string; help: string | null; kind: string; required: boolean; answer: string | null; limit_kind?: string | null; limit_value?: number | null }[];
   /** story: Josh's own words, to be written up. */
@@ -158,6 +160,7 @@ HARD RULES
 4. Two full-time staff running a program of this size on this revenue is efficiency; say so plainly where capacity or staffing is asked about.
 5. Stay consistent with what is ALREADY WRITTEN in this folder (program name, amount, counts, dates). If something already written conflicts with a fact, follow the fact and note the conflict in brackets.
 6. Answer the funder's question as asked, in the order asked, and nothing else. No preamble, no headings inside a single answer, no sign-off.
+7. NEVER UNDERSELL NLA (Josh, 2026-10-22: a funding purpose left out the summer excursions, and that loses money for the kids). Before writing any answer about the program — its purpose, design, activities, schedule, who it serves, the need it meets, what the money pays for, outcomes — go through EVERY program and service in the library ("Programs", "How the program runs through the year") and EVERY relevant live number, and include each one that answers the question. A reviewer can only score what is on the page. When the limit is tight, cut words, not programs: a clause per program beats a paragraph on one. If something must still be left out, say so in "left_out" with the reason. Never claim more than the records show: if the live numbers count it, use the count; if they don't, describe it without a number.
 
 THE FUNDER
 (This section describes O.C.E.A.N.; it is replaced for any other funder.)
@@ -183,12 +186,14 @@ const systemFor = (folder?: Folder, brief?: FunderBrief | null) => {
 
 const CHAT_RULES = `
 HOW YOU WORK IN A CONVERSATION
-You are sitting next to Josh (Program Director) or Chrissy (Program Coordinator) while they fill in a funder's application. One question from the application is open, or the grant as a whole is.
-- Ask first. On the first turn for a question, do not write the answer yet: say in one or two lines what you would recommend, and ask the one to three things that would make the answer stronger (which program, which number to lead with, a detail only they know). If you already have everything, say so and offer to draft.
-- Recommend with reasons, from the live numbers and the library. When asked which program is the strongest ask, compare them on what the funder scores.
-- Answer questions about NLA's data from the LIVE NUMBERS; if the number is not there, say so plainly.
-- Write when told ("draft it", "write it", "go ahead", or when they have answered your questions). A written answer goes in the "answer" field of your reply, ready to paste into the portal, inside the funder's limit if there is one, and your "reply" says in one line what you did and what they might change.
-- Keep replies short. Two to five sentences unless they ask for more. No headings, no bullet walls.
+You are the best grant writer NLA could hire, sitting next to Josh (Program Director) or Chrissy (Program Coordinator) while they fill in a funder's online application, one question at a time. It is an open conversation, like talking to Claude: they ask, you answer.
+- Answer exactly what they ask. Recommend with reasons when they ask what to do — e.g. which program is strongest for this funder, compared on what the funder scores, with the proof from the live numbers and the weak spots a reviewer would poke.
+- Questions about NLA's data: answer from the LIVE NUMBERS, exactly, with the period; if a number is not there, say so plainly and say how NLA could get it.
+- Write the open question's answer when they ask ("write it", "draft it", "go", "fill it in"), or when the answer is obvious and they asked you to decide. It goes in "answer", ready to paste, inside the funder's limit. Your "reply" then says in one line what you did.
+- Fill OTHER questions on this screen ONLY when they ask you to (e.g. "fill in the amount and total cost too"). Those go in "fills", each with the question's number. Keep every answer consistent with every other one: same program, same amounts, same numbers.
+- When you write an answer about the program, check it against EVERY program, service and number in the library and live numbers first (rule 7). If anything that bears on the question is not in it, your reply says so in one line: "Left out: X, because …". Never leave something out silently.
+- If they tell you a real story, keep it in their words in "story_draft" so they can save it to the story bank.
+- Be brief: two to four sentences, plain words, no headings, no bullet walls, unless they ask for more. Never pad. Never repeat the question back.
 - Every rule above about numbers, the year, young logs, and the library still applies.`;
 
 const STRATEGY_RULES = `
@@ -473,27 +478,43 @@ Check: every criterion the funder scores; whether each answer answers exactly wh
       const subject = it
         ? `THE OPEN QUESTION\nSection: ${it.section}\nQuestion: ${it.label}${it.detail ? `\nThe funder's note: ${it.detail}` : ""}\nKind of field: ${it.kind}${limitLine(it)}${it.answer ? `\nCurrent answer in the box:\n${it.answer}` : "\n(no answer yet)"}`
         : "THE OPEN SUBJECT: the grant as a whole (which program to propose, how much to ask, what to lead with).";
+      const sibs = Array.isArray(body.siblings) ? body.siblings : [];
       const context =
         block("THE GRANT", describeFolder(body.folder)) +
+        (sibs.length ? block("THE OTHER QUESTIONS ON THIS SCREEN (fill one ONLY when asked, by its number)", sibs.map((q) => `[${q.i}] ${q.label}${q.help ? " — " + q.help : ""}${q.limit_value ? ` (limit ${q.limit_value} ${q.limit_kind})` : ""}\n    now: ${q.answer?.trim() ? q.answer.trim() : "(empty)"}`).join("\n")) : "") +
+        (body.caseBrief ? block("THE CASE NLA SETTLED ON", describeCase(body.caseBrief)) : "") +
         block("ABOUT NLA LIBRARY", describeLibrary(body.library)) +
+        ((body.stories ?? []).length ? block("THE STORY BANK", describeStories(body.stories ?? [], body.usedStoryIds ?? [])) : "") +
         block("LIVE NUMBERS (as of today, from the back end)", describeFacts(body.facts)) +
         block("ALREADY WRITTEN IN THIS FOLDER", describeAnswered(body.answered ?? []));
       const transcript = history.map((m) => `${m.role === "user" ? "JOSH" : "GRANT COACH"}: ${m.content}`).join("\n\n");
       const userContent =
         `${subject}${context}\n\n=== THE CONVERSATION SO FAR (reply to the last line) ===\n${transcript}` +
-        `\n\nReturn ONLY JSON: {"reply":"<what you say back, short>","answer":"<ONLY if you are writing or rewriting the answer now: the full answer ready to paste; otherwise omit this key>"}`;
-      const response = await anthropic.messages.create({
-        model: MODEL,
-        max_tokens: 8000,
-        system: systemFor(body.folder, body.funderBrief) + CHAT_RULES,
+        `\n\nReturn ONLY JSON: {"reply":"<what you say back, brief>",` +
+        `"answer":"<ONLY when writing the open question's answer now; otherwise omit>",` +
+        `"fills":[{"i":<number of another question on this screen>,"answer":"<its answer>"}] (ONLY when asked to fill other questions; otherwise omit),` +
+        `"story_draft":{"title":"","story":"<their story, 60-140 words, only what they said, first names only>","program":"","proves":[],"people":""} (ONLY when they just told a new real story; otherwise omit),` +
+        `"story_id":"<the story-bank id the answer tells, or null>","left_out":["<what bears on the question but is not in the answer> — <why>"] (only when writing an answer)}`;
+      const response = await createBest(anthropic, {
+        max_tokens: 10000,
+        system: systemFor(body.folder, body.funderBrief) + CHAT_RULES + ((body.stories ?? []).length ? STORY_RULES : ""),
         messages: [{ role: "user", content: userContent }],
+        // A conversation should feel like one: medium on the best model answers in seconds, not minutes.
         ...thinking("medium"),
-      } as never);
+      });
       const parsed = extractJson(textOf(response as never));
       const reply = String(parsed.reply ?? "").trim();
       const answer = typeof parsed.answer === "string" && parsed.answer.trim() ? parsed.answer.trim() : undefined;
       if (!reply && !answer) throw new Error("Grant Coach said nothing. Try again.");
-      return json({ reply: reply || "Here is a draft.", answer, words: answer ? answer.split(/\s+/).filter(Boolean).length : undefined });
+      const sibIds = new Set(sibs.map((q) => q.i));
+      const fills = (Array.isArray(parsed.fills) ? parsed.fills : [])
+        .filter((x: { i?: number; answer?: string }) => sibIds.has(Number(x.i)) && typeof x.answer === "string" && x.answer.trim())
+        .map((x: { i: number; answer: string }) => ({ i: Number(x.i), answer: x.answer.trim() }));
+      const storyIds = new Set((body.stories ?? []).map((st) => st.id));
+      const story_id = typeof parsed.story_id === "string" && storyIds.has(parsed.story_id) ? parsed.story_id : null;
+      const story_draft = parsed.story_draft && typeof parsed.story_draft === "object" && parsed.story_draft.story ? parsed.story_draft : undefined;
+      const left_out = Array.isArray(parsed.left_out) ? parsed.left_out.filter((x: unknown) => typeof x === "string" && x.trim()).map((x: string) => x.trim()).slice(0, 6) : [];
+      return json({ reply: reply || "Here it is.", answer, fills: fills.length ? fills : undefined, story_draft, story_id, left_out, words: answer ? answer.split(/\s+/).filter(Boolean).length : undefined });
     }
 
     const mode = body.mode === "narrative" ? "narrative" : "item";
@@ -536,7 +557,7 @@ Check: every criterion the funder scores; whether each answer answers exactly wh
         ((body.caseBrief || it.kind === "narrative")
           ? `\n\nWrite it to SCORE: a reviewer reads this against the funder's criteria. Lead with the strongest evidence, name numbers and periods exactly, and make the link to what the funder rewards obvious. Then set "score_note" to ONE line for Josh: which of the funder's scoring criteria this answer earns points on, and the evidence in it that earns them (e.g. "Community need & CSBG alignment — 71% of youth below 200% FPL, Wildwood and Woodbine named"). If the answer is weak on a criterion it should cover, say so in the note.`
           : "") +
-        `\n\nReturn ONLY JSON: {"answer":"<the answer, ready to paste into the form>","needs":null,"story_id":"<the id of the story-bank story you told, or null>","score_note":null}`;
+        `\n\nReturn ONLY JSON: {"answer":"<the answer, ready to paste into the form>","needs":null,"story_id":"<the id of the story-bank story you told, or null>","score_note":null,"left_out":["<a program, service or number from the library or live numbers that bears on this question but is not in the answer> — <why>"]}`;
       maxTokens = 7000;
       effort = "medium";
     }
@@ -566,7 +587,8 @@ Check: every criterion the funder scores; whether each answer answers exactly wh
     const storyIds = new Set((body.stories ?? []).map((st) => st.id));
     const story_id = typeof parsed.story_id === "string" && storyIds.has(parsed.story_id) ? parsed.story_id : null;
     const score_note = typeof parsed.score_note === "string" && parsed.score_note.trim() ? parsed.score_note.trim() : null;
-    return json({ answer, needs, story_id, score_note, words: answer.split(/\s+/).filter(Boolean).length });
+    const left_out = Array.isArray(parsed.left_out) ? parsed.left_out.filter((x: unknown) => typeof x === "string" && x.trim()).map((x: string) => x.trim()).slice(0, 6) : [];
+    return json({ answer, needs, story_id, score_note, left_out, words: answer.split(/\s+/).filter(Boolean).length });
   } catch (err) {
     console.error("grant-writer error:", err);
     return json({ error: (err as Error).message || "Internal server error" }, 500);

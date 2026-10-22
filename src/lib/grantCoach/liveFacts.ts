@@ -208,6 +208,73 @@ export const describeRates = (rates: MonthRate[], unit: string, peopleWord?: str
   return ` Full months logged — ${months}. Strongest full month: ${best.label}, ${best.perNight} ${unit} a night. Average across full months: ${avg} ${unit} a night.`;
 };
 
+/* ── Estimates Josh can stand behind (2026-10-22) ──
+   The Meal Tracker and the driver app are younger than a program year, so a
+   year's total would undersell NLA and a projection would overstate it.
+   These name their basis every time: the rate measured, and the nights it is
+   multiplied by — dinner nights (Monday to Friday), never calendar days. */
+
+/** Monday-to-Friday nights between two dates, inclusive (YYYY-MM-DD). */
+export const weekdayNights = (from: string, to: string) => {
+  const [fy, fm, fd] = from.split("-").map(Number), [ty, tm, td] = to.split("-").map(Number);
+  const d = new Date(fy, fm - 1, fd), end = new Date(ty, tm - 1, td);
+  let n = 0;
+  for (; d <= end; d.setDate(d.getDate() + 1)) { const w = d.getDay(); if (w >= 1 && w <= 5) n += 1; }
+  return n;
+};
+
+export interface MealEstimate {
+  month: string; monthLabel: string; nights: number; meals: number; perNight: number;
+  monthNights: number; monthly: number; seasonFrom: string; seasonTo: string; seasonNights: number; season: number;
+}
+
+/**
+ * The Meal Train at this month's rate: meals a night so far this month, times
+ * the month's dinner nights, and times the dinner nights from the season's
+ * first meal to June 30. Holidays are not taken out, so it is "about".
+ */
+export const mealEstimate = (rows: { date: string; count: number }[], today: string): MealEstimate | null => {
+  const month = today.slice(0, 7);
+  const these = rows.filter((r) => r.date.slice(0, 7) === month);
+  const nights = new Set(these.map((r) => r.date)).size;
+  if (nights < 4) return null;
+  const meals = these.reduce((t, r) => t + (r.count ?? 0), 0);
+  const perNight = Math.round(meals / nights);
+  const [y, m] = month.split("-").map(Number);
+  const monthEnd = `${month}-${String(new Date(y, m, 0).getDate()).padStart(2, "0")}`;
+  const monthNights = weekdayNights(`${month}-01`, monthEnd);
+  const seasonFrom = rows.map((r) => r.date).sort()[0];
+  const sy = Number(seasonFrom.slice(5, 7)) >= 7 ? Number(seasonFrom.slice(0, 4)) + 1 : Number(seasonFrom.slice(0, 4));
+  const seasonTo = `${sy}-06-30`;
+  const seasonNights = weekdayNights(seasonFrom, seasonTo);
+  return {
+    month, monthLabel: new Date(y, m - 1, 15).toLocaleDateString("en-US", { month: "long", year: "numeric" }), nights, meals, perNight,
+    monthNights, monthly: perNight * monthNights, seasonFrom, seasonTo, seasonNights, season: perNight * seasonNights,
+  };
+};
+
+export interface Rider { first_name: string; last_name: string; date_of_birth: string | null; pickup_zone: string | null }
+const personKey = (first: string, last: string, dob: string | null) => `${first.trim().toLowerCase()}|${last.trim().toLowerCase()}|${dob ?? ""}`;
+
+/** Who rides: ages and towns from the rider list; income from the matching registration form (name + date of birth). */
+export const riderProfile = (riders: Rider[], regs: (RegRow & { child_first_name: string; child_last_name: string })[], asOf: Date) => {
+  const byKey = new Map(regs.map((r) => [personKey(r.child_first_name, r.child_last_name, r.child_date_of_birth), r]));
+  const matched = riders.map((x) => byKey.get(personKey(x.first_name, x.last_name, x.date_of_birth))).filter((r): r is RegRow & { child_first_name: string; child_last_name: string } => !!r);
+  const ages = riders
+    .map((x) => (x.date_of_birth ? Math.floor((asOf.getTime() - new Date(x.date_of_birth + "T12:00:00").getTime()) / (365.25 * 86_400_000)) : null))
+    .filter((a): a is number => a != null && a >= 0 && a <= 99).sort((a, b) => a - b);
+  const zones: Record<string, number> = {};
+  riders.forEach((x) => { const z = (x.pickup_zone ?? "").trim() || "Not given"; zones[z] = (zones[z] ?? 0) + 1; });
+  return {
+    riders: riders.length,
+    matched: matched.length,
+    disadvantaged: matched.filter(isBelowPoverty).length,
+    ageMedian: ages.length ? ages[Math.floor((ages.length - 1) / 2)] : null,
+    ageMin: ages[0] ?? null, ageMax: ages[ages.length - 1] ?? null,
+    zones: Object.entries(zones).sort((a, b) => b[1] - a[1]),
+  };
+};
+
 const shareList = (entries: [string, number][], total: number, top = 5) =>
   entries.slice(0, top).map(([k, v]) => `${k} ${pct(v, total)}%`).join(", ");
 
@@ -269,6 +336,26 @@ export async function gatherLiveFacts(today = new Date()): Promise<Fact[]> {
       facts.push({ key: `attendance.${p.key}`, label: "Attendance", value: `unavailable (${(e as Error).message})`, period: p.label, source: "attendance_records" });
     }
 
+    // Excursions: the trips themselves (Josh, 2026-10-22 — they were missing from a funding purpose).
+    try {
+      const { data, error } = await from("excursions").select("date, name, youth_count").gte("date", p.from).lte("date", p.to).order("date") as unknown as { data: { date: string; name: string; youth_count: number | null }[] | null; error: { message: string } | null };
+      if (error) throw new Error(error.message);
+      const trips = data ?? [];
+      if (trips.length) {
+        const dow = (d: string) => { const [y, m, dd] = d.split("-").map(Number); return new Date(y, m - 1, dd).getDay(); };
+        const fridayWeekend = trips.filter((t) => [0, 5, 6].includes(dow(t.date))).length;
+        const summer = trips.filter((t) => ["06", "07", "08"].includes(t.date.slice(5, 7))).length;
+        const cov = coverage(trips.map((t) => t.date), p);
+        facts.push({
+          key: `excursions.${p.key}`, label: "Excursions (full-day trips)",
+          value: `${trips.length} excursions logged${cov.note}: ${summer} in summer, ${fridayWeekend} on a Friday or weekend. Places: ${[...new Set(trips.map((t) => t.name))].join(", ")}.`,
+          period: p.label, source: "the excursion records (the excursion log began in spring 2026; earlier trips are not counted)",
+        });
+      }
+    } catch (e) {
+      facts.push({ key: `excursions.${p.key}`, label: "Excursions", value: `unavailable (${(e as Error).message})`, period: p.label, source: "excursions" });
+    }
+
     // Meals.
     try {
       const rows = await fetchAll<{ event_date: string; meal_count: number; donor_name: string | null }>((a, b) =>
@@ -300,6 +387,44 @@ export async function gatherLiveFacts(today = new Date()): Promise<Fact[]> {
       if (count) facts.push({ key: `juniors_sessions.${p.key}`, label: "Juniors Aftercare sessions journaled", value: String(count), period: p.label, source: "the Juniors Aftercare journal" });
     } catch { /* optional */ }
   }
+
+  // The Meal Train this season, at this month's rate (Josh, 2026-10-22): the log restarted in the fall,
+  // so the season's rate, named as an estimate with its basis, is the honest figure.
+  try {
+    const today = iso(new Date());
+    const [cs] = programYearRange(getCurrentAttendanceYear(new Date()));
+    const rows = await fetchAll<{ event_date: string; meal_count: number }>((a, b) =>
+      from("meal_events").select("event_date, meal_count").gte("event_date", iso(cs)).lte("event_date", today).range(a, b) as never);
+    const est = mealEstimate(rows.map((r) => ({ date: r.event_date, count: r.meal_count ?? 0 })), today);
+    if (est) facts.push({
+      key: "meals.estimate", label: "Meal Train — estimate at this month's rate",
+      value: `${est.monthLabel} so far: ${est.meals.toLocaleString()} meals on ${est.nights} nights, ${est.perNight} a night. At that rate: about ${est.monthly.toLocaleString()} meals a month (${est.perNight} × ${est.monthNights} dinner nights, Monday to Friday) and about ${est.season.toLocaleString()} meals this season (${est.perNight} × ${est.seasonNights} dinner nights from ${fmtDay(est.seasonFrom)} to ${fmtDay(est.seasonTo)}, before holidays). Always say it is an estimate at this month's rate.`,
+      period: `this season, ${shortProgramYear(getCurrentAttendanceYear(new Date()))}`, source: "the Meal Tracker; multiplied by dinner nights, never calendar days",
+    });
+  } catch { /* the estimate is optional; the year's meals fact stands */ }
+
+  // Who rides: every youth the driver app carried in the last complete year, by age, town and income.
+  try {
+    const year = periods[0];
+    const rides = await fetchAll<{ youth_id: string }>((a, b) =>
+      from("transport_attendance").select("youth_id").gte("recorded_at", year.from + "T00:00:00").lte("recorded_at", year.to + "T23:59:59").in("status", ["present", "picked_up", "dropped_off"]).range(a, b) as never);
+    const ids = [...new Set(rides.map((r) => r.youth_id))];
+    if (ids.length) {
+      const riders: Rider[] = [];
+      for (let i = 0; i < ids.length; i += 200) {
+        const { data } = await from("youth_profiles").select("first_name, last_name, date_of_birth, pickup_zone").in("id", ids.slice(i, i + 200)) as unknown as { data: Rider[] | null };
+        riders.push(...(data ?? []));
+      }
+      const regs = await fetchAll<RegRow & { child_first_name: string; child_last_name: string }>((a, b) =>
+        from("youth_registrations").select("id, youth_link_id, program_year, child_first_name, child_last_name, child_sex, child_race_ethnicity, household_income_range, free_or_reduced_lunch, child_school_district, family_structure, child_date_of_birth").eq("program_year", year.year).range(a, b) as never);
+      const pr = riderProfile(riders, regs, new Date(year.to + "T12:00:00"));
+      facts.push({
+        key: "riders.profile", label: "Who rides NLA's vans",
+        value: `${pr.riders} different youth rode${pr.ageMedian != null ? `, ages ${pr.ageMin}–${pr.ageMax} (median ${pr.ageMedian})` : ""}. Pick-up areas: ${pr.zones.map(([z, n]) => `${z} ${pct(n, pr.riders)}%`).join(", ")}. Economically disadvantaged: ${pr.disadvantaged} of the ${pr.matched} riders matched to a registration form (${pct(pr.disadvantaged, pr.matched)}%)${pr.matched < pr.riders ? `; ${pr.riders - pr.matched} riders could not be matched by name and date of birth` : ""}. The driver app began in spring 2026, so these are the riders since then.`,
+        period: year.label, source: "the driver app's rider list, matched to registration forms by name and date of birth",
+      });
+    }
+  } catch { /* optional */ }
 
   // Who the youth were: that year's registrations, one per person, ages as of the year's end.
   try {

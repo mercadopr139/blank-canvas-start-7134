@@ -6,7 +6,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { Loader2, Gavel, AlertTriangle, Check, Wand2, XCircle } from "lucide-react";
+import { Loader2, Gavel, AlertTriangle, Check, Wand2, XCircle, ArrowDownCircle } from "lucide-react";
 import GcCard, { GC_BLUE } from "@/components/admin/grantCoach/GcCard";
 import { preSubmitChecks, reviewApplication, type Review } from "@/lib/grantCoach/review";
 import type { CaseBrief, DraftFolder, LibraryEntry, FunderBrief } from "@/lib/grantCoach/writer";
@@ -26,18 +26,26 @@ interface Props {
   /** Latest change to any answer, to tell a stale review from a current one. */
   lastChange: string | null;
   busy: boolean;
+  /** Take Josh to a question on the page. */
+  onJump: (id: string) => void;
   onFix: (it: AppItem, instruction: string) => Promise<void>;
 }
 
 const tone = (pct: number) => (pct >= 85 ? "#34d399" : pct >= 70 ? GC_BLUE : pct >= 55 ? "#fcd34d" : "#fca5a5");
 
-export default function GrantReviewer({ folderId, folder, items, library, getFacts, caseBrief, review, reviewedAt, funderBrief, lastChange, busy, onFix }: Props) {
+export default function GrantReviewer({ folderId, folder, items, library, getFacts, caseBrief, review, reviewedAt, funderBrief, lastChange, busy, onJump, onFix }: Props) {
   const qc = useQueryClient();
   const [running, setRunning] = useState(false);
   const [fixing, setFixing] = useState<string | null>(null);
   const live = items.filter((i) => i.status !== "na");
   const checks = preSubmitChecks(live);
   const stale = !!review && !!reviewedAt && !!lastChange && lastChange > reviewedAt;
+  // The reviewer reads the finished application: not while story questions still wait for the case.
+  const waitingForCase = live.filter((i) => i.needs_case && !i.answer?.trim()).length;
+  const openIds = new Set([...checks.blank, ...checks.over, ...checks.needYou, ...checks.unapproved].map((i) => i.id));
+  const openInOrder = live.filter((i) => openIds.has(i.id));
+  const [cursor, setCursor] = useState(0);
+  const next = () => { if (!openInOrder.length) return; const k = cursor % openInOrder.length; onJump(openInOrder[k].id); setCursor(k + 1); };
   const ready = !checks.blank.length && !checks.over.length && !checks.unapproved.length && !checks.needYou.length;
 
   const run = async () => {
@@ -65,10 +73,15 @@ export default function GrantReviewer({ folderId, folder, items, library, getFac
     try { await onFix(it, w.instruction || w.fix); toast.success("Rewritten. Read it, then approve it or reject it."); } finally { setFixing(null); }
   };
 
-  const List = ({ title, rows, color }: { title: string; rows: AppItem[] | { label: string }[]; color: string }) => rows.length ? (
+  // Each item is a link to its question.
+  const List = ({ title, rows, color }: { title: string; rows: { id: string; label: string }[]; color: string }) => rows.length ? (
     <div>
       <p className="text-[11px] font-bold uppercase tracking-wide" style={{ color }}>{title} ({rows.length})</p>
-      <ul className="mt-0.5 space-y-0.5">{rows.slice(0, 8).map((r, k) => <li key={k} className="text-[12px] text-white/70">• {r.label}</li>)}{rows.length > 8 && <li className="text-[12px] text-white/40">…and {rows.length - 8} more</li>}</ul>
+      <ul className="mt-0.5 space-y-0.5">
+        {rows.map((r) => (
+          <li key={r.id}><button type="button" onClick={() => onJump(r.id)} className="text-left text-[12px] text-white/80 hover:text-white underline-offset-2 hover:underline">• {r.label}</button></li>
+        ))}
+      </ul>
     </div>
   ) : null;
 
@@ -78,7 +91,7 @@ export default function GrantReviewer({ folderId, folder, items, library, getFac
       title="The reviewer"
       blurb={review ? `${review.overall}/100${stale ? " · answers changed since this review" : ""}` : "Read the application the way the funder's panel will, before you submit"}
       right={
-        <Button size="sm" onClick={() => void run()} disabled={running || busy || !live.some((i) => i.answer?.trim())} className="text-white h-8" style={{ backgroundColor: "#bf0f3e" }}>
+        <Button size="sm" onClick={() => void run()} disabled={running || busy || waitingForCase > 0 || !live.some((i) => i.answer?.trim())} title={waitingForCase ? "Answer the open questions first" : undefined} className="text-white h-8" style={{ backgroundColor: "#bf0f3e" }}>
           {running ? <Loader2 className="w-4 h-4 mr-1.5 animate-spin" /> : <Gavel className="w-4 h-4 mr-1.5" />} {review ? "Review again" : "Review the application"}
         </Button>
       }
@@ -87,8 +100,14 @@ export default function GrantReviewer({ folderId, folder, items, library, getFac
         {/* The plain checks: no AI, always current. */}
         <div className={`rounded-xl border p-3 ${ready ? "border-emerald-400/30 bg-emerald-400/[0.04]" : "border-amber-400/30 bg-amber-400/[0.04]"}`}>
           <p className={`text-sm font-semibold inline-flex items-center gap-1.5 ${ready ? "text-emerald-300" : "text-amber-200"}`}>
-            {ready ? <Check className="w-4 h-4" /> : <AlertTriangle className="w-4 h-4" />} {ready ? "Ready to submit: every required question answered, approved and inside its limit." : "Before you submit"}
+            {ready ? <Check className="w-4 h-4" /> : <AlertTriangle className="w-4 h-4" />} {ready ? "Ready to submit: every required question answered, approved and inside its limit." : `Before you submit · ${openInOrder.length} to go`}
           </p>
+          {!ready && (
+            <div className="mt-2 flex flex-wrap items-center gap-2">
+              <Button size="sm" onClick={next} className="h-8 text-white" style={{ backgroundColor: "#bf0f3e" }}><ArrowDownCircle className="w-4 h-4 mr-1.5" /> {cursor === 0 ? "Start at the first one" : "Next"}</Button>
+              <span className="text-[12px] text-white/50">Or click any question below to go straight to it.</span>
+            </div>
+          )}
           {!ready && (
             <div className="mt-2 grid gap-3 sm:grid-cols-2">
               <List title="Required, not answered" rows={checks.blank} color="#fca5a5" />
@@ -99,6 +118,9 @@ export default function GrantReviewer({ folderId, folder, items, library, getFac
           )}
         </div>
 
+        {waitingForCase > 0 && !running && (
+          <p className="text-[12px] text-white/50">The reviewer reads the finished application. {waitingForCase} question{waitingForCase === 1 ? " still needs" : "s still need"} an answer: click {waitingForCase === 1 ? "it" : "one"} above, talk it through with Grant Coach, then review.</p>
+        )}
         {running && <p className="text-sm text-white/55 inline-flex items-center gap-2"><Loader2 className="w-4 h-4 animate-spin" style={{ color: GC_BLUE }} /> Reading every answer the way a skeptical reviewer would, and checking every number against the back end…</p>}
 
         {review && !running && (
