@@ -13,8 +13,9 @@ import CoachUnlock from "@/components/board/CoachUnlock";
 import { useBoardSession } from "@/hooks/useBoardSession";
 import { Button } from "@/components/ui/button";
 import {
-  ArrowLeft, Dumbbell, ChevronLeft, ChevronRight, Maximize, Minimize, Pencil, Check,
+  ArrowLeft, Dumbbell, ChevronLeft, ChevronRight, Maximize, Minimize, Pencil, Check, Eye, EyeOff,
 } from "lucide-react";
+import { toast } from "sonner";
 import { NbtEditTonight } from "@/components/nbt/NbtEditTonight";
 import { VerseOfTheDayStrip } from "@/components/verse/VerseOfTheDayStrip";
 import { todayNY } from "@/lib/programYear";
@@ -96,6 +97,27 @@ const NbtBoard = () => {
     const k = WEEKDAY_KEYS[dow];
     if (k && mondayOf(today) === weekStart && week.days?.[k]) setDayKey(k);
   }, [week, linkedDay, today, weekStart]);
+
+  // Tonight only (Josh, 2026-10-22): a signed-in coach hides a station, or the
+  // whole Cardio Stations card, right on the wall. Nothing is deleted.
+  const saveWork = async (work: Partial<NbtDay["work"]>) => {
+    if (!week || !day) return;
+    const next: NbtDay = { ...day, work: { ...day.work, ...work } };
+    qc.setQueryData(["nbt-week", weekStart], (old: { week: NbtWeek | null } | undefined) =>
+      old?.week ? { ...old, week: { ...old.week, days: { ...old.week.days, [dayKey]: next } } } : old);
+    const { error } = await supabase
+      .from("nbt_weeks" as never)
+      .update({ days: { ...week.days, [dayKey]: next } } as never)
+      .eq("id", week.id);
+    if (error) toast.error(error.message);
+    qc.invalidateQueries({ queryKey: ["nbt-week", weekStart] });
+  };
+  const toggleStation = (index: number) => {
+    if (!day) return;
+    const hidden = new Set(day.work.hiddenStations ?? []);
+    if (hidden.has(index)) hidden.delete(index); else hidden.add(index);
+    saveWork({ hiddenStations: [...hidden].sort((a, b) => a - b) });
+  };
 
   // The coach's note from the Practice Plan's S&C block for this night.
   const { data: liftNote } = useQuery({
@@ -491,6 +513,20 @@ const NbtBoard = () => {
               data-max-px="44"
               className="flex-1 min-h-0 overflow-hidden flex flex-col gap-[0.75em]"
             >
+              {/* The lifts, hidden for tonight: the kids see nothing; a signed-in coach gets the way back. */}
+              {day.work.liftHidden ? (
+                isAdmin ? (
+                  <div className="shrink-0 flex justify-end">
+                  <button
+                    type="button"
+                    onClick={() => saveWork({ liftHidden: false })}
+                    className="inline-flex items-center gap-[0.3em] rounded-[0.4em] border border-white/20 px-[0.7em] py-[0.25em] text-[0.45em] font-bold uppercase tracking-wide text-white/70 hover:text-white hover:bg-white/10"
+                  >
+                    <Eye className="w-[1.2em] h-[1.2em]" /> Unhide Lift Section
+                  </button>
+                  </div>
+                ) : null
+              ) : (<>
               {/* The lifts: two cards, one row. */}
               <div className="shrink-0 grid grid-cols-2 gap-[0.5em]">
                 {TRACKS.map((t) => {
@@ -528,16 +564,51 @@ const NbtBoard = () => {
                   words={{ title: `Lift · ${day.minutes?.lift ?? 15} min · everyone`, idle: "Tap Start after the verse.", running: "On the bar. Groups rotate.", rang: "Time — rack it. Stations next.", done: "Lift done" }}
                   color={NBT_AMBER}
                 />
+                {/* Coach only: the lift off the wall for tonight, once it's done. */}
+                {isAdmin && (
+                  <div className="mt-[0.4em] flex justify-end text-[1.25em]">
+                  <button
+                    type="button"
+                    onClick={() => saveWork({ liftHidden: true })}
+                    className="inline-flex items-center gap-[0.3em] rounded-[0.4em] border border-white/20 px-[0.7em] py-[0.25em] text-[0.45em] font-bold uppercase tracking-wide text-white/70 hover:text-white hover:bg-white/10"
+                  >
+                    <EyeOff className="w-[1.2em] h-[1.2em]" /> Hide Lift Section
+                  </button>
+                  </div>
+                )}
               </div>
+              </>)}
 
               {/* Cardio Stations: the band takes what is left. */}
-              {(() => {
-                const lines = stationLines(day);
+              {day.work.stationsHidden ? (
+                // Off the wall tonight. The kids see nothing; a signed-in coach gets the way back.
+                isAdmin ? (
+                  <div className="shrink-0 flex justify-end">
+                    <button
+                      type="button"
+                      onClick={() => saveWork({ stationsHidden: false })}
+                      className="shrink-0 inline-flex items-center gap-[0.3em] rounded-[0.4em] border border-white/20 px-[0.7em] py-[0.25em] text-[0.45em] font-bold uppercase tracking-wide text-white/70 hover:text-white hover:bg-white/10"
+                    >
+                      <Eye className="w-[1.2em] h-[1.2em]" /> Unhide Cardio Station Section
+                    </button>
+                  </div>
+                ) : null
+              ) : (() => {
+                // A station hidden for tonight is off the wall, and the clock counts only the ones
+                // showing. A signed-in coach still sees it, dimmed, with Show under it.
+                const hidden = new Set(day.work.hiddenStations ?? []);
+                const all = stationLines(day);
+                const lines = all.filter((_, i) => i === 0 || !hidden.has(i));
                 const header = lines[0] ?? "5 stations · 2 min each · rotate on the whistle";
-                const tiles = lines.slice(1).map((l) => {
+                const parse = (l: string) => {
                   const m = l.match(/^Station\s+(\d)\s*·\s*([^—]+?)\s*—\s*(.*)$/);
                   return m ? { n: m[1], name: m[2].trim(), rest: m[3].trim() } : { n: "", name: "", rest: l };
-                });
+                };
+                const tiles = all
+                  .map((l, i) => ({ ...parse(l), line: i, off: hidden.has(i) }))
+                  .slice(1)
+                  .filter((t) => isAdmin || !t.off);
+                const showing = tiles.filter((t) => !t.off).length;
                 return (
                   <section className="rounded-[0.8em] border border-white/15 bg-white/[0.06] overflow-hidden flex-1 min-h-0 flex flex-col shadow-[0_0.3em_1.2em_rgba(0,0,0,0.45)]">
                     <div className="px-[0.9em] py-[0.4em] border-b shrink-0 flex items-baseline justify-between gap-[1em]" style={{ background: "#3c3527", borderColor: `${NBT_AMBER}66` }}>
@@ -551,7 +622,8 @@ const NbtBoard = () => {
                     </div>
                     <div className="grid gap-[0.5em] flex-1 min-h-0 px-[0.9em] pt-[0.6em] pb-[0.5em]" style={{ gridTemplateColumns: `repeat(${Math.max(1, tiles.length)}, minmax(0, 1fr))` }}>
                       {tiles.map((t, i) => (
-                        <div key={i} data-fit className="rounded-[0.6em] border border-white/15 bg-[#141416] px-[0.7em] py-[0.5em] min-h-0 overflow-hidden flex flex-col">
+                        <div key={t.line} className="min-h-0 flex flex-col gap-[0.3em]">
+                        <div data-fit className={`rounded-[0.6em] border border-white/15 bg-[#141416] px-[0.7em] py-[0.5em] min-h-0 flex-1 overflow-hidden flex flex-col ${t.off ? "opacity-35" : ""}`}>
                           <p className="text-[0.5em] font-bold uppercase tracking-[0.18em] leading-tight" style={{ color: `${NBT_AMBER}b3` }}>
                             <span className="text-[1.7em] font-black tracking-normal mr-[0.3em] align-[-0.1em]" style={{ color: NBT_AMBER }}>{t.n || i + 1}</span>{t.name}
                           </p>
@@ -581,10 +653,34 @@ const NbtBoard = () => {
                             );
                           })()}
                         </div>
+                        {/* Coach only: take this station off the wall for tonight, or put it back. */}
+                        {isAdmin && (
+                          <button
+                            type="button"
+                            onClick={() => toggleStation(t.line)}
+                            className={`shrink-0 inline-flex items-center justify-center gap-[0.3em] rounded-[0.4em] py-[0.25em] text-[0.45em] font-bold uppercase tracking-wide ${t.off ? "text-black" : "border border-white/20 text-white/70 hover:text-white hover:bg-white/10"}`}
+                            style={t.off ? { backgroundColor: NBT_AMBER } : undefined}
+                          >
+                            {t.off ? <><Eye className="w-[1.2em] h-[1.2em]" /> Show tonight</> : <><EyeOff className="w-[1.2em] h-[1.2em]" /> Hide tonight</>}
+                          </button>
+                        )}
+                        </div>
                       ))}
                     </div>
                     <div className="shrink-0 px-[0.9em] pb-[0.6em]">
-                      <StationClock storageKey={`nbt-stations:${weekStart}:${dayKey}`} stations={Math.max(1, tiles.length)} seconds={120} color={NBT_AMBER} />
+                      <StationClock storageKey={`nbt-stations:${weekStart}:${dayKey}`} stations={Math.max(1, showing)} seconds={120} color={NBT_AMBER} />
+                      {/* Coach only: the whole card off the wall for tonight. */}
+                      {isAdmin && (
+                        <div className="mt-[0.4em] flex justify-end">
+                          <button
+                            type="button"
+                            onClick={() => saveWork({ stationsHidden: true })}
+                            className="inline-flex items-center gap-[0.3em] rounded-[0.4em] border border-white/20 px-[0.7em] py-[0.25em] text-[0.45em] font-bold uppercase tracking-wide text-white/70 hover:text-white hover:bg-white/10"
+                          >
+                            <EyeOff className="w-[1.2em] h-[1.2em]" /> Hide Cardio Station Section
+                          </button>
+                        </div>
+                      )}
                     </div>
                   </section>
                 );

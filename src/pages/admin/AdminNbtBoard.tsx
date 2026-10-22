@@ -358,7 +358,7 @@ export const NbtWeekBuilder = ({
         // The Cardio Stations are one shared block: only "Rewrite stations" changes them. A lift or
         // track rewrite keeps tonight's stations as they are (it used to replace them every time).
         work: blockPart === "work"
-          ? withStations(current, stationLines(day)).work
+          ? { ...withStations(current, stationLines(day)).work, hiddenStations: [] }
           : stationLines(current).length
             ? current.work
             : { ...current.work, [track]: day.work[track] },

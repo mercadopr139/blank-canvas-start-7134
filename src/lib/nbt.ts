@@ -137,6 +137,12 @@ export interface NbtDay {
      * because it's shared"). On a stations day alpha and bravo are empty.
      */
     shared?: string[];
+    /** Tonight only (Josh, 2026-10-22): station lines the wall leaves out, by line number in `shared`. */
+    hiddenStations?: number[];
+    /** Tonight only: the whole Cardio Stations card is off the wall. */
+    stationsHidden?: boolean;
+    /** Tonight only: the lift cards and the lift clock are off the wall (after the lift, say). */
+    liftHidden?: boolean;
     bravo: string[];
     alpha: string[];
     result_unit: ResultUnit | string;

@@ -69,7 +69,9 @@ export const NbtEditTonight = ({
   const stations = stationLines(draft);
   const stationsNight = stations.length > 0;
   const saveStations = (value: string | null) => {
-    const next = withStations(draft, bulletLinesOf(value)) as NbtDay;
+    // A new station list renumbers the lines, so tonight's hides start fresh.
+    const fresh = withStations(draft, bulletLinesOf(value)) as NbtDay;
+    const next: NbtDay = { ...fresh, work: { ...fresh.work, hiddenStations: [] } };
     setDraft(next);
     save(next);
   };
